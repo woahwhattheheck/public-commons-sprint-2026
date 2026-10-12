@@ -87,32 +87,75 @@ class OwnedMoodle:
             info = {"repository": "moodle/moodle", "commit": PIN, "archiveUrl": ARCHIVE,
                     "archiveSha256": sha(archive), "archiveBytes": archive.stat().st_size}
             save(sourceinfo, info)
-        if not (self.root / "version.php").is_file():
-            need(not self.root.exists() or not any(self.root.iterdir()), "Preserve an existing incomplete Moodle tree for native source repair")
-            self.root.mkdir(parents=True, exist_ok=True)
-            prefix = "moodle-" + PIN + "/"
-            with tarfile.open(archive, "r:gz") as bundle:
-                members = bundle.getmembers()
-                for member in members:
-                    if member.name.rstrip("/") == prefix.rstrip("/"): continue
-                    need(member.name.startswith(prefix), "Original source archive has its exact committed prefix")
-                    relative = member.name[len(prefix):]
-                    target = self.root / relative
-                    need(not Path(relative).is_absolute() and ".." not in Path(relative).parts,
-                         "Original Moodle source remains inside its owned directory")
-                    if member.isdir():
-                        target.mkdir(parents=True, exist_ok=True)
-                    elif member.isfile():
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        with bundle.extractfile(member) as input_, target.open("wb") as output:
-                            shutil.copyfileobj(input_, output)
-                        target.chmod(0o755 if member.mode & 0o111 else 0o644)
-                    elif member.issym():
-                        link = (target.parent / member.linkname).resolve()
-                        need(link.is_relative_to(self.root.resolve()), "Retain only original internal source links")
+        complete = self.runtime / "MOODLE_EXTRACTED.json"
+        if complete.is_file():
+            retained = read(complete)
+            need(retained.get("commit") == PIN and retained.get("archiveSha256") == info["archiveSha256"] and
+                 retained.get("root") == str(self.root), "Reuse this original complete source extraction")
+            need((self.root / "version.php").is_file() and (self.root / "admin/cli/install_database.php").is_file(),
+                 "The original extracted Moodle installation source is retained")
+            return
+        need(not self.root.is_symlink(), "Use this operation's original regular source directory")
+        self.root.mkdir(parents=True, exist_ok=True)
+        prefix = "moodle-" + PIN + "/"
+        counts = {"files": 0, "directories": 0, "links": 0, "reusedFiles": 0, "recoveredPartialFiles": 0}
+        with tarfile.open(archive, "r:gz") as bundle:
+            for member in bundle:
+                if member.name.rstrip("/") == prefix.rstrip("/"): continue
+                need(member.name.startswith(prefix), "Original source archive has its exact committed prefix")
+                relative = member.name[len(prefix):]
+                need(relative and not Path(relative).is_absolute() and ".." not in Path(relative).parts,
+                     "Original Moodle source remains inside its owned directory")
+                target = self.root / relative
+                need(target.resolve().is_relative_to(self.root.resolve()), "Original source parents stay inside this operation")
+                if member.isdir():
+                    need(not target.is_symlink() and (not target.exists() or target.is_dir()), "Retain the original source directory: " + relative)
+                    target.mkdir(parents=True, exist_ok=True); counts["directories"] += 1
+                elif member.isfile():
+                    need(not target.is_symlink() and (not target.exists() or target.is_file()), "Retain the original source file: " + relative)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    original = target.stat() if target.is_file() else None
+                    with bundle.extractfile(member) as input_:
+                        if original:
+                            need(original.st_size <= member.size, "Preserve different existing source: " + relative)
+                            with target.open("rb") as existing:
+                                for block in iter(lambda: existing.read(1024 * 1024), b""):
+                                    need(input_.read(len(block)) == block, "Preserve different existing source: " + relative)
+                            if original.st_size == member.size:
+                                counts["reusedFiles"] += 1; counts["files"] += 1
+                                continue
+                            # An exact original prefix is an interrupted legacy
+                            # extraction. Complete it atomically from the same TAR.
+                            counts["recoveredPartialFiles"] += 1
+                            input_.seek(0)
+                        pending = target.with_name(target.name + ".diso-extract-pending")
+                        with pending.open("wb") as output:
+                            shutil.copyfileobj(input_, output, 1024 * 1024)
+                            output.flush(); os.fsync(output.fileno())
+                        need(pending.stat().st_size == member.size, "Receive the complete original source member: " + relative)
+                        if original:
+                            current = target.stat()
+                            need((current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns) ==
+                                 (original.st_dev, original.st_ino, original.st_size, original.st_mtime_ns),
+                                 "Preserve a concurrent original source edit: " + relative)
+                        else:
+                            need(not target.exists() and not target.is_symlink(), "Preserve concurrently created source: " + relative)
+                        pending.chmod(0o755 if member.mode & 0o111 else 0o644); pending.replace(target)
+                    counts["files"] += 1
+                elif member.issym():
+                    link = (target.parent / member.linkname).resolve()
+                    need(link.is_relative_to(self.root.resolve()), "Retain only original internal source links")
+                    if target.is_symlink():
+                        need(os.readlink(target) == member.linkname, "Preserve a different original source link: " + relative)
+                    else:
+                        need(not target.exists(), "Preserve an existing source object: " + relative)
                         target.parent.mkdir(parents=True, exist_ok=True); target.symlink_to(member.linkname)
-                    else: raise RuntimeError("Inspect the original source archive member: " + member.name)
-        need((self.root / "admin/cli/install_database.php").is_file(), "The original complete native installer is retained")
+                    counts["links"] += 1
+                else: raise RuntimeError("Inspect the original source archive member: " + member.name)
+        need((self.root / "version.php").is_file() and (self.root / "admin/cli/install_database.php").is_file(),
+             "The original complete native installer is retained")
+        save(complete, {"schema": "dpsa.diso.extracted-moodle.v1", "commit": PIN, "archiveSha256": info["archiveSha256"],
+                        "root": str(self.root), "members": counts, "completedAt": time.time()})
     def database(self):
         if self.config.get("moodleRoot"): return
         config = self.config["database"]

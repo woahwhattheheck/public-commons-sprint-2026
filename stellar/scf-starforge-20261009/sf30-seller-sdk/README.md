@@ -2,6 +2,10 @@
 
 **Status:** Node.js 22+ seller metadata compiler and runnable resource service. MIT. The compiler and challenge-only service need no npm dependencies. The optional payment runtime delegates verification and settlement to the official x402 SDK and an explicitly configured facilitator.
 
+## FHIR Bulk Data source and customer workbench
+
+The [FHIR Bulk Data workbench](./fhir_bulk/README.md) retains actual provider discovery and Groups, complete resumable full/modification exports, exact original resources/outcomes/deletions, reviewed native mappings and keyed comparisons. Its private operator composes retained resource state, publishes through the original SF30 seller, prepares the original SF88 buyer, and receives complete source-backed datasets and editable workspaces. Start with `node dataset-cli.mjs fhir-bulk serve --workspace /absolute/private/fhir-workspace`; the guide includes the complete unchanged public SMART source and browser receiving commands.
+
 ## Grants.gov source and grant research workspace
 
 The [Grants.gov workspace](./grantsgov/README.md) retains complete opportunity searches and notice details, editable qualifications and workshares, immutable source editions and substantive notice comparisons. Its local operator UI and CLI prepare the original SF30 merchant dataset and native publisher/customer workflow, and export the complete research for receiving and reopen. Start it with `node dataset-cli.mjs grants serve --workspace /private/grant-research`.

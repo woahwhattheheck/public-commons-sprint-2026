@@ -1,0 +1,119 @@
+{
+  "schema": "starforge.lab-edd-original-model-receiving-summary.v1",
+  "operationId": "MCCAMPBELL-EDD-RECEIVING-9F77-20261012",
+  "sourceReceipt": "source-receipt.json",
+  "families": [
+    {
+      "filename": "Equis3.zip",
+      "sourceSha256": "db4ac5c96d687b19c8a5b2dece909c3a338361258d213c2a0a84f482b0c0afc6",
+      "summary": {
+        "sampleRows": 30,
+        "sampleIdentities": 30,
+        "testRows": 0,
+        "testIdentities": 41,
+        "resultRows": 500,
+        "batchAssignmentRows": 41,
+        "laboratoryBatchIdentities": 9,
+        "missingSampleParentRows": 0,
+        "missingTestParentRows": 0,
+        "nonDetectBlankResults": 137,
+        "detectedBlankTargetResults": 0,
+        "reportedLimitCells": 589,
+        "recordsWithQcFields": 500
+      },
+      "counts": {
+        "error": 0,
+        "review": 2,
+        "info": 0
+      },
+      "disposition": "REVIEW_REQUIRED",
+      "decisions": 3,
+      "reviewSha256": "040d8e046027518a36504c8ae5137a0227d429d96417f01a0b17c526ac051c06",
+      "tables": {
+        "csv": {
+          "path": "equis-lab-3-decisions.csv",
+          "bytes": 2052,
+          "sha256": "ff462ab86fa3faa9d71924855077e0fbe2e1d577f983f19ef360ca873bcb4bd2",
+          "rows": 9
+        },
+        "tsv": {
+          "path": "equis-lab-3-decisions.tsv",
+          "bytes": 2052,
+          "sha256": "b81e4557c57bfb703c5ec1fab165a957999463f1f6efabf718d2738cdae416d9",
+          "rows": 9
+        }
+      },
+      "nativeFiles": 3,
+      "sameDelivery": {
+        "added": 0,
+        "removed": 0,
+        "unchanged": 571,
+        "changed": 0,
+        "ambiguous": 0
+      }
+    },
+    {
+      "filename": "Equis4_CSV.zip",
+      "sourceSha256": "7ce006eade0db042557c7d69182feab9da294a9f49d1c318f852771e6d0e9015",
+      "summary": {
+        "sampleRows": 32,
+        "sampleIdentities": 29,
+        "testRows": 41,
+        "testIdentities": 41,
+        "resultRows": 500,
+        "batchAssignmentRows": 41,
+        "laboratoryBatchIdentities": 9,
+        "missingSampleParentRows": 2,
+        "missingTestParentRows": 1,
+        "nonDetectBlankResults": 137,
+        "detectedBlankTargetResults": 0,
+        "reportedLimitCells": 589,
+        "recordsWithQcFields": 287
+      },
+      "counts": {
+        "error": 3,
+        "review": 5,
+        "info": 0
+      },
+      "disposition": "CORRECTION_REQUIRED",
+      "decisions": 4,
+      "reviewSha256": "55d64cb3c54f6edcedbb3c6ad323c9604db72dda9819bc17d8d797dc274fedd7",
+      "tables": {
+        "csv": {
+          "path": "equis-lab-4-decisions.csv",
+          "bytes": 4676,
+          "sha256": "c4216fa5eb7c6af2c25eaa2a995707e04d763aea22f48619236840f309b69288",
+          "rows": 24
+        },
+        "tsv": {
+          "path": "equis-lab-4-decisions.tsv",
+          "bytes": 4676,
+          "sha256": "9bf60566d4dc6a94a5a1903b7ba5eda41b115879f0a724cd0caee720773b33db",
+          "rows": 24
+        }
+      },
+      "nativeFiles": 4,
+      "sameDelivery": {
+        "added": 0,
+        "removed": 0,
+        "unchanged": 609,
+        "changed": 0,
+        "ambiguous": 2
+      }
+    }
+  ],
+  "packet": {
+    "filename": "McCampbell_Complete_EDD_Model_20261012.zip",
+    "bytes": 424705,
+    "sha256": "1cd63aab060efd7fc6bcea03136133df9bcf3669715ad02bfb8a201364918c27",
+    "members": 26,
+    "logicalBytes": 3220616
+  },
+  "retainedNativeResult": {
+    "filename": "model-receiving.json.gz",
+    "bytes": 446318,
+    "sha256": "7378033a535d94a165e297b6b66d5b965fbeb93eef5669f6113bff7a8cbdabba",
+    "logicalBytes": 12626728,
+    "logicalSha256": "d191b3b04bbfd9d454ff2c8c4b4df18d7f0565872b8c5422f4166e461e019502"
+  }
+}

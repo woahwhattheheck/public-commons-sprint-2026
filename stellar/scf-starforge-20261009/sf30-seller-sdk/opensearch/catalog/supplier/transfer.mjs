@@ -79,7 +79,7 @@ export function validateSupplierRow(table,values,header) {
       fail('SUPPLIER_BUNDLE_PRODUCT_INVALID','A supplier product differs from its reviewed identity or findings.');
   }
   if(table==='catalog_supplier_recipient'){
-    if(row.supplier_key!==record.supplierKey||row.identifier!==record.identifier||row.action!==record.action||!['product','tradeItem'].includes(record.kind)||!['added','changed','unchanged','expired','deleted'].includes(record.action)||record.beforeSha256!==(record.before===null?null:digest(record.before))||record.afterSha256!==(record.after===null?null:digest(record.after)))fail('XCHANGE_BUNDLE_RECIPIENT_INVALID','A recipient row differs from its complete before/after state or original action.');
+    if(row.supplier_key!==record.supplierKey||row.identifier!==record.identifier||row.action!==record.action||!['product','tradeItem'].includes(record.kind)||!['added','changed','unchanged','expired','deleted','skipped'].includes(record.action)||record.beforeSha256!==(record.before===null?null:digest(record.before))||record.afterSha256!==(record.after===null?null:digest(record.after)))fail('XCHANGE_BUNDLE_RECIPIENT_INVALID','A recipient row differs from its complete before/after state or original action.');
   }
   return record;
 }

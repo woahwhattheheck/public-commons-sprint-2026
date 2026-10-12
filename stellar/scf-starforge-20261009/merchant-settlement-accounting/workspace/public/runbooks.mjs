@@ -900,9 +900,15 @@ async function boot() {
   try{
     await openDb();await refreshRoot({restore:true});
     S.pending=await loadPending();renderRecovery();
-    if(S.pending?.status?.stage==='COMMITTED'){await finishCommitted(S.pending);return;}
+    const requestedCycle=new URL(location.href).searchParams.get('cycle');
+    if(S.pending?.status?.stage==='COMMITTED'){
+      await finishCommitted(S.pending);
+      if(requestedCycle)await openCycle(requestedCycle);
+      return;
+    }
     const view=S.restoredView||{};
-    if(view.view==='author'&&await readKey(key('author/meta')))await resumeAuthor();
+    if(requestedCycle)await openCycle(requestedCycle);
+    else if(view.view==='author'&&await readKey(key('author/meta')))await resumeAuthor();
     else if(view.view==='schedule'&&await readKey(key('schedule')))await resumeSchedule();
     else if(view.view==='book'&&view.bookId)await openBook(view.bookId,view.editionId);
     else if(view.view==='cycle'&&view.cycleId)await openCycle(view.cycleId,view.stepId);

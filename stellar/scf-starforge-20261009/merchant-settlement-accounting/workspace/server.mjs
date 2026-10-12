@@ -8,6 +8,8 @@ import {resolve} from 'node:path';
 import {openAccountingWorkspace,WorkspaceError} from './store.mjs';
 import {accountingWorkspaceBinding} from './binding.mjs';
 import {openCollectionWorkspace} from './collection-workspace.mjs';
+import {accountingSourceMode} from './buyer-startup.mjs';
+import {buyerMain,BUYER_HELP} from './buyer-cli.mjs';
 import {handlePricingRequest,PRICING_REQUEST_BYTES} from './pricing-workspace.mjs';
 import {handlePeriodRequest} from './period-workspace.mjs';
 import {AccountantWorkspace,handleAccountantRequest,ACCOUNTANT_REQUEST_BYTES} from './accountant-workspace.mjs';
@@ -67,7 +69,13 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
     if(errors.length)throw Object.assign(new AggregateError(errors,'The original accounting controllers did not all close cleanly.'),{code:'ACCOUNTING_RUNTIME_CLOSE_FAILED'});
   };
   const openRuntime=async()=>{
-    const workspace=await openAccountingWorkspace(options),accountant=new AccountantWorkspace(workspace),cryptoworth=new CryptoworthWorkspace(workspace,accountant),runbooks=new RunbookWorkspace(workspace,accountant);
+    const workspace=await openAccountingWorkspace(options),accountant=new AccountantWorkspace(workspace);
+    if(accountingSourceMode(workspace.state)==='buyer'){
+      const xero=new XeroWorkspace(workspace,accountant,xeroClient?{client:xeroClient}:{});
+      try{await xero.init();return {workspace,accountant,xero};}
+      catch(error){await closeRuntime({workspace,xero}).catch(()=>{});throw error;}
+    }
+    const cryptoworth=new CryptoworthWorkspace(workspace,accountant),runbooks=new RunbookWorkspace(workspace,accountant);
     const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{}),xero=new XeroWorkspace(workspace,accountant,xeroClient?{client:xeroClient}:{});let collection,portfolioClients;
     const qbo=new QboWorkspace(workspace,accountant,qboClient?{client:qboClient}:{});
     try{const statements=new CustomerStatementWorkspace(workspace);await statements.init();const delivery=new AccountingDeliveryWorkspace(workspace,{secretEnv:deliverySecretEnv});await delivery.init();workspace.adjustments.configureTransport({httpsProxyEnv:rpcProxyEnv});collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();await qbo.recover();await xero.init();
@@ -115,6 +123,7 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       const connectionsPath=path==='/api/oauth/connections'||path==='/api/oauth/connection'||path==='/api/oauth/command'||path==='/api/accounting-connections'||path.startsWith('/api/accounting-connections/');
       if(!maintenancePath&&!connectionsPath)operation=maintenance.enter();
       if(path===SIGNED_NOTICE_PATH){
+        check(accountingSourceMode(operation.workspace.state)==='merchant','MERCHANT_SOURCES_REQUIRED','Signed merchant notices require their original merchant accounting workspace.',409);
         check(request.method==='POST'&&!url.search,'NOT_FOUND','This signed delivery endpoint accepts original POST notices only.',404);
         const accepted=await operation.delivery.acceptSigned(await readSignedNotice(request));
         send(response,accepted.duplicate?200:202,accepted);return;
@@ -135,6 +144,9 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       }
       if(maintenancePath){send(response,200,await maintenance.route({method:request.method,path,value}));return;}
       const {workspace,accountant,cryptoworth,runbooks,portfolio,portfolioClients,bitwave,qbo,xero,collection,statements,delivery}=operation;
+      if(accountingSourceMode(workspace.state)==='buyer')
+        check(path==='/api/state'||path==='/api/accountant'||path.startsWith('/api/accountant/')||path==='/api/xero'||path.startsWith('/api/xero/'),
+          'BUYER_ACCOUNTING_OPERATION','Use this buyer workspace’s issued-source, accountant, Xero and recovery operations.',409);
       if(clientMount){
         check(clientMount[2]==='/api/runbooks'||clientMount[2].startsWith('/api/runbooks/'),'NOT_FOUND','Choose an original client-runbook operation.',404);
         check(portfolioClients,'PORTFOLIO_CLIENT_NOT_CONFIGURED','Open the configured portfolio host.',409);
@@ -232,6 +244,14 @@ Create:
 Reopen:
   node workspace/server.mjs --workspace /private/accounting-workspace
 
+Initialize from an original issued buyer period:
+  node workspace/server.mjs --workspace /private/buyer-accounting \\
+    --buyer-source /private/issued-buyer-accountant-source.json \\
+    --buyer-operator "Accountant name"
+Optional --buyer-source-sha256 pins the selected original file; --buyer-source-name names its intake.
+Reopen using only --workspace. The retained original file and first handoff ID remain inside that workspace.
+Choose the original buyer file or the original merchant source options; do not mix them.
+
 Optional: --port 8446 and --recovered-dir /private/original-recovered-settlements.
 Signed SF98 accounting intake: --delivery-secret-env ACCOUNTING_SF98_SECRET.
 Expose only POST /sf98/accounting-events through the existing trusted HTTPS proxy.
@@ -260,7 +280,7 @@ Operating backup and recovery: backup | inspect-backup | verify-backup | restore
 Use a recovery subcommand with --help for the original encrypted workflow.
 `;
 export async function main(argv=process.argv.slice(2)){
-  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP+'\n'+ADJUSTMENTS_HELP+'\n'+XERO_HELP+'\n'+CRYPTOWORTH_HELP+'\n'+RUNBOOK_HELP+'\n'+PORTFOLIO_HELP);return;}
+  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+BUYER_HELP+'\n'+RECOVERY_HELP+'\n'+ADJUSTMENTS_HELP+'\n'+XERO_HELP+'\n'+CRYPTOWORTH_HELP+'\n'+RUNBOOK_HELP+'\n'+PORTFOLIO_HELP);return;}
   if(argv[0]==='runbooks')return runbooksMain(argv.slice(1));
   if(argv[0]==='portfolio')return portfolioMain(argv.slice(1));
   if(argv.includes('--managed-launch-sha256')){
@@ -273,13 +293,14 @@ export async function main(argv=process.argv.slice(2)){
   }
   if(argv[0]==='cryptoworth')return cryptoworthMain(argv.slice(1));
   if(argv[0]==='xero')return xeroMain(argv.slice(1));
+  if(argv[0]==='buyer')return buyerMain(argv.slice(1));
   if(argv[0]==='adjustments')return adjustmentsMain(argv.slice(1));
   if(RECOVERY_COMMANDS.has(argv[0])){
     const controller=new AbortController(),stop=()=>controller.abort();process.once('SIGINT',stop);process.once('SIGTERM',stop);
     try{return await recoveryMain(argv,{signal:controller.signal});}finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
   }
   const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir','--rpc-proxy-env',
-    '--recovery-state-root','--recovery-backup-root','--recovery-pass-env','--delivery-secret-env','--expected-workspace-id','--expected-sources-sha256','--desk','--portfolio-config','--portfolio-workspace','--expected-portfolio-sha256']),values={};
+    '--recovery-state-root','--recovery-backup-root','--recovery-pass-env','--delivery-secret-env','--expected-workspace-id','--expected-sources-sha256','--desk','--buyer-source','--buyer-source-sha256','--buyer-source-name','--buyer-operator','--portfolio-config','--portfolio-workspace','--expected-portfolio-sha256']),values={};
   for(let i=0;i<argv.length;i++){
     const key=argv[i];check(!Object.hasOwn(values,key),'INVALID_ARGUMENTS',HELP);
     if(key==='--recovery-start-paused'){values[key]=true;continue;}
@@ -299,6 +320,8 @@ export async function main(argv=process.argv.slice(2)){
   check(values['--desk']===undefined||['accounting','cryptoworth','runbooks','client-portfolio'].includes(values['--desk']),'INVALID_DESK','Choose accounting, Cryptoworth, client runbooks or the firm portfolio.');
   const app=await startAccountingWorkspace({directory:resolve(values['--workspace']),
     expectedWorkspaceId:values['--expected-workspace-id'],expectedSourcesSha256:values['--expected-sources-sha256'],
+    buyerSourceFile:values['--buyer-source']&&resolve(values['--buyer-source']),buyerSourceSha256:values['--buyer-source-sha256'],
+    buyerSourceName:values['--buyer-source-name'],buyerOperator:values['--buyer-operator'],
     outboxDir:values['--outbox']&&resolve(values['--outbox']),proofDir:values['--proof-dir']&&resolve(values['--proof-dir']),termsFile:values['--terms']&&resolve(values['--terms']),
     recoveredDir:values['--recovered-dir']&&resolve(values['--recovered-dir']),
     recoveryStateRoot:values['--recovery-state-root']&&resolve(values['--recovery-state-root']),
@@ -317,7 +340,7 @@ export async function main(argv=process.argv.slice(2)){
         operatorUrl:app.url+({cryptoworth:'/cryptoworth.html',runbooks:'/runbooks.html','client-portfolio':'/portfolio.html'}[values['--desk']]??'/')})+'\n');
     }catch(error){await app.close();throw error;}
   }
-  process.stdout.write('Merchant accounting workspace: '+app.url+'\n');
+  process.stdout.write((app.workspace&&accountingSourceMode(app.workspace.state)==='buyer'?'Buyer accounting workspace: ':'Merchant accounting workspace: ')+app.url+'\n');
   const close=()=>app.close().then(()=>process.exit(0),error=>{console.error(error.message);process.exit(1);});
   process.once('SIGINT',close);process.once('SIGTERM',close);
 }

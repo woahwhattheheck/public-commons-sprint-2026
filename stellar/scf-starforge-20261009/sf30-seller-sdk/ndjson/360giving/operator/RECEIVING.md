@@ -60,3 +60,10 @@ The publisher review remains editable in the receiving workspace. Creating the s
 The native query and comparison views read the reconstructed original engine. Exact monetary text, optional-value states, grant identifiers and full original grant JSON remain available.
 
 Keep the complete ZIP and its manifest together. Open the receiving workspace to continue the work, export a later handoff, or read the exact original operation again.
+
+
+## Continue through Applications
+
+A READY runtime containing the 360Giving Applications provider can open this initialized receiving workspace as **360Giving publisher workspace**. Select the received private directory and its existing Python. Applications retains the complete publisher and shared native engine source in its reviewed release. Its private stable connection file also supports the same commands through `--connection`, including complete handoff and field-change downloads.
+
+The original distribution includes `distribution/runtime-workspace/360giving-receiving.mjs` and `360GIVING_APPLICATIONS.md`. That driver operates the full saved-source export, source cold reopening, independent receiving and receiver cold reopening sequence through the existing Applications manager. Reuse its original input and receiving directory to continue its saved application and publisher requests.

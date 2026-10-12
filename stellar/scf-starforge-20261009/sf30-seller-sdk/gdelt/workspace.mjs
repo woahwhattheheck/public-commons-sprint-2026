@@ -86,8 +86,11 @@ export async function startGdeltWorkspace(options={}){
   const startup={...application.startup(),url:origin+'/#'+token};
   const session={server,application,origin,url:startup.url,startup,
     close(){return closePromise??=(async()=>{
-      closing=true;if(owned)await application.close();
-      await new Promise((done,reject)=>{server.close(error=>error?reject(error):done());server.closeIdleConnections?.();});
+      closing=true;let failure;
+      try{if(owned)await application.close();}catch(error){failure=error;}
+      try{await new Promise((done,reject)=>{server.close(error=>error?reject(error):done());server.closeIdleConnections?.();});}
+      catch(error){failure??=error;}
+      if(failure)throw failure;
     })();}};
   if(options.connectionFile)try{await retainGdeltConnection(options.connectionFile,startup);}catch(error){await session.close();throw error;}
   return session;

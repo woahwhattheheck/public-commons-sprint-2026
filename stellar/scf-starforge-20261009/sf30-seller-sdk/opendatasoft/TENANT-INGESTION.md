@@ -171,6 +171,6 @@ The copied source and notes belong to the reviewed plan. Applying, recovery, rec
 
 ## Native API reference
 
-automation/API.md describes the complete 92-operation client, parameters, schemas, callback journal and streaming file transport. contract.mjs retains the official SDK/OpenAPI basis and current-reference.json records the present Huwise documentation corrections. upstream-openapi.json and UPSTREAM_LICENSE retain the original complete SDK source and license.
+automation/API.md describes the complete 92-operation client, parameters, schemas, callback journal and streaming file transport. contract.mjs retains the official SDK/OpenAPI basis and current-reference.json records the present Huwise documentation corrections. upstream-openapi.json and UPSTREAM_LICENSE.txt retain the original complete SDK source and license.
 
 Official current reference: https://developer.huwise.com/apis/automation/v1.0/index.html

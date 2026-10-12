@@ -1,6 +1,6 @@
 import { sourceWorkspaceTools, read, selection, page, digest, alias, UUID, SHA, ALIAS } from './catalog/source-workspace.mjs';
 export { sourceWorkspaceTools } from './catalog/source-workspace.mjs';
-// MIT. Agent access to the original XML/NDJSON console and its retained workspace.
+// MIT. Agent access to the original XML/NDJSON/IATI console and its retained workspace.
 import { constants } from 'node:fs';
 import { open, lstat, mkdir, readdir, link, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
@@ -13,6 +13,8 @@ const EXPORT_SCHEMA = 'stellar-forge.source-console-export.v1';
 
 
 const MAX_EXPORT = 256000000;
+const MAX_IATI_PACKET = 4 * 1024 * 1024 * 1024;
+const exportLimit = (format, kind) => format === 'iati' && ['portfolio', 'report'].includes(kind) ? MAX_IATI_PACKET : MAX_EXPORT;
 const MAX_SOURCE = 256 * 1024 * 1024;
 const MAX_JSON = 16 * 1024 * 1024;
 const fail = (code, message) => Object.assign(new Error(message), { code });
@@ -70,13 +72,13 @@ export async function readSourceWorkspaceConfiguration(path) {
   exact(raw, ['schema', 'workspaces'], ['schema', 'workspaces']);
   if (raw.schema !== SOURCE_WORKSPACE_CONNECTION_SCHEMA || !plain(raw.workspaces) ||
       Object.keys(raw.workspaces).length < 1 || Object.keys(raw.workspaces).length > 32)
-    throw fail('CONFIGURATION_ERROR', 'Declare 1–32 original XML or NDJSON source workspaces.');
+    throw fail('CONFIGURATION_ERROR', 'Declare 1–32 original XML, NDJSON or IATI source workspaces.');
   const workspaces = Object.create(null), base = dirname(path);
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     checked(alias, ALIAS, 'workspace alias');
     exact(input, ['label', 'format', 'consoleUrlEnv', 'consoleUrlFile', 'files'], ['format']);
-    if (!['xml', 'ndjson'].includes(input.format) || (input.consoleUrlEnv === undefined) === (input.consoleUrlFile === undefined))
-      throw fail('CONFIGURATION_ERROR', 'Choose XML or NDJSON and exactly one original console URL environment or file reference.');
+    if (!['xml', 'ndjson', 'iati'].includes(input.format) || (input.consoleUrlEnv === undefined) === (input.consoleUrlFile === undefined))
+      throw fail('CONFIGURATION_ERROR', 'Choose XML, NDJSON or IATI and exactly one original console URL environment or file reference.');
     const files = Object.create(null);
     if (input.files !== undefined && (!plain(input.files) || Object.keys(input.files).length > 128))
       throw fail('CONFIGURATION_ERROR', 'Declare up to 128 original source or project-packet file handles.');
@@ -194,7 +196,9 @@ export class MerchantSourceWorkspaces {
     const directory = await this.#directory(workspace);
     const metadata = JSON.parse((await bytes(join(directory, id + '.json'), 65536, true)).toString('utf8'));
     if (metadata.schema !== EXPORT_SCHEMA || metadata.workspace !== workspace || metadata.exportId !== id ||
-        !['project','dataset','changes','merchant'].includes(metadata.kind) || metadata.bytes < 0 || metadata.bytes > MAX_EXPORT)
+        !['project','dataset','changes','merchant','portfolio','report'].includes(metadata.kind) ||
+        ['portfolio','report'].includes(metadata.kind) && metadata.format !== 'iati' ||
+        !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 0 || metadata.bytes > exportLimit(metadata.format, metadata.kind))
       throw fail('SOURCE_EXPORT_INVALID', 'Retained export metadata changed.');
     return { directory, metadata };
   }
@@ -214,7 +218,7 @@ export class MerchantSourceWorkspaces {
       try {
         for await (const chunk of response.body ?? []) {
           length += chunk.length;
-          if (length > MAX_EXPORT) throw fail('SOURCE_EXPORT_TOO_LARGE', 'Original export exceeds the existing 256 MB retained delivery limit.');
+          if (length > exportLimit(definition.format, kind)) throw fail('SOURCE_EXPORT_TOO_LARGE', 'Original export exceeds its declared complete delivery limit.');
           digest.update(chunk); await handle.writeFile(chunk);
         }
         await handle.sync();
@@ -235,7 +239,7 @@ export class MerchantSourceWorkspaces {
     });
   }
   async #upload(definition, file, route) {
-    const { handle, info } = await fileHandle(file.path, route === '/api/import' ? 2 * MAX_SOURCE : MAX_SOURCE);
+    const { handle, info } = await fileHandle(file.path, route === '/api/import' ? (definition.format === 'iati' ? MAX_IATI_PACKET : 2 * MAX_SOURCE) : MAX_SOURCE);
     let stream;
     try {
       if (file.sha256) {
@@ -259,17 +263,19 @@ export class MerchantSourceWorkspaces {
   async #execute(name, args) {
     if (name === 'merchant_source_workspaces') return this.summary;
     const { workspace, ...input } = args, definition = this.#definition(workspace);
-    for (const field of ['source','plan','build','before','after','comparison','exportId'])
+    for (const field of ['source','plan','build','before','after','comparison','exportId','portfolio'])
       if (input[field] !== undefined) checked(input[field], SHA, field + ' SHA256');
     const result = native => ({ workspace, native });
+    if (name.startsWith('merchant_source_iati_') && definition.format !== 'iati')
+      throw fail('SOURCE_FORMAT_REQUIRED', 'Select an original IATI console for its portfolio operation.');
     switch (name) {
       case 'merchant_source_status': {
         const state = await this.#state(definition);
-        return { workspace, schema: state.schema, counts: Object.fromEntries(['sources','plans','builds','comparisons'].map(key => [key,state[key].length])),
+        return { workspace, schema: state.schema, counts: Object.fromEntries(['sources','plans','builds','comparisons', ...(definition.format === 'iati' ? ['portfolios'] : [])].map(key => [key,state[key].length])),
           ownership: 'EXISTING_SOURCE_CONSOLE', retainedExports: (await this.#exports(workspace)).length, fileReads: this.#reads.status(workspace) };
       }
       case 'merchant_source_inventory': {
-        if (!['sources','plans','builds','comparisons'].includes(input.kind)) throw fail('INVALID_PARAMS', 'Select a saved source inventory kind.');
+        if (!['sources','plans','builds','comparisons', ...(definition.format === 'iati' ? ['portfolios'] : [])].includes(input.kind)) throw fail('INVALID_PARAMS', 'Select a saved source inventory kind.');
         return result({ kind: input.kind, ...paged((await this.#state(definition))[input.kind], input) });
       }
       case 'merchant_source_inspect': return result(await this.#json(definition, '/api/source?id=' + input.source));
@@ -301,7 +307,18 @@ export class MerchantSourceWorkspaces {
           async response => JSON.parse((await responseBytes(response, MAX_JSON)).toString('utf8'))));
       }
       case 'merchant_source_export': {
-        if (!['project','dataset','changes'].includes(input.kind)) throw fail('INVALID_PARAMS', 'Choose a complete project, dataset or changes export.');
+        if (!['project','dataset','changes','portfolio','report'].includes(input.kind))
+          throw fail('INVALID_PARAMS', 'Choose a complete native export kind.');
+        if (['portfolio','report'].includes(input.kind)) {
+          if (definition.format !== 'iati' || !input.portfolio || input.build !== undefined || input.comparison !== undefined)
+            throw fail('INVALID_PARAMS', 'IATI portfolio/report export selects only its original portfolio and optional revision.');
+          const revision = input.revision === undefined ? '' : '&revision=' + integer(input.revision, 1, Number.MAX_SAFE_INTEGER);
+          return this.#retain(workspace, definition,
+            (input.kind === 'portfolio' ? '/api/iati/export' : '/api/iati/report/export') + '?portfolio=' + input.portfolio + revision,
+            input.kind, { portfolio: input.portfolio, ...(input.revision === undefined ? {} : { revision: input.revision }) });
+        }
+        if (input.portfolio !== undefined || input.revision !== undefined)
+          throw fail('INVALID_PARAMS', 'Native build and comparison exports already select immutable editions.');
         if (input.kind === 'changes') {
           if (!input.comparison || input.build !== undefined) throw fail('INVALID_PARAMS', 'Changes export requires only its original comparison.');
           return this.#retain(workspace, definition, '/api/changes/download?id=' + input.comparison, input.kind, { comparison: input.comparison });
@@ -319,7 +336,11 @@ export class MerchantSourceWorkspaces {
         const { directory, metadata } = await this.#exportMetadata(workspace, input.exportId);
         return { workspace, exportId: input.exportId, ...await this.#reads.read({ scope: workspace, key: input.exportId,
           kind: 'source-' + metadata.kind, directory, readId: input.readId, expectedSha256: input.exportId, offset: input.offset, limit: input.limit,
-          load: async () => ({ bytes: await bytes(join(directory, input.exportId + '.data'), MAX_EXPORT, true), name: metadata.name, type: metadata.contentType }) }) };
+          load: async () => {
+            const { handle: readonlyFileHandle, info } = await fileHandle(join(directory, input.exportId + '.data'), exportLimit(metadata.format, metadata.kind), true);
+            if (info.size !== metadata.bytes) { await readonlyFileHandle.close(); throw fail('SOURCE_EXPORT_CHANGED', 'Retained export byte count changed.'); }
+            return { readonlyFileHandle, bytes: metadata.bytes, sha256: metadata.sha256, name: metadata.name, type: metadata.contentType };
+          } }) };
       }
       case 'merchant_source_file_release':
         await this.#reads.release(workspace, checked(input.readId, UUID, 'original file read'));
@@ -334,12 +355,30 @@ export class MerchantSourceWorkspaces {
         } else {
           const owner = input.fromWorkspace ?? workspace; this.#definition(owner);
           const { directory, metadata } = await this.#exportMetadata(owner, input.exportId);
-          if (metadata.kind !== 'project' || metadata.format !== definition.format)
-            throw fail('INVALID_PARAMS', 'Import a complete project packet matching the original receiving format.');
+          if (!['project','portfolio'].includes(metadata.kind) || metadata.format !== definition.format)
+            throw fail('INVALID_PARAMS', 'Import a complete project or IATI portfolio packet matching the original receiving format.');
           file = { path: join(directory, input.exportId + '.data'), sha256: input.exportId };
         }
         return result(await this.#upload(definition, file, '/api/import'));
       }
+      case 'merchant_source_iati_presets': return result(await this.#json(definition, '/api/iati/presets'));
+      case 'merchant_source_iati_profile': return result(await this.#json(definition, '/api/iati/profile?source=' + input.source));
+      case 'merchant_source_iati_portfolios':
+        return result(paged((await this.#json(definition, '/api/iati/portfolios')).portfolios, input));
+      case 'merchant_source_iati_history':
+        return result(paged((await this.#json(definition, '/api/iati/history?portfolio=' + input.portfolio)).history, input));
+      case 'merchant_source_iati_portfolio':
+      case 'merchant_source_iati_report': {
+        const revision = input.revision === undefined ? '' : '&revision=' + integer(input.revision, 1, Number.MAX_SAFE_INTEGER);
+        return result(await this.#json(definition,
+          (name === 'merchant_source_iati_portfolio' ? '/api/iati/portfolio?id=' : '/api/iati/report?portfolio=') +
+          input.portfolio + revision));
+      }
+      case 'merchant_source_iati_portfolio_save':
+      case 'merchant_source_iati_compare':
+        if (!plain(input.definition)) throw fail('INVALID_PARAMS', 'Supply the complete original IATI request definition.');
+        return result(await this.#json(definition,
+          name === 'merchant_source_iati_portfolio_save' ? '/api/iati/portfolio' : '/api/iati/compare', input.definition));
       default: throw fail('TOOL_NOT_FOUND', 'Unknown original source-workspace operation.');
     }
   }

@@ -24,6 +24,23 @@ const absolute = value => {
     fail('BLOCKSCOUT_ABSOLUTE_OUTPUT_REQUIRED');
   return value;
 };
+// The first connection release rendered this placeholder for an implicit PRO
+// source. It remains a read-compatibility representation of already exported
+// reviews; new reviews use null until an operator supplies an actual review time.
+function connectionChanges(source, plan, historicalLegacyTime = false) {
+  const beforeConnection = connectionSummary(source);
+  if (historicalLegacyTime && source.connection === undefined)
+    beforeConnection.reviewedAt = '2026-10-11T00:00:00.000Z';
+  const rows = [];
+  for (const [name, before, after] of [
+    ['Provider connection', beforeConnection, connectionSummary(plan)],
+    ['Provider account', source.accountAlias, plan.accountAlias],
+    ['Credential environment', source.apiKeyEnv, plan.apiKeyEnv],
+    ['Selected data chains and prices', source.chains, plan.chains],
+    ['Local usage and retention limits', source.limits, plan.limits]
+  ]) if (!same(before, after)) rows.push({ name, before, after });
+  return rows;
+}
 export function reviewConnection(inputPlan, changes, expectedPlanSha256) {
   const source = validatePlan(inputPlan), sourcePlanSha256 = planSha(source);
   if (!digest(expectedPlanSha256) || sourcePlanSha256 !== expectedPlanSha256)
@@ -43,14 +60,7 @@ export function reviewConnection(inputPlan, changes, expectedPlanSha256) {
     fail('BLOCKSCOUT_NEW_CONNECTION_ACCOUNT_REQUIRED', 409);
   const selected = { schema: REVIEW_SCHEMA, sourcePlanSha256, plan };
   const reviewSha256 = hash(JSON.stringify(selected));
-  const rows = [];
-  for (const [name, before, after] of [
-    ['Provider connection', connectionSummary(source), connectionSummary(plan)],
-    ['Provider account', source.accountAlias, plan.accountAlias],
-    ['Credential environment', source.apiKeyEnv, plan.apiKeyEnv],
-    ['Selected data chains and prices', source.chains, plan.chains],
-    ['Local usage and retention limits', source.limits, plan.limits]
-  ]) if (!same(before, after)) rows.push({ name, before, after });
+  const rows = connectionChanges(source, plan);
   return { ...selected, sourcePlan: source, reviewSha256, planSha256: prepared.planSha256,
     connection: connectionSummary(plan), changes: rows,
     requiresNewMerchantState: newAccount || source.accountAlias !== plan.accountAlias,
@@ -69,9 +79,12 @@ function checkReview(value) {
   const reconstructed = reviewConnection(source, { connection: prepared.plan.connection,
     accountAlias: prepared.plan.accountAlias, apiKeyEnv: prepared.plan.apiKeyEnv,
     limits: prepared.plan.limits }, value.sourcePlanSha256);
-  for (const key of ['reviewSha256', 'planSha256', 'connection', 'changes', 'requiresNewMerchantState', 'routes'])
+  for (const key of ['reviewSha256', 'planSha256', 'connection', 'requiresNewMerchantState', 'routes'])
     if (!same(value[key], reconstructed[key])) fail('BLOCKSCOUT_CONNECTION_REVIEW_CHANGED', 409);
-  return prepared;
+  if (!same(value.changes, reconstructed.changes) &&
+      (source.connection !== undefined || !same(value.changes, connectionChanges(source, prepared.plan, true))))
+    fail('BLOCKSCOUT_CONNECTION_REVIEW_CHANGED', 409);
+  return { ...prepared, review: reconstructed };
 }
 async function privateRead(path, maximum = 2097152) {
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -166,7 +179,7 @@ export function inspectConnectionBundle(value) {
   if (!same(plan, prepared.plan)) fail('BLOCKSCOUT_CONNECTION_BUNDLE_PLAN_CHANGED', 409);
   return { reviewSha256: value.review.reviewSha256, sourcePlanSha256: value.review.sourcePlanSha256,
     planSha256: prepared.planSha256, connection: connectionSummary(prepared.plan),
-    plan: prepared.plan, files: PACKAGE_FILES.length, bytes: total };
+    plan: prepared.plan, review: prepared.review, files: PACKAGE_FILES.length, bytes: total };
 }
 /** Publish a fresh package atomically; reopen the same completed operation after a lost return. */
 export async function prepareConnectionPackage(review, directory) {

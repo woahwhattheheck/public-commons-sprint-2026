@@ -55,6 +55,10 @@ def build(config, work, state, statefile, environment):
     if existing:
         need(existing["scriptSha256"] == scriptsha, "Continue this operation with its original module scripts")
         need(len(existing["videos"]) == 13, "The retained media contains all13 presentations")
+        settings = existing.get("renderSettings", {})
+        need(settings.get("sourcesSha256") == sha(source / "sources.json"), "Retain the original presentation source catalogue")
+        need(settings.get("voice") == (config.get("voice") if existing.get("speechExecutable") else None),
+             "Continue this render with its original selected narration voice")
         need(requestedmode != "require" or all(v["mode"] == "narrated-captioned" for v in existing["videos"]),
              "Use the original narrated media for a narrated receiving operation")
         need(all(exact(media / item["path"], item) for item in existing["files"]), "The original rendered media files are complete")
@@ -138,6 +142,10 @@ def main(config, build_only):
     need(state["operationId"] == OPERATION, "Resume the same original native course operation")
     environment = dict(os.environ)
     environment.update({str(k): str(v) for k, v in config.get("environment", {}).items()})
+    # Media PCM, FFmpeg scratch and Playwright profiles belong to this selected
+    # operation's storage allocation, including when the shared /tmp is full.
+    temporary = work / "temporary"; temporary.mkdir(parents=True, exist_ok=True)
+    environment.update({name: str(temporary) for name in ("TMPDIR", "TMP", "TEMP")})
     state["buildOnly"] = build_only
     try:
         compiled, package = build(config, work, state, statefile, environment)

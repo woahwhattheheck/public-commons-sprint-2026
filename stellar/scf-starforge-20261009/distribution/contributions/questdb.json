@@ -1,0 +1,37 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "questdb",
+  "description": "QuestDB native time-series reports, retained captures and versioned data products",
+  "commands": {
+    "questdb": "stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/cli.mjs",
+    "questdb-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/publisher/cli.mjs",
+    "questdb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/workspace/server.mjs",
+    "questdb-workbench": "stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/workspace/cli.mjs",
+    "questdb-mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/workspace/mcp.mjs"
+  },
+  "commandDescriptions": {
+    "questdb": "Discover, query, capture and reopen native QuestDB time-series editions",
+    "questdb-publisher": "Extract, review, publish and refresh original QuestDB dataset products",
+    "questdb-workspace": "Open the complete QuestDB source, report, capture and merchant browser",
+    "questdb-workbench": "Operate the original browser workbench and receive complete customer editions",
+    "questdb-mcp": "Expose the original QuestDB workbench through 22 MCP tools and complete file receiving"
+  },
+  "exports": {
+    "./seller/questdb": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/source.mjs",
+    "./seller/questdb/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/config.mjs",
+    "./seller/questdb/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/report.mjs",
+    "./seller/questdb/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/declaration.mjs",
+    "./seller/questdb/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/publisher/model.mjs",
+    "./seller/questdb/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/workspace/server.mjs",
+    "./seller/questdb/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/workspace/model.mjs",
+    "./seller/questdb/workspace/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/workspace/client.mjs",
+    "./seller/questdb/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/workspace/mcp.mjs"
+  },
+  "applicationProviders": {
+    "questdb": "stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/application-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-paid-agent/stdio.mjs",
+    "stellar-forge/mcp-paid-agent/http-tools.mjs"
+  ]
+}

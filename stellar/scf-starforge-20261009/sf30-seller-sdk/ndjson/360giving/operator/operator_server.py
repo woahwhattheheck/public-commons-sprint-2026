@@ -15,6 +15,7 @@ class OperatorServer(NativeServer):
         self.jobs_lock = threading.RLock()
         self.accepting = True
         self.active = {}
+        self.launch_record = None
         self.jobs = ThreadPoolExecutor(max_workers=1, thread_name_prefix="publisher")
         super().__init__(workspace, port, assets_directory=HERE / "public", handler_class=Handler)
 
@@ -103,7 +104,11 @@ class Handler(NativeHandler):
             return
         self._gate()
         q, ws = self._query(target), self.server.workspace
-        if target.path == "/api/state":
+        if target.path == "/api/launch":
+            if self.server.launch_record is None:
+                raise InputError("Open this workspace through its original console command")
+            self._json(self.server.launch_record)
+        elif target.path == "/api/state":
             self._json(ws.state())
         elif target.path == "/api/request":
             self._json(ws.request(q["id"]))

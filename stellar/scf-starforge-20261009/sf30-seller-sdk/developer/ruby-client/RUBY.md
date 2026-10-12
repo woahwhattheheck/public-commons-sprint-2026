@@ -6,6 +6,8 @@ The package also includes a durable receiving service for Rails jobs. A stable b
 
 For complete paginated datasets, use [Dataset receiving and Rails editions](DATASETS.md). That workflow retains the original native acquisition, receives every SF100 data file, previews all mapped row changes and commits the selected edition with its application receipt. The complete migration, models, job and commissioning command are delivered in [examples/rails_dataset](examples/rails_dataset/README.md).
 
+For a completed SF100 room already retained by its source owner, [direct native receiving](NATIVE_DATASETS.md) provides the original Python/Node scan, exact portable Ruby data packet, and a complete independently movable Rails application delivery. It shares the same row, meaning, receipt and edition APIs and can be exported as a standalone sixteen-file customer package.
+
 ## Create and deliver the customer package
 
 Use the current seller OpenAPI exported by the maintained merchant workspace:
@@ -28,7 +30,7 @@ An already completed JavaScript customer export can receive its Ruby companions 
 starforge client ruby resume --dir /absolute/existing-customer-export
 ~~~
 
-The exporter preserves the original five JavaScript files and their existing client-export.json. The current edition adds 21 Ruby/application files and writes ruby-client.json after every companion is complete. Each file carries an exact byte count and SHA-256. The Ruby manifest also binds the original client-export.json and seller source hash.
+The exporter preserves the original five JavaScript files and their existing client-export.json. The current edition adds 26 Ruby/application files and writes ruby-client.json after every companion is complete. Each file carries an exact byte count and SHA-256. The Ruby manifest also binds the original client-export.json and seller source hash.
 
 | File | Purpose |
 | --- | --- |
@@ -46,8 +48,11 @@ The exporter preserves the original five JavaScript files and their existing cli
 | rails_dataset.rb | Complete mapping/revision preview and transaction importer |
 | DATASETS.md | Dataset operation, source contract and receiving guide |
 | examples/rails_dataset/ | Migration, models, job, commission command, mapping and application guide |
+| native_dataset.rb and native_dataset_receiving.rb | Complete finalized SF100 receiving, source identity and original page/meaning retention |
+| native_dataset_customer.rb | Receive, resume, inspect, read and transfer the original native packet |
+| NATIVE_DATASETS.md and examples/native_dataset_lifecycle.rb | Full source-to-application receiving and portable database handoff |
 
-Inspection and copy preserve existing complete eight-file Ruby editions. Export to a new destination for the current full Dataset/Rails edition; completed existing packages retain their original manifests. The current exporter includes and verifies every nested Rails example file.
+Inspection and copy preserve existing complete eight-file and twenty-one-file Ruby editions. Export to a new destination for the current full Dataset/Rails edition; completed existing packages retain their original manifests. The current exporter includes and verifies every nested Rails example file.
 
 Use exact-copy delivery when transferring an existing package:
 

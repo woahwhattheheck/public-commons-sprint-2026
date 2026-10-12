@@ -1,0 +1,46 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "lab-edd",
+  "description": "Complete source-bound laboratory EDD review, native receiving files and sealed-file jobs",
+  "commands": {
+    "lab-edd": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/cli.mjs",
+    "lab-edd-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.mjs"
+  },
+  "commandDescriptions": {
+    "lab-edd": "Review complete laboratory EDD source, record field decisions and receive native delivery files",
+    "lab-edd-receive": "Receive the complete original laboratory file job, native outputs and offline operator workflow"
+  },
+  "exports": {
+    "./seller/lab-edd": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application.mjs",
+    "./seller/lab-edd/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/model.mjs",
+    "./seller/lab-edd/profiles": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/profiles.mjs",
+    "./seller/lab-edd/decisions": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/decisions.mjs",
+    "./seller/lab-edd/result": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/result.mjs",
+    "./seller/lab-edd/local": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/local.mjs",
+    "./seller/lab-edd/workbook": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/workbook.mjs",
+    "./seller/lab-edd/profiles/equis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/profiles/equis.mjs",
+    "./seller/lab-edd/profiles/dts8": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/profiles/dts8.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/merchant.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/input.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.dts.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/workbook_bridge.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving-browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook/reader.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/workbook-native-receiving.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/source-receipt.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/model-result.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/observations.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/Equis3.zip",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/Equis4_CSV.zip",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/McCampbell_Complete_EDD_Model_20261012.zip",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving-processes.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving-process.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.complete.example.json"
+  ]
+}
