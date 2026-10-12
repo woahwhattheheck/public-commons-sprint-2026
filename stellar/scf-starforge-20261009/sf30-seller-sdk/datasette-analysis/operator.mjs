@@ -4,7 +4,7 @@ const token = location.hash.slice(1);
 const nativeSchema = 'stellar-forge.datasette-operator.v1';
 const state = {snapshot: null, selected: null, offset: 0, next: null,
   page: null, busy: false, refresh: null, poll: null, currentView: 'editions',
-  shownRequests: new Set(), comparison: null};
+  shownRequests: new Set(), comparison: null, comparisonPage: null};
 const storageKey = 'stellar-forge:datasette-pending:' + location.origin;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function el(tag, text, className) {
@@ -47,6 +47,8 @@ function display(value) {
   if (value === undefined) return '—';
   if (value === '') return '""';
   if (object(value) && typeof value.text === 'string' && value.encoding) return value.text;
+  if (object(value) && typeof value.text === 'string' && value.type)
+    return value.type === 'null' ? 'NULL' : value.type === 'missing' ? 'MISSING' : value.text === '' ? '\"\"' : value.text;
   if (object(value) && value.type && Object.hasOwn(value, 'value')) return display(value.value);
   return object(value) || Array.isArray(value) ? JSON.stringify(value) : String(value);
 }
@@ -286,11 +288,53 @@ function renderComparison(result) {
   const root = $('comparison-result'); root.replaceChildren();
   root.append(el('h3', 'Saved edition comparison'));
   if (object(result.summary)) root.append(definition(result.summary));
-  if (Array.isArray(result.rows)) {
-    const area = el('div', undefined, 'table-scroll'); area.append(table(result.columns, result.rows));
-    root.append(area);
+  const job = result.page?.report?.id || result.native?.id
+    || nativeState().comparisons?.find(item => item.id === result.comparison_id)?.job_id;
+  if (!state.comparisonPage || state.comparisonPage.id !== result.comparison_id)
+    state.comparisonPage = {id: result.comparison_id, page: result.page || {rows: result.rows || []},
+      history: [], kind: 'all'};
+  const selected = state.comparisonPage, page = selected.page;
+  const controls = el('div', undefined, 'pagination'), filter = el('select');
+  filter.setAttribute('aria-label', 'Change kind');
+  for (const kind of ['all', 'added', 'removed', 'changed', 'moved']) {
+    const option = el('option', formatKey(kind)); option.value = kind; filter.append(option);
   }
-  root.append(jsonDetails('Complete comparison result', result));
+  filter.value = selected.kind;
+  async function readPage(after, kind, previous) {
+    if (!/^[a-f0-9]{32}$/.test(job || '')) throw new Error('Open the retained comparison in the Analysis workspace.');
+    const query = new URLSearchParams({after: String(after), kind});
+    const next = await api('/api/changes/' + job + '?' + query);
+    if (state.comparisonPage !== selected) return;
+    selected.page = next; selected.kind = kind; selected.history = previous;
+    renderComparison(result);
+  }
+  filter.addEventListener('change', () => readPage(0, filter.value, []).catch(error => notice(error.message, true)));
+  const before = el('button', 'Previous'), after = el('button', 'Next');
+  before.type = after.type = 'button'; before.disabled = selected.history.length === 0;
+  after.disabled = page.next_after === null || page.next_after === undefined;
+  before.addEventListener('click', () => {
+    const previous = selected.history.slice(), cursor = previous.pop();
+    readPage(cursor, selected.kind, previous).catch(error => notice(error.message, true));
+  });
+  after.addEventListener('click', () => readPage(page.next_after, selected.kind,
+    [...selected.history, page.after || 0]).catch(error => notice(error.message, true)));
+  controls.append(filter, before, el('span', (page.rows?.length || 0) + ' changes on this page', 'meta'), after);
+  root.append(controls);
+  const columns = page.report?.columns || result.native?.columns || result.columns || [];
+  for (const change of page.rows || []) {
+    const detail = el('details', undefined, 'detail-block');
+    detail.append(el('summary', formatKey(change.kind) + ' · '
+      + (change.key || []).map(display).join(' / ') + ' · source rows '
+      + display(change.before_row_number) + ' → ' + display(change.after_row_number)));
+    const cells = columns.map((column, index) => ({column,
+      before: change.before === null ? {type: 'missing', text: ''} : change.before?.[index],
+      after: change.after === null ? {type: 'missing', text: ''} : change.after?.[index],
+      changed: (change.changed_columns || []).includes(column) ? 'Changed' : ''}));
+    const area = el('div', undefined, 'table-scroll');
+    area.append(table(['column', 'before', 'after', 'changed'], cells)); detail.append(area); root.append(detail);
+  }
+  if (!page.rows?.length) root.append(el('p', 'No changes in this selection.', 'empty'));
+  root.append(jsonDetails('Retained comparison and current page', {comparison: result.native || result, page}));
 }
 function renderRequests() {
   const requests = state.snapshot?.requests || [];

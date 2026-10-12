@@ -187,7 +187,12 @@ class DatasetteAnalysis:
                + " ORDER BY " + _identifier(order))
         if limit is not None:
             sql += " LIMIT " + str(limit) + " OFFSET " + str(offset)
-        result = self.analysis.database.query(sql, max_rows=max(1, (limit or version["row_count"]) + 1))
+        if limit is None:
+            with self.analysis.database.stream_query(sql) as result:
+                rows = [dict(zip(result.columns, row)) for row in result]
+            require(len(rows) == version["row_count"], "DATASETTE_ANALYSIS_ROWS_INCOMPLETE")
+            return columns, rows
+        result = self.analysis.database.query(sql, max_rows=max(1, limit + 1))
         require(not result.truncated, "DATASETTE_ANALYSIS_ROWS_INCOMPLETE")
         return columns, [dict(zip(result.columns, row)) for row in result.rows]
 
