@@ -4,6 +4,10 @@ A complete local operator for acquiring FEMA Public Assistance records, building
 
 The application keeps original source responses, immutable source editions, successive portfolio versions, analyst decisions, native dataset packages, seller releases and received customer files in one private directory. It runs on the maintained Stellar Forge dataset, publisher and buyer engines. The interface uses a compact grayscale layout with seven work areas: Sources, Portfolios, Review, Changes, Publication, Customers and Handover.
 
+## Commission a customer installation
+
+Use [COMMISSIONING.md](COMMISSIONING.md) to carry an actual analyst question through source receiving, review, native payment, complete output, recurring use and independent technical handover. The guide includes the complete retained DR 4724 example, a [native portfolio criteria file](examples/commissioning-dr4724.json) and a [customer workorder](examples/commissioning-workorder.md). It distinguishes the working portfolio, published table and private installation handover, and maps a selected installation into the existing SCF milestones.
+
 ## Start the operator
 
 Use the installed Stellar Forge distribution with Node 24 and its normal runtime dependencies:
