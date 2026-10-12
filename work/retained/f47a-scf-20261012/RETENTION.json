@@ -133,6 +133,19 @@
     "Fetch the published original parent 9c2a32c35b5471b2c249512cf9629c263bc743af if it is not present in the clone.",
     "Run git bundle verify work/retained/f47a-scf-20261012/original-local-commit.bundle.",
     "Run git fetch work/retained/f47a-scf-20261012/original-local-commit.bundle HEAD:refs/heads/restored-f47a-original-commit to recover the exact original local commit.",
-    "The retained branch includes all former untracked files as ordinary tracked source."
+    "The retained branch includes all former untracked files as ordinary tracked source.",
+    "The earlier local accountant commit is retained in original-accountant-premerge.bundle; fetch its stated published parent and import the named original ref with git fetch."
+  ],
+  "earlierUnpublishedCommits": [
+    {
+      "file": "original-accountant-premerge.bundle",
+      "originalCommit": "520d14423f76db3e3b265b6336f5b03a00c59aba",
+      "originalParent": "f66ce689efe9f39e78cacc25ed4835e6b68a7de8",
+      "originalRef": "refs/retained/f47a-original-accountant-premerge",
+      "bytes": 35503,
+      "sha256": "adce3e1af9c64a103887899a135131f3a9f18c64ccccff16b50f11640cfeab44",
+      "gitBlob": "922a4f57470b7d6b9b1d899a0b8a102d1f74040a",
+      "verification": "The bundle contains this ref:\n520d14423f76db3e3b265b6336f5b03a00c59aba refs/retained/f47a-original-accountant-premerge\nThe bundle requires this ref:\nf66ce689efe9f39e78cacc25ed4835e6b68a7de8 \nThe bundle uses this hash algorithm: sha1\n/dev/shm/f47a-scf-retirement/original-accountant-premerge.bundle is okay\n"
+    }
   ]
 }
