@@ -1,10 +1,10 @@
 // MIT. Reviewed native Huwise Automation ingestion inside the original workbench lock.
 import { join, resolve, dirname } from 'node:path';
-import { lstat, readdir } from 'node:fs/promises';
+import { lstat, readdir, rename, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { object, bytes, digest, identity, fault, stamp, privateDirectory, readPrivate, readJson, createFile, atomicJson } from '../../postgres/publisher/files.mjs';
-import { catalogOrigin, captureSelection, captureOpendatasoftDataset, readOpendatasoftCapture, ExactOpendatasoftNumber } from '../capture.mjs';
-import { createOpendatasoftAutomationClient, validateOpendatasoftAutomationBody } from './client.mjs';
+import { object, bytes, digest, fault, stamp, privateDirectory, readPrivate, createFile, atomicJson, syncDirectory } from '../../postgres/publisher/files.mjs';
+import { catalogOrigin, captureSelection, captureOpendatasoftDataset, readOpendatasoftCapture, parseOpendatasoftJson, ExactOpendatasoftNumber } from '../capture.mjs';
+import { createOpendatasoftAutomationClient, validateOpendatasoftAutomationBody, classifyOpendatasoftAutomationStatus } from './client.mjs';
 import { AUTOMATION_SOURCE, AUTOMATION_SCHEMAS } from './contract.mjs';
 
 export const AUTOMATION_CONNECTION_SCHEMA = 'stellar-forge.opendatasoft-automation-connection.v1';
@@ -33,14 +33,56 @@ function exact(value, allowed, required = []) {
     throw fail('INPUT_INVALID','Use the documented tenant plan fields.');
   return value;
 }
-const clone = value => structuredClone(value);
+const clone = value => parseOpendatasoftJson(bytes(value));
+const readJson = async (path,maximum) => parseOpendatasoftJson(await readPrivate(path,maximum));
+function exactDecimal(token) {
+  const match = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(token);
+  if (!match) throw fail('NUMBER_INVALID','Retain complete native JSON numeric tokens.');
+  let digits = (match[2] + (match[3] ?? '')).replace(/^0+/,'');
+  if (!digits) return '0';
+  let exponent = BigInt(match[4] ?? '0') - BigInt((match[3] ?? '').length);
+  const trailing = /0+$/.exec(digits)?.[0].length ?? 0;
+  if (trailing) { digits = digits.slice(0,-trailing); exponent += BigInt(trailing); }
+  return match[1] + digits + 'e' + exponent.toString();
+}
+function nativeCanonical(value) {
+  if (value instanceof ExactOpendatasoftNumber) return ['number',exactDecimal(value.source)];
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw fail('NUMBER_INVALID','Use finite native JSON numbers.');
+    return ['number',exactDecimal(String(value))];
+  }
+  if (value === null) return ['null'];
+  if (Array.isArray(value)) return ['array',value.map(nativeCanonical)];
+  if (object(value)) return ['object',Object.keys(value).sort().map(key => [key,nativeCanonical(value[key])])];
+  return [typeof value,value];
+}
+const identity = value => digest(Buffer.from(JSON.stringify(nativeCanonical(value))));
+async function retainBytes(path,content) {
+  const raw = Buffer.isBuffer(content) ? content:Buffer.from(content);
+  if (await exists(path)) {
+    const prior = await readPrivate(path,raw.length);
+    if (prior.length !== raw.length || digest(prior) !== digest(raw)) throw fail('JOURNAL_CHANGED','The original retained native bytes differ.');
+    return;
+  }
+  const pending = path + '.pending-' + randomUUID();
+  try {
+    await createFile(pending,raw);
+    await rename(pending,path);
+    await syncDirectory(dirname(path));
+  } catch (error) {
+    if (await exists(pending)) await unlink(pending).catch(() => {});
+    throw error;
+  }
+}
 const exists = async path => { try { await lstat(path); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; } };
 const entityId = (kind, value) => kind === 'users' ? value?.user?.username : kind === 'groups' ? value?.group?.uid : value?.uid;
 
 /** Keep complete writable native schemas, including custom metadata and processor parameters. */
 export function automationWritable(value, schemaName) {
   function visit(item, schema = {}) {
+    if (item instanceof ExactOpendatasoftNumber) return item;
     if (schema.$ref) schema = { ...AUTOMATION_SCHEMAS[schema.$ref.split('/').at(-1)], ...schema, $ref:undefined };
+    if (object(item) && typeof item.uid === 'string' && schema.oneOf?.some(choice => choice.type === 'object' && choice.required?.includes('uid') && choice.properties?.uid)) return { uid:item.uid };
     if (Array.isArray(item)) return item.map(child => visit(child,schema.items ?? {}));
     if (!object(item)) return item;
     let properties = { ...(schema.properties ?? {}) };
@@ -67,25 +109,28 @@ function datasetBody(value) {
   return automationWritable(Object.fromEntries(Object.entries(value).filter(([key]) =>
     ['dataset_id','is_restricted','metadata','default_security'].includes(key))),'Dataset');
 }
-function sourceValue(value) {
-  if (value instanceof ExactOpendatasoftNumber) return { exactNumber:value.source };
-  if (Array.isArray(value)) return value.map(sourceValue);
-  if (object(value)) return Object.fromEntries(Object.keys(value).sort().map(key => [key,sourceValue(value[key])]));
-  return value;
-}
+const sourceValue = value => value;
+
 function expectedBodyMatches(actual, wanted, schema) {
-  const a = automationWritable(actual,schema);
+  const a = automationWritable(actual,schema), expected = clone(wanted);
+  // These native flags make modified a provider-derived timestamp. The flags
+  // themselves and every other explicitly reviewed value must still match.
+  const defaults = schema === 'Dataset' ? expected?.metadata?.default : schema === 'DatasetMetadata' ? expected?.default : null;
+  if (defaults && (defaults.modified_updates_on_data_change?.value === true || defaults.modified_updates_on_metadata_change?.value === true))
+    delete defaults.modified;
   function contains(current, desired) {
+    if (desired instanceof ExactOpendatasoftNumber || typeof desired === 'number')
+      return (current instanceof ExactOpendatasoftNumber || typeof current === 'number') && identity(current) === identity(desired);
     if (Array.isArray(desired)) return Array.isArray(current) && desired.length === current.length && desired.every((item,index) => contains(current[index],item));
     if (object(desired)) return object(current) && Object.entries(desired).every(([key,value]) => Object.hasOwn(current,key) && contains(current[key],value));
     return Object.is(current,desired);
   }
-  return contains(a,wanted);
+  return contains(a,expected);
 }
 function configuration(snapshot) {
   if (snapshot.absent) return { absent:true, datasetId:snapshot.datasetId };
   return {
-    dataset:datasetBody(snapshot.dataset),
+    dataset:{ ...datasetBody(snapshot.dataset),...(object(snapshot.metadata) ? { metadata:automationWritable(snapshot.metadata,'DatasetMetadata') }: {}) },
     resources:snapshot.resources.map(value => ({ uid:value.uid, ...automationWritable(value,'Resource') })),
     ...Object.fromEntries(Object.entries(TYPES).map(([kind,type]) => [kind,snapshot[kind].map(value => ({ id:entityId(kind,value), ...automationWritable(value,type.schema) }))])),
     attachments:snapshot.attachments,
@@ -156,22 +201,24 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     const { label:_label,...target } = await binding(plan);
     return createOpendatasoftAutomationClient({ ...target,env:environment });
   }
-  async function retainCall(plan, operationId, input, { signal, step, follow } = {}) {
+  async function retainCall(plan, operationId, input, { signal, step, follow, downloadExpected } = {}) {
     const client = await clientFor(plan), callId = randomUUID(), dir = join(location(plan.id),'journal',callId);
     await privateDirectory(dir,true);
     let requestSaved = false, responseSaved = false;
+    if (downloadExpected) input = { ...input,download:{ destination:join(dir,'response.bin'),...downloadExpected } };
     const options = {
       signal,
       async onRequest(request) {
-        await createFile(join(dir,'request.json'),bytes(request)); requestSaved = true;
+        await retainBytes(join(dir,'request.json'),bytes(request)); requestSaved = true;
         if (step) {
           step.callId = callId; step.state = 'DISPATCH_PENDING'; step.operationId = operationId; step.request = request;
           await save(plan);
         }
       },
       async onResponse(response) {
-        await createFile(join(dir,'response.bin'),response.raw);
-        await createFile(join(dir,'receipt.json'),bytes(response.receipt));
+        if (response.raw !== null) await retainBytes(join(dir,'response.bin'),response.raw);
+        else if (!response.file || response.file.path !== join(dir,'response.bin')) throw fail('JOURNAL_INCOMPLETE','The native file response is not in its original journal.');
+        await retainBytes(join(dir,'receipt.json'),bytes(response.receipt));
         responseSaved = true;
         if (step) {
           step.receipt = response.receipt;
@@ -187,14 +234,14 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       return { ...response, callId };
     } catch (error) {
       if (!responseSaved && error.response?.raw && error.response.receipt) {
-        await createFile(join(dir,'response.bin'),error.response.raw);
-        await createFile(join(dir,'receipt.json'),bytes(error.response.receipt));
+        await retainBytes(join(dir,'response.bin'),error.response.raw);
+        await retainBytes(join(dir,'receipt.json'),bytes(error.response.receipt));
         responseSaved = true;
       }
-      await createFile(join(dir,'error.json'),bytes({ code:error.code ?? 'NATIVE_CALL_FAILED',outcome:error.outcome ?? 'UNKNOWN',
+      await retainBytes(join(dir,'error.json'),bytes({ code:error.code ?? 'NATIVE_CALL_FAILED',outcome:error.outcome ?? 'UNKNOWN',
         message:error.code ? error.message : 'The native call did not return completely.',request:error.request ?? null,receipt:error.receipt ?? null,at:stamp() }));
       if (step) {
-        step.state = error.outcome === 'REJECTED' ? 'REJECTED' : requestSaved ? 'UNCERTAIN' : 'NOT_DISPATCHED';
+        step.state = error.outcome === 'NOT_SENT' ? 'NOT_DISPATCHED' : error.outcome === 'REJECTED' ? 'REJECTED' : requestSaved ? 'UNCERTAIN' : 'NOT_DISPATCHED';
         step.error = { code:error.code ?? 'NATIVE_CALL_FAILED',message:error.code ? error.message : 'Read the retained native result.' };
         plan.state = step.state === 'UNCERTAIN' ? 'RECOVERY_REQUIRED' : 'FAILED'; plan.error = step.error; await save(plan);
       }
@@ -202,19 +249,26 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     } finally { await client.close(); }
   }
   async function list(plan, operationId, params = {}, query = {}, signal) {
-    const all = [], seen = new Set(); let next = null, pages = 0;
+    const all = [], seen = new Set(), totals = []; let next = null, pages = 0;
     do {
       const received = await retainCall(plan,operationId,{ params,query },{ signal,follow:next });
       const value = received.value, rows = Array.isArray(value) ? value : value?.results;
       if (!Array.isArray(rows)) throw fail('PAGE_INVALID','The native collection response did not contain its documented complete results.');
       all.push(...rows); pages++;
+      if (value?.total_count !== null && value?.total_count !== undefined) {
+        const token = value.total_count instanceof ExactOpendatasoftNumber ? value.total_count.source:String(value.total_count);
+        if (!/^\d+$/.test(token)) throw fail('PAGE_INVALID','The native total_count is not a nonnegative integer.');
+        const total = BigInt(token);
+        if (total > BigInt(Number.MAX_SAFE_INTEGER)) throw fail('COLLECTION_LIMIT','The native collection count exceeds this host integer capacity.');
+        totals.push(Number(total));
+      }
       const candidate = Array.isArray(value) ? null : value.next ?? value.links?.find?.(item => item.rel === 'next')?.href ?? null;
       if (candidate && typeof candidate !== 'string') throw fail('PAGE_INVALID','The native next-page link is not a URL.');
       if (candidate && seen.has(candidate)) throw fail('PAGE_LOOP','The provider repeated a collection page.');
       if (candidate) seen.add(candidate);
       next = candidate;
-      if (!next && Number.isSafeInteger(value?.count) && value.count !== all.length)
-        throw fail('PAGE_INCOMPLETE','The provider collection ended before its declared count.');
+      if (!next && totals.some(total => total !== all.length))
+        throw fail('PAGE_INCOMPLETE','The complete native collection differs from its observed total_count values.');
       if (all.length > 100000 || pages > 10000) throw fail('COLLECTION_LIMIT','The native configuration exceeds this workbench collection capacity.');
     } while (next);
     return all;
@@ -251,27 +305,43 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
   async function readSnapshot(plan, descriptor) {
     const raw = await readPrivate(join(location(plan.id),descriptor.file),16777216);
     if (digest(raw) !== descriptor.sha256) throw fail('SNAPSHOT_CHANGED','The retained tenant configuration has changed.');
-    return JSON.parse(raw.toString('utf8'));
+    return parseOpendatasoftJson(raw);
+  }
+  async function retainedSource(plan,spec) {
+    const capture = await readOpendatasoftCapture(join(location(plan.id),'source','capture.json'),plan.source.captureSha256);
+    if (capture.manifestSha256 !== plan.source.captureSha256)
+      throw fail('SOURCE_CHANGED','The retained source capture differs from the reviewed edition.');
+    const upload = capture.rawFiles.get('records.json');
+    if (!upload || upload.length !== spec.source.bytes || digest(upload) !== spec.source.sha256)
+      throw fail('UPLOAD_CHANGED','The complete retained upload no longer matches the reviewed source.');
+    const notesRaw = await readPrivate(join(location(plan.id),'source','edition-notes.json'),4194304);
+    const notes = parseOpendatasoftJson(notesRaw);
+    if (digest(notesRaw) !== spec.source.notesSha256 || (notes.revision ?? 0) !== plan.source.notesRevision)
+      throw fail('SOURCE_CHANGED','The retained source notes differ from the reviewed edition.');
+    return capture;
   }
   async function originalSource(plan, spec) {
     const current = selectedEdition(plan.source.editionId), capture = await selectedCapture(plan.source.editionId);
     if (capture.manifestSha256 !== plan.source.captureSha256 || (current.notes?.revision ?? 0) !== plan.source.notesRevision)
       throw fail('SOURCE_CHANGED','Review a new plan for the changed source edition or notes.');
-    const upload = await readPrivate(join(location(plan.id),'source','records.json'),spec.source.bytes);
-    if (upload.length !== spec.source.bytes || digest(upload) !== spec.source.sha256)
-      throw fail('UPLOAD_CHANGED','The complete retained upload no longer matches the reviewed source.');
-    return capture;
+    return retainedSource(plan,spec);
   }
   function workflow(plan, spec, before) {
     const steps = [];
-    const dataset = before.absent ? spec.dataset : {
-      ...datasetBody(before.dataset), ...spec.dataset,
-      metadata:{ ...datasetBody(before.dataset).metadata,...spec.dataset.metadata,
-        default:{ ...datasetBody(before.dataset).metadata?.default,...spec.dataset.metadata.default } },
-    };
+    const originalDataset = before.absent ? null:configuration(before).dataset;
+    const metadata = clone(originalDataset?.metadata ?? {});
+    for (const [template,fields] of Object.entries(spec.dataset.metadata))
+      metadata[template] = { ...(metadata[template] ?? {}),...fields };
+    const dataset = { ...(originalDataset ?? {}),...spec.dataset };
+    if (before.absent) dataset.metadata = metadata; else delete dataset.metadata;
     validateOpendatasoftAutomationBody(before.absent ? 'create-dataset':'update-dataset',dataset);
     steps.push({ key:'dataset',operationId:before.absent ? 'create-dataset':'update-dataset',schema:'Dataset',body:dataset,
       expected:before.absent ? null:datasetBody(before.dataset) });
+    if (!before.absent) {
+      validateOpendatasoftAutomationBody('update-all-dataset-metadata',metadata);
+      steps.push({ key:'metadata',operationId:'update-all-dataset-metadata',schema:'DatasetMetadata',body:metadata,
+        expected:automationWritable(before.metadata,'DatasetMetadata') });
+    }
     steps.push({ key:'upload',operationId:'upload-resource-file',upload:true });
     const priorResource = before.absent ? null:before.resources.find(item => item.uid === spec.resource.uid);
     if (spec.resource.uid && !priorResource) throw fail('RESOURCE_MISSING','The selected native resource UID was not present in the retained tenant configuration.');
@@ -308,7 +378,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     const receipt = await readJson(join(dir,'receipt.json'),1048576), raw = await readPrivate(join(dir,'response.bin'),1073741824);
     if (digest(raw) !== receipt.sha256 || raw.length !== receipt.bytes) throw fail('RESPONSE_CHANGED','The retained original native response has changed.');
     if (!receipt.complete || receipt.outcome !== 'ACKNOWLEDGED') return null;
-    return { value:JSON.parse(raw.toString('utf8')),receipt };
+    return { value:parseOpendatasoftJson(raw),receipt };
   }
   async function completeStep(plan, descriptor, step, value, recovery = null) {
     if (descriptor.key === 'dataset') {
@@ -324,7 +394,17 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       if (typeof value?.uid !== 'string') throw fail('RESOURCE_RESPONSE_INVALID','The native resource response did not contain an actual resource UID.');
       plan.resourceUid = value.uid;
     }
-    step.state = 'COMPLETE'; step.completedAt = stamp(); step.actualId = value?.uid ?? null;
+    if (descriptor.schema) {
+      step.appliedConfiguration = automationWritable(value,descriptor.schema);
+      const desired = step.desired ?? descriptor.body;
+      if (!expectedBodyMatches(value,desired,descriptor.schema)) {
+        step.configurationMismatch = { at:stamp(),expectedSha256:identity(desired),actualSha256:identity(step.appliedConfiguration) };
+        step.state = 'ACKNOWLEDGED'; plan.state = 'CONFIGURATION_REVIEW_REQUIRED';
+        plan.error = { code:'ODS_TENANT_NATIVE_CONFIGURATION_DIFFERENT',message:'The native response for ' + descriptor.key + ' differs from the reviewed configuration. Inspect its retained request and complete response.' };
+        await save(plan); throw fail('NATIVE_CONFIGURATION_DIFFERENT',plan.error.message,409);
+      }
+    }
+    step.state = 'COMPLETE'; step.completedAt = stamp(); step.actualId = descriptor.kind ? entityId(descriptor.kind,value) : value?.uid ?? null;
     if (recovery) step.recovery = recovery;
     await save(plan); return value;
   }
@@ -340,7 +420,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     let body = descriptor.body;
     if (descriptor.key === 'resource') body = { ...body,datasource:{ type:'uploaded_file',file:{ uid:plan.fileUid } } };
     if (descriptor.expected) {
-      const operation = descriptor.key === 'dataset' ? 'retrieve-dataset' : descriptor.key === 'resource' ? 'retrieve-dataset-resource' : TYPES[descriptor.kind].get;
+      const operation = descriptor.key === 'dataset' ? 'retrieve-dataset' : descriptor.key === 'metadata' ? 'list-all-dataset-metadata' : descriptor.key === 'resource' ? 'retrieve-dataset-resource' : TYPES[descriptor.kind].get;
       const current = (await retainCall(plan,operation,{ params },{ signal })).value;
       if (identity(automationWritable(current,descriptor.schema)) !== identity(descriptor.expected))
         throw fail('REMOTE_EDITED','The selected native object changed after review. Inspect its current configuration before a new plan.',409);
@@ -366,14 +446,26 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         ? [(await retainCall(plan,'retrieve-dataset',{ params },{ signal })).value]
         : (await list(plan,'list-datasets',{}, { dataset_id:plan.target.datasetId },signal)).filter(value => value.dataset_id === plan.target.datasetId);
       if (matches.length === 1 && expectedBodyMatches(matches[0],descriptor.body,'Dataset')) candidate = matches[0];
+    } else if (descriptor.key === 'metadata') {
+      received = await retainCall(plan,'list-all-dataset-metadata',{ params },{ signal });
+      if (expectedBodyMatches(received.value,descriptor.body,'DatasetMetadata')) candidate = received.value;
     } else if (descriptor.key === 'upload') {
-      const fileUid = input.fileUid ?? plan.fileUid;
+      const fileUid = input.fileUid ?? plan.fileUid ?? spec.source.filename;
       if (fileUid) {
-        received = await retainCall(plan,'retrieve-dataset-resource-file',{ params:{ ...params,file_uid:line(fileUid,'the actual native file UID') } },{ signal });
-        const download = await retainCall(plan,'download-dataset-resource-file',{ params:{ ...params,file_uid:fileUid } },{ signal });
-        if (download.raw.length !== spec.source.bytes || digest(download.raw) !== spec.source.sha256)
-          throw fail('RECOVERY_FILE_DIFFERENT','The actual native file bytes differ from this plan source.');
-        candidate = received.value;
+        try {
+          received = await retainCall(plan,'retrieve-dataset-resource-file',{ params:{ ...params,file_uid:line(fileUid,'the native file UID or reviewed filename') } },{ signal });
+        } catch (error) {
+          if (input.fileUid || plan.fileUid || error.receipt?.status !== 404) throw error;
+        }
+        if (received) {
+          const actualUid = line(received.value?.uid,'the actual returned native file UID');
+          const download = await retainCall(plan,'download-dataset-resource-file',{ params:{ ...params,file_uid:actualUid } },{
+            signal,downloadExpected:{ expectedBytes:spec.source.bytes,expectedSha256:spec.source.sha256 } });
+          if (!download.file?.complete || download.file.bytes !== spec.source.bytes || download.file.sha256 !== spec.source.sha256)
+            throw fail('RECOVERY_FILE_DIFFERENT','The actual native file bytes differ from this plan source.');
+          plan.uploadReadback = { fileUid:actualUid,bytes:download.file.bytes,sha256:download.file.sha256,callId:download.callId,at:stamp() };
+          candidate = received.value;
+        }
       }
     } else if (descriptor.key === 'publish') {
       const current = (await retainCall(plan,'get-dataset-status',{ params },{ signal })).value;
@@ -397,8 +489,79 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     plan.state = 'RECOVERY_REQUIRED';
     step.recovery = { kind:'UNRESOLVED_NATIVE_READBACK',at:stamp() }; await save(plan);
     throw fail('RECOVERY_REQUIRED',descriptor.key === 'upload'
-      ? 'Supply the actual uploaded file UID; recovery will download and match every original source byte.'
+      ? 'The reviewed upload filename did not identify matching native source bytes. Supply its actual uploaded file UID to continue the complete file readback.'
       : 'The native readback has not identified this original operation. Retain the plan and inspect its request and response.',409);
+  }
+  function projectedConfiguration(plan,baseline) {
+    const expected = baseline.absent ? { dataset:null,resources:[],fields:[],processors:[],users:[],groups:[],schedules:[],attachments:[],alternativeExports:[] } : configuration(baseline);
+    for (const descriptor of plan.workflow ?? []) {
+      const step = plan.steps[descriptor.key];
+      if (step?.state !== 'COMPLETE' || !descriptor.schema) continue;
+      const body = automationWritable(step.appliedConfiguration ?? step.desired ?? descriptor.body,descriptor.schema);
+      if (descriptor.key === 'dataset') {
+        const metadata = expected.dataset?.metadata ?? body.metadata;
+        expected.dataset = { ...body,...(metadata ? { metadata }: {}) }; continue;
+      }
+      if (descriptor.key === 'metadata') { expected.dataset.metadata = body; continue; }
+      const kind = descriptor.key === 'resource' ? 'resources':descriptor.kind;
+      const idKey = kind === 'resources' ? 'uid':'id', actualId = step.actualId ?? descriptor.uid;
+      if (typeof actualId !== 'string') throw fail('NATIVE_ID_REQUIRED','Recover the actual native identifier for ' + descriptor.key + '.');
+      const value = { [idKey]:actualId,...body };
+      const index = expected[kind].findIndex(item => item[idKey] === actualId);
+      if (index < 0) expected[kind].push(value); else expected[kind][index] = value;
+    }
+    return expected;
+  }
+  function comparableConfiguration(value,publication) {
+    const result = clone(value);
+    // Collection order changes do not change these native sets. Field and processor
+    // sequences stay ordered because their execution order changes the result.
+    for (const kind of ['resources','users','groups','schedules','attachments','alternativeExports'])
+      result[kind].sort((a,b) => identity(a).localeCompare(identity(b)));
+    const defaults = result.dataset?.metadata?.default;
+    if (publication && defaults && (defaults.modified_updates_on_data_change?.value === true || defaults.modified_updates_on_metadata_change?.value === true))
+      delete defaults.modified;
+    return result;
+  }
+  async function compareConfiguration(plan,current,publication = false) {
+    const baseline = await readSnapshot(plan,plan.createdBaseline ?? plan.inspection);
+    const expected = comparableConfiguration(projectedConfiguration(plan,baseline),publication);
+    const actual = comparableConfiguration(configuration(current),publication);
+    const sections = Object.keys(expected).filter(key => identity(expected[key]) !== identity(actual[key]));
+    return { matched:sections.length === 0,changedSections:sections,at:stamp(),
+      expectedConfigurationSha256:identity(expected),actualConfigurationSha256:identity(actual),
+      automaticModifiedMetadata:publication && expected.dataset?.metadata?.default?.modified === undefined };
+  }
+  async function ensureCreatedBaseline(plan,spec,signal) {
+    if (plan.createdBaseline || plan.steps.dataset?.state !== 'COMPLETE' || plan.workflow[0].operationId !== 'create-dataset') return;
+    const current = await snapshot(plan,signal);
+    if (!expectedBodyMatches(current.dataset,plan.workflow[0].body,'Dataset'))
+      throw fail('CREATED_CONFIGURATION_CHANGED','The newly created dataset differs from its reviewed native configuration.',409);
+    plan.createdBaseline = await writeSnapshot(plan,'created-defaults',current);
+    await save(plan);
+  }
+  async function guardConfiguration(plan,spec,signal,phase,publication = false) {
+    const current = await snapshot(plan,signal), retained = await writeSnapshot(plan,phase,current);
+    const comparison = await compareConfiguration(plan,current,publication);
+    plan.configurationCheck = { ...comparison,snapshot:retained,phase };
+    if (!comparison.matched) {
+      plan.state = 'CONFIGURATION_CHANGED';
+      plan.error = { code:'ODS_TENANT_CONFIGURATION_CHANGED',message:'The current tenant differs from the reviewed configuration in: ' + comparison.changedSections.join(', ') + '.' };
+      await save(plan); throw fail('CONFIGURATION_CHANGED',plan.error.message,409);
+    }
+    await save(plan); return current;
+  }
+  async function verifyUploadedSource(plan,spec,signal) {
+    if (!plan.fileUid) throw fail('UPLOAD_REQUIRED','Recover the actual native source file UID.');
+    if (plan.uploadReadback?.fileUid === plan.fileUid && plan.uploadReadback.sha256 === spec.source.sha256 && plan.uploadReadback.bytes === spec.source.bytes)
+      return;
+    const downloaded = await retainCall(plan,'download-dataset-resource-file',{
+      params:{ dataset_uid:plan.datasetUid,file_uid:plan.fileUid },
+    },{ signal,downloadExpected:{ expectedBytes:spec.source.bytes,expectedSha256:spec.source.sha256 } });
+    if (!downloaded.file?.complete || downloaded.file.bytes !== spec.source.bytes || downloaded.file.sha256 !== spec.source.sha256)
+      throw fail('UPLOAD_DIFFERENT','The native uploaded source differs from the reviewed complete export.');
+    plan.uploadReadback = { fileUid:plan.fileUid,bytes:downloaded.file.bytes,sha256:downloaded.file.sha256,callId:downloaded.callId,at:stamp() };
+    await save(plan);
   }
   function receivingComparison(capture, received, spec) {
     const criteria = spec.acceptance, sourceFields = capture.fields.map(field => field.id), receivedFields = new Set(received.fields.map(field => field.id));
@@ -459,10 +622,14 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     },
     async plan(value) {
       const plan = await read(value), spec = await specFor(plan);
-      return { ...plan,specification:spec,
-        ...(plan.inspection ? { remote:await readSnapshot(plan,plan.inspection) } : {}) };
+      return { ...planSummary(plan),lastExport:plan.lastExport ?? null,
+        workflow:(plan.workflow ?? []).map(({ key,kind,operationId }) => ({ key,...(kind ? { kind }: {}),operationId })),
+        steps:Object.fromEntries(Object.entries(plan.steps).map(([key,step]) => [key,{ state:step.state,operationId:step.operationId,actualId:step.actualId ?? null }])),
+        specificationJson:bytes(spec).toString('utf8'),nativePlanJson:bytes(plan).toString('utf8'),
+        ...(plan.inspection ? { remoteJson:bytes(await readSnapshot(plan,plan.inspection)).toString('utf8') } : {}) };
     },
     async prepare(input) {
+      if (typeof input === 'string' || Buffer.isBuffer(input)) input = parseOpendatasoftJson(typeof input === 'string' ? Buffer.from(input):input);
       exact(input,['editionId','captureSha256','notesRevision','target','dataset','resource','resourceMode','changes','publish','acceptance'],
         ['editionId','captureSha256','notesRevision','target','dataset','resource','publish']);
       const entry = selectedEdition(input.editionId), capture = await selectedCapture(input.editionId);
@@ -477,8 +644,8 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       if (input.dataset.dataset_id && input.dataset.dataset_id !== target.datasetId) throw fail('TARGET_CHANGED','Use the same target dataset ID in the complete configuration.');
       dataset.dataset_id = target.datasetId;
       if (typeof dataset.is_restricted !== 'boolean') throw fail('VISIBILITY_REQUIRED','Choose the dataset visibility in the reviewed native configuration.');
-      for (const name of ['title','modified','language'])
-        if (!Object.hasOwn(dataset.metadata?.default?.[name] ?? {},'value')) throw fail('METADATA_REQUIRED','Supply the native title, modified date and language metadata values.');
+      if (!object(dataset.metadata) || Object.values(dataset.metadata).some(fields => !object(fields)))
+        throw fail('METADATA_REQUIRED','Supply the native metadata dictionary, with each template containing its field values.');
       exact(input.resource,['uid','type','title','params'],['type','title']);
       const resource = clone(input.resource);
       line(resource.type,'the native extractor type'); line(resource.title,'the resource title');
@@ -514,13 +681,14 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       }
       const raw = capture.rawFiles.get('records.json');
       if (!raw) throw fail('SOURCE_INVALID','The source edition is missing its complete original records export.');
+      const planId = randomUUID(), notesBytes = bytes(entry.notes ?? { revision:0,text:'',rowNotes:[] });
       const source = { editionId:input.editionId,captureSha256:input.captureSha256,notesRevision:input.notesRevision,
-        datasetId:capture.manifest.datasetId,rowCount:capture.rows.length,fieldCount:capture.fields.length,
-        filename:target.datasetId.replace(/[^A-Za-z0-9_.-]/g,'_') + '.json',sha256:digest(raw),bytes:raw.length };
+        datasetId:capture.manifest.datasetId,rowCount:capture.rows.length,fieldCount:capture.fields.length,notesSha256:digest(notesBytes),
+        filename:target.datasetId.replace(/[^A-Za-z0-9_.-]/g,'_').slice(0,100) + '-' + planId + '-' + digest(raw).slice(0,16) + '.json',sha256:digest(raw),bytes:raw.length };
       const spec = { schema:TENANT_PLAN_SCHEMA,contract:AUTOMATION_SOURCE,target,source,dataset,resource,
         resourceMode:input.resourceMode ?? 'replace-selected',changes,publish:input.publish,acceptance };
       if (bytes(spec).length > 8388608) throw fail('PLAN_TOO_LARGE','The reviewed configuration exceeds eight MiB.');
-      const plan = { schema:TENANT_PLAN_SCHEMA,id:randomUUID(),createdAt:stamp(),updatedAt:stamp(),state:'PREPARED',
+      const plan = { schema:TENANT_PLAN_SCHEMA,id:planId,createdAt:stamp(),updatedAt:stamp(),state:'PREPARED',
         target,source,planSha256:identity(spec),datasetUid:target.datasetUid ?? null,
         inspection:null,review:null,steps:{},error:null };
       await privateDirectory(root,true); await privateDirectory(location(plan.id),true);
@@ -528,7 +696,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       await createFile(join(location(plan.id),'specification.json'),bytes(spec));
       for (const [filename,content] of capture.rawFiles) await createFile(join(location(plan.id),'source',filename),content);
       await createFile(join(location(plan.id),'source','capture.json'),capture.manifestBytes);
-      await createFile(join(location(plan.id),'source','edition-notes.json'),bytes(entry.notes ?? { revision:0,text:'',rowNotes:[] }));
+      await createFile(join(location(plan.id),'source','edition-notes.json'),notesBytes);
       await save(plan); return planSummary(plan);
     },
     async inspect(value,signal) {
@@ -539,7 +707,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       const before = await snapshot(plan,signal);
       plan.inspection = await writeSnapshot(plan,'before',before);
       plan.workflow = workflow(plan,spec,before); plan.review = null; plan.state = 'INSPECTED'; plan.error = null;
-      await save(plan); return api.plan(value);
+      await save(plan); return planSummary(plan);
     },
     async review(value,input) {
       exact(input,['planSha256','configurationSha256','note'],['planSha256','configurationSha256']);
@@ -556,7 +724,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       exact(input,['reviewId'],['reviewId']);
       const plan = await read(value), spec = await specFor(plan);
       if (input.reviewId !== plan.review?.id || plan.review.planSha256 !== plan.planSha256) throw fail('REVIEW_REQUIRED','Use the saved review for this exact tenant plan.');
-      await originalSource(plan,spec);
+      await retainedSource(plan,spec);
       if (plan.state === 'ACCEPTED' || plan.state === 'CONFIGURED' && !spec.publish) return planSummary(plan);
       if (!Object.values(plan.steps).some(step => step.state !== 'READY' && step.state !== 'NOT_DISPATCHED')) {
         const current = await snapshot(plan,signal);
@@ -564,10 +732,30 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         await writeSnapshot(plan,'dispatch-before',current);
         if (currentHash !== plan.review.configurationSha256) throw fail('REMOTE_EDITED','The tenant changed after review. Inspect the same unstarted plan and review its actual configuration.',409);
       }
+      for (const descriptor of plan.workflow) {
+        const step = plan.steps[descriptor.key];
+        if (!step || step.state === 'COMPLETE') continue;
+        const retained = await storedResponse(plan,step);
+        if (retained) await completeStep(plan,descriptor,step,retained.value,{ kind:'ORIGINAL_RESPONSE',receipt:retained.receipt });
+        else if (['UNCERTAIN','DISPATCH_PENDING','ACKNOWLEDGED'].includes(step.state))
+          throw fail('RECOVERY_REQUIRED','Recover the original native step before continuing its configuration.',409);
+      }
+      await ensureCreatedBaseline(plan,spec,signal);
+      if (Object.values(plan.steps).some(step => step.state === 'COMPLETE'))
+        await guardConfiguration(plan,spec,signal,'resume-configuration',plan.steps.publish?.state === 'COMPLETE');
       plan.state = 'APPLYING'; plan.error = null; await save(plan);
       for (const descriptor of plan.workflow) {
         progress({ phase:descriptor.key,datasetUid:plan.datasetUid ?? null });
+        if (descriptor.key === 'publish' && plan.steps.publish?.state !== 'COMPLETE') {
+          await verifyUploadedSource(plan,spec,signal);
+          await guardConfiguration(plan,spec,signal,'publish-configuration');
+        }
         await runStep(plan,spec,descriptor,signal);
+        if (descriptor.key === 'dataset') await ensureCreatedBaseline(plan,spec,signal);
+      }
+      if (!spec.publish) {
+        await verifyUploadedSource(plan,spec,signal);
+        await guardConfiguration(plan,spec,signal,'configured');
       }
       plan.state = spec.publish ? 'PUBLICATION_REQUESTED':'CONFIGURED';
       if (plan.datasetUid) plan.providerStatus = (await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal })).value;
@@ -578,10 +766,11 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       if (input.stepIds !== undefined && !object(input.stepIds)) throw fail('RECOVERY_INVALID','Use native identifiers keyed by the original step name.');
       const plan = await read(value), spec = await specFor(plan);
       if (!plan.review || !plan.workflow) throw fail('REVIEW_REQUIRED','This plan has not started a reviewed native operation.');
-      await originalSource(plan,spec);
+      await retainedSource(plan,spec);
       for (const descriptor of plan.workflow) {
         progress({ phase:'recover ' + descriptor.key });
         await reconcileStep(plan,spec,descriptor,signal,input);
+        if (descriptor.key === 'dataset') await ensureCreatedBaseline(plan,spec,signal);
       }
       const incomplete = plan.workflow.some(descriptor => plan.steps[descriptor.key]?.state !== 'COMPLETE');
       if (plan.state !== 'RECEIVING_REQUIRED') plan.state = incomplete ? 'REVIEWED':spec.publish ? 'PUBLICATION_REQUESTED':'CONFIGURED';
@@ -595,35 +784,51 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     },
     async receive(value,input = {},signal,progress = () => {}) {
       exact(input,['maxRows','maxBytes']);
-      const plan = await read(value), spec = await specFor(plan), capture = await originalSource(plan,spec);
+      const plan = await read(value), spec = await specFor(plan), capture = await retainedSource(plan,spec);
       if (!plan.datasetUid || !plan.review) throw fail('DATASET_REQUIRED','Apply the reviewed native configuration before receiving its publication.');
       const unfinished = (plan.workflow ?? []).filter(step => step.key !== 'publish' && plan.steps[step.key]?.state !== 'COMPLETE');
       if (unfinished.length) throw fail('RECOVERY_REQUIRED','Recover the original configuration steps before receiving the publication.');
       const status = (await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal })).value;
       plan.providerStatus = status;
-      if (status.status !== 'idle' || status.is_published !== true) {
+      if (classifyOpendatasoftAutomationStatus(status).phase !== 'IDLE' || status.is_published !== true) {
         plan.state = 'PUBLICATION_PENDING'; await save(plan);
         return planSummary(plan);
       }
-      const connection = await binding(plan), receivingId = randomUUID();
+      await guardConfiguration(plan,spec,signal,'receiving-before',true);
+      const connection = await binding(plan), priorReceiving = plan.receiving;
+      const resume = priorReceiving?.state === 'RECEIVING' && priorReceiving.publicationSince === status.since;
+      const receivingId = resume ? checkedId(priorReceiving.id):randomUUID();
+      const limits = {
+        maxRows:integer(input.maxRows ?? priorReceiving?.limits?.maxRows ?? Math.max(250000,spec.acceptance.expectedRows + 1),'receiving row capacity',10000000),
+        maxBytes:integer(input.maxBytes ?? priorReceiving?.limits?.maxBytes ?? Math.max(268435456,spec.source.bytes * 4),'receiving byte capacity',1073741824),
+      };
+      if (priorReceiving && !resume) {
+        plan.receivingHistory ??= [];
+        plan.receivingHistory.push({ ...priorReceiving,retainedAt:stamp() });
+      }
       const receivingRoot = join(location(plan.id),'receiving'); await privateDirectory(receivingRoot,true);
       const receivingDirectory = join(receivingRoot,receivingId);
       const selection = captureSelection({ catalogOrigin:connection.origin,datasetId:plan.target.datasetId,authTokenEnv:connection.authTokenEnv });
-      plan.state = 'RECEIVING'; plan.receiving = { id:receivingId,state:'RECEIVING',startedAt:stamp() }; await save(plan);
+      plan.state = 'RECEIVING'; plan.receiving = { id:receivingId,state:'RECEIVING',
+        startedAt:resume ? priorReceiving.startedAt:stamp(),publicationSince:status.since,limits }; await save(plan);
       const received = await captureOpendatasoftDataset(selection,receivingDirectory,{
-        env:environment,signal,onProgress:progress,maxRows:input.maxRows ?? Math.max(250000,spec.acceptance.expectedRows + 1),
-        maxBytes:input.maxBytes ?? Math.max(268435456,spec.source.bytes * 4),
+        env:environment,signal,onProgress:progress,...limits,
       });
       const afterStatus = (await retainCall(plan,'get-dataset-status',{ params:{ dataset_uid:plan.datasetUid } },{ signal })).value;
-      if (afterStatus.status !== 'idle' || afterStatus.is_published !== true || status.since !== afterStatus.since)
+      if (classifyOpendatasoftAutomationStatus(afterStatus).phase !== 'IDLE' || afterStatus.is_published !== true || status.since !== afterStatus.since)
         throw fail('PUBLICATION_CHANGED','The tenant publication changed while its complete receiving export was being read.');
       const acceptance = receivingComparison(capture,received,spec);
       if (Array.isArray(afterStatus.records_errors) && afterStatus.records_errors.length) acceptance.accepted = false;
       acceptance.recordErrors = afterStatus.records_errors ?? [];
-      plan.receiving = { id:receivingId,state:acceptance.accepted ? 'ACCEPTED':'REVIEW_REQUIRED',captureSha256:received.manifestSha256,
+      plan.receiving = { ...plan.receiving,state:acceptance.accepted ? 'ACCEPTED':'REVIEW_REQUIRED',captureSha256:received.manifestSha256,
         captureFile:join('receiving',receivingId,'capture.json'),acceptance,completedAt:stamp() };
       plan.providerStatus = afterStatus;
       const after = await snapshot(plan,signal); plan.after = await writeSnapshot(plan,'after',after);
+      const configurationResult = await compareConfiguration(plan,after,true);
+      plan.configurationCheck = { ...configurationResult,snapshot:plan.after,phase:'receiving-after' };
+      acceptance.configuration = configurationResult;
+      acceptance.accepted = acceptance.accepted && configurationResult.matched;
+      plan.receiving.state = acceptance.accepted ? 'ACCEPTED':'REVIEW_REQUIRED';
       if (acceptance.accepted && plan.steps.publish?.state !== 'COMPLETE' && plan.steps.publish) {
         plan.steps.publish.state = 'COMPLETE'; plan.steps.publish.completedAt = stamp();
         plan.steps.publish.recovery = { kind:'COMPLETE_EXPLORE_RECEIVING',captureSha256:received.manifestSha256,at:stamp() };
@@ -633,7 +838,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
     },
     async export(value) {
       const plan = await read(value), spec = await specFor(plan);
-      await originalSource(plan,spec);
+      await retainedSource(plan,spec);
       const guide = [
         '# Huwise tenant ingestion', '',
         'Plan: ' + plan.id, 'Tenant: ' + plan.target.origin, 'Dataset: ' + plan.target.datasetId,
@@ -647,7 +852,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
         '## Continue the same operation', '',
         'Open the original Huwise workbench with its private Automation connection. Inspect this exact plan before continuing.',
         'Use tenant-recover for an interrupted native dispatch; retained successful response bytes are adopted before any new call.',
-        'An upload interrupted before its file UID returns is recovered using the actual native file UID and a complete hash-matched download.',
+        'An interrupted upload is first looked up using its unique reviewed filename. Recovery adopts only the returned actual file UID after downloading and matching every original source byte. An explicit file UID can also be supplied.',
         'Use tenant-apply with the existing saved review to continue remaining configuration steps.',
         'Use tenant-status to read native processing state, then tenant-receive to capture and compare the full published dataset.',
         'Publishing returns a native acknowledgement. Acceptance is the saved complete Explore receiving result.', '',
@@ -692,7 +897,7 @@ export function createOpendatasoftAutomationWorkspace({ directory, connectionFil
       if (!entry) throw fail('EXPORT_REQUIRED','Choose an existing retained tenant delivery.',404);
       const raw = await readPrivate(join(entry.directory,'manifest.json'),16777216);
       if (digest(raw) !== entry.manifestSha256) throw fail('EXPORT_CHANGED','The retained tenant delivery manifest changed.');
-      const manifest = JSON.parse(raw.toString('utf8'));
+      const manifest = parseOpendatasoftJson(raw);
       for (const file of manifest.files) {
         if (typeof file.path !== 'string' || file.path.split('/').some(part => !part || part === '.' || part === '..' || part.includes('\\')))
           throw fail('EXPORT_CHANGED','The retained delivery path is invalid.');

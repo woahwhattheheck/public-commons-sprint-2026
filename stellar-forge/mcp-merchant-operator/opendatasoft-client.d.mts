@@ -15,24 +15,45 @@ export interface ProjectionField { field: string; type: 'string' | 'integer' | '
 export interface RowNote { rowIndex: number; text: string }
 export interface SourceIdentity {
   catalogOrigin: string; datasetId: string; datasetUid: string; editionId: string;
-  captureSha256: string; notesRevision: number; rowCount: number; merchantManifestSha256?: string;
+  captureSha256: string; notesRevision: number; rowCount: number; merchantManifestSha256?: string; tenantManifestSha256?: string;
 }
 export interface FileIdentity { name: string; bytes: number; sha256: string; contentType: string }
 export interface ExportManifest {
   schema: 'stellar-forge.opendatasoft-agent-export.v1'; exportId: string; workspace: string;
   createdAt: string; source: SourceIdentity;
-  selection: { geometryField?: string; sourceId?: string; merchantExportId?: string; buyerRequestId?: string };
+  selection: { geometryField?: string; sourceId?: string; merchantExportId?: string; buyerRequestId?: string; tenantExportId?: string };
   files: FileIdentity[];
 }
 export interface ExportInput extends Scope {
   exportId: string; editionId: string; expectedCaptureSha256: string; expectedNotesRevision: number;
-  geometryField?: string; sourceId?: string; merchantExportId?: string; buyerRequestId?: string;
+  geometryField?: string; sourceId?: string; merchantExportId?: string; buyerRequestId?: string; tenantExportId?: string;
 }
 export interface Operation {
   id: string; kind: string; state: 'RUNNING' | 'COMPLETE' | 'FAILED' | 'CANCELLED' | 'INTERRUPTED';
   startedAt: string; completedAt?: string; progress: unknown; result: unknown; error: unknown;
 }
+export interface TenantPlanInput {
+  editionId:string; captureSha256:string; notesRevision:number;
+  target:{alias:string;datasetId:string;datasetUid?:string};
+  dataset:NativeResult & {dataset_id?:string;is_restricted:boolean;metadata:NativeResult};
+  resource:{uid?:string;type:string;title:string;params?:NativeResult};
+  resourceMode?:'append'|'replace-selected'; publish:boolean;
+  changes?:Partial<Record<'fields'|'processors'|'users'|'groups'|'schedules',Array<{id?:string;body:NativeResult}>>>;
+  acceptance?:{mode?:'source-match'|'reviewed-output';expectedRows?:number;fieldMap?:Record<string,string>;allowAdditionalRows?:boolean};
+}
 export interface Inputs {
+  tenant_targets:Scope;
+  tenant_datasets:Scope & {target:string;query?:{dataset_id?:string;offset?:number;limit?:number}};
+  tenant_prepare:Scope & ({plan:TenantPlanInput;planJson?:never} | {planJson:string;plan?:never});
+  tenant_plan:Scope & {planId:string};
+  tenant_inspect:Scope & {planId:string};
+  tenant_review:Scope & {planId:string;planSha256:string;configurationSha256:string;note?:string};
+  tenant_apply:Scope & {planId:string;reviewId:string};
+  tenant_recover:Scope & {planId:string;recovery?:{fileUid?:string;stepIds?:Record<string,string>}};
+  tenant_status:Scope & {planId:string};
+  tenant_receive:Scope & {planId:string;limits?:{maxRows?:number;maxBytes?:number}};
+  tenant_export:Scope & {planId:string};
+  tenant_delivery:Scope & {tenantExportId:string};
   status: Partial<Scope> & Page;
   open: Scope & { browser?: boolean };
   close: Scope & { instanceId: string };
@@ -67,7 +88,7 @@ export interface Inputs {
 }
 export type OperationStarted = { operationId: string; editionId?: string };
 export interface ManifestResult { state: 'MANIFEST_RETAINED'; exportId: string; manifest: ExportManifest; manifestSha256: string; manifestFile: FileIdentity }
-export type StartedAction = 'capture' | 'resume' | 'import' | 'notes' | 'source_save' | 'publication_create' | 'publication_review' | 'publication_recover' | 'publication_publish' | 'merchant_export' | 'merchant_stage' | 'buyer_prepare';
+export type StartedAction = 'tenant_prepare' | 'tenant_inspect' | 'tenant_review' | 'tenant_apply' | 'tenant_recover' | 'tenant_status' | 'tenant_receive' | 'tenant_export' | 'capture' | 'resume' | 'import' | 'notes' | 'source_save' | 'publication_create' | 'publication_review' | 'publication_recover' | 'publication_publish' | 'merchant_export' | 'merchant_stage' | 'buyer_prepare';
 export type Result<K extends keyof Inputs> =
   K extends StartedAction ? OperationStarted :
   K extends 'operation' ? { workspace: string; operation: Operation } :

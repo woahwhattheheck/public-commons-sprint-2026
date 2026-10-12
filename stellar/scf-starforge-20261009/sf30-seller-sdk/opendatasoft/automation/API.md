@@ -4,17 +4,19 @@ This module operates the real Huwise / Opendatasoft Automation v1.0 API for a ho
 
 ## Authoritative source
 
-The operation registry and request schemas come from the official [Opendatasoft Automation SDK](https://github.com/opendatasoft/opendatasoft-automation-sdk) at commit `d8111887796815a7a2cf0755033a809b0f3f757e`. The complete, unmodified source is included as [upstream-openapi.json](./upstream-openapi.json), with its original [MIT license](./UPSTREAM_LICENSE).
+The current [Huwise Automation v1.0 reference](https://developer.huwise.com/apis/automation/v1.0/index.html), reviewed on 2026-10-12, supplies the current dataset, metadata, resource-file and translation behavior. [current-reference.json](./current-reference.json) records each applied correction, its method/path and official section. These corrections take precedence over the older SDK snapshot.
 
-- Upstream path: `generators/python/openapi/openapi_3.1.0_original.json`.
+The complete original [Opendatasoft Automation SDK](https://github.com/opendatasoft/opendatasoft-automation-sdk) specification is also retained unmodified as [upstream-openapi.json](./upstream-openapi.json), with its original [MIT license](./UPSTREAM_LICENSE):
+
+- Commit: `d8111887796815a7a2cf0755033a809b0f3f757e`.
+- Path: `generators/python/openapi/openapi_3.1.0_original.json`.
 - Git blob: `568f4b4b3b9414dc404ea8fac83f35bfabf6bfcd`.
 - Original bytes: 461,135.
 - SHA256: `27065299b52ec6c8e71272981f912107ff6931d1276fab7bb15a5a0de1de7d3b`.
-- Current documentation reviewed on 2026-10-12: [Automation API v1.0](https://help.opendatasoft.com/apis/ods-automation-v1/).
 
-The original specification contains 105 paths and 115 schemas. This client exposes 86 operations covering the dataset lifecycle and its actual configuration dependencies. `contract.mjs` retains the complete transitive request schemas used by those operations. The remaining unrelated portal administration endpoints remain available in the unmodified source reference.
+That SDK snapshot contains 105 paths and 115 schemas. The active client exposes 92 operations and the complete referenced request definitions. Ninety registry IDs come from the retained SDK. The two translation keys identify the exact current documented GET/POST routes and are explicitly marked as client keys; the rendered reference does not expose their original OpenAPI IDs. The metadata-field listing additionally accepts the current documentation's `list-metadata-template-fields` alias.
 
-Use the source pin when reviewing a change in provider behavior. The rendered documentation is current, while the included SDK specification provides a reproducible contract. Preserve any new native fields in receiving records before updating the registry.
+The original SDK is a reproducible source artifact. Its fixed default-metadata requirements and resource-upload HTTP 200 response have been superseded in the active contract by the current reference. The client accepts the older documented upload 200 response as a compatibility case while accepting current 201 normally. Optional native response fields remain preserved.
 
 ## Host configuration and lifetime
 
@@ -57,17 +59,17 @@ Every convenience method uses named inputs and the same second options object:
 ```js
 await client.getDataset({ datasetUid }, options);
 await client.createDataset({ body: reviewedDataset }, options);
-await client.updateDataset({ datasetUid, body: completeWritableDataset }, options);
+await client.updateDataset({ datasetUid, body: reviewedDatasetConfiguration }, options);
 await client.createResource({ datasetUid, body: reviewedResource }, options);
 await client.publishDataset({ datasetUid }, options);
 ```
 
-The authoritative generic form uses the exact native operation ID:
+The generic form accepts the registry operation key:
 
 ```js
 await client.invoke('update-dataset', {
   params: { dataset_uid: datasetUid },
-  body: completeWritableDataset
+  body: reviewedDatasetConfiguration
 }, options);
 ```
 
@@ -83,7 +85,7 @@ JSON responses return:
 
 Optional provider fields and native result unions remain intact. The client does not project a response into a smaller display shape. `value` uses the existing exact-number representation when a native numeric token would be rounded by ordinary JavaScript parsing. Retain `raw` for exact replay/export; use the original parser/serializer for subsequent JSON operations.
 
-JSON request bodies may be complete JavaScript objects or `Uint8Array` containing the reviewed JSON bytes. Byte input is parsed for structural validation and dispatched without reserialization. Object input rejects non-JSON values and preserves the existing exact-number representation. Structural checks enforce the retained required fields, primitive types, unions, discriminators and documented bounds while keeping optional provider-specific fields. The full upstream specification remains the reference for advanced formats and provider validation.
+JSON request bodies may be complete JavaScript objects or `Uint8Array` containing the reviewed JSON bytes. Byte input is parsed for structural validation and dispatched without reserialization. Object input rejects non-JSON values and preserves the existing exact-number representation. Structural checks enforce the retained required fields, primitive types, unions, discriminators and documented bounds while keeping optional provider-specific fields. The current reference corrections and retained SDK definitions identify the source of each structural check; the provider performs its own final validation.
 
 ### Request and response journals
 
@@ -137,7 +139,7 @@ A failed request callback prevents dispatch. A failed response callback throws a
 
 The native dataset UID is the immutable path identity. `dataset_id` is the human identifier used by Explore; the provider permits changing it while unpublished. Keep both identities in a reviewed plan.
 
-The minimum complete native create body is:
+The current native create schema requires `metadata`. Its structural minimum is `{metadata:{}}`; a reviewed publication should supply useful descriptive values and an explicit dataset ID/access choice:
 
 ```js
 {
@@ -146,16 +148,36 @@ The minimum complete native create body is:
   metadata: {
     default: {
       title: { value: reviewedTitle },
-      modified: { value: originalSourceDateTime },
       language: { value: 'en' }
+    },
+    reviewed_custom_template: {
+      original_source: { value: reviewedSourceReference }
     }
   }
 }
 ```
 
-Use the actual source date/time and reviewed access choice. The reviewed create explicitly binds `dataset_id` and `is_restricted`. The native schema's required list contains `metadata`; default metadata in turn requires title, modified and language entries. Metadata entries are objects containing `value`, with native override/remote fields where supplied.
+Template names and field requirements come from the actual portal. The client preserves arbitrary template names and exact JSON metadata values. The current create schema does not require fixed `default.title`, `default.modified` or `default.language` entries. Include source dates when they have a real source value and meaning.
 
-The writable top-level dataset fields are `dataset_id`, `is_restricted`, `metadata` and optional `default_security`. Native GET fields `uid`, `created_at`, `updated_at` and `is_published` are read-only. `updateDataset` invokes PUT, so construct the complete reviewed writable representation from the full preimage instead of treating a small object as a PATCH.
+Dataset configuration and metadata use separate operations:
+
+```js
+await client.updateDataset({
+  datasetUid,
+  body: reviewedDatasetConfiguration // dataset_id, is_restricted, default_security
+}, options);
+
+await client.updateMetadata({
+  datasetUid,
+  body: reviewedCompleteMetadata
+}, options);
+```
+
+`updateDataset` uses PUT on the dataset and accepts its configuration properties. A `metadata` key is rejected locally with `ODS_AUTOMATION_BODY_ENDPOINT_MISMATCH` before dispatch, directing the caller to the dedicated metadata operation. Retain the actual complete preimage and explicitly review the resulting configuration. Dataset GET also includes read-only `uid`, `created_at`, `updated_at`, `created_by`, `updated_by` and `is_published`.
+
+`updateMetadata` replaces the full metadata dictionary; omitted fields are removed. Its HTTP 200 result is the complete metadata dictionary, rather than a Dataset or an action acknowledgment. `updateMetadataTemplate` replaces only the selected template and removes omitted fields there. The single-field helper `updateMetadataField` requires `value` and supports `override_remote_value`. Receive and retain the provider's `remote_value` as well; it is read-only in the writable metadata shape.
+
+The `DatasetMetadata` schema remains a generic template → field → metadata-value dictionary, and `Metadata` aliases it. The actual full/template PUT bodies are open JSON objects in the current reference. The client keeps those permissive native schemas; the reviewed workspace uses the complete dictionary shape to preserve existing templates and writable override controls.
 
 For a full publication review, receive the following original configuration:
 
@@ -163,7 +185,9 @@ For a full publication review, receive the following original configuration:
 | --- | --- | --- |
 | Dataset definition | `getDataset` | Keep the full body, UID, human ID and source fields. |
 | Native state | `getDatasetStatus` | Keep all status, previous/next, since, errors and params. |
-| Metadata | `getMetadata` | Keep all default and custom templates, values and overrides. |
+| Metadata | `getMetadata` | Keep every template, original value and override control. |
+| Portal template definitions | `listMetadataTemplates`, `getDomainMetadataTemplate`, `listMetadataTemplateFields` | Receive the portal's real templates, fields, requirement levels and choices. |
+| Translations | `getDatasetTranslations` | Keep the original term/language dictionary used when localized content is published. |
 | Resources | `listResources` | Follow every native page; preserve native order and full datasource configuration. |
 | Ordered fields | `listFields` | Follow the actual returned next URL; retain original field positions. |
 | Ordered processors | `listProcessors` | Follow the actual returned next URL; retain processing order and complete params. |
@@ -180,13 +204,13 @@ The resource list's documented `expand` value can be `datasource.connection` or 
 
 ## Upload the complete source, then attach its actual returned identity
 
-`uploadFile` posts multipart/form-data to the dataset's resource-file endpoint. The multipart part name is exactly `file`. The full upload response is `{uid, filename, mimetype, created_at}`; the returned UID is the attachment identity.
+`uploadFile` posts multipart/form-data to the dataset's resource-file endpoint. The multipart part name is exactly `file`. The current success is HTTP 201 and the complete response includes `{uid, filename, mimetype, created_at}`. The client also accepts the retained SDK's documented HTTP 200 response. Attach the actual returned UID.
 
 ```js
 const uploaded = await client.uploadFile({
   datasetUid,
   file: immutableCaptureRecordsPath,
-  filename: 'records.json',
+  filename: reviewedUniqueFilename,
   mimetype: 'application/json',
   expectedSha256: originalRecordsSha256,
   expectedBytes: originalRecordsBytes
@@ -211,6 +235,8 @@ const preview = await client.previewResourceInput({
 
 await client.createResource({ datasetUid, body: resource }, options);
 ```
+
+The current Resource create/update schema requires `type` and `title`; `params`, `url` and `datasource` are optional in that generic schema. An uploaded-source plan supplies its actual `uploaded_file` datasource explicitly. Unsaved extractor guessing and preview still require their documented `datasource`/`type` inputs. Preserve the full native extractor and datasource configuration in the plan.
 
 The file path must name an absolute regular file. The client opens and retains its descriptor, verifies identity and complete bytes before dispatch, streams it in 64 KiB chunks, then verifies the streamed hash and file identity before sending the multipart terminator. Optional expected hash and size bind it to the original reviewed capture. A `Uint8Array` input is copied before dispatch. Neither mode rewrites source records or rounds numeric tokens.
 
@@ -261,6 +287,25 @@ The destination is created exclusively with mode 0600 and is never overwritten. 
 On interruption, the same file retains its actually written prefix and `complete:false`. A hash mismatch keeps the complete received bytes for inspection and throws the binding error. HTTP error bodies remain in `response.raw`, even when a successful binary download would have used a destination.
 
 An alternative export may return the documented 303 response. Its original Location is retained and no redirect is followed. A separate reviewed transfer can receive that external file without forwarding the Automation key.
+
+## Portal metadata definitions and translations
+
+The standard dataset templates are `default`, `visualization`, `internal` and `asset_content_configuration`. Additional templates depend on portal configuration. Discover the actual complete definitions before constructing a custom metadata plan:
+
+```js
+const templates = await client.collect('list-metadata-templates', {
+  query: { is_active: true, limit: 1000 }
+}, options);
+
+const fields = await client.collect('get-metadata-fields-list', {
+  params: { template_name: reviewedTemplateName },
+  query: { limit: 1000 }
+}, options);
+```
+
+`listMetadataTemplates({query}, options)` and `listMetadataTemplateFields({templateName,query}, options)` return individual full pages. `getDomainMetadataTemplate({templateName}, options)` and `getMetadataTemplateField({templateName,templateFieldName}, options)` retrieve a complete definition. The current prose identifier `list-metadata-template-fields` aliases the retained SDK key `get-metadata-fields-list` in generic calls.
+
+`getDatasetTranslations({datasetUid}, options)` retrieves the current translation dictionary. `updateDatasetTranslations({datasetUid,body}, options)` uses the documented POST route; its body maps original terms to language dictionaries. Both return the complete dictionary with HTTP 200. The reference describes an update, so the client does not assume undocumented patch, replacement or deletion semantics. Retain the original translation dictionary, review the intended complete change and compare the actual readback before publication.
 
 ## Full pagination and ordered configuration
 
@@ -326,7 +371,7 @@ The workbench then captures the complete published dataset with its existing Exp
 | Explicit 4xx/native rejection | `REJECTED` | Retain the full error and correct the exact provider-reported condition. |
 | Write transport loss, timeout, 5xx or incomplete successful response | `UNCERTAIN` | Compare current native state with the retained before-state and intended after-state before deciding another mutation. |
 | Response-save callback failed | Original observed outcome plus full response | Retain the original reply through recovery, then adopt/read back that exact operation. |
-| Upload acknowledgment lost | `UNCERTAIN`; source hash remains known | Reconcile actual native file/resource identities with the tenant; a guessed file UID or repeated upload is not an adoption. |
+| Upload acknowledgment lost | `UNCERTAIN`; source hash remains known | Probe the original reviewed filename only as a native lookup candidate, then adopt the actual returned file UID after complete downloaded-byte/hash readback. |
 | Existing prior idle status is unchanged | `WAITING` when a transition is required | Continue status/configuration and Explore receiving against the original target. |
 
 Creating a dataset can be reconciled by the exact reviewed human dataset ID and the full current definition; do not adopt a different source/configuration that happens to have a matching title. Resource/field/processor updates need the exact reviewed native UID and full configuration. The provider does not advertise an idempotency key for these mutation endpoints.
@@ -343,9 +388,9 @@ The source contract contains a few published schema inconsistencies which receiv
 
 ## Native operation reference
 
-All paths below are relative to `/api/automation/v1.0`. The native operation ID is the key accepted by `invoke`, `paginate`, `collect` and `followPage`. Convenience methods translate named IDs to the exact snake_case path parameters.
+All paths below are relative to `/api/automation/v1.0`. The operation key is accepted by `invoke`, `paginate`, `collect` and `followPage`. Convenience methods translate named IDs to exact snake_case path parameters. Original SDK keys are retained; the two translation keys are identified separately in `current-reference.json`.
 
-| Method | Native path | Operation ID | Convenience method |
+| Method | Native path | Operation key | Convenience method |
 | --- | --- | --- | --- |
 | GET | `/datasets/` | `list-datasets` | `listDatasets` |
 | POST | `/datasets/` | `create-dataset` | `createDataset` |
@@ -433,3 +478,9 @@ All paths below are relative to `/api/automation/v1.0`. The native operation ID 
 | GET | `/datasource_connections/{connection_uid}/` | `retrieve-connection` | `getConnection` |
 | PUT | `/datasource_connections/{connection_uid}/` | `update-connection` | `updateConnection` |
 | DELETE | `/datasource_connections/{connection_uid}/` | `delete-connection` | `deleteConnection` |
+| GET | `/metadata/templates/` | `list-metadata-templates` | `listMetadataTemplates` |
+| GET | `/metadata/templates/{template_name}/` | `retrieve-metadata-templates` | `getDomainMetadataTemplate` |
+| GET | `/metadata/templates/{template_name}/fields/` | `get-metadata-fields-list` | `listMetadataTemplateFields` |
+| GET | `/metadata/templates/{template_name}/fields/{template_field_name}/` | `get-metadata-fields-retrieve` | `getMetadataTemplateField` |
+| GET | `/datasets/{dataset_uid}/i18n/translations/` | `get-dataset-translations` | `getDatasetTranslations` |
+| POST | `/datasets/{dataset_uid}/i18n/translations/` | `update-dataset-translations` | `updateDatasetTranslations` |

@@ -19,9 +19,26 @@ async function request(path,body) {
   if (!response.ok) throw new Error(value.message || value.error || 'The request did not complete.');
   return value;
 }
+function numericIdentity(source) {
+  const match = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(source);
+  if (!match) return null;
+  let digits = (match[2] + (match[3] ?? '')).replace(/^0+/,'');
+  if (!digits) return '0';
+  let exponent = BigInt(match[4] ?? '0') - BigInt((match[3] ?? '').length);
+  const trailing = /0+$/.exec(digits)?.[0].length ?? 0;
+  if (trailing) { digits = digits.slice(0,-trailing); exponent += BigInt(trailing); }
+  return match[1] + digits + 'e' + exponent.toString();
+}
 function json(name) {
-  let value;
-  try { value = JSON.parse(form.elements[name].value); } catch { throw new Error('Enter valid JSON for ' + name + '.'); }
+  let value, precise = true;
+  try {
+    value = JSON.parse(form.elements[name].value,(_key,item,context) => {
+      if (typeof item === 'number' && (typeof context?.source !== 'string' || !Number.isFinite(item) ||
+          numericIdentity(context.source) !== numericIdentity(String(item)))) precise = false;
+      return item;
+    });
+  } catch { throw new Error('Enter valid JSON for ' + name + '.'); }
+  if (!precise) throw new Error('Use Complete native plan JSON to preserve the exact numeric literals in ' + name + '.');
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Use a JSON object for ' + name + '.');
   return value;
 }
@@ -30,8 +47,8 @@ function button(label,action,disabled = false) {
   value.addEventListener('click',() => Promise.resolve().then(action).catch(error => message(error.message,true)));
   return value;
 }
-function details(label,value) {
-  const section = node('details'); section.append(node('summary',label),node('pre',JSON.stringify(value,null,2))); return section;
+function details(label,value,raw = false) {
+  const section = node('details'); section.append(node('summary',label),node('pre',raw ? value:JSON.stringify(value,null,2))); return section;
 }
 function describe(rows) {
   const list = node('dl');
@@ -150,14 +167,14 @@ function drawPlan() {
     ]));
     root.append(details('Full receiving result',plan.receiving));
   }
-  root.append(details('Reviewed configuration',plan.specification));
-  if (plan.remote) root.append(details('Original tenant configuration',plan.remote));
+  root.append(details('Reviewed configuration',plan.specificationJson,true));
+  if (plan.remoteJson) root.append(details('Original tenant configuration',plan.remoteJson,true));
   if (plan.review) {
     root.append(details('Saved review',plan.review));
-    const recovery = node('details'); recovery.append(node('summary','Native recovery identifiers'),node('p','For an interrupted upload, provide its actual fileUid. The original file is downloaded and compared before adoption. Existing configuration identifiers can be supplied in stepIds.'));
+    const recovery = node('details'); recovery.append(node('summary','Native recovery identifiers'),node('p','Recovery first looks up the unique reviewed upload filename and compares the complete native file. Supply fileUid when the tenant uses another identifier. Existing configuration identifiers can be supplied in stepIds.'));
     const textarea = node('textarea',null,{ id:'recovery-input',rows:'4',spellcheck:'false' }); textarea.value = '{}'; recovery.append(textarea); root.append(recovery);
   }
-  if (Object.keys(plan.steps ?? {}).length) root.append(details('Original native operations',plan.steps));
+  if (plan.nativePlanJson) root.append(details('Complete native plan and operations',plan.nativePlanJson,true));
 }
 async function chooseEdition() {
   const id = form.elements.edition.value; if (!id) return;
@@ -189,14 +206,17 @@ document.querySelector('#find-dataset').addEventListener('click',async () => {
 form.addEventListener('submit',async event => {
   event.preventDefault();
   try {
+    const complete = form.elements.planJson.value.trim();
+    if (complete) { await run('tenant-plans',{ planJson:complete }); return; }
+    if (!form.reportValidity()) return;
     if (!state.edition) throw new Error('Select a complete retained source edition.');
     const datasetId = form.elements.datasetId.value.trim(), datasetUid = form.elements.datasetUid.value.trim(), resourceUid = form.elements.resourceUid.value.trim();
-    const metadata = json('metadata');
+    const metadata = json('metadata'), template = form.elements.metadataTemplate.value.trim();
     const input = {
       editionId:state.edition.id,captureSha256:state.edition.manifestSha256,notesRevision:state.edition.notes?.revision ?? 0,
       target:{ alias:form.elements.target.value,datasetId,...(datasetUid ? { datasetUid }: {}) },
       dataset:{ dataset_id:datasetId,is_restricted:form.elements.visibility.value === 'restricted',
-        metadata:{ ...metadata,default:{ ...(metadata.default ?? {}),title:{ value:form.elements.title.value.trim() },modified:{ value:form.elements.modified.value.trim() },language:{ value:form.elements.language.value } } } },
+        metadata:{ ...metadata,[template]:{ ...(metadata[template] ?? {}),title:{ value:form.elements.title.value.trim() },modified:{ value:form.elements.modified.value.trim() },language:{ value:form.elements.language.value } } } },
       resource:{ ...(resourceUid ? { uid:resourceUid }: {}),type:form.elements.extractor.value.trim(),title:form.elements.resourceTitle.value.trim(),params:json('params') },
       resourceMode:form.elements.resourceMode.value,changes:json('changes'),publish:form.elements.publish.checked,acceptance:json('acceptance'),
     };

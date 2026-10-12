@@ -12,7 +12,7 @@ export const OPENDATASOFT_EXPORT_SCHEMA = 'stellar-forge.opendatasoft-agent-expo
 export const OPENDATASOFT_MAX_FILE_BYTES = 512 * 1024 * 1024;
 const SHA = /^[a-f0-9]{64}$/, ID = /^[a-f0-9-]{36}$/;
 const NAMES = new Set(['data.json','data.csv','data.geojson','review.html','DATASET-RECEIVING.md',
-  'source-declaration.json','merchant.tar.gz','MERCHANT-RECEIVING.md','buyer-request.json']);
+  'source-declaration.json','merchant.tar.gz','MERCHANT-RECEIVING.md','buyer-request.json','tenant.tar.gz','TENANT-INGESTION.md']);
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const decode = bytes => new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -43,7 +43,7 @@ export function parseOpendatasoftExport(bytes, exportId) {
     names.add(file.name); count(file.bytes, OPENDATASOFT_MAX_FILE_BYTES);
   }
   if (!['data.json','data.csv','data.geojson','review.html','DATASET-RECEIVING.md'].every(name => names.has(name)) ||
-      names.has('merchant.tar.gz') !== names.has('MERCHANT-RECEIVING.md'))
+      names.has('merchant.tar.gz') !== names.has('MERCHANT-RECEIVING.md') || names.has('tenant.tar.gz') !== names.has('TENANT-INGESTION.md'))
     throw fail('EXPORT_INVALID', 'The export must include every analyst format and the selected merchant receiving guide.');
   return value;
 }
