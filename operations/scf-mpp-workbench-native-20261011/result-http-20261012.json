@@ -1,0 +1,23 @@
+{
+  "runtime": {
+    "@stellar/mpp": "0.7.1",
+    "mppx": "0.6.29",
+    "@stellar/stellar-sdk": "15.1.0"
+  },
+  "console": "authenticated contract/package intake, revision save, exact offer preview and original native preparation",
+  "nativePrepare": "REVIEW_READY",
+  "concurrentPreparation": {
+    "requests": 2,
+    "merchantCalls": 1,
+    "sameNativeChallenge": true
+  },
+  "workspace": "borrowed customer close preserves the host lease; state remains readable during a pending native request",
+  "recovery": "original query/body/profile retained across a failed HTTP preparation, changed active contract and console restart",
+  "history": {
+    "originalPurchases": 3,
+    "paginated": true,
+    "originalChallengesReopened": true
+  },
+  "browser": "served and parsed original browser modules",
+  "requestCount": 4
+}
