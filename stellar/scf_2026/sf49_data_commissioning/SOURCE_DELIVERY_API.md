@@ -19,6 +19,7 @@ const sourceDelivery = await openSourceEditionDelivery({
   attachBundle,
 });
 const sourceRoutes = createSourceEditionDeliveryRoutes({service:sourceDelivery});
+sourceRoutes.configure(originalHttpServer);
 
 // In the original authenticated request handler, before reading a JSON body:
 if (await sourceRoutes.handle(req, res, {origin:actualBoundOrigin})) return;
@@ -27,7 +28,7 @@ if (await sourceRoutes.handle(req, res, {origin:actualBoundOrigin})) return;
 await sourceRoutes.close();
 ~~~
 
-The original host remains responsible for its authentication and bound loopback listener. The route additionally checks the actual Host, Origin, and Fetch-Site. Pass the trusted actual origin as `http://127.0.0.1:PORT`, without a trailing slash. The host must route these paths before its ordinary JSON reader. Large bodies are raw PUT streams.
+The original host remains responsible for its authentication and bound loopback listener. The route additionally checks the actual Host, Origin, and Fetch-Site. Pass the trusted actual origin as `http://127.0.0.1:PORT`, without a trailing slash. The host must route these paths before its ordinary JSON reader. Large bodies are raw PUT streams. Call `sourceRoutes.configure(server)` before listening: it removes Node's whole-request deadline that would otherwise cut off a valid large upload, while preserving the original header deadline. Each raw upload has a two-minute inactivity timeout and retains its exact declared byte ceiling.
 
 ### Resolve the saved original input
 

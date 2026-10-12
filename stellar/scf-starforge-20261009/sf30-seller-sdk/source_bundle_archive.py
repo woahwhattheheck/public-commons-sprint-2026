@@ -15,6 +15,7 @@ import re
 import sqlite3
 import stat
 import zipfile
+import zlib
 
 CHUNK = 1024 * 1024
 
@@ -174,7 +175,8 @@ def _owner(root, name, policy):
     path = root / (".source-archive-" + key + ".sqlite")
     fd = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_mode & 0o077:
             policy.fail("HANDOVER_PATH_INVALID")
     finally:
         os.close(fd)
@@ -183,6 +185,8 @@ def _owner(root, name, policy):
         try:
             owner.execute("BEGIN EXCLUSIVE")
         except sqlite3.OperationalError as error:
+            if (getattr(error, "sqlite_errorcode", 0) & 0xff) not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+                raise
             raise policy.error_type(policy.prefix + "_HANDOVER_ALREADY_RUNNING",
                                     "The original archive destination has an active writer.") from error
         yield
@@ -190,8 +194,13 @@ def _owner(root, name, policy):
         owner.close()
 
 
-def _stage(path, digest):
-    return path.with_name("." + path.name + "." + digest + ".partial")
+def _stage(path, digest, *, root=None):
+    # A source filename must never be mistaken for one of our recovery files.
+    # Extraction supplies its root so even nested source paths use the reserved
+    # top-level namespace, which _relative() excludes from every inventory.
+    root = path.parent if root is None else root
+    identity = str(path.relative_to(root)).encode("utf-8") + b"\x00" + digest.encode("ascii")
+    return root / (".source-archive-stage-" + hashlib.sha256(identity).hexdigest() + ".partial")
 
 
 def _remove_stage(path, policy):
@@ -212,6 +221,8 @@ def _publish(path, temporary, pin, policy):
             policy.fail("RECEIVED_FILE_CONFLICT")
     _sync(path.parent)
     temporary.unlink(missing_ok=True)
+    if temporary.parent != path.parent:
+        _sync(temporary.parent)
 
 
 def _retain_metadata(path, raw, policy):
@@ -266,20 +277,24 @@ def _read_zip(bundle, policy, expected=None):
     return manifest, files, raw
 
 
+def _verify_member(bundle, file, policy):
+    checksum, size = hashlib.sha256(), 0
+    with bundle.open("files/" + file["path"]) as member:
+        for chunk in iter(lambda: member.read(CHUNK), b""):
+            checksum.update(chunk)
+            size += len(chunk)
+            if size > int(file["bytes"]):
+                policy.fail("HANDOVER_FILE_SIZE_MISMATCH")
+    if str(size) != file["bytes"] or checksum.hexdigest() != file["sha256"]:
+        policy.fail("HANDOVER_FILE_DIGEST_MISMATCH")
+
+
 def _verify_zip(path, policy, expected=None):
     before = file_hash(path, policy, maximum=policy.max_archive_bytes)
     with zipfile.ZipFile(path) as bundle:
         manifest, files, _raw = _read_zip(bundle, policy, expected)
         for file in files:
-            checksum, size = hashlib.sha256(), 0
-            with bundle.open("files/" + file["path"]) as member:
-                for chunk in iter(lambda: member.read(CHUNK), b""):
-                    checksum.update(chunk)
-                    size += len(chunk)
-                    if size > int(file["bytes"]):
-                        policy.fail("HANDOVER_FILE_SIZE_MISMATCH")
-            if str(size) != file["bytes"] or checksum.hexdigest() != file["sha256"]:
-                policy.fail("HANDOVER_FILE_DIGEST_MISMATCH")
+            _verify_member(bundle, file, policy)
     if before != file_hash(path, policy, maximum=policy.max_archive_bytes):
         policy.fail("HANDOVER_SOURCE_CHANGED")
     return {"archive": before, "members": len(files) + 1}, manifest
@@ -310,7 +325,7 @@ def archive(input, *, policy):
         if temporary.exists():
             try:
                 result, _manifest_value = _verify_zip(temporary, policy, manifest)
-            except (policy.error_type, zipfile.BadZipFile, EOFError, RuntimeError):
+            except (policy.error_type, zipfile.BadZipFile, EOFError, RuntimeError, zlib.error):
                 _remove_stage(temporary, policy)
             else:
                 _publish(output, temporary, result["archive"], policy)
@@ -376,16 +391,22 @@ def extract(input, *, policy):
                 _path(destination, file["path"], policy)
                 expected = _pin(file, policy)
                 if target.exists():
+                    # Reusing a correct output is not evidence that this ZIP
+                    # carries those bytes. Read it through CRC and SHA checks.
+                    _verify_member(bundle, file, policy)
                     if file_hash(target, policy) != expected:
                         policy.fail("RECEIVED_FILE_CONFLICT")
                     continue
-                temporary = _stage(target, file["sha256"])
+                temporary = _stage(target, file["sha256"], root=destination)
                 if temporary.exists():
                     try:
                         ready = file_hash(temporary, policy) == expected
                     except policy.error_type:
                         ready = False
                     if ready:
+                        _verify_member(bundle, file, policy)
+                        if file_hash(temporary, policy) != expected:
+                            policy.fail("ORIGINAL_FILE_CHANGED")
                         _publish(target, temporary, expected, policy)
                         continue
                     _remove_stage(temporary, policy)

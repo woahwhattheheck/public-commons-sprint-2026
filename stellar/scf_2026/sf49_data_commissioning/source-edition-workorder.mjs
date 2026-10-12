@@ -344,7 +344,8 @@ export async function sourceEditionWorkorderFile({directory,name}) {
   const selected=name==='manifest.json'?{path:name,role:'source-edition-manifest',
     bytes:bundle.manifestBytes.length,sha256:sha(bundle.manifestBytes)}:bundle.inventory.get(relPath(name));
   ensure(selected,'The original bundle does not declare this file');
-  return {...selected,path:path.join(bundle.root,selected.path),name:selected.path,verification:'ORIGINAL_MANIFEST_BOUND'};
+  return {...selected,path:path.join(bundle.root,selected.path),name:selected.path,verification:'ORIGINAL_MANIFEST_BOUND',
+    bundleId:bundle.manifest.bundleId,manifestSha256:sha(bundle.manifestBytes)};
 }
 /** Bounded original workorder input for the existing case adapter.
  * The full handoff and attachments remain available through their declared files.
