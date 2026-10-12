@@ -1,9 +1,10 @@
-// MIT. Official grpc-js unary calls behind the ORIGINAL SF30 admission/lifecycle.
+// MIT. Official grpc-js single-request calls behind the ORIGINAL SF30 admission/lifecycle.
 import * as grpc from '@grpc/grpc-js';
-import { validateGrpcConfig, captureGrpcEnvironment } from './config.mjs';
+import { createGrpcConnection } from './connection.mjs';
 import { compileProtoSource } from './proto.mjs';
 import { normalizeGrpcRequest, normalizeGrpcResponse, serializeGrpcRequest } from './values.mjs';
 import { fail, readJson } from './common.mjs';
+import { grpcServerStream } from './stream.mjs';
 
 export class GrpcSourceError extends Error {
   constructor(code, grpcCode, status = 503) {
@@ -17,41 +18,17 @@ function callError(issue) {
     DEADLINE_EXCEEDED: 504, UNAVAILABLE: 503, FAILED_PRECONDITION: 409, ABORTED: 409, OUT_OF_RANGE: 422 })[name] ?? 502;
   return new GrpcSourceError('GRPC_UPSTREAM_' + name, name, status);
 }
-function metadataFor(config, env) {
-  const metadata = new grpc.Metadata();
-  for (const item of config.metadata) {
-    const value = env[item.valueEnv];
-    if (item.name.endsWith('-bin')) {
-      if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value))
-        fail('GRPC_BINARY_METADATA_BASE64_INVALID');
-      const bytes = Buffer.from(value, 'base64');
-      if (bytes.length > 8192 || bytes.toString('base64') !== value) fail('GRPC_METADATA_TOO_LARGE');
-      metadata.set(item.name, bytes);
-    } else {
-      if (!/^[\x20-\x7e]*$/.test(value) || Buffer.byteLength(value) > 8192) fail('GRPC_METADATA_VALUE_INVALID');
-      metadata.set(item.name, value);
-    }
-  }
-  return metadata;
-}
 export async function createGrpcSource(configInput, protoSource, { env = process.env, contract: existingContract } = {}) {
-  const config = validateGrpcConfig(configInput), environment = captureGrpcEnvironment(config, env);
   const contract = existingContract ?? compileProtoSource(protoSource);
+  const { config, client, metadata } = createGrpcConnection(configInput, { env });
   const transport = config.transport;
-  const pem = key => transport[key] ? Buffer.from(environment[transport[key]], 'utf8') : null;
-  const credentials = transport.mode === 'plaintext' ? grpc.credentials.createInsecure() :
-    grpc.credentials.createSsl(pem('caEnv'), pem('privateKeyEnv'), pem('certificateEnv'));
-  const options = { 'grpc.enable_retries': 0, 'grpc.max_send_message_length': config.limits.maxRequestBytes,
-    'grpc.max_receive_message_length': config.limits.maxResponseBytes,
-    ...(transport.serverName ? { 'grpc.ssl_target_name_override': transport.serverName,
-      'grpc.default_authority': transport.serverName } : {}) };
-  const metadata = metadataFor(config, environment), client = new grpc.Client(config.target, credentials, options);
   let closing = false, closePromise, completed = 0, failures = 0;
   const active = new Set();
   function method(path) {
     const selected = contract.methods[path];
     if (!selected) fail('GRPC_METHOD_NOT_FOUND');
-    if (selected.requestStream || selected.responseStream) fail('GRPC_UNARY_METHOD_REQUIRED');
+    if (selected.requestStream) fail('GRPC_SINGLE_REQUEST_METHOD_REQUIRED');
+    if (selected.responseStream && !config.limits.stream) fail('GRPC_STREAM_LIMITS_REQUIRED');
     return selected;
   }
   function request(path, input) {
@@ -79,6 +56,7 @@ export async function createGrpcSource(configInput, protoSource, { env = process
     let prepared;
     try {
       prepared = request(path, input);
+      if (prepared.selected.responseStream) fail('GRPC_UNARY_METHOD_REQUIRED');
       if (closing || signal?.aborted) throw new GrpcSourceError('GRPC_SOURCE_CLOSED', 'CANCELLED');
       if (active.size >= config.limits.maxInFlight) throw new GrpcSourceError('GRPC_SOURCE_BUSY', 'RESOURCE_EXHAUSTED', 429);
     } catch (issue) { return Promise.reject(issue); }
@@ -109,12 +87,37 @@ export async function createGrpcSource(configInput, protoSource, { env = process
       }
     });
   }
+  function stream(path, input, { signal } = {}) {
+    const prepared = request(path, input);
+    if (!prepared.selected.responseStream) fail('GRPC_SERVER_STREAM_METHOD_REQUIRED');
+    if (closing || signal?.aborted) throw new GrpcSourceError('GRPC_SOURCE_CLOSED', 'CANCELLED');
+    if (active.size >= config.limits.maxInFlight)
+      throw new GrpcSourceError('GRPC_SOURCE_BUSY', 'RESOURCE_EXHAUSTED', 429);
+    let opened, nativeCall, settle;
+    const job = { cancel: () => opened?.close(), promise: new Promise(done => { settle = done; }) };
+    active.add(job);
+    try {
+      nativeCall = client.makeServerStreamRequest(path, value => serializeGrpcRequest(contract, path, value),
+        prepared.selected.definition.responseDeserialize, prepared.value, metadata.clone(),
+        { deadline: Date.now() + config.limits.timeoutMs });
+      opened = grpcServerStream({ nativeCall,
+        normalize: value => normalizeGrpcResponse(contract, path, value),
+        limits: config.limits, signal, mapError: callError,
+        onClose(outcome) { active.delete(job); settle(); if (outcome.complete) completed++; else failures++; },
+      });
+      return opened;
+    } catch (issue) {
+      // If adapter construction fails, this owner still cancels the created RPC.
+      nativeCall?.on('error', () => {}); nativeCall?.cancel(); nativeCall?.destroy();
+      active.delete(job); settle(); failures++; throw issue;
+    }
+  }
   function inspect() {
     return { schema: 'stellar-forge.grpc-inspection.v1', protoSha256: contract.source.sha256,
       transport: transport.mode, inventory: structuredClone(contract.inventory), limits: { ...config.limits } };
   }
   function route(path) {
-    method(path);
+    const selected = method(path);
     return Object.freeze({
       admit(context) {
         try {
@@ -130,7 +133,9 @@ export async function createGrpcSource(configInput, protoSource, { env = process
         }
       },
       async handler(context) {
-        try { return { status: 200, headers: { 'content-type': 'application/json; charset=utf-8' },
+        try {
+          if (selected.responseStream) return stream(path, context.body, { signal: context.signal }).response;
+          return { status: 200, headers: { 'content-type': 'application/json; charset=utf-8' },
           body: await call(path, context.body, { signal: context.signal }) }; }
         catch (issue) { return { status: issue.status ?? 502, body: {
           error: issue instanceof GrpcSourceError ? issue.code : 'GRPC_RESPONSE_UNAVAILABLE',
@@ -150,7 +155,7 @@ export async function createGrpcSource(configInput, protoSource, { env = process
     }
     return closePromise;
   }
-  return Object.freeze({ call, ready, route, inspect, close, contract,
+  return Object.freeze({ call, stream, ready, route, inspect, close, contract,
     status: () => ({ state: closing ? 'CLOSED' : 'READY', active: active.size,
       maxInFlight: config.limits.maxInFlight, completed, failures }) });
 }

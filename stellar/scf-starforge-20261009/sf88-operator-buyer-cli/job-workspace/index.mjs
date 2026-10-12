@@ -7,3 +7,5 @@ export { readJobWorkspaceLaunch, jobWorkspaceLaunchPath, jobWorkspaceEntryUrl,
 
 export { openJobIntake, jobIntakeExtension, JOB_INTAKE_SCHEMA, JOB_INTAKE_PHASES } from './intake/index.mjs';
 export * from './inputs/index.mjs';
+export { openJobResolutionBuyer, openJobResolutionController, jobResolutionExtension,
+  runJobBuyerResolutionCommand } from './resolution/index.mjs';

@@ -23,6 +23,26 @@ The selected SDK uses the original Node buyer engine. Its Linux executable requi
 
 The mapping selects the native `Jam Values!A20:G36` table by worksheet coordinates. It retains the actual numeric zero values, source cell types and the original trailing whitespace. This Census table describes special-value conventions. Its sixteen reference rows remain attached to their original source coordinates and bytes.
 
+## Installed command and private workspace
+
+The cumulative distribution registers this directory as the `census-workbook-customer` component. In an installation whose source includes that contribution, inspect its original registration and prepare a private customer workspace:
+
+```sh
+starforge registrations --source census-workbook-customer
+starforge census-workbook-customer --help
+starforge census-workbook-customer prepare --workspace "$PWD/census-customer"
+```
+
+Preparation copies the three original executable scripts into the selected directory, synchronizes them, and reports their byte sizes and SHA-256 values. Repeating it verifies the retained files before continuing. A different script is refused so its completed customer state stays paired with its original source. Preparation uses Node and does not need a running merchant or browser.
+
+The command's installed source and its selected merchant runtime have separate roles. The following cumulative release carries this customer entrypoint; the reproducible customer below selects the original e287 merchant installation with the explicit cf1e writer upgrade. Set the existing runtime variables described below, then start or continue that same private workspace:
+
+```sh
+starforge census-workbook-customer run --workspace "$PWD/census-customer"
+```
+
+The launcher also accepts `--merchant-package`, `--rust-binary`, `--playwright`, `--chromium` and `--python` in place of the corresponding environment variables. It invokes the unchanged original runner from the prepared workspace, which retains its inputs, checkpoints, acquisition, browser output, Analysis exports and Rust delivery there.
+
 ## Run on the existing installed product
 
 Receive the [original e287 source archive](https://github.com/woahwhattheheck/public-commons-sprint-2026/releases/download/starforge-merchant-0.1.0-source.ge28755f20dd4/tokenjunkielabs-starforge-merchant-0.1.0-source.ge28755f20dd4.tgz), verify the size and SHA-256 above, and install it with `npm install --ignore-scripts --no-audit --no-fund ./tokenjunkielabs-starforge-merchant-0.1.0-source.ge28755f20dd4.tgz` in an owned directory.
@@ -49,7 +69,7 @@ export SCF_RUST_BINARY=/absolute/starforge-rust-linux-x86_64/bin/starforge-buyer
 node ./run-installed-customer.mjs
 ```
 
-The wrapper verifies the original base manifest, both exact writer postimages, the released binary and both workbook hashes before opening the native application. Its result records the base source plus the explicit two-file upgrade, including their byte sizes, Git blob IDs and SHA-256 values. By default it keeps its own state under `browser-run/` beside these scripts. `SCF_CENSUS_WORKSPACE` may select another absolute owned directory containing these original controller/caller files; its `inputs/` files are retained or retrieved from the pinned public Census URLs.
+The wrapper verifies the original base manifest, both exact writer postimages, the released binary and both workbook hashes before opening the native application. Its result records the base source plus the explicit two-file upgrade, including their byte sizes, Git blob IDs and SHA-256 values. When invoked directly, the runner keeps its state under `browser-run/` beside these scripts. `SCF_CENSUS_WORKSPACE` may select another absolute owned directory containing the same three executable scripts. The installed `prepare`/`run` launcher creates and verifies those copies before invoking it; `inputs/` files are retained or retrieved from the pinned public Census URLs.
 
 ## Customer workflow
 

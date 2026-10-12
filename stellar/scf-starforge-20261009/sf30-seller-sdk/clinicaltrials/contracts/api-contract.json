@@ -1,0 +1,307 @@
+{
+  "schema": "stellar-forge.clinicaltrials-api-contract.v1",
+  "sourceSha256": "ba31adaea67e6bb09ff77af5c0c11daf36d5aff7f5d6cbed89f0aab04b297aea",
+  "apiVersion": "2.0.5",
+  "base": "https://clinicaltrials.gov/api/v2",
+  "parameters": [
+    {
+      "name": "format",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "csv",
+          "json"
+        ],
+        "default": "json"
+      },
+      "description": "Must be one of the following:\n* `csv`- return CSV table with one page of study data; first page will contain header with column names; available fields are listed on [CSV Download](/data-api/about-api/csv-download) page\n* `json`- return JSON with one page of study data; every study object is placed in a separate line; `markup` type fields format depends on `markupFormat` parameter"
+    },
+    {
+      "name": "markupFormat",
+      "schema": {
+        "type": "string",
+        "enum": [
+          "markdown",
+          "legacy"
+        ],
+        "default": "markdown"
+      },
+      "description": "Format of `markup` type fields:\n* `markdown`- [markdown](https://spec.commonmark.org/0.28/) format\n* `legacy`- compatible with classic PRS\n\nApplicable only to `json` format."
+    },
+    {
+      "name": "query.cond",
+      "schema": {
+        "type": "string"
+      },
+      "description": "\"Conditions or disease\" query in [Essie expression syntax](/find-studies/constructing-complex-search-queries). See \"ConditionSearch Area\" on [Search Areas](/data-api/about-api/search-areas#ConditionSearch) for more details."
+    },
+    {
+      "name": "query.term",
+      "schema": {
+        "type": "string"
+      },
+      "description": "\"Other terms\" query in [Essie expression syntax](/find-studies/constructing-complex-search-queries). See \"BasicSearch Area\" on [Search Areas](/data-api/about-api/search-areas#BasicSearch) for more details."
+    },
+    {
+      "name": "query.locn",
+      "schema": {
+        "type": "string"
+      },
+      "description": "\"Location terms\" query in [Essie expression syntax](/find-studies/constructing-complex-search-queries). See \"LocationSearch Area\" on [Search Areas](/data-api/about-api/search-areas#LocationSearch) for more details."
+    },
+    {
+      "name": "query.titles",
+      "schema": {
+        "type": "string"
+      },
+      "description": "\"Title / acronym\" query in [Essie expression syntax](/find-studies/constructing-complex-search-queries). See \"TitleSearch Area\" on [Search Areas](/data-api/about-api/search-areas#TitleSearch) for more details."
+    },
+    {
+      "name": "query.intr",
+      "schema": {
+        "type": "string"
+      },
+      "description": "\"Intervention / treatment\" query in [Essie expression syntax](/find-studies/constructing-complex-search-queries). See \"InterventionSearch Area\" on [Search Areas](/data-api/about-api/search-areas#InterventionSearch) for more details."
+    },
+    {
+      "name": "query.outc",
+      "schema": {
+        "type": "string"
+      },
+      "description": "\"Outcome measure\" query in [Essie expression syntax](/find-studies/constructing-complex-search-queries). See \"OutcomeSearch Area\" on [Search Areas](/data-api/about-api/search-areas#OutcomeSearch) for more details."
+    },
+    {
+      "name": "query.spons",
+      "schema": {
+        "type": "string"
+      },
+      "description": "\"Sponsor / collaborator\" query in [Essie expression syntax](/find-studies/constructing-complex-search-queries). See \"SponsorSearch Area\" on [Search Areas](/data-api/about-api/search-areas#SponsorSearch) for more details."
+    },
+    {
+      "name": "query.lead",
+      "schema": {
+        "type": "string"
+      },
+      "description": "Searches in \"LeadSponsorName\" field. See [Study Data Structure](/data-api/about-api/study-data-structure#LeadSponsorName) for more details. The query is in [Essie expression syntax](/find-studies/constructing-complex-search-queries)."
+    },
+    {
+      "name": "query.id",
+      "schema": {
+        "type": "string"
+      },
+      "description": "\"Study IDs\" query in [Essie expression syntax](/find-studies/constructing-complex-search-queries). See \"IdSearch Area\" on [Search Areas](/data-api/about-api/search-areas#IdSearch) for more details."
+    },
+    {
+      "name": "query.patient",
+      "schema": {
+        "type": "string"
+      },
+      "description": "See \"PatientSearch Area\" on [Search Areas](/data-api/about-api/search-areas#PatientSearch) for more details."
+    },
+    {
+      "name": "filter.overallStatus",
+      "style": "pipeDelimited",
+      "explode": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Status"
+        }
+      },
+      "description": "Filter by comma- or pipe-separated list of statuses"
+    },
+    {
+      "name": "filter.geo",
+      "schema": {
+        "type": "string",
+        "pattern": "^distance\\(-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,\\d+(\\.\\d+)?(km|mi)?\\)$"
+      },
+      "description": "Filter by geo-function. Currently only distance function is supported.\nFormat: `distance(latitude,longitude,distance)`"
+    },
+    {
+      "name": "filter.ids",
+      "style": "pipeDelimited",
+      "explode": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[Nn][Cc][Tt]0*[1-9]\\d{0,7}$"
+        }
+      },
+      "description": "Filter by comma- or pipe-separated list of NCT IDs (a.k.a. ClinicalTrials.gov identifiers).\nThe provided IDs will be searched in [NCTId](data-api/about-api/study-data-structure#NCTId) and\n[NCTIdAlias](data-api/about-api/study-data-structure#NCTIdAlias) fields."
+    },
+    {
+      "name": "filter.advanced",
+      "schema": {
+        "type": "string"
+      },
+      "description": "Filter by query in [Essie expression syntax](/find-studies/constructing-complex-search-queries)"
+    },
+    {
+      "name": "filter.synonyms",
+      "style": "pipeDelimited",
+      "explode": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "description": "Filter by comma- or pipe-separated list of `area`:`synonym_id` pairs"
+    },
+    {
+      "name": "postFilter.overallStatus",
+      "style": "pipeDelimited",
+      "explode": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Status"
+        }
+      },
+      "description": "Filter by comma- or pipe-separated list of statuses"
+    },
+    {
+      "name": "postFilter.geo",
+      "schema": {
+        "type": "string",
+        "pattern": "^distance\\(-?\\d+(\\.\\d+)?,-?\\d+(\\.\\d+)?,\\d+(\\.\\d+)?(km|mi)?\\)$"
+      },
+      "description": "Filter by geo-function. Currently only distance function is supported.\nFormat: `distance(latitude,longitude,distance)`"
+    },
+    {
+      "name": "postFilter.ids",
+      "style": "pipeDelimited",
+      "explode": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[Nn][Cc][Tt]0*[1-9]\\d{0,7}$"
+        }
+      },
+      "description": "Filter by comma- or pipe-separated list of NCT IDs (a.k.a. ClinicalTrials.gov identifiers).\nThe provided IDs will be searched in [NCTId](data-api/about-api/study-data-structure#NCTId) and\n[NCTIdAlias](data-api/about-api/study-data-structure#NCTIdAlias) fields."
+    },
+    {
+      "name": "postFilter.advanced",
+      "schema": {
+        "type": "string"
+      },
+      "description": "Filter by query in [Essie expression syntax](/find-studies/constructing-complex-search-queries)"
+    },
+    {
+      "name": "postFilter.synonyms",
+      "style": "pipeDelimited",
+      "explode": false,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "description": "Filter by comma- or pipe-separated list of `area`:`synonym_id` pairs"
+    },
+    {
+      "name": "aggFilters",
+      "schema": {
+        "type": "string"
+      },
+      "description": "Apply aggregation filters, aggregation counts will not be provided.\nThe value is comma- or pipe-separated list of pairs `filter_id`:`space-separated list of option keys` for the checked options."
+    },
+    {
+      "name": "geoDecay",
+      "schema": {
+        "type": "string",
+        "pattern": "^func:(gauss|exp|linear),scale:(\\d+(\\.\\d+)?(km|mi)),offset:(\\d+(\\.\\d+)?(km|mi)),decay:(\\d+(\\.\\d+)?)$",
+        "default": "func:exp,scale:300mi,offset:0mi,decay:0.5"
+      },
+      "description": "Set proximity factor by distance from `filter.geo` location to the closest [LocationGeoPoint](/data-api/about-api/study-data-structure#LocationGeoPoint) of a study.\nIgnored, if `filter.geo` parameter is not set or response contains more than 10,000 studies."
+    },
+    {
+      "name": "fields",
+      "style": "pipeDelimited",
+      "explode": false,
+      "schema": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "pattern": "^([a-zA-Z][a-zA-Z0-9\\-. ]*)|(@query)$"
+        }
+      },
+      "description": "If specified, must be non-empty comma- or pipe-separated list of fields to return. If unspecified, all fields will be returned.\nOrder of the fields does not matter.\n\nFor `csv` format, specify list of columns. The column names are available on [CSV Download](/data-api/about-api/csv-download).\n\nFor `json` format, every list item is either area name, piece name, field name, or special name.\nIf a piece or a field is a branch node, all descendant fields will be included.\nAll area names are available on [Search Areas](/data-api/about-api/search-areas),\nthe piece and field names — on [Data Structure](/data-api/about-api/study-data-structure) and also can be retrieved at `/studies/metadata` endpoint.\nThere is a special name, `@query`, which expands to all fields queried by search."
+    },
+    {
+      "name": "sort",
+      "style": "pipeDelimited",
+      "explode": false,
+      "schema": {
+        "type": "array",
+        "maxItems": 2,
+        "default": [],
+        "items": {
+          "type": "string",
+          "pattern": "^(([a-zA-Z][a-zA-Z0-9\\-. ]*)|(@relevance))(:(asc|desc))?$"
+        }
+      },
+      "description": "Comma- or pipe-separated list of sorting options of the studies. The returning studies are not sorted by default for a performance reason.\nEvery list item contains a field/piece name and an optional sort direction (`asc` for ascending or `desc` for descending)\nafter colon character.\n\nAll piece and field names can be found on [Data Structure](/data-api/about-api/study-data-structure) and also can be retrieved\nat `/studies/metadata` endpoint. Currently, only date and numeric fields are allowed for sorting.\nThere is a special \"field\" `@relevance` to sort by relevance to a search query.\n\nStudies missing sort field are always last. Default sort direction:\n* Date field - `desc`\n* Numeric field - `asc`\n* `@relevance` - `desc`"
+    },
+    {
+      "name": "countTotal",
+      "schema": {
+        "type": "boolean",
+        "default": false
+      },
+      "description": "Count total number of studies in all pages and return `totalCount` field with first page, if `true`.\nFor CSV, the result can be found in `x-total-count` response header.\nThe parameter is ignored for the subsequent pages."
+    },
+    {
+      "name": "pageSize",
+      "schema": {
+        "type": "integer",
+        "format": "int32",
+        "minimum": 0,
+        "default": 10
+      },
+      "description": "Page size is maximum number of studies to return in response. It does not have to be the same for every page.\nIf not specified or set to 0, the default value will be used. It will be coerced down to  1,000, if greater than that."
+    },
+    {
+      "name": "pageToken",
+      "schema": {
+        "type": "string"
+      },
+      "description": "Token to get next page. Set it to a `nextPageToken` value returned with the previous page in JSON format.\nFor CSV, it can be found in `x-next-page-token` response header.\nDo not specify it for first page."
+    }
+  ],
+  "statuses": [
+    "ACTIVE_NOT_RECRUITING",
+    "COMPLETED",
+    "ENROLLING_BY_INVITATION",
+    "NOT_YET_RECRUITING",
+    "RECRUITING",
+    "SUSPENDED",
+    "TERMINATED",
+    "WITHDRAWN",
+    "AVAILABLE",
+    "NO_LONGER_AVAILABLE",
+    "TEMPORARILY_NOT_AVAILABLE",
+    "APPROVED_FOR_MARKETING",
+    "WITHHELD",
+    "UNKNOWN"
+  ],
+  "version": {
+    "type": "object",
+    "properties": {
+      "apiVersion": {
+        "type": "string"
+      },
+      "dataTimestamp": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "apiVersion"
+    ]
+  }
+}

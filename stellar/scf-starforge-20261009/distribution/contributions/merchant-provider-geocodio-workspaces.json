@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-geocodio-workspaces",
+  "description": "Original geocodio workspaces MCP provider",
+  "merchantProviders": {
+    "geocodio-workspaces": "stellar-forge/mcp-merchant-operator/providers/geocodio-workspaces.mjs"
+  }
+}

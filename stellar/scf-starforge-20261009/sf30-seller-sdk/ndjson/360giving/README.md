@@ -4,6 +4,42 @@ Prepare a complete 360Giving publisher file for the original NDJSON workspace an
 
 The profile uses the original NDJSON engine for immutable source intake, projection, queries, keyed comparisons and customer project receiving. The domain adapter adds the 360Giving package and publisher review steps.
 
+## Installed publisher command
+
+The maintained Starforge distribution includes this entire profile: the publisher program, local review, exact source examples, official schemas, attribution and complete receiving workflow. Use `starforge dataset-360giving` with the same arguments as `publisher.py`. The `example` subcommand runs the original complete two-fund workflow.
+
+Select Python 3.11 or later with `jsonschema>=4.23,<5` and `referencing>=0.35,<1` installed, as declared in this profile's `requirements.txt`. The command uses `SF30_NDJSON_PYTHON` when set, or `python3` (`python` on Windows). A leading `--python` selects an explicit executable for this invocation.
+
+~~~sh
+starforge dataset-360giving --python /absolute/venv/bin/python prepare \
+  --source /absolute/publisher-original.json \
+  --source-url https://publisher.example/grants.json \
+  --registry /absolute/original-registry-record.json \
+  --capture /absolute/acquisition.json \
+  --out /absolute/publisher-edition
+
+starforge dataset-360giving candidate \
+  --workspace /absolute/publisher-edition \
+  --decisions /absolute/review-decisions.json \
+  --out /absolute/publisher-candidate
+
+starforge dataset-360giving export \
+  --workspace /absolute/publisher-edition \
+  --decisions /absolute/review-decisions.json \
+  --candidate /absolute/publisher-candidate \
+  --out /absolute/publisher-receiving.zip
+
+starforge dataset-360giving receive \
+  --file /absolute/publisher-receiving.zip \
+  --out /absolute/second-operator-edition
+
+starforge dataset-360giving example --out /absolute/scvo-publisher-work
+~~~
+
+Set `SF30_NDJSON_PYTHON` once when all commands use the selected environment, or supply `--python` before the subcommand each time. Standard input, output and errors pass through to the original Python program, including the complete JSON result and its exit status. `prepare --help` and `example --help` show the original arguments.
+
+Use `starforge registrations --command dataset-360giving` to inspect this command's original source registration. The installed review and receiving packages carry their own complete Python operator, so a second operator can continue from the exported edition.
+
 ## Receive the source
 
 Use Python 3.11 or later with the dependencies in requirements.txt. Retain the original HTTP response and decoded JSON when acquisition uses compression. Point --source at the decoded original package and --transport at the original transport file. The optional capture JSON contains the original acquisition metadata.

@@ -10,12 +10,14 @@ import { initializeOAuthConnection, oauthConnectionStatus } from '../store.mjs';
 import { HOST_CONNECTIONS_SCHEMA, normalizeOAuthHostConnections, readOAuthHostConnections,
   inspectOAuthHostDirectory } from '../host.mjs';
 import { normalizeOAuthProfile, oauthProfileIdentity } from '../profile.mjs';
-import { applicationEnvironment } from '../../../distribution/runtime-workspace/application-command.mjs';
+import { applicationEnvironment } from '../../../distribution/runtime-workspace/application-environment.mjs';
+import { oauthSetupProviderId } from './providers.mjs';
 import { SETUP_SCHEMA, MAX_SOURCE_BYTES, MAX_ENTRIES, MAX_REVIEW_BYTES, limits, fail, need, fields, text, revision,
   requestId, sourceId, normalizeContext, callbackUri, inspectSetupSource, normalizeNewDefinition,
   normalizeDesiredEntries, publicEntry, setupError, plain, hex, envName, identity, digest } from './model.mjs';
 
 const JSON_LIMIT=64*1024*1024;
+const HOST_EDITION = Symbol('original host setup edition');
 function retainedBytes(value,maximum=JSON_LIMIT) {
   const raw=bytes(value);
   need(raw.length<=maximum,'INPUT_INVALID','This setup record exceeds its retained size limit. Review a smaller complete service family.');
@@ -265,6 +267,14 @@ function environmentFor(snapshot,entries) {
     'The composed private environment must fit the original 128-name, 64 KiB Applications file limit.',409);
   return {value,raw,sha256:digest(raw),names:[...declared.keys()].sort()};
 }
+async function desiredDefinition(raw, sourceText, context, options) {
+  if (own(raw, 'provider')) {
+    need(options.providers, 'PROVIDER_UNAVAILABLE',
+      'Use the selected runtime\'s original provider registration adapter.', 409);
+    return options.providers.normalizeDefinition(raw, sourceText, {context});
+  }
+  return normalizeNewDefinition(raw, sourceText, {allowLoopback:context.allowLoopbackOAuth});
+}
 async function makeReview(directory,state,context,input,options) {
   fields(input,['expectedRevision','baseEditionId','entries'],'registry review');
   need(revision(input.expectedRevision)===state.revision,'REVISION_CHANGED','Refresh the setup before reviewing changed selections.',409);
@@ -282,7 +292,7 @@ async function makeReview(directory,state,context,input,options) {
     }
     let original=sources.get(requested.sourceId);
     if(!original){original=await sourceRecord(directory,state,requested.sourceId);sources.set(requested.sourceId,original);}
-    const normalized=normalizeNewDefinition(requested,original.text,{allowLoopback:snapshot.context.allowLoopbackOAuth});
+    const normalized=await desiredDefinition(requested,original.text,snapshot.context,options);
     const old=snapshot.baseEntries.find(entry=>entry.alias===requested.alias);
     need(!old || old.profileSha256===normalized.profileSha256 ||
       requested.replacesProfileSha256===old.profileSha256,'PROFILE_REPLACEMENT_REQUIRED',
@@ -371,6 +381,13 @@ async function retainedReview(directory,state,reviewId) {
   return plan;
 }
 function commandBody(action,input) {
+  if (action === 'source.provider') {
+    fields(input, ['requestId', 'expectedRevision', 'provider', 'sourceSha256'], 'native provider source import');
+    requestId(input.requestId); revision(input.expectedRevision);
+    oauthSetupProviderId(input.provider); sourceId(input.sourceSha256);
+    return {requestId:input.requestId, expectedRevision:input.expectedRevision,
+      provider:input.provider, sourceId:input.sourceSha256};
+  }
   if(action==='source.import') {
     fields(input,['requestId','expectedRevision','label','sourceText'],'source import');
     requestId(input.requestId);revision(input.expectedRevision);text(input.label,'source label',160);
@@ -408,7 +425,7 @@ async function verifyPlan(directory,state,plan,options) {
       'REVIEW_CHANGED','A retained profile or callback no longer matches its source review.',409);
     if(entry.definition) {
       const source=await sourceRecord(directory,state,entry.sourceId);
-      const derived=normalizeNewDefinition(entry.definition,source.text,{allowLoopback:plan.context.allowLoopbackOAuth});
+      const derived=await desiredDefinition(entry.definition,source.text,plan.context,options);
       need(eq(derived.profile,entry.profile),'SOURCE_CHANGED','The reviewed profile no longer matches its exact source.',409);
     }
     if(entry.kind==='retained')await checkConnection(entry,plan.context.allowLoopbackOAuth);
@@ -492,15 +509,20 @@ async function commitEdition(directory,state,command,options) {
 }
 async function executeCommand(directory,state,command,options) {
   if(command.action==='commit')return commitEdition(directory,state,command,options);
-  if(command.action==='source.import') {
+  if(['source.import','source.provider'].includes(command.action)) {
+    const retained=command.action==='source.provider'?command.providerSource:command.input;
+    need(retained && Number.isSafeInteger(retained.sourceBytes) && retained.sourceBytes>0,
+      'SOURCE_CHANGED','The original source import metadata is unavailable.',409);
     const raw=await readOwned(join(directory,'sources',command.input.sourceId+'.source'),MAX_SOURCE_BYTES);
-    need(raw.length===command.input.sourceBytes && digest(raw)===command.input.sourceId,
+    need(raw.length===retained.sourceBytes && digest(raw)===command.input.sourceId,
       'SOURCE_CHANGED','The original imported source is missing or changed.',409);
     const viewed=inspectSetupSource(new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(raw));
     const source=state.sources.find(value=>value.id===command.input.sourceId)??{
-      id:command.input.sourceId,sha256:command.input.sourceId,bytes:raw.length,label:command.input.label,
+      id:command.input.sourceId,sha256:command.input.sourceId,bytes:raw.length,label:retained.label,
       title:viewed.inspection.title,importedAt:command.at};
-    return {delta:{kind:'source',source},result:{revision:state.revision+1,source,...viewed}};
+    return {delta:{kind:'source',source},result:{revision:state.revision+1,source,...viewed,
+      ...(command.action==='source.provider'?{provider:command.input.provider,
+        factorySha256:retained.factorySha256}:{})}};
   }
   const edition=await checkedEdition(directory,state,command.input.editionId);
   await validatePrepared(directory,edition,options);
@@ -570,7 +592,7 @@ async function mutate(directory,state,action,context,input,options) {
   } else {
     need(normalized.expectedRevision===state.revision,'REVISION_CHANGED','Refresh the current setup before preparing another command.',409);
     need(!prior,'REQUEST_CHANGED','The retained request already has a completed result.',409);
-    let contextBinding=null;
+    let contextBinding=null,providerSource;
     if(action==='commit') {
       const plan=await retainedReview(directory,state,normalized.reviewId);
       need(plan.revision===state.revision && plan.baseEditionId===state.currentEditionId &&
@@ -587,12 +609,23 @@ async function mutate(directory,state,action,context,input,options) {
     else {
       // Retain original bytes before the pending journal; an unreferenced source
       // object is inert and can be reused by the same import after a lost write.
-      inspectSetupSource(input.sourceText);
-      await immutable(join(directory,'sources',normalized.sourceId+'.source'),Buffer.from(input.sourceText));
+      let sourceText=input.sourceText;
+      if (action==='source.provider') {
+        need(options.providers,'PROVIDER_UNAVAILABLE','Use the selected original provider source adapter.',409);
+        const original=await options.providers.source(normalized.provider,normalized.sourceId);
+        sourceText=original.sourceText;
+        need(digest(Buffer.from(sourceText))===normalized.sourceId &&
+          Buffer.byteLength(sourceText)===original.source.bytes,
+          'SOURCE_CHANGED','The original provider descriptor changed before import.',409);
+        providerSource={sourceBytes:original.source.bytes,label:original.label,
+          factorySha256:original.factorySha256};
+      }
+      inspectSetupSource(sourceText);
+      await immutable(join(directory,'sources',normalized.sourceId+'.source'),Buffer.from(sourceText));
     }
     command={schema:schema('command'),requestId:normalized.requestId,action,inputHash,
       input:normalized,context:selected,runtimeBinding:options.runtimeBinding,contextBinding,
-      at:stamp(),phase:'prepared',...(action==='commit'?{
+      at:stamp(),phase:'prepared',...(providerSource?{providerSource}:{}),...(action==='commit'?{
         editionId:identity({workspaceId:state.workspaceId,requestId:normalized.requestId,inputHash})}:{})};
     state={...state,pending:command};
     retainedBytes(state);
@@ -619,6 +652,7 @@ async function readOperation(directory,state,requested,runtimeBinding) {
     ...(pending?{phase:receipt?'publication_retained':pending.phase}:{result:receipt.result})};
 }
 async function route(directory,state,action,context,input,options) {
+  if (action===HOST_EDITION) return hostEdition(directory,state,input,options);
   if(action==='catalog') {
     fields(input,[],'setup catalog');
     let snapshot,contextError=null;
@@ -635,7 +669,8 @@ async function route(directory,state,action,context,input,options) {
       clientSecretEnvs:Object.keys(snapshot?.environment.effective??{}).filter(name=>
         envName(name) && !['HOME','CODEX_HOME'].includes(name) && !unavailable.has(name) &&
         typeof snapshot.environment.effective[name]==='string' && snapshot.environment.effective[name].length>0).sort(),
-      limits,policy:{allowLoopbackOAuth:options.policy.allowLoopbackOAuth===true},contextError,
+      limits,providers:options.providers?await options.providers.catalog():[],
+      policy:{allowLoopbackOAuth:options.policy.allowLoopbackOAuth===true},contextError,
       runtimeBinding:options.runtimeBinding,pending:pendingView(state.pending)};
   }
   if(action==='source.inspect') {
@@ -647,7 +682,7 @@ async function route(directory,state,action,context,input,options) {
     need(!state.pending,'COMMAND_PENDING','Resume the current setup command before preparing a different review.',423);
     return makeReview(directory,state,context,input,options);
   }
-  if(['source.import','commit','activate'].includes(action))return mutate(directory,state,action,context,input,options);
+  if(['source.import','source.provider','commit','activate'].includes(action))return mutate(directory,state,action,context,input,options);
   if(action==='recover') {
     fields(input,['requestId'],'retained setup recovery');requestId(input.requestId);
     const operation=await readOperation(directory,state,input.requestId,options.runtimeBinding);
@@ -692,9 +727,78 @@ async function route(directory,state,action,context,input,options) {
   fail('INPUT_INVALID','Choose a supported setup action.');
 }
 
+async function hostEdition(directory,state,input,options) {
+  fields(input,['editionId','alias','expectedProfileSha256'],'host edition selection');
+  id(input.editionId);
+  need(typeof input.alias==='string' && /^[a-z][a-z0-9_-]{0,63}$/.test(input.alias) &&
+    hex(input.expectedProfileSha256),'INPUT_INVALID','Select the exact reviewed edition, alias and profile.');
+  const edition=await checkedEdition(directory,state,input.editionId);
+  await validatePrepared(directory,edition,options);
+  const entry=edition.entries.find(value=>value.alias===input.alias);
+  need(entry && entry.profileSha256===input.expectedProfileSha256,'PROFILE_CHANGED',
+    'The selected immutable edition contains a different alias or profile.',409);
+  const provider=entry.profile.provider?.kind==='intuit-quickbooks'?'quickbooks':
+    entry.profile.provider?.kind==='xero-accounting'?'xero':null;
+  need(provider && options.providers,'PROVIDER_UNAVAILABLE',
+    'Select a reviewed original QuickBooks or Xero profile supported by this runtime.',409);
+  const original=await options.providers.source(provider,entry.sourceId);
+  need(original.source.sha256===entry.profile.source.sha256 &&
+    original.source.scheme===entry.profile.source.scheme,'SOURCE_CHANGED',
+    'The native accounting source no longer matches this selected setup profile.',409);
+  const environment=await privateEnvironment({environmentFile:join(directory,'editions',edition.id,'environment.json')});
+  need(environment.sha256===edition.environmentSha256,'EDITION_CHANGED',
+    'The immutable environment changed while resolving its native accounting selection.',409);
+  const status=await checkConnection(entry,edition.context.allowLoopbackOAuth);
+  const selectionRoot=options.selectionRoot??join(options.ownerDirectory,'oauth-accounting');
+  absolute(selectionRoot);
+  need(selectionRoot!==options.ownerDirectory && [directory,options.grantRoot].every(root=>
+    selectionRoot!==root && !selectionRoot.startsWith(root+'/') && !root.startsWith(selectionRoot+'/')),
+    'DIRECTORY_CHANGED','Keep native accounting selections separate from setup editions and grant stores.',409);
+  const selectionRootIdentity=await directoryIdentity(selectionRoot,{create:true});
+  const selectionKey=identity({workspaceId:state.workspaceId,alias:entry.alias,profileSha256:entry.profileSha256});
+  const selectionDirectory=join(selectionRoot,selectionKey);
+  await directoryIdentity(selectionDirectory,{create:true});
+  const marker={schema:schema('accounting-selection-owner'),ownerWorkspaceId:state.ownerWorkspaceId,
+    workspaceId:state.workspaceId,provider,alias:entry.alias,profileSha256:entry.profileSha256,selectionKey};
+  const markerPath=join(selectionDirectory,'setup-owner.json');
+  const previous=await optional(markerPath);
+  if(previous)need(eq(previous,marker),'DIRECTORY_CHANGED',
+    'The native accounting selection directory belongs to a different setup profile.',409);
+  else {
+    need((await readdir(selectionDirectory)).length===0,'DIRECTORY_CHANGED',
+      'An unowned existing selection directory cannot be adopted implicitly.',409);
+    await immutable(markerPath,bytes(marker));
+  }
+  const selectionDirectoryIdentity=await directoryIdentity(selectionDirectory);
+  return {
+    schema:schema('host-edition'),ownerWorkspaceId:state.ownerWorkspaceId,workspaceId:state.workspaceId,
+    revision:state.revision,currentEditionId:state.currentEditionId,
+    edition:summary(edition),runtimeBinding:options.runtimeBinding,provider,
+    prepared:prepared(directory,edition),
+    registry:{path:join(directory,'editions',edition.id,'connections.json'),sha256:edition.registrySha256,
+      connections:edition.entries.map(({alias,directoryEnv})=>({alias,directoryEnv}))},
+    environmentFile:{path:join(directory,'editions',edition.id,'environment.json'),sha256:edition.environmentSha256},
+    environment:{...environment.effective},entry:structuredClone(entry),status,
+    selection:{directory:selectionDirectory,key:selectionKey,owner:marker,
+      rootIdentity:selectionRootIdentity,directoryIdentity:selectionDirectoryIdentity},
+  };
+}
+
+/**
+ * Host-only private binding. It is deliberately unreachable from string action
+ * routes and ordinary download handlers. The caller must never serialize its
+ * environment field to HTTP, normal command output, logs or a public artifact.
+ * Resolving prepares only the owned empty company/tenant selection directory;
+ * original native selection helpers retain all grant and company write authority.
+ */
+export function resolveOAuthSetupEdition(options,input) {
+  return oauthSetupAction(options,{action:HOST_EDITION,input});
+}
+
 /** The caller owns these destinations; HTTP adapters must not accept path overrides. */
 export async function oauthSetupAction({
   directory,grantRoot,ownerDirectory,ownerWorkspaceId,runtimeBinding=null,policy={},validateReview,validatePrepared,
+  providers,selectionRoot,
 }={}, {action,context={},input={}}={}) {
   try {
     absolute(directory);absolute(grantRoot);absolute(ownerDirectory);
@@ -710,7 +814,11 @@ export async function oauthSetupAction({
     await directoryIdentity(grantRoot,{create:true});
     need([validateReview,validatePrepared].every(value=>value===undefined || typeof value==='function'),
       'INPUT_INVALID','Use receiving-host runtime validators supplied by the original application facade.');
-    const options={directory,grantRoot,ownerDirectory,ownerWorkspaceId,runtimeBinding,policy,validateReview,validatePrepared};
+    need(providers===undefined || providers && ['catalog','source','normalizeDefinition']
+      .every(name=>typeof providers[name]==='function'),'INPUT_INVALID',
+      'Use the original trusted provider adapter supplied by the receiving host.');
+    const options={directory,grantRoot,ownerDirectory,ownerWorkspaceId,runtimeBinding,policy,validateReview,
+      validatePrepared,providers,selectionRoot};
     return await withConnectionLock(directory,async()=>{
       const roots={owner:await directoryIdentity(ownerDirectory),
         setup:await directoryIdentity(directory),grants:await directoryIdentity(grantRoot)};

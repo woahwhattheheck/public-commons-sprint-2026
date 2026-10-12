@@ -1,0 +1,37 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "buyer-runbook",
+  "description": "Original Buyer browser, typed client, CLI and merchant MCP receiving workflow",
+  "applicationProviders": {
+    "buyer-runbook": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/buyer-runbook.mjs"
+  },
+  "merchantProviders": {
+    "buyer-runbook-workspaces": "stellar/scf-starforge-20261009/buyer-runbook/merchant-provider.mjs"
+  },
+  "commands": {
+    "buyer-agent": "stellar/scf-starforge-20261009/buyer-runbook/agent-cli.mjs"
+  },
+  "commandDescriptions": {
+    "buyer-agent": "Operate the original Buyer receiving workspace and resume complete customer files"
+  },
+  "exports": {
+    "./buyer/agent": {
+      "types": "./source/stellar/scf-starforge-20261009/buyer-runbook/agent-client.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/buyer-runbook/agent-client.mjs"
+    },
+    "./buyer/agent/setup": "./source/stellar/scf-starforge-20261009/buyer-runbook/agent-setup.mjs",
+    "./buyer/agent/provider": "./source/stellar/scf-starforge-20261009/buyer-runbook/merchant-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/buyer-runbook/agent-contract.mjs",
+    "stellar/scf-starforge-20261009/buyer-runbook/agent-connection.mjs",
+    "stellar/scf-starforge-20261009/buyer-runbook/agent-storage.mjs",
+    "stellar/scf-starforge-20261009/buyer-runbook/agent-client.mjs",
+    "stellar/scf-starforge-20261009/buyer-runbook/agent-cli.mjs",
+    "stellar/scf-starforge-20261009/buyer-runbook/agent-client.d.mts",
+    "stellar/scf-starforge-20261009/buyer-runbook/agent-setup.mjs",
+    "stellar/scf-starforge-20261009/buyer-runbook/merchant-provider.mjs",
+    "stellar/scf-starforge-20261009/buyer-runbook/agent-receiving.mjs",
+    "stellar/scf-starforge-20261009/buyer-runbook/AGENT.md"
+  ]
+}

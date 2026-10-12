@@ -1,0 +1,56 @@
+{
+  "operation_id": "apex-original-operator-journey-20261012-f11",
+  "root": "/workspace/scratch/f11d76a9f6d6/apex-compensation-20261012",
+  "app": "/workspace/scratch/f11d76a9f6d6/apex-compensation-20261012/workbench",
+  "workspace": "/workspace/scratch/62002f3ae951/apex-source-inputs/receiving/workspace",
+  "workspace_id": "workspace-64a7a33c16294ea490bc1a630753c9b3",
+  "source_browser_sha256": "6479f2cb55d4d083627659bb4a82571977f66998625fcdfcdddad0bae4dbd2b2",
+  "source_host_sha256": "d8194543339ce7a9dc7f1a4504c9131274097a805e6b87edae44bc34288ce87c",
+  "source_engine_sha256": "b4fb4e4eaae9258cfdb697210aece0a0dc3dc283dd206dbd19731581fbccbd54",
+  "sources": {
+    "method": {
+      "id": "classification-method-b3dd2110dd2745e3b4dc231afdae0e72",
+      "sha256": "e1ce48fa416b89d55d4d2e3cfc788dc24ca63e47f0a374718973e6e855f6a785",
+      "rows": 27
+    },
+    "roles": {
+      "id": "classification-roles-764f8213d1a744e296bf09235fb768ac",
+      "sha256": "1de370b159d203245ab39c03fde9d725482304ba0accc564de9533f31bae6fe1",
+      "rows": 47
+    },
+    "roster": {
+      "id": "classification-roster-3434968448ce401c8fc43ce221349296",
+      "sha256": "6c9e5ac422450a54a786a67c27589e331a08fb3f56742dacef7bfcfca70a727b",
+      "rows": 19
+    }
+  },
+  "scenarios": {
+    "immediate": {
+      "id": "classification-scenario-b023dc46695642cc82ab5bb801fa9f0b",
+      "csv": "0dec3c9351663c54ce385b1a730142d54df5790fb20455277a501d539b1fd326",
+      "json": "818b0689b53939753723ca12e2fdf0ff64cc45c6bcc297169d186b18dac4f5ba"
+    },
+    "phased": {
+      "id": "classification-scenario-5876871ef4ed40c1819e375c2d29dfb1",
+      "csv": "26d34ce08145c5196fbd0e06b6e96ab681b34445fa7261321b651b5b68c07cb7",
+      "json": "ab8235e75a7b247d3b26d81b6fe035fb30c2bdf6bf542019a6b8c52936b3169a"
+    },
+    "deferred": {
+      "id": "classification-scenario-4528b364f3d34920bc12da3bb240eef6",
+      "csv": "dfdae322ccd7c651914da67097ad789b5a29ea15f1a7aed6b24004c9096e0076",
+      "json": "2c4450f0666d287dcec16c6ccf37fc78fc461a73caf0faa72c5cbd68767a82c4"
+    }
+  },
+  "zip_sha256": "d2700b5d31a78da61d5fbf7f94c5e62cae9d677cdd40f69a3eb08bc954c67d7a",
+  "planning_row": {
+    "id": "apex-authorized-fire-rescue-assistant-fire-chief--fire-rescue-assistant-fire-chief",
+    "role_id": "apex-fire-rescue-assistant-fire-chief",
+    "grade_id": "M14",
+    "fte": "3",
+    "annual_base_rate": "104849.06",
+    "reference": "128436.88",
+    "proposed": "162501.04",
+    "source_ref": "CN19-A1 PDF page 2, pay-plan-p2-l38; CN20-A1 PDF page 2"
+  },
+  "source_engine_git_blob": "9046b4c11397b1c7044f277031e227e56b354d7c"
+}

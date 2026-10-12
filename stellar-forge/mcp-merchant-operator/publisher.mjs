@@ -104,6 +104,7 @@ function operationFailure(error) {
 async function originalFactory(kind) {
   if (kind === 'bls-labor') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/model.mjs')).openBlsPublisher;
   if (kind === 'census-acs') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs')).openCensusPublisher;
+  if (kind === 'timescale') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/model.mjs')).openTimescaleWorkspace;
   if (kind === 'postgres') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/model.mjs')).openPostgresPublisher;
   if (kind === 'sqlite') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/model.mjs')).openSqlitePublisher;
   if (kind === 'mysql') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/model.mjs')).openMysqlPublisher;
@@ -117,7 +118,7 @@ async function originalFactory(kind) {
 }
 
 export class MerchantPublisher {
-  #config; #entries = new Map(); #opening = new Map(); #closing = false; #close;
+  #config; #entries = new Map(); #opening = new Map(); #closing = false; #close; #borrowed = new Set();
   constructor(config) { this.#config = config; }
   get summary() {
     return { configured: Boolean(this.#config.publishers),
@@ -161,19 +162,24 @@ export class MerchantPublisher {
   async #openOriginal(alias) {
     const configured = this.#declared(alias);
     const factory = await originalFactory(configured.kind);
-    const publisher = await factory({ directory: configured.directory,
+    const original = await factory({ directory: configured.directory,
       ...(configured.seller ? { seller: configured.seller, resource: configured.resource } : {}) });
+    const workspace = configured.kind === 'timescale' ? original : null;
+    const publisher = workspace ? workspace.publisher : original;
+    const closeOriginal = () => original.close();
     let schedule;
     try {
+      if (workspace && workspace.settings.id !== configured.workspaceId)
+        throw failure('TIMESCALE_WORKSPACE_BINDING_CHANGED', 'The original Timescale workspace no longer matches its host declaration.');
       const { openPostgresSchedule } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/schedule.mjs');
       schedule = await openPostgresSchedule({ publisher });
-      const entry = { alias, publisher, schedule, instanceId: randomUUID(), pending: new Set(), children: new Map(), closing: null };
+      const entry = { alias, publisher, schedule, workspace, closeOriginal, instanceId: randomUUID(), pending: new Set(), children: new Map(), closing: null };
       this.#entries.set(alias, entry);
       if (!this.#closing) schedule.start();
       return this.#view(entry);
     } catch (error) {
       this.#entries.delete(alias);
-      try { await schedule?.close(); } finally { await publisher.close(); }
+      try { await schedule?.close(); } finally { await closeOriginal(); }
       throw error;
     }
   }
@@ -190,7 +196,7 @@ export class MerchantPublisher {
       child = { key, pending: new Set(), closing: null, resource: null, ready: null, lease: null };
       entry.children.set(key, child);
       child.ready = Promise.resolve().then(() => open({ publisher: entry.publisher, schedule: entry.schedule,
-        instanceId: entry.instanceId })).then(resource => {
+        workspace: entry.workspace, instanceId: entry.instanceId })).then(resource => {
         if (!resource || typeof resource.close !== 'function')
           throw failure('PUBLISHER_BORROW_INVALID', 'The owned child must provide its native close operation.');
         child.resource = resource; return resource;
@@ -238,7 +244,7 @@ export class MerchantPublisher {
           const results = await Promise.allSettled([scheduling, ...children, ...entry.pending]);
           failed = results.find(result => result.status === 'rejected');
         } finally {
-          await entry.publisher.close();
+          await entry.closeOriginal();
           if (this.#entries.get(entry.alias) === entry) this.#entries.delete(entry.alias);
         }
         if (failed) throw failed.reason;
@@ -336,6 +342,22 @@ export class MerchantPublisher {
       default: throw failure('TOOL_NOT_FOUND', 'Unknown publisher operation.');
     }
   }
+  async callBorrowed({ alias, publisher, schedule, instanceId } = {}, name, args = {}) {
+    if (this.#closing) throw failure('PUBLISHER_CLOSING', 'The merchant publisher adapter is closing.');
+    identifier(alias, 'Publisher alias'); nativeId(instanceId);
+    const allowed = publisherTools(toolName => toolName);
+    if (!allowed.includes(name) ||
+        ['merchant_publishers', 'merchant_publisher_open', 'merchant_publisher_close'].includes(name) ||
+        args.publisher !== alias || !publisher || typeof publisher.status !== 'function' ||
+        typeof publisher.startExtraction !== 'function' || !schedule || typeof schedule.status !== 'function')
+      throw failure('PUBLISHER_BORROW_INVALID', 'Use a host-owned original publisher/scheduler and its declared alias.');
+    const entry = { alias, publisher, schedule, instanceId };
+    const operation = Promise.resolve().then(() => this.#execute(entry, name, args));
+    this.#borrowed.add(operation);
+    try { return await operation; }
+    catch (error) { throw operationFailure(error); }
+    finally { this.#borrowed.delete(operation); }
+  }
   async call(name, args) {
     if (this.#closing) throw failure('PUBLISHER_CLOSING', 'The merchant publisher adapter is closing.');
     try {
@@ -356,7 +378,7 @@ export class MerchantPublisher {
     this.#closing = true;
     this.#close = (async () => {
       await Promise.allSettled([...this.#opening.values()]);
-      const outcomes = await Promise.allSettled([...this.#entries.values()].map(entry => this.#stop(entry)));
+      const outcomes = await Promise.allSettled([...this.#borrowed, ...[...this.#entries.values()].map(entry => this.#stop(entry))]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('PUBLISHER_SHUTDOWN_INCOMPLETE', 'An original publisher reported incomplete shutdown; inspect its retained workspace.');
     })();

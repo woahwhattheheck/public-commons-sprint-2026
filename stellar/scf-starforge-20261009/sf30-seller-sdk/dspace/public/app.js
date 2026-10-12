@@ -4,31 +4,86 @@ const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state,sourcePage={offset:0,limit:20,total:0,items:[]},edition,comparisonPage=0,queryCursor=null,queryInput=null;
 let selection=new Map(),selectedFields=new Set(),pending=null,saving=false;
-const draftKey=()=> 'dspace.draft.'+(state?.operator.selected??'original');
+const scopeFields=['operatorId','instanceId','projectKey','workspaceId'];
+function scopeOf(value=state){
+ if(!value)return null;
+ const result={operatorId:value.operator?.id,instanceId:value.operator?.instanceId,projectKey:value.operator?.selected,workspaceId:value.id};
+ if(scopeFields.some(key=>typeof result[key]!=='string'||!result[key]))throw new Error('The operator did not return its complete original workspace identity.');
+ return result;
+}
+const sameTarget=(left,right)=>!!left&&!!right&&['operatorId','projectKey','workspaceId'].every(key=>left[key]===right[key]);
+const sameScope=(left,right)=>sameTarget(left,right)&&left.instanceId===right.instanceId;
+const draftKey=()=> 'dspace.draft.'+[state?.operator.id,state?.id,state?.operator.selected].join('.');
+function scopedOptions(options={}){
+ const {scope=scopeOf(),...init}=options,headers=new Headers(init.headers);
+ if(scope){
+  for(const [name,key] of [['operator','operatorId'],['instance','instanceId'],['project','projectKey'],['workspace','workspaceId']]){
+   if(typeof scope[key]!=='string'||!scope[key])throw new Error('Recover the original saved workspace identity before continuing.');
+   headers.set('x-dspace-'+name,scope[key]);
+  }
+ }
+ return {...init,headers};
+}
+function requirePendingScope(){
+ if(!pending?.scope)throw new Error('Review the older saved request with Reconnect original workspace before retrying it.');
+ const current=scopeOf();
+ if(!sameTarget(pending.scope,current))throw new Error('This request belongs to its saved operator, project and workspace. Use Reconnect original workspace before retrying.');
+ if(!sameScope(pending.scope,current))throw new Error('The original operator restarted. Use Reconnect original workspace to review its new process before retrying the same request.');
+ return {...pending.scope};
+}
+const pendingFacts=document.createElement('p');pendingFacts.id='pending-scope';$('pending').append(pendingFacts);
+const reconnectButton=document.createElement('button');reconnectButton.id='reconnect-request';reconnectButton.type='button';reconnectButton.textContent='Reconnect original workspace';$('pending').append(reconnectButton);
+function renderPending(){
+ $('pending').hidden=!pending;
+ pendingFacts.textContent=!pending?'':pending.scope
+  ?'Saved operator '+pending.scope.operatorId+' · project '+pending.scope.projectKey+' · workspace '+pending.scope.workspaceId+' · process '+pending.scope.instanceId
+  :'This older request retained project '+(pending.project??'unknown')+' without the operator and workspace identities. Review its destination before reconnecting.';
+}
 const say=(text,error=false)=>{$('message').textContent=text;$('message').classList.toggle('error',error);};
 const facts=rows=>rows.map(([label,value,small])=>'<div><span>'+esc(label)+'</span><'+(small?'code':'strong')+'>'+esc(value)+'</'+(small?'code':'strong')+'></div>').join('');
 function show(page){document.querySelectorAll('main>section').forEach(s=>s.hidden=s.id!=='page-'+page);document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));}
 async function request(url,options={}){
- const response=await fetch(url,options);
+ const response=await fetch(url,scopedOptions(options));
  const type=response.headers.get('content-type')??'';
  const value=type.includes('json')?await response.json():await response.text();
  if(!response.ok)throw Object.assign(new Error(value.message??'The operation could not complete.'),{status:response.status,details:value});
  return value;
 }
-const post=(url,value)=>request(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(value)});
+const post=(url,value,scope)=>request(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(value),...(scope===undefined?{}:{scope})});
 const idb=new Promise((resolve,reject)=>{
  const opening=indexedDB.open('starforge-dspace',1);opening.onupgradeneeded=()=>opening.result.createObjectStore('requests');
  opening.onsuccess=()=>resolve(opening.result);opening.onerror=()=>reject(opening.error);
 });
-async function savedRequest(value){
+const pendingId=value=>value?.kind==='receive'?value.operationId:value?.value?.operationId;
+async function savedRequest(value,expectedId){
  const db=await idb;
  return new Promise((resolve,reject)=>{
   const tx=db.transaction('requests',value===undefined?'readonly':'readwrite'),store=tx.objectStore('requests');
-  const req=value===undefined?store.get('pending'):value===null?store.delete('pending'):store.put(value,'pending');
-  tx.oncomplete=()=>resolve(req.result??null);tx.onerror=()=>reject(tx.error);
+  const reading=store.get('pending');let result=null,conflict=null;
+  reading.onsuccess=()=>{
+   const prior=reading.result??null;
+   if(value===undefined){result=prior;return;}
+   // One original saved browser request spans all tabs on this origin. A
+   // second tab must recover it before replacing it, and can only clear the
+   // exact request it read. The native operation ID remains unchanged.
+   const incoming=value===null?expectedId:pendingId(value);
+   if((value!==null&&!incoming)||(prior&&pendingId(prior)!==incoming)){
+    conflict=new Error('Another saved browser request is already awaiting recovery. Its original input has been retained; review that request before starting another change.');
+    tx.abort();return;
+   }
+   if(value===null)store.delete('pending');else store.put(value,'pending');
+   result=value;
+  };
+  tx.oncomplete=()=>resolve(result);
+  tx.onabort=()=>reject(conflict??tx.error??new Error('The original saved request could not be retained.'));
+  tx.onerror=()=>reject(conflict??tx.error);
  });
 }
-async function setPending(value){await savedRequest(value);pending=value;$('pending').hidden=!pending;}
+async function setPending(value){
+ try{await savedRequest(value,pendingId(pending));pending=value;}
+ catch(error){pending=await savedRequest();renderPending();throw error;}
+ renderPending();
+}
 function saveDraft(){
  if(!state)return;
  localStorage.setItem(draftKey(),JSON.stringify({selection:[...selection],fields:[...selectedFields],name:$('dataset-name').value,mode:$('mode').value,attribution:$('attribution').value,basis:$('basis').value,reference:$('reference').value}));
@@ -45,7 +100,8 @@ function fill(id,rows,valueKey,label,empty){
  if([...element.options].some(o=>o.value===previous))element.value=previous;
 }
 async function refresh(){
- state=await request('/api/state');
+ state=await request('/api/state',{scope:null});
+ scopeOf();renderPending();
  $('revision').textContent='Revision '+state.revision+' · '+state.operation_count+' saved requests';
  $('workspace-summary').innerHTML='<strong>'+esc(state.id)+'</strong><p>'+state.sources.length+' sources<br>'+state.editions.length+' editions<br>'+state.reviews.length+' reviews</p>';
  fill('project',state.operator.projects,'key',p=>p.name);$('project').value=state.operator.selected;
@@ -67,28 +123,52 @@ async function action(name,input){
  saving=true;
  try{
  const value={action:name,operationId:crypto.randomUUID(),actor:$('actor').value.trim(),expectedRevision:state.revision,...input};
- await setPending({kind:'action',project:state.operator.selected,value});
+ await setPending({version:2,kind:'action',project:state.operator.selected,scope:scopeOf(),value});
  return await resume();
  }finally{saving=false;}
 }
 async function resume(){
  if(!pending)return;
- if(pending.project!==state.operator.selected){await post('/api/select-project',{key:pending.project});await refresh();loadDraft();}
+ const scope=requirePendingScope();
  let result;
- try{
-  if(pending.kind==='receive'){
-   result=await request('/api/receive',{method:'POST',headers:{'content-type':'application/vnd.sqlite3','x-operation-id':pending.operationId},body:pending.file});
-  }else result=await post('/api/action',pending.value);
- }catch(error){
-  if([400,404,409,413].includes(error.status))await setPending(null);
-  throw error;
- }
+ if(pending.kind==='receive'){
+  result=await request('/api/receive',{method:'POST',headers:{'content-type':'application/vnd.sqlite3','x-operation-id':pending.operationId},body:pending.file,scope});
+ }else result=await post('/api/action',pending.value,scope);
+ // Scope or revision errors retain the exact request for readback and review.
+ // Receiving deliberately selects the returned original project.
+ if(result.state)state=result.state;
  await setPending(null);await refresh();
  say(result.replayed?'Recovered the original saved result.':'Saved successfully at revision '+state.revision+'.');
  return result;
 }
+async function reconnectPending(){
+ if(!pending)return;
+ let current=await request('/api/state',{scope:null}),scope=scopeOf(current);
+ const original=pending.scope;
+ if(original){
+  if(scope.operatorId!==original.operatorId)throw new Error('Open the saved operator '+original.operatorId+' to recover this request. The current operator is different.');
+  if(scope.projectKey!==original.projectKey){
+   current=await post('/api/select-project',{key:original.projectKey},scope);scope=scopeOf(current);
+  }
+  if(!sameTarget(original,scope)){
+   state=current;await refresh();
+   throw new Error('The saved project now points to a different workspace. The original request is retained and has not been sent there.');
+  }
+ }else{
+  // Older browser records have no owner binding. Never infer it from a reused
+  // port or the common "original" project key; require an explicit review.
+  if(pending.project!==scope.projectKey)throw new Error('Select the older request’s recorded project '+pending.project+' before reviewing its workspace binding.');
+  const accepted=window.confirm('This older saved request has no retained operator or workspace identity. Bind its unchanged request to operator '+scope.operatorId+', project '+scope.projectKey+', workspace '+scope.workspaceId+'? Choose OK only after checking this is its intended original workspace.');
+  if(!accepted)return;
+ }
+ const updated={...pending,version:2,scope,project:scope.projectKey,
+  previousScope:original??null,reconnectedAt:new Date().toISOString(),
+  ...(original?{}:{legacyBindingReviewed:true})};
+ await setPending(updated);state=current;await refresh();loadDraft();
+ say('Reconnected the saved request to its reviewed workspace. Retry saved request now uses this operator process and the original request ID.');
+}
 async function download(kind,id){
- const response=await fetch('/api/download?'+new URLSearchParams({kind,...(id?{id}:{})}));
+ const response=await fetch('/api/download?'+new URLSearchParams({kind,...(id?{id}:{})}),scopedOptions());
  if(!response.ok){const value=await response.json();throw new Error(value.message);}
  const blob=await response.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=response.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1]??'repository-download';
@@ -221,16 +301,17 @@ on('project-file','change',async e=>{
  const file=e.target.files[0];if(!file)return;
  if(pending||saving)throw new Error('Recover the saved request before receiving another project.');
  saving=true;try{
- await setPending({kind:'receive',project:state.operator.selected,operationId:crypto.randomUUID(),file});
+ await setPending({version:2,kind:'receive',project:state.operator.selected,scope:scopeOf(),operationId:crypto.randomUUID(),file});
  await resume();loadDraft();e.target.value='';show('delivery');
  }finally{saving=false;}
 });
 on('retry','click',resume);
+on('reconnect-request','click',reconnectPending);
 on('discard','click',async()=>{
  if(!pending)return;
  if(pending.kind==='receive')throw new Error('Retry this complete project to recover its original receiving result.');
- if(pending.project!==state.operator.selected){await post('/api/select-project',{key:pending.project});await refresh();loadDraft();}
- try{const saved=await request('/api/operation?id='+encodeURIComponent(pending.value.operationId));await setPending(null);await refresh();say('Recovered saved request '+saved.result.operationId+'.');}
+ const scope=requirePendingScope();
+ try{const saved=await request('/api/operation?id='+encodeURIComponent(pending.value.operationId),{scope});await setPending(null);await refresh();say('Recovered saved request '+saved.result.operationId+'.');}
  catch(error){if(error.status!==404)throw error;await setPending(null);say('Cleared the unsent request.');}
 });
-(async()=>{await refresh();loadDraft();pending=await savedRequest();$('pending').hidden=!pending;say('Opened the saved repository workspace.');})().catch(e=>say(e.message,true));
+(async()=>{await refresh();loadDraft();pending=await savedRequest();renderPending();say('Opened the saved repository workspace.');})().catch(e=>say(e.message,true));
