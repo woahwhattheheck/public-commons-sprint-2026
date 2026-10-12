@@ -139,7 +139,11 @@ function writeResearchOutput(stream,text){
  return new Promise((resolve,reject)=>{
   let settled=false;
   const finish=error=>{
-   if(settled)return;settled=true;stream.removeListener('error',onError);
+   if(settled)return;settled=true;
+   // A failed Writable callback can precede its queued error event. Keep the
+   // once listener until that event so stderr/stdout failure cannot strand
+   // native owners by becoming an uncaught process error.
+   if(!error)stream.removeListener('error',onError);
    error?reject(error):resolve();
   },onError=error=>finish(error);
   stream.once('error',onError);
