@@ -155,6 +155,10 @@ Retain the returned snapshot, field selection, source identifier and original `p
 
 The installed package exposes `starforge arcgis` (and `arcgis-publisher`) for these same CLI commands. JavaScript consumers use `@tokenjunkielabs/starforge-merchant/seller/arcgis`, `/seller/arcgis/publisher` and `/buyer/arcgis`. The existing merchant MCP accepts a host-declared `kind: "arcgis"` and opens this original publisher; see [the maintained MCP guide](../../../../stellar-forge/mcp-merchant-operator/PUBLISHERS.md).
 
+## Managed merchant deployment
+
+[DEPLOYMENT.md](DEPLOYMENT.md) continues a reviewed, published ArcGIS extraction into the original SF82 release console: export the exact candidate and merchant, stage against the same dataset version store, select/start/drain/rollback/reopen, then recover the public GIS declaration from the retained release for the original buyer delivery. Use `deployment-export`, `deployment-stage`, `deployment-status` and `deployment-receiving` through the existing ArcGIS command.
+
 ## Completed native customer workflow
 
 On 2026-10-11, the original Node 24.19 runtime imported and independently

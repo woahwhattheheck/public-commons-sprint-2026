@@ -19,6 +19,8 @@ import {handleCustomerStatementRequest,customerStatementAsset} from '../customer
 import {XeroWorkspace,handleXeroRequest,XERO_REQUEST_BYTES} from './xero-workspace.mjs';
 import {QboWorkspace,handleQboRequest,QBO_REQUEST_BYTES} from './qbo-workspace.mjs';
 import {XERO_HELP,xeroMain} from './xero-cli.mjs';
+import {AccountingDeliveryWorkspace,SIGNED_NOTICE_PATH} from '../delivery/workspace.mjs';
+import {readSignedNotice,handleDeliveryNoticeRequest,deliveryNoticeAsset} from '../delivery/server.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
 const TYPES={'.json':'application/json; charset=utf-8','.csv':'text/csv; charset=utf-8','.html':'text/html; charset=utf-8','.tar':'application/x-tar'};
@@ -30,21 +32,21 @@ async function body(request,limit=600_000){
   let value;try{value=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{throw new WorkspaceError('INVALID_JSON','The request is not valid JSON.');}
   check(value&&typeof value==='object'&&!Array.isArray(value),'INVALID_REQUEST','Send an object.');return value;
 }
-export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,xeroClient,
-  recoveryStateRoot,recoveryBackupRoot,recoveryPassEnv,recoveryStartPaused=false,...options}){
+export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,xeroClient,qboClient,
+  recoveryStateRoot,recoveryBackupRoot,recoveryPassEnv,recoveryStartPaused=false,deliverySecretEnv,...options}){
   check(host==='127.0.0.1'||host==='localhost','LOOPBACK_REQUIRED','This operator workspace binds to loopback.');
   check(Number.isInteger(port)&&port>=0&&port<=65535,'INVALID_PORT','Choose a valid port.');
   const hosts=new Set();
-  const closeRuntime=async({workspace,bitwave,xero,collection})=>{
-    const errors=[];for(const owned of [xero,bitwave,collection,workspace]){try{await owned?.close();}catch(error){errors.push(error);}await Promise.allSettled([...(owned?.tasks??[])]);}
+  const closeRuntime=async({workspace,bitwave,qbo,xero,collection})=>{
+    const errors=[];for(const owned of [qbo,xero,bitwave,collection,workspace]){try{await owned?.close();}catch(error){errors.push(error);}await Promise.allSettled([...(owned?.tasks??[])]);}
     if(errors.length)throw Object.assign(new AggregateError(errors,'The original accounting controllers did not all close cleanly.'),{code:'ACCOUNTING_RUNTIME_CLOSE_FAILED'});
   };
   const openRuntime=async()=>{
     const workspace=await openAccountingWorkspace(options),accountant=new AccountantWorkspace(workspace);
     const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{}),xero=new XeroWorkspace(workspace,accountant,xeroClient?{client:xeroClient}:{});let collection;
-    const qbo=new QboWorkspace(workspace,accountant);
-    try{const statements=new CustomerStatementWorkspace(workspace);await statements.init();workspace.adjustments.configureTransport({httpsProxyEnv:rpcProxyEnv});collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();await qbo.recover();await xero.init();return {workspace,accountant,bitwave,qbo,xero,collection,statements};}
-    catch(error){await closeRuntime({workspace,bitwave,xero,collection}).catch(()=>{});throw error;}
+    const qbo=new QboWorkspace(workspace,accountant,qboClient?{client:qboClient}:{});
+    try{const statements=new CustomerStatementWorkspace(workspace);await statements.init();const delivery=new AccountingDeliveryWorkspace(workspace,{secretEnv:deliverySecretEnv});await delivery.init();workspace.adjustments.configureTransport({httpsProxyEnv:rpcProxyEnv});collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();await qbo.recover();await xero.init();return {workspace,accountant,bitwave,qbo,xero,collection,statements,delivery};}
+    catch(error){await closeRuntime({workspace,bitwave,qbo,xero,collection}).catch(()=>{});throw error;}
   };
   const maintenance=await openAccountingMaintenance({directory:options.directory,stateRoot:recoveryStateRoot,backupRoot:recoveryBackupRoot,
     passEnv:recoveryPassEnv,startPaused:recoveryStartPaused,openRuntime,closeRuntime});
@@ -74,8 +76,16 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       if(request.method==='GET'&&(path==='/customer-statements'||path.startsWith('/customer-statements/'))){
         const asset=await customerStatementAsset(path);if(asset){send(response,200,asset.bytes,{type:asset.type});return;}
       }
+      if(request.method==='GET'&&(path==='/delivery-notices'||path.startsWith('/delivery-notices/'))){
+        const asset=await deliveryNoticeAsset(path);if(asset){send(response,200,asset.bytes,{type:asset.type});return;}
+      }
       const maintenancePath=path==='/api/maintenance'||path.startsWith('/api/maintenance/');
       if(!maintenancePath)operation=maintenance.enter();
+      if(path===SIGNED_NOTICE_PATH){
+        check(request.method==='POST'&&!url.search,'NOT_FOUND','This signed delivery endpoint accepts original POST notices only.',404);
+        const accepted=await operation.delivery.acceptSigned(await readSignedNotice(request));
+        send(response,accepted.duplicate?200:202,accepted);return;
+      }
       let value;
       if(request.method==='POST'){
         check(request.headers['x-workspace-request']==='1','WORKSPACE_REQUEST_REQUIRED','Use the operator workspace form.',403);
@@ -84,7 +94,9 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       }
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
       if(maintenancePath){send(response,200,await maintenance.route({method:request.method,path,value}));return;}
-      const {workspace,accountant,bitwave,qbo,xero,collection,statements}=operation;
+      const {workspace,accountant,bitwave,qbo,xero,collection,statements,delivery}=operation;
+      const deliveryResult=await handleDeliveryNoticeRequest(delivery,{method:request.method,path,query,value});
+      if(deliveryResult){send(response,200,deliveryResult.value);return;}
       const statement=await handleCustomerStatementRequest(statements,{method:request.method,path,query,value});
       if(statement){if(statement.file)send(response,200,statement.file.bytes,{type:statement.file.type,name:statement.file.name});else send(response,200,statement.value);return;}
       const adjustment=await handleAdjustmentRequest(workspace.adjustments,{method:request.method,path,query,value});
@@ -146,7 +158,7 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
   const actual=server.address().port;hosts.add('127.0.0.1:'+actual);hosts.add('localhost:'+actual);
   let closing;
   return {get workspace(){return maintenance.runtime?.workspace;},get collection(){return maintenance.runtime?.collection;},
-    get accountant(){return maintenance.runtime?.accountant;},get bitwave(){return maintenance.runtime?.bitwave;},get qbo(){return maintenance.runtime?.qbo;},get xero(){return maintenance.runtime?.xero;},get statements(){return maintenance.runtime?.statements;},maintenance,server,url:'http://127.0.0.1:'+actual,
+    get accountant(){return maintenance.runtime?.accountant;},get bitwave(){return maintenance.runtime?.bitwave;},get qbo(){return maintenance.runtime?.qbo;},get xero(){return maintenance.runtime?.xero;},get statements(){return maintenance.runtime?.statements;},get delivery(){return maintenance.runtime?.delivery;},maintenance,server,url:'http://127.0.0.1:'+actual,
     close(){if(!closing)closing=(async()=>{
       const stopped=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
       const results=await Promise.allSettled([stopped,maintenance.close()]);const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
@@ -164,6 +176,9 @@ Reopen:
   node workspace/server.mjs --workspace /private/accounting-workspace
 
 Optional: --port 8446 and --recovered-dir /private/original-recovered-settlements.
+Signed SF98 accounting intake: --delivery-secret-env ACCOUNTING_SF98_SECRET.
+Expose only POST /sf98/accounting-events through the existing trusted HTTPS proxy.
+Open /delivery-notices/ for received notices and original capture/recovery.
 Browser backup and recovery: --recovery-state-root /private/state
   --recovery-backup-root /private/accounting-backups
   --recovery-pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE
@@ -171,6 +186,9 @@ Add --recovery-start-paused to restore an absent or unfinished original workspac
 For an explicitly configured cloud HTTPS proxy, add --rpc-proxy-env HTTPS_PROXY.
 Requires Node22+, Linux flock, and tar for review downloads.
 Uses the original accounting engine and report writer; all serving is loopback.
+QuickBooks journals: open /qbo.html to fetch the configured company and post reviewed journals.
+Native QuickBooks calls use STARFORGE_QBO_ACCESS_TOKEN, STARFORGE_QBO_REALM_ID,
+and STARFORGE_QBO_ENVIRONMENT (sandbox by default) in this process environment.
 Xero journals: open /xero.html or use the xero subcommand.
 Native Xero calls use STARFORGE_XERO_ACCESS_TOKEN from this process environment.
 Operating backup and recovery: backup | inspect-backup | verify-backup | restore | recovery-status.
@@ -185,7 +203,7 @@ export async function main(argv=process.argv.slice(2)){
     try{return await recoveryMain(argv,{signal:controller.signal});}finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
   }
   const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir','--rpc-proxy-env',
-    '--recovery-state-root','--recovery-backup-root','--recovery-pass-env']),values={};
+    '--recovery-state-root','--recovery-backup-root','--recovery-pass-env','--delivery-secret-env']),values={};
   for(let i=0;i<argv.length;i++){
     const key=argv[i];check(!Object.hasOwn(values,key),'INVALID_ARGUMENTS',HELP);
     if(key==='--recovery-start-paused'){values[key]=true;continue;}
@@ -198,7 +216,7 @@ export async function main(argv=process.argv.slice(2)){
     recoveryStateRoot:values['--recovery-state-root']&&resolve(values['--recovery-state-root']),
     recoveryBackupRoot:values['--recovery-backup-root']&&resolve(values['--recovery-backup-root']),
     recoveryPassEnv:values['--recovery-pass-env'],recoveryStartPaused:values['--recovery-start-paused']??false,
-    rpcProxyEnv:values['--rpc-proxy-env'],
+    rpcProxyEnv:values['--rpc-proxy-env'],deliverySecretEnv:values['--delivery-secret-env'],
     port:values['--port']===undefined?8446:Number(values['--port'])});
   process.stdout.write('Merchant accounting workspace: '+app.url+'\n');
   const close=()=>app.close().then(()=>process.exit(0),error=>{console.error(error.message);process.exit(1);});
