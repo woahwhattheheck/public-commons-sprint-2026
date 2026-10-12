@@ -27,8 +27,9 @@ Git bodies; no new source download or attachment access is required.
 The five editions contain 657 selected rows. The one-day buoy edition is also
 contained in the three-day edition; these are not 657 independent observations.
 Each six-member source archive retains the exact JSON, CSV, metadata, DDS, DAS
-and their manifest. Use fetch_file with encoding base64 for binary Git files;
-the generic text Git reader cannot decode an original binary body.
+and their manifest. Download archives as bytes and check the recorded checksum.
+Each MUR archive includes the original DAS, including its ISO-8859-1 degree
+symbol; a text conversion to UTF-8 changes that original body.
 
 ## Complete operating sequence
 
