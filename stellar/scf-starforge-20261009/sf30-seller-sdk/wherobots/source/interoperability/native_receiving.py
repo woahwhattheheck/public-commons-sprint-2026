@@ -54,7 +54,7 @@ def main():
         input_receipts[item["id"]] = {**item, **_file_hash(path), "path": str(path)}
     import pyarrow
     try:
-        sdk_version = importlib.metadata.version("wherobots")
+        sdk_version = importlib.metadata.version("wherobots-python-sdk")
     except importlib.metadata.PackageNotFoundError:
         sdk_version = None
     result_path = out / "operation.json"
