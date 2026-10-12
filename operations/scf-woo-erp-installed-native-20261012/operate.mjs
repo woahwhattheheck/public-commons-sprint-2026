@@ -27,6 +27,7 @@ need(original.schema==='commons.woo-erp.operating-delivery.v1'&&
  'Complete the same original delivery and browser/CLI cold receiving before this continuation.');
 const root=join(resolve(cfg.outputRoot),'installed-erp');
 await mkdir(root,{recursive:true,mode:0o700});await chmod(root,0o700);
+for(const child of ['received','reopened']){await mkdir(join(root,child),{recursive:true,mode:0o700});await chmod(join(root,child),0o700);}
 const hostRoot=join(resolve(cfg.privateRoot),'installed-erp-host');
 await mkdir(hostRoot,{recursive:true,mode:0o700});await chmod(hostRoot,0o700);
 const jsonBytes=value=>Buffer.from(JSON.stringify(value,null,2)+'\n');
@@ -72,8 +73,13 @@ async function event(action,value={}){
  await save(join(root,'journey-'+phase+'.json'),events);
  process.stdout.write(JSON.stringify(events.at(-1))+'\n');
 }
-async function start(port=0){
- server=await startMerchantMcp({configPath,port,environment});
+async function start(port){
+ const listenerPath=join(hostRoot,'listener.json');
+ if(port===undefined&&await exists(listenerPath))port=(await read(listenerPath)).port;
+ server=await startMerchantMcp({configPath,port:port??0,environment});
+ const selectedPort=Number(new URL(server.url).port);
+ if(!await exists(listenerPath))await save(listenerPath,{schema:'commons.woo-erp.native-listener.v1',port:selectedPort});
+ else need((await read(listenerPath)).port===selectedPort,'Continue the original MCP listener used by the retained download.');
  client=await openWooErpClient({url:server.url+'/mcp',store:'shop',environment});
  need(server.operator.tools.filter(tool=>tool.name.startsWith('merchant_woo_erp_')).length===23,
   'The maintained Woo provider did not advertise all23 ERP tools.');
