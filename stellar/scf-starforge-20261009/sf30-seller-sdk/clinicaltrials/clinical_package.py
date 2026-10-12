@@ -71,9 +71,12 @@ class PackageOperations:
             manifest={**metadata,"files":{name:{k:v for k,v in value.items() if k!="path"} for name,value in members.items()}}
             if len(members)>20000 or sum(v["bytes"] for v in members.values())>MAX_PACKET:
                 raise InputError("Portable source exceeds the 20,000-member / 2 GiB receiving capacity")
+            manifest_bytes=json_bytes(manifest)
+            if len(manifest_bytes)>16*1024*1024:
+                raise InputError("Portable workspace metadata exceeds the receiver's 16 MiB manifest capacity")
             with os.fdopen(os.open(destination,os.O_RDWR|os.O_CREAT|os.O_EXCL,0o600),"w+b") as out:
                 with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
-                    archive.writestr("manifest.json",json_bytes(manifest))
+                    archive.writestr("manifest.json",manifest_bytes)
                     for name,value in members.items():archive.write(value["path"],name)
                 out.flush();os.fsync(out.fileno())
             return manifest
@@ -182,7 +185,11 @@ class PackageOperations:
     def restore_customer(self,path):
         with self.mutex,self.scratch() as temp:
             actual=file_digest(path,MAX_PACKET);previous=self._meta("importing")
-            has_data=bool(SourceWorkspace.state(self)["sources"] or self._all("registry_captures"))
+            native_state=SourceWorkspace.state(self)
+            has_data=any(native_state.get(key) for key in ["sources","plans","builds","comparisons"]) or any(
+                self.db.execute("SELECT 1 FROM "+table+" LIMIT 1").fetchone() is not None for table in [
+                    "registry_captures","registry_prs","registry_prs_plans","registry_prs_previews",
+                    "registry_prs_reconciliations","registry_reviews","registry_batches"])
             if has_data and previous!=actual:
                 if self._meta("restoredFrom")==actual:return {"restored":True,"sourceSha256":actual,"alreadyRestored":True}
                 raise InputError("Receive the portable workspace into an empty original workspace")

@@ -278,6 +278,10 @@ This prints the same structured launch record used by Applications. The
 authenticated /api/launch read is available only for that managed startup.
 The ordinary direct serve command retains its original console output.
 
+## Disclosure batch receiving
+
+The same application includes [Batch receiving](BATCH_RECEIVING.md) for original protocol and results XML. Retain client references, review original modernization and upload-composition reports, bind registry comparisons, and export the complete original documents and portable workspace. The managed binding includes both the batch controller and its browser panel alongside the Clinical, PRS and original NDJSON source: 48 executed or source-contract members. Batch actions use the existing workspace lease and action journal. Stop and reopen preserve the same entries, dispositions and original source identities.
+
 ## Source integration
 
 The existing ClinicalTrials distribution contribution declares

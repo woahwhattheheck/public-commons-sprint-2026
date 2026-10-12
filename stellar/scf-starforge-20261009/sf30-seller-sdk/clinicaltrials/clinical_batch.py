@@ -145,7 +145,7 @@ class BatchOperations:
                 if row.get("equal") is not True:
                     add("reconciliation",row.get("status","review"),
                         row.get("label") or row.get("fieldId") or "Original source field comparison",row)
-            for row in reconciliation.get("unlinkedXml",[]):
+            for row in reconciliation.get("unlinkedXmlStudies",[]):
                 add("reconciliation","unlinked","The original PRS study remains unlinked",row)
         entry["inspection"]={"schemaKind":report["schemaKind"],"schemaValid":bool(report.get("schemaValid")),
                             "wellFormed":bool(report.get("wellFormed")),"bytes":report["bytes"],
@@ -236,6 +236,13 @@ class BatchOperations:
             registry.text(p.get("reviewer"),"Candidate reviewer",160)
             registry.text(p.get("note"),"Candidate selection reason",8192)
             preview_id=p.get("previewId")
+            if not preview_id and candidate["id"]==entry["documentId"]:
+                # Selecting the same retained bytes keeps their reviewed composition.
+                preview_id=entry.get("previewId")
+            if not preview_id and candidate["id"]!=entry["inputDocumentId"]:
+                prepared=[self.prs_preview(item["id"]) for item in entry["artifacts"] if item["kind"]=="preview"]
+                if any(item["candidateId"]==candidate["id"] for item in prepared):
+                    raise InputError("Select this candidate through its retained composition so the source findings stay bound to this entry")
             if preview_id and self.prs_preview(preview_id)["candidateId"]!=candidate["id"]:
                 raise InputError("The selected preview does not contain this candidate")
             entry["documentId"]=candidate["id"];entry["previewId"]=preview_id
@@ -307,6 +314,31 @@ class BatchOperations:
             if prior and load_json(prior[0])!=batch:raise InputError("The retained batch differs from this portable copy")
             with self.db:self.db.execute("INSERT OR IGNORE INTO registry_batches VALUES(?,?)",(batch["id"],encoded.decode()))
 
+    def _batch_artifact_closure(self,entry):
+        """Resolve the original records behind every selected or earlier row artifact."""
+        pending=[*entry["artifacts"],{"kind":"document","id":entry["inputDocumentId"]},
+                 {"kind":"document","id":entry["documentId"]}]
+        for key,kind in [("planId","plan"),("previewId","preview"),("reconciliationId","reconciliation")]:
+            if entry.get(key):pending.append({"kind":kind,"id":entry[key]})
+        methods={"document":self.prs_document,"plan":self.prs_plan,
+                 "preview":self.prs_preview,"reconciliation":self.prs_reconciliation}
+        resolved=[];seen=set()
+        while pending:
+            item=pending.pop();kind=item.get("kind");ident=digest(item.get("id"))
+            if kind not in methods:raise InputError("Unknown retained batch artifact kind")
+            if (kind,ident) in seen:continue
+            seen.add((kind,ident));record=methods[kind](ident)
+            if kind=="document":
+                record=record["record"]
+                references=[record.get("originalId")]
+            elif kind=="preview":
+                references=[record["baseDocumentId"],record["incomingDocumentId"],record["candidateId"]]
+            else:
+                references=[record["documentId"]]
+            resolved.append((kind,ident,record))
+            pending.extend({"kind":"document","id":value} for value in references if value)
+        return resolved
+
     def export_batch(self,batch_id,request_id):
         batch=self._batch(batch_id);ident="export-"+request_id
         prior=self.db.execute("SELECT body FROM registry_batch_exports WHERE id=?",(ident,)).fetchone()
@@ -333,15 +365,18 @@ class BatchOperations:
                     exceptions.append([entry["key"],entry["label"],finding["id"],finding["kind"],finding["status"],
                         finding["blocking"],finding["message"],review.get("decision","pending"),review.get("note",""),
                         json_bytes(finding["detail"]).decode().strip()])
-                for artifact in entry["artifacts"]:
-                    aid=digest(artifact["id"]);kind=artifact["kind"]
+                linked_sources=list(entry["sourceLinks"])
+                for kind,aid,record in self._batch_artifact_closure(entry):
                     if kind=="document":
-                        self.prs_document(aid)
                         for suffix in [".xml",".json"]:copy("prs/"+aid+suffix,self._verified("prs/"+aid+suffix,aid if suffix==".xml" else None,prs.MAX_XML))
                     else:
                         name="prs/"+methods[kind]+aid+".json"
                         copy(name,self._verified(name,aid,prs.MAX_XML))
-                for linked in entry["sourceLinks"]:
+                    if kind=="reconciliation":
+                        linked_sources.extend({"captureId":record["captureId"],"nctId":source["nctId"],
+                                               "sourceSha256":source["inputSha256"]}
+                                              for source in record["report"]["report"].get("apiSources",[]))
+                for linked in linked_sources:
                     study=self.study(linked["captureId"],linked["nctId"])
                     name="studies/"+linked["captureId"]+"/"+linked["nctId"]+".json"
                     if name not in members:
