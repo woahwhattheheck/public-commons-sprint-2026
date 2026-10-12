@@ -186,9 +186,13 @@ export function createReviewerCustomerPage({state,$,node,text,pretty,when,proper
     await run('review',{workspace,source:'upload',title,expectedSha256:selected.file.sha256,base64:b64(bytes)});
   }
   async function originalDraft(pending,tool,args,ctx,recoveryOf){
-    let existing;try{existing=(await api('draft/'+encodeURIComponent(pending.draftId),{epoch:ctx.session})).draft;}
-    catch(error){if(error.status!==404)throw error;}
+    // The full authorized profile inventory includes every current draft revision.
+    // A new retained UUID is absence in that inventory, not a failed resource request.
+    const profile=await api('profile/'+encodeURIComponent(ctx.profile),{epoch:ctx.session});
     check(ctx);
+    if(profile.profile?.id!==ctx.profile||!Array.isArray(profile.drafts))
+      throw new Error('The saved profile did not return its complete original draft inventory.');
+    const existing=profile.drafts.find(value=>value.id===pending.draftId);
     if(existing){
       if(existing.profileId!==ctx.profile||existing.tool!==tool||canonical(JSON.parse(existing.argumentsJson))!==canonical(args))
         throw new Error('The saved reviewer draft identity belongs to different original input.');

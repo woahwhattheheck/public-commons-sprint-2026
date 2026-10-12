@@ -30,7 +30,7 @@ for(const name of ['source','downloads','screenshots','browser-temp'])
   await mkdir(join(root,name),{mode:0o700}).catch(error=>{if(error.code!=='EEXIST')throw error;});
 const lease=await operationLease(join(operation,'controller.lock'));
 let journal,original,merchantResult,saving=Promise.resolve(),sender=null,host=null,browser=null,page=null,
-  stopping=false,activePhase='setup',failure=null;
+  stopping=false,activePhase='setup',failure=null,browserAttempt=null;
 const abort=new AbortController(),now=()=>new Date().toISOString();
 const stop=()=>{stopping=true;abort.abort(new Error('Original Console receiving cancelled.'));
   browser?.close().catch(()=>{});};
@@ -196,6 +196,19 @@ async function screenshot(name,width){
   await page.screenshot({path,fullPage:true});await chmod(path,0o600);
   const bytes=await readFile(path);return {name,width,path,bytes:bytes.length,sha256:digest(bytes)};
 }
+function browserUrl(value){
+  try{const url=new URL(value);return url.origin+url.pathname;}catch{return '';}
+}
+function browserError(kind,detail){
+  const value={at:now(),attemptId:browserAttempt.id,phase:activePhase,kind,...detail};
+  journal.consoleErrors.push(value);
+  process.stdout.write(JSON.stringify({browserError:value})+'\n');
+}
+function assertBrowserClean(){
+  assert(browserAttempt,'Retain the current browser attempt before checking its errors.');
+  const errors=journal.consoleErrors.slice(browserAttempt.errorStart);
+  assert.equal(errors.length,0,JSON.stringify(errors));
+}
 async function connectBrowser(){
   if(browser)return page;
   check();
@@ -209,8 +222,18 @@ async function connectBrowser(){
     acceptDownloads:true,env:{...process.env,TMPDIR:join(root,'browser-temp')},
     args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-zygote','--single-process']});
   check();page=browser.pages()[0]??await browser.newPage();page.setDefaultTimeout(30000);
-  page.on('pageerror',error=>{journal.consoleErrors.push({at:now(),message:error.message});});
-  page.on('console',message=>{if(message.type()==='error')journal.consoleErrors.push({at:now(),message:message.text()});});
+  const observedPage=page;
+  page.on('pageerror',error=>browserError('pageerror',{message:error.message,url:browserUrl(observedPage.url())}));
+  page.on('console',message=>{
+    if(message.type()!=='error')return;
+    const location=message.location();
+    browserError('console',{message:message.text(),url:browserUrl(location.url),
+      lineNumber:location.lineNumber,columnNumber:location.columnNumber});
+  });
+  page.on('response',response=>{
+    if(response.status()>=400)browserError('http',{message:'HTTP '+response.status(),
+      status:response.status(),url:browserUrl(response.url()),method:response.request().method()});
+  });
   await page.goto(host.session.consoleUrl,{waitUntil:'domcontentloaded'});
   await page.locator('#access-token').fill(host.token);
   await page.locator('#connect-form button[type="submit"]').click();
@@ -233,9 +256,42 @@ async function sourcePanel(){
   await page.locator('#reviewer-quote').selectOption(original.phases.complete_primary_result.quoteId);
 }
 async function download(button,path){
-  const pending=page.waitForEvent('download');await page.locator(button).click();
-  const result=await pending;assert.equal(await result.failure(),null);
-  const bytes=await readFile(await result.path());return exact(path,bytes);
+  const selectedPage=page,selectedBrowser=browser;
+  assert(selectedPage&&selectedBrowser,'Keep the original browser owner for this download.');
+  const owned=()=>{
+    check();
+    assert(page===selectedPage&&browser===selectedBrowser&&!selectedPage.isClosed(),
+      'The original download browser closed or changed.');
+  };
+  owned();
+  let settled=false,finish,timer,result=null,retained=false;
+  const pending=new Promise(resolve=>{finish=value=>{
+    if(settled)return;settled=true;clearTimeout(timer);
+    selectedPage.off('download',received);selectedPage.off('close',closed);
+    selectedPage.off('crash',crashed);selectedBrowser.off('close',closed);
+    abort.signal.removeEventListener('abort',cancelled);resolve(value);
+  };});
+  function received(value){finish({download:value});}
+  function closed(){finish({error:new Error('The original download browser closed.')});}
+  function crashed(){finish({error:new Error('The original download page crashed.')});}
+  function cancelled(){finish({error:abort.signal.reason??new Error('The original download was cancelled.')});}
+  selectedPage.on('download',received);selectedPage.on('close',closed);
+  selectedPage.on('crash',crashed);selectedBrowser.on('close',closed);
+  abort.signal.addEventListener('abort',cancelled,{once:true});
+  timer=setTimeout(()=>finish({error:new Error('The original file download did not start within 30 seconds.')}),30000);
+  try{
+    owned();await selectedPage.locator(button).click();owned();
+    const observed=await pending;if(observed.error)throw observed.error;
+    result=observed.download;owned();
+    const failure=await result.failure();owned();assert.equal(failure,null);
+    const local=await result.path();owned();assert(local,'The original browser retained no file path.');
+    const bytes=await readFile(local);owned();
+    const saved=await exact(path,bytes);owned();retained=true;return saved;
+  }finally{
+    finish({error:new Error('The original download observer ended.')});
+    const observed=await pending;
+    if(!retained&&observed.download)await observed.download.cancel().catch(()=>{});
+  }
 }
 
 async function recipeInstallation(){
@@ -329,6 +385,10 @@ async function run(){
     'public/workflow-recipes.mjs','public/workflows.mjs','REVIEWER_RECEIVING.mjs'])
     sources[file]=digest(await readFile(new URL(file,import.meta.url)));
   journal.sourceGenerations.push({at:now(),files:sources,node:process.versions.node});
+  journal.browserAttempts??=[];
+  browserAttempt={id:randomUUID(),startedAt:now(),errorStart:journal.consoleErrors.length,
+    sourceGeneration:journal.sourceGenerations.length-1};
+  journal.browserAttempts.push(browserAttempt);
   journal.original.runId=original.runId;journal.state='CONTINUING';await save();
   await opening(join(root,'operator'));await profile();
   await phase('configured_original_profile',async()=>{
@@ -417,8 +477,8 @@ async function run(){
         views.push(await screenshot(name,width));
       }
     }
-    assert.equal(journal.consoleErrors.length,0,JSON.stringify(journal.consoleErrors));
-    return {views,completeResult:saved,desktopViews:5,mobileViews:5};
+    assertBrowserClean();
+    return {views,completeResult:saved,desktopViews:5,mobileViews:5,browserAttemptId:browserAttempt.id};
   });
   await phase('review_and_install_native_recipe',async()=>{
     await fresh('workbench_open',{workspace:'receiver'});
@@ -537,9 +597,9 @@ async function run(){
     await connectBrowser();await page.locator('[data-page="workflows"]').click();
     await page.locator('#workflow-runs button').filter({hasText:journal.workflowRunId}).click();
     await page.locator('#workflow-run-state').filter({hasText:'COMPLETE'}).waitFor();
-    assert.equal(journal.consoleErrors.length,0,JSON.stringify(journal.consoleErrors));
+    assertBrowserClean();
     return {workspaceId:current.console.workspaceId,originalRunId:run.id,packetSha256:expected.packet.sha256,
-      screenshot:await screenshot('cold-receiving',390)};
+      browserAttemptId:browserAttempt.id,screenshot:await screenshot('cold-receiving',390)};
   });
   return {reused:false};
 }
@@ -557,6 +617,11 @@ catch(error){
   if(journal&&!outcome?.reused){
     journal.ownedBrowserClosed=browser===null;journal.ownedMerchantClosed=host===null;
     journal.ownedWorkbenchesClosed=sender===null&&host===null;journal.closedAt=now();
+    if(browserAttempt){
+      browserAttempt.finishedAt=journal.closedAt;browserAttempt.errorEnd=journal.consoleErrors.length;
+      browserAttempt.errorCount=browserAttempt.errorEnd-browserAttempt.errorStart;
+      browserAttempt.ownedProcessesClosed=journal.ownedBrowserClosed&&journal.ownedMerchantClosed&&journal.ownedWorkbenchesClosed;
+    }
     await save().catch(error=>{failure??=error;});
   }
   process.off('SIGINT',stop);process.off('SIGTERM',stop);
@@ -565,6 +630,7 @@ try{
   if(failure)throw failure;
   if(!outcome.reused){
     assert(journal.ownedBrowserClosed&&journal.ownedMerchantClosed&&journal.ownedWorkbenchesClosed);
+    assertBrowserClean();
     journal.state='COMPLETE';journal.completedAt=now();delete journal.error;
     const result={...journal,schema:'stellar-forge.grant-reviewer-console-receiving-result.v1',
       originalPurchaseTransactions:original.originalPurchaseTransactions,
