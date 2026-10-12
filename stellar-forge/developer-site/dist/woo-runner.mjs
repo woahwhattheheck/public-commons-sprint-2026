@@ -34,6 +34,10 @@ node merchant.mjs buyer --toolkit /absolute/checkout-or-installed-package -- ins
 node merchant.mjs operator --toolkit /absolute/checkout-or-installed-package -- --review --config /private/review.json
 node merchant.mjs queue --toolkit /absolute/checkout-or-installed-package -- show --root /private/inbox --intent EXACT_INTENT
 node merchant.mjs refund --toolkit /absolute/checkout-or-installed-package -- inspect --config /private/woo-operator.json --order 123
+node merchant.mjs agent-init --toolkit /absolute/checkout-or-installed-package [--input /private/agent-input.json]
+node merchant.mjs agent-inspect --toolkit /absolute/checkout-or-installed-package --dir /private/merchant/agents
+node merchant.mjs agent-client --toolkit /absolute/checkout-or-installed-package --dir /private/merchant/agents -- --merge /private/host.json --output /private/host-with-woo.json
+node merchant.mjs agent-stdio --toolkit /absolute/checkout-or-installed-package --dir /private/merchant/agents
 
 plugin copies the original PHP, browser assets and operating guide for WordPress.
 prepare is offline and creates a NEW private directory plus the original plugin
@@ -43,7 +47,12 @@ SF98_WEBHOOK_SECRET environment. buyer / operator / queue / refund forward only 
 arguments to their original CLI, including its normal approval and wallet flow.
 Read README.md and BUYER.md before operating a real merchant or buyer.
 The original plugin's REFUNDS.md covers verified adjustment import, order credits
-and recovery of the same saved WooCommerce refund.`;
+and recovery of the same saved WooCommerce refund.
+agent-init composes the original Woo operator and merchant MCP initializer in
+a new private directory. agent-inspect reopens its original stores offline.
+agent-client merges the original stdio registration into a NEW host file.
+agent-stdio launches that same provider. Read AGENTS.md for source aliases,
+the existing WordPress manager environment and the first real merchant reads.`;
 
 function need(value, message) { if (!value) throw new Error(message); }
 async function regular(path) {
@@ -103,7 +112,7 @@ async function originalSource(toolkit) {
 }
 
 async function sourceCommand(base, entry, args) {
-  const child = spawn(process.execPath, [join(base,ENTRIES[entry]),...args], {stdio:'inherit',shell:false,env:process.env});
+  const child = spawn(process.execPath, [join(base,ENTRIES[entry] ?? AGENT_ENTRIES[entry]),...args], {stdio:'inherit',shell:false,env:process.env});
   const stop = signal => { if (!child.killed) child.kill(signal); };
   const interrupt = () => stop('SIGINT'), terminate = () => stop('SIGTERM');
   process.once('SIGINT',interrupt); process.once('SIGTERM',terminate);
@@ -140,13 +149,203 @@ async function setup(base) {
   return {input,raw,compiled,routeFiles,settlementUrl,config:join(input.privateDirectory,'merchant.json')};
 }
 
+
+const AGENT_INPUT_SCHEMA = 'stellar-forge.frontdoor-woo-agents.v1';
+const AGENT_SETUP_SCHEMA = 'stellar-forge.frontdoor-woo-agent-setup.v1';
+const AGENT_ENTRIES = {
+  agent: '../../stellar-forge/mcp-merchant-operator/serve.mjs',
+  agentClient: '../../stellar-forge/mcp-merchant-operator/client-config.mjs',
+  agentStdio: '../../stellar-forge/mcp-merchant-operator/stdio.mjs',
+};
+function plain(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
+function agentPath(value, label) {
+  need(typeof value === 'string' && isAbsolute(value) && resolve(value) === value &&
+    value !== '/' && !/[\0\r\n]/.test(value), label + ' must be a normalized absolute host path.');
+  return value;
+}
+async function agentModules(base) {
+  const directory = resolve(base, '../../stellar-forge/mcp-merchant-operator');
+  for (const file of ['config.mjs','woocommerce.mjs','client-config.mjs','stdio.mjs'])
+    await regular(join(directory,file));
+  const [configuration, registration, woo, original] = await Promise.all([
+    import(pathToFileURL(join(directory,'config.mjs')).href),
+    import(pathToFileURL(join(directory,'client-config.mjs')).href),
+    import(pathToFileURL(join(directory,'woocommerce.mjs')).href),
+    import(pathToFileURL(join(base,WOO,'merchant-operator.mjs')).href),
+  ]);
+  need(typeof configuration.initializeWooCommerceMerchant === 'function' &&
+    typeof registration.createMerchantMcpClientConfiguration === 'function' &&
+    typeof woo.MerchantWooCommerce === 'function',
+    'Select the maintained toolkit with the Woo merchant MCP connection.');
+  return {directory, ...configuration, ...registration, ...woo, ...original};
+}
+function agentPairs(values, allowed) {
+  const options = Object.create(null);
+  need(values.length % 2 === 0, 'Supply each agent option with its value. Use --help.');
+  for (let index = 0; index < values.length; index += 2) {
+    const name = values[index], value = values[index + 1];
+    need(allowed.includes(name) && !Object.hasOwn(options,name) && value && !value.startsWith('--'),
+      'Unknown, repeated or incomplete agent option. Use --help.');
+    options[name] = value;
+  }
+  return options;
+}
+async function agentInput(base, state, path, modules) {
+  const input = await json(path, 1024 * 1024);
+  need(plain(input) && input.schema === AGENT_INPUT_SCHEMA &&
+    Object.keys(input).every(key => ['schema','directory','store','label','serverName','operator',
+      'usernameEnv','applicationPasswordEnv','records','adjustments'].includes(key)),
+    'Choose the packet agent-input.json. Use credential environment names in that file.');
+  const directory = agentPath(input.directory,'Agent directory');
+  need(typeof input.store === 'string' && /^[a-z0-9][a-z0-9_-]{0,63}$/.test(input.store) &&
+    !['constructor','prototype'].includes(input.store), 'Choose a lowercase store alias.');
+  need(typeof input.label === 'string' && input.label.trim() && input.label.length <= 160 &&
+    !/[\0\r\n]/.test(input.label), 'Choose a short store label.');
+  need(typeof input.serverName === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(input.serverName) &&
+    !['constructor','prototype'].includes(input.serverName), 'Choose an MCP server name.');
+  need(plain(input.records ?? {}) && plain(input.adjustments ?? {}), 'Receipt and accounting aliases must be objects.');
+  for (const entry of Object.values(input.records ?? {})) {
+    need(plain(entry),'Each receipt alias needs its original file and trusted payer.');
+    agentPath(entry.file,'Original receipt file');
+  }
+  for (const entry of Object.values(input.adjustments ?? {})) {
+    need(plain(entry),'Each accounting alias needs its original export root.');
+    agentPath(entry.directory,'Original accounting export root');
+  }
+  const siteUrl = state.compiled.admissionUrl.slice(0, -'/wp-json/stellar-forge/v1/checkout-admission'.length);
+  const external = input.operator === undefined ? null : agentPath(input.operator,'Existing operator');
+  need(!external || input.usernameEnv === undefined && input.applicationPasswordEnv === undefined,
+    'An existing operator supplies its original environment names. Remove usernameEnv and applicationPasswordEnv when selecting operator.');
+  const rawOperator = external ? await json(external,65536) : {
+    schema: modules.CONFIG_SCHEMA, siteUrl, usernameEnv:input.usernameEnv,
+    applicationPasswordEnv:input.applicationPasswordEnv, outbox:state.raw.outbox,
+    workspace:join(directory,'operations'), timeoutMs:15000,
+  };
+  const operator = modules.compileOperator(rawOperator);
+  need(operator.siteUrl === siteUrl,
+    'The selected operator must match this packet’s exact WordPress URL.');
+  for (const source of [operator.outbox, ...(external ? [operator.workspace] : [])])
+    need(directory !== source && !directory.startsWith(source + '/'),
+      'Keep the new agent directory outside the original outbox and operator workspace.');
+  if (external) need(external !== directory && !external.startsWith(directory + '/'),
+    'Select the existing operator outside the new agent directory.');
+  if (!external) {
+    const saved = await json(state.config);
+    need(isDeepStrictEqual(saved,state.raw), 'Prepare the matching original merchant configuration before creating its first operator.');
+  }
+  return {input,directory,siteUrl,external,rawOperator,operator};
+}
+async function prepareAgent(base, state, path) {
+  const modules = await agentModules(base), selected = await agentInput(base,state,path,modules);
+  const {input,directory,siteUrl,external,rawOperator,operator} = selected;
+  const entryPath = join(modules.directory,'stdio.mjs');
+  const configPath = join(directory,'host','merchant-mcp.json');
+  const connection = {schema:modules.WOOCOMMERCE_CONNECTION_SCHEMA, stores:{
+    [input.store]:{label:input.label, operator:external ?? './operator.json',
+      records:input.records ?? {}, adjustments:input.adjustments ?? {}}}};
+  await publishDirectory(directory,async staging => {
+    if (!external) {
+      await writeFile(join(staging,'operator.json'),JSON.stringify(rawOperator,null,2) + '\n',{flag:'wx',mode:0o600});
+      for (const name of ['operations','operations/reviews','operations/refunds'])
+        await mkdir(join(staging,name),{mode:0o700});
+    }
+    const connectionPath = join(staging,'woocommerce.json');
+    await writeFile(connectionPath,JSON.stringify(connection,null,2) + '\n',{flag:'wx',mode:0o600});
+    await modules.initializeWooCommerceMerchant({directory:join(staging,'host'),connection:connectionPath,name:input.label});
+    // The original initializer creates its own stores. Keep its connection
+    // relative to those stores when atomically publishing this NEW directory.
+    const stagedConfig = join(staging,'host','merchant-mcp.json');
+    const host = await json(stagedConfig);
+    host.woocommerceConnection = '../woocommerce.json';
+    await writeFile(stagedConfig,JSON.stringify(host,null,2) + '\n',{mode:0o600});
+    await modules.readMerchantConfig(stagedConfig);
+    const client = modules.createMerchantMcpClientConfiguration({
+      configPath,name:input.serverName,entryPath,nodePath:process.execPath,
+    });
+    await writeFile(join(staging,'client.json'),JSON.stringify(client,null,2) + '\n',{flag:'wx',mode:0o600});
+    await writeFile(join(staging,'agent-input.json'),await readFile(path),{flag:'wx',mode:0o600});
+    const receipt = {schema:AGENT_SETUP_SCHEMA,createdAt:new Date().toISOString(),
+      directory,store:input.store,label:input.label,serverName:input.serverName,siteUrl,
+      outbox:operator.outbox,operator:external ?? join(directory,'operator.json'),
+      workspace:operator.workspace,configuration:configPath,connection:join(directory,'woocommerce.json'),
+      client:join(directory,'client.json'),entryPath,nodePath:process.execPath,
+      source:resolve(base,'../..')};
+    await writeFile(join(staging,'agent-setup.json'),JSON.stringify(receipt,null,2) + '\n',{flag:'wx',mode:0o600});
+  });
+  return inspectAgent(base,directory);
+}
+async function readAgent(base,directory) {
+  directory = agentPath(directory,'Existing agent directory');
+  const metadata = await lstat(directory);
+  need(metadata.isDirectory() && !(metadata.mode & 0o077), 'Select the original private agent directory.');
+  const saved = await json(join(directory,'agent-setup.json'));
+  need(saved.schema === AGENT_SETUP_SCHEMA && saved.directory === directory &&
+    saved.configuration === join(directory,'host','merchant-mcp.json') &&
+    saved.connection === join(directory,'woocommerce.json') && saved.client === join(directory,'client.json'),
+    'Reopen the original agent directory with its matching setup record.');
+  const modules = await agentModules(base);
+  need(saved.entryPath === join(modules.directory,'stdio.mjs') &&
+    saved.source === resolve(base,'../..'), 'Use the same toolkit path as this prepared agent. For an intentional source relocation, use the new toolkit’s original client-config.mjs with the saved host configuration.');
+  const config = await modules.readMerchantConfig(saved.configuration);
+  const store = config.woocommerce?.stores[saved.store];
+  need(store && store.operator.siteUrl === saved.siteUrl && store.operator.outbox === saved.outbox &&
+    store.operator.workspace === saved.workspace, 'The original agent store or operator workspace changed.');
+  return {saved,modules,config};
+}
+async function inspectAgent(base,directory) {
+  const {saved,modules,config} = await readAgent(base,directory);
+  const woo = new modules.MerchantWooCommerce(config);
+  try {
+    const stores = await woo.call('merchant_woo_stores',{});
+    return {status:'WOO_AGENT_CONFIGURED',directory:saved.directory,configuration:saved.configuration,
+      client:saved.client,serverName:saved.serverName,store:saved.store,siteUrl:saved.siteUrl,
+      outbox:saved.outbox,workspace:saved.workspace,stores:stores.entries,
+      credentialEnvironment:{username:config.woocommerce.stores[saved.store].operator.usernameEnv,
+        applicationPassword:config.woocommerce.stores[saved.store].operator.applicationPasswordEnv},
+      tools:modules.woocommerceTools(name => name),networkRequests:0};
+  } finally { await woo.close(); }
+}
+async function agentAction(base,action,options,forwarded) {
+  if (action === 'agent-init') {
+    need(forwarded.length === 0,'agent-init accepts --input before the argument separator.');
+    const selected = agentPairs(options,['--input']);
+    const state = await setup(base);
+    const result = await prepareAgent(base,state,resolve(selected['--input'] ?? join(PACKET,'agent-input.json')));
+    console.log(JSON.stringify(result)); return;
+  }
+  const selected = agentPairs(options,['--dir']);
+  need(selected['--dir'],'Select --dir /absolute/original-agent-directory.');
+  const directory = agentPath(selected['--dir'],'Agent directory');
+  if (action === 'agent-inspect') {
+    need(forwarded.length === 0,'agent-inspect takes no forwarded arguments.');
+    console.log(JSON.stringify(await inspectAgent(base,directory))); return;
+  }
+  const {saved} = await readAgent(base,directory);
+  if (action === 'agent-client') {
+    const clientOptions = agentPairs(forwarded,['--name','--merge','--output']);
+    need(clientOptions['--output'],'Choose a new private --output file after -- for the original host registration.');
+    const name = clientOptions['--name'] ?? saved.serverName;
+    await sourceCommand(base,'agentClient',['--config',saved.configuration,'--name',name,
+      ...(clientOptions['--merge'] ? ['--merge',clientOptions['--merge']] : []),
+      '--output',clientOptions['--output']]);
+    return;
+  }
+  need(forwarded.length === 0,'agent-stdio takes no forwarded arguments.');
+  await sourceCommand(base,'agentStdio',['--config',saved.configuration]);
+}
+
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 0 || (args.length === 1 && args[0] === '--help')) { console.log(help); return; }
   const [major,minor] = process.versions.node.split('.').map(Number);
   need(major > 22 || (major === 22 && minor >= 16), 'Use Node.js 22.16 or later.');
   const action = args[0], split = args.indexOf('--'), options = split < 0 ? args.slice(1) : args.slice(1,split);
   const forwarded = split < 0 ? [] : args.slice(split + 1);
-  need(['plugin','prepare','inspect','preflight','serve','deliver','status','buyer','operator','queue','refund'].includes(action), 'Choose an action shown by --help.');
+  need(['plugin','prepare','inspect','preflight','serve','deliver','status','buyer','operator','queue','refund','agent-init','agent-inspect','agent-client','agent-stdio'].includes(action), 'Choose an action shown by --help.');
+  if (action.startsWith('agent-')) {
+    need(options[0] === '--toolkit' && options[1], 'Select --toolkit /absolute/checkout-or-installed-package first.');
+    const base = await originalSource(options[1]);
+    await agentAction(base,action,options.slice(2),forwarded); return;
+  }
   need(options[0] === '--toolkit' && (action === 'plugin' ? options.length === 4 && options[2] === '--out' : options.length === 2), 'Supply --toolkit /absolute/checkout-or-installed-package; plugin also requires --out /absolute/new-directory.');
   const base = await originalSource(options[1]);
   if (action === 'plugin') {
