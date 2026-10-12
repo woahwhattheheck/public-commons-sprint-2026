@@ -571,12 +571,18 @@ class IslandoraDesk:
             "rollback_config_file_path":str(root/"rollback.yml"),
             "rollback_csv_file_path":str(root/"rollback.csv"),**extra}
 
+    def _preparation_digest(self,job,rows):
+        digest=hashlib.sha256(jbytes({"buildId":job["buildId"],"target":job["target"],
+            "crosswalk":job["crosswalk"],"baseline":job.get("baseline")}))
+        for row in rows:digest.update(jbytes(row))
+        return digest.hexdigest()
+
     def asset_path(self,identity,asset):
         origin=asset.get("originJob") or identity
         path=path_under(self.directory(origin),asset["path"])
         if not path.is_file() or file_sha(path)!=asset["sha256"]:
             raise InputError("A retained original file changed or is missing")
-        return path
+        return path.resolve()
 
     def _write_batch(self,job,root,name,task,headers,rows,**extra):
         if not rows:return None
@@ -591,7 +597,7 @@ class IslandoraDesk:
         with self.ws.mutex,self.ws.db:
             job=self.job(identity)
             if job["status"]=="RUNNING":raise InputError("Native execution owns this migration")
-            root=self.directory(identity)/"batches"
+            root=path_under(self.directory(identity),"batches").resolve()
             root.mkdir(mode=0o700,exist_ok=True)
             rows=list(self._rows(identity));batches=[]
             creates=[r for r in rows if r["state"]=="CREATE"]
@@ -653,14 +659,15 @@ class IslandoraDesk:
                 b=self._write_batch(job,root,"media-"+kind,"add_media",["node_id","file","media_use_tid"],items,media_type=kind)
                 if b:batches.append(b)
             job["batches"]=batches
+            job["preparation"]={"directory":str(root),"stateSha256":self._preparation_digest(job,rows)}
             job["packageAt"]=stamp();self._save(job)
             return {"job":job,"directory":str(root),"batches":batches}
 
     @exclusive
     def import_native_map(self,identity):
-        job=self.job(identity);path=self.directory(identity)/"batches"/"native-node-map.sqlite"
+        job=self.job(identity);path=path_under(self.directory(identity),"batches/native-node-map.sqlite")
         if not path.exists():return {"matched":0}
-        db=sqlite3.connect("file:"+str(path)+"?mode=ro",uri=True)
+        db=sqlite3.connect(path.resolve().as_uri()+"?mode=ro",uri=True)
         try:
             entries=db.execute("SELECT csv_id,node_id,host FROM csv_id_to_node_id_map").fetchall()
         finally:db.close()
@@ -669,47 +676,132 @@ class IslandoraDesk:
             if host!=job["target"]["host"]:continue
             if ident in mapping and mapping[ident]!=node:raise InputError("Native map has multiple nodes for one source identifier")
             mapping[ident]=node
+        with self.ws.mutex:
+            known={r["identifier"]:str(r.get("nodeId") or "") for r in self._rows(identity)}
+        matched=sum(ident in known for ident in mapping)
+        if all(ident not in known or known[ident]==str(node) for ident,node in mapping.items()):
+            return {"matched":matched,"received":len(mapping),"unchanged":True}
         return self.receive(identity,csv_bytes(["id","node_id"],[{"id":k,"node_id":v} for k,v in mapping.items()]),"map")
+
+    def _verify_batch(self,identity,batch):
+        root=path_under(self.directory(identity),"batches").resolve()
+        config=path_under(root,batch["config"]);data=path_under(root,batch["csv"])
+        if file_sha(config)!=batch["configSha256"] or file_sha(data)!=batch["csvSha256"]:
+            raise InputError("Native inputs changed after preparation; prepare the selected edition again")
+        return config,data
+
+    def _current_batch(self,identity,batch_name):
+        job=self.job(identity)
+        batch=next((b for b in job.get("batches",[]) if b["name"]==batch_name),None)
+        if not batch:raise InputError("Prepare this native batch first")
+        self._verify_batch(identity,batch)
+        # Receive the copied native map before choosing the remaining work. This
+        # also continues a writer whose process ended before its IDs were saved.
+        self.import_native_map(identity)
+        job=self.job(identity)
+        with self.ws.mutex:
+            current={"directory":str(path_under(self.directory(identity),"batches").resolve()),
+                     "stateSha256":self._preparation_digest(job,self._rows(identity))}
+        if job.get("preparation")!=current:
+            self.prepare(identity);job=self.job(identity)
+            batch=next((b for b in job["batches"] if b["name"]==batch_name),None)
+            if not batch:
+                raise InputError("The selected batch is no longer current; choose from this job's prepared batches")
+        self._verify_batch(identity,batch)
+        return job,batch
+
+    def _snapshot_native_map(self,identity):
+        root=self.directory(identity).resolve();source=path_under(root,"batches/native-node-map.sqlite")
+        if not source.exists():return None
+        saved=path_under(root,"native-maps");saved.mkdir(mode=0o700,exist_ok=True)
+        tmp=saved/(uuid.uuid4().hex+".sqlite")
+        reader=writer=None
+        try:
+            reader=sqlite3.connect(source.resolve().as_uri()+"?mode=ro",uri=True)
+            writer=sqlite3.connect(tmp);os.chmod(tmp,0o600)
+            reader.backup(writer)
+            writer.close();writer=None
+            reader.close();reader=None
+            digest=file_sha(tmp);destination=saved/(digest+".sqlite")
+            if destination.exists():
+                if destination.is_symlink() or file_sha(destination)!=digest:
+                    raise InputError("A retained native map snapshot changed")
+                tmp.unlink()
+            else:
+                os.replace(tmp,destination);storage.sync_dir(saved)
+            return {"path":destination.relative_to(root).as_posix(),
+                    "bytes":destination.stat().st_size,"sha256":digest}
+        finally:
+            if writer is not None:writer.close()
+            if reader is not None:reader.close()
+            if tmp.exists():tmp.unlink()
+
+    def _run_inputs(self,identity,batch,run_dir):
+        root=self.directory(identity).resolve();prepared,data=self._verify_batch(identity,batch)
+        prepared_body=prepared.read_bytes()
+        put_file(run_dir/"prepared.yml",prepared_body)
+        shutil.copyfile(data,run_dir/"input.csv");os.chmod(run_dir/"input.csv",0o600)
+        if file_sha(run_dir/"input.csv")!=batch["csvSha256"]:
+            raise InputError("The native CSV changed while retaining this run")
+        settings=decode(prepared_body)
+        # These are the exact paths the new native process will receive. The
+        # active map stays with this job; input, results and rollback stay with
+        # this invocation and survive later batch regeneration.
+        settings.update(input_dir=str(run_dir),input_csv=str(run_dir/"input.csv"),
+            csv_id_to_node_id_map_dir=str((root/"batches").resolve()),
+            csv_id_to_node_id_map_filename="native-node-map.sqlite",
+            csv_id_to_node_id_map_path=str((root/"batches"/"native-node-map.sqlite").resolve()),
+            log_file_path=str(run_dir/"workbench.log"),
+            rollback_config_file_path=str(run_dir/"rollback.yml"),
+            rollback_csv_file_path=str(run_dir/"rollback.csv"))
+        for key,name in (("output_csv","created-nodes.csv"),("export_csv_file_path","current-target.csv")):
+            if key in settings:settings[key]=str(run_dir/name)
+        put_file(run_dir/"config.yml",jbytes(settings))
+        inputs={}
+        for key,name in (("config","config.yml"),("csv","input.csv"),("preparedConfig","prepared.yml")):
+            path=run_dir/name
+            inputs[key]={"path":path.relative_to(root).as_posix(),
+                         "bytes":path.stat().st_size,"sha256":file_sha(path)}
+        return settings,inputs
 
     @exclusive
     def execute(self,identity,batch_name,workbench,python=None,check=False):
         workbench=Path(workbench).resolve();python=str(Path(python or sys.executable).resolve())
         if not workbench.is_file():raise InputError("Select the installed original Islandora workbench script")
-        job=self.job(identity)
-        batch=next((b for b in job.get("batches",[]) if b["name"]==batch_name),None)
-        if not batch:raise InputError("Prepare this native batch first")
+        job,batch=self._current_batch(identity,batch_name)
         if not check and batch["task"]!="export_csv" and not job.get("review"):
             raise InputError("Review the current complete migration before applying target changes")
-        root=self.directory(identity)/"batches";config=root/batch["config"]
-        if file_sha(config)!=batch["configSha256"] or file_sha(root/batch["csv"])!=batch["csvSha256"]:
-            raise InputError("Native inputs changed after preparation; prepare the selected edition again")
         if batch["task"]=="add_media" and not check:
             self.inspect_target(identity)
-            prepared=self.prepare(identity)
-            job=self.job(identity)
+            prepared=self.prepare(identity);job=self.job(identity)
             batch=next((b for b in prepared["batches"] if b["name"]==batch_name),None)
             if not batch:return {"batch":batch_name,"status":"COMPLETE","received":True,"at":stamp()}
-            config=root/batch["config"]
             if not job.get("review"):raise InputError("Resolve the newly received source/target decisions before applying changes")
         if not check and batch["task"]!="export_csv":
             checked=self.execute(identity,batch_name,workbench,python,check=True)
             if checked.get("exitCode")!=0:return {"status":"CONTINUE","check":checked,"batch":batch_name}
-            job=self.job(identity)
-        run_id=uuid.uuid4().hex;run_dir=self.directory(identity)/"runs"/run_id;run_dir.mkdir(mode=0o700,parents=True)
-        command=[python,str(workbench),"--config",str(config)]
+            job,batch=self._current_batch(identity,batch_name)
+            if not job.get("review"):raise InputError("Review the current complete migration before applying target changes")
+        root=self.directory(identity).resolve()
+        run_id=uuid.uuid4().hex;runs=path_under(root,"runs");runs.mkdir(mode=0o700,exist_ok=True)
+        run_dir=runs/run_id;run_dir.mkdir(mode=0o700)
+        settings,inputs=self._run_inputs(identity,batch,run_dir)
+        map_before=self._snapshot_native_map(identity)
+        command=[python,str(workbench),"--config",str(run_dir/"config.yml")]
         if check:command.append("--check")
-        elif batch["task"]=="create":
-            map_path=root/"native-node-map.sqlite"
-            if map_path.exists():
-                db=sqlite3.connect("file:"+str(map_path)+"?mode=ro",uri=True)
-                try:
-                    ids=[int(x[0]) for x in db.execute("SELECT node_id FROM csv_id_to_node_id_map WHERE host=?",
-                        (job["target"]["host"],)) if str(x[0]).isdigit()]
-                finally:db.close()
-                if ids:command.extend(["--recovery_mode_starting_from_node_id",str(min(ids))])
+        elif batch["task"]=="create" and map_before:
+            db=sqlite3.connect(path_under(root,map_before["path"]).resolve().as_uri()+"?mode=ro",uri=True)
+            try:
+                ids=[int(x[0]) for x in db.execute("SELECT node_id FROM csv_id_to_node_id_map WHERE host=?",
+                    (job["target"]["host"],)) if str(x[0]).isdigit() and int(x[0])>0]
+            finally:db.close()
+            if ids:command.extend(["--recovery_mode_starting_from_node_id",str(min(ids))])
         run={"id":run_id,"batch":batch_name,"task":batch["task"],"check":bool(check),
-             "inputSha256":batch["csvSha256"],"startedAt":stamp(),"status":"RUNNING",
-             "workbenchSha256":file_sha(workbench),"log":str(run_dir.relative_to(self.directory(identity))/"native.log")}
+             "inputSha256":inputs["csv"]["sha256"],"configSha256":inputs["config"]["sha256"],
+             "inputs":inputs,"mapBefore":map_before,"review":job.get("review"),
+             "command":command,"startedAt":stamp(),"status":"RUNNING",
+             "workbenchSha256":file_sha(workbench),"log":(run_dir.relative_to(root)/"native.log").as_posix()}
+        put_file(run_dir/"invocation.json",jbytes(run))
         with self.ws.mutex,self.ws.db:
             job["runs"].append(run);job["status"]="RUNNING";self._save(job)
         env=os.environ.copy();env["PYTHONUNBUFFERED"]="1"
@@ -731,20 +823,23 @@ class IslandoraDesk:
             raise
         finally:
             self.process=None
+            try:run["mapAfter"]=self._snapshot_native_map(identity)
+            except Exception as exc:run["mapSnapshotError"]=str(exc)
             with self.ws.mutex,self.ws.db:
                 job=self.job(identity)
                 job["runs"]=[run if r["id"]==run_id else r for r in job["runs"]]
                 job["status"]="PREPARED" if code==0 else "CONTINUE"
                 self._save(job)
+            put_file(run_dir/"result.json",jbytes(run))
         if not check:
             if batch["task"]=="create":
                 self.import_native_map(identity)
-                result=Path(decode(config.read_bytes())["output_csv"])
+                result=Path(settings["output_csv"])
                 # Native create output can overlay source CSV values on its
                 # returned fields; use its IDs and receive metadata via export_csv.
                 if result.exists():self.receive(identity,result.read_bytes(),"map")
             elif batch["task"]=="export_csv":
-                result=root/"current-target.csv"
+                result=Path(settings["export_csv_file_path"])
                 if result.exists():self.receive(identity,result.read_bytes(),"target")
                 if code==0:self.inspect_target(identity)
         return run
