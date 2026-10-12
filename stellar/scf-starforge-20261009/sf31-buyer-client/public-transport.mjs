@@ -91,10 +91,10 @@ export function resolveBuyerProxy(value, environment = process.env) {
 export function normalizeSourceAuthorization(value) {
   if (value === null || typeof value !== 'object' || Array.isArray(value) ||
       Object.keys(value).some(key => !['origin','scheme'].includes(key)) ||
-      value.scheme !== 'Bearer') fail('INVALID_SOURCE_AUTHORIZATION');
+      !['Bearer','ApiKey'].includes(value.scheme)) fail('INVALID_SOURCE_AUTHORIZATION');
   const target = checkedURL(value.origin);
   if (value.origin !== target.origin) fail('SOURCE_AUTHORIZATION_EXACT_ORIGIN_REQUIRED');
-  return Object.freeze({origin:target.origin, scheme:'Bearer'});
+  return Object.freeze({origin:target.origin, scheme:value.scheme});
 }
 function requestData(init, paymentAuthorization = false, sourceAuthorization = null) {
   const allowed = new Set(['method', 'headers', 'body', 'redirect', 'signal']);
@@ -118,9 +118,14 @@ function requestData(init, paymentAuthorization = false, sourceAuthorization = n
   if (headers.has('authorization')) {
     const value = headers.get('authorization');
     const payment = paymentAuthorization && /^Payment [A-Za-z0-9_-]{1,65528}$/.test(value);
-    const source = sourceAuthorization !== null && value.length <= 16391 &&
+    const source = sourceAuthorization?.scheme === 'Bearer' && value.length <= 16391 &&
       /^Bearer [A-Za-z0-9._~+/-]+=*$/i.test(value);
     if (!payment && !source) fail('FORBIDDEN_TRANSPORT_HEADER');
+  }
+  if (headers.has('api-key')) {
+    const value = headers.get('api-key');
+    if (sourceAuthorization?.scheme !== 'ApiKey' || value.length > 16384 ||
+        !/^[\x21-\x7e]+$/.test(value)) fail('FORBIDDEN_TRANSPORT_HEADER');
   }
   if (sourceAuthorization !== null && (headers.has('payment-signature') || headers.has('x-payment')))
     fail('SOURCE_AUTHORIZATION_PAYMENT_HEADER_FORBIDDEN');
