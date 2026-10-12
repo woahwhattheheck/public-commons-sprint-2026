@@ -37,6 +37,145 @@ def _progress(value):
         print(json.dumps(value, ensure_ascii=False), flush=True)
 
 
+def _same_history(before, current):
+    """Accept only the same saved workspace or its original journal continuation."""
+    require(before["schema"] == current["schema"]
+            and before["state"]["id"] == current["state"]["id"]
+            and current["state"]["revision"] >= before["state"]["revision"],
+            "JOURNEY_WORKSPACE_CHANGED", "Use the same original migration workspace and history.")
+    require(current["events"][:len(before["events"])] == before["events"],
+            "JOURNEY_HISTORY_CHANGED", "The retained workspace event prefix changed.")
+    current_requests = {row["requestId"]: row for row in current["requests"]}
+    require(len(current_requests) == len(current["requests"])
+            and all(current_requests.get(row["requestId"]) == row for row in before["requests"]),
+            "JOURNEY_REQUEST_HISTORY_CHANGED", "Preserve every original committed request and result.")
+    if before["state"]["revision"] == current["state"]["revision"]:
+        require(value_sha(before) == value_sha(current), "JOURNEY_SNAPSHOT_CHANGED",
+                "The selected original workspace snapshot changed without a journal revision.")
+    for name in ("sources", "projects"):
+        retained = {row["id"]: row for row in current["state"][name]}
+        require(all(retained.get(row["id"]) == row for row in before["state"][name]),
+                "JOURNEY_SOURCE_CHANGED", "Preserve the original retained sources and projects.", collection=name)
+    old_migration = before["state"].get("migration", {})
+    migration = current["state"].get("migration", {})
+    for name in ("captures", "plans", "editions", "projectDeliveries", "reviews", "inputs"):
+        retained = {row["id"]: row for row in migration.get(name, [])}
+        require(all(retained.get(row["id"]) == row for row in old_migration.get(name, [])),
+                "JOURNEY_MIGRATION_CHANGED", "Preserve the original migration records.", collection=name)
+
+
+def _bind_workspace(root, workspace, config, remap):
+    current = workspace.snapshot()
+    identity = {
+        "schema": "starforge.migration-receiving-workspace.v1",
+        "operationId": config["operationId"], "configSha256": value_sha(config),
+        "workspaceId": current["state"]["id"],
+        "editions": [{"editionId": row["editionId"],
+                      "documentSha256": value_sha(workspace.document("edition", row["editionId"]))}
+                     for row in config["editions"]],
+    }
+    binding_path = root / "workspace-input.json"
+    snapshot_path = root / "workspace-input-snapshot.json"
+    if binding_path.exists():
+        binding, _ = read_json(binding_path)
+        require(all(binding.get(key) == value for key, value in identity.items()),
+                "JOURNEY_WORKSPACE_BINDING", "Retain the original operation, workspace and edition documents.")
+        require(binding["snapshotFile"]["path"] == snapshot_path.name,
+                "JOURNEY_WORKSPACE_BINDING", "Use the original retained workspace snapshot.")
+        file_digest(snapshot_path, expected=binding["snapshotFile"])
+        original, _ = read_json(snapshot_path)
+        require(value_sha(original) == binding["snapshotSha256"],
+                "JOURNEY_WORKSPACE_BINDING", "The retained source snapshot identity changed.")
+    else:
+        original = read_json(snapshot_path)[0] if snapshot_path.exists() else current
+        _same_history(original, current)
+        binding = {**identity, "snapshotSha256": value_sha(original)}
+        if remap is not None:
+            require(remap["expectedWorkspaceId"] == binding["workspaceId"]
+                    and remap["expectedSnapshotSha256"] == binding["snapshotSha256"],
+                    "JOURNEY_HOST_BINDING", "Match this move to the selected original workspace snapshot.")
+        _keep(root, snapshot_path.name, original)
+        binding["snapshotFile"] = {"path": snapshot_path.name, **file_digest(snapshot_path)}
+        _keep(root, binding_path.name, binding)
+    _same_history(original, current)
+    if remap is not None:
+        require(remap["expectedWorkspaceId"] == binding["workspaceId"]
+                and remap["expectedSnapshotSha256"] == binding["snapshotSha256"],
+                "JOURNEY_HOST_BINDING", "Match this move to the operation's retained source snapshot.")
+        workspace.verify_migration()
+        host = {
+            "schema": "starforge.migration-receiving-host-binding.v1",
+            "operationId": config["operationId"], "configSha256": binding["configSha256"],
+            "workspaceId": binding["workspaceId"], "snapshotSha256": binding["snapshotSha256"],
+            "workspace": str(workspace.root), "outputRoot": str(root),
+        }
+        _keep(root, "host-bindings/" + value_sha(host) + ".json", host)
+    return binding
+
+
+def _open_journey(config, remap_file):
+    remap = None
+    if remap_file is not None:
+        remap, _ = read_json(remap_file)
+        fields = {"schema", "operationId", "expectedWorkspaceId", "expectedSnapshotSha256",
+                  "workspace", "outputRoot"}
+        require(isinstance(remap, dict) and set(remap) == fields
+                and remap["schema"] == "starforge.migration-receiving-host.v1"
+                and remap["operationId"] == config["operationId"]
+                and all(isinstance(remap[name], str) and remap[name] for name in fields),
+                "JOURNEY_HOST_CONFIGURATION", "Select explicit host paths for this original operation.")
+        require(len(remap["expectedSnapshotSha256"]) == 64
+                and all(char in "0123456789abcdef" for char in remap["expectedSnapshotSha256"]),
+                "JOURNEY_HOST_CONFIGURATION", "Use the retained snapshot's exact SHA-256.")
+    locations = remap if remap is not None else config
+    require(all(isinstance(locations.get(name), str) and locations[name] for name in ("workspace", "outputRoot")),
+            "JOURNEY_CONFIGURATION", "Select the existing workspace and original receiving output directory.")
+    root = Path(locations["outputRoot"]).expanduser().absolute()
+    if remap is not None:
+        require(root.is_dir() and (root / "operation-input.json").is_file(),
+                "JOURNEY_ORIGINAL_OUTPUT", "Move the complete original operation directory before continuing.")
+    else:
+        root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    root = directory(root)
+    workspace = Workspace(directory(locations["workspace"]))
+    require(not root.is_relative_to(workspace.root), "JOURNEY_OUTPUT",
+            "Keep complete receiving outputs outside the active migration workspace.")
+    _keep(root, "operation-input.json", {"schema": "starforge.migration-receiving-journey.v1", "config": config})
+    _bind_workspace(root, workspace, config, remap)
+    return root, workspace
+
+
+def _archive(root, name, workspace, filename, revision):
+    """Keep the original receipt; the current archive location is host-specific."""
+    target = root / filename
+    receipt_path = root / name
+    retained = read_json(receipt_path)[0] if receipt_path.exists() else None
+    if retained is not None:
+        require(target.is_file(), "JOURNEY_ARCHIVE_MISSING",
+                "Move the original completed archive with its saved receipt.", file=filename)
+    actual = export_handover(
+        workspace, target, expected_revision=revision,
+        expected_sha256=retained["sha256"] if retained is not None else None, progress=_progress,
+    )
+    if retained is not None:
+        fields = ("bytes", "sha256", "manifestSha256", "workspaceId", "revision", "fileCount", "totalDecodedBytes")
+        require(all(actual.get(key) == retained.get(key) for key in fields),
+                "JOURNEY_ARCHIVE_CHANGED", "Preserve the complete original archive and its receipt.", file=filename)
+        return retained
+    return _keep(root, name, actual)
+
+
+def _current_locations(root, workspace):
+    return {
+        "workspace": str(workspace.root), "outputRoot": str(root),
+        "result": str(root / "result.json"),
+        "archive": str(root / "complete-migration.zip"),
+        "receivedWorkspace": str(root / "received-workspace"),
+        "onwardArchive": str(root / "onward-migration.zip"),
+        "onwardWorkspace": str(root / "onward-workspace"),
+    }
+
+
 @_native_operation
 def reopen_received(workspace_path, output_file):
     """Called from the received source tree by a separate selected-QGIS process."""
@@ -111,18 +250,15 @@ def _independent_receiver(workspace, output):
 
 
 @_native_operation
-def perform(config_file):
+def perform(config_file, remap=None):
     config, _ = read_json(config_file)
     require(isinstance(config, dict) and isinstance(config.get("operationId"), str)
             and config["operationId"] and isinstance(config.get("editions"), list) and config["editions"],
             "JOURNEY_CONFIGURATION", "Select the original migration workspace and complete reviewed edition sequence.")
-    root = Path(config["outputRoot"]).expanduser().absolute()
-    root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    root = directory(root)
-    workspace = Workspace(directory(config["workspace"]))
-    require(not root.is_relative_to(workspace.root), "JOURNEY_OUTPUT",
-            "Keep complete receiving outputs outside the active migration workspace.")
-    _keep(root, "operation-input.json", {"schema": "starforge.migration-receiving-journey.v1", "config": config})
+    require(all(isinstance(row, dict) and isinstance(row.get("editionId"), str) and row["editionId"]
+                for row in config["editions"]), "JOURNEY_EDITION",
+            "Use the complete original retained migration edition sequence.")
+    root, workspace = _open_journey(config, remap)
     actor = config.get("actor", "Migration receiving operator")
     final_path = root / "result.json"
     if final_path.exists():
@@ -134,9 +270,15 @@ def perform(config_file):
                            expected_sha256=result["archive"]["sha256"], native_reopen="required")
         require(receiver["workspaceId"] == result["workspaceId"], "JOURNEY_IDENTITY",
                 "Keep the original received workspace.")
+        file_digest(root / "onward-migration.zip", expected=result["onwardArchive"])
+        onward = receive(root / "onward-migration.zip", root / "onward-workspace",
+                         expected_sha256=result["onwardArchive"]["sha256"], native_reopen="required")
+        require(onward["workspaceId"] == result["workspaceId"], "JOURNEY_IDENTITY",
+                "Keep the original onward receiving workspace.")
+        locations = _current_locations(root, workspace)
         print(json.dumps({"operationId": config["operationId"], "complete": True,
-                          "replayed": True, "result": str(final_path)}), flush=True)
-        return result
+                          "replayed": True, "result": str(final_path), "locations": locations}), flush=True)
+        return {**result, "locations": locations}
 
     requests = set()
     source_ids, built_projects = [], []
@@ -190,22 +332,19 @@ def perform(config_file):
         _keep(root, "export-input.json", selected_export)
     require(selected_export["workspaceId"] == workspace.read()["id"], "JOURNEY_EXPORT_CHANGED",
             "Keep the original export workspace.")
-    archive = export_handover(workspace, root / "complete-migration.zip",
-                              expected_revision=selected_export["revision"], progress=_progress)
-    _keep(root, "archive.json", archive)
-    inspected = inspect_handover(archive["path"], expected_sha256=archive["sha256"], progress=_progress)
-    incoming = receive(archive["path"], root / "received-workspace",
+    archive = _archive(root, "archive.json", workspace, "complete-migration.zip", selected_export["revision"])
+    archive_path = root / "complete-migration.zip"
+    inspected = inspect_handover(archive_path, expected_sha256=archive["sha256"], progress=_progress)
+    incoming = receive(archive_path, root / "received-workspace",
                        expected_sha256=archive["sha256"], native_reopen="required", progress=_progress)
-    again = receive(archive["path"], root / "received-workspace",
+    again = receive(archive_path, root / "received-workspace",
                     expected_sha256=archive["sha256"], native_reopen="required", progress=_progress)
     receiver = incoming["workspace"]
     require(again["replayed"] and value_sha(receiver.snapshot()) == inspected["snapshotSha256"],
             "JOURNEY_SNAPSHOT", "The independent receiving must retain the exact full original snapshot.")
     independent = _independent_receiver(receiver, root / "independent-reopen.json")
-    onward = export_handover(receiver, root / "onward-migration.zip",
-                             expected_revision=receiver.read()["revision"], progress=_progress)
-    _keep(root, "onward-archive.json", onward)
-    onward_received = receive(onward["path"], root / "onward-workspace",
+    onward = _archive(root, "onward-archive.json", receiver, "onward-migration.zip", receiver.read()["revision"])
+    onward_received = receive(root / "onward-migration.zip", root / "onward-workspace",
                               expected_sha256=onward["sha256"], native_reopen="required", progress=_progress)
     require(onward_received["workspace"].snapshot() == receiver.snapshot(), "JOURNEY_ONWARD_SNAPSHOT",
             "The complete onward handover must retain the original migration and project history.")
@@ -223,8 +362,9 @@ def perform(config_file):
     _keep(root, "result.json", result)
     print(json.dumps({"operationId": config["operationId"], "complete": True,
                       "result": str(final_path), "workspaceId": result["workspaceId"],
-                      "savedProjects": len(inspected["projects"])}), flush=True)
-    return result
+                      "savedProjects": len(inspected["projects"]),
+                      "locations": _current_locations(root, workspace)}), flush=True)
+    return {**result, "locations": _current_locations(root, workspace)}
 
 
 def main():
@@ -233,11 +373,13 @@ def main():
     action.add_argument("--config")
     action.add_argument("--reopen-received")
     parser.add_argument("--output")
+    parser.add_argument("--remap", help="Explicit host paths bound to the original operation and workspace snapshot.")
     args = parser.parse_args()
     if args.reopen_received:
+        require(args.remap is None, "JOURNEY_HOST_CONFIGURATION", "Use --remap only with the original --config.")
         require(args.output is not None, "RECEIVED_RESULT_PATH", "Choose the original independent result file.")
         return reopen_received(args.reopen_received, args.output)
-    return perform(args.config)
+    return perform(args.config, remap=args.remap)
 
 
 if __name__ == "__main__":
