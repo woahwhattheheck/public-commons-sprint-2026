@@ -143,6 +143,8 @@ The note attaches to the exact source edition. Updating a saved review preserves
 
 Every new action uses the workspace revision displayed when its form was opened and a stable operation ID. The browser retains entered values and the pending action in session storage when space permits.
 
+Source imports accept a file up to 60 MiB. Their saved form contains the file name, size, content fingerprint and original operation, with the source body kept out of session storage. After a page reload, reopen the saved form and select the same source package. The browser checks the parsed package’s SHA-256 and restores it to the original request. An unchanged import recovers the original result. Choosing a different package or changing other fields creates a new action. The browser retains the small pending form before dispatching an import.
+
 If the workspace changes while the form is open, choose **Review latest saved view**. Read the relevant current site, edition, note or publisher state. Then choose **Use this revision and keep my form**. The entered fields remain in place; a release operation also adopts the generation that was actually reviewed.
 
 When a request’s response is interrupted, submit the unchanged form or choose **Continue saved action**. The server resolves the original operation before checking the current workspace revision. A completed action returns its saved result. A changed payload receives a new operation identity.

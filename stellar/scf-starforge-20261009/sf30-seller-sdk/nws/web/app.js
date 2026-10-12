@@ -99,10 +99,24 @@ function applyValues(form,values){
     else element.value=values[element.name];
   }
 }
+function dialogDraft(modal,values){
+  let pending=modal.pending??null;
+  if(modal.kind==='capture.import'&&pending?.payload&&modal.sourcePackage){
+    const {bundle,...payload}=pending.payload;
+    pending={...pending,payload};
+  }
+  return {kind:modal.kind,context:modal.context,expectedRevision:modal.expectedRevision,values,pending,sourcePackage:modal.sourcePackage??null};
+}
+function restoreImportBody(modal,bundle,selection){
+  if(modal.pending?.action==='capture.import'&&modal.pending.payload&&!Object.hasOwn(modal.pending.payload,'bundle')&&
+    modal.sourcePackage?.sha256===selection.sha256)modal.pending={...modal.pending,payload:{...modal.pending.payload,bundle}};
+  modal.sourcePackage=selection;
+}
 function saveDialog(){
-  const modal=S.modal;if(!modal||!$('operation-form'))return;
-  const item={kind:modal.kind,context:modal.context,expectedRevision:modal.expectedRevision,values:formValues($('operation-form')),pending:modal.pending??null};
-  if(!remember('dialog',item))$('dialog-error').textContent='The browser could not retain this large form for a page reload. It remains open with its original action in this session.';
+  const modal=S.modal;if(!modal||!$('operation-form'))return false;
+  const retained=remember('dialog',dialogDraft(modal,formValues($('operation-form'))));
+  if(!retained)$('dialog-error').textContent='This browser could not retain the pending form. Free browser storage and submit again; the entered form is still open.';
+  return retained;
 }
 function clearConflict(){
   $('dialog-conflict').hidden=true;$('latest-view').hidden=true;$('latest-view').textContent='';$('adopt-latest').disabled=true;
@@ -134,7 +148,7 @@ function modalFields(kind,context){
   if(kind==='capture.import')return {title:'Import a retained source package',submit:'Import original source',html:
     field('siteId','Matching saved site',{type:'select',options:sites,value:context.id??sites[0]?.[0],required:true,full:true})+
     field('label','Edition label',{value:'',full:true})+
-    field('file','NWS source package',{type:'file',help:'Select a complete source-package JSON. The saved site must have the package’s coordinates. Original response bytes and source times are retained.',full:true})};
+    field('file','NWS source package',{type:'file',help:'Select a complete source-package JSON for this site’s coordinates. After a page reload, select the same file to continue its saved import. Selecting a different package or changing the fields starts a new action. Original source bytes and times are retained.',full:true})};
   if(kind==='capture.station'){
     const capture=S.view.captures.find(c=>c.id===context.id);
     return {title:'Choose an observation station',submit:'Use station and continue',html:
@@ -196,7 +210,7 @@ function modalFields(kind,context){
 function openForm(kind,context={},restoring=null){
   if(!S.view)return;
   const definition=modalFields(kind,context),pending=restoring?.pending??null;
-  S.modal={kind,context,expectedRevision:restoring?.expectedRevision??S.view.revision,pending,busy:false,reviewedView:null,conflict:false};
+  S.modal={kind,context,expectedRevision:restoring?.expectedRevision??S.view.revision,pending,sourcePackage:restoring?.sourcePackage??null,busy:false,reviewedView:null,conflict:false};
   $('dialog-title').textContent=definition.title;
   $('dialog-body').innerHTML=(definition.help?'<p class="muted">'+esc(definition.help)+'</p>':'')+
     '<form id="operation-form"><div class="fields">'+definition.html+'</div><p class="help" id="form-revision">Opened at workspace revision '+esc(S.modal.expectedRevision)+'.</p>'+
@@ -216,9 +230,12 @@ async function payloadOf(modal){
   if(modal.kind==='capture.import'){
     const file=$('operation-form').elements.namedItem('file').files[0];
     let bundle;
-    if(file){if(file.size>60*1024*1024)throw new Error('Choose a source package below60 MiB for this browser import.');bundle=JSON.parse(await file.text());}
+    if(file){if(file.size>60*1024*1024)throw new Error('Choose a source package at or below 60 MiB for this browser import.');bundle=JSON.parse(await file.text());}
     else bundle=modal.pending?.payload?.bundle;
-    if(!bundle)throw new Error('Choose the complete retained NWS source package.');
+    if(!bundle)throw new Error(modal.sourcePackage?'Select '+(modal.sourcePackage.name||'the original source package')+' again to continue its saved import.':'Choose the complete retained NWS source package.');
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(bundle)));
+    const sha256=Array.from(new Uint8Array(digest),value=>value.toString(16).padStart(2,'0')).join('');
+    restoreImportBody(modal,bundle,{name:file?.name??modal.sourcePackage?.name??'source-package.json',bytes:file?.size??modal.sourcePackage?.bytes??null,sha256});
     values.bundle=bundle;if(!values.label)delete values.label;
   }
   if(modal.kind==='release.prepare'){
@@ -242,7 +259,8 @@ async function submitForm(){
   try{
     const payload=await payloadOf(modal);
     if(!sameAction(modal.pending,modal.kind,payload))modal.pending={action:modal.kind,payload,expectedRevision:modal.expectedRevision,operationId:crypto.randomUUID()};
-    saveDialog();
+    const retained=saveDialog();
+    if(modal.kind==='capture.import'&&!retained)throw new Error('Free browser storage so the original import can be retained across a page reload, then submit this form again.');
     const result=await postAction(modal.pending);
     if(result.view)acceptView(result.view);
     if(!Object.hasOwn(result,'result')){$('dialog-error').textContent='The original operation is still running. Submit this unchanged form again to read its result.';return;}
