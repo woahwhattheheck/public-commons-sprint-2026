@@ -90,6 +90,7 @@ async function nativeReportChecks(name,capture,{from,to}){
 export async function runQuestDbNativeJourney({directory,from,firstTo,to,historyFrom,
   endpoint='https://demo.questdb.io/',sourcePin=null,onEvent=()=>{}}={}){
   assert.equal(typeof directory,'string');directory=resolve(directory);
+  if(sourcePin!==null)assert.match(sourcePin,/^[a-f0-9]{40}$/,'Use the exact Git commit for the source pin.');
   for(const value of [from,firstTo,to,historyFrom])timestampValue(value);
   assert.ok(timestampValue(from)<timestampValue(firstTo)&&timestampValue(firstTo)<timestampValue(to));
   assert.ok(timestampValue(historyFrom)<=timestampValue(from)-1000000000n,
@@ -312,7 +313,7 @@ export async function runQuestDbNativeJourney({directory,from,firstTo,to,history
       "const m=await openQuestDbWorkbench({directory:process.argv[3],datasetNativeFactory:compiled=>createNativeSellerServer(compiled,{facilitatorClient})});",
       "try{const state=await m.inspect();const publication=await m.inspectPublication(process.argv[4]);const first=await m.inspectRun(process.argv[4],process.argv[5]);const second=await m.inspectRun(process.argv[4],process.argv[6]);console.log(JSON.stringify({state,publication,first:first.preview,second:second.preview}));}finally{await m.close();}"
     ].join('\n');
-    const reopened=JSON.parse((await execute(process.execPath,['--input-type=module','-e',reopenScript,workbenchModel,nativeFactory,
+    const reopened=await optional(join(directory,'reopened.json'))??JSON.parse((await execute(process.execPath,['--input-type=module','-e',reopenScript,workbenchModel,nativeFactory,
       workspaceDirectory,publicationId,initial.id,latest.id],{env:environment,timeout:30000,maxBuffer:8388608})).stdout);
     assert.equal(reopened.state.revision,state.revision);assert.equal(reopened.state.publications.length,1);
     assert.equal(reopened.publication.id,publicationId);assert.ok(reopened.publication.seller?.origin);
@@ -349,10 +350,12 @@ export async function runQuestDbNativeJourney({directory,from,firstTo,to,history
 }
 
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  const values=process.argv.slice(2),help='node native-demo.mjs DIRECTORY FROM FIRST_TO TO HISTORY_FROM [HTTPS_ENDPOINT]';
-  if(values.length<5||values.length>6){console.error(help);process.exitCode=2;}
+  const args=process.argv.slice(2),pinIndex=args.indexOf('--source-pin'),values=pinIndex<0?args:args.slice(0,pinIndex);
+  const help='node native-demo.mjs DIRECTORY FROM FIRST_TO TO HISTORY_FROM [HTTPS_ENDPOINT] [--source-pin COMMIT]';
+  const pin=pinIndex<0?process.env.QUESTDB_SOURCE_PIN??null:args[pinIndex+1];
+  if(values.length<5||values.length>6||pinIndex>=0&&pinIndex!==args.length-2||pin!==null&&!/^[a-f0-9]{40}$/.test(pin??'')){console.error(help);process.exitCode=2;}
   else runQuestDbNativeJourney({directory:values[0],from:values[1],firstTo:values[2],to:values[3],historyFrom:values[4],endpoint:values[5],
-    sourcePin:process.env.QUESTDB_SOURCE_PIN??null,onEvent:event=>console.log(JSON.stringify(event))})
+    sourcePin:pin,onEvent:event=>console.log(JSON.stringify(event))})
     .then(result=>console.log(JSON.stringify({outcome:result.outcome,result:join(result.paths.directory,'journey-result.json'),
       firstRows:result.first.rows,secondRows:result.second.rows,workspace:result.paths.workspaceDirectory,publicationId:result.context.publicationId})))
     .catch(issue=>{console.error(JSON.stringify({code:issue.code??'NATIVE_QUESTDB_OPERATION_FAILED',message:issue.message}));process.exitCode=1;});
