@@ -60,6 +60,7 @@
 <section data-pane="history" hidden>
 <h2>Original operations</h2><p>Committed operations retain their original requests and results. An interrupted request is retried with the same identity and reviewed choices.</p>
 <div id="pending-panel" hidden><h3>Unfinished response</h3><p id="pending-label"></p><label>Original request<select id="pending-select"></select></label><button id="retry" type="button">Continue original request</button><details><summary>Original request</summary><pre id="pending-detail"></pre></details></div>
+<details id="incomplete-journals" hidden><summary>Interrupted request publication</summary><p>These original journals were retained. Continue the original request from the selector or the browser that started it. Files with unknown or conflicting contents require inspection; the rest of Operations remains available.</p><pre id="incomplete-journal-detail"></pre></details>
 <div class="table-scroll"><table><thead><tr><th>Committed</th><th>Operation</th><th>Action</th><th>Result</th></tr></thead><tbody id="operations"></tbody></table></div>
 <div class="actions"><button id="history-previous" type="button">Previous operations</button><span id="history-page"></span><button id="history-next" type="button">Next operations</button></div>
 <details><summary>Selected original operation</summary><pre id="operation-detail"></pre></details>

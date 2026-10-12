@@ -183,6 +183,9 @@ async function refreshHistory() {
     if (!pending.some(item => item.request.operationId === original.request.operationId)) pending.push(original);
   }
   retainLocal('pending', pending); renderPending();
+  const incomplete = result.incompleteJournals || [];
+  $('#incomplete-journals').hidden = incomplete.length === 0;
+  $('#incomplete-journal-detail').textContent = jsonText(incomplete);
   replaceRows('#operations', result.operations.map(operation => {
     const tr = tableRow([operation.committedAt, operation.operationId, operation.kind]);
     const cell = entry('td'), button = entry('button', 'Open original'); button.type = 'button';
@@ -201,8 +204,14 @@ $('#refresh').addEventListener('click', () => guarded(refreshProject));
 $('#apply-profile').addEventListener('click', () => guarded(async () => {
   const selected = parseExactJSON($('#profile-json').value);
   const inspected = await api('inspect', {}, selected);
-  profile = selected; project = inspected; retainLocal('profile', profile); renderProject();
-  status('Mapping selected for subsequent original requests.');
+  const changed = project?.selectedProfileSha256 !== inspected.selectedProfileSha256;
+  profile = inspected.selectedProfile; project = inspected; retainLocal('profile', profile); renderProject();
+  if (changed) {
+    review = null; decisions = new Map(); changePage = 0;
+    $('#row-comparison').hidden = true; renderChanges();
+  }
+  status(changed ? 'Mapping selected. Review the staged edition again before publishing.' :
+    'The same mapping remains selected.');
 }));
 $('#source-form').addEventListener('submit', event => {
   event.preventDefault();

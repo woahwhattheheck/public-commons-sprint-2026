@@ -1,0 +1,222 @@
+{
+  "schema": "starforge.postgis-native-journey.v1",
+  "operationId": "postgis-native-customer-journey-original",
+  "databaseUse": "selected-native-demonstration-project",
+  "directory": "/absolute/project/native-journey",
+  "connectionFile": "/absolute/private/commissioning.json",
+  "profile": {
+    "schema": "starforge.postgis-intake-profile.v1",
+    "projectId": "demonstration-intake",
+    "database": {
+      "profileId": "selected-postgis-service",
+      "name": "selected_database",
+      "schema": "selected_schema",
+      "primaryKeyMetadata": null
+    },
+    "layers": [
+      {
+        "id": "parcels",
+        "sourceLayerId": "replace-with-original-vector-layer-id",
+        "relation": "parcels",
+        "title": "Selected parcels",
+        "fields": [
+          {
+            "sourceName": "parcel_id",
+            "name": "parcel_id",
+            "type": "bigint",
+            "nullable": false,
+            "codec": "native"
+          },
+          {
+            "sourceName": "district",
+            "name": "district",
+            "type": "text",
+            "nullable": false,
+            "codec": "native"
+          },
+          {
+            "sourceName": "assessed_value",
+            "name": "assessed_value",
+            "type": "numeric",
+            "nullable": true,
+            "codec": "native"
+          }
+        ],
+        "geometry": {
+          "sourceSrid": 4326,
+          "targetSrid": 4326,
+          "type": "MULTIPOLYGON",
+          "dimension": 2,
+          "assignSourceCrs": false,
+          "acceptInvalid": false
+        },
+        "roles": [
+          {
+            "name": "existing_qgis_editor",
+            "permissions": [
+              "select",
+              "insert",
+              "update",
+              "delete"
+            ],
+            "scope": {
+              "column": "district",
+              "values": [
+                "selected-district"
+              ]
+            }
+          },
+          {
+            "name": "existing_geoserver_reader",
+            "permissions": [
+              "select"
+            ],
+            "scope": null
+          }
+        ]
+      }
+    ]
+  },
+  "sources": {
+    "baseline": {
+      "directory": "/absolute/original/baseline-vector-export",
+      "expectedManifestSha256": "REPLACE_WITH_ACTUAL_BASELINE_MANIFEST_SHA256"
+    },
+    "successor": {
+      "directory": "/absolute/original/successor-vector-export",
+      "expectedManifestSha256": "REPLACE_WITH_ACTUAL_SUCCESSOR_MANIFEST_SHA256"
+    }
+  },
+  "customerEditRole": "existing_qgis_editor",
+  "customerEdits": [
+    {
+      "layerId": "parcels",
+      "rowKey": "REPLACE_WITH_ACTUAL_ORIGINAL_ROW_KEY",
+      "values": {
+        "assessed_value": 125000
+      }
+    }
+  ],
+  "expectedConflicts": 1,
+  "readers": [
+    {
+      "connectionFile": "/absolute/private/qgis-reader.json",
+      "role": "existing_qgis_editor",
+      "layerIds": [
+        "parcels"
+      ]
+    },
+    {
+      "connectionFile": "/absolute/private/geoserver-reader.json",
+      "role": "existing_geoserver_reader",
+      "layerIds": [
+        "parcels"
+      ]
+    }
+  ],
+  "restore": {
+    "connectionFile": "/absolute/private/restore-commissioning.json",
+    "profile": {
+      "schema": "starforge.postgis-intake-profile.v1",
+      "projectId": "demonstration-intake",
+      "database": {
+        "profileId": "selected-restore-service",
+        "name": "selected_restore_database",
+        "schema": "selected_schema",
+        "primaryKeyMetadata": null
+      },
+      "layers": [
+        {
+          "id": "parcels",
+          "sourceLayerId": "replace-with-original-vector-layer-id",
+          "relation": "parcels",
+          "title": "Selected parcels",
+          "fields": [
+            {
+              "sourceName": "parcel_id",
+              "name": "parcel_id",
+              "type": "bigint",
+              "nullable": false,
+              "codec": "native"
+            },
+            {
+              "sourceName": "district",
+              "name": "district",
+              "type": "text",
+              "nullable": false,
+              "codec": "native"
+            },
+            {
+              "sourceName": "assessed_value",
+              "name": "assessed_value",
+              "type": "numeric",
+              "nullable": true,
+              "codec": "native"
+            }
+          ],
+          "geometry": {
+            "sourceSrid": 4326,
+            "targetSrid": 4326,
+            "type": "MULTIPOLYGON",
+            "dimension": 2,
+            "assignSourceCrs": false,
+            "acceptInvalid": false
+          },
+          "roles": [
+            {
+              "name": "existing_qgis_editor",
+              "permissions": [
+                "select",
+                "insert",
+                "update",
+                "delete"
+              ],
+              "scope": {
+                "column": "district",
+                "values": [
+                  "selected-district"
+                ]
+              }
+            },
+            {
+              "name": "existing_geoserver_reader",
+              "permissions": [
+                "select"
+              ],
+              "scope": null
+            }
+          ]
+        }
+      ]
+    },
+    "readers": [
+      {
+        "connectionFile": "/absolute/private/restore-reader.json",
+        "role": "existing_geoserver_reader",
+        "layerIds": [
+          "parcels"
+        ]
+      }
+    ]
+  },
+  "python": "/absolute/native/python",
+  "qgis": {
+    "python": "/absolute/qgis/python",
+    "actor": "receiving-operator",
+    "title": "PostGIS receiving demonstration",
+    "qgisProfileDirectory": "/absolute/private/qgis-profile",
+    "layerIds": [
+      "parcels"
+    ],
+    "projectCrs": "EPSG:4326",
+    "connection": {
+      "schema": "starforge.postgis-qgis-connection.v1",
+      "profileId": "selected-postgis-service",
+      "service": "existing_postgis_service",
+      "authConfigId": "",
+      "role": "existing_qgis_editor",
+      "sslMode": "verify-full",
+      "allowEditing": false
+    }
+  }
+}

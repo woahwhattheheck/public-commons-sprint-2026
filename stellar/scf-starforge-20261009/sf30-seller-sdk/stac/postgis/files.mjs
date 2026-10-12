@@ -27,24 +27,61 @@ export async function regularFile(path) {
   need(stat.isFile() && !stat.isSymbolicLink() && await realpath(path) === resolve(path), 'POSTGIS_REGULAR_FILE_REQUIRED', path);
   return stat;
 }
-export async function fileRecord(path, name) {
+export async function fileRecord(path, name, {signal} = {}) {
+  signal?.throwIfAborted();
   const before = await regularFile(path), hash = createHash('sha256');
-  let bytes = 0;
-  for await (const chunk of createReadStream(path)) { hash.update(chunk); bytes += chunk.length; }
-  const after = await regularFile(path);
-  need(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
-    before.mtimeMs === after.mtimeMs && bytes === after.size, 'POSTGIS_FILE_CHANGED_WHILE_READING', name);
-  return {path: name, bytes, sha256: hash.digest('hex')};
+  const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  let primaryError;
+  try {
+    signal?.throwIfAborted();
+    const opened = await handle.stat();
+    need(opened.isFile() && before.dev === opened.dev && before.ino === opened.ino &&
+      before.size === opened.size && before.mtimeMs === opened.mtimeMs,
+      'POSTGIS_FILE_CHANGED_WHILE_READING', name);
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let bytes = 0;
+    for (;;) {
+      signal?.throwIfAborted();
+      const {bytesRead} = await handle.read(buffer, 0, buffer.length, bytes);
+      signal?.throwIfAborted();
+      if (bytesRead === 0) break;
+      hash.update(buffer.subarray(0, bytesRead)); bytes += bytesRead;
+    }
+    signal?.throwIfAborted();
+    const after = await handle.stat(), named = await regularFile(path);
+    need(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
+      before.mtimeMs === after.mtimeMs && bytes === after.size &&
+      named.dev === after.dev && named.ino === after.ino && named.size === after.size &&
+      named.mtimeMs === after.mtimeMs, 'POSTGIS_FILE_CHANGED_WHILE_READING', name);
+    signal?.throwIfAborted();
+    return {path: name, bytes, sha256: hash.digest('hex')};
+  } catch (error) { primaryError = error; throw error; }
+  finally {
+    // This same FileHandle drains outstanding reads before releasing its descriptor.
+    try { await handle.close(); }
+    catch (cleanupError) {
+      if (!primaryError) throw cleanupError;
+      const joined = new AggregateError([primaryError, cleanupError],
+        'The original file read and its cleanup both failed.', {cause: primaryError});
+      joined.code = primaryError?.code || 'POSTGIS_FILE_CLEANUP_FAILED';
+      throw joined;
+    }
+  }
 }
-export async function verifyFile(root, record) {
+export async function verifyFile(root, record, {signal} = {}) {
+  signal?.throwIfAborted();
   need(record && Number.isSafeInteger(record.bytes) && record.bytes >= 0, 'POSTGIS_FILE_DESCRIPTOR_REQUIRED');
   hash(record.sha256);
-  const actual = await fileRecord(member(root, record.path), record.path);
+  const actual = await fileRecord(member(root, record.path), record.path, {signal});
   need(actual.bytes === record.bytes && actual.sha256 === record.sha256, 'POSTGIS_PACKAGE_FILE_CHANGED', record.path);
   return actual;
 }
-export async function readJSON(path) {
-  await regularFile(path); return parseExactJSON(await readFile(path, 'utf8'));
+export async function readJSON(path, {signal} = {}) {
+  signal?.throwIfAborted();
+  await regularFile(path);
+  const text = await readFile(path, {encoding: 'utf8', signal});
+  signal?.throwIfAborted();
+  return parseExactJSON(text);
 }
 export async function writeOnce(path, bytes) {
   if (typeof bytes === 'string') bytes = Buffer.from(bytes);
@@ -56,7 +93,7 @@ export async function writeOnce(path, bytes) {
     need(actual.bytes === expected.bytes && actual.sha256 === expected.sha256, 'POSTGIS_EXISTING_OUTPUT_CONFLICT', path);
     return expected;
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  const temporary = path + '.receiving-' + randomUUID();
+  const temporary = path + '.receiving-' + expected.sha256 + '-' + randomUUID();
   let handle;
   try {
     handle = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
@@ -77,13 +114,28 @@ export async function writeOnce(path, bytes) {
 }
 export async function writeJSONOnce(path, value) { return writeOnce(path, canonical(value) + '\n'); }
 export async function claimDirectory(directory, request) {
-  const root = await privateDirectory(directory);
+  const root = await privateDirectory(directory), bytes = Buffer.from(canonical(request) + '\n');
+  const expectedSha256 = sha256(bytes);
   try {
     const existing = await readJSON(member(root, 'request.json'));
     need(canonical(existing) === canonical(request), 'POSTGIS_ORIGINAL_DIRECTORY_REQUEST_CONFLICT', root);
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
-    need((await readdir(root)).length === 0, 'POSTGIS_EMPTY_NEW_OPERATION_DIRECTORY_REQUIRED', root);
+    // A digest in a receiving filename binds a interrupted write to its complete
+    // original request. Preserve prior receiving files; publish only this request.
+    for (const name of await readdir(root)) {
+      const current = /^request\.json\.receiving-([a-f0-9]{64})-([a-f0-9-]{36})$/.exec(name);
+      const legacy = /^request\.json\.receiving-([a-f0-9-]{36})$/.test(name);
+      need(current || legacy, 'POSTGIS_UNCLAIMED_DIRECTORY_CONTENTS', {directory: root, name});
+      if (current) need(current[1] === expectedSha256, 'POSTGIS_ORIGINAL_DIRECTORY_REQUEST_CONFLICT', root);
+      const path = member(root, name), before = await regularFile(path);
+      need(before.size <= bytes.length, 'POSTGIS_ORIGINAL_DIRECTORY_REQUEST_CONFLICT', path);
+      const partial = await readFile(path), after = await regularFile(path);
+      need(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
+        before.mtimeMs === after.mtimeMs, 'POSTGIS_FILE_CHANGED_WHILE_READING', path);
+      need(partial.equals(bytes.subarray(0, partial.length)) && (current || partial.length === bytes.length),
+        'POSTGIS_ORIGINAL_REQUEST_PUBLICATION_INCOMPLETE', {directory: root, name});
+    }
     await writeJSONOnce(member(root, 'request.json'), request);
   }
   return root;
@@ -254,18 +306,22 @@ export async function validateSourceMapping(source, profile, srids, options = {}
     'POSTGIS_NATIVE_CRS_OBSERVATION_REQUIRED');
   return result;
 }
-export async function openReceiving(directory, expectedManifestSha256) {
-  const root = await privateDirectory(directory), descriptor = await fileRecord(member(root, 'postgis-receiving.json'), 'postgis-receiving.json');
+export async function openReceiving(directory, expectedManifestSha256, {signal} = {}) {
+  signal?.throwIfAborted();
+  const root = await privateDirectory(directory);
+  const descriptor = await fileRecord(member(root, 'postgis-receiving.json'), 'postgis-receiving.json', {signal});
   if (expectedManifestSha256) need(descriptor.sha256 === hash(expectedManifestSha256), 'POSTGIS_RECEIVING_MANIFEST_CHANGED');
-  const receipt = validateReceiving(await readJSON(member(root, 'postgis-receiving.json')));
+  const receipt = validateReceiving(await readJSON(member(root, 'postgis-receiving.json'), {signal}));
   const paths = new Set();
   for (const file of receipt.files) {
+    signal?.throwIfAborted();
     need(!paths.has(file.path), 'POSTGIS_RECEIVING_FILE_DUPLICATE', file.path); paths.add(file.path);
-    await verifyFile(root, file);
+    await verifyFile(root, file, {signal});
   }
   need(paths.has(receipt.source.manifest.path) && paths.has(receipt.mapping.path), 'POSTGIS_RECEIVING_ORIGINALS_MISSING');
-  await verifyFile(root, receipt.source.manifest); await verifyFile(root, receipt.mapping);
-  const profile = await readJSON(member(root, receipt.mapping.path));
+  await verifyFile(root, receipt.source.manifest, {signal}); await verifyFile(root, receipt.mapping, {signal});
+  const profile = await readJSON(member(root, receipt.mapping.path), {signal});
   need(profile.projectId === receipt.projectId, 'POSTGIS_RECEIVING_PROJECT_CHANGED');
+  signal?.throwIfAborted();
   return {directory: root, manifest: receipt, manifestFile: descriptor, profile};
 }
