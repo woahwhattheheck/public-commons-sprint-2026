@@ -12,9 +12,11 @@ Required equipment:
 
 - Node.js 24 with the original SQLite-backed workspace support.
 - The maintained `@redis/client@6.2.1` dependency.
-- A native Redis OSS executable, version 6.x through 7.2.
+- A native Redis OSS executable, version 7.0 through 7.2.
 - A distinct native Valkey executable that reports `server_name=valkey` and `valkey_version`.
 - A private writable working parent for engine files, SQLite workspaces, packages and complete customer exports. Preserve that directory through the receiving carrier's finalizer.
+
+The original source uses ACL-restricted EVAL_RO, which requires Redis 7 or later; the RDB receiving range for this complete product is therefore Redis 7.0–7.2.
 
 The receiving code takes explicit engine paths. It does not download a server, choose a different engine, or modify an existing deployment. Each invocation starts two fresh loopback-only servers in new private directories, generates temporary independent reader credentials, and stops its own children before the final cold reopen.
 
