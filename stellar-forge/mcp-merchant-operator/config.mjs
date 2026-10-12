@@ -69,24 +69,38 @@ export async function readPublisherConfiguration(path) {
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     identifier(alias, 'Publisher alias');
     exact(input, ['label', 'kind', 'directory', 'seller', 'resource'], ['kind', 'directory']);
-    if (!['postgres', 'sqlite', 'mysql', 'mongodb', 'sheets', 'sheetbest', 'nocodb', 'sftp', 'arcgis', 'census-acs', 'bls-labor'].includes(input.kind))
-      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql, mongodb, sheets, sheetbest, nocodb, sftp, arcgis, census-acs or bls-labor.');
+    if (!['postgres', 'sqlite', 'mysql', 'mongodb', 'sheets', 'sheetbest', 'nocodb', 'sftp', 'arcgis', 'census-acs', 'bls-labor', 'timescale'].includes(input.kind))
+      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql, mongodb, sheets, sheetbest, nocodb, sftp, arcgis, census-acs, bls-labor or timescale.');
     const directory = hostPath(input.directory, base), info = await lstat(directory);
     if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && (info.mode & 0o077))
       throw failure('CONFIGURATION_ERROR', 'Bind an existing private original publisher directory (0700).');
     const canonical = await realpath(directory);
     if (directories.has(canonical)) throw failure('CONFIGURATION_ERROR', 'Each publisher workspace must have one declared alias.');
     directories.add(canonical);
-    const saved = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(join(directory, 'workspace.json'), 4096)));
-    if (saved.schema !== 'stellar-forge.' + input.kind + '-publisher-workspace.v1')
+    const saved = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(join(directory, 'workspace.json'), input.kind === 'timescale' ? 16384 : 4096)));
+    const workspaceSchema = input.kind === 'timescale' ? 'stellar-forge.timescale-workspace.v1'
+      : 'stellar-forge.' + input.kind + '-publisher-workspace.v1';
+    if (saved.schema !== workspaceSchema)
       throw failure('CONFIGURATION_ERROR', 'The declared kind must match the original retained publisher workspace.');
+    if (input.kind === 'timescale') {
+      if (typeof saved.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(saved.id))
+        throw failure('CONFIGURATION_ERROR', 'The original Timescale workspace needs its retained identity.');
+      const nested = join(canonical, 'publisher'), native = await lstat(nested);
+      if (!native.isDirectory() || native.isSymbolicLink() || await realpath(nested) !== nested ||
+          process.platform !== 'win32' && (native.mode & 0o077) || directories.has(nested))
+        throw failure('CONFIGURATION_ERROR', 'The Timescale publisher must have one original private owner.');
+      const original = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(join(nested, 'workspace.json'), 4096)));
+      if (original.schema !== 'stellar-forge.postgres-publisher-workspace.v1')
+        throw failure('CONFIGURATION_ERROR', 'The Timescale project must contain its original PostgreSQL publisher.');
+      directories.add(nested);
+    }
     let buyer = {};
     if (input.seller !== undefined || input.resource !== undefined) {
       const { datasetBuyerEndpoint } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/buyer-handoff.mjs');
       buyer = datasetBuyerEndpoint(input.seller, input.resource);
     }
     workspaces[alias] = { label: line(input.label ?? alias, 'Publisher label'), kind: input.kind,
-      directory: canonical, ...buyer };
+      directory: canonical, ...(input.kind === 'timescale' ? { workspaceId: saved.id } : {}), ...buyer };
   }
   return { workspaces };
 }
