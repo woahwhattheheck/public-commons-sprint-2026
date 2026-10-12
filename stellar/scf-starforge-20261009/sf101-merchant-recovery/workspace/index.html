@@ -14,7 +14,7 @@
 </header>
 <main>
   <div id="notice" role="status" aria-live="polite">Opening the retained recovery workspace…</div>
-  <section class="host-line" aria-label="Host configuration"><div><span class="label">Remote store</span><span id="store-summary">—</span></div><div><span class="label">Passphrase</span><span id="passphrase-summary">—</span></div><div><span class="label">Original journal</span><code id="operations-path">—</code></div></section>
+  <section class="host-line" aria-label="Host configuration"><div><span class="label" id="store-label">Recovery mode</span><span id="store-summary">—</span></div><div><span class="label">Passphrase</span><span id="passphrase-summary">—</span></div><div><span class="label">Original journal</span><code id="operations-path">—</code></div></section>
   <div class="work-grid">
     <div>
       <section class="panel" aria-labelledby="transfer-heading">
@@ -32,7 +32,25 @@
           </div>
           <div id="bundle-field"><div class="label-row"><label for="bundle">Local encrypted bundle</label><button id="refresh-bundles" type="button" class="text-button">Refresh bundles</button></div><select id="bundle"></select><p class="hint" id="bundle-help">Select an original encrypted snapshot from the host's backup roots.</p></div>
           <div id="snapshot-field" hidden><label for="snapshot">Remote snapshot ID</label><input id="snapshot" list="snapshot-options" class="mono" autocomplete="off" spellcheck="false" maxlength="64" placeholder="64-character snapshot SHA-256"><datalist id="snapshot-options"></datalist><p class="hint">Use the exact ID from remote inventory or a completed upload.</p></div>
-          <div id="restored-field" hidden><label for="restore-operation">Completed original cold restore</label><input id="restore-operation" list="restored-options" class="mono" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,79}" autocomplete="off" spellcheck="false" disabled><datalist id="restored-options"></datalist><p class="hint">Choose the original completed restore operation ID for a typed dataset-publisher snapshot. Its journal selects the exact encrypted bundle and receiving directory.</p></div>
+          <div id="restored-field" class="restored-selection" hidden>
+            <label for="publisher-source">Restored publisher source</label>
+            <select id="publisher-source" disabled>
+              <option value="remote">Original remote restore journal</option>
+              <option value="host">Host-declared restored publisher</option>
+            </select>
+            <div id="remote-restored-field">
+              <label for="restore-operation">Completed original cold restore</label>
+              <input id="restore-operation" list="restored-options" class="mono" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,79}" autocomplete="off" spellcheck="false" disabled>
+              <datalist id="restored-options"></datalist>
+              <p class="hint">Choose the original completed restore operation ID. Its local journal selects the encrypted bundle and receiving directory for native publisher preparation.</p>
+            </div>
+            <div id="host-restored-field" hidden>
+              <label for="publisher-restore">Host-declared existing restore</label>
+              <select id="publisher-restore" disabled></select>
+              <p class="hint" id="publisher-restore-help">The host administrator declares the encrypted bundle and its existing plaintext restore.</p>
+            </div>
+            <p class="hint">Review authenticates the selected existing recovery and shows its original and restored publisher bindings. Keep this operation ID to prepare, adopt, or reopen its retained native result.</p>
+          </div>
           <label for="operation-id">Operation ID</label><input id="operation-id" class="mono" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,79}" autocomplete="off" spellcheck="false" required><p class="hint">This ID retains the original selection and progress through continuation.</p>
           <div id="destination-field" hidden><label for="destination">New destination name</label><input id="destination" class="mono" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,79}" autocomplete="off" spellcheck="false" placeholder="Use the operation ID"><p class="hint" id="destination-help"></p></div>
           <button id="review-button" type="submit" class="primary">Review transfer</button>
@@ -52,8 +70,14 @@
       </section>
     </div>
     <div>
-      <section class="panel" aria-labelledby="inventory-heading">
+      <section class="panel" id="publisher-restores-panel" aria-labelledby="publisher-restores-heading" hidden>
+        <div class="section-head"><div><p class="eyebrow">HOST / RESTORED</p><h2 id="publisher-restores-heading">Declared restored publishers</h2></div><span id="publisher-restores-count" class="badge">0</span></div>
+        <p class="hint">These existing encrypted bundles and cold restores are selected by the host. Review one to reopen its native publisher recovery.</p>
+        <div id="publisher-restores-list" class="compact-list"></div>
+      </section>
+      <section class="panel" id="inventory-panel" aria-labelledby="inventory-heading">
         <div class="section-head"><div><p class="eyebrow">REMOTE / COMPLETED</p><h2 id="inventory-heading">Snapshot inventory</h2></div><button id="refresh-inventory" type="button">Refresh inventory</button></div>
+        <p class="hint" id="inventory-mode-note" hidden>Local recovery is available through the declared source plans, encrypted bundles, and restored publishers. The host can add a remote store to this profile when remote transfer is needed.</p>
         <p class="hint" id="inventory-observed">Refresh to read the selected remote store.</p>
         <div class="table-scroll"><table><thead><tr><th>Snapshot</th><th>Created</th><th class="number">Files / bytes</th><th>Use</th></tr></thead><tbody id="inventory-rows"><tr><td colspan="4" class="empty">Remote inventory has not been read in this session.</td></tr></tbody></table></div>
         <button id="inventory-more" type="button" hidden>Load more snapshots</button>

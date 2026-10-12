@@ -14,3 +14,6 @@ export { openN8nMerchant, serveN8nMerchant } from './merchant.mjs';
 export { startN8nWorkspace } from './workspace/server.mjs';
 export { runN8nMerchantCommand } from './cli.mjs';
 export { N8N_LAUNCH_SCHEMA, startN8nMerchantLaunch, readN8nMerchantLaunch } from './launch.mjs';
+export { N8nAgentOperations } from './agent-operations.mjs';
+export { N8N_EXPORT_SCHEMA, N8N_EXPORT_MANIFEST, N8N_EXPORT_MAX_BYTES, N8N_EXPORT_MAX_FILE_BYTES,
+  parseN8nJobExport, validateN8nExportRecords } from './transfer-format.mjs';

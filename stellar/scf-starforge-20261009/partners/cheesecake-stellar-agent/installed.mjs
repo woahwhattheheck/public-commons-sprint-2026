@@ -8,12 +8,12 @@ import { createHash, randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { loadConfiguration, inspectHandoff } from './configuration.mjs';
 import { readBytes } from './application.mjs';
+import { APPLICATION_SOURCE_FILES } from './project-files.mjs';
 
 const STARTUP = 'stellar-forge.application-installed-startup.v1';
 const SELECTION = 'stellar-forge.application-installed-selection.v1';
 const APPLICATION = 'stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent';
-const APPLICATION_FILES = ['application.mjs','configuration.mjs','remote-mcp.mjs','server.mjs',
-  'cli.mjs','installed.mjs','ui/app.js','ui/index.html','ui/style.css'];
+const APPLICATION_FILES = APPLICATION_SOURCE_FILES;
 const fail = code => Object.assign(new Error(code), {code});
 const need = (condition, code) => { if (!condition) throw fail(code); };
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -64,7 +64,7 @@ export async function installedApplicationPaths() {
   }
   return {schema:'stellar-forge.application-installed-paths.v1',sourceRoot,applicationDirectory,
     runtimeDirectory,operatorGuide:join(applicationDirectory,'OPERATOR.md'),
-    installedGuide:join(applicationDirectory,'INSTALLED.md')};
+    installedGuide:join(applicationDirectory,'INSTALLED.md'),projectGuide:join(applicationDirectory,'PROJECT_RECOVERY.md')};
 }
 async function selection(config, {requireState = true,managedSourceDirectory} = {}) {
   const paths = await installedApplicationPaths();
@@ -92,7 +92,7 @@ async function selection(config, {requireState = true,managedSourceDirectory} = 
   }))];
   need(references[0].sha256 === handoff.manifestSha256, 'APPLICATION_HANDOFF_CHANGED');
   const directories = [config.handoffDirectory,config.stateDirectory];
-  for (const key of ['operatorProfile','authorizationModule'])
+  for (const key of ['operatorProfile','authorizationModule','projectProfile'])
     if (config[key]) references.push(await sourceFile(config[key]));
   let remoteMcp = null;
   if (config.remoteMcp) {
@@ -107,7 +107,7 @@ async function selection(config, {requireState = true,managedSourceDirectory} = 
       configurationFile:config.remoteMcp,operatorModule:remote.config.operatorModule};
   }
   return {applicationId:config.applicationId,subject:config.subject,stateDirectory:config.stateDirectory,
-    handoffDirectory:config.handoffDirectory,remoteMcpFile:config.remoteMcp ?? null,
+    handoffDirectory:config.handoffDirectory,remoteMcpFile:config.remoteMcp ?? null,projectProfileFile:config.projectProfile ?? null,
     runtimeDirectory:config.runtimeDirectory,sourceRoot,
     handoffId:handoff.manifest.handoffId,manifestSha256:handoff.manifestSha256,
     httpRequests:handoff.requests.size,remoteMcp,directories:[...new Set(directories)],
@@ -138,7 +138,7 @@ export async function inspectInstalledApplication(configFile, {expectedSelection
 
 /** Prepare one new private receiving application from the host's selected sources. */
 export async function initializeInstalledApplication({directory:destination,applicationId,subject,
-  handoffDirectory,operatorProfile,authorizationModule,remoteMcp} = {}) {
+  handoffDirectory,operatorProfile,authorizationModule,remoteMcp,projectProfile} = {}) {
   absolute(destination);
   await directory(dirname(destination),{privateOnly:true});
   need(typeof applicationId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(applicationId),
@@ -146,14 +146,14 @@ export async function initializeInstalledApplication({directory:destination,appl
   need(typeof subject === 'string' && subject.trim() === subject && subject.length >= 1 &&
     subject.length <= 256 && !/[\x00-\x1f\x7f]/.test(subject), 'APPLICATION_HOST_SUBJECT_REQUIRED');
   absolute(handoffDirectory);
-  for (const path of [operatorProfile,authorizationModule,remoteMcp]) if (path) absolute(path);
+  for (const path of [operatorProfile,authorizationModule,remoteMcp,projectProfile]) if (path) absolute(path);
   const paths = await installedApplicationPaths();
   need(!destination.startsWith(paths.sourceRoot + '/') && destination !== paths.sourceRoot,
     'APPLICATION_STATE_OUTSIDE_INSTALLATION_REQUIRED');
   const config = {schema:'stellar-forge.application-config.v1',applicationId,
     runtimeDirectory:paths.runtimeDirectory,handoffDirectory,stateDirectory:join(destination,'state'),subject,
     ...(operatorProfile ? {operatorProfile} : {}),...(authorizationModule ? {authorizationModule} : {}),
-    ...(remoteMcp ? {remoteMcp} : {})};
+    ...(remoteMcp ? {remoteMcp} : {}),...(projectProfile ? {projectProfile} : {})};
   // Complete original source inspection precedes the new workspace creation.
   await selection(config,{requireState:false});
   await mkdir(destination,{mode:0o700});
@@ -165,14 +165,15 @@ export async function initializeInstalledApplication({directory:destination,appl
 
 /** Start the unchanged authenticated application on its selected loopback listener. */
 export async function startInstalledApplication({configFile,expectedSelectionSha256,managedSourceDirectory,
-  bearerToken=process.env.STELLAR_APP_ACCESS_TOKEN,host='127.0.0.1',port=0} = {}) {
+  environment=process.env,bearerToken=environment.STELLAR_APP_ACCESS_TOKEN,host='127.0.0.1',port=0} = {}) {
   const selected = await inspectInstalledApplication(absolute(configFile),{expectedSelectionSha256,managedSourceDirectory});
   const {createApplicationServer} = await import('./server.mjs');
-  const opened = await createApplicationServer({configFile,bearerToken,host,port});
+  const opened = await createApplicationServer({configFile,bearerToken,host,port,environment});
   try {
     const expectedBinding = {configFile:selected.configFile,configurationSha256:selected.configurationSha256,
       applicationId:selected.applicationId,subject:selected.subject,runtimeDirectory:selected.runtimeDirectory,
-      stateDirectory:selected.stateDirectory,handoffDirectory:selected.handoffDirectory,remoteMcp:selected.remoteMcpFile};
+      stateDirectory:selected.stateDirectory,handoffDirectory:selected.handoffDirectory,remoteMcp:selected.remoteMcpFile,
+      projectProfile:selected.projectProfileFile};
     need(isDeepStrictEqual(opened.launchBinding,expectedBinding), 'APPLICATION_OPENED_CONFIGURATION_CHANGED');
     need(opened.identity.applicationId === selected.applicationId && opened.identity.subject === selected.subject &&
       opened.identity.handoffId === selected.handoffId && opened.identity.manifestSha256 === selected.manifestSha256 &&
@@ -196,11 +197,14 @@ const help = [
   '  starforge stellar-application init --dir NEW_PRIVATE_DIRECTORY --id APPLICATION_ID',
   '    --subject HOST_SUBJECT --handoff ORIGINAL_HANDOFF_DIRECTORY',
   '    [--profile ORIGINAL_OPERATOR_PROFILE] [--authorization TRUSTED_MODULE] [--remote REMOTE_SELECTION_JSON]',
+  '    [--project-profile PRIVATE_PROJECT_PROFILE_JSON]',
   '  starforge stellar-application inspect --config PRIVATE_APPLICATION_JSON',
   '  starforge stellar-application serve --config PRIVATE_APPLICATION_JSON [--port 0] [--host 127.0.0.1|::1]',
   '    [--expected-selection-sha256 REVIEWED_SOURCE_SHA256] [--managed-source SELECTED_APPLICATION_DIRECTORY]',
   '  starforge stellar-application list|verify-source --config PRIVATE_APPLICATION_JSON',
   '  starforge stellar-application review|execute|status|recover|read|export|cancel|spending|reconcile ...',
+  '  starforge stellar-application project-help',
+  '  starforge stellar-application project-configure|project-snapshot|project-receive|project-serve ...',
   '',
   'Serve uses STELLAR_APP_ACCESS_TOKEN from the protected process environment.',
   'Enter that token in the original browser connection field. Payment approval uses the original terminal.',
@@ -229,10 +233,11 @@ export async function main(args=process.argv.slice(2)) {
     const value=await installedApplicationPaths();process.stdout.write(JSON.stringify(value,null,2)+'\n');return value;
   }
   if (action === 'init') {
-    const o=options(tail,['dir','id','subject','handoff','profile','authorization','remote']);
+    const o=options(tail,['dir','id','subject','handoff','profile','authorization','remote','project-profile']);
     need(o.dir && o.id && o.subject && o.handoff,'APPLICATION_INSTALLED_REQUIRED_OPTION');
     const value=await initializeInstalledApplication({directory:absolute(o.dir),applicationId:o.id,subject:o.subject,
-      handoffDirectory:absolute(o.handoff),operatorProfile:o.profile,authorizationModule:o.authorization,remoteMcp:o.remote});
+      handoffDirectory:absolute(o.handoff),operatorProfile:o.profile,authorizationModule:o.authorization,remoteMcp:o.remote,
+      projectProfile:o['project-profile']});
     process.stdout.write(JSON.stringify(value,null,2)+'\n');return value;
   }
   if (action === 'inspect') {
@@ -252,6 +257,9 @@ export async function main(args=process.argv.slice(2)) {
     }catch(error){process.stderr.write(JSON.stringify({error:'APPLICATION_CLOSE_FAILED'})+'\n');process.exitCode=1;}};
     process.once('SIGTERM',stop);process.once('SIGINT',stop);
     return opened;
+  }
+  if(action.startsWith('project-')){
+    const {main:project}=await import('./project-cli.mjs');return project(args);
   }
   const {main:original}=await import('./cli.mjs');
   return original(args);
