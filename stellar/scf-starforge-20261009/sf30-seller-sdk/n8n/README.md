@@ -420,3 +420,20 @@ The invoice configuration selects one result item and a 1 MiB output limit. HTTP
 
 The implementation is in [config.mjs](config.mjs), [prepare.mjs](prepare.mjs), [client.mjs](client.mjs), [runtime.mjs](runtime.mjs), [merchant.mjs](merchant.mjs), and [store.mjs](store.mjs). The payment and customer lifecycle is defined by the original [job model](../jobs/model.mjs), [seller](../jobs/merchant.mjs), and [buyer](../jobs/buyer.mjs). The original [n8n 2.42.6 trigger source](https://github.com/n8n-io/n8n/blob/n8n%402.42.6/packages/nodes-base/nodes/ExecuteWorkflow/ExecuteWorkflowTrigger/ExecuteWorkflowTrigger.node.ts) defines the child trigger's passthrough behavior.
 
+
+
+## Agent operations and complete job receiving
+
+The running merchant also exposes its original jobs, execution recovery and
+complete result exports through the maintained merchant MCP host. Configure an
+n8n workspace alias for this same prepared directory, inspect the actual function
+and job, and retain the request UUID before preparing or renewing a customer
+handoff. Both the browser and agent continue the same original merchant.
+
+The sixteen tools include paged jobs, worker operation, revision-bound job and
+dispatch recovery, and immutable full job/dispatch/result exports. The installed
+inspect-n8n, download-n8n and reopen-n8n commands receive every original file,
+resume a verified interrupted prefix and validate the complete native identities
+after reopening.
+
+[Open the complete agent, connection, recovery and receiving guide](../../../../stellar-forge/mcp-merchant-operator/N8N_WORKSPACE.md).

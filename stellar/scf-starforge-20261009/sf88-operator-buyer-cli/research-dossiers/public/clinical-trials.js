@@ -1,6 +1,6 @@
 // MIT. Registry-specific review on the existing Research dossiers session and Store.
 export function createClinicalTrialsPanel({root,tab,api,task,notify,getDossier,onReceived,isBusy}){
- const local={configured:false,shown:false,dossierId:null,generation:0,current:null,items:[],next:null,offset:0,poll:null,pending:null,loading:false,retained:[],retainedCurrent:null,retainedOffset:0,inputs:[],inputsNext:null};
+ const local={configured:false,shown:false,dossierId:null,generation:0,current:null,items:[],next:null,offset:0,poll:null,pending:null,loading:false,retained:[],retainedCurrent:null,retainedOffset:0,inputs:[],inputsNext:null,analysisTarget:null,analysis:null,analysisFacets:null,analysisCriteria:{},analysisOffset:0};
  const $=id=>root.querySelector('#ct-'+id),escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const array=value=>Array.isArray(value)?value:[],date=value=>value?.date?value.date+(value.type?' · '+value.type:''):'—';
  root.innerHTML='<div class="view-heading"><div><h2>Trial registry</h2><p class="muted">Receive an original ClinicalTrials cohort into a research question, review full studies, and preserve the evidence in the dossier.</p></div><button id="ct-refresh" data-ct="refresh">Refresh retained work</button></div>'+
@@ -14,7 +14,7 @@ export function createClinicalTrialsPanel({root,tab,api,task,notify,getDossier,o
  '<p class="form-error ct-wide" hidden></p><div class="ct-wide"><button type="submit">Prepare cohort review</button></div></form>'+
  '<section id="ct-retained-section"><h3>Original dossier registry editions</h3><p class="muted small">These complete native editions remain available after original dossier export and reopen, including when no source connection is configured.</p>'+
  '<label>Retained registry edition<select id="ct-retained-select"></select></label><button data-ct="retained-open" id="ct-retained-open">Review original edition</button>'+
- '<div id="ct-retained-review" hidden><h4 id="ct-retained-title"></h4><p id="ct-retained-coverage"></p><div class="ct-actions"><button data-ct="retained-download">Download original registry edition</button><button data-ct="retained-packet">Download complete provider source packet</button><button data-ct="retained-prev" id="ct-retained-prev">Previous records</button><span id="ct-retained-page"></span><button data-ct="retained-next" id="ct-retained-next">Next records</button></div>'+
+ '<div id="ct-retained-review" hidden><h4 id="ct-retained-title"></h4><p id="ct-retained-coverage"></p><div class="ct-actions"><button data-ct="retained-download">Download original registry edition</button><button data-ct="retained-packet">Download complete provider source packet</button><button data-ct="retained-analyze">Analyze this cohort</button><button data-ct="retained-prev" id="ct-retained-prev">Previous records</button><span id="ct-retained-page"></span><button data-ct="retained-next" id="ct-retained-next">Next records</button></div>'+
  '<div class="table-wrap"><table><thead><tr><th>Study</th><th>Registry status</th><th>Protocol / results</th><th></th></tr></thead><tbody id="ct-retained-rows"></tbody></table></div>'+
  '<details><summary>Original cohort scope and source references</summary><pre id="ct-retained-provenance"></pre></details>'+
  '<details id="ct-retained-record" hidden><summary>Complete native record</summary><pre id="ct-retained-record-body"></pre></details>'+
@@ -25,13 +25,30 @@ export function createClinicalTrialsPanel({root,tab,api,task,notify,getDossier,o
  '<details><summary>Exact prepared scope</summary><pre id="ct-scope"></pre></details><div class="ct-actions">'+
  '<button data-ct="start" id="ct-start">Read retained source into review</button><button data-ct="stop" id="ct-stop">Stop local receiving</button>'+
  '<button data-ct="receive" id="ct-receive">Retain reviewed edition</button>'+
- '<button data-ct="download" id="ct-download">Download complete registry edition</button></div>'+
+ '<button data-ct="download" id="ct-download">Download complete registry edition</button><button data-ct="analyze" id="ct-analyze">Analyze this cohort</button></div>'+
  '<div id="ct-cohort" hidden><p id="ct-coverage"></p><details><summary>Source pages and version observations</summary><pre id="ct-provenance"></pre></details>'+
  '<div class="table-wrap"><table><thead><tr><th>Study</th><th>Registry status</th><th>Design / enrollment</th><th>Source dates</th><th>Posted results</th><th></th></tr></thead><tbody id="ct-studies"></tbody></table></div>'+
  '<div class="ct-actions"><button data-ct="previous" id="ct-previous">Previous records</button><span id="ct-page"></span><button data-ct="next" id="ct-next">Next records</button></div>'+
  '<details id="ct-record" hidden><summary>Complete retained native study record</summary><pre id="ct-record-body"></pre></details>'+
  '<label>Compare with a prior retained acquisition<select id="ct-compare-with"></select></label><button data-ct="compare" id="ct-compare">Compare selected cohorts</button>'+
  '<div id="ct-comparison" hidden><h4>Retained cohort changes</h4><pre id="ct-comparison-body"></pre></div></div></section>';
+ root.insertAdjacentHTML('beforeend','<section id="ct-analysis" hidden><h3>Cohort analysis</h3><h4 id="ct-analysis-title"></h4><p id="ct-analysis-summary"></p>'+
+  '<form id="ct-analysis-filter-form" class="ct-analysis-filters"><label class="ct-wide">Find NCT ID, title, condition or sponsor<input id="ct-analysis-query" maxlength="2000" type="search"></label>'+
+  '<label>Registry status<select id="ct-analysis-statuses" multiple size="4"></select></label><label>Study type<select id="ct-analysis-studyTypes" multiple size="4"></select></label>'+
+  '<label>Phase combination<select id="ct-analysis-phaseKeys" multiple size="4"></select></label><label>Condition membership<select id="ct-analysis-conditions" multiple size="4"></select></label>'+
+  '<label>Lead sponsor<select id="ct-analysis-sponsors" multiple size="4"></select></label><label>Source results flag<select id="ct-analysis-resultsFlags" multiple size="3"></select></label>'+
+  '<label>Retained results sections<select id="ct-analysis-results-sections"><option value="">Any</option><option value="true">One or more sections</option><option value="false">No sections retained</option></select></label>'+
+  '<p class="muted small ct-wide">Select any matching values within a field. Different fields are combined. Empty selections include every source value; the report records the applied filters.</p>'+
+  '<div class="ct-actions ct-wide"><button type="submit">Apply filters</button><button type="button" data-ct="analysis-clear">Clear filters</button></div><p class="form-error ct-wide" hidden></p></form>'+
+  '<h4>Findings from the retained source</h4><ul id="ct-analysis-observations"></ul>'+
+  '<div class="ct-actions"><button data-ct="analysis-export-csv">Download complete cohort CSV</button><button data-ct="analysis-export-html">Download HTML report</button><button data-ct="analysis-export-md">Download Markdown report</button><button data-ct="analysis-export-json">Download analysis JSON</button></div>'+
+  '<label>Grouped review<select id="ct-analysis-group"><option value="statuses">Registry status</option><option value="studyTypes">Study type</option><option value="phaseCombinations">Phase combinations</option><option value="conditions">Condition memberships</option><option value="sponsors">Lead sponsors</option><option value="interventionTypes">Intervention types</option><option value="resultsFlags">Source results flag</option><option value="resultsSections">Retained results sections</option><option value="resultsCoverage">Results flag and section coverage</option><option value="enrollmentTypes">Enrollment types</option></select></label>'+
+  '<div class="table-wrap"><table><thead><tr><th>Source label</th><th>Distinct studies</th><th>Source occurrences</th><th>Share of selected studies</th></tr></thead><tbody id="ct-analysis-groups"></tbody></table></div>'+
+  '<h4>Selected source records</h4><div class="table-wrap"><table><thead><tr><th>Study</th><th>Status / design</th><th>Condition / sponsor</th><th>Enrollment / results</th><th>Original source position</th><th></th></tr></thead><tbody id="ct-analysis-rows"></tbody></table></div>'+
+  '<div class="ct-actions"><button data-ct="analysis-prev" id="ct-analysis-prev">Previous records</button><span id="ct-analysis-page"></span><button data-ct="analysis-next" id="ct-analysis-next">Next records</button></div>'+
+  '<details id="ct-analysis-record" hidden><summary>Complete original study record</summary><pre id="ct-analysis-record-body"></pre></details>'+
+  '<details id="ct-analysis-repeats" hidden><summary>Repeated studies and source versions</summary><div class="table-wrap"><table><thead><tr><th>NCT ID</th><th>Occurrences</th><th>Source versions</th></tr></thead><tbody id="ct-analysis-repeat-rows"></tbody></table></div></details>'+
+  '<details><summary>Method and source scope</summary><ul id="ct-analysis-methods"></ul><pre id="ct-analysis-source"></pre></details></section>');
  const endpoint=suffix=>'/api/dossiers/'+encodeURIComponent(local.dossierId)+'/clinical-trials'+suffix;
  const operation=suffix=>endpoint('/operations/'+local.current.plan.id+suffix);
  const key=()=> 'clinicaltrials-preparation:'+location.origin+':'+local.dossierId;
@@ -69,7 +86,7 @@ export function createClinicalTrialsPanel({root,tab,api,task,notify,getDossier,o
   $('start').textContent=op.phase==='PREPARED'?'Read retained source into review':'Resume original receiving';
   $('stop').hidden=!value.running;$('stop').disabled=isBusy();
   $('receive').hidden=op.phase!=='READY';$('receive').disabled=isBusy()||!questionMatches;
-  $('download').hidden=!op.editionSha256;$('download').disabled=isBusy();
+  $('download').hidden=!op.editionSha256;$('download').disabled=isBusy();$('analyze').hidden=!op.editionSha256;$('analyze').disabled=isBusy();
   $('cohort').hidden=!cohort;
   if(cohort){
    const u=cohort.usage;
@@ -131,6 +148,85 @@ export function createClinicalTrialsPanel({root,tab,api,task,notify,getDossier,o
   link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
  }
 
+ const facetFields={statuses:'statuses',studyTypes:'studyTypes',phaseKeys:'phaseCombinations',conditions:'conditions',sponsors:'sponsors',resultsFlags:'resultsFlags'};
+ function analysisPath(suffix=''){
+  const target=local.analysisTarget;
+  return endpoint('/'+target.kind+'/'+encodeURIComponent(target.id)+'/analysis'+suffix);
+ }
+ function appliedQuery(criteria=local.analysisCriteria){
+  const query=new URLSearchParams();query.set('criteria',JSON.stringify(criteria));return query;
+ }
+ function renderAnalysisGroups(){
+  const rows=array(local.analysis?.groups?.[$('analysis-group').value]);
+  $('analysis-groups').innerHTML=rows.length?rows.map(row=>'<tr><td>'+escape(row.label)+'</td><td>'+row.count+'</td><td>'+escape(row.occurrences??row.count)+'</td><td>'+escape(row.percent)+'%</td></tr>').join(''):
+   '<tr><td colspan="4">No reported source labels in this selection.</td></tr>';
+ }
+ function renderAnalysisFacets(){
+  if(!local.analysisFacets)return;
+  for(const[field,group]of Object.entries(facetFields)){
+   const entries=[...array(local.analysisFacets[group])];
+   if(field==='conditions'&&local.analysisFacets.missing?.conditions)entries.push({value:null,label:'No condition reported',count:local.analysisFacets.missing.conditions});
+   $('analysis-'+field).innerHTML=entries.map(row=>{
+    const value=JSON.stringify(field==='phaseKeys'?row.key:row.value);
+    return '<option value="'+escape(value)+'">'+escape(row.label)+' · '+row.count+'</option>';
+   }).join('');
+   for(const option of $('analysis-'+field).options)option.selected=array(local.analysisCriteria[field]).some(value=>JSON.stringify(value)===option.value);
+  }
+  $('analysis-query').value=local.analysisCriteria.query??'';
+  $('analysis-results-sections').value=local.analysisCriteria.hasResultsSections===true?'true':local.analysisCriteria.hasResultsSections===false?'false':'';
+ }
+ function originalIndex(row){
+  const pages=array(local.analysis?.source?.sourcePages);
+  return pages.slice(0,row.source.pageIndex).reduce((total,page)=>total+page.rowCount,0)+row.source.pageStudyIndex;
+ }
+ function renderAnalysis(){
+  const value=local.analysis;$('analysis').hidden=!value;if(!value)return;
+  const total=value.page.total;
+  $('analysis-title').textContent=value.label;
+  $('analysis-summary').textContent=value.selectedStudies+' distinct selected studies / '+(value.selectedOccurrences??total)+' original records from '+
+   value.source.captureStudies+' retained studies and '+(value.source.captureOccurrences??value.source.captureStudies)+' source occurrences. '+
+   (value.source.complete?'Complete captured cohort.':'Partial captured cohort. All findings use the retained scope.');
+  $('analysis-observations').innerHTML=array(value.observations).map(line=>'<li>'+escape(line)+'</li>').join('');
+  renderAnalysisGroups();
+  $('analysis-rows').innerHTML=value.rows.map(row=>'<tr><td><a href="'+escape(row.url)+'" target="_blank" rel="noreferrer">'+escape(row.nctId)+'</a><br>'+escape(row.title)+
+   '</td><td>'+escape(row.status??'Not reported')+'<br>'+escape(row.studyType??'Not reported')+' · '+escape(array(row.phaseCombination).join(' + ')||'No phase reported')+
+   '</td><td>'+escape(array(row.conditions).join('; ')||'No condition reported')+'<br>'+escape(row.sponsorName??'Sponsor not reported')+
+   '</td><td>'+escape(row.enrollment.count??'Not reported')+' '+escape(row.enrollment.type??'')+'<br>'+escape(row.hasResults===true?'Results flag true':row.hasResults===false?'Results flag false':'Results flag not reported')+
+   '<br>'+row.resultsSections.length+' retained result sections</td><td>Page '+(row.source.pageIndex+1)+' / record '+(row.source.pageStudyIndex+1)+
+   '<br><code>'+escape(row.source.recordSha256.slice(0,16))+'</code></td><td><button data-ct="analysis-record" data-index="'+originalIndex(row)+'">Native record</button></td></tr>').join('');
+  $('analysis-page').textContent=(total?value.page.offset+1:0)+'–'+Math.min(value.page.offset+value.page.limit,total)+' of '+total+' original records';
+  $('analysis-prev').disabled=isBusy()||value.page.offset===0;
+  $('analysis-next').disabled=isBusy()||value.page.offset+value.page.limit>=total;
+  const repeated=array(value.repeatedStudies);
+  $('analysis-repeats').hidden=!repeated.length;
+  $('analysis-repeat-rows').innerHTML=repeated.map(row=>'<tr><td>'+escape(row.nctId)+'</td><td>'+row.occurrences+'</td><td>'+row.variantCount+
+   (row.changed?' distinct record versions':' identical retained version')+'</td></tr>').join('');
+  $('analysis-methods').innerHTML=array(value.methods).map(line=>'<li>'+escape(line)+'</li>').join('');
+  $('analysis-source').textContent=JSON.stringify({source:value.source,filters:value.filters,selectedStudies:value.selectedStudies,selectedOccurrences:value.selectedOccurrences,excludedStudies:value.excludedStudies,excludedOccurrences:value.excludedOccurrences},null,2);
+  for(const element of $('analysis-filter-form').querySelectorAll('input,select,button'))element.disabled=isBusy();
+  for(const element of $('analysis').querySelectorAll('[data-ct^="analysis-export"],[data-ct="analysis-record"]'))element.disabled=isBusy();
+ }
+ async function loadAnalysis(resetFacets=false,{criteria=local.analysisCriteria,offset=local.analysisOffset}={}){
+  if(!local.analysisTarget)return;
+  const generation=local.generation,target=JSON.stringify(local.analysisTarget),query=appliedQuery(criteria);
+  query.set('offset',offset);query.set('limit',50);
+  const value=await api(analysisPath()+'?'+query);
+  if(generation!==local.generation||target!==JSON.stringify(local.analysisTarget))return;
+  local.analysis=value;local.analysisCriteria=criteria;local.analysisOffset=offset;
+  if(resetFacets||!local.analysisFacets){local.analysisFacets=value.groups;renderAnalysisFacets();}
+  renderAnalysis();
+ }
+ async function openAnalysis(kind,id){
+  local.analysisTarget={kind,id};local.analysisCriteria={};local.analysisOffset=0;local.analysisFacets=null;local.analysis=null;
+  $('analysis-record').hidden=true;renderAnalysis();
+  await loadAnalysis(true);$('analysis').scrollIntoView({block:'start'});
+ }
+ function collectAnalysisCriteria(){
+  const criteria={query:$('analysis-query').value};
+  for(const field of Object.keys(facetFields))criteria[field]=[...$('analysis-'+field).selectedOptions].map(option=>JSON.parse(option.value));
+  const sections=$('analysis-results-sections').value;criteria.hasResultsSections=sections===''?null:sections==='true';return criteria;
+ }
+
  function selectedInput(){
   const [sourceId,captureId]=($('source-select').value||'').split(':');
   const input=local.inputs.find(row=>row.sourceId===sourceId),capture=input?.captures.find(row=>row.id===captureId);
@@ -171,6 +267,12 @@ export function createClinicalTrialsPanel({root,tab,api,task,notify,getDossier,o
  $('source-select').addEventListener('change',renderInputs);
 
  const action=(fn,form=null)=>task(async()=>{stopPoll();await fn();},form);
+ $('analysis-group').addEventListener('change',renderAnalysisGroups);
+ $('analysis-filter-form').addEventListener('submit',event=>{
+  event.preventDefault();action(async()=>{
+   await loadAnalysis(false,{criteria:collectAnalysisCriteria(),offset:0});
+  },event.currentTarget);
+ });
  $('form').addEventListener('submit',event=>{
   event.preventDefault();action(async()=>{
    const view=getDossier(),selected=selectedInput();
@@ -188,6 +290,21 @@ export function createClinicalTrialsPanel({root,tab,api,task,notify,getDossier,o
   const button=event.target.closest('[data-ct]');if(!button||button.disabled)return;
   const name=button.dataset.ct;
   action(async()=>{
+   if(name==='retained-analyze'){if(local.retainedCurrent)return openAnalysis('retained',local.retainedCurrent.edition.id);return;}
+   if(name==='analyze'){if(local.current?.operation.editionSha256)return openAnalysis('operations',local.current.plan.id);return;}
+   if(name.startsWith('analysis-')){
+    if(!local.analysisTarget)return;
+    if(name==='analysis-clear')return loadAnalysis(true,{criteria:{},offset:0});
+    if(name==='analysis-prev'||name==='analysis-next')return loadAnalysis(false,{offset:Math.max(0,local.analysisOffset+(name==='analysis-next'?50:-50))});
+    if(name==='analysis-record'){
+     const target=local.analysisTarget,value=await api(endpoint('/'+target.kind+'/'+encodeURIComponent(target.id)+'/record')+'?index='+encodeURIComponent(button.dataset.index));
+     $('analysis-record-body').textContent=sourceText(value);$('analysis-record').hidden=false;$('analysis-record').open=true;return;
+    }
+    if(name.startsWith('analysis-export-')){
+     const format=name.slice('analysis-export-'.length);
+     return download(analysisPath('/'+format)+'?'+appliedQuery(),'clinicaltrials-cohort.'+format);
+    }
+   }
    if(name==='refresh')return refresh();
    if(name==='more-inputs')return loadInputs(true);
    if(name==='input-packet'){const selected=selectedInput();if(!selected)return;
@@ -257,13 +374,13 @@ export function createClinicalTrialsPanel({root,tab,api,task,notify,getDossier,o
    $('form').hidden=!local.configured;$('source-status').textContent=local.configured?'The original packet reader is available. Source acquisition and merchant operation stay in the existing ClinicalTrials console.':'Original received registry editions remain readable.';
   },
   setDossier(view){
-   if(view?.id!==local.dossierId){stopPoll();local.generation++;local.dossierId=view?.id??null;local.items=[];local.current=null;local.next=null;local.offset=0;local.retained=[];local.retainedCurrent=null;local.retainedOffset=0;local.inputs=[];local.inputsNext=null;
+   if(view?.id!==local.dossierId){stopPoll();local.generation++;local.dossierId=view?.id??null;local.items=[];local.current=null;local.next=null;local.offset=0;local.retained=[];local.retainedCurrent=null;local.retainedOffset=0;local.inputs=[];local.inputsNext=null;local.analysisTarget=null;local.analysis=null;local.analysisFacets=null;local.analysisCriteria={};local.analysisOffset=0;
     try{local.pending=JSON.parse(sessionStorage.getItem(key())||'null');}catch{local.pending=null;}
-    renderList();renderCurrent();renderRetained();renderInputs();
+    renderList();renderCurrent();renderRetained();renderInputs();renderAnalysis();
    }
    questions();local.retained=array(view?.editions).filter(row=>row.provider==='clinicaltrials-gov'&&row.mode==='retained');renderRetained();tab.hidden=!local.configured&&!local.retained.length;
   },
   show(visible){const changed=visible!==local.shown;local.shown=visible;if(!visible)stopPoll();else if(changed)refresh().catch(error=>notify(error.code||error.message,'error'));else schedule();},
-  updateBusy(){for(const element of $('form').querySelectorAll('input,textarea,select,button'))element.disabled=isBusy()||!local.configured||!getDossier()?.questions?.length;renderCurrent();renderRetained();$('import-packet').disabled=isBusy();$('packet-file').disabled=isBusy();renderInputs();}
+  updateBusy(){for(const element of $('form').querySelectorAll('input,textarea,select,button'))element.disabled=isBusy()||!local.configured||!getDossier()?.questions?.length;renderCurrent();renderRetained();renderAnalysis();$('import-packet').disabled=isBusy();$('packet-file').disabled=isBusy();renderInputs();}
  };
 }

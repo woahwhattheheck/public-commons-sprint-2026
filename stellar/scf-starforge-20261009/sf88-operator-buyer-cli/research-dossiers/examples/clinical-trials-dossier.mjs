@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {pipeline} from 'node:stream/promises';
 import {openDossierStore} from '../dossier.mjs';
 import {openClinicalTrialsWorkspace} from '../clinical-trials-workspace.mjs';
+import {analyzeClinicalTrialsCohort,filterClinicalTrialsCohort,renderClinicalTrialsCohortCsv,renderClinicalTrialsCohortJson,renderClinicalTrialsCohortReport} from '../clinical-trials-analysis.mjs';
 import {privateDirectory,readJson,writeJson,jsonBytes} from '../../node/store.mjs';
 import {need,sha} from '../clinical-trials-model.mjs';
 import {withPrivateLock} from '../../../sf30-seller-sdk/routescan/quota.mjs';
@@ -36,7 +37,7 @@ async function streamExport(store,id,path){
 export async function runClinicalTrialsDossierExample(options){
  need(typeof options?.outputDirectory==='string','EXAMPLE_CONFIGURATION_REQUIRED');
  const root=await privateDirectory(options.outputDirectory);
- return withPrivateLock(root,'example.lock',()=>runHeld(options));
+ return withPrivateLock(root,'example.lock',async()=>enrichHeld(options,await runHeld(options)));
 }
 async function runHeld(options){
  const required=['sourcePacket','packetSha256','captureId','question','title','workspaceDirectory','receivingDirectory','outputDirectory','requestId','selectNctId'];
@@ -91,13 +92,13 @@ async function runHeld(options){
    journal.selection={sourceId:evidence.id};await persist();
   }
   const findingTitle=options.findingTitle??'Source and cohort review';
-  const findingText=options.findingText??('The selected retained cohort contains '+selected.value.results.length+' studies. '+original.record.id+' is available in full original source with its capture and page identities. This report describes the selected registry edition; it does not infer patient eligibility or treatment efficacy.');
+  const findingText=options.findingText??('The selected retained cohort contains '+selected.value.usage.uniqueStudies+' distinct studies in '+selected.value.results.length+' source occurrences. '+original.record.id+' is available in full original source with its capture and page identities. This report describes the selected registry edition; it does not infer patient eligibility or treatment efficacy.');
   if(!dossier.findings.some(row=>row.questionId===question.id&&row.title===findingTitle&&row.text===findingText)){
    dossier=await store.addFinding(dossier.id,{questionId:question.id,title:findingTitle,text:findingText,sourceIds:[evidence.id],expectedRevision:dossier.revision});
   }
   if(dossier.questions.find(row=>row.id===question.id).status!=='answered')dossier=await store.updateQuestion(dossier.id,question.id,{status:'answered',expectedRevision:dossier.revision});
   const before=await workspace.compareRetained(dossier.id,journal.editionId,journal.editionId);
-  need(before.beforeSha256===selected.sha256&&before.afterSha256===selected.sha256&&before.unchanged===selected.value.results.length,'EXAMPLE_COMPARISON_SOURCE_CHANGED');
+  need(before.beforeSha256===selected.sha256&&before.afterSha256===selected.sha256&&before.unchanged===selected.value.usage.uniqueStudies,'EXAMPLE_COMPARISON_SOURCE_CHANGED');
   const reports={};
   for(const format of ['md','html']){const report=await store.exportDossier(dossier.id,{format});reports[format]=await publish(join(output,'clinicaltrials-report.'+format),report.body);}
   reports.portable=await streamExport(store,dossier.id,join(output,'clinicaltrials-dossier.json.gz'));
@@ -122,6 +123,34 @@ async function runHeld(options){
   await persist();return journal.result;
  }finally{await workspace?.close();await receiver?.close();}
 }
+async function enrichHeld(options,completed){
+ const store=await openDossierStore(options.receivingDirectory),workspace=await openClinicalTrialsWorkspace({
+  directory:join(store.directory,'clinical-trials'),dossiers:store,python:options.python??'python3'});
+ try{
+  const selected=await workspace.retainedEdition(completed.dossierId,completed.editionId);
+  need(selected.sha256===completed.editionSha256,'EXAMPLE_ANALYSIS_EDITION_CHANGED');
+  const analysis=filterClinicalTrialsCohort(analyzeClinicalTrialsCohort(selected.value,{editionSha256:selected.sha256}),{});
+  need(analysis.selectedOccurrences===completed.rows&&analysis.selectedStudies===selected.value.usage.uniqueStudies,
+   'EXAMPLE_ANALYSIS_POPULATION_CHANGED');
+  const reports={};
+  for(const format of ['csv','json','html','md']){
+   const content=format==='csv'?renderClinicalTrialsCohortCsv(analysis):format==='json'?renderClinicalTrialsCohortJson(analysis):
+    renderClinicalTrialsCohortReport(analysis,{format});
+   reports[format]=await publish(join(options.outputDirectory,'clinicaltrials-cohort.'+format),Buffer.from(content,'utf8'));
+  }
+  const groups=Object.fromEntries(Object.entries(analysis.groups).map(([name,items])=>[name,Array.isArray(items)?
+   items.map(row=>({label:row.label,count:row.count,occurrences:row.occurrences,denominator:row.denominator,percent:row.percent})):items]));
+  const result={...completed,cohortAnalysis:{source:analysis.source,selectedStudies:analysis.selectedStudies,
+   selectedOccurrences:analysis.selectedOccurrences,repeatedStudies:analysis.repeatedStudies,groups,observations:analysis.observations,reports}};
+  const journalPath=join(options.outputDirectory,'workflow.json'),journal=await readJson(journalPath);
+  need(journal.inputSha256===sha(jsonBytes(options))&&journal.result?.editionSha256===selected.sha256,'EXAMPLE_ANALYSIS_IDENTITY_CHANGED');
+  journal.result=result;await writeJson(journalPath,journal);
+  process.stdout.write(JSON.stringify({step:'cohort-analysis',studies:analysis.selectedStudies,occurrences:analysis.selectedOccurrences,
+   editionSha256:selected.sha256,reports})+'\n');
+  return result;
+ }finally{await workspace.close();}
+}
+
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const config=JSON.parse(await readFile(process.argv[2],'utf8'));
  try{process.stdout.write(JSON.stringify(await runClinicalTrialsDossierExample(config))+'\n');}

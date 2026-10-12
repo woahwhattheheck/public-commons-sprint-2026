@@ -1,8 +1,14 @@
 // MIT. Named ClinicalTrials routes inside the original authenticated dossier server.
-import {need} from './clinical-trials-model.mjs';
+import {need,object} from './clinical-trials-model.mjs';
 const integer=(value,fallback)=>{if(value===null||value===undefined)return fallback;need(/^\d{1,12}$/.test(value),'CLINICALTRIALS_REVIEW_PAGE_INVALID');const n=Number(value);need(Number.isSafeInteger(n),'CLINICALTRIALS_REVIEW_PAGE_INVALID');return n;};
 const part=value=>{let result;try{result=decodeURIComponent(value);}catch{need(false,'CLINICALTRIALS_EDITION_ID_INVALID');}need(result.length>0&&result.length<=160&&!/[\x00-\x1f\x7f/\\]/.test(result),'CLINICALTRIALS_EDITION_ID_INVALID');return result;};
-export async function handleClinicalTrialsRoute({workspace,dossierId,action,req,url,readBody,send}){
+function criteria(url){
+ const raw=url.searchParams.get('criteria');if(raw===null)return {};
+ need(raw.length<=16384,'CLINICALTRIALS_ANALYSIS_FILTER_INVALID');
+ let value;try{value=JSON.parse(raw);}catch{need(false,'CLINICALTRIALS_ANALYSIS_FILTER_INVALID');}
+ need(object(value),'CLINICALTRIALS_ANALYSIS_FILTER_INVALID');return value;
+}
+export async function handleClinicalTrialsRoute({workspace,dossierId,action,req,url,readBody,send,projection='full'}){
  if(!action.startsWith('clinical-trials/'))return false;
  const route=action.slice('clinical-trials/'.length),paging={offset:integer(url.searchParams.get('offset'),0),limit:integer(url.searchParams.get('limit'),50)};
  if(route==='inputs'&&req.method==='POST'){
@@ -12,6 +18,20 @@ export async function handleClinicalTrialsRoute({workspace,dossierId,action,req,
   send(201,await workspace.importInput(req,{expectedSha256,expectedBytes}));return true;
  }
  if(req.method==='GET'){
+  const analyzed=route.match(/^(operations|retained)\/([^/]+)\/analysis(?:\/(csv|json|html|md))?$/);
+  if(analyzed){
+   const id=part(analyzed[2]),format=analyzed[3],selection={criteria:criteria(url)};
+   if(analyzed[1]==='operations'){
+    const selected=await workspace.inspect(id,{probe:false});
+    need(selected.plan.payload.dossierId===dossierId,'CLINICALTRIALS_OPERATION_DOSSIER_MISMATCH');
+    if(format){const output=await workspace.exportAnalysis(id,{...selection,format});send(200,output.bytes,output.contentType,output.filename);}
+    else send(200,await workspace.analysis(id,{...selection,...paging}));
+   }else{
+    if(format){const output=await workspace.exportRetainedAnalysis(dossierId,id,{...selection,format});send(200,output.bytes,output.contentType,output.filename);}
+    else send(200,await workspace.retainedAnalysis(dossierId,id,{...selection,...paging}));
+   }
+   return true;
+  }
   if(route==='inputs'){send(200,await workspace.inputs({after:url.searchParams.get('after')??'',limit:integer(url.searchParams.get('limit'),30)}));return true;}
   const input=route.match(/^inputs\/(ctsrc_[a-f0-9]{64})(?:\/(packet))?$/);
   if(input){
@@ -50,7 +70,7 @@ export async function handleClinicalTrialsRoute({workspace,dossierId,action,req,
    need(Object.keys(data).every(key=>allowed.includes(key)),'CLINICALTRIALS_OPERATION_FIELDS_INVALID');
    if(verb==='start')send(202,await workspace.start(id,data));
    else if(verb==='stop')send(200,await workspace.stop(id));
-   else if(verb==='receive')send(200,await workspace.receive(id,data));
+   else if(verb==='receive')send(200,await workspace.receive(id,{...data,projection}));
    else send(405,{error:'METHOD_NOT_ALLOWED'});
    return true;
   }

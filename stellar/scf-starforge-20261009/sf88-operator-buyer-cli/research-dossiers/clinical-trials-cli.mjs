@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {pipeline} from 'node:stream/promises';
 import {openDossierStore} from './dossier.mjs';
 import {openClinicalTrialsWorkspace} from './clinical-trials-workspace.mjs';
-import {need,sha} from './clinical-trials-model.mjs';
+import {need,sha,object} from './clinical-trials-model.mjs';
 const HELP=[
  'Research trial registry receiving',
  '',
@@ -23,6 +23,10 @@ const HELP=[
  'retained-record --dir DIR --dossier ID --edition ID --index N',
  'compare --dir DIR --operation ct_HEX --before ct_HEX',
  'compare-retained --dir DIR --dossier ID --before EDITION_ID --after EDITION_ID',
+ 'analysis --dir DIR --operation ct_HEX [--criteria JSON] [--offset N] [--limit 50]',
+ 'retained-analysis --dir DIR --dossier ID --edition ID [--criteria JSON] [--offset N] [--limit 50]',
+ 'export-analysis --dir DIR --operation ct_HEX --format csv|json|html|md --output FILE [--criteria JSON]',
+ 'export-retained-analysis --dir DIR --dossier ID --edition ID --format csv|json|html|md --output FILE [--criteria JSON]',
  'download --dir DIR --operation ct_HEX --output FILE',
  'download-packet --dir DIR --dossier ID --edition ID --output FILE.zip',
  'export-dossier --dir DIR --dossier ID --format json.gz|json|md|html --output FILE',
@@ -39,6 +43,8 @@ const flags={
  retained:['dir','python','dossier'],'retained-review':['dir','python','dossier','edition','offset','limit'],
  record:['dir','python','operation','index'],'retained-record':['dir','python','dossier','edition','index'],
  compare:['dir','python','operation','before'],'compare-retained':['dir','python','dossier','before','after'],
+ analysis:['dir','python','operation','criteria','offset','limit'],'retained-analysis':['dir','python','dossier','edition','criteria','offset','limit'],
+ 'export-analysis':['dir','python','operation','criteria','format','output'],'export-retained-analysis':['dir','python','dossier','edition','criteria','format','output'],
  download:['dir','python','operation','output'],'download-packet':['dir','python','dossier','edition','output'],
  'export-dossier':['dir','python','dossier','format','output'],reopen:['dir','python','file']
 };
@@ -57,6 +63,11 @@ function required(options,key){need(typeof options[key]==='string'&&options[key]
 function absolute(options,key){const path=required(options,key);need(path===resolve(path),'CLINICALTRIALS_ABSOLUTE_PATH_REQUIRED');return path;}
 function integer(options,key,fallback){if(options[key]===undefined&&fallback!==undefined)return fallback;
  const value=required(options,key);need(/^[0-9]+$/.test(value)&&Number.isSafeInteger(Number(value)),'CLINICALTRIALS_INTEGER_INVALID');return Number(value);}
+function criteria(options){
+ const raw=options.criteria??'{}';need(raw.length<=16384,'CLINICALTRIALS_ANALYSIS_FILTER_INVALID');
+ let value;try{value=JSON.parse(raw);}catch{need(false,'CLINICALTRIALS_ANALYSIS_FILTER_INVALID');}
+ need(object(value),'CLINICALTRIALS_ANALYSIS_FILTER_INVALID');return value;
+}
 async function saveFile(path,bytes){
  const handle=await open(path,'wx',0o600);let complete=false;
  try{await handle.writeFile(bytes);await handle.sync();complete=true;}finally{await handle.close();if(!complete)await unlink(path).catch(()=>{});}
@@ -98,6 +109,14 @@ export async function runClinicalTrialsResearch(argv=process.argv.slice(2)){
   else if(command==='retained-record')result=await clinical.retainedRecord(required(o,'dossier'),required(o,'edition'),integer(o,'index'));
   else if(command==='compare')result=await clinical.compare(required(o,'operation'),required(o,'before'));
   else if(command==='compare-retained')result=await clinical.compareRetained(required(o,'dossier'),required(o,'before'),required(o,'after'));
+  else if(command==='analysis')result=await clinical.analysis(required(o,'operation'),{criteria:criteria(o),...page()});
+  else if(command==='retained-analysis')result=await clinical.retainedAnalysis(required(o,'dossier'),required(o,'edition'),{criteria:criteria(o),...page()});
+  else if(command==='export-analysis'||command==='export-retained-analysis'){
+   const options={criteria:criteria(o),format:required(o,'format')};
+   const saved=command==='export-analysis'?await clinical.exportAnalysis(required(o,'operation'),options):
+    await clinical.exportRetainedAnalysis(required(o,'dossier'),required(o,'edition'),options);
+   result={...await saveFile(absolute(o,'output'),saved.bytes),editionSha256:saved.editionSha256,contentType:saved.contentType};
+  }
   else if(command==='download')result=await saveFile(absolute(o,'output'),(await clinical.edition(required(o,'operation'))).bytes);
   else if(command==='download-packet')result=await saveFile(absolute(o,'output'),(await clinical.retainedPacket(required(o,'dossier'),required(o,'edition'))).bytes);
   else if(command==='export-dossier'){

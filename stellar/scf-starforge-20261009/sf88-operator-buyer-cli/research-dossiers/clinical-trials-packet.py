@@ -258,7 +258,7 @@ class Packet:
                 study = document(line, exact=True)
                 need(typed(study) == typed(original), "CLINICALTRIALS_PAGE_STUDY_CONTENT_CHANGED")
                 nct = selected(study, "protocolSection", "identificationModule", "nctId")
-                need(isinstance(nct, str) and NCT.fullmatch(nct) and nct not in ids,
+                need(isinstance(nct, str) and NCT.fullmatch(nct),
                      "CLINICALTRIALS_ORIGINAL_STUDY_ID_CHANGED")
                 ids.add(nct)
                 protocol = study["protocolSection"]

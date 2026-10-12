@@ -90,7 +90,7 @@ export function validateEdition(value){
   const body=Buffer.from(result.content,'utf8'),meta=result.metadata,page=value.sourcePages[meta.pageIndex];
   need(body.length<=16*1024*1024&&body.length===meta.recordBytes&&sha(body)===meta.recordSha256&&
    meta.nctId===result.id&&meta.captureId===capture.id&&page&&meta.pageSha256===page.sha256&&
-   meta.pageStudyIndex===counts[meta.pageIndex]++&&result.url===ORIGIN+'/study/'+result.id&&!ids.has(result.id),
+   meta.pageStudyIndex===counts[meta.pageIndex]++&&result.url===ORIGIN+'/study/'+result.id,
    'CLINICALTRIALS_WHOLE_STUDY_BINDING_CHANGED');
   need(meta.pageIndex>=lastPage,'CLINICALTRIALS_STUDY_ORDER_CHANGED');lastPage=meta.pageIndex;
   ids.add(result.id);hash.update(body);pageHashes[meta.pageIndex].update(body);
@@ -105,20 +105,27 @@ export function validateEdition(value){
 }
 export function compareEditions(before,after){
  before=validateEdition(before);after=validateEdition(after);
- const left=new Map(before.results.map(row=>[row.id,row])),right=new Map(after.results.map(row=>[row.id,row]));
- const added=[],absent=[],changed=[];let unchanged=0;
- for(const [id,row]of right){
-  const old=left.get(id);if(!old){added.push({nctId:id,occurrences:1});continue;}
-  if(old.metadata.recordSha256===row.metadata.recordSha256){unchanged++;continue;}
-  const keys=[...new Set([...Object.keys(old.metadata.sectionSha256??{}),...Object.keys(row.metadata.sectionSha256??{})])];
-  const changedSections=keys.filter(key=>old.metadata.sectionSha256?.[key]!==row.metadata.sectionSha256?.[key]);
-  changed.push({nctId:id,before:[old.metadata],after:[row.metadata],changedSections,
-   sourceTextChanged:true,sectionValuesChanged:changedSections.length>0});
+ const groups=rows=>{const result=new Map();for(const row of rows){const current=result.get(row.id)??[];current.push(row);result.set(row.id,current);}return result;};
+ const left=groups(before.results),right=groups(after.results),added=[],absent=[],changed=[];let unchanged=0;
+ const hashes=rows=>rows.map(row=>row.metadata.recordSha256).sort();
+ const values=(rows,key)=>[...new Set(rows.map(row=>row.metadata.sectionSha256?.[key]??null))].sort();
+ for(const[id,rows]of right){
+  const old=left.get(id);
+  if(!old){added.push({nctId:id,occurrences:rows.length,records:rows.map(row=>row.metadata)});continue;}
+  const beforeHashes=hashes(old),afterHashes=hashes(rows);
+  if(same(beforeHashes,afterHashes)){unchanged++;continue;}
+  const keys=[...new Set([...old,...rows].flatMap(row=>Object.keys(row.metadata.sectionSha256??{})))].sort();
+  const changedSections=keys.filter(key=>!same(values(old,key),values(rows,key)));
+  changed.push({nctId:id,before:old.map(row=>row.metadata),after:rows.map(row=>row.metadata),
+   beforeOccurrences:old.length,afterOccurrences:rows.length,changedSections,
+   sourceTextChanged:!same([...new Set(beforeHashes)],[...new Set(afterHashes)]),
+   occurrenceCountsChanged:old.length!==rows.length,
+   sectionValuesChanged:changedSections.length>0});
  }
- for(const[id]of left)if(!right.has(id))absent.push({nctId:id,occurrences:1});
+ for(const[id,rows]of left)if(!right.has(id))absent.push({nctId:id,occurrences:rows.length,records:rows.map(row=>row.metadata)});
  return {beforeNormalizedSha256:sha(json(before)),afterNormalizedSha256:sha(json(after)),sameScope:same(before.usage.scope,after.usage.scope),
   beforeCoverage:before.usage.coverage,afterCoverage:after.usage.coverage,
   beforeCaptureId:before.usage.captureId,afterCaptureId:after.usage.captureId,
   added,absentFromSelectedCapture:absent,changed,unchanged,
-  meaning:'Absence is relative to these selected retained captures. Registry withdrawal, efficacy and eligibility are not inferred. Whole-source text and selected section-value changes are reported separately.'};
+  meaning:'Each retained study occurrence and source variant remains explicit. Absence is relative to these selected captures. Registry withdrawal, efficacy and eligibility are not inferred. Whole-source text, occurrence counts and section-value changes are reported separately.'};
 }

@@ -12,6 +12,8 @@ import {renderReport,renderAccountingCSV} from './report.mjs';
 import {openHandoffIntake} from './handoff-intake.mjs';
 import {openPaidFileIntake} from './paid-file-intake.mjs';
 import {createRunbookRecovery,verifyRunbookRecovery} from './recovery.mjs';
+import {checkOperatorChannel,operatorApprovalEnvironment} from '../sf81-buyer-operator-bridge/bridge.mjs';
+import {normalizeRunbookApprovalMode} from './launch.mjs';
 
 const SCHEMA = 'stellar-forge.buyer-runbook-workspace.v1';
 const DRAFT = 'stellar-forge.buyer-runbook-draft.v1';
@@ -67,7 +69,15 @@ async function terminalAvailable() {
 }
 
 export async function openRunbookWorkspace({directory, configsDirectory, operatorSettings, paidFileClaimEnvs,
-  runs = []} = {}) {
+  runs = [], approvalMode = 'TERMINAL', approvalBroker} = {}) {
+  approvalMode = normalizeRunbookApprovalMode(approvalMode);
+  check(approvalMode !== 'BROWSER' || (approvalBroker &&
+    ['snapshot','decide','revoke'].every(name => typeof approvalBroker[name] === 'function')),
+    'WORKSPACE_BROWSER_APPROVAL_HOST_REQUIRED');
+  const browserEnvironment = approvalMode === 'BROWSER' ?
+    operatorApprovalEnvironment(approvalBroker.environment) : {};
+  check(approvalMode !== 'BROWSER' || Object.keys(browserEnvironment).length === 2,
+    'WORKSPACE_BROWSER_APPROVAL_HOST_REQUIRED');
   directory = await privateDirectory(directory, true);
   for (const name of ['drafts', 'runs', 'imports']) await privateDirectory(join(directory, name), true);
   let meta;
@@ -95,6 +105,45 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     workspaceForOperation:row=>paidFiles.ownsOperation(row)?paidFiles.workspaceForOperation(row):requestIntake.workspaceForOperation(row),
   };
   let active = null, task = null, recoveryActive=null,recoveryTask=null,closing = false, sequence = Promise.resolve();
+  let approvalBinding = null;
+  const revokeApproval = () => {
+    if (approvalMode === 'BROWSER' && approvalBinding) approvalBroker.revoke(approvalBinding.intentId);
+  };
+  async function approvalAvailability() {
+    const terminal = await terminalAvailable();
+    return {terminalAvailable:terminal,approvalMode,
+      approvalAvailable:!closing && (approvalMode === 'BROWSER' || terminal)};
+  }
+  function selectedApproval() {
+    if (approvalMode !== 'BROWSER' || !approvalBinding) return null;
+    const value = approvalBroker.snapshot(approvalBinding.intentId);
+    return value && value.id !== approvalBinding.previousApprovalId ? value : null;
+  }
+  async function approvalState() {
+    const availability = await approvalAvailability();
+    const current = approvalBinding ? Object.fromEntries(
+      ['runId','executionId','operationId','intentId'].map(name => [name,approvalBinding[name]])) : null;
+    return {...availability,current,approval:selectedApproval()};
+  }
+  function decideApproval(input) {
+    check(input && typeof input === 'object' && !Array.isArray(input) &&
+      Object.keys(input).length === 7 &&
+      ['runId','executionId','operationId','intent','approvalId','requestSha256','decision']
+        .every(name => Object.hasOwn(input,name)), 'WORKSPACE_APPROVAL_FIELDS_INVALID');
+    const bound = approvalBinding, review = selectedApproval();
+    check(approvalMode === 'BROWSER' && bound && active?.kind === 'BUYER' &&
+      bound.runId === input.runId && bound.executionId === input.executionId &&
+      bound.operationId === input.operationId && bound.intentId === input.intent &&
+      active.runId === bound.runId && active.executionId === bound.executionId &&
+      review?.id === input.approvalId && review.review?.request_sha256 === input.requestSha256,
+      'WORKSPACE_APPROVAL_SELECTION_CHANGED',409);
+    // An interrupted reply can recover the same completed decision. A finished
+    // execution or a cancellation can never create a new operator decision.
+    if (active.finishedAt || active.cancelRequested || closing)
+      check(['APPROVED','REJECTED'].includes(review.state),
+        'WORKSPACE_APPROVAL_NO_LONGER_PENDING',409);
+    return approvalBroker.decide(input);
+  }
   const recovery=createRunbookRecovery({directory,configsDirectory,state:list,resolveRun,intake});
   const serial = action => {
     const next = sequence.then(() => { check(!closing, 'WORKSPACE_CLOSING', 503); return action(); });
@@ -243,7 +292,7 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
       catch(error) { row.paidFile={error:codeOf(error)}; }
     }
     return {id, state, active:active?.runId === id ? {...active, events:[...active.events]} : null,
-      terminalAvailable:await terminalAvailable()};
+      ...await approvalAvailability()};
   }
   async function list() {
     const drafts = [], acquisitions = [], errors = [];
@@ -264,29 +313,58 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     }
     drafts.sort((a,b) => b.savedAt.localeCompare(a.savedAt));
     return {directory, configsDirectory, drafts, acquisitions, errors, active,
-      terminalAvailable:await terminalAvailable(), configurations:await configurations(), intake:await requestIntake.state(),
+      ...await approvalAvailability(), configurations:await configurations(), intake:await requestIntake.state(),
       paidFiles:await paidFiles.state(),
       recovery:{active:recoveryActive,history:await recovery.history()}};
   }
   async function launch({id, only},kind='BUYER') {
     check(!active || active.finishedAt, 'WORKSPACE_EXECUTION_BUSY', 409);
-    if(kind==='BUYER')check(await terminalAvailable(), 'CONTROLLING_TERMINAL_REQUIRED', 409);
+    if (kind === 'BUYER' && approvalMode === 'TERMINAL')
+      check(await terminalAvailable(),'CONTROLLING_TERMINAL_REQUIRED',409);
     const path = await resolveRun(id), state = await inspectRunbook(path);
     check(!state.executionLock, 'RUNBOOK_EXECUTION_LOCK_EXISTS', 409);
     need(only === undefined || state.operations.some(row => row.id === only), 'UNKNOWN_JOB_ID');
     const controller = new AbortController();
     const current = {executionId:randomUUID(), runId:id, kind, only:only ?? null, startedAt:now(),
       status:'RUNNING', cancelRequested:false, events:[], finishedAt:null};
+    revokeApproval(); approvalBinding = null;
     active = current;
+    const environmentForOperation = async row => {
+      const original = await intake.environmentForOperation(row);
+      check(original && typeof original === 'object' && !Array.isArray(original),
+        'INVALID_OPERATOR_ENVIRONMENT');
+      check(!closing && !controller.signal.aborted,'RUNBOOK_INTERRUPTED_BEFORE_LAUNCH');
+      // Both transports are chosen by this host, never inherited from a received
+      // configuration or another console in the parent process environment.
+      const environment = {...original};
+      delete environment.SF81_APPROVAL_SOCKET;
+      delete environment.SF81_APPROVAL_TOKEN;
+      if (approvalMode === 'BROWSER') Object.assign(environment,browserEnvironment);
+      revokeApproval();
+      approvalBinding = {runId:id,executionId:current.executionId,operationId:row.id,
+        intentId:row.intentId,previousApprovalId:approvalMode === 'BROWSER' ?
+          approvalBroker.snapshot(row.intentId)?.id ?? null : null};
+      // The original runbook invokes this resolver before its durable attempt.
+      await checkOperatorChannel(row.intentId,{environment});
+      check(!closing && !controller.signal.aborted,'RUNBOOK_INTERRUPTED_BEFORE_LAUNCH');
+      return environment;
+    };
+    current.cancel = () => {
+      current.cancelRequested = true; current.status = 'CANCELLING';
+      revokeApproval(); controller.abort();
+    };
     const run=kind==='ACCOUNTING'?finalizeRunbook:executeRunbook;
     task = run(path, {only, signal:controller.signal,
       ...(kind==='ACCOUNTING'?{workspaceForOperation:intake.workspaceForOperation}:
-        {environmentForOperation:intake.environmentForOperation}),onProgress:event => {
+        {environmentForOperation}),onProgress:event => {
       current.events.push({...event, at:now()});
       if (current.events.length > 128) current.events.shift();
     }}).then(result => { current.result = result; current.status = result.interrupted ? 'CANCELLED' : 'FINISHED'; },
-      error => { current.error = codeOf(error); current.status = 'FAILED'; }).finally(() => { current.finishedAt = now(); });
-    current.cancel = () => { current.cancelRequested = true; current.status = 'CANCELLING'; controller.abort(); };
+      error => { current.error = codeOf(error); current.status = controller.signal.aborted ? 'CANCELLED' : 'FAILED'; })
+      .finally(() => {
+        revokeApproval();
+        current.finishedAt = now();
+      });
     return {executionId:current.executionId, runId:id, kind, status:current.status};
   }
   async function waitForExecution({id,executionId}) {
@@ -318,6 +396,7 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     const controller=new AbortController(),current={executionId:randomUUID(),runId:input.id,
       kind:reset?'PAID_FILE_RESET':'PAID_FILE_RETRIEVE',only:input.only,startedAt:now(),
       status:'RUNNING',cancelRequested:false,events:[],finishedAt:null};
+    revokeApproval(); approvalBinding = null;
     active=current;
     task=paidFiles.transfer(row,path,{configSha256:input.configSha256,handoffSha256:input.handoffSha256,
       reset,signal:controller.signal}).then(result=>{current.result=result;current.status='FINISHED';},
@@ -454,6 +533,7 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
       const old = await json(importPath(id)); check(old.path === canonical && old.planId === plan.id, 'IMPORTED_RUN_MISMATCH'); }
   }
   return {directory, state:list, draft:latestDraft, run:getRun, export:exportRun, download, previewResource,
+    approvalState,decideApproval:input=>serial(()=>decideApproval(input)),
     operatorState:()=>serial(operatorState),operatorRevision:id=>serial(()=>requestIntake.operatorSetup.revision(id)),
     operatorAttachment:requestIntake.operatorSetup.attachment,
     reviewOperatorSettings:input=>mutate(()=>reviewOperatorSettings(input)),
@@ -483,7 +563,7 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     snapshotRecovery:(input,context)=>mutate(()=>recovery.snapshot(input,context)),
     startRecovery:input=>serial(()=>launchRecovery(input)),
     cancelRecovery:input=>serial(()=>cancelRecovery(input)),
-    async close() { closing = true; await sequence; if (active && !active.finishedAt) active.cancel();
+    async close() { closing = true; revokeApproval(); await sequence; if (active && !active.finishedAt) active.cancel();
       if(recoveryActive&&!recoveryActive.finishedAt)recoveryActive.cancel();
       await Promise.all([task,recoveryTask]); }};
 }

@@ -132,3 +132,66 @@ The source packet limit is 128 MiB compressed, with the original 2 GiB declared 
 ## Complete original-source example
 
 `examples/clinical-trials-dossier.mjs` is a reusable whole workflow on a previously exported source packet. Its configuration selects the existing packet SHA, capture, question, study and private sending/receiving directories. It uses the original Store for question, evidence, finding, report and streamed portable history, then downloads the unchanged provider packet from the reopened dossier. The same configuration resumes its saved operation and completed result; it performs no registry acquisition. Run `node examples/clinical-trials-dossier.mjs /absolute/private/example.json`. Required fields are `sourcePacket`, `packetSha256`, `captureId`, `question`, `title`, `workspaceDirectory`, `receivingDirectory`, `outputDirectory`, `requestId` and `selectNctId`; optional original `expectedRows` and `expectedStudySha256` bind an already captured cohort. `findingTitle`, `findingText` and `evidenceNote` retain the operator's source-linked review.
+
+## Original Research client
+
+Use `ResearchWorkspaceClient` from the maintained `./buyer/research-dossiers/client` export and call `client.clinicalTrials()`. The facade shares that client's current connection-file, workspace/instance checks, request tracking, source-file reader and streamed download writer. It exposes `inputs`, `input`, `importPacket`, `prepare`, `operations`, `review`, `start`, `stop`, `receive`, `record`, `compare`, `retained`, `retainedReview`, `retainedRecord`, `compareRetained`, `exportEdition`, `exportInputPacket`, `exportRetainedEdition` and `exportRetainedPacket`. `receive` requests the original metadata projection; full edition and packet bytes use the explicit download methods. Detach the original `client.close()` after its work; the listener remains with its owner.
+
+```js
+const client = ResearchWorkspaceClient.fromFile('/absolute/private/research-connection.json');
+await client.status();
+const trials = client.clinicalTrials();
+const source = await trials.importPacket(dossierId, {file: originalPacketPath, sha256: originalPacketSha256});
+const prepared = await trials.prepare(dossierId, {requestId, questionId, expectedRevision, sourceId: source.sourceId, captureId});
+await trials.start(dossierId, prepared.plan.id, {expectedPlanSha256: prepared.plan.sha256});
+const reviewed = await trials.review(dossierId, prepared.plan.id, {offset: 0, limit: 50});
+// Once the original operation is READY, the selected edition and current dossier revision are reviewed.
+await trials.receive(dossierId, prepared.plan.id, {expectedPlanSha256: prepared.plan.sha256, expectedEditionSha256: reviewed.operation.editionSha256, expectedRevision});
+await trials.exportRetainedPacket(dossierId, retainedEditionId, {file: '/absolute/private/received-original.zip', expectedSha256: originalPacketSha256});
+await client.close();
+```
+
+The source-owned `research-clinicaltrials` registration adds `starforge research-trials`; the original `clinicaltrials` provider and `research-client` commands retain their existing meanings.
+
+
+## Cohort analysis and complete research exports
+
+Open **Analyze this cohort** from either the prepared receiving review or an original retained dossier edition. The same panel provides status, study-type, phase-combination, condition and lead-sponsor filters, separate results-flag and result-section filters, grouped counts, source-record navigation and complete CSV, JSON, HTML and Markdown exports. Every export uses the last successfully applied filter selection and the exact saved edition SHA. Paging changes only the on-screen records; exported files contain every selected occurrence.
+
+The analysis distinguishes distinct NCT IDs from original source occurrences. Repeated rows and changed versions of a study remain visible with their original capture/page/row identities. Comparisons preserve all before/after source variants. The Research Store continues to use its original index-based occurrence identities and source grouping; public NCT IDs are unchanged.
+
+The installed CLI exposes:
+
+```sh
+npx --no-install starforge research-trials retained-analysis \
+  --dir /absolute/private/research --dossier d_UUID --edition e_SHA \
+  --criteria '{"statuses":["COMPLETED"]}' --offset 0 --limit 50
+
+npx --no-install starforge research-trials export-retained-analysis \
+  --dir /absolute/private/research --dossier d_UUID --edition e_SHA \
+  --criteria '{"statuses":["COMPLETED"]}' --format html \
+  --output /absolute/private/completed-study-review.html
+```
+
+Use the equivalent `analysis` and `export-analysis` commands with `--operation` for a reviewed local receiving operation.
+
+The original client facade adds `analysis`, `retainedAnalysis`, `exportAnalysis` and `exportRetainedAnalysis`. Review options are `{criteria, offset, limit}`; export options are `{file, format:'csv'|'json'|'html'|'md', criteria}`, plus the original download writer's options.
+
+```js
+const trials = client.clinicalTrials();
+const cohort = await trials.retainedAnalysis(dossierId, editionId, {
+  criteria: {statuses: ['COMPLETED'], resultsFlags: [true]},
+  offset: 0, limit: 50
+});
+await trials.exportRetainedAnalysis(dossierId, editionId, {
+  file: '/absolute/private/cohort-review.html',
+  format: 'html',
+  criteria: cohort.filters
+});
+```
+
+The same authenticated route family is `GET .../operations/:id/analysis` or `GET .../retained/:editionId/analysis`. Pass JSON-encoded `criteria` plus `offset`/`limit`; append `/csv`, `/json`, `/html` or `/md` for the complete selected export. No new listener, source acquisition or provider workspace is opened.
+
+The maintained example first completes its original source→question/evidence/report→portable reopen. It then derives the cohort review from that same reopened edition, retaining four additional complete reports and source-linked group/observation metadata in its existing workflow result. Rerunning a completed example reuses its original operation and dossier.
+
+See [CLINICAL_TRIALS_ANALYSIS.md](CLINICAL_TRIALS_ANALYSIS.md) for exact group denominators, overlapping source versions, field semantics and report interfaces.

@@ -5,6 +5,7 @@ import {privateDirectory,readJson,readBytes,writeJson,writeBytes,safeCode as nat
 import {withPrivateLock} from '../../sf30-seller-sdk/routescan/quota.mjs';
 import {ORIGIN,PROVIDER,validateEdition,compareEditions,packetBytes,sha,json,need,object} from './clinical-trials-model.mjs';
 import {openClinicalTrialsInputs} from './clinical-trials-inputs.mjs';
+import {analyzeClinicalTrialsCohort,filterClinicalTrialsCohort,clinicalTrialsAnalysisPage,renderClinicalTrialsCohortCsv,renderClinicalTrialsCohortJson,renderClinicalTrialsCohortReport} from './clinical-trials-analysis.mjs';
 const PLAN='stellar-forge.clinicaltrials-plan.v1',STATE='stellar-forge.clinicaltrials-operation.v1';
 const now=()=>new Date().toISOString();
 const safeCode=error=>nativeSafeCode(error?.code,'CLINICALTRIALS_OPERATION_FAILED');
@@ -160,7 +161,9 @@ export async function openClinicalTrialsWorkspace({directory,dossiers,inputs=nul
    sourcePages:retained.value.sourcePages,offset,limit,total:retained.value.results.length,
    studies:retained.value.results.slice(offset,offset+limit).map(row=>row.metadata)}};
  }
- async function receive(id,{expectedPlanSha256,expectedEditionSha256,expectedRevision}={}){
+ async function receive(id,{expectedPlanSha256,expectedEditionSha256,expectedRevision,projection='full'}={}){
+  need(['full','metadata'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+  const resultView=dossierId=>projection==='metadata'?metadata(dossierId):dossiers.get(dossierId);
   return withPrivateLock(folder(id),'operation.lock',async()=>{
    const selected=await plan(id),current=await state(id),request=selected.payload.request;
    need(selected.sha256===expectedPlanSha256&&current.editionSha256===expectedEditionSha256,'CLINICALTRIALS_REVIEW_CHANGED');
@@ -168,7 +171,7 @@ export async function openClinicalTrialsWorkspace({directory,dossiers,inputs=nul
    const existing=before.editions.find(row=>row.questionId===request.questionId&&row.raw?.sha256===retained.sha256);
    if(current.phase==='IMPORTED'){
     need(existing&&current.received?.editionId===existing.id,'CLINICALTRIALS_RECEIVED_EDITION_MISSING');
-    return {operation:current,receipt:current.received,dossier:await dossiers.get(request.dossierId)};
+    return {operation:current,receipt:current.received,dossier:await resultView(request.dossierId)};
    }
    if(current.pendingReceive&&existing){
     const pending=current.pendingReceive,receivedRevision=pending.expectedRevision+(pending.duplicateEditionId?0:1);
@@ -179,14 +182,14 @@ export async function openClinicalTrialsWorkspace({directory,dossiers,inputs=nul
      sourceSha256:retained.sha256,originalRevision:pending.expectedRevision,revision:receivedRevision,
      duplicate:pending.duplicateEditionId!==null,receivedAt:pending.startedAt,reconciled:true};
     const saved=await save(id,{...current,phase:'IMPORTED',received:receipt,pendingReceive:null});
-    return {operation:saved,receipt,dossier:await dossiers.get(request.dossierId)};
+    return {operation:saved,receipt,dossier:await resultView(request.dossierId)};
    }
    need(before.revision===revision(expectedRevision),'REVISION_CONFLICT');
    need(before.questions.find(row=>row.id===request.questionId)?.text===selected.payload.question,'CLINICALTRIALS_QUESTION_CHANGED');
    const pending={expectedRevision,duplicateEditionId:existing?.id??null,startedAt:now()};
    const pendingState=await save(id,{...current,pendingReceive:pending});
    const received=await dossiers.receive(request.dossierId,{questionId:request.questionId,label:request.label,provider:PROVIDER,
-    rawBytes:retained.bytes,sourceReference:ORIGIN+'/data-api/api',expectedRevision,
+    rawBytes:retained.bytes,sourceReference:ORIGIN+'/data-api/api',expectedRevision,projection,
     origin:{mode:'ORIGINAL_CLINICALTRIALS_PACKET_RECEIVING',operationId:id,planSha256:selected.sha256,
      packetSha256:selected.payload.source.packetSha256,captureId:request.captureId}});
    const original=received.editions.find(row=>row.questionId===request.questionId&&row.raw?.sha256===retained.sha256);
@@ -246,6 +249,29 @@ export async function openClinicalTrialsWorkspace({directory,dossiers,inputs=nul
    authority:'ORIGINAL_RETAINED_DOSSIER_EDITIONS'};
  }
 
+ function analyzeSaved(saved,criteria={}){
+  return filterClinicalTrialsCohort(analyzeClinicalTrialsCohort(saved.value,{editionSha256:saved.sha256}),criteria);
+ }
+ async function analysis(id,{criteria={},...options}={}){
+  const paging=pageOptions(options),saved=await edition(id);
+  return clinicalTrialsAnalysisPage(analyzeSaved(saved,criteria),paging);
+ }
+ async function retainedAnalysis(dossierId,editionId,{criteria={},...options}={}){
+  const paging=pageOptions(options),saved=await retainedEdition(dossierId,editionId);
+  return clinicalTrialsAnalysisPage(analyzeSaved(saved,criteria),paging);
+ }
+ function analysisExport(saved,identity,{criteria={},format='csv'}={}){
+  need(['csv','json','html','md'].includes(format),'CLINICALTRIALS_ANALYSIS_FORMAT_INVALID');
+  const analyzed=analyzeSaved(saved,criteria);
+  const content=format==='csv'?renderClinicalTrialsCohortCsv(analyzed):format==='json'?renderClinicalTrialsCohortJson(analyzed):
+   renderClinicalTrialsCohortReport(analyzed,{format});
+  const bytes=Buffer.from(content,'utf8');
+  return {bytes,sha256:sha(bytes),editionSha256:saved.sha256,filename:identity+'.cohort.'+format,
+   contentType:{csv:'text/csv; charset=utf-8',json:'application/json; charset=utf-8',html:'text/html; charset=utf-8',md:'text/markdown; charset=utf-8'}[format]};
+ }
+ async function exportAnalysis(id,options={}){return analysisExport(await edition(id),identifier(id),options);}
+ async function exportRetainedAnalysis(dossierId,editionId,options={}){return analysisExport(await retainedEdition(dossierId,editionId),editionId,options);}
+
  async function list(dossierId,{after='',limit=30}={}){
   need(typeof after==='string'&&(after===''||/^ct_[a-f0-9]{64}$/.test(after))&&Number.isSafeInteger(limit)&&limit>=1&&limit<=100,'CLINICALTRIALS_OPERATION_PAGE_INVALID');
   const names=(await readdir(operations)).filter(name=>/^ct_[a-f0-9]{64}$/.test(name)&&name>after).sort();
@@ -262,7 +288,7 @@ export async function openClinicalTrialsWorkspace({directory,dossiers,inputs=nul
   async retainedPacket(dossierId,editionId){const retained=await retainedEdition(dossierId,editionId);
    return {bytes:packetBytes(retained.value.sourcePacket),sha256:retained.value.sourcePacket.sha256,
     filename:'clinicaltrials-workspace-'+retained.value.sourcePacket.sha256.slice(0,12)+'.zip'};},
-  retainedList,retainedReview,retainedEdition,retainedRecord,compareRetained,
+  retainedList,retainedReview,retainedEdition,retainedRecord,compareRetained,analysis,retainedAnalysis,exportAnalysis,exportRetainedAnalysis,
   async snapshot(){return {configured:true,source:inputs.identity,activeOperations:[...active.keys()]};},
   async close(){if(closed)return;closed=true;for(const entry of active.values())entry.controller.abort();
    await Promise.allSettled([...active.values()].map(entry=>entry.promise));if(ownInputs)await inputs.close();}};
