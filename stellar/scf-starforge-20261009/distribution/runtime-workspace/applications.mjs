@@ -1,4 +1,5 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
+import { readDistributionSpecification } from '../specification.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -516,7 +517,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
   const type = applicationType(kind), settings = normalizeSettings(type, input);
   need(typeof label === 'string' && label.trim() && label.length <= 120, 'APPLICATION_LABEL_REQUIRED');
   const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false });
-  const spec = await readJSON(join(runtime.sourceRoot, 'stellar/scf-starforge-20261009/distribution/distribution.json'));
+  const { spec } = await readDistributionSpecification({ sourceRoot: runtime.sourceRoot });
   need(type.python || Object.hasOwn(spec.commands ?? {}, type.command), 'APPLICATION_NOT_IN_RUNTIME',
     'This selected runtime does not include ' + type.command + '. Choose a runtime containing that original command.');
   if (type.requiredSource) await regular(join(runtime.sourceRoot, type.requiredSource), 4 * 1024 * 1024).catch(() =>
