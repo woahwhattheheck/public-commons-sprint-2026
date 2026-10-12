@@ -283,16 +283,20 @@ export async function inspectGrantDemoWorkspace({directory, sourceRoot} = {}) {
 }
 
 /** Export the complete public receiving packet and current native import history. */
-export async function exportGrantDemo({directory, output, sourceRoot} = {}) {
+export async function exportGrantDemo({directory, output, sourceRoot, requestId, exportedAt: selectedAt} = {}) {
   need(typeof output === 'string' && isAbsolute(output), 'REVIEWER_ABSOLUTE_PATH_REQUIRED');
   const {root, value} = await retainedInput(directory, sourceRoot);
   // The original writer lease establishes a closed, coherent receiving view.
   // Its data and complete result files remain owned by the existing native stores.
   const state = await nativeState(root, value, {write:true});
-  const packet = structuredClone(value.packet), exportedAt = new Date().toISOString();
+  need((requestId === undefined) === (selectedAt === undefined), 'REVIEWER_EXPORT_IDENTITY_REQUIRED');
+  if (requestId !== undefined) need(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(requestId) &&
+    typeof selectedAt === 'string' && Number.isFinite(Date.parse(selectedAt)) &&
+    new Date(selectedAt).toISOString() === selectedAt, 'REVIEWER_EXPORT_IDENTITY_INVALID');
+  const packet = structuredClone(value.packet), exportedAt = selectedAt ?? new Date().toISOString();
   const history = encoded({schema:'stellar-forge.grant-reviewer-native-history.v1', exportedAt,
     receivedPacketId:packet.packetId, sourceOperationId:packet.source.operationId, quotes:state.quotes});
-  const path = 'receiving/history-' + randomUUID() + '.json';
+  const path = 'receiving/history-' + (requestId ?? randomUUID()) + '.json';
   packet.documents.push({path, contentType:'application/json', bytes:history.length,
     sha256:sha(history), encoding:'base64', data:history.toString('base64')});
   packet.receivingHistory = [...(packet.receivingHistory ?? []), path];
@@ -300,9 +304,16 @@ export async function exportGrantDemo({directory, output, sourceRoot} = {}) {
   await validatePacket(packet, value.native);
   const bytes = encoded(packet);
   need(bytes.length <= MAX_PACKET_BYTES, 'REVIEWER_PACKET_LIMIT');
-  const saved = await writeSourceFile(resolve(output), bytes);
+  let saved, reused = false;
+  try { saved = await writeSourceFile(resolve(output), bytes); }
+  catch (error) {
+    if (error.code !== 'EEXIST' || requestId === undefined) throw error;
+    const existing = await readSourceFile(resolve(output), {privateFile:true});
+    need(existing.equals(bytes), 'REVIEWER_EXPORT_OUTPUT_CHANGED');
+    saved = {path:resolve(output), bytes:bytes.length, sha256:sha(bytes)}; reused = true;
+  }
   return {schema:PACKET_SCHEMA, packetId:packet.packetId, sourcePacketId:value.packet.packetId,
-    exportedAt, ...saved, quotes:state.quotes};
+    exportedAt, ...saved, quotes:state.quotes, ...(requestId !== undefined ? {requestId, reused} : {})};
 }
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char =>
