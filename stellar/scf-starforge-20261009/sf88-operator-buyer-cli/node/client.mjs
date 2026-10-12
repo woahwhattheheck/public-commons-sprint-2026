@@ -18,6 +18,19 @@ const NATIVE_RESULT = 'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT';
 const copy = value => parseJson(jsonBytes(value));
 const profileKeys = new Set(['operator', 'signerModule', 'trustedPayer', 'bodyCaptureTimeoutMs', 'buyerTransport', 'requestTimeoutMs']);
 
+// Preparation and offline review use the same original child lifecycle as execute.
+function checkSignal(signal) {
+  need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
+  need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
+  return signal;
+}
+
+function requestSignal(request, options) {
+  const signals = [...new Set([request.signal, options?.signal].filter(value => value !== undefined))];
+  for (const signal of signals) checkSignal(signal);
+  return signals.length > 1 ? AbortSignal.any(signals) : signals[0];
+}
+
 export class Buyer {
   constructor({ runtimeDirectory, stateDirectory, operatorProfile, datasetReportLimit = 33554432,
     inboxReportLimit = 33554432, ...runtimeOptions }) {
@@ -66,13 +79,15 @@ export class Buyer {
     return { ...config, ...copy(profile) };
   }
 
-  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace } = {}) {
+  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace, signal } = {}) {
+    checkSignal(signal);
     await this.ready();
     // Explicit workspace adoption uses its native operator, never a global profile override.
     const config = nativeWorkspace === undefined ? await this._profile(copy(input), operatorProfile) : copy(input);
     const workspace = nativeWorkspace === undefined ? {} : { nativeWorkspace: absolute(nativeWorkspace) };
     need(object(config.operation), 'OPERATION_REQUIRED');
     const op = this.operation(config.operation.intentId);
+    checkSignal(signal);
     try { await mkdir(op.directory, { mode: 0o700 }); }
     catch (error) {
       if (error.code === 'EEXIST') throw new BuyerError('INTENT_ALREADY_EXISTS_USE_RECOVER', { operation: op });
@@ -80,6 +95,7 @@ export class Buyer {
     }
     await syncDirectory(this.stateDirectory);
     try {
+      checkSignal(signal);
       await writeJson(join(op.directory, 'operation.json'), { schema: SCHEMA,
         intentId: op.intentId, state: 'PREPARING', createdAt: now(), ...workspace }, { exclusive: true });
       const bodyFiles = body !== undefined || config.operation.bodyFile !== undefined
@@ -112,7 +128,7 @@ export class Buyer {
       need(raw.length <= 65536, 'CONFIG_SIZE_LIMIT');
       await writeBytes(op.configPath, raw, { exclusive: true });
       let native = await this.runtime.checked(['--review', '--config', op.configPath],
-        { stateDirectory: this.stateDirectory, mode: 'OFFLINE_REVIEW' });
+        { stateDirectory: this.stateDirectory, mode: 'OFFLINE_REVIEW', signal });
       let ticketSha256 = null;
       if (config.operation.ticketFile !== undefined) {
         // Original native review validates ownership, schema and header policy.
@@ -126,9 +142,10 @@ export class Buyer {
         need(raw.length <= 65536, 'CONFIG_SIZE_LIMIT');
         await writeBytes(op.configPath, raw);
         native = await this.runtime.checked(['--review', '--config', op.configPath],
-          { stateDirectory: this.stateDirectory, mode: 'OFFLINE_REVIEW' });
+          { stateDirectory: this.stateDirectory, mode: 'OFFLINE_REVIEW', signal });
         need(ticketSha256 === native.operationTicket?.sha256, 'OPERATION_TICKET_CHANGED');
       }
+      checkSignal(signal);
       const hashes = { configSha256: digest(raw), bodySha256: digest(body ?? Buffer.alloc(0)), ticketSha256 };
       need(native.intentId === op.intentId && native.bodySha256 === hashes.bodySha256, 'NATIVE_REVIEW_MISMATCH');
       await writeJson(join(op.directory, 'operation.json'), { schema: SCHEMA,
@@ -136,6 +153,7 @@ export class Buyer {
         runtimeDirectory: this.runtime.directory, ...workspace, ...hashes });
       await writeJson(join(op.directory, 'review.json'), { intentId: op.intentId,
         ...hashes, ...workspace, native, reviewedAt: now() }, { exclusive: true });
+      checkSignal(signal);
       return op;
     } catch (error) {
       // This creating call has not returned an operation or launched a purchase.
@@ -146,6 +164,7 @@ export class Buyer {
   }
 
   async fromConfig(input, options) {
+    checkSignal(options?.signal);
     const config = typeof input === 'string' ? await readJson(absolute(input)) : input;
     return this._create(config, options);
   }
@@ -153,15 +172,17 @@ export class Buyer {
   async fromWorkspace(directory, { configuration, intentId, body, responseFile, requestTimeoutMs,
     signal, ...extra } = {}) {
     need(Object.keys(extra).length === 0, 'WORKSPACE_IMPORT_FIELDS_INVALID');
+    checkSignal(signal);
     await this.ready();
     const workspace = await readWorkspace(this, directory, { configuration, signal });
     const config = copy(workspace.configuration);
     if (intentId !== undefined) config.operation.intentId = intent(intentId);
     need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
-    return this._create(config, { body, responseFile, requestTimeoutMs, nativeWorkspace: workspace.directory });
+    return this._create(config, { body, responseFile, requestTimeoutMs, nativeWorkspace: workspace.directory, signal });
   }
 
   async fromOperationHandoff(file, { accept, operatorProfile, signal, responseFile, requestTimeoutMs } = {}) {
+    checkSignal(signal);
     need(Number.isSafeInteger(accept) && accept >= 0, 'EXPLICIT_SELECTION_INDEX_REQUIRED');
     await this.ready();
     const temporary=await mkdtemp(join(this.stateDirectory,'.operation-import-'));
@@ -171,7 +192,7 @@ export class Buyer {
       {stateDirectory:this.stateDirectory,mode:'OFFLINE_OPERATION_IMPORTED',signal});
       // _create retains the exact body and original validated ticket before
       // removing the import directory. Operator settings come from this buyer.
-      return await this._create(await readJson(imported.configPath),{operatorProfile,responseFile,requestTimeoutMs});
+      return await this._create(await readJson(imported.configPath),{operatorProfile,responseFile,requestTimeoutMs,signal});
     } finally { await rm(temporary,{recursive:true,force:true}); }
   }
 
@@ -186,19 +207,20 @@ export class Buyer {
     // The installed original runtime validates and canonicalizes ordinary
     // headers during _create's mandatory native review. Keep this standalone
     // package independent of files outside its own published directory.
-    return this._create({ operation }, { ...options, body: request.body });
+    return this._create({ operation }, { ...options, body: request.body, signal: requestSignal(request, options) });
   }
 
   // Directly fits the original SF30 createSellerClient({buyer}) interface.
   // Native SF62 approval and SF36 policy still run; no callback is fabricated.
   async call(request, options) {
     need(object(request), 'GENERATED_REQUEST_FIELDS_INVALID');
-    need(!request.signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
-    const operation = await this.fromRequest(request, options);
-    return operation.execute({ review: await operation.review(), signal: request.signal });
+    const signal = requestSignal(request, options);
+    const operation = await this.fromRequest({ ...request, signal }, { ...options, signal });
+    return operation.execute({ review: await operation.review({ signal }), signal });
   }
 
   async discover(catalog, { destination, signal } = {}) {
+    checkSignal(signal);
     await this.ready();
     const directory = await mkdtemp(join(this.stateDirectory, '.catalog-'));
     try {
@@ -213,6 +235,7 @@ export class Buyer {
 
   async prepare({ discoveryFile, row, accept, intentId, url, method = 'GET',
     headers, body, operatorProfile, signal, ticketFile, ticketHeader, responseFile, requestTimeoutMs }) {
+    checkSignal(signal);
     need(Number.isSafeInteger(row) && row >= 0 && Number.isSafeInteger(accept) && accept >= 0,
       'EXPLICIT_SELECTION_INDEX_REQUIRED');
     intent(intentId);
@@ -231,7 +254,7 @@ export class Buyer {
         ...(ticketHeader === undefined ? [] : ['--ticket-header', ticketHeader])],
       { stateDirectory: this.stateDirectory, mode: 'OFFLINE_CONFIG_PREPARED', signal });
       const config = await readJson(output);
-      return await this._create(config, { body, operatorProfile, responseFile, requestTimeoutMs });
+      return await this._create(config, { body, operatorProfile, responseFile, requestTimeoutMs, signal });
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
 
@@ -270,11 +293,13 @@ export class Operation {
     need(ticketHash === (meta.ticketSha256 ?? null), 'OPERATION_TICKET_CHANGED');
     return { meta, config };
   }
-  async review() {
+  async review({ signal } = {}) {
+    checkSignal(signal);
     const { meta } = await this._bound();
     const native = await this.buyer.runtime.checked(['--review', '--config', this.configPath],
-      { stateDirectory: this.buyer.stateDirectory, mode: 'OFFLINE_REVIEW' });
+      { stateDirectory: this.buyer.stateDirectory, mode: 'OFFLINE_REVIEW', signal });
     await this._bound();
+    checkSignal(signal);
     need(native.intentId === this.intentId && native.bodySha256 === meta.bodySha256 &&
       (native.operationTicket?.sha256 ?? null) === (meta.ticketSha256 ?? null), 'NATIVE_REVIEW_MISMATCH');
     const review = { intentId: this.intentId, configSha256: meta.configSha256,
@@ -282,6 +307,7 @@ export class Operation {
       ...(meta.nativeWorkspace === undefined ? {} : { nativeWorkspace: meta.nativeWorkspace }),
       native, reviewedAt: now() };
     await writeJson(join(this.directory, 'review.json'), review);
+    checkSignal(signal);
     return copy(review);
   }
   async execute({ review, signal } = {}) {

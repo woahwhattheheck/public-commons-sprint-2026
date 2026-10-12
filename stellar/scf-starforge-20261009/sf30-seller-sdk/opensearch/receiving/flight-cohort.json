@@ -1,0 +1,107 @@
+{
+  "schema": "stellar-forge.opensearch-native-cohort.v1",
+  "provenance": {
+    "publicSource": "https://playground.opensearch.org",
+    "captureRequestId": "ee290-native-flights-capture-20261011T234116Z-bd81fdd1",
+    "editionId": "49042fc669d38005ea9363a73c5fc9c9",
+    "resultSha256": "5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825",
+    "engine": {
+      "name": "opensearch-cluster-leader-0",
+      "cluster_name": "opensearch-cluster",
+      "cluster_uuid": "l7JU9tA0RmO3hbTc1ayTOw",
+      "version": {
+        "distribution": "opensearch",
+        "number": "3.9.0",
+        "build_type": "tar",
+        "build_hash": "4ee42a94e87f66fbf1e62a9871b1b87f91e02472",
+        "build_date": "2026-09-23T01:01:31.883915140Z",
+        "build_snapshot": false,
+        "lucene_version": "10.5.1",
+        "minimum_wire_compatibility_version": "2.19.0",
+        "minimum_index_compatibility_version": "2.0.0"
+      },
+      "tagline": "The OpenSearch Project: https://opensearch.org/"
+    },
+    "sourceDeclaration": {
+      "schema": "stellar-forge.opensearch-source.v1",
+      "endpointEnv": "OPENSEARCH_PLAYGROUND_ENDPOINT",
+      "auth": {
+        "type": "none"
+      },
+      "allowLocal": true,
+      "maxInFlight": 1,
+      "queries": {
+        "flights": {
+          "indices": [
+            "opensearch_dashboards_sample_data_flights"
+          ],
+          "query": {
+            "bool": {
+              "filter": [
+                {
+                  "term": {
+                    "OriginCountry": {
+                      "$param": "country"
+                    }
+                  }
+                },
+                {
+                  "range": {
+                    "AvgTicketPrice": {
+                      "gte": {
+                        "$param": "minimum_price"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "parameters": {
+            "country": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "minimum_price": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "fields": [
+            "FlightNum",
+            "Origin",
+            "Dest",
+            "OriginCountry",
+            "DestCountry",
+            "AvgTicketPrice",
+            "timestamp",
+            "FlightDelay",
+            "Cancelled"
+          ],
+          "sort": [
+            {
+              "timestamp": "asc"
+            },
+            {
+              "FlightNum": "asc"
+            }
+          ],
+          "pageSize": 3,
+          "maxHits": 7,
+          "maxBytes": 917504,
+          "timeoutMs": 30000,
+          "probe": {
+            "country": "US",
+            "minimum_price": 0
+          }
+        }
+      }
+    },
+    "input": {
+      "country": "US",
+      "minimum_price": 0
+    }
+  },
+  "resultJson": "{\n  \"schema\": \"stellar-forge.opensearch-result.v1\",\n  \"query\": \"flights\",\n  \"fields\": [\n    \"FlightNum\",\n    \"Origin\",\n    \"Dest\",\n    \"OriginCountry\",\n    \"DestCountry\",\n    \"AvgTicketPrice\",\n    \"timestamp\",\n    \"FlightDelay\",\n    \"Cancelled\"\n  ],\n  \"fieldTypes\": {\n    \"FlightNum\": {\n      \"type\": \"keyword\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    },\n    \"Origin\": {\n      \"type\": \"keyword\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    },\n    \"Dest\": {\n      \"type\": \"keyword\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    },\n    \"OriginCountry\": {\n      \"type\": \"keyword\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    },\n    \"DestCountry\": {\n      \"type\": \"keyword\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    },\n    \"AvgTicketPrice\": {\n      \"type\": \"float\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    },\n    \"timestamp\": {\n      \"type\": \"date\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    },\n    \"FlightDelay\": {\n      \"type\": \"boolean\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    },\n    \"Cancelled\": {\n      \"type\": \"boolean\",\n      \"searchable\": true,\n      \"aggregatable\": true\n    }\n  },\n  \"source\": {\n    \"clusterFingerprint\": \"b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab\",\n    \"serverVersion\": \"3.9.0\"\n  },\n  \"hits\": [\n    {\n      \"_index\": \"opensearch_dashboards_sample_data_flights\",\n      \"_id\": \"FH8-76AB8EVjkSdEB73a\",\n      \"_source\": {\n        \"FlightNum\": \"RBFKZBX\",\n        \"Origin\": \"Casper-Natrona County International Airport\",\n        \"Dest\": \"Indira Gandhi International Airport\",\n        \"FlightDelay\": true,\n        \"OriginCountry\": \"US\",\n        \"AvgTicketPrice\": 772.1008456460212,\n        \"Cancelled\": false,\n        \"DestCountry\": \"IN\",\n        \"timestamp\": \"2026-09-21T00:02:06\"\n      },\n      \"_score\": null,\n      \"sort\": [\n        1789948926000,\n        \"RBFKZBX\",\n        \"opensearch_dashboards_sample_data_flights\",\n        19\n      ],\n      \"exactIntegerPaths\": []\n    },\n    {\n      \"_index\": \"opensearch_dashboards_sample_data_flights\",\n      \"_id\": \"YH8-76AB8EVjkSdEB73a\",\n      \"_source\": {\n        \"FlightNum\": \"9E0P1AU\",\n        \"Origin\": \"Erie International Tom Ridge Field\",\n        \"Dest\": \"San Francisco International Airport\",\n        \"FlightDelay\": false,\n        \"OriginCountry\": \"US\",\n        \"AvgTicketPrice\": 159.9909618375961,\n        \"Cancelled\": false,\n        \"DestCountry\": \"US\",\n        \"timestamp\": \"2026-09-21T00:06:27\"\n      },\n      \"_score\": null,\n      \"sort\": [\n        1789949187000,\n        \"9E0P1AU\",\n        \"opensearch_dashboards_sample_data_flights\",\n        95\n      ],\n      \"exactIntegerPaths\": []\n    },\n    {\n      \"_index\": \"opensearch_dashboards_sample_data_flights\",\n      \"_id\": \"Fn8-76AB8EVjkSdEB73a\",\n      \"_source\": {\n        \"FlightNum\": \"1TJWK8F\",\n        \"Origin\": \"Newark Liberty International Airport\",\n        \"Dest\": \"Ottawa Macdonald-Cartier International Airport\",\n        \"FlightDelay\": true,\n        \"OriginCountry\": \"US\",\n        \"AvgTicketPrice\": 253.21006490337038,\n        \"Cancelled\": false,\n        \"DestCountry\": \"CA\",\n        \"timestamp\": \"2026-09-21T01:08:20\"\n      },\n      \"_score\": null,\n      \"sort\": [\n        1789952900000,\n        \"1TJWK8F\",\n        \"opensearch_dashboards_sample_data_flights\",\n        21\n      ],\n      \"exactIntegerPaths\": []\n    },\n    {\n      \"_index\": \"opensearch_dashboards_sample_data_flights\",\n      \"_id\": \"FX8-76AB8EVjkSdEB73a\",\n      \"_source\": {\n        \"FlightNum\": \"R43CELD\",\n        \"Origin\": \"Erie International Tom Ridge Field\",\n        \"Dest\": \"Wichita Mid Continent Airport\",\n        \"FlightDelay\": true,\n        \"OriginCountry\": \"US\",\n        \"AvgTicketPrice\": 167.59992219374266,\n        \"Cancelled\": false,\n        \"DestCountry\": \"US\",\n        \"timestamp\": \"2026-09-21T01:08:20\"\n      },\n      \"_score\": null,\n      \"sort\": [\n        1789952900000,\n        \"R43CELD\",\n        \"opensearch_dashboards_sample_data_flights\",\n        20\n      ],\n      \"exactIntegerPaths\": []\n    },\n    {\n      \"_index\": \"opensearch_dashboards_sample_data_flights\",\n      \"_id\": \"En8-76AB8EVjkSdEB73a\",\n      \"_source\": {\n        \"FlightNum\": \"7TTZM4I\",\n        \"Origin\": \"Cleveland Hopkins International Airport\",\n        \"Dest\": \"Ministro Pistarini International Airport\",\n        \"FlightDelay\": true,\n        \"OriginCountry\": \"US\",\n        \"AvgTicketPrice\": 569.6132552035547,\n        \"Cancelled\": false,\n        \"DestCountry\": \"AR\",\n        \"timestamp\": \"2026-09-21T01:30:47\"\n      },\n      \"_score\": null,\n      \"sort\": [\n        1789954247000,\n        \"7TTZM4I\",\n        \"opensearch_dashboards_sample_data_flights\",\n        17\n      ],\n      \"exactIntegerPaths\": []\n    },\n    {\n      \"_index\": \"opensearch_dashboards_sample_data_flights\",\n      \"_id\": \"KH8-76AB8EVjkSdEB73a\",\n      \"_source\": {\n        \"FlightNum\": \"HF9AP10\",\n        \"Origin\": \"John F Kennedy International Airport\",\n        \"Dest\": \"San Diego International Airport\",\n        \"FlightDelay\": false,\n        \"OriginCountry\": \"US\",\n        \"AvgTicketPrice\": 231.96273728774017,\n        \"Cancelled\": false,\n        \"DestCountry\": \"US\",\n        \"timestamp\": \"2026-09-21T01:50:27\"\n      },\n      \"_score\": null,\n      \"sort\": [\n        1789955427000,\n        \"HF9AP10\",\n        \"opensearch_dashboards_sample_data_flights\",\n        39\n      ],\n      \"exactIntegerPaths\": []\n    },\n    {\n      \"_index\": \"opensearch_dashboards_sample_data_flights\",\n      \"_id\": \"TX8-76AB8EVjkSdEB77b\",\n      \"_source\": {\n        \"FlightNum\": \"0VWO82H\",\n        \"Origin\": \"Savannah Hilton Head International Airport\",\n        \"Dest\": \"Zurich Airport\",\n        \"FlightDelay\": false,\n        \"OriginCountry\": \"US\",\n        \"AvgTicketPrice\": 337.660374662825,\n        \"Cancelled\": false,\n        \"DestCountry\": \"CH\",\n        \"timestamp\": \"2026-09-21T03:01:52\"\n      },\n      \"_score\": null,\n      \"sort\": [\n        1789959712000,\n        \"0VWO82H\",\n        \"opensearch_dashboards_sample_data_flights\",\n        332\n      ],\n      \"exactIntegerPaths\": []\n    }\n  ],\n  \"hitCount\": 7,\n  \"total\": {\n    \"value\": 8,\n    \"relation\": \"gte\"\n  },\n  \"truncated\": true,\n  \"pages\": 3,\n  \"snapshot\": \"point-in-time\",\n  \"capturedAt\": \"2026-10-11T23:41:37.599Z\",\n  \"numberEncoding\": \"unsafe-integer-decimal-text\",\n  \"snapshotReleased\": true\n}\n"
+}

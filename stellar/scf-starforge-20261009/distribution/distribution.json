@@ -761,6 +761,8 @@
     "./seller/socrata/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs",
     "./seller/releases/dataset": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-dataset.mjs",
     "./seller/arcgis/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/deployment.mjs",
+    "./seller/opensearch/relevance": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/native.mjs",
+    "./seller/opensearch/relevance/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/workspace.mjs",
     "./seller/census-acs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/source.mjs",
     "./seller/census-acs/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs",
     "./seller/census-acs/publisher/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/plan.mjs",
