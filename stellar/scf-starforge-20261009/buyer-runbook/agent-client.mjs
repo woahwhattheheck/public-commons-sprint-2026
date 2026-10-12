@@ -248,7 +248,16 @@ export class MerchantBuyerRunbookWorkspaces extends BuyerRunbookAgent{
 export async function connectBuyerRunbookFileClient({url,workspace,tokenEnv,environment,signal}={}){
  need(typeof workspace==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(workspace),'INVALID_PARAMS','Select the original host-declared workspace alias.');
  const original=await openMerchantFileClient({url,tokenEnv,environment,signal,errorPrefix:'BUYER_AGENT',clientName:'stellar-forge-buyer-runbook'});
- return {endpoint:original.endpoint+'#buyer-workspace='+workspace,call:async(name,args,options)=>{
+ const inventory=await original.call(BUYER_AGENT_PREFIX+'workspaces',{});
+ need(inventory.schema===BUYER_AGENT_SCHEMA&&Array.isArray(inventory.workspaces),
+  'BUYER_AGENT_FILE_REPLY_INVALID','Read the original authenticated Buyer workspace inventory.');
+ const selected=inventory.workspaces.filter(row=>row?.alias===workspace);
+ need(selected.length===1&&typeof selected[0].directory==='string'&&isAbsolute(selected[0].directory)&&
+  SHA.test(selected[0].selectionSha256??''),'BUYER_AGENT_FILE_REPLY_INVALID','Select the original configured Buyer workspace and source.');
+ // Bind receiving to the original workspace, not a temporary MCP port. Its
+ // retained manifest remains the exact content identity across host reopening.
+ const endpoint='buyer-runbook:'+selected[0].directory+'#'+selected[0].selectionSha256;
+ return {endpoint,call:async(name,args,options)=>{
   need([BUYER_AGENT_PREFIX+'manifest',BUYER_AGENT_PREFIX+'file',BUYER_AGENT_PREFIX+'file_release'].includes(name),
    'TOOL_NOT_FOUND','Select an original Buyer retained-file tool.');
   const reply=await original.call(name,{...args,workspace},options);
