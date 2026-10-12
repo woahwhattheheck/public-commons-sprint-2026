@@ -6,13 +6,15 @@
     "coops-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/workspace.mjs",
     "coops": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/cli.mjs",
     "coops-mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/mcp-client.mjs",
-    "coops-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs"
+    "coops-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs",
+    "coops-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving-host.mjs"
   },
   "commandDescriptions": {
     "coops-workspace": "Operate retained coastal observations, datum evidence, historical studies, analyst decisions and native delivery",
     "coops": "Capture, resume, review and export original NOAA coastal source work",
     "coops-mcp": "Use the same coastal workspace through native merchant tools and complete retained-file receiving",
-    "coops-analysis": "Open a retained coastal analysis input or workbook and write the complete offline analyst delivery"
+    "coops-analysis": "Open a retained coastal analysis input or workbook and write the complete offline analyst delivery",
+    "coops-receive": "Receive one original coastal study through the native console, actual source review and selected persistent browser"
   },
   "exports": {
     "./seller/coops": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/core.mjs",
@@ -33,7 +35,8 @@
     "./seller/coops/analysis/core": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/core.mjs",
     "./seller/coops/analysis/bundle": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs",
     "./seller/coops/analysis/retained": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/retained.mjs",
-    "./seller/coops/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving.mjs"
+    "./seller/coops/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving.mjs",
+    "./seller/coops/receiving-host": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving-host.mjs"
   },
   "browserAssets": [
     {
