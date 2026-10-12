@@ -1,4 +1,5 @@
 // MIT. Operator UI over the original authenticated host and retained native calls.
+import { createWorkflowPage } from './workflows.mjs';
 const $=id=>document.getElementById(id);
 const state={token:'',host:null,profiles:[],profile:null,details:null,page:'host',tools:[],tool:null,
   definition:null,draft:null,dirty:false,offset:0,next:null,total:0,call:null,recovery:new Map(),customer:null,
@@ -22,6 +23,7 @@ async function api(path,{method='GET',body,raw=false}={}){
   if(!response.ok){
     let packet;try{packet=await response.json();}catch{}
     const error=new Error(packet?.error?.message??packet?.error_description??'The original host returned HTTP '+response.status+'.');
+    error.status=response.status;
     error.code=packet?.error?.code??packet?.error??'HTTP_'+response.status;
     if(response.status===401){text($('connection-state'),'Token required');$('connection-state').dataset.state='ERROR';}
     throw error;
@@ -58,7 +60,7 @@ function setPage(name){
   document.querySelectorAll('[data-page]').forEach(value=>name===value.dataset.page?value.setAttribute('aria-current','page'):value.removeAttribute('aria-current'));
 }
 function syncControls(){
-  updateRun();
+  updateRun();workflowPage.sync();
   for(const id of ['rename-profile','export-profile','native-status'])$(id).disabled=!state.profile;
   $('previous-tools').disabled=state.offset===0;$('next-tools').disabled=state.next===null;
   if(state.customer){$('resume-customer').disabled=Boolean(state.customer.active);$('pause-customer').disabled=!state.customer.active;$('download-customer').disabled=!state.customer.localFiles;}
@@ -85,7 +87,7 @@ function renderHost(){
   properties($('host-details'),[
     ['Merchant',host.merchant],['Config file',host.configuration.name],['Config SHA-256',host.configuration.sha256,true],
     ['Host binding',host.configurationFingerprint,true],['Console workspace',host.console.workspaceId,true],
-    ['Accepted calls',host.operator.activeCalls],['Console calls',host.console.activeCalls],
+    ['Accepted calls',host.operator.activeCalls],['Console calls',host.console.activeCalls],['Active workflows',host.console.workflows?.activeRuns??0],
     ['Customer transfers',host.console.customers?.activeDownloads??0],['Customer archives',host.console.customers?.activeArchives??0],
     ['Seller instance',host.operator.instanceId??'No seller managed by this host',true]
   ]);
@@ -120,21 +122,21 @@ async function loadProfiles(selectId=state.profile?.id){
   renderHost();await loadProfile();
 }
 async function loadProfile(){
-  if(!state.profile){state.details={drafts:[],calls:[],deliveries:[]};renderProfile();return;}
+  if(!state.profile){state.details={drafts:[],calls:[],deliveries:[]};renderProfile();workflowPage.profileChanged();return;}
   const packet=await api('profile/'+encodeURIComponent(state.profile.id));
-  state.profile=packet.profile;state.details=packet;renderProfile();
+  state.profile=packet.profile;state.details=packet;renderProfile();await workflowPage.refresh();schedulePoll();
 }
 function renderProfile(){
   const packet=state.details??{drafts:[],calls:[],deliveries:[]};
   text($('request-count'),packet.calls.length);text($('customer-count'),packet.deliveries.length);
-  renderBinding();renderDrafts();renderCalls();renderCustomers();
+  renderBinding();renderDrafts();renderCalls();renderCustomers();workflowPage.profileChanged();
   if(state.customer){const current=packet.deliveries.find(value=>value.id===state.customer.id);if(current){state.customer=current;renderCustomer();}}
   schedulePoll();
 }
 function schedulePoll(){
   clearTimeout(state.poll);
   if(!state.token)return;
-  const pending=state.details?.calls.some(value=>value.receiving==='ACTIVE')||state.details?.deliveries.some(value=>value.active);
+  const pending=workflowPage.hasActive||state.details?.calls.some(value=>value.receiving==='ACTIVE')||state.details?.deliveries.some(value=>value.active);
   if(pending)state.poll=setTimeout(async()=>{try{await Promise.all([refreshHost(),loadProfile()]);if(state.call&&state.details.calls.some(value=>value.id===state.call.id&&value.state!==state.call.state))await openCall(state.call.id,false);}catch(error){notice(error.message,true);}},1500);
 }
 async function connect(){
@@ -148,7 +150,7 @@ function disconnect(){
   $('connected').hidden=true;$('connect-panel').hidden=false;$('disconnect').hidden=true;text($('connection-state'),'Disconnected');
   $('connection-state').removeAttribute('data-state');notice('');$('access-token').value='';
   for(const id of ['call-result','call-arguments','customer-json'])$(id).textContent='';
-  $('native-arguments').value='';
+  $('native-arguments').value='';workflowPage.reset();
 }
 function profileForm(mode){
   state.profileMode=mode;$('profile-form').hidden=false;$('profile-name').value=mode==='rename'?requireProfile().name:'';$('profile-name').focus();
@@ -359,5 +361,7 @@ action($('refresh-customers'),()=>loadProfile());
 action($('resume-customer'),()=>receiveCustomer(state.customer.identity));
 action($('pause-customer'),async()=>{await api('customer-pause',{method:'POST',body:{id:state.customer.id}});await loadProfile();notice('Pause requested at the original receiving checkpoint.');});
 action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),state.customer.identity.exportId+'.tar.gz'));
+const workflowPage=createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,
+  requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll});
 const bootstrap=new URLSearchParams(location.hash.slice(1)).get('token');
 if(bootstrap){history.replaceState(null,'',location.pathname+location.search);$('access-token').value=bootstrap;busy($('connect-form').querySelector('button'),connect);}

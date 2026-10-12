@@ -1,6 +1,6 @@
 // MIT. Complete saved workflows over the original native console requests.
 import { canonical, digest, fail } from './records.mjs';
-import { WorkflowRecords, workflowPointer } from './workflow-records.mjs';
+import { WorkflowRecords, workflowPointer, workflowDispatchActive } from './workflow-records.mjs';
 
 const clone=value=>JSON.parse(JSON.stringify(value));
 const plain=value=>Boolean(value&&typeof value==='object'&&!Array.isArray(value));
@@ -37,6 +37,8 @@ function assign(argumentsValue,pointer,value){
 export function createMerchantWorkflows({store,definitions,getHost,startCall,waitCall,isCallActive,requireTool}){
   const records=new WorkflowRecords(store),active=new Map();
   let closing=false;
+  const updateOwned=(id,kind,mutate,options={})=>records.update(id,kind,mutate,{...options,ownerWorkspaceId:store.id});
+  const dispatchActive=run=>run.steps.some(step=>{const call=currentCall(step.callId);return call?.state==='RUNNING'&&workflowDispatchActive(step,store.id);});
   const originalDraft=(definition,step)=>store.draft(step.draftId,step.draftRevision);
   async function authorizeDefinition(definition,context){
     for(const step of definition.steps){const draft=originalDraft(definition,step);await requireTool(context,draft.tool,JSON.parse(draft.argumentsJson));}
@@ -56,7 +58,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
   })});
   const runView=(run,full=false)=>{
     const {inputsJson,events,...value}=run;
-    return{...value,active:active.has(run.id),stepsComplete:run.steps.filter(done).length,stepCount:run.steps.length,
+    return{...value,active:active.has(run.id)||dispatchActive(run),stepsComplete:run.steps.filter(done).length,stepCount:run.steps.length,
       inputsBytes:Buffer.byteLength(inputsJson),inputsSha256:digest(inputsJson),eventCount:events.length,
       custody:run.ownerWorkspaceId===store.id?'OWNED':'RECEIVED_COPY',...(full?{inputsJson,events}:{})};
   };
@@ -103,6 +105,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
   }
   function waiting(id,error,stepId=null){
     return records.update(id,'ATTENTION_REQUIRED',run=>{
+      if(run.ownerWorkspaceId!==store.id)return;
       if(run.state==='COMPLETE')return;
       run.state='WAITING';run.error=errorValue(error);
       const step=run.steps.find(value=>value.id===stepId);
@@ -117,13 +120,14 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
       requireOwner(run);
       while(true){
         run=records.run(id);
+        if(run.ownerWorkspaceId!==store.id)return;
         if(run.state==='COMPLETE')return;
         const index=run.steps.findIndex(step=>!done(step));
         if(index<0){
-          records.update(id,'COMPLETED',value=>{value.state='COMPLETE';value.completedAt=new Date().toISOString();value.pauseRequested=false;value.error=null;});return;
+          updateOwned(id,'COMPLETED',value=>{value.state='COMPLETE';value.completedAt=new Date().toISOString();value.pauseRequested=false;value.error=null;});return;
         }
         if(closing||run.pauseRequested){
-          records.update(id,'PAUSED',value=>{value.state='PAUSED';value.pauseRequested=true;value.error=null;});return;
+          updateOwned(id,'PAUSED',value=>{value.state='PAUSED';value.pauseRequested=true;value.error=null;});return;
         }
         let step=run.steps[index];stepId=step.id;
         const original=originalDraft(definition,definition.steps[index]),native=definitions.get(original.tool);
@@ -135,38 +139,43 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
         if(step.draftRevision===null){
           const selected=materialize(definition,run,index);
           await requireTool(context,original.tool,selected.args);
-          let prepared;
-          try{prepared=store.draft(step.draftId,1);}
-          catch(error){
-            if(error.code!=='CONSOLE_DRAFT_NOT_FOUND')throw error;
-            prepared=store.saveDraft({id:step.draftId,profileId:run.profileId,name:(definition.name+' / '+definition.steps[index].name).slice(0,160),
-              tool:original.tool,arguments:selected.args},native);
-          }
-          need(prepared.profileId===run.profileId&&prepared.tool===original.tool&&prepared.toolSchemaSha256===original.toolSchemaSha256&&
-            canonical(JSON.parse(prepared.argumentsJson))===canonical(selected.args),'CONSOLE_WORKFLOW_REQUEST_CHANGED','The original prepared workflow request has different arguments.');
-          run=records.update(id,'STEP_PREPARED',value=>{
-            const selected=value.steps[index];selected.draftRevision=prepared.revision;selected.argumentsSha256=prepared.argumentsSha256;
-            selected.state='RESERVED';value.state='RUNNING';value.error=null;
-          },{stepId,callId:step.callId,detail:{draftId:prepared.id,draftRevision:prepared.revision,argumentsSha256:prepared.argumentsSha256}});
+          run=store.transaction(()=>{
+            const current=records.run(id);requireOwner(current);
+            need(!current.pauseRequested&&current.revision===run.revision,'CONSOLE_WORKFLOW_RUN_CHANGED','Reopen the current saved workflow before preparing its next request.');
+            let prepared;
+            try{prepared=store.draft(step.draftId,1);}
+            catch(error){
+              if(error.code!=='CONSOLE_DRAFT_NOT_FOUND')throw error;
+              prepared=store.saveDraft({id:step.draftId,profileId:run.profileId,name:(definition.name+' / '+definition.steps[index].name).slice(0,160),
+                tool:original.tool,arguments:selected.args},native);
+            }
+            need(prepared.profileId===run.profileId&&prepared.tool===original.tool&&prepared.toolSchemaSha256===original.toolSchemaSha256&&
+              canonical(JSON.parse(prepared.argumentsJson))===canonical(selected.args),'CONSOLE_WORKFLOW_REQUEST_CHANGED','The original prepared workflow request has different arguments.');
+            return updateOwned(id,'STEP_PREPARED',value=>{
+              const selected=value.steps[index];selected.draftRevision=prepared.revision;selected.argumentsSha256=prepared.argumentsSha256;
+              selected.state='RESERVED';value.state='RUNNING';value.error=null;
+            },{expectedRevision:current.revision,stepId,callId:step.callId,detail:{draftId:prepared.id,draftRevision:prepared.revision,argumentsSha256:prepared.argumentsSha256}});
+          });
           step=run.steps[index];
         }
         call=currentCall(step.callId);
         if(!call){
           if(closing||records.run(id).pauseRequested)continue;
           await startCall({id:step.callId,profileId:run.profileId,draftId:step.draftId,draftRevision:step.draftRevision,
-            expectedHostFingerprint:run.executionHostFingerprint},context);
+            expectedHostFingerprint:run.executionHostFingerprint},context,{runId:id,stepId:step.id,expectedRevision:records.run(id).revision});
           call=currentCall(step.callId);
           need(call,'CONSOLE_WORKFLOW_REQUEST_PENDING','Reopen the original prepared request to recover its dispatch.');
-          records.update(id,'STEP_DISPATCHED',value=>{value.state='RUNNING';value.error=null;},
-            {stepId,callId:step.callId,detail:{requestSha256:call.requestSha256}});
+
         }
         await requireTool(context,call.tool,JSON.parse(call.argumentsJson));
         if(call.state==='RUNNING'&&isCallActive(call.id))call=await waitCall(call.id);
+        if(call.state==='RUNNING'&&workflowDispatchActive(records.run(id).steps[index],store.id))return;
         if(call.state==='RUNNING'){
           waiting(id,fail('CONSOLE_WORKFLOW_NATIVE_PENDING','This original request is still awaiting its native outcome. Open its existing recovery tools and then continue this same workflow.'),stepId);return;
         }
+        const current=records.run(id);if(current.ownerWorkspaceId!==store.id)return;if(done(current.steps[index]))continue;
         requireResult(definition.steps[index],call);
-        records.update(id,'STEP_COMPLETED',value=>{
+        updateOwned(id,'STEP_COMPLETED',value=>{
           const step=value.steps[index];step.state='COMPLETE';step.completedAt=call.completedAt;value.state='RUNNING';value.error=null;
         },{stepId,callId:call.id,detail:{resultSha256:call.resultSha256}});
       }
@@ -194,7 +203,19 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
       return{workflows,runs};
     },
     async definition(id,revision,context){const value=records.definition(id,revision);await authorizeDefinition(value,context);return definitionView(value);},
-    async run(id,context){const value=records.run(id);await authorizeRun(value,context);return runView(value,true);},
+    async run(id,context){
+      const value=records.run(id),definition=await authorizeRun(value,context),recoveryCalls=[];
+      const index=value.steps.findIndex(step=>!done(step)),step=value.steps[index];
+      if(step)for(const call of store.calls(value.profileId)){
+        if(!successful(call))continue;
+        const draft=store.draft(call.draftId,call.draftRevision);
+        if(draft.recoveryOf!==step.callId)continue;
+        try{await requireTool(context,call.tool,JSON.parse(call.argumentsJson));requireResult(definition.steps[index],call);
+          recoveryCalls.push({id:call.id,tool:call.tool,name:draft.name,completedAt:call.completedAt,resultSha256:call.resultSha256});}
+        catch(error){if(!error.merchantConsoleAuthorization&&!String(error.code??'').startsWith('CONSOLE_WORKFLOW_'))throw error;}
+      }
+      return{...runView(value,true),recoveryCalls};
+    },
     async save(input,context){
       for(const step of input.steps??[]){const draft=store.draft(step.draftId,step.draftRevision);await requireTool(context,draft.tool,JSON.parse(draft.argumentsJson));}
       const value=records.save(input);return{...value,definition:definitionView(value.definition)};
@@ -210,7 +231,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
     async resume(input,context){
       need(!closing,'CONSOLE_CLOSING','The original operator interface is closing.');
       requireRevision(input);const run=records.run(input.id);await authorizeRun(run,context);requireOwner(run);
-      const updated=records.update(run.id,'CONTINUED',value=>{
+      const updated=updateOwned(run.id,'CONTINUED',value=>{
         if(value.state==='COMPLETE')return;
         value.pauseRequested=false;value.state='READY';value.error=null;
       },{expectedRevision:input.expectedRevision});
@@ -219,7 +240,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
     },
     async pause(input,context){
       requireRevision(input);const run=records.run(input.id);await authorizeRun(run,context);requireOwner(run);
-      const updated=records.update(run.id,'PAUSE_REQUESTED',value=>{
+      const updated=updateOwned(run.id,'PAUSE_REQUESTED',value=>{
         if(value.state==='COMPLETE')return;
         value.pauseRequested=true;if(!active.has(value.id))value.state='PAUSED';
       },{expectedRevision:input.expectedRevision});
@@ -236,7 +257,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
       await requireTool(context,recovered.tool,JSON.parse(recovered.argumentsJson));
       requireResult(definition.steps[index],recovered);
       need(typeof input.note==='string'&&input.note.trim()&&input.note.length<=8000,'CONSOLE_WORKFLOW_RECOVERY_NOTE','Record how this completed native recovery resolves the original step.');
-      const updated=records.update(run.id,'STEP_RECOVERED',value=>{
+      const updated=updateOwned(run.id,'STEP_RECOVERED',value=>{
         const selected=value.steps[index];selected.state='RECOVERED';selected.resolvedCallId=recovered.id;
         selected.resolutionNote=input.note.trim();selected.completedAt=new Date().toISOString();value.state='PAUSED';value.pauseRequested=true;value.error=null;
       },{expectedRevision:input.expectedRevision,stepId:step.id,callId:recovered.id,detail:{originalCallId:original.id,resultSha256:recovered.resultSha256,note:input.note.trim()}});
@@ -259,7 +280,8 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
         'CONSOLE_WORKFLOW_HANDOVER','Pause this unfinished run and let its current native request return, then select the destination workspace.');
       const handover={id:input.handoverId,fromWorkspaceId:store.id,toWorkspaceId:input.workspaceId,hostFingerprint:input.hostFingerprint,
         note:input.note.trim(),at:new Date().toISOString(),sourceRevision:run.revision};
-      const updated=records.update(run.id,'HANDED_OVER',value=>{
+      const updated=updateOwned(run.id,'HANDED_OVER',value=>{
+        need(!dispatchActive(value),'CONSOLE_WORKFLOW_ACTIVE','Let the original native request return before handing this run to another workspace.');
         value.ownerWorkspaceId=handover.toWorkspaceId;value.executionHostFingerprint=handover.hostFingerprint;value.handover=handover;
         value.state='PAUSED';value.pauseRequested=true;value.error=null;
       },{expectedRevision:input.expectedRevision,detail:handover});
@@ -267,7 +289,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
     },
     beginClose(){
       closing=true;
-      for(const id of active.keys())records.update(id,'HOST_DRAIN_REQUESTED',run=>{run.pauseRequested=true;});
+      for(const id of active.keys())records.update(id,'HOST_DRAIN_REQUESTED',run=>{if(run.ownerWorkspaceId===store.id)run.pauseRequested=true;});
     },
     async close(){this.beginClose();const values=await Promise.allSettled([...active.values()]);
       const errors=values.filter(value=>value.status==='rejected').map(value=>value.reason);
