@@ -4844,6 +4844,41 @@ See the [award research operating guide](../sf30-seller-sdk/usaspending/README.m
 and [complete dossier receiving guide](../sf30-seller-sdk/usaspending/DOSSIER.md)
 for configuration, original acquisition, operator use and portable handover.
 
+## SAM.gov notice intake and original merchant handoff
+
+The installed `starforge samgov` command operates one private source workspace from saved
+GSA query through complete retained pages, notice and resource editions, reviewed
+deadlines and changes, explicit selections and frozen handoffs.
+
+~~~sh
+starforge samgov --help
+starforge samgov serve --workspace /absolute/private/sam-opportunities --operator "Procurement operator"
+~~~
+
+The browser and CLI use the same capture and revision history. Capture resumes
+its original saved page index, descriptions and attachments retain their issued
+source URLs, and full portable receiving preserves the original state chain and
+named export bytes. The five operator views cover searches/captures, notices,
+change review, selections, and handoffs. Readable HTML/Markdown and four CSV
+registers render the complete selected packet.
+
+A selected notice set prepares the original CSV dataset and version publisher.
+Supply the existing public payment terms and resource origin together to
+configure its merchant; `merchant-serve` and the browser's local seller controls
+start that same prepared service. Buyer review reads its actual running offer,
+and buyer preparation binds the original SF88 intent to that reviewed digest.
+The optional launch-selected opportunity workspace receives the same retained
+notice and document sources for requirements, teaming and response work.
+
+Typed imports start at
+`@tokenjunkielabs/starforge-merchant/seller/samgov` and its `/core`,
+`/transport`, `/merchant`, `/opportunity`, `/reports`, `/server` and `/cli` subpaths.
+See the [complete SAM.gov operator guide](../sf30-seller-sdk/samgov/README.md).
+The [primary GSA contract](https://open.gsa.gov/api/get-opportunities-public-api/)
+defines the provider's latest active observation, one-year query window and
+zero-based page index. Existing provider credentials remain in the selected
+runtime.
+
 ## Opportunity requirements, teaming and proposal handoff
 
 The installed `starforge opportunity` family operates the company and opportunity

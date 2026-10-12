@@ -425,7 +425,8 @@
     "grpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/start.mjs",
     "grpc-contract": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/cli.mjs",
     "grpc-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
-    "grpc-example": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/server.mjs"
+    "grpc-example": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/server.mjs",
+    "samgov": "stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1031,7 +1032,39 @@
     "./seller/fred/receiver": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/receiver.mjs",
     "./merchant/mcp/har-workspaces": "./source/stellar-forge/mcp-merchant-operator/har-workspace.mjs",
     "./merchant/mcp/har-export": "./source/stellar-forge/mcp-merchant-operator/har-export.mjs",
-    "./merchant/mcp/har-download": "./source/stellar-forge/mcp-merchant-operator/har-download.mjs"
+    "./merchant/mcp/har-download": "./source/stellar-forge/mcp-merchant-operator/har-download.mjs",
+    "./seller/samgov": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/workspace.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/workspace.mjs"
+    },
+    "./seller/samgov/core": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/core.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/core.mjs"
+    },
+    "./seller/samgov/transport": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/transport.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/transport.mjs"
+    },
+    "./seller/samgov/merchant": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/merchant.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/merchant.mjs"
+    },
+    "./seller/samgov/opportunity": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/opportunity.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/opportunity.mjs"
+    },
+    "./seller/samgov/reports": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/reports.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/reports.mjs"
+    },
+    "./seller/samgov/server": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/server.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/server.mjs"
+    },
+    "./seller/samgov/cli": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/cli.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/cli.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {
