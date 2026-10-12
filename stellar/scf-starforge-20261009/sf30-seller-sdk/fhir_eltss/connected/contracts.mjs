@@ -46,23 +46,24 @@ export function canonical(value){
 export function manifestIdentity(value){
   const copy={...value};delete copy.exportId;return digest(Buffer.from(JSON.stringify(canonical(copy))));
 }
-export function parseEltssExport(bytes,expectedId){
+export function parseEltssExport(bytes,expectedId,{schema=EXPORT_SCHEMA,manifestName=MANIFEST_NAME,
+  kinds=['native-response','source-file','source-packet','dataset','dataset-packet','comparison-file','workspace-packet','assessment-file','edition-changes-file','handoff-packet','artifact-file']}={}){
   need(bytes.length<=65000,'ELTSS_MANIFEST_INVALID');
   const value=decode(bytes);
   exact(value,['schema','exportId','workspace','workspaceId','instanceId','kind','source','files'],
     ['schema','exportId','workspace','workspaceId','instanceId','kind','source','files']);
   checked(value.exportId,SHA,'export ID');checked(value.workspace,ALIAS,'workspace alias');
   checked(value.workspaceId,UUID,'workspace ID');checked(value.instanceId,UUID,'operator instance');
-  need(value.schema===EXPORT_SCHEMA && value.exportId===manifestIdentity(value) &&
+  need(value.schema===schema && value.exportId===manifestIdentity(value) &&
     (expectedId===undefined || expectedId===value.exportId) && plain(value.source) &&
-    ['native-response','source-file','source-packet','dataset','dataset-packet','comparison-file','workspace-packet','assessment-file','edition-changes-file','handoff-packet','artifact-file'].includes(value.kind) &&
+    kinds.includes(value.kind) &&
     Array.isArray(value.files) && value.files.length>=1 && value.files.length<=4,
     'ELTSS_MANIFEST_INVALID','Select the complete original eLTSS export manifest.');
   const names=new Set();let total=0;
   for(const file of value.files){
     exact(file,['name','bytes','sha256','contentType'],['name','bytes','sha256','contentType']);
     need(typeof file.name==='string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/.test(file.name) &&
-      file.name!==MANIFEST_NAME && !names.has(file.name) && Number.isSafeInteger(file.bytes) &&
+      file.name!==manifestName && !names.has(file.name) && Number.isSafeInteger(file.bytes) &&
       file.bytes>=0 && file.bytes<=MAX_PACKET_BYTES,'ELTSS_MANIFEST_INVALID');
     names.add(file.name);checked(file.sha256,SHA,'file SHA256');text(file.contentType,'Content type',256);
     total+=file.bytes;
