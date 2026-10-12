@@ -14,7 +14,7 @@ const base64=bytes=>{let text='';for(let i=0;i<bytes.length;i+=32768)text+=Strin
 const stale=()=>Object.assign(Error('A later source selection superseded this view request.'),{code:'KIWIS_VIEW_CHANGED'});
 export function mountKiWIS({api,notice}){
   let inventory={sources:[],reviews:[]},source=null,sourceId=null,choices=null,preview=null,page=0,selectedRecord=null,comparison=null,fields=[],filtered=[];
-  let generation=0,navigation=0,loading=null,revision=0,refreshSequence=0,comparisonSequence=0,savedReviewId=null;
+  let generation=0,navigation=0,loading=null,revision=0,refreshSequence=0,comparisonSequence=0,savedReviewId=null,comparisonPage=0;
   let edits=Promise.resolve(),pendingEdits=0,activeCapture=null,sourceReceiving=false,bundleReceiving=false;
   const action=fn=>async event=>{event?.preventDefault();try{await fn(event);}catch(error){if(error.code!=='KIWIS_VIEW_CHANGED')notice(error.message,true);}};
   const draftState=element('p','',{id:'kiwis-draft-state',role:'status'});$('kiwis-save-form').before(draftState);
@@ -23,7 +23,7 @@ export function mountKiWIS({api,notice}){
   function requireSource(){if(!source||!choices)throw Error('Open a complete original source pair.');}
   function controls(){
     const busy=pendingEdits>0||loading!==null;
-    for(const id of ['kiwis-mapping-form','kiwis-quality-form','kiwis-time-form','kiwis-save-form','kiwis-records'])
+    for(const id of ['kiwis-mapping-form','kiwis-quality-form','kiwis-time-form','kiwis-save-form','kiwis-records','kiwis-compare-form'])
       for(const node of $(id).querySelectorAll('input,select,textarea,button'))node.disabled=busy;
     for(const id of ['kiwis-mapping-series','kiwis-link-unique','kiwis-separate','kiwis-decisions-file'])$(id).disabled=busy;
     $('kiwis-adopt-comparison').disabled=busy||!comparison;
@@ -36,6 +36,8 @@ export function mountKiWIS({api,notice}){
       pendingEdits?'Validating the selected changes; the current complete draft is retained.':
       savedReviewId?'Saved edition '+savedReviewId+'. Changing decisions creates a new draft with a new review name.':
       source?'Editable draft for '+sourceId+'. Save a new review name to retain this complete edition.':'';
+    $('kiwis-compare-state').textContent=savedReviewId?'Compare saved edition '+savedReviewId+' with the earlier saved review, including all decision changes.':
+      source?'Compare this source with the earlier saved review. Save the current draft to include its decision changes.':'';
     timeMode();
   }
   async function refresh(){
@@ -50,7 +52,7 @@ export function mountKiWIS({api,notice}){
   }
   function markDraftChanged(){
     if(savedReviewId&&$('kiwis-save-id').value===savedReviewId)$('kiwis-save-id').value='';
-    savedReviewId=null;$('kiwis-downloads').replaceChildren();revision++;
+    savedReviewId=null;$('kiwis-downloads').replaceChildren();comparison=null;$('kiwis-comparison').hidden=true;revision++;
   }
   function counts(){
     $('kiwis-counts').replaceChildren(...Object.entries(preview.counts).map(([key,value])=>{
@@ -277,17 +279,58 @@ export function mountKiWIS({api,notice}){
     requireSource();const file=$('kiwis-decisions-file').files[0];
     if(file){try{await changeDraft(async()=>JSON.parse(await file.text()));}finally{$('kiwis-decisions-file').value='';}}
   }));
+  function renderComparison(){
+    const review=comparison?.reviewComparison;
+    $('kiwis-review-difference').hidden=!review;if(!review)return;
+    const status=$('kiwis-comparison-filter').value,search=$('kiwis-comparison-search').value.toLowerCase(),
+      rows=review.records.filter(row=>(!status||row.status===status)&&(!search||
+        [row.previousRecordId,row.currentRecordId,row.before?.status,row.after?.status,...row.changedFields].join(' ').toLowerCase().includes(search))),
+      pages=Math.max(1,Math.ceil(rows.length/40));
+    comparisonPage=Math.max(0,Math.min(comparisonPage,pages-1));
+    const body=$('kiwis-comparison-records');body.replaceChildren();
+    for(const row of rows.slice(comparisonPage*40,(comparisonPage+1)*40)){
+      const tr=element('tr');
+      for(const value of [row.previousRecordId===row.currentRecordId?row.currentRecordId:
+        (row.previousRecordId??'Absent')+' → '+(row.currentRecordId??'Absent'),row.before?.status??'Absent',
+        row.after?.status??'Absent',row.changedFields.join(', ')||row.sourceMatch.reason])tr.append(element('td',value));
+      const cell=element('td'),button=element('button','Open decision difference',{type:'button'});
+      button.addEventListener('click',()=>{$('kiwis-comparison-record-detail').textContent=JSON.stringify(row,null,2);
+        $('kiwis-comparison-record-detail').hidden=false;});
+      cell.append(button);tr.append(cell);body.append(tr);
+    }
+    $('kiwis-comparison-page').textContent=rows.length+' records · Page '+(comparisonPage+1)+' of '+pages;
+    $('kiwis-comparison-prev').disabled=comparisonPage===0;$('kiwis-comparison-next').disabled=comparisonPage>=pages-1;
+  }
+  for(const id of ['kiwis-comparison-filter','kiwis-comparison-search'])$(id).addEventListener('input',()=>{comparisonPage=0;renderComparison();});
+  $('kiwis-comparison-prev').addEventListener('click',()=>{comparisonPage--;renderComparison();});
+  $('kiwis-comparison-next').addEventListener('click',()=>{comparisonPage++;renderComparison();});
+  $('kiwis-comparison-download').addEventListener('click',action(async()=>{
+    if(!comparison)throw Error('Compare the selected editions first.');
+    download((comparison.reviewComparison?.current.reviewId??sourceId)+'-complete-edition-comparison.json',comparison);
+  }));
   $('kiwis-compare-form').addEventListener('submit',action(async()=>{
-    requireSource();const expected=generation,request=++comparisonSequence,id=sourceId,previousReviewId=$('kiwis-previous-review').value;
-    const result=await api('/api/kiwis/compare',{sourceId:id,previousReviewId});
-    if(expected!==generation||request!==comparisonSequence)throw stale();
-    if(result.currentSourceSha256!==source.sourceSha256)throw Error('The comparison belongs to another complete source.');
-    comparison=result;const summary={};
+    requireSource();if(pendingEdits||loading!==null)throw Error('Wait for the current review to finish opening or validating.');
+    const view=snapshot(),request=++comparisonSequence,id=sourceId,reviewId=savedReviewId,
+      previousReviewId=$('kiwis-previous-review').value;
+    if(!previousReviewId)throw Error('Select the earlier saved review.');
+    const result=await api('/api/kiwis/compare',{sourceId:id,previousReviewId,...(reviewId?{reviewId}:{})});
+    if(!sameView(view)||request!==comparisonSequence||savedReviewId!==reviewId)throw stale();
+    if(result.currentSourceSha256!==source.sourceSha256||reviewId&&result.reviewComparison?.current.reviewId!==reviewId)
+      throw Error('The comparison belongs to another complete source or saved review.');
+    comparison=result;comparisonPage=0;const summary={};
     for(const row of comparison.changes){const key=row.kind+'/'+row.status;summary[key]=(summary[key]??0)+1;}
-    $('kiwis-comparison-summary').textContent=JSON.stringify({changes:summary,proposedCorrespondences:comparison.proposedDocument.correspondences.length,
+    const review=comparison.reviewComparison;
+    $('kiwis-comparison-summary').textContent=JSON.stringify({
+      mode:review?'Saved review decisions and source editions':'Source editions',
+      ...(review?{previousReviewId:review.previous.reviewId,currentReviewId:review.current.reviewId,
+        sameSource:review.sameSource,previousCounts:review.previous.counts,currentCounts:review.current.counts,countDelta:review.countDelta,
+        reviewCoverage:review.coverage,statusTransitions:review.statusTransitions,
+        decisionChanges:Object.fromEntries(Object.entries(review.decisionChanges).map(([name,{entries,...counts}])=>[name,counts]))}:{}),
+      sourceChanges:summary,proposedCorrespondences:comparison.proposedDocument.correspondences.length,
       qualityCataloguesChanged:comparison.qualityCataloguesChanged,counterpartProfileChanged:comparison.counterpartProfileChanged??false,
-      counterpartCoverage:comparison.counterpartCoverage??null,retainedDecisions:comparison.retainedDecisions},null,2);
-    $('kiwis-comparison').hidden=false;controls();download(id+'-complete-edition-comparison.json',comparison);
+      counterpartCoverage:comparison.counterpartCoverage??null},null,2);
+    $('kiwis-comparison-record-detail').hidden=true;$('kiwis-comparison-filter').value='';$('kiwis-comparison-search').value='';
+    $('kiwis-comparison').hidden=false;renderComparison();controls();download((reviewId??id)+'-complete-edition-comparison.json',comparison);
   }));
   $('kiwis-adopt-comparison').addEventListener('click',action(async()=>{
     requireSource();if(!comparison||comparison.currentSourceSha256!==source.sourceSha256)throw Error('Compare the original source editions first.');

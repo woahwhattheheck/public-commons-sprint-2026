@@ -411,8 +411,101 @@ export function compareCommissioningSources(current,previous,previousDocument){
     currentSourceSha256:current.sourceSha256,previousDocument:document,qualityCataloguesChanged:!sameQuality,
     counterpartProfileChanged:!sameProfile,metadataComparison:'Exact provider fields; repeated request-window wrappers are separate coverage.',
     changes,retainedDecisions:retained,
+    counterpartMatches:[...rowMatches].map(([previousRecordId,match])=>({previousRecordId,status:match.status,reason:match.reason,
+      currentRecordId:['UNCHANGED','CHANGED'].includes(match.status)?match.candidate?.recordId??null:null,candidateIds:match.candidateIds})),
     counterpartCoverage:{previousRecords:previous.counterpart.records.length,currentRecords:current.counterpart.records.length,
       representedPrevious:coveredBefore.size,representedCurrent:coveredAfter.size},
     proposedDocument:normalizeDecisions(current,proposed)};
+  return {...content,comparisonSha256:digest(canonical(content))};
+}
+
+
+function savedReviewIdentity(source,saved){
+  if(saved?.schema!=='starforge.kiwis-commissioning-saved.v1'||saved.review?.schema!==REVIEW_SCHEMA)
+    fail('KIWIS_REVIEW','Compare two complete saved commissioning reviews.');
+  const {savedSha256,...savedBody}=saved,{reviewSha256,...reviewBody}=saved.review,review=saved.review;
+  if(digest(canonical(savedBody))!==savedSha256||digest(canonical(reviewBody))!==reviewSha256||
+    review.sourceSha256!==source.sourceSha256||!same(review.source,source.binding)||
+    digest(canonical(review.document))!==review.documentSha256||!same(normalizeDecisions(source,review.document),review.document))
+    fail('KIWIS_REVIEW_CHANGED','Keep each complete saved review bound to its original sources and decisions.');
+  const originals=new Map(source.counterpart.records.map(row=>[row.recordId,row])),seen=new Set();
+  if(!Array.isArray(review.records)||review.records.length!==originals.size||review.counts.counterpartRecords!==originals.size)
+    fail('KIWIS_REVIEW_CHANGED','Retain every original physical counterpart in the saved review.');
+  for(const row of review.records){
+    if(seen.has(row.recordId)||originals.get(row.recordId)?.rowSha256!==row.rowSha256)
+      fail('KIWIS_REVIEW_CHANGED','Retain one saved review record for every exact original physical row.');
+    seen.add(row.recordId);
+  }
+  return {reviewId:saved.reviewId,sourceId:saved.sourceId,title:saved.title,savedSha256,
+    sourceSha256:review.sourceSha256,reviewSha256,documentSha256:review.documentSha256,counts:review.counts,document:review.document};
+}
+function decisionChanges(previous,current){
+  const result={};
+  const keyFor={profiles:row=>[row.seriesId],quality:row=>[row.seriesId,row.code],
+    times:row=>[row.recordId,row.path],correspondences:row=>[row.recordId]};
+  for(const [section,key]of Object.entries(keyFor)){
+    const before=new Map(previous[section].map((value,index)=>[canonical(key(value)),{value,index}])),
+      after=new Map(current[section].map((value,index)=>[canonical(key(value)),{value,index}]));
+    const summary={previous:before.size,current:after.size,added:0,removed:0,changed:0,unchanged:0,entries:[]};
+    for(const id of new Set([...before.keys(),...after.keys()])){
+      const a=before.get(id),b=after.get(id),status=!a?'ADDED':!b?'REMOVED':same(a.value,b.value)?'UNCHANGED':'CHANGED';
+      summary[status.toLowerCase()]++;
+      summary.entries.push({key:JSON.parse(id),status,beforeIndex:a?.index??null,afterIndex:b?.index??null,
+        changedFields:a&&b?Object.keys({...a.value,...b.value}).filter(field=>!same(a.value[field]??null,b.value[field]??null)):[]});
+    }
+    result[section]=summary;
+  }
+  return result;
+}
+export function compareCommissioningReviews(current,previous,currentSaved,previousSaved){
+  const currentIdentity=savedReviewIdentity(current,currentSaved),previousIdentity=savedReviewIdentity(previous,previousSaved),
+    sourceComparison=compareCommissioningSources(current,previous,previousSaved.review.document),
+    oldRecords=new Map(previousSaved.review.records.map(row=>[row.recordId,row])),
+    newRecords=new Map(currentSaved.review.records.map(row=>[row.recordId,row])),
+    sameSource=current.sourceSha256===previous.sourceSha256,
+    matches=new Map(sourceComparison.counterpartMatches.map(match=>[match.previousRecordId,match])),
+    pairedCurrent=new Set(),records=[],transitions=new Map();
+  const coverage={previousRecords:oldRecords.size,currentRecords:newRecords.size,paired:0,unchanged:0,changed:0,
+    unpairedPrevious:0,unpairedCurrent:0};
+  const incoming=new Map();
+  for(const match of matches.values())for(const id of match.candidateIds){
+    if(!incoming.has(id))incoming.set(id,[]);incoming.get(id).push(match.previousRecordId);
+  }
+  function append(before,after,sourceMatch){
+    const changedFields=before&&after?Object.keys({...before,...after}).filter(field=>!same(before[field]??null,after[field]??null)):[],
+      status=before&&after?(changedFields.length?'CHANGED':'UNCHANGED'):'UNPAIRED';
+    if(before&&after){coverage.paired++;coverage[status.toLowerCase()]++;}
+    else if(before)coverage.unpairedPrevious++;else coverage.unpairedCurrent++;
+    const key=canonical([before?.status??null,after?.status??null]);transitions.set(key,(transitions.get(key)??0)+1);
+    records.push({previousRecordId:before?.recordId??null,currentRecordId:after?.recordId??null,status,sourceMatch,changedFields,
+      before:before??null,after:after??null});
+  }
+  for(const [id,before]of oldRecords){
+    const match=sameSource?{status:'UNCHANGED',reason:'Both saved reviews retain the identical source edition and physical record.',
+      currentRecordId:id,candidateIds:[id]}:matches.get(id);
+    const after=match&&['UNCHANGED','CHANGED'].includes(match.status)&&match.currentRecordId?newRecords.get(match.currentRecordId):null;
+    if(after){
+      if(pairedCurrent.has(after.recordId))fail('KIWIS_COMPARISON','A saved-review comparison must not coalesce original physical rows.');
+      pairedCurrent.add(after.recordId);
+    }
+    append(before,after,match??{status:'UNMAPPED',reason:'No original physical source match is established.',currentRecordId:null,candidateIds:[]});
+  }
+  for(const [id,after]of newRecords)if(!pairedCurrent.has(id))
+    append(null,after,{status:'UNPAIRED',reason:'This current physical row has no unique paired prior review record.',
+      currentRecordId:id,previousRecordIds:incoming.get(id)??[]});
+  if(coverage.paired+coverage.unpairedPrevious!==oldRecords.size||coverage.paired+coverage.unpairedCurrent!==newRecords.size)
+    fail('KIWIS_COMPARISON','Keep complete physical row coverage in both saved editions.');
+  const countDelta={};
+  for(const key of new Set([...Object.keys(previousSaved.review.counts),...Object.keys(currentSaved.review.counts)])){
+    const before=previousSaved.review.counts[key],after=currentSaved.review.counts[key];
+    if(!Number.isSafeInteger(before)||!Number.isSafeInteger(after))fail('KIWIS_COMPARISON','Compare exact complete native review counts.');
+    countDelta[key]=after-before;
+  }
+  const body={schema:'starforge.kiwis-commissioning-saved-review-comparison.v1',previous:previousIdentity,current:currentIdentity,
+    sameSource,countDelta,coverage,decisionIdentity:'Exact saved decision keys; source identity matches are retained separately for each physical record.',
+    decisionChanges:decisionChanges(previousSaved.review.document,currentSaved.review.document),
+    statusTransitions:[...transitions].map(([key,count])=>{const [before,after]=JSON.parse(key);return {before,after,count};}),records};
+  const reviewComparison={...body,reviewComparisonSha256:digest(canonical(body))};
+  const {comparisonSha256,...sourceBody}=sourceComparison,content={...sourceBody,mode:'saved-reviews',sourceComparisonSha256:comparisonSha256,reviewComparison};
   return {...content,comparisonSha256:digest(canonical(content))};
 }

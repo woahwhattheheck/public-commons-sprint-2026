@@ -55,7 +55,7 @@
     }
   ],
   "browser": {
-    "playwrightModule": "/absolute/path/to/installed/playwright/index.js",
+    "playwrightModule": "/absolute/path/to/installed/playwright/index.mjs",
     "chromiumExecutable": "/absolute/path/to/installed/chromium"
   }
 }

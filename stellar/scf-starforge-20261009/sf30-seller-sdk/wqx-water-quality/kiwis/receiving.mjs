@@ -69,8 +69,8 @@ async function counterpart(selected,base){
   if(kind==='kiwis-wqm')return {kind,response:original};
   return {kind,bundle:original};
 }
-async function operatorBrowser({projectDirectory,reviewId,expectedCounts,output,configuration,saveAs}){
-  const phaseInput={projectDirectory,reviewId,expectedCounts,configuration,saveAs:saveAs??null},
+async function operatorBrowser({projectDirectory,reviewId,previousReviewId,expectedCounts,output,configuration,saveAs}){
+  const phaseInput={projectDirectory,reviewId,expectedCounts,configuration,saveAs:saveAs??null,...(previousReviewId?{previousReviewId}:{})},
     phaseSha256=digest(canonical(phaseInput)),phasePath=join(output,'COMPLETE.json');
   try{
     const previous=await jsonFile(phasePath);
@@ -88,7 +88,7 @@ async function operatorBrowser({projectDirectory,reviewId,expectedCounts,output,
   }catch(error){if(error.code!=='ENOENT')throw error;}
   const phaseFiles=[],playwright=await import(pathToFileURL(resolve(configuration.playwrightModule)).href);
   const workspace=await startWaterQualityWorkspace({directory:projectDirectory}),errors=[],downloads=[];
-  let browser;
+  let browser,comparisonResult;
   try{
     const originalSaved=await readCommissioningReview({project:workspace.project,reviewId});
     browser=await playwright.chromium.launch({executablePath:resolve(configuration.chromiumExecutable),headless:true,
@@ -115,6 +115,39 @@ async function operatorBrowser({projectDirectory,reviewId,expectedCounts,output,
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2);
     requireValue(!overflow,'The complete operator page must fit the selected mobile viewport.');
     await page.setViewportSize({width:1440,height:1040});
+    if(previousReviewId){
+      const prior=await readCommissioningReview({project:workspace.project,reviewId:previousReviewId});
+      await page.locator('#kiwis-previous-review').selectOption(previousReviewId);
+      const responsePromise=page.waitForResponse(response=>response.url().endsWith('/api/kiwis/compare')&&response.request().method()==='POST');
+      await page.locator('#kiwis-compare-form button[type="submit"]').click();
+      const response=await responsePromise;
+      requireValue(response.status()===200,'Compare both complete saved editions through the original operator workspace.');
+      const comparison=await response.json(),{comparisonSha256,...body}=comparison,review=comparison.reviewComparison;
+      requireValue(digest(canonical(body))===comparisonSha256&&review?.current.reviewId===reviewId&&
+        review.previous.reviewId===previousReviewId&&review.current.savedSha256===originalSaved.savedSha256&&
+        review.previous.savedSha256===prior.savedSha256,'The operator comparison must retain both exact saved editions.');
+      requireValue(review.coverage.previousRecords===prior.review.records.length&&
+        review.coverage.currentRecords===originalSaved.review.records.length&&
+        review.coverage.paired+review.coverage.unpairedPrevious===prior.review.records.length&&
+        review.coverage.paired+review.coverage.unpairedCurrent===originalSaved.review.records.length,
+        'The operator comparison must account for every physical review record.');
+      await page.locator('#kiwis-comparison').waitFor({state:'visible'});
+      const summary=JSON.parse(await page.locator('#kiwis-comparison-summary').textContent());
+      requireValue(summary.previousReviewId===previousReviewId&&summary.currentReviewId===reviewId&&
+        canonical(summary.previousCounts)===canonical(prior.review.counts)&&canonical(summary.currentCounts)===canonical(expectedCounts)&&
+        canonical(summary.reviewCoverage)===canonical(review.coverage),
+        'The visible comparison must show the complete original count and decision change.');
+      if(review.records.length){
+        await page.getByRole('button',{name:'Open decision difference',exact:true}).first().click();
+        await page.locator('#kiwis-comparison-record-detail').waitFor({state:'visible'});
+        requireValue(canonical(JSON.parse(await page.locator('#kiwis-comparison-record-detail').textContent()))===canonical(review.records[0]),
+          'The operator must open the complete original before/after decision record.');
+      }
+      phaseFiles.push(await preserve(join(output,'complete-saved-review-comparison.json'),comparison));
+      comparisonResult={previousReviewId,currentReviewId:reviewId,comparisonSha256,
+        reviewComparisonSha256:review.reviewComparisonSha256,coverage:review.coverage,countDelta:review.countDelta,
+        statusTransitions:review.statusTransitions};
+    }
     let selectedReviewId=reviewId;
     if(saveAs){
       selectedReviewId=operationId(saveAs);
@@ -135,7 +168,7 @@ async function operatorBrowser({projectDirectory,reviewId,expectedCounts,output,
     requireValue(!errors.length,'The operator encountered a browser error: '+errors.join('; '));
     const selectedSaved=await readCommissioningReview({project:workspace.project,reviewId:selectedReviewId}),
       result={reviewId:selectedReviewId,savedSha256:selectedSaved.savedSha256,counts:actual,downloads,browserErrors:errors,
-        viewports:[[1440,1040],[390,844]],horizontalOverflow:overflow};
+        viewports:[[1440,1040],[390,844]],horizontalOverflow:overflow,...(comparisonResult?{comparison:comparisonResult}:{})};
     await preserve(phasePath,{schema:'starforge.kiwis-operator-phase.v1',inputSha256:phaseSha256,
       originalSavedSha256:originalSaved.savedSha256,result,files:phaseFiles});
     return result;
@@ -192,11 +225,16 @@ export async function receiveProgramme(configuration,{baseDirectory=process.cwd(
         const file=await exportCommissioningReview({project,reviewId:saved.reviewId,format});
         files.push(await preserve(join(output,'deliverables',saved.reviewId,file.filename),file.bytes));
       }
-      if(selected.previousReviewId){
-        const comparison=await compareCommissioningEditions({project,sourceId:selected.sourceId,previousReviewId:selected.previousReviewId});
-        comparisons.push({reviewId:saved.reviewId,comparisonSha256:comparison.comparisonSha256,changes:comparison.changes.length});
-        files.push(await preserve(join(output,'deliverables',saved.reviewId,'complete-edition-comparison.json'),comparison));
-      }
+    }
+    // All configured saved editions exist before comparisons, independent of configuration order.
+    for(const selected of configuration.reviews.filter(review=>review.previousReviewId)){
+      const comparison=await compareCommissioningEditions({project,sourceId:selected.sourceId,reviewId:selected.reviewId,
+        previousReviewId:selected.previousReviewId});
+      comparisons.push({reviewId:selected.reviewId,previousReviewId:selected.previousReviewId,comparisonSha256:comparison.comparisonSha256,
+        changes:comparison.changes.length,reviewComparisonSha256:comparison.reviewComparison.reviewComparisonSha256,
+        coverage:comparison.reviewComparison.coverage,countDelta:comparison.reviewComparison.countDelta,
+        statusTransitions:comparison.reviewComparison.statusTransitions});
+      files.push(await preserve(join(output,'deliverables',selected.reviewId,'complete-edition-comparison.json'),comparison));
     }
     await project.close();project=null;
     if(configuration.browser){
@@ -204,7 +242,7 @@ export async function receiveProgramme(configuration,{baseDirectory=process.cwd(
         'Select the installed original Playwright module and Chromium executable.');
       for(const selected of configuration.reviews.filter(review=>review.browser===true)){
         const original=reviews.find(r=>r.reviewId===selected.reviewId);
-        const value=await operatorBrowser({projectDirectory,reviewId:selected.reviewId,expectedCounts:original.counts,
+        const value=await operatorBrowser({projectDirectory,reviewId:selected.reviewId,previousReviewId:selected.previousReviewId,expectedCounts:original.counts,
           output:join(output,'browser',selected.reviewId),configuration:configuration.browser,saveAs:selected.operatorReviewId});
         operator.push(value);
       }
@@ -224,12 +262,18 @@ export async function receiveProgramme(configuration,{baseDirectory=process.cwd(
     received=await openWaterQualityProject(receivingDirectory);
     for(const row of reopened){const actual=await readCommissioningReview({project:received,reviewId:row.reviewId});
       requireValue(actual.savedSha256===row.savedSha256,'Cold reopen must retain the exact original receiving edition.');}
+    for(const comparison of comparisons){
+      const actual=await compareCommissioningEditions({project:received,reviewId:comparison.reviewId,previousReviewId:comparison.previousReviewId});
+      requireValue(actual.comparisonSha256===comparison.comparisonSha256,
+        'Cold independent receiving must reproduce the complete saved-review comparison.');
+      files.push(await preserve(join(output,'independent-comparisons',comparison.reviewId+'-complete-edition-comparison.json'),actual));
+    }
     await received.close();received=null;
     if(configuration.browser){
       const chosen=configuration.reviews.find(review=>review.browser===true);
       if(chosen){
         const original=reviews.find(r=>r.reviewId===chosen.reviewId);
-        operator.push(await operatorBrowser({projectDirectory:receivingDirectory,reviewId:chosen.reviewId,expectedCounts:original.counts,
+        operator.push(await operatorBrowser({projectDirectory:receivingDirectory,reviewId:chosen.reviewId,previousReviewId:chosen.previousReviewId,expectedCounts:original.counts,
           output:join(output,'browser','independent-receiving'),configuration:configuration.browser}));
       }
     }
