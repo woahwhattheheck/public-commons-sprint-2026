@@ -710,15 +710,16 @@
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Original Airbyte connector commissioning, managed Applications and complete SDK/MCP receiving",
-    "readme": "opportunities/airbyte-connector-commissioning-20261012/README.md",
+    "description": "Original Property Operations, managed Applications and complete native SDK/MCP customer receiving",
+    "readme": "stellar/scf-starforge-20261009/sf30-seller-sdk/property-operations/INTERFACES.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs",
-      "airbyte-commissioning": "opportunities/airbyte-connector-commissioning-20261012/applications/cli.mjs"
+      "property-application": "stellar/scf-starforge-20261009/sf30-seller-sdk/property-operations/managed-launch.mjs",
+      "property-mcp": "stellar-forge/mcp-merchant-operator/property-cli.mjs"
     },
     "repository": {
-      "url": "https://github.com/woahwhattheheck/commons",
-      "directory": "opportunities/airbyte-connector-commissioning-20261012"
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+      "directory": "stellar/scf-starforge-20261009/sf30-seller-sdk/property-operations"
     }
   }
 }
