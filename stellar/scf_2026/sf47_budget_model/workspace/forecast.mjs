@@ -69,6 +69,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
       +field('Delivery starts','startDate',row.startDate,{type:'date',required:!timed})+field('Delivery finishes','endDate',row.endDate,{type:'date',required:!timed})
       +'<div data-forecast-timing-only class="forecast-wide"><div class="forecast-fields">'
       +field('Original condition before work can start','timingStartCondition',row.timing?.startCondition||'',{area:true,wide:true,help:'Retain the original deposit, agreed inputs and named review prerequisites. Leave both work dates empty until its reviewed window is known.'})
+      +field('Original reviewed trigger date','timingReviewedReleaseDate',row.timing?.reviewedReleaseDate||'',{type:'date',help:'Leave empty while prerequisites are unresolved. Once reviewed, this original date anchors the promised deadline even when resource availability delays work.'})
       +field('Quoted delivery window (business days)','timingDeliveryBusinessDays',row.timing?.deliveryBusinessDays??1,{type:'number',help:'The original Portfolio derives the delivery deadline from the reviewed release date and selected working calendar.'})+'</div></div>'
       +field('Cost timing','paymentMode',row.paymentMode||'accrual',{options:[['accrual','Evenly over delivery dates'],['completion','At delivery completion']]})
       +field('Original offer URL','sourceUrl',row.sourceUrl,{type:'url',wide:true})
@@ -88,6 +89,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
     for(const node of row.querySelectorAll('[name=timingStartCondition],[name=timingDeliveryBusinessDays],[name=receiptCondition]')){
       node.required=timed;node.disabled=busy||!timed;node.dataset.forecastFixed=String(!timed);
     }
+    const trigger=row.querySelector('[name=timingReviewedReleaseDate]');trigger.disabled=busy||!timed;trigger.dataset.forecastFixed=String(!timed);
   }
   function editor(inputs){
     const packages=new Map(inputs.packageOverrides.map(row=>[row.costId,row]));
@@ -129,7 +131,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
         priceUsd:value(row,'priceUsd'),totalDeliveryCostUsd:value(row,'totalDeliveryCostUsd'),remainingHours:value(row,'remainingHours'),
         startDate:optional(row,'startDate'),endDate:optional(row,'endDate'),paymentMode:value(row,'paymentMode'),
         ...(value(row,'timingMode')==='EVENT_DEPENDENT'?{timing:{mode:'EVENT_DEPENDENT',
-          startCondition:value(row,'timingStartCondition'),deliveryBusinessDays:Number(value(row,'timingDeliveryBusinessDays')),
+          startCondition:value(row,'timingStartCondition'),reviewedReleaseDate:optional(row,'timingReviewedReleaseDate'),deliveryBusinessDays:Number(value(row,'timingDeliveryBusinessDays')),
           receiptConditions:[...row.querySelectorAll('[data-forecast-receipt]')].map(receipt=>({receiptId:value(receipt,'receiptId'),condition:value(receipt,'receiptCondition')}))}}:{}),
         sourceUrl:value(row,'sourceUrl'),sourceIds:selectedValues(row,'sourceIds'),cashIds:selectedValues(row,'cashIds'),
         invoiceIds:selectedValues(row,'invoiceIds'),directCashIds:selectedValues(row,'directCashIds'),scope:value(row,'scope'),note:value(row,'note'),
@@ -152,8 +154,8 @@ export function mountForecast({container,current,api:transport,mutationId,record
   function eventTimingHtml(report){
     const timing=report.eventTiming;if(!timing)return '';
     return '<section class="forecast-note"><h5>Event-dependent work and collections</h5><p>'+esc(timing.undatedHours)+' selected work hours and '+usd(timing.undatedDeliveryCostUsd)+' of delivery costs await work dates. '+usd(timing.undatedCustomerReceiptsUsd)+' of quoted collections await collection dates. These amounts remain in the complete scope; the cash and capacity curves cover entered dates.</p>'
-      +table(['Project','Original start condition','Delivery working days','Work window','Original collection terms'],timing.projects.map(row=>[
-        esc(row.title)+(row.selected?'':'<small>Excluded from this scenario</small>'),esc(row.startCondition),esc(row.deliveryBusinessDays),
+      +table(['Project','Original start condition','Original reviewed trigger','Delivery working days','Work window','Original collection terms'],timing.projects.map(row=>[
+        esc(row.title)+(row.selected?'':'<small>Excluded from this scenario</small>'),esc(row.startCondition),esc(row.reviewedReleaseDate||'Awaiting original event'),esc(row.deliveryBusinessDays),
         row.startDate?esc(row.startDate)+' — '+esc(row.endDate):'Awaiting reviewed dates',
         row.receipts.map(receipt=>esc(receipt.label)+' · '+usd(receipt.amountUsd)+' · '+esc(receipt.condition)+'<small>'+(receipt.date?esc(receipt.date):'Collection date not entered')+'</small>').join('<br>')
       ]))+'<p>'+esc(timing.basis)+'</p></section>';
