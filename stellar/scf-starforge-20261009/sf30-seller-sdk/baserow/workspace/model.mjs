@@ -14,6 +14,8 @@ import { openBaserowPublisher } from '../publisher/model.mjs';
 import { startPostgresPublisherServer } from '../../postgres/publisher/server.mjs';
 import { reviewBaserowDeployment, prepareBaserowDeployment, inspectBaserowDeployment, stageBaserowDeployment, readBaserowDeploymentFile } from '../deployment.mjs';
 import { inspectBaserowAuthoring } from './launch.mjs';
+import { publisherRequest, readBaserowPublisher, executeBaserowPublisher, observeBaserowPublisher,
+  baserowPublisherBefore } from './publisher-operations.mjs';
 import { normalizeConnections, selectConnection, connectionViews, discoveryConfig } from './provider.mjs';
 import { MAX_PACKET_BYTES, makeBaserowSourcePacket, validatePacket, retainPacket, packetFromCapture, createOrVerify } from './packet.mjs';
 
@@ -625,6 +627,45 @@ export async function openBaserowAuthoring({ directory, create = false, connecti
         try { return await action(original); } finally { await original.close(); }
       });
     }
+
+    async function publisherState({ action = 'status', input = {}, ...extra } = {}) {
+      if (Object.keys(extra).length) throw fault('BASEROW_PUBLISHER_ACTION_INVALID');
+      input = publisherRequest(action, input);
+      return withPublisher(publisher => readBaserowPublisher({
+        publisher, schedule: publisherService?.schedule ?? null }, action, input));
+    }
+    async function performPublisherCommand(input, request, recovering = false) {
+      const beforeFile = join(directory, 'inputs', request + '.publisher-before.json');
+      if (recovering) {
+        const before = await absent(beforeFile) ? null : await readJson(beforeFile, 8192);
+        return withPublisher(publisher => observeBaserowPublisher({
+          publisher, schedule: publisherService?.schedule ?? null }, input.action, input.input, before));
+      }
+      return serializePublisherAccess(async () => {
+        const state = current();
+        if (state.selectedVersion === null || state.selectedVersion !== input.expectedSelectedVersion)
+          throw fault('BASEROW_SELECTION_CHANGED', 'Use the current reviewed source selection.', 409);
+        const selected = version(state.selectedVersion);
+        if (digest(await readPrivate(settings.sourceFile)) !== selected.sourceSha256)
+          throw fault('BASEROW_SELECTED_SOURCE_CHANGED');
+        if (!publisherService)
+          throw fault('BASEROW_PUBLISHER_OPEN_REQUIRED', 'Open this selected source in its original publisher before changing it.', 409);
+        if (input.action === 'plan-save' && input.input.plan.sourceHash !== selected.sourceSha256)
+          throw fault('BASEROW_PUBLISHER_SOURCE_CHANGED');
+        const service = publisherService;
+        await createOrVerify(beforeFile, bytes(baserowPublisherBefore(service.publisher)));
+        const value = await executeBaserowPublisher(service, input.action, input.input, request);
+        return { mode: 'ORIGINAL_PUBLISHER_RESULT', action: input.action, value,
+          sourceVersion: selected.id, sourceSha256: selected.sourceSha256 };
+      });
+    }
+    async function publisherCommand({ action, input = {}, expectedSelectedVersion, requestId, ...extra }) {
+      if (Object.keys(extra).length) throw fault('BASEROW_PUBLISHER_ACTION_INVALID');
+      integer(expectedSelectedVersion, 'Use the current selected source version.');
+      const saved = { action, input: publisherRequest(action, input, true), expectedSelectedVersion };
+      return run('PUBLISHER_COMMAND', saved, requestId, () => performPublisherCommand(saved, requestId));
+    }
+
     function savedDeploymentOperation(request, kind) {
       const row = db.prepare('SELECT * FROM operations WHERE id=?').get(id(request));
       if (!row || row.kind !== kind || row.status !== 'complete')
@@ -861,6 +902,7 @@ export async function openBaserowAuthoring({ directory, create = false, connecti
           return { draft: state.draft, draftRevision: state.draftRevision };
         });
         if (row.kind === 'PREVIEW') return performPreview(input, request);
+        if (row.kind === 'PUBLISHER_COMMAND') return performPublisherCommand(input, request, true);
         if (row.kind === 'DEPLOYMENT_REVIEW') return performDeploymentReview(input, request);
         if (row.kind === 'DEPLOYMENT_PREPARE') return performDeploymentPrepare(input, request);
         if (row.kind === 'DEPLOYMENT_STAGE') return performDeploymentStage(input);
@@ -891,7 +933,7 @@ export async function openBaserowAuthoring({ directory, create = false, connecti
     const api = {
       directory, settings, discover, discovery: discoveryRecord, importSource, importPacket, readLive,
       inspectCapture, captureRows, captureFiles, captureFile, saveDraft, preview, saveVersion, selectVersion, exportVersion, exportCapture, captureAttempt, compareVersions,
-      openPublisher, resume, operation, version, deploymentStatus, reviewDeployment, prepareDeployment,
+      openPublisher, publisherState, publisherCommand, resume, operation, version, deploymentStatus, reviewDeployment, prepareDeployment,
       inspectDeploymentPackage, stageDeployment, openDeploymentConsole, closeDeploymentConsole,
       compareDeployment, commandDeployment, deploymentFile,
       async status({ capturesOffset = 0, versionsOffset = 0, discoveriesOffset = 0, limit = 25 } = {}) {

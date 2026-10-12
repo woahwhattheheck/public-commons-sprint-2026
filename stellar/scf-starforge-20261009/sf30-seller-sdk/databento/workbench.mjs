@@ -20,6 +20,8 @@ const HELP = [
   'import [--source-root ROOT] --dir NEW_DIR --bundle ORIGINAL_WORKSPACE.json',
   'reopen [--source-root ROOT] --dir NEW_DIR --bundle ORIGINAL_WORKSPACE.json',
   'status [--source-root ROOT] --dir DIR',
+  'binding [--source-root ROOT] --dir DIR',
+  'managed --source-root ROOT --dir DIR --expected-workspace-identity SHA --expected-source-sha256 SHA [--port 0]',
   'inspect [--source-root ROOT] --dir DIR [--revision REVISION]',
   'serve [--source-root ROOT] --dir DIR [--port 8431] [--operator-assets WEB_DIR_OR_MANIFEST]',
   'workspace [--source-root ROOT] --dir DIR -- ORIGINAL_COMMAND [OPTIONS]',
@@ -81,7 +83,8 @@ function parse(argv) {
   const shared = ['source-root', 'dir'];
   const allowed = {
     create: [...shared, 'dataset', 'plan'], import: [...shared, 'bundle'], reopen: [...shared, 'bundle'],
-    status: shared, inspect: [...shared, 'revision'], serve: [...shared, 'port', 'operator-assets'],
+    status: shared, binding: shared, inspect: [...shared, 'revision'], serve: [...shared, 'port', 'operator-assets'],
+    managed: [...shared, 'port', 'expected-workspace-identity', 'expected-source-sha256'],
     workspace: shared, export: [...shared, 'out'], handoff: [...shared, 'preview', 'out', 'audience', 'python'],
   }[command];
   if (!allowed || Object.keys(flags).some(key => !allowed.includes(key)) || (forward.length && command !== 'workspace')) throw new Error(HELP);
@@ -216,7 +219,7 @@ async function operatorOptions(value) {
   }
   return {operatorPath: manifest.operatorPath, operatorAssets};
 }
-async function serve(model, sourceRoot, flags) {
+async function serve(model, sourceRoot, flags, launch = null) {
   const options = await operatorOptions(flags['operator-assets']);
   const {startPythonWorkspace} = await import(pathToFileURL(join(sourceRoot, NATIVE, 'server.mjs')).href);
   const server = await startPythonWorkspace(model, {port: port(flags.port), ...options});
@@ -225,8 +228,12 @@ async function serve(model, sourceRoot, flags) {
       throw new Error('Use the original Python workspace server version that supports operatorAssets and operatorPath.');
     const onSignal = () => {void server.close().catch(error => {process.stderr.write(error.message + '\n'); process.exitCode = 1;});};
     process.once('SIGINT', onSignal); process.once('SIGTERM', onSignal);
-    process.stdout.write(JSON.stringify({schema: 'tj.databento-workspace-console.v1',
-      operatorUrl: server.operatorUrl, nativeOperatorUrl: server.nativeOperatorUrl ?? server.operatorUrl}, null, 2) + '\n');
+    const announcement = launch
+      ? await (await import('./managed.mjs')).databentoManagedStartup({launch, workspace: model, service: server})
+      : {schema: 'tj.databento-workspace-console.v1', operatorUrl: server.operatorUrl,
+        nativeOperatorUrl: server.nativeOperatorUrl ?? server.operatorUrl};
+    // Managed startup is one schema-first line for the original serialized observer.
+    process.stdout.write(JSON.stringify(announcement, null, launch ? undefined : 2) + '\n');
     try {await server.closed;}
     finally {process.removeListener('SIGINT', onSignal); process.removeListener('SIGTERM', onSignal);}
   } finally {await server.close();}
@@ -379,6 +386,19 @@ export async function main(argv = process.argv.slice(2)) {
   const {command, flags, forward} = parse(argv);
   const sourceRoot = await realpath(resolve(flags['source-root'] ?? resolve(HERE, '../../../..')));
   const root = resolve(required(flags, 'dir')), workspace = join(root, 'workspace');
+  let launch = null;
+  if (command === 'binding' || command === 'managed') {
+    const managed = await import('./managed.mjs');
+    if (command === 'binding') {
+      const result = {schema: 'stellar-forge.databento-workbench-review.v1',
+        workspace: await managed.inspectDatabentoWorkspace(root),
+        source: await managed.inspectDatabentoLaunchSource(sourceRoot)};
+      process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+    }
+    launch = await managed.prepareDatabentoManagedLaunch({directory: root, sourceRoot,
+      expectedWorkspaceIdentity: required(flags, 'expected-workspace-identity'),
+      expectedSourceSha256: required(flags, 'expected-source-sha256')});
+  }
   const native = await import(pathToFileURL(join(sourceRoot, NATIVE, 'model.mjs')).href);
   if (command === 'workspace') {
     if (!forward.length) throw new Error('An original workspace command is required after --.');
@@ -410,7 +430,7 @@ export async function main(argv = process.argv.slice(2)) {
       await ownedDirectory(root, {schema: 'tj.databento-workbench.v1', mode: 'import', bundleSha256: sha(bytes)});
       model = await present(workspace) ? await native.openWorkspace(workspace) : await native.importWorkspace(workspace, bytes);
     } else model = await native.openWorkspace(workspace);
-    if (command === 'serve') return await serve(model, sourceRoot, flags);
+    if (command === 'serve' || command === 'managed') return await serve(model, sourceRoot, flags, launch);
     let result;
     if (command === 'handoff') result = await handoff(model, required(flags, 'preview'), required(flags, 'out'), flags, native.MAX_BUNDLE_BYTES);
     else if (command === 'export') {

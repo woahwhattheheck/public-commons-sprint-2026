@@ -1,0 +1,19 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "routescan",
+  "description": "Routescan gas data",
+  "commands": {
+    "routescan-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/cli.mjs",
+    "routescan-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace-cli.mjs"
+  },
+  "commandDescriptions": {
+    "routescan-merchant": "Configure, preview and operate the original Routescan gas-data merchant",
+    "routescan-workspace": "Operate its saved project through the original local workspace"
+  },
+  "exports": {
+    "./seller/routescan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/merchant.mjs",
+    "./seller/routescan/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/project.mjs",
+    "./seller/routescan/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace.mjs",
+    "./seller/routescan/backup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/backup.mjs"
+  }
+}

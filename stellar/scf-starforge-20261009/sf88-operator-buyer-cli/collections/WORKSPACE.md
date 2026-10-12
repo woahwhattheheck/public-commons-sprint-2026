@@ -179,3 +179,7 @@ The same-origin local JSON API requires the private bearer key. Mutations requir
 Host, origin and fetch-site checks protect the loopback interface. JSON bodies, paths and export filenames are validated. Export output uses the existing private-directory and exact-byte retention helpers. Browser request data is rendered with text nodes.
 
 See [README.md](README.md) for the single executable original-inbox lifecycle example.
+
+## Backup and receiving
+
+The same workspace now has a **Backup and receiving** pane and can start with `--receiving-directory ABS_PRIVATE_DIRECTORY` before any collection exists. It uses the original SF88/SF101 encrypted capture and restore, immutable operation IDs, saved progress/results and the exact original state root. See [RECOVERY.md](RECOVERY.md) for the full operator and CLI flow. Existing collection, browser approval, MCP run/export and Applications launch behavior remains available.
