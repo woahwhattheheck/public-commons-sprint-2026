@@ -23,6 +23,7 @@ APPLICATIONS = {
     "consumer": CLI.parent / "python" / "consumer-bridge.mjs",
     "research": CLI.parent / "python" / "research-bridge.mjs",
     "dataset": DATASET_BRIDGE,
+    "dbnomics": CLI.parent.parent / "sf30-seller-sdk" / "dbnomics" / "cli.mjs",
     "finalized-dataset": CLI.parent / "python" / "finalized-dataset-bridge.mjs",
     "object": CLI.parent / "python" / "object-bridge.mjs",
     "acquisitions": CLI.parent.parent / "buyer-runbook" / "customer-bridge.mjs",
