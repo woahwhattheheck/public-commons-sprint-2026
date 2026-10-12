@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "grant-reviewer",
   "title": "Grant purchase reviewer",
-  "description": "Original grant purchase review, complete retained Buyer results and controlled receiving handover",
+  "description": "Original grant purchase review, complete retained Buyer results, merchant access and receiving handover",
   "base": {
     "commands": [
       "installation",
@@ -10,7 +10,8 @@
       "runtime-install",
       "runtime-workspace",
       "runtime-transfer",
-      "grant-demo"
+      "grant-demo",
+      "merchant-mcp"
     ],
     "exports": [
       "./runtime-profile",
@@ -34,18 +35,21 @@
     "browserAssets": []
   },
   "contributions": [
-    "grant-reviewer"
+    "grant-reviewer",
+    "merchant-grant-reviewer"
   ],
   "components": [
     "stellar/scf-starforge-20261009/distribution",
     "stellar/scf-starforge-20261009/sf46-release",
     "stellar/scf_2026/presentation/reviewer",
-    "stellar-forge/mcp-paid-agent"
+    "stellar-forge/mcp-paid-agent",
+    "stellar-forge/mcp-merchant-operator",
+    "stellar/scf-starforge-20261009/sf82-seller-pilot"
   ],
   "supportFiles": [],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Review, receive, reopen and hand over the original completed Stellar grant purchase",
+    "description": "Review and receive the original Stellar grant purchase through Applications and merchant MCP",
     "readme": "stellar/scf-starforge-20261009/distribution/selections/GRANT_REVIEWER.md"
   },
   "excludeFiles": [

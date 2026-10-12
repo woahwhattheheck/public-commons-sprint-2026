@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID, timingSafeEqual, createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { constants } from 'node:fs';
+import { ExactCkanNumber } from './capture.mjs';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { readPrivate, hashPrivate, privateDirectory, syncDirectory, fault } from '../postgres/publisher/files.mjs';
@@ -13,6 +14,12 @@ import { readPrivate, hashPrivate, privateDirectory, syncDirectory, fault } from
 const assets = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
 const root = fileURLToPath(new URL('./public/', import.meta.url));
+function exactPresentation(value) {
+  if (value instanceof ExactCkanNumber) return value.source;
+  if (Array.isArray(value)) return value.map(exactPresentation);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, exactPresentation(item)]));
+  return value;
+}
 const json = (response, value, status = 200) => {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
   response.end(JSON.stringify(value));
@@ -77,9 +84,9 @@ async function downloadWorkspaceArchive(response, selected) {
   })();
   const hash = createHash('sha256'); let count = 0;
   try {
-    response.writeHead(200, { 'content-type': 'application/vnd.stellar-forge.ckan-workspace',
-      'content-length': selected.bytes, 'x-archive-sha256': selected.sha256,
-      'content-disposition': 'attachment; filename="ckan-workspace-' + selected.id + '.ckanw"' });
+    response.writeHead(200, { 'content-type': selected.mediaType ?? 'application/vnd.stellar-forge.ckan-workspace',
+      'content-length': selected.bytes, [selected.hashHeader ?? 'x-archive-sha256']: selected.sha256,
+      'content-disposition': 'attachment; filename="' + (selected.downloadName ?? ('ckan-workspace-' + selected.id + '.ckanw')) + '"' });
     const meter = new Transform({ transform(chunk, encoding, done) {
       hash.update(chunk); count += chunk.length; done(null, chunk);
     } });
@@ -145,6 +152,18 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
         if (parts[0] === 'editions' && parts.length === 2) return json(response, await workbench.edition(parts[1]));
         if (parts[0] === 'compare' && parts.length === 1)
           return json(response, await workbench.compare(url.searchParams.get('before'), url.searchParams.get('after'), url.searchParams.get('key') ?? '_id'));
+        if (parts[0] === 'refreshes' && parts.length === 2)
+          return json(response, exactPresentation(await workbench.refresh(parts[1])));
+        if (parts[0] === 'refreshes' && parts[2] === 'changes' && parts.length === 3)
+          return json(response, exactPresentation(await workbench.refreshChanges(parts[1], {
+            expectedComparisonSha256: url.searchParams.get('sha256'),
+            offset: Number(url.searchParams.get('offset') ?? 0), limit: Number(url.searchParams.get('limit') ?? 50) })));
+        if (parts[0] === 'refreshes' && parts[2] === 'changes' && parts[3] === 'download' && parts.length === 4) {
+          const selected = await workbench.refreshChangesFile(parts[1], url.searchParams.get('sha256'));
+          return await downloadWorkspaceArchive(response, { ...selected, id: parts[1],
+            mediaType: 'application/x-ndjson; charset=utf-8', hashHeader: 'x-content-sha256',
+            downloadName: 'ckan-refresh-' + parts[1] + '-changes.jsonl' });
+        }
         if (parts[0] === 'publications' && parts.length === 2)
           return json(response, await workbench.publication(parts[1], url.searchParams.get('query') ?? ''));
         if (parts[0] === 'sources' && parts[2] === 'semantics' && parts.length === 3) {
@@ -202,8 +221,13 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
         const input = await body(request);
         if (parts[0] === 'editions' && parts[2] === 'semantics' && parts.length === 3)
           return json(response, await workbench.previewSemantics(parts[1], input.projection));
+        if (parts[0] === 'refreshes' && parts[2] === 'preview' && parts.length === 3)
+          return json(response, exactPresentation(await workbench.previewRefresh(parts[1], input)));
         let result;
-        if (parts[0] === 'workspace' && parts[1] === 'archives' && parts.length === 2) result = workbench.archiveWorkspace({});
+        if (parts[0] === 'sources' && parts[2] === 'refreshes' && parts.length === 3) result = workbench.prepareRefresh(parts[1], input);
+        else if (parts[0] === 'refreshes' && parts[2] === 'resume' && parts.length === 3) result = workbench.resumeRefresh(parts[1]);
+        else if (parts[0] === 'refreshes' && parts[2] === 'review' && parts.length === 3) result = workbench.reviewRefresh(parts[1], input);
+        else if (parts[0] === 'workspace' && parts[1] === 'archives' && parts.length === 2) result = workbench.archiveWorkspace({});
         else if (parts[0] === 'capture' && parts.length === 1) result = workbench.startCapture(input);
         else if (parts[0] === 'editions' && parts[2] === 'resume' && parts.length === 3) result = workbench.resumeCapture(parts[1], input);
         else if (parts[0] === 'editions' && parts[2] === 'sources' && parts.length === 3) result = workbench.saveSource(parts[1], input);

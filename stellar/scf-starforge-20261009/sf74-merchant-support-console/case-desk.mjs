@@ -19,7 +19,8 @@ const defaults = () => ({merchant:'',owner:'',status:'new',followUpOn:'',nextAct
 const emptyState = () => ({name:'Merchant case',inputs:{resource:'',catalog:'',origin:'',network:'stellar:testnet',payTo:'',method:'GET',credentialed:false},sources:{},termsText:'',baselineOnly:false});
 
 export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
-  readSupport=()=>null,prepareSupport=async()=>null,applySupport=()=>{},onDraftChange=()=>{}}) {
+  readSupport=()=>null,prepareSupport=async()=>null,applySupport=()=>{},onDraftChange=()=>{},
+  applySavedCommissioning=async()=>true}) {
   const abort = new AbortController();
   let enabled=false, busy=false, dirty=false, active=null, candidateId=crypto.randomUUID();
   let generation=0, identity=0, applying=false, listSequence=0, offset=0, nextOffset=null;
@@ -109,9 +110,9 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
     editor.dataset.dirty=String(dirty);
     for(const node of rows.querySelectorAll('button')) node.disabled=busy;
   }
-  function changed({user=false} = {}) {
+  function changed({user=false,source=true} = {}) {
     if((applying&&!user)||destroyed)return;
-    generation++;dirty=true;controls();onDraftChange();
+    generation++;dirty=true;controls();if(source)onDraftChange();
   }
   function metadata() {return {merchant:merchant.value,owner:owner.value,status:workStatus.value,
     followUpOn:followUpOn.value,nextAction:nextAction.value,notes:notes.value};}
@@ -226,6 +227,10 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
       if(destroyed||identity!==token)return false;
       active=result.case;candidateId=active.id;lastAttempt=null;conflict.hidden=true;
       dirty=generation!==stamp;
+      if(!dirty&&Object.hasOwn(result,'commissioning')) {
+        await applySavedCommissioning(result.commissioning,{canReplace:()=>identity===token&&generation===stamp});
+        dirty=generation!==stamp;
+      }
       say(dirty?'Saved the captured draft. Newer edits are still unsaved.':'Case saved. '+STATUS[active.metadata.status]+(active.metadata.followUpOn?' · follow-up '+active.metadata.followUpOn:''));
       await reload();return !dirty;
     }catch(error){
@@ -283,6 +288,7 @@ export function mountCaseDesk({root,readState,applyState,onNameChange = ()=>{},
   reload();
   return {
     changed,
+    currentCase(){return active?{id:active.id,revision:active.revision}:null;},
     importWorkspace,
     openSavedCase(id){return transition(()=>openCase(id),'open the received case');},
     async exportSnapshot(){

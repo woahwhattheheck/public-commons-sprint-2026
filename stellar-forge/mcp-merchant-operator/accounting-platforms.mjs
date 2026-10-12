@@ -251,11 +251,12 @@ function xeroReturnView(value, args = {}) {
 /** The caller supplies only the existing host-alias reader and owning accountant lifetime. */
 export class MerchantPlatforms {
   constructor(workspace, accountant, { readSource, definition = { qbo: null, xero: null },
-    environment = process.env, quickbooksOAuth = {} }) {
+    environment = process.env, quickbooksOAuth = {}, buyerOnly = false }) {
     this.workspace = workspace;
     this.accountant = accountant;
     this.readSource = readSource;
-    this.qbo = definition.qbo?.oauth ? null : new QboWorkspace(workspace, accountant, {
+    this.buyerOnly = buyerOnly;
+    this.qbo = buyerOnly || definition.qbo?.oauth ? null : new QboWorkspace(workspace, accountant, {
       client: new QboHttpClient(definition.qbo ?? { realmId: '', environment: 'sandbox', minorVersion: null }) });
     this.definition = definition;
     this.oauthRuntime = { ...quickbooksOAuth, environment };
@@ -266,11 +267,11 @@ export class MerchantPlatforms {
     if (this.closed) return Promise.reject(fail('ACCOUNTING_PLATFORMS_CLOSED', 'The owned accounting platform runtime is closed.'));
     if (!this.opening) this.opening = (async () => {
       try {
-        if (this.definition.qbo?.oauth) {
+        if (!this.buyerOnly && this.definition.qbo?.oauth) {
           this.qboOAuth = await openMerchantQuickBooksConnection(this.definition.qbo.oauth, this.oauthRuntime);
           this.qbo = new QboWorkspace(this.workspace, this.accountant, { client: this.qboOAuth.client });
         }
-        await this.qbo.recover(); await this.xero.init();
+        await this.qbo?.recover(); await this.xero.init();
       } catch (error) { await this.dispose().catch(() => {}); throw error; }
     })();
     return this.opening;
@@ -293,7 +294,7 @@ export class MerchantPlatforms {
     return this.closing;
   }
   async qboConnection() {
-    if (!this.definition.qbo) throw fail('ACCOUNTING_QBO_CONNECTION_REQUIRED', 'Declare this original native QuickBooks company in the host workspace configuration.');
+    if (this.buyerOnly || !this.definition.qbo) throw fail('ACCOUNTING_QBO_CONNECTION_REQUIRED', 'Declare this original native QuickBooks company in the host workspace configuration.');
     if (this.qboOAuth) await this.qboOAuth.connection();
     return this.qbo.connection();
   }

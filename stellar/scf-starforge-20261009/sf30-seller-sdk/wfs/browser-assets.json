@@ -22,6 +22,20 @@
         "style.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/vector.mjs",
+      [
+        "vector.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/vector-json.mjs",
+      [
+        "../../stac/vector/json.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

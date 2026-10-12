@@ -16,7 +16,7 @@ spec = importlib.util.spec_from_file_location(PACKAGE, Path(__file__).with_name(
 api = importlib.util.module_from_spec(spec)
 sys.modules[PACKAGE] = api
 spec.loader.exec_module(api)
-from _starforge_native_vector.common import parse_json, json_bytes, atomic_json, need, read_json
+from _starforge_native_vector.common import parse_json, json_bytes, atomic_json, need, read_json, MAX_DOCUMENT
 
 def dispatch(request):
     need(isinstance(request, dict), "VECTOR_REQUEST_REQUIRED")
@@ -67,8 +67,13 @@ def main():
     parser.add_argument("--result", help="Retain the complete original result JSON at this local path")
     args = parser.parse_args()
     os.environ["PROJ_NETWORK"] = "OFF"
-    request = parse_json(Path(args.request).read_bytes() if args.request else sys.stdin.buffer.read())
     try:
+        if args.request:
+            request = read_json(args.request)
+        else:
+            raw = sys.stdin.buffer.read(MAX_DOCUMENT + 1)
+            need(len(raw) <= MAX_DOCUMENT, "VECTOR_DOCUMENT_TOO_LARGE")
+            request = parse_json(raw)
         value = {"ok": True, "result": dispatch(request)}
         status = 0
     except Exception as exc:
