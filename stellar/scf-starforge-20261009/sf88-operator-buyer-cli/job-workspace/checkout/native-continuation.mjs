@@ -23,19 +23,27 @@ import { openJobWorkspace } from '../model.mjs';
 import { startJobCustomerWorkspace } from '../server.mjs';
 import { readJobWorkspaceLaunch } from '../launch.mjs';
 import { readJobCheckoutTicket } from './contract.mjs';
+import { prepareInputFileFixture, openInputFileJourney } from '../../../sf30-seller-sdk/jobs/inputs/native-journey.mjs';
+import { isInputRoute } from '../../../sf30-seller-sdk/jobs/inputs/http.mjs';
+import { validStrKey } from '../../../sf86-rpc-transfer-reconcile/terms.mjs';
 
 const origin = 'https://jobs-merchant.example';
 const fixture = resolve(process.env.SF_JOBS_CHECKOUT_FIXTURE_DIR ?? '/');
 assert.notEqual(fixture, '/', 'Use the original native-continuation.py launcher.');
 const marker = await readJson(join(fixture, 'fixture.json'));
 const browserApproval = marker.approvalMode === 'BROWSER';
-const operation = browserApproval ? 'SCF-JOB-BROWSER-APPROVAL-0B8D-20261012'
-  : 'SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012';
-const jobId = browserApproval ? 'browser-checkout:2026.10' : 'checkout:2026.10';
+const inputFilesMode = marker.inputMode === 'ORIGINAL_MERCHANT_INPUT_FILES';
+assert.ok(!inputFilesMode || browserApproval, 'File-input journey uses the original browser approval.');
+const operation = inputFilesMode ? 'SCF-JOB-INPUT-FILES-0B8D-20261012' : browserApproval
+  ? 'SCF-JOB-BROWSER-APPROVAL-0B8D-20261012' : 'SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012';
+const jobId = inputFilesMode ? 'input-files:2026.10' : browserApproval ? 'browser-checkout:2026.10' : 'checkout:2026.10';
+const functionId = inputFilesMode ? 'reconcile' : 'analyze';
+const purchasePath = inputFilesMode ? '/invoice-reconciliation' : '/analysis';
 assert.equal(marker.schema, 'stellar-forge.sf88.job-checkout-journey.v1');
 assert.equal(marker.operation, operation);
 assert.equal(marker.fixtureDirectory, fixture);
-assert.equal(fixture, join(marker.retainedDirectory, browserApproval ? 'checkout-browser-continuation' : 'checkout-continuation'));
+assert.equal(fixture, join(marker.retainedDirectory, inputFilesMode ? 'checkout-input-files-continuation' :
+  browserApproval ? 'checkout-browser-continuation' : 'checkout-continuation'));
 const retained = marker.retainedDirectory, runtimeDirectory = resolve(fileURLToPath(new URL('../../', import.meta.url)));
 assert.equal(marker.runtimeDirectory, runtimeDirectory);
 assert.equal(process.env.NODE_EXTRA_CA_CERTS, join(fixture, 'tls', 'tls.pem'));
@@ -44,9 +52,15 @@ const handoffPath = join(fixture, 'checkout.handoff.json'), output = join(fixtur
 const profilePath = join(fixture, 'operator-profile.json'), merchantState = join(fixture, 'merchant-state');
 const checkoutId = digest(JSON.stringify(['paid-job-checkout', origin + '/jobs/' + encodeURIComponent(jobId)]));
 const intentId = 'job-checkout:' + checkoutId;
-const fixtureAsset = 'C' + 'A'.repeat(55);
+// Canonical local-fixture keys let the unchanged accounting compiler read these terms.
+const fixtureAsset = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4';
+const fixturePayTo = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+const fixturePayer = 'GAAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQDZ7H';
+assert.ok(validStrKey(fixtureAsset, 'C'));
+assert.ok(validStrKey(fixturePayTo, 'G') && validStrKey(fixturePayer, 'G'));
+assert.notEqual(fixturePayTo, fixturePayer);
 let merchant, seller, customer, model, host, received, complete = false, interrupted = false;
-let frontend, proxy, facilitator, transport, selfService = null;
+let frontend, proxy, facilitator, transport, selfService = null, inputFixture = null, inputJourney = null, fileReceiving = null;
 const sockets = new Set(), servers = new Set();
 const traffic = { connects: 0, status: 0, result: 0, intakeCatalog: 0, intakePrepare: 0, intakeWithdraw: 0 };
 const progress = phase => process.stdout.write(JSON.stringify({ operation, phase }) + '\n');
@@ -135,8 +149,8 @@ async function approveBrowserFixture(taskId) {
   const expected = {
     schema: 'stellar-forge.sf62.operator-review.v1',
     request_id: intentId, actor: 'fixture-job-checkout', service: 'fixture-application-jobs',
-    resource: origin + '/analysis?sf98_order=' + encodeURIComponent(jobId), method: 'POST',
-    scheme: 'exact', network: 'stellar:testnet', asset: fixtureAsset, pay_to: 'UNVERIFIED_DEMO_RECIPIENT',
+    resource: origin + purchasePath + '?sf98_order=' + encodeURIComponent(jobId), method: 'POST',
+    scheme: 'exact', network: 'stellar:testnet', asset: fixtureAsset, pay_to: fixturePayTo,
     max_atomic_units_to_reserve: '10000', max_timeout_seconds: 60,
     body_present: true, body_bytes: body.length, body_sha256: digest(body),
   };
@@ -175,7 +189,7 @@ async function runCheckout(kind) {
   return after;
 }
 async function startWorkspace() {
-  model = await openJobWorkspace({ directory, buyerRoots: [], fileRoots: [], fetchImpl: transport,
+  model = await openJobWorkspace({ directory, buyerRoots: [], fileRoots: inputFilesMode ? [inputFixture.root] : [], fetchImpl: transport,
     checkout: { operatorProfile: profilePath, runtimeDirectory, timeoutMs: 90000 } });
   host = await startJobCustomerWorkspace({ model, port: 0, browserApproval });
   const ready = await readJobWorkspaceLaunch({ directory, runtimeDirectory,
@@ -196,6 +210,24 @@ async function closeWorkspace() {
       } finally { model = null; }
     }
   }
+}
+async function startMerchant() {
+  merchant = await openJobMerchant({ configPath, directory: merchantState,
+    env: { SF_JOBS_JOURNEY_GATE: join(retained, 'release-application') } });
+  seller = await startJobSeller(merchant, { port: 0, operationsPort: 0,
+    nativeFactory: compiled => createNativeSellerServer(compiled, {
+      facilitatorClient: new HTTPFacilitatorClient({ url: 'http://127.0.0.1:' + facilitator.address().port }),
+    }) });
+  customer = await startCustomerServer({ model: merchant, port: 0,
+    ...(browserApproval ? { intakeConfig: { enabled: true, functions: [functionId] } } : {}) });
+}
+async function closeMerchant() {
+  const results = await Promise.allSettled([seller?.close(), customer?.close()]);
+  seller = customer = null;
+  try { await merchant?.close(); } catch (error) { results.push({ status: 'rejected', reason: error }); }
+  merchant = null;
+  const errors = results.filter(value => value.status === 'rejected').map(value => value.reason);
+  if (errors.length) throw new AggregateError(errors, 'CHECKOUT_MERCHANT_CLOSE_FAILED');
 }
 async function transfer(path, body) {
   const ticket = await api(path, body), response = await fetch(host.origin + ticket.url);
@@ -225,16 +257,20 @@ try {
   assert.deepEqual(raw.environment ?? [], ['SF_JOBS_JOURNEY_GATE']);
   const report = await readJson(join(retained, 'merchant-state', 'records', 'report:2026.10.json'));
   assert.deepEqual(report.input, { values: [2, 4, 6, 8], window: 2 });
-  const configured = { ...raw, application: marker.application, workerCount: 1, memoryLimitMb: 64,
-    maxPending: 4, maxJobs: 32, functions: { analyze: { ...raw.functions.analyze,
-      payment: { ...raw.functions.analyze.payment, asset: fixtureAsset } } } };
+  if (inputFilesMode) inputFixture = await prepareInputFileFixture({ fixture, immutable });
+  const configured = inputFilesMode ? { ...inputFixture.configuration,
+    maxPending: 4, maxJobs: 32, functions: { reconcile: { ...inputFixture.configuration.functions.reconcile,
+      payment: { ...inputFixture.configuration.functions.reconcile.payment, asset: fixtureAsset, payTo: fixturePayTo } } } }
+    : { ...raw, application: marker.application, workerCount: 1, memoryLimitMb: 64,
+      maxPending: 4, maxJobs: 32, functions: { analyze: { ...raw.functions.analyze,
+        payment: { ...raw.functions.analyze.payment, asset: fixtureAsset, payTo: fixturePayTo } } } };
   await immutable(configPath, jsonBytes(configured));
   await immutable(join(fixture, 'signer.mjs'), Buffer.from([
     '// Disposable signer envelope for this one local original-protocol journey.',
     'export async function sign({ challenge, accepted }) {',
-    "  if (challenge.resource?.url !== " + JSON.stringify(origin + '/analysis?sf98_order=' + encodeURIComponent(jobId)) + " ||",
+    "  if (challenge.resource?.url !== " + JSON.stringify(origin + purchasePath + '?sf98_order=' + encodeURIComponent(jobId)) + " ||",
     "      accepted.scheme !== 'exact' || accepted.network !== 'stellar:testnet' ||",
-    "      accepted.asset !== 'C' + 'A'.repeat(55) || accepted.payTo !== 'UNVERIFIED_DEMO_RECIPIENT' ||",
+    "      accepted.asset !== " + JSON.stringify(fixtureAsset) + " || accepted.payTo !== " + JSON.stringify(fixturePayTo) + " ||",
     "      accepted.amount !== '10000') throw new Error('CHECKOUT_FIXTURE_TERMS_CHANGED');",
     "  return { x402Version: 2, resource: challenge.resource, accepted, extensions: challenge.extensions,",
     "    payload: { fixture: 'LOCAL_PAID_JOB_PROTOCOL', jobId: " + JSON.stringify(jobId) + " } };",
@@ -265,18 +301,18 @@ try {
       };
       else if (['/verify', '/settle'].includes(request.url)) {
         for (const field of ['scheme', 'network', 'asset', 'payTo', 'amount', 'maxTimeoutSeconds'])
-          assert.equal(value.paymentRequirements[field], configured.functions.analyze.payment[field]);
+          assert.equal(value.paymentRequirements[field], configured.functions[functionId].payment[field]);
         assert.deepEqual(value.paymentPayload.payload, { fixture: 'LOCAL_PAID_JOB_PROTOCOL', jobId });
         const paymentSha256 = digest(JSON.stringify(value.paymentPayload));
         if (counters.paymentSha256) assert.equal(paymentSha256, counters.paymentSha256);
         counters.paymentSha256 = paymentSha256;
         if (request.url === '/verify') {
           counters.verifies++;
-          result = { isValid: true, payer: 'LOCAL_PAID_JOB_PROTOCOL' };
+          result = { isValid: true, payer: fixturePayer };
         } else {
           counters.settles++;
           result = { success: true, network: 'stellar:testnet',
-            transaction: digest(operation + ':' + jobId), payer: 'LOCAL_PAID_JOB_PROTOCOL' };
+            transaction: digest(operation + ':' + jobId), payer: fixturePayer };
         }
         await writeJson(counterPath, counters);
       }
@@ -286,32 +322,26 @@ try {
     counterTail = action.catch(() => {});
     action.catch(() => { if (!response.headersSent) response.writeHead(500); response.end('{}'); });
   }));
-  merchant = await openJobMerchant({ configPath, directory: merchantState,
-    env: { SF_JOBS_JOURNEY_GATE: join(retained, 'release-application') } });
-  seller = await startJobSeller(merchant, { port: 0, operationsPort: 0,
-    nativeFactory: compiled => createNativeSellerServer(compiled, {
-      facilitatorClient: new HTTPFacilitatorClient({ url: 'http://127.0.0.1:' + facilitator.address().port }),
-    }) });
-  customer = await startCustomerServer({ model: merchant, port: 0,
-    ...(browserApproval ? { intakeConfig: { enabled: true, functions: ['analyze'] } } : {}) });
+  await startMerchant();
 
   frontend = await serve(httpsServer({
     key: await readFile(join(fixture, 'tls', 'tls.key')), cert: await readFile(join(fixture, 'tls', 'tls.pem')),
     minVersion: 'TLSv1.2',
   }, (request, response) => {
     const allowedPurchase = request.method === 'POST' &&
-      request.url === '/analysis?sf98_order=' + encodeURIComponent(jobId);
+      request.url === purchasePath + '?sf98_order=' + encodeURIComponent(jobId);
     const allowedGet = request.method === 'GET' &&
       ['/jobs/' + encodeURIComponent(jobId), '/jobs/' + encodeURIComponent(jobId) + '/result'].includes(request.url);
     const allowedIntake = browserApproval && (request.method === 'GET' && request.url === CATALOG_PATH ||
       request.method === 'POST' && [REQUEST_PATH, WITHDRAW_PATH].includes(request.url));
-    if (request.headers.host !== 'jobs-merchant.example' || !(allowedPurchase || allowedGet || allowedIntake)) {
+    const allowedInput = inputFilesMode && isInputRoute(request.url) && ['POST', 'PUT', 'GET', 'HEAD', 'DELETE'].includes(request.method);
+    if (request.headers.host !== 'jobs-merchant.example' || !(allowedPurchase || allowedGet || allowedIntake || allowedInput)) {
       response.writeHead(404); response.end(); return;
     }
     if (allowedGet) traffic[request.url.endsWith('/result') ? 'result' : 'status']++;
     if (allowedIntake) traffic[request.url === CATALOG_PATH ? 'intakeCatalog' :
       request.url === REQUEST_PATH ? 'intakePrepare' : 'intakeWithdraw']++;
-    const target = new URL(allowedGet || allowedIntake ? customer.url : seller.url);
+    const target = new URL(allowedGet || allowedIntake || allowedInput ? customer.url : seller.url);
     const forwarded = httpRequest({ hostname: '127.0.0.1', port: target.port, method: request.method,
       path: request.url, headers: { ...request.headers, connection: 'close' }, agent: false }, incoming => {
       response.writeHead(incoming.statusCode, incoming.headers); incoming.pipe(response);
@@ -336,6 +366,16 @@ try {
   });
   process.env.SF_JOBS_CHECKOUT_PROXY = 'http://127.0.0.1:' + proxy.address().port;
   transport = createPublicHttpsFetch({ trustedProxy: profile.buyerTransport, timeoutMs: 30000 });
+  if (inputFilesMode) {
+    inputJourney = openInputFileJourney({ fixture, operation, origin, jobId, immutable, inputs: inputFixture,
+      api, getModel: () => model, getHost: () => host, getMerchant: () => merchant,
+      restartWorkspace: async mode => {
+        if (mode !== true) await closeWorkspace();
+        if (mode !== false) await startWorkspace();
+      },
+      restartMerchant: async () => { await closeMerchant(); await startMerchant(); } });
+    transport = inputJourney.wrapTransport(transport);
+  }
 
   const claimPath = join(fixture, 'claim-token.txt');
   let imported, ticketBytes, ticket, claimToken;
@@ -348,15 +388,15 @@ try {
     assert.equal(catalog.publicOrigin, origin);
     assert.equal(catalog.functions.length, 1);
     const selectedFunction = catalog.functions[0];
-    assert.equal(selectedFunction.id, 'analyze');
+    assert.equal(selectedFunction.id, functionId);
     assert.equal(selectedFunction.payment.asset, fixtureAsset);
+    assert.equal(selectedFunction.payment.payTo, fixturePayTo);
     assert.equal(selectedFunction.payment.amount, '10000');
-    const draft = await api('/api/job-intake/draft', {
-      catalog, functionId: 'analyze', input: report.input,
-      reference: jobId, label: 'October checkout application',
-    });
-    const requestPath = '/api/job-intake/requests/' + draft.request.id;
     const checkoutExisted = await exists(join(directory, 'checkout', 'records', checkoutId, 'record.json'));
+    const draft = inputFilesMode ? await inputJourney.prepare({ catalog, definition: selectedFunction }) :
+      await api('/api/job-intake/draft', { catalog, functionId: 'analyze', input: report.input,
+        reference: jobId, label: 'October checkout application' });
+    const requestPath = '/api/job-intake/requests/' + draft.request.id;
     if (draft.request.phase !== 'IMPORTED') {
       await api(requestPath + '/start', { kind: 'prepare', expectedRevision: draft.request.revision });
       const prepared = await model.intake.wait(draft.request.id);
@@ -366,7 +406,8 @@ try {
     const prepared = await api(requestPath);
     assert.equal(prepared.checkoutId, checkoutId);
     assert.equal(prepared.reference, jobId);
-    assert.deepEqual(prepared.input, report.input);
+    if (inputFilesMode) inputJourney.assertRequest(prepared);
+    else assert.deepEqual(prepared.input, report.input);
     ticketBytes = await model.intake.ticket(prepared.id);
     ticket = readJobCheckoutTicket(ticketBytes);
     claimToken = ticket.handoff.claimToken;
@@ -409,7 +450,8 @@ try {
   assert.equal(ticket.id, checkoutId); assert.equal(ticket.handoff.claimToken, claimToken);
   assert.equal(ticket.summary.inputSha256, (await merchant.get(jobId)).inputSha256);
   for (const path of ['/jobs/', '/jobs/checkout/', '/jobs/checkout/app.mjs', '/jobs/checkout/style.css', '/', '/collections',
-    ...(browserApproval ? ['/jobs/request/', '/jobs/request/app.mjs', '/jobs/request/style.css'] : [])])
+    ...(browserApproval ? ['/jobs/request/', '/jobs/request/app.mjs', '/jobs/request/style.css'] : []),
+    ...(inputFilesMode ? ['/jobs/request/files.mjs', '/jobs/request/sha256.mjs', '/jobs/request/hash-worker.mjs'] : [])])
     assert.equal((await fetch(host.origin + path)).status, 200, path);
   assert.equal(imported.checkout.id, checkoutId);
   assert.equal(JSON.stringify(imported).includes(claimToken), false);
@@ -452,10 +494,15 @@ try {
   assert.equal(delivered.task.state, 'COMPLETE', delivered.lastError ?? '');
   assert.equal(delivered.resource.status, 'VERIFIED');
   const resource = delivered.resource;
-  assert.equal(JSON.parse((await api('/api/resources/' + resource.id + '/preview')).text).mean, 5);
+  const previewedResult = JSON.parse((await api('/api/resources/' + resource.id + '/preview')).text);
+  if (inputFilesMode) inputJourney.verifyReport(previewedResult);
+  else assert.equal(previewedResult.mean, 5);
   const downloaded = await transfer('/api/resources/' + resource.id + '/download', {});
-  assert.equal(JSON.parse(downloaded.bytes).sum, 20); assert.equal(downloaded.sha256, resource.sha256);
-  const note = 'October application purchased through the original checkout; mean 5 and sum 20.';
+  if (inputFilesMode) inputJourney.verifyReport(JSON.parse(downloaded.bytes));
+  else assert.equal(JSON.parse(downloaded.bytes).sum, 20);
+  assert.equal(downloaded.sha256, resource.sha256);
+  const note = inputFilesMode ? 'Original ledger and supplier prices; 6000 rows reconciled with exact integer amounts.'
+    : 'October application purchased through the original checkout; mean 5 and sum 20.';
   let annotation = resource.annotation;
   if (annotation.note !== note) annotation = await api('/api/resources/' + resource.id + '/note', {
     expectedRevision: annotation.revision, operationId: operation + ':note',
@@ -484,7 +531,11 @@ try {
   const receivedRows = received.search({ limit: 50 }).items;
   assert.equal(receivedRows.length, 1);
   assert.equal(receivedRows[0].origin.resource.job.jobId, jobId);
-  assert.equal(JSON.parse((await received.preview(receivedRows[0].id)).text).mean, 5);
+  const receivedResult = JSON.parse((await received.preview(receivedRows[0].id)).text);
+  if (inputFilesMode) {
+    inputJourney.verifyReport(receivedResult);
+    fileReceiving = await inputJourney.finish({ resourceId: resource.id, claimToken });
+  } else assert.equal(receivedResult.mean, 5);
 
   progress('reopen-original-checkout-and-customer');
   const priorToken = host.token;
@@ -518,8 +569,8 @@ try {
       approval: browserApproval ? 'ORIGINAL_SF62_BROWSER_BROKER_WITH_DISPOSABLE_FIXTURE_POLICY'
         : 'ORIGINAL_SF62_PTY_WITH_DISPOSABLE_FIXTURE_POLICY',
       source: { originalConfigSha256: original.configSha256, originalApplicationSha256: original.applicationSha256,
-        checkoutConfigSha256: digest(await readBytes(configPath)), application: marker.application,
-        asset: fixtureAsset, network: 'stellar:testnet' } },
+        checkoutConfigSha256: digest(await readBytes(configPath)), application: configured.application,
+        asset: fixtureAsset, payTo: fixturePayTo, payer: fixturePayer, network: 'stellar:testnet' } },
     sources: { runtimeDirectory, buyerClientSha256: digest(await readFile(join(runtimeDirectory, 'node', 'client.mjs'))),
       checkoutControllerSha256: digest(await readFile(new URL('./controller.mjs', import.meta.url))),
       driverSha256: digest(await readFile(fileURLToPath(import.meta.url))) },
@@ -528,6 +579,7 @@ try {
     artifact: { sha256: resource.sha256, bytes: resource.bytes },
     collection: { id: collectionId, archiveSha256: exported.sha256, receivedResources: receivedRows.length },
     nativeVerifies: counters.verifies, nativeSettlements: counters.settles, traffic,
+    ...(inputFilesMode ? { inputFiles: fileReceiving } : {}),
     lifecycle: ['retained merchant application', browserApproval ? 'original merchant catalog and customer input request' :
       'prepared private ticket', 'original SDK offline review',
       browserApproval ? 'original browser decision and SF62/SF36 reservation'
@@ -549,16 +601,31 @@ try {
   await received.close(); received = null;
   await closeWorkspace();
   await writeJson(output, summary); complete = true;
-  process.stdout.write(JSON.stringify({ operation, result: 'PASS', output }) + '\n');
 } finally {
   process.off('SIGINT', stop); process.off('SIGTERM', stop);
   const closed = await Promise.allSettled([received?.close(), closeWorkspace()]);
   try { await shutdownServers(); } catch (error) { closed.push({ status: 'rejected', reason: error }); }
-  closed.push(...await Promise.allSettled([seller?.close(), customer?.close()]));
-  try { await merchant?.close(); } catch (error) { closed.push({ status: 'rejected', reason: error }); }
+  try { await closeMerchant(); } catch (error) { closed.push({ status: 'rejected', reason: error }); }
   const failures = closed.filter(value => value.status === 'rejected');
   if (!complete || failures.length) process.stderr.write(JSON.stringify({
     operation, fixtureDirectory: fixture, customerWorkspace: directory, retainedWorkDirectory: retained,
   }) + '\n');
   if (failures.length) throw new AggregateError(failures.map(value => value.reason), 'CHECKOUT_CONTINUATION_CLOSE_FAILED');
 }
+
+// The receiving desk and original checkout owners have drained before this
+// continuation reopens their same paid job. Retain its source summary once so
+// a resumed checkout cannot change the resolution operation's input identity.
+if (inputFilesMode) {
+  const resolutionSource = join(fixture, 'resolution-checkout-source.json');
+  if (!await exists(resolutionSource)) await immutable(resolutionSource, await readBytes(output));
+  const { runJobResolutionContinuation } = await import('../../../sf30-seller-sdk/jobs/resolution/native-continuation.mjs');
+  const resolution = await runJobResolutionContinuation({ checkoutResult: resolutionSource });
+  const completed = await readJson(output);
+  assert.equal(resolution.result, 'PASS');
+  assert.equal(resolution.jobId, jobId);
+  assert.equal(resolution.entryId, completed.checkout.jobEntryId);
+  completed.resolution = resolution;
+  await writeJson(output, completed);
+}
+process.stdout.write(JSON.stringify({ operation, result: 'PASS', output }) + '\n');

@@ -6,7 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { runRemote } from '../remote.mjs';
 import { openS3Store } from '../remote-s3.mjs';
 import { inspectLocalCapture, readCapturedBundle, runLocalCapture, runLocalVerification,
-  RETIRED_CAPTURE_PREFIX } from './local.mjs';
+  inspectLocalPublisherRestore, runLocalPublisherPreparation, RETIRED_CAPTURE_PREFIX } from './local.mjs';
 import { acquireDeliveryLease } from '../../sf98-merchant-delivery/delivery-lock.mjs';
 
 export const HOST_SCHEMA = 'stellar-forge.recovery-workspace.v1';
@@ -22,7 +22,7 @@ const stamp = () => new Date().toISOString();
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const clone = value => JSON.parse(JSON.stringify(value));
-const localCommand = command => command === 'snapshot' || command === 'local-verify';
+const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare'].includes(command);
 const inside = (parent, child) => parent === child || child.startsWith(parent + sep);
 
 function need(ok, code, message = code, status = 400) {
@@ -102,7 +102,7 @@ function compileHost(value) {
     value.profiles.length > 0 && value.profiles.length <= 32, 'WORKSPACE_HOST_CONFIG_INVALID');
   const seen = new Set();
   const profiles = value.profiles.map(input => {
-    exact(input, ['id', 'label', 'storeConfig', 'operations', 'passEnv', 'bundleRoots', 'downloadRoot', 'restoreRoot', 'capturePlans'], 'profile');
+    exact(input, ['id', 'label', 'storeConfig', 'operations', 'passEnv', 'bundleRoots', 'downloadRoot', 'restoreRoot', 'capturePlans', 'publisherRestores'], 'profile');
     const id = identifier(input.id, 'profile ID');
     need(!seen.has(id), 'WORKSPACE_DUPLICATE_PROFILE'); seen.add(id);
     need(PASS_ENV.test(input.passEnv ?? ''), 'WORKSPACE_PASSPHRASE_NAME_INVALID');
@@ -127,9 +127,31 @@ function compileHost(value) {
         planFile: absolute(plan.planFile, 'Original snapshot plan'), bundleRootId: plan.bundleRootId };
     });
     need(capturePlans.length <= 32, 'WORKSPACE_CAPTURE_PLANS_INVALID');
-    return { id, label: label(input.label, id), storeConfig: absolute(input.storeConfig, 'S3 configuration'),
-      operations: absolute(input.operations, 'Original operations directory'), passEnv: input.passEnv, bundleRoots, capturePlans,
-      downloadRoot: absolute(input.downloadRoot, 'Download root'), restoreRoot: absolute(input.restoreRoot, 'Restore root') };
+    const downloadRoot = absolute(input.downloadRoot, 'Download root');
+    const restoreRoot = absolute(input.restoreRoot, 'Restore root');
+    const restoreIds = new Set();
+    need(input.publisherRestores === undefined || Array.isArray(input.publisherRestores),
+      'WORKSPACE_PUBLISHER_RESTORES_INVALID');
+    const publisherRestores = (input.publisherRestores ?? []).map(restored => {
+      exact(restored, ['id', 'label', 'bundleDirectory', 'restoreDirectory'], 'restored publisher');
+      const restoredId = identifier(restored.id, 'restored-publisher ID');
+      need(!restoreIds.has(restoredId), 'WORKSPACE_DUPLICATE_PUBLISHER_RESTORE'); restoreIds.add(restoredId);
+      const bundleDirectory = absolute(restored.bundleDirectory, 'Original encrypted publisher bundle');
+      const restoreDirectory = absolute(restored.restoreDirectory, 'Original restored publisher');
+      need(bundleRoots.some(root => bundleDirectory !== root.directory && inside(root.directory, bundleDirectory)) ||
+        bundleDirectory !== downloadRoot && inside(downloadRoot, bundleDirectory),
+        'WORKSPACE_PUBLISHER_BUNDLE_OUTSIDE_HOST_ROOTS');
+      need(restoreDirectory !== restoreRoot && inside(restoreRoot, restoreDirectory),
+        'WORKSPACE_PUBLISHER_RESTORE_OUTSIDE_HOST_ROOTS');
+      need(!inside(bundleDirectory, restoreDirectory) && !inside(restoreDirectory, bundleDirectory),
+        'WORKSPACE_PUBLISHER_RESTORE_OVERLAP');
+      return { id: restoredId, label: label(restored.label, restoredId), bundleDirectory, restoreDirectory };
+    });
+    need(publisherRestores.length <= 32, 'WORKSPACE_PUBLISHER_RESTORES_INVALID');
+    return { id, label: label(input.label, id),
+      storeConfig: input.storeConfig == null ? null : absolute(input.storeConfig, 'S3 configuration'),
+      operations: absolute(input.operations, 'Original operations directory'), passEnv: input.passEnv, bundleRoots,
+      capturePlans, publisherRestores, downloadRoot, restoreRoot };
   });
   return { schema: HOST_SCHEMA, title: label(value.title, 'Merchant recovery'), profiles };
 }
@@ -169,7 +191,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       need(!inside(directory, root) && !inside(root, directory), 'WORKSPACE_SOURCE_DIRECTORY_OVERLAP');
       await privateDirectory(root);
     }
-    await privateBytes(profile.storeConfig);
+    if (profile.storeConfig !== null) await privateBytes(profile.storeConfig);
     // Original plan files are read for fresh capture review. Retained operations can reopen after source removal.
     if (await exists(profile.operations)) await privateDirectory(profile.operations);
   }
@@ -205,7 +227,12 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     need(hash(await privateBytes(configFile)) === configHash, 'WORKSPACE_HOST_CONFIG_CHANGED',
       'Restart the workspace to load the changed host configuration', 409);
   }
+  function requireRemoteStore(profile) {
+    need(profile.storeConfig !== null, 'WORKSPACE_REMOTE_STORE_NOT_CONFIGURED',
+      'This host profile is configured for local recovery. Select a profile with a remote store for transfers.', 409);
+  }
   async function storeHint(profile) {
+    if (profile.storeConfig === null) return null;
     const cfg = await privateJSON(profile.storeConfig);
     need(cfg.schema === 'stellar-forge.merchant-recovery-s3.v1', 'WORKSPACE_S3_CONFIG_INVALID');
     return { region: cfg.region, bucket: cfg.bucket, prefix: cfg.prefix ?? '',
@@ -262,7 +289,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     return { operations: rows, errors, nextCursor: page.nextCursor };
   }
   async function inventory(profileId, { cursor, limit = 20 } = {}) {
-    const profile = selectedProfile(profileId); await currentHost();
+    const profile = selectedProfile(profileId); await currentHost(); requireRemoteStore(profile);
     const store = await openS3Store(profile.storeConfig);
     try { return { ...(await runRemote({ command: 'list', limit, ...(cursor ? { cursor } : {}) }, { store })), observedAt: stamp() }; }
     finally { store.close(); }
@@ -270,6 +297,62 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   function allowedBundle(profile, path) {
     return profile.bundleRoots.some(root => path !== root.directory && inside(root.directory, path)) ||
       path !== profile.downloadRoot && inside(profile.downloadRoot, path);
+  }
+  async function publisherRestoreSource(profile, restoreId) {
+    identifier(restoreId, 'completed restore operation ID');
+    const original = await operation(profile.id, restoreId);
+    need(original.command === 'restore' && original.status === 'COMPLETE' &&
+      HEX.test(original.snapshotId ?? ''), 'WORKSPACE_PUBLISHER_COMPLETE_RESTORE_REQUIRED',
+      'Select a completed original cold restore of the typed dataset publisher');
+    absolute(original.bundle, 'Original encrypted bundle');
+    absolute(original.destination, 'Completed cold restore');
+    need(allowedBundle(profile, original.bundle) && original.destination !== profile.restoreRoot &&
+      inside(profile.restoreRoot, original.destination), 'WORKSPACE_PUBLISHER_RESTORE_OUTSIDE_HOST_ROOTS');
+    need(!inside(original.bundle, original.destination) && !inside(original.destination, original.bundle),
+      'WORKSPACE_PUBLISHER_RESTORE_OVERLAP');
+    for (const path of [original.bundle, original.destination]) {
+      for (const control of [directory, ...host.profiles.map(item => item.operations)])
+        need(!inside(control, path) && !inside(path, control), 'WORKSPACE_OPERATION_PATH_OVERLAP');
+      await privateDirectory(path);
+    }
+    need(hash(await privateBytes(join(original.bundle, 'manifest.json'), MAX_MANIFEST)) === original.snapshotId,
+      'WORKSPACE_ORIGINAL_SNAPSHOT_CHANGED');
+    return original;
+  }
+  function declaredPublisherRestore(profile, restoredId) {
+    identifier(restoredId, 'host-declared restored-publisher ID');
+    const selected = profile.publisherRestores.find(item => item.id === restoredId);
+    need(selected, 'WORKSPACE_PUBLISHER_RESTORE_NOT_DECLARED',
+      'Select an original restored publisher declared by this host profile', 404);
+    return selected;
+  }
+  async function declaredPublisherSource(profile, restoredId) {
+    const selected = declaredPublisherRestore(profile, restoredId);
+    for (const path of [selected.bundleDirectory, selected.restoreDirectory]) {
+      for (const control of [directory, ...host.profiles.map(item => item.operations)])
+        need(!inside(control, path) && !inside(path, control), 'WORKSPACE_OPERATION_PATH_OVERLAP');
+      await privateDirectory(path);
+    }
+    const raw = await privateBytes(join(selected.bundleDirectory, 'manifest.json'), MAX_MANIFEST);
+    const manifest = JSON.parse(raw.toString('utf8'));
+    need(object(manifest) && manifest.schema === BUNDLE_SCHEMA &&
+      Number.isSafeInteger(manifest.fileCount) && manifest.fileCount >= 0 &&
+      Number.isSafeInteger(manifest.totalPlainBytes) && manifest.totalPlainBytes >= 0,
+      'WORKSPACE_ORIGINAL_BUNDLE_REQUIRED');
+    return { publisherRestore: clone(selected), bundle: selected.bundleDirectory,
+      destination: selected.restoreDirectory, snapshotId: hash(raw),
+      files: manifest.fileCount, plainBytes: manifest.totalPlainBytes };
+  }
+  async function publisherRestoreBinding(profile, review) {
+    const options = review.options;
+    const original = options.sourcePublisherRestoreId !== undefined ?
+      await declaredPublisherSource(profile, options.sourcePublisherRestoreId) :
+      await publisherRestoreSource(profile, options.sourceRestoreId);
+    need(original.snapshotId === options.snapshotId && original.bundle === options.bundle &&
+      original.destination === options.out, 'WORKSPACE_PUBLISHER_RESTORE_SELECTION_CHANGED');
+    if (original.publisherRestore) need(JSON.stringify(original.publisherRestore) === JSON.stringify(review.publisherRestore),
+      'WORKSPACE_PUBLISHER_RESTORE_SELECTION_CHANGED');
+    return original;
   }
   function captureIdentity(profileId, id) {
     return hash(STATE_SCHEMA + '\n' + workspaceState.id + '\n' + directory + '\n' + profileId + '\n' + id);
@@ -285,6 +368,28 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         options.plan === plan.planFile && dirname(options.out) === root.directory &&
         options.captureId === captureIdentity(profile.id, review.operationId) &&
         HEX.test(options.expectedPlanSha256 ?? ''), 'WORKSPACE_CAPTURE_SELECTION_CHANGED');
+    } else if (review.command === 'publisher-prepare') {
+      need((options.sourceRestoreId !== undefined) !== (options.sourcePublisherRestoreId !== undefined),
+        'WORKSPACE_PUBLISHER_RESTORE_SELECTION_INVALID');
+      if (options.sourcePublisherRestoreId !== undefined) {
+        const selected = declaredPublisherRestore(profile, options.sourcePublisherRestoreId);
+        need(review.sourceType === 'host-publisher-restore' &&
+          JSON.stringify(selected) === JSON.stringify(review.publisherRestore) &&
+          selected.bundleDirectory === options.bundle && selected.restoreDirectory === options.out,
+          'WORKSPACE_PUBLISHER_RESTORE_SELECTION_CHANGED');
+      } else {
+        identifier(options.sourceRestoreId, 'completed restore operation ID');
+        need(review.publisherRestore === undefined, 'WORKSPACE_PUBLISHER_RESTORE_SELECTION_CHANGED');
+      }
+      need(allowedBundle(profile, options.bundle) && options.out !== profile.restoreRoot &&
+        inside(profile.restoreRoot, options.out) &&
+        HEX.test(options.snapshotId ?? '') && options.snapshotId === review.snapshotId &&
+        HEX.test(options.expectedReviewSha256 ?? '') && HEX.test(options.publisherOperationId ?? '') &&
+        options.expectedReviewSha256 === review.restoredPublisher?.reviewSha256 &&
+        options.publisherOperationId === review.restoredPublisher?.operationId &&
+        options.bundle === review.restoredPublisher?.bundleDirectory &&
+        options.out === review.restoredPublisher?.restoreDirectory,
+        'WORKSPACE_PUBLISHER_RESTORE_SELECTION_CHANGED');
     } else {
       need(review.command === 'local-verify' && allowedBundle(profile, options.bundle) &&
         HEX.test(options.snapshotId ?? '') && options.snapshotId === review.snapshotId,
@@ -305,7 +410,8 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       'WORKSPACE_OPERATION_ID_USED', 'Select a new local operation ID; this ID already belongs to an original transfer');
     let review;
     if (input.action === 'snapshot') {
-      need(input.bundleId === undefined && input.snapshotId === undefined && input.quiesced === true,
+      need(input.bundleId === undefined && input.snapshotId === undefined && input.restoreId === undefined &&
+        input.publisherRestoreId === undefined && input.quiesced === true,
         'WORKSPACE_CAPTURE_QUIESCENCE_REQUIRED',
         'Confirm that every declared source producer is quiesced before reviewing its capture');
       const capturePlan = profile.capturePlans.find(item => item.id === input.capturePlanId);
@@ -330,9 +436,33 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
         options: { command: 'snapshot', id: input.id, plan: capturePlan.planFile, out,
           passEnv: profile.passEnv, captureId, expectedPlanSha256: plan.planSha256,
           captureKind: plan.captureKind } };
-    } else {
+    } else if (input.action === 'publisher-prepare') {
       need(input.capturePlanId === undefined && input.quiesced === undefined &&
-        input.snapshotId === undefined && input.destinationName === undefined,
+        input.snapshotId === undefined && input.destinationName === undefined && input.bundleId === undefined,
+        'WORKSPACE_PUBLISHER_RESTORE_SELECTION_INVALID');
+      need((input.restoreId !== undefined) !== (input.publisherRestoreId !== undefined),
+        'WORKSPACE_PUBLISHER_RESTORE_SELECTION_INVALID',
+        'Select either a completed remote restore or one host-declared restored publisher');
+      const original = input.publisherRestoreId !== undefined ?
+        await declaredPublisherSource(profile, input.publisherRestoreId) :
+        await publisherRestoreSource(profile, input.restoreId);
+      const selected = { command: 'publisher-prepare', id: input.id,
+        ...(input.publisherRestoreId !== undefined ? { sourcePublisherRestoreId: input.publisherRestoreId } :
+          { sourceRestoreId: input.restoreId }),
+        bundle: original.bundle, out: original.destination, passEnv: profile.passEnv,
+        snapshotId: original.snapshotId };
+      const restoredPublisher = await inspectLocalPublisherRestore(selected);
+      review = { profileId: profile.id, command: 'publisher-prepare', operationId: input.id,
+        ...(original.publisherRestore ? { sourceType: 'host-publisher-restore', publisherRestore: original.publisherRestore } :
+          { sourceType: 'remote-restore' }),
+        store: null, snapshotId: original.snapshotId, source: original.bundle, destination: original.destination,
+        originalStatus: restoredPublisher.status === 'RESTORED_PUBLISHER_PREPARED' ? 'COMPLETE' : restoredPublisher.status,
+        files: original.files ?? null, plainBytes: original.plainBytes ?? null, restoredPublisher,
+        options: { ...selected, expectedReviewSha256: restoredPublisher.reviewSha256,
+          publisherOperationId: restoredPublisher.operationId } };
+    } else {
+      need(input.capturePlanId === undefined && input.quiesced === undefined && input.restoreId === undefined &&
+        input.publisherRestoreId === undefined && input.snapshotId === undefined && input.destinationName === undefined,
         'WORKSPACE_LOCAL_VERIFICATION_SELECTION_INVALID');
       const bundle = await bundleAt(profile, input.bundleId);
       review = { profileId: profile.id, command: 'local-verify', operationId: input.id,
@@ -346,13 +476,17 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   }
   async function selection(input) {
     exact(input, ['profileId', 'action', 'id', 'bundleId', 'snapshotId', 'destinationName',
-      'capturePlanId', 'quiesced'], 'recovery selection');
+      'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId'], 'recovery selection');
     const profile = selectedProfile(input.profileId);
     identifier(input.id, 'original operation ID');
-    need(['snapshot', 'verify', 'push', 'pull', 'restore', 'resume'].includes(input.action), 'WORKSPACE_ACTION_INVALID');
+    need(['snapshot', 'verify', 'publisher-prepare', 'push', 'pull', 'restore', 'resume'].includes(input.action),
+      'WORKSPACE_ACTION_INVALID');
     await currentHost();
-    if (input.action === 'snapshot' || input.action === 'verify') return localSelection(profile, input);
-    need(input.capturePlanId === undefined && input.quiesced === undefined, 'WORKSPACE_TRANSFER_SELECTION_INVALID');
+    if (['snapshot', 'verify', 'publisher-prepare'].includes(input.action)) return localSelection(profile, input);
+    requireRemoteStore(profile);
+    need(input.capturePlanId === undefined && input.quiesced === undefined && input.restoreId === undefined &&
+      input.publisherRestoreId === undefined,
+      'WORKSPACE_TRANSFER_SELECTION_INVALID');
     let options = { command: input.action, config: profile.storeConfig, operations: profile.operations,
       id: input.id, passEnv: profile.passEnv };
     let local = null, original = null;
@@ -432,9 +566,9 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     }
     const running = active?.key === requestPath(request.review.profileId, request.review.operationId);
     const local = request.local ? clone(request.local) : null;
-    if (local?.paidJobsPlan) {
-      const { schema, planSha256, bytes } = local.paidJobsPlan;
-      local.paidJobsPlan = { schema, planSha256, bytes };
+    for (const key of ['paidJobsPlan', 'datasetPublisherPlan']) if (local?.[key]) {
+      const { schema, planSha256, bytes } = local[key];
+      local[key] = { schema, planSha256, bytes };
     }
     return { profileId: request.review.profileId, operationId: request.review.operationId,
       review: clone(request.review), createdAt: request.createdAt, updatedAt: request.updatedAt,
@@ -472,12 +606,14 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       let result;
       if (local) {
         localPathBindings(profile, request.review);
+        if (request.review.command === 'publisher-prepare') await publisherRestoreBinding(profile, request.review);
         request.local ??= {};
         const localOptions = { options: request.review.options, state: request.local,
           save: async () => { request.updatedAt = stamp(); await atomicJSON(job.key, request); },
           cancelled: () => job.cancelRequested };
         result = request.review.command === 'snapshot' ?
           await runLocalCapture({ ...localOptions, allowCapture: job.allowCapture === true }) :
+          request.review.command === 'publisher-prepare' ? await runLocalPublisherPreparation(localOptions) :
           await runLocalVerification(localOptions);
       } else {
         if (request.review.command === 'push') need(
@@ -544,6 +680,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     if (localCommand(request.review.command)) {
       localPathBindings(profile, request.review);
       if (request.result?.status === 'COMPLETE') return requestView(request);
+      if (request.review.command === 'publisher-prepare') await publisherRestoreBinding(profile, request.review);
       if (request.review.command === 'snapshot') need(!request.local?.pendingRetirement &&
         await readCapturedBundle(request.review.options), 'WORKSPACE_CAPTURE_REVIEW_REQUIRED',
         'Review the same capture and confirm that its original source producers are quiesced', 409);
@@ -574,8 +711,9 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   async function state() {
     const profiles = [];
     for (const profile of host.profiles) profiles.push({ id: profile.id, label: profile.label,
-      store: await storeHint(profile), operations: profile.operations,
+      store: await storeHint(profile), remoteConfigured: profile.storeConfig !== null, operations: profile.operations,
       bundleRoots: clone(profile.bundleRoots), capturePlans: clone(profile.capturePlans),
+      publisherRestores: clone(profile.publisherRestores),
       downloadRoot: profile.downloadRoot, restoreRoot: profile.restoreRoot,
       passEnv: profile.passEnv, passphraseAvailable: typeof process.env[profile.passEnv] === 'string' && process.env[profile.passEnv].length > 0 });
     const page = await requests();

@@ -80,13 +80,33 @@ function requestOptions(value = {}) {
     maxResponseBytes: integer(value.maxResponseBytes ?? 16777216, 1024, 67108864, 'CKAN_RESPONSE_LIMIT_INVALID') };
 }
 export async function requestCkan(origin, action, parameters = {}, options = {}) {
-  const base = catalogOrigin(origin), config = requestOptions(options);
+  const base = catalogOrigin(origin);
   if (!ACTIONS.has(action) || !object(parameters)) throw fault('CKAN_READ_ACTION_REQUIRED');
   const url = new URL('/api/3/action/' + action, base);
   for (const [key, value] of Object.entries(parameters)) {
     if (value !== undefined && value !== null)
       url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
   }
+  return receiveJson(url, requestOptions(options), options, result);
+}
+export function ckanSchemaUrl(origin, value) {
+  let url;
+  try { url = new URL(value); } catch { throw fault('CKAN_SCHEMA_URL_INVALID'); }
+  if (typeof value !== 'string' || value.length > 4096 || url.origin !== catalogOrigin(origin) ||
+      url.username || url.password || url.hash || url.search)
+    throw fault('CKAN_SCHEMA_URL_INVALID', 'Use a schema URL on this HTTPS catalogue without credentials, a query or a fragment.');
+  return url.href;
+}
+export async function requestCkanSchema(origin, schemaUrl, options = {}) {
+  const url = new URL(ckanSchemaUrl(origin, schemaUrl)), config = requestOptions(options);
+  config.maxResponseBytes = Math.min(config.maxResponseBytes, 4194304);
+  return receiveJson(url, config, options, raw => {
+    const value = parseCkanJson(raw);
+    if (!object(value)) throw fault('CKAN_SEMANTIC_SCHEMA_INVALID');
+    return value;
+  });
+}
+async function receiveJson(url, config, options, decode) {
   const headers = { accept: 'application/json' };
   if (config.authTokenEnv) {
     const token = (options.env ?? process.env)[config.authTokenEnv];
@@ -122,7 +142,7 @@ export async function requestCkan(origin, action, parameters = {}, options = {})
     if (error.code) throw error;
     throw fault(signal.aborted ? 'CKAN_REQUEST_CANCELLED' : 'CKAN_RESPONSE_INTERRUPTED');
   }
-  const raw = Buffer.concat(chunks), value = result(raw);
+  const raw = Buffer.concat(chunks), value = decode(raw);
   return { raw, value, receipt: { ...receipt, bytes: raw.length, sha256: digest(raw) } };
 }
 export function captureSelection(value) {
@@ -137,6 +157,7 @@ export function captureSelection(value) {
   if (value.pagination === 'keyset' && Object.hasOwn(filters, '_id'))
     throw fault('CKAN_KEYSET_ID_FILTER_UNSUPPORTED', 'Use offset pagination to preserve the selected _id filter.');
   return { catalogOrigin: origin, packageId, resourceId, filters, q: value.q ?? '',
+    ...(value.schemaUrl ? { schemaUrl: ckanSchemaUrl(origin, value.schemaUrl) } : {}),
     pagination: value.pagination ?? 'offset', pageSize: integer(value.pageSize ?? 1000, 1, 32000, 'CKAN_PAGE_SIZE_INVALID'),
     ...requestOptions(value) };
 }
@@ -189,18 +210,21 @@ export async function captureCkanResource(selection, directory, options = {}) {
     }
     const transport = { ...config, ...options };
     async function retain(file, action, parameters) {
+      const decode = action === 'csvw_schema' ? parseCkanJson : result;
       const found = state.files.find(item => item.file === file);
       if (found) {
         const raw = await readPrivate(join(directory, file), config.maxResponseBytes);
         if (raw.length !== found.bytes || digest(raw) !== found.sha256) throw fault('CKAN_RETAINED_PAGE_CHANGED');
-        return { raw, value: result(raw), receipt: state.receipts.find(item => item.file === file) ?? null };
+        return { raw, value: decode(raw), receipt: state.receipts.find(item => item.file === file) ?? null };
       }
       let received;
       if (await exists(join(directory, file))) {
         const raw = await readPrivate(join(directory, file), config.maxResponseBytes);
-        received = { raw, value: result(raw), receipt: { recoveredAfterInterruption: true, receivedAt: null } };
+        received = { raw, value: decode(raw), receipt: { recoveredAfterInterruption: true, receivedAt: null } };
       } else {
-        received = await requestCkan(config.catalogOrigin, action, parameters, transport);
+        received = action === 'csvw_schema'
+          ? await requestCkanSchema(config.catalogOrigin, parameters.url, transport)
+          : await requestCkan(config.catalogOrigin, action, parameters, transport);
         if (state.sourceBytes + received.raw.length > limits.maxBytes) throw fault('CKAN_CAPTURE_BYTE_LIMIT');
         await createFile(join(directory, file), received.raw);
       }
@@ -216,6 +240,8 @@ export async function captureCkanResource(selection, directory, options = {}) {
     if (before.value.id !== config.resourceId || before.value.package_id && before.value.package_id !== pkg.value.id)
       throw fault('CKAN_RESOURCE_NOT_IN_PACKAGE');
     if (before.value.datastore_active === false) throw fault('CKAN_RESOURCE_HAS_NO_DATASTORE', 'Select a resource whose DataStore API is active.');
+    const semanticBefore = config.schemaUrl
+      ? await retain('schema.json', 'csvw_schema', { url: config.schemaUrl }) : null;
     state.packageId = pkg.value.id; state.resourceId = before.value.id;
     await atomicJson(directory, 'progress.json', state);
     const seen = new Set();
@@ -277,6 +303,8 @@ export async function captureCkanResource(selection, directory, options = {}) {
     }
     const after = await retain('resource-after.json', 'resource_show', { id: config.resourceId });
     if (after.value.id !== config.resourceId) throw fault('CKAN_RESOURCE_CHANGED');
+    const semanticAfter = config.schemaUrl
+      ? await retain('schema-after.json', 'csvw_schema', { url: config.schemaUrl }) : null;
     const manifest = { schema: CAPTURE_SCHEMA, provider: 'ckan', readOnly: true, state: 'COMPLETE',
       catalogOrigin: config.catalogOrigin, packageId: state.packageId, resourceId: config.resourceId,
       selection: config, selectionHash, startedAt: state.startedAt, completedAt: stamp(),
@@ -284,6 +312,12 @@ export async function captureCkanResource(selection, directory, options = {}) {
       packageTitle: pkg.value.title ?? pkg.value.name, resourceTitle: before.value.name ?? config.resourceId,
       license: { id: pkg.value.license_id ?? null, title: pkg.value.license_title ?? null, url: pkg.value.license_url ?? null },
       fields: state.fields ?? [], rowCount: state.rowCount, sourceBytes: state.sourceBytes,
+      ...(semanticBefore ? {
+        semanticSchema: { url: config.schemaUrl, ...fileInfo('schema.json', semanticBefore.raw),
+          after: fileInfo('schema-after.json', semanticAfter.raw) },
+        semanticConsistency: identity(semanticBefore.value) === identity(semanticAfter.value)
+          ? 'semantics-unchanged' : 'semantics-changed',
+      } : {}),
       consistency: identity(version(before.value)) === identity(version(after.value)) ? 'metadata-unchanged' : 'metadata-changed',
       observationKind: 'sequential-datastore-pages', pages: state.pages, files: state.files, receipts: state.receipts };
     await createFile(join(directory, 'capture.json'), bytes(manifest));
@@ -308,7 +342,7 @@ export async function readCkanCapture(filename, expectedHash) {
   catalogOrigin(manifest.catalogOrigin);
   const rawFiles = new Map(), rows = [], ids = new Set();
   for (const item of manifest.files) {
-    if (!/^(package|resource|resource-after)\.json$|^pages\/\d{8}\.json$/.test(item.file ?? '') ||
+    if (!/^(package|resource|resource-after|schema|schema-after)\.json$|^pages\/\d{8}\.json$/.test(item.file ?? '') ||
         !HASH.test(item.sha256 ?? '') || !Number.isSafeInteger(item.bytes) || item.bytes < 1 || item.bytes > 67108864 ||
         rawFiles.has(item.file)) throw fault('CKAN_CAPTURE_FILE_INVALID');
     const raw = await readPrivate(join(dirname(filename), item.file), 67108864);
@@ -317,6 +351,17 @@ export async function readCkanCapture(filename, expectedHash) {
   }
   if (!rawFiles.has('package.json') || !rawFiles.has('resource.json') || !rawFiles.has('resource-after.json'))
     throw fault('CKAN_METADATA_MISSING');
+  if (manifest.semanticSchema) {
+    const reference = manifest.semanticSchema;
+    ckanSchemaUrl(manifest.catalogOrigin, reference.url);
+    for (const [name, descriptor] of [['schema.json', reference], ['schema-after.json', reference.after]]) {
+      const raw = rawFiles.get(name);
+      if (!descriptor || descriptor.file !== name || !raw || raw.length > 4194304 ||
+          digest(raw) !== descriptor.sha256 || raw.length !== descriptor.bytes || !object(parseCkanJson(raw)))
+        throw fault('CKAN_SEMANTIC_SOURCE_CHANGED');
+    }
+    if (manifest.selection?.schemaUrl !== reference.url) throw fault('CKAN_SEMANTIC_SOURCE_CHANGED');
+  } else if (rawFiles.has('schema.json') || rawFiles.has('schema-after.json')) throw fault('CKAN_SEMANTIC_SOURCE_MISSING');
   const pkg = result(rawFiles.get('package.json')), resource = result(rawFiles.get('resource.json'));
   if (pkg.id !== manifest.packageId || resource.id !== manifest.resourceId ||
       !pkg.resources?.some(item => item.id === manifest.resourceId)) throw fault('CKAN_CAPTURE_IDENTITY_CHANGED');

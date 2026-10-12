@@ -475,3 +475,116 @@ export function readN8nMerchantLaunch(options: {
   directory: string; sourceDirectory?: string; launchSourceDirectory?: string;
   pid?: number; instanceId?: string; nativeFactoryPath?: string | null; startWorker?: boolean;
 }): Promise<N8nLaunchRecord>;
+
+
+export const N8N_EXPORT_SCHEMA: 'stellar-forge.n8n-job-export.v1';
+export const N8N_EXPORT_MANIFEST: 'n8n-job-export.json';
+export const N8N_EXPORT_MAX_BYTES: number;
+export const N8N_EXPORT_MAX_FILE_BYTES: number;
+export interface N8nExportRequest {
+  requestId: string;
+  jobId: string;
+  expectedRevision: number;
+  expectedDispatchRevision: number | null;
+}
+export interface N8nExportFile {
+  name: 'job.json' | 'dispatch.json' | 'result.json';
+  bytes: number;
+  sha256: Sha256;
+}
+export interface N8nExportedJob {
+  id: string;
+  functionId: string;
+  revision: number;
+  state: NativeJobState;
+  inputSha256: Sha256;
+  configSha256: Sha256;
+  applicationSha256: Sha256;
+  result: Pick<NativeJobResult, 'bytes' | 'sha256' | 'contentType' | 'filename'> | null;
+}
+export interface N8nJobExport {
+  schema: typeof N8N_EXPORT_SCHEMA;
+  exportId: Sha256;
+  configurationSha256: Sha256;
+  request: N8nExportRequest;
+  job: N8nExportedJob;
+  files: N8nExportFile[];
+  totalBytes: number;
+}
+export interface N8nManifestReply {
+  state: 'MANIFEST_RETAINED';
+  exportId: Sha256;
+  manifestFile: { name: typeof N8N_EXPORT_MANIFEST; bytes: number; sha256: Sha256 };
+}
+export interface N8nFileRequest {
+  exportId: Sha256;
+  file: typeof N8N_EXPORT_MANIFEST | N8nExportFile['name'];
+  expectedManifestSha256: Sha256;
+  expectedSha256: Sha256;
+  offset?: number;
+  limit?: number;
+  readId?: string;
+}
+export interface N8nFileChunk {
+  exportId: Sha256;
+  manifestSha256: Sha256;
+  readId: string;
+  file: { name: N8nFileRequest['file']; bytes: number; sha256: Sha256; contentType: string };
+  offset: number;
+  bytesRead: number;
+  nextOffset: number | null;
+  encoding: 'base64';
+  data: string;
+}
+export interface N8nAgentStatus {
+  schema: 'stellar-forge.n8n-agent-status.v1';
+  configuration: N8nMerchantSnapshot['configuration'];
+  jobs: Omit<NativeJobSnapshot, 'jobs'>;
+  services: ServiceAddresses;
+  fileReads: { activeFileReads: number; snapshotBytes: number };
+}
+export interface N8nJobPage {
+  schema: 'stellar-forge.n8n-job-page.v1';
+  revision: number;
+  total: number;
+  jobs: NativeJobSummary[];
+  nextCursor: string | null;
+}
+export interface N8nExportPage {
+  schema: 'stellar-forge.n8n-export-page.v1';
+  exports: Array<{ exportId: Sha256; job: N8nExportedJob; files: N8nExportFile[];
+    totalBytes: number; manifestSha256: Sha256 }>;
+  nextCursor: string | null;
+}
+export interface N8nPrepareRequest {
+  requestId: string;
+  reference?: string;
+  functionId: string;
+  input: JsonObject;
+  label?: string;
+}
+export interface N8nRenewRequest {
+  requestId: string;
+  jobId: string;
+  expectedRevision: number;
+  reason: string;
+}
+/** Validate the immutable completion manifest and every original file descriptor. */
+export function parseN8nJobExport(bytes: Uint8Array, expectedExportId?: Sha256): N8nJobExport;
+/** Validate full original job/input/source and dispatch identities after file verification. */
+export function validateN8nExportRecords(manifest: N8nJobExport, jobBytes: Uint8Array,
+  dispatchBytes: Uint8Array): N8nJobDetail;
+/** Borrows the existing live merchant; owns its request journal and temporary file reads. */
+export class N8nAgentOperations {
+  constructor(merchant: N8nMerchant);
+  status(): Promise<N8nAgentStatus>;
+  jobs(input?: { limit?: number; cursor?: string; q?: string; status?: NativeJobState }): Promise<N8nJobPage>;
+  prepare(input: N8nPrepareRequest): Promise<NativeJobHandoff>;
+  renew(input: N8nRenewRequest): Promise<NativeJobHandoff>;
+  export(input: N8nExportRequest): Promise<N8nManifestReply>;
+  exports(input?: { limit?: number; cursor?: string; jobId?: string }): Promise<N8nExportPage>;
+  manifest(input: { exportId: Sha256 }): Promise<N8nManifestReply>;
+  file(input: N8nFileRequest): Promise<N8nFileChunk>;
+  release(input: { exportId: Sha256; readId: string }): Promise<{ state: 'FILE_READ_RELEASED'; exportId: Sha256; readId: string }>;
+  close(): Promise<void>;
+}

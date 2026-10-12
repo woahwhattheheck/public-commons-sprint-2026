@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.grpc-merchant-plan.v1",
+  "publicOrigin": "https://merchant.example.com",
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "amount": "25000",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "maxTimeoutSeconds": 60
+  },
+  "routes": [
+    {
+      "id": "account-events",
+      "path": "/account-events",
+      "grpcMethod": "/forge.streams.AccountEvents/Watch",
+      "serviceName": "Account event stream",
+      "description": "Read ordered account events through the retained single-request server-streaming method.",
+      "example": {
+        "account_id": "local-example-account",
+        "count": 4,
+        "delay_ms": 20
+      }
+    }
+  ]
+}

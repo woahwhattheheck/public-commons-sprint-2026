@@ -1,6 +1,10 @@
 import type { Server } from 'node:http';
 import type { Library, Resource, Scan } from '../resource-library/library.mjs';
-import type { JobIntake, IntakeStatus } from './intake/index.mjs';
+import type { JobIntake, IntakeStatus, InputStorageLimits } from './intake/index.mjs';
+import type { JobResolutionController } from './resolution/index.mjs';
+export { openJobResolutionBuyer, openJobResolutionController, jobResolutionExtension,
+  runJobBuyerResolutionCommand } from './resolution/index.mjs';
+export type { JobResolutionController, BuyerResolution, BuyerResolutionState, BuyerResolutionExport } from './resolution/index.mjs';
 export * from './intake/index.mjs';
 
 export type JobState = 'PREPARED' | 'AWAITING_SETTLEMENT' | 'QUEUED' | 'RUNNING' |
@@ -51,7 +55,7 @@ export interface WorkspaceList {
   q?: string; state?: '' | JobState; view?: 'active' | 'archived' | 'all'; offset?: number; limit?: number;
 }
 export interface JobWorkspace {
-  readonly directory: string; readonly library: Library; readonly checkout: JobCheckout; readonly intake: JobIntake;
+  readonly directory: string; readonly library: Library; readonly checkout: JobCheckout; readonly intake: JobIntake; readonly resolution: JobResolutionController;
   register(options: {buyerDirectory: string; label?: string}): Promise<{entry: JobEntry; reused: boolean}>;
   retain(options: {acceptanceBytes: Buffer; label?: string} & (
     {claimToken: string; handoff?: never} |
@@ -73,12 +77,13 @@ export interface WorkspaceOptions {
   transport?: {mode: 'explicit-connect'; origin: string} & (
     {proxyUrl: string; proxyEnv?: never} | {proxyUrl?: never; proxyEnv: string});
   fetchImpl?: typeof fetch; requestTimeoutMs?: number; maxConcurrent?: number; checkout?: CheckoutOptions;
+  inputFileStorage?: InputStorageLimits; transferTimeoutMs?: number;
 }
 export function openJobWorkspace(options: WorkspaceOptions): Promise<JobWorkspace>;
 export type JobWorkspaceLanding = 'request' | 'checkout' | 'jobs' | 'library' | 'collections';
 export type JobApprovalMode = 'browser' | 'terminal';
 export function startJobCustomerWorkspace(options: {model: JobWorkspace; port?: number; browserApproval?: boolean; landing?: JobWorkspaceLanding}): Promise<{
-  origin: string; url: string; libraryUrl: string; collectionsUrl: string; checkoutUrl: string; intakeUrl: string;
+  origin: string; url: string; libraryUrl: string; collectionsUrl: string; checkoutUrl: string; intakeUrl: string; resolutionUrl: string;
   approvalMode: JobApprovalMode; landing: JobWorkspaceLanding; entryUrl: string;
   token: string; server: Server; launch: JobWorkspaceLaunch; privateLaunch: string; close(): Promise<void>;
 }>;
@@ -187,7 +192,7 @@ export interface JobWorkspaceLaunch {
   schema: 'stellar-forge.sf88.job-workspace-launch.v1'; state: 'LISTENING' | 'CLOSED';
   directory: string; runtimeDirectory: string; operatorSelection: CheckoutSelection | null;
   pid: number; instanceId: string; startedAt: string; endedAt?: string;
-  url: string; checkoutUrl: string; libraryUrl: string; collectionsUrl: string; intakeUrl?: string; privateLaunch: string;
+  url: string; checkoutUrl: string; libraryUrl: string; collectionsUrl: string; intakeUrl?: string; resolutionUrl?: string; privateLaunch: string;
   approvalMode?: JobApprovalMode; landing?: JobWorkspaceLanding; entryUrl?: string;
 }
 export const JOB_WORKSPACE_LAUNCH_SCHEMA: 'stellar-forge.sf88.job-workspace-launch.v1';

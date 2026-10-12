@@ -20,6 +20,7 @@ import zipfile
 
 from .analysis_workbooks import _open_private, _file_record
 from .errors import StateError
+from .response_documents import allowed_document_payload, snapshot_document_files
 from .storage import digest, dump, parse, private_directory, read, sync_directory, write
 
 ARCHIVE_SCHEMA = "stellar-forge.analysis-workspace-archive.v1"
@@ -63,7 +64,7 @@ def _relative(value):
 def _allowed_payload(value):
     """The portable format carries data files, never a launcher or executable."""
     _relative(value)
-    if value == "datasets.sqlite3":
+    if value == "datasets.sqlite3" or allowed_document_payload(value):
         return True
     if re.fullmatch(r"analysis-query-exports/(?:[a-f0-9]{32}/(?:manifest\.json|rows\.(?:csv|jsonl|sqlite3))|control/[a-f0-9]{32}\.json)", value):
         return True
@@ -325,6 +326,20 @@ class WorkspaceArchives:
                 add("analysis-exports/" + result["filename"], result, identifier)
             elif kind == "backup":
                 add("analysis-backups/" + identifier + "/datasets.sqlite3", result, identifier)
+        # Resolve every registered source revision from this same database view.
+        # During export this is the retained immutable SQLite snapshot; a newer
+        # live registration cannot add files to an already selected backup.
+        try:
+            documents = snapshot_document_files(self.database.directory, db)
+        except (StateError, OSError) as error:
+            if review_missing is None:
+                raise
+            review_missing.append({"path": "analysis-response-documents",
+                                   "reason": "source_document_required_or_changed",
+                                   "code": error.code if isinstance(error, StateError) else "IO_ERROR"})
+        else:
+            for item in documents:
+                add(item["path"], item, item["path"].split("/")[1])
         return sorted(selected.values(), key=lambda item: item["path"]), outputs, exclusions
 
     def review(self, *, include_previous_backups=False):
@@ -385,7 +400,8 @@ class WorkspaceArchives:
             self._progress(identifier, phase="SNAPSHOT", files_done=0, bytes_done=0)
             self.database.backup(snapshot)
         plan_path = folder / "archive-inputs.json"
-        if plan_path.exists():
+        cached_plan = plan_path.exists()
+        if cached_plan:
             manifest = parse(read(plan_path, _MAX_MANIFEST))
         else:
             with sqlite3.connect(database_path.as_uri() + "?mode=ro&immutable=1", uri=True) as db:
@@ -404,6 +420,22 @@ class WorkspaceArchives:
         _need(manifest.get("schema") == ARCHIVE_SCHEMA and manifest.get("id") == identifier and
               manifest.get("workspace_id") == self.identity, "WORKSPACE_ARCHIVE_PLAN_CHANGED")
         files = manifest["files"]
+        if cached_plan:
+            # A retained plan predating document custody must not become a
+            # COMPLETE archive that omits sources referenced by its own DB.
+            # Recheck against that same snapshot, never the live workspace.
+            with sqlite3.connect(database_path.as_uri() + "?mode=ro&immutable=1", uri=True) as db:
+                db.execute("PRAGMA trusted_schema=OFF")
+                _need(db.execute("SELECT workspace_id FROM sf_analysis_format WHERE id=1").fetchone()[0] == self.identity,
+                      "WORKSPACE_ARCHIVE_SNAPSHOT_IDENTITY_CHANGED")
+                documents = snapshot_document_files(self.database.directory, db)
+            expected_documents = {item["path"]: item for item in documents}
+            planned_documents = {
+                item["path"]: _entry(item) for item in files
+                if allowed_document_payload(item.get("path"))
+            }
+            _need(planned_documents == expected_documents,
+                  "WORKSPACE_ARCHIVE_DOCUMENT_SOURCE_SELECTION_CHANGED")
         total = sum(item["bytes"] for item in files)
         self._progress(identifier, phase="ARCHIVING", files_done=0, files_total=len(files), bytes_done=0, bytes_total=total)
         temporary, target = folder / "workspace.zip.part", folder / "workspace.zip"
