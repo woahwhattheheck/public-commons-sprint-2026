@@ -25,7 +25,7 @@ const HELP='Native Stellar MPP Charge\n\n'+
   'node mpp-charge/cli.mjs customer-status WORKSPACE [OFFSET]\n'+
   'node mpp-charge/cli.mjs customer-preview|customer-prepare WORKSPACE OFFER_ID INPUTS.json\n'+
   'node mpp-charge/cli.mjs customer-retry WORKSPACE PURCHASE_ID\n'+
-  'node mpp-charge/cli.mjs serve WORKSPACE [PORT]\n'+
+  'node mpp-charge/cli.mjs serve WORKSPACE [PORT] [--token-env ENV]\n'+
   'node mpp-charge/cli.mjs merchant WORKSPACE [PORT]\n'+
   'node mpp-charge/cli.mjs prepare WORKSPACE [CHALLENGE_ID]\n'+
   'node mpp-charge/cli.mjs execute|resume|finalize|inspect WORKSPACE PURCHASE_ID\n'+
@@ -56,9 +56,15 @@ export async function main(argv=process.argv.slice(2)) {
       console.log(json(result));return 0;
     }
     if(command==='serve') {
-      requireValue(rest.length<=1,'MPP_CLI_ARGUMENTS_INVALID');
-      const app=await serveWorkspace({directory:resolve(directory),port:rest[0]===undefined?8787:Number(rest[0])});
+      const tokenIndex=rest.indexOf('--token-env');
+      requireValue(tokenIndex===-1?rest.length<=1:
+        (tokenIndex===0 || tokenIndex===1) && rest.length===tokenIndex+2,'MPP_CLI_ARGUMENTS_INVALID');
+      const tokenEnv=tokenIndex===-1?undefined:rest[tokenIndex+1];
+      const selectedPort=tokenIndex===0?undefined:rest[0];
+      const app=await serveWorkspace({directory:resolve(directory),
+        port:selectedPort===undefined?8787:Number(selectedPort),tokenEnv});
       console.log('Private operator workspace: '+app.url);
+      console.log(JSON.stringify(app.readiness));
       await waitForStop(app.close);return 0;
     }
     workspace=await openWorkspace(resolve(directory),{create:command==='init'});

@@ -1,5 +1,7 @@
 # Starforge merchant operations through MCP
 
+Native Stellar MPP customer operations use the existing private console and original payment records. The [MPP guide](./MPP.md) covers host connections, retained customer reviews, native jobs, recovery, and complete resumable response or customer-package downloads through this same operator.
+
 Federal award research is available through the same merchant interface. Open
 host-declared USAspending workspaces, operate the original provider capture jobs,
 review award and recipient data, prepare the native merchant dataset, receive

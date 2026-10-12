@@ -126,3 +126,7 @@ Every workbench endpoint uses the existing bearer session and same-origin protec
 | GET /api/customer-workbench/purchases/ID/response | Original resource download |
 
 Native runtime versions remain isolated and pinned to `@stellar/mpp@0.7.1`, `mppx@0.6.29` and `@stellar/stellar-sdk@15.1.0`. The customer workbench is included in the existing MPP component and typed `./mpp/customer` export.
+
+## Native MCP and Applications integration
+
+The [native merchant MCP guide](../../../../stellar-forge/mcp-merchant-operator/MPP.md) connects the existing customer console to the maintained merchant operator. The same workspace now exposes direct original purchase inspection, original job lookup, exact configuration review and SHA-pinned paid-response chunks. These reads remain available while a purchase waits on its native merchant or original terminal governor. Applications can bind the schema-first `stellar-forge.mpp-console-ready.v1` startup record to authenticated `/api/identity` using the original process/parent IDs, workspace and creation time.
