@@ -243,7 +243,8 @@ async function reopenDialog(){
  if(S.busy||!S.dialog?.reopen)return;
  const callback=S.dialog.reopen,form=$('#dialog-form'),draft=[];
  for(const input of Array.from(form.elements)){
-  if(!input.name||input.disabled||['submit','button'].includes(input.type))continue;
+  const originallyDisabled=interactionControls.has(input)?interactionControls.get(input):input.disabled;
+  if(!input.name||originallyDisabled||['submit','button'].includes(input.type))continue;
   if(input.type==='file')draft.push({name:input.name,type:'file',files:Array.from(input.files||[])});
   else if(['checkbox','radio'].includes(input.type))draft.push({name:input.name,type:input.type,value:input.value,checked:input.checked});
   else draft.push({name:input.name,type:input.type,value:input.value});
@@ -616,11 +617,11 @@ async function mutate(path,payload,{label:actionLabel='Save change',message='Cha
   if(!response?.state||!Number.isSafeInteger(response.revision)||response.state.revision!==response.revision){
    const error=new Error('The save returned an incomplete result. Recover this original request before another change.');error.outcomeUnknown=true;throw error;
   }
-  savePending(null);S.state=response.state;
+  savePending(null);if(!recovery)S.state=response.state;
   if(response.detail?.run?.id)S.runId=response.detail.run.id;
   if(after)await after(response.result,response);
   dialogClose({force:true});
-  await refresh({providedState:response.state,providedDetail:response.detail,keepDialog:true});
+  await refresh(recovery?{keepDialog:true}:{providedState:response.state,providedDetail:response.detail,keepDialog:true});
   notification(message);
   return response;
  }catch(error){
