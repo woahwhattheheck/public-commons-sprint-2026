@@ -422,6 +422,7 @@ def run_locked(args, root):
         save(seed_path, seed)
     conf = json.loads(ORIGINAL_CONFIG)
     conf.update({"listen_address": "127.0.0.1", "listen_port": ports["gateway"], "secret": credentials["gateway"],
+        "pid_file_location": str(root / "gateway.pid"),
         "template_path": str(gateway_home / "templates"), "app_path": str(root / "apps"),
         "middleware_path": str(root / "middleware"), "use_db_app_configs": False, "enable_analytics": False})
     conf["storage"].update({"host": "127.0.0.1", "port": ports["redis"], "password": credentials["redis"],
