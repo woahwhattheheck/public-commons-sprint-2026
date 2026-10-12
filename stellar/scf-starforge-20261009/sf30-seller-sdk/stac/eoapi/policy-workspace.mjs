@@ -101,6 +101,17 @@ export async function openDeploymentPolicyWorkspace({ directory, create = true, 
       state.approvals.push(approval); state.currentApprovalId = approval.id; return approval;
     }, expectedRevision);
   }
+  async function getApproval({ approvalId } = {}) {
+    const state = await getState();
+    const approval = state.approvals.find(value => value.id === (approvalId ?? state.currentApprovalId));
+    need(approval, 'EOAPI_APPROVED_POLICY_REQUIRED');
+    const review = state.reviews.find(value => value.id === approval.reviewId);
+    need(review && review.policyDigest === approval.policyDigest, 'EOAPI_APPROVED_POLICY_CHANGED');
+    const policy = normalizeDeploymentPolicy(review.policy), compilation = compileDeploymentPolicy(policy);
+    need(compilation.ready && compilation.digest === approval.policyDigest &&
+      policyDigest(review.compilation) === policyDigest(compilation), 'EOAPI_APPROVED_POLICY_CHANGED');
+    return structuredClone({ approval, review, policy, compilation });
+  }
   async function exportPackage({ approvalId, directory: destination } = {}) {
     const state = await getState();
     const approval = state.approvals.find(value => value.id === (approvalId ?? state.currentApprovalId));
@@ -149,5 +160,5 @@ export async function openDeploymentPolicyWorkspace({ directory, create = true, 
       state.imports.push(receipt); return receipt;
     }, expectedRevision);
   }
-  return Object.freeze({ directory, getState, saveDraft, review, approve, exportPackage, importPackage, close: () => queue });
+  return Object.freeze({ directory, getState, getApproval, saveDraft, review, approve, exportPackage, importPackage, close: () => queue });
 }
