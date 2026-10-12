@@ -885,6 +885,7 @@
     "./seller/ckan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/source.mjs",
     "./seller/ckan/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/capture.mjs",
     "./seller/ckan/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/declaration.mjs",
+    "./seller/ckan/semantics": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/semantics.mjs",
     "./seller/ckan/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/server.mjs",
     "./seller/ckan/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/model.mjs",
     "./seller/ckan/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/model.mjs",
