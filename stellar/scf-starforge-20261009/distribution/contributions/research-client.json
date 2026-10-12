@@ -10,7 +10,9 @@
     "research-europe-pmc": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/europe-pmc-cli.mjs",
     "research-template-exchange": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/cli.mjs",
     "research-study-protocol": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-cli.mjs",
-    "research-protocol-review": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-operator.mjs"
+    "research-protocol-review": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-operator.mjs",
+    "research-ris": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/cli.mjs",
+    "research-ris-receiving": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/native.mjs"
   },
   "commandDescriptions": {
     "research-client": "Operate the Research listener, source and eligibility reviews, study extraction, evidence tables, appraisals, customer updates, Documents/Pipelines, and complete receiving",
@@ -20,7 +22,9 @@
     "research-europe-pmc": "Operate saved literature queries, original Europe PMC pages, edition comparison, record review and complete dossier/workspace receiving",
     "research-template-exchange": "Map a customer workbook to a reviewed publication, receive returned edits and recover the original reviewer draft.",
     "research-study-protocol": "Capture the registered study protocol, receive it into the existing Research question, and preserve the complete selected engine for customer delivery.",
-    "research-protocol-review": "Inspect the original registered protocol, retain the complete question preview and recover its exact SourceBundle request on the existing Research workspace."
+    "research-protocol-review": "Inspect the original registered protocol, retain the complete question preview and recover its exact SourceBundle request on the existing Research workspace.",
+    "research-ris": "Review original RIS sources, recover saved requests and export complete source editions through the existing Research listener.",
+    "research-ris-receiving": "Run the selected complete RIS browser, Merchant and cold receiving operation with its exact original source and request identities."
   },
   "exports": {
     "./buyer/research-dossiers/client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs",
@@ -74,7 +78,13 @@
     "./buyer/research-dossiers/study-protocol/cli": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-cli.mjs",
     "./buyer/research-dossiers/study-protocol/client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-client.mjs",
     "./buyer/research-dossiers/study-protocol/inspection": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-inspection.mjs",
-    "./buyer/research-dossiers/study-protocol/operator": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-operator.mjs"
+    "./buyer/research-dossiers/study-protocol/operator": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-operator.mjs",
+    "./buyer/research-dossiers/ris/client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/client.mjs",
+    "./buyer/research-dossiers/ris/parser": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/parser.mjs",
+    "./buyer/research-dossiers/ris/review": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/review.mjs",
+    "./buyer/research-dossiers/ris/cli": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/cli.mjs",
+    "./buyer/research-dossiers/ris/native": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/native.mjs",
+    "./merchant/mcp/research-ris": "./source/stellar-forge/mcp-merchant-operator/research-ris.mjs"
   },
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/europe-pmc"
@@ -241,6 +251,29 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-cli.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-protocol.mjs",
-    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/zotero-workspace.mjs"
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/zotero-workspace.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/constants.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/parser.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/schema.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/review.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/store.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/routes.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/client.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/normalize.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/cli.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/ris-drafts.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/ris-sources.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/ris-sources.css",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/native-support.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/merchant-journey.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/reopen.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/browser-journey.mjs",
+    "stellar-forge/mcp-merchant-operator/research-ris.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/research-ris.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/native.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/package.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/OPERATING_GUIDE.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/RECEIVING_GUIDE.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/SOURCE_CONTRACT.md"
   ]
 }

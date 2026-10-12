@@ -5,8 +5,8 @@
   "date": "2026-10-12",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "branch": "delivery/research-buyer-dbc61-20261012",
-  "sourceFiles": 1802,
-  "sourceBytes": 27883462,
+  "sourceFiles": 1824,
+  "sourceBytes": 28227542,
   "composition": {
     "schema": "sf88.research-native.following-source-composition.v1",
     "operation": "DBC61-SCF-STUDY-EXTRACTION-20261012",
@@ -169,8 +169,8 @@
       "sourceCanvas": "F0C8PEWTEBB",
       "originalRef": "c17faa14faa346061842505c520e194f13e20b20"
     },
-    "fileCount": 1802,
-    "sourceBytes": 27883462,
+    "fileCount": 1824,
+    "sourceBytes": 28227542,
     "currentGrpcAccounting": {
       "files": 14,
       "sourceBytes": 247593,
@@ -270,12 +270,79 @@
     },
     "currentInstalledGuides": {
       "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
-      "packet": "5440fab8f0550903bb46d3f0b073b9e379d9cfaa",
+      "merge": "33b3375dc168304a5026be21bfb0d2b1c149f084",
       "paths": [
-        "products/research/README.md",
-        "products/research/OPERATING.md",
-        "products/research/RECEIVING.md"
+        {
+          "path": "products/research/README.md",
+          "bytes": 7611,
+          "sha256": "afb3be026755bfdf581ee846b8a909e28cc796bcd5395b397c621a734ec2ae77",
+          "gitBlobSha": "462481ea8c6da429fa44e61afbd671175601d3cf"
+        },
+        {
+          "path": "products/research/OPERATING.md",
+          "bytes": 95340,
+          "sha256": "990d4e400a73102c00dd835723ff685ad9991438f1f87ae1b1b8b135efccff03",
+          "gitBlobSha": "1cdc3b9abffa449bd7aeb4ea355cc7ba48f14f19"
+        },
+        {
+          "path": "products/research/RECEIVING.md",
+          "bytes": 83433,
+          "sha256": "31ae5b7fb309a808b7bafd627513e821552d7e0a8d4e225132f6c5b88009f413",
+          "gitBlobSha": "9c658929a59e210a9f73e89e8a8d8004e1744acd"
+        }
       ]
+    },
+    "currentRIS": {
+      "sourcePacket": {
+        "gitBlobSha": "796dcbf6cbc7600601391a74c998709c79a579b2",
+        "bytes": 1081896,
+        "sha256": "92a5ff52d68ef3c9638bc6bd4ed7dd24c56ad62b9c31c9e82a4d450059c255ff"
+      },
+      "publicMerge": "9ca38f577cbcb2b901e85a281a9062b7e420fc05",
+      "sourceFiles": 32,
+      "added": 21,
+      "sharedSuccessors": 11,
+      "canonicalSourceCorrection": {
+        "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/normalize.mjs",
+        "gitBlobSha": "913bd1701968d2e1f26bf0f4d492319e35257741",
+        "bytes": 11824,
+        "sha256": "5aed0b101634b06ac58db045c3a364960ae724c8b3d615928bd108e508c6daf0",
+        "behavior": "Accept the original exact DOI or ris-record:<64 lowercase hex> source identity.",
+        "mergedPublic": "90ca7ac31f345cb21cc30e3c381a43e589dc5e79",
+        "mergedMaintained": "ce1b2b35af6a6377697196fca1ce8ca6571904b9"
+      },
+      "sourceContract": {
+        "sourceCanvas": "F0C8LD1B8CE",
+        "packetBytes": 60397,
+        "packetSha256": "53782e6a98a9bf84a88fb43fa983c3d5c678584a0a629f27f26d99949bb2b321",
+        "files": [
+          {
+            "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/SOURCE_CONTRACT.md",
+            "bytes": 24998,
+            "sha256": "144eabf80d7207523da92777d284a66fdcf6c74fe4a7993353bfdcef2f53ac6e",
+            "gitBlobSha": "d6655a977a22e1ff70fc80ef7dbedb2dfaf84f86"
+          },
+          {
+            "path": "stellar/scf-starforge-20261009/distribution/contributions/research-client.json",
+            "bytes": 32087,
+            "sha256": "991620e30977903e8c159e12186989c5aeaf5abbfcfd8dddcc573ac75d2b8ae0",
+            "gitBlobSha": "f1c4c3a56b43710edd36ae2b0ced0990d28fd975"
+          }
+        ],
+        "supportFiles": 185,
+        "comparison": {
+          "repository": "citation-js/citation-js",
+          "tag": "v0.9.0",
+          "commit": "51a37ce28fd3508e5cc2957b7d17794cdbad8ed0",
+          "sourceCanvas": "F0C86V05A3H"
+        }
+      }
+    },
+    "currentProtocolReceivingGuide": {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-PROTOCOL-RECEIVING.md",
+      "bytes": 22018,
+      "sha256": "7750fa9471b35a9ef117db2bb7bf82c756398360195e7629059212bf427a6ac6",
+      "gitBlobSha": "22148f71fbb8cf88d9a604100ec551e874771f20"
     }
   },
   "originalFirst634": {
@@ -284,7 +351,14 @@
     "merge": "10f0034b738e458269067c303ff8769e5f31125f",
     "nativeOwner": "F99A",
     "requestId": "research-nct03529110-dbc61-20261012-01",
-    "completeSourceCanvas": "F0C8PP7RJ57"
+    "completeSourceCanvas": "F0C8PP7RJ57",
+    "directSourceCommit": "a2a005f2ba8b48b65b4602eef5d630dfcc799c02",
+    "directSourceBranch": "delivery/research-nct03529110-dbc61-20261012",
+    "directSourceManifest": {
+      "bytes": 292518,
+      "sha256": "69a1fd0dcff8057b37e6b2049a42edc0ba0ede5e02d360ac3e2be3fa662c42f4",
+      "gitBlobSha": "77b0b610222f6b7d1222963b7d73d4ef89e950a0"
+    }
   },
   "followingOwners": {
     "sourceAssembly": "DBC61",
@@ -293,7 +367,7 @@
     "buyerDependencyClosure": "DBC61/scf_engineering"
   },
   "moduleInspection": {
-    "resolvedLiteralEdges": 4362,
+    "resolvedLiteralEdges": 4418,
     "generatedReferences": [
       {
         "from": "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-generator.mjs",
@@ -572,6 +646,12 @@
       },
       "host_selected_modules": "Playwright, configured signer/handler/provider modules and receiving runtime paths remain explicit original host inputs. This source index does not provision them.",
       "static_local_module_edges_without_resolution": []
+    },
+    "sourceReview": {
+      "cohort": "RIS32",
+      "changedSourceFiles": 32,
+      "priorEdgesReplaced": 107,
+      "currentEdges": 163
     }
   },
   "runtimeRequirements": {
@@ -731,23 +811,23 @@
     {
       "path": "products/research/OPERATING.md",
       "mode": "100644",
-      "bytes": 91223,
-      "sha256": "a6b466e39ee6e1e3baeba183c8b74ff080fe9dce660e034766cfa58dcf407889",
-      "gitBlobSha": "6957463cda4109e78b284368bee34614ba1fdad4"
+      "bytes": 95340,
+      "sha256": "990d4e400a73102c00dd835723ff685ad9991438f1f87ae1b1b8b135efccff03",
+      "gitBlobSha": "1cdc3b9abffa449bd7aeb4ea355cc7ba48f14f19"
     },
     {
       "path": "products/research/README.md",
       "mode": "100644",
-      "bytes": 5273,
-      "sha256": "34d9302526350bd75f0ab0bc15cf2c069f21b575c34559c47109d06c0f5d0cb8",
-      "gitBlobSha": "cad09f951f1feab3f8683217113b18140ba88a75"
+      "bytes": 7611,
+      "sha256": "afb3be026755bfdf581ee846b8a909e28cc796bcd5395b397c621a734ec2ae77",
+      "gitBlobSha": "462481ea8c6da429fa44e61afbd671175601d3cf"
     },
     {
       "path": "products/research/RECEIVING.md",
       "mode": "100644",
-      "bytes": 77043,
-      "sha256": "2e80e477b91b1387b5951fa62db3f9eb9127f3f47214de4c3bc1fbaffc8ba3b9",
-      "gitBlobSha": "8af80ab40abcfb37121053fe5a712edc3271b391"
+      "bytes": 83433,
+      "sha256": "31ae5b7fb309a808b7bafd627513e821552d7e0a8d4e225132f6c5b88009f413",
+      "gitBlobSha": "9c658929a59e210a9f73e89e8a8d8004e1744acd"
     },
     {
       "path": "scf46-stellar-bazaar/src/catalog.mjs",
@@ -1359,6 +1439,13 @@
       "gitBlobSha": "6fde4ad5594f2205ea4463e4fb15d5e01aab6c6e"
     },
     {
+      "path": "stellar-forge/mcp-merchant-operator/catalog/research-ris.mjs",
+      "mode": "100644",
+      "bytes": 4570,
+      "sha256": "bbb32368317add158f75b3d6046585d1277af6f661d1c80ebcee4512e229ad38",
+      "gitBlobSha": "4e1d186449abf0ac5a7ac1b3091baed5678110ad"
+    },
+    {
       "path": "stellar-forge/mcp-merchant-operator/catalog/research-risk-of-bias.mjs",
       "mode": "100644",
       "bytes": 3398,
@@ -1368,9 +1455,9 @@
     {
       "path": "stellar-forge/mcp-merchant-operator/catalog/research-workspace.mjs",
       "mode": "100644",
-      "bytes": 15041,
-      "sha256": "d03eef66a18c99e871f8d6f940634f597d366bcc87db6ecfa26ff8c37bebd2ad",
-      "gitBlobSha": "5ac24b6119243f116fa1fa577d969165d3288069"
+      "bytes": 15230,
+      "sha256": "44b98a74ecbef01a624926f5732973f55527cb37fa91d7b639a369eeb00f0f16",
+      "gitBlobSha": "72b051070cbd4c0f103b4ddf8f081a9563b664d7"
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/catalog/s3-workspace.mjs",
@@ -1954,6 +2041,13 @@
       "gitBlobSha": "a8cd271b49655f0e54c12f5b90fadd062fc5aa55"
     },
     {
+      "path": "stellar-forge/mcp-merchant-operator/research-ris.mjs",
+      "mode": "100644",
+      "bytes": 6546,
+      "sha256": "3696dac3009b13790320200692d5105e13dd5e31a0fe05e7a37bed09a186094b",
+      "gitBlobSha": "79c1ce5306d76791c9018c000062bb99f713c023"
+    },
+    {
       "path": "stellar-forge/mcp-merchant-operator/research-risk-of-bias.mjs",
       "mode": "100644",
       "bytes": 2695,
@@ -1963,9 +2057,9 @@
     {
       "path": "stellar-forge/mcp-merchant-operator/research-workspace.mjs",
       "mode": "100644",
-      "bytes": 33987,
-      "sha256": "afe5127c94dd21c7abdb8aa2dea07cd9f658652451e58834ec013add488c4008",
-      "gitBlobSha": "3c180b1606a4257bde78f7340d76a83207a10abb"
+      "bytes": 34600,
+      "sha256": "14e363fb28155a693c7052200ba90837c1704d47498994b96c076bd407122ef8",
+      "gitBlobSha": "7728ec8661dd2a1ec74cb5dda05b2cec9e1ddfa0"
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/retained-download.mjs",
@@ -2516,9 +2610,9 @@
     {
       "path": "stellar/scf-starforge-20261009/distribution/contributions/research-client.json",
       "mode": "100644",
-      "bytes": 28367,
-      "sha256": "22897bc4fce2b86bb42f7f64db75759802a47bd00769fa8fe780180ce3c2f2b7",
-      "gitBlobSha": "59b3543fb47a585de52f8895e732c90e520e3a77"
+      "bytes": 32087,
+      "sha256": "991620e30977903e8c159e12186989c5aeaf5abbfcfd8dddcc573ac75d2b8ae0",
+      "gitBlobSha": "f1c4c3a56b43710edd36ae2b0ced0990d28fd975"
     },
     {
       "path": "stellar/scf-starforge-20261009/distribution/contributions/research-customer-commerce.json",
@@ -11609,9 +11703,9 @@
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/dossier.mjs",
       "mode": "100644",
-      "bytes": 61663,
-      "sha256": "39af0329ff9cb48022eb647d7dd1a73ea5ece510aa140aa0e370102c8fc48e8a",
-      "gitBlobSha": "a8bec6b8ca8504e4090c708dd7eb22326d32ef67"
+      "bytes": 62286,
+      "sha256": "603281cef7eebd865de8ece6c1054f480f4a07e15f083ade5f7e160164ed63a5",
+      "gitBlobSha": "1d8c2e24f675168a540714889278a4776ed031e6"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/eligibility-cli.mjs",
@@ -11812,9 +11906,9 @@
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/normalize.mjs",
       "mode": "100644",
-      "bytes": 11045,
-      "sha256": "77f54c3f83761bc8cb8156ad00de9fd02d88dbc77879cc878e6aab472a985806",
-      "gitBlobSha": "ddf55c74a1f0e93e0e8076b766c9fbfc2dda1884"
+      "bytes": 11824,
+      "sha256": "5aed0b101634b06ac58db045c3a364960ae724c8b3d615928bd108e508c6daf0",
+      "gitBlobSha": "913bd1701968d2e1f26bf0f4d492319e35257741"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/OBJECT_INPUTS.md",
@@ -11868,9 +11962,9 @@
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/app.js",
       "mode": "100644",
-      "bytes": 64382,
-      "sha256": "8054a829cd576ac1b4479785e5fe24fb0f0991db090a0a59d74d9bdca89cf2fb",
-      "gitBlobSha": "83c14dd23c7a2c14698d51240843d1a72d3a66a1"
+      "bytes": 65131,
+      "sha256": "b5d516d0d865e025da45aeee00c77f0265f488c8b9c444536a36b814384fe54c",
+      "gitBlobSha": "9b5cc6fd3d63e99f9d557fab1ea7fdc371c5cd71"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/citation-review.css",
@@ -11959,9 +12053,9 @@
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/index.html",
       "mode": "100644",
-      "bytes": 22857,
-      "sha256": "ba46e97ee4078b532da9cde37e5d92df2449bb5755a1e33bf335431ccfaa0196",
-      "gitBlobSha": "329eac750baa83f43b64de23e0e7fe79fa1f9551"
+      "bytes": 23059,
+      "sha256": "7904e4160f0b2fcb35af62aea8d97a7a1e910600e16a344fb9dd91baae0f8732",
+      "gitBlobSha": "02e63112483e2f143b72ade89c22b1853c39ee72"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/object-inputs.js",
@@ -11969,6 +12063,27 @@
       "bytes": 14935,
       "sha256": "966511f9cb4207a5545a5103fd32f8a64ea140862203d529dc531ffa0e46d324",
       "gitBlobSha": "f0d86d36fd61c20c363bca46f676a4c6644efdbe"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/ris-drafts.js",
+      "mode": "100644",
+      "bytes": 9600,
+      "sha256": "54247a3f2e5ffdecc923f0f41ed10a52c46ae8b77a218ea8e3254522f60acb0e",
+      "gitBlobSha": "044354a4ac59012662481c7e2e57be46081db59b"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/ris-sources.css",
+      "mode": "100644",
+      "bytes": 5825,
+      "sha256": "104f87cb3979ff3aa141d2cbd71874bd359dc9ac2724ae7378c59665cddf9ec7",
+      "gitBlobSha": "3142656be0d5841318baa904576eb5af516a3449"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/ris-sources.js",
+      "mode": "100644",
+      "bytes": 57338,
+      "sha256": "07dc62ba3b68be6bcfecf6a55db958358fe43a9bc72d4ebc9ca2b98763aea80b",
+      "gitBlobSha": "6e28719e937bd0d6396690253a38d27a807557ab"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/source-bundles.css",
@@ -12078,9 +12193,9 @@
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/README.md",
       "mode": "100644",
-      "bytes": 30647,
-      "sha256": "78dceedd9787d9696a7ff0eb00e63a1457c6a21dc3e75ee3accb30f0793e37f1",
-      "gitBlobSha": "f04847370e889baf3b78e6f3c6c1cbb932ffaa53"
+      "bytes": 31539,
+      "sha256": "9ab9bc204518a15bd373cf335732cbcf78d1ebe66709c0290ed9455ef8ed42ca",
+      "gitBlobSha": "7958e046c997903504a2631f97d7a622f6aa5c67"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/report.mjs",
@@ -12130,6 +12245,125 @@
       "bytes": 5316,
       "sha256": "f3eb3bc613dcee710515f4b52f68e189937f4b3dc7977194eb873845758c8496",
       "gitBlobSha": "99c8a9b6b07e8da1fe34e3af59cf6fe439c47b62"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/browser-journey.mjs",
+      "mode": "100644",
+      "bytes": 35651,
+      "sha256": "d651085f0f6b8908463929a5ecb930e7d7faf55f071e86e36962b92b213f208a",
+      "gitBlobSha": "c5fb56217f1b5f1482e8289c62afcfbd363d28fb"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/cli.mjs",
+      "mode": "100644",
+      "bytes": 6312,
+      "sha256": "c6b77f556d973897977e3bff079d38d7004d03aedf18ac9235b6238124b507b4",
+      "gitBlobSha": "42b79c8c4fb92a20455266887c239c19f3638735"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/client.mjs",
+      "mode": "100644",
+      "bytes": 4280,
+      "sha256": "70f44abc075d3f1c35466c65f2c03f0343e9b298310b8e65b3b04f3fa978512e",
+      "gitBlobSha": "511ae75814ba862d111c18f2ef5a379e39e59ea4"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/constants.mjs",
+      "mode": "100644",
+      "bytes": 643,
+      "sha256": "85a8d3827fca42cd4c28509a4ef945a48c8b985c05fcab6dfd131eff6199c9bc",
+      "gitBlobSha": "3292502942cb9b32df3d523f0311d482b2f3865a"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/merchant-journey.mjs",
+      "mode": "100644",
+      "bytes": 18146,
+      "sha256": "35567471fea41d13d1ee3a9f4c642ff950be72ea451b04d14d277e18f52f5dd8",
+      "gitBlobSha": "cede16a5181e4f0ea0aed47f460e93e20fe0c654"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/native-support.mjs",
+      "mode": "100644",
+      "bytes": 9404,
+      "sha256": "b2fea3755b162d6ef447ec9af6207f10c57034b289f3257c604d0b1eecefaf1e",
+      "gitBlobSha": "502e80b5d3b9d2bdf3b2387525bb54b6a99d3b57"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/native.mjs",
+      "mode": "100755",
+      "bytes": 27717,
+      "sha256": "e2d7c861332cc3c23e15ddb890784397fd83c070b6ef887fb11daf33aad42354",
+      "gitBlobSha": "424dcb04c57e7fd8ab4ecf53e11eac8be3f177b5"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/OPERATING_GUIDE.md",
+      "mode": "100644",
+      "bytes": 10106,
+      "sha256": "73fc15c138a039a9bb43cce83818de47f1f409d81ba9f2d7836dd6ae2edafd22",
+      "gitBlobSha": "e2c9f3e2cf90a9d961be9feb65cae0d58d4059c6"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/package.py",
+      "mode": "100755",
+      "bytes": 18037,
+      "sha256": "53a0386dddfa98d6abb0f20b2cf8afa3ec16dac79a91f3153684a1837a73402d",
+      "gitBlobSha": "acb01b9637765d7372c7c460d27fa964e01e16a8"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/parser.mjs",
+      "mode": "100644",
+      "bytes": 6656,
+      "sha256": "485717f8e740108c929bb72892aaccf449c990dace1638780d2a722fdf2e3bf2",
+      "gitBlobSha": "a5399402971763b230e3f17b664b59e4f9a199a9"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/RECEIVING_GUIDE.md",
+      "mode": "100644",
+      "bytes": 9794,
+      "sha256": "fbf9697cb1df294b2ed1212c98da71b987fdb0a62b032d6603803ed109489a8b",
+      "gitBlobSha": "5915e30259c32fbd5e740c7443114ffd08b3b89c"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/reopen.mjs",
+      "mode": "100755",
+      "bytes": 10424,
+      "sha256": "355ece6a4951f378453bc33ce4d000213e70d4fc4c76ba59c86e89281f173b0f",
+      "gitBlobSha": "b8afe14d459fbcd7c0944104f7cb7e8913bc84ec"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/review.mjs",
+      "mode": "100644",
+      "bytes": 19490,
+      "sha256": "0a29278c471f04925b516ee92a0b672ce734fc60a15fed12f9d23060d5ac7190",
+      "gitBlobSha": "97a78cddb5369a4943e62a0e0074968cbedc5423"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/routes.mjs",
+      "mode": "100644",
+      "bytes": 2559,
+      "sha256": "29ce483d2bf235aa59b5c971a41d470ac17c7d4ed1bb8fd22da692f4f983ae91",
+      "gitBlobSha": "2f09a12336c427b5833cdd3f0b4366fdc7f9ac91"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/schema.mjs",
+      "mode": "100644",
+      "bytes": 9989,
+      "sha256": "30285a69fc379775b31912367959132c92284ee620249575451ac92df7a04b36",
+      "gitBlobSha": "88a1201d018d99b3b94a12edd0e7ed2a8872c87d"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/SOURCE_CONTRACT.md",
+      "mode": "100644",
+      "bytes": 24998,
+      "sha256": "144eabf80d7207523da92777d284a66fdcf6c74fe4a7993353bfdcef2f53ac6e",
+      "gitBlobSha": "d6655a977a22e1ff70fc80ef7dbedb2dfaf84f86"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/store.mjs",
+      "mode": "100644",
+      "bytes": 24201,
+      "sha256": "e909da3a90c28b8dee9c00a2d041371d51c2180d561c85ba26365146e9258eab",
+      "gitBlobSha": "8c7bcf57418a2c2b0e692f21208c7119c44492ce"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/risk-of-bias/API.md",
@@ -12295,9 +12529,9 @@
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs",
       "mode": "100644",
-      "bytes": 56312,
-      "sha256": "db11e304e39e790c59fe6e3341629c228b5bf3adaee17feb144bd85c8d80bb41",
-      "gitBlobSha": "ce2dd2116cc0d3e235aade6efa1090f60e9452cc"
+      "bytes": 56677,
+      "sha256": "42294356762ddddf6e075fb70649a1f64ac82fb9a376e4849a8ed37d44e986e1",
+      "gitBlobSha": "48c194b7b8a89bff637bdb01e7157b8eb39da31b"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/SOURCE_BUNDLES.md",
@@ -12519,9 +12753,9 @@
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-PROTOCOL-RECEIVING.md",
       "mode": "100644",
-      "bytes": 21620,
-      "sha256": "0f06f0470fdfe5528e84d5d0c8e24202431c170dae1c8b95b2a0b843a4533ab7",
-      "gitBlobSha": "b5553d2ad61dc0115d291f0042e99aa9a354bc52"
+      "bytes": 22018,
+      "sha256": "7750fa9471b35a9ef117db2bb7bf82c756398360195e7629059212bf427a6ac6",
+      "gitBlobSha": "22148f71fbb8cf88d9a604100ec551e874771f20"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-receiving.mjs",
@@ -12813,16 +13047,16 @@
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-cli.mjs",
       "mode": "100644",
-      "bytes": 21479,
-      "sha256": "f397eb1012d7b3754077b84121f8729f21a489ca99d4229283c6240ab15286d4",
-      "gitBlobSha": "70eda1086896f724745009c2214ea105c613286c"
+      "bytes": 21638,
+      "sha256": "ca128d66fc3384e3b5baf2544ee6cea0f8e6be14ecee8ce6216a6e66933f881d",
+      "gitBlobSha": "6a88c346a0daa143a0fb579f53163d47880ecfb6"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs",
       "mode": "100644",
-      "bytes": 25648,
-      "sha256": "dc106509094a73d9acd2330c75325139ba87c806b9f06f9a18226b45a8684544",
-      "gitBlobSha": "89db9d5d037d01c22727bdbd9ca78f0982cb555e"
+      "bytes": 25908,
+      "sha256": "0c81c36acb0a0446ab247e3fc3527d5e88e0b81cf05af08c7a7f06b09b832e40",
+      "gitBlobSha": "b1519c6bdbd101f51a19fe23e6848e69f46413a1"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs",
