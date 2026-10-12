@@ -1,6 +1,7 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
 import { readDistributionSpecification } from '../specification.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
+import { coingeckoApplication, prepareCoingeckoApplication } from './application-coingecko.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -35,7 +36,8 @@ import { tenderlyApplication, prepareTenderlyApplication } from './application-t
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
 import { rssAtomApplication, prepareRssAtomApplication } from './application-rss-atom.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
-import { managedState, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
+import { managedState, managedHome, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
+import { applicationRunPage, applicationHistoryLimit } from './application-history.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
 import { PYTHON_APPLICATION_CATALOG, pythonApplicationCommand, pythonApplicationResource } from '../python-runtime/application-lifecycle.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
@@ -60,6 +62,7 @@ const common = [
   field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
 ];
 export const APPLICATION_CATALOG = Object.freeze([
+  coingeckoApplication(common),
   grpcApplication(common),
   atlasApplication(common),
   n8nApplication(common),
@@ -250,7 +253,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'grpc-workspace') {
+  if (type.id === 'coingecko') {
+    const original = await prepareCoingeckoApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'grpc-workspace') {
     const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
@@ -546,24 +553,30 @@ async function busyApplication(root, id) {
   }
   return null;
 }
-async function selectedRelease(root, saved) {
-  const homes = await managedState(root, { homeId: saved.homeId });
-  const home = homes.homes.find(item => item.id === saved.homeId);
+async function selectedRelease(root, saved, homes = null) {
+  // This map belongs to one overview request, never to a lifecycle action.
+  if (homes && !homes.has(saved.homeId)) homes.set(saved.homeId, managedHome(root, saved.homeId));
+  const home = await (homes ? homes.get(saved.homeId) : managedHome(root, saved.homeId));
   const release = home?.releases.find(item => item.runtime &&
     bindingKeys.every(key => item.runtime[key] === saved.runtime[key]));
   return { home, release };
 }
-async function view(root, saved) {
-  const { home, release } = await selectedRelease(root, saved);
-  const history = await runs(root, saved.id);
-  const rows = await Promise.all(history.slice(0, 30).map(async run => {
-    const cancelled = await runCancellation(root, saved.id, run.id);
+async function runViews(root, applicationId, history) {
+  return Promise.all(history.map(async run => {
+    const cancelled = await runCancellation(root, applicationId, run.id);
     const observed = cancelled ? { id: run.id, phase: 'CANCELLED', active: false, result: cancelled } : await operationView(root, run.id);
     return { id: run.id, createdAt: run.createdAt, revision: run.revision, command: run.request.command,
       args: run.request.args, terminal: run.request.terminal === true, ...observed,
       request: undefined, privateUrl: observed.active && !observed.stop ? observed.url?.url ?? null : null,
       privateLinks: observed.active && !observed.stop && Array.isArray(observed.url?.links) ? observed.url.links : [] };
   }));
+}
+async function view(root, saved, { homes = null, historyLimit = 30 } = {}) {
+  const [{ home, release }, page] = await Promise.all([
+    selectedRelease(root, saved, homes),
+    applicationRunPage(root, { applicationId: saved.id, limit: historyLimit }),
+  ]);
+  const rows = await runViews(root, saved.id, page.runs);
   const current = rows[0] ?? null;
   const adoption = !release && saved.adoption ? await operationView(root, saved.adoption.requestId) : null;
   const phase = !release ? 'CONNECTING' : !current ? 'READY' :
@@ -572,17 +585,26 @@ async function view(root, saved) {
         current.phase;
   return { ...saved, phase, release: release ? { id: release.id, digest: release.digest, sourceCommit: release.sourceCommit } : null,
     home: home ? { id: home.id, directory: home.directory, revision: home.revision, phase: home.phase } : null,
-    adoption, current, runs: rows, totalRuns: history.length };
+    adoption, current, runs: rows, totalRuns: page.totalRuns,
+    history: { limit: page.limit, nextCursor: page.nextCursor } };
 }
-export async function applicationsState(root) {
+export async function applicationsState(root, { historyLimit = 30 } = {}) {
+  historyLimit = applicationHistoryLimit(historyLimit);
   await initializeApplications(root);
   const names = (await readdir(join(root, 'applications'))).filter(name => /^[a-f0-9]{24}$/.test(name));
+  const homes = new Map();
   const items = await Promise.all(names.map(async id => {
-    try { return await view(root, await application(root, id)); }
+    try { return await view(root, await application(root, id), { homes, historyLimit }); }
     catch (error) { return { id, label: id, phase: 'UNAVAILABLE', error: errorView(error) }; }
   }));
   items.sort((a, b) => String(a.label).localeCompare(String(b.label)) || a.id.localeCompare(b.id));
   return { schema: 'stellar-forge.runtime-applications.v1', catalog: APPLICATION_CATALOG, applications: items };
+}
+export async function applicationsHistory(root, input = {}) {
+  await application(root, recordId(input.applicationId));
+  const page = await applicationRunPage(root, input);
+  return { schema: 'stellar-forge.application-history.v1', ...page,
+    runs: await runViews(root, input.applicationId, page.runs) };
 }
 export async function reviewApplication(root, { runtimeId, runtimeDirectory, kind, settings: input,
   label, applicationId = null, expectedRevision = null, homeId = null } = {}) {

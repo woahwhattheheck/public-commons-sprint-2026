@@ -40,20 +40,37 @@ async function requestBody(req,maximum){
   let value;try{value=JSON.parse(Buffer.concat(parts).toString('utf8'))}catch{need(false,'INVALID_JSON','Request body must be JSON')}
   need(value!==null&&typeof value==='object'&&!Array.isArray(value),'INVALID_JSON');return value;
 }
-export async function startMarketWorkspace({directory,port=0,buyerProfiles=[],fetchImpl,allowLocal=false,providerMode,...options}={}){
+export async function startMarketWorkspace({directory,port=0,buyerProfiles=[],fetchImpl,allowLocal=false,providerMode,beforeOpen=null,onListening=null,...options}={}){
   need(typeof directory==='string','STATE_DIRECTORY_REQUIRED');
   const release=await acquireWorkspaceLease(resolve(directory));
-  let model,runner,server,closing;
+  let model,runner,server,closing,managedLaunch=null,stopping=false;
+  const pending=new Set();
+  async function cleanup(){
+    stopping=true;
+    const failures=[];
+    if(server?.listening)await new Promise(done=>{
+      server.close(error=>{if(error)failures.push(error);done()});
+      server.closeIdleConnections();
+    });
+    await Promise.allSettled([...pending]);
+    try{await runner?.close()}catch(error){failures.push(error)}
+    try{model?.close()}catch(error){failures.push(error)}
+    try{await release()}catch(error){failures.push(error)}
+    if(failures.length){failures[0].cleanupErrors=failures.slice(1).map(errorView);throw failures[0]}
+  }
   try{
+    need(beforeOpen===null||typeof beforeOpen==='function','INVALID_STARTUP_CALLBACK');
+    need(onListening===null||typeof onListening==='function','INVALID_STARTUP_CALLBACK');
+    if(beforeOpen)await beforeOpen();
     model=new MarketModel(directory,{buyerProfiles,allowLocal,providerMode,...options});
     runner=new MarketJobs(model,{fetchImpl,probeTimeoutMs:options.probeTimeoutMs??30000}).start();model.attachRunner(runner);
-    server=createServer((req,res)=>dispatch(req,res).catch(error=>{
+    server=createServer((req,res)=>{const operation=dispatch(req,res).catch(error=>{
       if(res.headersSent){res.destroy();return}
       const status=Number.isInteger(error.status)?error.status:500;
       send(res,status,{error:error.code??'WORKSPACE_ERROR',message:error.message??'The operation failed',
         ...(error.currentRevision===undefined?{}:{currentRevision:error.currentRevision}),
         ...(error.current===undefined?{}:{current:error.current})});
-    }));
+    });pending.add(operation);operation.finally(()=>pending.delete(operation)).catch(()=>{})});
     server.requestTimeout=120000;server.headersTimeout=10000;
     function send(res,status,value,headers={}){
       const bytes=Buffer.isBuffer(value)?value:jsonBytes(value);
@@ -69,7 +86,8 @@ export async function startMarketWorkspace({directory,port=0,buyerProfiles=[],fe
       send(res,200,bytes,{'content-type':contentType,'content-disposition':DOWNLOAD_NAME(name)});
     }
     async function dispatch(req,res){
-      const address=server.address(),allowed=new Set(['127.0.0.1:'+address.port,'localhost:'+address.port]);
+      need(!stopping,'WORKSPACE_CLOSING','The original workspace is closing. Reopen it from its saved application.',503);
+      const address=server.address(),allowed=new Set(['127.0.0.1:'+address.port,'localhost:'+address.port,...(address.port===80?['127.0.0.1','localhost']:[])]);
       need(allowed.has(req.headers.host),'INVALID_HOST','Use this workspace’s loopback address',400);
       const base='http://'+req.headers.host,url=new URL(req.url,base),path=url.pathname,query=Object.fromEntries(url.searchParams);
       const write=['POST','PUT','PATCH','DELETE'].includes(req.method);
@@ -86,6 +104,10 @@ export async function startMarketWorkspace({directory,port=0,buyerProfiles=[],fe
       if(req.method==='GET'&&path==='/favicon.ico'){res.writeHead(204);res.end();return}
       need(path.startsWith('/api/'),'NOT_FOUND','Route not found',404);
       const body=write?await requestBody(req,Math.ceil((path==='/api/restore'?LIMITS.restoreBytes:LIMITS.uploadBytes)*4/3)+1048576):null;
+      if(req.method==='GET'&&path==='/api/managed-launch'){
+        need(managedLaunch,'NOT_FOUND','This native instance has no managed launch.',404);
+        return result(res,managedLaunch);
+      }
       if(req.method==='GET'&&path==='/api/state')return result(res,model.state());
       if(req.method==='POST'&&path==='/api/projects')return result(res,model.createProject(body),201);
       if(req.method==='POST'&&path==='/api/restore')return result(res,model.restore(body),201);
@@ -156,9 +178,12 @@ export async function startMarketWorkspace({directory,port=0,buyerProfiles=[],fe
       need(false,'NOT_FOUND','API route not found',404);
     }
     await new Promise((done,fail)=>{server.once('error',fail);server.listen(port,'127.0.0.1',done)});
-    const close=()=>closing??=(async()=>{await runner.close();await new Promise(done=>{server.close(done);server.closeIdleConnections()});model.close();await release()})();
-    return{url:'http://127.0.0.1:'+server.address().port,server,model,runner,close};
+    const url='http://127.0.0.1:'+server.address().port;
+    if(onListening)managedLaunch=await onListening({url,model,runner});
+    const close=()=>closing??=cleanup();
+    return{url,server,model,runner,close};
   }catch(error){
-    await runner?.close().catch(()=>{});model?.close();await release();throw error;
+    await cleanup().catch(cleanupError=>{error.cleanupError=errorView(cleanupError)});
+    throw error;
   }
 }

@@ -20,6 +20,15 @@ includes `grantsgov`, `grantsgov-receive`, the research browser, the merchant MC
 connection and the original source modules. Native paid publication uses the
 same installed seller and buyer dependencies as the existing dataset publisher.
 
+The installed registrations come from the source-owned
+`distribution/contributions/grantsgov.json`. Inspect the original command and
+module inventory through the same distribution CLI:
+
+```sh
+starforge registrations --source grantsgov
+starforge registrations --command grantsgov-receive
+```
+
 Initialize a private original research workspace:
 
 ```sh
