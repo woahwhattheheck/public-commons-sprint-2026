@@ -24,6 +24,8 @@ const help = `Starforge merchant toolkit
 
 Native commands (arguments pass unchanged to the maintained implementation):
   sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
+  buyer-collections                         Review, retain and operate original paid request collections
+  buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
   census-publisher                         Publish Census ACS observations and complete original source deliveries
   usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
   usaspending-dossier                       Receive award editions, write research findings and recover source packets
