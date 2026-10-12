@@ -19,7 +19,7 @@ const HASH = /^[a-f0-9]{64}$/;
 const MAX_BUNDLE = 128 * 1024 * 1024;
 const SOURCE_FILES = [
   'managed.mjs', 'project.mjs', 'workspace.mjs', 'provider.mjs', 'samples.mjs',
-  'analysis.mjs', 'openwaters.mjs', 'merchant.mjs',
+  'analysis.mjs', 'openwaters.mjs', 'openwaters-contract.mjs', 'merchant.mjs',
   'ui/index.html', 'ui/app.mjs', 'ui/openwaters.mjs', 'ui/style.css',
 ];
 const hash = value => createHash('sha256').update(typeof value === 'string' || Buffer.isBuffer(value)
@@ -207,7 +207,8 @@ export async function startManagedWaterQuality(review, {
         ? await new Buyer(await boundJson(review.selection.buyer, 1024 * 1024, true)).ready() : null;
       workspace = await startWaterQualityWorkspace({
         directory: review.selection.directory, port: requestedPort, merchantPort,
-        facilitator: review.selection.facilitator ?? undefined, buyer,
+        facilitator: review.selection.facilitator ?? undefined,
+        allowLocalFacilitator: review.selection.allowLocalFacilitator, buyer,
       });
       const saved = await workspace.project.read();
       const selectedReviewId = review.selection.review?.id ?? received?.reviewId ?? null;
@@ -236,6 +237,7 @@ export async function startManagedWaterQuality(review, {
         reviewId: selectedReview?.reviewId ?? null, reviewSha256: selectedReview?.reviewSha256 ?? null,
         planId: selectedPlan?.planId ?? null, planSha256: selectedPlan?.planSha256 ?? null,
         received, buyerConfigured: Boolean(buyer), facilitator: review.selection.facilitator,
+        allowLocalFacilitator: review.selection.allowLocalFacilitator,
         url: workspace.url, links: linksFor(workspace.url, selectedReview?.reviewId, selectedPlan?.planId),
       };
       await atomicJson(review.selection.directory, WQX_MANAGED_LAUNCH, launch);

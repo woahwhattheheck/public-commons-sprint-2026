@@ -104,6 +104,9 @@ export async function wqxWaterQualityStartup(request, operationDirectory, text, 
     need(!requested || requested === selected, 'APPLICATION_WQX_DECISION_CHANGED');
     need(selected === null || ID.test(selected), 'APPLICATION_WQX_DECISION_CHANGED');
   }
+  need(value.facilitator === option(request, '--facilitator', true) &&
+    value.allowLocalFacilitator === request.args.includes('--allow-local-facilitator'),
+  'APPLICATION_WQX_FACILITATOR_CHANGED');
   const origin = url.origin;
   need(Array.isArray(value.links) && value.links.length <= 11, 'APPLICATION_WQX_LINKS_CHANGED');
   for (const item of value.links) {
@@ -119,6 +122,7 @@ export async function wqxWaterQualityStartup(request, operationDirectory, text, 
       sourceSha256, selectionSha256, projectRevision: value.projectRevision,
       projectSelectionSha256: value.projectSelectionSha256, reviewId: value.reviewId, reviewSha256: value.reviewSha256,
       planId: value.planId, planSha256: value.planSha256, received: value.received,
-      buyerConfigured: value.buyerConfigured, facilitator: value.facilitator, pid: value.pid },
+      buyerConfigured: value.buyerConfigured, facilitator: value.facilitator,
+      allowLocalFacilitator: value.allowLocalFacilitator, pid: value.pid },
   };
 }

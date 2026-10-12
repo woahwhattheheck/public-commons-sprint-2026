@@ -140,7 +140,7 @@ starforge water-quality water-receive \
   --bundle /absolute/unpacked/open-waters/complete-open-waters.json
 ~~~
 
-The existing managed application can open that same independent received project. The original project receiver verifies source identities and reproduces the saved receiving exports.
+The [managed Water quality application](../MANAGED.md) can open that same independent received project. The original project receiver verifies source identities and reproduces the saved receiving exports.
 
 ## Retained real Potomac example
 
@@ -154,3 +154,37 @@ The supplied input.example.json and choices.example.json use the actual complete
 The source contains 1,035 results, 13 activities, one station and 1,112 retained detection-limit records. The decision example uses the existing March-versus-January analysis options. The complete source remains available through the original [Open Waters receiving operation](../OPEN_WATERS.md).
 
 Scientific behavior remains defined by the [analysis contract](../ANALYSIS.md): exact decimal summaries, distinct methods and units, original limits and censoring, explicit qualifier/estimate choices, and original coordinate datums.
+
+
+## Run the maintained native scientific receiving
+
+The receiving driver uses the original input-file store and its Linux lease, canonical input validator and terminable job worker. It receives two complete input families in one retained operation: a scientific review with the supplied explicit analysis choices, and the original complete Open Waters bundle with its original choices inherited. The second family runs twice with the same job reference and input hash; its ZIP bytes must agree.
+
+Supply the original complete Open Waters file and a fresh private receiving directory. Select a private scratch directory with sufficient space for the full original capture, native review, receiving outputs and compressed result.
+
+~~~sh
+node --expose-gc --max-old-space-size=384 \
+  stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/receive.mjs \
+  --source /absolute/original/complete-open-waters.json \
+  --directory /private/water-quality-job-receiving \
+  --scratch /private/water-quality-job-worker-temp \
+  --python /absolute/python3
+~~~
+
+The default merchant.example.json declares the complete scientific function and its 768 MiB worker heap. The default choices.example.json selects the retained Potomac March-versus-January decision. For another original review, pass --choices with a corresponding choice document whose sourceReviewSha256 matches that review. Use --config to select an existing installation of this same scientific function. All input staging occurs through the original sealed-file store; the receiver executes the native worker directly as an operator receiving operation.
+
+The operation retains its original source identities, upload plans and sealed files, both result ZIPs, the independent standard-library ZIP checks, all native export comparisons, and two independently received native projects. result.json contains the useful outcome and project paths. receiving.json is the private continuation record containing the original upload claims; keep that record with its original input store.
+
+For the supplied full Potomac source, the receiving operation covers:
+
+- The exact original source-file bytes and the complete capture within both native input families.
+- The explicit saved scientific options and note, alongside the original review decision.
+- Every ZIP member’s CRC, length and SHA-256, read by Python’s standard-library ZIP implementation.
+- The original project’s four scientific exports and complete review bundle after receiving.
+- All six Open Waters exports after receiving, including its complete native bundle.
+- Closing and reopening the same independent project with its original capture, review and plan identities.
+- A second native worker attempt with the same job reference and canonical input, yielding the same complete result ZIP.
+
+The independently received Open Waters project is <directory>/openWaters/received-project. It is ready for the managed application’s Open, export, stop and reopen operations. Keep that complete project and the result ZIP for continued customer work.
+
+Reinvoke the same command against the same directory to continue its original input uploads and retained receiving state. The original source, configuration, application and choices identities must match the saved operation. A completed result is reopened and verified; its original completed worker attempt is retained.
