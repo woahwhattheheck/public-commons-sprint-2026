@@ -16,9 +16,9 @@
   "port_base": 24840,
   "application": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "blob": "03bc157721328bf44c37568fe0a2aec948a7cb45",
-    "bytes": 699722,
-    "sha256": "84834fec49e5f40f1bea1b5770745263a81e528a0e4153f49efef8c2721b706c",
+    "blob": "babfe5b88df02b9d1c36da3004305cc9140dbe2b",
+    "bytes": 704184,
+    "sha256": "2e8b1db7664eb8064dca547c7e091decee7f985794c4538fa76317c343783010",
     "commit": "986bc2379e892ee721de30a0b88701461a0dffd6"
   },
   "journey": {
