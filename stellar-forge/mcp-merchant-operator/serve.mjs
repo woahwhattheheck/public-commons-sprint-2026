@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { loadOAuthResourceHost } from '../mcp-paid-agent/oauth-host.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeStacWorkspaceMerchant, initializeStellarExpertWorkspaceMerchant, initializeApiPassWorkspaceMerchant, initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializeGraphqlWorkspaceMerchant, initializePublisherMerchant, initializeArcgisWorkspaceMerchant, initializeS3WorkspaceMerchant, initializeOpenSearchWorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeODataWorkspaceMerchant, initializeFiscalDataWorkspaceMerchant, initializeGeocodioWorkspaceMerchant, initializeWorldBankWorkspaceMerchant, initializeWebDavWorkspaceMerchant, initializeEdgarWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeNocoDBWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeOpenCageWorkspaceMerchant, initializeCoinGeckoWorkspaceMerchant, initializeRedisWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializeResearchWorkspaceMerchant, initializeGrantsWorkspaceMerchant, initializeSourceWorkspaceMerchant, initializeClinicalTrialsWorkspaceMerchant, initializeBaserowWorkspaceMerchant, initializeUSGSWorkspaceMerchant, initializeFeedsWorkspaceMerchant, initializeDspaceOperatorMerchant, initializeGrpcWorkspaceMerchant, initializeOpenApiWorkspaceMerchant, initializeHarWorkspaceMerchant, initializeN8nWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, initializeCocartWorkspaceMerchant, initializeMppMerchant, initializeBuyerExpenseMerchant, initializeGrantWorkspaceMerchant, failure } from './config.mjs';
+import { initializeStacWorkspaceMerchant, initializeStellarExpertWorkspaceMerchant, initializeApiPassWorkspaceMerchant, initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializeGraphqlWorkspaceMerchant, initializePublisherMerchant, initializeArcgisWorkspaceMerchant, initializeS3WorkspaceMerchant, initializeOpenSearchWorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeODataWorkspaceMerchant, initializeFiscalDataWorkspaceMerchant, initializeGeocodioWorkspaceMerchant, initializeCensusGeocoderWorkspaceMerchant, initializeWorldBankWorkspaceMerchant, initializeWebDavWorkspaceMerchant, initializeEdgarWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeNocoDBWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeOpenCageWorkspaceMerchant, initializeCoinGeckoWorkspaceMerchant, initializeRedisWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializeResearchWorkspaceMerchant, initializeGrantsWorkspaceMerchant, initializeSourceWorkspaceMerchant, initializeClinicalTrialsWorkspaceMerchant, initializeBaserowWorkspaceMerchant, initializeUSGSWorkspaceMerchant, initializeFeedsWorkspaceMerchant, initializeDspaceOperatorMerchant, initializeGrpcWorkspaceMerchant, initializeOpenApiWorkspaceMerchant, initializeHarWorkspaceMerchant, initializeN8nWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, initializeCocartWorkspaceMerchant, initializeMppMerchant, initializeBuyerExpenseMerchant, initializeGrantWorkspaceMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
@@ -53,6 +53,7 @@ const HELP = `Starforge merchant MCP
   init-odata-workspaces --dir NEW_DIRECTORY --connection ODATA_WORKSPACE_CONNECTION.json [--name NAME]
   init-fiscaldata-workspaces --dir NEW_DIRECTORY --connection FISCALDATA_WORKSPACE_CONNECTION.json [--name NAME]
   init-geocodio-workspaces --dir NEW_DIRECTORY --connection GEOCODIO_WORKSPACE_CONNECTION.json [--name NAME]
+  init-census-geocoder-workspaces --dir NEW_DIRECTORY --connection CENSUS_GEOCODER_CONNECTION.json [--name NAME]
   init-webdav-workspaces --dir NEW_DIRECTORY --connection WEBDAV_WORKSPACE_CONNECTION.json [--name NAME]
   init-edgar-workspaces --dir NEW_DIRECTORY --connection EDGAR_WORKSPACE_CONNECTION.json [--name NAME]
   init-sheets-workspaces --dir NEW_DIRECTORY --connection SHEETS_WORKSPACE_CONNECTION.json [--name NAME]
@@ -256,8 +257,9 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
   let closing;
   const close = () => {
     if (closing) return closing;
-    closing = (async () => {
-      const stopped = new Promise((done, reject) => server.close(error => error ? reject(error) : done()));
+    const disposing = (async () => {
+      const stopped = new Promise((done, reject) => server.close(error =>
+        error && error.code !== 'ERR_SERVER_NOT_RUNNING' ? reject(error) : done()));
       // Finish an accepted change before draining the owned original seller.
       // New calls now receive OPERATOR_CLOSING, and new sockets are refused.
       try { await access.close(); }
@@ -266,7 +268,9 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
         finally { server.closeAllConnections(); await stopped; }
       }
     })();
-    return closing;
+    closing = disposing;
+    void disposing.catch(() => { if (closing === disposing) closing = null; });
+    return disposing;
   };
   return { operator, server, url: 'http://127.0.0.1:' + server.address().port, maxRequestBytes: operator.maxRequestBytes, authorization:access.describe(), close };
 }
@@ -637,6 +641,12 @@ export async function main(args = process.argv.slice(2)) {
     const options = pairs(rest, ['--dir', '--connection', '--name']);
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
     const result = await initializeWooCommerceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'init-census-geocoder-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeCensusGeocoderWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
   if (command === 'init-geocodio-workspaces') {
