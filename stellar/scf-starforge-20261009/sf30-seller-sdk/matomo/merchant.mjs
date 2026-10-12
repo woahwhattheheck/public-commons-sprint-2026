@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {lstat,readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
-import {openWorkbench} from '../sqlite/workbench/model.mjs';
+import {openWorkbench,compileDraft} from '../sqlite/workbench/model.mjs';
 import {openSqlitePublisher} from '../sqlite/publisher/model.mjs';
 import {prepareSqliteRelease} from '../../sf82-seller-pilot/release-sqlite.mjs';
 import {initReleaseStore,readReleaseState,listReleases,inspectRelease,stageRelease,compareReleases,activateRelease,rollbackRelease,releaseStatus,runActiveRelease,normalizeReleaseRuntime} from '../../sf82-seller-pilot/releases.mjs';
@@ -23,6 +23,7 @@ function projection(edition,names) {
   return names.map(item=>{const field=edition.fields.find(x=>x.name===item);if(!field)throw fault('MATOMO_QUERY_FIELD_NOT_FOUND');return field;});
 }
 export function matomoMerchantDraft(edition,{merchant,amount,fields=[],path='/matomo'}={}) {
+  if(typeof merchant?.name!=='string'||! /^[\x20-\x7e]{1,32}$/.test(merchant.name))throw fault('MATOMO_MERCHANT_NAME_INVALID',undefined,400);
   if(typeof amount!=='string'||! /^[1-9][0-9]*$/.test(amount))throw fault('MATOMO_PAYMENT_AMOUNT_REQUIRED');
   if(typeof path!=='string'||! /^\/[A-Za-z0-9/_-]*$/.test(path)||path.endsWith('/'))throw fault('MATOMO_RESOURCE_PATH_REQUIRED');
   const selected=projection(edition,fields),columns=[...ROW_COLUMNS,...selected.map(x=>x.column)];
@@ -35,6 +36,13 @@ export function matomoMerchantDraft(edition,{merchant,amount,fields=[],path='/ma
     query('sourceFiles','SELECT '+SOURCE_COLUMNS.map(quote).join(',')+' FROM source_files ORDER BY path,chunk_index LIMIT $limit OFFSET $offset',SOURCE_COLUMNS,
       {...paging,limit:{type:'integer',minimum:'1',maximum:'12',optional:true,default:'10'}},{offset:'0',limit:'10'},'/source-files','Original report manifests and responses in the maintained source-file chunk protocol. Retain the complete selected file population before receiving.')
   ]};
+}
+function inspectMerchantDraft(draft,database) {
+  try{return compileDraft(draft,database);}
+  catch(error){
+    if(error instanceof TypeError||error instanceof RangeError||(Number.isInteger(error.status)&&error.status>=400&&error.status<500))throw fault('MATOMO_MERCHANT_DRAFT_INVALID',undefined,400);
+    throw error;
+  }
 }
 export function createMatomoMerchant(store,editions,{environment=process.env}={}) {
   store.db.exec('CREATE TABLE IF NOT EXISTS merchants(id TEXT PRIMARY KEY,edition_id TEXT NOT NULL REFERENCES editions(id),data TEXT NOT NULL,created_at TEXT NOT NULL);CREATE TABLE IF NOT EXISTS merchant_packages(id TEXT PRIMARY KEY,merchant_id TEXT NOT NULL REFERENCES merchants(id),data TEXT NOT NULL,created_at TEXT NOT NULL);');
@@ -58,6 +66,9 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
     only(input,['operationId','expectedRevision','editionId','configuration']);
     const id=identifier(input.operationId),edition=await editions.manifest(input.editionId,{database:true});
     const draft=matomoMerchantDraft(edition.value,input.configuration);
+    // Validate the complete public draft with the original native compiler before
+    // allocating a retained merchant identity. No source query or provider read.
+    inspectMerchantDraft(draft,edition.database);
     return store.perform('configure-merchant',input,async()=>{
       store.transaction(()=>{store.db.prepare('INSERT INTO merchants(id,edition_id,data,created_at) VALUES(?,?,?,?)').run(id,input.editionId,JSON.stringify({
         editionSha256:edition.edition.data.manifest.sha256,configuration:input.configuration,state:'CONFIGURING'}),stamp());store.event('MERCHANT_STARTED',id);});
@@ -78,6 +89,7 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
   }
   async function save(input) {
     only(input,['operationId','expectedRevision','merchantId','draft','draftRevision']);
+    const item=await selected(input.merchantId);inspectMerchantDraft(input.draft,item.value.database);
     return store.perform('save-merchant',input,async()=>workbench(input.merchantId,async api=>{
       await api.inspectDraft(input.draft);const saved=await api.save(input.draft,input.draftRevision);
       change('merchants',input.merchantId,{state:'CONFIGURED',draftRevision:saved.revision},'MERCHANT_DRAFT_SAVED');
