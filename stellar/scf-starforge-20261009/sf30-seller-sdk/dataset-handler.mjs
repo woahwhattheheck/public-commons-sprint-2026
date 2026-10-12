@@ -16,6 +16,7 @@ const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 // The CSV/query/version engines retain their existing value and cursor behavior.
 export const DATASET_SEMANTIC_SCHEMAS = Object.freeze([
   'stellar-forge.ckan-semantics.v1', 'stellar-forge.odata-semantics.v1',
+  'stellar-forge.superset-semantics.v1', 'stellar-forge.directus-semantics.v1',
 ]);
 const HASH = /^[a-f0-9]{64}$/;
 function need(condition, message) {
@@ -106,6 +107,90 @@ export function validateDatasetSemantics(value, columns) {
       (!key.complete || key.projected.every((name, index) =>
         valueColumns.get(name).sourceField === key.source[index])),
       'Retained OData entity keys must identify the corresponding value columns.');
+  }
+  if (value.schema === 'stellar-forge.superset-semantics.v1') {
+    const source = value.source;
+    let base;
+    try { base = new URL(source.baseUrl); } catch { need(false, 'Retained Superset source URL is invalid.'); }
+    need(source.provider === 'apache-superset' && source.protocolVersion === '6.1' &&
+      ['http:', 'https:'].includes(base.protocol) && !base.username && !base.password &&
+      !base.search && !base.hash && base.pathname.endsWith('/') && base.href === source.baseUrl &&
+      Number.isSafeInteger(source.chartId) && source.chartId > 0 &&
+      (source.chartUuid === null || typeof source.chartUuid === 'string' && source.chartUuid.length > 0) &&
+      Number.isSafeInteger(source.queryOrdinal) && source.queryOrdinal >= 0 &&
+      HASH.test(source.queryContextSha256 ?? '') && HASH.test(source.principalSha256 ?? '') &&
+      HASH.test(source.schemaSha256 ?? '') && object(value.query) &&
+      value.query.savedContextSha256 === source.queryContextSha256 &&
+      (value.query.rowLimit === null || Number.isSafeInteger(value.query.rowLimit) && value.query.rowLimit >= 0) &&
+      Number.isSafeInteger(value.query.rowOffset) && value.query.rowOffset >= 0 &&
+      value.columns.length % 2 === 0,
+      'Retained Superset meaning requires its original chart, user, saved query and native result scope.');
+    const nativeNames = new Set(), nativeOrdinals = new Set(), projected = new Map();
+    for (let index = 0; index < value.columns.length; index += 2) {
+      const column = value.columns[index], state = value.columns[index + 1], definition = column.sourceDefinition;
+      need(column.role === 'value' && state.role === 'state' && column.stateColumn === state.name &&
+        state.valueColumn === column.name && column.sourceField === state.sourceField &&
+        state.type === 'string' && state.nullable === false && state.encoding === 'native' &&
+        object(definition) && definition.sourceName === column.sourceField &&
+        Number.isSafeInteger(definition.sourceOrdinal) && definition.sourceOrdinal >= 0 &&
+        Number.isSafeInteger(definition.nativeType) && !nativeNames.has(definition.sourceName) &&
+        !nativeOrdinals.has(definition.sourceOrdinal) && object(state.sourceDefinition) &&
+        state.sourceDefinition.sourceName === definition.sourceName &&
+        state.sourceDefinition.sourceOrdinal === definition.sourceOrdinal &&
+        state.sourceDefinition.nativeType === definition.nativeType &&
+        state.sourceDefinition.role === 'source-presence' &&
+        datasetSemanticIdentity(state.sourceDefinition.values) === datasetSemanticIdentity(['value', 'null', 'missing']),
+        'Retained Superset value/state columns differ from their native column identities.');
+      nativeNames.add(definition.sourceName); nativeOrdinals.add(definition.sourceOrdinal); projected.set(column.name, column);
+    }
+    need(key.projected.every(name => projected.has(name)) &&
+      (!key.complete || key.projected.every((name, index) => projected.get(name).sourceField === key.source[index])),
+      'Retained Superset row keys must identify their corresponding projected value columns.');
+  }
+  if (value.schema === 'stellar-forge.directus-semantics.v1') {
+    const source = value.source, native = value.directus;
+    need(source.provider === 'directus' && source.protocolVersion === '12.5' &&
+      ['baseUrl', 'collection', 'primaryField'].every(k => typeof source[k] === 'string' && source[k]) &&
+      HASH.test(source.schemaSha256 ?? '') && source.definitionNumericEncoding === 'original-json-number-lexemes' &&
+      object(source.query) && Array.isArray(source.query.fields) && Array.isArray(source.query.sort) &&
+      object(source.principal) && typeof source.principal.id === 'string' && source.principal.id &&
+      object(native) && object(native.collection) && native.collection.collection === source.collection &&
+      Array.isArray(native.fields) && Array.isArray(native.relations) && native.relations.every(object) && value.columns.length % 2 === 0,
+      'Retained Directus meaning requires its original query, authenticated principal and native schema.');
+    const fields = new Map();
+    for (const field of native.fields) {
+      need(object(field) && field.collection === source.collection && typeof field.field === 'string' && field.field &&
+        !fields.has(field.field), 'Retained Directus fields must be unique original collection definitions.');
+      fields.set(field.field, field);
+    }
+    const primary = native.fields.filter(field => field.schema?.is_primary_key === true);
+    need(primary.length === 1 && primary[0].field === source.primaryField,
+      'Retained Directus primary-key meaning differs from the original field schema.');
+    const values = new Map(), selected = new Set();
+    for (let index = 0; index < value.columns.length; index += 2) {
+      const column = value.columns[index], state = value.columns[index + 1], field = fields.get(column.sourceField);
+      need(field && !selected.has(column.sourceField) && column.role === 'value' && state.role === 'state' &&
+        column.type === 'string' && column.nullable === false && column.encoding === 'json' &&
+        column.stateColumn === state.name && state.valueColumn === column.name && state.sourceField === column.sourceField &&
+        state.type === 'string' && state.nullable === false && state.encoding === 'native',
+        'Retained Directus value/state columns differ from the original exact JSON projection.');
+      selected.add(column.sourceField);
+      const definition = {collection:source.collection, field:field.field, sourcePath:field.field,
+        type:field.type ?? 'unknown', nullable:typeof field.schema?.is_nullable === 'boolean' ? field.schema.is_nullable : null,
+        schema:field.schema ?? null, meta:field.meta ?? null,
+        relations:native.relations.filter(r => r.collection === source.collection && r.field === field.field ||
+          r.related_collection === source.collection && r.meta?.one_field === field.field)};
+      const stateDefinition = {sourcePath:field.field, role:'source-presence',
+        sourceNullable:definition.nullable, values:['value', 'null', 'missing']};
+      need(datasetSemanticIdentity(column.sourceDefinition) === datasetSemanticIdentity(definition) &&
+        datasetSemanticIdentity(state.sourceDefinition) === datasetSemanticIdentity(stateDefinition),
+        'Retained Directus source definitions no longer match their collection, relation or presence meaning.');
+      values.set(column.name, column);
+    }
+    need(datasetSemanticIdentity(key.source) === datasetSemanticIdentity([source.primaryField]) &&
+      key.projected.every(name => values.get(name)?.sourceField === source.primaryField) &&
+      key.complete === (key.projected.length === 1),
+      'Retained Directus primary-key projection differs from its value column.');
   }
   const expected = [...value.columns.map(column => column.projectedDefinition),
     ...value.virtualColumns.map(column => {
