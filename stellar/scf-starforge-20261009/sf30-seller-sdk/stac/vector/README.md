@@ -482,7 +482,7 @@ The native journey accepts an actual original selection and source directory:
   --selection /absolute/original-selection.json \
   --source-root /absolute/original-source-files \
   --out /absolute/vector-native-run \
-  --qgis-source /absolute/maintained-stac/qgis
+  --qgis-source /absolute/maintained-stac/qgis/starforge_stac
 ~~~
 
 It captures the actual selected source, writes both formats, interrupts the
