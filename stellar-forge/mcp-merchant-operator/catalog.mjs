@@ -20,6 +20,7 @@ import { geocodioWorkspaceTools } from './catalog/geocodio-workspace.mjs';
 import { webDavWorkspaceTools } from './catalog/webdav-tools.mjs';
 import { edgarWorkspaceTools } from './catalog/sec-edgar-tools.mjs';
 import { sheetsWorkspaceTools } from './catalog/sheets-workspace.mjs';
+import { nocodbWorkspaceTools } from './catalog/nocodb-workspace.mjs';
 import { ckanWorkspaceTools } from './catalog/ckan-workspace.mjs';
 import { tenderlyWorkspaceTools } from './catalog/tenderly-workspace.mjs';
 import { opencageWorkspaceTools } from './catalog/opencage-workspace.mjs';
@@ -79,6 +80,7 @@ const familyTools = {
   webdavWorkspaces: webDavWorkspaceTools(tool),
   edgarWorkspaces: edgarWorkspaceTools(tool),
   sheetsWorkspaces: sheetsWorkspaceTools(tool),
+  nocodbWorkspaces: nocodbWorkspaceTools(tool),
   ckanWorkspaces: ckanWorkspaceTools(tool),
   tenderlyWorkspaces: tenderlyWorkspaceTools(tool),
   opencageWorkspaces: opencageWorkspaceTools(tool),
@@ -167,6 +169,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.webdavWorkspaces,
   ...familyTools.edgarWorkspaces,
   ...familyTools.sheetsWorkspaces,
+  ...familyTools.nocodbWorkspaces,
   ...familyTools.ckanWorkspaces,
   ...familyTools.tenderlyWorkspaces,
   ...familyTools.opencageWorkspaces,
