@@ -105,7 +105,7 @@ def package_rows(context, tranche):
     } for row in native_costs(context, tranche)]
 
 
-def normalize_inputs(context, value):
+def normalize_inputs(context, value, *, check_bindings=True):
     value = object_value(value, ("tranche", "items", "note"), "completion plan")
     tranche = domain.integer(value.get("tranche"), "Completion tranche", 1, 3)
     items = value.get("items")
@@ -134,14 +134,14 @@ def normalize_inputs(context, value):
         work = domain.reference_list(raw.get("workIds", []), available["work"], "Retained completed work")
         for ident in work:
             original = available["work"][ident]
-            if original["costId"] != cost_id:
+            if check_bindings and original["costId"] != cost_id:
                 domain.fail("Linked work must use this original work package.", "COMPLETION_WORK")
-            if original["contributorId"] not in owners:
+            if check_bindings and original["contributorId"] not in owners:
                 domain.fail("Include each linked work contributor among the assigned owners.", "COMPLETION_WORK")
         deployments = domain.reference_list(raw.get("deploymentIds", []), available["deployments"], "Deliverable deployments")
         for ident in deployments:
             original = available["deployments"][ident]
-            if original.get("tranche") not in (None, tranche) or original["costIds"] and cost_id not in original["costIds"]:
+            if check_bindings and (original.get("tranche") not in (None, tranche) or original["costIds"] and cost_id not in original["costIds"]):
                 domain.fail("Linked deployments must retain this tranche and work-package selection.", "COMPLETION_DEPLOYMENT")
         prepared.append({"costId": cost_id, "ownerIds": owners, "startDate": start, "endDate": end,
                          "state": state, "completedOn": completed, "workIds": work, "deploymentIds": deployments,
@@ -206,7 +206,9 @@ def validate_plan(context, row, maximum_version):
     domain.timestamp(row.get("createdAt"), "Completion plan creation")
     domain.timestamp(row.get("updatedAt"), "Completion plan update")
     text(row.get("recordedBy"), "Original plan operator", 300, True)
-    normalized = normalize_inputs(context, row.get("inputs"))
+    # Preserve the original saved assignment when a later native work or deployment correction
+    # changes its live association. The original event binds this row; preview reviews current links.
+    normalized = normalize_inputs(context, row.get("inputs"), check_bindings=False)
     if normalized != row["inputs"] or normalized["tranche"] != row["tranche"]:
         domain.fail("The retained completion plan differs from its original selection.", "INVALID_COMPLETION")
     extensions = row.get("extensions")
@@ -324,6 +326,13 @@ def preview(context, data):
                 reasons.append("Record the actual completed result.")
             if item["completedOn"] and item["completedOn"] > as_of:
                 reasons.append("The recorded completion date follows this preparation date.")
+            if any(available["work"][wid]["costId"] != item["costId"] or
+                   available["work"][wid]["contributorId"] not in item["ownerIds"] for wid in item["workIds"]):
+                reasons.append("Review the linked work whose cost or contributor changed after these assignments were saved.")
+            if any(available["deployments"][ident].get("tranche") not in (None, saved["tranche"]) or
+                   available["deployments"][ident]["costIds"] and item["costId"] not in available["deployments"][ident]["costIds"]
+                   for ident in item["deploymentIds"]):
+                reasons.append("Review the linked deployment whose tranche or work-package selection changed.")
             if any(available["work"][wid]["state"] == "VOID" for wid in item["workIds"]):
                 reasons.append("Reconcile the linked work observation that was voided.")
             if any(available["work"][wid]["endDate"] > as_of for wid in item["workIds"]):

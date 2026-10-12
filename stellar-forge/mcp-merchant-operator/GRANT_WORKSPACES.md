@@ -367,3 +367,68 @@ try {
 ~~~
 
 The client exposes original plan operations, case creation/commands, preview/save, complete downloads, bundle/scenario import, source attachment and intake. Its methods return complete native responses: value is the parsed native JSON; bytes, sha256 and source retain the exact response and launch. Local file destinations and application-specific decisions belong to the calling host; Merchant tools expose aliases and verified transfer IDs instead of filesystem paths.
+
+
+## Operate tranche completion through agents
+
+The same grant case now exposes 53 operations. Completion adds eight tools to the prior 45-tool catalogue; existing case commands and export also accept the original completion actions and prepared files.
+
+| Tool | Work performed |
+| --- | --- |
+| merchant_grant_completion | Read the complete original payment clocks, deadlines, assignments and currently recorded issuer outcomes. |
+| merchant_grant_completion_seed | Open every original assignment for one selected tranche. |
+| merchant_grant_completion_save | Save the complete assignment input inline or from an original verified response/input. |
+| merchant_grant_completion_preview | Preview one payment’s completed tranche form. |
+| merchant_grant_completion_prepare | Freeze the complete reviewed form and business source. |
+| merchant_grant_completion_extension | Retain an issuer-confirmed later deadline and its source reference. |
+| merchant_grant_completion_submit | Record an actual form receipt against its original preparation. |
+| merchant_grant_completion_decision | Retain the issuer’s dated outcome on that receipt. |
+
+### Carry the complete original assignments
+
+Read merchant_grant_case to obtain program.version, then call merchant_grant_completion_seed with workspace, caseId, expectedVersion and tranche (1, 2 or 3). Its complete native response is retained as a snapshot. The /inputs object contains every original package, owner, assigned date, completion result and linked work/deployment/source ID.
+
+An agent can inspect the complete original rows through merchant_grant_rows and the snapshot’s source-bound pointer. To save edited assignments, supply the full edited inputs object or a complete received JSON file containing it. A retained snapshot or verified transfer can supply that object directly:
+
+~~~json
+{
+  "workspace": "grant",
+  "caseId": "operation-…",
+  "expectedVersion": 12,
+  "requestId": "original-assignment-save",
+  "actor": "Grant delivery operator",
+  "input": {"snapshotId": "snapshot-…"},
+  "expectedInputSha256": "<complete original response SHA256>",
+  "inputPointer": "/inputs"
+}
+~~~
+
+The IDs and version above are placeholders for the native case and retained response. The whole file is verified before selecting /inputs. The client sends that complete object to native completion.save and retains the original response. An unchanged assignment can return unchanged without advancing the version.
+
+Source-bound input references retain their original workspace, file SHA and pointer in the returned snapshot. Use the actual full-file hash, including its response wrapper. A compact tool response’s array markers are references to retained rows and are not editable substitute data.
+
+### Prepare and record the form
+
+merchant_grant_completion takes workspace, caseId and optional asOfDate. The original service derives the next form deadline from each qualifying received T0, T1 or T2 payment. It retains payment corrections as the original voided observation plus its replacement receipt; the final T3 payment starts no further clock. The original award schedule remains visible beside the received-payment schedule.
+
+Call merchant_grant_completion_preview with the current case version, receiptId, summary and selected asOfDate. Inspect ready, issues, the completed packages, selected sources and payment deadline from the complete retained result. A corrected linked work/deployment association appears in the native issues so the saved assignment can be updated.
+
+merchant_grant_completion_prepare takes those same fields, the returned expectedPreviewSha256, actor and stable requestId. It freezes the entire prepared review. Read the new case version before another write. Use merchant_grant_review with its recordId to reopen the full preparation, and merchant_grant_export with kind completion, caseId and reviewId to retain its complete ZIP. Existing byte reads, downloads and retained-file lifetime apply unchanged.
+
+A prepared ZIP contains completion.json, completion.html, deliverables.csv, selected original sources and MANIFEST.json. Each source is checked against the frozen review before export. The complete case ZIP additionally carries the original requests’ case events, all submitted form records, confirmations and review snapshots into another declared workspace.
+
+After the original SCF form has an actual receipt, merchant_grant_completion_submit records reviewId, expectedReviewSha256, submittedOn and formReference, with optional sourceIds and sourceNote. expectedReviewSha256 is the prepared review’s businessSha256, not its ZIP/file hash. The recorded form retains the preparation even when newer work exists in the case. The native result reports preparedSourceCurrent and submittedWithinDeadline.
+
+For an issuer-confirmed extension, use merchant_grant_completion_extension with the original receiptId, confirmedOn, deadlineOn and reference. sourceIds retain the confirmation; confirmationNote describes that confirmation, and note describes the surrounding case operation. The original deadline remains in the record. The issuer’s confirmation date determines when the extended deadline is applicable.
+
+merchant_grant_completion_decision takes outcomeId, state, date and sourceNote, plus optional sourceIds. State is ACCEPTED, CHANGES_REQUESTED or WITHDRAWN. Prepare and record a new form reference for a revised submission; both preparations and both form receipts remain in the case.
+
+Calendar reads show the current recorded issuer outcome. asOfDate selects payment, confirmation and submission dates for clock evaluation; it is not a historical reconstruction of issuer decisions.
+
+### Preserve the original request through recovery
+
+All five completion writes also use the existing merchant_grant_case_command action names: completion.save, completion.prepare, completion.extension, completion.submit and completion.decision. The explicit tools provide field-level selection and keep the same native command journal.
+
+After a transport interruption, retain the same requestId and exact payload. Original native replay returns the already accepted result. A rejected current-version or preview comparison requires a fresh read and reviewed request. A response already returned by the service remains an accepted result even if saving its local snapshot encounters a disk error; the existing retention result gives the original read/replay recovery.
+
+The cumulative managed Support receiving operation also opens these same completed grant directories through the managed agent lifecycle. It carries the complete seed object through the existing verified input selector, replays the original native form commands, and reopens the byte-identical prepared files and complete case on the receiving workspace.
