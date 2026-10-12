@@ -90,3 +90,24 @@ contracts/utilityapi-examples.json holds the original published provider blocks 
 Run operate-example.py --out /absolute/private/utility-operation to receive those full original sources, save the complete interval reviews, build/query the original native dataset, reconcile bills, compare the overlapping source edition, export a full customer package, restore it into a fresh workspace, and query the restored native snapshot. The operating output records the actual source counts and results.
 
 The shared foundation lives in ../ndjson, ../xml, ../dataset-handler.mjs, ../socrata/publisher.mjs and ../clinicaltrials/publisher-bridge.mjs. This contribution adds a utility workflow while retaining those original engines and their existing ownership.
+
+
+## Browser and customer-client operation
+
+After the full original-source driver completes, continue with the same seller workspace through the browser, customer client and original CLI:
+
+```sh
+node operate-browser-client.mjs \
+  --operation-dir /absolute/private/original-operation \
+  --out /absolute/private/new-browser-receiving
+```
+
+The output parent must exist. The browser driver uses an existing Playwright installation and Chromium. It discovers Playwright from the primary runtime or the installed package; `--playwright /absolute/playwright/index.mjs` and `--chromium /absolute/chromium` select existing installations explicitly.
+
+This operation opens every original source in the browser and downloads its unchanged bytes, reads all record collections, sets source priority with the actual ordering controls, saves a review, builds and compares the native edition, queries every page, reconciles original bills, receives the complete customer delivery, and reads the original publisher and operation history. It then closes that operator, reopens the workspace with the CLI, restores the downloaded portable package through a new browser workspace, queries every native row through `utility-client.mjs`, exports the received customer application, and closes/reopens its original CLI. Complete files and desktop/compact screenshots are retained in the selected output directory.
+
+## Completed original-source operation
+
+The complete original `operate-example.py` workflow ran on 12 October 2026 from source cut `8a5b9b1a166933cf433724e516a1fb5f0236ad4a`. It received 20 original inputs, built the full 1,340-reading Green Button dataset, joined all 96 overlapping day references, read all 14 native query pages, reconciled the original billing summaries, exported the whole customer package, and cold-restored/re-exported it. Receiving preserved all 20 imports, two reviews, two native builds, one comparison and two reconciliations. The native snapshot after the day-source join and after customer receiving was `62266c0da32ddf56f862c7e3467a45a89278d59795238c12512bfbcaded5f8cf`.
+
+The source-edition comparison changed provenance in the 96 overlapping intervals and retained 1,244 unchanged intervals. Original readings and exact quantities remain in the complete retained source files.
