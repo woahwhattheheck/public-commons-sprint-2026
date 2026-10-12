@@ -1,0 +1,64 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "cfce-givecredit-statements",
+  "description": "Original GiveCredit registry and Stellar ledger capture, donor and initiative statements, provider pool funding, explicit Stellarcarbon associations and independent receiving",
+  "components": [
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements",
+    "products/cfce-givecredit-statements"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/index.d.mts",
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/core.d.mts",
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/client.d.mts",
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/capture.d.mts",
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/ledger.d.mts",
+    "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.d.mts"
+  ],
+  "commands": {
+    "givecredit-statements": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/cli.mjs"
+  },
+  "commandDescriptions": {
+    "givecredit-statements": "Operate original donor payments, provider pools, carbon allocations and versioned statements"
+  },
+  "exports": {
+    "./givecredit": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/index.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/index.mjs"
+    },
+    "./givecredit/core": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/core.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/core.mjs"
+    },
+    "./givecredit/client": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/client.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/client.mjs"
+    },
+    "./givecredit/capture": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/capture.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/capture.mjs"
+    },
+    "./givecredit/ledger": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/ledger.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/ledger.mjs"
+    },
+    "./givecredit/server": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.mjs"
+    }
+  },
+  "nativePeers": {
+    "@stellar/stellar-sdk": {
+      "version": "^16.3.0",
+      "probe": "@stellar/stellar-sdk"
+    }
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "cfce-givecredit-statements": "stellar/scf-starforge-20261009/partners/cfce-givecredit-statements/application-provider.mjs"
+  }
+}
