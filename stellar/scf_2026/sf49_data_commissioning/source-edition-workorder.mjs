@@ -289,7 +289,7 @@ export async function prepareSourceEditionWorkorder({handoff,terms,attachments,o
   await publishBytes(path.join(out,'manifest.json'),manifestBytes);
   return replaySourceEditionWorkorder({directory:out});
 }
-async function readBundle(directory) {
+async function readBundle(directory,{verifyFiles=true}={}) {
   const root=path.resolve(directory),manifestBytes=await readBounded(path.join(root,'manifest.json'),MAX_META),manifest=json(manifestBytes);
   fields(manifest,['schema','operationId','generatedAt','bundleId','nativeSource','attachments','files'],'bundle manifest');
   ensure(manifest.schema===BUNDLE_SCHEMA&&identity(manifest.operationId)&&instant(manifest.generatedAt)&&digestOK(manifest.bundleId),'Invalid bundle identity');
@@ -301,7 +301,7 @@ async function readBundle(directory) {
     fields(value,['path','role','bytes','sha256'],'bundle file');relPath(value.path);
     ensure(!seen.has(value.path)&&typeof value.role==='string'&&value.role.length>0&&value.role.length<=160&&bytesOK(value.bytes,MAX_TOTAL)&&digestOK(value.sha256),'Invalid or duplicate bundle file');
     seen.add(value.path);total+=value.bytes;ensure(total<=MAX_TOTAL+MAX_HANDOFF_BYTES+MAX_META*2,'Bundle exceeds the total limit');
-    await hashFile(path.join(root,value.path),value);
+    if(verifyFiles)await hashFile(path.join(root,value.path),value);
   }
   for(const required of ['request.json','originals/support.json','originals/terms.json','packet.json','seller-packet.html','acceptance-checklist.md'])ensure(seen.has(required),'Missing original bundle file: '+required);
   const inventory=new Map(manifest.files.map(value=>[value.path,value]));
@@ -336,13 +336,15 @@ export async function inspectSourceEditionWorkorder({directory}) {
   return {...checked.summary,manifest:bundle.manifest,request:bundle.request,
     packet:checked.original.packet,manifestBytes:bundle.manifestBytes.length};
 }
-/** A server-side file descriptor after verifying the original complete bundle. */
+/** A descriptor bound to the original manifest/request. The streaming caller
+ * verifies the selected opened file; complete inspection/replay remains explicit.
+ */
 export async function sourceEditionWorkorderFile({directory,name}) {
-  const bundle=await readBundle(directory);
+  const bundle=await readBundle(directory,{verifyFiles:false});
   const selected=name==='manifest.json'?{path:name,role:'source-edition-manifest',
     bytes:bundle.manifestBytes.length,sha256:sha(bundle.manifestBytes)}:bundle.inventory.get(relPath(name));
   ensure(selected,'The original bundle does not declare this file');
-  return {...selected,path:path.join(bundle.root,selected.path),name:selected.path};
+  return {...selected,path:path.join(bundle.root,selected.path),name:selected.path,verification:'ORIGINAL_MANIFEST_BOUND'};
 }
 /** Bounded original workorder input for the existing case adapter.
  * The full handoff and attachments remain available through their declared files.
