@@ -16,6 +16,7 @@ import { graphqlWorkspaceTools } from './catalog/graphql-workspace.mjs';
 import { s3WorkspaceTools } from './catalog/s3-workspace.mjs';
 import { openSearchWorkspaceTools } from './catalog/opensearch-workspace.mjs';
 import { socrataWorkspaceTools } from './catalog/socrata-workspace.mjs';
+import { opendatasoftWorkspaceTools } from './catalog/opendatasoft-workspace.mjs';
 import { odataWorkspaceTools } from './catalog/odata-workspace.mjs';
 import { worldbankWorkspaceTools } from './catalog/worldbank-workspace.mjs';
 import { fiscalDataWorkspaceTools } from './catalog/fiscaldata-workspace.mjs';
@@ -86,6 +87,7 @@ const familyTools = {
   s3Workspaces: s3WorkspaceTools(tool),
   opensearchWorkspaces: openSearchWorkspaceTools(tool),
   socrataWorkspaces: socrataWorkspaceTools(tool),
+  opendatasoftWorkspaces: opendatasoftWorkspaceTools(tool),
   odataWorkspaces: odataWorkspaceTools(tool),
   worldbankWorkspaces: worldbankWorkspaceTools(tool),
   fiscalDataWorkspaces: fiscalDataWorkspaceTools(tool),
@@ -185,6 +187,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.s3Workspaces,
   ...familyTools.opensearchWorkspaces,
   ...familyTools.socrataWorkspaces,
+  ...familyTools.opendatasoftWorkspaces,
   ...familyTools.odataWorkspaces,
   ...familyTools.worldbankWorkspaces,
   ...familyTools.fiscalDataWorkspaces,
