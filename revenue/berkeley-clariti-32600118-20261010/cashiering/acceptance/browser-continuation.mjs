@@ -64,6 +64,7 @@ attempt.source=currentSource;cp.source= currentSource;save();
 let browser=null,context=null,page=null,second=null,server=null,activeAction=null,cleaning=null;
 const serverLog=fs.createWriteStream(path.join(output,'server-attempt-'+attempt.number+'.log'),{flags:'a',mode:0o600});
 const browserErrors=[];
+const pageRoles=new WeakMap();
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function startServer({database=db,restoreFile=null}={}){
  check(!server,'This controller already owns an application listener.');
@@ -106,7 +107,7 @@ const uri=value=>encodeURIComponent(String(value));
 async function financialState(p=page){return api(p,'/api/cashiering/state');}
 async function detail(id=cp.bindings.run_id,p=page){return api(p,'/api/cashiering/runs/'+uri(id));}
 async function settle(p=page){
- await p.waitForFunction(()=>!document.querySelector('#app[aria-busy="true"],#editor[aria-busy="true"]'),{timeout:25000});
+ await p.waitForFunction(()=>!document.querySelector('#app[aria-busy="true"],#editor[aria-busy="true"]'),null,{timeout:25000});
 }
 function action(name,attributes={},p=page,within=''){
  let selector=(within?within+' ':'')+'[data-action='+JSON.stringify(name)+']';
@@ -131,6 +132,28 @@ async function selectRun(id,p=page){
  await closeDialog(p);await p.locator('#active-run').selectOption(id);await settle(p);
  check(await p.locator('#active-run').inputValue()===id,'The requested retained run was not selected.');
 }
+async function retainBrowserSession(p){
+ const retained=await p.evaluate(()=>Object.fromEntries(['berkeley-cashier-actor','berkeley-cashier-pending'].map(key=>[key,sessionStorage.getItem(key)])));
+ cp.browser_sessions=cp.browser_sessions||{};
+ cp.browser_sessions[pageRoles.get(p)||'primary']=retained;save();
+}
+function retainedPendingEntry(value){
+ if(!value)return null;
+ let pending;try{pending=JSON.parse(value);}catch{throw new Error('The retained browser pending metadata is malformed.');}
+ const match=Object.entries(cp.actions).find(([,entry])=>entry.request?.request_id===pending.request_id);
+ check(match,'The restored tab has an original request outside this controller journal.',pending);
+ return {pending,key:match[0],entry:match[1]};
+}
+async function reconcileRestoredTab(p,role){
+ const raw=await p.evaluate(()=>sessionStorage.getItem('berkeley-cashier-pending'));
+ const retained=retainedPendingEntry(raw);if(!retained)return;
+ if(role==='primary'&&retained.key==='receiving-profile'&&cp.phases['18-current-state-recovery']?.status!=='PASS')return;
+ const result=await api(p,'/api/cashiering/requests/'+uri(retained.pending.request_id));
+ check(result.found,'The interrupted original request has no committed result; inspect the same request before any explicit continuation.',{key:retained.key,request_id:retained.pending.request_id});
+ await clickAction('reconcile-pending',{},p,'#app');
+ retained.entry.response=result.response;retained.entry.recovered_through_ui_at=new Date().toISOString();save();
+ await retainBrowserSession(p);
+}
 async function attachPage(p){
  p.on('pageerror',e=>{browserErrors.push({message:e.message,at:new Date().toISOString()});cp.page_errors.push({message:e.message,at:new Date().toISOString(),attempt:attempt.number});save();});
  await p.route('**/api/cashiering/**',async route=>{
@@ -142,6 +165,7 @@ async function attachPage(p){
   const payload=request.postDataJSON();
   const entry=cp.actions[active.key];
   entry.requests=entry.requests||[];entry.requests.push({payload,at:new Date().toISOString()});entry.request=payload;entry.path=pathname;save();
+  await retainBrowserSession(p);
   if(active.dropResponse){
    const response=await route.fetch();
    const text=await response.text();entry.observed_status=response.status();entry.observed_server_response=JSON.parse(text);entry.dropped_response=true;save();
@@ -151,9 +175,18 @@ async function attachPage(p){
  });
 }
 async function newPage(){
- const p=await context.newPage();await attachPage(p);
+ const role=page===null?'primary':'secondary';
+ const p=await context.newPage();pageRoles.set(p,role);await attachPage(p);
+ const retained={...(cp.browser_sessions?.[role]||{})};
+ const pending=retainedPendingEntry(retained['berkeley-cashier-pending']);
+ if(pending?.entry.http_status&&pending.entry.http_status!==200&&pending.entry.rejected_response)retained['berkeley-cashier-pending']=null;
+ await p.addInitScript(({origin,state})=>{
+  if(location.origin!==origin)return;
+  for(const [key,value] of Object.entries(state)){if(value===null)sessionStorage.removeItem(key);else sessionStorage.setItem(key,value);}
+ },{origin,state:retained});
  await p.goto(origin+'/cashiering/',{waitUntil:'domcontentloaded'});
- await p.locator('#active-run').waitFor();await settle(p);return p;
+ await p.locator('#active-run').waitFor();await settle(p);
+ await reconcileRestoredTab(p,role);return p;
 }
 async function recoverAction(key,p=page){
  const entry=cp.actions[key];if(!entry)return null;if(entry.response)return entry.response;if(entry.http_status&&entry.rejected_response)return entry.rejected_response;
@@ -163,7 +196,7 @@ async function recoverAction(key,p=page){
  throw new Error('No committed result is recorded for the retained UI action '+key+'. Inspect its original request before explicitly continuing; no automatic replay was attempted.');
 }
 async function postAction(key,endpoint,perform,{p=page,expectedStatus=200,dropResponse=false}={}){
- const prior=await recoverAction(key,p);if(prior){if(cp.actions[key].response){await closeDialog(p);await clickAction('refresh',{},p,'#app');}return prior;}
+ const prior=await recoverAction(key,p);if(prior){if(cp.actions[key].response){await closeDialog(p);await clickAction('refresh',{},p,'#app');await retainBrowserSession(p);}return prior;}
  check(!activeAction,'Only one UI write may be active.');
  cp.actions[key]={path:endpoint,started_at:new Date().toISOString(),requests:[]};save();
  activeAction={key,path:endpoint,page:p,dropResponse};
@@ -172,7 +205,7 @@ async function postAction(key,endpoint,perform,{p=page,expectedStatus=200,dropRe
  try{
   await perform();
   if(dropResponse){
-   await p.locator('.dialog-error').waitFor({state:'visible',timeout:30000});await settle(p);
+   await p.locator('.dialog-error').waitFor({state:'visible',timeout:30000});await settle(p);await retainBrowserSession(p);
    const entry=cp.actions[key];check(entry.dropped_response&&entry.observed_status===200,'The deliberately interrupted response did not originate from one committed request.');
    return entry.observed_server_response;
   }
@@ -183,9 +216,9 @@ async function postAction(key,endpoint,perform,{p=page,expectedStatus=200,dropRe
   await settle(p);
   if(expectedStatus===200){
    check(data.state&&Number.isSafeInteger(data.revision)&&data.state.revision===data.revision,'Native mutation did not return its exact saved state.');
-   await p.waitForFunction(()=>!document.querySelector('#editor').open,{timeout:15000});
+   await p.waitForFunction(()=>!document.querySelector('#editor').open,null,{timeout:15000});
   }
-  return data;
+  await retainBrowserSession(p);return data;
  }finally{activeAction=null;}
 }
 async function submit(key,endpoint,options={}){
@@ -473,7 +506,13 @@ async function executeWorkflow(){
   return {closing_id:response.result.id,signoff_ids:response.result.signoffs.map(s=>s.id),documents:response.result.deposit_document_ids};
  });
  await phase('17-receiving-layout-response','Save an explicit layout and retain a deliberately lost committed response',async()=>{
-  if(cp.actions['receiving-profile']?.dropped_response)return {request_id:cp.actions['receiving-profile'].request.request_id,dropped_after_commit:true};
+  if(cp.actions['receiving-profile']?.request){
+   const retained=cp.actions['receiving-profile'],response=await recoverAction('receiving-profile');
+   check(response?.result?.id&&response.result.columns?.length===6,'The original interrupted layout did not resolve to its exact committed result.');
+   cp.bindings.profile_id=response.result.id;cp.bindings.profile_version=response.result.version;save();
+   check(await action('reconcile-pending',{},page,'#app').count()===1,'The original pending tab metadata was not restored for the actual UI recovery.');
+   return {profile_id:response.result.id,version:response.result.version,request_id:retained.request.request_id,dropped_after_commit:Boolean(retained.dropped_response),resumed_from_original_request:true};
+  }
   await tab('interfaces');await clickAction('profile-new',{},page,'#app');
   for(const [name,value] of Object.entries({'profile-name':'Illustrative CSV receiving layout · '+operation,'profile-scope':'balances','profile-lane':'permits','profile-delimiter':',','profile-line-ending':'CRLF','profile-header':true,'profile-note':'Explicit local receiving contract for this operator exercise. It is not a Munis, Clariti or agency production layout. Ordered date, session, tender, currency, major amount and supplied account-code literal are retained.','actor':actor}))await formFill(name,value);
   const columns=[
@@ -514,7 +553,7 @@ async function executeWorkflow(){
   const displayed=await page.locator('.topmeta strong').textContent();check(displayed===String(actual.revision),'The browser shows an old workspace revision after recovery.',{displayed,current:actual.revision});
   check(actual.captures.some(c=>c.id===cp.bindings.layout_document_id),'The other writer’s original source was lost from current state.');
   check(actual.profiles.filter(p=>p.id===cp.bindings.profile_id&&p.version===cp.bindings.profile_version).length===1&&entry.requests.length===1,'The uncertain-save recovery duplicated the layout.');
-  entry.response=recovered.response;entry.recovered_through_ui_at=new Date().toISOString();save();
+  entry.response=recovered.response;entry.recovered_through_ui_at=new Date().toISOString();save();await retainBrowserSession(page);
   return {request_id:entry.request.request_id,post_count:entry.requests.length,original_result_revision:recovered.response.revision,current_revision:actual.revision,source_id:cp.bindings.layout_document_id};
  });
  await phase('19-prepare-interface','Review the exact layout edition and prepare its immutable file',async()=>{
