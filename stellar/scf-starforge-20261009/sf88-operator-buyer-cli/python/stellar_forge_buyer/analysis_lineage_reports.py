@@ -139,6 +139,7 @@ def files(plan, snapshot, events, observations):
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, raw)
     documents["handover.zip"] = (stream.getvalue(), "application/zip")
+    need(len(documents["handover.zip"][0]) <= _MAX_ARCHIVE, "HANDOVER_TOO_LARGE")
     return documents
 
 

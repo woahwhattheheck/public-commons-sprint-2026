@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Original QGIS analyst workspace. Every mutation retains its original request.
+import {renderParcels, acceptParcelResult} from './parcels.js';
 const $ = (selector, root = document) => root.querySelector(selector);
 const clone = value => structuredClone(value);
 const clean = value => value === null || value === undefined ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value);
@@ -181,6 +182,16 @@ async function acceptResult(operation) {
     if (payload.action === 'field.review') fieldReview = {result, ...payload.payload};
     if (payload.action === 'field.inspect') draft.fieldInspection = result;
   }
+  if (action === 'parcel.command') {
+    draft.parcels ||= {};
+    acceptParcelResult(draft.parcels, payload, result);
+    if (payload.action === 'map.publish') {
+      draft.layers ||= clone(state.layers);
+      if (!draft.layers.some(row => row.id === result.layer.id)) draft.layers.push(clone(result.layer));
+      currentTab = 'layers'; draft.tab = currentTab;
+    }
+    saveDraft();
+  }
   if (action === 'project.receive') { draft.receivedProject = result; saveDraft(); }
   await refreshState({render: false});
   await render();
@@ -216,15 +227,23 @@ function renderOperation() {
 }
 async function render() {
   const epoch = ++renderEpoch, host = $('#content');
-  $('#navigation').replaceChildren(...['sources', 'layers', 'maps', 'editions', 'field', 'transfers', 'history'].map(tab =>
+  $('#navigation').replaceChildren(...['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'transfers', 'history'].map(tab =>
     button(tab[0].toUpperCase() + tab.slice(1), async () => { currentTab = tab; setDraft('tab', tab); await render(); },
       {'aria-current': currentTab === tab ? 'page' : undefined})));
   const result = await ({sources: sourcesPane, layers: layersPane, maps: mapsPane, editions: editionsPane,
-    field: fieldPane, transfers: transfersPane, history: historyPane})[currentTab]();
+    field: fieldPane, parcels: parcelsPane, transfers: transfersPane, history: historyPane})[currentTab]();
   if (epoch === renderEpoch) host.replaceChildren(...(Array.isArray(result) ? result : [result]));
   renderOperation();
 }
 
+
+async function parcelsPane() {
+  if (!draft.parcels || typeof draft.parcels !== 'object' || Array.isArray(draft.parcels)) draft.parcels = {};
+  return renderParcels({state, draft: draft.parcels, sourceDirectory: draft.sourceDirectory,
+    element, button, link, panel, detail, note, actions, label, inputValue, selectValue, textArea,
+    table, pager, compact, clean, request, render, save: saveDraft, jsonDownload, requireValue,
+    uploadControl, notice, run: (action, payload) => run('parcel.command', {action, payload})});
+}
 
 function connectionFields(profile, changed, roles = []) {
   const update = (key, value) => { profile[key] = value; changed(); };
@@ -908,7 +927,7 @@ async function initialize() {
   storageKey = 'starforge-qgis-analyst:' + launch.workspaceId;
   try { draft = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { draft = {}; }
   if (!draft || typeof draft !== 'object' || Array.isArray(draft)) draft = {};
-  currentTab = ['sources', 'layers', 'maps', 'editions', 'field', 'transfers', 'history'].includes(draft.tab) ? draft.tab : 'sources';
+  currentTab = ['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'transfers', 'history'].includes(draft.tab) ? draft.tab : 'sources';
   $('#actor-control').replaceChildren(label('Responsible analyst', inputValue(draft.actor || '', value => setDraft('actor', value), {autocomplete: 'name'})));
   $('#global-actions').replaceChildren(button('Refresh saved workspace', () => refreshState()),
     button('Export browser draft', () => jsonDownload('qgis-analyst-draft.json', {schema: 'starforge.stac-qgis-analyst-draft.v1', workspaceId: state.id, draft})));

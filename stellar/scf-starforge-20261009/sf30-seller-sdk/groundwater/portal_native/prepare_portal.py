@@ -18,7 +18,7 @@ from common import (Children, PortalRunError, digest, git_sha, info, inventory, 
                     publish, publish_bytes, read, read_bytes, require, sync_dir, verify, verify_archive)
 
 HERE=Path(__file__).resolve().parent
-CAPSULE_SHA="f8472570d58e87741a180c81388f15fbde3ead2d"
+CAPSULE_SHA="ec6a1d1faa4d641835d2853715887ad5481be800"
 BASE_KEYS=("operation_id","parent_operation_id","source_capsule","work_directory",
            "python_executable","node_executable","npm_executable","playwright_directory",
            "chromium_executable","port","operator_username","reader_username","slot")

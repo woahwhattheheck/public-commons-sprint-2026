@@ -2,18 +2,28 @@
 import {randomUUID} from 'node:crypto';
 import {normalizeFlowableConnection,planFlowableRequest,createFlowableTransport,
   executeFlowableRequest,captureFlowablePortfolio,readFlowableRequestState,reconcileFlowableRequest} from '../native.mjs';
+import {FLOWABLE_DMN_COLLECTIONS as DECISION_COLLECTIONS,planFlowableDmnRequest,createFlowableDmnTransport,
+  executeFlowableDmnRequest,captureFlowableDmnPortfolio,readFlowableDmnRequestState,reconcileFlowableDmnRequest} from '../dmn-native.mjs';
+import {FLOWABLE_OPERATION_KINDS} from './actions.mjs';
 import {buildFlowableReview} from './review.mjs';
 import {openFlowableStore,SCHEMA,KINDS,textHash,field,recordId,requestId,idFor} from './store.mjs';
 import {need,digest,now} from '../../../distribution/runtime-workspace/storage.mjs';
 import {exportFlowableDelivery,inspectFlowableDelivery,adoptFlowableDelivery,
   stageFlowableDelivery,ensureFlowableDeliveryFile} from './delivery.mjs';
 
-const OPERATION_KINDS=['release','process','task','migration'];
+const OPERATION_KINDS=FLOWABLE_OPERATION_KINDS;
+const DECISION_KINDS=new Set(['decisionPortfolio','decisionRelease','decisionEvaluation']);
+const PROCESS_NATIVE=Object.freeze({plan:planFlowableRequest,transport:createFlowableTransport,execute:executeFlowableRequest,
+  capture:captureFlowablePortfolio,read:readFlowableRequestState,reconcile:reconcileFlowableRequest});
+const DECISION_NATIVE=Object.freeze({plan:planFlowableDmnRequest,transport:createFlowableDmnTransport,execute:executeFlowableDmnRequest,
+  capture:captureFlowableDmnPortfolio,read:readFlowableDmnRequestState,reconcile:reconcileFlowableDmnRequest});
+const adapterFor=kind=>DECISION_KINDS.has(kind)?DECISION_NATIVE:PROCESS_NATIVE;
 const COLLECTIONS=['deployments','definitions','processes','tasks','historicProcesses',
   'historicTasks','historicActivities','historicVariables'];
 const READABLE=new Set(['view','listRecords','getRecord','readPortfolio','readDefinition','readSource',
-  'readReview','deliveryFile','sourceFile']);
-const EXPECTED_ACTIONS={release:['deploy'],process:['start'],task:['claim','complete','delegate','resolve'],migration:['migrate']};
+  'readReview','readDecisionPortfolio','readDecisionDefinition','readDecisionExecution','deliveryFile','sourceFile']);
+const EXPECTED_ACTIONS={release:['deploy'],process:['start'],task:['claim','complete','delegate','resolve'],migration:['migrate'],
+  decisionRelease:['deploy'],decisionEvaluation:['evaluate']};
 const recordRef=record=>({kind:record.kind,id:record.id,revision:record.revision,sha256:record.sha256});
 function errorInfo(error){
   return{code:typeof error?.code==='string'&&/^[A-Z][A-Z0-9_]{0,120}$/.test(error.code)?error.code:'FLOWABLE_OPERATION_FAILED',
@@ -52,8 +62,17 @@ function nativeIdentity(state){
     bytes:resource.bytes??null,sha256:resource.sha256??null})).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)));
   return output;
 }
+function operationIdentity(kind,state){
+  const native=nativeIdentity(state);
+  if(!DECISION_KINDS.has(kind))return native;
+  // The selected definition and its resources own evaluation semantics. Concurrent evaluations
+  // may add history without changing that selection; retain them in the original state, not its preimage.
+  return {connectionId:native.connectionId,connectionSha256:native.connectionSha256,action:native.action,
+    definitions:native.definitions,deployments:native.deployments,
+    resources:native.resources.filter(resource=>resource.kind==='dmn-definition-resource')};
+}
 const summaryOf=state=>Object.fromEntries(['definitions','deployments','processes','historicProcesses','tasks',
-  'historicTasks','activities','historicActivities','resources'].map(key=>[key,(state?.[key]??[]).length]));
+  'historicTasks','activities','historicActivities','historicExecutions','resources'].map(key=>[key,(state?.[key]??[]).length]));
 
 export async function openFlowableWorkspace({directory,connections=[],environment=process.env,fetch=globalThis.fetch,
   signal,timeoutMs=120000,maximumResponseBytes=64*1024*1024}={}){
@@ -78,7 +97,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
     need(textHash(connection)===record.value.configurationSha256,'FLOWABLE_CONNECTION_RECORD_CHANGED');
     return{record,connection};
   }
-  const transport=(connection,operationSignal)=>createFlowableTransport(connection,
+  const transport=(connection,operationSignal,kind='process')=>adapterFor(kind).transport(connection,
     {environment,fetch,signal:operationSignal,timeoutMs,maxResponseBytes:maximumResponseBytes});
   async function sinks(id,extra={}){
     return{...extra,retainBodies:false,
@@ -147,7 +166,8 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
     return{schema:SCHEMA,workspaceId,directory:store.directory,createdAt:store.identity.createdAt,connections:records,
       counts:Object.fromEntries(KINDS.map(kind=>[kind,heads.filter(item=>item.kind===kind).length])),closing,
       capabilities:{engine:'Flowable REST',deployments:'original-bpmn-or-archive',humanTasks:['claim','complete','delegate','resolve'],
-        migration:'native-process-instance-validation',history:'original-engine',delivery:'complete-source-and-history'}};
+        migration:'native-process-instance-validation',history:'original-engine',delivery:'complete-source-and-history',
+        decisions:{engine:'Flowable DMN REST',releases:'original-dmn-resource',evaluation:'native-decision-key-selection',history:'native-execution-audit'}}};
   }
   async function listRecords(input={}){
     const result=await store.list(input);return{...result,items:result.items.map(visible)};
@@ -160,7 +180,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       if(record.value.validation)output.validation=await responseSummary(record.value.validation);
       if(record.value.response)output.response=await responseSummary(record.value.response);
     }
-    if(record.kind==='portfolio'&&record.value.inventory){
+    if(['portfolio','decisionPortfolio'].includes(record.kind)&&record.value.inventory){
       const inventory=await store.getJSON(record.value.inventory);
       output.portfolio={startedAt:inventory.startedAt,completedAt:inventory.completedAt,
         collections:Object.fromEntries(Object.entries(inventory.collections??{}).map(([key,value])=>[key,
@@ -175,14 +195,15 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       bodySha256:original.bodySha256,reference,
       ...(original.bodyBytes<=1024*1024?{json:original.json,bodyText:original.json==null?original.bodyText:undefined}:{})};
   }
-  async function portfolioRecord(id,revision){
-    const record=await store.get('portfolio',recordId(id),revision);
+  async function portfolioRecord(id,revision,kind='portfolio'){
+    const record=await store.get(kind,recordId(id),revision);
     need(record.value.inventory,'FLOWABLE_PORTFOLIO_INCOMPLETE','This capture has no complete portfolio.',409);
     return{record,inventory:await store.getJSON(record.value.inventory)};
   }
-  async function readPortfolio(input){
-    need(COLLECTIONS.includes(input.collection),'FLOWABLE_COLLECTION_INVALID');
-    const{record,inventory}=await portfolioRecord(input.id,input.revision);
+  async function readCapturedPortfolio(kind,input){
+    const collections=kind==='decisionPortfolio'?DECISION_COLLECTIONS:COLLECTIONS;
+    need(collections.includes(input.collection),'FLOWABLE_COLLECTION_INVALID');
+    const{record,inventory}=await portfolioRecord(input.id,input.revision,kind);
     const collection=inventory.collections[input.collection],selected=page(input);
     need(collection&&Array.isArray(collection.items),'FLOWABLE_COLLECTION_ABSENT',undefined,404);
     const items=collection.items.slice(selected.offset,selected.offset+selected.limit);
@@ -190,17 +211,30 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       nativeTotal:collection.total,complete:collection.complete,pages:collection.pages,exchanges:collection.exchanges,
       nextOffset:selected.offset+items.length<collection.items.length?selected.offset+items.length:null};
   }
-  async function readDefinition(input){
-    const{record,inventory}=await portfolioRecord(input.portfolioId,input.revision);
+  const readPortfolio=input=>readCapturedPortfolio('portfolio',input);
+  const readDecisionPortfolio=input=>readCapturedPortfolio('decisionPortfolio',input);
+  async function readCapturedDefinition(kind,input){
+    const{record,inventory}=await portfolioRecord(input.portfolioId,input.revision,kind);
     const definition=inventory.collections.definitions.items.find(item=>item.id===input.definitionId);
     need(definition,'FLOWABLE_DEFINITION_NOT_IN_PORTFOLIO',undefined,404);
-    const resources=[],nativeLinks=new Set([definition.resource,definition.diagramResource].filter(value=>typeof value==='string'&&value.length));
+    const resources=[],nativeLinks=new Set([definition.resource,definition.diagramResource,definition.resourceName].filter(value=>typeof value==='string'&&value.length));
     for(const item of inventory.resources??[]){
       if(item.deploymentId===definition.deploymentId&&(item.definitionId===definition.id||
         item.definitionIds?.includes(definition.id)||nativeLinks.has(item.native?.url)||nativeLinks.has(item.filename)))
         resources.push(await hydrateResource(item));
     }
-    return{portfolio:recordRef(record),definition,resources};
+    const deployment=inventory.collections.deployments?.items?.find(item=>item.id===definition.deploymentId)??null;
+    return{portfolio:recordRef(record),definition,deployment,resources};
+  }
+  const readDefinition=input=>readCapturedDefinition('portfolio',input);
+  const readDecisionDefinition=input=>readCapturedDefinition('decisionPortfolio',input);
+  async function readDecisionExecution(input){
+    const{record,inventory}=await portfolioRecord(input.portfolioId,input.revision,'decisionPortfolio');
+    const execution=inventory.collections.historicExecutions.items.find(item=>item.id===input.executionId);
+    need(execution,'FLOWABLE_DECISION_EXECUTION_NOT_IN_PORTFOLIO',undefined,404);
+    const resources=[];
+    for(const item of inventory.resources??[])if(item.executionId===execution.id)resources.push(await hydrateResource(item));
+    return{portfolio:recordRef(record),execution,resources};
   }
   async function readSource(input){
     const bytes=await store.readBlob(input.reference);
@@ -225,28 +259,32 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
     return initial('connection',input,'saveConnection',{label:connection.label,connection,configurationSha256:textHash(connection),
       state:'SAVED'},{id,expectedRevision:input.expectedRevision??0});
   }
-  async function capturePortfolio(input,operationSignal){
-    const{prior}=await replay(input,'capturePortfolio',true);if(prior)return prior;
+  async function captureNativePortfolio(kind,input,operationSignal){
+    const decision=kind==='decisionPortfolio',method=decision?'captureDecisionPortfolio':'capturePortfolio';
+    const native=adapterFor(kind),collections=decision?DECISION_COLLECTIONS:COLLECTIONS;
+    const{prior}=await replay(input,method,true);if(prior)return prior;
     const{connection,record:target}=await lookupConnection(input.connectionId);
-    let record=await initial('portfolio',input,'capturePortfolio',{label:field(input.label??'Engine portfolio',300,true),
+    let record=await initial(kind,input,method,{label:field(input.label??(decision?'Decision portfolio':'Engine portfolio'),300,true),
       connectionId:target.id,configurationSha256:target.value.configurationSha256,connection,
       phase:'CAPTURING',state:'CAPTURING',startedAt:now()});
     try{
-      const inventory=await captureFlowablePortfolio(transport(connection,operationSignal),await sinks(record.id));
-      need(COLLECTIONS.every(key=>inventory.collections?.[key]?.complete===true),
+      const inventory=await native.capture(transport(connection,operationSignal,kind),await sinks(record.id));
+      need(collections.every(key=>inventory.collections?.[key]?.complete===true),
         'FLOWABLE_PORTFOLIO_INCOMPLETE','An original native collection did not complete.');
       const journal=await store.journal(record.id);
       record=await store.revise(record,{...record.value,inventory:await store.putJSON(inventory),journal:journal.original,
         phase:'CAPTURED',state:'CAPTURED',completedAt:inventory.completedAt??now(),
-        summary:{...Object.fromEntries(COLLECTIONS.map(key=>[key,inventory.collections[key].items.length])),
+        summary:{...Object.fromEntries(collections.map(key=>[key,inventory.collections[key].items.length])),
           resources:inventory.resources.length}});return record;
     }catch(error){return retainFailure(record,error,'INTERRUPTED');}
   }
+  const capturePortfolio=(input,operationSignal)=>captureNativePortfolio('portfolio',input,operationSignal);
+  const captureDecisionPortfolio=(input,operationSignal)=>captureNativePortfolio('decisionPortfolio',input,operationSignal);
   async function prepareOperation(kind,input,operationSignal){
     const method='prepare'+kind[0].toUpperCase()+kind.slice(1),{prior}=await replay(input,method,true);if(prior)return prior;
     need(EXPECTED_ACTIONS[kind]?.includes(input.selection?.action),'FLOWABLE_OPERATION_SELECTION_INVALID');
     const{record:target,connection}=await lookupConnection(input.connectionId),selection=input.selection;
-    const plan=planFlowableRequest(connection,selection),planSha256=textHash(plan);
+    const native=adapterFor(kind),plan=native.plan(connection,selection),planSha256=textHash(plan);
     const requestBody=Buffer.from(plan.bodyBase64??'','base64');
     need(requestBody.toString('base64')===(plan.bodyBase64??''),'FLOWABLE_NATIVE_BODY_INVALID');
     let sourceResource;
@@ -261,8 +299,8 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       ...(sourceResource?{sourceResource}:{}),
       summary:{action:plan.action,method:plan.method,path:plan.path,bodyBytes:requestBody.length}});
     try{
-      const client=transport(connection,operationSignal),callbacks=await sinks(record.id);
-      const before=await readFlowableRequestState(client,plan,callbacks),beforeRef=await store.putJSON(before);
+      const client=transport(connection,operationSignal,kind),callbacks=await sinks(record.id);
+      const before=await native.read(client,plan,callbacks),beforeRef=await store.putJSON(before);
       let validationRef=null,validationPlanRef=null,validation=null,valid=true;
       if(kind==='migration'){
         const validationPlan=planFlowableRequest(connection,{...selection,action:'validateMigration'});
@@ -272,7 +310,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
         valid=validation.ok===true&&Array.isArray(validation.json?.validationMessages)&&validation.json.validationMessages.length===0;
       }
       const journal=await store.journal(record.id);
-      record=await store.revise(record,{...record.value,before:beforeRef,preimageSha256:textHash(nativeIdentity(before)),
+      record=await store.revise(record,{...record.value,before:beforeRef,preimageSha256:textHash(operationIdentity(kind,before)),
         validation:validationRef,validationPlan:validationPlanRef,journal:journal.original,
         phase:valid?'PREPARED':'INVALID',state:valid?'PREPARED':'INVALID',preparedAt:now(),
         summary:{...record.value.summary,preimage:summaryOf(before),
@@ -282,10 +320,10 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
   }
   async function finishReadback(record,client,operationSignal){
     operationSignal.throwIfAborted();
-    const plan=await store.getJSON(record.value.plan),before=await store.getJSON(record.value.before);
+    const native=adapterFor(record.kind),plan=await store.getJSON(record.value.plan),before=await store.getJSON(record.value.before);
     const response=record.value.response?await completeExchange(await store.getJSON(record.value.response)):null;
-    const after=await readFlowableRequestState(client,plan,await sinks(record.id,{response}));
-    const result=reconcileFlowableRequest(plan,before,after,response),journal=await store.journal(record.id);
+    const after=await native.read(client,plan,await sinks(record.id,{response}));
+    const result=native.reconcile(plan,before,after,response),journal=await store.journal(record.id);
     return store.revise(record,{...record.value,after:await store.putJSON(after),reconciliation:await store.putJSON(result),
       journal:journal.original,phase:'COMPLETED',state:result.state,completedAt:now(),failure:null,
       summary:{...record.value.summary,result:result.state,responseStatus:response?.status??null,
@@ -298,14 +336,14 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
     need(input.planSha256===record.value.planSha256,'FLOWABLE_REVIEW_HASH_CHANGED','Execute the exact request shown in this saved review.',409);
     if(record.value.phase!=='PREPARED')return record;
     need(record.revision===input.expectedRevision,'FLOWABLE_RECORD_CONFLICT','Refresh the saved review.',409);
-    const connection=await sameConfiguration(record),plan=await store.getJSON(record.value.plan),selection=await store.getJSON(record.value.selection);
-    need(textHash(planFlowableRequest(connection,selection))===record.value.planSha256,'FLOWABLE_NATIVE_PLAN_CHANGED');
-    const client=transport(connection,operationSignal);
+    const native=adapterFor(kind),connection=await sameConfiguration(record),plan=await store.getJSON(record.value.plan),selection=await store.getJSON(record.value.selection);
+    need(textHash(native.plan(connection,selection))===record.value.planSha256,'FLOWABLE_NATIVE_PLAN_CHANGED');
+    const client=transport(connection,operationSignal,kind);
     try{
-      const current=await readFlowableRequestState(client,plan,await sinks(record.id));
-      if(textHash(nativeIdentity(current))!==record.value.preimageSha256){
+      const current=await native.read(client,plan,await sinks(record.id));
+      if(textHash(operationIdentity(kind,current))!==record.value.preimageSha256){
         return store.revise(record,{...record.value,phase:'STALE',state:'STALE',preflight:await store.putJSON(current),
-          failure:{code:'FLOWABLE_PREIMAGE_CHANGED',message:'The native definition, process or task changed after preparation. Prepare a new review of its current state.',at:now()}});
+          failure:{code:'FLOWABLE_PREIMAGE_CHANGED',message:'The selected native definition, process, task or decision changed after preparation. Prepare a new review of its current state.',at:now()}});
       }
       // Migration validation is native and current at dispatch, using the original complete document.
       if(kind==='migration'){
@@ -323,7 +361,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
         requestSha256:resumed.selected.sha256,value:{...record.value,phase:'DISPATCHED',state:'DISPATCHED',
           dispatchedAt:now(),dispatchRequestId:input.requestId,preflight:await store.putJSON(current)}});
       // The durable dispatch precedes the native mutation. Recovery reads this request's outcome.
-      const response=await completeExchange(await executeFlowableRequest(client,plan,await sinks(record.id)));
+      const response=await completeExchange(await native.execute(client,plan,await sinks(record.id)));
       const responseRef=await store.putJSON(response);
       await store.appendJournal(record.id,{type:'dispatch-response',reference:responseRef,planSha256:record.value.planSha256,
         status:response.status,bodySha256:response.bodySha256});
@@ -361,7 +399,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
         }
         if(selectedResponse)record=await store.revise(record,{...record.value,response:selectedResponse});
       }
-      return await finishReadback(record,transport(connection,operationSignal),operationSignal);
+      return await finishReadback(record,transport(connection,operationSignal,input.kind),operationSignal);
     }catch(error){return retainFailure(record,error,'UNKNOWN');}
   }
   async function readReview(input){
@@ -387,7 +425,8 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
     return{path:store.blobPath(input.reference),bytes:input.reference.bytes,sha256:input.reference.sha256,
       mediaType:input.reference.mediaType??'application/octet-stream',filename:'flowable-source-'+input.reference.sha256+'.source'};
   }
-  const methods={view,listRecords,getRecord,readPortfolio,readDefinition,readSource,readReview,saveConnection,capturePortfolio,
+  const methods={view,listRecords,getRecord,readPortfolio,readDefinition,readDecisionPortfolio,readDecisionDefinition,
+    readSource,readReview,readDecisionExecution,saveConnection,capturePortfolio,captureDecisionPortfolio,
     reconcileOperation,exportWorkspace,inspectDelivery,adoptDelivery,deliveryFile,sourceFile};
   for(const kind of OPERATION_KINDS){
     const name=kind[0].toUpperCase()+kind.slice(1);
@@ -411,7 +450,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
         expectedRevision:received.value.adoptExpectedRevision,manifestSha256:received.value.manifestSha256});
     }
     for(const head of await store.heads()){
-      if(!['portfolio',...OPERATION_KINDS].includes(head.kind))continue;
+      if(!['portfolio','decisionPortfolio',...OPERATION_KINDS].includes(head.kind))continue;
       const record=await store.get(head.kind,head.id);
       if(['CAPTURING','PREPARING'].includes(record.value.phase))await retainFailure(record,
         {code:'FLOWABLE_PROCESS_INTERRUPTED',message:'The prior process stopped during native source capture. Its retained originals are available.'},'INTERRUPTED');

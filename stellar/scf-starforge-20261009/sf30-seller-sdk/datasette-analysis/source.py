@@ -416,6 +416,10 @@ def source_document(directory, *, collections, edition):
         extension = "json" if item["content_type"] == "application/json" else "bin"
         records.append({**content(item["raw"], extension, item["content_type"]), "role": item["role"]})
     source = edition["source"]
+    # The portable public reference names the published endpoint. Datasette's
+    # exact filtered/query selection remains in the original source-meaning
+    # attachment and every retained request, and is used by the customer report.
+    public_reference = source_url(source["url"])._replace(query="").geturl()
     license_record = source.get("license")
     license_text = json.dumps(license_record, ensure_ascii=False) if license_record else "See retained publisher metadata."
     scope = f"Complete {source.get('database', '')}/{source.get('table', '')} selection; {len(edition['rows'])} rows."
@@ -426,19 +430,22 @@ def source_document(directory, *, collections, edition):
            "page receipts retain the observed retrieval times. "
            if source.get("capture_time_basis") == "native-capture-commit"
            else "Capture time describes retrieval. ")
+        + "The exact selected URL and filters are retained in source-meaning.json and the original page receipts. "
         + "Source license and attribution: " + license_text)
     manifest = {"schema": "stellar-forge.analysis-source-document.v1",
                 "title": source["title"], "format": "json", "complete": True,
                 "document": content(projection, "json", "application/json"),
                 "originals": records,
                 "provenance": {"kind": "public-source", "publisher": source["publisher"],
-                    "sourceUrl": source["url"], "capturedAt": source["captured_at"],
+                    "sourceUrl": public_reference, "capturedAt": source["captured_at"],
                     "scope": scope[:500], "description": description[:12000],
                     "transform": {"name": "Datasette reviewed exact-source customer projection v1",
                         "sourceUrl": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/source.py",
                         "sha256": sha(regular(Path(__file__)))}}}
-    target = directory / "source.json"
     raw = encoded(manifest)
+    # A corrected adapter can resume a failed preparation without replacing
+    # the original descriptor. The native registry receives this exact edition.
+    target = directory / ("source-" + sha(raw) + ".json")
     if target.exists():
         require(regular(target) == raw, "DATASETTE_DOCUMENT_SELECTION_CHANGED")
     else:

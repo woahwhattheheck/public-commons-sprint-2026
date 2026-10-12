@@ -1,8 +1,8 @@
 {
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "gridfabric-plaid",
-  "title": "GridFabric Plaid operations",
-  "description": "Complete GridFabric Plaid native source/report/event/callback operations and portable receiving, composed with the original Utility and Leap products through the maintained selected runtime",
+  "title": "GridFabric Plaid operations, SDK and managed Applications",
+  "description": "Complete GridFabric Plaid native operations, typed SDK, merchant MCP and managed Applications receiving, composed with the original Utility and Leap products through the maintained selected runtime",
   "base": {
     "commands": [
       "installation",
@@ -112,7 +112,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/leap-intervals",
     "operations/scf-leap-interval-receiving-20261012",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid",
-    "operations/scf-gridfabric-plaid-receiving-20261012"
+    "operations/scf-gridfabric-plaid-receiving-20261012",
+    "operations/scf-gridfabric-plaid-managed-receiving-20261012"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -233,12 +234,43 @@
     "operations/scf-gridfabric-plaid-receiving-20261012/README.md",
     "operations/scf-gridfabric-plaid-receiving-20261012/receiving-config.example.json",
     "operations/scf-gridfabric-plaid-receiving-20261012/source-manifest.json",
-    "stellar/scf-starforge-20261009/distribution/contributions/gridfabric-plaid.json"
+    "stellar/scf-starforge-20261009/distribution/contributions/gridfabric-plaid.json",
+    "operations/scf-gridfabric-plaid-managed-receiving-20261012/README.md",
+    "operations/scf-gridfabric-plaid-managed-receiving-20261012/run-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/MANAGED_APPLICATION.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/SDK_MCP.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/application-provider.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/managed-binding.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/managed-launch.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/mcp/catalog.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/mcp/provider.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/mcp/setup.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/mcp/workspace.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/native-file-reader.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sdk/client.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sdk/contract.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sdk/download.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sdk/http-client.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sdk/index.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sdk/index.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sdk/receiving-input.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sdk/receiving.mjs",
+    "stellar/scf-starforge-20261009/distribution/selections/gridfabric-plaid.json",
+    "stellar/scf-starforge-20261009/distribution/selections/GRIDFABRIC_PLAID.md"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Complete GridFabric Plaid native source/report/event/callback operations and portable receiving, composed with the original Utility and Leap products through the maintained selected runtime",
-    "readme": "stellar/scf-starforge-20261009/distribution/selections/GRIDFABRIC_PLAID.md"
+    "description": "Complete GridFabric Plaid native operations, typed SDK, merchant MCP and managed Applications receiving, composed with the original Utility and Leap products through the maintained selected runtime",
+    "readme": "stellar/scf-starforge-20261009/distribution/selections/GRIDFABRIC_PLAID.md",
+    "bin": {
+      "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs",
+      "gridfabric-plaid": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/cli.mjs",
+      "gridfabric-application": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/managed-launch.mjs"
+    },
+    "repository": {
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+      "directory": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid"
+    }
   },
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"

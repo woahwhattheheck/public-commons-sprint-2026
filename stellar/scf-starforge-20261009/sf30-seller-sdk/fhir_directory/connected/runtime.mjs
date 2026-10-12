@@ -1,0 +1,105 @@
+// MIT. Native directory routes use the maintained complete Merchant workspace runtime.
+import {createMerchantWorkspaceRuntime} from '../../fhir_eltss/connected/runtime.mjs';
+import {gravityReferralNativeRoute,gravityReferralUploadRoute} from '../../fhir_referral/connected/runtime.mjs';
+import {HumanServicesDirectoryConnection} from './connection.mjs';
+import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,
+  validateHumanServicesDirectoryArguments,nativeInputActions} from './catalog.mjs';
+import {EXPORT_SCHEMA,RESULT_SCHEMA,MANIFEST_NAME,parseHumanServicesDirectoryExport,checked,SHA} from './contracts.mjs';
+export {humanServicesDirectoryMerchantTools} from './catalog.mjs';
+const part=value=>encodeURIComponent(value),path=(...parts)=>'/api/directory/'+parts.map(part).join('/');
+function query(target,values){
+  const params=new URLSearchParams(Object.entries(values).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]));
+  return target+(params.size?'?'+params:'');
+}
+function filename(member,fallback){
+  const value=typeof member==='string'?member.split('/').at(-1):'';
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/.test(value)&&
+    !['original-request.json','original-response.json','original-input.json','original-artifact.json',MANIFEST_NAME].includes(value)?
+    value:fallback;
+}
+export function humanServicesDirectoryNativeRoute(action,args){
+  if(action==='directory_state')return {method:'GET',target:'/api/state'};
+  const direct={directory_catalogue:'catalogue',directory_guidance:'guidance'};
+  if(direct[action])return {method:'GET',target:path(direct[action])};
+  const selected=directoryBodyRoutes.find(row=>row.action===action);
+  if(selected)return {method:'POST',target:selected.target,input:args[selected.key]};
+  if(action==='directory_records')return {method:'GET',target:query(path(args.collection),{
+    offset:args.offset,limit:args.limit,query:args.query})};
+  if(action==='directory_record')return {method:'GET',target:path(args.collection,args.recordId)};
+  if(action==='directory_operation')return {method:'GET',target:path('operations',args.operationId)};
+  if(['directory_advance','directory_pause','directory_resume'].includes(action))
+    return {method:'POST',target:path('operations',args.operationId,action.slice('directory_'.length)),input:{}};
+  if(action==='directory_source_rows')return {method:'GET',target:query(path('sources',args.sourceId,'rows'),{
+    offset:args.offset,limit:args.limit,table:args.table,query:args.query})};
+  if(action==='directory_source_row')return {method:'GET',target:path('sources',args.sourceId,'rows',args.recordId)};
+  if(action==='directory_source_members')return {method:'GET',target:path('sources',args.sourceId,'members')};
+  if(action==='directory_edition_rows')return {method:'GET',target:query(path('editions',args.editionId,'rows'),{
+    offset:args.offset,limit:args.limit,table:args.table,query:args.query})};
+  if(action==='directory_edition_row')return {method:'GET',target:path('editions',args.editionId,'rows',args.sourceId,args.recordId)};
+  if(action==='directory_edition_links')return {method:'GET',target:query(path('editions',args.editionId,'links'),{record_id:args.recordId,offset:args.offset,limit:args.limit})};
+  if(action==='directory_link_targets')return {method:'GET',
+    target:query(path('editions',args.editionId,'links',args.sourceId,args.linkId,'targets'),{offset:args.offset,limit:args.limit})};
+  if(action==='directory_capture_source')return {method:'POST',
+    target:path('operations',args.operationId,'capture-source'),input:{}};
+  if(action==='directory_comparison_changes')return {method:'GET',target:query(path('comparisons',args.comparisonId,'changes'),{
+    offset:args.offset,limit:args.limit,state:args.state})};
+  if(action==='directory_mapping_preview_details')return {method:'GET',
+    target:query(path('mappingPreviews',args.mappingPreviewId,'details'),{group:args.group,offset:args.offset,limit:args.limit})};
+  if(action==='directory_selection_candidates')return {method:'GET',
+    target:query(path('selections',args.selectionId,'candidates'),{offset:args.offset,limit:args.limit,query:args.query})};
+  if(['workspace_packet','referral_workspace_packet','directory_workspace_packet'].includes(action))
+    return {method:'GET',target:path('workspace','file'),kind:'workspace-packet',filename:'Human_Services_Directory_Editable_Workspace.zip'};
+  const files={
+    directory_index_file:{target:path(args.collection,args.recordId,'index','file'),
+      kind:'directory-export-file',filename:'Directory_Complete_Index.sqlite'},
+    directory_source_record_file:{target:path('sources',args.sourceId,'rows',args.recordId,'file'),
+      kind:'directory-source-file',filename:'Directory_Original_Record.json'},
+    directory_comparison_changes_file:{target:path('comparisons',args.comparisonId,'changes','file'),
+      kind:'directory-export-file',filename:'Directory_Complete_Changes.jsonl'},
+    directory_capture_file:{target:path('operations',args.operationId,'file'),
+      kind:'directory-source-file',filename:'Directory_Original_Capture.zip'},
+    directory_guidance_file:{target:query(path('guidance','file'),{member:args.member}),
+      kind:'directory-guidance-file',filename:filename(args.member,'Directory_Original_Guidance_Member.txt')},
+    directory_source_file:{target:query(path('sources',args.sourceId,'file'),{member:args.member}),
+      kind:'directory-source-file',filename:filename(args.member,'Directory_Original_Source.bin')},
+    directory_handoff_file:{target:path('handoffs',args.handoffId,'file'),
+      kind:'directory-handoff-packet',filename:'Human_Services_Directory_Handoff.zip'},
+    directory_export_file:{target:path('exports',args.exportId,'file'),
+      kind:'directory-export-file',filename:'Directory_Prepared_Export.bin'}
+  };
+  if(files[action])return {method:'GET',...files[action]};
+  return gravityReferralNativeRoute(action,args);
+}
+export function humanServicesDirectoryUploadRoute(kind,args,upload,options){
+  if(kind==='workspace')return {target:path('workspace','receive'),adoptWorkspace:true};
+  if(kind==='directory-handoff')return {target:path('handoffs','receive'),adoptWorkspace:true};
+  if(kind==='directory-source'){
+    checked(args.importProfileId,SHA,'saved directory import profile');
+    return {method:'PUT',target:path('imports',args.importProfileId,'content')};
+  }
+  return gravityReferralUploadRoute(kind,args,upload,options);
+}
+export const MerchantHumanServicesDirectory=createMerchantWorkspaceRuntime({
+  Connection:HumanServicesDirectoryConnection,tools:humanServicesDirectoryMerchantTools,
+  validateArguments:validateHumanServicesDirectoryArguments,inputActions:nativeInputActions,
+  routeFor:humanServicesDirectoryNativeRoute,uploadRoute:humanServicesDirectoryUploadRoute,
+  configKey:'humanServicesDirectory',exportNamespace:'human-services-directory',
+  exportSchema:EXPORT_SCHEMA,resultSchema:RESULT_SCHEMA,manifestName:MANIFEST_NAME,
+  parseExport:parseHumanServicesDirectoryExport,errorPrefix:'HUMAN_SERVICES_DIRECTORY',
+  apiSchema:'stellar-forge.human-services-directory-merchant-api.v1',
+  importActions:{source_import:'source',packet_import:'packet',workspace_import:'workspace',
+    handoff_import:'handoff',artifact_import:'artifact',referral_workspace_import:'workspace',
+    referral_handoff_import:'referral-handoff',referral_published_examples_import:'published-examples',
+    directory_source_import:'directory-source',directory_workspace_import:'workspace',
+    directory_handoff_import:'directory-handoff'},
+  receivingKinds:{source:'source-packet',packet:'dataset-packet',workspace:'workspace-packet',
+    handoff:'handoff-packet',artifact:'artifact-file','referral-handoff':'referral-handoff-packet',
+    'directory-source':'directory-source-file','directory-handoff':'directory-handoff-packet'},
+  schemaMetadata:{
+    nativeDirectory:'stellar-forge.human-services-directory.v1',
+    directory:directoryNativeContract,source:directorySourceContract,
+    recovery:'Read the same directory acquisition after an uncertain response. Source import keeps its saved import profile and complete original file. Receiving retains the original directory UUID, source indices, reviewed mappings, service selection and Gravity records.',
+    sourceSemantics:'Use the literal source edition and original mapping rows. HSDS3.3.1 input and HSD STU1 mappings from HSDS2.0.1 remain distinct. Service selection retains stated status, schedule, capacity units/times and the operator decision. Native Task and ServiceRequest changes require the exact reviewed resource binding.',
+    fileLimits:'Connected complete-file receiving uses the maintained 512MiB limit. The native directory routes support larger selected archives within their declared 2GiB maximum; those files remain available directly from the original operator.'
+  }
+});

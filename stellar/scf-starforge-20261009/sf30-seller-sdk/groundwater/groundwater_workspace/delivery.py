@@ -47,6 +47,8 @@ def _html(snapshot):
     for engine,row in result["engines"].items():
         parts.append("<tr><td>"+esc(engine)+"</td><td>"+esc(row["model_id"])+"</td><td>"+esc(row["units"]["length"])+"</td><td>"+esc(row["units"]["time"])+"</td><td>"+esc(len(row["heads"]))+"</td></tr>")
     parts.append("</table><h2>Selected changes</h2><pre>"+esc(json.dumps(snapshot["edition"]["changes"],indent=2))+"</pre><h2>Source and result findings</h2>")
+    if snapshot["run"].get("reference_basis") is not None:
+        parts.append("<h3>Reference inspection used by this run</h3><p>The original import findings remain in the source record. This run froze the separately attributed inspection below.</p><pre>"+esc(json.dumps(snapshot["run"]["reference_basis"],indent=2))+"</pre><h3>Original import findings</h3><pre>"+esc(json.dumps(snapshot["source"]["findings"],indent=2))+"</pre>")
     for finding in result["findings"]:
         parts.append("<p><strong>"+esc(finding["id"])+"</strong> — "+esc(finding["message"])+"</p>")
     parts.append("<h2>Named review</h2><pre>"+esc(json.dumps(snapshot["review"],indent=2))+"</pre><h2>Paired native aquifers</h2><pre>"+esc(json.dumps(result["cross_engine"],indent=2))+"</pre>")

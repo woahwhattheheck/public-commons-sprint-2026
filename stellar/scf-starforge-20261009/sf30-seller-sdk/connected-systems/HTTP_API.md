@@ -4,10 +4,9 @@ Source root: `stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/`
 Original native engine and retained workspace: sibling `xml/workspace.py`, Git blob `24c4fb7ccf08f6d350bcfb4eae6accc251a60a4e`.
 This module is a read-only JSON CSAPI consumer. It does not command connected equipment.
 
-## Source ownership and imports
+## Modules and imports
 
-Scout owns `csapi_source.py`, `csapi_workspace.py`, merchant/customer/MCP integration and the native source operation.
-Actions owns `csapi_server.py`, `public/{index.html,app.js,style.css}`, `cli.py`, `cli.mjs`, and `delivery/browser-{owner.py,phase.cjs}`.
+`csapi_source.py` interprets exact captured responses. `csapi_workspace.py` composes the original native workspace, while `csapi_server.py`, the CLI and browser files expose that same maintained API.
 Import `Workspace, InputError` from `csapi_workspace`. Workspace(root, create=False) is a context manager with close(). The format kind is `connected-systems`.
 No shared original XML or ERDDAP source changes are required.
 
@@ -34,7 +33,8 @@ All identifiers named source/plan/build/connection/query/document are full SHA25
 
 ### Retained source and mapping
 
-- state() -> the original {schema,sources,plans,builds,comparisons} plus connections,queries,documents,operations. Source rows retain id,label,name,bytes,created.
+- state() -> the original complete {schema,sources,plans,builds,comparisons} plus connections,queries,documents,operations. Source rows retain id,label,name,bytes,created. Documents and operations are the latest 200, with documentCount, operationCount and explicit listCoverage. Use records() for full inventories.
+- records(collection,offset=0,limit=100,expected_view_sha256=None) -> {schema,collection,viewSha256,total,offset,returned,nextOffset,items}. Collections: sources,plans,builds,comparisons,connections,queries,documents,operations. Items have the same per-collection shape as state(); documents/operations include all retained rows. Limit is 1..250. Nonzero offsets require the original viewSha256. A changed view raises InputError with code CSAPI_COLLECTION_CHANGED, status 409 and view_sha256.
 - add_source(stream,label=None,name=None) -> {id,label,name,bytes,created,inventory}. File is a complete Connected Systems source ZIP, although the original retained internal filename is source.connected-systems.
 - source(id) -> that row including inventory. inventory includes schema,endpoint,datastream,system,observationSchema,schemaSha256,coverage,rowCount,fields,duplicates,files,rights,valuePolicy. Full raw documents remain downloadable.
 - source_rows(id,offset=0,limit=100) -> {rows:[{ordinal,page,index,observation}],offset,nextOffset,rowCount,representation}. Original JSON number tokens are displayed as strings, explicitly identified by the preserved source schema/field kinds; no binary float conversion.
@@ -48,19 +48,57 @@ All identifiers named source/plan/build/connection/query/document are full SHA25
 
 ### Original build/query/compare/customer receiving
 
-These methods and return shapes are unchanged from XML workspace 24c4:
+The native build, query, comparison and receiving methods retain the XML workspace 24c4 ABI. Dataset export adds the source-specific merchant lineage; packet export retains its exact build-bound bytes:
 - build(source_id,plan_id,expected=None) -> {schema,id,source,plan,rowCount,keys,columns,native,engineBlob,files}.
 - build_view(id) -> exact saved build review.
 - query(build_id,params) -> original native SF30 response {response,dataset,engineBlob,...}; params maps strings to strings. Preserve actual snapshot/cursor and HTTP result status.
 - compare(before_id,after_id) -> {schema,id,before,after,plan,keys,semantics,counts,changesSha256}. Same mapping and explicit unique keys required.
 - comparison_page(id,offset=0,limit=50) -> {rows,offset,nextOffset}; comparison_file(id) -> full JSONL path.
-- export_dataset(build_id,destination) -> {directory,dataset,build}; original data.csv, dataset.json and connected-systems-lineage.json.
+- export_dataset(build_id,destination) -> {directory,dataset,build,lineage}; original data.csv, dataset.json and connected-systems-lineage.json. Lineage schema is stellar-forge.connected-systems-lineage.v1; fields include build (SHA string), snapshot, project, files, sources, selection, coverage, duplicates, mapping, rowCount, engineBlob, valuePolicy, created_at. files contains exactly the data.csv/dataset.json projection of build.files; the private rows.sqlite runtime index is not exported as a dataset file.
 - export_packet(build_id,output) -> {file,bytes,sha256,build}; exact source/mapping/data/native review, compatible with an independently created connected-systems workspace.
-- import_packet(path) -> {source,plan,build,reconstructed:true}; original engine reconstructs the dataset and verifies its expected native snapshot/cells.
+- import_packet(path) -> {source:SHA256_STRING,plan:SHA256_STRING,build:FULL_BUILD,reconstructed:true}; original engine reconstructs the dataset and verifies its expected native snapshot/cells.
 - scratch() yields one original private operation directory.
 
-The server may expose the same established routes for sources/plans/builds/query/comparisons/export/receive. Add /api/connections, /api/browse, /api/documents/<id>, /api/queries, /api/acquisitions, /api/operations/<id>. Keep request fields faithful to these signatures. Store pending request IDs and exact source/plan selections before a mutation; show recovery for failed/lost responses. A server-side failure never implies an acquisition did not run.
+The server exposes the original routes for sources, plans, builds, queries, comparisons, exports and receiving, with /api/connections, /api/browse, /api/documents/<id>, /api/queries, /api/acquisitions, /api/operations/<id>, and GET /api/records/<collection>?offset=0&limit=100&expectedViewSha256=SHA. Failed collection paging returns viewSha256, preserving the core's known identity. Keep request fields faithful to these signatures. Store pending request IDs and exact source/plan selections before a mutation; show recovery for failed/lost responses. A server-side failure never implies an acquisition did not run.
 
 ## Browser continuation
 
-One original browser owner consumes --source-root, --operation-root, --workspace (Scout's original closed native workspace), repeated --source-packet, optional --temporary-root and --screenshots. It does not perform a second source acquisition or create a replacement native seed. The owner continues the same retained checkpoints, drives actual source/mapping/build/query/compare/export, then opens one independent customer receiving workspace. Source IDs/schema/coverage policy and expected native dataset are checkpoint inputs. It closes both servers and workspaces before returning. Actual provider source paths and native result will be supplied after the one Scout acquisition returns.
+One original browser owner consumes --source-root, --operation-root, --workspace (the original closed native workspace), repeated --source-packet, explicit --coverage-policy require-exhausted|allow-partial, optional --temporary-root and --screenshots. It does not perform a second source acquisition or create a replacement native seed. The owner continues the same retained checkpoints, drives actual source/mapping/build/query/compare/export, then opens one independent customer receiving workspace. Source IDs/schema/coverage policy and expected native dataset are checkpoint inputs. It closes both servers and workspaces before returning. Actual provider source paths, source hashes, reviewed mappings and native result are required inputs from that same completed acquisition/build.
+
+## Complete local route map
+
+All API routes require the original capability and apply the same origin checks.
+
+| Method | Route | Original call / body |
+| --- | --- | --- |
+| GET | `/api/launch` | Token-free current listener identity. |
+| GET | `/api/state` | Startup summary plus workspace identity. |
+| GET | `/api/records/<collection>` | `records(collection,offset,limit,expectedViewSha256)`. |
+| POST | `/api/connections` | `save_connection(raw)`. |
+| GET | `/api/connections/<id>` | `connection(id)`. |
+| POST | `/api/browse` | `{connectionId,resource,params,operationId}`. |
+| GET | `/api/documents/<id>` | `document(id)`. |
+| GET | `/api/documents/<id>/body` | Complete original response bytes. |
+| POST | `/api/queries` | `save_query(raw)`. |
+| GET | `/api/queries/<id>` | `query_definition(id)`. |
+| POST | `/api/acquisitions` | `{queryId,operationId,label?}`. |
+| GET | `/api/operations/<id>` | Exact original request and retained progress/result. |
+| POST | `/api/sources` | Complete application/zip body; encoded source name/label headers. |
+| GET | `/api/sources/<id>` | Full source inventory. |
+| GET | `/api/sources/<id>/rows` | Original rows by offset/limit. |
+| GET | `/api/sources/<id>/files` | Complete original member inventory. |
+| GET | `/api/sources/<id>/files?name=MEMBER` | Exact URL-encoded retained member name. |
+| POST | `/api/sources/<id>/mapping` | `{name?}`; return the complete proposed mapping without saving it. |
+| POST | `/api/plans` | Complete reviewed normalized mapping. |
+| GET | `/api/plans/<id>` | Exact saved mapping. |
+| POST | `/api/builds` | `{source,plan}`. |
+| GET | `/api/builds/<id>` | Full native review. |
+| GET | `/api/builds/<id>/query` | Original scalar-string native parameters. |
+| GET | `/api/builds/<id>/packet` | Exact six-member project ZIP. |
+| GET | `/api/builds/<id>/dataset` | Exact three-member native dataset ZIP. |
+| POST | `/api/comparisons` | `{before,after}`. |
+| GET | `/api/comparisons/<id>/changes` | Original comparison paging by offset/limit. |
+| GET | `/api/comparisons/<id>/file` | Complete original comparison JSONL. |
+| POST | `/api/packets` | Complete original project ZIP; independent native reconstruction. |
+
+The default-mapping route returns a proposal; the separate plan save records the reviewed mapping. Error responses preserve the known code, status, documentId, retryAt and viewSha256; HTTP/provider failure is not converted into a completed acquisition.

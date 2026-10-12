@@ -224,6 +224,13 @@ if(await exists(resultFile)){
    const current=await api('/state?project_id='+input.project_id);
    require(current.backups.every(row=>row.status==='external_archive'),'Restored backup history incorrectly exposes a local archive.');
    require(current.runs.every(row=>!row.worker_active),'Restored UI started a native worker.');
+   if(input.reference_inspection_id){
+    const retainedSource=await api('/sources/'+input.imported_source_id);
+    require(retainedSource.source.sha256===input.imported_source_sha256&&retainedSource.reference_inspection?.basis.inspection_id===input.reference_inspection_id&&retainedSource.reference_inspection.basis.sha256===input.reference_basis_sha256,'Restore lost the original source inspection or changed its source.');
+    await go('sources/'+input.imported_source_id);
+    await page.getByText('Current reference inspection',{exact:true}).waitFor();
+    await capture('09-restored-source-inspection');
+   }
    const result={schema:'starforge.groundwater-browser-result.v1',state:'complete',mode,operation_id:input.operation_id,workspace_id:input.workspace_id,scenario_run_id:input.scenario_run_id,report_id:input.report_id,report_sha256:report.report.sha256,requests:[],screenshots,automatic_native_execution:false};
    await context.close();context=null;await browser.close();
    await writeJSON(resultFile,result);
@@ -246,7 +253,21 @@ if(await exists(resultFile)){
     await enter(form,'intended_units','{"length":"feet","time":"seconds"}');
    }));
    const importedSource=await api('/sources/'+imported.source_id);
-   require(!importedSource.source.findings.some(row=>row.severity==='blocking'),'The original generated package has unresolved literal native references.');
+   const originalSource=stable(importedSource.source),originalEditions=stable(importedSource.editions);
+   const inspected=await perform('native-package-reference-inspection','source.inspect',filled('source-inspect',async()=>{
+    await go('sources/'+imported.source_id);
+    const form=page.locator('form[data-handler="source-inspect"]');
+    await enter(form,'reason','Reinspect the exact retained native ZIP with the corrected explicit MF6/legacy reference grammars. Keep the original import, source, baseline edition, original findings and native runs unchanged; BAS6 uses the legacy third-token filename and its integer unit remains a unit.');
+   }));
+   const inspectedSource=await api('/sources/'+imported.source_id);
+   require(stable(inspectedSource.source)===originalSource&&stable(inspectedSource.editions)===originalEditions,'Reference inspection changed the original saved source or its editions.');
+   const referenceInspection=inspectedSource.reference_inspection;
+   require(referenceInspection?.current&&referenceInspection.basis.inspection_id===inspected.inspection_id&&referenceInspection.basis.sha256===inspected.reference_basis_sha256,'The retained inspection is not the exact committed result of this original inspection phase.');
+   require(!referenceInspection.basis.findings.some(row=>row.severity==='blocking'),'The original generated package has unresolved inspected native input references: '+JSON.stringify(referenceInspection.basis.findings));
+   require(referenceInspection.basis.source_sha256===importedSource.source.sha256,'Reference inspection lost the immutable original source identity.');
+   await go('sources/'+imported.source_id);
+   await page.getByText('Current reference inspection',{exact:true}).waitFor();
+   await capture('02-native-source-reference-inspection');
    await go('runs/'+input.baseline_run_id);
    await page.getByText('Native completion',{exact:true}).waitFor();
    await capture('02-original-native');
@@ -329,7 +350,7 @@ if(await exists(resultFile)){
    }));
    const finalState=await api('/state?project_id='+input.project_id);
    require(finalState.backups.find(row=>row.id===backup.id)?.status==='complete','The original full backup did not complete.');
-   const result={schema:'starforge.groundwater-browser-result.v1',state:'complete',mode,operation_id:input.operation_id,workspace_id:input.workspace_id,project_id:input.project_id,imported_source_id:imported.source_id,scenario_edition_id:scenario.id,scenario_run_id:queued.id,report_id:frozen.id,report_sha256:report.report.sha256,delivery_id:delivery.id,acknowledgment_id:acknowledged.id,backup_id:backup.id,requests,screenshots,comparison,completed_at:new Date().toISOString()};
+   const result={schema:'starforge.groundwater-browser-result.v1',state:'complete',mode,operation_id:input.operation_id,workspace_id:input.workspace_id,project_id:input.project_id,imported_source_id:imported.source_id,imported_source_sha256:importedSource.source.sha256,reference_inspection_id:inspected.inspection_id,reference_basis_sha256:referenceInspection.basis.sha256,scenario_edition_id:scenario.id,scenario_run_id:queued.id,report_id:frozen.id,report_sha256:report.report.sha256,delivery_id:delivery.id,acknowledgment_id:acknowledged.id,backup_id:backup.id,requests,screenshots,comparison,completed_at:new Date().toISOString()};
    await context.close();context=null;await browser.close();
    await writeJSON(resultFile,result);
   }

@@ -10,6 +10,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { tmpdir } from 'node:os';
+import { runAnalysisLineageMcpJourney } from './analysis_lineage_mcp.mjs';
 
 const SCHEMA = 'stellar-forge.analysis-lineage-native-receiving.v1';
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -484,6 +485,16 @@ async function main(argv) {
     const screenshots = { desktop: await screenshot('desktop', 1440), mobile: await screenshot('mobile', 390) };
     await captureBrowser();
     need(browserErrors.length === 0, 'Original browser reported an unhandled application error: ' + browserErrors.join('; '));
+    // The browser has finished. Retire Chromium before the same live Analysis
+    // service receives the original MCP file/reopen continuation.
+    await context.close(); context = null;
+    const mcp = await runAnalysisLineageMcpJourney({ directory: root, checkout: c.checkout,
+      analysisDirectory: c.analysis_directory, operationId: c.operation_id, phase,
+      workspaceId: c.workspace_id, rootJobId: c.root_job_id, plan,
+      publicationRequest: phase === 'publish' ? journal.requests.publication :
+        { id: c.publication_job_id, plan_id: c.plan_id, plan_sha256: c.plan_sha256 },
+      originalHandover: files['handover.zip'] });
+    journal.steps.mcp = mcp; await checkpoint();
     const result = { schema: SCHEMA, phase, status: 'COMPLETE', operation_id: c.operation_id,
       workspace_id: c.workspace_id, configuration_sha256: configurationSha,
       root_job_id: c.root_job_id, plan_id: plan.id, plan_sha256: plan.plan_sha256,

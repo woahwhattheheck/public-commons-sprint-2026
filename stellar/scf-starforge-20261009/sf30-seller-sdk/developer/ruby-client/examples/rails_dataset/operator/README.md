@@ -98,6 +98,11 @@ resources :dataset_imports, only: [:index, :show, :create] do
     get :changes
     get :history
     get :attachments
+    get :records
+    get :record
+    post :capture_data
+    get :data_export
+    get :data_attachment
     get :download
     get :receipt
     get :attachment
@@ -161,6 +166,16 @@ A candidate can supply `mapping_path` instead of a mapping object. The browser r
 6. **Receive the result.** Download complete JSON/CSV reviews, selected mapping, all historical edition rows, original files or the complete review TAR. History is scoped to the original dataset stream.
 
 A changed application preview produces a conflict and keeps the original review available. Use “Refresh from saved source” to review the new current state. Errors appear with the same original review; queue transport errors retain a resume action.
+
+## Browse and deliver the committed working records
+
+Open **Dataset and source details** on a committed review. Save one complete capture of the current dataset, then browse every retained business key, working value, source row and original attachment through the same tenant and target-model scope. The capture records active and removed keys separately and identifies working targets as unchanged, changed or missing. The original edition receipts and source rows remain attached to each record.
+
+The records view provides full-text search, typed filters, multi-column sorting and complete pagination. CSV and JSON downloads contain the entire selected result, including the raw original source row and exact typed working values. Record details preserve original attachment references and stream the selected complete files. Pending captures use the same signed operation on resume.
+
+For a managed application, the saved-record view also supplies the exact working-data selection for verification and full portable export. That explicit selection carries the capture, current working database, original source, immutable editions and receipts together. Receiving rechecks the complete current records against the retained capture. After later edits or a new imported edition, save a new capture for that new working state.
+
+See [the complete saved-data operator guide](records.md) for column types, query fields, CLI commands, capture replay, full downloads and the original application receiving example. The new `DataCaptureJob` runs through the host's existing Active Job queue; the included local commissioner uses its actual inline queue.
 
 ## Files, editions and attachment identity
 

@@ -71,7 +71,8 @@ def parser():
     export = common(commands.add_parser("export", help="Prepare complete native reports, workbooks and workspace delivery"), connect=True)
     export.add_argument("--destination")
     call = common(commands.add_parser("call", help="Submit an exact original domain JSON request"), connect=True)
-    call.add_argument("--action", required=True, choices=["status", "prepare", "rows", "compare", "export"])
+    call.add_argument("--action", required=True, choices=["status", "prepare", "rows", "compare", "export", "nld.status", "nld.rows",
+                                                    "nld.prepare", "nld.execute", "nld.report", "nld.pack", "nld.restore"])
     call.add_argument("--request", required=True)
     request = common(commands.add_parser("request", help="Read or resume one existing HTTP action"), connect=True)
     request.add_argument("--id", required=True)
@@ -136,6 +137,10 @@ def connected(args):
         return original
     if action == "rows":
         return client.rows(**body)
+    if action == "nld.status":
+        return client.nld_status(**body)
+    if action == "nld.rows":
+        return client.nld_rows(**body)
     request_id = args.request_id or uuid.uuid4().hex
     emit({"schema": SCHEMA, "operation_id": args.operation_id,
           "request_id": request_id, "action": action}, stream=sys.stderr)

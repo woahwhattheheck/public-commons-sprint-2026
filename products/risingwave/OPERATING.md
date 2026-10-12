@@ -71,6 +71,58 @@ feature. Its package lock records the resolved client and transitive packages. T
 browser, workbench client and dedicated MCP transport use the product's
 original Node modules.
 
+## Start the selected native RisingWave runtime
+
+The original receiving operation uses RisingWave 3.1.0. Keep its selected
+executable, process owner and private database directory together through
+native receiving and installed Applications receiving.
+
+For the original Linux x86_64 runtime, the pinned
+[release archive](https://github.com/risingwavelabs/risingwave/releases/download/v3.1.0/risingwave-v3.1.0-x86_64-unknown-linux.tar.gz)
+is 201,363,854 bytes with SHA-256
+`3e42052148bcd5cf9df076f983005f7164a8ee77d83128ab51e02489c9a7e629`.
+Reuse the selected verified executable, and bind its absolute path as
+RISINGWAVE_BIN. Set RISINGWAVE_STORE_ROOT, RISINGWAVE_LISTEN_ADDR,
+RISINGWAVE_MEMORY_BYTES, RISINGWAVE_PARALLELISM and
+RISINGWAVE_COMPACTOR_THREADS from that original receiver's host and runtime
+selection. The memory value is the budget for the whole RisingWave process.
+
+The pinned 3.1.0
+[single-node argument contract](https://github.com/risingwavelabs/risingwave/blob/45baf6460ea942e4ff57a5aa057d5b8db7f3b563/src/cmd_all/src/single_node.rs)
+uses --store-directory, also available through
+RW_SINGLE_NODE_STORE_DIRECTORY. Single-node mode is the default when no
+subcommand is supplied. Start that selected instance in its owning process:
+
+~~~sh
+"$RISINGWAVE_BIN" \
+  --store-directory "$RISINGWAVE_STORE_ROOT" \
+  --listen-addr "$RISINGWAVE_LISTEN_ADDR" \
+  --total-memory-bytes "$RISINGWAVE_MEMORY_BYTES" \
+  --parallelism "$RISINGWAVE_PARALLELISM" \
+  --compaction-worker-threads-number "$RISINGWAVE_COMPACTOR_THREADS"
+~~~
+
+With the default local storage configuration, the selected directory retains
+state_store and the SQLite metadata file meta_store/single_node.db. Keep both
+with the original operation. The single-node source fixes the internal meta,
+dashboard, compute and compactor ports at 5690, 5691, 5688 and 6660;
+--listen-addr selects the frontend address. Use the same retained instance
+for the native and managed stages.
+
+Keep the original RISINGWAVE_URL in the private environment configuration
+and point it at this selected database. The native receiving command selects
+its explicit local/TLS options. Closing the native workbench writer hands
+that workspace to Applications; the database continues serving the same
+source while the managed workbench opens, closes and reopens.
+
+The maintained `risingwave-runtime` command completes the local bootstrap above.
+It resumes the pinned archive, verifies the executable, preserves the original
+private state/environment and keeps one foreground instance through receiving.
+`prepare`, `inspect` and `serve` retain the original configuration and process;
+`inspect --connect` checks the actual database through the selected pg driver.
+The [complete local runtime guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/LOCAL_RUNTIME.md)
+contains the exact preparation, host resource selection and interruption workflow.
+
 ## Connect to the actual source
 
 Create a private source file containing environment reference names:
@@ -465,6 +517,17 @@ difference through the selected MCP runtime, downloads both published editions
 and the original buyer file, and completes stop and fresh-process reopen.
 Keep the original native server and environment references available throughout.
 
+The included [browser continuation](../../stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/browser-workbench.mjs)
+opens both managed launches with the existing Playwright and Chromium runtime.
+Pass its absolute installed path with --browser-module. It visits all saved
+report mappings and subscription reviews, receives fourteen capture files and
+all four comparison files through the visible download controls, opens both
+published run panels and the original customer offer, and downloads the saved
+source and merchant terms. Each phase retains seven desktop and three mobile
+views with the complete original file comparisons. The Applications guide
+provides the exact invocation, inherited browser environment and retained
+output paths.
+
 
 The native receiving operator in the
 [source guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/README.md)
@@ -483,6 +546,61 @@ For an upgrade, prepare a new runtime from the intended committed archive.
 Attach the same operating state through the original Applications workflow.
 Preserve the earlier source release and runtime while checking the reopened
 operation and its complete retained history.
+
+
+## Reopen the complete browser workspace
+
+The browser saves its complete working draft beside the native operating state.
+It keeps the source declaration, merchant choices, the report being edited,
+columns, parameter definitions and probes, membership filters, raw JSON editor
+text, input values, selected editions, product and customer fields. A reload
+restores those values before any original request is continued.
+
+Draft saves also retain the original request bodies and IDs for source saves,
+subscription review and creation, capture, complete comparison, publication and
+customer preparation. Transfer → Original operations opens accepted results or
+continues a pending request with its original body. A completed capture still
+uses its own Resume or Recover action when its native read needs continuation.
+
+The private workbench stores browser drafts in browser-workspaces. A new launch
+port or an Applications restart reads those same drafts from the original
+workbench directory. Transfer lists every saved browser workspace and provides
+Save, Open, Export and Import. Opening the saved source starts a fresh browser
+draft while preserving the previous complete draft in that list. When two tabs
+edit the same draft, the second writer keeps its own complete workspace rather
+than replacing the other tab's edits.
+
+The exported JSON contains all draft fields and original operation selections.
+Import it into its original saved workbench to restore that editor. The
+workbench's creation identity and directory bind the import; connection values
+continue to come from the launcher's environment references. Keep the complete
+private operating directory and its received edition files when transferring
+the actual application state.
+
+### Reconcile another operator's source changes
+
+A restored draft retains its original source revision. If a newer revision was
+saved, Reconcile source changes combines independent edits to the source and
+merchant settings. Fields changed on both sides appear with their previous,
+draft and saved values. Choose each overlapping field, recalculate, and apply
+the complete reconciled draft. Save changes then uses the current revision.
+
+Raw JSON editors remain available exactly as typed, including incomplete text.
+Apply edited source or payment JSON before saving or reconciling those fields.
+Report drafts retain incomplete field values until their declaration can be
+compiled.
+
+### Continue customer preparation and downloads
+
+Preparing a customer request now retains a stable buyerId alongside its original
+intent, run, query, payment choice and offer digest. A repeated original request
+reopens the same prepared file. The customer history pages through every saved
+request, including older requests beyond the first page.
+
+Transfer also retains original download selections. Its download buttons request
+the same edition, comparison, source revision or customer file again. Complete
+edition and comparison receiving continues through the existing CLI and MCP
+receiving operations, which retain partial offsets and verify every full file.
 
 ## References
 

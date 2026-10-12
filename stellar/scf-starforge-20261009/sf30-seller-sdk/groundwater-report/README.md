@@ -13,3 +13,7 @@ A complete operator desk and maintained merchant provider for publishing an exis
 - `groundwater-report` CLI: the same complete operator workflow.
 
 The component is additive outside the frozen scientific application's 64-file source. It imports the original scientific, SF30, SF88 and SF47 contracts and does not replace their stores or native semantics.
+
+## Managed installation and receiving
+
+The source-owned **Groundwater Report Desk** Applications entry and the committed **groundwater-report** product selection use the original runtime installer, managed adoption, reviewed start, verified private listener, Stop and same-run recovery. The [complete installation guide](INSTALLATION.md) covers original source/profile selection, existing desk initialization or receiving, optional scientific/Operations bindings, ordinary UI work, full export, same-desk reopen and an independently reviewed restored copy. The installed continuation **groundwater-report-managed-native** retains the original application, run, desk and selected report-operation identities. It dispatches no solver or buyer payment.
