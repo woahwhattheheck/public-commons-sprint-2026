@@ -36,7 +36,7 @@ if _merchant_standalone:
             ("library_upload.py", "library_hosted_apps.py", "library_file_transfer.py")}
 operation = "ASTRA-24EA-MERCHANT-WORKFLOW-20261012"
 assert payload["operationId"] == operation
-assert payload["sourceCommit"] == "fcbbbb9d4ad45162fc61186121226a9b25e4c143"
+assert payload["sourceCommit"] == "3d3876cb960f24ae2d796103c8003416b3008b51"
 assert len(payload["file_blobs"]) == 693
 provided_files = payload.get("files", {})
 assert not provided_files or set(provided_files) == set(payload["file_blobs"])

@@ -81,9 +81,13 @@ It runs the merged recurring merchant product from
 `woahwhattheheck/tjlabs-stellar-merchant-workspace` at
 `264a1022ce890f2356a2e3e5501a95b6ce121bdd`, with the native receiving entry and
 operating chapter selected from commit
-`fcbbbb9d4ad45162fc61186121226a9b25e4c143`. PR 240 integrated the original native
+`3d3876cb960f24ae2d796103c8003416b3008b51`. PR 240 integrated the original native
 continuation at `1316a5cebdfbcdfc3b23a2d39881d4a58abd07d0`; the selected source adds
 the complete workspace archive and customer restoration path in PR 306.
+The selection also carries the Grist and SeaTable authoring registration
+correction merged in PR 431, keeping their original workspace/receiving commands
+and exports compatible with the maintained distribution contract. This lets the
+same complete native merchant programme load every selected provider.
 
 Keep `run-series-native.py` and `series-source-map.json` together. The packet
 contains the full bodies and Git blob identities of all 693 selected source
