@@ -1,0 +1,153 @@
+{
+  "schema": "starforge.opensanctions.native-source-closure.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "sourceCommit": "4d4c9c32988e085607c870a1a37e1092f183fc2d",
+  "sourceRoot": "stellar/scf-starforge-20261009/sf30-seller-sdk",
+  "files": [
+    {
+      "path": "ndjson/application.py",
+      "gitBlob": "61efda1abe1624087ad3e2ededec350d17063dc0",
+      "bytes": 4771
+    },
+    {
+      "path": "ndjson/cli.py",
+      "gitBlob": "f3390c8e60b3b23eb26a2360df72ab6d95c53a91",
+      "bytes": 8366
+    },
+    {
+      "path": "ndjson/cli.mjs",
+      "gitBlob": "43221fe7bc81ea0d51487ed274404fe9fa38c2a9",
+      "bytes": 1571
+    },
+    {
+      "path": "ndjson/ndjson_source.py",
+      "gitBlob": "7a9f68391f0c7ea2196606ffe0743924214266eb",
+      "bytes": 15810
+    },
+    {
+      "path": "ndjson/managed.py",
+      "gitBlob": "33ba0f8ecf87a78825a8b494a96fd871262171e0",
+      "bytes": 5220
+    },
+    {
+      "path": "ndjson/merchant.mjs",
+      "gitBlob": "f69b3b00dd3a51b30641f66085d88769f0e8e1d8",
+      "bytes": 12770
+    },
+    {
+      "path": "ndjson/public/index.html",
+      "gitBlob": "b788da27a2c3a66e5d754c62c9846a5c47d9baad",
+      "bytes": 11857
+    },
+    {
+      "path": "ndjson/public/app.js",
+      "gitBlob": "91ccdeca2d66a46b652d7110f4c1b20edb67b79c",
+      "bytes": 26721
+    },
+    {
+      "path": "ndjson/public/style.css",
+      "gitBlob": "b36f889a9b96ae8fbdfc65791c9e299eb686aa73",
+      "bytes": 6895
+    },
+    {
+      "path": "xml/xml_source.py",
+      "gitBlob": "8f02d9545ae2959f354cff555ddb0e8595f1b8e0",
+      "bytes": 17648
+    },
+    {
+      "path": "xml/workspace.py",
+      "gitBlob": "24c4fb7ccf08f6d350bcfb4eae6accc251a60a4e",
+      "bytes": 36232
+    },
+    {
+      "path": "xml/server.py",
+      "gitBlob": "ebc353d198ea0772cea0400c7b523a8d4d51ee39",
+      "bytes": 9434
+    },
+    {
+      "path": "xml/native.mjs",
+      "gitBlob": "b335d4148f82cc40b3d5bdb08891c0d6b98f67ac",
+      "bytes": 1629
+    },
+    {
+      "path": "dataset-handler.mjs",
+      "gitBlob": "7496dd29c59c23b3bc16c7d24a327a30b867625f",
+      "bytes": 19779
+    },
+    {
+      "path": "ndjson/opensanctions/model.py",
+      "gitBlob": "32cfe89a2596cbcb62f4daccc36f60cc35204252",
+      "bytes": 57444
+    },
+    {
+      "path": "ndjson/opensanctions/updates.py",
+      "gitBlob": "a14c81d7dfccb251e026f1c58d735ef072a4a8a0",
+      "bytes": 15460
+    },
+    {
+      "path": "ndjson/opensanctions/matching.py",
+      "gitBlob": "6316f46552cf8b5edce3cc2a67981fec33767ab8",
+      "bytes": 20439
+    },
+    {
+      "path": "ndjson/opensanctions/web.py",
+      "gitBlob": "093152563f3c1baa346ff8f8f10e5d8b8c944189",
+      "bytes": 9060
+    },
+    {
+      "path": "ndjson/opensanctions/cli.py",
+      "gitBlob": "19368b12171ca895f34ed36c9255f9be7b799610",
+      "bytes": 5331
+    },
+    {
+      "path": "ndjson/opensanctions/application_binding.py",
+      "gitBlob": "937ff872e2136bad370c91c9e389283bd5997522",
+      "bytes": 2950
+    },
+    {
+      "path": "ndjson/opensanctions/cli.mjs",
+      "gitBlob": "f01b4f38f621a58393d0c445b6e3126181452669",
+      "bytes": 1586
+    },
+    {
+      "path": "ndjson/opensanctions/managed.mjs",
+      "gitBlob": "19d77bd333bc4bf3869e75a17087188c0c0ffafc",
+      "bytes": 9448
+    },
+    {
+      "path": "ndjson/opensanctions/application-provider.mjs",
+      "gitBlob": "ab930c5ade3f82ebd051b1c5860231bb491ebd41",
+      "bytes": 1103
+    },
+    {
+      "path": "ndjson/opensanctions/public/index.html",
+      "gitBlob": "53ec43430e7ba6fe8128bc33586663d1bf31dc73",
+      "bytes": 16739
+    },
+    {
+      "path": "ndjson/opensanctions/public/app.js",
+      "gitBlob": "57cd8bec104d106d0b4cfe341e3c06af2c97482b",
+      "bytes": 33131
+    },
+    {
+      "path": "ndjson/opensanctions/public/style.css",
+      "gitBlob": "151484727db2feaf24b0dee9a4071fa7c39ed058",
+      "bytes": 7045
+    },
+    {
+      "path": "ndjson/opensanctions/SOURCE_CONTRACT.json",
+      "gitBlob": "5ac795013a0675293281bebb683b9e726b0a2c34",
+      "bytes": 3889
+    },
+    {
+      "path": "ndjson/opensanctions/README.md",
+      "gitBlob": "7165c6b9fe083852621ba8c6d58a32b260b9437d",
+      "bytes": 16211
+    },
+    {
+      "path": "ndjson/opensanctions/MANAGED_APPLICATIONS.md",
+      "gitBlob": "38b3eb89e395512aa810190517eedefa2d21aab4",
+      "bytes": 7867
+    }
+  ]
+}
