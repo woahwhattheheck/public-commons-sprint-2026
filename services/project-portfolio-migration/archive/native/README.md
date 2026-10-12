@@ -71,3 +71,57 @@ The final result is output/result.json. Its schema is portfolio.archive-native-r
 operation.json pins the selected source and original operation. selected-profile.json records the actual native metric choices. source-selection.json and its retained history identify the source used at each continuation. The original, received and reopened subdirectories retain their browser action checkpoints, storage state, downloaded delivery files and screenshots.
 
 Use these outputs for the existing customer's handover and the same parent operation's result. The commercial case and target execution history remain in their original workflows.
+
+## Following native timephased reporting phase
+
+Use the actual edition returned for the original upstream
+junit/data/timephased-budget-baseline.mpp fixture. The parent operation already
+owns its native intake and runtime. Preserve its exact edition/workspace and
+original receiving operation ID.
+
+Add --native-timephased to this same archive receiving command and choose an
+owned following output directory such as original-native-output/archive-timephased.
+The flag selects explicit weekly intervals from the actual retained raw span
+bounds, rounded outward to complete equal-width weeks, and supported native WORK/CURRENCY/material field definitions. A saved
+explicit selection may instead be supplied with --timephased-profile profile.json.
+The two flags are mutually exclusive.
+
+    python3 archive/native/receive.py \
+      --workspace /private/original-portfolio-workspace \
+      --edition <actual-timephased-fixture-edition-sha256> \
+      --output /private/original-native-output/archive-timephased \
+      --operation-id <same-original-native-receiving-operation> \
+      --native-timephased \
+      --node /path/to/node \
+      --playwright /path/to/playwright/index.mjs \
+      --chromium /path/to/chrome-headless-shell
+
+An already equipped original Python receiver calls receive_archive with its same
+arguments plus timephased=True, or timephased=<complete selected profile dict>.
+Pass native=original_portfolio.native so the original runtime is reused.
+
+This phase enters periods and named series through the actual Archive controls.
+Its first native review retains full original calculation records and requires
+no native calculation errors for the selected fixture. The browser verifies
+complete assignment facts/period totals, runs and exports the full totals query,
+downloads the complete source/reporting ZIP and retains desktop/phone views.
+
+The following receive/reopen phases inject RetainedCalculationOnly, whose native
+lookup, lock and ensure methods fail if invoked. Successful receiving therefore
+demonstrates source/calculation/table verification without a second native
+calculation. The original selected models, complete JSONL objects, archive and
+query rows remain unchanged. Source-absent same-request receiving is preserved.
+
+Keep the same operation/output/edition/profile arguments for a continuation.
+selected-profile.json pins the actual generated periods and fields. Existing
+completed source and browser phase receipts are verified and reused. The
+result's profile.timephased and original publication identify this following
+reporting delivery; native receipt and customer screens must come from the
+same accepted original operation.
+
+The receiving result retains both assignment effective calendars and the actual
+project baseline calendar, with the selected native basis named per series/fact.
+Native duration overlap and endpoint/first-match cost accrual are preserved.
+The selected profile must satisfy the original pro-rata COST-resource fixed-grid
+admission when that actual source path is present; a rejected range is corrected
+through the original cohort/profile review before any JNI period invocation.
