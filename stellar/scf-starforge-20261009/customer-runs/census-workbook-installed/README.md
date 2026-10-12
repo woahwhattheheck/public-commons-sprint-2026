@@ -59,6 +59,14 @@ The original customer caller performs one four-page, sixteen-row acquisition thr
 
 The Rust continuation attaches that completed acquisition to its original operator, recovers it, creates the original verified delivery, reads all sixteen typed rows, copies the exact dataset bytes and reopens the retained handle. Its ten native calls preserve the saved acquisition and source snapshot.
 
+## Completed native customer
+
+The original Census merchant/customer completed all 17 operating phases on 12 October 2026. The exact 2023 workbook produced 16 typed rows, a reviewed publication, four acquired pages, retained customer receiving, saved Analysis SQL and complete CSV, JSONL and SQLite exports. The 2024 source comparison retained 15 unchanged rows and the changed Year Moved In row. Publication advanced to revision 5 while the earlier customer kept its 2023 snapshot. Publisher close/reopen, rollback/restore and both browser sizes completed against the same retained state.
+
+The released Linux Rust client then used the original e287 installed buyer runtime to receive that same acquisition. All ten commands completed: readiness, attachment, recovery, inspection, delivery, verification, typed records, exact copy, reopened recovery and reopened verification. The 16 typed records preserved all three zero-valued topics, the original `Less than $100 ` trailing space and the 2023 upper value 2022. The delivered and copied CSV both have SHA-256 `82801395fb816ebc8d4f7eee01794b80ca65410d7e2c4d91c14a95f7410f7c20`.
+
+[Completed cloud customer](completed-cloud-customer.json) binds the original 17-phase merchant result, its maintained cf1e writer, the later e287 Rust buyer, both source workbooks, complete Analysis downloads and the exact browser source postimages. [Original operator delivery](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791776300091399?thread_ts=1791740061.579289) retains the original source and full customer state. The installed workflow above uses the same receiving API and preserves its selected source generations in `public-native-result.json`.
+
 ## Retained output and handoff
 
 The original browser controller saves completed phases in `browser-run/checkpoint.json`. Reuse the same owned workspace on a continuation; the original code consumes completed phases and completed acquisition pages. Keep its native journals, complete reports and original error details on that runtime.
