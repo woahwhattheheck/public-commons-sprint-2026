@@ -236,6 +236,9 @@ def receive(archive, directory, expected_sha256):
                 extra = extra | GOVERNED_REQUIRED
             required = REQUIRED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
             allowed = ALLOWED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
+            # Earlier accountant-enabled editions omitted this guide; current complete exports include it.
+            if bookkeeping:
+                allowed = allowed | {APP_PREFIX + "expense-workspace/BOOKKEEPING.md"}
             if len(entries) != len(descriptions) or not required <= set(entries) <= allowed or set(names) != set(entries) | {"manifest.json"}:
                 raise ValueError("The complete project must retain the exact original application and workspace members.")
             if sum(i.file_size for i in infos) > MAX_BYTES:

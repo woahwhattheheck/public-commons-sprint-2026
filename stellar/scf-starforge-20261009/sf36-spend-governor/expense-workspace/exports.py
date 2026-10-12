@@ -106,7 +106,9 @@ def render_issued(doc):
           esc((r.get("disposition") or {}).get("operator") or "") + "<br>" + esc((r.get("disposition") or {}).get("reason") or "")]
          for r in doc["issues"]])
     outstanding = table(["Request / source", "Native reservation day", "Network / asset", "Outstanding maximum", "Capture status"],
-        [[esc(r["request_id"]) + "<br><small>" + esc(r["source_name"]) + "</small>", esc(r["native_reservation_day"]),
+        [[esc(r["request_id"]) + "<br><small>" + esc(r["source_name"]) + "</small>" +
+          ("<br><small>Same original reservation: " + esc(" · ".join(v["source_name"] + " [" + v["source_capture"] + "]" for v in r["contributing_sources"])) + "</small>"
+           if r.get("contributing_sources") else ""), esc(r["native_reservation_day"]),
           esc(r["network"]) + "<br><code>" + esc(r["asset"]) + "</code>", units(r["amount"], r, labels),
           "Absent from latest capture; original row retained" if r["missing"] else "Present in accepted capture"] for r in doc["outstanding_reservations"]])
     native_payments = table(["Quote / source", "Original buyer / payment state", "Quote day / terms", "Settled transfer", "Original spending", "Recorded result"],
