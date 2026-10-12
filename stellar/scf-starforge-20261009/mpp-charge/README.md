@@ -30,6 +30,95 @@ The caller provides the existing private parent directory. The runtime template 
 
 The maintained package includes command **starforge mpp** and API export **@tokenjunkielabs/starforge-merchant/mpp**. Replace the source CLI path with `starforge mpp` for all commands below.
 
+### Receive the runtime with a small memory footprint
+
+The maintained streamed receiver installs the same original manifest and lockfile
+directly into the native dependency directory. It uses Python's standard library
+and keeps one package archive and one package extraction in flight:
+
+~~~sh
+starforge mpp runtime-receive /private/mpp-dependencies
+starforge mpp runtime-receive /private/mpp-dependencies --inspect
+~~~
+
+The original lock selects 82 packages, including the four nested dependency
+locations under ox and viem. Each package is fetched from its locked npm registry
+URL and checked against the original SHA512 integrity before extraction. The
+receiver preserves the complete locked package paths, package identities,
+executable files and command links. The native merchant and buyer continue to
+load this same directory through their existing dependencyRoot and loadNative
+interfaces.
+
+The receiver retains completed packages and their exact file descriptions under
+the private directory's .mpp-runtime state. Repeat the same command after an
+interruption to inspect completed packages and continue from the next unfinished
+package. Each original registry GET can retry a transient timeout, reset or
+incomplete read up to three attempts in the same receiving process. Retry
+progress and final errors identify the original lock path and URL. Short
+Retry-After responses retain the provider's wait; longer waits and permission
+or integrity errors return their original context for the same-directory
+continuation. Completed package checkpoints survive either outcome.
+
+Existing matching template files or package files can be adopted;
+conflicting original bytes identify the precise file that needs a separate
+installation directory. --inspect checks the completed tree and command links
+without registry requests.
+
+A named archive cache supports shared-worker receiving and an offline
+installation from retained original archives:
+
+~~~sh
+starforge mpp runtime-receive /private/mpp-dependencies \
+  --cache /private/mpp-archives
+
+starforge mpp runtime-receive /private/second-mpp-runtime \
+  --cache /private/mpp-archives --offline
+~~~
+
+The default per-install archive is released after that package is retained.
+An explicit cache keeps the original SHA512-addressed archives for another
+worker or installation. Download and extraction work always stays on the
+installation filesystem; verified originals are copied into the retained cache.
+
+When persistent capacity is small, select a partial cache explicitly:
+
+~~~sh
+starforge mpp runtime-receive /dev/mpp-runtime \
+  --cache /retained/mpp-archives --cache-limit-bytes 4194304
+~~~
+
+This example adds original archives while the cache stays within 4 MiB. The
+receiver reuses matching retained archives, copies new ones while the budget and
+current free space allow, and completes the runtime on the installation
+filesystem when the cache fills. A new cache directory that cannot be created
+because its filesystem is full is reported as unavailable, and installation
+continues locally. Existing cached files remain in place even if a lower budget
+is selected on a later run. An interrupted worker can receive a new runtime using that same
+partial cache. Offline receiving requires every unfinished package's archive to
+be available; a partial cache alone may need further original registry reads.
+Without --cache-limit-bytes, the explicit cache keeps the full-retention policy.
+
+A separate private cache lease coordinates copies and enforces the selected
+budget. Copies are checked against the original SHA512 and published only after
+they are complete. The result reports the cache's measured available bytes and
+archive footprint, cache reuse/retention/skips, and the complete footprint of
+unique original archives when every selected archive size has been observed.
+The final READY result includes the original lock and
+manifest hashes, received package/file counts, downloaded and installed byte
+counts, registry retry count, elapsed time and this receiver process's measured
+maximum resident memory.
+
+This command follows the current installation's --ignore-scripts --omit=dev
+selection. It uses locked production package locations and respects the lock's
+platform/optional flags. A private filesystem lease coordinates reception into
+one destination. MPP_RUNTIME_PYTHON selects an existing Python executable when
+the host does not name it python3. Node and the native MPP engine are used by the
+original merchant or customer command after receiving completes.
+
+The root manifest and lock are interpreted according to the original
+[npm lockfile format](https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json/)
+and [npm ci installation settings](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
+
 ## Operate the workspace
 
 ~~~sh
@@ -232,3 +321,7 @@ Retained merchant profiles preserve their configured route values and file paths
 ## Customer receiving and purchasing
 
 The private console includes a **Customer workbench** for receiving merchant contracts and customer packages, configuring the payer and spending limits, preparing exact offer requests, operating the original approval and recovery flow, and downloading purchased resources. See the [workbench guide](./customer/workbench-guide.md) for its console, CLI and typed API interfaces.
+
+## Native customer agents
+
+The [merchant MCP native guide](../../../stellar-forge/mcp-merchant-operator/MPP.md) connects this same console to the maintained HTTP and stdio merchant operator. It covers retained customer reviews, native preparation and payment jobs, original recovery, and complete resumable response or package delivery. `serve WORKSPACE [PORT] --token-env ENV` shares an explicitly selected 64-character lowercase hexadecimal console token with the existing host; startup retains the usual private URL marker and adds its original process/workspace readiness JSON.

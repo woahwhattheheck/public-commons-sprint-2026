@@ -6,24 +6,59 @@ import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams, readReleaseWorkspace } from './release-upstreams.mjs';
-import { releaseCacheControlPath } from './release-cache.mjs';
-import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from './release-python.mjs';
-import { DUCKDB_SOURCE_SCHEMA, stageDuckdbRelease, inspectDuckdbRelease } from './release-duckdb.mjs';
-import { S3_SOURCE_SCHEMA, stageS3Release, inspectS3Release } from './release-s3.mjs';
-import { MYSQL_SOURCE_SCHEMA, stageMysqlRelease, inspectMysqlRelease } from './release-mysql.mjs';
-import { MSSQL_SOURCE_SCHEMA, stageMssqlRelease, inspectMssqlRelease } from './release-mssql.mjs';
-import { POSTGRES_SOURCE_SCHEMA, stagePostgresRelease, inspectPostgresRelease } from './release-postgres.mjs';
-import { REDIS_SOURCE_SCHEMA, stageRedisRelease, inspectRedisRelease } from './release-redis.mjs';
-import { OPENSEARCH_SOURCE_SCHEMA, stageOpenSearchRelease, inspectOpenSearchRelease } from './release-opensearch.mjs';
-import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
-import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
-import { DATASET_SOURCE_SCHEMA, stageDatasetRelease, inspectDatasetRelease } from './release-dataset.mjs';
-import { CLICKHOUSE_SOURCE_SCHEMA, stageClickHouseRelease, inspectClickHouseRelease } from './release-clickhouse.mjs';
-import { GRPC_SOURCE_SCHEMA, stageGrpcRelease, inspectGrpcRelease } from './release-grpc.mjs';
+import { upstreamReleaseSnapshot, releaseCacheControlPath } from './release-input-contracts.mjs';
+import {
+  PYTHON_SOURCE_SCHEMA,
+  DUCKDB_SOURCE_SCHEMA,
+  S3_SOURCE_SCHEMA,
+  MYSQL_SOURCE_SCHEMA,
+  MSSQL_SOURCE_SCHEMA,
+  POSTGRES_SOURCE_SCHEMA,
+  REDIS_SOURCE_SCHEMA,
+  OPENSEARCH_SOURCE_SCHEMA,
+  JSONRPC_SOURCE_SCHEMA,
+  SQLITE_SOURCE_SCHEMA,
+  DATASET_SOURCE_SCHEMA,
+  CLICKHOUSE_SOURCE_SCHEMA,
+  GRPC_SOURCE_SCHEMA,
+} from './release-source-contracts.mjs';
 import { acquireReleaseLease, releaseProcessOwner, releaseOwnerLiveness, recordedSellerAlive,
   validProcessIdentity, validReleaseLease, sameReleaseLease } from './release-process.mjs';
-import { NATIVE_SDK_VERSION } from '../sf30-seller-sdk/native-factory.mjs';
+import { NATIVE_SDK_VERSION } from '../sf30-seller-sdk/native-version.mjs';
+
+// Resolve only the selected original native release implementation. Every stage
+// and inspect call keeps its existing arguments, result and ownership semantics.
+const stagePythonRelease = async (...args) => (await import('./release-python.mjs')).stagePythonRelease(...args);
+const inspectPythonRelease = async (...args) => (await import('./release-python.mjs')).inspectPythonRelease(...args);
+const stageDuckdbRelease = async (...args) => (await import('./release-duckdb.mjs')).stageDuckdbRelease(...args);
+const inspectDuckdbRelease = async (...args) => (await import('./release-duckdb.mjs')).inspectDuckdbRelease(...args);
+const stageS3Release = async (...args) => (await import('./release-s3.mjs')).stageS3Release(...args);
+const inspectS3Release = async (...args) => (await import('./release-s3.mjs')).inspectS3Release(...args);
+const stageMysqlRelease = async (...args) => (await import('./release-mysql.mjs')).stageMysqlRelease(...args);
+const inspectMysqlRelease = async (...args) => (await import('./release-mysql.mjs')).inspectMysqlRelease(...args);
+const stageMssqlRelease = async (...args) => (await import('./release-mssql.mjs')).stageMssqlRelease(...args);
+const inspectMssqlRelease = async (...args) => (await import('./release-mssql.mjs')).inspectMssqlRelease(...args);
+const stagePostgresRelease = async (...args) => (await import('./release-postgres.mjs')).stagePostgresRelease(...args);
+const inspectPostgresRelease = async (...args) => (await import('./release-postgres.mjs')).inspectPostgresRelease(...args);
+const stageRedisRelease = async (...args) => (await import('./release-redis.mjs')).stageRedisRelease(...args);
+const inspectRedisRelease = async (...args) => (await import('./release-redis.mjs')).inspectRedisRelease(...args);
+const stageOpenSearchRelease = async (...args) => (await import('./release-opensearch.mjs')).stageOpenSearchRelease(...args);
+const inspectOpenSearchRelease = async (...args) => (await import('./release-opensearch.mjs')).inspectOpenSearchRelease(...args);
+const stageJsonrpcRelease = async (...args) => (await import('./release-jsonrpc.mjs')).stageJsonrpcRelease(...args);
+const inspectJsonrpcRelease = async (...args) => (await import('./release-jsonrpc.mjs')).inspectJsonrpcRelease(...args);
+const stageSqliteRelease = async (...args) => (await import('./release-sqlite.mjs')).stageSqliteRelease(...args);
+const inspectSqliteRelease = async (...args) => (await import('./release-sqlite.mjs')).inspectSqliteRelease(...args);
+const stageDatasetRelease = async (...args) => (await import('./release-dataset.mjs')).stageDatasetRelease(...args);
+const inspectDatasetRelease = async (...args) => (await import('./release-dataset.mjs')).inspectDatasetRelease(...args);
+const stageClickHouseRelease = async (...args) => (await import('./release-clickhouse.mjs')).stageClickHouseRelease(...args);
+const inspectClickHouseRelease = async (...args) => (await import('./release-clickhouse.mjs')).inspectClickHouseRelease(...args);
+const stageGrpcRelease = async (...args) => (await import('./release-grpc.mjs')).stageGrpcRelease(...args);
+const inspectGrpcRelease = async (...args) => (await import('./release-grpc.mjs')).inspectGrpcRelease(...args);
+
+// Preserve synchronous input contracts while selecting original upstream readers on use.
+const stageReleaseUpstreams = async (...args) => (await import('./release-upstreams.mjs')).stageReleaseUpstreams(...args);
+const inspectReleaseUpstreams = async (...args) => (await import('./release-upstreams.mjs')).inspectReleaseUpstreams(...args);
+const readReleaseWorkspace = async (...args) => (await import('./release-upstreams.mjs')).readReleaseWorkspace(...args);
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
@@ -446,7 +481,7 @@ export async function stageRelease(root, options) {
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
   const datasetSource = options.datasetPackage !== undefined;
   if (datasetSource && (Object.keys(options).some(key =>
-      !['id','label','runtime','datasetPackage'].includes(key) && options[key] !== undefined) ||
+      !['id','label','alias','runtime','datasetPackage'].includes(key) && options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
     throw new TypeError('Choose the prepared dataset package or another source; the dataset owns its original controller and query bindings.');
   const pythonSource = options.python !== undefined;
@@ -796,6 +831,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'clickhouse', before: before?.clickhouse ?? null, after: after.clickhouse ?? null });
   if (stable(before?.grpc ?? null) !== stable(after.grpc ?? null))
     runtimeChanges.push({ field: 'grpc', before: before?.grpc ?? null, after: after.grpc ?? null });
+  if (stable(before?.dataset ?? null) !== stable(after.dataset ?? null))
+    runtimeChanges.push({ field: 'dataset', before: before?.dataset ?? null, after: after.dataset ?? null });
   if (stable(before?.facilitatorReview ?? null) !== stable(after.facilitatorReview ?? null))
     runtimeChanges.push({ field: 'facilitatorReview', before: before?.facilitatorReview ?? null, after: after.facilitatorReview ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,

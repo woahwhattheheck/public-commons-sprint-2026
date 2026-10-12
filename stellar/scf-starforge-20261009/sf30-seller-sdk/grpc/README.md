@@ -46,11 +46,32 @@ the browser session. The HTTP listener binds to 127.0.0.1 and requires the
 original capability on API requests. Keep the state directory outside the
 source checkout and installed software directory.
 
+## Open from installed Applications
+
+In the original Runtime workspace, select the installed runtime with the gRPC
+transport and add a **gRPC merchant authoring** application. Choose its private
+workspace directory, listener port and, when needed, the original private
+environment file. Review the saved selection, then Start and open the private
+workspace URL shown by the managed application.
+
+Applications opens this same operator workspace. Source capture, typed request
+editing, explicit native calls, payment terms, merchant preparation and SF82
+release control stay in their original screens and retained files. Start checks
+the reviewed workspace identity, current source revision and selected native
+launcher bytes before announcing a live authenticated session.
+
+Use the original application's Stop action to drain its merchant and native
+calls. Reopen uses the same private state and shows prior outcomes; it does not
+repeat an earlier application RPC or silently restart a seller. A changed current
+revision needs a fresh Start review. The complete field, startup, recovery and
+installation instructions are in
+[Managed gRPC Applications](../../distribution/runtime-workspace/GRPC_APPLICATIONS.md).
+
 ## Operate the included native example
 
 The included example is a real gRPC server with three clearly labelled local
 demonstration rows. It exposes Summary and a visible streaming Watch method.
-Only Summary can become a paid unary route.
+Summary is a unary route. A captured server-streaming method can become a paid NDJSON route after explicit stream limits are saved; the complete runnable server-stream example and workflow are in [Streaming](STREAMING.md).
 
 In one terminal, choose an example-only authorization value and start the server:
 
@@ -78,8 +99,11 @@ external account.
    credentials. Set the merchant-host protobuf directory and one or more entry
    files, then capture. Imported local files and required standard descriptors
    are retained with their source identities.
-2. On **Methods & terms**, choose a captured unary method. Streaming methods
-   remain visible but cannot be selected for these request/response HTTP routes.
+2. On **Methods & terms**, choose a captured unary or server-streaming method.
+   For server streams, first enable explicit byte, record and deadline limits on
+   Source. Client-streaming and bidirectional application methods remain visible
+   for inspection. [Streaming](STREAMING.md) covers exact NDJSON capture, payment,
+   customer delivery and retained release/recovery.
 3. Edit the exact request JSON or the generated fields. Inclusion checkboxes
    distinguish absent fields from explicit false, zero and empty values. Nested
    messages, maps and repeated values use JSON. The complete request and response
@@ -160,6 +184,15 @@ The original seller still applies its own route, schema and payment-envelope
 limits. A valid large protobuf closure may need a smaller selected public method
 set to fit the advertised buyer contract. The compiler reports that concrete
 limit before publishing a prepared merchant.
+
+## Server-streaming methods
+
+The same operator and merchant can retain a single-request native server stream
+as exact typed NDJSON. Complete and partial captures keep their original call
+IDs, bytes, SHA-256 and native terminal status. The browser downloads the retained
+file without buffering the whole stream, and the original SF88 Node/Python buyer
+consumes its existing response-file contract. See the complete
+[server-streaming workflow](STREAMING.md).
 
 ## Retained operations and recovery
 
@@ -285,3 +318,4 @@ results identify their actual source/runtime selection separately.
 ### Working editor changes
 
 Typed request fields and the exact JSON editor share the same request. Invalid visible input prevents a call or route application. A working request can be called without adding it to the saved merchant plan; Apply route retains it as the route example. Complete plan JSON is explicitly applied or discarded before Save, channel review or Prepare. Opening another method, route, revision or the included example asks before discarding current work. A later inventory refresh keeps the exact opened revision as the editor's save base.
+

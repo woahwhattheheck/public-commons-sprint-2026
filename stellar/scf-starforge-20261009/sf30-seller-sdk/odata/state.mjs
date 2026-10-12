@@ -1,6 +1,6 @@
 // MIT. Durable original OData workspace state and source files.
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
+import { link, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { acquireReleaseLease } from '../../sf82-seller-pilot/release-process.mjs';
 
@@ -18,8 +18,23 @@ export function identifier(value, label = 'identifier') {
   return value;
 }
 export async function writeNew(path, bytes) {
-  const file = await open(path, 'wx', 0o600);
-  try { await file.writeFile(bytes); await file.sync(); } finally { await file.close(); }
+  // Publish only complete, synced bytes. A failed write owns this temporary
+  // file, never the final path; retries cannot encounter its partial content.
+  const temporary = path + '.' + randomUUID() + '.part';
+  const file = await open(temporary, 'wx', 0o600);
+  try {
+    try { await file.writeFile(bytes); await file.sync(); }
+    finally { await file.close(); }
+    // The same-directory link installs exclusively: EEXIST preserves the
+    // original destination, including another writer's successful commit.
+    await link(temporary, path);
+    if (process.platform !== 'win32') {
+      const directory = await open(dirname(path), 'r');
+      try { await directory.sync(); } finally { await directory.close(); }
+    }
+  } finally {
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  }
 }
 export async function atomic(path, value) {
   const temporary = path + '.' + randomUUID() + '.tmp';

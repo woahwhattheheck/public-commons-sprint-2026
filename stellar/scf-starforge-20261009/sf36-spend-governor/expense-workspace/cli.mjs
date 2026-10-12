@@ -7,7 +7,7 @@ import {fileURLToPath} from "node:url";
 
 export function main(args = process.argv.slice(2)) {
   return new Promise((resolveRun, reject) => {
-    const child = spawn("python3", [fileURLToPath(new URL("./server.py", import.meta.url)), ...args],
+    const child = spawn("python3", [fileURLToPath(new URL("./server.py", import.meta.url)), "--node", process.execPath, ...args],
       {stdio: "inherit", shell: false, windowsHide: true});
     const interrupt = () => child.kill("SIGINT");
     const terminate = () => child.kill("SIGTERM");

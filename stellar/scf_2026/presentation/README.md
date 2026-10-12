@@ -155,3 +155,19 @@ Keep the recording state private. The public presentation source, finished film,
 captions, script and source index can be delivered together through the existing
 SCF application workstream. This presentation supplements the canonical
 application; it does not submit a new application or assert an award.
+
+## Receive the completed purchase in the installed application
+
+The [complete reviewer receiving workflow](reviewer/RECEIVING.md) packages this
+same original MySQL case for a reviewer who does not have the recording host's
+private paths. A maintained distribution containing `grant-demo` can receive
+the included packet, open the original Buyer console, inspect the exact query,
+terms, history and full results, export the received work and reopen that export.
+
+The original film, editable companion, quote IDs, payment observation and source
+query remain authoritative. The receiving operation introduces no payment and
+loads no signer. Its public packet retains the complete 53,468-byte success and
+the separate earlier 4,733-byte indeterminate error result, with their actual
+original statuses and source histories. The source owner can recapture the same
+closed case with the documented host-only capture command; receiving never
+imports executable configuration from the packet.

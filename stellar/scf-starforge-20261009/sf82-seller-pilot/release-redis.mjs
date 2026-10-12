@@ -9,7 +9,8 @@ import { verifyPreparedRedisSeller, compileRedisMerchantPlan } from '../sf30-sel
 import { readRedisSourceFile } from '../sf30-seller-sdk/redis/config.mjs';
 import { startRedisSeller, createRedisNativeFactory } from '../sf30-seller-sdk/redis/merchant.mjs';
 
-export const REDIS_SOURCE_SCHEMA = 'stellar-forge.redis-seller-release-manifest.v1';
+import { REDIS_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { REDIS_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'redis/package';
 const MiB = 1024 * 1024;
 const hash = value => createHash('sha256').update(value).digest('hex');

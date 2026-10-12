@@ -11,6 +11,7 @@ import { readDatasetSourceFiles } from '../../sf82-seller-pilot/release-dataset.
 import { openWebDavSource, buildDatasetEdition } from './source.mjs';
 import { listCaptures, readCapture } from './capture.mjs';
 import { exportSourcePacket, inspectSourcePacket } from './packet.mjs';
+import { inspectWebDavWorkspaceBinding } from './managed.mjs';
 import { fail, exact, ID, validateSource, validateProjection, projectionDocument, requiredEnvironment,
   identity, sha256, jsonBytes, clone, now, text, integer } from './config.mjs';
 
@@ -34,10 +35,15 @@ async function copied(source, destination, expected) {
   if (actual.hash !== expected.hash || actual.bytes !== expected.bytes) fail('WEBDAV_EXPORT_CHANGED', 'The exported bytes differ from their original retained source.', 409);
   return actual;
 }
-export async function openWebDavWorkspace({ directory, environment = process.env, python = 'python3' } = {}) {
+export async function openWebDavWorkspace({ directory, environment = process.env, python = 'python3',
+  expectedWorkspaceId, expectedWorkspaceIdentity } = {}) {
   if (typeof directory !== 'string' || !isAbsolute(directory) || resolve(directory) !== directory || directory === '/')
     fail('WEBDAV_WORKSPACE_DIRECTORY', 'Use a normalized absolute private workspace directory.');
-  await privateDirectory(directory, true);
+  const bound = expectedWorkspaceId !== undefined || expectedWorkspaceIdentity !== undefined;
+  if (bound && (typeof expectedWorkspaceId !== 'string' || !ID.test(expectedWorkspaceId) ||
+      typeof expectedWorkspaceIdentity !== 'string' || !/^[a-f0-9]{64}$/.test(expectedWorkspaceIdentity)))
+    fail('WEBDAV_WORKSPACE_BINDING_REQUIRED', 'Select the original workspace ID and creation identity together.');
+  await privateDirectory(directory, !bound);
   const release = await acquireWorkspace(directory), sources = new Map(), publishers = new Map(), active = new Map();
   let tail = Promise.resolve(), closing = null, closed = false;
   const root = name => join(directory, name);
@@ -428,6 +434,9 @@ export async function openWebDavWorkspace({ directory, environment = process.env
     } finally { await release(); }
   })();
   try {
+    // A reviewed managed launch binds the existing identity under the original
+    // writer lease before creating any source family or initial workspace state.
+    if (bound) await inspectWebDavWorkspaceBinding(directory, { expectedWorkspaceId, expectedWorkspaceIdentity });
     for (const name of ['sources', 'cache', 'mappings', 'editions', 'merchants', 'exports', 'publishers', 'packets', 'operations']) await privateDirectory(root(name), true);
     if (!await exists(root('workspace.json'))) await atomicJson(directory, 'workspace.json', {
       schema: WORKSPACE_SCHEMA, id: randomUUID(), revision: 0, createdAt: now(), updatedAt: now(), activeSourceId: null,

@@ -63,7 +63,20 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 
 /** Owner adapters supply the original manifest parser, names and identity schema. */
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
-  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect = openMerchantFileClient, nestedFiles = false }) {
+  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect: openClient = openMerchantFileClient, nestedFiles = false, readLease = true,
+  validateExportId = value => identifier(value, 'Export ID') }) {
+  async function connect(provided, options) {
+    if (provided === undefined) return openClient({ ...options, errorPrefix, clientName });
+    if (!provided || typeof provided !== 'object' || Array.isArray(provided) ||
+        typeof provided.call !== 'function' || typeof provided.endpoint !== 'string' ||
+        !provided.endpoint.trim() || provided.endpoint.length > 4096 || /[\0\r\n]/.test(provided.endpoint) ||
+        options.url !== undefined)
+      throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Supply one original file client with its stable endpoint identity, or the HTTP endpoint.');
+    // A trusted native adapter can select an existing tenant/slot without
+    // opening another HTTP server. The original writer still verifies every
+    // manifest, file digest and resumed checkpoint against this exact identity.
+    return Object.freeze({ endpoint: provided.endpoint, call: provided.call.bind(provided) });
+  }
   async function regular(path, flags = constants.O_RDONLY, maximum = maximumBytes) {
     const handle = await open(path, flags | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0), 0o600);
     try {
@@ -210,8 +223,9 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   function chunkBytes(result, file, offset, limit, exportId, manifestSha256, readId) {
     const size = Math.min(limit, file.bytes - offset);
     if (result.exportId !== exportId || result.manifestSha256 !== manifestSha256 || result.file?.name !== file.name ||
-        result.file?.bytes !== file.bytes || result.file?.sha256 !== file.sha256 || !validReadId(result.readId) ||
-        readId && result.readId !== readId || result.offset !== offset || result.bytesRead !== size || result.encoding !== 'base64' ||
+        result.file?.bytes !== file.bytes || result.file?.sha256 !== file.sha256 ||
+        (readLease ? !validReadId(result.readId) || readId && result.readId !== readId
+          : result.readId !== undefined && result.readId !== null) || result.offset !== offset || result.bytesRead !== size || result.encoding !== 'base64' ||
         result.nextOffset !== (offset + size < file.bytes ? offset + size : null) || typeof result.data !== 'string')
       throw failure(errorPrefix + '_DOWNLOAD_CHUNK_CONFLICT', 'The returned chunk does not match its pinned original file and byte offset.');
     const bytes = Buffer.from(result.data, 'base64');
@@ -290,12 +304,12 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   }
 
   /** Saves the exact original files; a second invocation resumes the same directory. */
-  async function download({ url, exportId, directory, tokenEnv, environment, signal,
+  async function download({ url, client: suppliedClient, exportId, directory, tokenEnv, environment, signal,
     chunkSize = MAX_RETAINED_CHUNK_BYTES, onProgress, expectedManifestSha256 } = {}) {
-    identifier(exportId, 'Export ID');
+    validateExportId(exportId);
     if (!Number.isSafeInteger(chunkSize) || chunkSize < 1 || chunkSize > MAX_RETAINED_CHUNK_BYTES)
       throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Chunk size must be 1–196608 bytes.');
-    const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
+    const client = await connect(suppliedClient, { url, tokenEnv, environment, signal });
     const manifestBytes = await retainedManifest(client, exportId);
     if (expectedManifestSha256 !== undefined && (!validSha(expectedManifestSha256) || sha(manifestBytes) !== expectedManifestSha256))
       throw failure(errorPrefix + '_DOWNLOAD_EXPORT_CHANGED', 'The retained completion manifest differs from the reviewed original export.');
@@ -311,9 +325,9 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
     });
   }
 
-  async function inspect({ url, exportId, tokenEnv, environment, signal } = {}) {
-    identifier(exportId, 'Export ID');
-    const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
+  async function inspect({ url, client: suppliedClient, exportId, tokenEnv, environment, signal } = {}) {
+    validateExportId(exportId);
+    const client = await connect(suppliedClient, { url, tokenEnv, environment, signal });
     const bytes = await retainedManifest(client, exportId);
     return { manifest: parseManifest(bytes, exportId), manifestSha256: sha(bytes) };
   }

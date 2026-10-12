@@ -1,4 +1,4 @@
-// MIT. Captured unary methods compiled by the original seller and client generator.
+// MIT. Captured single-request methods compiled by the original seller and client generator.
 import { mkdir, unlink, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { compileHttpSellerOffer } from '../seller.mjs';
@@ -40,7 +40,9 @@ export function rebaseGrpcSchema(value, prefix) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return structuredClone(value);
   const result = Object.create(null);
   for (const [key, child] of Object.entries(value)) {
-    if (key === '$id' || key === '$schema') continue;
+    // Keep descriptor annotations in methods.json; Bazaar receives executable assertions.
+    // contentEncoding is an annotation; the original canonical base64 pattern remains.
+    if (key === '$id' || key === '$schema' || key === 'contentEncoding' || key.startsWith('x-protobuf-')) continue;
     if (key === '$ref') {
       if (typeof child !== 'string' || child !== '#' && !child.startsWith('#/')) fail('GRPC_LOCAL_SCHEMA_REFERENCE_REQUIRED');
       result[key] = prefix + child.slice(1);
@@ -71,7 +73,8 @@ export function compileGrpcMerchantPlan(contract, plan, { limits: configuredLimi
         route.path.startsWith('/_seller/') || route.path === '/_seller' || route.path.includes('//') ||
         new URL(route.path, origin).pathname !== route.path) fail('GRPC_PUBLIC_PATH_INVALID');
     const selected = contract.methods[route.grpcMethod];
-    if (!selected || selected.requestStream || selected.responseStream) fail('GRPC_APPROVED_UNARY_METHOD_REQUIRED');
+    if (!selected || selected.requestStream) fail('GRPC_APPROVED_SINGLE_REQUEST_METHOD_REQUIRED');
+    if (selected.responseStream && !limits.stream) fail('GRPC_STREAM_LIMITS_REQUIRED');
     const example = normalizeGrpcRequest(contract, route.grpcMethod, route.example);
     const terms = payment(route) ?? inherited;
     if (!terms) fail('GRPC_COMPLETE_PAYMENT_TERMS_REQUIRED');
@@ -80,6 +83,7 @@ export function compileGrpcMerchantPlan(contract, plan, { limits: configuredLimi
     const offer = compileHttpSellerOffer({ url: origin.origin + route.path, method: 'POST', bodyType: 'json', body: example,
       serviceName: text(route.serviceName, 'GRPC_SERVICE_NAME_REQUIRED', 32),
       description: text(route.description, 'GRPC_DESCRIPTION_REQUIRED', 2048),
+      ...(selected.responseStream ? { responseFormat: 'ndjson' } : {}),
       ...(route.tags === undefined ? {} : { tags: route.tags }), ...terms });
     const input = offer.extensions.bazaar.schema.properties.input;
     input.properties.body = rebaseGrpcSchema(schema.request, '#/properties/input/properties/body');
@@ -87,9 +91,14 @@ export function compileGrpcMerchantPlan(contract, plan, { limits: configuredLimi
     offer.extensions.bazaar.schema.properties.output.properties.example =
       rebaseGrpcSchema(schema.response, '#/properties/output/properties/example');
     ids.add(route.id);
-    bindings[route.id] = { method: route.grpcMethod };
+    bindings[route.id] = { method: route.grpcMethod,
+      ...(selected.responseStream ? { responseFormat: 'ndjson' } : {}) };
     methods[route.id] = { method: route.grpcMethod, requestType: selected.requestType,
-      responseType: selected.responseType, request: schema.request, response: schema.response };
+      responseType: selected.responseType, request: schema.request, response: schema.response,
+      ...(selected.responseStream ? { responseFormat: 'ndjson', responseStream: true,
+        stream: { ...limits.stream, maxRecordBytes: Math.min(limits.maxJsonResponseBytes + 1, 16777216),
+          maxDurationMs: limits.timeoutMs },
+        completion: 'A complete response requires an OK native terminal status. One reviewed route payment covers the entire single-request stream.' } : {}) };
     return { id: route.id, path: route.path, handler: 'grpcCall' + index, admit: 'grpcAdmit' + index,
       validateInput: true, maxRequestBytes: limits.maxJsonRequestBytes, offer };
   });
@@ -98,7 +107,8 @@ export function compileGrpcMerchantPlan(contract, plan, { limits: configuredLimi
   compileSellerRoutes(routes.map(route => ({ id: route.id, offer: route.offer, handler: noop, admit: noop, maxRequestBytes: route.maxRequestBytes })));
   const service = { schema: 'stellar-forge.seller-service.v1', publicOrigin: origin.origin,
     handlerTimeoutMs: limits.timeoutMs, requestTimeoutMs: limits.timeoutMs + 120000,
-    maxRequestBytes: limits.maxJsonRequestBytes, maxResponseBytes: limits.maxJsonResponseBytes, routes };
+    maxRequestBytes: limits.maxJsonRequestBytes, maxResponseBytes: limits.maxJsonResponseBytes,
+    ...(Object.values(bindings).some(item => item.responseFormat === 'ndjson') ? { maxStreamBytes: limits.stream.maxBytes } : {}), routes };
   jsonBytes(service);
   return { service, bindings, methods: { schema: 'stellar-forge.grpc-public-methods.v1', routes: methods } };
 }
