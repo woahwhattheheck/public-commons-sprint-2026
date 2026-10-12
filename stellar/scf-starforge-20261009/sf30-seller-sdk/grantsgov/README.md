@@ -161,6 +161,8 @@ For a configured merchant, add `payment` and `origin` together in a JSON file pa
 
 ## Operate the existing native publisher
 
+The [complete publishing and customer receiving guide](PUBLISHING.md) runs a retained source cohort through the native versioned publisher, existing testnet payer, customer export and source-workspace receiving. Its runnable example is [examples/publisher-native.mjs](examples/publisher-native.mjs).
+
 The Publishing screen passes documented native operations to the existing [Socrata publisher](../socrata/publisher.mjs). The workspace resolves a merchant ID to its retained folder and a configured buyer alias to its existing private workspace. Every native draft, snapshot, release generation and customer session remains owned by that publisher.
 
 Use the current returned IDs and revisions in sequence:
