@@ -371,7 +371,7 @@ export function observeApplicationOutput(request, directory, context = {}) {
       return;
     }
     if (request.command === 'dataset-kafka') {
-      if (!text.startsWith('{"schema":"stellar-forge.kafka-workspace-launch.v1",')) return;
+      if (!text.startsWith('{')) return;
       saving = saving.then(async () => {
         if (seen) return;
         const startup = await kafkaStartup(request, text);
