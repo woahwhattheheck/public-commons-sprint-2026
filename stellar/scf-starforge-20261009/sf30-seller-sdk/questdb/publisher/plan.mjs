@@ -16,7 +16,8 @@ function parse(original){
 export async function inspectQuestDbPublicationSource(path){
   const original=await readPrivate(path,1048576),{config,queries}=parse(original);
   return{hash:digest(original),bytes:original.length,endpointEnv:config.endpointEnv,
-    authentication:config.tokenEnv?'bearer':config.userEnv?'basic':'none',queries:describeQuestDbQueries(queries)};
+    authentication:config.tokenEnv?'bearer':config.userEnv?'basic':'none',queries:describeQuestDbQueries(queries),
+    extraction:{order:'query',includeNativeCsv:true}};
 }
 export async function captureQuestDbPublicationPlan(sourceFile,directory,input){
   exact(input,['title','query','input','dataset','extraction','sourceHash'],'INVALID_PUBLICATION_PLAN');
