@@ -1,0 +1,9 @@
+/* MIT. Original neutral operator surface for reviewing finite request sequences. */
+.request-series { min-width: 0; }
+.request-series-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); gap: .45rem; margin: .8rem 0; }
+.request-series-list button { min-width: 0; text-align: left; overflow-wrap: anywhere; white-space: normal; }
+.request-series-list button[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: -2px; font-weight: 650; }
+.request-series .actions { flex-wrap: wrap; }
+.request-series h3 { margin-top: 1.2rem; }
+.request-series textarea { width: 100%; box-sizing: border-box; }
+@media(max-width: 620px) { .request-series-list { grid-template-columns: 1fr; } .request-series .actions button { flex: 1 1 9rem; } }
