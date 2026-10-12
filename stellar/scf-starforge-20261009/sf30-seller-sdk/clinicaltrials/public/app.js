@@ -1,5 +1,6 @@
 // MIT. Industrial registry console over the single original retained workspace.
 import { createPublisherPanel } from '/publisher.mjs';
+import { createBatchPanel } from '/batch.js';
 
 const $ = id => document.getElementById(id);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -177,6 +178,7 @@ const publisherPanel = createPublisherPanel({
   download:(kind,id) => download('/api/clinical/publisher-export?'+params({kind,id})),
   handle,notice,selectSection,
 });
+const batchPanel = createBatchPanel({getState:() => model,perform,upload,api,download,handle,notice,params,selectSection,getPending:() => pending});
 function controls() {
   const locked = !model || busy || !!pending;
   document.querySelectorAll('[data-write]').forEach(control => { control.disabled = locked; });
@@ -196,7 +198,7 @@ function controls() {
     $('pending-details').textContent = json(pending);
     $('pending-clear').disabled = pending.outcome?.status === 'RUNNING' || !pending.outcome;
   }
-  publisherPanel.controls(locked);
+  publisherPanel.controls(locked); batchPanel.controls(locked);
 }
 function renderCohort() {
   const config = model.configuration, c = model.capture;
@@ -276,7 +278,7 @@ function render() {
     node('p','Revision '+model.revision),node('p',model.capture?.version?.dataTimestamp || 'Provider edition not yet read'));
   renderCohort(); renderSelectors(); renderEditions(); renderPrs(); renderMerchant(); renderExport();
   $('state-details').textContent = json(model);
-  publisherPanel.render(model); controls();
+  publisherPanel.render(model); batchPanel.render(model); controls();
 }
 async function readCapture() {
   if (!model?.capture) throw new Error('Select a retained capture.');
