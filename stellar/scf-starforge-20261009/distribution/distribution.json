@@ -1074,6 +1074,9 @@
     "./merchant/api-pass-workspace/config": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/configuration.mjs",
     "./merchant/api-pass-workspace/server": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/server.mjs",
     "./merchant/api-pass-workspace/cli": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs",
+    "./merchant/mcp/grpc": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace.mjs",
+    "./merchant/mcp/grpc/receiving": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace-download.mjs",
+    "./merchant/mcp/grpc/export": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace-export.mjs",
     "./buyer/mcp/collections": "./source/stellar-forge/mcp-paid-agent/native-collections.mjs",
     "./buyer/mcp/collections-schema": "./source/stellar-forge/mcp-paid-agent/native-collections-schema.mjs",
     "./buyer/mcp/collections-download": "./source/stellar-forge/mcp-paid-agent/native-collections-download.mjs"

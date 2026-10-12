@@ -179,6 +179,22 @@ Return the following to the original provider/product thread:
 
 Keep the complete private output with the receiving operation so another owner can reopen it. Share only the selected public projection and public source through the approved publisher/repository flow. The source declaration, capture metadata, raw table data and tokens are not public repository fixtures.
 
+
+## Add the actual dedicated testnet purchase phase
+
+For the same provider operation with actual native payments, use the
+[complete testnet receiving command](TESTNET_RECEIVING.md). It retains two new
+dedicated free testnet accounts on the selected host, runs this unchanged core,
+and continues through the original SF82 facilitator release, SF88 dataset
+buyer, SF81 approvals, SF36 finalization, SF43 transfer observations and SF100
+delivery. All four paid pages retain the same reviewed film snapshot.
+
+That command accepts this guide's input as a private template, supplies the
+new account's public recipient and native testnet asset, and writes a retained
+derived core input. The core result keeps its original challenge/configuration
+scope. The accompanying testnet result reports actual request, transfer,
+accounting and delivered-data identities only after execution completes.
+
 ## Original implementation references
 
 - [Source adapter](README.md) and [provider intake](PROVIDER_INPUT.md)

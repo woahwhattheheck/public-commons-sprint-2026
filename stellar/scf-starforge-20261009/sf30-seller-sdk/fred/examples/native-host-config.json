@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.fred-native-host-config.v1",
+  "directory": "/private/fred-native-host",
+  "originalDirectory": "/private/original-native-host",
+  "receiver": {
+    "id": "fred-unrate-original",
+    "title": "UNRATE economic edition"
+  },
+  "browser": {
+    "module": "/installed/playwright/index.mjs",
+    "executablePath": "/installed/chromium/chrome-headless-shell",
+    "headless": true,
+    "timeoutMs": 30000,
+    "args": [
+      "--disable-dev-shm-usage",
+      "--no-sandbox",
+      "--single-process",
+      "--no-zygote"
+    ]
+  }
+}
