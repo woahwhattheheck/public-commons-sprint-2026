@@ -34,3 +34,14 @@ The meter response identifies DEVICE versus UTILITY_METER, creation metadata and
 
 The validation-error schema's top-level required list names `summary`, whereas its properties define `error_summary`. The error-row required list names an undeclared `errors` field. The JSON projection preserves those source lists and records how the receiver should retain useful native responses without inventing those fields. The guide calls consumed/generated values positive while its own example includes zero; the error descriptions reject negative values. Current meter API enums are uppercase even though the narrative guide lowercases them.
 
+
+## Additional creation and upload eligibility sources
+
+Retrieved on 2026-10-12, retained with the nine original API captures on the same source page:
+
+- Direct Enroll / partner-created meters: https://developer.leap.energy/docs/partner-created-meters ; published update 2026-09-16; complete retained capture 12,580 bytes; SHA256 `8eef4b63d96f80eccf499a42350f84e0b36e260ef5533acffeccdf6977eadc4e`.
+- Interval Data Upload API guide: https://developer.leap.energy/docs/interval-data-upload-api ; published update 2026-08-03; complete retained capture 7,036 bytes; SHA256 `faee34df3ad1eadfd0b35067249e186be6224e93df0d02c7165a8f3e77f987ad`.
+
+Creation-channel evidence identifies meters made through Create Meters API or Portal CSV. The ownership evidence covers both the uploaded interval and the upload time in the partner account. The API audit creator enumeration describes the creating entity; the application does not equate that enum alone with upload eligibility. Pending missing windows remain in the saved response and are excluded from another upload.
+
+Full original captures and retrieval identities: https://app.notion.com/p/3f7dd7723100812882e8e337d55c4e96?pvs=204 .

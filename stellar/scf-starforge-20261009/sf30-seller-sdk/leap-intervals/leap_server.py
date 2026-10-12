@@ -1,7 +1,7 @@
 """MIT. Private loopback operator for the original Leap workspace."""
 from __future__ import annotations
 import hashlib
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
@@ -49,6 +49,8 @@ def serve(workspace, *, port=0, connection_file=None):
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", "no-store")
+            self.send_header("Connection", "close")
+            self.close_connection = True
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
             self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'")
@@ -90,6 +92,8 @@ def serve(workspace, *, port=0, connection_file=None):
             self.send_header("Content-Length", str(metadata["bytes"]))
             self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + quote(metadata["name"], safe=""))
             self.send_header("Cache-Control", "no-store")
+            self.send_header("Connection", "close")
+            self.close_connection = True
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             with open(path, "rb") as source:
@@ -106,34 +110,37 @@ def serve(workspace, *, port=0, connection_file=None):
                     self.send_bytes(200, (HERE / "public" / name).read_bytes(), types[name])
                     return
                 self.authenticate()
-                with workspace.mutex:
+                file_response = None
+                with workspace.read_view() as view:
                     if path == "/api/launch":
-                        result = {"schema": workspace.meta("schema"), "status": "READY", "workspace_id": workspace.meta("workspace_id"),
-                                  "workspace": str(workspace.root), "origin": self.server.origin, "revision": workspace.meta("revision")}
+                        result = {"schema": view.meta("schema"), "status": "READY", "workspace_id": view.meta("workspace_id"),
+                                  "workspace": str(view.root), "origin": self.server.origin, "revision": view.meta("revision")}
                     elif path == "/api/state":
-                        result = workspace.state()
+                        result = view.state()
                     elif path == "/api/list":
-                        result = workspace.list_collection(query.get("collection"), query.get("offset", 0), query.get("limit", 100))
+                        result = view.list_collection(query.get("collection"), query.get("offset", 0), query.get("limit", 100))
                     elif path == "/api/item":
-                        result = workspace.get(query.get("collection"), query.get("id"))
+                        result = view.get(query.get("collection"), query.get("id"))
                     elif path == "/api/rows":
-                        result = workspace.rows(query.get("batch_id"), query.get("offset", 0), query.get("limit", 100))
+                        result = view.rows(query.get("batch_id"), query.get("offset", 0), query.get("limit", 100))
                     elif path == "/api/issues":
-                        result = workspace.issue_rows(query.get("batch_id"), query.get("offset", 0), query.get("limit", 100))
+                        result = view.issue_rows(query.get("batch_id"), query.get("offset", 0), query.get("limit", 100))
                     elif path == "/api/missing":
-                        result = workspace.missing_rows_page(query.get("snapshot_id"), query.get("offset", 0), query.get("limit", 100))
+                        result = view.missing_rows_page(query.get("snapshot_id"), query.get("offset", 0), query.get("limit", 100))
                     elif path == "/api/operation":
-                        result = workspace.operation(query.get("id"))
+                        result = view.operation(query.get("id"))
                     elif path == "/api/file":
-                        meta = workspace.get("files", query.get("id"))
-                        self.send_file(workspace.blob_path(meta["id"]), meta)
-                        return
+                        meta = view.get("files", query.get("id"))
+                        file_response = (view.blob_path(meta["id"]), meta)
                     elif path == "/api/export":
-                        path, meta = export_path(workspace, query.get("id"))
-                        self.send_file(path, meta, "application/zip")
-                        return
+                        path, meta = export_path(view, query.get("id"))
+                        file_response = (path, meta, "application/zip")
                     else:
                         raise LeapError("LOCAL_NOT_FOUND", "Choose an original workspace route.")
+                # Finish the read transaction before a slow client receives any bytes.
+                if file_response is not None:
+                    self.send_file(*file_response)
+                else:
                     self.send_json(200, result)
             except (BrokenPipeError, ConnectionResetError):
                 self.close_connection = True
@@ -183,7 +190,10 @@ def serve(workspace, *, port=0, connection_file=None):
                 self.fail(error)
 
     require(isinstance(port, int) and 0 <= port <= 65535, "LOCAL_PORT", "Choose a local port or zero for an assigned port.")
-    server = HTTPServer(("127.0.0.1", port), Handler)
+    class OperatorServer(ThreadingHTTPServer):
+        daemon_threads = False
+        block_on_close = True
+    server = OperatorServer(("127.0.0.1", port), Handler)
     server.host_header = "127.0.0.1:" + str(server.server_address[1])
     server.origin = "http://" + server.host_header
     connection = Path(connection_file).absolute() if connection_file else workspace.root / "leap.connection"

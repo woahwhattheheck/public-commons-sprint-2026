@@ -6,10 +6,12 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import sys
+import tempfile
 
 from leap_contracts import LeapError, require, json_bytes
-from leap_workspace import LeapWorkspace
+from leap_workspace import LeapWorkspace, digest_file, sync_directory
 from leap_delivery import MAX_PACKET_BYTES, export_path
 
 def load_json(path):
@@ -69,6 +71,34 @@ def original_input(path):
     return path, info
 
 
+def receive_export(source, destination, metadata):
+    def original_destination():
+        info = destination.lstat()
+        require(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid(),
+                "LOCAL_EXPORT_EXISTS", "Use the original received file or choose a new filename.")
+        require(digest_file(destination) == (metadata["bytes"], metadata["sha256"]),
+                "LOCAL_EXPORT_EXISTS", "The receiving filename contains different bytes; choose a new filename.")
+    if destination.exists() or destination.is_symlink():
+        original_destination()
+        return
+    fd, temporary = tempfile.mkstemp(prefix=".leap-export-", dir=destination.parent)
+    try:
+        with open(source, "rb") as src, os.fdopen(fd, "wb") as out:
+            shutil.copyfileobj(src, out, 1024 * 1024)
+            out.flush()
+            os.fsync(out.fileno())
+        require(digest_file(temporary) == (metadata["bytes"], metadata["sha256"]),
+                "LOCAL_EXPORT_CHANGED", "The received export differs from its complete retained bytes.")
+        try:
+            # An atomic no-overwrite publication in the chosen receiving directory.
+            os.link(temporary, destination)
+        except FileExistsError:
+            original_destination()
+        sync_directory(destination.parent)
+    finally:
+        os.unlink(temporary)
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
     with contextlib.closing(LeapWorkspace(args.workspace)) as work:
@@ -109,15 +139,10 @@ def main(argv=None):
             result = work.perform("batch." + args.command, payload, **options)
         elif args.command == "export":
             destination = Path(args.out).absolute()
-            require(not destination.exists() and not destination.is_symlink(), "LOCAL_EXPORT_EXISTS", "Choose a new receiving filename.")
             result = work.perform("package.export", {"batch_id": args.batch_id}, **options)
             require(isinstance(result["result"], dict) and result["result"].get("id"), "LOCAL_EXPORT", "Resume the original export operation.")
             path, meta = export_path(work, result["result"]["id"])
-            with open(path, "rb") as source, open(destination, "xb") as out:
-                os.chmod(destination, 0o600)
-                shutil.copyfileobj(source, out, 1024 * 1024)
-                out.flush()
-                os.fsync(out.fileno())
+            receive_export(path, destination, meta)
             result["received_file"] = {"path": str(destination), "bytes": meta["bytes"], "sha256": meta["sha256"]}
         else:
             raise LeapError("LOCAL_COMMAND", "Choose an original application command.")

@@ -169,9 +169,17 @@ def profile_row(row, index):
     return output, entry["target_column"]
 
 
-def validate_load(row, mapping, clock_us):
+def validation_context(mapping, clock_us):
+    periods = {}
+    for item in mapping["ownership"]:
+        periods.setdefault(item["meter_id"], []).append((instant(item["start_utc"]), instant(item["end_utc"])))
+    return {"cutoff_us": cutoff(clock_us), "ownership": periods}
+
+
+def validate_load(row, mapping, clock_us, context=None):
     """Return canonical wire values and every useful row-level validation."""
     output = {column: row.get(column, "") for column in LOAD_COLUMNS + OPTIONAL_COLUMNS}
+    context = validation_context(mapping, clock_us) if context is None else context
     issues = []
     def issue(code, column, message):
         issues.append({"code": code, "column": column, "message": message})
@@ -189,7 +197,7 @@ def validate_load(row, mapping, clock_us):
                 issue(code + "_0003", column, "Align this source instant to a UTC 15-minute boundary.")
             if value > clock_us:
                 issue("LOCAL_FUTURE_INTERVAL", column, "Leap accepts past intervals.")
-            if value < cutoff(clock_us):
+            if value < context["cutoff_us"]:
                 issue("LOCAL_INTERVAL_AGE", column, "This interval predates the application's two-calendar-year eligibility cutoff.")
         except (ValueError, TypeError):
             issue("LOCAL_TIMESTAMP", column, "Use a complete ISO8601 timestamp with an explicit UTC offset.")
@@ -197,8 +205,8 @@ def validate_load(row, mapping, clock_us):
         start, end = times["interval_start_time_utc"], times["interval_end_time_utc"]
         if end - start != INTERVAL_US:
             issue("DTR_0003", "interval_end_time_utc", "Keep each complete original interval exactly 15 minutes.")
-        ownership = [item for item in mapping["ownership"] if item["meter_id"] == output["meter_id"]]
-        if not any(instant(item["start_utc"]) <= start and end <= instant(item["end_utc"]) for item in ownership):
+        ownership = context["ownership"].get(output["meter_id"], ())
+        if not any(period_start <= start and end <= period_end for period_start, period_end in ownership):
             issue("LOCAL_OWNERSHIP_PERIOD", "meter_id", "Retain partner ownership evidence covering this complete interval.")
     numbers = {}
     for column in ENERGY_COLUMNS:
