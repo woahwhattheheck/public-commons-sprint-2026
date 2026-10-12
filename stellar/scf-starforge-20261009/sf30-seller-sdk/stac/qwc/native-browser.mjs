@@ -12,21 +12,39 @@ const RESULT = 'starforge.stac-qwc-publication-browser-result.v1';
 const need = (value, code, message) => { if (!value) throw Object.assign(new Error(message), { code }); };
 const digest = value => createHash('sha256').update(value).digest('hex');
 const encoded = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
-let firstSignal = null, browser = null, closing = null;
-const interrupted = () => { if (firstSignal) throw Object.assign(new Error('The original browser receiving was cancelled.'), { code: 'CANCELLED' }); };
+let firstSignal = null, browser = null, closing = null, outputError = null;
+const lifetime = new AbortController();
+const interrupted = () => {
+  if (firstSignal) throw Object.assign(new Error('The original browser receiving was cancelled.'), { code:'CANCELLED' });
+  if (outputError) throw outputError;
+  lifetime.signal.throwIfAborted();
+};
+function requestClose() { closing ??= closeBrowser().finally(() => { closing = null; }); }
+function outputFailed(error) {
+  outputError ??= Object.assign(new Error('The original browser output failed: ' + String(error.message)),
+    {code:error.code??'OUTPUT_FAILED',cause:error});
+  if(!lifetime.signal.aborted)lifetime.abort(outputError);
+  requestClose();
+}
+function diagnostic(value) {
+  if(outputError || process.stderr.destroyed)return;
+  try{process.stderr.write(value,error=>{if(error)outputFailed(error);});}catch(error){outputFailed(error);}
+}
+process.stdout.on('error',outputFailed);process.stderr.on('error',outputFailed);
 async function closeBrowser() {
   while (browser?.isConnected()) {
     try { await browser.close(); }
     catch (error) {
       if (!browser.isConnected()) break;
-      process.stderr.write('Waiting for the same original browser to close: ' + String(error.message).slice(0,500) + '\n');
+      diagnostic('Waiting for the same original browser to close: ' + String(error.message).slice(0,500) + '\n');
       await delay(1000);
     }
   }
 }
 function onSignal(name) {
   firstSignal ??= name;
-  closing ??= closeBrowser().finally(() => { closing = null; });
+  if(!lifetime.signal.aborted)lifetime.abort(Object.assign(new Error('The original browser receiving was cancelled.'),{code:'CANCELLED'}));
+  requestClose();
 }
 const onInt = () => onSignal('SIGINT'), onTerm = () => onSignal('SIGTERM');
 process.on('SIGINT', onInt); process.on('SIGTERM', onTerm);
@@ -105,13 +123,24 @@ async function main() {
   const auth={Authorization:'Bearer '+token};
   const request=async(path,body) => {
     interrupted();
-    const response=await fetch(url.origin+path,{method:body===undefined?'GET':'POST',redirect:'error',
-      headers:{...auth,...(body===undefined?{}:{'Content-Type':'application/json'})},
-      body:body===undefined?undefined:JSON.stringify(body)});
-    need(response.status>=200 && response.status<300,'CONSOLE_HTTP','The original console request returned '+response.status+'.');
-    const value=await response.json();
-    need(!value.error,value.error?.code??'CONSOLE_ERROR',value.error?.message??'The original console operation failed.');
-    return value;
+    const requestLifetime=new AbortController();
+    const forward=()=>requestLifetime.abort(lifetime.signal.reason);
+    lifetime.signal.addEventListener('abort',forward,{once:true});
+    if(lifetime.signal.aborted)forward();
+    const timer=setTimeout(()=>requestLifetime.abort(Object.assign(
+      new Error('The original loopback request exceeded its selected allowance.'),{code:'CONSOLE_REQUEST_TIMEOUT'})),
+      Math.min(input.timeoutSeconds*1000,30000));
+    try {
+      const response=await fetch(url.origin+path,{method:body===undefined?'GET':'POST',redirect:'error',
+        signal:requestLifetime.signal,
+        headers:{...auth,...(body===undefined?{}:{'Content-Type':'application/json'})},
+        body:body===undefined?undefined:JSON.stringify(body)});
+      need(response.status>=200 && response.status<300,'CONSOLE_HTTP','The original console request returned '+response.status+'.');
+      const value=await response.json();
+      need(!value.error,value.error?.code??'CONSOLE_ERROR',value.error?.message??'The original console operation failed.');
+      interrupted();
+      return value;
+    } finally {clearTimeout(timer);lifetime.signal.removeEventListener('abort',forward);}
   };
   const launch=await request('/api/launch');
   need(launch.schema==='starforge.stac-qwc-launch.v1' && launch.status==='QWC_OPERATOR_READY' &&
@@ -121,7 +150,7 @@ async function main() {
   interrupted();
   browser=await chromium.launch({executablePath:input.browser.chrome,headless:true,
     args:['--no-sandbox','--disable-dev-shm-usage','--disable-background-networking']});
-  if(firstSignal) { await closeBrowser(); interrupted(); }
+  if(firstSignal || lifetime.signal.aborted || outputError) { await closeBrowser(); interrupted(); }
   const context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
   await context.route('**/*',route=>{
     try { const target=new URL(route.request().url()); return target.origin===url.origin?route.continue():route.abort(); }
@@ -147,7 +176,7 @@ async function main() {
     let current=value;
     while(['STARTING','RUNNING'].includes(current.phase)) {
       interrupted(); need(Date.now()<until,'NATIVE_JOB_TIMEOUT','The original native job remains active beyond its selected browser allowance.');
-      await delay(700); current=await request('/api/job?id='+encodeURIComponent(current.id));
+      await delay(700,undefined,{signal:lifetime.signal}); current=await request('/api/job?id='+encodeURIComponent(current.id));
     }
     need(current.phase==='COMPLETED','NATIVE_JOB_RESULT',JSON.stringify(current.error??{phase:current.phase}));
     return current;
@@ -265,13 +294,23 @@ async function main() {
   return result;
 }
 try {
-  const result=await main();process.stdout.write(JSON.stringify({schema:result.schema,status:result.status,
-    operationId:result.operationId,mode:result.mode,artifacts:result.artifacts.length})+'\n');
+  const result=await main();
+  interrupted();
+  await new Promise((accept,reject)=>{
+    try{process.stdout.write(JSON.stringify({schema:result.schema,status:result.status,
+      operationId:result.operationId,mode:result.mode,artifacts:result.artifacts.length})+'\n',
+      error=>error?reject(error):accept());}catch(error){reject(error);}
+  });
+  interrupted();
 } catch(error) {
-  process.stderr.write(JSON.stringify({error:{code:error.code??error.name,message:error.message}})+'\n');
+  diagnostic(JSON.stringify({error:{code:outputError?.code??error.code??error.name,
+    message:outputError?.message??error.message}})+'\n');
   process.exitCode=firstSignal==='SIGINT'?130:firstSignal==='SIGTERM'?143:1;
 } finally {
   await closeBrowser();if(closing)await closing;
   process.removeListener('SIGINT',onInt);process.removeListener('SIGTERM',onTerm);
   if(firstSignal)process.exitCode=firstSignal==='SIGINT'?130:143;
+  else if(outputError)process.exitCode=1;
+  // Stream error listeners remain for the remaining process lifetime, including
+  // delayed pipe-close errors after the native browser has fully drained.
 }
