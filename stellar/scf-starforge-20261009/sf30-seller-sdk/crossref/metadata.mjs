@@ -257,3 +257,6 @@ export function crossrefFieldChanges(before,after){
   return keys.filter(key=>JSON.stringify(a[key]??null)!==JSON.stringify(b[key]??null))
     .map(field=>({field,before:structuredClone(a[field]??null),after:structuredClone(b[field]??null)}));
 }
+
+// Public projector reused by retained-document intake; the original field mapping is unchanged.
+export {workResult as projectCrossrefWork};

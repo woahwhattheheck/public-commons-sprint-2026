@@ -8,21 +8,21 @@ from pathlib import Path
 from .common import (CAPTURE, EXPORT, VectorError, need, canonical, digest, json_bytes,
     read_json, read_catalog, private_directory, claim, require_id, atomic_json, file_record,
     verify_manifest, clone_capture, all_files, fsync_directory, member, copy_verified,
-    descriptor, verify_file)
+    descriptor, verify_file, parse_json)
+from .capture import open_capture
 
 COMPARISON = "starforge.vector-comparison.v1"
 
 def capture_at(directory, expected_sha256=None):
     directory = Path(directory).resolve()
     if (directory / "capture.json").is_file():
-        manifest, record = verify_manifest(directory, "capture.json", CAPTURE, expected_sha256)
-        return directory, manifest, record
+        opened = open_capture(directory, expected_sha256)
+        return directory, opened["manifest"], opened["manifestFile"]
     from .materialize import open_vector_export
     value = open_vector_export(directory, expected_sha256, native=False)
     source = directory / "source"
-    manifest, record = verify_manifest(source, "capture.json", CAPTURE,
-                                       value["manifest"]["sourceCapture"]["sha256"])
-    return source, manifest, record
+    opened = open_capture(source, value["manifest"]["sourceCapture"]["sha256"])
+    return source, opened["manifest"], opened["manifestFile"]
 
 def property_changes(before, after, before_kinds=None, after_kinds=None):
     before = before or {}
@@ -65,8 +65,8 @@ def compare_captures(before_directory, after_directory, directory, operation_id,
             manifest, record = verify_manifest(root, "vector-comparison.json", COMPARISON)
             need(manifest["requestSha256"] == digest(request), "VECTOR_ORIGINAL_REQUEST_CONFLICT")
             return {"directory": str(root), "manifest": manifest, "manifestFile": record, "replayed": True}
-        clone_capture(bp, root / "before")
-        clone_capture(ap, root / "after")
+        clone_capture(bp, root / "before", before_file["sha256"])
+        clone_capture(ap, root / "after", after_file["sha256"])
         temporary = root / "comparison.sqlite.receiving"
         temporary.unlink(missing_ok=True)
         connection = sqlite3.connect(temporary)
@@ -82,8 +82,8 @@ def compare_captures(before_directory, after_directory, directory, operation_id,
         source = read_catalog(root / "before" / "catalog.sqlite")
         source.execute("ATTACH DATABASE ? AS candidate",
                        ((root / "after" / "catalog.sqlite").resolve().as_uri() + "?mode=ro",))
-        before_layers = {row["id"]: json.loads(row["metadata_json"]) for row in source.execute("SELECT * FROM layers")}
-        after_layers = {row["id"]: json.loads(row["metadata_json"]) for row in source.execute("SELECT * FROM candidate.layers")}
+        before_layers = {row["id"]: parse_json(row["metadata_json"]) for row in source.execute("SELECT * FROM layers")}
+        after_layers = {row["id"]: parse_json(row["metadata_json"]) for row in source.execute("SELECT * FROM candidate.layers")}
         summaries = layer_changes(before_layers, after_layers)
         counts = {"added": 0, "removed": 0, "changed": 0, "unchanged": 0,
                   "geometryChanged": 0, "propertiesChanged": 0, "otherMembersChanged": 0,
@@ -127,10 +127,10 @@ def compare_captures(before_directory, after_directory, directory, operation_id,
                         continue
                     status = "ADDED" if bj is None else "REMOVED" if aj is None else "CHANGED"
                     counts[status.lower()] += 1
-                    left = json.loads(bj) if bj is not None else None
-                    right = json.loads(aj) if aj is not None else None
+                    left = parse_json(bj) if bj is not None else None
+                    right = parse_json(aj) if aj is not None else None
                     lf, rf = (left or {}).get("feature"), (right or {}).get("feature")
-                    identity = json.loads(row["identity_json"])
+                    identity = parse_json(row["identity_json"])
                     repeated = max(row["before_key_count"], row["after_key_count"]) > 1
                     incomplete = identity["mode"] == "fields" and any(
                         not item["present"] for item in identity["fields"])
@@ -206,11 +206,29 @@ def compare_captures(before_directory, after_directory, directory, operation_id,
 
 def open_comparison(directory, expected_sha256=None):
     manifest, record = verify_manifest(directory, "vector-comparison.json", COMPARISON, expected_sha256)
+    declared = {item["path"]: descriptor(item) for item in manifest["files"]}
+    changes = manifest.get("changes")
+    need(isinstance(changes, dict) and changes.get("database") == "comparison.sqlite" and
+         changes.get("path") == "changes.ndjson" and
+         {"comparison.sqlite", "changes.ndjson"}.issubset(declared),
+         "VECTOR_COMPARISON_INDEX_NOT_DECLARED")
     for name in ("before", "after"):
-        retained, _ = verify_manifest(Path(directory) / name, "capture.json", CAPTURE,
-                                       manifest[name]["capture"]["sha256"])
-        need(retained["selectionSha256"] == manifest[name]["selectionSha256"] and
-             retained["selection"]["sourceEdition"] == manifest[name]["sourceEdition"],
+        need(isinstance(manifest.get(name), dict), "VECTOR_COMPARISON_EDITION_CHANGED")
+        side = manifest[name]
+        expected = descriptor(side.get("capture"))
+        need(expected["path"] == name + "/capture.json" and
+             declared.get(expected["path"]) == expected,
+             "VECTOR_COMPARISON_CAPTURE_NOT_DECLARED", name)
+        opened = open_capture(Path(directory) / name, expected["sha256"])
+        retained, retained_file = opened["manifest"], opened["manifestFile"]
+        need({**retained_file, "path": name + "/capture.json"} == expected,
+             "VECTOR_COMPARISON_CAPTURE_CHANGED", name)
+        for item in retained["files"]:
+            nested = {**descriptor(item), "path": name + "/" + item["path"]}
+            need(declared.get(nested["path"]) == nested,
+                 "VECTOR_COMPARISON_CAPTURE_MEMBER_NOT_DECLARED", nested["path"])
+        need(retained["selectionSha256"] == side.get("selectionSha256") and
+             canonical(retained["selection"]["sourceEdition"]) == canonical(side.get("sourceEdition")),
              "VECTOR_COMPARISON_EDITION_CHANGED")
     return {"directory": str(Path(directory).resolve()), "manifest": manifest, "manifestFile": record}
 

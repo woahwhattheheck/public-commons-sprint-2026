@@ -11,5 +11,8 @@
   "exports": {
     "./seller/fhir-bulk": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/merchant.mjs",
     "./buyer/fhir-bulk": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/customer.mjs"
+  },
+  "applicationProviders": {
+    "fhir-bulk": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/application-provider.mjs"
   }
 }

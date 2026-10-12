@@ -354,7 +354,15 @@ export async function readGrantPortfolioConnection(filename) {
     need(data.length === info.size && after.size === info.size && after.mtimeMs === info.mtimeMs &&
       after.ctimeMs === info.ctimeMs && after.nlink === 1 && attached.dev === info.dev && attached.ino === info.ino,
     'CONNECTION_FILE_CHANGED', 'The original console connection changed during reading.');
-    return new TextDecoder('utf-8', {fatal:true}).decode(data).trim();
+    const text = new TextDecoder('utf-8', {fatal:true}).decode(data).trim();
+    if (!text.startsWith('{')) return text;
+    let value; try { value = JSON.parse(text); } catch {}
+    need(plain(value) && value.schema === 'stellar-forge.grant-portfolio-workspace-launch.v1' &&
+      value.status === 'GRANT_PORTFOLIO_WORKSPACE_READY' && typeof value.console === 'string' &&
+      UUID.test(value.workspaceId ?? '') && HASH.test(value.bindingSha256 ?? '') &&
+      (value.connectionFile === undefined || value.connectionFile === resolve(filename)),
+      'CONNECTION_FILE', 'Use the original console connection announcement.');
+    return value.console;
   } finally { await handle.close(); }
 }
 export async function connectGrantPortfolio({consoleUrl, consoleUrlFile, timeoutMs} = {}) {

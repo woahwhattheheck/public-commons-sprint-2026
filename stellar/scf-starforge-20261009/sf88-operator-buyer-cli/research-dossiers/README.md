@@ -16,6 +16,22 @@ The [Research client guide](RESEARCH_CLIENT.md) covers the authenticated SDK,
 It includes revision-pinned section reads, complete retained source exports,
 streamed portable reopen and managed Applications startup records.
 
+## Review citation updates across saved findings
+
+The [citation review guide](CITATION_REVIEW.md) covers registered Crossref notices,
+per-question evidence assessments, full finding edits and explicit dispositions,
+all saved in one original dossier revision. Open **Update review** in the browser
+to inspect the original notice and its source bindings, recover complete drafts,
+resolve concurrent edits, and download the before/reviewed/current reports.
+
+[Retained Crossref document intake](CROSSREF_DOCUMENTS.md) imports original work
+and update-list metadata with exact source files and transfer provenance. The
+[operator handover](CITATION-REVIEW-OPERATOR.md) covers recovery and receiving.
+The existing client and `research-client` command expose notice pages and atomic
+review/recovery. `research-crossref-documents` supplies the original-document
+intake; `research-citation-workflow` runs the complete browser and portable-reopen
+workflow using an installed Playwright module and Chromium executable.
+
 ## Import original source bundles
 
 [Source bundles](SOURCE_BUNDLES.md) bring a manifest, its named original files,

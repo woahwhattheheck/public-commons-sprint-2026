@@ -17,6 +17,7 @@ import { labProfile } from './profiles.mjs';
 import { sourceMembers, readLabDecisions } from './application.mjs';
 import { reviewTable, parseReviewTable } from './decisions.mjs';
 import { readLabResult } from './result.mjs';
+import { receiveLabProcessOwnership } from './receiving-processes.mjs';
 
 const ROOT=fileURLToPath(new URL('.',import.meta.url));
 const SCHEMA='starforge.lab-edd-native-receiving.v1';
@@ -129,6 +130,13 @@ function checkedConfig(value,base){
     !/^[A-Za-z0-9][A-Za-z0-9_-]{0,159}$/.test(value.operationId)||!Array.isArray(value.families)||!value.families.length||value.families.length>16)
     throw Error('Use the complete source-pinned laboratory receiving configuration.');
   const seen=new Set();
+  if(value.processOwnership!==undefined){
+    const selected=value.processOwnership;
+    if(!selected||typeof selected!=='object'||typeof selected.family!=='string'||
+      !value.families.some(family=>family.name===selected.family&&family.profile==='geotech-dts8d'&&family.sourceKind==='generated software-format fixture')||
+      (selected.timeoutMs!==undefined&&(!Number.isSafeInteger(selected.timeoutMs)||selected.timeoutMs<3000||selected.timeoutMs>60000)))
+      throw Error('Select a generated DTS format family and its actual native-process receiving timeout.');
+  }
   return {...value,merchantFile:resolve(base,value.merchantFile??'merchant.example.json'),
     families:value.families.map(family=>{
       if(typeof family.name!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(family.name)||seen.has(family.name)||typeof family.sourceFile!=='string')
@@ -228,6 +236,16 @@ export async function receiveLabJobs({configuration,directory,scratch,phase='all
         }
         state.completedAt??=new Date().toISOString();await save(checkpoint);global.gc?.();
       }
+      if(config.processOwnership&&!checkpoint.processOwnership){
+        const family=config.families.find(row=>row.name===config.processOwnership.family);
+        const source=await realpath(family.sourceFile);
+        checkpoint.processOwnership=await receiveLabProcessOwnership({
+          directory:join(directory,'native-process-receiving'),scratch:join(scratch,'native-process-receiving'),
+          merchant,store,inputDirectory:join(directory,'inputs'),source,sourceBinding:checkpoint.families[family.name].source,
+          operationId:config.operationId,lease,signal,timeoutMs:config.processOwnership.timeoutMs??15000,
+          stageSource:(reference,token,path)=>stageFile(store,definition,merchant.compiled.publicOrigin,reference,'source',path,token,signal)
+        });await save(checkpoint);
+      }
       checkpoint.nativeCompletedAt??=new Date().toISOString();await save(checkpoint);
     }
     if(phase!=='native'){
@@ -239,10 +257,10 @@ export async function receiveLabJobs({configuration,directory,scratch,phase='all
       }
     }
     const result={schema:SCHEMA,operationId:config.operationId,binding,
-      nativeCompletedAt:checkpoint.nativeCompletedAt??null,browser:checkpoint.browser??null,
+      nativeCompletedAt:checkpoint.nativeCompletedAt??null,browser:checkpoint.browser??null,processOwnership:checkpoint.processOwnership??null,
       status:checkpoint.nativeCompletedAt&&checkpoint.browser?'COMPLETE':'NATIVE_COMPLETE',
       families:Object.fromEntries(Object.entries(checkpoint.families).map(([name,state])=>[name,{
-        source:state.source,decisionDocumentSha256:state.decisionDocumentSha256,tables:state.tables,
+        source:state.source,sourceKind:config.families.find(row=>row.name===name).sourceKind??'operator-supplied delivery',decisionDocumentSha256:state.decisionDocumentSha256,tables:state.tables,
         iterations:Object.fromEntries(Object.entries(state.iterations).map(([id,value])=>{
           const {token,...publicValue}=value;return [id,publicValue];
         })),completedAt:state.completedAt}]))};

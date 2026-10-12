@@ -121,6 +121,8 @@ def run_export(ws, export_id, operation_id, max_wait_seconds=3600):
 def common(parser):
     parser.add_argument("--workspace", default=argparse.SUPPRESS, help="Absolute original private workspace")
     parser.add_argument("--credentials-file", default=argparse.SUPPRESS, help="Absolute local authentication profile file")
+    parser.add_argument("--expected-workspace-id", default=argparse.SUPPRESS,
+                        help="Reopen this exact initialized native workspace UUID")
 
 
 def parser():
@@ -345,7 +347,8 @@ def execute(args, ws):
             raise InputError("Choose a loopback port from 0 to 65535")
         from fhir_server import OperatorServer
         with OperatorServer(ws, args.port) as server:
-            emit({"url": server.url, "workspace": str(ws.root)})
+            emit({"schema": "stellar-forge.fhir-bulk-startup.v1", "url": server.url,
+                  "workspace": str(ws.root), "workspaceId": ws.workspace_id})
             try:
                 server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:
@@ -361,11 +364,16 @@ def main(argv=None):
         p.error("--workspace is required")
     try:
         path = absolute(args.workspace, "Workspace")
+        expected_workspace_id = getattr(args, "expected_workspace_id", None)
+        if expected_workspace_id and not path.exists():
+            raise InputError("The selected initialized FHIR workspace is no longer present")
         create = args.command in {"init", "serve", "workspace-import", "packet-import"} and not path.exists()
         credentials = getattr(args, "credentials_file", None)
         if credentials:
             credentials = absolute(credentials, "Credentials")
         with Workspace(path, create=create, credentials_file=credentials) as ws:
+            if expected_workspace_id is not None and ws.workspace_id != expected_workspace_id:
+                raise InputError("The original FHIR workspace differs from the selected workspace UUID")
             result = execute(args, ws)
         if result is not None:
             emit(result)

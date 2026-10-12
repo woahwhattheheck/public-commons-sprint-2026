@@ -1,7 +1,7 @@
 "use strict";
 const $ = (selector, root = document) => root.querySelector(selector);
 const S = { token: location.hash.slice(1), state: null, portfolio: null, view: "portfolios", table: "entities",
-  offset: 0, search: "", status: "", standard: "", epoch: 0, pending: null, review: {}, totalsOffset: 0 };
+  offset: 0, search: "", status: "", standard: "", epoch: 0, refreshEpoch: 0, pending: null, review: {}, totalsOffset: 0 };
 const names = { "source.receive": "Receive source edition", "portfolio.save": "Save portfolio",
   "review.save": "Save review", "portfolio.export": "Build complete handoff", "portfolio.receive": "Receive complete portfolio" };
 function node(tag, text, className) {
@@ -52,23 +52,30 @@ async function post(path, value) {
   return api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value) });
 }
 async function refresh(selectId = S.portfolio && S.portfolio.id, selectRevision = null) {
-  S.state = await api("/api/state");
-  $("#connection").textContent = S.state.sources.length + " source editions · Workspace revision " + S.state.revision;
+  const refreshEpoch = ++S.refreshEpoch;
+  ++S.epoch;
+  const state = await api("/api/state");
+  if (refreshEpoch !== S.refreshEpoch) return;
+  const current = state.portfolios.find(p => p.id === selectId);
+  const portfolio = current ? await api("/api/portfolio?id=" + current.id + "&revision=" + (selectRevision || current.revision)) : null;
+  if (refreshEpoch !== S.refreshEpoch) return;
+  if (S.portfolio?.id !== portfolio?.id || S.portfolio?.snapshot !== portfolio?.snapshot) {
+    S.review = {}; S.offset = 0; S.totalsOffset = 0;
+    if ($("#detail-dialog").open) $("#detail-dialog").close();
+  }
+  S.state = state; S.portfolio = portfolio;
+  $("#connection").textContent = state.sources.length + " source editions · Workspace revision " + state.revision;
   const selected = $("#portfolio-select");
   selected.replaceChildren(node("option", "Select a saved portfolio"));
   selected.firstChild.value = "";
-  for (const p of S.state.portfolios) { const o = node("option", p.name); o.value = p.id; selected.append(o); }
-  const current = S.state.portfolios.find(p => p.id === selectId);
-  if (current) {
-    selected.value = current.id;
-    S.portfolio = await api("/api/portfolio?id=" + current.id + "&revision=" + (selectRevision || current.revision));
-  } else S.portfolio = null;
+  for (const p of state.portfolios) { const o = node("option", p.name); o.value = p.id; selected.append(o); }
+  if (current) selected.value = current.id;
   const revisions = $("#revision-select");
   revisions.replaceChildren();
   if (current) for (let index = current.revision; index >= 1; index--) {
     const option = node("option", "Revision " + index); option.value = String(index); revisions.append(option);
   }
-  if (S.portfolio) revisions.value = String(S.portfolio.revision);
+  if (portfolio) revisions.value = String(portfolio.revision);
   else revisions.append(node("option", "—"));
   await render();
 }
@@ -322,7 +329,10 @@ function portfoliosView(container) {
 }
 async function detail(ref) {
   const p = S.portfolio;
-  return api("/api/detail?" + new URLSearchParams({ portfolioId: p.id, revision: String(p.revision), sourceId: ref.sourceId, entityKey: ref.entityKey }));
+  const full = await api("/api/detail?" + new URLSearchParams({ portfolioId: p.id, revision: String(p.revision), sourceId: ref.sourceId, entityKey: ref.entityKey }));
+  if (S.portfolio?.id !== p.id || S.portfolio?.snapshot !== p.snapshot || full.snapshot !== p.snapshot)
+    throw new Error("The selected portfolio revision changed. Open its current record again.");
+  return full;
 }
 function showDialog(title, elements) {
   $("#detail-title").textContent = title; $("#detail-content").replaceChildren(...elements); $("#detail-dialog").showModal();
@@ -346,14 +356,23 @@ async function choose(side, ref, decision = null) {
   await render();
 }
 async function openDecision(row) {
+  const selectedPortfolio = S.portfolio;
   S.review = { decision: row };
   const resolve = field => row.staleReasons?.find(reason => reason.field === field)?.current
     || row.proposedReferences?.[field] || row[field];
   const left = resolve(row.type === "record" ? "record" : "left");
   const right = resolve(row.type === "record" ? "related" : "right");
   for (const [side, ref] of [["left", left], ["right", right]]) {
-    if (ref && S.portfolio.sources.includes(ref.sourceId)) {
-      try { S.review[side] = (await detail(ref)).entity; } catch { /* The original decision remains visible for a new record selection. */ }
+    if (S.portfolio?.snapshot !== selectedPortfolio.snapshot) return;
+    if (ref && selectedPortfolio.sources.includes(ref.sourceId)) {
+      try {
+        const full = await detail(ref);
+        if (S.portfolio?.snapshot !== selectedPortfolio.snapshot) return;
+        S.review[side] = full.entity;
+      } catch (error) {
+        if (S.portfolio?.snapshot !== selectedPortfolio.snapshot) return;
+        if (error.code !== "NOT_FOUND") throw error;
+      }
     }
   }
   await render();
@@ -538,7 +557,7 @@ $("#revision-select").addEventListener("change", () => {
 });
 $("#refresh").addEventListener("click", () => refresh().catch(failure));
 $("#new-portfolio").addEventListener("click", () => {
-  S.portfolio = null; S.view = "portfolios"; S.review = {}; $("#portfolio-select").value = ""; $("#revision-select").replaceChildren(node("option", "—")); render().catch(failure);
+  ++S.refreshEpoch; S.portfolio = null; S.view = "portfolios"; S.review = {}; $("#portfolio-select").value = ""; $("#revision-select").replaceChildren(node("option", "—")); render().catch(failure);
 });
 $("#close-detail").addEventListener("click", () => $("#detail-dialog").close());
 if (!/^[A-Za-z0-9_-]{43}$/.test(S.token)) {
