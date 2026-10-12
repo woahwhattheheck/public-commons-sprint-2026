@@ -62,16 +62,19 @@ export async function runSupersetNativeCustomer(options={}){
   function saved(name){return phases.find(p=>p.name===name)?.result;}
   async function child(name,argv,{environment={},wait=false}={}){
     await privateDirectory(join(directory,'logs'),true);
+    signal.throwIfAborted();
     const handle=await open(join(directory,'logs',name+'.log'),'a',0o600);
-    let processChild;
-    try{processChild=spawn(argv[0],argv.slice(1),{cwd:fixtureDirectory,env:{...process.env,...environment},
-      stdio:['ignore',handle.fd,handle.fd],detached:false});}
-    finally{await handle.close();}
-    const entry={name,child:processChild,closed:false,code:null,error:null};
-    entry.completion=new Promise(resolve=>{
-      processChild.once('error',error=>{entry.error=error;entry.closed=true;resolve(entry);});
-      processChild.once('close',(code,sig)=>{entry.code=code;entry.exitSignal=sig;entry.closed=true;resolve(entry);});
-    });children.push(entry);
+    let entry;
+    try{
+      signal.throwIfAborted();
+      const processChild=spawn(argv[0],argv.slice(1),{cwd:fixtureDirectory,env:{...process.env,...environment},
+        stdio:['ignore',handle.fd,handle.fd],detached:false});
+      entry={name,child:processChild,closed:false,code:null,error:null};
+      entry.completion=new Promise(resolve=>{
+        processChild.once('error',error=>{entry.error=error;entry.closed=true;resolve(entry);});
+        processChild.once('close',(code,sig)=>{entry.code=code;entry.exitSignal=sig;entry.closed=true;resolve(entry);});
+      });children.push(entry);
+    }finally{await handle.close();}
     if(wait){await entry.completion;if(entry.error||entry.code!==0)throw Object.assign(new Error('Original native '+name+' did not complete; read its retained log.'),{code:'SUPERSET_NATIVE_PROCESS_FAILED'});}
     return entry;
   }
