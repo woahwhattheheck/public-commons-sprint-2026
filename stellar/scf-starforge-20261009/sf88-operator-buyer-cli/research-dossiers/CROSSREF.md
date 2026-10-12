@@ -72,7 +72,9 @@ partial outcome, prepare a new operation with the required scope and refresh
 option; the earlier result and original response history remain available.
 
 Receiving compares the current original dossier revision and the exact reviewed
-plan and edition hashes. If another operator changes the dossier first, the
+plan and edition hashes. The original metadata API supplies revision and edition checks
+without re-projecting retained research bodies. A completed receive returns the
+full original dossier view at its recorded receiving revision. If another operator changes the dossier first, the
 workspace refreshes the review before another decision. Existing source notes,
 classifications, selected evidence and authored findings remain on their original
 occurrences. Crossref metadata does not automatically select new evidence or

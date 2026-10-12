@@ -3,7 +3,7 @@ import {readdir} from 'node:fs/promises';
 import {join} from 'node:path';
 import {privateDirectory,readJson,readBytes,writeJson,writeBytes,jsonBytes,parseJson,digest,need,object,now,safeCode} from '../node/store.mjs';
 import {withPrivateLock} from '../../sf30-seller-sdk/routescan/quota.mjs';
-import {requestFor,parseCapture} from '../../sf30-seller-sdk/crossref/metadata.mjs';
+import {requestFor} from '../../sf30-seller-sdk/crossref/metadata.mjs';
 import {collectCrossrefEdition,selectedCrossrefDois,compareCrossrefMetadata,validateCrossrefEdition,receiveCrossrefEdition} from './crossref.mjs';
 
 const PLAN='stellar-forge.crossref-workspace-plan.v1',STATE='stellar-forge.crossref-workspace-operation.v1';
@@ -43,6 +43,8 @@ export async function openCrossrefWorkspace({directory,dossiers,source,identity}
   const operations=await privateDirectory(join(directory,'operations'));
   const active=new Map();let closed=false;
   const folder=id=>join(operations,idValue(id));
+  const metadata=(id,options)=>typeof dossiers.getMetadata==='function'?dossiers.getMetadata(id,options):dossiers.get(id,options);
+  const fullView=(id,value)=>Array.isArray(value.sources)?value:dossiers.get(id,{revision:value.revision});
   async function plan(id){
     const value=await readJson(join(folder(id),'plan.json'),1024*1024);
     need(value.schema===PLAN&&value.id===id&&object(value.request)&&object(value.payload)&&
@@ -211,11 +213,11 @@ export async function openCrossrefWorkspace({directory,dossiers,source,identity}
       const selected=await plan(id),current=await state(id);
       need(selected.sha256===expectedPlanSha256,'CROSSREF_PLAN_CHANGED');
       need(current.editionSha256===expectedEditionSha256,'CROSSREF_REVIEWED_EDITION_CHANGED');
-      const before=await dossiers.get(selected.request.dossierId);
+      const before=await metadata(selected.request.dossierId);
       if(current.phase==='IMPORTED'){
         need(before.editions.some(row=>row.questionId===selected.request.questionId&&row.raw?.sha256===current.editionSha256),
           'CROSSREF_RECEIVED_EDITION_MISSING');
-        return {operation:current,receipt:current.received,dossier:before};
+        return {operation:current,receipt:current.received,dossier:await fullView(selected.request.dossierId,before)};
       }
       const pending=current.pendingReceive;
       const retained=before.editions.find(row=>row.questionId===selected.request.questionId&&row.raw?.sha256===current.editionSha256&&
@@ -224,7 +226,7 @@ export async function openCrossrefWorkspace({directory,dossiers,source,identity}
         revision(pending.expectedRevision);
         const duplicate=pending.duplicateEditionId===retained.id;
         const receivedRevision=pending.expectedRevision+(duplicate?0:1);
-        const original=before.revision===receivedRevision?before:await dossiers.get(selected.request.dossierId,{revision:receivedRevision});
+        const original=before.revision===receivedRevision?before:await metadata(selected.request.dossierId,{revision:receivedRevision});
         need(original.editions.some(row=>row.id===retained.id&&row.raw?.sha256===current.editionSha256&&
           (duplicate||row.origin?.operationId===id)),'CROSSREF_RECEIVE_RECONCILIATION_FAILED');
         const {value}=await edition(id);
@@ -233,7 +235,7 @@ export async function openCrossrefWorkspace({directory,dossiers,source,identity}
           sourceSha256:current.editionSha256,coverage:value.usage.coverage,metadataRecords:value.results.length,
           receivedAt:pending.startedAt,reconciled:true};
         const saved=await save(id,{...current,phase:'IMPORTED',error:null,received:receipt,pendingReceive:null});
-        return {operation:saved,receipt,dossier:before};
+        return {operation:saved,receipt,dossier:await fullView(selected.request.dossierId,before)};
       }
       need(before.revision===revision(expectedRevision),'REVISION_CONFLICT');
       const question=before.questions.find(row=>row.id===selected.request.questionId);
