@@ -22,6 +22,7 @@ import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.
 import { inspectPostman, preparePostmanSource } from '../postman/collection.mjs';
 import { openOAuthConnectionRegistry, readOAuthHostConnections } from '../../sf30-seller-sdk/oauth-connections/host.mjs';
 import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
+import { startManagedOpenApiWorkspace } from './managed-launch.mjs';
 import { openCacheWorkspace } from '../../sf30-seller-sdk/response-cache/workspace/model.mjs';
 import { cacheWorkspaceApi, serveCacheWorkspaceAsset, sendCacheWorkspaceResponse } from '../../sf30-seller-sdk/response-cache/workspace/http.mjs';
 import { createMigrationRoutes } from '../blockworks/routes.mjs';
@@ -444,9 +445,10 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     if (errors.length>1) throw new AggregateError(errors,'Workspace sessions did not finish stopping.');
   })();
   if (!noSignals) for (const signal of ['SIGINT','SIGTERM']) process.once(signal,()=>close().catch(()=>{process.exitCode=1;}));
-  return {url:origin+'/#'+token,origin,token,close,output};
+  return {url:origin+'/#'+token,origin,token,close,output,connectionStatus:()=>registry.list()};
 }
 export async function main(args=process.argv.slice(2)) {
+  if(args.includes('--managed-launch-sha256'))return startManagedOpenApiWorkspace(args,{startWorkspace});
   if (args.length===1 && args[0]==='--help') {console.log(HELP);return;}
   const options=new Map();
   for(let i=0;i<args.length;) {
