@@ -21,10 +21,30 @@ const modelInput = {inputs:object, ...originalInput, inputPointer:str(4000)};
 const createCase = {planId:id('plan'), selectedRevision:integer, expectedContentSha256:digest,
   name:nonempty(300), mode:{enum:['OPERATIONS', 'WALKTHROUGH']}, calendarStart:{type:['string','null']},
   actor:nonempty(300), requestId:requestIdentifier};
-function tool(suffix, description, properties = {}, required = [], readOnly = false) {
+const supportDate = {type:'string', pattern:'^[0-9]{4}-[0-9]{2}-[0-9]{2}$'};
+const supportDeployment = {type:'object', additionalProperties:false,
+  properties:{name:nonempty(500), operator:nonempty(500), operatorId:{anyOf:[str(500),{type:'null'}]},
+    role:{enum:['MERCHANT','BUYER','BOTH']},
+    participantClass:{enum:['TEAM_OPERATED','INDEPENDENT_OPERATOR','CUSTOMER']},
+    environment:{enum:['LOCAL','TESTNET','MAINNET','OTHER']},
+    state:{enum:['PLANNED','INSTALLED','OPERATING','HANDED_OVER','RETIRED']},
+    costIds:{type:'array', items:nonempty(200), uniqueItems:true, maxItems:200},
+    tranche:{anyOf:[{type:'integer',minimum:1,maximum:3},{type:'null'},{const:''}]},
+    endpoint:str(4000), releaseRef:str(4000), caseRef:str(4000), acceptedBy:str(300),
+    acceptedAt:{anyOf:[supportDate,{const:''},{type:'null'}]}, sourceNote:str(12000)},
+  required:['name','operator'],
+  allOf:[{if:{properties:{state:{const:'HANDED_OVER'}},required:['state']},
+    then:{required:['acceptedBy','acceptedAt'],properties:{acceptedBy:nonempty(300),acceptedAt:supportDate}}}]};
+const emptyDeployment = {anyOf:[{type:'null'},{type:'object',maxProperties:0}]};
+const supportSelection = {allOf:[{
+  if:{properties:{deploymentId:id('deployment')},required:['deploymentId']},
+  then:{properties:{deployment:emptyDeployment}},
+  else:{required:['deployment'],properties:{deployment:supportDeployment}}
+}]};
+function tool(suffix, description, properties = {}, required = [], readOnly = false, rules = {}) {
   return {name:'merchant_grant_' + suffix, description,
     annotations:{readOnlyHint:readOnly, destructiveHint:false, idempotentHint:true, openWorldHint:false},
-    inputSchema:{type:'object', properties, required, additionalProperties:false}};
+    inputSchema:{type:'object', properties, required, additionalProperties:false, ...rules}};
 }
 export const grantWorkspaceTools = [
   tool('workspaces', 'List host-declared SF47 workspaces and original source selections without opening SQLite or starting a process.', {}, [], true),
@@ -99,6 +119,15 @@ export const grantWorkspaceTools = [
     ['workspace','caseId','expectedVersion','portfolioId','alternativeId'], true),
   tool('review', 'Read the complete original retained business review and its source snapshot.',
     {...ws, caseId:id('operation'), reviewId:id('review')}, ['workspace','caseId','reviewId'], true),
+  tool('support_preview', 'Review the complete original SF74 support handoff against the current case without saving. Keep its exact filename and whole-file SHA; the native result retains source/reader identities, full report and HTML, deployments and previewSha256.',
+    {...ws, ...caseSelection, ...originalInput, filename:nonempty(240)},
+    ['workspace','caseId','expectedVersion','input','expectedInputSha256','filename'], true),
+  tool('support_receive', 'Receive the exact reviewed support file and rendered report through the original case transaction. Choose one existing deploymentId without replacement fields, or a new deployment. Preserve filename, reviewed preview SHA, current version and request ID for recovery.',
+    {...ws, ...caseSelection, ...originalInput, ...originalRequest, filename:nonempty(240),
+      expectedPreviewSha256:digest, deploymentId:{anyOf:[id('deployment'),{type:'null'}]},
+      deployment:{anyOf:[supportDeployment,...emptyDeployment.anyOf]}},
+    ['workspace','caseId','expectedVersion','input','expectedInputSha256','filename',
+      'expectedPreviewSha256','requestId','actor'], false, supportSelection),
   tool('source_attach', 'Attach exact original bytes through source.add, retaining filename, MIME, URL, observation date and native content hash.',
     {...ws, ...caseSelection, ...originalInput, ...originalRequest, filename:nonempty(240), kind:nonempty(80),
       mediaType:nonempty(200), sourceUrl:str(2000), observedAt:str(100)},

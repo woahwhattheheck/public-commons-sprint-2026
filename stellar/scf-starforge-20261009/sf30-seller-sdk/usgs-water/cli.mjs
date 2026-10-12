@@ -14,6 +14,7 @@ const HELP = [
   'Stellar Forge / USGS water operations', '',
   'node usgs-water/cli.mjs COMMAND --project /private/water-project [options]', '',
   'serve          Open the private operator workspace (--port 0, --buyer-config buyer.json).',
+  'managed        Open that same workspace through installed Applications (see MANAGED.md).',
   'init           Save title and native selection (--title NAME --selection selection.json).',
   'config         Read the saved project or save --selection FILE --expected-revision N.',
   'capture        Acquire/resume --id ID against --expected-revision N.',
@@ -102,6 +103,13 @@ export async function main(argv = process.argv.slice(2)) {
   const { command, options } = args(argv);
   if (['help', '--help', '-h'].includes(command)) return output(HELP);
   const directory = resolve(required(options, 'project'));
+  if (command === 'managed') {
+    const { runManagedWaterWorkspace } = await import('./managed.mjs');
+    return runManagedWaterWorkspace({ directory, port: integer(options.port, 0),
+      merchantPort: integer(options['merchant-port'], 0), facilitator: options.facilitator,
+      buyerConfiguration: options['buyer-config'], nativePython: options['hec-dss-python'],
+      expectedInputsSha256: options['expected-inputs-sha'], expectedProjectSha256: options['expected-project-sha'] });
+  }
   if (command === 'serve') {
     const buyer = options['buyer-config'] ? await openBuyer(options) : null;
     const workspace = await startWaterWorkspace({ directory, port: integer(options.port, 0), merchantPort: integer(options['merchant-port'], 0),

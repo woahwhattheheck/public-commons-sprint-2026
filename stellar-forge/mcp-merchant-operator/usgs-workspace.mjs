@@ -290,11 +290,14 @@ export class MerchantUSGSWorkspaces {
       for (const entry of this.#requests) if (entry.workspace === workspace) entry.controller.abort();
       await this.#opening.get(workspace)?.catch(() => {});
       const session = this.#sessions.get(workspace);
-      const closing = session?.close();
-      await this.#reads.closeScope(workspace);
-      await Promise.allSettled(admitted);
-      await closing;
-      this.#sessions.delete(workspace);
+      const outcomes = await Promise.allSettled([
+        Promise.resolve().then(() => session?.close()),
+        this.#reads.closeScope(workspace),
+        Promise.allSettled(admitted),
+      ]);
+      const rejected = outcomes.find(value => value.status === 'rejected');
+      if (rejected) throw rejected.reason;
+      if (this.#sessions.get(workspace) === session) this.#sessions.delete(workspace);
       return { workspace, state: 'CLOSED', savedWorkRetained: true };
     })();
     this.#stopping.set(workspace, pending);
@@ -611,7 +614,7 @@ export class MerchantUSGSWorkspaces {
         await Promise.allSettled([...this.#pending]);
         const outcomes = await Promise.allSettled([...stopping, reads]);
         if (outcomes.some(value => value.status === 'rejected')) throw fail('USGS_SHUTDOWN_INCOMPLETE', 'An original Water workspace or file descriptor did not finish closing.');
-      })();
+      })().catch(error => { this.#close = null; throw error; });
     }
     return this.#close;
   }
