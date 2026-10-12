@@ -53,6 +53,8 @@ def source_label(row):
     source = row["source"]
     if source.get("sourceKind") == "postgis":
         return "PostGIS · " + source["projectId"] + " · revision " + str(source["revision"])
+    if source.get("sourceKind") == "parcel":
+        return "Parcels · " + source.get("title", short(row["id"]))
     if source.get("sourceKind") == "vector":
         edition = source.get("sourceEdition", {})
         label = edition.get("editionId") or edition.get("id") or edition.get("version") or short(row["id"])
@@ -141,7 +143,7 @@ class LayerDialog(QDialog):
         form.addRow("Explicit CRS override", self.crs)
         self.bands = QLineEdit()
         self.bands.setPlaceholderText("Native default, one gray band, or R,G,B band numbers")
-        if asset.get("sourceKind") == "vector":
+        if asset.get("sourceKind") in ("vector", "parcel"):
             self.bands.setEnabled(False)
         form.addRow("Band selection", self.bands)
         self.subset = QLineEdit()
@@ -877,7 +879,8 @@ class ReceivingDock(QDockWidget):
                  self.selected_one(self.history, "history event"), self).exec())
 
     def guide(self):
-        name = "VECTOR_RECEIVING.md" if self.source is not None and self.source.sourceKind == "vector" else "OPERATIONS.md"
+        name = ("PARCELS.md" if self.source is not None and self.source.sourceKind == "parcel" else
+                "VECTOR_RECEIVING.md" if self.source is not None and self.source.sourceKind == "vector" else "OPERATIONS.md")
         path = Path(__file__).resolve().parent / name
         if not path.is_file():
             path = path.parent.parent / name

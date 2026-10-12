@@ -70,7 +70,8 @@ class Uploads:
             require(len(files) == 1 and files[0]["path"].lower().endswith(".zip"),
                     "ANALYST_PROJECT_UPLOAD", "Select one complete original project archive.")
         elif value["kind"] == "source":
-            require(bool({"qgis-receiving.json", "vector-export.json", "postgis-receiving.json"} & seen),
+            require(bool({"qgis-receiving.json", "vector-export.json", "postgis-receiving.json",
+                          "parcel-source-receiving.json", "parcel-map-source.json"} & seen),
                     "ANALYST_SOURCE_UPLOAD", "Select the complete original receiving folder, including its manifest.")
         manifest = {"schema": UPLOAD_SCHEMA, "uploadId": identity, "kind": value["kind"],
                     "workspaceId": self.workspace.read()["id"], "files": files, "totalBytes": total}

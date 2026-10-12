@@ -28,6 +28,10 @@ def execute(args, progress=None):
     if command in POSTGIS_COMMANDS:
         payload = read_json(args.input)[0] if args.input else {"sourceId": args.source_id}
         return postgis_execute(workspace, command, payload, project_id=args.project_id, progress=progress)
+    if command == "parcels":
+        require(args.input, "INPUT_REQUIRED", "Supply the complete original parcel --input JSON.")
+        from .parcels.operator import run_file
+        return run_file(workspace, args.input, progress=progress)
     if command == "open":
         return workspace.read()
     if command == "field":
@@ -98,7 +102,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["source-open", "create", "open", "import", "select", "scenes", "assets",
                                            "layers", "compare", "review", "native-inspect", "native-save", "native-open",
-                                           "export", "receive", "history", "operation", "field", "postgis-layers",
+                                           "export", "receive", "history", "operation", "field", "parcels", "postgis-layers",
                                            "native-postgis-check", "native-postgis-select", "native-postgis-refresh"])
     parser.add_argument("--workspace")
     parser.add_argument("--directory")
