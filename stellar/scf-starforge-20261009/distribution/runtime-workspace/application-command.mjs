@@ -11,6 +11,7 @@ import { ndjsonStartup } from './application-ndjson.mjs';
 import { cheesecakeStartup } from './application-cheesecake.mjs';
 import { odataStartup } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarStartup } from './application-sec-edgar.mjs';
+import { usgsWaterStartup } from './application-usgs-water.mjs';
 import { jobResultReceiverStartup } from './application-job-result-receiver.mjs';
 import { sheetsStartup } from './application-sheets.mjs';
 import { nocodbStartup } from './application-nocodb.mjs';
@@ -286,6 +287,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
           schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
           operationId: directory.split('/').at(-1), command: request.command,
           source: 'original-command-stdout', observedAt: now(), url, links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'usgs-water' && request.args?.[0] === 'managed') {
+      if (!text.startsWith('{"schema":"stellar-forge.usgs-water-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await usgsWaterStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
         });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;

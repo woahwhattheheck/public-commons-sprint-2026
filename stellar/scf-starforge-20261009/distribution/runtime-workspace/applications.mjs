@@ -16,6 +16,7 @@ import { ndjsonApplication, prepareNdjsonApplication } from './application-ndjso
 import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
 import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
+import { usgsWaterApplication, prepareUsgsWaterApplication } from './application-usgs-water.mjs';
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
 import { nocodbApplication, prepareNocoDBApplication } from './application-nocodb.mjs';
@@ -83,6 +84,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   cheesecakeApplication(common),
   odataApplication(common),
   secEdgarApplication(common),
+  usgsWaterApplication(common),
   jobResultReceiverApplication(common),
   sheetsApplication(common),
   nocodbApplication(common),
@@ -296,6 +298,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'odata') {
     const original = await prepareODataApplication(settings, { ...context, inputPath, selectedExecutable, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'usgs-water') {
+    const original = await prepareUsgsWaterApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); selectedResourceKey = original.resourceKey;
   } else if (type.id === 'sec-edgar') {
     const original = await prepareSecEdgarApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
