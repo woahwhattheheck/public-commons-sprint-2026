@@ -9,7 +9,7 @@ import {pathToFileURL} from 'node:url';
 import {openStacWorkspace} from './workspace.mjs';
 import {startStacServer} from './server.mjs';
 
-export const STAC_HELP=`Earth Search scene operations
+export const STAC_HELP=`Earth Search scene operations\n\nCustomer onboarding: eoapi-help lists policy, source, selected-file and customer receiving commands.
 
 Usage:
   node sf30-seller-sdk/stac/cli.mjs COMMAND --workspace /absolute/workspace [options]
@@ -129,6 +129,11 @@ async function keepOpen(close){
 export async function runStacCLI(argv=process.argv.slice(2)){
   const {flags,positionals}=parseArgs(argv),command=positionals[0]||'help';
   if(command==='help'||flags.help){process.stdout.write(STAC_HELP);return;}
+  if(command.startsWith('eoapi-')) {
+    const {runEoapiCommand}=await import('./eoapi/cli.mjs');
+    const {result,close,exitCode}=await runEoapiCommand({command,flags});
+    stdout(result);if(exitCode)process.exitCode=exitCode;if(close)await keepOpen(close);return;
+  }
   if(command.startsWith('merchant-')||command.startsWith('customer-')){
     const {runStacCommercialCommand}=await import('./customer.mjs');
     const {result,close}=await runStacCommercialCommand({command,flags});stdout(result);if(close)await keepOpen(close);return;

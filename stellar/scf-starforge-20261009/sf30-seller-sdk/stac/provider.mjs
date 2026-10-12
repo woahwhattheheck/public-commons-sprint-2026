@@ -146,24 +146,54 @@ export function assetDescriptor(item, key, collection) {
       missingSchemes.length ? 'STORAGE_SCHEME_UNRESOLVED' : 'PUBLIC_HTTPS',
     source: structuredClone(source) };
 }
-export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, timeoutMs = 120000,
+export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, sourceAuth, timeoutMs = 120000,
   maxMetadataBytes = 64 * 1024 * 1024 } = {}) {
   endpoint = normalizeEndpoint(endpoint);
+  need(sourceAuth === undefined || sourceAuth === null || typeof sourceAuth.requestHeaders === 'function' &&
+    typeof sourceAuth.authorizationForOrigin === 'function', 'STAC_SOURCE_AUTH_RUNTIME_INVALID');
   const profiles = (transport ? Array.isArray(transport) ? transport : [transport] : []).map(normalizeBuyerTransport);
-  const fetches = new Map();
+  const fetches = new Map(), pending = new Set(), lifetime = new AbortController();
+  let closing = null;
+  function owned(operation) {
+    return (...args) => {
+      if (lifetime.signal.aborted) return Promise.reject(Object.assign(new Error('STAC_PROVIDER_CLOSED'), { code: 'STAC_PROVIDER_CLOSED' }));
+      const result = Promise.resolve().then(() => operation(...args));
+      pending.add(result); result.then(() => pending.delete(result), () => pending.delete(result));
+      return result;
+    };
+  }
   function fetchFor(url) {
     const origin = new URL(publicURL(url)).origin;
     if (!fetches.has(origin)) {
       const profile = profiles.find(p => p.origin === origin);
       need(!profiles.length || profile, 'STAC_SOURCE_TRANSPORT_ORIGIN_NOT_CONFIGURED');
-      fetches.set(origin, createPublicHttpsFetch({ timeoutMs, ...(profile ? { trustedProxy: profile } : {}) }));
+      fetches.set(origin, createPublicHttpsFetch({ timeoutMs, ...(profile ? { trustedProxy: profile } : {}),
+        sourceAuthorization: sourceAuth?.authorizationForOrigin(origin) ?? null }));
     }
     return fetches.get(origin);
   }
   async function request(request, signal) {
-    return fetchFor(request.url)(request.url, { method: request.method ?? 'GET', redirect: 'manual',
-      headers: request.headers ?? { accept: 'application/json' }, signal,
+    // The original request.json already exists. Resolve the private bearer only
+    // for this dispatch; retained request identity never contains this header.
+    signal = signal ? AbortSignal.any([signal, lifetime.signal]) : lifetime.signal;
+    need(!signal.aborted, 'STAC_PROVIDER_CLOSED');
+    const method = request.method ?? 'GET';
+    const headers = new Headers(request.headers ?? { accept: 'application/json' });
+    need(!headers.has('authorization') && !headers.has('cookie') && !headers.has('proxy-authorization'),
+      'STAC_RETAINED_REQUEST_CREDENTIAL_FORBIDDEN');
+    const dispatch = fetchFor(request.url);
+    const privateHeaders = new Headers(await sourceAuth?.requestHeaders({ url: request.url, method, signal }) ?? {});
+    for (const [name, value] of privateHeaders) {
+      need(name === 'authorization', 'STAC_SOURCE_AUTH_HEADER_UNSUPPORTED');
+      headers.set(name, value);
+    }
+    const response = await dispatch(request.url, { method, redirect: 'manual', headers, signal,
       ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }) });
+    try {
+      await sourceAuth?.observeResponse?.({ url: request.url, status: response.status,
+        authorization: privateHeaders.get('authorization') });
+    } catch (error) { await response.body?.cancel().catch(() => {}); throw error; }
+    return response;
   }
   async function captureJson(selected, { directory, signal } = {}) {
     await privateDirectory(directory);
@@ -224,7 +254,11 @@ export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, tim
       throw error;
     }
   }
-  return Object.freeze({ endpoint, captureJson, downloadAsset });
+  return Object.freeze({ endpoint, captureJson: owned(captureJson), downloadAsset: owned(downloadAsset),
+    close() {
+      if (!closing) { lifetime.abort(); closing = (async () => { await Promise.allSettled([...pending]); })(); }
+      return closing;
+    } });
 }
 export const SCENE_COLUMNS = ['item_key','collection','item_id','datetime','start_datetime','end_datetime','cloud_cover',
   'platform','constellation','geometry_json','properties_json','assets_json','links_json','decision_status','decision_note'];
