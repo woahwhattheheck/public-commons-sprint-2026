@@ -1,5 +1,6 @@
 // MIT. Research dossier operator; all provider and persistence operations stay in the original server.
 import {createCrossrefPanel} from './crossref.js';
+import {createUnstructuredPanel} from './unstructured.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -83,6 +84,7 @@ import {createCrossrefPanel} from './crossref.js';
     $('connection').textContent = value ? 'Saving / loading' : 'Local workspace';
     if (!value) renderNoteState();
     crossrefPanel.updateBusy();
+    documentPanel.updateBusy();
   }
   async function api(path, {method = 'GET', body, download = false} = {}) {
     const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
@@ -134,6 +136,7 @@ import {createCrossrefPanel} from './crossref.js';
     state.openalexConfigured = result.openalex?.configured === true;
     $('import-openalex-mode').hidden = !state.openalexConfigured;
     crossrefPanel.configure(result.crossref);
+    documentPanel.configure(result.unstructured);
     renderList();
   }
   async function openDossier(id) {
@@ -173,6 +176,7 @@ import {createCrossrefPanel} from './crossref.js';
     $('empty-workspace').hidden = !!view;
     $('dossier-workspace').hidden = !view;
     crossrefPanel.setDossier(view);
+    documentPanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -534,13 +538,14 @@ import {createCrossrefPanel} from './crossref.js';
   function showTab(tab) {
     if (tab === 'crossref' && $('crossref-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions', 'crossref'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
       if (name === tab) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
     });
     crossrefPanel.show(tab === 'crossref');
+    documentPanel.show(tab === 'documents');
   }
   function clearFormError(form) { const box = form.querySelector('.form-error'); if (box) {box.textContent = ''; box.hidden = true;} }
   function showDossier(edit = false) {
@@ -654,6 +659,9 @@ import {createCrossrefPanel} from './crossref.js';
     try { return JSON.parse(raw); } catch { throw Object.assign(new Error('JSON_INVALID'), {code: 'JSON_INVALID'}); }
   }
   const crossrefPanel = createCrossrefPanel({root:$('view-crossref'),tab:$('crossref-tab'),api,task,notify,
+    getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const documentPanel = createUnstructuredPanel({root:$('view-documents'),tab:$('documents-tab'),api,task,notify,
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {

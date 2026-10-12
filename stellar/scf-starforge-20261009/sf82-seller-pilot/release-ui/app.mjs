@@ -20,6 +20,7 @@ function stageCommand(release) {
   if (release?.postgres) return command + ' --postgres-package prepared-postgres-package';
   if (release?.sqlite) return command + ' --sqlite-package sqlite-workbench-export';
   if (release?.jsonrpc) return command + ' --jsonrpc-package prepared-rpc-package';
+  if (release?.opensearch) return command + ' --opensearch-package prepared-opensearch-package';
   if (release?.redis) return command + ' --redis-package prepared-redis-package';
   if (release?.mysql) return command + ' --mysql-package prepared-mysql-package';
   if (release?.s3) return command + ' --s3-package configured-s3-package';

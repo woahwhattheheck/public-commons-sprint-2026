@@ -1,5 +1,6 @@
 // MIT. Document review and receiving in the original research workspace.
-import { join, resolve } from 'node:path';
+import { join, resolve, isAbsolute } from 'node:path';
+import { stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { Buyer } from '../node/client.mjs';
 import { readBytes, readJson, parseJson } from '../node/store.mjs';
@@ -40,6 +41,28 @@ function selected(value) {
 function requestedHash(value) {
   need(typeof value === 'string' && HEX.test(value), 'UNSTRUCTURED_REVIEWED_EDITION_REQUIRED');
   return value;
+}
+
+/** Open a launcher-selected original buyer source; browser requests never provide these paths. */
+export async function openSavedDocumentBuyerSource(configPath) {
+  need(typeof configPath === 'string' && isAbsolute(configPath) && resolve(configPath) === configPath,
+    'UNSTRUCTURED_DOCUMENT_SOURCE_PATH_REQUIRED');
+  const value = await readJson(configPath, 1024 * 1024);
+  need(object(value) && value.schema === 'stellar-forge.unstructured-document-source.v1' &&
+    Object.keys(value).every(key => ['schema','workspaceId','runtimeDirectory','stateDirectory','inboxDirectory'].includes(key)),
+  'UNSTRUCTURED_DOCUMENT_SOURCE_CONFIG_INVALID');
+  need(typeof value.workspaceId === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(value.workspaceId),
+    'UNSTRUCTURED_WORKSPACE_ID_REQUIRED');
+  const runtimeDirectory = value.runtimeDirectory ?? nativeRuntime;
+  const stateDirectory = value.stateDirectory ?? value.inboxDirectory;
+  for (const path of [runtimeDirectory,stateDirectory,...(value.inboxDirectory === undefined ? [] : [value.inboxDirectory])]) {
+    need(typeof path === 'string' && isAbsolute(path) && resolve(path) === path,
+      'UNSTRUCTURED_DOCUMENT_SOURCE_ABSOLUTE_PATHS_REQUIRED');
+    need((await stat(path)).isDirectory(), 'UNSTRUCTURED_DOCUMENT_SOURCE_DIRECTORY_REQUIRED');
+  }
+  const buyer = new Buyer({runtimeDirectory,stateDirectory});
+  return {buyer,runtimeDirectory,workspaceId:value.workspaceId,
+    ...(value.inboxDirectory === undefined ? {} : {inboxDirectory:value.inboxDirectory})};
 }
 
 /** Host supplies the original buyer/inbox once. Browser selections contain no filesystem path. */

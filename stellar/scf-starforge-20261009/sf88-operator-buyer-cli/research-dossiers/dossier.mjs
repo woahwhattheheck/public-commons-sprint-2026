@@ -110,6 +110,13 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     need(bytes.length === metadata.bytes && digest(bytes) === metadata.sha256, 'RESEARCH_BLOB_CHANGED');
     return bytes;
   }
+  /** Open a current retained edition through this store's original verified blob reader. */
+  async function readRetainedEdition(id, editionId) {
+    const {state} = await head(id);
+    const edition = state.editions.find(value => value.id === editionId);
+    need(edition?.mode === 'retained', 'RETAINED_EDITION_REQUIRED');
+    return {edition: clone(edition), bytes: await blob(edition.raw)};
+  }
   const metadata = state => ({ ...summary(state), schema: DOCUMENT,
     questions: clone(state.questions), editions: clone(state.editions),
     selections: clone(state.selections), findings: clone(state.findings) });
@@ -484,6 +491,6 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     return get(id);
   }
 
-  return Object.freeze({ directory, list, create, get, getMetadata, update, addQuestion, updateQuestion,
+  return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, update, addQuestion, updateQuestion,
     receive, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding, compare, exportDossier, reopen });
 }
