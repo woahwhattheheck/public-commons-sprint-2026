@@ -176,6 +176,31 @@ export function reviewDocument(document,{orders=[],roundingPolicy=null,forOutput
 const numericOrNull=value=>{try{return exact(value);}catch{return null;}};
 function documentRecord(record){return record.document??record;}
 function docRef(record,item){return{id:record.id,kind:documentRecord(record).kind,documentId:documentRecord(record).documentId,revision:record.revision,lineId:item.lineId,sourcePath:item.sourcePath??null};}
+// Recompute business review against today's original and confirmation selections.
+// Native findings stay attached to their original XML path; replaced item lines
+// do not keep an obsolete confirmation error active in another line.
+function currentDocumentFindings(record,activeIndexes,order){
+  const doc=documentRecord(record),active=new Set(activeIndexes);
+  const findings=[...(Array.isArray(doc.findings)?doc.findings:[]),...reviewDocument(doc,{orders:[order]}).findings];
+  const kept=[],seen=new Set();
+  for(const finding of findings){
+    const path=typeof finding.path==='string'?finding.path:'/';
+    const jsonItem=/^\/items\/(\d+)(?:\/|$)/.exec(path);
+    let index=jsonItem?Number(jsonItem[1]):null;
+    if(index===null){
+      const originalIndex=doc.items.findIndex(item=>item.sourcePath&&(path===item.sourcePath||path.startsWith(item.sourcePath+'/')));
+      if(originalIndex>=0)index=originalIndex;
+    }
+    if(index!==null&&!active.has(index))continue;
+    const item=index===null?null:doc.items[index],reference=item?lineReference(doc,item):null;
+    const key=canonical([finding.code,path,finding.severity]);if(seen.has(key))continue;seen.add(key);
+    kept.push({...clone(finding),path:'/documents/'+record.id+path,
+      document:{id:record.id,kind:doc.kind,documentId:doc.documentId,revision:record.revision},
+      sourcePath:path.startsWith('/'+doc.kind)?path:item?.sourcePath??null,
+      orderLineId:reference?.lineId??null,documentLineId:item?.lineId??null});
+  }
+  return kept;
+}
 export function projectOrder(originalRecord,selectionRecords=[],{revision=1,history=[]}={}){
   const original=documentRecord(originalRecord), id=orderId(original.orderId);
   const confirmations=new Map(),currentDocuments=new Map(),sourceFindings=[];
@@ -240,11 +265,30 @@ export function projectOrder(originalRecord,selectionRecords=[],{revision=1,hist
     for(const item of doc.items){const ref=lineReference(doc,item);if(ref.orderId===id&&!original.items.some(line=>line.lineId===ref.lineId))
       sourceFindings.push(issue('ORDER_LINE_NOT_FOUND','/documents/'+record.id+'/items/'+item.lineId,'A selected document refers to a line absent from the current original order.',doc.kind));}
   }
-  const review=reviewDocument(original),findings=[...review.findings,...sourceFindings,...lines.flatMap(line=>line.findings)];
+  const effectiveRecords=[...new Map([...confirmations.values()].map(value=>value.record).concat([...currentDocuments.values()]).map(record=>[record.id,record])).values()];
+  for(const record of effectiveRecords){
+    const doc=documentRecord(record),activeIndexes=[];
+    for(let index=0;index<doc.items.length;index++){
+      const item=doc.items[index],ref=lineReference(doc,item);
+      if(ref.orderId!==id)continue;
+      if(doc.kind!=='ORDERRESPONSE'||confirmations.get(ref.lineId)?.record.id===record.id)activeIndexes.push(index);
+    }
+    if(!activeIndexes.length)continue;
+    const selectedFindings=currentDocumentFindings(record,activeIndexes,{orderId:id,document:originalRecord,items:lines});
+    for(const finding of selectedFindings){
+      sourceFindings.push(finding);
+      const line=finding.orderLineId?lines.find(item=>item.lineId===finding.orderLineId):null;
+      if(line){line.findings.push(finding);if(finding.severity==='error')line.status='REVIEW';}
+    }
+  }
+  const review=reviewDocument(original),unique=new Map();
+  for(const finding of [...(Array.isArray(original.findings)?original.findings:[]),...review.findings,...sourceFindings,...lines.flatMap(line=>line.findings)])
+    unique.set(canonical([finding.code,finding.path,finding.severity]),finding);
+  const findings=[...unique.values()];
   const status=findings.some(f=>f.severity==='error')?'REVIEW':lines.every(line=>['DOCUMENTS_COMPLETE','CANCELLED'].includes(line.status))?'COMPLETE':lines.every(line=>line.status==='AWAITING_CONFIRMATION')?'AWAITING_CONFIRMATION':'IN_PROGRESS';
   return{schema:ORDER_SCHEMA,orderId:id,revision,document:clone(originalRecord),header:clone(original.header),items:lines,status,findings,
     totals:{currency:original.header.currency??null,net:review.net},history:clone(history),
-    selectedDocuments:[...new Map([...confirmations.values()].map(value=>value.record).concat([...currentDocuments.values()]).map(record=>[record.id,record])).values()].map(record=>({
+    selectedDocuments:effectiveRecords.map(record=>({
       id:record.id,kind:documentRecord(record).kind,documentId:documentRecord(record).documentId,revision:record.revision,source:record.source??documentRecord(record).source??null}))};
 }
 // A complete dispatch reference may be invoiced over several separate invoices.
