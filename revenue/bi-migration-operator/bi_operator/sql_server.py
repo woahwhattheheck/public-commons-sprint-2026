@@ -463,7 +463,8 @@ class SqlServer:
             raise ValueError("Choose an existing Node22.16+ through BI_SQL_NODE before launching the native job.")
         number = int(job["payload"].get("launch_generation", 0)) + 1
         updated = {**job["payload"], "status": "starting", "auto_start": False, "launch_generation": number,
-                   "last_mode": mode, "launch_requested_at": now(), "error": None}
+                   "last_mode": mode, "launch_requested_at": now(), "error": None,
+                   "_operation_id": self.service.operation_id or job["payload"].get("_operation_id")}
         job = self.store.put("sql_job", updated, job["id"], job["revision"], actor)
         args = [sys.executable, str(target / "worker/SQL_SERVER_WORKER.py"), "--job", str(target / "job.json"),
                 "--operation", str(operation), "--node", node, "--mode", mode]
@@ -485,7 +486,12 @@ class SqlServer:
         mode = request.get("mode", "continue" if job["payload"]["status"] not in ("prepared", "queued") else "execute")
         if mode not in ("execute", "continue"):
             raise ValueError("Continue the original read job explicitly.")
-        return self._launch(job, mode, self.service.actor)
+        launched = self._launch(job, mode, self.service.actor)
+        with self.store.lock, self.store.db:
+            detached = json.loads(self.store.setting("sql_detached_jobs") or "[]")
+            self.store.db.execute("INSERT OR REPLACE INTO settings VALUES('sql_detached_jobs',?)",
+                (encoded([ident for ident in detached if ident != job["id"]]),))
+        return launched
 
     def cancel_job(self, request):
         job = self.store.get("sql_job", request["id"])
@@ -561,8 +567,11 @@ class SqlServer:
             "result_bundle": bundle, "received_bundle_sha256": digest(data), "native_result": native,
             "progress": {"rows": result["rows"], "pages": result["pages"], "complete": result["complete"]},
             "error": result.get("error"), "received_at": now(),
+            "catalog": state.get("catalog"), "column_types": result.get("column_types", []),
+            "native_events": state.get("events", [])[-50:],
             "capture_id": capture_id if csv_file else None,
-            "dataset_id": dataset_id if csv_file and result["complete"] else None}
+            "dataset_id": dataset_id if csv_file and result["complete"] else None,
+            "_operation_id": self.service.operation_id or p.get("_operation_id")}
         entries.append(("sql_job", job["id"], job["revision"], updated))
         self._batch(entries, actor)
         return self.store.get("sql_job", job["id"])
@@ -582,7 +591,7 @@ class SqlServer:
         for job in jobs:
             p = job["payload"]
             try:
-                if launch and not active and p.get("auto_start") and p["status"] == "queued":
+                if launch and not active and p.get("auto_start") and p["status"] == "queued" and job["id"] not in json.loads(self.store.setting("sql_detached_jobs") or "[]"):
                     job = self._launch(job, "execute", "SQL Server background worker")
                     active = True
                     p = job["payload"]
@@ -597,6 +606,16 @@ class SqlServer:
                     state = worker().document(state_path)
                     if state.get("job_sha256") != p["job_sha256"]:
                         raise ValueError("The original native state has a different job digest.")
+                    if state["status"] in ("complete", "canceled", "partial", "failed"):
+                        prior_native = json.loads(self.store.bytes(p["native_result"]["digest"])) if p.get("native_result") else {}
+                        if prior_native.get("state_sha256") != digest(worker().read(state_path)):
+                            data, native_result, _ = worker().package_result(target.parent / "job.json", target)
+                            immutable = target / ("result-" + digest(data) + ".zip")
+                            if not immutable.exists():
+                                atomic_write(immutable, data)
+                            atomic_write(result_path, data)
+                            job = self._accept(job, data, "Retained SQL Server terminal-state recovery")
+                            p = job["payload"]
                     progress = {"rows": state.get("rows", 0), "pages": len(state.get("pages", [])), "complete": state.get("complete", False)}
                     if progress != p.get("progress") or state["status"] != p.get("observed_native_status"):
                         job = self.store.put("sql_job", {**p, "progress": progress,
@@ -677,6 +696,9 @@ class SqlServer:
         mapped = [{f["target"]: row[f["source"]] for f in fields} for row in rows]
         blob = self.store.blob(csv_bytes(targets, mapped), p["table"] + "-sql-source.csv", "text/csv")
         value = copy.deepcopy(plan["payload"])
+        target_table = next(t for t in value["project"]["tables"] if t["name"] == p["table"])
+        for column in target_table["columns"]:
+            column["source_column"] = column["name"]
         value["bindings"][p["table"]] = {"kind": "csv", "digest": blob["digest"],
             "null_token": capture["payload"]["null_token"], "source": {"sql_mapping": record_ref(mapping),
             "sql_capture": p["capture"], "native_types": capture["payload"]["column_types"],

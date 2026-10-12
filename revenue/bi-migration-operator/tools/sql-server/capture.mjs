@@ -106,7 +106,10 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
     event('native_continuation_started',{generation:state.generation,mode});
     await save();
     const cancelPath=path.join(root,'cancel.json');
-    if(await exists(cancelPath))await fs.rename(cancelPath,cancelPath+'.prior-'+state.generation);
+    if(await exists(cancelPath)){
+      if(mode==='continue')await fs.rename(cancelPath,cancelPath+'.prior-'+state.generation);
+      else{cancel();state.status='canceled';state.pending=null;event('canceled_before_dispatch');await save();return state;}
+    }
     timer=setInterval(async()=>{
       try{if(await exists(cancelPath)||process.ppid!==parent)cancel();}catch{cancel();}
     },250);

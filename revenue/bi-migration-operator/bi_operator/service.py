@@ -15,6 +15,7 @@ from . import archive, native
 from .compare import compare_outputs, read_csv, csv_bytes
 from .providers import Rollouts, capture_results
 from .report_server import ReportServer
+from .sql_server import SqlServer, SQL_KINDS
 from .store import Store, Conflict, digest, encoded, identifier, now
 
 KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result")
@@ -71,8 +72,11 @@ class Service:
             "server.result.import": self.report_server.import_result,
             "server.handoff": self.report_server.handoff,
         }
+        self.sql = SqlServer(self)
+        self.actions.update(self.sql.actions())
 
     def close(self):
+        self.sql.close()
         self.store.close()
 
     @staticmethod
@@ -110,7 +114,7 @@ class Service:
 
     def state(self):
         result = {"workspace_id": self.store.setting("workspace_id"), "version": "1.0.0", "time": now()}
-        for kind in KINDS:
+        for kind in (*KINDS, *SQL_KINDS):
             records = self.store.list(kind)
             for record in records:
                 payload = record["payload"]
@@ -122,6 +126,8 @@ class Service:
                     payload["build"]["file_count"] = len(payload["build"].get("files", []))
                     payload.get("build", {}).pop("files", None)
             result[kind] = records
+        result["sql_runtime"] = self.sql.runtime()
+        result["sql_detached_jobs"] = json.loads(self.store.setting("sql_detached_jobs") or "[]")
         result["operations"] = self.store.operations()
         return result
 
@@ -250,7 +256,11 @@ class Service:
         previous = self.store.get("comparison", request["previous_id"]) if request.get("previous_id") else None
         if previous and previous["payload"]["left_file"]["digest"] != lfile["digest"]:
             raise ValueError("A correction comparison retains its original baseline. Create a separate comparison for a changed baseline.")
-        result = compare_outputs(self.store.bytes(lfile["digest"]), self.store.bytes(rfile["digest"]), request.get("spec", {}))
+        spec = copy.deepcopy(request.get("spec", {}))
+        if "null_token" not in spec:
+            spec.setdefault("left_null_token", left["payload"].get("null_token"))
+            spec.setdefault("right_null_token", right["payload"].get("null_token"))
+        result = compare_outputs(self.store.bytes(lfile["digest"]), self.store.bytes(rfile["digest"]), spec)
         return self.write("comparison", {"label": text(request.get("label", "Output comparison"), 300),
             "left": self.reference(left), "right": self.reference(right), "left_file": lfile, "right_file": rfile,
             "result": result, "parameters": request.get("parameters", {}), "scope": text(request.get("scope")),
@@ -346,6 +356,7 @@ class Service:
 
     def backup_create(self, request):
         # Export files are outside the immutable object set, so backups never embed prior backups.
+        self.sql.prepare_backup()
         exports = self.store.root / "exports"
         exports.mkdir(exist_ok=True, mode=0o700)
         filename = "workspace-" + self.operation_id + ".bi-backup"
