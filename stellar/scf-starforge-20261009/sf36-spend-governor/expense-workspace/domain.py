@@ -124,6 +124,17 @@ def group_amounts(lines, dimensions=()):
     return [value | {"amount": str(value["amount"])} for _, value in sorted(groups.items())]
 
 
+def spending_reservation_identity(ledger, request_id, request_digest):
+    """One original physical ledger row, retained across its financial source views."""
+    if not isinstance(ledger, dict) or set(ledger) != {"device", "inode"} or not all(
+            isinstance(value, (str, int)) and str(value).isdigit() for value in ledger.values()):
+        return None
+    if not isinstance(request_id, str) or not request_id or not isinstance(request_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", request_digest):
+        return None
+    return {"ledger": {key: str(ledger[key]) for key in ("device", "inode")},
+            "request_id": request_id, "request_digest": request_digest}
+
+
 def period_view(period, items, sources, centers, dispositions, closed_transfers=None):
     """Dates are operator recognition dates; native days never become settlement dates."""
     start, through = period["from_day"], period["through_day"]
@@ -133,9 +144,12 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
     issues, candidates, exposures, native_outcomes = [], [], [], []
     disposition_by_key = {(d["item_id"], d["code"]): d for d in dispositions}
     closed_transfers = sorted(closed_transfers or [], key=lambda v:(v["period_id"], v["close_id"], v["item_id"]))
-    previously_issued = {}
+    previously_issued, previously_reserved = {}, {}
     for entry in closed_transfers:
-        previously_issued.setdefault(entry["transfer_identity"], []).append(entry)
+        if entry.get("transfer_identity"):
+            previously_issued.setdefault(entry["transfer_identity"], []).append(entry)
+        if entry.get("spending_reservation"):
+            previously_reserved.setdefault(digest(entry["spending_reservation"]), []).append(entry)
 
     def issue(code, item, description, *, group=None, kinds=None):
         item_id = item["id"] if item else ""
@@ -258,6 +272,10 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
         if not relevant:
             continue
         detail = row.get("native_detail")
+        source = source_by_id.get(item["source_id"], {})
+        original_reservation = (spending_reservation_identity(source.get("reservation_ledger_identity"), row["request_id"], row["request_digest"])
+            if row.get("source_kind", "sf36_ledger") in ("sf36_ledger", "governed_mcp") and
+            source.get("current_capture") == item["capture_id"] and not item["missing"] else None)
         if isinstance(detail, dict):
             native_outcomes.append({"item_id":item["id"], "request_id":row["request_id"], "source_name":item["source_name"],
                 "source_capture":item["capture_id"], "quote_day":detail.get("quote_created_day",row["day"]), "native_status":detail["native_status"],
@@ -329,9 +347,12 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             continue
         transfer_identity = row.get("native_detail", {}).get("transfer_identity")
         prior = previously_issued.get(transfer_identity, [])
+        if original_reservation:
+            prior = list({(value["period_id"], value["close_id"], value["item_id"]): value for value in
+                [*prior, *previously_reserved.get(digest(original_reservation), [])]}.values())
         if prior:
             issue("TRANSFER_ALREADY_ISSUED", item,
-                  "The same original transfer is included in another currently closed period. Exclude this representation, or reopen and correct the earlier period before recognising it here.",
+                  "The same original transfer or spending reservation is included in another currently closed period. Exclude this representation, or reopen and correct the earlier period before recognising it here.",
                   group={"issued_charges":prior}, kinds=["exclude_from_period"])
             continue
         selected_lines = []
@@ -353,7 +374,8 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                                    "project": line["project"], "account_code": line["account_code"], "amount": line["amount"],
                                    "memo": line["memo"] or coding["memo"], "coding_id": coding["id"], "line": index + 1,
                                    "source_capture": item["capture_id"], "basis": item["basis"],
-                                   "native_payment": row.get("native_detail")})
+                                   "native_payment": row.get("native_detail"),
+                                   "original_spending_reservation": original_reservation})
         group = receipt_groups.get(receipt_key(row), [])
         exact = exact_transfers.get(row.get("native_detail", {}).get("transfer_identity"), [])
         # The same original ledger row can be exposed directly and through its

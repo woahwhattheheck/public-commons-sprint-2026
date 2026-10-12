@@ -11,7 +11,7 @@ import sqlite3
 import stat
 import threading
 
-from domain import Problem, SCHEMA, now, canonical, identifier, text, day, digest, row_key, basis, native_changes, validate_coding, period_view
+from domain import Problem, SCHEMA, now, canonical, identifier, text, day, digest, row_key, basis, native_changes, validate_coding, period_view, spending_reservation_identity
 from native import capture_source, parse_labels
 from credit_store import CreditStore, CREDIT_DDL
 from accountant_store import AccountantStore, ACCOUNTANT_DDL
@@ -467,12 +467,31 @@ class Store(CreditStore, AccountantStore):
                     continue
                 issued = self._get("closes", other["latest_close"])
                 seen = set()
+                captured_sources = {value["id"]: value for value in issued.get("native_captures", [])}
                 for line in issued.get("allocations", []):
                     transfer = (line.get("native_payment") or {}).get("transfer_identity")
-                    if transfer and (transfer, line["item_id"]) not in seen:
-                        seen.add((transfer, line["item_id"]))
-                        closed_transfers.append({"transfer_identity":transfer, "period_id":other["id"],
-                            "period_name":other["name"], "close_id":issued["id"], "item_id":line["item_id"],
+                    retained = line.get("original_spending_reservation") or {}
+                    reservation = (spending_reservation_identity(retained.get("ledger"), line["request_id"], line["request_digest"])
+                                   if retained.get("request_id") == line["request_id"] and
+                                   retained.get("request_digest") == line["request_digest"] else None)
+                    if reservation is None and line.get("source_kind", "sf36_ledger") in ("sf36_ledger", "governed_mcp"):
+                        # Older issued ledger lines predate the additive identity
+                        # field. Derive it from their own frozen accepted capture,
+                        # never from the source's later locator or current ledger.
+                        captured = captured_sources.get(line["source_capture"])
+                        if captured and captured.get("source_id") == line["source_id"]:
+                            original = next((row for row in captured.get("report", {}).get("rows", [])
+                                if row.get("request_id") == line["request_id"] and row.get("request_digest") == line["request_digest"] and
+                                row.get("state") == "settled" and row.get("settled_base_units") == line["settled_actual"]), None)
+                            if original:
+                                ledger = (captured["identity"] if line.get("source_kind", "sf36_ledger") == "sf36_ledger" else
+                                          captured["report"]["source"].get("reservation_ledger_identity"))
+                                reservation = spending_reservation_identity(ledger, line["request_id"], line["request_digest"])
+                    key = (transfer, digest(reservation) if reservation else None, line["item_id"])
+                    if (transfer or reservation) and key not in seen:
+                        seen.add(key)
+                        closed_transfers.append({"transfer_identity":transfer, "spending_reservation":reservation,
+                            "period_id":other["id"], "period_name":other["name"], "close_id":issued["id"], "item_id":line["item_id"],
                             "source_capture":line["source_capture"], "recognition_date":line["recognition_date"]})
             view = period_view(period, self._items(), self._source_views(), {c["id"]: c for c in self._bodies("centers")},
                                self._dispositions(ident), closed_transfers)

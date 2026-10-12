@@ -46,7 +46,14 @@ ADJUSTMENT_READER_FILES = {
 }
 # Previously issued v1 projects contain the original 53-file Woo closure.
 # The additive v2 reader requires both the native Python adapter and its two JS files.
-CREDIT_REQUIRED.update("app/" + n for n in CREDIT_READER_FILES if n not in ADJUSTMENT_READER_FILES)
+# Current included modules need these original imports. Earlier v1/v2 projects
+# retain their previous byte selections and may omit them while opening saved data.
+OPTIONAL_CREDIT_READER_FILES = {
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-client.mjs",
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/recovery.mjs",
+}
+CREDIT_REQUIRED.update("app/" + n for n in CREDIT_READER_FILES
+                       if n not in ADJUSTMENT_READER_FILES | OPTIONAL_CREDIT_READER_FILES)
 ADJUSTMENT_REQUIRED = {APP_PREFIX + "expense-workspace/native_adjustments.py"}
 ADJUSTMENT_REQUIRED.update("app/" + n for n in ADJUSTMENT_READER_FILES)
 CREDIT_VERSIONS = ("original-woo-refund-v1", "original-native-refund-v2")
@@ -239,6 +246,8 @@ def receive(archive, directory, expected_sha256):
             # Earlier accountant-enabled editions omitted this guide; current complete exports include it.
             if bookkeeping:
                 allowed = allowed | {APP_PREFIX + "expense-workspace/BOOKKEEPING.md"}
+            if credit_feature:
+                allowed = allowed | {"app/" + path for path in OPTIONAL_CREDIT_READER_FILES}
             if len(entries) != len(descriptions) or not required <= set(entries) <= allowed or set(names) != set(entries) | {"manifest.json"}:
                 raise ValueError("The complete project must retain the exact original application and workspace members.")
             if sum(i.file_size for i in infos) > MAX_BYTES:
