@@ -191,7 +191,7 @@ function selectionIdentity(workspace,operation) {
 }
 export class MerchantKafkaWorkspaces {
   #config;#options;#clients=new Map();#pending=new Set();#closing=false;#close;
-  #reads;#exporting=new Map();#controller=new AbortController();
+  #reads;#readsClose;#exporting=new Map();#controller=new AbortController();
   constructor(config,options={}) {
     exact(options,[],['timeoutMs','maximumJsonBytes','concurrency']);
     this.#config=config;this.#options={...options};
@@ -488,6 +488,8 @@ export class MerchantKafkaWorkspaces {
     this.#closing=true;this.#controller.abort();
     // Cancel client-owned IO only. The original native capture belongs to Applications.
     for(const client of this.#clients.values())void client.close().catch(()=>{});
+    // Signal the original reader now so an admitted full-file hash can drain.
+    if(!this.#readsClose){this.#readsClose=this.#reads.close();this.#readsClose.catch(()=>{});}
   }
   close() {
     if(this.#close)return this.#close;
@@ -495,11 +497,11 @@ export class MerchantKafkaWorkspaces {
     const attempt=(async()=>{
       while(this.#pending.size)await Promise.allSettled([...this.#pending]);
       const results=await Promise.allSettled([...this.#clients.values()].map(client=>client.close()));
-      await this.#reads.close();
+      await this.#readsClose;
       const rejected=results.filter(value=>value.status==='rejected').map(value=>value.reason);
       if(rejected.length)throw new AggregateError(rejected,'Original Kafka client close needs retry.');
     })();
-    this.#close=attempt.catch(error=>{this.#close=null;throw error;});
+    this.#close=attempt.catch(error=>{this.#close=null;this.#readsClose=null;throw error;});
     return this.#close;
   }
 }
