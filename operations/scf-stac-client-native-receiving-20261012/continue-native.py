@@ -120,10 +120,13 @@ def main():
       request=json.loads(native_bodies['request.json'])
       if request['intent']['operation_id']!=manifest['linkedOperation']:
        raise RuntimeError('Original result and native request operations differ')
-      records=original_record.parent.parent/'native-retained-results'
+      record_key=hashlib.sha256(request['intent']['operation_id'].encode('utf-8')).hexdigest()
+      restored=pathlib.Path('/dev/c79f-stac-receiving-placement')/('native-placement-'+record_key[:24])/'work/records'/record_key
+      if manifest.get('nativeRecord')!=str(restored):
+       raise RuntimeError('Original native record path identity differs')
+      records=restored.parent
       records.mkdir(parents=True,exist_ok=True,mode=0o700)
-      restored=native.run_path(request['intent']['operation_id'],str(records))
-      if pathlib.Path(manifest['nativeRecord']).name!=restored.name:
+      if native.run_path(request['intent']['operation_id'],str(records))!=restored:
        raise RuntimeError('Original native record directory identity differs')
       if restored.exists() or restored.is_symlink():
        if restored.is_symlink() or not restored.is_dir():
