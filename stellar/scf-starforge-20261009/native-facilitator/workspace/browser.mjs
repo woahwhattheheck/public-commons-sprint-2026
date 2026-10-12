@@ -1,10 +1,11 @@
 // MIT. Original native policy review and runtime controls; keys remain in the host.
+import { createCatalogOperator } from './catalog-browser.mjs';
 const $=id=>document.getElementById(id);
 const fragment=new URLSearchParams(location.hash.slice(1));
 let token=fragment.get('token')??sessionStorage.getItem('native-facilitator-token');
 if(fragment.has('token')){sessionStorage.setItem('native-facilitator-token',token);history.replaceState(null,'',location.pathname);}
 let busy=false,workspace=null,runtime=null,selected=null,reviewed=null,cursor=null,importedOwnership=null;
-let desiredPort=4020,profileProbe=null,runtimeProbe=null;
+let desiredPort=4020,profileProbe=null,runtimeProbe=null,statusGeneration=0;
 const make=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const notice=text=>{$('notice').textContent=text;};
 function disabled(element,value){element.dataset.unavailable=String(Boolean(value));element.disabled=busy||value;}
@@ -16,12 +17,13 @@ async function api(path,input,raw=false){
   return raw?response:response.json();
 }
 async function act(action){
-  if(busy)return;setBusy(true);
+  if(busy)return;statusGeneration++;setBusy(true);
   try{await action();}catch(error){notice(error.message);}
   finally{setBusy(false);try{await refreshStatus();}catch(error){notice(error.message);}}
 }
 const lines=id=>$(id).value.split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
 const number=id=>Number($(id).value);
+const catalogOperator=createCatalogOperator({$,make,api,act,disabled,notice});
 function config(){
   const signers=lines('signers').map(line=>{const parts=line.split(/\s+/);if(parts.length!==2)throw new Error('Each settlement account needs one public address and one environment-variable name.');return {address:parts[0],secretEnv:parts[1]};});
   const feeAddress=$('fee-address').value.trim(),feeEnv=$('fee-env').value.trim();
@@ -30,12 +32,14 @@ function config(){
     feeBumpSigner:feeAddress?{address:feeAddress,secretEnv:feeEnv}:null,
     payments:{assets:lines('assets'),recipients:lines('recipients'),maxAtomic:$('max-atomic').value.trim(),
       paymentFlows:['authorization','upfront'].filter(value=>$('flow-'+value).checked)},
+    catalog:catalogOperator.configuration(),
     limits:{maxTransactionFeeStroops:number('fee-ceiling'),inclusionFeeStroops:number('inclusion-fee'),
       maxVerifyInFlight:number('verify-capacity'),maxSettleInFlight:number('settle-capacity'),drainGraceMs:number('drain-grace')},
     operations:{ownershipDirectory:importedOwnership??workspace.ownershipDirectory,rpcTimeoutMs:number('rpc-timeout'),
       readinessMaxAgeMs:number('readiness-age'),maxLedgerAgeSeconds:number('ledger-age'),requireReady:$('require-ready').checked}};
 }
 function fill(value,name){
+  catalogOperator.fill(value.catalog);
   $('profile-name').value=name??'merchant-testnet';$('network').value=value.network;$('rpc').value=value.rpcUrl;
   $('signers').value=(value.signers??[]).map(item=>item.address+' '+item.secretEnv).join('\n');
   $('fee-address').value=value.feeBumpSigner?.address??'';$('fee-env').value=value.feeBumpSigner?.secretEnv??'';
@@ -58,7 +62,8 @@ function summaryTable(value){
     ['Signing account references',summary.signers.map(item=>item.address+' · '+item.secretEnv).join('\n')],
     ['Concurrent verifications',String(summary.limits.maxVerifyInFlight)],['Drain grace',summary.limits.drainGraceMs+' ms'],
     ['RPC readiness policy',(summary.operations.requireReady?'Required before payment':'Observed on request')+' · timeout '+summary.operations.rpcTimeoutMs+' ms · cache '+summary.operations.readinessMaxAgeMs+' ms · maximum ledger age '+summary.operations.maxLedgerAgeSeconds+' s'],
-    ['Shared signer ownership',summary.operations.ownershipDirectory],['Native configuration SHA-256',value.sha256]]){
+    ['Shared signer ownership',summary.operations.ownershipDirectory],...catalogOperator.summaryRows(summary.catalog),
+    ['Native configuration SHA-256',value.sha256]]){
     const row=make('tr');row.append(make('th',label),make('td',text));tbody.append(row);
   }table.append(tbody);return table;
 }
@@ -100,6 +105,7 @@ function appendProbe(node,value,id){
 }
 function renderStatus(value){
   workspace=value.workspace??workspace;runtime=value.runtime??null;
+  catalogOperator.status(runtime);
   $('ownership').textContent='Shared signer ownership directory selected by the host: '+workspace.ownershipDirectory;
   $('runtime-state').textContent=runtime?(runtime.stopping?'Draining':'Accepting'):'Stopped';
   const node=$('runtime');node.replaceChildren();
@@ -123,7 +129,7 @@ function renderStatus(value){
   if($('listener-port'))disabled($('listener-port'),Boolean(runtime));
   if($('start-native'))disabled($('start-native'),Boolean(runtime));
 }
-async function refreshStatus(){renderStatus(await api('status'));}
+async function refreshStatus(){const generation=++statusGeneration,value=await api('status');if(generation===statusGeneration)renderStatus(value);}
 async function refreshProfiles(reset=false){
   const page=await api('profiles'+(!reset&&cursor?'?after='+encodeURIComponent(cursor):''));
   if(reset)$('profiles').replaceChildren();cursor=page.next;
@@ -139,7 +145,7 @@ $('profile-form').addEventListener('submit',event=>{event.preventDefault();act(a
 $('profile-form').addEventListener('input',()=>{reviewed=null;$('review').replaceChildren();});
 $('refresh').addEventListener('click',()=>act(async()=>{await refreshProfiles(true);notice('Saved profiles and native state refreshed.');}));
 $('more-profiles').addEventListener('click',()=>act(()=>refreshProfiles()));
-$('new-profile').addEventListener('click',()=>{selected=null;reviewed=null;importedOwnership=null;$('profile-form').reset();$('review').replaceChildren();renderSelected();notice('New profile. Supply the existing public accounts and host key references.');});
+$('new-profile').addEventListener('click',()=>{selected=null;reviewed=null;importedOwnership=null;$('profile-form').reset();catalogOperator.reset();$('review').replaceChildren();renderSelected();notice('New profile. Supply the existing public accounts and host key references.');});
 $('network').addEventListener('change',()=>{if($('network').value==='stellar:pubnet'){$('rpc').value='';notice('Enter the HTTPS RPC selected for this mainnet deployment.');}});
 $('import-profile').addEventListener('change',()=>act(async()=>{
   const file=$('import-profile').files[0];if(!file)return;if(file.size>65536)throw new Error('Native configuration files must be at most 64 KiB.');
