@@ -163,11 +163,12 @@ export class DspaceWorkspace {
     if(typeof input.actor!=='string'||!input.actor.trim()||input.actor.length>256)throw fault('DSPACE_ACTOR','Name the operator making this change.');
     if(!Number.isSafeInteger(input.expectedRevision)||input.expectedRevision<0)throw fault('DSPACE_REVISION','Use the current workspace revision.');
     let rawSource=null;
-    const intent={action,...input};delete intent.operationId;
+    const intent={...input,action};delete intent.operationId;
     if(action==='import-source'){
-      if(typeof input.sourceBase64!=='string'||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(input.sourceBase64))
+      if(typeof input.sourceBase64!=='string'||input.sourceBase64.length>Math.ceil(MAX_SOURCE_BYTES/3)*4||input.sourceBase64.length%4!==0||!/^[A-Za-z0-9+/]*={0,2}$/.test(input.sourceBase64))
         throw fault('DSPACE_SOURCE_BYTES','Use the exact complete source file bytes.');
       rawSource=Buffer.from(input.sourceBase64,'base64');
+      if(rawSource.toString('base64')!==input.sourceBase64)throw fault('DSPACE_SOURCE_BYTES','Use canonical original file bytes.');
       intent.sourceBase64={sha256:hash(rawSource),bytes:rawSource.length};
     }
     const requestSha=hash(canonical(intent));
@@ -218,7 +219,7 @@ export class DspaceWorkspace {
         doc.sha256=hash(canonical(doc));result={review:this.put('reviews',doc)};
       }else if(action==='select-edition'){
         const edition=this.get('editions',input.editionId),review=this.get('reviews',input.reviewId);
-        if(review.edition_id!==edition.id||review.edition_sha256!==edition.sha256||review.decision!=='approved')
+        if(review.edition_id!==edition.id||review.edition_sha256!==edition.sha256||review.decision!=='approved'||this.list('reviews').filter(r=>r.edition_id===edition.id).at(-1)?.id!==review.id)
           throw fault('DSPACE_REVIEW_REQUIRED','Select the approval of this exact edition.');
         this.setMeta('selected_edition_id',edition.id);this.setMeta('selected_review_id',review.id);
         result={selected_edition_id:edition.id,selected_review_id:review.id,snapshot:edition.snapshot};
@@ -259,8 +260,8 @@ export class DspaceWorkspace {
   exportDataset(editionId,destination){
     return this.run(async()=>{
       const edition=this.get('editions',editionId);
-      const approvals=this.list('reviews').filter(r=>r.edition_id===edition.id&&r.edition_sha256===edition.sha256&&r.decision==='approved');
-      if(!approvals.length)throw fault('DSPACE_REVIEW_REQUIRED','Approve the exact customer fields and distribution basis before exporting a merchant dataset.');
+      const review=this.list('reviews').filter(r=>r.edition_id===edition.id&&r.edition_sha256===edition.sha256).at(-1);
+      if(review?.decision!=='approved')throw fault('DSPACE_REVIEW_REQUIRED','Approve the exact customer fields and distribution basis before exporting a merchant dataset.');
       const root=path.resolve(destination);directory(root);
       const csv=this.bytes(edition.csv_sha256),config=this.bytes(edition.config_sha256);
       const sources=edition.source_ids.map(id=>{
@@ -271,6 +272,7 @@ export class DspaceWorkspace {
       const lineage={schema:'stellar-forge.dspace-lineage.v1',workspace_id:this.meta('workspace_id'),
         edition:{id:edition.id,sha256:edition.sha256,name:edition.name,created_at:edition.created_at},
         snapshot:edition.snapshot,mode:edition.mode,selection:edition.selection,metadata_fields:edition.metadataFields,
+        review:{id:review.id,edition_sha256:review.edition_sha256,decision:review.decision,actor:review.actor,created_at:review.created_at},
         rights:edition.rights,sources,item_count:edition.item_count,row_count:edition.row_count,
         files:{'data.csv':{bytes:csv.length,sha256:hash(csv)},'dataset.json':{bytes:config.length,sha256:hash(config)}}};
       await writeExact(path.join(root,'data.csv'),csv);await writeExact(path.join(root,'dataset.json'),config);

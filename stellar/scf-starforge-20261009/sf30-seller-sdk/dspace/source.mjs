@@ -64,14 +64,28 @@ function walk(value, visit, pointer = '', depth = 0, counter = {n: 0}) {
     if (child && typeof child === 'object')
       walk(child, visit, pointer + '/' + key.replaceAll('~', '~0').replaceAll('/', '~1'), depth + 1, counter);
 }
+function exactBase64(value) {
+  if(typeof value!=='string'||value.length%4!==0||!/^[A-Za-z0-9+/]*={0,2}$/.test(value))
+    throw fault('DSPACE_SOURCE_BODY','The original base64 file body is invalid.');
+  const bytes=Buffer.from(value,'base64');
+  if(bytes.toString('base64')!==value)throw fault('DSPACE_SOURCE_BODY','The original base64 file body is invalid.');
+  return bytes;
+}
 function exactBody(request) {
-  if (request.body_text === undefined || request.body_text === null) return null;
-  if (typeof request.body_text !== 'string') throw fault('DSPACE_SOURCE_BODY', 'Retain original body_text, not a reconstructed object.');
-  const bytes = Buffer.from(request.body_text);
-  if (request.body_bytes !== undefined && request.body_bytes !== null && request.body_bytes !== bytes.length ||
-      request.body_sha256 !== undefined && request.body_sha256 !== null && request.body_sha256 !== hash(bytes))
-    throw fault('DSPACE_SOURCE_DIGEST', 'An original response body differs from its recorded bytes or digest.');
-  return {bytes: bytes.length, sha256: hash(bytes), text: request.body_text};
+  let bytes=null;
+  if(request.body_base64!==undefined&&request.body_base64!==null)bytes=exactBase64(request.body_base64);
+  if(request.body_text!==undefined&&request.body_text!==null){
+    if(typeof request.body_text!=='string')throw fault('DSPACE_SOURCE_BODY','Retain original body_text, not a reconstructed object.');
+    const textBytes=Buffer.from(request.body_text);
+    if(bytes&&!bytes.equals(textBytes))throw fault('DSPACE_SOURCE_DIGEST','The two original response body forms differ.');
+    bytes=textBytes;
+  }
+  if(!bytes)return null;
+  if(request.body_bytes!==undefined&&request.body_bytes!==null&&request.body_bytes!==bytes.length||
+      request.body_sha256!==undefined&&request.body_sha256!==null&&request.body_sha256!==hash(bytes))
+    throw fault('DSPACE_SOURCE_DIGEST','An original response body differs from its recorded bytes or digest.');
+  let text=null;try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{}
+  return {bytes:bytes.length,sha256:hash(bytes),text};
 }
 function title(item) {
   const name = item.name ?? item.metadata?.['dc.title']?.[0]?.value;
@@ -105,11 +119,17 @@ export function inspectDspaceSource(input) {
     const requestId = String(request.id ?? index + 1);
     const reference = {request_id: requestId, request_index: index, method, url: requestUrl,
       status, started_at: request.started_at ?? null, received_at: request.received_at ?? null,
-      body_finished_at: request.body_finished_at ?? null, source_mode: request.source_mode ?? document.source?.body_kind ?? null,
+      body_finished_at: request.body_finished_at ?? request.body_completed_at ?? null, source_mode: request.source_mode ?? document.source?.body_kind ?? null,
       body_sha256: body?.sha256 ?? null, body_bytes: body?.bytes ?? null, error: request.error ?? null};
     requests.push(reference);
     if (!body || method !== 'GET' || request.error || status !== null && (status < 200 || status > 299)) continue;
-    const native = parse(body.text, 'Response ' + requestId);
+    const contentType=String(request.content_type??request.response_headers?.['content-type']??'').toLowerCase();
+    const isJsonType=/(?:^|[/+])json(?:;|$)/.test(contentType);
+    if(body.text===null){if(isJsonType)throw fault('DSPACE_SOURCE_ENCODING','A declared JSON response is not complete UTF-8.');continue;}
+    if(!isJsonType&&!/^[\\s]*[{[]/.test(body.text))continue;
+    let native;
+    try{native=JSON.parse(body.text);}
+    catch{if(isJsonType)throw fault('DSPACE_SOURCE_JSON','Response '+requestId+' is not complete declared JSON.');continue;}
     const scopeRead = scopeUuid && new URL(requestUrl).searchParams.get('scope')?.toLowerCase() === scopeUuid;
     const found = new Set();
     walk(native, (value, pointer) => {
@@ -129,6 +149,14 @@ export function inspectDspaceSource(input) {
     const m = document.source_manifest, b = Buffer.from(m.body_text);
     if (m.bytes !== undefined && b.length !== m.bytes || m.sha256 && hash(b) !== m.sha256)
       throw fault('DSPACE_SOURCE_MANIFEST', 'The original source manifest bytes differ from its digest.');
+  }
+  if(!Array.isArray(document.files??[]))throw fault('DSPACE_SOURCE_FILES','The original file inventory must be an array.');
+  for(const file of document.files??[]){
+    if(!object(file))throw fault('DSPACE_SOURCE_FILES','An original file entry must be an object.');
+    if(file.content_b64===undefined)continue;
+    const data=exactBase64(file.content_b64);
+    if(file.sha256&&hash(data)!==file.sha256||file.bytes!==undefined&&data.length!==file.bytes)
+      throw fault('DSPACE_SOURCE_FILE_DIGEST','An original retained asset differs from its recorded bytes.');
   }
   const items = [...variants.values()].map(record => ({...record, name: title(record.object),
     entity_type: record.object.metadata['dspace.entity.type']?.[0]?.value ?? null,
