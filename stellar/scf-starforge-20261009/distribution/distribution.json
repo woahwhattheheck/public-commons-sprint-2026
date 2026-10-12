@@ -64,7 +64,8 @@
     "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api",
     "stellar/scf-starforge-20261009/partners/coingecko-stellar-market",
     "stellar/scf-starforge-20261009/sf61-bazaar-explorer",
-    "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent"
+    "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent",
+    "stellar/scf-starforge-20261009/partners/unstructured"
   ],
   "browserAssets": [
     {
@@ -427,7 +428,9 @@
     "grpc-example": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/server.mjs",
     "stellar-application": "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/installed.mjs",
     "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
-    "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs"
+    "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs",
+    "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
+    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1045,7 +1048,12 @@
     "./seller/nocodb/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/model.mjs",
     "./seller/nocodb/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/server.mjs",
     "./seller/nocodb/workspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/launch.mjs",
-    "./seller/nocodb/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/packet.mjs"
+    "./seller/nocodb/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/packet.mjs",
+    "./seller/unstructured-partition": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/unstructured-partition.mjs",
+    "./buyer/unstructured": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/unstructured/index.mjs",
+    "./buyer/research-dossiers/unstructured-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/unstructured-workspace.mjs",
+    "./partners/unstructured": "./source/stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
+    "./partners/unstructured/commerce": "./source/stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
   },
   "nativePeers": {
     "@x402/core": {
