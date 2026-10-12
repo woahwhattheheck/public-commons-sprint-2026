@@ -63,7 +63,7 @@ function validPage(offset,limit) {
     throw fault('DIRECTUS_PAGE','Use an offset of zero or greater and a limit from 1 to 100.');
 }
 
-const NATIVE_PHASES=new Set(['prepared','invoking','received','reconciled','complete','failed','uncertain']);
+const NATIVE_PHASES=new Set(['principal','prepared','invoking','received','reconciled','complete','failed','uncertain']);
 function validateNativeEvent(event) {
   if(!object(event)||event.schema!=='stellar-forge.directus-native-event.v1'||
       !REQUEST.test(event.operationId??'')||!HASH.test(event.requestSha256??'')||
