@@ -169,7 +169,7 @@ export async function finalizeSelectedNodeAttempt(contextPath,contextSha256,{sig
     'OUTBOX_AND_ORIGINAL_MERCHANT_ROUTE_REQUIRED_TOGETHER');
   if(context.request.outboxDirectory!==null){
     await accountingPrivateDirectory(context.request.outboxDirectory);
-    need(/^[A-Za-z0-9._:-]{1,160}$/.test(context.request.merchantRoute),
+    need(typeof context.request.merchantRoute==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(context.request.merchantRoute),
       'ACCOUNTING_MERCHANT_ROUTE_INVALID');
   }
   await workspacePins(context);

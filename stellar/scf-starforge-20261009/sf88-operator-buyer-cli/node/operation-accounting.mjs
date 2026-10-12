@@ -201,7 +201,7 @@ function finalizeOptions(options,source){
   need((options.outboxDirectory!==undefined)===(options.merchantRoute!==undefined),
     'OUTBOX_AND_ORIGINAL_MERCHANT_ROUTE_REQUIRED_TOGETHER');
   if(options.merchantRoute!==undefined)need(typeof options.merchantRoute==='string'&&
-    /^[A-Za-z0-9._:-]{1,160}$/.test(options.merchantRoute),'ACCOUNTING_MERCHANT_ROUTE_INVALID');
+    /^[A-Za-z0-9_-]{1,80}$/.test(options.merchantRoute),'ACCOUNTING_MERCHANT_ROUTE_INVALID');
   return{workspaceDirectory,outboxDirectory:options.outboxDirectory===undefined?null:absolute(options.outboxDirectory),
     merchantRoute:options.merchantRoute??null};
 }

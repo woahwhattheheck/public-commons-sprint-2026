@@ -13,11 +13,14 @@
     "merchant-workorder": "stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs"
   },
   "commandDescriptions": {
-    "source-edition-workorder": "Prepare, receive and replay a source-bound workorder with original attachments",
+    "source-edition-workorder": "Prepare, inspect, export, receive and replay the original source-edition workorder",
     "merchant-workorder": "Build the original workorder from a saved support handoff or intake"
   },
   "exports": {
     "./merchant/source-edition-workorder": "./source/stellar/scf_2026/sf49_data_commissioning/source-edition-workorder.mjs",
-    "./merchant/workorder": "./source/stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs"
+    "./merchant/workorder": "./source/stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs",
+    "./merchant/source-edition-archive": "./source/stellar/scf_2026/sf49_data_commissioning/source-edition-archive.mjs",
+    "./merchant/source-edition-delivery": "./source/stellar/scf_2026/sf49_data_commissioning/source-edition-delivery.mjs",
+    "./merchant/source-edition-http": "./source/stellar/scf_2026/sf49_data_commissioning/source-edition-http.mjs"
   }
 }
