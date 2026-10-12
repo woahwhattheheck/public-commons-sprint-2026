@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import fcntl
+import gzip
 import hashlib
 import json
 import os
@@ -14,6 +15,7 @@ import re
 import stat
 import subprocess
 import sys
+import tarfile
 import threading
 import uuid
 import zlib
@@ -24,6 +26,7 @@ OID = re.compile(r"^[a-f0-9]{40}$")
 FILE_LIMIT = 2 * 1024 * 1024
 SOURCE_LIMIT = 64 * 1024 * 1024
 METADATA_LIMIT = 8 * 1024 * 1024
+ARCHIVE_STREAM_LIMIT = 128 * 1024 * 1024
 
 class SourceError(Exception):
     pass
@@ -292,6 +295,81 @@ def receive_files(directory, selected, cache, missing, flat=False):
         received += 1
     return received
 
+class ArchiveStream:
+    """Limit expanded tar bytes, including names, headers and skipped members."""
+    def __init__(self, source):
+        self.source = source
+        self.bytes = 0
+
+    def read(self, size=-1):
+        remaining = ARCHIVE_STREAM_LIMIT - self.bytes
+        requested = remaining + 1 if size is None or size < 0 else min(size, remaining + 1)
+        data = self.source.read(min(requested, 65536))
+        self.bytes += len(data)
+        need(self.bytes <= ARCHIVE_STREAM_LIMIT, "Expanded source archive exceeds 128 MiB")
+        return data
+
+def receive_archive(expected_sha256, filename, cache, missing):
+    """Read exact blobs directly from an existing pinned tar.gz release."""
+    need(re.fullmatch(r"[a-f0-9]{64}", expected_sha256 or "") is not None,
+         "An original archive SHA-256 is required")
+    path = Path(filename)
+    need(path.is_absolute() and path.resolve(strict=True) == path,
+         "Use the original absolute regular archive path")
+    need(stat.S_ISREG(path.lstat().st_mode), "Source archive must be a regular file")
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(fd, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        need(stat.S_ISREG(before.st_mode) and before.st_size <= SOURCE_LIMIT,
+             "Compressed source archive exceeds 64 MiB")
+        digest = hashlib.sha256()
+        hashed_bytes = 0
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            hashed_bytes += len(block)
+            need(hashed_bytes <= before.st_size, "Original source archive grew during hashing")
+            digest.update(block)
+        need(hashed_bytes == before.st_size, "Original source archive changed during hashing")
+        need(digest.hexdigest() == expected_sha256, "Original source archive digest differs")
+        stream.seek(0)
+        sizes = {row["size"] for row in missing.values()}
+        received = 0
+        regular_members = 0
+        with gzip.GzipFile(fileobj=stream, mode="rb") as expanded:
+            bounded = ArchiveStream(expanded)
+            with tarfile.open(fileobj=bounded, mode="r|") as archive:
+                for member in archive:
+                    # Names and link targets never become filesystem paths.
+                    if not member.isfile():
+                        continue
+                    regular_members += 1
+                    need(member.size >= 0, "Negative original archive member size")
+                    if not missing or member.size not in sizes or member.size > FILE_LIMIT:
+                        continue
+                    handle = archive.extractfile(member)
+                    need(handle is not None, "Original archive member could not be read")
+                    with handle:
+                        data = handle.read(FILE_LIMIT + 1)
+                    need(len(data) == member.size, "Original archive member was truncated")
+                    oid = object_id("blob", data)
+                    row = missing.get(oid)
+                    if row is None or row["size"] != len(data):
+                        continue
+                    cache.write(oid, "blob", data)
+                    del missing[oid]
+                    received += 1
+            # Consume the original compressed member through its checksum even
+            # after tar's end marker, without retaining expanded bytes.
+            while bounded.read(65536):
+                pass
+        after = os.fstat(stream.fileno())
+        need((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) ==
+             (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns),
+             "Original source archive changed during reading")
+    return {"kind": "original-release-archive", "archive": str(path),
+            "sha256": expected_sha256, "archiveBytes": before.st_size,
+            "expandedBytes": bounded.bytes, "regularMembers": regular_members,
+            "objects": received}
+
 def materialize(directory, selected, cache):
     directory = absolute_directory(directory, exists=False)
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -390,6 +468,8 @@ def receive(args):
             donor = absolute_directory(name)
             count = receive_files(donor, selected, cache, missing)
             donors.append({"kind": "original-source", "directory": str(donor), "objects": count})
+        for expected_sha256, filename in getattr(args, "donor_archive", []):
+            donors.append(receive_archive(expected_sha256, filename, cache, missing))
         for name in args.incoming:
             donor = absolute_directory(name)
             count = receive_files(donor, selected, cache, missing, flat=True)
@@ -432,13 +512,15 @@ def main():
     parser.add_argument("--git", default="git", help="Existing Git executable with --no-lazy-fetch support")
     parser.add_argument("--donor-repository", action="append", default=[], help="Existing Git database, read only")
     parser.add_argument("--donor-source", action="append", default=[], help="Existing native source root, read only")
+    parser.add_argument("--donor-archive", action="append", nargs=2, default=[], metavar=("SHA256", "PATH"),
+                        help="Existing original tar.gz release digest and absolute path, read only")
     parser.add_argument("--incoming", action="append", default=[], help="Exact received blobs named OID.blob or OID.blob.gz")
     parser.add_argument("--materialize", help="New native source directory for the complete requested closure")
     parser.add_argument("--additional-path", action="append", default=[], help="Exact source path subsequently requested by the maintained builder")
     args = parser.parse_args()
     try:
         return receive(args)
-    except (SourceError, OSError, ValueError, zlib.error, subprocess.SubprocessError) as error:
+    except (SourceError, OSError, ValueError, EOFError, tarfile.TarError, zlib.error, subprocess.SubprocessError) as error:
         print(json.dumps({"phase": "ERROR", "code": type(error).__name__, "message": str(error)[:1200]}),
               file=sys.stderr)
         return 1
