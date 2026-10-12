@@ -313,6 +313,14 @@ The receiver recomputes the dataset through the installed native engine and chec
 
 The producer and independent receiver returned the same ordered-row hash and original values. This result covers the committed illustrative resource; it does not claim a complete live sensor collection. Browser and installed-product receiving have separate result records.
 
+## Selected package and installed receiving
+
+The complete [selected-package guide](../../distribution/selections/CONNECTED_SYSTEMS.md) uses the maintained distribution builder and runtime installer. The committed [selection recipe](../../distribution/selections/connected-systems.json) includes the native engine, private Applications operator, merchant MCP family, receiving commands and the exact public example.
+
+After installation, run `delivery/installed-receive.mjs` as described in that guide. It imports the accepted project through the installed CLI and MCP, verifies original rows and complete source/dataset/packet bytes, closes the operator and reopens the same receiving workspace. The completed result records its installation and source identities. Resuming a completed run checks the retained outputs and returns its original result without repeating the journey.
+
+Merchant terms and a buyer offer are optional explicit operator inputs. The reference project supplies neither a payment account nor a dataset price; those stages remain `NOT_RUN` unless the operator selects the original required inputs.
+
 ## Retention and errors
 
 The source acquisition journal retains query/request identity, completed pages, progress, safe provider errors and the actual retry deadline. HTTP 429/503 deadlines are retained per connection; retrying before the deadline is rejected locally. There is no automatic account rotation, background acquisition or endless retry.
