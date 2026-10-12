@@ -376,11 +376,19 @@ export class MerchantConsoleStore {
       id(value.id); id(value.workspaceId); sha(value.identitySha256); timestamp(value.startedAt); timestamp(value.updatedAt);
       if (deliveryKeys.has(value.id) || !['DOWNLOADING','PAUSED','FAILED','COMPLETE'].includes(value.state)) throw fail('CONSOLE_ARCHIVE','Receive unique customer records with their original receiving state.',400);
       deliveryKeys.add(value.id);
-      if(value.profileId!==profile.id||!plain(value.identity)||value.identity.profileId!==profile.id||!['core','opensearch','openapi'].includes(value.identity.family)||!value.identity.exportId||digest(canonical(value.identity))!==value.identitySha256)
+      if(value.profileId!==profile.id||!plain(value.identity)||value.identity.profileId!==profile.id||!['core','opensearch','openapi','grant-reviewer'].includes(value.identity.family)||!value.identity.exportId||digest(canonical(value.identity))!==value.identitySha256)
         throw fail('CONSOLE_ARCHIVE_CHANGED','The retained customer selection changed.',400);
       id(value.identity.exportId); sha(value.identity.expectedManifestSha256); sha(value.identity.hostFingerprint);
       if(value.identity.family==='opensearch') id(value.identity.workspace);
       if(value.identity.family==='openapi') validateOpenApiCustomerRecord(value);
+      if(value.identity.family==='grant-reviewer'){
+        if(typeof value.identity.workspace!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value.identity.workspace))
+          throw fail('CONSOLE_ARCHIVE','Retain the original reviewer workspace alias.',400);
+        sha(value.identity.exportId);
+        if(value.state==='COMPLETE'&&(value.manifest?.schema!=='stellar-forge.grant-reviewer-merchant-export.v1'||
+          value.manifest.workspace!==value.identity.workspace||value.manifest.exportId!==value.identity.exportId))
+          throw fail('CONSOLE_ARCHIVE_CHANGED','The reviewer manifest belongs to a different original selection.',400);
+      }
       if(value.state==='COMPLETE') {
         timestamp(value.completedAt);
         if(!Array.isArray(value.files) || !plain(value.manifest)) throw fail('CONSOLE_ARCHIVE','Retain the complete original customer manifest.',400);
