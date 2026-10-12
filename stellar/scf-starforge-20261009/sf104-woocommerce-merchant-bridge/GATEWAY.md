@@ -87,6 +87,12 @@ In **WooCommerce → Settings → Payments**, enable **Stellar x402 digital
 checkout**. Its label and concise buyer instructions are editable. The gateway
 appears only when the cart satisfies the saved product mapping.
 
+For customer access, open [**WooCommerce → Settings → Site visibility**](https://woocommerce.com/document/configuring-woocommerce-settings/coming-soon-mode/) and set
+the store to **Live** when it is ready. A store left in **Coming soon** can hide
+the order confirmation from a signed-in customer even while an administrator
+can see the complete order. Use the customer's own session to check the order
+page and its private payment-instructions download before accepting orders.
+
 ## Map a real digital product
 
 Edit an existing **simple, virtual** WooCommerce product. It may use
