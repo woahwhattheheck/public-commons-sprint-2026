@@ -1,0 +1,165 @@
+{
+  "schema": "obs.odoo19.native-api-source-index.v1",
+  "source_repository": "odoo/odoo",
+  "source_commit": "5120de57bb998f4e551a815edeb158d9f17fb89a",
+  "compared_odoo18_commit": "57f8ae149db8bcad3da2e44c4c8e412f80f3189f",
+  "retrieved_at": "2026-10-12",
+  "sources": [
+    {
+      "path": "addons/sale_timesheet/models/sale_order.py",
+      "git_blob": "6ca421d982ffc7fb4c70528c5dcdaab02a3e4653",
+      "characters": 8339,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/models/sale_order.py"
+    },
+    {
+      "path": "addons/sale_timesheet/wizard/sale_make_invoice_advance.py",
+      "git_blob": "b7bca4a27282ad9d11f3d3e378deff28e7641f05",
+      "characters": 2465,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/wizard/sale_make_invoice_advance.py"
+    },
+    {
+      "path": "addons/sale_project/models/sale_order.py",
+      "git_blob": "774786128dedb72ee49234072dc08e145353ce7f",
+      "characters": 16001,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_project/models/sale_order.py"
+    },
+    {
+      "path": "addons/sale/models/sale_order.py",
+      "git_blob": "baeaa41b7deb60e67a04788e2f5f80c8f5ceabf2",
+      "characters": 100475,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale/models/sale_order.py"
+    },
+    {
+      "path": "addons/sale/wizard/sale_make_invoice_advance.py",
+      "git_blob": "6bc18546e5adc65cc9ddd97f16c688c215edde24",
+      "characters": 10371,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale/wizard/sale_make_invoice_advance.py"
+    },
+    {
+      "path": "addons/account/models/account_move.py",
+      "git_blob": "49d44d3959dff82852c97c62d95c8ab601ea0cac",
+      "characters": 367224,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/account/models/account_move.py"
+    },
+    {
+      "path": "addons/sale_timesheet/models/account_move.py",
+      "git_blob": "3e43b6f481be1a99b2ddb7ebf15f0a4c58b537a7",
+      "characters": 5410,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/models/account_move.py"
+    },
+    {
+      "path": "addons/sale_timesheet/models/account_move_line.py",
+      "git_blob": "db6cc5d41bb1a51f5f55f2b3be33b687c3eafee8",
+      "characters": 2709,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/models/account_move_line.py"
+    },
+    {
+      "path": "addons/sale_timesheet/models/account_move_reversal.py",
+      "git_blob": "7b2f696017bb89e078de81f2f88eaceade98aef2",
+      "characters": 1134,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/models/account_move_reversal.py"
+    },
+    {
+      "path": "addons/sale_timesheet/__manifest__.py",
+      "git_blob": "4dba1ad875d6eefc2d2617d4bdf1b106bce9cc0d",
+      "characters": 2101,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/__manifest__.py"
+    },
+    {
+      "path": "addons/sale_project/__manifest__.py",
+      "git_blob": "509cf4689aa6bfd6c2eddf7c329abe4bf4a4a7cd",
+      "characters": 1713,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_project/__manifest__.py"
+    },
+    {
+      "path": "addons/sale_timesheet/data/sale_service_demo.xml",
+      "git_blob": "345f3a0b810b3ff122fda045f5195ee98c5563ed",
+      "characters": 169855,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/data/sale_service_demo.xml"
+    },
+    {
+      "path": "addons/sale_project/data/sale_project_demo.xml",
+      "git_blob": "2f284c65e1b86b69b4b47b65e394ed3cb6d97578",
+      "characters": 11334,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_project/data/sale_project_demo.xml"
+    },
+    {
+      "path": "addons/sale_timesheet/security/ir.model.access.csv",
+      "git_blob": "6036540fe32ca2b9be3c21bedc3c8f2cd04aca6a",
+      "characters": 389,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/security/ir.model.access.csv"
+    },
+    {
+      "path": "addons/sale_project/security/ir.model.access.csv",
+      "git_blob": "c70acd3518ac997c30be5500ff87819283601b13",
+      "characters": 573,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_project/security/ir.model.access.csv"
+    },
+    {
+      "path": "addons/sale/security/ir.model.access.csv",
+      "git_blob": "c2349e6e4cbaee49224f0d95ccc47339332c8649",
+      "characters": 5052,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale/security/ir.model.access.csv"
+    },
+    {
+      "path": "addons/account/security/ir.model.access.csv",
+      "git_blob": "225e6adf78b4a9a3283f9177982a365acebb8a95",
+      "characters": 16144,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/account/security/ir.model.access.csv"
+    },
+    {
+      "path": "odoo/cli/db.py",
+      "git_blob": "0f77366ba12927e2cad28fd76b531b64bd98b0e0",
+      "characters": 9933,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/odoo/cli/db.py"
+    },
+    {
+      "path": "odoo/service/db.py",
+      "git_blob": "5eaf2f0e3d24d7f9654e064d5b4e3017aaf3a449",
+      "characters": 21177,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/odoo/service/db.py"
+    },
+    {
+      "path": "addons/sale/models/sale_order_line.py",
+      "git_blob": "eebc3c857b9b028eb8be7a0a2b0b19933b2f0826",
+      "characters": 84927,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale/models/sale_order_line.py"
+    },
+    {
+      "path": "addons/sale_timesheet/models/sale_order_line.py",
+      "git_blob": "40c7f47885170f30c364b41f44fd4536438da076",
+      "characters": 11623,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/sale_timesheet/models/sale_order_line.py"
+    },
+    {
+      "path": "odoo/cli/module.py",
+      "git_blob": "d3a831dd3220f247007fdbd1ad58ff0a67c0386f",
+      "characters": 7576,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/odoo/cli/module.py"
+    },
+    {
+      "path": "odoo/addons/base/models/ir_module.py",
+      "git_blob": "6d69e795dbb3b87b72a740d992d66f7b4d798c07",
+      "characters": 50275,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/odoo/addons/base/models/ir_module.py"
+    },
+    {
+      "path": "odoo/addons/base/security/ir.model.access.csv",
+      "git_blob": "29785e02c9795cd27a0b6b5652853d03995b9c35",
+      "characters": 16554,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/odoo/addons/base/security/ir.model.access.csv"
+    },
+    {
+      "path": "odoo/modules/module.py",
+      "git_blob": "488a2a063d4c2ccde0b7bb80727880050c3ff2d0",
+      "characters": 23108,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/odoo/modules/module.py"
+    },
+    {
+      "path": "addons/account/wizard/account_move_reversal.py",
+      "git_blob": "0b1c5d61c8dde6ee6ea6d1d3abf4e665f4d4cf2e",
+      "characters": 9056,
+      "url": "https://github.com/odoo/odoo/blob/5120de57bb998f4e551a815edeb158d9f17fb89a/addons/account/wizard/account_move_reversal.py"
+    }
+  ]
+}
