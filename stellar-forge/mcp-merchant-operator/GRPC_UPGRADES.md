@@ -272,8 +272,12 @@ Read-only inspection of a received directory needs neither connection.
 
 Commands producing one JSON result support --out NEW_JSON, written atomically
 as a new private file. Existing destinations remain preserved. The export
-command writes four complete private files; repeating it with the same captured
-values preserves already-written equal files and completes any missing file.
+command writes four complete private files. Repeating an export for the same
+immutable review keeps the first saved review observation, including its original
+current-selection and adoption state, and completes any missing source/plan file.
+Later workspace selection changes leave those received bytes intact. Use a new
+directory to capture a later adoption observation. Different review/source/plan
+closures continue to conflict with an existing destination.
 Offline inspect defaults to native compilation; use --verify hashes on an
 operator host that only has the HTTP receiving dependencies.
 
@@ -306,7 +310,10 @@ It operates all six agent tools over the actual MCP endpoint, pages complete
 native changes/methods/routes, recovers the original review/adoption through
 both agent and CLI, interrupts/resumes/repeats four-file receiving, reopens the
 CLI export through the original compiler, and receives/loads all seven original
-customer files. It closes an MCP listener only when it created that listener, and saves the original IDs,
-source/receiving hashes and continuation under upgrade-agent-receiving.json.
+customer files. It closes an MCP listener only when it created that listener.
+Finalization separately retains receiving errors, owned-listener close errors and
+the current application call count, then checkpoints the original IDs and hashes
+under upgrade-agent-receiving.json. Completion is saved after successful owned
+cleanup; the original failure propagates after the checkpoint attempt.
 Invoke it within the owner's original upgrade journey once its adopted review
 and preparation are available.
