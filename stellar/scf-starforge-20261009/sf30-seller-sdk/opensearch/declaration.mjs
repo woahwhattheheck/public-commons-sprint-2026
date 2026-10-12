@@ -103,6 +103,7 @@ export function describeOpenSearchQueries(compiled) {
     parameters: structuredClone(query.parameters), parameterOrder: [...query.parameterOrder],
     indices: [...query.indices], fields: [...query.fields], sort: structuredClone(query.sort),
     pageSize: query.pageSize, maxHits: query.maxHits, maxBytes: query.maxBytes, timeoutMs: query.timeoutMs,
+    effectiveSort: [...structuredClone(query.sort.length ? query.sort : [{ _score: 'desc' }]), { _index: 'asc' }, { _shard_doc: 'asc' }],
     snapshot: 'point-in-time', tieBreakers: [{ _index: 'asc' }, { _shard_doc: 'asc' }],
   }]));
 }
