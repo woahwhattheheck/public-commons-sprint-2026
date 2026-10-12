@@ -12,8 +12,8 @@
         "port": 6379,
         "database": 0,
         "tls": "verify-full",
-        "usernameEnv": "VALKEY_USERNAME",
-        "passwordEnv": "VALKEY_PASSWORD"
+        "passwordEnv": "VALKEY_PASSWORD",
+        "username": "CUSTOMER_READ_USER"
       },
       "maxConnections": 4,
       "maxPending": 16,

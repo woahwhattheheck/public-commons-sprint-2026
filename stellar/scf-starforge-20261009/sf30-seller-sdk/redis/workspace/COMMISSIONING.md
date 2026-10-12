@@ -42,7 +42,7 @@ Each selected route needs a checks entry referencing its declared query. Up to 2
   "expected": {
     "rowCount": 1,
     "requiredRows": [
-      ["9007199254740993", "Reviewed customer item", "12500000"]
+      {"itemId":"9007199254740993", "title":"Reviewed customer item", "priceAtomic":"12500000"}
     ]
   }
 }
