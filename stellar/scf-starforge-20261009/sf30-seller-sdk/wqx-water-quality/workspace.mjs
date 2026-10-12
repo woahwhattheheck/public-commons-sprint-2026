@@ -11,7 +11,8 @@ import { retainedFiles } from './provider.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATIC = new Map([['/', ['ui/index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['ui/app.mjs', 'text/javascript; charset=utf-8']],
-  ['/style.css', ['ui/style.css', 'text/css; charset=utf-8']]]);
+  ['/style.css', ['ui/style.css', 'text/css; charset=utf-8']],
+  ['/openwaters.mjs', ['ui/openwaters.mjs', 'text/javascript; charset=utf-8']]]);
 const json = value => JSON.stringify(value, null, 2) + '\n';
 function fail(message, code = 'WQX_WORKSPACE_INVALID', status = 400) { throw Object.assign(new Error(message), { code, status }); }
 function sameToken(value, expected) {
@@ -63,7 +64,7 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
   };
   async function view() {
     return { project: await project.read(), captures: await project.listCaptures(), reviews: await project.listReviews(),
-      editions: await project.listEditions(), runtime: plainRuntime(activeMerchant, activeEditionId),
+      editions: await project.listEditions(), openWaters: await project.listOpenWaters(), runtime: plainRuntime(activeMerchant, activeEditionId),
       buyerConfigured: Boolean(buyer), jobs: [...jobs.values()].map(({ promise, ...row }) => row), token };
   }
   function startJob(id, work) {
@@ -90,6 +91,12 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       if (request.method === 'GET' && path === '/api/status')
         return send(response, 200, { captures: await project.listCaptures(), runtime: plainRuntime(activeMerchant, activeEditionId),
           jobs: [...jobs.values()].map(({ promise, ...row }) => row) });
+      if (request.method === 'GET' && path === '/api/open-waters') return send(response, 200, await project.listOpenWaters());
+      if (request.method === 'GET' && (match = /^\/api\/open-waters\/([A-Za-z0-9_-]+)(?:\/(locations|results|crosswalk|report|bundle|references))?$/.exec(path))) {
+        if (!match[2]) return send(response, 200, await project.readOpenWaters(match[1]));
+        const exported = await project.exportOpenWaters({ planId: match[1], format: match[2] });
+        return send(response, 200, exported.bytes, exported.mime, exported.filename);
+      }
       if (request.method === 'GET' && (match = /^\/api\/reviews\/([A-Za-z0-9_-]+)(?:\/(html|json|csv|geojson|bundle))?$/.exec(path))) {
         if (!match[2]) return send(response, 200, await project.readReview(match[1]));
         const exported = match[2] === 'bundle' ? await project.exportReviewBundle({ reviewId: match[1] }) : await project.exportReview({ reviewId: match[1], format: match[2] });
@@ -124,18 +131,21 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       }
       if (request.method !== 'POST') fail('Workspace route not found.', 'WQX_ROUTE_NOT_FOUND', 404);
       if (!sameToken(request.headers['x-workspace-token'], token)) fail('Refresh the workspace before making a change.', 'WQX_TOKEN_MISMATCH', 403);
-      const input = await body(request, path === '/api/receive' ? 96 * 1024 * 1024 : undefined);
+      const input = await body(request, path === '/api/open-waters/receive' ? 128 * 1024 * 1024 : path === '/api/receive' ? 96 * 1024 * 1024 : undefined);
       if (path === '/api/captures') {
         const id = operationId(input.operationId ?? randomUUID());
         return send(response, 202, startJob(id, progress => project.acquire({ operationId: id, expectedRevision: input.expectedRevision, onProgress: progress })));
       }
       if ((match = /^\/api\/captures\/([A-Za-z0-9_-]+)\/cancel$/.exec(path))) return send(response, 200, project.cancelCapture(match[1]));
       if (path === '/api/analysis') return send(response, 200, await project.analyze(input));
+      if (path === '/api/open-waters/preview') return send(response, 200, await project.previewOpenWaters(input));
       const result = await serial(async () => {
         if (path === '/api/project') return project.save(input);
         if (path === '/api/import-capture') return project.importCapture(input);
         if (path === '/api/receive') return project.receiveReviewBundle(input);
         if (path === '/api/reviews') return project.saveReview(input);
+        if (path === '/api/open-waters') return project.saveOpenWaters(input);
+        if (path === '/api/open-waters/receive') return project.receiveOpenWaters(input);
         if (path === '/api/editions') return project.prepareEdition(input);
         if (path === '/api/merchant/stage') {
           if (activeMerchant && input.editionId === activeEditionId) fail('Stop this running merchant before changing its launch configuration.', 'WQX_MERCHANT_RUNNING', 409);
