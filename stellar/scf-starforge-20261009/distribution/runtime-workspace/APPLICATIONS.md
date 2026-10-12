@@ -21,6 +21,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
+| DuckDB customer and agent | mcp-native serve | Original running customer warehouse, reviewed source reports, saved SQL, complete CSV/Parquet and portable receiving through the same browser and agent connection |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
@@ -104,6 +105,18 @@ Use the browser for source intake, field mapping, edition selection, extraction,
 Applications prevents a second managed launch of the same merchant configuration. The publisher retains its own native writer lease. A changed connection file requires a fresh application review; source records and ordinary workspace progress continue through their original controls.
 
 See `stellar-forge/mcp-merchant-operator/ARCGIS_WORKSPACE.md` in the selected source for complete configuration, native request recovery, deployment and file-delivery instructions.
+
+## DuckDB customer and agent
+
+Select **DuckDB customer and agent** from a complete READY Node runtime. Choose the original initialized native buyer MCP directory and a private DuckDB connection JSON containing the running customer directory and its exact source report aliases. The existing Python **DuckDB dataset workspace** owns that original warehouse and browser.
+
+Use **Agent port** for the MCP listener; the Python browser retains its own port. Supply the original MCP access configuration through the host environment or private environment JSON. Review checks the running original service and source reports, pins its persistent workspace ID and exact connection bytes, and retains the selected complete source and original directories.
+
+After **Review application → Save application → Review start → Start**, **Open application** opens the actual original DuckDB browser. The retained operation also includes the agent MCP endpoint and native buyer console. Work on source mappings, immutable editions, saved SQL, comparison, complete query exports and portable receiving in that same customer workspace.
+
+The native launcher serves its currently opened native instance, including when an older saved operator module points to a previous source checkout. The original buyer, wallet and ledger remain in use. **Stop** closes the managed MCP connection; the separately owned Python service remains available. A same-workspace Python restart rotates its browser capability while preserving the persistent workspace ID. Current database contents and the rotating launch file are not immutable input fingerprints.
+
+The complete [DuckDB customer and agent guide](../../../../stellar-forge/mcp-paid-agent/DUCKDB.md) includes registration creation, both launch routes, every agent operation, exact-value handling, whole-file delivery, source refresh and original request continuation.
 
 ## Publisher initialization and reopening
 
