@@ -19,6 +19,7 @@ const PROJECT_EXCLUDES = ['.git', '.bundle', 'vendor/bundle'];
 const terminal = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED']);
 const SIMPLE_ACTIONS = new Set(['install', 'verify', 'export']);
 const CUSTOMER_ENTRIES = new Set(['native-dataset-lifecycle', 'baserow-customer-lifecycle', 'dataset-records', 'dataset-records-lifecycle']);
+const CAPTURE_UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const DEFAULT_GEMFILE = '# Original managed Rails operator dependencies; the complete resolved lock is retained before install.\n' +
   'source "https://rubygems.org"\n' +
   'gem "rails", ">= 7.1", "< 9"\n' +
@@ -366,7 +367,9 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
     const parameters = { offline };
     if (workingCapture !== undefined) {
       need(applicationId && ['export','verify'].includes(action) && plain(workingCapture) &&
-        Object.keys(workingCapture).sort().join(',') === 'captureId,expectedCaptureSha256,reviewId',
+        Object.keys(workingCapture).sort().join(',') === 'captureId,expectedCaptureSha256,reviewId' &&
+        typeof workingCapture.reviewId === 'string' && CAPTURE_UUID.test(workingCapture.reviewId) &&
+        typeof workingCapture.captureId === 'string' && CAPTURE_UUID.test(workingCapture.captureId),
         'RUBY_WORKING_CAPTURE_INVALID');
       parameters.workingCapture = { reviewId: operationId(workingCapture.reviewId),
         captureId: operationId(workingCapture.captureId),
