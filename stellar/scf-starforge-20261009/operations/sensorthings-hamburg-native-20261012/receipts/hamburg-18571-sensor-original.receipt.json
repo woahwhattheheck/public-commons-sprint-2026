@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_HAMBURG_NATIVE_1B40_20261012",
+  "role": "sensor",
+  "sourceUrl": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Sensor",
+  "receivedAt": "2026-10-12T10:31:58Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "hamburg-18571-sensor-original.json",
+    "bytes": 579,
+    "sha256": "323c1e798774eb8f85016fadb2264e7ef9a6a3afd59b28ba7b8a7de3e8aaf78e"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Sensor",
+    "filename": "hamburg-18571-sensor-original.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-8103-9037-00b2510f63c8\",\"filename\":\"hamburg-18571-sensor-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":579,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-8103-9037-00b2510f63c8\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-8103-9037-00b2510f63c8\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-8103-9037-00b2510f63c8\",\"filename\":\"hamburg-18571-sensor-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":579,\"content\":\"{\\\"@iot.selfLink\\\":\\\"https://iot.hamburg.de/v1.1/Sensors(5659)\\\",\\\"@iot.id\\\":5659,\\\"name\\\":\\\"Charge point availability according to OCPP standard\\\",\\\"description\\\":\\\"The sensor records the availability of an electric charging stations charge point according to the Open Charge Point Protocol\\\",\\\"encodingType\\\":\\\"text/html\\\",\\\"metadata\\\":\\\"https://www.openchargealliance.org/protocols/ocpp-201/\\\",\\\"properties\\\":{},\\\"Datastreams@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Sensors(5659)/Datastreams\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Sensors(5659)/MultiDatastreams\\\"}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}
