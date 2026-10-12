@@ -6,7 +6,7 @@ import {initializeCloudMerchant,readCloudWorkspaceConfiguration} from './managed
 const HELP='starforge cloud-mcp init --directory PRIVATE_HOST --connection PRIVATE_CONNECTION.json [--name NAME]\n'+
  'starforge cloud-mcp inspect --connection PRIVATE_CONNECTION.json\n'+
  'The connection selects existing original Cloud/DuckDB workspace UUIDs and host-private environment files.\n'+
- 'Run the returned configuration through the installed original mcp-merchant command.\n';
+ 'Run the returned configuration through the installed original merchant-mcp command.\n';
 export async function main(argv=process.argv.slice(2)){
  if(!argv.length||argv.includes('--help')){process.stdout.write(HELP);return null;}
  const {values:v,positionals}=parseArgs({args:argv,allowPositionals:true,options:{

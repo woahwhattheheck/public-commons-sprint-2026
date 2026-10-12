@@ -2,7 +2,7 @@
 import { createServer } from 'node:http';
 import { readFile, open } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { once } from 'node:events';
+import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { LIMITS } from '../cloud-delivery/contract.mjs';
 import { CLOUD_UPLOAD_CHUNK_BYTES } from '../cloud-delivery/uploads.mjs';
@@ -58,11 +58,17 @@ function query(url, required, optional = []) {
       keys.some(key => ![...required, ...optional].includes(key))) throw new WorkspaceError('CLOUD_QUERY_INVALID');
   return Object.fromEntries(url.searchParams);
 }
-async function download(res, descriptor, waiting) {
-  const handle = await open(descriptor.path, constants.O_RDONLY | constants.O_NOFOLLOW);
-  let stream;
+async function download(res, descriptor, waiting, signal) {
+  signal.throwIfAborted();
+  // Own the response before the first filesystem await, so shutdown also sees
+  // a download whose descriptor or stream has not finished opening yet.
+  waiting.add(res);
+  let handle, stream, source;
   try {
+    handle = await open(descriptor.path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    signal.throwIfAborted();
     const stat = await handle.stat({ bigint: true });
+    signal.throwIfAborted();
     const prefix = Buffer.from(descriptor.prefix ?? '');
     if (!stat.isFile()) throw new WorkspaceError('CLOUD_DOWNLOAD_INVALID');
     const length = stat.size + BigInt(prefix.length);
@@ -71,10 +77,22 @@ async function download(res, descriptor, waiting) {
     const filename = String(descriptor.filename).replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 200);
     res.writeHead(200, { ...HEADERS, 'content-type': descriptor.type,
       'content-length': String(length), 'content-disposition': 'attachment; filename="' + filename + '"' });
-    if (prefix.length && !res.write(prefix)) await once(res, 'drain');
-    stream = handle.createReadStream({ autoClose: false }); waiting.add(stream);
-    await pipeline(stream, res);
-  } finally { if (stream) waiting.delete(stream); await handle.close(); }
+    stream = handle.createReadStream({ autoClose: false });
+    // Prefix and original bytes share the same backpressure and cancellation.
+    // There is no separate drain waiter outside the owned download lifecycle.
+    source = prefix.length ? Readable.from((async function* () {
+      yield prefix;
+      yield* stream;
+    })(), { objectMode: false }) : stream;
+    waiting.add(source);
+    await pipeline(source, res, { signal });
+  } finally {
+    source?.destroy();
+    if (stream !== source) stream?.destroy();
+    waiting.delete(source);
+    waiting.delete(res);
+    await handle?.close();
+  }
 }
 
 export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
@@ -82,6 +100,7 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
   const assets = new Map(await Promise.all([...ASSETS].map(async ([path, [name, type]]) =>
     [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
   const token = randomBytes(32).toString('hex'), waiting = new Set(),instanceId=randomUUID();
+  const lifetime = new AbortController();
   let origin, model, closing = false, closePromise;
   const server = createServer((req, res) => {
     Promise.resolve().then(async () => {
@@ -144,12 +163,12 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
         }
         if (url.pathname === '/api/cloud/file') {
           const { edition, file } = query(url, ['edition', 'file']);
-          return download(res, await model.cloud.file({ editionId: edition, fileId: file }), waiting);
+          return download(res, await model.cloud.file({ editionId: edition, fileId: file }), waiting, lifetime.signal);
         }
         if (url.pathname === '/api/cloud/report') {
           const input = query(url, ['id'], ['kind']);
           if (input.kind !== undefined && input.kind !== 'summary') throw new WorkspaceError('CLOUD_REPORT_KIND_INVALID');
-          return download(res, await model.cloud.report(input), waiting);
+          return download(res, await model.cloud.report(input), waiting, lifetime.signal);
         }
         if (url.pathname === '/api/cloud/delivery') {
           const input = query(url, ['id'], ['kind']);
@@ -159,7 +178,7 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
             return send(res, 200, { delivery });
           }
           if (input.kind !== undefined) throw new WorkspaceError('CLOUD_REPORT_KIND_INVALID');
-          return download(res, await model.cloud.delivery(input), waiting);
+          return download(res, await model.cloud.delivery(input), waiting, lifetime.signal);
         }
       }
       if(req.method==='PUT'&&url.pathname==='/api/cloud/upload-chunk'){
@@ -219,6 +238,7 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
   origin = 'http://127.0.0.1:' + server.address().port;
   try { model = await createDuckdbWorkspace({ ...options, navigationOrigin: origin }); }
   catch (error) {
+    lifetime.abort();
     server.closeAllConnections(); await new Promise(done => server.close(done)); throw error;
   }
   return {
@@ -226,7 +246,8 @@ export async function startDuckdbWorkspace({ port = 8437, ...options } = {}) {
     close() {
       if (closePromise) return closePromise;
       closing = true;
-      for (const req of waiting) req.destroy();
+      lifetime.abort();
+      for (const resource of waiting) resource.destroy();
       const listenerClosed = new Promise(done => server.close(done));
       server.closeIdleConnections();
       const pending=Promise.all([model.close(),listenerClosed]).then(()=>undefined);
