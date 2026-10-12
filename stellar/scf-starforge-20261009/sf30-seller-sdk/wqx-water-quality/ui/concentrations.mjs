@@ -18,7 +18,7 @@ export function mountConcentrations({api, notice, run, context, applyDocument}) 
   function selection() {
     const state = context();
     if ($('cu-scope').value === 'unit') return catalog?.groups.find(row => row.unit === $('cu-source-unit').value)?.resultIds ?? [];
-    if ($('cu-scope').value === 'limits') return catalog?.limitOnly?.resultIds ?? [];
+    if ($('cu-scope').value === 'limits') return catalog?.limitOnly?.supportedResultIds ?? [];
     return state.selectedResultIds ?? [];
   }
   function signature() { return [...selection()].sort().join('\0'); }
@@ -32,6 +32,14 @@ export function mountConcentrations({api, notice, run, context, applyDocument}) 
     $('cu-controls').disabled = state.busy || !active || state.saved;
     $('cu-source-unit').disabled = $('cu-scope').value !== 'unit';
     $('cu-selected').textContent = selection().length.toLocaleString() + ' result records selected for a unit change';
+    const limits = catalog?.limitOnly, showLimits = $('cu-scope').value === 'limits' && limits;
+    $('cu-limit-context').textContent = showLimits ? limits.supportedCount.toLocaleString() + ' of ' + limits.count.toLocaleString() +
+      ' records with an unspecified result unit report mass-per-volume limits. Other source units remain available below.' : '';
+    const preserved = $('cu-preserved'); preserved.replaceChildren();
+    if (showLimits) for (const row of limits.preserved) {
+      const details = make('details'), summary = make('summary', row.characteristic + ' · ' + row.units.map(show).join(', ') + ' · original quantities preserved');
+      details.append(summary, make('p', row.reason), make('small', row.nativeResultId ?? row.sourceRecordId)); preserved.append(details);
+    }
     $('cu-prepare').disabled = state.busy || !active || state.saved || !selection().length;
     $('cu-apply').disabled = state.busy || state.saved || !current() || proposal?.state !== 'PREPARED' || applied || reopened;
     $('cu-undo').disabled = state.busy || state.saved || !current() || !applied || !proposal?.inputDocument;

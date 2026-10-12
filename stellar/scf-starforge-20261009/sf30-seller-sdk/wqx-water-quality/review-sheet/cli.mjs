@@ -24,6 +24,7 @@ const HELP = [
   'standardize  Prepare complete result/limit choices (--document FILE --target-unit UNIT --reason TEXT',
   '         --results IDS_JSON, --from-unit EXACT_UNIT or --reported-limits-only',
   '         --out decisions.json --report report.json).',
+  '         Reported-limits-only selects explicit supported mass-per-volume limits; units lists preserved other-unit records.',
   'unit-report  Reopen the full saved conversion (--review REVIEW [--format json|csv] --out FILE).',
   'list     List retained complete and prepared decision reviews.',
   'read     Reopen one original decision review (--review REVIEW).',
@@ -98,7 +99,7 @@ export async function main(argv = process.argv.slice(2)) {
       if (out === reportOut) throw new Error('Choose distinct decision and complete-report output files.');
       const document = await documentFile(required(values, 'document'), values['input-format']);
       const groups = values.results ? null : concentrationSourceGroups(await project.readOpenWaters(document.sourcePlanId));
-      const resultIds = values.results ? await jsonFile(values.results) : values['reported-limits-only'] ? groups.limitOnly.resultIds :
+      const resultIds = values.results ? await jsonFile(values.results) : values['reported-limits-only'] ? groups.limitOnly.supportedResultIds :
         groups.groups.find(row => row.unit === values['from-unit'])?.resultIds;
       const report = await prepareConcentrationChoices({project, document, resultIds,
         targetUnit:required(values, 'target-unit'), reason:required(values, 'reason')});

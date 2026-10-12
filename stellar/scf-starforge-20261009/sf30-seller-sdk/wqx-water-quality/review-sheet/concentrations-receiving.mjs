@@ -13,7 +13,7 @@ import { writeBytes } from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { openWaterQualityProject } from '../project.mjs';
 import { startWaterQualityWorkspace } from '../workspace.mjs';
 import { openWatersHash, openWatersCanonical } from '../openwaters.mjs';
-import { REVIEW_SHEET_SCHEMA, normalizeReviewSheetDocument } from './model.mjs';
+import { REVIEW_SHEET_SCHEMA, normalizeReviewSheetDocument, iterateReviewSheetTargets } from './model.mjs';
 import { reviewSheetCsv, reviewSheetTsv, parseReviewSheetCsv, parseReviewSheetTsv } from './csv.mjs';
 import { previewReviewSheet, readReviewSheet, exportReviewSheet } from './workflow.mjs';
 import { concentrationSourceGroups, concentrationReportForDocument, concentrationReportCsv } from './concentrations.mjs';
@@ -72,7 +72,7 @@ function settings(raw) {
     /^[0-9a-f]{64}$/.test(raw.reviewSha256 ?? '') && /^[0-9a-f]{64}$/.test(raw.captureSha256 ?? ''), 'Bind the complete original source graph.');
   need(raw.targetUnit === 'ug/L' && raw.sourceGroups?.length === 3 &&
     same(raw.sourceGroups.map(x=>[x.unit,x.count]),[['mg/L',220],['ug/L',40],['ng/L',38]]) &&
-    raw.limitOnlyCount === 452 && raw.selectedResults === 750 && raw.sourceResults === 1035 && raw.originalLimits === 1112,
+    raw.limitOnlyCount === 452 && raw.supportedLimitOnlyCount === 451 && raw.consideredResults === 750 && raw.selectedResults === 749 && raw.sourceResults === 1035 && raw.originalLimits === 1112,
     'Use the retained complete Potomac cohort and its exact unit projection.');
   for(const key of ['sourcePlanId','newPlanId','reviewId']) need(/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(raw[key] ?? ''), 'Keep the original ' + key + '.');
   need(raw.newPlanId !== raw.sourcePlanId && typeof raw.reason === 'string' && raw.reason.length > 0 && raw.reason.length <= 600,
@@ -118,7 +118,7 @@ async function sourcePhase(config,paths,requestSha256) {
       expectedReviewSha256:config.reviewSha256});
     need(plan.planSha256===config.sourcePlanSha256 && plan.captureSha256===config.captureSha256,'The corrected source plan did not reproduce.');
     const catalog=concentrationSourceGroups(plan);
-    need(catalog.sourceResults===config.sourceResults && catalog.limitOnly.count===config.limitOnlyCount,'The original result/limit-only selection changed.');
+    need(catalog.sourceResults===config.sourceResults && catalog.limitOnly.count===config.limitOnlyCount && catalog.limitOnly.supportedCount===config.supportedLimitOnlyCount,'The original result/limit-only selection changed.');
     for(const group of config.sourceGroups) need(catalog.groups.find(x=>x.unit===group.unit)?.count===group.count,'The exact source-unit group changed.');
     need(plan.results.reduce((n,row)=>n+(row.limits??[]).length,0)===config.originalLimits,'The complete reported limit source changed.');
     await immutableJson(join(paths.cli,'units.json'),catalog);
@@ -127,7 +127,7 @@ async function sourcePhase(config,paths,requestSha256) {
   } finally { await project.close(); }
   gc();
   const selections=[...config.sourceGroups.map(row=>({key:row.unit.replace('/','-'),count:row.count,args:['--from-unit',row.unit]})),
-    {key:'reported-limits-only',count:config.limitOnlyCount,args:['--reported-limits-only']}];
+    {key:'reported-limits-only',count:config.supportedLimitOnlyCount,args:['--reported-limits-only']}];
   for(let index=0;index<selections.length;index++) {
     const selection=selections[index], input=join(paths.cli,'draft-'+index+'.json'), output=join(paths.cli,'draft-'+(index+1)+'.json');
     const reportFile=join(paths.cli,'conversion-'+selection.key+'.json');
@@ -151,6 +151,14 @@ async function sourcePhase(config,paths,requestSha256) {
   try {
     let plan=await verified.readOpenWaters(config.sourcePlanId);
     let document=normalizeReviewSheetDocument(await maybe(join(paths.cli,'draft-4.json')));
+    const preservedId='wqx-record-11d4710939ec7646c8fe39b90e5e9589924e15cef1824024e388b1d0111498af';
+    let target;
+    for(const row of iterateReviewSheetTargets(plan,{kind:'result',attentionOnly:false})) {
+      if(row.sourceKey===preservedId&&row.field==='RESULT_MSR_UNIT') {target=row;break;}
+    }
+    need(target,'The original Turbidity decision target changed.');
+    document=normalizeReviewSheetDocument({...document,decisions:[...document.decisions,{targetId:target.targetId,action:'keep',
+      reason:'Preserve this original Turbidity non-detect and its 2.0/2 NTRU optical reporting limits. NTRU is outside the selected mass-per-volume conversion profile; keep the blank result/unit and original optical quantities.'}]});
     let preview=await previewReviewSheet({project:verified,document,newPlanId:config.newPlanId});
     let report=concentrationReportForDocument(plan,document,{resultPlan:preview.plan});
     const scientific=checkCohort(config,plan,preview.plan,report);
@@ -186,15 +194,24 @@ function checkCohort(config,source,result,report) {
   }
   need(limits===config.originalLimits,'A reported limit was lost.');
   const limitOnly=report.rows.filter(row=>!row.before.RESULT_MSR && !row.before.RESULT_MSR_UNIT);
-  need(limitOnly.length===config.limitOnlyCount && limitOnly.every(row=>row.after.RESULT_MSR==='' && row.after.RESULT_MSR_UNIT===''),
+  need(limitOnly.length===config.supportedLimitOnlyCount && limitOnly.every(row=>row.after.RESULT_MSR==='' && row.after.RESULT_MSR_UNIT===''),
     'Limit-only records must preserve the exact blank result and unspecified result unit.');
+  const preservedId='wqx-record-11d4710939ec7646c8fe39b90e5e9589924e15cef1824024e388b1d0111498af';
+  const opticalBefore=originals.get(preservedId),opticalAfter=result.results.find(row=>row.sourceRecordId===preservedId);
+  need(opticalBefore?.fields.CHAR_NAME==='Turbidity'&&opticalBefore.fields.DETECTION_LIMIT_UNIT==='NTRU'&&
+    same(opticalBefore.fields,opticalAfter?.fields)&&same(rawLimits(opticalBefore),rawLimits(opticalAfter)),
+    'The original optical Turbidity quantities must remain exact.');
+  const unspecified=source.results.filter(row=>!(row.fields.RESULT_MSR??'').trim()&&!row.fields.RESULT_MSR_UNIT&&(row.limits??[]).some(limit=>String(limit.value??'').trim()));
+  need(unspecified.length===config.limitOnlyCount&&unspecified.every(row=>{const after=result.results.find(item=>item.sourceRecordId===row.sourceRecordId);return !(after.fields.RESULT_MSR??'')&&!(after.fields.RESULT_MSR_UNIT??'');}),
+    'An originally unspecified non-detect result/unit was invented.');
   const silica=report.rows.find(row=>row.sourceRecordId==='wqx-record-e7dcd103f470f706bc66c0589322d6de9cc4925e950981da060ab9c41c2bfbb4');
   need(silica?.before.RESULT_MSR==='4.65' && silica.after.RESULT_MSR==='4650' && silica.after.RESULT_MSR_UNIT==='ug/L' &&
     silica.reportedLimits.length===1 && silica.reportedLimits[0].original.value==='0.06' &&
     silica.reportedLimits[0].converted.value==='60' && silica.reportedLimits[0].converted.unit==='ug/L',
     'The original populated Silica result and attached limit did not convert exactly.');
   return {sourceResults:source.results.length,convertedResults:report.rows.length,reportedLimits:limits,
-    unspecifiedResultUnits:limitOnly.length,convertedReportedLimits:report.summary.reportedLimits,
+    unspecifiedResultUnits:unspecified.length,convertedLimitOnlyResults:limitOnly.length,consideredResults:config.consideredResults,
+    preservedOpticalResults:1,preservedOpticalUnit:'NTRU',convertedReportedLimits:report.summary.reportedLimits,
     nativeLimitQuantities:report.summary.nativeLimits,unchangedQualifierAndDetectionContext:true,
     silica:{before:'4.65 mg/L',after:'4650 ug/L',limitBefore:'0.06 mg/L',limitAfter:'60 ug/L'}};
 }
@@ -259,7 +276,7 @@ async function browserPhase(config,paths,requestSha256) {
     const expectedJson=await identity(join(paths.cli,'expected-report.json')),expectedCsv=await identity(join(paths.cli,'expected-report.csv'));
     progress.reports[role]={json:await download('#cu-json',join(paths.exports,role),expectedJson),
       csv:await download('#cu-csv',join(paths.exports,role),expectedCsv)};
-    need((await page.locator('#cu-summary').textContent()).includes('750'),'The full saved conversion is absent from the original UI.');
+    need((await page.locator('#cu-summary').textContent()).includes(config.selectedResults.toLocaleString()),'The full saved conversion is absent from the original UI.');
     for(const format of FORMATS) {
       const retained=progress.exports[role][format];
       if(retained){const actual=await identity(retained.file);need(actual.sha256===retained.sha256&&actual.bytes===retained.bytes,'A retained browser export changed.');continue;}
@@ -286,7 +303,7 @@ async function browserPhase(config,paths,requestSha256) {
       await page.locator('#rs-source-plan').selectOption(config.sourcePlanId);
       await clickJson('#rs-load','/api/review-sheets/source/'+encodeURIComponent(config.sourcePlanId),'GET');
       {
-        for(const sample of [{scope:'unit',unit:'mg/L',count:220},{scope:'limits',count:452}]) {
+        for(const sample of [{scope:'unit',unit:'mg/L',count:220},{scope:'limits',count:config.supportedLimitOnlyCount}]) {
           if(progress.panel.some(row=>row.scope===sample.scope)) continue;
           await visible('#cu-scope');await page.locator('#cu-scope').selectOption(sample.scope);
           if(sample.unit)await page.locator('#cu-source-unit').selectOption(sample.unit);

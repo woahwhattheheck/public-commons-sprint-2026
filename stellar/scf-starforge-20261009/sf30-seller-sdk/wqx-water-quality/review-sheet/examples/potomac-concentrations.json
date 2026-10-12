@@ -24,7 +24,7 @@
     }
   ],
   "limitOnlyCount": 452,
-  "selectedResults": 750,
+  "selectedResults": 749,
   "sourceResults": 1035,
   "originalLimits": 1112,
   "newPlanId": "potomac-concentrations-ug-l-01",
@@ -42,5 +42,7 @@
     "--in-process-gpu",
     "--font-render-hinting=none",
     "--disk-cache-size=1048576"
-  ]
+  ],
+  "supportedLimitOnlyCount": 451,
+  "consideredResults": 750
 }
