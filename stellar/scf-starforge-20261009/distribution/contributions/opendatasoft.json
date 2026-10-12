@@ -29,5 +29,8 @@
       "types": "./source/stellar-forge/mcp-merchant-operator/opendatasoft-client.d.mts",
       "import": "./source/stellar-forge/mcp-merchant-operator/opendatasoft-client.mjs"
     }
+  },
+  "merchantProviders": {
+    "opendatasoft-workspaces": "stellar-forge/mcp-merchant-operator/providers/opendatasoft-workspaces.mjs"
   }
 }

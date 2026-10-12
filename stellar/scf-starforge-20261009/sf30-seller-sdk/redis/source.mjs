@@ -1,6 +1,6 @@
 // MIT. Native Redis/Valkey execution with an exclusively owned connection per read.
 import { createHash } from 'node:crypto';
-import { compileRedisQueries, bindRedisQuery, describeRedisQueries, QueryInputError } from './declaration.mjs';
+import { compileRedisQueries, bindRedisQuery, describeRedisQueries, redisScanCursor, QueryInputError } from './declaration.mjs';
 import { READ_SCRIPT } from './read-script.mjs';
 import { createUpstashRestClient, RedisHttpError } from './upstash-rest.mjs';
 import { createRedisConnectionFactory, RedisConnectionError } from './connection.mjs';
@@ -32,23 +32,33 @@ function safeError(issue, name) {
   }
   const message = typeof issue?.message === 'string' ? issue.message : '';
   if (message.includes('SF30_RESULT_TOO_LARGE')) return fail('QUERY_RESULT_TOO_LARGE', name);
+  if (message.includes('SF30_SCAN_PAGE_TOO_MANY_ROWS')) return fail('QUERY_SCAN_PAGE_TOO_LARGE', name);
   if (message.includes('WRONGTYPE')) return fail('QUERY_SOURCE_TYPE_CHANGED', name);
   if (/NOPERM|NOAUTH|WRONGPASS/.test(message)) return fail('SOURCE_ACCESS_DENIED', name);
   if (/unknown command.*EVAL_RO/i.test(message)) return fail('SOURCE_REQUIRES_READONLY_SCRIPTING', name);
   return fail('QUERY_UNAVAILABLE', name);
 }
 function resultOf(name, query, bound, raw) {
-  if (!Array.isArray(raw) || raw.length !== 2 || ![0, 1].includes(raw[0]) || !Array.isArray(raw[1]) || raw[1].length > query.maxRows)
+  if (!Array.isArray(raw) || raw.length !== (query.kind === 'set' ? 3 : 2) || ![0, 1].includes(raw[0]) || !Array.isArray(raw[1]) || raw[1].length > query.maxRows)
     throw fail('QUERY_RESULT_INVALID', name);
   const rows = raw[1].map(row => {
     if (!Array.isArray(row) || row.length !== query.columns.length) throw fail('QUERY_RESULT_INVALID', name);
     return Object.fromEntries(query.columns.map((column, index) => [column, scalar(row[index])]));
   });
+  let cursor;
+  if (query.kind === 'set') {
+    try { cursor = redisScanCursor(scalar(raw[2]), query.cursor); }
+    catch { throw fail('QUERY_RESULT_INVALID', name); }
+    if ((cursor === '0') !== (raw[0] === 0)) throw fail('QUERY_RESULT_INVALID', name);
+  }
   const output = { schema: 'stellar-forge.redis-result.v1', query: name, kind: query.kind,
     columns: [...query.columns], rows, rowCount: rows.length, truncated: raw[0] === 1,
     valueEncoding: 'utf8-or-base64-object', nullEncoding: 'json-null',
     readConsistency: 'single-native-read-script',
-    ...(query.kind === 'stream' ? { duplicateFieldProjection: 'last-value' } : {}) };
+    ...(query.kind === 'stream' ? { duplicateFieldProjection: 'last-value' } : {}),
+    ...(query.kind === 'list' ? { order: 'list-index', pageOffset: bound.position } : {}),
+    ...(query.kind === 'set' ? { scanCursor: cursor, scanComplete: cursor === '0', scanCount: query.scanCount,
+      iterationConsistency: 'native-sscan', memberOrder: 'unspecified', duplicatesPossible: true } : {}) };
   if (output.truncated && query.offset) {
     const next = BigInt(bound.position) + BigInt(rows.length);
     if (next <= BigInt(query.parameters[query.offset].maximum))
@@ -56,6 +66,8 @@ function resultOf(name, query, bound, raw) {
     else output.continuationUnavailable = 'OFFSET_LIMIT';
   }
   if (output.truncated && query.after && rows.length) output.nextInput = { ...bound.values, [query.after]: rows.at(-1).id };
+  if (output.truncated && query.cursor)
+    output.nextInput = { ...bound.values, [query.cursor]: cursor };
   if (output.nextInput) {
     try { bindRedisQuery(query, output.nextInput); }
     catch (issue) {
@@ -162,7 +174,7 @@ export async function createRedisQuerySource({ connection, queries, maxConnectio
       if (job.done) return;
       const q = definition(job.name);
       const raw = await wait(client.sendCommand(['EVAL_RO', READ_SCRIPT, '1', job.bound.key,
-        q.kind, String(q.maxRows), String(q.maxBytes), job.bound.position, ...Object.values(q.fields)],
+        q.kind, String(q.maxRows), String(q.maxBytes), job.bound.position, ...(q.kind === 'set' ? [String(q.scanCount)] : Object.values(q.fields))],
         http ? { maxResponseBytes: q.maxBytes + 16 * q.maxRows * (q.columns.length + 1) + 1024 } : { key: job.bound.key }));
       if (job.done || closed) throw fail('QUERY_ABORTED', job.name);
       const result = resultOf(job.name, q, job.bound, raw); healthy = true; finish(job, null, result);
@@ -232,7 +244,7 @@ export async function createRedisQuerySource({ connection, queries, maxConnectio
           if (issue instanceof QueryInputError) return invalid(issue);
           return { status: issue.code === 'QUERY_TIMEOUT' ? 504 :
             ['SOURCE_BUSY', 'SOURCE_RATE_LIMITED', 'SOURCE_QUOTA_EXCEEDED'].includes(issue.code) ? 429 :
-            issue.code === 'QUERY_RESULT_TOO_LARGE' ? 413 : 503,
+            ['QUERY_RESULT_TOO_LARGE', 'QUERY_SCAN_PAGE_TOO_LARGE'].includes(issue.code) ? 413 : 503,
             ...(issue.retryAfter ? { headers: { 'retry-after': issue.retryAfter } } : {}),
             body: { error: issue instanceof RedisSourceError ? issue.code : 'QUERY_UNAVAILABLE' } };
         }

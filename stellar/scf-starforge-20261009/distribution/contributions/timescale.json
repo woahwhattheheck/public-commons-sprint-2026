@@ -35,7 +35,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/README.md",
     "stellar-forge/mcp-merchant-operator/TIMESCALE_WORKSPACE.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/native-demo.mjs",
-    "stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs"
+    "stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/browser-receiving.mjs"
   ],
   "browserAssets": [
     {
