@@ -19,9 +19,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const FIXTURE = JSON.parse(await readFile(join(ROOT, 'data', 'events.json'), 'utf8'));
 validateFixture(FIXTURE);
-const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/archive.js':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8',
+const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/archive.js':'text/javascript; charset=utf-8', '/player-recap.js':'text/javascript; charset=utf-8', '/player_recap.mjs':'text/javascript; charset=utf-8', '/engine.mjs':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8',
   '/coach-review':'text/html; charset=utf-8', '/coach-review.js':'text/javascript; charset=utf-8', '/coach-review.css':'text/css; charset=utf-8'};
-const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/archive.js': 'archive.js', '/style.css': 'style.css',
+const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/archive.js': 'archive.js', '/player-recap.js': 'player-recap.js', '/player_recap.mjs': '../src/player_recap.mjs', '/engine.mjs': '../src/engine.mjs', '/style.css': 'style.css',
   '/coach-review':'coach-review.html', '/coach-review.js':'coach-review.js', '/coach-review.css':'coach-review.css'};
 const DEFAULT_PORT = 3167;
 // Existing local replay remains free; admitted paid attempts count even on failure.

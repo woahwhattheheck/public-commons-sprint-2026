@@ -126,3 +126,39 @@ svg.pitch{width:100%;height:auto;display:block;border-radius:2px}
 @media(max-width:1000px){.layout{grid-template-columns:1fr}#broadcast{position:static}.moments,.feed{max-height:280px}}
 @media(max-width:540px){header,main,footer{padding-left:12px;padding-right:12px}.card,.setup{padding:12px}.persona{grid-template-columns:1fr 1fr}.club{font-size:1rem}.clock strong{font-size:1.55rem}.cue{position:static;margin-top:8px}.cue p{font-size:1rem}.marker{font-size:40px}.review-evidence li{grid-template-columns:48px 40px minmax(0,1fr);gap:4px}.transport button{padding-left:10px;padding-right:10px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Player recaps share the native match's neutral controls and readable tables. */
+.recap-panel{margin-top:18px}
+.recap-panel h2{margin:0}.recap-panel h3{font-size:.95rem;margin:14px 0 9px}.recap-panel h4{font-size:.9rem;margin:0}
+.recap-heading{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.recap-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+.recap-controls select{width:100%;min-width:0}
+.recap-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+.recap-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.recap-stat{padding:9px;background:#f6f7f7;border:1px solid var(--edge);border-radius:3px}
+.recap-stat dt{font-size:.76rem;color:var(--muted);overflow-wrap:anywhere}
+.recap-stat dd{font-size:1.22rem;font-variant-numeric:tabular-nums;margin:4px 0 0}
+.recap-narrative{font-size:.88rem;line-height:1.55}
+.recap-table{max-width:100%;overflow-x:auto}
+.recap-table table{min-width:380px}.recap-table thead th:first-child{text-align:left}
+.recap-table td{white-space:nowrap}
+.recap-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.recap-actions button{font-size:.82rem;min-height:38px}
+.recap-actions .review-jump{margin:0}
+.recap-sequences{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.recap-sequence{border:1px solid var(--edge);border-radius:3px;padding:12px;min-width:0;align-self:start}
+.recap-sequence.selected{border-color:#4a555e;background:#f7f8f8;box-shadow:inset 3px 0 #4a555e}
+.recap-sequence-heading{display:flex;align-items:start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.recap-outcome{font-size:.73rem;border:1px solid var(--edge);padding:3px 6px;border-radius:2px}
+.recap-sequence-text{font-size:.85rem;line-height:1.5}
+.recap-sequence details{font-size:.82rem;border-top:1px solid var(--edge);padding-top:9px}
+.recap-sequence summary{cursor:pointer;font-weight:600}
+.recap-evidence{list-style:none;padding:0;margin:10px 0}
+.recap-evidence li{display:grid;grid-template-columns:48px 48px minmax(0,1fr) 48px;gap:6px;padding:6px 0;border-top:1px solid var(--edge)}
+.recap-evidence time,.recap-evidence code{font-size:.75rem;color:var(--muted)}
+.recap-evidence span{overflow-wrap:anywhere}
+.recap-pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:14px 0}
+.recap-pagination button{font-size:.82rem}
+#recapStatus{min-height:1.5em}
+@media(max-width:900px){.recap-columns{grid-template-columns:1fr;gap:10px}.recap-sequences{grid-template-columns:1fr}}
+@media(max-width:540px){.recap-controls{grid-template-columns:1fr}.recap-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.recap-pagination{flex-wrap:wrap}.recap-pagination .note{order:3;flex-basis:100%;text-align:center}.recap-evidence li{grid-template-columns:43px 38px minmax(0,1fr) 43px;font-size:.75rem}.recap-table table{min-width:340px}}
