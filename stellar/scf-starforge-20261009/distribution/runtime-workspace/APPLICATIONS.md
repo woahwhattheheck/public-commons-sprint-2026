@@ -663,6 +663,11 @@ Choose **Databento migration** with the initialized or received workbench direct
 
 Complete historical source editions, inspect field mappings, perform the named review, preserve results and export the customer handover from the original workbench. Stop closes its native server and model; reopen retains the same work and history. The complete [Databento Applications guide](DATABENTO_APPLICATIONS.md) covers initial setup or receiving, source/runtime selection, original producer and review actions, customer export, Stop and recovery.
 
+
+## WooCommerce merchant
+
+**WooCommerce merchant** starts the original SF104 native seller and the original SF98 notice worker together over the selected merchant configuration and same private outbox. Review retains the actual store, notice endpoint, source/configuration identities and named secret environment binding. First start binds the outbox to its original store under the existing exclusive delivery lease; subsequent launches reuse that binding and journal. Open uses the original Operations dashboard, and the WordPress order-console link keeps order, frozen-term, release and refund work in the actual configured store. Stop drains the original seller before awaiting delivery termination; a delivery failure also drains the seller. See the [complete managed Woo operating guide](../../sf104-woocommerce-merchant-bridge/MANAGED.md) for setup, original CLI, same-request recovery and same-outbox receiving. The installed command is `woo-managed`; no independent process manager or payment engine is added.
+
 ## World Bank economic data
 
 Choose **World Bank economic data** with the original private merchant configuration and a declared World Bank workspace alias. Review and Save retain both connection files, the workspace directory and the installed launcher. Start opens one original merchant MCP host and its World Bank model; the same model serves the authenticated browser. Open checks the running model and browser identities against the saved request and original configuration binding.
