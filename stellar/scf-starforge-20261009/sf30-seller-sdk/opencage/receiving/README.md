@@ -171,7 +171,11 @@ existing installed model and source binding, attaches that actual runtime,
 reviews and saves an `opencage-workspace` application, and preserves the
 original application ID, save request, start reviews and operation IDs in its
 receiving report. Interrupted adoption and saved starts use the model's own
-Connect and Recover operations.
+Connect and Recover operations. Pending, queued and interrupted starts retain
+their saved operation IDs; recovery only selects a run already recorded by this
+receiving. A failed receiving also requests the original Stop and waits for its
+worker, managed command and listener to close before returning. Its initial
+error and any shutdown error remain in the same report.
 
 After Start, the original serialized Applications observer must contain the
 same authenticated native identity as the running OpenCage listener. The

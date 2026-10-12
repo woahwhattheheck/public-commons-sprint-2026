@@ -155,24 +155,26 @@ export async function receiveOpenCageApplication(input){
   else report.runtime=currentRuntime;
   report.original=producer.binding;await save();
   const component=join(runtime.sourceRoot,COMPONENT),distribution=join(runtime.sourceRoot,'stellar/scf-starforge-20261009/distribution/runtime-workspace');
-  const [{createRuntimeWorkspace,openRuntimeWorkspace},{startRuntimeWorkspace},launch,{GeocodeDelivery},{createGeocodeServer}]
+  const [{createRuntimeWorkspace,openRuntimeWorkspace},{startRuntimeWorkspace},{managedCommandAlive},launch,{GeocodeDelivery},{createGeocodeServer}]
     =await Promise.all([importFile(join(distribution,'model.mjs')),importFile(join(distribution,'server.mjs')),
-      importFile(join(component,'launch.mjs')),importFile(join(component,'customer.mjs')),importFile(join(component,'server.mjs'))]);
+      importFile(join(distribution,'managed-workspace.mjs')),importFile(join(component,'launch.mjs')),
+      importFile(join(component,'customer.mjs')),importFile(join(component,'server.mjs'))]);
   const selection=await launch.prepareGeocodeManagedSelection({workspaceDirectory,sourceDirectory:component});
   need(selection.workspace.workspaceIdentity===expected.workspaceIdentity,'The managed source opened a different original workspace.');
   await publish(join(outputDirectory,'source-selection.json'),selection,{immutable:true});
   const controller=join(outputDirectory,'applications');
   if(!await optional(join(controller,'workspace.json')))await createRuntimeWorkspace({directory:controller});
   let model=await openRuntimeWorkspace({directory:controller}),applicationId=report.applicationId;
-  let activeOperation=null,runtimeServer=null,customerServer=null,browser=null;
+  let activeOperation=null,runtimeServer=null,customerServer=null,browser=null,failure=null;
   const current=async()=>(await model.applicationsState()).applications.find(value=>value.id===applicationId);
   async function start(label){
     let application=await current(),run;
-    if(application?.current?.active||['STARTING','RUNNING','INTERRUPTED'].includes(application?.phase)){
+    if(application?.current?.active||['PENDING','QUEUED','STARTING','RUNNING','INTERRUPTED'].includes(application?.phase)){
       run=report.runs.find(value=>value.requestId===application.current?.id);
       need(run,'Reconcile the different retained application operation before this receiving.');
-      if(application.phase==='INTERRUPTED')await model.applicationsRecover({applicationId,operationId:run.requestId});
       activeOperation=run.requestId;
+      if(!application.current.active&&['PENDING','QUEUED','INTERRUPTED'].includes(application.phase))
+        await model.applicationsRecover({applicationId,operationId:run.requestId});
     }else{
       const previous=report.runs.filter(value=>value.label===label).at(-1);
       run=previous&&!previous.startedAt&&!previous.stoppedAt&&application?.current?.id!==previous.requestId?previous:
@@ -200,14 +202,35 @@ export async function receiveOpenCageApplication(input){
     run.selectionSha256=actual.selectionSha256;run.origin=new URL(address).origin;await save();
     return {run,address,application,original};
   }
-  async function stop(run){
-    const original=await current();
-    if(original?.phase!=='STOPPED'||original.current?.id!==run.requestId)
+  async function stop(run,{cleanup=false}={}){
+    need(report.runs.includes(run),'Stop only this receiving operation\'s saved application run.');
+    const observed=async()=>{
+      const application=await current();
+      const operation=application?.current?.id===run.requestId?application.current:
+        application?.runs?.find(value=>value.id===run.requestId);
+      need(operation,'Keep the original application run available during shutdown.');
+      const address=operation.privateUrl??operation.url?.url;
+      if(!run.origin&&address){
+        const url=new URL(address);
+        need(url.protocol==='http:'&&url.hostname==='127.0.0.1','Keep the original loopback listener.');
+        run.origin=url.origin;
+      }
+      const commandActive=await managedCommandAlive(operation.state);
+      return {application,operation,commandActive,listenerClosed:!operation.active&&!commandActive&&
+        (!run.origin||await closed(run.origin))};
+    };
+    const original=await observed();
+    if(original.operation.active||original.commandActive||!original.listenerClosed||
+      original.application?.phase!=='STOPPED'||original.application.current?.id!==run.requestId)
       await model.applicationsStop({applicationId,operationId:run.requestId});
-    await waitFor(current,value=>value?.phase==='STOPPED'&&value.current?.id===run.requestId&&value.current?.active===false,
-      'The original saved OpenCage application has not stopped.');
-    if(run.origin)await waitFor(()=>closed(run.origin),value=>value,'The original OpenCage listener is still open.');
-    run.stoppedAt??=new Date().toISOString();activeOperation=null;await save();
+    const ended=await waitFor(observed,value=>value.operation.active===false&&!value.commandActive&&value.listenerClosed&&
+      (cleanup||(value.application.phase==='STOPPED'&&value.application.current?.id===run.requestId)),
+      'The original saved OpenCage worker or listener has not stopped.');
+    if(ended.application.phase==='STOPPED'&&ended.application.current?.id===run.requestId)
+      run.stoppedAt??=new Date().toISOString();
+    if(cleanup)run.cleanup={drainedAt:new Date().toISOString(),phase:ended.operation.phase,
+      workerActive:false,commandActive:false,listenerClosed:true};
+    activeOperation=null;await save();
   }
   async function retained(address){
     const requests=await sessionRead(address,'/api/request?id='+encodeURIComponent(expected.requestId));
@@ -239,7 +262,10 @@ export async function receiveOpenCageApplication(input){
     }
     const awaiting=await current();
     if(awaiting?.phase==='CONNECTING')await model.applicationsConnect({applicationId});
-    await waitFor(current,value=>['READY','STOPPED','RUNNING'].includes(value?.phase),'The original reviewed runtime adoption has not completed.');
+    await waitFor(current,value=>['READY','STOPPED'].includes(value?.phase)||
+      (['PENDING','QUEUED','STARTING','RUNNING','INTERRUPTED'].includes(value?.phase)&&
+        report.runs.some(run=>run.requestId===value.current?.id)),
+      'The original reviewed runtime adoption or saved run is not ready to continue.');
     await mark('original-application-reviewed-and-saved',{applicationId,runtimeId:attached.runtimeId,
       workspaceIdentity:selection.workspace.workspaceIdentity,selectionSha256:selection.sha256,sourceSha256:selection.source.sha256});
     const first=await start('first-open');
@@ -297,17 +323,30 @@ export async function receiveOpenCageApplication(input){
       instanceId:reopened.original.instanceId,...await retained(reopened.address)});
     await stop(reopened.run);
     const final=await current();
-    report.status='COMPLETE';report.completedAt=new Date().toISOString();
+    report.status='COMPLETE';delete report.error;delete report.cleanupError;report.completedAt=new Date().toISOString();
     report.application={id:applicationId,revision:final.revision,phase:final.phase,home:final.home,release:final.release,
       workspaceDirectory,selectionSha256:selection.sha256,customerDirectory:receiving};
     await save();return report;
   }catch(error){
-    report.status='INCOMPLETE';report.error={code:error.code??'OPENCAGE_APPLICATION_RECEIVING',message:error.message};
+    failure=error;report.status='INCOMPLETE';report.error={code:error.code??'OPENCAGE_APPLICATION_RECEIVING',message:error.message};
     await save().catch(()=>{});throw error;
   }finally{
     await browser?.close().catch(()=>{});await customerServer?.close().catch(()=>{});await runtimeServer?.close().catch(()=>{});
-    if(activeOperation)await model.applicationsStop({applicationId,operationId:activeOperation}).catch(()=>{});
-    await model.close();
+    let cleanupError;
+    try{
+      if(activeOperation){
+        const run=report.runs.find(value=>value.requestId===activeOperation);
+        need(run,'Keep the saved application operation for shutdown.');
+        await stop(run,{cleanup:true});
+      }
+    }catch(error){
+      cleanupError=error;report.status='INCOMPLETE';report.cleanupError={operationId:activeOperation,
+        code:error.code??'OPENCAGE_APPLICATION_SHUTDOWN',message:error.message};
+      await save().catch(()=>{});
+    }finally{
+      try{await model.close();}catch(error){cleanupError??=error;}
+    }
+    if(cleanupError&&!failure)throw cleanupError;
   }
 }
 
