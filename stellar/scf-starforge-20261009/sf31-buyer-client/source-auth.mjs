@@ -13,18 +13,20 @@ const METHODS = new Set(['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS']);
 const ENVIRONMENT_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 const CREDENTIAL_REFERENCE = /^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,511}$/;
 const BEARER_TOKEN = /^[A-Za-z0-9._~+/-]+=*$/;
+const API_KEY = /^[\x21-\x7e]+$/;
 
-function binding(value) {
+function binding(value, {scheme, environmentKey}) {
   if (value === null || typeof value !== 'object' || Array.isArray(value) ||
-      Object.keys(value).some(key => !['origin','tokenEnv','credentialRef'].includes(key)))
+      Object.keys(value).some(key => !['origin',environmentKey,'credentialRef'].includes(key)))
     fail('SOURCE_AUTH_BINDING_INVALID');
-  const authorization = normalizeSourceAuthorization({origin:value.origin, scheme:'Bearer'});
-  if ((value.tokenEnv === undefined) === (value.credentialRef === undefined))
+  const authorization = normalizeSourceAuthorization({origin:value.origin, scheme});
+  const environmentName = value[environmentKey];
+  if ((environmentName === undefined) === (value.credentialRef === undefined))
     fail('SOURCE_AUTH_ONE_CREDENTIAL_REFERENCE_REQUIRED');
-  if (value.tokenEnv !== undefined) {
-    if (typeof value.tokenEnv !== 'string' || !ENVIRONMENT_NAME.test(value.tokenEnv))
+  if (environmentName !== undefined) {
+    if (typeof environmentName !== 'string' || !ENVIRONMENT_NAME.test(environmentName))
       fail('SOURCE_AUTH_ENVIRONMENT_NAME_INVALID');
-    return Object.freeze({...authorization, tokenEnv:value.tokenEnv});
+    return Object.freeze({...authorization, [environmentKey]:environmentName});
   }
   if (typeof value.credentialRef !== 'string' || !CREDENTIAL_REFERENCE.test(value.credentialRef))
     fail('SOURCE_AUTH_CREDENTIAL_REFERENCE_INVALID');
@@ -61,28 +63,29 @@ function awaitCredential(promise, signal) {
  * offered request, portable edition or downloaded deployment package.
  * Environment values and resolver results are read afresh for each dispatch.
  */
-export function createSourceBearerAuth({
+function createSourceAuth({
   bindings, resolveCredential=null, environment=process.env, timeoutMs=30_000
-}={}) {
+}={}, capability) {
+  const {scheme, environmentKey, pattern, headerName, prefix} = capability;
   if (!Array.isArray(bindings) || !bindings.length || bindings.length > 64)
     fail('SOURCE_AUTH_BINDINGS_REQUIRED');
   if ((resolveCredential !== null && typeof resolveCredential !== 'function') ||
       environment === null || typeof environment !== 'object' ||
       !Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000)
     fail('SOURCE_AUTH_CONFIGURATION_INVALID');
-  const selected = bindings.map(binding);
+  const selected = bindings.map(value => binding(value, capability));
   const byOrigin = new Map(selected.map(value => [value.origin, value]));
   if (byOrigin.size !== selected.length) fail('SOURCE_AUTH_DUPLICATE_ORIGIN');
   if (selected.some(value => value.credentialRef !== undefined) && resolveCredential === null)
     fail('SOURCE_AUTH_CREDENTIAL_RESOLVER_REQUIRED');
   const authorizations = new Map(selected.map(value => [value.origin,
-    Object.freeze({origin:value.origin, scheme:'Bearer'})]));
+    Object.freeze({origin:value.origin, scheme})]));
   const active = new Set();
   let closed = false;
 
   function authorizationForOrigin(origin) {
     if (closed) fail('SOURCE_AUTH_CLOSED');
-    const checked = normalizeSourceAuthorization({origin, scheme:'Bearer'});
+    const checked = normalizeSourceAuthorization({origin, scheme});
     return authorizations.get(checked.origin) ?? null;
   }
   async function requestHeaders(input) {
@@ -105,8 +108,8 @@ export function createSourceBearerAuth({
       try {
         value = await awaitCredential(Promise.resolve().then(() => {
           controller.signal.throwIfAborted();
-          return selected.tokenEnv !== undefined
-            ? environment[selected.tokenEnv]
+          return selected[environmentKey] !== undefined
+            ? environment[selected[environmentKey]]
             : resolveCredential(selected.credentialRef, {
                 url:request.url, origin:request.origin, method:request.method,
                 signal:controller.signal
@@ -121,10 +124,10 @@ export function createSourceBearerAuth({
       controller.signal.throwIfAborted();
       if (typeof value !== 'string' || value.length < 1)
         fail('SOURCE_AUTH_CREDENTIAL_UNAVAILABLE');
-      // No trimming or JSON coercion: use exactly the assigned native token.
-      if (value.length > 16384 || !BEARER_TOKEN.test(value))
+      // No trimming or JSON coercion: use exactly the assigned native value.
+      if (value.length > 16384 || !pattern.test(value))
         fail('SOURCE_AUTH_CREDENTIAL_INVALID');
-      return Object.freeze({authorization:'Bearer ' + value});
+      return Object.freeze({[headerName]:prefix + value});
     } finally {
       clearTimeout(timer);
       request.signal?.removeEventListener('abort', stop);
@@ -140,5 +143,21 @@ export function createSourceBearerAuth({
   return Object.freeze({
     origins:Object.freeze([...byOrigin.keys()]),
     requestHeaders, authorizationForOrigin, close
+  });
+}
+
+/** Assigned upstream Bearer token; preserves the original tokenEnv contract. */
+export function createSourceBearerAuth(options) {
+  return createSourceAuth(options, {
+    scheme:'Bearer', environmentKey:'tokenEnv', pattern:BEARER_TOKEN,
+    headerName:'authorization', prefix:'Bearer '
+  });
+}
+
+/** Assigned Prescient/native API key, sent only in the literal api-key header. */
+export function createSourceApiKeyAuth(options) {
+  return createSourceAuth(options, {
+    scheme:'ApiKey', environmentKey:'apiKeyEnv', pattern:API_KEY,
+    headerName:'api-key', prefix:''
   });
 }

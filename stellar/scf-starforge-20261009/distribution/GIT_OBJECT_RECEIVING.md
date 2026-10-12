@@ -97,6 +97,43 @@ through the existing provider/source transfer and repeat the same command.
 Exit code 0 reports `OBJECTS_AVAILABLE`. All requested object bytes and complete
 original tree metadata are then available in `repository.git`.
 
+## Receive directly from a retained release
+
+A completed merchant release can supply original blobs without another package
+extraction. Pass its retained SHA-256 and absolute file path as one repeatable
+`--donor-archive` pair alongside the current Git or source donors:
+
+```sh
+python3 git-object-receiving.py \
+  --metadata /private/captured-source.json \
+  --commit ORIGINAL_COMMIT \
+  --directory /private/source-receiving \
+  --donor-repository /existing/complete-source.git \
+  --donor-archive ARCHIVE_SHA256 /existing/merchant-release.tgz \
+  --materialize /private/original-consumer/source
+```
+
+The receiver checks the entire original archive digest before receiving any
+member. It opens one regular file, streams its gzip/tar contents and matches
+member bytes to missing objects in the selected Git tree. The archive can come
+from an earlier or later release: only exact matching Git blob IDs and original
+byte lengths enter the current immutable cache. Package prefixes and member
+names do not affect matching. Archive paths and link targets are never
+extracted or executed.
+
+Compressed archives retain a 64 MiB limit. The expanded stream, including tar
+headers and skipped members, has a 128 MiB limit; an individual accepted source
+file retains the existing 2 MiB limit and the selected source retains its
+64 MiB aggregate limit. The receiver consumes gzip checksums and verifies that
+the opened archive stayed unchanged during the read.
+
+The existing `donors` result adds an `original-release-archive` entry with its
+archive path, checked SHA-256, compressed and expanded sizes, regular member
+count and contributed object count. All Git/source/flat-blob donors, missing
+object requests, cache resumption and source materialization keep their
+existing contracts. An interrupted read can leave only independently verified
+source blobs; resume the same original cache and archive.
+
 ## Continue the original builder and runtime
 
 Invoke the maintained builder against the receiving repository:
