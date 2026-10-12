@@ -8,6 +8,7 @@ import { atlasApplication, prepareAtlasApplication } from './application-atlas.m
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
+import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
@@ -43,6 +44,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   redisApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
+  pricingApplication(common),
   tenderlyApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
     title: 'XML dataset onboarding', terminal: false,
@@ -178,6 +180,7 @@ function normalizeSettings(type, input) {
   if (type.id === 'dataset') need(Boolean(settings.datasetFile) !== Boolean(settings.stateDirectory),
     'APPLICATION_DATASET_SELECTION_REQUIRED', 'Choose exactly one original dataset file or retained state');
   if (type.id === 'job-checkout') validateJobCheckoutSelection(settings);
+  if (type.id === 'merchant-pricing') validatePricingSelection(settings);
   if (type.id.endsWith('-publisher')) {
     need(!settings.create || settings.sourceFile && settings.stateDirectory, 'APPLICATION_PUBLISHER_SOURCE_REQUIRED');
     need(Boolean(settings.seller) === Boolean(settings.resource), 'APPLICATION_BUYER_ENDPOINT_PAIR_REQUIRED');
@@ -213,6 +216,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'dataset-buyer') {
     const prepared = await prepareDatasetBuyerApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'merchant-pricing') {
+    const prepared = await preparePricingApplication(settings, { ...context, inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'tenderly') {
     const original = await prepareTenderlyApplication(settings, inputPath, runtimeDirectory);

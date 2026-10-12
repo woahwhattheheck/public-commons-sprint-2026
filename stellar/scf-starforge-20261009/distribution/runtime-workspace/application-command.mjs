@@ -4,6 +4,7 @@ import { atlasStartup } from './application-atlas.mjs';
 import { redisStartup } from './application-redis.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
+import { pricingStartup } from './application-pricing.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
 import { eventFeedOutputReader, eventFeedStartup, verifyEventFeedLaunch } from './application-event-feed.mjs';
 import { constants } from 'node:fs';
@@ -93,6 +94,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
           schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
           operationId: directory.split('/').at(-1), command: request.command,
           source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'revenue-workspace') {
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = pricingStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
         });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;

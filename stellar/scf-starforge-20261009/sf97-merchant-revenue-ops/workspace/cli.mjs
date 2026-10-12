@@ -5,11 +5,13 @@ import { pathToFileURL } from 'node:url';
 import { startWorkspace } from './server.mjs';
 import { readJson } from '../analyze.mjs';
 
+export const PRICING_WORKSPACE_LAUNCH_SCHEMA = 'stellar-forge.merchant-pricing-workspace-launch.v1';
+
 export async function main(argv = process.argv.slice(2)) {
-  const usage = 'node workspace/cli.mjs --config SELLER_JSON --state PRIVATE_DIRECTORY (--snapshot ORIGINAL_TRAFFIC_JSON [--history ORIGINAL_HISTORY_JSON] | --history ORIGINAL_HISTORY_JSON | --ops-url ORIGINAL_LOOPBACK_OPERATIONS_URL) [--native-outbox PRIVATE_SF98_DIRECTORY] [--source-package ORIGINAL_API_MERCHANT_PACKAGE] [--release-store ORIGINAL_SELLER_RELEASE_STORE] [--release-runtime HOST_RUNTIME_JSON] [--port 8457]';
+  const usage = 'node workspace/cli.mjs --config SELLER_JSON --state PRIVATE_DIRECTORY (--snapshot ORIGINAL_TRAFFIC_JSON [--history ORIGINAL_HISTORY_JSON] | --history ORIGINAL_HISTORY_JSON | --ops-url ORIGINAL_LOOPBACK_OPERATIONS_URL) [--native-outbox PRIVATE_SF98_DIRECTORY] [--source-package ORIGINAL_API_MERCHANT_PACKAGE] [--release-store ORIGINAL_SELLER_RELEASE_STORE] [--release-runtime HOST_RUNTIME_JSON] [--expected-config-sha256 SHA256] [--port 8457]';
   if (argv.length === 1 && ['--help','-h'].includes(argv[0])) { console.log(usage); return; }
   const allowed = new Set(['--config','--state','--snapshot','--history','--ops-url','--native-outbox','--port',
-    '--source-package','--release-store','--release-runtime']), args = {};
+    '--source-package','--release-store','--release-runtime','--expected-config-sha256']), args = {};
   for (let i = 0; i < argv.length; i += 2) {
     if (!allowed.has(argv[i]) || !argv[i+1] || Object.hasOwn(args,argv[i])) throw new TypeError(usage);
     args[argv[i]] = argv[i+1];
@@ -24,8 +26,11 @@ export async function main(argv = process.argv.slice(2)) {
   const workspace = await startWorkspace({config:args['--config'],directory:args['--state'],snapshot:args['--snapshot'],
     history:args['--history'],opsUrl:args['--ops-url'],nativeOutbox:args['--native-outbox'],
     sourcePackage:args['--source-package'],releaseStore:args['--release-store'],releaseRuntime,
+    expectedConfigSha256:args['--expected-config-sha256'],
     port:args['--port'] === undefined ? 8457 : Number(args['--port'])});
-  console.log(JSON.stringify({status:'MERCHANT_PRICING_WORKSPACE_READY',url:workspace.url,state:args['--state']}));
+  console.log(JSON.stringify({schema:PRICING_WORKSPACE_LAUNCH_SCHEMA,
+    status:'MERCHANT_PRICING_WORKSPACE_READY',...workspace.model.launch,
+    pid:process.pid,url:workspace.url,planningUrl:workspace.planningUrl}));
   const stop = () => workspace.close().catch(() => { process.exitCode = 1; });
   process.once('SIGINT',stop); process.once('SIGTERM',stop);
   return workspace;
