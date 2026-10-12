@@ -7,6 +7,7 @@ import { databentoStartup } from './application-databento.mjs';
 import { blockscoutStartup } from './application-blockscout.mjs';
 import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
 import { ndjsonStartup } from './application-ndjson.mjs';
+import { kafkaStartup } from './application-kafka.mjs';
 import { cheesecakeStartup } from './application-cheesecake.mjs';
 import { odataStartup } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarStartup } from './application-sec-edgar.mjs';
@@ -358,6 +359,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
       saving = saving.then(async () => {
         if (seen) return;
         const startup = await ndjsonStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'dataset-kafka') {
+      if (!text.startsWith('{"schema":"stellar-forge.kafka-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await kafkaStartup(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;

@@ -96,6 +96,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/httpd.py",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -344,7 +348,8 @@
     "baserow-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment-cli.mjs",
     "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
     "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
-    "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs"
+    "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs",
+    "dataset-kafka": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/cli.mjs"
   },
   "exports": {
     "./seller/opencage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/index.mjs",
