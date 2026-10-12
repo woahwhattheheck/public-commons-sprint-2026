@@ -59,9 +59,15 @@ const completionDate = value => {
     'GRANT_INVALID_INPUT', 'Use the native calendar date in YYYY-MM-DD form.');
   return value;
 };
+const cohortReviewIds = value => {
+  need(Array.isArray(value) && value.length <= 20 && new Set(value).size === value.length,
+    'GRANT_INVALID_INPUT', 'Select at most 20 distinct original frozen cohort reviews.');
+  for (const selected of value) id(selected, 'review');
+  return value;
+};
 const COMPLETION_FIELDS = Object.freeze({
   save:{allowed:['inputs'], required:['inputs']},
-  prepare:{allowed:['receiptId','asOfDate','summary','expectedPreviewSha256'],
+  prepare:{allowed:['receiptId','asOfDate','summary','expectedPreviewSha256','cohortReviewIds'],
     required:['receiptId','asOfDate','summary','expectedPreviewSha256']},
   extension:{allowed:['receiptId','confirmedOn','deadlineOn','reference','sourceIds','confirmationNote'],
     required:['receiptId','confirmedOn','deadlineOn','reference']},
@@ -81,6 +87,7 @@ function completionCommandBody(action, body) {
   if (data.reviewId !== undefined) id(data.reviewId,'review');
   if (data.outcomeId !== undefined) id(data.outcomeId,'outcome');
   if (data.inputs !== undefined) object(data.inputs,'Completion assignments');
+  if (data.cohortReviewIds !== undefined) cohortReviewIds(data.cohortReviewIds);
   for (const key of ['asOfDate','confirmedOn','deadlineOn','submittedOn','date'])
     if (data[key] !== undefined) completionDate(data[key]);
   for (const key of ['expectedPreviewSha256','expectedReviewSha256'])
@@ -433,6 +440,24 @@ export class GrantWorkspaceClient {
     return this.#request('/api/operations/' + caseId + '/portfolio-selection',
       {body:{expectedVersion, portfolioId, alternativeId}, mutation:false});
   }
+  cohortSeed(caseId, expectedVersion, tranche) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version'); integer(tranche,'Cohort tranche',2,3);
+    return this.#request('/api/operations/'+caseId+'/cohort-seed',
+      {body:{expectedVersion,tranche},mutation:false});
+  }
+  cohortPreview(caseId, expectedVersion, inputs) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version'); object(inputs,'Original cohort review inputs');
+    return this.#request('/api/operations/'+caseId+'/cohort-preview',
+      {body:{expectedVersion,inputs},mutation:false});
+  }
+  cohortPrepare(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','requestId','actor','note','inputs','expectedPreviewSha256'],
+      ['expectedVersion','requestId','actor','inputs','expectedPreviewSha256']);
+    const {inputs,expectedPreviewSha256,...original}=body;
+    object(inputs,'Original cohort review inputs'); sha(expectedPreviewSha256);
+    return this.command(caseId,{...original,action:'cohort.prepare',data:{inputs,expectedPreviewSha256}});
+  }
   completionSeed(caseId, expectedVersion, tranche) {
     id(caseId,'operation'); integer(expectedVersion,'Current case version'); integer(tranche,'Completion tranche',1,3);
     return this.#request('/api/operations/'+caseId+'/completion-seed',
@@ -440,7 +465,8 @@ export class GrantWorkspaceClient {
   }
   completionPreview(caseId, expectedVersion, inputs) {
     id(caseId,'operation'); integer(expectedVersion,'Current case version');
-    exact(inputs,['receiptId','asOfDate','summary'],['receiptId','summary']);
+    exact(inputs,['receiptId','asOfDate','summary','cohortReviewIds'],['receiptId','summary']);
+    if (inputs.cohortReviewIds !== undefined) cohortReviewIds(inputs.cohortReviewIds);
     id(inputs.receiptId,'cash');
     if (inputs.asOfDate !== undefined) completionDate(inputs.asOfDate);
     text(inputs.summary,'Completed tranche result',20000,true);
@@ -517,6 +543,7 @@ export class GrantWorkspaceClient {
       portfolio:() => '/api/operations/' + id(args.caseId, 'operation') + '/portfolios/' + id(args.portfolioId, 'portfolio') + '/export.zip',
       source:() => '/api/operations/' + id(args.caseId, 'operation') + '/sources/' + id(args.sourceId, 'source'),
       completion:() => '/api/operations/' + id(args.caseId,'operation') + '/completion-reviews/' + id(args.reviewId,'review') + '/export.zip',
+      cohort:() => '/api/operations/' + id(args.caseId,'operation') + '/cohort-reviews/' + id(args.reviewId,'review') + '/export.zip',
     };
     need(Object.hasOwn(routes, kind), 'GRANT_INVALID_DOWNLOAD', 'Choose a complete original grant export or source.');
     return this.#request(routes[kind](), {});
