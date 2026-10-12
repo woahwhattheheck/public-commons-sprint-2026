@@ -33,8 +33,8 @@ async function loadDelivery(sourceDirectory,{maxBytes=MAX_TOTAL_BYTES}={}){
   const read=async name=>{check(Object.hasOwn(manifest.files,name),'FEED_RECEIVING_REQUIRED_FILE');return JSON.parse(await regularBytes(root,name));};
   const c=await read('contract.json'),review=await read('review.json');normalizeContract(c.contract);
   check(c.schema==='stellar-forge.research-feed-contract-revision.v1'&&c.sha256===contractHash(c.contract)&&c.sha256===manifest.contractSha256&&c.contract.id===manifest.contractId&&c.revision===manifest.contractRevision&&Number.isSafeInteger(c.revision)&&c.revision>0,'FEED_RECEIVING_CONTRACT_CHANGED');
-  const identity={contractSha256:manifest.contractSha256,editionId:manifest.editionId,sourceFingerprint:manifest.sourceFingerprint,reviewRevision:manifest.reviewRevision,before:manifest.before};
-  check(manifest.id==='feed-'+digest(canonical(identity)).slice(0,32),'FEED_RECEIVING_IDENTITY_CHANGED');
+  const identity={contractSha256:manifest.contractSha256,editionId:manifest.editionId,sourceFingerprint:manifest.sourceFingerprint,reviewRevision:manifest.reviewRevision,reviewSha256:manifest.reviewSha256,before:manifest.before};
+  check(manifest.id==='feed-'+digest(canonical(identity)).slice(0,32)&&manifest.reviewSha256===digest(canonical(review)),'FEED_RECEIVING_IDENTITY_CHANGED');
   const sourceDirectories=manifest.sourceEditions.map(id=>{check(/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(id),'FEED_RECEIVING_EDITION_ID');check(Object.hasOwn(manifest.files,'source/'+id+'/manifest.json'),'FEED_RECEIVING_SOURCE_REQUIRED');return join(root,'source',id);});
   const research=await inspectResearchExports(sourceDirectories,{maxBytes});
   return {root,manifest,manifestBytes,contract:c,review,total,sourceDirectories,research,read};
@@ -78,7 +78,7 @@ export async function receiveFeedRelease({sourceDirectory,destination,maxBytes=M
     check(Buffer.from(feedJSONL(projection)).equals(await regularBytes(x.root,'feed.jsonl'))&&Buffer.from(feedCSV(projection)).equals(await regularBytes(x.root,'feed.csv')),'FEED_RECEIVING_PROJECTION_CHANGED');
     const reviewStates=[x.review];
     if(x.manifest.before){
-      const before=await research.edition(x.manifest.before.id),r=await x.read('before-review.json');validateReview(before,x.contract,r,x.manifest.before.reviewRevision);check(r.sourceFingerprint===x.manifest.before.source,'FEED_RECEIVING_COMPARISON_CONTEXT_CHANGED');reviewStates.push(r);
+      const before=await research.edition(x.manifest.before.id),r=await x.read('before-review.json');validateReview(before,x.contract,r,x.manifest.before.reviewRevision);check(r.sourceFingerprint===x.manifest.before.source&&digest(canonical(r))===x.manifest.before.reviewSha256,'FEED_RECEIVING_COMPARISON_CONTEXT_CHANGED');reviewStates.push(r);
     }
     await research.transaction(async()=>{
       const directory=await privateDirectory(join(feeds.root,'contracts',x.contract.contract.id));await privateDirectory(join(directory,'revisions'));
