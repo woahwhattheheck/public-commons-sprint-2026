@@ -6,6 +6,7 @@ import { dirname, resolve, join, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { prepareProduct, prepareTokenBuyer, PLAN_SCHEMA, LIMITS, error } from './product.mjs';
+import { connectionForPlan, connectionSummary } from './connection.mjs';
 import { privateDirectory, restoreProviderBackup } from './accounting.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -16,6 +17,12 @@ const own = (o, key) => Object.hasOwn(o, key);
 export const HELP = [
   'Blockscout token merchant — Node 24+, Linux, complete Stellar Forge source',
   '', '  template', '  inspect --plan PLAN.json',
+  '  connection-template --plan PLAN.json',
+  '  connection-review --plan PLAN.json --changes CHANGES.json',
+  '  connection-prepare --plan PLAN.json --changes CHANGES.json --expected-plan-sha256 SHA256',
+  '        --review-sha256 SHA256 --out NEW_PRIVATE_PACKAGE',
+  '  connection-inspect --bundle CONNECTION_PACKAGE.json',
+  '  connection-receive --bundle CONNECTION_PACKAGE.json --review-sha256 SHA256 --out NEW_PRIVATE_PACKAGE',
   '  prepare --plan PLAN.json --out NEW_PRIVATE_PACKAGE',
   '  serve --package PACKAGE --state PRIVATE_MERCHANT_ROOT --facilitator HTTPS_URL',
   '        [--port 8423] [--operations-port 8424] [--desk-port 8425]',
@@ -46,6 +53,11 @@ export const HELP = [
   'A revision conflict exits 3 with the current attempt for explicit review.',
 ].join('\n');
 const commands = {
+  'connection-template': { required: ['plan'] },
+  'connection-review': { required: ['plan', 'changes'] },
+  'connection-prepare': { required: ['plan', 'changes', 'expected-plan-sha256', 'review-sha256', 'out'] },
+  'connection-inspect': { required: ['bundle'] },
+  'connection-receive': { required: ['bundle', 'review-sha256', 'out'] },
   inspect: { required: ['plan'] }, prepare: { required: ['plan', 'out'] },
   serve: { required: ['package', 'state', 'facilitator'], optional: ['port', 'operations-port', 'desk-port', 'drain-grace-ms', 'expected-plan-sha256', 'expected-package-sha256'], switches: ['allow-local-facilitator'] },
   buyer: { required: ['package', 'chain', 'address', 'intent', 'out', 'response-out'] },
@@ -102,25 +114,30 @@ function entry(plan) {
       return 'export const ' + id + '=app.handlers.' + id + ';\nexport const admit_' + id + '=app.handlers.admit_' + id + ';';
     }).join('\n') + '\nexport const blockscoutSnapshot=app.snapshot;\nexport const close=app.close;\n';
 }
-const FILES = ['plan.json', 'openapi.json', 'selections.json', 'route-bindings.json', 'seller-service.json', 'seller-offers.json', 'handlers.mjs', 'RUN.md'];
-export async function preparePackage(input, directory) {
+export const PACKAGE_FILES = Object.freeze(['plan.json', 'openapi.json', 'selections.json', 'route-bindings.json', 'seller-service.json', 'seller-offers.json', 'handlers.mjs', 'RUN.md']);
+const FILES = PACKAGE_FILES;
+export async function preparePackage(input, directory, { instructionsDirectory = directory } = {}) {
   const prepared = prepareProduct(input);
+  if (!isAbsolute(instructionsDirectory) || resolve(instructionsDirectory) !== instructionsDirectory)
+    throw error('BLOCKSCOUT_ABSOLUTE_OUTPUT_REQUIRED');
   if (!isAbsolute(directory) || resolve(directory) !== directory) throw error('BLOCKSCOUT_ABSOLUTE_OUTPUT_REQUIRED');
   await privateDirectory(dirname(directory), false); await mkdir(directory, { mode: 0o700 });
   const documents = { 'plan.json': json(prepared.plan), 'openapi.json': json(prepared.spec),
     'selections.json': json(prepared.selections), 'route-bindings.json': json(prepared.bindings),
     'seller-service.json': json(prepared.service), 'seller-offers.json': json({ resources: prepared.imported.offers.map(row => row.seller) }),
     'handlers.mjs': entry(prepared.plan), 'RUN.md': '# Blockscout token merchant\n\n' +
-      'Use the complete matching source release at ' + root + '. The private API key belongs in the environment named ' + prepared.plan.apiKeyEnv + '.\n\n' +
-      'Run node ' + join(here, 'cli.mjs') + ' serve --package ' + directory + ' --state /private/blockscout-merchant --facilitator https://YOUR_FACILITATOR.\n\n' +
-      'Keep the same merchant state directory across restarts, credential rotation and selected price rollback. The startup URLs open the provider desk and original native operations.\n\n' +
+      'Use the complete matching source release at ' + root + '. Provider: ' + connectionSummary(prepared.plan).providerName +
+      ' (' + connectionSummary(prepared.plan).origin + '). ' +
+      (connectionSummary(prepared.plan).credentialEnvironment ? 'The private credential belongs in the environment named ' + prepared.plan.apiKeyEnv + '.' : 'The selected operator instance uses anonymous access.') + '\n\n' +
+      'Run node ' + join(here, 'cli.mjs') + ' serve --package ' + instructionsDirectory + ' --state /private/blockscout-merchant --facilitator https://YOUR_FACILITATOR.\n\n' +
+      'Use the state directory belonging to this provider account and connection. Reuse it across restarts, credential rotation and selected price rollback; initialize a separate merchant root for another account or connection. The startup URLs open the provider desk and original native operations.\n\n' +
       'The source README contains complete install, buyer, recovery, backup and original SF82 release commands.\n' };
   const manifest = { schema: 'stellar-forge.blockscout-package.v1', planSha256: prepared.planSha256,
     files: Object.fromEntries(FILES.map(name => [name, { sha256: hash(documents[name]), bytes: Buffer.byteLength(documents[name]) }])) };
   for (const name of FILES) await save(join(directory, name), documents[name]);
   await save(join(directory, 'package.json'), json(manifest));
   return { status: 'PREPARED', directory, planSha256: prepared.planSha256, routes: prepared.plan.chains.length,
-    paymentNetwork: prepared.plan.payment.network, requiredEnvironment: prepared.plan.apiKeyEnv, manifest };
+    paymentNetwork: prepared.plan.payment.network, requiredEnvironment: connectionSummary(prepared.plan).credentialEnvironment, manifest };
 }
 export async function readPackage(directory, { expectedPlanSha256, expectedManifestSha256 } = {}) {
   for (const expected of [expectedPlanSha256, expectedManifestSha256])
@@ -245,7 +262,38 @@ export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && args[0] === '--help') { process.stdout.write(HELP + '\n'); return; }
   if (args.length === 1 && args[0] === 'template') { const value = template(); process.stdout.write(json(value)); return value; }
   const { command, options: o } = options(args); let result;
-  if (command === 'prepare') result = await preparePackage(await readJSON(resolve(o.plan)), o.out);
+  if (command.startsWith('connection-')) {
+    const setup = await import('./connection-setup.mjs');
+    if (command === 'connection-inspect' || command === 'connection-receive') {
+      const bundle = await readJSON(resolve(o.bundle), 2097152);
+      if (command === 'connection-inspect') result = setup.inspectConnectionBundle(bundle);
+      else {
+        const received = await setup.receiveConnectionBundle(bundle, o.out, o['review-sha256']);
+        const bytes = Buffer.from(json(received.bundle));
+        const { bundle: omitted, ...summary } = received;
+        result = { ...summary, bundle: { path: join(received.directory, 'connection-package.json'),
+          bytes: bytes.length, sha256: hash(bytes) } };
+      }
+    } else {
+      const p = prepareProduct(await readJSON(resolve(o.plan)));
+      if (command === 'connection-template') result = { connection: connectionForPlan(p.plan),
+        accountAlias: p.plan.accountAlias, apiKeyEnv: p.plan.apiKeyEnv, limits: { ...p.plan.limits } };
+      else {
+        const changes = await readJSON(resolve(o.changes));
+        const review = setup.reviewConnection(p.plan, changes,
+          command === 'connection-prepare' ? o['expected-plan-sha256'] : p.planSha256);
+        if (command === 'connection-review') result = review;
+        else {
+          if (review.reviewSha256 !== o['review-sha256']) throw error('BLOCKSCOUT_CONNECTION_REVIEW_CHANGED', 409);
+          const prepared = await setup.prepareConnectionPackage(review, o.out);
+          const bytes = Buffer.from(json(prepared.bundle));
+          const { bundle: omitted, ...summary } = prepared;
+          result = { ...summary, bundle: { path: join(prepared.directory, 'connection-package.json'),
+            bytes: bytes.length, sha256: hash(bytes) } };
+        }
+      }
+    }
+  } else if (command === 'prepare') result = await preparePackage(await readJSON(resolve(o.plan)), o.out);
   else if (command === 'inspect') {
     const p = prepareProduct(await readJSON(resolve(o.plan))); result = { plan: p.plan, planSha256: p.planSha256,
       routes: p.imported.offers.map(row => ({ method: row.method, path: row.path, offer: row.seller })) };
