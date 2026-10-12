@@ -211,10 +211,11 @@ drains the merchant and retains the usage checkpoint. Start the same directory
 again to continue with the same requests and results.
 
 The [commerce browser workspace](sf66-demo-launcher/COMMERCE_CONSOLE.md) provides
-selection, review, execution, saved-resource preview/download and recovery over
-that same session. Start it instead of a second terminal session for the same
-directory. Its original approval prompt remains in the terminal from which it
-was launched.
+selection, saved-request review, live payment approval, execution, delivered
+resources and recovery over that same session. Its default browser mode displays
+the actual accepted terms for an explicit Approve or Reject decision through the
+original reservation and signer. Use the guide's explicit terminal option when
+the original controlling-terminal prompt is preferred.
 
 ## Stage, replace and restore a live merchant release
 
