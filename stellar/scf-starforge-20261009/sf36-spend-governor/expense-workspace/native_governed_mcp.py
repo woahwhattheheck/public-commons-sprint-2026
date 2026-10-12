@@ -189,15 +189,37 @@ def project_governed_snapshot(snapshot):
     retained = {row["quoteId"]: row for row in snapshot["bindings"]}
     ledger_report = build_statement(snapshot["ledger_snapshot"]) if snapshot["ledger_snapshot"] is not None else None
     ledger_rows = {row["request_id"]:row for row in ledger_report["rows"]} if ledger_report else {}
-    rows, source_issues, source_notes = [], [], []
-    linked_ids = set()
+    rows, source_issues, source_notes, unlinked = [], [], [], []
+    linked_ids, unlinked_ids = set(), set()
+
+    def retain_unlinked(ident, ledger, problems):
+        # A damaged native binding cannot turn an observed original reservation
+        # into zero. Retain its exact selected-owner exposure for source review,
+        # separately from a successfully attributed purchase.
+        if (ledger and ledger["actor"] == owner["actor"] and ledger["service"] == owner["service"]
+                and ident not in unlinked_ids):
+            unlinked_ids.add(ident)
+            unlinked.append({"request_id":ident,"request_digest":ledger["request_digest"],
+                "actor":ledger["actor"],"service":ledger["service"],"network":ledger["network"],"asset":ledger["asset"],
+                "native_reservation_day":ledger["day"],"state":ledger["state"],"maximum":ledger["amount"],
+                "amount":ledger["reserved_base_units"],"settled_actual":ledger["actual"],
+                "receipt_ref":ledger["receipt_ref"],"proof_sha256":ledger["proof_sha256"],
+                "attribution":"UNVERIFIED_NATIVE_LINK","problems":list(problems)})
+            source_issues.append({"request_id":ident,"code":"ORIGINAL_LEDGER_LINK_REQUIRES_REVIEW",
+                                  "problems":list(problems),"request_digest":ledger["request_digest"]})
+            return unlinked[-1]
+        return next((value for value in unlinked if value["request_id"] == ident), None)
+
     for ident in sorted(set(originals) | set(retained)):
         original, captured = originals.get(ident), retained.get(ident)
         ledger = ledger_rows.get(ident)
         problems = list(captured.get("problems", [])) if captured else []
         notes = []
         binding = captured.get("expectedBinding") if captured else None
-        request_sha = captured.get("requestSha256") if captured else derivations.get(ident, {}).get("requestSha256")
+        derived = derivations.get(ident, {})
+        request = validate_request(binding["request"]) if binding else (
+            validate_request(derived["request"]) if derived.get("request") else None)
+        request_sha = captured.get("requestSha256") if binding else derived.get("requestSha256")
         if original:
             row = deepcopy(original)
             detail = row["native_detail"]
@@ -215,6 +237,7 @@ def project_governed_snapshot(snapshot):
             (source_notes if binding and not problems and ledger is None else source_issues).append({
                 "request_id":ident,"code":"NATIVE_BINDING_WITHOUT_QUOTE_OR_LEDGER",
                 "problems":problems,"record_sha256":captured.get("recordSha256") if captured else None})
+            retain_unlinked(ident, ledger, problems or ["NATIVE_REQUEST_BINDING_UNAVAILABLE"])
             continue
         detail.update(spending_owner=deepcopy(owner),spending_link="NO_NATIVE_BINDING",
             native_quote_present=original is not None,spending_request_sha256=request_sha,
@@ -223,8 +246,7 @@ def project_governed_snapshot(snapshot):
             spending_state=None,spending_maximum=None,spending_actual=None,
             spending_reserved_base_units="0",spending_reservation_day=None,spending_receipt_ref=None,
             spending_proof_sha256=None,spending_problems=problems,spending_notes=notes)
-        if captured and binding:
-            request = validate_request(binding["request"])
+        if request:
             if _sha(native_canonical(request)) != request_sha:
                 problems.append("NATIVE_REQUEST_DIGEST_CHANGED")
             if ledger:
@@ -233,6 +255,7 @@ def project_governed_snapshot(snapshot):
                     "scheme":request["scheme"],"amount":request["max_amount"]}
                 if any(ledger.get(k) != v for k,v in matches.items()):
                     problems.append("NATIVE_LEDGER_REQUEST_CHANGED")
+                    detail["unverified_spending_exposure"]=retain_unlinked(ident, ledger, problems)
                 else:
                     linked_ids.add(ident)
                     detail.update(spending_link="ORIGINAL_SF36",spending_state=ledger["state"],
@@ -240,21 +263,22 @@ def project_governed_snapshot(snapshot):
                         spending_reserved_base_units=ledger["reserved_base_units"],
                         spending_reservation_day=ledger["day"],spending_receipt_ref=ledger["receipt_ref"],
                         spending_proof_sha256=ledger["proof_sha256"])
-                    # The original ledger supplies finance amounts for a governed
-                    # row; its quoted observation remains separately visible.
                     for key,value in ledger.items():
                         row[key]=value
                     row["native_detail"]=detail
                     row["native_date_basis"]="SF36 reservation day"
-                    bad,warnings=_finality_problems(captured,request,request_sha,ledger)
-                    problems.extend(bad);notes.extend(warnings)
-                    final_payment=captured.get("finalityPayment") or {}
-                    if final_payment.get("classification") == "TRANSFER_MATCHED":
-                        transfer=final_payment.get("transferIdentity")
-                        if detail.get("transfer_identity") and detail["transfer_identity"] != transfer:
-                            problems.append("NATIVE_TRANSFER_IDENTITY_CHANGED")
-                        elif ledger["state"] == "settled":
-                            detail["transfer_identity"]=transfer
+                    if not binding:
+                        problems.append("NATIVE_BINDING_RECORD_MISSING" if not captured else "NATIVE_BINDING_RECORD_INVALID")
+                    else:
+                        bad,warnings=_finality_problems(captured,request,request_sha,ledger)
+                        problems.extend(bad);notes.extend(warnings)
+                        final_payment=captured.get("finalityPayment") or {}
+                        if final_payment.get("classification") == "TRANSFER_MATCHED":
+                            transfer=final_payment.get("transferIdentity")
+                            if detail.get("transfer_identity") and detail["transfer_identity"] != transfer:
+                                problems.append("NATIVE_TRANSFER_IDENTITY_CHANGED")
+                            elif ledger["state"] == "settled":
+                                detail["transfer_identity"]=transfer
                     if original and original["state"] == "settled":
                         if ledger["state"] == "reserved":
                             notes.append("MATCHED_PAYMENT_AWAITS_SPENDING_RECONCILIATION")
@@ -262,12 +286,13 @@ def project_governed_snapshot(snapshot):
                             problems.append("QUOTE_AND_SPENDING_SETTLEMENT_CHANGED")
                     elif original and ledger["state"] == "settled" and original["state"] in ("failed","observation_review"):
                         problems.append("QUOTE_AND_SPENDING_OUTCOME_DISAGREE")
-            else:
+            elif binding:
                 detail["spending_link"]="BOUND_WITHOUT_RESERVATION"
                 if original and original["native_detail"].get("signed_request_dispatched"):
                     problems.append("GOVERNED_SIGNED_DISPATCH_WITHOUT_LEDGER_ROW")
-        elif ledger and request_sha and ledger["request_digest"] == request_sha:
-            problems.append("NATIVE_BINDING_RECORD_MISSING")
+        elif ledger:
+            problems.append("NATIVE_REQUEST_BINDING_UNAVAILABLE")
+            detail["unverified_spending_exposure"]=retain_unlinked(ident, ledger, problems)
         if problems:
             row["state"]="spending_review"
             detail["spending_link"]="SOURCE_REVIEW_REQUIRED"
@@ -280,22 +305,26 @@ def project_governed_snapshot(snapshot):
         rows.append(row)
     rows.sort(key=lambda row:(row["day"],row["request_id"]))
     groups={}
+    def group_for(network,asset):
+        return groups.setdefault((network,asset),{"network":network,"asset":asset,"requests":0,"pending_requests":0,
+            "unresolved_quotes":0,"settled_base_units":0,"reserved_base_units":0,"released_capacity_base_units":0,
+            "unverified_reserved_base_units":0})
     for row in rows:
-        key=(row["network"],row["asset"])
-        group=groups.setdefault(key,{"network":key[0],"asset":key[1],"requests":0,"pending_requests":0,
-            "unresolved_quotes":0,"settled_base_units":0,"reserved_base_units":0,"released_capacity_base_units":0})
+        group=group_for(row["network"],row["asset"])
         group["requests"]+=1
         group["pending_requests"]+=int(int(row.get("reserved_base_units") or "0")>0)
         group["unresolved_quotes"]+=int(row["state"] in ("unresolved","observation_review","spending_review"))
-        # A conflicting binding remains retained for review. Never promote its
-        # observed amount to allocatable settled expense.
         if row["state"]=="settled":
             group["settled_base_units"]+=int(row["settled_base_units"] or "0")
         for name in ("reserved_base_units","released_capacity_base_units"):
             group[name]+=int(row.get(name) or "0")
+    for exposure in unlinked:
+        group=group_for(exposure["network"],exposure["asset"])
+        group["reserved_base_units"]+=int(exposure["amount"])
+        group["unverified_reserved_base_units"]+=int(exposure["amount"])
     for group in groups.values():
         group["accounted_base_units"]=str(group["settled_base_units"]+group["reserved_base_units"])
-        for name in ("settled_base_units","reserved_base_units","released_capacity_base_units"):
+        for name in ("settled_base_units","reserved_base_units","released_capacity_base_units","unverified_reserved_base_units"):
             group[name]=str(group[name])
     native = snapshot["ledger_snapshot"]
     return {"schema":STATEMENT,"captured_at":snapshot["observedAt"],
@@ -303,18 +332,21 @@ def project_governed_snapshot(snapshot):
             "database_name":"Original quotes.sqlite and SF36 ledger",
             "journal_events":native["journal_events"] if native else 0,
             "last_sequence":native["last_sequence"] if native else 0,
-            "projection_sha256":digest(rows),"quote_transitions":snapshot["quotes"]["transitionCount"],
+            "projection_sha256":digest({"rows":rows,"unlinked_spending_exposures":unlinked}),
+            "quote_transitions":snapshot["quotes"]["transitionCount"],
             "quote_last_sequence":snapshot["quotes"]["lastSequence"],
             "spending_owner":owner,"ledger_state":"INITIALIZED" if native is not None else "UNINITIALIZED",
+            "reservation_ledger_identity":snapshot.get("ledger_identity"),
             "native_initialized":snapshot["nativeInitialized"],"linked_requests":len(linked_ids),
-            "shared_ledger_rows":len(ledger_rows),"other_shared_ledger_rows":len(set(ledger_rows)-linked_ids),
-            "integrity_issues":source_issues,"source_notes":source_notes},
+            "shared_ledger_rows":len(ledger_rows),"other_shared_ledger_rows":len(set(ledger_rows)-linked_ids-unlinked_ids),
+            "unlinked_spending_exposures":unlinked,"integrity_issues":source_issues,"source_notes":source_notes},
         "rows":rows,"portfolio":[groups[k] for k in sorted(groups)],
         "basis":"Original MCP quote snapshot joined by original native invocation/request binding to the original SF36 statement",
         "date_basis":"Original SF36 reservation day for bound ledger rows; quote creation day for quote-only rows; recognition remains an operator decision",
         "notes":["Bound SF36 rows retain the original ledger's actual, outstanding maximum and released capacity.",
             "The original quote/payment outcome and complete-result metadata remain separately retained.",
             "A matched quote whose original ledger is still reserved needs original buyer spending reconciliation.",
+            "A damaged binding retains the observed original reservation for review; it cannot become allocatable expense.",
             "The full shared ledger snapshot is retained; unrelated shared rows are not attributed to this native MCP owner.",
             "No signing key, control key, wallet, merchant request, new reservation or network reconciliation is used by source capture."]}
 

@@ -33,6 +33,11 @@ MCP_REQUIRED = {APP_PREFIX + "expense-workspace/native_mcp.py",
     "app/stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/terms.mjs",
     "app/stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/networks.json"}
 
+GOVERNED_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in ("native_governed_mcp.py", "GOVERNED_MCP.md")}
+GOVERNED_REQUIRED.update("app/stellar-forge/mcp-paid-agent/" + n for n in
+    ("expense-governed-statement.mjs", "native-spend-binding.mjs", "native-spend-configuration.mjs"))
+GOVERNED_FEATURE = "original-spending-readonly-v1"
+
 CREDIT_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in
     ("native_woo.py", "credits.py", "credit_store.py", "credit-reader-files.json")}
 ADJUSTMENT_READER_FILES = {
@@ -124,9 +129,11 @@ def inspect_database(path, manifest):
             raise ValueError("The project manifest does not match its original native workspace revision.")
         source_kinds = sorted({json.loads(row[0]).get("kind", "sf36_ledger") for row in
                                database.execute("SELECT body FROM sources")})
-        if any(kind not in ("sf36_ledger", "mcp_quote", "woo_refund", "merchant_adjustments") for kind in source_kinds):
+        if any(kind not in ("sf36_ledger", "mcp_quote", "governed_mcp", "woo_refund", "merchant_adjustments") for kind in source_kinds):
             raise ValueError("The retained source kind is not supported by this original receiver.")
-        if "mcp_quote" in source_kinds and manifest.get("mcp_quote_capture") != "native-readonly-v1":
+        if "governed_mcp" in source_kinds and manifest.get("governed_mcp_capture") != GOVERNED_FEATURE:
+            raise ValueError("The governed MCP source requires its original binding and spending readers.")
+        if any(kind in source_kinds for kind in ("mcp_quote", "governed_mcp")) and manifest.get("mcp_quote_capture") != "native-readonly-v1":
             raise ValueError("The complete MCP expense source requires its original included reader.")
         if manifest.get("mcp_quote_capture") is not None and manifest.get("source_kinds") != source_kinds:
             raise ValueError("The original source kinds do not match the complete project manifest.")
@@ -222,6 +229,11 @@ def receive(archive, directory, expected_sha256):
                 raise ValueError("The accountant return feature requires its original typed source closure.")
             if bookkeeping:
                 extra = extra | ACCOUNTANT_REQUIRED
+            governed = manifest.get("governed_mcp_capture")
+            if governed not in (None, GOVERNED_FEATURE) or governed and not feature:
+                raise ValueError("The governed MCP feature requires its original complete quote/spending source closure.")
+            if governed:
+                extra = extra | GOVERNED_REQUIRED
             required = REQUIRED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
             allowed = ALLOWED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
             if len(entries) != len(descriptions) or not required <= set(entries) <= allowed or set(names) != set(entries) | {"manifest.json"}:

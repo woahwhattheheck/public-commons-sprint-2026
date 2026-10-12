@@ -82,7 +82,7 @@ export async function captureGovernedMcpExpenseRecords({descriptor,configuration
   const byId=new Map(quotes.records.map(record=>[record.quote.quoteId,record]));
   const quoteBindings=quotes.records.map(({quote})=>{
     try{const bound=mcpSpendingBinding({...quote,requestUrl:quote.url},owner);
-      return {quoteId:quote.quoteId,requestSha256:digest(mcpJson(bound.request)),problem:null};}
+      return {quoteId:quote.quoteId,requestSha256:digest(mcpJson(bound.request)),request:bound.request,problem:null};}
     catch(error){return {quoteId:quote.quoteId,requestSha256:null,problem:error.code??'GOVERNED_EXPENSE_QUOTE_UNSUPPORTED'};}
   });
   let entries=[];
