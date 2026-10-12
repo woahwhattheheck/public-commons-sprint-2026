@@ -69,8 +69,8 @@
     },
     {
       "path": "operate_inventory.py",
-      "git_blob": "6ee5edfdb2e8534026185148c6e8d13700888250",
-      "bytes": 46827
+      "git_blob": "307f3e07159379504e291ab548e3910eaaba5043",
+      "bytes": 47092
     },
     {
       "path": "prepare_inventory.py",
@@ -79,8 +79,43 @@
     },
     {
       "path": "README.md",
-      "git_blob": "39668a3245d770cc7344ae1ff9ae444edc227109",
-      "bytes": 17602
+      "git_blob": "26444148474c3098b849e6f7f2669ccb989d64f4",
+      "bytes": 18259
+    },
+    {
+      "path": "workspace/actions.py",
+      "git_blob": "2da2482451e41d2b828ba523e031d67ec65238ac",
+      "bytes": 17955
+    },
+    {
+      "path": "workspace/model.py",
+      "git_blob": "206002ca6ab809c8c9f407dce47685fd2be2886a",
+      "bytes": 47132
+    },
+    {
+      "path": "workspace/README.md",
+      "git_blob": "e6fbcd913663abf880ba54eee7638ce47b471aa5",
+      "bytes": 13018
+    },
+    {
+      "path": "workspace/server.py",
+      "git_blob": "3c916299ac05f838c45b2dc963ea7a9d83d8448d",
+      "bytes": 25276
+    },
+    {
+      "path": "workspace/web/app.js",
+      "git_blob": "236bfc9dd43107ee37f1cf06e3aa4f80cf6831dd",
+      "bytes": 67051
+    },
+    {
+      "path": "workspace/web/index.html",
+      "git_blob": "357d10e54a6102a9b50777d207d4cdd7cbef68c2",
+      "bytes": 771
+    },
+    {
+      "path": "workspace/web/style.css",
+      "git_blob": "899bcb69c092e7a68843cc17f736dd81484310ea",
+      "bytes": 16478
     }
   ]
 }

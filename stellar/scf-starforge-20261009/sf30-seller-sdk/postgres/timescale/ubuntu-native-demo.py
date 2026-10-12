@@ -234,8 +234,9 @@ def main():
     actual = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
     if actual != args.source:
         raise ValueError("Source checkout differs from the selected immutable commit")
-    if os.geteuid() != 0:
-        raise ValueError("This private Ubuntu bootstrap needs root to run PostgreSQL as uid65534")
+    pg_uid = 65534 if os.geteuid() == 0 else os.geteuid()
+    pg_gid = 65534 if os.geteuid() == 0 else os.getegid()
+    pg_owner = {"user": pg_uid, "group": pg_gid} if os.geteuid() == 0 else {}
     if os.uname().machine != "x86_64":
         raise ValueError("The selected official Ubuntu packages require x86_64")
     release = dict(line.split("=", 1) for line in Path("/etc/os-release").read_text().splitlines()
@@ -304,6 +305,7 @@ def main():
     record = {"schema": "stellar-forge.timescale-ubuntu-native-host.v1",
               "operation": args.operation_id, "source": args.source,
               "repository": str(repo), "runtime": str(runtime), "nodeVersion": node_version,
+              "postgresOwner": {"uid": pg_uid, "gid": pg_gid},
               "remediationReceiver": str(args.remediation_receiver) if args.remediation_receiver else None,
               "createdAt": now(), "packages": [], "dependencies": [],
               "stages": [], "complete": False}
@@ -418,19 +420,19 @@ def main():
         linked_modules = True
         stage("existing-dependencies", "COMPLETE", packages=len(record["dependencies"]))
         pg.mkdir(mode=0o700)
-        os.chown(pg, 65534, 65534)
+        os.chown(pg, pg_uid, pg_gid)
         sockets = pg / "socket"
         sockets.mkdir(mode=0o700)
-        os.chown(sockets, 65534, 65534)
+        os.chown(sockets, pg_uid, pg_gid)
         password = secrets.token_urlsafe(40)
         pwfile = pg / "password"
         pwfile.write_text(password + "\n")
         pwfile.chmod(0o600)
-        os.chown(pwfile, 65534, 65534)
+        os.chown(pwfile, pg_uid, pg_gid)
         call([pgbin / "initdb", "-D", data, "-L", prefix / "usr/share/postgresql/17",
               "--username=postgres", "--locale=C.UTF-8", "--encoding=UTF8",
               "--auth-local=trust", "--auth-host=scram-sha-256", "--pwfile=" + str(pwfile)],
-             "database-init", user=65534, group=65534)
+             "database-init", **pg_owner)
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
@@ -438,7 +440,7 @@ def main():
             " -c shared_preload_libraries=timescaledb -c shared_buffers=32MB"
             " -c max_connections=20 -c jit=off -c timescaledb.telemetry_level=off")
         call([pgbin / "pg_ctl", "-D", data, "-l", pg / "postgres.log", "-o", options, "-w", "start"],
-             "database-start", user=65534, group=65534)
+             "database-start", **pg_owner)
         started = True
         env["PGPASSWORD"] = password
         env["TIMESCALE_NATIVE_DEMO_PASSWORD"] = password
@@ -508,8 +510,8 @@ def main():
                 except OSError:
                     pass
                 stopped = subprocess.run([str(pgbin / "pg_ctl"), "-D", str(data),
-                    "-m", "fast", "-w", "stop"], env=env, user=65534, group=65534,
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+                    "-m", "fast", "-w", "stop"], env=env,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120, **pg_owner)
                 record["databaseStopOutput"] = stopped.stdout[-8000:].decode(errors="replace")
                 record["databaseStopped"] = stopped.returncode == 0
                 try:

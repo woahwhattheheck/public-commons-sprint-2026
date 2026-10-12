@@ -3,13 +3,17 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { fault } from '../postgres/publisher/files.mjs';
+import { MAX_INPUT_BYTES } from './source.mjs';
+
+// JSON can encode each retained one-byte control character as six bytes.
+const MAX_BODY_BYTES = 6 * MAX_INPUT_BYTES + 65536;
 
 async function readBody(req) {
   if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''))
     throw fault('JSON_REQUIRED', 'Send application/json.', 415);
   const chunks = []; let size = 0;
   for await (const chunk of req) {
-    size += chunk.length; if (size > 8 * 1024 * 1024) throw fault('REQUEST_TOO_LARGE', 'The input exceeds 8 MiB.', 413);
+    size += chunk.length; if (size > MAX_BODY_BYTES) throw fault('REQUEST_TOO_LARGE', 'The encoded request exceeds the customer input allowance.', 413);
     chunks.push(chunk);
   }
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
@@ -20,7 +24,8 @@ export async function startGeocoderServer({ workspace, port = 0, closeWorkspace 
     throw new TypeError('Open a geocoder workspace and choose a valid local port.');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'], ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
-    ['/style.css', 'style.css', 'text/css; charset=utf-8']
+    ['/style.css', 'style.css', 'text/css; charset=utf-8'],
+    ['/customer-intake.mjs', 'customer-intake.mjs', 'text/javascript; charset=utf-8']
   ].map(async ([path, name, type]) => [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
   const token = randomBytes(32).toString('hex'), authorization = Buffer.from('Bearer ' + token);
   let origin, closing;

@@ -7,7 +7,7 @@ export default defineMerchantProvider({
   id: 'census-geocoder-workspaces', family: 'censusGeocoderWorkspaces',
   title: 'Census address operations', order: 230, catalogOrder: 190,
   configKey: 'censusGeocoderWorkspaces', summary: true, dependencies: [],
-  concurrency: 'provider', shutdown: 'provider', maxRequestBytes: 131072,
+  concurrency: 'provider', shutdown: 'provider', maxRequestBytes: 2097152,
   configuration: {
     input: 'censusGeocoderWorkspaceConnection', privateExports: true,
     read: async (value, { hostPath }) =>

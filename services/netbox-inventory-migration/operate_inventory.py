@@ -512,7 +512,9 @@ def handover(directory):
                 if candidate.is_file() and candidate.suffix != ".zip":
                     files.append((candidate, candidate.relative_to(root).as_posix()))
     source_root = Path(__file__).resolve().parent
-    for name in ("inventory_migration.py", "prepare_inventory.py", "operate_inventory.py", "README.md"):
+    for name in ("inventory_migration.py", "prepare_inventory.py", "operate_inventory.py", "README.md",
+                 "workspace/model.py", "workspace/actions.py", "workspace/server.py", "workspace/README.md",
+                 "workspace/web/index.html", "workspace/web/app.js", "workspace/web/style.css"):
         path = source_root / name
         if path.is_file():
             files.append((path, "operator-source/" + name))
@@ -721,6 +723,53 @@ def restore(archive_path, directory):
         return {**restored, "archive_sha256": archive_sha, "restored_members": len(entries)}
 
 
+def operate(action, workspace, *, config=None, review_digest="", refresh=False, wait=0, archive=None):
+    """Run the original operator action for the CLI or retained customer desk."""
+    if action not in ("inspect", "review", "apply", "recover", "retry-current", "report", "handover", "restore"):
+        raise InventoryError("Select an original inventory operator action.")
+    if isinstance(wait, bool) or not isinstance(wait, int) or not 0 <= wait <= 600:
+        raise InventoryError("--wait must be between zero and 600 seconds.")
+    if not isinstance(refresh, bool):
+        raise InventoryError("refresh must be a JSON boolean.")
+    if action == "restore":
+        if not archive:
+            raise InventoryError("Select the original --archive for restore.")
+        return restore(archive, workspace)
+    with workspace_lock(workspace) as root:
+        if action in ("inspect", "report", "handover"):
+            return {"inspect": inspect, "report": report, "handover": handover}[action](root)
+        if not config:
+            raise InventoryError("Select the original --config for this native NetBox operation.")
+        api = NativeApi(read_json(config))
+        root, manifest, packet, packet_bytes = load_workspace(root)
+        bind(root, api, manifest)
+        if action == "recover":
+            return wait_for_result(root, api, manifest, wait)
+        if action == "retry-current":
+            directory, previous = current_attempt(root)
+            if previous is None:
+                raise InventoryError("There is no original execution to continue.")
+            received = recover(root, api, manifest)
+            if received["state"] in ("APPLIED", "REVIEWED"):
+                return received
+            # The original retry keeps the operation journal and native
+            # transaction serialization, after reading its current receipt.
+            return dispatch(root, api, manifest, packet_bytes, previous["phase"],
+                            previous.get("review_digest", ""), wait)
+        phase = "REVIEW" if action == "review" else "APPLY"
+        directory, previous = current_attempt(root)
+        received = recover(root, api, manifest) if previous else {"state": "PREPARED"}
+        if received["state"] == "APPLIED":
+            return received
+        if previous and received["state"] == "AWAITING_NATIVE_RESULT":
+            return wait_for_result(root, api, manifest, wait)
+        if phase == "REVIEW" and received["state"] == "REVIEWED" and not refresh:
+            return received
+        if phase == "APPLY" and not review_digest:
+            raise InventoryError("Pass --review-digest from the completed original review.")
+        return dispatch(root, api, manifest, packet_bytes, phase, review_digest, wait)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("inspect", "review", "apply", "recover", "retry-current", "report", "handover", "restore"))
@@ -732,53 +781,11 @@ def main():
     parser.add_argument("--wait", type=int, default=0, help="Seconds to follow the same original native job, from 0 to 600.")
     args = parser.parse_args()
     try:
-        if not 0 <= args.wait <= 600:
-            raise InventoryError("--wait must be between zero and 600 seconds.")
+        result = operate(args.action, args.workspace, config=args.config, review_digest=args.review_digest,
+                         refresh=args.refresh, wait=args.wait, archive=args.archive)
         if args.action == "restore":
-            if not args.archive:
-                raise InventoryError("Select the original --archive for restore.")
-            result = restore(args.archive, args.workspace)
             print(json.dumps(result, ensure_ascii=False, indent=2), flush=True)
             return 0
-        with workspace_lock(args.workspace) as root:
-            if args.action in ("inspect", "report", "handover"):
-                result = {"inspect": inspect, "report": report, "handover": handover}[args.action](root)
-            else:
-                if not args.config:
-                    raise InventoryError("Select the original --config for this native NetBox operation.")
-                api = NativeApi(read_json(args.config))
-                root, manifest, packet, packet_bytes = load_workspace(root)
-                bind(root, api, manifest)
-                if args.action == "recover":
-                    result = wait_for_result(root, api, manifest, args.wait)
-                elif args.action == "retry-current":
-                    directory, previous = current_attempt(root)
-                    if previous is None:
-                        raise InventoryError("There is no original execution to continue.")
-                    received = recover(root, api, manifest)
-                    if received["state"] in ("APPLIED", "REVIEWED"):
-                        result = received
-                    else:
-                        # Explicit original-operation retry. A fresh native
-                        # receipt read above precedes another job; the original
-                        # script's tenant transaction and operation journal
-                        # serialize duplicate requests into one inventory commit.
-                        result = dispatch(root, api, manifest, packet_bytes, previous["phase"],
-                                          previous.get("review_digest", ""), args.wait)
-                else:
-                    phase = "REVIEW" if args.action == "review" else "APPLY"
-                    directory, previous = current_attempt(root)
-                    received = recover(root, api, manifest) if previous else {"state": "PREPARED"}
-                    if received["state"] == "APPLIED":
-                        result = received
-                    elif previous and received["state"] == "AWAITING_NATIVE_RESULT":
-                        result = wait_for_result(root, api, manifest, args.wait)
-                    elif phase == "REVIEW" and received["state"] == "REVIEWED" and not args.refresh:
-                        result = received
-                    elif phase == "APPLY" and not args.review_digest:
-                        raise InventoryError("Pass --review-digest from the completed original review.")
-                    else:
-                        result = dispatch(root, api, manifest, packet_bytes, phase, args.review_digest, args.wait)
         shown = {key: value for key, value in result.items()
                  if key in ("state", "operation_id", "execution_reference", "phase", "review_digest", "receipt_sha256",
                             "counts", "journal", "error", "provider_status", "archive", "bytes", "sha256", "members",
