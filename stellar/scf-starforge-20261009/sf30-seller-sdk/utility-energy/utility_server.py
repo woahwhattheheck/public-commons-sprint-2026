@@ -27,7 +27,10 @@ class Handler(RetainedHandler):
         if any(len(value)!=1 for value in query.values()):raise InputError("Use one value for each query parameter")
         q={key:value[0] for key,value in query.items()};ws=self.server.workspace
         route=target.path
-        if route=="/api/state":self._json(ws.state())
+        if route=="/api/launch":
+            if self.server.launch_available:self._json(self.server.launch_metadata)
+            else:self._json({"error":"The original Utility console is draining"},503)
+        elif route=="/api/state":self._json(ws.state())
         elif route=="/api/import":self._json(ws.saved("imports",q["id"]))
         elif route=="/api/record":self._json(ws.record(q["id"]))
         elif route=="/api/series":self._json(ws.series(q["imports"].split(",") if q.get("imports") else None))
@@ -99,5 +102,17 @@ class Handler(RetainedHandler):
         else:self._json({"error":"Unknown utility operator route"},404)
 
 class OperatorServer(RetainedServer):
-    def __init__(self,workspace,port=0):
+    def __init__(self,workspace,port=0,*,binding=None,connection_file=None):
+        from managed import inspect_binding,startup
+        selected=binding or inspect_binding(workspace.root)
         super().__init__(workspace,port,assets_directory=HERE/"public",handler_class=Handler)
+        self.launch_metadata=startup(self,selected,connection_file)
+        self.launch_available=True
+
+    def shutdown(self):
+        self.launch_available=False
+        return super().shutdown()
+
+    def server_close(self):
+        self.launch_available=False
+        return super().server_close()
