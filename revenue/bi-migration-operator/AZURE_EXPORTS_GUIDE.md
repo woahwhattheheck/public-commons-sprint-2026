@@ -54,11 +54,13 @@ There are two cloud paths:
 1. Select an existing native manifest from the container listing and acquire it directly.
 2. In **Native runs**, choose an existing export and billing month, then **Prepare monthly selection**. Review the retained definition and explicit time period. **Run selected month** makes one request to that existing export's /run endpoint. Refresh native execution history, choose the actual completed run ID, then acquire its returned manifestFile.
 
-The run request is saved before the provider POST. If its response is lost, the record reopens in the uncertain state. Continue with **Refresh original run history**, select the actual provider run, and receive it. Refreshing history retains every native response and continuation. It never substitutes a guessed run ID or starts a second export execution.
+The run request is saved before the provider POST. If its response is lost, the record reopens in the uncertain state. Continue with **Refresh original run history**, select the actual provider run, and receive it. Refreshing history retains every successful native response and continuation. A throttled history request saves the provider delay and resumes that selection after its retry time. Its history_state records that waiting request while the selected execution keeps its original status; a previously completed run remains available for manifest acquisition. It never substitutes a guessed run ID or starts a second export execution.
 
 Daily month-to-date exports with OverwritePreviousReport represent replacement editions. Select one complete manifest edition for billing. A new manifest produces a new source; do not add yesterday's and today's snapshots together. Microsoft documents the native partition manifest and this overwrite behavior in its [improved exports guide](https://learn.microsoft.com/en-us/azure/cost-management-billing/costs/tutorial-improved-exports).
 
-The product retains the manifest's own exportConfig, deliveryConfig, runInfo, dataset version and manifest version. Those values are not rewritten to the connector's request API version. Exact native file paths and order come from its blobs array.
+The product retains the manifest's own exportConfig, deliveryConfig, runInfo, dataset version and manifest version. Those values are not rewritten to the connector's request API version. Exact native file paths and order come from its blobs array. Acquisition through a selected run also compares the manifest's export resource and run ID with that retained execution. If an overwritten path now identifies another execution, refresh the native history and select that current run.
+
+Blob listings follow each opaque NextMarker until it is empty, including pages shorter than the requested page size. Azure's Encoded=true Name attribute is decoded only on the entries it marks; ordinary percent characters in filenames and the continuation marker remain unchanged. The complete original XML response remains in the discovery history.
 
 ## Receive and resume original files
 
@@ -66,7 +68,7 @@ The product retains the manifest's own exportConfig, deliveryConfig, runInfo, da
 
 The first request pins the manifest ETag. Each partition starts with its original length and ETag and continues with Range and If-Match. A committed chunk records its digest and byte count; the next request starts after those bytes. Completion joins all chunks into the original full file and checks the manifest again. The implementation follows the original [Get Blob range/conditional contract](https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob).
 
-If the provider requests a retry interval, the record saves the retry time. Reopen it after that time and continue. If a pinned manifest or file changes, select the provider's new complete edition. The earlier source and any billing statement made from it remain retained.
+If the provider requests a retry interval, the record saves the retry time. Cost Management's x-ms-ratelimit-microsoft.consumption-retry-after header and ordinary Retry-After are both honored; when both are present, the later retry time applies. Reopen it after that time and continue. If a pinned manifest or file changes, select the provider's new complete edition. The earlier source and any billing statement made from it remain retained.
 
 For offline originals, select a manifest JSON or a ZIP containing the manifest and every native partition. Enter the manifest's exact member path and any explicit archive prefix. The archive member for a blob must equal that prefix plus the complete native blob name. Individual original partitions can also be received into their selected manifest row. The file picker never guesses among same-named files from different folders.
 
@@ -82,7 +84,7 @@ Once every native partition is complete, select a partition and inspect its orig
 - Explicit billing amount, currency, resource, group, subscription, service, charge, tags, invoice and allocation-rule columns.
 - Staff note and source revision.
 
-Map fields to the actual header names. The amount and currency columns are required. The native ActualCost or AmortizedCost declaration must agree with the chosen basis. Other retained dataset types require their own native semantic mapping; they do not become billing amounts merely because they contain numeric columns.
+Map fields to the actual header names. The amount and currency columns are required. The native ActualCost or AmortizedCost declaration must agree with the chosen basis. Microsoft's legacy Usage declaration uses the actual basis while retaining its original dataset type and version. Other retained dataset types require their own native semantic mapping; they do not become billing amounts merely because they contain numeric columns.
 
 The review reads every original row and validates the complete native row count and selected billing month. It preserves refunds, signed high-precision decimal amounts, separate duplicate-looking rows and original file/row order. The supplier view retains Azure's internal allocation rows as excluded records according to the original Billing engine.
 
@@ -181,6 +183,7 @@ The installed Azure export path uses these original Microsoft contracts:
 - [Exports — List, 2025-03-01](https://learn.microsoft.com/en-us/rest/api/cost-management/exports/list?view=rest-cost-management-2025-03-01)
 - [Exports — Execute, 2025-03-01](https://learn.microsoft.com/en-us/rest/api/cost-management/exports/execute?view=rest-cost-management-2025-03-01)
 - [Exports — Get Execution History, 2025-03-01](https://learn.microsoft.com/en-us/rest/api/cost-management/exports/get-execution-history?view=rest-cost-management-2025-03-01)
+- [Exports — current execution history, 2026-06-01 (including native throttling and legacy Usage)](https://learn.microsoft.com/en-us/rest/api/cost-management/exports/get-execution-history?view=rest-cost-management-2026-06-01)
 - [Azure Storage — List Blobs](https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs)
 - [Azure Storage — Get Blob](https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob)
 - [Improve exports and native partition manifests](https://learn.microsoft.com/en-us/azure/cost-management-billing/costs/tutorial-improved-exports)

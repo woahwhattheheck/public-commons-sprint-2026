@@ -1,0 +1,15 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "collection-recovery-agent",
+  "description": "Original Request Collections recovery and encrypted agent receiving",
+  "commands": {
+    "mcp-collection-recovery-download": "stellar-forge/mcp-paid-agent/native-collections-recovery-download.mjs"
+  },
+  "commandDescriptions": {
+    "mcp-collection-recovery-download": "Inspect, resume and reopen an original encrypted Request Collections backup"
+  },
+  "exports": {
+    "./buyer/mcp/collection-recovery": "./source/stellar-forge/mcp-paid-agent/native-collections-recovery.mjs",
+    "./buyer/mcp/collection-recovery-download": "./source/stellar-forge/mcp-paid-agent/native-collections-recovery-download.mjs"
+  }
+}

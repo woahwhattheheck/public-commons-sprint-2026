@@ -1,5 +1,7 @@
 // MIT. Applications presentation over the original runtime and managed-command APIs.
 import { renderOpenApiApplicationReview } from './openapi-application.mjs';
+import { renderApplicationReview } from './application-review.mjs';
+import { renderAccountingApplicationReview } from './accounting-application.mjs';
 import { createOpenApiConnectionSetupView } from './openapi-connection-setup.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
@@ -30,6 +32,16 @@ function mppReviewRows(command) {
     ['Workspace created', workspace.createdAt],
     ['Saved profile revision', workspace.revision],
     ['Configured roles', roles.join(', ') || 'Ready for merchant or customer configuration'],
+  ];
+}
+function wooReviewRows(command) {
+  const woo = command?.woo;
+  if (!woo) return [];
+  return [
+    ['WordPress store', woo.storeOrigin], ['Original outbox', woo.outbox],
+    ['Notice destination', woo.deliveryUrl], ['Shared secret environment name', woo.secretEnv],
+    ['Retained native routes / catalogs', woo.routes.length + ' / ' + woo.catalogs.length],
+    ['Store binding', woo.originalOutboxBinding ?? 'Created under the original worker lease at first start'],
   ];
 }
 async function textHash(text) {
@@ -66,6 +78,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const openapiSetupRoot = element('div'); configuration.append(openapiSetupRoot);
   const openapiSetup = createOpenApiConnectionSetupView({
     root: openapiSetupRoot, api, message, error,
+    applicationKinds: ['openapi', 'merchant-accounting'],
     getContext() {
       const value = configurationValue();
       return { workspaceId: getState()?.workspaceId, runtimeId: value.runtimeId,
@@ -76,7 +89,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     },
     onPrepared(prepared) {
       const value = configurationValue();
-      if (value.kind !== 'openapi') return;
+      if (!['openapi', 'merchant-accounting'].includes(value.kind)) return;
       renderSettings({ ...value.settings, ...prepared });
       configuration.open = true; reviewButton.focus();
     },
@@ -88,7 +101,32 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const details = element('div'), actions = element('div', undefined, 'actions'), operationReview = element('div', undefined, 'result');
   operationReview.hidden = true;
   const open = element('a', 'Open application'); open.target = '_blank'; open.rel = 'noopener noreferrer'; open.referrerPolicy = 'no-referrer'; open.hidden = true;
+  const wordpress = element('a', 'WordPress order console'); wordpress.target = '_blank';
+  wordpress.rel = 'noopener noreferrer'; wordpress.referrerPolicy = 'no-referrer'; wordpress.hidden = true;
   const urlNote = element('p', '', 'note');
+  const navigationRecovery = element('div', undefined, 'result'); navigationRecovery.hidden = true;
+  function savedAddress(label, value) {
+    let url;
+    try { url = new URL(value); } catch { return null; }
+    if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
+        Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
+        url.username || url.password) return null;
+    const row = element('div'), address = element('input');
+    address.type = 'text'; address.value = value; address.readOnly = true;
+    address.setAttribute('aria-label', label + ' saved address');
+    address.addEventListener('focus', () => address.select());
+    const copy = button('Copy ' + label.toLowerCase() + ' address', async () => {
+      address.focus(); address.select();
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(value);
+        message(label + ' address copied. Paste it into a new tab’s address bar.');
+      } catch {
+        message(label + ' address selected. Copy it and paste it into a new tab’s address bar.');
+      }
+    });
+    row.append(field(label, address), copy); return row;
+  }
   const relatedApplications = element('div', undefined, 'actions');
   relatedApplications.hidden = true;
   const reviewStart = button('Review start', () => act(async () => {
@@ -112,8 +150,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     await refresh(); await refreshWorkspace();
   }));
   const editButton = button('Edit settings', () => edit(selected()));
-  actions.append(open, reviewStart, stop, reconnect, continueRun, editButton);
-  selectedPanel.append(selectedTitle, details, actions, relatedApplications, urlNote, operationReview);
+  actions.append(open, wordpress, reviewStart, stop, reconnect, continueRun, editButton);
+  selectedPanel.append(selectedTitle, details, actions, relatedApplications, navigationRecovery, urlNote, operationReview);
   const history = element('section', undefined, 'panel'); history.hidden = true;
   history.append(element('h3', 'Original operations'));
   const historyRows = element('div'), historyControls = element('div', undefined, 'actions');
@@ -299,6 +337,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         ['Input', reviewed.command.terminal ? 'Connected original terminal, explicit operator responses' : 'Original application output'],
         ['Environment file', reviewed.settings.environmentFile ?? 'Inherited operator environment'],
         ...mppReviewRows(reviewed.command),
+        ...wooReviewRows(reviewed.command),
       ]);
       const save = button(editingId ? 'Save reviewed settings' : 'Save application', () => act(async () => {
         if (configurationReview !== reviewed) return;
@@ -311,7 +350,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         await refresh(); await refreshWorkspace(); message(result.connectionError?.message ?? 'Application saved with its original runtime and data locations.');
       }));
       reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows,
-        renderOpenApiApplicationReview(reviewed.command), save);
+        renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), save);
       if (reviewed.command.createDirectories.length) reviewResult.append(element('p', 'Creates private folder: ' + reviewed.command.createDirectories.join(', '), 'note'));
       reviewResult.hidden = false;
     });
@@ -339,14 +378,18 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ['Inputs', reviewed.command.inputs.map(item => item.path).join('\n')],
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
       ...mppReviewRows(reviewed.command),
-    ]), renderOpenApiApplicationReview(reviewed.command), start); operationReview.hidden = false;
+      ...wooReviewRows(reviewed.command),
+    ]), renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), start); operationReview.hidden = false;
   }
   function renderSelected() {
     const app = selected(); selectedPanel.hidden = !app; history.hidden = !app;
     if (!app) { outputPanel.hidden = true; return; }
     title.textContent = app.label; phase.textContent = app.phase;
     actions.hidden = Boolean(app.error);
-    if (app.error) { details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren(); return; }
+    if (app.error) {
+      details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren();
+      relatedApplications.hidden = navigationRecovery.hidden = true; urlNote.textContent = ''; return;
+    }
     details.replaceChildren(facts([
       ['Application', data.catalog.find(item => item.id === app.kind)?.title ?? app.kind],
       ['Runtime', app.runtime.directory], ['Source commit', app.runtime.sourceCommit],
@@ -368,23 +411,58 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     continueRun.hidden = !current || active || !unsettled;
     continueRun.textContent = current?.phase === 'INTERRUPTED' ? 'Reconcile original operation' : 'Continue original start';
     editButton.disabled = active || unsettled;
-    open.hidden = !current?.privateUrl;
-    if (current?.privateUrl) open.href = current.privateUrl; else open.removeAttribute('href');
+    const woo = app.kind === 'woo-merchant';
+    open.rel = woo ? 'noopener' : 'noopener noreferrer';
+    open.referrerPolicy = woo ? 'origin' : 'no-referrer';
+    wordpress.hidden = true; wordpress.removeAttribute('href');
+    const wooRun = current?.url?.original;
+    if (woo && wooRun?.schema === 'stellar-forge.sf104.managed-startup.v1') {
+      try {
+        const admin = new URL(wooRun.adminUrl), store = new URL(wooRun.storeOrigin);
+        if (admin.protocol === 'https:' && admin.origin === store.origin && !admin.username && !admin.password &&
+            admin.pathname.endsWith('/wp-admin/admin.php') && admin.search === '?page=sf98-woocommerce' && !admin.hash) {
+          wordpress.href = admin.href; wordpress.hidden = false;
+        }
+      } catch { /* Original startup remains visible in its retained output. */ }
+    }
+    const navigationChanged = woo && Boolean(current?.privateUrl) &&
+      (wooRun?.schema !== 'stellar-forge.sf104.managed-startup.v1' || wooRun.navigationOrigin !== location.origin);
+    open.hidden = !current?.privateUrl || navigationChanged;
+    if (current?.privateUrl && !navigationChanged) open.href = current.privateUrl; else open.removeAttribute('href');
     open.textContent = app.kind === 'mercury-feed' ? 'Open event feed' : 'Open application';
-    relatedApplications.replaceChildren(...(current?.privateLinks ?? []).flatMap(link => {
+    const related = (current?.privateLinks ?? []).flatMap(link => {
       let url;
       try { url = new URL(link.url); } catch { return []; }
       if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
           Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
           url.username || url.password || typeof link.label !== 'string') return [];
-      const anchor = element('a', link.label); anchor.href = url.href; anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer'; anchor.referrerPolicy = 'no-referrer'; return [anchor];
-    }));
+      return [{ label: link.label, url: link.url }];
+    });
+    relatedApplications.replaceChildren(...(navigationChanged ? [] : related.map(link => {
+      const anchor = element('a', link.label); anchor.href = link.url; anchor.target = '_blank';
+      anchor.rel = woo ? 'noopener' : 'noopener noreferrer';
+      anchor.referrerPolicy = woo ? 'origin' : 'no-referrer'; return anchor;
+    })));
     relatedApplications.hidden = !relatedApplications.childElementCount;
+    navigationRecovery.hidden = !navigationChanged;
+    if (navigationChanged) {
+      const signature = JSON.stringify([app.id, current.id, wooRun?.navigationOrigin, location.origin, current.privateUrl, related]);
+      if (navigationRecovery.dataset.signature !== signature) {
+        navigationRecovery.dataset.signature = signature;
+        navigationRecovery.replaceChildren(
+          element('h4', 'Open the running merchant'),
+          element('p', 'This Applications address differs from the one recorded at merchant startup. Copy a saved address and paste it into a new tab’s address bar. The running service keeps its original access settings.', 'note'),
+          ...[savedAddress('Operations', current.privateUrl), ...related.map(link => savedAddress(link.label, link.url))].filter(Boolean));
+      }
+    } else {
+      navigationRecovery.replaceChildren(); delete navigationRecovery.dataset.signature;
+    }
     const workbookCommand = ['python-workbooks', 'python-workbook-delivery'].includes(app.kind);
     urlNote.textContent = workbookCommand ? (active ? 'The original workbook command is running. Its output is retained below.' :
       current ? 'The original workbook command has ended. Open its retained outcome and complete output below.' :
-      'Review a start to run this original workbook command.') : current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts.' :
+      'Review a start to run this original workbook command.') : navigationChanged ?
+      'The original process and saved addresses are still attached to this operation. To restore direct Open buttons here, stop it and review a new start from this Applications address.' :
+      current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts at the same address.' :
       active ? current.stop ? 'The original application is draining its work and stopping.' : 'Waiting for the original application to print its local session URL.' :
         current?.url ? 'This operation has ended. Its retained URL is historical; review a new start to open the same saved application data.' :
           'Save and review a start to receive the original application URL.';

@@ -29,6 +29,13 @@
         "ui/openwaters.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/review-sheet.mjs",
+      [
+        "ui/review-sheet.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

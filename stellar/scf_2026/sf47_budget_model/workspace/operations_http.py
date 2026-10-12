@@ -9,7 +9,9 @@ from operations import Operations, decoded
 
 
 def register_static(static):
-    static.update({"/operations_support.mjs": ("operations_support.mjs", "text/javascript; charset=utf-8"),
+    static.update({"/operations_completion.mjs": ("operations_completion.mjs", "text/javascript; charset=utf-8"),
+                   "/operations_completion.css": ("operations_completion.css", "text/css; charset=utf-8"),
+                   "/operations_support.mjs": ("operations_support.mjs", "text/javascript; charset=utf-8"),
                    "/operations.mjs": ("operations.mjs", "text/javascript; charset=utf-8"),
                    "/operations.css": ("operations.css", "text/css; charset=utf-8"),
                    "/forecast.mjs": ("forecast.mjs", "text/javascript; charset=utf-8"),
@@ -33,7 +35,7 @@ def read(handler, parsed):
     if path == "/api/operations":
         handler.send(200, {"cases": ops.list(query.get("planId", [None])[0])})
         return True
-    match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})(?:/(report|history|export.zip|sources/source-[a-f0-9]{32}|reviews/review-[a-f0-9]{32}|forecasts(?:/forecast-[a-f0-9]{32}(?:/export.zip)?)?|portfolios(?:/portfolio-[a-f0-9]{32}(?:/export.zip)?)?))?", path)
+    match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})(?:/(report|history|export.zip|completion|completion-reviews/review-[a-f0-9]{32}/export.zip|sources/source-[a-f0-9]{32}|reviews/review-[a-f0-9]{32}|forecasts(?:/forecast-[a-f0-9]{32}(?:/export.zip)?)?|portfolios(?:/portfolio-[a-f0-9]{32}(?:/export.zip)?)?))?", path)
     if not match:
         raise Problem("Operations page not found.", 404, "NOT_FOUND")
     ident, action = match.groups()
@@ -45,6 +47,11 @@ def read(handler, parsed):
         handler.send(200, ops.history(ident, int(query.get("after", ["0"])[0]), int(query.get("limit", ["100"])[0])))
     elif action == "export.zip":
         handler.send(200, ops.export(ident), "application/zip", ident + ".zip")
+    elif action == "completion":
+        handler.send(200, ops.completion_calendar(ident, query.get("asOfDate", [None])[0]))
+    elif action.startswith("completion-reviews/"):
+        review_id = action.split("/")[1]
+        handler.send(200, ops.export_completion(ident, review_id), "application/zip", review_id + "-completion.zip")
     elif action == "forecasts":
         handler.send(200, {"forecasts": ops.list_forecasts(ident)})
     elif action.startswith("forecasts/"):
@@ -87,11 +94,12 @@ def write(handler, parsed):
     elif path == "/api/operations":
         result = ops.create(handler.json_body())
     else:
-        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|support-preview|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
+        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|completion-seed|completion-preview|support-preview|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
         if not match:
             raise Problem("Operations command not found.", 404, "NOT_FOUND")
         body = handler.json_body()
-        methods = {"command": ops.command, "support-preview": ops.preview_support,
+        methods = {"command": ops.command, "completion-seed": ops.seed_completion, "completion-preview": ops.preview_completion,
+                   "support-preview": ops.preview_support,
                    "forecast-preview": ops.preview_forecast,
                    "portfolio-preview": ops.preview_portfolio, "portfolio-seed": ops.seed_portfolio,
                    "portfolio-selection": ops.select_portfolio}

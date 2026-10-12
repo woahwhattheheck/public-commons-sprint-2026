@@ -1,62 +1,39 @@
-/** Original provider owners, constructed only when a configured tool first needs them. */
-export const MERCHANT_PROVIDERS = Object.freeze({
-  stacWorkspaces: Object.freeze({ configKey: 'stacWorkspaces', summary: true, dependencies: Object.freeze([]), load: () => import('./stac-workspace.mjs'), create: (module, config) => new module.MerchantStacWorkspaces(config) }),
-  dspaceOperators: Object.freeze({ configKey: "dspaceOperators", summary: true, dependencies: Object.freeze([]), load: () => import("../../stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/merchant-provider.mjs"), create: (module, config, options, dependencies) => new module.MerchantDspaceOperators(config) }),
-  grantWorkspaces: Object.freeze({ configKey: "grantWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./grant-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantGrantWorkspaces(config) }),
-  n8nWorkspaces: Object.freeze({ configKey: "n8nWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./n8n-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantN8nWorkspaces(config) }),
-  paidJobWorkspaces: Object.freeze({ concurrency: 'provider', requestClose: provider => provider.cancel(), configKey: "paidJobWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./paid-jobs.mjs"), create: (module, config) => new module.MerchantPaidJobWorkspaces(config) }),
-  apiPassWorkspaces: Object.freeze({ concurrency: 'provider', configKey: "apiPassWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./api-pass-workspace.mjs"), create: (module, config) => new module.MerchantApiPassWorkspaces(config) }),
-  researchWorkspaces: Object.freeze({ concurrency: 'provider', configKey: "researchWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./research-workspace.mjs"), create: (module, config) => new module.MerchantResearchWorkspaces(config) }),
-  clientExports: Object.freeze({ configKey: null, summary: true, dependencies: Object.freeze([]), load: () => import("./client-exports.mjs"), create: (module, config, options, dependencies) => new module.MerchantClientExports({ directory: config.exportsDirectory }) }),
-  discovery: Object.freeze({ configKey: "catalog", summary: true, dependencies: Object.freeze([]), load: () => import("./discovery.mjs"), create: (module, config, options, dependencies) => new module.MerchantDiscovery(config) }),
-  fleet: Object.freeze({ requestClose: provider => provider.cancelStaging(), configKey: "fleet", summary: true, dependencies: Object.freeze([]), load: () => import("./fleet.mjs"), create: (module, config, options, dependencies) => new module.MerchantFleet(config.fleet) }),
-  accounting: Object.freeze({ configKey: "accounting", summary: true, dependencies: Object.freeze([]), load: () => import("./accounting.mjs"), create: (module, config, options, dependencies) => new module.MerchantAccounting(config, options.accounting) }),
-  support: Object.freeze({ configKey: "support", summary: true, dependencies: Object.freeze([]), load: () => import("./support.mjs"), create: (module, config, options, dependencies) => new module.MerchantSupport(config) }),
-  receiving: Object.freeze({ configKey: "receiving", summary: true, dependencies: Object.freeze([]), load: () => import("./receiving.mjs"), create: (module, config, options, dependencies) => new module.MerchantReceiving(config) }),
-  pythonWorkspaces: Object.freeze({ configKey: "pythonWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./python-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantPythonWorkspaces(config) }),
-  graphqlWorkspaces: Object.freeze({ configKey: "graphqlWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./graphql-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantGraphqlWorkspaces(config) }),
-  s3Workspaces: Object.freeze({ configKey: "s3Workspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./s3-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantS3Workspaces(config) }),
-  opensearchWorkspaces: Object.freeze({ concurrentTools: Object.freeze(['merchant_opensearch_close']), configKey: "opensearchWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./opensearch-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantOpenSearchWorkspaces(config, options.opensearch) }),
-  socrataWorkspaces: Object.freeze({ configKey: "socrataWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./socrata-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantSocrataWorkspaces(config) }),
-  odataWorkspaces: Object.freeze({ configKey: "odataWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./odata-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantODataWorkspaces(config) }),
-  fiscalDataWorkspaces: Object.freeze({ configKey: "fiscalDataWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./fiscaldata-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantFiscalDataWorkspaces(config) }),
-  geocodioWorkspaces: Object.freeze({ configKey: "geocodioWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./geocodio-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantGeocodioWorkspaces(config) }),
-  censusGeocoderWorkspaces: Object.freeze({ configKey: "censusGeocoderWorkspaces", summary: true, concurrency: "provider", shutdown: "provider", dependencies: Object.freeze([]), load: () => import("./census-geocoder-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantCensusGeocoderWorkspaces(config) }),
-  worldbankWorkspaces: Object.freeze({ configKey: "worldbankWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./worldbank-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantWorldBankWorkspaces(config) }),
-  webdavWorkspaces: Object.freeze({ configKey: "webdavWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./webdav-tools.mjs"), create: (module, config, options, dependencies) => new module.MerchantWebDavWorkspaces(config) }),
-  edgarWorkspaces: Object.freeze({ configKey: "edgarWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./sec-edgar-tools.mjs"), create: (module, config, options, dependencies) => new module.MerchantEdgarWorkspaces(config) }),
-  sheetsWorkspaces: Object.freeze({ configKey: "sheetsWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./sheets-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantSheetsWorkspaces(config) }),
-  nocodbWorkspaces: Object.freeze({ configKey: "nocodbWorkspaces", summary: true, dependencies: Object.freeze(["publishers"]), load: () => import("./nocodb-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantNocoDBWorkspaces(config, dependencies.publishers) }),
-  ckanWorkspaces: Object.freeze({ configKey: "ckanWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./ckan-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantCkanWorkspaces(config) }),
-  tenderlyWorkspaces: Object.freeze({ configKey: "tenderlyWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./tenderly-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantTenderlyWorkspaces(config) }),
-  opencageWorkspaces: Object.freeze({ configKey: "opencageWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./opencage-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantOpenCageWorkspaces(config, options.opencage) }),
-  stellarExpertWorkspaces: Object.freeze({ configKey: "stellarExpertWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./stellar-expert-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantStellarExpertWorkspaces(config, options.stellarExpert) }),
-  coingeckoWorkspaces: Object.freeze({ configKey: "coingeckoWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./coingecko-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantCoinGeckoWorkspaces(config) }),
-  redisWorkspaces: Object.freeze({ configKey: "redisWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./redis-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantRedisWorkspaces(config) }),
-  usaSpendingWorkspaces: Object.freeze({ configKey: "usaSpendingWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./usaspending-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantUSASpendingWorkspaces(config) }),
-  grantsWorkspaces: Object.freeze({ configKey: "grantsWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./grantsgov-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantGrantsWorkspaces(config) }),
-  sourceWorkspaces: Object.freeze({ configKey: "sourceWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./source-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantSourceWorkspaces(config) }),
-  clinicalTrialsWorkspaces: Object.freeze({ configKey: "clinicalTrialsWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./clinicaltrials-workspace.mjs"), create: (module, config) => new module.MerchantClinicalTrialsWorkspaces(config) }),
-  baserowWorkspaces: Object.freeze({ configKey: "baserowWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./baserow-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantBaserowWorkspaces(config) }),
-  usgsWorkspaces: Object.freeze({ concurrentTools: Object.freeze(['merchant_usgs_capture_cancel', 'merchant_usgs_close']), shutdown: 'provider', configKey: "usgsWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./usgs-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantUSGSWorkspaces(config) }),
-  feedsWorkspaces: Object.freeze({ configKey: "feedsWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./feeds-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantFeedWorkspaces(config) }),
-  grpcWorkspaces: Object.freeze({ concurrentTools: Object.freeze(['merchant_grpc_cancel_call', 'merchant_grpc_stop', 'merchant_grpc_release_stop', 'merchant_grpc_release_close']), shutdown: 'provider', configKey: "grpcWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./grpc-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantGrpcWorkspaces(config, options.grpc) }),
-  openapiWorkspaces: Object.freeze({ configKey: "openapiWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./openapi-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantOpenApiWorkspaces(config, options.openapi) }),
-  harWorkspaces: Object.freeze({ configKey: "harWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./har-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantHarWorkspaces(config) }),
-  publishers: Object.freeze({ configKey: "publishers", summary: true, dependencies: Object.freeze([]), load: () => import("./publisher.mjs"), create: (module, config, options, dependencies) => new module.MerchantPublisher(config) }),
-  arcgisWorkspaces: Object.freeze({ configKey: "arcgisWorkspaces", summary: true, dependencies: Object.freeze(["publishers"]), load: () => import("./arcgis-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantArcgisWorkspaces(config, dependencies.publishers, options.arcgis) }),
-  facilitators: Object.freeze({ configKey: "facilitators", summary: false, dependencies: Object.freeze([]), load: () => import("../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs"), create: (module, config, options, dependencies) => module.createReleaseFacilitatorControl(config.releaseStore, config.facilitators) }),
-  pricing: Object.freeze({ configKey: "pricing", summary: true, dependencies: Object.freeze([]), load: () => import("./pricing.mjs"), create: (module, config, options, dependencies) => new module.MerchantPricing(config) }),
-  woocommerce: Object.freeze({ configKey: "woocommerce", summary: true, dependencies: Object.freeze([]), load: () => import("./woocommerce.mjs"), create: (module, config, options, dependencies) => new module.MerchantWooCommerce(config, options.woocommerce) }),
-  cocartWorkspaces: Object.freeze({ configKey: "cocartWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./cocart-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantCocartWorkspaces(config) }),
-  mpp: Object.freeze({ configKey: "mpp", summary: true, dependencies: Object.freeze([]), load: () => import("./mpp-console.mjs"), create: (module, config, options, dependencies) => new module.MerchantMppConsole(config, options.mpp) }),
-  buyerExpenses: Object.freeze({ configKey: "buyerExpenses", summary: true, dependencies: Object.freeze([]), load: () => import("./buyer-expenses.mjs"), create: (module, config, options, dependencies) => new module.MerchantBuyerExpenses(config) }),
-  cache: Object.freeze({ configKey: null, summary: false, dependencies: Object.freeze([]), load: () => import("./controls.mjs"), create: (module, config, options, dependencies) => module }),
-  dataset: Object.freeze({ configKey: null, summary: false, dependencies: Object.freeze([]), load: () => import("./dataset-lifecycle.mjs"), create: (module, config, options, dependencies) => module })
-});
+// MIT. The current distribution owns declarations; original runtimes remain lazy.
+import { readMerchantProviders } from './provider-registry.mjs';
+export { readMerchantProviders } from './provider-registry.mjs';
+
+export const MERCHANT_PROVIDER_REGISTRY = await readMerchantProviders();
+export const MERCHANT_PROVIDERS = MERCHANT_PROVIDER_REGISTRY.providers;
 
 export function merchantProviderConfigured(key, config) {
   const provider = MERCHANT_PROVIDERS[key];
   if (!provider) throw new RangeError('Unknown merchant provider: ' + key);
   return provider.configKey === null || config[provider.configKey] !== null && config[provider.configKey] !== undefined;
+}
+export function merchantRequestBytes(config) {
+  return Math.max(128 * 1024, ...Object.entries(MERCHANT_PROVIDERS)
+    .filter(([key]) => merchantProviderConfigured(key, config)).map(([, provider]) => provider.maxRequestBytes));
+}
+export async function configureMerchantProviders(raw, config, { base, hostPath }) {
+  for (const provider of MERCHANT_PROVIDER_REGISTRY.configurationOrder) {
+    if (provider.configKey === null) continue;
+    const definition = provider.configuration;
+    const value = raw[definition.input];
+    config[provider.configKey] = value === undefined ? null :
+      await definition.read(value, Object.freeze({ base, config, hostPath }));
+  }
+  return config;
+}
+export function merchantPrivateExports(config) {
+  return Object.entries(MERCHANT_PROVIDERS).some(([key, provider]) =>
+    provider.configuration?.privateExports && merchantProviderConfigured(key, config));
+}
+export async function initializeMerchantProvider(id, options) {
+  const provider = MERCHANT_PROVIDER_REGISTRY.forId(id);
+  if (typeof provider.initialize !== 'function')
+    throw Object.assign(new TypeError('This provider uses the common merchant configuration: ' + id),
+      { code: 'MERCHANT_PROVIDER_SETUP_UNAVAILABLE' });
+  if (!options || typeof options !== 'object' || Array.isArray(options))
+    throw Object.assign(new TypeError('Expected original host setup options.'), { code: 'CONFIGURATION_ERROR' });
+  return provider.initialize(options);
 }

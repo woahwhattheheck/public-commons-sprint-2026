@@ -22,5 +22,8 @@
   ],
   "applicationProviders": {
     "census-geocoder": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/census-geocoder.mjs"
+  },
+  "merchantProviders": {
+    "census-geocoder-workspaces": "stellar-forge/mcp-merchant-operator/providers/census-geocoder-workspaces.mjs"
   }
 }

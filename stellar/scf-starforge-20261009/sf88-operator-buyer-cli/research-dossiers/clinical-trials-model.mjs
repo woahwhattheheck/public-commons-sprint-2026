@@ -4,6 +4,9 @@ import {createHash} from 'node:crypto';
 import {inflateRawSync} from 'node:zlib';
 export const PROVIDER='clinicaltrials-gov',ORIGIN='https://clinicaltrials.gov';
 export const PACKET='stellar-forge.clinicaltrials-packet.v1',ENVELOPE='sf88-research-results-v1';
+export const BATCH_PACKET='stellar-forge.clinicaltrials-packet.v2';
+const MAX_MANIFEST=16*1024*1024;
+const packetSchema=value=>value===PACKET||value===BATCH_PACKET;
 export const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 export const json=value=>Buffer.from(JSON.stringify(value,null,2)+'\n');
 export const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -36,14 +39,14 @@ function manifestFromPacket(bytes){
    nameLength=u16(offset+28),extraLength=u16(offset+30),commentLength=u16(offset+32),local=u32(offset+42);
   const name=take(offset+46,nameLength).toString('utf8');
   if(name==='manifest.json'){
-   need(!found&&!(flags&1)&&[0,8].includes(method)&&size>0&&size<=8*1024*1024&&local<central,fail);
+   need(!found&&!(flags&1)&&[0,8].includes(method)&&size>0&&size<=MAX_MANIFEST&&local<central,fail);
    need(u32(local)===0x04034b50&&u16(local+8)===method,fail);
    const localName=u16(local+26),localExtra=u16(local+28);
    need(take(local+30,localName).toString('utf8')===name,fail);
    const start=local+30+localName+localExtra;
    need(start+compressed<=central,fail);
    const packed=take(start,compressed);
-   found=method===0?Buffer.from(packed):inflateRawSync(packed,{maxOutputLength:8*1024*1024});
+   found=method===0?Buffer.from(packed):inflateRawSync(packed,{maxOutputLength:MAX_MANIFEST});
    need(found.length===size,fail);
   }
   offset+=46+nameLength+extraLength+commentLength;need(offset<=end,fail);
@@ -51,7 +54,7 @@ function manifestFromPacket(bytes){
  need(offset===end&&found,fail);return {bytes:found,value:parse(found)};
 }
 export function packetBytes(value){
- need(object(value)&&value.schema===PACKET&&typeof value.base64==='string'&&
+ need(object(value)&&packetSchema(value.schema)&&typeof value.base64==='string'&&
   Number.isSafeInteger(value.bytes)&&value.bytes>0&&value.bytes<=128*1024*1024,'CLINICALTRIALS_SOURCE_PACKET_REQUIRED');
  const bytes=Buffer.from(value.base64,'base64');
  need(bytes.toString('base64')===value.base64&&bytes.length===value.bytes&&sha(bytes)===value.sha256,'CLINICALTRIALS_SOURCE_PACKET_CHANGED');
@@ -63,8 +66,11 @@ export function validateEdition(value){
   Array.isArray(value.sourcePages)&&Array.isArray(value.sourceVersions)&&object(value.usage),
   'CLINICALTRIALS_RETAINED_EDITION_REQUIRED');
  const packet=packetBytes(value.sourcePacket),manifest=manifestFromPacket(packet);
- need(sha(manifest.bytes)===value.sourcePacket.manifestSha256&&manifest.value.schema===PACKET&&
+ need(sha(manifest.bytes)===value.sourcePacket.manifestSha256&&manifest.value.schema===value.sourcePacket.schema&&
   Array.isArray(manifest.value.captures),'CLINICALTRIALS_ORIGINAL_MANIFEST_CHANGED');
+ const batches=manifest.value.batches??[];
+ need(Array.isArray(batches)&&(manifest.value.schema!==BATCH_PACKET||Array.isArray(manifest.value.batches))&&
+  (!batches.length||manifest.value.schema===BATCH_PACKET),'CLINICALTRIALS_BATCH_PACKET_REQUIRED');
  const capture=manifest.value.captures.find(row=>row.id===value.usage.captureId);
  need(capture&&same(capture.configuration,value.usage.scope)&&capture.rowCount===value.results.length&&
   capture.pageCount===value.sourcePages.length&&capture.byteCount===value.usage.sourceBytes&&

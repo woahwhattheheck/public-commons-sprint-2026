@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-baserow-workspaces",
+  "description": "Original baserow workspaces MCP provider",
+  "merchantProviders": {
+    "baserow-workspaces": "stellar-forge/mcp-merchant-operator/providers/baserow-workspaces.mjs"
+  }
+}
