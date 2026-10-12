@@ -14,10 +14,13 @@ The change does not touch seller admission, payment verification or settlement.
   beginning with the smallest posting. Every survivor must still satisfy all payment
   fields within **one actual accepted option**. A testnet option and an unrelated pubnet
   recipient never combine into an invented offer.
-- Search invokes the existing `rankBazaarEntries` on exactly the same filtered corpus,
-  in the same insertion order, then reuses that ranking for subsequent cursors/limits.
-  The first new query still pays for the original ranking. This does not change its
-  fuzzy matching, field weights, score reductions, canonical tie breaks or relevance.
+- Search reuses tokenized fields and exact-term postings across different queries.
+  It finds permitted typo terms once through first-character/length buckets, then
+  scores the matching candidates through the same scorer as `rankBazaarEntries`.
+  Field averages and document frequency still come from the **complete filtered
+  corpus**, including rows without a query match. Field weights, phrase bonuses,
+  fuzzy limits, floating-point reductions and stable canonical tie breaks are retained.
+  Subsequent cursors/limits reuse the existing complete-result cache.
 - Existing insert, replace and retirement operations immediately discard cached results.
   Once built, postings update incrementally. Missing-key retirement changes neither the
   original version nor the cache. A staged clone gets its own Map and fresh query state.
@@ -33,6 +36,30 @@ hash. Values reference already-owned rows rather than duplicating their bodies. 
 postings and canonical ordering are proportional to the current authoritative catalog;
 all memory is released with that catalog instance.
 
+## Search preparation across different queries
+
+The first nonempty search prepares only its selected rows. A narrow payment or
+transport filter does not tokenize the rest of the catalog. Later queries reuse
+those fields and prepare any newly selected rows. A changed prepared row replaces
+only its own term postings and field lengths; retirement releases them. New rows
+that have not been searched add no lexical work to an insertion. A transaction clone
+starts with its own empty lexical state.
+
+Exact terms cover all seven original fields. Typo lookup covers the original first
+five domain fields and preserves the same minimum length, initial character and
+one-or-two-edit limits. Candidate selection can retain an extra row with a matching
+term only in its URL; the common scorer still applies the original field restriction.
+A selected row with no exact or permitted fuzzy match cannot affect the returned
+ranking, but its field lengths and exact-term counts remain in the corpus statistics.
+Returned order follows the authoritative Map's insertion order before the original
+score/key sort, including key replacement, retirement and reinsertion.
+
+The index retains only prepared current rows: their bounded field tokens/frequencies,
+distinct-term postings and a counted vocabulary for typo lookup. It adds memory
+proportional to the searchable text of those rows, without copying provider bodies.
+The existing result-cache limits remain independent. Retirement removes unused terms
+and buckets, and discarding a catalog releases both indexes.
+
 ## Inspect an existing instance
 
 ```js
@@ -41,7 +68,10 @@ console.log(catalog.queryStats);
 
 This returns a detached numeric snapshot: list/search hits and misses, index/order
 builds, candidate checks, ranking runs, evictions, invalidations, indexed entry count,
-and retained result/reference counts. It includes no query strings, URLs, recipients,
+and retained result/reference counts. Ranking counters also report prepared rows,
+queried corpus rows, scored candidate rows, term lookups and fuzzy comparisons; current
+sizes report retained documents, tokens, unique terms and posting references.
+It includes no query strings, URLs, recipients,
 resource bodies or payment data. Counters are lifetime-local to that catalog instance;
 a transaction clone starts new counters. Nothing is added to the HTTP surface.
 
