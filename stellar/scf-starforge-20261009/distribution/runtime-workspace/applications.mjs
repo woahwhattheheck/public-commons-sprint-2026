@@ -178,7 +178,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   { id: 'merchant-recovery', command: 'merchant-recovery-remote',
     requiredSource: 'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/cli.mjs',
     title: 'Merchant recovery', terminal: false,
-    description: 'Review retained snapshots, off-host inventory, original transfers and cold restore in the original recovery workspace. Select a runtime with its S3 feature.',
+    description: 'Capture and verify local snapshots, prepare original restored publishers, and use a configured S3 store for off-host transfer and cold restore.',
     fields: [field('hostConfig', 'Original private recovery host configuration', 'path', true),
       field('workspaceDirectory', 'Private recovery workspace directory', 'path', true,
         'An existing directory or one new directory in an existing private parent. Original transfer journals remain at the host-selected paths.'), ...common] },
@@ -544,10 +544,14 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       }
     };
     for (const profile of original.host.profiles) {
-      await retain(profile.storeConfig, 'file');
+      if (profile.storeConfig != null) await retain(profile.storeConfig, 'file');
       await retain(profile.operations, 'directory', true);
       for (const root of profile.bundleRoots) await retain(root.directory);
       for (const plan of profile.capturePlans ?? []) await retain(plan.planFile, 'file', true);
+      for (const restored of profile.publisherRestores ?? []) {
+        await retain(restored.bundleDirectory, 'directory', true);
+        await retain(restored.restoreDirectory, 'directory', true);
+      }
       await retain(profile.downloadRoot);
       await retain(profile.restoreRoot);
     }
