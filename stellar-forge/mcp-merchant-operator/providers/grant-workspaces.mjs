@@ -4,7 +4,7 @@ import { grantWorkspaceTools } from "../catalog/grant-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "grant-workspaces", family: "grantWorkspaces",
-  title: "grant workspaces merchant", order: 20, catalogOrder: 360,
+  title: "grant workspaces merchant", order: 40, catalogOrder: 390,
   configKey: "grantWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 33554432,
   configuration: { input: "grantWorkspaceConnection", privateExports: true,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_grant_",
       "text": "For SF47 planning and delivery, select the declared grant workspace and read its original schema, plans and case versions. Use the exact original request ID, revision, actor, reviewed plan content and forecast input hashes for changes. Inspect a retained request after a lost reply. Reuse the original planner, cash model, evidence files, outcome register and grant Application writer. Page snapshots with the returned pointers and offsets; retain the complete immutable files and SHA-pinned input transfers. The explicit open tool may start only a host-authorized original workspace; a borrowed running Application stays with its owner when this merchant closes.",
-      "order": 20
+      "order": 60
     }
   ],
   load: () => import("../grant-workspace.mjs"),

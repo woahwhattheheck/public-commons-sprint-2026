@@ -4,7 +4,7 @@ import { socrataWorkspaceTools } from "../catalog/socrata-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "socrata-workspaces", family: "socrataWorkspaces",
-  title: "socrata workspaces merchant", order: 160, catalogOrder: 120,
+  title: "socrata workspaces merchant", order: 190, catalogOrder: 130,
   configKey: "socrataWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "socrataWorkspaceConnection", privateExports: true,

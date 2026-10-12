@@ -49,7 +49,7 @@ A reviewed field is `{source,name,label,role,unit,scale,notes,nullToken}`. sourc
 
 Comparison summaries have `{id,name,leftEditionId,rightEditionId,createdAt,keyFields,measureFields,sha256,summary,files}`. summary is `{leftRows,rightRows,added,removed,changed,unchanged,fieldChanges,measureTotals}`. measureTotals retain exact decimal-string deltas and count incompatible/non-numeric values separately. Comparison never silently sums different units or different field scales. Keys must identify one row in both editions; duplicates produce an actionable key conflict before a comparison is committed.
 
-Export summaries have `{id,kind,sourceId,createdAt,sha256,files}`, with kind capture, edition, comparison, merchant or acquisition. Complete exports have an archive plus source manifest and readable overview; individual files remain available. publisher is the original publisher's state, documented below, and stays null until first prepared merchant.
+Export summaries have `{id,kind,sourceId,createdAt,sha256,files}`, with kind capture, edition, comparison, briefing, merchant or acquisition. Complete exports have an archive plus source manifest and readable overview; individual files remain available. publisher is the original publisher's state, documented below, and stays null until first prepared merchant.
 
 ## Actions
 
@@ -75,6 +75,7 @@ All identifiers refer to retained objects in this workspace. Creation requestId 
 | comparisons.create | {leftEditionId,rightEditionId,keyFields,measureFields,name,requestId} | immutable comparison summary |
 | comparisons.get | {id,offset:0,limit:50,changesOnly:false} | comparison plus {rows,offset,total,nextOffset} |
 | exports.create | {kind:"capture\|edition\|comparison",id,requestId} | complete immutable export summary |
+| briefings.create | {comparisonId,expectedComparisonSha256,exportId,title,audience?,notes?,rowsPerPage?,requestId} | complete briefing export summary, with the original offline archive and source delivery |
 | merchant.configure | {editionId,origin,path,payment,requestId} | complete merchant export summary |
 | publisher.prepare | {exportId} | original prepared package/candidate result |
 | publisher.status | {} | original publisher status |
@@ -125,13 +126,25 @@ Each measureTotals entry is keyed by the published field name and includes compa
 
 Publisher buyer export first completes the original SF88 manifest and SF100 delivery. The same returned result gains export, a normal kind=acquisition export entry containing complete delivery.tar.gz, manifest.json, DELIVERY.md and session-manifest.json. The archive carries every original native delivery file byte for byte. It does not copy the configured buyer workspace. Retrying the same original delivery content reopens the same content-bound complete export.
 
-Original internal export records use kind=exports for their record collection and exportKind for their delivery type; public snapshot/action results expose kind=capture|edition|comparison|merchant|acquisition. This distinction is internal; callers use the public kind above.
+Original internal export records use kind=exports for their record collection and exportKind for their delivery type; public snapshot/action results expose kind=capture|edition|comparison|briefing|merchant|acquisition. This distinction is internal; callers use the public kind above.
 
 Unfinished comparisons and exports retain status BUILDING or FAILED, an optional original error, and creation:{action,payload} for the exact same-request Retry. Their summary/files are available after READY; publisher preparation requires a READY merchant export. DRAFT editions.get supplies the original complete field roster with included flags so excluded fields can be selected again, while snapshot editions.fields remains the selected published projection. A reviewed nullToken is excluded from every numerical aggregate/delta/dated observation, even when that marker itself is a valid decimal string; leftMissingRows/rightMissingRows, missingPairRows, nonNumericPairRows and unitIncompatibleRows retain the distinct reasons.
 
 Unsealed export copies use an intent-bound temporary, source-hash verification and create-only publication. A retry reconciles the exact interrupted staging link before private-file readback. Incomplete derived copies are retained with their original digest under staging/export-copy-recovery before the original request continues. Existing sealed deliveries are verified and remain immutable; recovery files are outside the delivered archive selection.
 
 New merchant exports also declare source.json.sourceFiles using the shared SF82 adapter’s exact {path,bytes,sha256} contract. It explicitly includes every captured response/receipt, capture manifest, reviewed field metadata and original row positions. The unchanged edition source.json is retained at original-edition/source.json; the publisher declaration adds the file list without rewriting the sealed edition. sourceClosureVersion=1 is pinned only on new merchant export records, so a retry of a retained older export preserves its original file layout. The original publisher preparation, SF82 staging and inspection retain and verify that same declared closure.
+
+## Customer briefing and retained delivery
+
+`briefings.create` operates on an exact READY comparison and an existing READY comparison export from the same source ID and SHA-256. `title` is required (up to 240 characters); `audience` is optional (up to 400), `notes` is optional (up to 64,000), and `rowsPerPage` is 1–500, default 200. Creation uses the existing request ID contract. A retry of the same input returns or completes its original export; a different request may create a separately authored briefing of the same comparison.
+
+The result and snapshot entry are an ordinary retained export with `kind:"briefing"`, `sourceId` equal to the comparison ID, and `sourceSha256` equal to its exact comparison digest. The `briefing` object preserves `title,audience,notes,rowsPerPage,sourceExportId,sourceExportSha256,producer`; a complete result additionally includes the original helper's `operationId,manifestSha256,archiveSha256,files,bytes`. The producer pins both the briefing module and renderer hashes.
+
+Use `file('export',result.id,'briefing.tar.gz')` for the complete offline report, including index.html, every row page, exact dated-measure data and the unchanged original comparison delivery. The same export exposes `briefing-manifest.json`, `briefing.json`, `briefing.md`, `dated-measures.csv`, plus the standard workspace `manifest.json`, `DELIVERY.md` and `delivery.tar.gz`. Every download uses the existing authenticated, manifest-bound file resolver. The report's original manifest is named briefing-manifest.json at this outer level; inside briefing.tar.gz it retains its original manifest.json name.
+
+The action owns the existing model's serial writer and lends its internal comparison reader, snapshot and file resolver to the original `createFiscalBriefing` helper. It does not enqueue a nested dispatch or open another model. Named MCP and managed-browser callers retain their original operator history; `merchant_fiscaldata_briefing` accepts `{workspace,payload}` with this same action payload. The existing CLI accepts `--action briefings.create`.
+
+The helper's private working directory is `<workspace-directory>-briefings`, outside the source workspace. Its complete verified bytes are copied into the original exports collection before the workspace export is sealed. Portable checkpoints therefore retain the complete report with the original workspace. An unfinished restored export can reconstruct its helper operation with the exact original creation timestamp and producer; interrupted derived copies stay in their original recovery records. A completed export reuses its seal and file identities. A changed executing producer requires the original source version for that unfinished request or a new request ID.
 
 ## Managed launch identity
 

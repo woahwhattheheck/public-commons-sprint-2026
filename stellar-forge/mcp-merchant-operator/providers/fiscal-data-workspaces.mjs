@@ -4,7 +4,7 @@ import { fiscalDataWorkspaceTools } from "../catalog/fiscaldata-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "fiscal-data-workspaces", family: "fiscalDataWorkspaces",
-  title: "fiscal data workspaces merchant", order: 180, catalogOrder: 150,
+  title: "fiscal data workspaces merchant", order: 210, catalogOrder: 170,
   configKey: "fiscalDataWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "fiscalDataWorkspaceConnection", privateExports: true,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_fiscaldata_",
       "text": "For Fiscal Data, list declared workspaces and explicitly open the original model. Review exact source revisions, fields, units, scales and stock-series notes before building native CSV editions. The browser and MCP share the same model and host operator identity. Keep original request IDs, reviewed offer digests and release generations. Checkpoint drains the original source model into a complete retained source/review package; receive only into an empty closed declared alias and resume unfinished captures explicitly. Source pages, native delivery archives and portable packages use SHA-pinned retained chunks. The original publisher, SF82 seller and SF88 buyer own every payment and approval.",
-      "order": 370
+      "order": 410
     }
   ],
   load: () => import("../fiscaldata-workspace.mjs"),

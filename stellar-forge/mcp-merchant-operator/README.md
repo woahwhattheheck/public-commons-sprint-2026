@@ -66,6 +66,10 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
+## Census address operations
+
+Use `starforge census-geocoder-agent serve` or **Census address operations** in Applications to operate the original address workspace from its browser and MCP together. Retained official captures, explicit match reviews, typed editions, native publication and SF88 customer receiving share one owner. The managed terminal preserves the original purchase approval. [CENSUS_GEOCODER_WORKSPACE.md](CENSUS_GEOCODER_WORKSPACE.md) covers complete host setup, source-to-customer operations, file receiving and close/reopen.
+
 ## ArcGIS merchant workspace
 
 The same interface now operates the original ArcGIS source workbench: source-file intake and live capture, reviewed field mappings, immutable editions, deployment exports and staging, release controls and complete customer file delivery. The existing publisher tools share that workbench’s original publisher, saved plans, publication history and scheduler.

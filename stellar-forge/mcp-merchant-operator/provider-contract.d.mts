@@ -17,6 +17,11 @@ export interface MerchantConfigurationContext {
   /** Resolve only the original host-selected configuration reference. */
   readonly hostPath: (value: unknown) => string;
 }
+export interface MerchantRuntimeOptions {
+  /** The host-selected environment, shared with original provider runtimes. */
+  readonly environment?: Record<string, string | undefined>;
+  readonly [provider: string]: any;
+}
 export type MerchantInstruction = {
   order?: number; text: string;
 } & ({ prefix: string | null; tool?: never } | { tool: string; prefix?: never });
@@ -37,7 +42,7 @@ export interface MerchantProviderDefinition<Module = any, Runtime = any> {
   summary?: boolean;
   dependencies?: string[];
   load(): Promise<Module>;
-  create(module: Module, config: MerchantConfiguration, options: Record<string, any>,
+  create(module: Module, config: MerchantConfiguration, options: MerchantRuntimeOptions,
     dependencies: Record<string, any>): Runtime | Promise<Runtime>;
   tools(tool: MerchantToolFactory): MerchantTool[];
   coreToolNames?: string[];

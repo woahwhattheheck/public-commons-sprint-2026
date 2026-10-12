@@ -4,7 +4,7 @@ import { sourceWorkspaceTools } from "../catalog/source-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "source-workspaces", family: "sourceWorkspaces",
-  title: "source workspaces merchant", order: 330, catalogOrder: 300,
+  title: "source workspaces merchant", order: 370, catalogOrder: 330,
   configKey: "sourceWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "sourceWorkspaceConnection", privateExports: true,

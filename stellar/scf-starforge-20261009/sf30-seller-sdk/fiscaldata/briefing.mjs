@@ -290,7 +290,7 @@ export async function verifyFiscalBriefing({directory,expectedManifestSha256}={}
  */
 export async function createFiscalBriefing({directory,model:borrowed,comparisonId,
   expectedComparisonSha256,exportId,outputDirectory,operationId,title,audience='',notes='',
-  rowsPerPage=ROWS_PER_PAGE}={}) {
+  rowsPerPage=ROWS_PER_PAGE,createdAt}={}) {
   absolute(directory);absolute(outputDirectory);
   need(!inside(directory,outputDirectory)&&!inside(outputDirectory,directory),'BRIEFING_OUTPUT_OVERLAP',
     'Choose a separate private briefing directory outside the source workspace.');
@@ -302,6 +302,9 @@ export async function createFiscalBriefing({directory,model:borrowed,comparisonI
     typeof audience==='string'&&audience.length<=400&&!/[\r\n]/.test(audience)&&
     typeof notes==='string'&&notes.length<=64000,'BRIEFING_TEXT_INVALID');
   need(Number.isSafeInteger(rowsPerPage)&&rowsPerPage>=1&&rowsPerPage<=500,'BRIEFING_PAGE_SIZE');
+  if(createdAt!==undefined)need(typeof createdAt==='string'&&Number.isFinite(Date.parse(createdAt))&&
+    new Date(createdAt).toISOString()===createdAt,'BRIEFING_CREATED_AT',
+    'Use the canonical UTC ISO timestamp retained by the original caller.');
   if(borrowed)need(['dispatch','file','snapshot'].every(name=>typeof borrowed[name]==='function'),
     'BRIEFING_ORIGINAL_MODEL_REQUIRED');
   let model,unlock;
@@ -334,13 +337,14 @@ export async function createFiscalBriefing({directory,model:borrowed,comparisonI
     const request={schema:BRIEFING_FORMAT,operationId,comparisonId,expectedComparisonSha256,exportId,
       title:title.trim(),audience,notes,rowsPerPage,workspaceId:header.id,workspaceCreatedAt:header.createdAt,
       producer,comparisonFileSha256:selected.file.sha256,rowsSha256:rows.sha256,
-      sourceManifestSha256:sourceManifest.file.sha256,sourceArchiveSha256:sourceArchive.sha256};
+      sourceManifestSha256:sourceManifest.file.sha256,sourceArchiveSha256:sourceArchive.sha256,
+      ...(createdAt===undefined?{}:{createdAt})};
     await privateDirectory(outputDirectory,true);unlock=await acquireWorkspace(outputDirectory);
     const root=join(outputDirectory,'briefing-'+identity({operationId}).slice(0,32));
     await privateDirectory(root,true);
     let intent;
     if(await absent(join(root,'intent.json'))) {
-      intent={request,requestSha256:identity(request),createdAt:new Date().toISOString()};
+      intent={request,requestSha256:identity(request),createdAt:createdAt??new Date().toISOString()};
       await atomicJson(root,'intent.json',intent);
     } else {
       intent=await readJson(join(root,'intent.json'),MiB);

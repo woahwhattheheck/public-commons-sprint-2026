@@ -418,7 +418,7 @@ export async function readMerchantConfig(path) {
   if (merchantPrivateExports(config)) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, datasetPackage, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, graphqlWorkspaces, stellarExpertWorkspaces, sourceWorkspaces, clinicalTrialsWorkspaces, baserowWorkspaces, usgsWorkspaces, feedsWorkspaces, dspaceOperators, grpcWorkspaces, openapiWorkspaces, harWorkspaces, n8nWorkspaces, ckanWorkspaces, pricing, woocommerce, cocartWorkspaces, mpp, buyerExpenses, apiPassWorkspaces, releaseStore }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, datasetPackage, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, graphqlWorkspaces, stellarExpertWorkspaces, sourceWorkspaces, clinicalTrialsWorkspaces, opendatasoftWorkspaces, baserowWorkspaces, usgsWorkspaces, feedsWorkspaces, dspaceOperators, grpcWorkspaces, openapiWorkspaces, harWorkspaces, n8nWorkspaces, paidJobWorkspaces, ckanWorkspaces, pricing, woocommerce, cocartWorkspaces, mpp, buyerExpenses, apiPassWorkspaces, releaseStore }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
   const source = await sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, datasetPackage, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime }, process.cwd(), 'initial');
@@ -450,6 +450,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   if (baserowWorkspaceConnection) await (await import('./baserow-workspace.mjs')).readBaserowWorkspaceConfiguration(baserowWorkspaceConnection);
   const grpcWorkspaceConnection = grpcWorkspaces === undefined ? undefined : hostPath(grpcWorkspaces, process.cwd());
   if (sourceWorkspaceConnection) await (await import('./source-workspace.mjs')).readSourceWorkspaceConfiguration(sourceWorkspaceConnection);
+  const opendatasoftWorkspaceConnection = opendatasoftWorkspaces === undefined ? undefined : hostPath(opendatasoftWorkspaces, process.cwd());
+  const opendatasoftWorkspaceSelection = opendatasoftWorkspaceConnection ? await (await import('./opendatasoft-workspace.mjs')).readOpendatasoftWorkspaceConfiguration(opendatasoftWorkspaceConnection) : null;
   const clinicalTrialsWorkspaceConnection = clinicalTrialsWorkspaces === undefined ? undefined : hostPath(clinicalTrialsWorkspaces, process.cwd());
   if (clinicalTrialsWorkspaceConnection) await (await import('./clinicaltrials-workspace.mjs')).readClinicalTrialsWorkspaceConfiguration(clinicalTrialsWorkspaceConnection);
   const usgsWorkspaceConnection = usgsWorkspaces === undefined ? undefined : hostPath(usgsWorkspaces, process.cwd());
@@ -465,6 +467,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   if (harWorkspaceConnection) await (await import('./har-workspace.mjs')).readHarWorkspaceConfiguration(harWorkspaceConnection);
   const n8nWorkspaceConnection = n8nWorkspaces === undefined ? undefined : hostPath(n8nWorkspaces, process.cwd());
   if (n8nWorkspaceConnection) await (await import('./n8n-workspace.mjs')).readN8nWorkspaceConfiguration(n8nWorkspaceConnection);
+  const paidJobWorkspaceConnection = paidJobWorkspaces === undefined ? undefined : hostPath(paidJobWorkspaces, process.cwd());
+  if (paidJobWorkspaceConnection) await (await import('./paid-jobs.mjs')).readPaidJobWorkspaceConfiguration(paidJobWorkspaceConnection);
   const graphqlWorkspaceConnection = graphqlWorkspaces === undefined ? undefined : hostPath(graphqlWorkspaces, process.cwd());
   if (graphqlWorkspaceConnection) await (await import('./graphql-workspace.mjs')).readGraphqlWorkspaceConfiguration(graphqlWorkspaceConnection);
   const ckanWorkspaceConnection = ckanWorkspaces === undefined ? undefined : hostPath(ckanWorkspaces, process.cwd());
@@ -482,6 +486,12 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   const apiPassWorkspaceConnection = apiPassWorkspaces === undefined ? undefined : hostPath(apiPassWorkspaces, process.cwd());
   if (apiPassWorkspaceConnection) await (await import('./api-pass-connection.mjs')).readApiPassWorkspaceConfiguration(apiPassWorkspaceConnection);
   const existingReleaseStore = releaseStore === undefined ? undefined : hostPath(releaseStore, process.cwd());
+  if (opendatasoftWorkspaceSelection) {
+    if (!existingReleaseStore) throw failure('CONFIGURATION_ERROR', 'Attach Huwise with its original seller-releases store, or use init-opendatasoft-workspaces.');
+    const selectedStore = await realpath(existingReleaseStore);
+    const originalStores = Object.values(opendatasoftWorkspaceSelection.workspaces).map(entry => join(entry.directory, 'seller-releases'));
+    if (!originalStores.includes(selectedStore)) throw failure('CONFIGURATION_ERROR', 'Huwise --release-store must belong to a configured original workbench.');
+  }
   if (ckanWorkspaceConnection && !existingReleaseStore)
     throw failure('CONFIGURATION_ERROR', 'Attach CKAN with its existing project seller-releases as --release-store, or use init-ckan-workspaces.');
   if (ckanWorkspaceSelection) {
@@ -507,6 +517,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(stellarExpertWorkspaceConnection ? { stellarExpertWorkspaceConnection } : {}),
     ...(sourceWorkspaceConnection ? { sourceWorkspaceConnection } : {}),
     ...(clinicalTrialsWorkspaceConnection ? { clinicalTrialsWorkspaceConnection } : {}),
+    ...(opendatasoftWorkspaceConnection ? { opendatasoftWorkspaceConnection } : {}),
     ...(baserowWorkspaceConnection ? { baserowWorkspaceConnection } : {}),
     ...(usgsWorkspaceConnection ? { usgsWorkspaceConnection } : {}),
     ...(feedsWorkspaceConnection ? { feedsWorkspaceConnection } : {}),
@@ -515,6 +526,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(openapiWorkspaceConnection ? { openapiWorkspaceConnection } : {}),
     ...(harWorkspaceConnection ? { harWorkspaceConnection } : {}),
     ...(n8nWorkspaceConnection ? { n8nWorkspaceConnection } : {}),
+    ...(paidJobWorkspaceConnection ? { paidJobWorkspaceConnection } : {}),
     ...(graphqlWorkspaceConnection ? { graphqlWorkspaceConnection } : {}),
     ...(ckanWorkspaceConnection ? { ckanWorkspaceConnection } : {}),
     ...(pricingConnection ? { pricingConnection } : {}),
@@ -541,7 +553,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
-    catalogConfigured: Boolean(catalogConnection), facilitatorsConfigured: Boolean(facilitatorConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), graphqlWorkspacesConfigured: Boolean(graphqlWorkspaceConnection), stellarExpertWorkspacesConfigured: Boolean(stellarExpertWorkspaceConnection), sourceWorkspacesConfigured: Boolean(sourceWorkspaceConnection), clinicalTrialsWorkspacesConfigured: Boolean(clinicalTrialsWorkspaceConnection), baserowWorkspacesConfigured: Boolean(baserowWorkspaceConnection), usgsWorkspacesConfigured: Boolean(usgsWorkspaceConnection), feedsWorkspacesConfigured: Boolean(feedsWorkspaceConnection), dspaceOperatorsConfigured: Boolean(dspaceOperatorConnection), grpcWorkspacesConfigured: Boolean(grpcWorkspaceConnection), openapiWorkspacesConfigured: Boolean(openapiWorkspaceConnection), harWorkspacesConfigured: Boolean(harWorkspaceConnection), n8nWorkspacesConfigured: Boolean(n8nWorkspaceConnection), ckanWorkspacesConfigured: Boolean(ckanWorkspaceConnection), pricingConfigured: Boolean(pricingConnection), woocommerceConfigured: Boolean(woocommerceConnection), cocartWorkspacesConfigured: Boolean(cocartWorkspaceConnection), mppConfigured: Boolean(mppConnection), buyerExpensesConfigured: Boolean(buyerExpenseConnection), apiPassWorkspacesConfigured: Boolean(apiPassWorkspaceConnection),
+    catalogConfigured: Boolean(catalogConnection), facilitatorsConfigured: Boolean(facilitatorConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), graphqlWorkspacesConfigured: Boolean(graphqlWorkspaceConnection), stellarExpertWorkspacesConfigured: Boolean(stellarExpertWorkspaceConnection), sourceWorkspacesConfigured: Boolean(sourceWorkspaceConnection), clinicalTrialsWorkspacesConfigured: Boolean(clinicalTrialsWorkspaceConnection), opendatasoftWorkspacesConfigured: Boolean(opendatasoftWorkspaceConnection), baserowWorkspacesConfigured: Boolean(baserowWorkspaceConnection), usgsWorkspacesConfigured: Boolean(usgsWorkspaceConnection), feedsWorkspacesConfigured: Boolean(feedsWorkspaceConnection), dspaceOperatorsConfigured: Boolean(dspaceOperatorConnection), grpcWorkspacesConfigured: Boolean(grpcWorkspaceConnection), openapiWorkspacesConfigured: Boolean(openapiWorkspaceConnection), harWorkspacesConfigured: Boolean(harWorkspaceConnection), n8nWorkspacesConfigured: Boolean(n8nWorkspaceConnection), paidJobWorkspacesConfigured: Boolean(paidJobWorkspaceConnection), ckanWorkspacesConfigured: Boolean(ckanWorkspaceConnection), pricingConfigured: Boolean(pricingConnection), woocommerceConfigured: Boolean(woocommerceConnection), cocartWorkspacesConfigured: Boolean(cocartWorkspaceConnection), mppConfigured: Boolean(mppConnection), buyerExpensesConfigured: Boolean(buyerExpenseConnection), apiPassWorkspacesConfigured: Boolean(apiPassWorkspaceConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
 }
@@ -1358,4 +1370,53 @@ export async function initializeStacWorkspaceMerchant({ directory, connection, n
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', stacWorkspacesConfigured: true,
     workspaces: Object.entries(selection.workspaces).map(([workspace, entry]) => ({ workspace, label: entry.label })),
     hostOwnership: 'ORIGINAL_STAC_HOST' };
+}
+
+/** Attach the original Census source, publisher and customer workspace. */
+export async function initializeCensusGeocoderWorkspaceMerchant({ directory, connection, name = 'Starforge Census address operations' }) {
+  const root = resolve(directory), censusGeocoderWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selected = await (await import('./census-geocoder-workspace.mjs')).readCensusGeocoderWorkspaceConfiguration(censusGeocoderWorkspaceConnection);
+  await mkdir(root, { mode: 0o700 });
+  await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, censusGeocoderWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', censusGeocoderWorkspacesConfigured: true,
+    workspaces: Object.entries(selected.workspaces).map(([workspace, item]) => ({ workspace, label: item.label })),
+    authoring: 'OPENED_BY_MERCHANT_CENSUS_GEOCODER_OPEN' };
+}
+/** Attach original retained economic workspaces through the installed client. */
+export async function initializeFredWorkspaceMerchant(options) {
+  return (await import('./fred-workspace-setup.mjs')).initializeFredWorkspaceMerchant(options);
+}
+
+/** Bind the same original Huwise seller store used by native merchant staging. */
+export async function initializeOpendatasoftWorkspaceMerchant({ directory, connection, workspace, name = 'Starforge Huwise operator' }) {
+  const root = resolve(directory), opendatasoftWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selected = await (await import('./opendatasoft-workspace.mjs')).readOpendatasoftWorkspaceConfiguration(opendatasoftWorkspaceConnection);
+  const aliases = Object.keys(selected.workspaces);
+  workspace ??= aliases.length === 1 ? aliases[0] : undefined;
+  identifier(workspace, 'Primary seller workspace');
+  const primary = selected.workspaces[workspace];
+  if (!primary) throw failure('CONFIGURATION_ERROR', 'Choose the original workspace whose seller store this merchant controls.');
+  const releaseStore = join(primary.directory, 'seller-releases');
+  const releases = await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs');
+  let exists = true;
+  try { await lstat(releaseStore); } catch (error) { if (error.code !== 'ENOENT') throw error; exists = false; }
+  if (exists) await releases.readReleaseState(releaseStore);
+  else await releases.initReleaseStore(releaseStore);
+  await mkdir(root, { mode: 0o700 });
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore,
+    exportsDirectory: './customer-exports', sources: {}, opendatasoftWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', opendatasoftWorkspacesConfigured: true,
+    primarySellerWorkspace: workspace, releaseStore,
+    workspaces: Object.entries(selected.workspaces).map(([workspace, item]) => ({ workspace, label: item.label })),
+    authoring: 'OPENED_BY_MERCHANT_OPENDATASOFT_OPEN' };
 }
