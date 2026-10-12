@@ -229,7 +229,7 @@ export async function startVectorServer(options = {}) {
           "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" });
         res.end(raw); return;
       }
-      const cookieName = "vector_session_" + new URL(origin).port;
+      const cookieName = "vector_session_" + (new URL(origin).port || "80");
       const cookies = Object.fromEntries(String(req.headers.cookie || "").split(";").map(item => item.trim()).filter(Boolean)
         .map(item => { const at = item.indexOf("="); return [item.slice(0, at), item.slice(at + 1)]; }));
       const supplied = String(req.headers.authorization || (cookies[cookieName] ? "Bearer " + cookies[cookieName] : "")).replace(/^Bearer /, "");
@@ -273,7 +273,7 @@ export async function startVectorServer(options = {}) {
   });
   await new Promise((yes, no) => { server.once("error", no); server.listen(port, host, yes); });
   const actual = server.address();
-  origin = "http://" + (host.includes(":") ? "[" + host + "]" : host) + ":" + actual.port;
+  origin = new URL("http://" + (host.includes(":") ? "[" + host + "]" : host) + ":" + actual.port).origin;
   return { url: origin + "/vector/#session=" + token, origin, operator,
     close: async () => { await operator.idle(); await new Promise((yes, no) => server.close(exc => exc ? no(exc) : yes())); } };
 }
