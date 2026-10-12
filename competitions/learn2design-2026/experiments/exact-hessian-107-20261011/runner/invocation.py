@@ -58,6 +58,20 @@ def selection_for(row):
         if not isinstance(companion.get("path"), str):
             raise ValueError("Companion requires a retained source path")
         bound.append({"module": module, "sha256": _hash(companion.get("sha256"))})
+    assets = invocation.get("assets", [])
+    if not isinstance(assets, list):
+        raise ValueError("Assets must be an explicit file list")
+    bound_assets, asset_names = [], set()
+    for asset in assets:
+        name = asset.get("name")
+        if (not isinstance(name, str) or
+                not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", name) or
+                name in asset_names or not isinstance(asset.get("path"), str) or
+                type(asset.get("bytes")) is not int or asset["bytes"] < 0):
+            raise ValueError("Assets require unique names, paths and byte lengths")
+        asset_names.add(name)
+        bound_assets.append({"name": name, "bytes": asset["bytes"],
+                             "sha256": _hash(asset.get("sha256"))})
     expectations = invocation.get("diagnostic_expectations", [])
     if not isinstance(expectations, list):
         raise ValueError("Diagnostic expectations must be an explicit list")
@@ -67,11 +81,15 @@ def selection_for(row):
                 any(not isinstance(k, str) or not k for k in check["path"])):
             raise ValueError("Diagnostic expectation requires a named path and exact value")
         canonical(check["equals"])
-    return {"schema": SCHEMA, "candidate_sha256": _hash(row.get("submission_sha256")),
-            "requirements_sha256": _hash(row.get("requirements_sha256")),
-            "companions": sorted(bound, key=lambda item: item["module"]),
-            "optimize_kwargs": deepcopy(options),
-            "diagnostic_expectations": deepcopy(expectations)}
+    selected = {"schema": SCHEMA, "candidate_sha256": _hash(row.get("submission_sha256")),
+                "requirements_sha256": _hash(row.get("requirements_sha256")),
+                "companions": sorted(bound, key=lambda item: item["module"]),
+                "optimize_kwargs": deepcopy(options),
+                "diagnostic_expectations": deepcopy(expectations)}
+    # Original arms retain their exact pre-asset treatment identities.
+    if bound_assets:
+        selected["assets"] = sorted(bound_assets, key=lambda item: item["name"])
+    return selected
 
 
 def arm_identity(row):
@@ -115,6 +133,12 @@ def load_selection(manifest_path, source_id, candidate_path):
                  "sha256": item["sha256"]}
         companions.append(bound)
         files.append({"role": "companion", **bound})
+    for item in row.get("invocation", {}).get("assets", []):
+        path = _member(root, item["path"])
+        if path.stat().st_size != item["bytes"]:
+            raise ValueError("Selected asset length differs: " + item["path"])
+        files.append({"role": "asset", "name": item["name"], "path": str(path),
+                      "bytes": item["bytes"], "sha256": item["sha256"]})
     for item in files:
         if file_sha(item["path"]) != item["sha256"]:
             raise ValueError("Selected source bytes differ: " + item["path"])

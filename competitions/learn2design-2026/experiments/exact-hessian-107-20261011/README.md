@@ -132,3 +132,13 @@ The original corrected source and its prior focused real-JAX result were supplie
 The retained plans produce twelve original development cells, six optional coordinate-map cells, twenty broader cells and twenty full-budget cells. The four supplied archives contain exactly `submission.py` and `requirements.txt` and passed the retained organizer's static validator. Source review checked original native return/logging semantics, interrupted-process handling, source identity, effective-runtime condition separation and per-cell cache isolation. No new test suite or hosted workflow is introduced.
 
 This source release contains no completed numerical comparison. Physical performance, feasibility across the public cohort and any final method selection must come from the retained native results.
+
+## Batched corpus portfolio, D76C
+
+The complete batched restart portfolio, original feasible archive and compiled
+public donor bank are integrated in [batch-portfolio-d76c](batch-portfolio-d76c/README.md).
+The maintained phase operator now also runs the forty-cell GPU comparison across
+original099, original scalar107, batched random starts and batched corpus starts,
+and a separate twenty-cell CPU comparison. The original Objective runner and
+all previous source arms remain in this project. The guide supplies the complete
+native campaign, recovery, export and seven-file submission commands.

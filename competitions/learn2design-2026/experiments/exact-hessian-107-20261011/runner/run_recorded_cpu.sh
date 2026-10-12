@@ -21,7 +21,7 @@ exec taskset -c "$L2D_CPUS" env \
   JAX_PLATFORMS=cpu JAX_ENABLE_X64=true \
   OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=2 \
   MALLOC_ARENA_MAX=2 MALLOC_TRIM_THRESHOLD_=65536 \
-  XLA_FLAGS=--xla_cpu_parallel_codegen_split_count=1 \
+  XLA_FLAGS="--xla_cpu_parallel_codegen_split_count=1 --xla_cpu_enable_concurrency_optimized_scheduler=false" \
   JAX_COMPILATION_CACHE_DIR="$L2D_CPU_CACHE_DIR" \
   JAX_COMPILATION_CACHE_MAX_SIZE=134217728 \
   JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS=1 \
