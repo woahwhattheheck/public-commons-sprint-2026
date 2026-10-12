@@ -7,7 +7,7 @@ import {parseArgs} from 'node:util';
 import {pipeline} from 'node:stream/promises';
 import {CommissioningWorkspace,problem,relativeFile,VERSION} from './workspace.mjs';
 import * as nativeEngine from './native/index.mjs';
-import {createHandover,inspectHandover} from './packaging.mjs';
+import {prepareHandover,inspectHandover,resumeHandover,readHandover} from './packaging.mjs';
 const appRoot=path.dirname(fileURLToPath(import.meta.url));
 const webRoot=path.join(appRoot,'web');
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.zip':'application/zip','.csv':'text/csv; charset=utf-8'};
@@ -37,40 +37,58 @@ async function nativeArtifact(workspace,operationId,artifactId){
 }
 export async function createWorkspaceServer({workspace,port=8846,maxRequestBytes=64*1024*1024}={}){
   if(!workspace)throw new TypeError('An opened commissioning workspace is required.');
-  const token=crypto.randomBytes(32).toString('hex'),packaging=new Map();let authority='';
+  const token=crypto.randomBytes(32).toString('hex'),packaging=new Map(),packagingJobs=new Map();
+  let authority='',closing=false,closePromise=null;
+  function beginHandover(id,fn,inspection=false){
+    if(packagingJobs.has(id))return;
+    const startedAt=new Date().toISOString();packaging.set(id,{id,state:'RUNNING',startedAt,inspection,localPending:true});
+    const promise=Promise.resolve().then(fn).then(
+      result=>packaging.set(id,{id,state:result.state,startedAt,inspection,result,localPending:false}),
+      error=>packaging.set(id,{id,state:'INTERRUPTED',startedAt,inspection,error:{message:error.message,code:error.code??null},localPending:false})
+    ).finally(()=>packagingJobs.delete(id));
+    packagingJobs.set(id,promise);
+  }
+  function validHandoverId(id){if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id))throw problem('Select the original handover UUID.');return id;}
   const server=http.createServer(async(req,res)=>{
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
     res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     try{
+      if(closing)throw problem('This workspace is closing after its original work finishes.',503,'WORKSPACE_CLOSING');
       const hosts=new Set([authority,authority.replace('127.0.0.1','localhost')]);
       if(!hosts.has(req.headers.host))throw problem('Open the local workspace address printed by this process.',403,'HOST_MISMATCH');
       const url=new URL(req.url,'http://'+authority);
       if(req.headers.origin){const origin=new URL(req.headers.origin);if(origin.protocol!=='http:'||!hosts.has(origin.host))throw problem('Use this workspace’s own local page.',403,'ORIGIN_MISMATCH');}
       if(!['GET','HEAD'].includes(req.method)&&req.headers['x-workspace-token']!==token)throw problem('Reload the local workspace page before making changes.',403,'SESSION_CHANGED');
       if(req.method==='GET'&&url.pathname==='/api/state')return json(res,200,await workspace.state());
-      if(req.method==='GET'&&url.pathname==='/api/manifest')return json(res,200,url.searchParams.get('draft')==='true'?await workspace.draftManifest():await workspace.editionManifest(query(url,'editionId')));
+      if(req.method==='GET'&&url.pathname==='/api/manifest')return json(res,200,url.searchParams.get('draft')==='true'?await workspace.draftManifest({expectedDraftId:query(url,'expectedDraftId',false)??undefined}):await workspace.editionManifest(query(url,'editionId')));
       if(req.method==='GET'&&url.pathname==='/api/compare')return json(res,200,await workspace.compare(query(url,'baselineId'),query(url,'candidateId')));
       if(req.method==='GET'&&url.pathname==='/api/source'){
-        const source=await workspace.readSource({editionId:query(url,'editionId',false),draft:url.searchParams.get('draft')==='true',path:query(url,'path')});
+        const source=await workspace.readSource({editionId:query(url,'editionId',false),draft:url.searchParams.get('draft')==='true',expectedDraftId:query(url,'expectedDraftId',false)??undefined,path:query(url,'path')});
         if(url.searchParams.get('download')==='true'){
           if(source.absolutePath)return await sendFile(res,source.absolutePath,{name:path.basename(source.path),expectedBytes:source.bytes});
           res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="'+path.basename(source.path).replace(/["\r\n\\]/g,'_')+'"','Content-Length':source.bytes});return res.end(source.content);
         }
         let content=source.content;
         if(content===undefined){const complete=await fs.readFile(source.absolutePath);try{content=new TextDecoder('utf-8',{fatal:true}).decode(complete);}catch{throw problem('This is a binary file. Download its complete original bytes.',415,'BINARY_SOURCE');}if(content.includes('\0'))throw problem('This is a binary file. Download its complete original bytes.',415,'BINARY_SOURCE');}
-        return json(res,200,{path:source.path,bytes:source.bytes,sha256:source.sha256,content});
+        return json(res,200,{path:source.path,draftId:source.draftId,editionId:source.editionId,bytes:source.bytes,sha256:source.sha256,content});
       }
-      if(req.method==='GET'&&url.pathname==='/api/operation')return json(res,200,{...workspace.operation(query(url,'id')),receivingContentExports:await workspace.contentExports(query(url,'id'))});
+      if(req.method==='GET'&&url.pathname==='/api/operation'){
+        const id=query(url,'id'),receivingContentExports=await workspace.contentExports(id);
+        return json(res,200,{...workspace.operation(id),receivingContentExports,pending:workspace.inflight.has(id)});
+      }
       if(req.method==='GET'&&url.pathname==='/api/artifact'){const {artifact,file}=await nativeArtifact(workspace,query(url,'operationId'),query(url,'id'));return await sendFile(res,file,{name:path.basename(artifact.relativePath??artifact.path),expectedBytes:artifact.bytes});}
       if(req.method==='GET'&&url.pathname==='/api/handover'){
-        const id=query(url,'id');if(!/^[a-f0-9-]{36}$/.test(id))throw problem('Select a handover created by this workspace.');
+        const id=validHandoverId(query(url,'id'));
         if(url.searchParams.get('download')==='true'){
           const result=JSON.parse(await fs.readFile(path.join(workspace.root,'handover',id,'result.json'),'utf8'));
           if(result.state!=='SUCCEEDED')throw problem('The complete handover is not yet available.',409,'HANDOVER_INCOMPLETE');
           return await sendFile(res,path.join(workspace.root,'handover',id,'Lightdash_Commissioning_Handover.zip'),{name:'Lightdash_Commissioning_Handover.zip',expectedBytes:result.archive.bytes});
         }
-        if(packaging.has(id))return json(res,200,packaging.get(id));
-        return json(res,200,JSON.parse(await fs.readFile(path.join(workspace.root,'handover',id,'result.json'),'utf8')));
+        if(packagingJobs.has(id))return json(res,200,{...packaging.get(id),localPending:true});
+        let retained;try{retained=await readHandover({workspace,id});}catch(error){if(!packaging.has(id))throw error;}
+        if(retained?.state==='SUCCEEDED')return json(res,200,retained);
+        const local=packaging.get(id);
+        return json(res,200,local?.error?{...retained,...local,localPending:false}:retained??local);
       }
       if(req.method==='POST'&&url.pathname.startsWith('/api/')){
         const data=await body(req,maxRequestBytes),revision=data.expectedRevision===undefined?undefined:Number(data.expectedRevision);
@@ -87,15 +105,18 @@ export async function createWorkspaceServer({workspace,port=8846,maxRequestBytes
           const operation=workspace.operation(data.operationId);workspace.execute(data.operationId,{inspect:url.pathname==='/api/inspect'}).catch(()=>{});
           return json(res,202,{operationId:operation.id,state:'ACCEPTED',inspect:url.pathname==='/api/inspect'});
         }
-        if(url.pathname==='/api/handover/inspect'){
-          const id=data.id,startedAt=new Date().toISOString();packaging.set(id,{id,state:'RUNNING',inspection:true,startedAt});
-          inspectHandover({workspace,appRoot,id}).then(result=>packaging.set(id,{id,state:'SUCCEEDED',inspection:true,startedAt,result}),error=>packaging.set(id,{id,state:'FAILED',inspection:true,startedAt,error:{message:error.message,code:error.code??null}}));
-          return json(res,202,{id,state:'ACCEPTED',inspection:true});
+        if(url.pathname==='/api/handover/inspect'||url.pathname==='/api/handover/resume'){
+          const id=validHandoverId(data.id),inspection=url.pathname==='/api/handover/inspect';
+          await readHandover({workspace,id});
+          if(!inspection)await prepareHandover({workspace,appRoot,id,resume:true});
+          beginHandover(id,()=>inspection?inspectHandover({workspace,appRoot,id}):resumeHandover({workspace,appRoot,id}),inspection);
+          return json(res,202,{id,state:'ACCEPTED',inspection});
         }
         if(url.pathname==='/api/handover'){
-          const id=crypto.randomUUID(),startedAt=new Date().toISOString();packaging.set(id,{id,state:'RUNNING',startedAt});
-          createHandover({workspace,appRoot,id,includeOperatorPrivate:data.includeOperatorPrivate===true}).then(result=>packaging.set(id,{id,state:'SUCCEEDED',startedAt,result}),error=>packaging.set(id,{id,state:'FAILED',startedAt,error:{message:error.message,code:error.code??null}}));
-          return json(res,202,{id,state:'ACCEPTED'});
+          const id=validHandoverId(data.id??crypto.randomUUID());
+          const request=await prepareHandover({workspace,appRoot,id,includeOperatorPrivate:data.includeOperatorPrivate===true,expectedRevision:revision});
+          beginHandover(id,()=>resumeHandover({workspace,appRoot,id}));
+          return json(res,202,{id,state:'ACCEPTED',workspaceRevision:request.workspaceRevision});
         }
       }
       if(req.method==='GET'&&url.pathname==='/'){const html=(await fs.readFile(path.join(webRoot,'index.html'),'utf8')).replace('__WORKSPACE_TOKEN__',token);res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end(html);}
@@ -106,7 +127,16 @@ export async function createWorkspaceServer({workspace,port=8846,maxRequestBytes
   });
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(Number(port),'127.0.0.1',()=>{server.off('error',reject);resolve();});});
   authority='127.0.0.1:'+server.address().port;
-  return {server,url:'http://'+authority,workspace,close:()=>new Promise((resolve,reject)=>server.close(e=>e?reject(e):resolve()))};
+  function close(){
+    if(closePromise)return closePromise;
+    closing=true;
+    closePromise=(async()=>{
+      await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
+      while(workspace.inflight.size||packagingJobs.size)await Promise.allSettled([...workspace.inflight.values(),...packagingJobs.values()]);
+    })();
+    return closePromise;
+  }
+  return {server,url:'http://'+authority,workspace,close};
 }
 if(process.argv[1]&&pathToFileURL(path.resolve(process.argv[1])).href===import.meta.url){
   const {values}=parseArgs({options:{workspace:{type:'string'},port:{type:'string',default:'8846'},create:{type:'boolean',default:false},label:{type:'string',default:'Lightdash commissioning'}}});
@@ -114,5 +144,11 @@ if(process.argv[1]&&pathToFileURL(path.resolve(process.argv[1])).href===import.m
   const workspace=await CommissioningWorkspace.open(values.workspace,{create:values.create,label:values.label,engine:nativeEngine});
   const running=await createWorkspaceServer({workspace,port:Number(values.port)});
   process.stdout.write(JSON.stringify({state:'LISTENING',url:running.url,workspaceId:workspace.metadata().id,workspace:workspace.root})+'\n');
-  const stop=()=>running.close().then(()=>{workspace.close();process.exit(0);});process.once('SIGINT',stop);process.once('SIGTERM',stop);
+  let stopping=false;
+  const stop=async()=>{
+    if(stopping)return;stopping=true;
+    try{await running.close();workspace.close();}
+    catch(error){process.stderr.write(JSON.stringify({state:'SHUTDOWN_ERROR',error:error.message})+'\n');process.exitCode=1;}
+  };
+  process.once('SIGINT',stop);process.once('SIGTERM',stop);
 }

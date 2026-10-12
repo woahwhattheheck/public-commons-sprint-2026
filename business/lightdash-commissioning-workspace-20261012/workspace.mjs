@@ -167,12 +167,13 @@ export class CommissioningWorkspace {
     for(const item of await fs.readdir(path.join(this.root,'handover'),{withFileTypes:true})){
       if(!item.isDirectory()||!/^[a-f0-9-]{36}$/.test(item.name))continue;
       const directory=path.join(this.root,'handover',item.name);
-      const request=await fs.readFile(path.join(directory,'request.json'),'utf8').then(JSON.parse,()=>null);
-      const result=await fs.readFile(path.join(directory,'result.json'),'utf8').then(JSON.parse,()=>null);
-      if(request?.schema==='lightdash.commissioning-handover-request.v1'&&request.id===item.name)handovers.push({id:item.name,createdAt:request.createdAt,state:result?.state??'PENDING',includeOperatorPrivate:request.includeOperatorPrivate,result});
+      const read=async name=>{try{return JSON.parse(await fs.readFile(path.join(directory,name),'utf8'));}catch(error){if(error.code==='ENOENT')return null;throw error;}};
+      const request=await read('request.json'),intent=request?null:await read('intent.json');
+      const result=await read('result.json'),status=await read('status.json'),selection=request??intent;
+      if(selection&&selection.id===item.name&&selection.workspaceId===metadata.id&&['lightdash.commissioning-handover-request.v1','lightdash.commissioning-handover-intent.v1'].includes(selection.schema))handovers.push({id:item.name,createdAt:selection.createdAt,workspaceRevision:request?.workspaceRevision??null,selectionPending:!request,state:request?(result?.state??status?.state??'PENDING'):'PENDING',includeOperatorPrivate:selection.includeOperatorPrivate,result,status});
     }
     handovers.sort((a,b)=>String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
-    return {metadata,editions,reviews,operations,drafts,handovers,engine,root:this.root};
+    return {metadata,editions,reviews,operations,drafts,handovers,engine,pendingOperationIds:[...this.inflight.keys()],root:this.root};
   }
   configure({label,connection,editionSettings},expectedRevision) {
     credentialFree(connection);
@@ -260,17 +261,19 @@ export class CommissioningWorkspace {
       current.draft={id,baseEditionId:draft.base_edition_id,changedAt:now(),retainedPreviousDraft:current.draft.id??null};return current;
     });
   }
-  async draftManifest() {
+  async draftManifest({expectedDraftId}={}) {
     const metadata=this.metadata();
+    if(expectedDraftId!==undefined&&expectedDraftId!==metadata.draft.id)throw problem('The selected draft changed. Reopen its complete source inventory.',409,'DRAFT_CHANGED');
     if(!metadata.draft.id)return null;
+    const changes=this.db.prepare('SELECT path,removed,bytes,sha256,executable FROM draft_files WHERE draft_id=?').all(metadata.draft.id);
     const baseline=await this.editionManifest(metadata.draft.baseEditionId);
     const files=new Map(baseline.files.map(f=>[f.path,f]));
-    for(const item of this.db.prepare('SELECT path,removed,bytes,sha256,executable FROM draft_files WHERE draft_id=?').all(metadata.draft.id)) {
+    for(const item of changes) {
       if(item.removed)files.delete(item.path);
       else files.set(item.path,{path:item.path,bytes:Number(item.bytes),sha256:item.sha256,executable:Boolean(item.executable)});
     }
     const selected=Array.from(files.values()).sort((a,b)=>a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
-    return {id:metadata.draft.id,files:selected,excluded:baseline.excluded,sourceSha256:sha256(canonical(selected)),changes:compareFiles(baseline.files,selected),baseEditionId:metadata.draft.baseEditionId};
+    return {id:metadata.draft.id,revision:metadata.revision,files:selected,excluded:baseline.excluded,sourceSha256:sha256(canonical(selected)),changes:compareFiles(baseline.files,selected),baseEditionId:metadata.draft.baseEditionId};
   }
   async editDraft({path:filename,content,remove=false,expectedFileSha256,expectedDraftId},expectedRevision) {
     const rel=relativeFile(filename);
@@ -329,16 +332,18 @@ export class CommissioningWorkspace {
     const [baseline,candidate]=await Promise.all([this.editionManifest(baselineId),this.editionManifest(candidateId)]);
     return {baselineId,candidateId,baselineSha256:baseline.sourceSha256,candidateSha256:candidate.sourceSha256,changes:compareFiles(baseline.files,candidate.files)};
   }
-  async readSource({editionId,draft=false,path:filename}) {
-    const rel=relativeFile(filename);
+  async readSource({editionId,draft=false,expectedDraftId,path:filename}) {
+    const rel=relativeFile(filename);let draftId=null;
     if(isExcluded(rel))throw problem('This is a host/runtime file.');
     if(draft) {
       const selected=this.metadata().draft;
+      if(expectedDraftId!==undefined&&expectedDraftId!==selected.id)throw problem('The selected draft changed. Reopen the original file in its draft.',409,'DRAFT_CHANGED');
       if(!selected.id)throw problem('Create a draft first.');
+      draftId=selected.id;editionId=selected.baseEditionId;
       const override=this.db.prepare('SELECT * FROM draft_files WHERE draft_id=? AND path=?').get(selected.id,rel);
       if(override){
         if(override.removed)throw problem('This file was removed in the current draft.',404,'SOURCE_NOT_FOUND');
-        return {path:rel,content:override.content,bytes:Number(override.bytes),sha256:override.sha256};
+        return {path:rel,draftId,editionId,content:override.content,bytes:Number(override.bytes),sha256:override.sha256};
       }
       editionId=selected.baseEditionId;
     }
@@ -346,7 +351,7 @@ export class CommissioningWorkspace {
     const root=path.join(this.root,'editions',editionId,'source'), target=path.join(root,rel), real=await fs.realpath(target);
     if(!real.startsWith(root+path.sep))throw problem('The selected file is outside this source edition.');
     const stat=await fs.stat(real);if(!stat.isFile())throw problem('Select a regular source file.');
-    return {path:rel,absolutePath:real,...await fileHash(real)};
+    return {path:rel,draftId,editionId,absolutePath:real,...await fileHash(real)};
   }
   saveReview({baselineId,candidateId,reviewedBy,note,decisions=[]},expectedRevision) {
     const baseline=this.edition(baselineId), candidate=this.edition(candidateId), originalMetadata=this.metadata();
@@ -390,7 +395,7 @@ export class CommissioningWorkspace {
     this.transaction(undefined,current=>{
       const prior=this.operation(operation.id);
       if(prior.requestSha256!==operation.requestSha256)throw problem('The operation input changed.',409,'OPERATION_CONFLICT');
-      if(['SUCCEEDED','FAILED'].includes(prior.status)&&['RUNNING','BUSY','INTERRUPTED'].includes(operation.status)){saved=prior;return current;}
+      if(['SUCCEEDED','FAILED'].includes(prior.status)&&['PLANNED','RUNNING','BUSY','INTERRUPTED'].includes(operation.status)){saved=prior;return current;}
       const updated=this.db.prepare('UPDATE operations SET updated_at=?,status=?,body=? WHERE id=? AND request_sha256=?').run(operation.updatedAt,operation.status,JSON.stringify(operation),operation.id,operation.requestSha256);
       if(Number(updated.changes)!==1)throw problem('The operation could not be retained.',409,'OPERATION_CONFLICT');
       return current;
@@ -400,10 +405,19 @@ export class CommissioningWorkspace {
   async execute(operationId,{inspect=false}={}) {
     if(this.inflight.has(operationId))return this.inflight.get(operationId);
     const promise=(async()=>{
-      const operation=this.operation(operationId);
+      const operation=this.operation(operationId),terminal=['SUCCEEDED','FAILED'].includes(operation.status);
+      if(!inspect&&terminal)return {operation,replayed:true};
+      if(inspect&&terminal){
+        const journal=path.join(this.root,'operations',operationId,'native','plan.json');
+        let info;try{info=await fs.lstat(journal);}catch(error){if(error.code!=='ENOENT')throw error;}
+        if(!info){
+          operation.inspection={observedAt:now(),available:false,code:'ORIGINAL_NATIVE_JOURNAL_UNAVAILABLE',message:'The original private execution journal is not present in this workspace. The completed native result is retained. Attach the original journal before provider reconciliation.'};
+          return {operation:this.storeOperation(operation),replayed:true,inspection:operation.inspection};
+        }
+        if(!info.isFile()||info.isSymbolicLink())throw problem('The original native execution journal must be its regular file.',409,'NATIVE_JOURNAL_CHANGED');
+      }
       if(this.metadata().receiving?.connectionDetached)throw problem('Configure the receiving host before executing or inspecting a native operation.',409,'RECEIVING_HOST_DETACHED');
       if(!this.engine)throw problem('The selected native integration is unavailable.',503,'ENGINE_UNAVAILABLE');
-      if(!inspect&&['SUCCEEDED','FAILED'].includes(operation.status))return {operation,replayed:true};
       if(!inspect){
         const metadata=this.metadata();
         if(sha256(canonical(metadata.connection))!==operation.connectionSha256)throw problem('Connection selection changed. Retain this operation and plan against the current target.',409,'CONNECTION_CHANGED');
@@ -418,6 +432,11 @@ export class CommissioningWorkspace {
       operation.status=inspect?operation.status:'RUNNING';this.storeOperation(operation);
       try{
         const result=await fn({workspaceDir:this.root,operationDir,operation:operation.plan,refresh:inspect});
+        if(inspect&&terminal&&(result.status??result.state)==='PLANNED'&&result.dispatched===false){
+          operation.inspection={observedAt:now(),available:false,code:'ORIGINAL_NATIVE_JOURNAL_UNAVAILABLE',message:'The native inspector could not find the original execution journal. The completed native result is retained.'};
+          return {operation:this.storeOperation(operation),replayed:true,inspection:operation.inspection};
+        }
+        if(inspect)operation.inspection={observedAt:now(),available:true};
         operation.nativeResult=result;
         operation.status=result.status??result.state??'RETURNED';
         operation.resultSummary=result.summary??result.message??null;
