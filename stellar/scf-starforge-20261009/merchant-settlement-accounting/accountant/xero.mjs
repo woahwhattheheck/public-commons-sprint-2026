@@ -121,6 +121,7 @@ export function createXeroPlan({id=randomUUID(),name,actor,createdAt=new Date().
   for(const entry of entries){const component=known.get(entry.componentId);xeroCheck(object(entry)&&component&&!seen.has(entry.componentId),'INVALID_XERO_COMPONENT','A source component is unknown or repeated.');seen.add(entry.componentId);
     xeroCheck(['include','exclude'].includes(entry.decision),'XERO_COMPONENT_DECISION_REQUIRED','Choose include or exclude for each source component.');
     if(entry.decision==='exclude'){excluded.push({...component,decision:'exclude',reason:xeroText(entry.reason,'Exclusion reason',2000,{multiline:true})});continue;}
+    xeroCheck(!isBuyerHandoff(handoff)||BigInt(component.amountAtomic)>0n,'XERO_ZERO_NATIVE_ALLOCATION','A zero native buyer allocation must be explicitly excluded with its retained reason; a distinct fee needs its own original source.');
     const matchedBuyer=isBuyerHandoff(handoff)&&component.dataContext==='operational'&&component.transfer==='TRANSFER_MATCHED'&&SHA.test(component.observationSha256??'');
     xeroCheck(purpose!=='books'||component.network==='stellar:pubnet'&&(isBuyerHandoff(handoff)?matchedBuyer:(component.kind==='REFUND'||component.transfer==='OFFICIAL_TRANSFER_MATCHED')),'XERO_BOOKS_SOURCE_REQUIRED','Books require each selected public-network component to retain its original independently matched transfer and operational source context.');
     const cents=xeroCents(entry.amount),date=xeroDate(entry.date),debit=accounts.get(entry.debitAccountCode),credit=accounts.get(entry.creditAccountCode);

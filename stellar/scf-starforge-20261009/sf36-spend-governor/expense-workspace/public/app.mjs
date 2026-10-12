@@ -508,7 +508,7 @@ async function appendAccountantReturn(doc){
     row.current?"Current references":"Prior references",row.summary.outcome,
     button("Open return",()=>navigate(()=>{view.bookkeeping=row.id;}),"small")])),
     pager(history,n=>navigate(()=>{view.bookkeepingOffset=n;}),20));
-  host.append(button("Export period and returned bookkeeping",()=>download(path+"/bookkeeping-packet","buyer-bookkeeping-complete-period.zip")));
+  host.append(button("Export period and returned bookkeeping",()=>download(path+"/bookkeeping-packet?expected_revision="+history.revision,"buyer-bookkeeping-complete-period.zip")));
   content.append(host);
   if(view.bookkeeping){
     const saved=await api("/api/accountant-returns/"+view.bookkeeping);
@@ -559,7 +559,8 @@ async function appendAccountantReturn(doc){
     await refreshState();await redrawAfter("Original accountant references and the complete return chain are saved. Issued financial amounts are unchanged.");
   }
   async function sendPending(){
-    try{await accepted(await api(path+"/accountant-return",pending));}
+    let response;
+    try{response=await api(path+"/accountant-return",pending);}
     catch(error){
       if(error.status&&error.status<500){pending=null;enable(true);candidate=null;result.replaceChildren(el("p",{class:"error"},error.message),el("p",{},"Your selected file and review fields remain. Preview the current returned source again."));throw error;}
       const requestId=pending.request_id;
@@ -568,11 +569,14 @@ async function appendAccountantReturn(doc){
           try{const receipt=await api("/api/requests/"+requestId);await accepted(receipt.response);}
           catch(e){if(e.status===404){notify("That original request has not committed. Retry the exact retained request.");return;}throw e;}
         }),button("Retry exact retained request",sendPending));
+      return;
     }
+    await accepted(response);
   }
   async function saveReferences(){
     if(pending)return sendPending();
     if(!candidate)throw new Error("Preview the complete original return first.");
+    if(!f.form.reportValidity())return;
     const supersedes=[...result.querySelectorAll("[data-supersedes]:checked")].map(x=>x.dataset.supersedes);
     const reason=f.fields.reason.value.trim();if(candidate.preview.other_handoffs.length&&!reason)throw new Error("Record the reason for replacing the preceding accountant handoff.");
     pending={request_id:crypto.randomUUID(),expected_revision:candidate.preview.revision,payload:{...candidate.payload,

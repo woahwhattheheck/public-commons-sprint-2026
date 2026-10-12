@@ -63,6 +63,10 @@ function renderSource(){
     const article=node('article',null,{class:'xero-component','data-component':component.id});
     article.append(node('h4',(index+1)+'. '+component.kind+' · '+(component.sourceLineId??component.eventId)),node('p','Original '+component.amountAtomic+' atomic units · '+component.network,{class:'source'}),jsonDetails('Original component',component));
     const decision=node('select',null,{name:'decision'});decision.append(node('option','Choose treatment',{value:''}),node('option','Include in journals',{value:'include'}),node('option','Exclude with a reason',{value:'exclude'}));decision.required=true;article.append(labelled('Accounting treatment',decision));
+    if(component.kind.startsWith('BUYER_')&&BigInt(component.amountAtomic)===0n){
+      decision.querySelector('option[value="include"]').disabled=true;
+      article.append(node('p','This original allocation is zero. Select exclusion and record its reason; a separate fee must retain its own source.',{class:'source'}));
+    }
     const included=node('div',null,{'data-included':'1',hidden:''}),excluded=node('div',null,{'data-excluded':'1',hidden:''});
     const first=node('div',null,{class:'xero-grid'}),second=node('div',null,{class:'xero-grid'});
     first.append(labelled('Value in '+source.context.organization.baseCurrency,input('amount',{placeholder:'0.00',required:true})),labelled('Journal date',input('date',{type:'date',value:component.sourceAt?.slice(0,10)??'',required:true})));

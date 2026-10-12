@@ -20,6 +20,6 @@ export default {
     return observeApplicationStartup(request, directory, text => {
       if (!text.startsWith("{\"schema\":\"stellar-forge.fiscaldata-application-startup.v1\",")) return null;
       return () => fiscalDataStartup(request, text);
-    });
+    }, { lineLimit: 32768 });
   },
 };
