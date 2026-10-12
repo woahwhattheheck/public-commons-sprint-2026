@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { pipeline } from 'node:stream/promises';
 import { openDatasetWorkspace } from './model.mjs';
 import { check, safeCode, CATALOG_LIMIT } from './receiving.mjs';
+import { datasetWorkspaceLaunch } from './launch.mjs';
 
 const HOST = '127.0.0.1';
 const security = {
@@ -21,6 +22,7 @@ const HELP = `Starforge dataset customer workspace
        [--profile ABSOLUTE_PROFILE_JSON] [--operator-settings ABSOLUTE_PRIVATE_PRESET]
        [--analysis-python ABSOLUTE_PYTHON --analysis-checkout ABSOLUTE_CHECKOUT
         --analysis-directory ABSOLUTE_PRIVATE_DATABASE_DIRECTORY] [--port 8439]
+       [--startup-format json]
 
 Receive the merchant's original offer file, review the dataset query and caps,
 then create and continue the original private acquisition. Keep this terminal
@@ -163,20 +165,25 @@ export async function startDatasetWorkspace({ stateDirectory, profilePath = null
 
 export async function main(argv = process.argv.slice(2)) {
   if (argv.length === 0 || argv.includes('--help')) { process.stdout.write(HELP); return; }
-  const args = {}, allowed = ['--state', '--profile', '--operator-settings', '--port', '--analysis-python', '--analysis-checkout', '--analysis-directory'];
+  const args = {}, allowed = ['--state', '--profile', '--operator-settings', '--port', '--analysis-python', '--analysis-checkout', '--analysis-directory', '--startup-format'];
   for (let index = 0; index < argv.length; index += 2) {
     check(allowed.includes(argv[index]) && args[argv[index]] === undefined && argv[index + 1], 'DATASET_ARGUMENTS_INVALID');
     args[argv[index]] = argv[index + 1];
   }
   check(args['--state'], 'DATASET_STATE_REQUIRED');
+  check(args['--startup-format'] === undefined || args['--startup-format'] === 'json', 'DATASET_STARTUP_FORMAT_INVALID');
   if (args['--port'] !== undefined) check(/^(0|[1-9][0-9]{0,4})$/.test(args['--port']), 'DATASET_PORT_INVALID');
   const keys = ['--analysis-python', '--analysis-checkout', '--analysis-directory'];
   const configured = keys.some(key => args[key] !== undefined);
   check(!configured || keys.every(key => args[key]), 'DATASET_ANALYSIS_SETTINGS_REQUIRED');
-  const workspace = await startDatasetWorkspace({ stateDirectory: args['--state'], profilePath: args['--profile'] ?? null,
+  const settings = { stateDirectory: args['--state'], profilePath: args['--profile'] ?? null,
     operatorSettings: args['--operator-settings'] ?? null, port: args['--port'] === undefined ? 8439 : Number(args['--port']),
-    analysis: configured ? { python: args['--analysis-python'], checkout: args['--analysis-checkout'], directory: args['--analysis-directory'] } : null });
-  process.stdout.write('Dataset customer workspace: ' + workspace.url + '\nKeep this terminal open for original per-page purchase approval.\n');
+    analysis: configured ? { python: args['--analysis-python'], checkout: args['--analysis-checkout'], directory: args['--analysis-directory'] } : null };
+  const workspace = await startDatasetWorkspace(settings);
+  process.stdout.write(args['--startup-format'] === 'json'
+    ? JSON.stringify(datasetWorkspaceLaunch(settings, workspace.url)) + '\n'
+    : 'Dataset customer workspace: ' + workspace.url + '\n');
+  process.stdout.write('Keep this terminal open for original per-page purchase approval.\n');
   let stopping = false;
   const stop = async () => {
     if (stopping) return; stopping = true;
@@ -188,3 +195,4 @@ export async function main(argv = process.argv.slice(2)) {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
   main().catch(error => { process.stderr.write(safeCode(error) + '\n'); process.exitCode = 1; });
+
