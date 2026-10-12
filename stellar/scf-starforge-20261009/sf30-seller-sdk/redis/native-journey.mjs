@@ -1,5 +1,7 @@
 // MIT. One native Redis merchant, original buyer and retained-release journey.
 // Native TCP mode requires redis-server 7+. Optional upstash-rest uses an owned ephemeral database.
+// SF30_REDIS_JOURNEY_TOPOLOGY=cluster|sentinel adds native topology/failover fixtures
+// while preserving the same authoring workspace, generated buyer and release flow.
 // Both modes use the existing local x402 facilitator fixture.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -22,6 +24,9 @@ import { initReleaseStore, stageRelease, inspectRelease, compareReleases } from 
 import { startReleaseConsole } from '../../sf82-seller-pilot/release-console.mjs';
 
 const http = process.env.SF30_REDIS_JOURNEY_PROVIDER === 'upstash-rest';
+const topology = process.env.SF30_REDIS_JOURNEY_TOPOLOGY ?? 'standalone';
+if (!['standalone', 'cluster', 'sentinel'].includes(topology) || http && topology !== 'standalone')
+  throw new Error('REDIS_JOURNEY_TOPOLOGY_INVALID');
 if (process.env.SF30_REDIS_JOURNEY_PROVIDER && !http) throw new Error('REDIS_JOURNEY_PROVIDER_INVALID');
 const { createClient } = http ? {} : await import('@redis/client');
 const endpoint = http ? validateUpstashEndpoint(process.env.UPSTASH_REDIS_REST_URL) : null;
@@ -29,7 +34,8 @@ const seedToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 if (http && (!seedToken || process.env.SF30_UPSTASH_JOURNEY_ALLOW_SEED !== 'owned-ephemeral-database'))
   throw new Error('UPSTASH_JOURNEY_REQUIRES_OWNED_EPHEMERAL_DATABASE');
 const prefix = http ? 'sf30-journey:' + randomBytes(12).toString('hex') + ':' : '';
-const key = value => prefix + value;
+let fixture;
+const key = value => fixture ? fixture.key(value) : prefix + value;
 async function createRestSeed() {
   const seeded = new Set(); let opened = true;
   async function send(command, binary) {
@@ -65,7 +71,7 @@ let nativeLog = '', operator, database, source, verified = 0, settled = 0;
 const password = http ? (process.env.UPSTASH_REDIS_REST_READ_TOKEN ?? seedToken) : randomBytes(24).toString('hex');
 const envName = 'SF30_REDIS_JOURNEY_PASSWORD';
 const priorEnv = process.env[envName]; process.env[envName] = password;
-const engine = http ? null : spawn(binary, ['--bind', '127.0.0.1', '--port', String(port), '--save', '',
+const engine = http || topology !== 'standalone' ? null : spawn(binary, ['--bind', '127.0.0.1', '--port', String(port), '--save', '',
   '--appendonly', 'no', '--dir', work], { stdio: ['ignore', 'pipe', 'pipe'] });
 engine?.stdout.on('data', value => { nativeLog = (nativeLog + value).slice(-8192); });
 engine?.stderr.on('data', value => { nativeLog = (nativeLog + value).slice(-8192); });
@@ -78,7 +84,11 @@ const facilitator = createServer(async (req, res) => {
   res.writeHead(result ? 200 : 404, { 'content-type': 'application/json' }); res.end(JSON.stringify(result));
 });
 try {
-  if (!http) {
+  if (!http && topology !== 'standalone') {
+    fixture = await (await import('./native-topology.mjs')).startNativeRedisTopology({
+      topology, directory: join(work, 'native-topology'), password, passwordEnv: envName, binary });
+    database = fixture.database;
+  } else if (!http) {
   await Promise.race([
     new Promise((resolve, reject) => {
       const onData = () => { if (nativeLog.includes('Ready to accept connections')) { engine.stdout.off('data', onData); resolve(); } };
@@ -93,7 +103,7 @@ try {
   const serverInfo = await database.info('server');
   const version = typeof serverInfo === 'string' ? serverInfo.match(/^redis_version:(.+)$/m)?.[1]?.trim() : undefined;
   if (!version) throw new Error('REDIS_SERVER_VERSION_UNAVAILABLE');
-  if (!http) await database.sendCommand(['ACL', 'SETUSER', 'merchant', 'reset', 'on', '>' + password,
+  if (!http && !fixture) await database.sendCommand(['ACL', 'SETUSER', 'merchant', 'reset', 'on', '>' + password,
     '~merchant:*', '+ping', '+eval_ro', '+strlen', '+get', '+hstrlen', '+hmget', '+zrange', '+xrange', '+select']);
   const binaryValue = Buffer.from([255, 0, 239, 187, 191]);
   await database.set(key('merchant:availability:catalog'), binaryValue);
@@ -105,9 +115,9 @@ try {
   await database.set(key('merchant:large'), 'x'.repeat(1025));
   await database.set(key('merchant:binary-large'), Buffer.alloc(800, 255));
   const declaration = JSON.parse(await readFile(new URL('./example-source.json', import.meta.url)));
-  declaration.connection = http ? { transport: 'upstash-rest', endpoint, tokenEnv: envName }
+  declaration.connection = fixture ? fixture.profile : http ? { transport: 'upstash-rest', endpoint, tokenEnv: envName }
     : { host: '127.0.0.1', port, database: 2, username: 'merchant', passwordEnv: envName, tls: 'local-plaintext' };
-  if (http) for (const query of Object.values(declaration.queries))
+  if (http || fixture) for (const query of Object.values(declaration.queries))
     query.key = typeof query.key === 'string' ? key(query.key) : { ...query.key, prefix: key(query.key.prefix) };
   declaration.queries.catalog.fields.missing = 'missing_field';
   declaration.queries.leaderboard.maxRows = 2; declaration.queries.leaderboard.parameters.offset.maximum = '2';
@@ -119,11 +129,14 @@ try {
       parameters: { offset: { type: 'integer', minimum: '0', maximum: '2', enum: ['0', '2'], default: '0' } } },
     afterBoundary: { ...declaration.queries.events, parameters: { after: { type: 'string', maxLength: 41, enum: ['-'], default: '-' } } },
   };
-  const connection = http ? { transport: 'upstash-rest', endpoint, token: password }
+  const connection = fixture ? fixture.connection : http ? { transport: 'upstash-rest', endpoint, token: password }
     : { socket: { host: '127.0.0.1', port }, database: 2, username: 'merchant', password };
-  await assert.rejects(createRedisQuerySource({ connection: { ...connection, ...(http ? { token: 'wrong' } : { password: 'wrong' }) }, queries }), error =>
-    ['SOURCE_ACCESS_DENIED', 'QUERY_UNAVAILABLE'].includes(error.code));
-  source = await createRedisQuerySource({ connection, queries, maxConnections: 2, maxPending: 8 });
+  await assert.rejects(createRedisQuerySource({ connection: fixture ? fixture.badConnection()
+    : { ...connection, ...(http ? { token: 'wrong' } : { password: 'wrong' }) }, queries,
+    ...(fixture ? { connectTimeoutMs: 300, startupTimeoutMs: 1000 } : {}) }), error =>
+    ['SOURCE_ACCESS_DENIED', 'QUERY_UNAVAILABLE', ...(fixture ? ['SOURCE_START_TIMEOUT'] : [])].includes(error.code));
+  const nativeConnectTimeoutMs = fixture ? 300 : 5000;
+  source = await createRedisQuerySource({ connection, queries, maxConnections: 2, maxPending: 8, connectTimeoutMs: nativeConnectTimeoutMs });
   assert.deepEqual((await source.query('availability', {})).rows[0].availability, { base64: binaryValue.toString('base64') });
   const catalog = await source.query('catalog', {}); assert.equal(catalog.rows[0].priceAtomic, '9007199254740993'); assert.equal(catalog.rows[0].missing, null);
   const ranks = await source.query('leaderboard', {}); assert.equal(ranks.rowCount, 2); assert.deepEqual(ranks.nextInput, { offset: '2' });
@@ -137,9 +150,11 @@ try {
   assert.throws(() => compileRedisQueries({ bad: { kind: 'get', key: '\ud800' } }));
   assert.throws(() => compileRedisQueries({ bad: { ...declaration.queries.events,
     parameters: { after: { type: 'string', maxLength: 41, enum: ['bad'] } } } }));
+  const topologyJourney = fixture ? await fixture.exercise({ source, queries, connectTimeoutMs: nativeConnectTimeoutMs }) : undefined;
   const nativeStatus = source.status(); await source.close(); source = null;
   // The merchant ACL independently rejects mutation and undeclared key access.
-  if (!http) {
+  if (fixture) await fixture.readerAcl();
+  else if (!http) {
   const reader = createClient({ ...connection, disableClientInfo: true }); reader.on('error', () => {});
   await reader.connect();
   try { await assert.rejects(reader.set(key('merchant:forbidden'), 'x'), /NOPERM/); await assert.rejects(reader.get('other:key'), /NOPERM/); }
@@ -159,8 +174,9 @@ try {
     }) : undefined;
   const firstPackage = await prepareRedisSeller({ sourceFile, planFile, directory: join(authoring, 'first') });
   const verifiedFirst = await verifyPreparedRedisSeller(firstPackage.directory);
-  assert.deepEqual(firstPackage.requiredEnvironment, [envName]);
-  assert.deepEqual(verifiedFirst.requiredEnvironment, [envName]);
+  const requiredEnvironment = fixture?.requiredEnvironment ?? [envName];
+  assert.deepEqual(firstPackage.requiredEnvironment, requiredEnvironment);
+  assert.deepEqual(verifiedFirst.requiredEnvironment, requiredEnvironment);
   const root = join(work, 'releases'); await initReleaseStore(root);
   const runtime = { port: 0, allowLocalFacilitator: true, facilitator: `http://127.0.0.1:${facilitator.address().port}` };
   await stageRelease(root, { id: 'first', redisPackage: firstPackage.directory, runtime });
@@ -172,7 +188,7 @@ try {
   assert.ok(comparison.runtimeChanges.some(change => change.field === 'redis'));
   await rm(authoring, { recursive: true });
   const retained = await inspectRelease(root, 'first'); assert.equal(retained.redis.queries.leaderboard.maxRows, 2);
-  assert.deepEqual(retained.redis.credentialReferences, [envName]);
+  assert.deepEqual(retained.redis.credentialReferences, requiredEnvironment);
   const clientDirectory = join(root, 'releases', 'first', 'redis', 'package', 'client');
   assert.equal((await inspectSellerClientExport({ directory: clientDirectory })).state, 'COMPLETE');
   const generated = await import(pathToFileURL(join(clientDirectory, 'seller-client.mjs')));
@@ -216,15 +232,18 @@ try {
   assert.equal((await buy('leaderboard', { offset: '0' }, '10000', 'rank-restored')).rowCount, 2);
   await call('/api/stop', { instanceId: state.console.instanceId });
   const removedSeedKeys = http ? await database.cleanup() : undefined;
-  const result = { result: 'PASS', redisVersion: version, nativeClient: http ? 'Upstash REST (HTTPS RESP2)' : '@redis/client@6.2.1', database: http ? 0 : 2,
+  const result = { result: 'PASS', redisVersion: version, nativeClient: http ? 'Upstash REST (HTTPS RESP2)' : '@redis/client@6.2.1', database: fixture?.databaseIndex ?? (http ? 0 : 2),
+    ...(topologyJourney ? { topology: topologyJourney } : {}),
     ...(http ? { provider: 'upstash-rest', removedSeedKeys, credentialMode: process.env.UPSTASH_REDIS_REST_READ_TOKEN ? 'DEDICATED_READ_TOKEN' : 'OWNED_EPHEMERAL_DATABASE' } : {}),
     nativeStatus, nativeVerifies: verified, nativeSettlements: settled, facilitator: 'LOCAL_PROTOCOL_FIXTURE',
-    journeys: [http ? 'native Upstash HTTPS, authentication and read-only Lua' : 'ACL and authenticated database selection', 'binary and exact scalar preservation', 'native rank and stream pagination',
+    journeys: [fixture ? 'native ' + topology + ', authentication, topology transition and terminal cleanup'
+      : http ? 'native Upstash HTTPS, authentication and read-only Lua' : 'ACL and authenticated database selection', 'binary and exact scalar preservation', 'native rank and stream pagination',
       'original generated client and buyer response files', 'retained source after authoring removal', 'native child upgrade and rollback'],
     deliveries, ...(workspaceJourney ? { workspace: workspaceJourney } : {}) };
   if (output) await write(output, result); console.log(JSON.stringify(result));
 } finally {
-  await operator?.close(); await source?.close(); if (database?.isOpen) database.destroy();
+  await operator?.close(); await source?.close();
+  if (fixture) await fixture.close(); else if (database?.isOpen) await database.destroy();
   if (facilitator.listening) await shutdown(facilitator);
   if (engine?.exitCode === null) { const exited = once(engine, 'exit'); engine.kill('SIGTERM'); await exited; }
   if (priorEnv === undefined) delete process.env[envName]; else process.env[envName] = priorEnv;
