@@ -3,16 +3,25 @@
   "id": "usgs-water",
   "description": "USGS water observations",
   "commands": {
-    "usgs-water": "stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/cli.mjs"
+    "usgs-water": "stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/cli.mjs",
+    "merchant-usgs": "stellar-forge/mcp-merchant-operator/usgs-workspace-download.mjs"
   },
   "commandDescriptions": {
-    "usgs-water": "Acquire USGS observations, review hydrology and operate paid editions"
+    "usgs-water": "Acquire USGS observations, review hydrology and operate paid editions",
+    "merchant-usgs": "Inspect Water projects, resume complete native DSS downloads and receive their original handovers"
   },
   "exports": {
     "./seller/usgs-water": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/merchant.mjs",
     "./seller/usgs-water/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/provider.mjs",
     "./seller/usgs-water/analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/analysis.mjs",
     "./seller/usgs-water/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/project.mjs",
-    "./seller/usgs-water/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/workspace.mjs"
-  }
+    "./seller/usgs-water/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/workspace.mjs",
+    "./merchant/mcp/usgs-workspaces": "./source/stellar-forge/mcp-merchant-operator/usgs-workspace.mjs",
+    "./merchant/mcp/usgs-delivery": "./source/stellar-forge/mcp-merchant-operator/usgs-delivery.mjs",
+    "./merchant/mcp/usgs-download": "./source/stellar-forge/mcp-merchant-operator/usgs-workspace-download.mjs",
+    "./seller/usgs-water/dss": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/dss.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/USGS_WORKSPACE.md"
+  ]
 }

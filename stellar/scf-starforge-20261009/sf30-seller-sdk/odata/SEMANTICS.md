@@ -204,3 +204,9 @@ additional source annotations and provider-specific interpretation.
 In Dataset exports, choose the accepted edition and optional property paths, then select **Preview field meanings**. The existing screen shows each receiving value/state column, the original CSDL type and declared facets, the exact source key, nullability, and storage encoding. **Download dictionary** saves the complete source-bound dictionary. Creating the export after a preview sends that dictionary's exact SHA256; changing the edition or property selection clears the preview. Every completed export retains its dictionary and original capture files. An earlier export remains downloadable with its original identity.
 
 Release preparation reopens an existing initialized dataset store with its original settings, so the same retained export can continue through the original merchant preparation after an interrupted operation.
+
+## Original Northwind receiving source
+
+The original retained Northwind operation contains 830 Orders in five response pages. The semantic preview reparses metadata SHA256 `81a48488cd2911f7254170da5403628db22127ea59124d6597d04c6af18d7702` and retains 14 physical value/state columns, including the complete `OrderID` key. Its `Freight` field is CSDL `Edm.Decimal` with source scale retained; the original first value remains the text `"32.3800"`.
+
+The same published loader opens the earlier configuration at its original snapshot `6df2673a539b6ca54ecb78907af204fd5a4fe20c011a64b102030ebc7d107817`. Adding the dictionary gives semantic snapshot `a1fd79affcc0b6abbf06725ddb82e13a3087d213ee22dc1c35fd75a92ee7a97e`. The actual 200-row native response retains the complete dictionary and both snapshot/semantic headers. The original refresh edition has the same definition identity, and a different requested meaning digest returns 409 during admission.

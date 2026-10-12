@@ -1,7 +1,11 @@
 // MIT. One original reviewed QuickBooks connection for the existing accounting owner.
+import { join, isAbsolute, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { normalizeOAuthProfile, oauthProfileIdentity } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/profile.mjs';
+import { MAX_STATE_BYTES, STATE_SCHEMA } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/store.mjs';
 import { QboHttpClient } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-http.mjs';
-import { readOAuthHostConnections, openOAuthConnectionRegistry } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/host.mjs';
-import { readQuickBooksSelection, quickBooksSelectionSummary, listQuickBooksConnections, openQuickBooksOAuthClient } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.mjs';
+import { HOST_CONNECTIONS_SCHEMA, normalizeOAuthHostConnections, readOAuthHostConnections, openOAuthConnectionRegistry } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/host.mjs';
+import { QUICKBOOKS_SELECTION_BYTES, validateQuickBooksSelection, readQuickBooksSelection, quickBooksSelectionSummary, listQuickBooksConnections, openQuickBooksOAuthClient } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.mjs';
 
 const fault = (code, message) => Object.assign(new Error(message), { code });
 const codeOf = error => /^(?:ACCOUNTING_|QBO_|OAUTH_)[A-Z0-9_]{1,100}$/.test(error?.code ?? '')
@@ -140,4 +144,93 @@ export async function openMerchantQuickBooksConnection(definition, {
     await refresh();
     return Object.freeze({ client, connection: refresh, close });
   } catch (error) { await close().catch(() => {}); throw error; }
+}
+
+
+/**
+ * Trusted source resolver for the original encrypted accounting recovery owner.
+ * The supplied reader is either its checked live source reader or its authenticated
+ * staging reader. It must never fall back to live files during cold restoration.
+ */
+export function merchantQuickBooksRecoverySources(definition, {
+  environment = process.env, allowLoopback = false, onPaths = () => {},
+} = {}) {
+  const env = {...environment}, configured = {...definition};
+  const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+  const require = (yes, message) => {
+    if (!yes) throw Object.assign(new Error(message), {code:'ACCOUNTING_QBO_RECOVERY_SOURCES'});
+  };
+  const fields = (value, allowed) => value && typeof value === 'object' && !Array.isArray(value) &&
+    Object.keys(value).every(key => allowed.includes(key));
+  const absolute = value => typeof value === 'string' && isAbsolute(value) && value !== '/' &&
+    resolve(value) === value && !/[\\\\\x00-\x1f\x7f]/.test(value);
+  return async ({readFile}) => {
+    require(typeof readFile === 'function', 'Use the original accounting source reader.');
+    async function read(path, limit, label) {
+      try {
+        const bytes = await readFile(path, limit);
+        require(bytes.length <= limit, 'An original OAuth recovery source exceeds its supported size.');
+        return {value:JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes)), sha256:hash(bytes)};
+      } catch (error) {
+        if (error.code?.startsWith('ACCOUNTING_RECOVERY_')) throw error;
+        throw Object.assign(new Error('Cannot read the original ' + label + ' through the selected recovery source map.'),
+          {code:'ACCOUNTING_QBO_RECOVERY_SOURCES'});
+      }
+    }
+    const source = await read(configured.connectionsFile, 65536, 'OAuth connections configuration');
+    require(fields(source.value, ['schema','connections']) && source.value.schema === HOST_CONNECTIONS_SCHEMA,
+      'Use the original OAuth host connections configuration.');
+    const connections = normalizeOAuthHostConnections(source.value.connections);
+    const selected = await read(join(configured.selectionDirectory, 'selection.json'), QUICKBOOKS_SELECTION_BYTES,
+      'reviewed QuickBooks company selection');
+    const selection = await validateQuickBooksSelection(selected.value);
+    if (configured.expectedSelectionSha256 && configured.expectedSelectionSha256 !== selection.integrity.sha256)
+      throw Object.assign(new Error('The retained QuickBooks selection differs from the company pin in this merchant host.'),
+        {code:'ACCOUNTING_QBO_SELECTION_CHANGED'});
+    require(connections.some(item => item.alias === selection.alias && item.directoryEnv === selection.binding.directoryEnv),
+      'Retain the selected company alias and its original directory environment reference.');
+    const directories = new Set(), references = new Set(), stores = [];
+    for (const item of [...connections].sort((a,b) => a.alias.localeCompare(b.alias))) {
+      const directory = env[item.directoryEnv];
+      require(Object.hasOwn(env, item.directoryEnv) && absolute(directory) && !directories.has(directory),
+        'Provision each configured OAuth directory environment reference at its original private path.');
+      directories.add(directory); references.add(item.directoryEnv);
+      stores.push({...item,directory});
+    }
+    const roots = [
+      {name:'QuickBooksConnections',path:configured.connectionsFile,kind:'file'},
+      {name:'QuickBooksSelection',path:configured.selectionDirectory,kind:'directory'},
+      ...stores.map(item => ({name:'OAuth-' + item.alias,path:item.directory,kind:'directory'})),
+    ];
+    onPaths(roots.map(item => ({...item})));
+    const identities = [];
+    for (const item of stores) {
+      const captured = await read(join(item.directory, 'connection.json'), MAX_STATE_BYTES,
+        'authorization state for alias ' + item.alias);
+      const state = captured.value;
+      require(state && state.schema === STATE_SCHEMA && typeof state.id === 'string',
+        'Keep the original private OAuth connection state.');
+      const profile = normalizeOAuthProfile(state.profile, {allowLoopback});
+      require(state.profileSha256 === oauthProfileIdentity(profile),
+        'The retained OAuth profile differs from its native profile identity.');
+      if (profile.clientSecretEnv) references.add(profile.clientSecretEnv);
+      identities.push({...item,connectionId:state.id,profileSha256:state.profileSha256,
+        ...(profile.clientSecretEnv ? {clientSecretEnv:profile.clientSecretEnv} : {})});
+      // Tokens, exchange bodies, consent state and secret environment values stay
+      // only in their original opaque file bytes inside the encrypted snapshot.
+    }
+    return {
+      schema:'stellar-forge.accounting-host-source-profile.v1',kind:'quickbooks-oauth',
+      binding:{
+        connectionsFile:configured.connectionsFile,selectionDirectory:configured.selectionDirectory,
+        expectedSelectionSha256:configured.expectedSelectionSha256 ?? null,
+        connectionsSha256:source.sha256,selectionFileSha256:selected.sha256,
+        selection:{id:selection.id,sha256:selection.integrity.sha256,alias:selection.alias,
+          directoryEnv:selection.binding.directoryEnv,profileSha256:selection.profileSha256,
+          grantId:selection.grantId,realmId:selection.realmId,environment:selection.environment},
+        connections:identities,
+      },
+      roots,requiredEnvironment:[...references].sort(),
+    };
+  };
 }
