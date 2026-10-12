@@ -612,6 +612,9 @@
     "./buyer/object": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-session.mjs",
     "./buyer/object-description": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-description.mjs",
     "./merchant/mcp": "./source/stellar-forge/mcp-merchant-operator/operator.mjs",
+    "./merchant/mcp/openapi": "./source/stellar-forge/mcp-merchant-operator/openapi-workspace.mjs",
+    "./merchant/mcp/openapi/client": "./source/stellar-forge/mcp-merchant-operator/openapi-workspace-client.mjs",
+    "./merchant/mcp/sf61-connection": "./source/stellar-forge/mcp-merchant-operator/sf61-connection.mjs",
     "./merchant/mcp/graphql-workspaces": "./source/stellar-forge/mcp-merchant-operator/graphql-workspace.mjs",
     "./merchant/mcp/graphql-download": "./source/stellar-forge/mcp-merchant-operator/graphql-workspace-download.mjs",
     "./seller/graphql/workspace-files": "./source/stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/workspace/files.mjs",
@@ -799,6 +802,8 @@
       "import": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/collection.mjs"
     },
     "./seller/openapi/merchant": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/model.mjs",
+    "./seller/openapi/package-transfer": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/package-transfer.mjs",
+    "./seller/openapi/package-export-format": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/package-export-format.mjs",
     "./seller/openapi/cache-policy-revisions": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/cache-policy-revisions.mjs",
     "./seller/openapi/source": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/source-document.mjs",
     "./seller/linkup-search": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/linkup-search.mjs",
