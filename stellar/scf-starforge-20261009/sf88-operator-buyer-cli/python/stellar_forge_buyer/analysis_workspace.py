@@ -716,6 +716,21 @@ def serve(workspace, *, port=0):
                 if len(parts) == 3 and parts[:2] == ["api", "change-export"]:
                     path, record = workspace.change_export_file(parts[2])
                     return self._file_reply(path, record)
+                if url.path == "/api/semantic-compare":
+                    if set(query) != {"before", "after"}:
+                        raise StateError("DATASET_SEMANTIC_COMPARISON_VERSIONS_REQUIRED")
+                    return self._reply(200, workspace.database.compare_semantics(get("before"), get("after")))
+                if len(parts) == 3 and parts[:2] == ["api", "semantics"]:
+                    if query:
+                        raise StateError("DATASET_SEMANTIC_QUERY_INVALID")
+                    return self._reply(200, workspace.database.semantics(parts[2]))
+                if len(parts) == 3 and parts[:2] == ["api", "semantics-file"]:
+                    if query:
+                        raise StateError("DATASET_SEMANTIC_QUERY_INVALID")
+                    raw = workspace.database.semantics_bytes(parts[2])
+                    if raw is None:
+                        raise StateError("DATASET_SEMANTIC_DICTIONARY_UNAVAILABLE")
+                    return self._reply(200, raw, "application/json", "source-semantics.json")
                 if len(parts) == 3 and parts[:2] == ["api", "version"]:
                     return self._reply(200, workspace.database.version(parts[2]))
                 if len(parts) == 3 and parts[:2] == ["api", "manifest"]:
