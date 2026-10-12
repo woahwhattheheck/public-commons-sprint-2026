@@ -234,7 +234,7 @@ export class SupplierWorkspace {
   recipientRows({reviewId,kind='all',change='all',search='',offset=0,limit=50}) {
     const review=this.review(reviewId),paging=page(offset,limit);
     if(!review.recipient)fail('XCHANGE_RECIPIENT_REVIEW_REQUIRED','Select a native xChange supplier review.');
-    if(!['all','product','tradeItem'].includes(kind)||!['all','added','changed','unchanged','expired','deleted'].includes(change))
+    if(!['all','product','tradeItem'].includes(kind)||!['all','added','changed','unchanged','expired','deleted','skipped'].includes(change))
       fail('XCHANGE_RECIPIENT_FILTER','Choose a native record kind and recipient action.');
     if(typeof search!=='string'||search.length>1024)fail('XCHANGE_RECIPIENT_SEARCH','Use an original identifier up to1024characters.');
     const clauses=['review_id=?'],args=[review.id];
@@ -253,7 +253,7 @@ export class SupplierWorkspace {
   export({reviewId,format,expectedReviewSha256}) {
     const review=this.review(reviewId);
     expectedHash(review.sha256,expectedReviewSha256,'The selected supplier review');
-    if(['xchange.json','recipient.jsonl','impact.csv'].includes(format)){if(!isXChangeProfile(review.plan.profile))fail('XCHANGE_PROFILE_REQUIRED','Select a native xChange review for this export.');return exportXChangeReview(this.db,review,format);}
+    if(['xchange.json','recipient.jsonl','impact.csv','parameters.xml','2ba.zip'].includes(format)){if(!isXChangeProfile(review.plan.profile))fail('XCHANGE_PROFILE_REQUIRED','Select a native xChange review for this export.');return exportXChangeReview(this.db,review,format);}
     const workspace=this;
     function* rows() {
       for(const saved of workspace.db.prepare('SELECT record_json FROM catalog_supplier_products WHERE review_id=? ORDER BY material_key').iterate(review.id))
@@ -276,7 +276,7 @@ export class SupplierWorkspace {
       function* products(){for(const row of rows())yield JSON.stringify(row)+'\n';}
       return{type:'application/x-ndjson; charset=utf-8',filename:filename+format,body:products()};
     }
-    if(format!=='bmecat.xml')fail('SUPPLIER_EXPORT_FORMAT_INVALID','Choose review.json, issues.csv, products.jsonl or bmecat.xml.');
+    if(format!=='bmecat.xml')fail('SUPPLIER_EXPORT_FORMAT_INVALID','Choose review.json, issues.csv, products.jsonl, bmecat.xml, xchange.json, recipient.jsonl, impact.csv, parameters.xml or 2ba.zip.');
     if(review.counts.errors||!review.counts.total)
       fail('SUPPLIER_CORRECTIONS_REQUIRED','Resolve the '+review.counts.errors+' delivery errors and review a nonempty product edition before creating BMEcat.');
     const exported=exportSupplierProducts(rows(),{profile:review.plan.profile,submission:review,format,productIds:productIds(this.db,review.id)});
