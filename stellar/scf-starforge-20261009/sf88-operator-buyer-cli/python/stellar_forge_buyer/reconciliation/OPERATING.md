@@ -159,7 +159,7 @@ Runs with numeric rules expose three separate counts: **Canonical exact matches*
 | TARGET_ONLY | The known key and window appear only on the target side. |
 | VALUE_DIFFERENCE | One original included row exists on each side and its compared values differ. |
 | MULTISET_DIFFERENCE | A group with multiple observations has different canonical value multiplicities. |
-| NOT_COMPARABLE | A known-key group contains quarantined observations. |
+| NOT_COMPARABLE | A known-key group contains quarantined observations, or a unique numeric-rule comparison is not comparable under its NULL or nonfinite-value policy. |
 
 SOURCE_ONLY and TARGET_ONLY describe the known keys inside the selected windows. Unresolved keys remain separately quarantined; their correspondence is not inferred.
 
