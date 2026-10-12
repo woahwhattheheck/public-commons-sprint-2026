@@ -204,3 +204,38 @@ The retained complete project is 87,394 bytes, SHA256 `9156505408514205f52caa6dc
 The subsequent original-purchase continuation reached revision 29 through `mcp_register`, source acceptance, allocation, period review/close and retained export. Four existing MySQL HPD quotes produced one exact-bound 50,000-atomic-unit expense, one separately carried unresolved signed quote and two unsigned rejections. The original D173 allocation and 10,000-unit unsent reservation remained intact; the new issued expense total was 60,000 atomic units in the same original testnet asset.
 
 The complete receiving project retained both native source kinds, all 14 tables, 14 committed requests and 24 project members, including the read-only quote-reader closure. The same case and issued edition reopened with no new source capture or payment. The original buyer's native reconciliation reused its existing optional Stellar SDK runtime; the expense capture itself required only Node's standard library. Desktop and mobile inspection of the included source completed with no page errors, and all owned processes closed.
+
+## Original buyer credits and refund receiving
+
+The same customer host exposes `refund_capture`, `refund_packets`, `refund_packet`, `refund_review`, `credits`, `credit` and `credit_coding_save` under the original `merchant_buyer_expense_` prefix. The JavaScript client derives `refundCapture`, `refundReview`, `creditCodingSave` and the corresponding read methods from the same contract. Successful mutations use the original Store transaction/request recovery and the same per-workspace child lifetime.
+
+Declare the original customer packets on the host, preserving exact source identities:
+
+```json
+{
+  "schema": "stellar-forge.buyer-expense-connection.v1",
+  "workspaces": {
+    "buyer": {
+      "directory": "/operator/buyer-expenses",
+      "refundSources": {
+        "original-return": {
+          "directory": "/received/original-refund",
+          "manifestSha256": "EXACT_ORIGINAL_MANIFEST_SHA256",
+          "siteUrl": "https://original-store.example",
+          "name": "Original customer refund",
+          "provenance": "The original operator, operation and retained source references",
+          "dataContext": "operational"
+        }
+      }
+    }
+  }
+}
+```
+
+The strings above are configuration placeholders. Supply the actual original packet/hash/store and use `development` for a retained development operation. Operational and development records stay in separate native workspaces. Existing `ledgers` and `quoteSources` may also declare `dataContext`, defaulting to `operational`.
+
+Capture the declared alias, inspect its source, then accept/reject the packet with a named reason and either the exact matching purchase item or explicit `register_original_purchase: true`. Read and code the original purchase before its returns. `credit_coding_save` uses the original exact native allocation shape and current return basis. It enforces original purchase dimensions, cumulative capacity and unique native return identity. Original store-currency credit and native returned units are never converted into one another.
+
+The existing `period_report`, `review` and `issued` views now include `credit_allocations`, `credit_totals`, `net_totals`, `credit_by_cost_center`, `net_by_cost_center` and `merchant_credit_outcomes`. Their immutable reports retain the original packet and source context. Reopen before changing a closed period. Use `export` kind `refund-packet` with the original packet ID for the unchanged customer source, or the existing accountant/project forms for a complete handoff. The maintained resumable downloader and trusted included-source receiver handle those original exports.
+
+No merchant mutation, new payment, signer or on-chain observation is initiated by the buyer-credit surface.
