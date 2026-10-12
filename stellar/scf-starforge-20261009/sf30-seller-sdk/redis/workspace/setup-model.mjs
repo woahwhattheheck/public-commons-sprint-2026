@@ -6,7 +6,7 @@ import { validateRedisSourceConfig, openRedisSourceFile } from '../config.mjs';
 import { compileRedisMerchantPlan } from '../prepare.mjs';
 import { compileRedisQueries, describeRedisQueries } from '../declaration.mjs';
 import { REDIS_CERTIFICATE_FILES, requiredRedisEnvironment } from '../connection-profile.mjs';
-import { createRedisAuthoringWorkspace, redisWorkspaceBinding } from './model.mjs';
+import { createRedisAuthoringWorkspace, openRedisAuthoringWorkspace, inspectRedisWorkspaceBinding, redisWorkspaceBinding } from './model.mjs';
 
 export const REDIS_SETUP_SCHEMA = 'stellar-forge.redis-connection-setup.v1';
 const plain = value => value && typeof value === 'object' && !Array.isArray(value);
@@ -39,7 +39,26 @@ async function put(path, value) {
 export async function redisSetupTemplates() {
   const [source, plan] = await Promise.all(['example-source.json', 'example-merchant-plan.json']
     .map(name => readFile(new URL('../' + name, import.meta.url), 'utf8').then(JSON.parse)));
+  source.connection={topology:'standalone',host:'redis.example.com',port:6379,database:0,tls:'verify-full',passwordEnv:'REDIS_PASSWORD'};
   return {label:'Redis merchant', source, plan, certificates:{}};
+}
+// Initial input is exposed to the local operator. Validate its credential shape
+// and any supplied PEM bytes before returning it, while allowing a CA filename
+// whose bundle is still to be selected in the browser.
+function validateInitialRedisSetup(input) {
+  fields(input,['label','source','plan','certificates']);
+  validateRedisSourceConfig(input.source);
+  if(input.source.bindings!==undefined)
+    throw issue('REDIS_SETUP_BINDINGS_INVALID','Import the original source declarations before generated customer bindings.');
+  const label=input.label??'Redis merchant';
+  if(typeof label!=='string'||!label.isWellFormed()||!label.trim()||label.length>200||/[\x00-\x1f\x7f]/.test(label))
+    throw issue('REDIS_SETUP_LABEL_INVALID','Give the workspace a name within 200 characters.');
+  if(Buffer.byteLength(encode(input.source))>262144||Buffer.byteLength(encode(input.plan))>262144)
+    throw issue('REDIS_SETUP_CONFIGURATION_TOO_LARGE','Keep each source and merchant plan within 256 KiB.');
+  compileRedisMerchantPlan(input.source.queries,input.plan);
+  fields(input.certificates??{},REDIS_CERTIFICATE_FILES.map(item=>item.profile));
+  for(const value of Object.values(input.certificates??{}))certificate(value);
+  return input;
 }
 export function normalizeRedisSetup(input, environment = process.env) {
   fields(input, ['label','source','plan','certificates']);
@@ -81,7 +100,13 @@ export function normalizeRedisSetup(input, environment = process.env) {
       publicOrigin:plan.publicOrigin,
       routes:compiled.service.routes.map(route => ({id:route.id,url:route.offer.resource.url,payment:route.offer.accepts}))}};
 }
-export async function createRedisConnectionSetup({directory, initial, environment = process.env} = {}) {
+export async function createRedisConnectionSetup({directory, initial, environment = process.env, operationId, inputSha256} = {}) {
+  const explicitOperation=operationId!==undefined;
+  if(explicitOperation&&(typeof operationId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(operationId)))
+    throw issue('REDIS_SETUP_OPERATION_INVALID','Use the original setup operation ID.');
+  if(inputSha256!==undefined&&inputSha256!==null&&(typeof inputSha256!=='string'||!/^[a-f0-9]{64}$/.test(inputSha256)))
+    throw issue('REDIS_SETUP_INPUT_DIGEST_INVALID','Use the exact selected input SHA256.');
+  const inputIdentity=inputSha256??(initial?hash(stable(initial)):null);
   if (typeof directory !== 'string' || !directory)
     throw issue('REDIS_SETUP_DIRECTORY_REQUIRED', 'Choose the new workspace directory when starting setup.');
   const selected = resolve(directory), parent = await realpath(dirname(selected));
@@ -91,18 +116,35 @@ export async function createRedisConnectionSetup({directory, initial, environmen
   const target = join(parent, name), parentStat = await lstat(parent);
   if (!parentStat.isDirectory()) throw issue('REDIS_SETUP_DIRECTORY_INVALID', 'The workspace parent must be an existing directory.');
   const existing = await lstat(target).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
-  if (existing) throw issue('REDIS_SETUP_DIRECTORY_EXISTS', 'Open the existing workspace, or choose a new directory for connection setup.', 409);
   const defaults = initial ? clone(initial) : await redisSetupTemplates();
-  return new RedisConnectionSetup({directory:target, parent, initial:defaults, environment:{...environment}});
+  validateInitialRedisSetup(defaults);
+  if(existing){
+    if(!explicitOperation)throw issue('REDIS_SETUP_DIRECTORY_EXISTS','Open the existing workspace, or continue with its original setup operation ID.',409);
+    const selected=await inspectRedisWorkspaceBinding(target,{includeSetupOrigin:true}),origin=selected.setupOrigin;
+    if(!origin||origin.operationId!==operationId||origin.inputSha256!==inputIdentity)
+      throw issue('REDIS_SETUP_ORIGIN_CHANGED','This directory does not belong to the selected setup operation and input.',409);
+    const workspace=await openRedisAuthoringWorkspace(target,{environment,
+      expectedWorkspaceId:selected.workspaceId,expectedProfileSha256:selected.profileSha256,expectedSetupOrigin:origin});
+    const setup=new RedisConnectionSetup({directory:target,parent,initial:defaults,environment:{...environment},
+      operationId,inputSha256:inputIdentity});
+    setup.id=origin.setupId;setup.workspace=workspace;setup.reviewed=origin.digest;
+    setup.created={requestId:origin.requestId,digest:origin.digest,directory:workspace.root,
+      ...redisWorkspaceBinding(workspace.metadata()),createdAt:workspace.metadata().createdAt,
+      setupOrigin:clone(origin),recovered:true};
+    return setup;
+  }
+  return new RedisConnectionSetup({directory:target, parent, initial:defaults, environment:{...environment},
+    operationId:operationId??'setup-'+randomUUID(),inputSha256:inputIdentity});
 }
 export class RedisConnectionSetup {
-  constructor({directory,parent,initial,environment}) {
+  constructor({directory,parent,initial,environment,operationId,inputSha256}) {
     this.directory=directory; this.parent=parent; this.initial=initial; this.environment=environment;
+    this.operationId=operationId;this.inputSha256=inputSha256;
     this.id='redis-setup-'+randomUUID(); this.queue=Promise.resolve(); this.active=new Set();
     this.workspace=null; this.created=null; this.reviewed=null; this.closing=null; this.closed=false;
   }
   state() {
-    return {schema:REDIS_SETUP_SCHEMA, setupId:this.id, directory:this.directory,
+    return {schema:REDIS_SETUP_SCHEMA, setupId:this.id, operationId:this.operationId, directory:this.directory,
       status:this.created?'CREATED':'CONFIGURING', initial:clone(this.initial),
       created:this.created?clone(this.created):null};
   }
@@ -175,12 +217,14 @@ export class RedisConnectionSetup {
       await this.materialize(draft,async root=>{
         const workspace=await createRedisAuthoringWorkspace({
           directory:this.directory,sourceFile:join(root,'source.json'),planFile:join(root,'merchant-plan.json'),
-          label:draft.label,environment:this.environment});
+          label:draft.label,environment:this.environment,setupOrigin:{schema:'stellar-forge.redis-setup-origin.v1',
+            setupId:this.id,operationId:this.operationId,requestId:captured.requestId,digest:draft.digest,inputSha256:this.inputSha256}});
         // The original workspace exists now. Retain it even if removing the input
         // directory fails, so the same request and GET state can recover it.
         this.workspace=workspace;
         this.created={requestId:captured.requestId,digest:draft.digest,directory:workspace.root,
-          ...redisWorkspaceBinding(workspace.metadata()),createdAt:new Date().toISOString()};
+          ...redisWorkspaceBinding(workspace.metadata()),createdAt:new Date().toISOString(),
+          setupOrigin:clone(workspace.metadata().setupOrigin)};
       });
       return clone(this.created);
     });

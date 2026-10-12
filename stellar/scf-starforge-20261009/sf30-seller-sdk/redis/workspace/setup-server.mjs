@@ -32,11 +32,11 @@ async function readBody(req) {
     return value;
   } catch { throw failure('JSON_REQUIRED','Send a valid JSON object.'); }
 }
-export async function startRedisConnectionSetupServer({directory,initial,environment=process.env,port=8437,setup}={}) {
+export async function startRedisConnectionSetupServer({directory,initial,environment=process.env,port=8437,setup,operationId,inputSha256}={}) {
   if(!Number.isInteger(port)||port<0||port>65535)throw new RangeError('Port must be 0–65535.');
   const assets=new Map(await Promise.all([...ASSETS].map(async([path,[name,type]])=>
     [path,{bytes:await readFile(new URL('./public/'+name,import.meta.url)),type}])));
-  const model=setup??await createRedisConnectionSetup({directory,initial,environment});
+  const model=setup??await createRedisConnectionSetup({directory,initial,environment,operationId,inputSha256});
   const token=randomBytes(32).toString('hex'),tokenBytes=Buffer.from(token);
   let origin,authority,closing,workspaceServer,opening;
   const connections=new Set();
@@ -47,7 +47,7 @@ export async function startRedisConnectionSetupServer({directory,initial,environ
     if(!opening)opening=(async()=>{
       if(model.workspace.closed)model.workspace=await openRedisAuthoringWorkspace(model.directory,{
         environment:model.environment,expectedWorkspaceId:model.created.workspaceId,
-        expectedProfileSha256:model.created.profileSha256});
+        expectedProfileSha256:model.created.profileSha256,expectedSetupOrigin:model.created.setupOrigin});
       const value=await startRedisAuthoringServer({workspace:model.workspace,port:0});
       workspaceServer=value;return value;
     })().finally(()=>{opening=null;});

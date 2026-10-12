@@ -29,7 +29,7 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/redis/cli.mjs workspace open
   --directory /srv/merchants/new-redis-workspace
 ~~~
 
-The original workspace create --source --plan terminal command remains available for existing source and plan files.
+The original workspace create --source --plan terminal command remains available for existing source and plan files. A managed host may supply --setup-operation ORIGINAL_REQUEST_ID. Startup returns that operation ID; continuing with the same ID and input adopts the completed workspace through its original open path.
 
 ## Deployment settings
 
@@ -68,7 +68,7 @@ The initial example plan contains demonstration payment fields. Supply the inten
 
 The current form, including partially edited JSON, is retained in browser session storage under the current setup ID. Download the setup when moving it to another host or process.
 
-Creation uses one retained request ID in the browser. A repeated request with the same digest returns the original workspace. A conflicting request cannot replace it. If a response is lost, refresh the setup window and use **Open workspace** for its completed result. After a process interruption, open the created directory with the original workspace command.
+Creation uses one retained request ID in the browser. A repeated request with the same digest returns the original workspace. A conflicting request cannot replace it. If a response is lost, refresh the setup window and use **Open workspace** for its completed result. After a process interruption, open the created directory with the original workspace command. Managed setup may instead repeat its original --setup-operation ID and exact input. The initializer retains the setup identity alongside the first workspace metadata. Recovery first reads that identity without a writer, then verifies it again under the original writer lease before recovering the workspace. A different operation or changed input cannot adopt that creation.
 
 The workspace database retains the immutable connection profile and CA blobs alongside its first product revision. Product edits create normal saved revisions under that same binding. Connection changes use a new setup directory.
 
@@ -89,7 +89,7 @@ console.log(session.operatorUrl);
 
 For a non-browser host, createRedisConnectionSetup in setup-model.mjs exposes state, review, preview, create and close. Creation calls createRedisAuthoringWorkspace; its result carries the original workspace ID/profile digest, required environment names, head and destination. The host may adopt setup.workspace into the original authoring server after creation.
 
-The workspace setup --input COMPLETE_SETUP_JSON command starts with a saved setup file, including both CA bundles. Local HTTP routes require the original token header; mutation routes also require the original origin. Customer source data returned by preview is displayed as text and downloaded as the complete source response.
+The workspace setup --input COMPLETE_SETUP_JSON command starts with a saved setup file, including both CA bundles. A queued host can add --expected-input-sha256 SHA256 to verify its exact raw input bytes before startup; the SHA is retained with the setup origin. It may also pass operationId and inputSha256 to the host API. Local HTTP routes require the original token header; mutation routes also require the original origin. Customer source data returned by preview is displayed as text and downloaded as the complete source response.
 
 ## Complete receiving run
 

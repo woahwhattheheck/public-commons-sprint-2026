@@ -44,7 +44,7 @@ export async function runRedisSetupJourney({sourceFile,planFile,root,runtime}={}
         stages.push({kind:'offline-create',deployment:connection.transport??connection.topology,workspaceId:created.workspaceId,environment:checked.environment});
       }finally{await setup.close();}
     }
-    server=await startRedisConnectionSetupServer({directory:join(root,'workspace'),initial,environment,port:0});
+    server=await startRedisConnectionSetupServer({directory:join(root,'workspace'),initial,environment,port:0,operationId:'original-native-setup'});
     const playwright=await import(process.env.SF30_PLAYWRIGHT_MODULE??'playwright');
     const chromium=playwright.chromium??playwright.default?.chromium;
     assert.equal(typeof chromium?.launch,'function');
@@ -125,6 +125,15 @@ export async function runRedisSetupJourney({sourceFile,planFile,root,runtime}={}
     stages.push({kind:'browser-create-edit-prepare-stage',workspaceId:originalId,revision:changed,publicFiles:publicFiles.length,
       livePreviewRows:catalog.data.rowCount,screenshot,releaseId:staged.result.releaseId});
     await browser.close();browser=null;await server.close();server=null;workspace=null;
+    const continued=await createRedisConnectionSetup({directory:join(root,'workspace'),initial,environment,operationId:'original-native-setup'});
+    try{
+      assert.equal(continued.created.workspaceId,originalId);assert.equal(continued.created.recovered,true);
+      assert.equal(continued.id,created.setupOrigin.setupId);
+      assert.equal(continued.workspace.metadata().head,changed);
+      stages.push({kind:'managed-setup-continuation',operationId:continued.operationId,workspaceId:originalId,head:changed});
+    }finally{await continued.close();}
+    await assert.rejects(createRedisConnectionSetup({directory:join(root,'workspace'),initial,environment,operationId:'another-setup'}),
+      error=>error.code==='REDIS_SETUP_ORIGIN_CHANGED');
     workspace=await openRedisAuthoringWorkspace(join(root,'workspace'),{environment,
       expectedWorkspaceId:created.workspaceId,expectedProfileSha256:created.profileSha256});
     assert.equal(workspace.metadata().id,originalId);
