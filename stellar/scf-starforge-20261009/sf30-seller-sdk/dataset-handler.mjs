@@ -127,8 +127,8 @@ function integer(value, name, min, max) {
     throw new TypeError(`${name} must be an integer from ${min} to ${max}`);
   return value;
 }
-function coerce(value, spec, label) {
-  if (value === '' && spec.nullable) return null;
+function coerce(value, spec, label, quotedEmptyText = false) {
+  if (value === '' && spec.nullable && !quotedEmptyText) return null;
   if (spec.type === 'string') return value;
   if (spec.type === 'boolean' && (value === 'true' || value === 'false')) return value === 'true';
   if (spec.type === 'integer' && /^-?(0|[1-9][0-9]*)$/.test(value) && Number.isSafeInteger(Number(value)))
@@ -141,7 +141,7 @@ function coerce(value, spec, label) {
 // Incremental CSV parser: quoted delimiters/newlines, escaped quotes, CRLF/LF/CR,
 // and a final record without a newline. No eval, regex query engine, or dependencies.
 function csvParser(onRecord, maxCellChars) {
-  let row = [], cell = [], chunks = [], cellChars = 0, mode = 0, started = false, skipLF = false, first = true;
+  let row = [], quoteStates = [], quoted = false, cell = [], chunks = [], cellChars = 0, mode = 0, started = false, skipLF = false, first = true;
   const append = c => {
     cellChars += c.length; started = true;
     if (cellChars > maxCellChars) throw new RangeError('CSV cell exceeds maxCellChars');
@@ -151,10 +151,11 @@ function csvParser(onRecord, maxCellChars) {
   };
   const field = () => {
     if (cell.length) chunks.push(cell.join(''));
-    row.push(chunks.join('')); cell = []; chunks = []; cellChars = 0; mode = 0; started = false;
+    row.push(chunks.join('')); quoteStates.push(quoted); quoted = false;
+    cell = []; chunks = []; cellChars = 0; mode = 0; started = false;
     if (row.length > 256) throw new RangeError('CSV exceeds 256 columns');
   };
-  const record = () => { field(); onRecord(row); row = []; };
+  const record = () => { field(); onRecord(row, quoteStates); row = []; quoteStates = []; };
   return {
     feed(text) {
       for (const c of text) {
@@ -170,7 +171,7 @@ function csvParser(onRecord, maxCellChars) {
         if (mode === 2) throw new TypeError('CSV contains text after a closing quote');
         if (c === '"') {
           if (started) throw new TypeError('CSV quote must begin a field');
-          mode = 1; started = true;
+          mode = 1; started = true; quoted = true;
         } else append(c);
       }
     },
@@ -187,7 +188,8 @@ export { csvParser as createCsvRecordParser };
 /** Load one immutable snapshot. Only declared columns are retained and exposed. */
 export async function loadCsvDataset({ file, name, columns, filters = [], ranges = [], sorts = [],
   maxBytes = 64 * 1024 * 1024, maxRows = 250000, maxCellChars = 65536,
-  defaultLimit = 50, maxLimit = 250, maxPageBytes = 900 * 1024, semantics } = {}) {
+  defaultLimit = 50, maxLimit = 250, maxPageBytes = 900 * 1024, semantics, nullEncoding = 'empty' } = {}) {
+  if (!['empty', 'unquoted-empty'].includes(nullEncoding)) throw new TypeError('Choose empty or unquoted-empty CSV null encoding');
   if (typeof name !== 'string' || !name.trim() || name.length > 128 || /[\x00-\x1f\x7f]/.test(name))
     throw new TypeError('Dataset name must be printable text, 1–128 characters');
   if (typeof file !== 'string' && !(file instanceof URL)) throw new TypeError('An operator-owned CSV file is required');
@@ -229,11 +231,12 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
   const rows = [], indexes = new Map(filters.map(key => [key, new Map()]));
   // Keep old snapshots/cursors byte-compatible when no new capability is enabled.
   const policy = { name, schema, filters, ...(ranges.length || sorts.length ? { ranges, sorts } : {}),
+    ...(nullEncoding === 'unquoted-empty' ? { nullEncoding } : {}),
     ...(semanticBinding ? { semantics: semanticBinding.sha256 } : {}) };
   const digest = createHash('sha256').update(JSON.stringify(policy)).update('\0');
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let headers, positions, recordNumber = 0, byteCount = 0;
-  const parser = csvParser(cells => {
+  const parser = csvParser((cells, quoted) => {
     recordNumber++;
     if (!headers) {
       if (cells.some(h => h === '') || new Set(cells).size !== cells.length)
@@ -249,7 +252,13 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
     if (cells.length !== headers.length) throw new TypeError(`CSV record ${recordNumber} has a different column count`);
     if (rows.length >= maxRows) throw new RangeError('CSV exceeds maxRows');
     const row = Object.create(null);
-    schema.forEach((spec, i) => { row[spec.name] = coerce(cells[positions[i]], spec, `CSV record ${recordNumber}, ${spec.name}`); });
+    schema.forEach((spec, i) => {
+      const value = cells[positions[i]], label = `CSV record ${recordNumber}, ${spec.name}`;
+      if (nullEncoding === 'unquoted-empty' && value === '' && !quoted[positions[i]]) {
+        if (!spec.nullable) throw new TypeError(`${label} requires a non-NULL value`);
+        row[spec.name] = null;
+      } else row[spec.name] = coerce(value, spec, label, nullEncoding === 'unquoted-empty' && quoted[positions[i]]);
+    });
     for (const key of filters) {
       const index = indexes.get(key), value = row[key];
       if (!index.has(value)) index.set(value, []);
@@ -304,6 +313,7 @@ export async function loadCsvDataset({ file, name, columns, filters = [], ranges
       ...(ranges.length || sorts.length ? { rangeFilterable: ranges.includes(s.name), sortable: sorts.includes(s.name) } : {}),
     }))),
     defaultLimit, maxLimit, order: 'csv-record-order',
+    ...(nullEncoding === 'unquoted-empty' ? { nullEncoding } : {}),
     ...(semanticBinding ? { semanticSchema: semanticBinding.schema } : {}) });
   const describe = () => structuredClone(description);
   const rangeOps = ['gt', 'gte', 'lt', 'lte'];
@@ -476,7 +486,7 @@ export async function loadDatasetConfig(configPath) {
   const bytes = await readFile(path);
   if (bytes.length > 65536) throw new RangeError('Dataset config exceeds 64 KiB');
   const config = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  const keys = new Set(['schema', 'file', 'name', 'columns', 'filters', 'ranges', 'sorts', 'maxBytes', 'maxRows', 'maxCellChars', 'defaultLimit', 'maxLimit', 'maxPageBytes', 'semantics']);
+  const keys = new Set(['schema', 'file', 'name', 'columns', 'filters', 'ranges', 'sorts', 'maxBytes', 'maxRows', 'maxCellChars', 'defaultLimit', 'maxLimit', 'maxPageBytes', 'semantics', 'nullEncoding']);
   if (!object(config) || config.schema !== 'stellar-forge.csv-dataset.v1' || typeof config.file !== 'string' ||
       !config.file || Object.keys(config).some(key => !keys.has(key))) throw new TypeError('Invalid csv-dataset.v1 configuration');
   return loadCsvDataset({ ...config, file: resolve(dirname(path), config.file) });
