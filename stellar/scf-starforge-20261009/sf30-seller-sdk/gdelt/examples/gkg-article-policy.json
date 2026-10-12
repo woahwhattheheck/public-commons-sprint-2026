@@ -1,0 +1,41 @@
+{
+  "table": "articles",
+  "fields": [
+    "source_batch",
+    "source_row",
+    "GKGRECORDID",
+    "DATE",
+    "SourceCollectionIdentifier",
+    "SourceCommonName",
+    "DocumentIdentifier",
+    "document_key",
+    "record_translated",
+    "tone_parse_status",
+    "ToneScore",
+    "PositiveScore",
+    "NegativeScore",
+    "Polarity",
+    "ActivityReferenceDensity",
+    "SelfGroupReferenceDensity",
+    "WordCount",
+    "TranslationInfo",
+    "V2Themes",
+    "V2Locations",
+    "V2Persons",
+    "V2Organizations",
+    "GCAM"
+  ],
+  "filters": [
+    "GKGRECORDID",
+    "SourceCollectionIdentifier",
+    "SourceCommonName"
+  ],
+  "ranges": [],
+  "sorts": [
+    "source_batch",
+    "source_row"
+  ],
+  "defaultLimit": 100,
+  "maxLimit": 500,
+  "selection": {}
+}

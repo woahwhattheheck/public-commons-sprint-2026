@@ -1,10 +1,11 @@
 // Records operator over the original Python workspace and reconciliation engine.
 import {createDraftStore} from '/local-draft-store.mjs';
+import {createWorkbookPanel} from './workbook.mjs';
 const $=s=>document.querySelector(s),clone=v=>structuredClone(v),json=v=>JSON.stringify(v,null,2),enc=new TextEncoder();
 const SCHEMA='tj.records-operator-workspace.v1';
-const RESULTS=new Set(['tj.records-operator-inspection.v1','tj.records-operator-build.v1','tj.records-operator-customer.v1']);
-const FUNCTIONS=new Set(['inspect_records','build_records','customer_records']);
-const TABS=[['overview','Overview'],['sources','Sources & contracts'],['inspection','Reconciliation'],['transition','Inventory & transfer'],['cooperative','Monthly reporting'],['requirements','Requirements & catalog'],['delivery','Customer handoff'],['history','History']];
+const RESULTS=new Set(['tj.records-operator-inspection.v1','tj.records-operator-build.v1','tj.records-operator-customer.v1','tj.records-workbook-inspection.v1']);
+const FUNCTIONS=new Set(['inspect_records','build_records','customer_records','inspect_workbook']);
+const TABS=[['overview','Overview'],['sources','Sources & contracts'],['workbooks','Workbook receiving'],['inspection','Reconciliation'],['transition','Inventory & transfer'],['cooperative','Monthly reporting'],['requirements','Requirements & catalog'],['delivery','Customer handoff'],['history','History']];
 const VIEWS=[['findings','Findings'],['customer-invoices','Customer projection'],['invoices','Invoice rows'],['rates','Contract rates'],['sites','Sites'],['cartons','Cartons'],['events','Service events'],['sources','Source files'],['input-errors','Input corrections'],['changes','Edition changes'],['reviews','Review history'],['transition','Inventory assignments'],['checks','Transfer checkpoints'],['cooperative','Monthly agency rows'],['cooperative-basis','Monthly basis rows'],['requirements','Technical questions'],['catalog','Cost catalog']];
 const DEFAULT_COLUMNS=[['Invoice','/values/invoice_ref'],['InvoiceLine','/values/row_id'],['ChargeCode','/values/charge_code'],['Carton','/values/carton_ref'],['Quantity','/values/quantity'],['Unit','/values/unit'],['BilledMinor','/values/amount_minor'],['ExpectedMinor','/analysis/expectedAmountMinor'],['VarianceMinor','/analysis/varianceMinor'],['EngineStates','/analysis/states'],['ReviewStatus','/analysis/reviewStatus'],['Source','/_source/id'],['SourceSHA256','/_source/sha256']].map(([name,path])=>({name,path}));
 const fmt=v=>v===null||v===undefined||v===''?'—':typeof v==='object'?JSON.stringify(v):String(v);
@@ -51,7 +52,7 @@ const period=()=>config()?.periods.find(p=>p.id===config().selectedPeriod);
 const edition=()=>period()?.editions.find(e=>e.id===period().selectedEdition);
 const dirty=()=>Boolean(draft&&(!same(draft.config,draft.baseConfig)||Object.keys(draft.files).length||ui.revisionNote.trim()));
 const editable=()=>!historical&&!busy&&!pending;
-const report=()=>output?.report||null;
+const report=()=>output?.schema==='tj.records-workbook-inspection.v1'?null:output?.report||null;
 const reportCurrent=()=>Boolean(report()&&preview?.revisionId===revision()?.id&&report().period?.id===period()?.id&&report().edition?.id===edition()?.id);
 const sourceDirty=()=>!same(draft?.config.periods,draft?.baseConfig.periods);
 const reviewEnabled=()=>editable()&&reportCurrent()&&!sourceDirty()&&Boolean(report()?.reconciliation?.requestSha256);
@@ -154,7 +155,7 @@ async function loadOutput(p){
   for(const f of value.files||[]){if(!/^[A-Za-z0-9_.-]{1,200}$/.test(f.name)||typeof f.body!=='string')throw new Error('A retained file has an unsupported name or body.');const d=enc.encode(f.body);if(d.length!==f.bytes||await digest(d)!==f.sha256)throw new Error('Generated file '+f.name+' differs from the saved output.');}
   output=value;outputId=p.id;ui.focused=null;
 }
-async function openPreview(id,{retainTrail=false}={}){const different=preview?.id!==id,p=await api('/api/preview?id='+encodeURIComponent(id));preview=p;if(different&&p.function==='inspect_records'){ui.view=p.input?.view||'findings';ui.offset=p.input?.offset||0;ui.limit=p.input?.limit||100;ui.query=p.input?.query||'';ui.exactId=p.input?.id||'';if(!retainTrail)ui.pageTrail=[];}if(outputId!==id){output=null;outputId=null;}if(p.status==='COMPLETED'&&p.result){if(outputId!==id)await loadOutput(p);}else if(terminal(p.status)){output=null;outputId=null;}schedulePoll();}
+async function openPreview(id,{retainTrail=false}={}){const different=preview?.id!==id,p=await api('/api/preview?id='+encodeURIComponent(id));preview=p;if(different&&p.function==='inspect_workbook'){workbookPanel.acceptPreview(p.input||{});ui.tab='workbooks';}if(different&&p.function==='inspect_records'){ui.view=p.input?.view||'findings';ui.offset=p.input?.offset||0;ui.limit=p.input?.limit||100;ui.query=p.input?.query||'';ui.exactId=p.input?.id||'';if(!retainTrail)ui.pageTrail=[];}if(outputId!==id){output=null;outputId=null;}if(p.status==='COMPLETED'&&p.result){if(outputId!==id)await loadOutput(p);}else if(terminal(p.status)){output=null;outputId=null;}schedulePoll();}
 function schedulePoll(){clearTimeout(pollTimer);if(!preview||terminal(preview.status))return;pollTimer=setTimeout(async()=>{if(busy){schedulePoll();return;}try{await openPreview(preview.id);state=await api('/api/state');render();}catch(e){notice(e.message+' Use Refresh to reopen this result.',true);}},1600);}
 
 
@@ -168,6 +169,21 @@ async function startPreview(fn,view=ui.view,offset=0,{tab,force=false}={}){
  const r=await mutate('/api/preview',{revisionId:revision().id,function:fn,input:args,operationId:'records-'+crypto.randomUUID()},'preview');
  ui.pageCache[key]=r.id;ui.tab=tab||(fn==='inspect_records'?'inspection':'delivery');await openPreview(r.id,{retainTrail:true});persist();
 }
+async function startWorkbookPreview(input) {
+ if(pending)throw new Error('Recover the retained operation first.');
+ if(!historical&&dirty())await saveDraft();
+ const selected=revision();
+ if(!JSON.parse(selected.declarationText).functions?.inspect_workbook)throw new Error('This saved application predates workbook receiving. Use records-workspace adopt-workbooks on this original workbench, then refresh the saved source.');
+ const args={...input,periodId:period().id,editionId:edition().id};
+ const key=canonical({revisionId:selected.id,function:'inspect_workbook',input:args}),cached=ui.pageCache[key];
+ if(cached&&state.previews.some(p=>p.id===cached&&p.status==='COMPLETED')) {
+   await openPreview(cached,{retainTrail:true});ui.tab='workbooks';persist();
+   notice('Opened the retained workbook result for this exact saved source and selection.');return;
+ }
+ const p=await mutate('/api/preview',{revisionId:selected.id,function:'inspect_workbook',input:args,operationId:'records-workbook-'+crypto.randomUUID()},'preview');
+ ui.pageCache[key]=p.id;ui.tab='workbooks';await openPreview(p.id,{retainTrail:true});persist();
+}
+
 async function inspectView(view,tab='inspection',id=''){ui.pageTrail=[];ui.query='';ui.exactId=id;ui.focused=null;return startPreview('inspect_records',view,0,{tab});}
 async function cancelPreview(){if(!preview||terminal(preview.status))return;await api('/api/preview/cancel',{id:preview.id});await openPreview(preview.id);notice('Cancelled the selected operation. Its saved source remains available.');}
 function parseJSON(value,label){try{return JSON.parse(value.replace(/^\uFEFF/,''));}catch{throw new Error(label+' must be valid JSON.');}}
@@ -758,9 +774,16 @@ function historyView(){
 function render(){
  if(!state||!draft)return;renderTop();
  $('#navigation').replaceChildren(...TABS.map(([id,label])=>el('button',{type:'button','aria-current':ui.tab===id?'page':null,onclick:()=>go(id)},label)));
- const views={overview,sources,inspection,transition,cooperative,requirements,delivery,history:historyView};
+ const views={overview,sources,workbooks:()=>workbookPanel.render(),inspection,transition,cooperative,requirements,delivery,history:historyView};
  $('#content').replaceChildren(...(views[ui.tab]||overview)().filter(Boolean));
 }
+const workbookPanel=createWorkbookPanel({
+ el,txt,small,mono,row,card,field,input,area,select,button,table,detail,dl,badge,empty,heading,
+ ui:()=>ui,edition,period,draft:()=>draft,output:()=>output,preview:()=>preview,revision,dirty,editable,
+ mutable:()=>!historical&&!pending,changed,persist,notice,canonical,digest,to64,downloadSource,bytes,fmt,
+ run,render,startWorkbookPreview,saveDraft,download,go,shell,
+});
+
 async function boot(){
  if(!token)throw new Error('Open the complete operator URL printed by the records workbench serve command.');
  state=await api('/api/state');namespace=state.workspace.id+':records-operator';store=createDraftStore(namespace);

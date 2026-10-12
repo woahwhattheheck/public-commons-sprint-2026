@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import uuid
 from pathlib import Path
 import shutil
 import sys
@@ -10,10 +12,13 @@ from urllib.parse import parse_qs, unquote
 import zipfile
 
 from fhir_workspace import Workspace, InputError, original_workspace, original_server
+from fhir_acquisition import atomic_json, safe_read
 
 
 HERE = Path(__file__).resolve().parent
 MAX_UPLOAD = 2 * original_workspace.MAX_SOURCE
+CONNECTION_SCHEMA = "stellar-forge.fhir-bulk-operator-connection.v1"
+STARTUP_SCHEMA = "stellar-forge.fhir-bulk-startup.v1"
 
 
 class OperatorServer(original_server.OperatorServer):
@@ -21,6 +26,43 @@ class OperatorServer(original_server.OperatorServer):
         kwargs.setdefault("assets_directory", HERE / "public")
         kwargs.setdefault("handler_class", Handler)
         super().__init__(workspace, port, **kwargs)
+        self.instance_id = str(uuid.uuid4())
+        self.connection_path = workspace.root / "fhir" / "operator-connection.json"
+        try:
+            self.publish_connection()
+        except Exception:
+            super().server_close()
+            raise
+
+    def operator_identity(self):
+        return {"schema": CONNECTION_SCHEMA, "active": True, "workspace": str(self.workspace.root),
+                "workspaceId": self.workspace.workspace_id, "instanceId": self.instance_id,
+                "processId": os.getpid(), "url": self.url.split("#", 1)[0]}
+
+    def publish_connection(self):
+        # The original workspace lease owns this private descriptor. Whole
+        # workspace exports enumerate only operations/observations under fhir/.
+        with self.workspace.mutex:
+            atomic_json(self.connection_path, {**self.operator_identity(), "accessToken": self.token})
+
+    def startup(self):
+        return {"schema": STARTUP_SCHEMA, "url": self.url, "workspace": str(self.workspace.root),
+                "workspaceId": self.workspace.workspace_id, "instanceId": self.instance_id,
+                "connectionFile": str(self.connection_path)}
+
+    def server_close(self):
+        # Drain the original server's request threads before ending its lease.
+        super().server_close()
+        path = getattr(self, "connection_path", None)
+        if path is None:
+            return
+        with self.workspace.mutex:
+            try:
+                saved = original_workspace.load_json(safe_read(path, 65536))
+            except FileNotFoundError:
+                return
+            if saved.get("instanceId") == self.instance_id:
+                atomic_json(path, {**self.operator_identity(), "active": False})
 
 
 class Handler(original_server.Handler):
@@ -140,6 +182,9 @@ class Handler(original_server.Handler):
         if parts == ["api", "catalogue"]:
             self._query(target, ())
             self._json(ws.catalogue())
+        elif parts == ["api", "operator"]:
+            self._query(target, ())
+            self._json(self.server.operator_identity())
         elif parts == ["api", "state"]:
             self._query(target, ())
             self._json(ws.state())
@@ -229,7 +274,13 @@ class Handler(original_server.Handler):
             with path.open("xb") as out:
                 path.chmod(0o600)
                 shutil.copyfileobj(self._body(MAX_UPLOAD), out, 65536)
-            result = ws.import_workspace(path) if route == "workspace" else ws.import_packet(path)
+            try:
+                result = ws.import_workspace(path) if route == "workspace" else ws.import_packet(path)
+            finally:
+                # Import may adopt its retained UUID before a recoverable later
+                # step fails. Keep the same live native owner discoverable.
+                if route == "workspace":
+                    self.server.publish_connection()
             self._json(result, 201)
 
     def _post(self):
@@ -261,6 +312,9 @@ class Handler(original_server.Handler):
         elif len(parts) == 4 and parts[:2] == ["api", "operations"] and parts[3] == "status":
             body = self._json_body({"statusUrl", "reason"}, {"statusUrl", "reason"})
             self._json(ws.adopt_status(parts[2], body))
+        elif len(parts) == 4 and parts[:2] == ["api", "operations"] and parts[3] == "receive-capture":
+            body = self._json_body({"sourceId", "reason"}, {"sourceId", "reason"})
+            self._json(ws.receive_capture(parts[2], body))
         elif len(parts) == 4 and parts[:2] == ["api", "operations"] and parts[3] == "cancel":
             body = self._json_body({"requestId"}, {"requestId"})
             self._json(ws.cancel(parts[2], body["requestId"]))
@@ -299,7 +353,7 @@ def main(argv=None):
     workspace_path = Path(args.workspace).expanduser().absolute()
     with Workspace(workspace_path, create=not workspace_path.exists(), credentials_file=credentials) as ws:
         with OperatorServer(ws, args.port) as server:
-            print(json.dumps({"url": server.url, "workspace": str(ws.root)}, ensure_ascii=False), flush=True)
+            print(json.dumps(server.startup(), ensure_ascii=False), flush=True)
             try:
                 server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:

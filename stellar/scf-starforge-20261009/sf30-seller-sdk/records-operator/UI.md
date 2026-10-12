@@ -81,3 +81,9 @@ Before a write, the UI retains the complete request payload. If a response is in
 The three-way merge retains independent local/current fields, named periods/editions and appended review/checkpoint/response history. Competing changes to the same field are shown with both configurations for an explicit merge. A complete local-draft download and reopen route preserves edits even when browser storage needs attention.
 
 The only polling is the current explicitly started native operation. There is no scheduled task, background data acquisition, separate source registry or duplicate application workspace.
+
+## Workbooks
+
+The Workbooks tab uses the same authenticated operator server, saved revisions and IndexedDB draft. Receive original XLSX and reference documents, inspect exact sheets and inclusive ranges, define semantic and custody field mappings, retain required context, review each original row and both actual custody acknowledgments, then explicitly promote an eligible native source. Original blanks, merged cells, formula text and cached values remain visible. A template can be delivered with zero custody rows without asserting an actual empty inventory.
+
+Source changes invalidate the prior native preview/binding. Save the draft and inspect the new revision before applying its review. The same historical and unknown-write controls remain active. Complete workbook delivery uses the original CLI shown in this tab and described in [WORKBOOKS.md](WORKBOOKS.md); it includes all selected physical rows and exact original bytes, independent of the visible page. Financial and customer views continue to use their original report schema.

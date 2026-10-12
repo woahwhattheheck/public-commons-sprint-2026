@@ -39,7 +39,7 @@ function retainPending(body){if(!storageKey)fail('Open the original project firs
 function clearPending(){sessionStorage.removeItem(storageKey+':pending');localPending=null;renderPending();}
 function preserveDraft(){
   if(!storageKey)return;
-  const fields=['captureOperation','reviewOperation','publishOperation','datasetId','intentId','table','fields','policy','reviewName','reviewNote','origin','route','payment','datasetKind','datasetQuery','maxPages','maxAtomic','previewQuery','previewKind','singleQuery'];
+  const fields=['sourceFormat','captureOperation','reviewOperation','publishOperation','datasetId','intentId','table','fields','policy','reviewName','reviewNote','origin','route','payment','datasetKind','datasetQuery','maxPages','maxAtomic','previewQuery','previewKind','singleQuery'];
   saved('draft',Object.fromEntries(fields.map(name=>[name,$(name).value])));
 }
 function restoreDraft(){
@@ -62,7 +62,7 @@ async function refresh(){
     if(first){storageKey='starforge-gdelt:'+state.project.id;restoreDraft();}
     $('projectTitle').textContent=state.project.title;$('revision').textContent='Revision '+state.project.revision;
     $('connection').textContent=state.buyerConfigured?'Original buyer configured':'Source and merchant workspace';
-    const captures=state.project.captures.map(c=>({value:c.id,label:c.batch+' · '+c.counts.events+' events / '+c.counts.mentions+' mentions'}));
+    const captures=state.project.captures.map(c=>({value:c.id,label:c.batch+' · '+(c.format==='gkg'?c.counts.articles+' GKG articles':c.counts.events+' events / '+c.counts.mentions+' mentions')}));
     const current=selectedCaptures();selectOptions('captures',captures,current.length?current:state.project.selectedCapture?[state.project.selectedCapture]:[]);
     selectOptions('before',captures);selectOptions('after',captures);
     if(first&&captures.length>1)$('after').value=captures.at(-1).value;
@@ -74,7 +74,7 @@ async function refresh(){
     show('merchantFacts',state.merchant??'Merchant stopped.');
     table('historyRows',state.project.operations.slice().reverse().map(o=>({id:o.id,action:o.kind,completed:o.completedAt,result:o.result})),['id','action','completed','result']);
     renderPending();
-    if(first&&!value('fields'))await fields(true);
+    if(first){displayedTable=value('table');await fields(!value('fields'));}
     return state;
   })().finally(()=>{refreshing=null;});return refreshing;
 }
@@ -91,18 +91,20 @@ const projectAction=(action,body)=>({action,expectedRevision:state.project.revis
 function renderManifest(){
   const batches=manifest.availableBatches??manifest.batches??[];
   selectOptions('batch',batches.map(batch=>({value:typeof batch==='string'?batch:batch.batch,label:typeof batch==='string'?batch:batch.batch})));
-  $('manifestInfo').textContent=(manifest.manifest??manifest).url+' · read '+(manifest.manifest??manifest).receivedAt;
+  $('manifestInfo').textContent=(manifest.format==='gkg'?'GKG articles':'Events and Mentions')+' · '+(manifest.manifest??manifest).url+' · read '+(manifest.manifest??manifest).receivedAt;
 }
 async function discover(history){
-  const out=await act({action:'discover',history},'sourceFacts');manifest=out;saved('manifest',manifest);renderManifest();
+  const out=await act({action:'discover',history,format:value('sourceFormat')},'sourceFacts');manifest=out;saved('manifest',manifest);renderManifest();
 }
 function policy(){
   const extra=json('policy',{});if(extra===null||Array.isArray(extra)||typeof extra!=='object')fail('Projection settings must be a JSON object.');
   return {...extra,table:value('table'),fields:value('fields').split(',').map(x=>x.trim()).filter(Boolean)};
 }
-async function fields(defaults=false){
-  const out=await query('fields',{table:value('table')});
+async function fields(defaults=false,selected=value('table')){
+  const out=await query('fields',{table:selected});
+  if(value('table')!==selected)return out;
   table('fieldMeanings',out.fields,['name','type','meaning']);
+  $('requiredFields').textContent='Comma-separated. Keep '+out.requiredFields.join(', ')+'.';
   if(defaults)$('fields').value=out.fields.map(field=>field.name).join(', ');
   preserveDraft();return out;
 }
@@ -144,12 +146,33 @@ function newOperation(name,prefix){
 }
 click('refresh',async()=>{await refresh();message('Original project state refreshed.');});
 click('discover',()=>discover(false));click('historyManifest',()=>discover(true));
-click('capture',()=>{if(!manifest||!value('batch'))fail('Read and select an official source update first.');return act(projectAction('capture',{id:value('captureOperation'),batch:value('batch'),manifest:manifest.manifest??manifest}),'sourceFacts');});
+click('capture',()=>{if(!manifest||!value('batch')||(manifest.format??'events-mentions')!==value('sourceFormat'))fail('Read or select the retained manifest for this source family first.');return act(projectAction('capture',{id:value('captureOperation'),batch:value('batch'),manifest:manifest.manifest??manifest,format:value('sourceFormat')}),'sourceFacts');});
 click('newCapture',()=>newOperation('captureOperation','capture'));
 click('importCapture',async()=>{const file=$('captureFile').files[0];if(!file)fail('Select the complete original capture JSON.');const capture=JSON.parse(await file.text());return act(projectAction('import',{id:value('captureOperation'),capture}),'sourceFacts');});
 click('inspectSource',async()=>{const captureId=selectedCaptures()[0];if(!captureId)fail('Select a retained capture.');result(await query('source-summary',{captureId}),'sourceFacts');});
 click('downloadSource',()=>download('source',{captureId:selectedCaptures()[0]}));
-click('schema',()=>fields(false));change('table',()=>fields(true));click('loadRows',()=>rows(true));
+click('schema',()=>fields(false));
+let displayedTable=null;
+change('table',async()=>{
+  const selected=value('table'),drafts=restore('projection-drafts')??{};
+  if(displayedTable)drafts[displayedTable]={fields:$('fields').value,policy:$('policy').value};
+  saved('projection-drafts',drafts);
+  const previous=drafts[selected],out=await fields(false,selected);
+  if(value('table')!==selected)return;
+  if(previous){$('fields').value=previous.fields;$('policy').value=previous.policy;}
+  else{const{table,fields:columns,...settings}=out.defaultPolicy;$('fields').value=columns.join(', ');$('policy').value=JSON.stringify(settings);}
+  displayedTable=selected;preserveDraft();
+});
+change('sourceFormat',async()=>{
+  preserveDraft();
+  if(manifest?.discoveryId){
+    const discoveryId=manifest.discoveryId,format=value('sourceFormat'),selected=await query('discovery',{id:discoveryId,format});
+    if(value('sourceFormat')!==format||manifest?.discoveryId!==discoveryId)return;
+    manifest={...selected,discoveryId};saved('manifest',manifest);renderManifest();
+  }
+  else message('Read the official manifest for the selected source family.');
+});
+click('loadRows',()=>rows(true));
 click('previousRows',()=>{offset=Math.max(0,offset-100);return rows();});click('nextRows',()=>{if(rowPage&&offset+100<rowPage.total)offset+=100;return rows();});
 click('saveReview',()=>act(projectAction('review',{id:value('reviewOperation'),captureIds:selectedCaptures(),policy:policy(),note:$('reviewNote').value,name:value('reviewName')}),'sourceFacts'));
 click('newReview',()=>newOperation('reviewOperation','review'));

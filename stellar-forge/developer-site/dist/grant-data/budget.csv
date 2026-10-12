@@ -1,0 +1,7 @@
+package_id,tranche,start_day_after_actual_award_acceptance,end_day_after_actual_award_acceptance,package_title,planned_hours,planning_rate_usd_per_hour,planned_cost_usd,basis
+T1-resource,1,1,30,Merchant-resource integration,80,95,7600,prospective
+T1-handover,1,1,30,Authority and handover,40,95,3800,prospective
+T2-provider,2,31,90,Provider and ledger deployment,70,95,6650,prospective
+T2-threat,2,31,90,Deployed threat response,50,95,4750,prospective
+T3-mainnet,3,91,150,Mainnet merchant rollout,90,95,8550,prospective
+T3-recovery,3,91,150,Production recovery and handover,70,95,6650,prospective
