@@ -711,6 +711,24 @@ const actions = [
     ]
   ],
   [
+    "study.dataset.prepare",
+    "Prepare the exact complete CSV of an immutable reviewed study release through the original SF30 dataset/query and SF82 handoff, preserving its historical review, mapping and every source identity. Native limit 250000 rows / 256 MiB; no truncation or renaming.",
+    {
+      "releaseId": {
+        "type": "string",
+        "pattern": "^study-release-[0-9a-f]{24}$"
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 128
+      }
+    },
+    [
+      "releaseId",
+      "name"
+    ]
+  ],
+  [
     "dataset.prepare",
     "Prepare an original source table/window with an optional pinned saved model-input mapping through native SF30.",
     {
