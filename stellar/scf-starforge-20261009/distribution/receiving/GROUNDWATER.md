@@ -2,7 +2,7 @@
 
 This workflow builds the existing **groundwater-reports** product from one committed Merchant repository, installs its reviewed runtime profile, and receives that exact source and dependency lock into a second installation. It uses the maintained Runtime Workspace, source builder, runtime installer and offline-transfer engine. The separate **groundwater-report** selection remains available for the Report Desk alone.
 
-The scientific source contract is [groundwater-sources.json](groundwater-sources.json). It pins all 64 source files from the original application at b66c57542bf125c2d4a56dc3b57538afd8858646, carried by capsule e0ea40cad53386320062f30b6c2a480859058008. It includes the publisher's complete Python and TeX examples, package metadata, licenses, native readers, operator UI and Tethys adapter. Installation does not reinterpret those sources.
+The scientific source contract is [groundwater-sources.json](groundwater-sources.json). It pins all 64 source files from the original application at 96a1d66ad032cbbb2640252fedd3f4048a6c8dd6, carried by capsule ec6a1d1faa4d641835d2853715887ad5481be800. It includes the publisher's complete Python and TeX examples, package metadata, licenses, native readers, operator UI and Tethys adapter. Installation does not reinterpret those sources.
 
 ## What the operator receives
 
