@@ -4848,6 +4848,13 @@ and workspace; preserve their existing signer, budget and transport bindings.
 The [complete operator guide](../partners/coingecko-stellar-market/README.md)
 describes the configuration and all five endpoint families.
 
+The same installed merchant MCP opens this original browser/model for agents:
+`starforge merchant-mcp init-coingecko-workspaces --dir NEW_PRIVATE_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json`.
+Its [complete agent guide](../../../stellar-forge/mcp-merchant-operator/COINGECKO-WORKSPACE.md)
+covers all 32 tools, complete source/file delivery, research, native purchase
+recovery and portable restoration. Application hosts can import the same adapter
+from `@tokenjunkielabs/starforge-merchant/merchant/mcp/coingecko`.
+
 Keep the private state outside the installation directory so a toolkit upgrade
 retains its projects. One server owns that state; multiple browser operators
 share its revision checks. Stop the server before using a mutating CLI command
