@@ -83,14 +83,18 @@ before opening the application. The running startup record adds
 listener when this merchant has configured accounts.
 
 The original operations console can now read this merchant's upstream
-snapshots, cache controls and supplier account snapshots. Open **Supplier
+snapshots, cache activity and supplier account snapshots. Open **Supplier
 accounts** to review original dispatch totals, remaining calls and provider
 cooldown. Its JSON and CSV exports describe the same local account state.
-Pass `--operation-controls` to enable the original cache and operation controls
-for these bindings. Startup then prints their private fragment link as
-`upstreamControls`; open that complete link on the merchant host. Without the
-flag, the operations desk keeps its original read-only mode. The launcher
-attaches the original application controls before the operations listener opens.
+
+For configured idempotent upstream bindings, pass `--operation-controls` to
+enable the original replay/recovery desk. Startup prints its private fragment
+link as `upstreamControls`; open that complete link on the merchant host.
+Without the flag, this desk keeps its original read-only mode. Preflight
+rejects the flag when no idempotent binding is configured. Cache invalidation
+remains the original `seller.invalidateUpstreamCache(bindingName)` application
+hook; the launcher attaches it and the operation control before opening the
+operations listener.
 
 One launch-time environment snapshot supplies upstream preflight and handler
 construction. Credential refresh and authorization-code connections still use
