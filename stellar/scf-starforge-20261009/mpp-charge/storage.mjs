@@ -21,7 +21,10 @@ export function id(value) {
   requireValue(typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/.test(value), 'MPP_ID_INVALID');
   return value;
 }
-const groups = new Set(['sdk','purchases','deliveries','profiles','reports']);
+const groups = new Set(['sdk','purchases','deliveries','profiles','reports',
+  'channel-tasks','channel-streams','channel-purchases','channel-deliveries',
+  'channel-settlements','channel-receiving','channel-settings',
+  'channel-funding','channel-funders','channel-observations']);
 async function read(path, optional = false) {
   try { return JSON.parse(new TextDecoder('utf8', {fatal:true}).decode(await regular(path, 16 * 1024 * 1024))); }
   catch(error) { if(optional && error.code === 'ENOENT') return null; throw error; }

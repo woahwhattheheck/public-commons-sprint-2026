@@ -27,6 +27,23 @@ const selected={console:consoleSchema};
 function mppTools(tool) {
   return [
     ...mppFileTools(tool),
+    tool('merchant_mpp_channel_status','Read the original recurring channel tasks, budgets, purchases, merchant deliveries, funding, collection, refund and receiving state.',
+      selected,['console'],read),
+    tool('merchant_mpp_channel_record','Reopen one original channel task, purchase, merchant contract, funder profile, financial operation or coherent chain observation.',
+      {...selected,kind:{type:'string',enum:['tasks','purchases','contracts','funders','funding','settlements','observations']},id:purchaseSchema},
+      ['console','kind','id'],read),
+    tool('merchant_mpp_channel_operate','Queue useful channel work in the original console: selected task and budget, original purchase, merchant delivery, add funds, collect earned commitments, start refund, return remaining funds, close or transfer the complete operating channel. Task and fee authorizations use the original controlling terminal. Resume original operation IDs.',
+      {...selected,operation:{type:'string',enum:['task-template','task-save','task-authorize','task-authority-resume','task-stop',
+        'purchase-prepare','purchase-execute','purchase-resume','purchase-refresh','purchase-cancel',
+        'merchant-save','merchant-start','merchant-stop','delivery-recover','close-prepare','close-execute',
+        'close-resume','close-reconcile','close-cancel','funder-template','funder-save','channel-observe','funding-prepare','funding-execute','funding-resume','funding-reconcile','funding-cancel','collection-prepare','collection-execute','collection-resume','collection-reconcile','collection-cancel',
+  'contract-fetch','export','receive']},input:{type:'object'}},
+      ['console','operation','input'],worldChange),
+    tool('merchant_mpp_channel_file','Read the original complete channel handover or paid response with the maintained file receiver. Handovers stream from their owned immutable native file. Continue with original readId, expectedSha256 and nextOffset; release ends a read.',
+      {...selected,kind:{type:'string',enum:['response','handover']},id:purchaseSchema,
+        expectedSha256:digestSchema,readId:{type:'string'},release:{type:'boolean'},...rangeSchema},
+      ['console','kind','id'],read),
+
     tool('merchant_mpp_export','Retain exact original paid response or merchant handoff bytes for the maintained resumable MCP downloader. Reopen the same exportId after an interrupted reply.',
       {...selected,exportId:{type:'string',pattern:'^[a-z0-9][a-z0-9_-]{0,63}$'},
         kind:{type:'string',enum:['response','contract','openapi','package']},purchaseId:purchaseSchema,

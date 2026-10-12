@@ -14,7 +14,9 @@ import { merchantContract, contractOpenAPI } from './customer/contract.mjs';
 import { createCustomerBundle } from './customer/export.mjs';
 import { createCustomerWorkbench, customerWorkbenchProfile } from './customer/workbench.mjs';
 
+import { createChannelWorkbench } from '../mpp-channel/workbench.mjs';
 const uiRoot=new URL('./public/',import.meta.url);
+const channelUiRoot=new URL('../mpp-channel/public/',import.meta.url);
 // A full native customer bundle is up to 2 MiB; control requests include its JSON envelope.
 const MAX_CONSOLE_BODY=3*1024*1024;
 function portNumber(value) {
@@ -104,6 +106,7 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
   requireValue(typeof token==='string' && /^[a-f0-9]{64}$/.test(token),'MPP_WORKSPACE_TOKEN_INVALID');
   const workspace=await openWorkspace(directory);
   const customerWorkbench=createCustomerWorkbench({workspace,environment});
+  const channelWorkbench=createChannelWorkbench({workspace,environment});
   const tokenBytes=Buffer.from(token);
   const jobs=new Map();let merchantServer=null,merchantTransition=false,origin,closePromise;
   function authorized(request) {
@@ -143,9 +146,10 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
       requireValue([new URL(origin).host,'127.0.0.1:'+server.address().port].includes(request.headers.host),'MPP_WORKSPACE_HOST_INVALID',403);
       const url=new URL(request.url,origin);
       requireValue(url.origin===origin,'MPP_WORKSPACE_ORIGIN_INVALID',403);
-      if(request.method==='GET' && ['/','/app.js','/customer-workbench.js','/style.css'].includes(url.pathname)) {
-        const name=url.pathname==='/'?'index.html':url.pathname.slice(1);
-        const body=await readFile(new URL(name,uiRoot));
+      if(request.method==='GET' && ['/','/app.js','/customer-workbench.js','/style.css','/channels','/channel-workbench.js','/channel-style.css'].includes(url.pathname)) {
+        const channelFile={'/channels':'index.html','/channel-workbench.js':'app.js','/channel-style.css':'style.css'}[url.pathname];
+        const name=channelFile ?? (url.pathname==='/'?'index.html':url.pathname.slice(1));
+        const body=await readFile(new URL(name,channelFile?channelUiRoot:uiRoot));
         await send(response,new Response(body,{headers:{
           'content-type':name.endsWith('.html')?'text/html; charset=utf-8':name.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8',
           'content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
@@ -163,6 +167,28 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
         await send(response,Response.json(observation,{headers:{'cache-control':'no-store'}}));return;
       }
       if(request.method==='GET' && url.pathname==='/api/state') {await send(response,Response.json(await snapshot()));return;}
+      if(request.method==='GET' && url.pathname==='/api/channel/state') {
+        await send(response,Response.json(await channelWorkbench.state(),{headers:{'cache-control':'no-store'}}));return;
+      }
+      const channelRead=/^\/api\/channel\/(tasks|purchases|contracts|funders|funding|settlements|observations)\/([^/]+)$/.exec(url.pathname);
+      if(request.method==='GET' && channelRead) {
+        await send(response,Response.json(await channelWorkbench.read(channelRead[1],decodeURIComponent(channelRead[2])),
+          {headers:{'cache-control':'no-store'}}));return;
+      }
+      const channelFileInfo=/^\/api\/channel\/handover-files\/([a-f0-9]{64})$/.exec(url.pathname);
+      if(request.method==='GET' && channelFileInfo) {
+        await send(response,Response.json(await channelWorkbench.handoverFile(channelFileInfo[1]),
+          {headers:{'cache-control':'no-store'}}));return;
+      }
+      const channelFile=/^\/api\/channel\/(responses|handovers)\/([^/]+)$/.exec(url.pathname);
+      if(request.method==='GET' && channelFile) {
+        const output=channelFile[1]==='handovers'?await channelWorkbench.handover(decodeURIComponent(channelFile[2])):
+          await channelWorkbench.response(decodeURIComponent(channelFile[2]));
+        await send(response,channelFile[1]==='handovers'?output:new Response(output.body,{headers:{
+          'content-type':'application/octet-stream','content-disposition':'attachment; filename="channel-response.bin"',
+          'cache-control':'private, no-store','x-content-type-options':'nosniff'
+        }}));return;
+      }
       if(request.method==='GET' && ['/api/customer','/api/customer/contract','/api/customer/openapi','/api/customer/package'].includes(url.pathname)) {
         requireValue([...url.searchParams.keys()].every(key=>key==='profileId') &&
           url.searchParams.getAll('profileId').length<=1,'MPP_CUSTOMER_SELECTION_INVALID');
@@ -238,9 +264,12 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
       }
       requireValue(request.method==='POST' && request.headers['content-type']?.split(';')[0]==='application/json',
         'MPP_JSON_POST_REQUIRED',405);
-      const body=JSON.parse((await readBody(request,MAX_CONSOLE_BODY)).toString('utf8'));
+      const body=JSON.parse((await readBody(request,url.pathname==='/api/channel/receive'?129*1024*1024:MAX_CONSOLE_BODY)).toString('utf8'));
       let result;
-      if(url.pathname==='/api/customer-workbench/intake') {
+      if(/^\/api\/channel\/[a-z-]+$/.test(url.pathname)) {
+        const action=url.pathname.split('/').at(-1);
+        result=startJob('Channel '+action,()=>channelWorkbench.action(action,body));
+      } else if(url.pathname==='/api/customer-workbench/intake') {
         result=await customerWorkbench.intake(body.document);
       } else if(url.pathname==='/api/customer-workbench/fetch') {
         result=await customerWorkbench.fetch(body);
@@ -317,12 +346,12 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
       if(!closePromise)closePromise=(async()=>{
         await new Promise(resolve=>server.close(resolve));
         await Promise.allSettled([...jobs.values()].map(job=>job.promise));
-        try{await merchantServer?.close();}finally{await workspace.close();}
+        try{await merchantServer?.close();}finally{try{await channelWorkbench.close();}finally{await workspace.close();}}
       })();
       return closePromise;
     }};
   } catch(error){
     await new Promise(resolve=>server.close(()=>resolve()));
-    await workspace.close();throw error;
+    try{await channelWorkbench.close();}finally{await workspace.close();}throw error;
   }
 }
