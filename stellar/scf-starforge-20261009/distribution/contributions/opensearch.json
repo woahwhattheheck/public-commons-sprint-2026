@@ -52,5 +52,8 @@
     "./seller/opensearch/catalog/supplier/xchange/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/processing.mjs",
     "./seller/opensearch/catalog/supplier/xchange/package": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/package.mjs",
     "./clients/opensearch-material/receiving/twoba": "./source/stellar-forge/mcp-merchant-operator/receiving/twoba-materials-native.mjs"
-  }
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/source/2BA_parameters_example.zip"
+  ]
 }
