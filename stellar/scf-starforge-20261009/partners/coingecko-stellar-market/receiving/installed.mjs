@@ -5,16 +5,17 @@ import { pathToFileURL } from 'node:url';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
+import { readCoinGeckoSourceContinuation } from './applications.mjs';
 
 const exec = promisify(execFile), hash = x => createHash('sha256').update(x).digest('hex');
 const args = process.argv.slice(2), selected = {};
 for(let i=0;i<args.length;i+=2) {
- if(!['--selection','--work','--output','--retained-runtime'].includes(args[i]) || !args[i+1] ||
-    Object.hasOwn(selected,args[i].slice(2))) throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE]');
+ if(!['--selection','--work','--output','--retained-runtime','--source-predecessor'].includes(args[i]) || !args[i+1] ||
+    Object.hasOwn(selected,args[i].slice(2))) throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE] [--source-predecessor FILE]');
  selected[args[i].slice(2)] = args[i+1];
 }
 if(!selected.selection || !selected.work || !selected.output)
- throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE]');
+ throw new Error('Use --selection FILE --work DIRECTORY --output DIRECTORY [--retained-runtime FILE] [--source-predecessor FILE]');
 const inputPath=resolve(selected.selection), work=resolve(selected.work), output=resolve(selected.output);
 const inputBytes=await readFile(inputPath), input=JSON.parse(inputBytes);
 const B='stellar/scf-starforge-20261009/';
@@ -41,6 +42,11 @@ if(retainedPath){
    .every(key=>/^[a-f0-9]{64}$/.test(retained[key]??'')),
  'ORIGINAL_READY_RUNTIME_DESCRIPTOR_REQUIRED');
 }
+const sourcePredecessor=selected['source-predecessor']?
+ await readCoinGeckoSourceContinuation(resolve(selected['source-predecessor']),input):null;
+if(sourcePredecessor)need(retained,'SOURCE_CORRECTION_READY_RUNTIME_REQUIRED');
+const predecessorSelection=sourcePredecessor?
+ {path:sourcePredecessor.path,sha256:sourcePredecessor.sha256}:null;
 const runtimeSelection=retained?{kind:'retained',path:retainedPath,sha256:hash(retainedBytes)}:
  {kind:'build',sourceCommit:input.sourceCommit};
 await mkdir(work,{recursive:true,mode:0o700});await mkdir(output,{recursive:true,mode:0o700});
@@ -54,6 +60,14 @@ need(state.inputSha256===hash(inputBytes),'ORIGINAL_INSTALLED_SELECTION_CHANGED'
 need(state.schema==='stellar-forge.coingecko-installed-receiving.v1'&&
  state.stages&&typeof state.stages==='object'&&!Array.isArray(state.stages),
  'ORIGINAL_INSTALLED_CHECKPOINT_INVALID');
+if(Object.hasOwn(state,'sourcePredecessor'))
+ need(JSON.stringify(state.sourcePredecessor)===JSON.stringify(predecessorSelection),
+  'ORIGINAL_SOURCE_PREDECESSOR_CHANGED');
+else {
+ need(!sourcePredecessor||!Object.keys(state.stages).length&&!state.preparation&&!state.runtime&&!state.result,
+  'SOURCE_CONTINUATION_SEPARATE_PREFIX_REQUIRED');
+ state.sourcePredecessor=predecessorSelection;
+}
 const runtimeStarted=async()=>Boolean(state.preparation||state.runtime||state.result||
  await exists(join(work,'runtime','preparation.json'))||
  await exists(join(work,'runtime','runtime-install.json'))||
@@ -195,7 +209,8 @@ const receiving={
  originalSources:input.originalSources,actor:input.actor,
  playwrightModule:input.playwrightModule,browserExecutable:input.browserExecutable,
  ...(input.browserArgs!==undefined?{browserArgs:input.browserArgs}:{}),
- ...(input.configurationFile?{configurationFile:input.configurationFile}:{})
+ ...(input.configurationFile?{configurationFile:input.configurationFile}:{}),
+ ...(predecessorSelection?{sourceContinuation:predecessorSelection}:{})
 };
 const manifest=join(work,'applications-receiving.json');
 if(await exists(manifest))need(JSON.stringify(JSON.parse(await readFile(manifest,'utf8')))===JSON.stringify(receiving),'ORIGINAL_APPLICATION_MANIFEST_CHANGED');
@@ -203,5 +218,6 @@ else await save(manifest,receiving);
 const driver=await import(pathToFileURL(input.driver).href);
 const result=await driver.receiveCoinGeckoApplication({manifest,output});
 state.result={applicationId:result.applicationId,projectId:result.projectId,completedAt:result.completedAt,
- requestedSourceCommit:input.sourceCommit,selectedSourceCommit:result.sourceCommit,runtimeSelection:state.runtimeSelection};
+ requestedSourceCommit:input.sourceCommit,selectedSourceCommit:result.sourceCommit,runtimeSelection:state.runtimeSelection,
+ ...(result.sourceContinuation?{sourceContinuation:result.sourceContinuation}:{})};
 await persist();say({complete:true,...state.result});
