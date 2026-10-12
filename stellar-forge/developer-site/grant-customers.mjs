@@ -3,6 +3,9 @@ const WEBHOOK = '## Webhook customer adoption: complete event tasks and operator
 const OPENFN = '## OpenFn: paid workflow commissioning and complete receiving';
 const REFERRAL = '## Referral implementation: source changes, returned outcomes and complete receiving';
 const RISINGWAVE = '## Recurring subscription delivery and streaming-data commissioning';
+const JOURNEY = '# 9A. Current demonstration and operator journey';
+const BILLING = '## Merchant settlement, customer billing and accountant receiving';
+const DEDICATED = new Set(['## Recurring economic-report installation', '## Coastal model-input installation', '## Datasette editions and customer analysis']);
 const OPENFN_PARAGRAPHS = [
   '**Paid workflow commissioning and complete receiving — OpenFn.**',
   '**OpenFn implementation opportunity.**',
@@ -28,15 +31,48 @@ export function projectGrantMarkdown(markdown, { application = false } = {}) {
   return clean(value);
 }
 
-/** An H2 owns its H3+ content, ending before the next H1 or H2. */
+/** Select real H1/H2 headings while preserving headings quoted inside fenced examples. */
+function headings(value) {
+  const found = [];
+  let offset = 0, fence = null;
+  for (const line of value.split('\n')) {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      if (marker && marker[1][0] === fence.character && marker[1].length >= fence.length && !marker[2].trim()) fence = null;
+    } else if (marker) {
+      fence = { character: marker[1][0], length: marker[1].length };
+    } else {
+      const heading = line.match(/^ {0,3}(#{1,2})[ \t]+(.+?)\s*$/);
+      if (heading) found.push({ text: heading[1] + ' ' + heading[2], level: heading[1].length, start: offset, end: offset + line.length + 1 });
+    }
+    offset += line.length + 1;
+  }
+  return found;
+}
+/** An H2 owns its H3+ content, ending before the next real H1 or H2. */
 function section(value, heading) {
-  const source = clean(value), matches = [...source.matchAll(new RegExp('^' + quoted(heading) + '\\n', 'gm'))];
+  const source = clean(value), outline = headings(source), matches = outline.filter(item => item.text === heading);
   need(matches.length <= 1, 'Keep one customer section: ' + heading);
   if (!matches.length) return null;
-  const start = matches[0].index, body = start + heading.length + 1;
-  const following = source.slice(body).search(/^#{1,2}\s/m);
-  const end = following < 0 ? source.length : body + following;
+  const start = matches[0].start, following = outline.find(item => item.start > start);
+  const end = following ? following.start : source.length;
   return { start, end, text: clean(source.slice(start, end)) };
+}
+/** Receive the whole accepted operator chapter, so a new customer section needs no code patch. */
+function acceptedCustomerSections(manuscript) {
+  const source = clean(manuscript), outline = headings(source), starts = outline.filter(item => item.text === JOURNEY);
+  need(starts.length <= 1, 'Select one complete current demonstration and operator journey.');
+  if (!starts.length) return [WEBHOOK, REFERRAL, RISINGWAVE, BILLING].map(heading => {
+    const found = section(source, heading);
+    return found ? { heading, text: found.text } : null;
+  }).filter(Boolean);
+  const start = starts[0], next = outline.find(item => item.start > start.start && item.level === 1);
+  const chapter = source.slice(start.start, next ? next.start : source.length);
+  const children = headings(chapter).filter(item => item.level === 2);
+  const intro = clean(chapter.slice(0, children.length ? children[0].start : chapter.length))
+    .replace(JOURNEY, '## Current demonstration and operator journey');
+  return [{ heading: '## Current demonstration and operator journey', text: intro },
+    ...children.filter(item => !DEDICATED.has(item.text)).map(item => ({ heading: item.text, text: section(chapter, item.text).text }))];
 }
 function installSection(companion, heading, replacement) {
   const value = clean(companion), found = section(value, heading);
@@ -54,9 +90,8 @@ function paragraph(manuscript, prefix) {
 /** Update complete accepted customer text while retaining every other chapter and table. */
 export function receiveGrantCustomerSections(productAndFinanceMarkdown, manuscript) {
   let companion = clean(productAndFinanceMarkdown);
-  for (const heading of [WEBHOOK, REFERRAL, RISINGWAVE]) {
-    const incoming = section(manuscript, heading);
-    if (incoming) companion = installSection(companion, heading, projectGrantMarkdown(incoming.text));
+  for (const incoming of acceptedCustomerSections(manuscript)) {
+    companion = installSection(companion, incoming.heading, projectGrantMarkdown(incoming.text));
   }
   const incoming = OPENFN_PARAGRAPHS.map(prefix => paragraph(manuscript, prefix));
   need(incoming.every(Boolean) || incoming.every(value => value === null), 'Select both accepted OpenFn paragraphs from the complete canonical manuscript.');
@@ -117,5 +152,16 @@ export function receiveGrantCustomerSources(index, companion) {
     /https:\/\/github\.com\/woahwhattheheck\/public-commons-sprint-2026\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/risingwave\/README\.md)/, subscriptions);
   receive('risingwave-subscription-commissioning', 'Complete subscription delivery commercial and receiving package',
     /https:\/\/github\.com\/woahwhattheheck\/commons\/tree\/([a-f0-9]{40})\/(tools\/revenue_owner_console_\d{8}\/case_assets\/risingwave-subscription-delivery-pilot-\d{8})/, subscriptions);
+  const billing = section(companion, BILLING)?.text || '';
+  receive('merchant-receivables-operation', 'Customer invoices, receipts and retained accounting work',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/merchant-receivables\/README\.md)/, billing);
+  receive('merchant-payment-plan-operation', 'Dated collection schedules and complete customer editions',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/merchant-payment-plans\/README\.md)/, billing);
+  receive('merchant-xero-customer-receiving', 'Accountant document receiving and complete customer handover',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/merchant-settlement-accounting\/receivables\/xero\/README\.md)/, billing);
+  index.narrative_source = { ...index.narrative_source, composition: {
+    ...index.narrative_source?.composition,
+    retained_product_sections: headings(clean(companion)).filter(item => item.level === 2).map(item => item.text.slice(3)),
+  } };
   return index;
 }
