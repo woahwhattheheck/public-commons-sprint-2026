@@ -188,6 +188,7 @@ export interface Presets {
   transactionTypes: Record<string, string>;
   budgetTypes: Record<string, string>;
   budgetStatuses: Record<string, string>;
+  currencyCatalog: { asOf: CalendarDate; codes: string[]; withdrawn: string[]; source: string };
 }
 export interface PythonIdentity {
   executable: string; prefix: string; basePrefix: string;
@@ -205,6 +206,8 @@ export interface ManagedLaunch {
 export interface ReceivedPortfolio {
   portfolio: Portfolio; reconstructed: true;
   historyCount: number; datasetCount: number; reportFiles: string[];
+  /** Actual receiving engine and SQLite index identities; original portfolio history remains unchanged. */
+  receivingBuilds: Array<{ id: Sha256; engineBlob: string; indexSha256: Sha256 }>;
 }
 export interface ReceivedProject { source: Sha256; plan: Sha256; build: NativeBuild; [key: string]: unknown }
 export interface SourceInput {
