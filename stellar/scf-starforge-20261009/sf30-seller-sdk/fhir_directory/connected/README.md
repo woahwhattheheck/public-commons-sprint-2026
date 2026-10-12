@@ -177,3 +177,10 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/REC
 The native receiving JSON supplies the actual workspace UUID, original input files and exact accepted replay inputs. If those original files moved, pass `--source-files ABS_JSON` with the existing source keys mapped to their new absolute paths; their retained lengths and SHA-256 values must still match. An existing authentication profile file may be selected with `--credentials-file`.
 
 The programme uses the maintained Merchant host, imports all declared original directory inputs, exercises all accepted native replay inputs, follows complete pages, receives complete indices and original files, receives the handoff and latest complete workspace into separate destinations, reopens the Merchant connection while keeping the original native operator, and verifies all retained downloads. It writes `OPERATED_CONNECTED_HUMAN_SERVICES_DIRECTORY.json` and its restartable `CONNECTED_JOURNEY.json`. See [the complete product receiving guide](../../../../../products/human-services-directory/RECEIVING.md).
+
+
+## Directory standards assessment and review
+
+The connected catalogue includes all four conformance writes, complete finding and row paging, exact finding reads, all declared full files, and the four immutable conformance collections. The input schemas come from the installed native catalogue.
+
+See [Conformance](../CONFORMANCE.md) for the complete operator workflow, SDK helpers, typed arguments, native routes, review semantics and editable receiving. The same local client, normal Merchant host, retained downloader and installed Applications entry operate these records.

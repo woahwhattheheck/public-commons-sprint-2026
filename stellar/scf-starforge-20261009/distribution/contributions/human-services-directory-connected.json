@@ -1,12 +1,12 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "human-services-directory-connected",
-  "description": "Native directory actions through the maintained Merchant SDK, MCP, complete-file receiver and managed Applications.",
+  "description": "Complete native Directory and conformance operations through the maintained Merchant SDK, MCP, full-file receiver and managed Applications.",
   "commands": {
     "merchant-human-services-directory": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/cli.mjs"
   },
   "commandDescriptions": {
-    "merchant-human-services-directory": "Operate the selected original directory workspace using local SDK or Merchant MCP calls, with native input schemas and complete saved source and handoff downloads."
+    "merchant-human-services-directory": "Operate original directory acquisition, conformance assessments and reviews, mappings and handoffs through the local SDK or Merchant MCP, with complete retained files."
   },
   "exports": {
     "./merchant/human-services-directory": {
@@ -37,6 +37,7 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/files.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/provider.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/runtime.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/setup.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/setup.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE.md"
   ]
 }

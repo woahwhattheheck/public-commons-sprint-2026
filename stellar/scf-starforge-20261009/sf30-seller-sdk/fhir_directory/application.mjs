@@ -84,7 +84,7 @@ export default {
   catalog({common,field}){
     return [{id:COMMAND,command:COMMAND,title:'Human Services Directory',terminal:false,
       requiredSource:SOURCE+'/application.mjs',
-      description:'Review service and location records, map service types, choose a referral destination and reopen complete handovers.',
+      description:'Assess directory standards, review service and location records, map service types, choose a referral destination and reopen complete handovers.',
       fields:[
         field('workspaceDirectory','Directory workspace','path',true,
           'Select the private directory created or received with human-services-directory.'),
