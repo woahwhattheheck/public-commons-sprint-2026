@@ -202,3 +202,9 @@ The original UN operating material includes September 30 and October 12, 2026 fu
 The complete original-source receiving operation reconstructed three native builds, both retained editions and the two-event case history in a fresh Workspace. Its original source query returned the same dataset snapshot and canonical entity. The current reviewed case retained both decisions without reopening on that edition. Native screening operations use the selected service's own indexed edition and actual response, retained with the customer request.
 
 Native candidate review continues the single existing case when its candidate or current canonical pointer matches. If the counterparty has several possible histories, the operator chooses the original history or explicitly starts a separate case. The prior case ID, revision and decisions stay visible while the exact received native request is attached to the new review.
+
+## Installed Applications
+
+The same console is available as **OpenSanctions source monitoring** through the maintained Applications registry. Its source-owned adapter extends the original NDJSON binding and shares the original workspace resource identity. Review and save the selected existing Python/workspace, start and open the authenticated console, then stop and reopen through the same managed application. Full source and customer receiving are described in [MANAGED_APPLICATIONS.md](MANAGED_APPLICATIONS.md).
+
+The installed `source-monitoring` command forwards to this original Python application. Its additional `binding`, `--expected-binding`, `--startup-format json` and optional `--connection-file` interface retain the original source, Python and workspace identity without copying the case database into another service.

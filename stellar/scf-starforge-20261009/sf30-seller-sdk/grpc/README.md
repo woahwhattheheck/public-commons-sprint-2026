@@ -71,7 +71,7 @@ installation instructions are in
 
 The included example is a real gRPC server with three clearly labelled local
 demonstration rows. It exposes Summary and a visible streaming Watch method.
-Only Summary can become a paid unary route.
+Summary is a unary route. A captured server-streaming method can become a paid NDJSON route after explicit stream limits are saved; the complete runnable server-stream example and workflow are in [Streaming](STREAMING.md).
 
 In one terminal, choose an example-only authorization value and start the server:
 
@@ -99,8 +99,11 @@ external account.
    credentials. Set the merchant-host protobuf directory and one or more entry
    files, then capture. Imported local files and required standard descriptors
    are retained with their source identities.
-2. On **Methods & terms**, choose a captured unary method. Streaming methods
-   remain visible but cannot be selected for these request/response HTTP routes.
+2. On **Methods & terms**, choose a captured unary or server-streaming method.
+   For server streams, first enable explicit byte, record and deadline limits on
+   Source. Client-streaming and bidirectional application methods remain visible
+   for inspection. [Streaming](STREAMING.md) covers exact NDJSON capture, payment,
+   customer delivery and retained release/recovery.
 3. Edit the exact request JSON or the generated fields. Inclusion checkboxes
    distinguish absent fields from explicit false, zero and empty values. Nested
    messages, maps and repeated values use JSON. The complete request and response
@@ -181,6 +184,15 @@ The original seller still applies its own route, schema and payment-envelope
 limits. A valid large protobuf closure may need a smaller selected public method
 set to fit the advertised buyer contract. The compiler reports that concrete
 limit before publishing a prepared merchant.
+
+## Server-streaming methods
+
+The same operator and merchant can retain a single-request native server stream
+as exact typed NDJSON. Complete and partial captures keep their original call
+IDs, bytes, SHA-256 and native terminal status. The browser downloads the retained
+file without buffering the whole stream, and the original SF88 Node/Python buyer
+consumes its existing response-file contract. See the complete
+[server-streaming workflow](STREAMING.md).
 
 ## Retained operations and recovery
 
@@ -307,3 +319,97 @@ results identify their actual source/runtime selection separately.
 
 Typed request fields and the exact JSON editor share the same request. Invalid visible input prevents a call or route application. A working request can be called without adding it to the saved merchant plan; Apply route retains it as the route example. Complete plan JSON is explicitly applied or discarded before Save, channel review or Prepare. Opening another method, route, revision or the included example asks before discarding current work. A later inventory refresh keeps the exact opened revision as the editor's save base.
 
+
+## Acquire an endpoint through server reflection
+
+Choose **Server reflection** in the Source tab. The existing private connection
+supplies the endpoint, TLS or mutual TLS, server name, metadata environment
+references and deadlines. The operator process reads those host environment values.
+
+1. **Discover services** reads the endpoint’s advertised service names. Automatic
+   selection uses the official v1 service and falls back to v1alpha when v1 returns
+   UNIMPLEMENTED. Other native failures retain their original status.
+2. Filter and page the names, select up to 256 services, then **Capture selected
+   services**. The client checks the reviewed inventory SHA256 and keeps one
+   bidirectional stream for every selected service and required import.
+3. Review the exact file hashes, selected methods and changes in files, services,
+   methods, messages and enums. Each capture has a retained operation ID. Download
+   its complete typed capture or original descriptor source JSON when needed.
+4. Choose whether to keep the draft merchant routes and terms, then **Save reviewed
+   capture**. The original revision/CAS path compiles the retained descriptor bytes.
+   Clearing the route checkbox starts with an empty route list for method selection.
+5. Continue through **Methods & terms → Save revision → Review → Prepare**. The
+   direct merchant, seven generated customer files, Operations and original SF82
+   stage/activate/drain/rollback all consume the same saved contract.
+
+**Saved work → Reflected source captures** reopens the existing bytes and compares
+them with the current saved merchant plan, including when the endpoint has changed
+or become unavailable. Saving checks the observed current revision and capture
+SHA256. After another browser saves an intervening change, open the retained capture
+against that new revision to review the composition.
+
+### Exact retained descriptors
+
+Schema `sf30-grpc-descriptor-source-v1` distinguishes reflected input from textual
+`.proto` capture. Sorted files retain their original opaque `FileDescriptorProto`
+bytes as canonical base64, byte lengths and SHA256 values. The source also records
+entrypoint filenames, selected services, native protocol, target, returned authority
+and the reviewed inventory hash.
+
+The stream cache retains descriptors that the server may omit from later responses
+in that same stream. A filename returning different bytes, a missing import,
+changed inventory or mismatched `original_request` rejects the acquisition.
+The original protobufjs/proto-loader compiler preserves maps, optional/oneof
+presence, exact integer representation, declared JSON names and scalar-default
+metadata. Only selected services populate the merchant method inventory. Streaming
+methods retain their native classification.
+
+Limits are 512 descriptor files, 4 MiB per descriptor and 32 MiB raw source. The
+existing 8 MiB complete captured JSON limit applies before saving or preparing.
+One reflection response is limited to 8 MiB; one acquisition accepts up to 64 MiB
+of descriptor transfer and 2,048 requests. Cancellation and workspace shutdown
+close the native reflection stream and channel.
+
+### Native and installed command line
+
+The existing installed `grpc-contract` command includes both reflection actions:
+
+```sh
+starforge grpc-contract reflect \
+  --source /private/merchant/source.json --protocol auto
+
+starforge grpc-contract reflect-capture \
+  --source /private/merchant/source.json \
+  --service example.analytics.v1.Analytics \
+  --expected-inventory-sha REVIEWED_INVENTORY_SHA256 \
+  --protocol v1 \
+  --out /private/merchant/descriptor-source.json
+
+starforge grpc-contract inspect \
+  --proto /private/merchant/descriptor-source.json
+
+starforge grpc-contract prepare \
+  --source /private/merchant/source.json \
+  --proto /private/merchant/descriptor-source.json \
+  --plan /private/merchant/merchant-plan.json \
+  --out /private/merchant/prepared
+```
+
+Use the protocol and inventory hash printed by the first command. Capture creates
+a new source file and prints its identity. In a source checkout, replace
+`starforge grpc-contract` with
+`node stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/cli.mjs`.
+
+| Private workspace action | Body |
+| --- | --- |
+| `POST /api/reflection-inventory` | `{source, protocol?}` |
+| `POST /api/reflection-capture` | `{id, source, services, protocol?, expectedInventorySha256, baseRevision}` |
+| `POST /api/reflection-open` | `{id, baseRevision?}` |
+| `POST /api/reflection-save` | `{id, expectedCaptureSha256, baseRevision, title, plan}` |
+
+The existing capability and local-origin rules apply. Repeating a capture UUID
+with the same acquisition inputs recovers its immutable result. Reusing that UUID
+with different inputs returns `GRPC_REFLECTION_OPERATION_REUSED`. Original revision
+and customer exports carry the complete descriptor source through import and
+release reopen. [reflection/PROTOCOLS.md](reflection/PROTOCOLS.md) records the
+official wire definitions and upstream identities.

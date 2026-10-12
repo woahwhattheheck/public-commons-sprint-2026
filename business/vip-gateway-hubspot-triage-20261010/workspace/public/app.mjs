@@ -1,3 +1,5 @@
+import { createAutomationView } from './automation.mjs';
+
 const $ = selector => document.querySelector(selector);
 const all = selector => [...document.querySelectorAll(selector)];
 const list = value => Array.isArray(value) ? value : [];
@@ -9,7 +11,7 @@ const human = value => String(value ?? '').replace(/[_-]/g, ' ').replace(/\b\w/g
 const time = value => !value ? 'Not recorded' : Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : String(value);
 const short = value => String(value ?? '').slice(0, 12);
 const count = value => Array.isArray(value) ? value.length : value ?? 0;
-const tabs = [['overview','Manager overview'],['sources','Original CRM sources'],['config','Pipeline definitions'],['runs','Saved monitoring runs'],['attention','Daily attention'],['cohorts','Cohorts & trends'],['actions','Follow-up work'],['handoff','History & handover']];
+const tabs = [['overview','Manager overview'],['sources','Original CRM sources'],['config','Pipeline definitions'],['automation','Continuous monitoring'],['runs','Saved monitoring runs'],['attention','Daily attention'],['cohorts','Cohorts & trends'],['actions','Follow-up work'],['handoff','History & handover']];
 const reasonNames = {
   OVERDUE_DECLARED_NEXT_ACTION:'Declared next action is overdue',
   NO_PARSEABLE_DECLARED_NEXT_ACTION_DATE:'Next action date is missing or unreadable',
@@ -21,13 +23,15 @@ const ui = {
   deals:null, dealOffset:0, dealFilters:{search:'',pipeline:'',owner:''}, runId:'', run:null, report:null,
   alerts:null, alertOffset:0, alertFilters:{search:'',owner:'',status:'',reason:''}, alertDetail:null,
   cohorts:null, cohortOffset:0, compareId:'', comparison:null, actionId:'', actionDetail:null,
-  busy:false, pending:null, incoming:false, poll:null
+  busy:false, pending:null, incoming:false, poll:null, projectEpoch:0
 };
 const drafts = new Map(), disabled = new WeakMap(), reports = new Map(), collectionCache = new Map(), collectionTotals = new Map();
 const project = () => ui.data?.project || null;
 const rows = key => list(ui.data?.[key]);
 const item = (key, id) => rows(key).find(value => value.id === id);
 const base = () => '/api/projects/' + uri(ui.projectId);
+const projectScope = () => ({ projectId: ui.projectId, epoch: ui.projectEpoch });
+const currentProject = scope => scope.projectId === ui.projectId && scope.epoch === ui.projectEpoch;
 const runName = id => item('runs', id)?.name || id || 'Not selected';
 const snapshotName = id => item('snapshots', id)?.name || id || 'Not selected';
 const operator = () => $('#operator').value.trim() || 'Operator';
@@ -124,48 +128,88 @@ async function fileContent(file) {
 }
 function selectProject(id) {
   if(ui.projectId===id) return;
-  captureDrafts(); ui.projectId=id; ui.data=null; ui.schema=null; ui.snapshotId=''; ui.snapshot=null; ui.deals=null; ui.dealOffset=0;
+  captureDrafts(); ui.projectEpoch++; ui.projectId=id; ui.data=null; ui.schema=null; ui.snapshotId=''; ui.snapshot=null; ui.deals=null; ui.dealOffset=0;
   ui.runId=''; ui.run=null; ui.report=null; ui.alerts=null; ui.alertOffset=0; ui.alertDetail=null; ui.cohorts=null; ui.cohortOffset=0;
   ui.compareId=''; ui.comparison=null; ui.actionId=''; ui.actionDetail=null;
+  automation.reset();
 }
 async function loadDetails() {
   if(!project()) return;
-  ui.schema=await request(base()+'/schema');
+  const scope=projectScope();
+  const read=async (url, apply, selected=()=>true) => {
+    const value=await request(url);
+    if(!currentProject(scope)||!selected()) return false;
+    apply(value); return true;
+  };
+  if(!await read(base()+'/schema',value=>{ui.schema=value;})) return;
   if(!item('snapshots',ui.snapshotId)) ui.snapshotId=rows('snapshots')[0]?.id||'';
   if(!item('runs',ui.runId)) ui.runId=rows('runs')[0]?.id||'';
-  if(ui.tab==='sources'&&ui.snapshotId) {
-    ui.snapshot=await request('/api/snapshots/'+uri(ui.snapshotId));
-    ui.deals=await request('/api/snapshots/'+uri(ui.snapshotId)+'/deals?'+new URLSearchParams({offset:String(ui.dealOffset),limit:'50',...ui.dealFilters}));
+  const tab=ui.tab,snapshotId=ui.snapshotId,runId=ui.runId;
+  const snapshotCurrent=()=>ui.tab===tab&&ui.snapshotId===snapshotId;
+  const runCurrent=()=>ui.tab===tab&&ui.runId===runId;
+  if(tab==='sources'&&snapshotId) {
+    if(!await read('/api/snapshots/'+uri(snapshotId),value=>{ui.snapshot=value;},snapshotCurrent)) return;
+    const offset=ui.dealOffset,filters=JSON.stringify(ui.dealFilters);
+    if(!await read('/api/snapshots/'+uri(snapshotId)+'/deals?'+new URLSearchParams({offset:String(offset),limit:'50',...ui.dealFilters}),
+      value=>{ui.deals=value;},()=>snapshotCurrent()&&ui.dealOffset===offset&&JSON.stringify(ui.dealFilters)===filters)) return;
   }
-  if(ui.runId&&['overview','runs','attention','cohorts','actions','handoff'].includes(ui.tab)) {
-    ui.run=await request('/api/runs/'+uri(ui.runId));
-    if(ui.run.run.status==='completed'&&!reports.has(ui.runId)) reports.set(ui.runId,await request('/api/runs/'+uri(ui.runId)+'/report'));
-    ui.report=ui.run.run.status==='completed'?(reports.get(ui.runId)||null):null;
+  if(runId&&['overview','runs','attention','cohorts','actions','handoff'].includes(tab)) {
+    if(!await read('/api/runs/'+uri(runId),value=>{ui.run=value;},runCurrent)) return;
+    if(ui.run.run.status==='completed'&&!reports.has(runId))
+      if(!await read('/api/runs/'+uri(runId)+'/report',value=>{reports.set(runId,value);},runCurrent)) return;
+    ui.report=ui.run.run.status==='completed'?(reports.get(runId)||null):null;
     if(!ui.report) { ui.alerts=null; ui.cohorts=null; ui.comparison=null; }
-    if(ui.tab==='attention'&&ui.report) {
-      ui.alerts=await request('/api/runs/'+uri(ui.runId)+'/alerts?'+new URLSearchParams({offset:String(ui.alertOffset),limit:'50',...ui.alertFilters}));
+    if(tab==='attention'&&ui.report) {
+      const offset=ui.alertOffset,filters=JSON.stringify(ui.alertFilters);
+      if(!await read('/api/runs/'+uri(runId)+'/alerts?'+new URLSearchParams({offset:String(offset),limit:'50',...ui.alertFilters}),
+        value=>{ui.alerts=value;},()=>runCurrent()&&ui.alertOffset===offset&&JSON.stringify(ui.alertFilters)===filters)) return;
       if(ui.alertDetail) {
-        const current=await request('/api/runs/'+uri(ui.runId)+'/alerts?'+new URLSearchParams({search:ui.alertDetail.dealId,limit:'50'}));
-        ui.alertDetail=list(current.alerts).find(a=>a.dealId===ui.alertDetail.dealId)||ui.alertDetail;
+        const dealId=ui.alertDetail.dealId;
+        if(!await read('/api/runs/'+uri(runId)+'/alerts?'+new URLSearchParams({search:dealId,limit:'50'}),
+          value=>{ui.alertDetail=list(value.alerts).find(a=>a.dealId===dealId)||ui.alertDetail;},
+          ()=>runCurrent()&&ui.alertDetail?.dealId===dealId)) return;
       }
     }
-    if(ui.tab==='cohorts'&&ui.report) ui.cohorts=await request('/api/runs/'+uri(ui.runId)+'/cohorts?offset='+ui.cohortOffset+'&limit=50');
-    if(ui.compareId&&ui.report&&['runs','cohorts'].includes(ui.tab)) ui.comparison=await request('/api/runs/'+uri(ui.runId)+'/compare?baseline='+uri(ui.compareId));
-  } else if(!ui.runId) { ui.run=null; ui.report=null; }
-  if(ui.actionId&&ui.tab==='actions') ui.actionDetail=await request('/api/actions/'+uri(ui.actionId));
+    if(tab==='cohorts'&&ui.report) {
+      const offset=ui.cohortOffset;
+      if(!await read('/api/runs/'+uri(runId)+'/cohorts?offset='+offset+'&limit=50',
+        value=>{ui.cohorts=value;},()=>runCurrent()&&ui.cohortOffset===offset)) return;
+    }
+    if(ui.compareId&&ui.report&&['runs','cohorts'].includes(tab)) {
+      const compareId=ui.compareId;
+      if(!await read('/api/runs/'+uri(runId)+'/compare?baseline='+uri(compareId),
+        value=>{ui.comparison=value;},()=>runCurrent()&&ui.compareId===compareId)) return;
+    }
+  } else if(!runId) { ui.run=null; ui.report=null; }
+  if(ui.actionId&&tab==='actions') {
+    const actionId=ui.actionId;
+    if(!await read('/api/actions/'+uri(actionId),value=>{ui.actionDetail=value;},
+      ()=>ui.tab===tab&&ui.actionId===actionId)) return;
+  }
+  if(ui.tab==='automation') await automation.load();
 }
 async function reloadData() {
-  ui.index=await request('/api/state');
+  const initial=projectScope(), index=await request('/api/state');
+  if(!currentProject(initial)) return;
+  ui.index=index;
   if(!list(ui.index.projects).some(p=>p.id===ui.projectId)) selectProject(list(ui.index.projects)[0]?.id||'');
-  if(ui.projectId) { ui.data=await request(base()); rememberCollections(); await loadDetails(); }
+  const scope=projectScope();
+  if(scope.projectId) {
+    const latest=await request('/api/projects/'+uri(scope.projectId));
+    if(!currentProject(scope)) return;
+    if(latest.project?.id!==scope.projectId) throw Error('The saved response belongs to a different operating project.');
+    ui.data=latest; rememberCollections(scope); await loadDetails();
+  }
+  if(!currentProject(scope)) return;
   $('#revision').textContent=project()?`Saved revision ${project().revision}`:'No project selected';
   $('#workspace-label').textContent=project()?`${project().name}\n${short(project().id)} · revision ${project().revision}`:'Private manager workspace';
 }
-function rememberCollections() {
+function rememberCollections(scope=projectScope()) {
+  if(!currentProject(scope)||ui.data?.project?.id!==scope.projectId) return;
   for(const kind of['snapshots','runs','jobs','actions','exports']) {
-    const key=ui.projectId+':'+kind, current=list(ui.data?.[kind]), known=collectionCache.get(key)||[];
+    const key=scope.projectId+':'+kind, current=list(ui.data?.[kind]), known=collectionCache.get(key)||[];
     const ids=new Set(current.map(x=>x.id)); const merged=[...current,...known.filter(x=>!ids.has(x.id))];
-    if(ui.data) ui.data[kind]=merged; collectionCache.set(key,merged);
+    ui.data[kind]=merged; collectionCache.set(key,merged);
     if(ui.data?.totals?.[kind]!==undefined) collectionTotals.set(key,ui.data.totals[kind]);
     else if(current.length<100&&!collectionTotals.has(key)) collectionTotals.set(key,current.length);
   }
@@ -179,7 +223,9 @@ function moreButton(kind) {
 async function loadOlder(kind) {
   const names={snapshots:'snapshot',runs:'run',jobs:'job',actions:'action',exports:'export'};
   if(!names[kind]) return;
+  const scope=projectScope();
   const result=await request(base()+'/items?'+new URLSearchParams({kind:names[kind],offset:String(rows(kind).length),limit:'50'}));
+  if(!currentProject(scope)||ui.data?.project?.id!==scope.projectId) return;
   const known=rows(kind),ids=new Set(known.map(x=>x.id));
   ui.data[kind]=[...known,...list(result.items).filter(x=>!ids.has(x.id))];
   collectionCache.set(ui.projectId+':'+kind,ui.data[kind]); collectionTotals.set(ui.projectId+':'+kind,result.total);
@@ -189,15 +235,25 @@ function jobsActive(data=ui.data) {
   return list(data?.jobs).some(j=>['queued','running','waiting','retry_wait','retrying'].includes(j.status)) ||
     list(data?.runs).some(r=>r.status==='queued') || list(data?.actions).some(a=>a.status==='executing'||a.reconciling);
 }
-function schedulePoll() { clearTimeout(ui.poll); if(jobsActive()) ui.poll=setTimeout(poll,1500); }
+function schedulePoll() { clearTimeout(ui.poll); if(ui.projectId&&(jobsActive()||automation.needsPolling())) ui.poll=setTimeout(poll,jobsActive()?1500:5000); }
 async function poll() {
   if(ui.busy) return schedulePoll();
+  const scope=projectScope();
   try {
-    const latest=await request(base());
-    if(isEditing()||ui.pending) { ui.incoming=latest.project.revision!==project().revision; ui.data.jobs=latest.jobs; ui.data.actions=latest.actions; ui.data.runs=latest.runs; rememberCollections(); renderIncoming(); }
-    else { ui.data=latest; rememberCollections(); await loadDetails(); render(); }
-  } catch(error) { tell(error.message+' Refresh to retrieve retained work.'); }
-  finally { schedulePoll(); }
+    const latest=await request('/api/projects/'+uri(scope.projectId));
+    if(!currentProject(scope)||!scope.projectId) return;
+    if(latest.project?.id!==scope.projectId) throw Error('The monitoring response belongs to a different operating project.');
+    if(!ui.data||ui.data.project?.id!==scope.projectId) return;
+    if(isEditing()||ui.pending) {
+      ui.incoming=ui.incoming||latest.project.revision!==project().revision||automation.fingerprint(latest.automation)!==automation.fingerprint(ui.data.automation);
+      ui.data.jobs=latest.jobs; ui.data.actions=latest.actions; ui.data.runs=latest.runs; ui.data.automation=latest.automation;
+      rememberCollections(scope); renderIncoming();
+    } else {
+      ui.data=latest; rememberCollections(scope); await loadDetails();
+      if(currentProject(scope)) render();
+    }
+  } catch(error) { if(currentProject(scope)) tell(error.message+' Refresh to retrieve retained work.'); }
+  finally { if(currentProject(scope)) schedulePoll(); }
 }
 async function refresh(inspect=false) {
   if(ui.busy) return;
@@ -225,13 +281,16 @@ async function mutate(build, options={}, frozen=null) {
       if(options.projectRevision!==false&&project()) payload.revision=project().revision;
       sent={url:built.url,options:{method:'POST',headers:{'Content-Type':'application/json','X-Workspace-Request':'1'},body:JSON.stringify(payload)}};
     }
+    if(options.beforeSend) await options.beforeSend(sent);
     const result=await request(sent.url,sent.options); written=result; ui.pending=null; ui.incoming=false;
+    if(options.afterSaved) await options.afterSaved(result);
     if(options.draftKey) drafts.delete(options.draftKey);
     if(options.after) await options.after(result);
     await reloadData(); render(); tell(options.message||'Saved.'); return result;
   } catch(error) {
+    if(!written&&options.afterRejected) options.afterRejected(error);
     if(written) { ui.pending=null; tell('The operation was saved. Refresh the current view to continue: '+error.message); renderConflict(); }
-    else if(error.status===409&&['STALE_REVISION','STALE_PROJECT','STALE_REVIEW','STALE_ACTION'].includes(error.code)) { ui.pending={kind:'conflict',build,options,error:error.message,inspected:false}; renderConflict(); tell('Newer work is saved. Your draft remains available.'); }
+    else if(error.status===409&&['STALE_REVISION','STALE_PROJECT','STALE_REVIEW','STALE_ACTION','STALE_AUTOMATION'].includes(error.code)) { ui.pending={kind:'conflict',build,options,error:error.message,inspected:false}; renderConflict(); tell('Newer work is saved. Your draft remains available.'); }
     else if(error.transport&&sent) { ui.pending={kind:'uncertain',build,options,frozen:sent,error:error.message,inspected:false}; renderConflict(); tell('Inspect saved work, then retrieve the same operation using its retained request identifier.'); }
     else { tell(error.message); if($('#dialog').open) { const notice=document.createElement('div'); notice.className='notice'; notice.textContent=error.message; $('#dialog-body').prepend(notice); } }
   } finally { busy(false); schedulePoll(); }
@@ -386,10 +445,11 @@ function handoffPage() {
   return heading('History and handover','Keep the complete operating project together: original CRM bytes, versioned monitoring, manager decisions and native outcomes.')+
     `<div class="grid"><section class="card"><h2>Prepare a complete operating handover</h2><form data-action="export" data-draft="${esc(key)}">${field('name','Handover name',d.name,{required:true})}${select('runId','Featured monitoring run',[['','Complete project without a featured run'],...rows('runs').map(r=>[r.id,r.name||r.id])],d.runId)}<button class="primary">Create complete handover</button></form><p class="help">The portable recovery contains the full retained project, including its original source files and decision history. Keep it with the project’s authorised operators.</p></section>${restorePanel}</div><section class="card"><h2>Retained handovers</h2>${table(rows('exports'),[{label:'Handover',key:'name'},{label:'Created',render:e=>esc(time(e.createdAt))},{label:'Featured run',render:e=>esc(runName(e.runId))},{label:'Download',render:e=>link('Complete project recovery','/api/exports/'+uri(e.id)+'/download',true)}])}${moreButton('exports')}</section><section class="card"><h2>Operating history</h2>${table(rows('history'),[{label:'Time',render:e=>esc(time(e.at||e.createdAt||e.timestamp))},{label:'Operator',render:e=>esc(e.actor||'')},{label:'Operation',render:e=>esc(human(e.kind||e.type||e.action||e.event||''))},{label:'Retained outcome',render:e=>`<details><summary>Inspect original event</summary><pre>${esc(json(e))}</pre></details>`}])}</section>`;
 }
+const automation = createAutomationView({ ui, esc, uri, time, human, json, button, link, badge, empty, field, select, check, heading, metrics, kv, table, draft, values, mutate, openDialog, closeDialog, project, base, request, render, tell, openRun });
 function render() {
   $('#nav').innerHTML=tabs.map(([id,label])=>`<button type="button" data-tab="${id}" aria-current="${ui.tab===id?'page':'false'}">${esc(label)}</button>`).join('');
   $('#scope').innerHTML=scope();
-  const views={overview,sources:sourcesPage,config:configPage,runs:runsPage,attention:attentionPage,cohorts:cohortsPage,actions:actionsPage,handoff:handoffPage};
+  const views={overview,sources:sourcesPage,config:configPage,automation:automation.render,runs:runsPage,attention:attentionPage,cohorts:cohortsPage,actions:actionsPage,handoff:handoffPage};
   $('#content').innerHTML=views[ui.tab](); renderIncoming(); renderConflict();
 }
 async function go(tab) { if(ui.busy) return; captureDrafts(); busy(true); ui.tab=tab; try { await loadDetails(); render(); window.scrollTo(0,0); } finally { busy(false); schedulePoll(); } }
@@ -408,6 +468,7 @@ function reviewValues(d,current) {
 }
 async function handleButton(control) {
   captureDrafts(); const act=control.dataset.act,id=control.dataset.id;
+  if(act?.startsWith('monitor-')) return automation.handleButton(control);
   if(act==='tab') return go(control.dataset.tab);
   if(act==='new-project') return projectDialog();
   if(act==='close-dialog') return closeDialog();
@@ -461,6 +522,7 @@ async function handleButton(control) {
 }
 async function submitForm(form) {
   captureForm(form); const action=form.dataset.action,key=form.dataset.draft,id=form.dataset.id,projectId=ui.projectId;
+  if(action?.startsWith('monitor-')) return automation.submitForm(form);
   if(action==='project') return mutate(()=>({url:'/api/projects',data:{name:values(key).name}}),{projectRevision:false,draftKey:key,after:r=>{closeDialog();selectProject(r.project.id);ui.tab='sources';},message:'Manager project created.'});
   if(action==='config') return mutate(()=>{const d=values(key),edited=buildConfig(d); return {url:base()+'/config',data:{config:mergeChanged(d.originalConfig,edited,project().config)}};},
     {draftKey:key,inspect:()=>project()?.config,message:'Pipeline definitions saved. Earlier monitoring runs retain their original settings.'});

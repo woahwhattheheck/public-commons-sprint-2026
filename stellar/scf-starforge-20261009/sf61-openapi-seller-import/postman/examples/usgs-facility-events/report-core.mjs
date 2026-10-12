@@ -52,6 +52,8 @@ function distanceKm(a, b) {
   return 6371 * 2 * Math.atan2(Math.sqrt(Math.min(1, h)), Math.sqrt(Math.max(0, 1-h)));
 }
 
+export { facilitiesOf as normaliseFacilities };
+
 export function buildFacilityReport(inputs, facilityInput, options = {}) {
   if (!Array.isArray(inputs) || !inputs.length || inputs.length > 16)
     throw new TypeError('Supply 1–16 retained GeoJSON responses.');
@@ -63,26 +65,29 @@ export function buildFacilityReport(inputs, facilityInput, options = {}) {
   let receivedFeatures = 0, duplicateIds = 0, supersededRevisions = 0, invalidFeatures = 0;
   for (const input of inputs) {
     const document = input?.document;
-    if (document?.type !== 'FeatureCollection' || !Array.isArray(document.features))
+    const noData = document === null && input?.response?.status === 204 && input.response.bodyBytes === 0;
+    const features = noData ? [] : document?.features;
+    if (!noData && (document?.type !== 'FeatureCollection' || !Array.isArray(features)))
       throw new TypeError('Input ' + text(input?.name) + ' must be a USGS GeoJSON FeatureCollection.');
-    if (receivedFeatures + document.features.length > 100000)
+    if (receivedFeatures + features.length > 100000)
       throw new TypeError('Use a report containing at most 100000 received event rows.');
-    if (document.metadata?.status !== undefined && document.metadata.status !== 200)
+    if (!noData && document.metadata?.status !== undefined && document.metadata.status !== 200)
       throw new TypeError('Input ' + text(input.name) + ' has a non-success provider status.');
     const sourceIndex = sources.length;
     sources.push({name:text(input.name), sha256:text(input.sha256) || null,
-      url:text(document.metadata?.url) || null, generatedUtc:iso(document.metadata?.generated),
-      returnedFeatures:document.features.length,
-      declaredCount:Number.isSafeInteger(document.metadata?.count) ? document.metadata.count : null});
+      url:text(noData ? input.response.url : document.metadata?.url) || null, generatedUtc:noData ? null : iso(document.metadata?.generated),
+      returnedFeatures:features.length,
+      declaredCount:!noData && Number.isSafeInteger(document.metadata?.count) ? document.metadata.count : null,
+      ...(noData ? {httpStatus:204} : {})});
     if (sources[sourceIndex].declaredCount !== null &&
-        sources[sourceIndex].declaredCount !== document.features.length)
+        sources[sourceIndex].declaredCount !== features.length)
       issues.push({source:sourceIndex, issue:'Provider count differs from the retained feature count.'});
-    for (let index=0; index<document.features.length; index++) {
+    for (let index=0; index<features.length; index++) {
       receivedFeatures++;
-      const event = eventOf(document.features[index]);
+      const event = eventOf(features[index]);
       if (!event) {
         invalidFeatures++;
-        issues.push({source:sourceIndex, index, id:text(document.features[index]?.id) || null,
+        issues.push({source:sourceIndex, index, id:text(features[index]?.id) || null,
           issue:'Event cannot be located or dated from its retained source.'});
         continue;
       }

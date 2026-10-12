@@ -90,11 +90,17 @@ export function createObjectWorkspaceRecovery({directory,profilePath,profileSha2
     let profileSha256=null;if(profilePath)profileSha256=hash(await bytes(profilePath,262144));
     need(profileSha256===startupProfileSha256,'OBJECT_RECOVERY_PROFILE_CHANGED_REOPEN_WORKSPACE');
     const settingsReference=join(directory,'received','operator-settings.json');
-    const settingsFile=await present(settingsReference)?(await json(settingsReference)).path:null;
-    await include(settingsFile);
-    const settingsSha256=settingsFile?hash(await bytes(settingsFile,65536)):null;
-    const received=await receiving.state();
-    need(settingsFile===received.settingsFile,'OBJECT_RECOVERY_PRESET_REFERENCE_CHANGED_REOPEN_WORKSPACE');
+    const declaredSettingsFile=await present(settingsReference)?(await json(settingsReference)).path:null;
+    const received=await receiving.state(),setup=received.operatorSetup;
+    need(setup&&!setup.error&&setup.declaredSettingsFile===declaredSettingsFile,
+      'OBJECT_RECOVERY_OPERATOR_SETTINGS_INVALID');
+    const settingsFile=received.settingsFile;await include(settingsFile);
+    const settingsSha256=settingsFile?hash(await bytes(settingsFile,16384)):null;
+    need(settingsSha256===setup.settingsSha256,'OBJECT_RECOVERY_PRESET_REFERENCE_CHANGED_REOPEN_WORKSPACE');
+    const operatorSetup={mode:setup.mode,revision:setup.revision,revisionNumber:setup.revisionNumber,
+      stateSha256:setup.stateSha256,declaredSettingsFile};
+    // Workspace revisions are inside the selected application tree. A former
+    // launcher preset is no longer a restore dependency after exact adoption.
     need(received.sources.every(source=>!source.error),'OBJECT_RECOVERY_RECEIVED_FILES_INVALID');
     async function original(source,path=null) {
       const {owner,op,download}=execution(source),operator=dirname(owner.ledger);
@@ -148,7 +154,7 @@ export function createObjectWorkspaceRecovery({directory,profilePath,profileSha2
       include:paths.filter(path=>!paths.some(other=>other!==path&&inside(other,path))),optionalInclude:[...missing].sort()};
     const native=await inspectWorkspaceRecovery(nativeOptions);
     const profile={schema:SCHEMA,directory,stateRoot,profilePath:profilePath??null,profileSha256,
-      settingsFile,settingsSha256,sessions,operators:operatorList,
+      settingsFile,settingsSha256,operatorSetup,sessions,operators:operatorList,
       received:received.sources.map(({id,descriptionSha256,catalogSha256})=>({id,descriptionSha256,catalogSha256}))
         .sort((a,b)=>a.id.localeCompare(b.id)),
       products:choices.map(({id,objectId,descriptionFile,configFile,workspace})=>({id,objectId,descriptionFile,configFile,workspace}))
@@ -219,6 +225,36 @@ async function inspectSnapshot({record,map}) {
     'OBJECT_RECOVERY_ORIGINAL_OPERATOR_REQUIRED');
   for(const [path,digest] of [[profile.profilePath,profile.profileSha256],[profile.settingsFile,profile.settingsSha256]])
     if(path!==null){within(path);need(HASH.test(digest)&&hash(await bytes(map(path)))===digest,'OBJECT_RECOVERY_SOURCE_CHANGED');}
+  if(profile.operatorSetup!==undefined) {
+    const setup=profile.operatorSetup,root=join(profile.directory,'received');
+    need(setup&&['NONE','DECLARED','WORKSPACE'].includes(setup.mode)&&HASH.test(setup.stateSha256??''),
+      'OBJECT_RECOVERY_OPERATOR_SETTINGS_INVALID');
+    const declaration=join(root,'operator-settings.json'),selection=join(root,'operator-presets','current.json');
+    const declaredSettingsFile=await present(map(declaration))?(await json(map(declaration))).path:null;
+    need(declaredSettingsFile===setup.declaredSettingsFile,'OBJECT_RECOVERY_PRESET_REFERENCE_CHANGED');
+    const selectionRaw=await present(map(selection))?await bytes(map(selection),16384):null;
+    let selectedId=null,file=null;
+    if(setup.mode==='WORKSPACE') {
+      need(selectionRaw!==null&&/^preset-[a-f0-9]{64}$/.test(setup.revision??'')&&
+        Number.isSafeInteger(setup.revisionNumber)&&setup.revisionNumber>0,
+        'OBJECT_RECOVERY_OPERATOR_SETTINGS_INVALID');
+      const selected=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(selectionRaw));
+      need(selected.schema==='stellar-forge.buyer-operator-preset-selection.v1'&&
+        Object.keys(selected).length===3&&selected.id===setup.revision&&selected.settingsSha256===profile.settingsSha256,
+        'OBJECT_RECOVERY_PRESET_REFERENCE_CHANGED');
+      selectedId=selected.id;file=join(root,'operator-presets','revisions',selected.id+'.settings.json');
+    } else {
+      need(selectionRaw===null&&setup.revision===null&&setup.revisionNumber===null,
+        'OBJECT_RECOVERY_PRESET_REFERENCE_CHANGED');
+      file=setup.mode==='DECLARED'?declaredSettingsFile:null;
+      need(setup.mode!=='DECLARED'||file!==null,'OBJECT_RECOVERY_PRESET_REFERENCE_CHANGED');
+      need(setup.mode!=='NONE'||declaredSettingsFile===null,'OBJECT_RECOVERY_PRESET_REFERENCE_CHANGED');
+    }
+    const base={mode:setup.mode,selectionSha256:selectionRaw===null?null:hash(selectionRaw),
+      selectedId,file,settingsSha256:profile.settingsSha256,error:null};
+    need(file===profile.settingsFile&&hash(encode(base))===setup.stateSha256,
+      'OBJECT_RECOVERY_OPERATOR_SETTINGS_CHANGED');
+  }
   const ids=new Set();
   for(const saved of profile.sessions) {
     need(ID.test(saved.id)&&!ids.has(saved.id)&&saved.directory===join(profile.directory,'sessions',saved.id),
@@ -248,6 +284,8 @@ export async function restoreObjectWorkspaceRecovery(options,context={}) {
     const current=await model.inspectRecovery({stateRoot:result.stateRoot});
     for(const field of ['products','received','operators','configurations','profilePath','profileSha256','settingsFile','settingsSha256'])
       need(same(current.profile[field],result.application[field]),'OBJECT_RECOVERY_REOPEN_IDENTITY_CHANGED');
+    if(result.application.operatorSetup!==undefined)
+      need(same(current.profile.operatorSetup,result.application.operatorSetup),'OBJECT_RECOVERY_REOPEN_IDENTITY_CHANGED');
     const products=await model.products();
     need(products.every(product=>!product.error)&&products.length===result.application.products.length,
       'OBJECT_RECOVERY_PRODUCTS_INVALID');
@@ -272,3 +310,4 @@ export async function restoreObjectWorkspaceRecovery(options,context={}) {
   catch(error){selectionRecordError=codeOf(error);}
   return {...restored,selectionRecord,selectionRecordError};
 }
+

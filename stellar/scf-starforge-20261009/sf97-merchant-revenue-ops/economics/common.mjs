@@ -1,3 +1,5 @@
+import { MAX_DOCUMENT } from './limits-contracts.mjs';
+export { MAX_DOCUMENT } from './limits-contracts.mjs';
 // MIT. Private immutable files and revision chains for merchant cost editions.
 import { constants } from 'node:fs';
 import { mkdir, open, lstat, realpath, readdir, link, rename, rm } from 'node:fs/promises';
@@ -5,7 +7,7 @@ import { resolve, join, dirname } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 
 export const MAX_SOURCE = 16 * 1024 * 1024;
-export const MAX_DOCUMENT = 32 * 1024 * 1024;
+
 export const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 export const SHA = /^[a-f0-9]{64}$/;
 export const own = (o,k) => Object.prototype.hasOwnProperty.call(o,k);

@@ -25,6 +25,7 @@ import { readJobWorkspaceLaunch } from '../launch.mjs';
 import { readJobCheckoutTicket } from './contract.mjs';
 import { prepareInputFileFixture, openInputFileJourney } from '../../../sf30-seller-sdk/jobs/inputs/native-journey.mjs';
 import { isInputRoute } from '../../../sf30-seller-sdk/jobs/inputs/http.mjs';
+import { validStrKey } from '../../../sf86-rpc-transfer-reconcile/terms.mjs';
 
 const origin = 'https://jobs-merchant.example';
 const fixture = resolve(process.env.SF_JOBS_CHECKOUT_FIXTURE_DIR ?? '/');
@@ -51,7 +52,13 @@ const handoffPath = join(fixture, 'checkout.handoff.json'), output = join(fixtur
 const profilePath = join(fixture, 'operator-profile.json'), merchantState = join(fixture, 'merchant-state');
 const checkoutId = digest(JSON.stringify(['paid-job-checkout', origin + '/jobs/' + encodeURIComponent(jobId)]));
 const intentId = 'job-checkout:' + checkoutId;
-const fixtureAsset = 'C' + 'A'.repeat(55);
+// Canonical local-fixture keys let the unchanged accounting compiler read these terms.
+const fixtureAsset = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4';
+const fixturePayTo = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+const fixturePayer = 'GAAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQDZ7H';
+assert.ok(validStrKey(fixtureAsset, 'C'));
+assert.ok(validStrKey(fixturePayTo, 'G') && validStrKey(fixturePayer, 'G'));
+assert.notEqual(fixturePayTo, fixturePayer);
 let merchant, seller, customer, model, host, received, complete = false, interrupted = false;
 let frontend, proxy, facilitator, transport, selfService = null, inputFixture = null, inputJourney = null, fileReceiving = null;
 const sockets = new Set(), servers = new Set();
@@ -143,7 +150,7 @@ async function approveBrowserFixture(taskId) {
     schema: 'stellar-forge.sf62.operator-review.v1',
     request_id: intentId, actor: 'fixture-job-checkout', service: 'fixture-application-jobs',
     resource: origin + purchasePath + '?sf98_order=' + encodeURIComponent(jobId), method: 'POST',
-    scheme: 'exact', network: 'stellar:testnet', asset: fixtureAsset, pay_to: 'UNVERIFIED_DEMO_RECIPIENT',
+    scheme: 'exact', network: 'stellar:testnet', asset: fixtureAsset, pay_to: fixturePayTo,
     max_atomic_units_to_reserve: '10000', max_timeout_seconds: 60,
     body_present: true, body_bytes: body.length, body_sha256: digest(body),
   };
@@ -253,17 +260,17 @@ try {
   if (inputFilesMode) inputFixture = await prepareInputFileFixture({ fixture, immutable });
   const configured = inputFilesMode ? { ...inputFixture.configuration,
     maxPending: 4, maxJobs: 32, functions: { reconcile: { ...inputFixture.configuration.functions.reconcile,
-      payment: { ...inputFixture.configuration.functions.reconcile.payment, asset: fixtureAsset } } } }
+      payment: { ...inputFixture.configuration.functions.reconcile.payment, asset: fixtureAsset, payTo: fixturePayTo } } } }
     : { ...raw, application: marker.application, workerCount: 1, memoryLimitMb: 64,
       maxPending: 4, maxJobs: 32, functions: { analyze: { ...raw.functions.analyze,
-        payment: { ...raw.functions.analyze.payment, asset: fixtureAsset } } } };
+        payment: { ...raw.functions.analyze.payment, asset: fixtureAsset, payTo: fixturePayTo } } } };
   await immutable(configPath, jsonBytes(configured));
   await immutable(join(fixture, 'signer.mjs'), Buffer.from([
     '// Disposable signer envelope for this one local original-protocol journey.',
     'export async function sign({ challenge, accepted }) {',
     "  if (challenge.resource?.url !== " + JSON.stringify(origin + purchasePath + '?sf98_order=' + encodeURIComponent(jobId)) + " ||",
     "      accepted.scheme !== 'exact' || accepted.network !== 'stellar:testnet' ||",
-    "      accepted.asset !== 'C' + 'A'.repeat(55) || accepted.payTo !== 'UNVERIFIED_DEMO_RECIPIENT' ||",
+    "      accepted.asset !== " + JSON.stringify(fixtureAsset) + " || accepted.payTo !== " + JSON.stringify(fixturePayTo) + " ||",
     "      accepted.amount !== '10000') throw new Error('CHECKOUT_FIXTURE_TERMS_CHANGED');",
     "  return { x402Version: 2, resource: challenge.resource, accepted, extensions: challenge.extensions,",
     "    payload: { fixture: 'LOCAL_PAID_JOB_PROTOCOL', jobId: " + JSON.stringify(jobId) + " } };",
@@ -301,11 +308,11 @@ try {
         counters.paymentSha256 = paymentSha256;
         if (request.url === '/verify') {
           counters.verifies++;
-          result = { isValid: true, payer: 'LOCAL_PAID_JOB_PROTOCOL' };
+          result = { isValid: true, payer: fixturePayer };
         } else {
           counters.settles++;
           result = { success: true, network: 'stellar:testnet',
-            transaction: digest(operation + ':' + jobId), payer: 'LOCAL_PAID_JOB_PROTOCOL' };
+            transaction: digest(operation + ':' + jobId), payer: fixturePayer };
         }
         await writeJson(counterPath, counters);
       }
@@ -383,6 +390,7 @@ try {
     const selectedFunction = catalog.functions[0];
     assert.equal(selectedFunction.id, functionId);
     assert.equal(selectedFunction.payment.asset, fixtureAsset);
+    assert.equal(selectedFunction.payment.payTo, fixturePayTo);
     assert.equal(selectedFunction.payment.amount, '10000');
     const checkoutExisted = await exists(join(directory, 'checkout', 'records', checkoutId, 'record.json'));
     const draft = inputFilesMode ? await inputJourney.prepare({ catalog, definition: selectedFunction }) :
@@ -562,7 +570,7 @@ try {
         : 'ORIGINAL_SF62_PTY_WITH_DISPOSABLE_FIXTURE_POLICY',
       source: { originalConfigSha256: original.configSha256, originalApplicationSha256: original.applicationSha256,
         checkoutConfigSha256: digest(await readBytes(configPath)), application: configured.application,
-        asset: fixtureAsset, network: 'stellar:testnet' } },
+        asset: fixtureAsset, payTo: fixturePayTo, payer: fixturePayer, network: 'stellar:testnet' } },
     sources: { runtimeDirectory, buyerClientSha256: digest(await readFile(join(runtimeDirectory, 'node', 'client.mjs'))),
       checkoutControllerSha256: digest(await readFile(new URL('./controller.mjs', import.meta.url))),
       driverSha256: digest(await readFile(fileURLToPath(import.meta.url))) },
@@ -593,7 +601,6 @@ try {
   await received.close(); received = null;
   await closeWorkspace();
   await writeJson(output, summary); complete = true;
-  process.stdout.write(JSON.stringify({ operation, result: 'PASS', output }) + '\n');
 } finally {
   process.off('SIGINT', stop); process.off('SIGTERM', stop);
   const closed = await Promise.allSettled([received?.close(), closeWorkspace()]);
@@ -605,3 +612,26 @@ try {
   }) + '\n');
   if (failures.length) throw new AggregateError(failures.map(value => value.reason), 'CHECKOUT_CONTINUATION_CLOSE_FAILED');
 }
+
+// The receiving desk and original checkout owners have drained before this
+// continuation reopens their same paid job. Retain its source summary once so
+// a resumed checkout cannot change the resolution operation's input identity.
+if (inputFilesMode) {
+  const resolutionSource = join(fixture, 'resolution-checkout-source.json');
+  if (!await exists(resolutionSource)) await immutable(resolutionSource, await readBytes(output));
+  const { runJobResolutionContinuation } = await import('../../../sf30-seller-sdk/jobs/resolution/native-continuation.mjs');
+  const resolution = await runJobResolutionContinuation({ checkoutResult: resolutionSource });
+  const completed = await readJson(output);
+  assert.equal(resolution.result, 'PASS');
+  assert.equal(resolution.jobId, jobId);
+  assert.equal(resolution.entryId, completed.checkout.jobEntryId);
+  completed.resolution = resolution;
+  await writeJson(output, completed);
+  const agentSource = join(fixture, 'agent-checkout-source.json');
+  if (!await exists(agentSource)) await immutable(agentSource, await readBytes(output));
+  const { runPaidJobAgentContinuation } = await import('../../../sf30-seller-sdk/jobs/agent/native-continuation.mjs');
+  completed.agent = await runPaidJobAgentContinuation({ checkoutResult: agentSource });
+  assert.equal(completed.agent.result, 'PASS');
+  await writeJson(output, completed);
+}
+process.stdout.write(JSON.stringify({ operation, result: 'PASS', output }) + '\n');

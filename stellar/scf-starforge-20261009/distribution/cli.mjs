@@ -99,6 +99,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
   api-pass-workspace                        Open the API customer workspace, saved requests, recovery and statements
+  merchant-api-pass                         Run retained API customer agent operations and complete-file downloads
   api-purchase                              Buy an API allowance, call approved routes and recover saved responses
   api-application                           Run source-pinned application functions over purchased API allowances
   baserow-source                            Discover, retain and publish original Baserow records and files
@@ -143,6 +144,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
+  merchant-accounting-cryptoworth            Review customer templates, native receiving, accountant returns and original packet recovery through MCP
   merchant-accounting-statements             Retain, recover and deliver original customer statements through MCP
   merchant-accounting-platforms              Review, retain and reconcile original QuickBooks and Xero operations
   databento-workspace                        Review historical source editions, map customer records and reopen handoffs
