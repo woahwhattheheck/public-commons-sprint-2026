@@ -1036,7 +1036,11 @@
     "./partners/stellar-application/installed": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/installed.mjs",
     "./merchant/mcp/sec-edgar": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-tools.mjs",
     "./merchant/mcp/sec-edgar-transfer": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-transfer.mjs",
-    "./merchant/mcp/sec-edgar-download": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs"
+    "./merchant/mcp/sec-edgar-download": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
+    "./seller/jobs/recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/paid-jobs.mjs",
+    "./seller/jobs/recovery/cli": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/paid-jobs-cli.mjs",
+    "./seller/jobs/source-binding": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/source-binding.mjs",
+    "./seller/jobs/recovery-state": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/recovery-state.mjs"
   },
   "nativePeers": {
     "@x402/core": {
