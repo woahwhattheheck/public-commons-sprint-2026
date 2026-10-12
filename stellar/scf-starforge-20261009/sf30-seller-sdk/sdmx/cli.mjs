@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'macrobond') return (await import('./macrobond/cli.mjs')).main(args.slice(1));
   if (args[0] === 'merchant') return (await import('./merchant.mjs')).main(args.slice(1));
   if (args[0] === 'buyer') return (await import('./customer.mjs')).main(args.slice(1));
   const executable = process.env.SF30_SDMX_PYTHON || process.env.SF30_XML_PYTHON ||

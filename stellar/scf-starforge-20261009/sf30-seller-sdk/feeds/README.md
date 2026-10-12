@@ -4,6 +4,10 @@ Turn a feed into a retained, reviewed dataset and an original Stellar Forge merc
 
 The feed tables share the maintained XML workspace's SQLite database and writer lease. Edition projection, CSV construction, native query admission, cursor paging, exact-cell comparison and receiving use that original workspace and SF30 dataset engine. The Python import shim loads the maintained modules by filename so the XML console and feed console keep their own routes.
 
+## Subscription collections
+
+[Open the complete subscription-library guide](COLLECTIONS.md) for original OPML intake and folder selection, saved collections, multi-feed acquisition and recovery, original capture review, combined native editions, and complete collection receiving. Choose **Subscription collections** from the same private console, or use the `subscriptions` subcommand.
+
 ## Open the console
 
 From `sf30-seller-sdk`, with Python 3.11+ and Node 22+:
