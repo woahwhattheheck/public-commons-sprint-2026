@@ -4,6 +4,7 @@ import {constants} from 'node:fs';
 import {lstat, mkdir, open, readdir, rename, unlink} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {validateFixture} from './engine.mjs';
+import {normalizeRetainedInsights} from './retained_insight.mjs';
 import {parseCount, parseView} from './live_sessions.mjs';
 import {parseScenario, parseSeed, SCENARIOS} from './scenarios.mjs';
 
@@ -78,7 +79,8 @@ function reviewData(raw, match) {
     return {eventId: item.eventId, count, label: text(item.label, 100, 'Moment title', item.eventId),
       note: text(item.note, 1000, 'Moment note')};
   }).sort((a, b) => a.count - b.count);
-  return {title, notes, cursor, view, selectedMomentId, filters: normalizedFilters, bookmarks};
+  return {title, notes, cursor, view, selectedMomentId, filters: normalizedFilters, bookmarks,
+    insights: normalizeRetainedInsights(raw.insights, match)};
 }
 function storedData(raw) {
   object(raw, 'Saved match');

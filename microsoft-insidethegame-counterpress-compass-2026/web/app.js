@@ -6,7 +6,7 @@ const L = {
     thirds: 'Locations use pitch thirds; shading shows pressing activity.',
     club: 'Your club', mode: 'Mode', language: 'Language', story: 'The story so far', numbers: 'Numbers', moments: 'Key moments', feed: 'Play-by-play',
     aiTitle: 'Optional AI commentary (Microsoft Foundry)', aiAsk: 'Ask for commentary', aiOff: 'Not configured', aiFail: 'Commentary unavailable; match captions keep working.',
-    opusTitle: 'AI match insight (optional)', opusAsk: 'Explain this moment', opusOff: 'Not configured', opusWait: 'Writing insight…', opusSlow: 'Still writing — the match stays fully usable.', opusFail: 'Insight unavailable right now; match captions keep working.', opusBusy: 'Insight is busy; try again in a little while.', opusAt: n => `Event ${n}`,
+    opusTitle: 'AI match insight (optional)', opusSaved: 'View saved insight', opusRetained: 'Saved insight', opusAsk: 'Explain this moment', opusOff: 'Not configured', opusWait: 'Writing insight…', opusSlow: 'Still writing — the match stays fully usable.', opusFail: 'Insight unavailable right now; match captions keep working.', opusBusy: 'Insight is busy; try again in a little while.', opusAt: n => `Event ${n}`,
     share: 'Copy match link', shareCopied: 'Link copied. It opens this moment paused.', shareManual: 'Select and copy the link below.', shareHelp: 'Reopens this synthetic match at the selected event. The recipient needs access to this app.', shareLocal: 'Local address: the link opens only where this app is running.', badLink: 'This match link is invalid or no longer supported. A fresh match is ready.', clampedLink: 'The saved event is beyond this version of the match; showing its final event.',
     play: '▶ Play', pause: '❚❚ Pause', step: 'Next event', restart: 'Restart', ready: 'READY', live: 'LIVE', paused: 'PAUSED', ft: 'FULL TIME',
     reconnecting: 'Reconnecting…', expiredSession: 'The session expired. Resume from the last confirmed moment.', recover: 'Resume match', recovering: 'Restoring the last confirmed event…', recoverFailed: 'Recovery failed. Check your connection and try Resume match again.', outOfSync: 'Event order changed. Resume from the last confirmed event.', loading: 'Setting up match…', badSeed: 'Seed must be 1–999999.',
@@ -27,7 +27,7 @@ const L = {
     thirds: 'Las posiciones se muestran por tercios; el sombreado indica la actividad de presión.',
     club: 'Tu club', mode: 'Modo', language: 'Idioma', story: 'La historia hasta ahora', numbers: 'Números', moments: 'Momentos clave', feed: 'Jugada a jugada',
     aiTitle: 'Comentario IA opcional (Microsoft Foundry)', aiAsk: 'Pedir comentario', aiOff: 'No configurado', aiFail: 'Comentario no disponible; los textos del partido siguen activos.',
-    opusTitle: 'Análisis IA del momento (opcional)', opusAsk: 'Explicar este momento', opusOff: 'No configurado', opusWait: 'Escribiendo análisis…', opusSlow: 'Sigue escribiendo; el partido sigue disponible.', opusFail: 'Análisis no disponible ahora; los textos del partido siguen activos.', opusBusy: 'Análisis ocupado; inténtalo de nuevo en un rato.', opusAt: n => `Jugada ${n}`,
+    opusTitle: 'Análisis IA del momento (opcional)', opusSaved: 'Ver análisis guardado', opusRetained: 'Análisis guardado', opusAsk: 'Explicar este momento', opusOff: 'No configurado', opusWait: 'Escribiendo análisis…', opusSlow: 'Sigue escribiendo; el partido sigue disponible.', opusFail: 'Análisis no disponible ahora; los textos del partido siguen activos.', opusBusy: 'Análisis ocupado; inténtalo de nuevo en un rato.', opusAt: n => `Jugada ${n}`,
     share: 'Copiar enlace del partido', shareCopied: 'Enlace copiado. Abre esta jugada en pausa.', shareManual: 'Selecciona y copia el enlace de abajo.', shareHelp: 'Abre este partido sintético en la jugada elegida. El destinatario necesita acceso a esta aplicación.', shareLocal: 'Dirección local: el enlace solo abre donde se ejecuta esta aplicación.', badLink: 'Este enlace no es válido o ya no es compatible. Hay un partido nuevo listo.', clampedLink: 'La jugada guardada supera esta versión del partido; se muestra la última.',
     play: '▶ Reproducir', pause: '❚❚ Pausa', step: 'Siguiente jugada', restart: 'Reiniciar', ready: 'LISTO', live: 'EN DIRECTO', paused: 'PAUSA', ft: 'FINAL',
     reconnecting: 'Reconectando…', expiredSession: 'La sesión caducó. Recupera la última jugada confirmada.', recover: 'Reanudar partido', recovering: 'Recuperando la última jugada confirmada…', recoverFailed: 'No se pudo reanudar. Comprueba la conexión y vuelve a intentarlo.', outOfSync: 'El orden de jugadas cambió. Recupera la última jugada confirmada.', loading: 'Preparando partido…', badSeed: 'La semilla debe ser 1–999999.',
@@ -45,7 +45,7 @@ const L = {
       rateLine: (s, r, p) => `Tasa de recuperación ${p}% (${s}/${r} ventanas resueltas).`, unclearLine: n => `${n} ventana(s) cortada(s) por otra pérdida: resultado desconocido, no cuenta como fallo.`,
       zoneLine: z => `Contrapresiones exitosas sobre todo en: ${z}.`, pressLine: x => `${x} acciones de presión por contrapresión.`, rivalLine: (t, p) => `${t}: tasa de recuperación ${p}.`}}
 };
-const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, archiveId: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
+const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, opusPending: null, insights: [], match: null, archiveId: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
 let archiveUI;
 const t = () => L[el('locale').value] || L.en;
 const view = () => ({team: el('team').value, audience: el('audience').value, locale: el('locale').value});
@@ -302,6 +302,34 @@ function ui() {
   archiveUI?.changed();
 }
 function opusKey() { return S.session ? [S.session.id, S.cursor, el('team').value, el('audience').value, el('locale').value].join('|') : ''; }
+function currentInsight() {
+  if (!S.frame || !S.session) return null;
+  const v = view(), moment = S.frame.overlays.at(-1)?.id;
+  return S.insights.findLast(record => {
+    const source = record.source;
+    return source.count === S.cursor && source.eventId === S.frame.event?.id &&
+      source.frameSecond === S.frame.elapsedSeconds && source.momentId === moment &&
+      source.team === v.team && source.audience === v.audience && source.locale === v.locale;
+  }) || null;
+}
+function drawSavedInsight() {
+  const record = currentInsight(), button = el('opus');
+  button.textContent = record ? t().opusSaved : S.opus ? t().opusAsk : t().opusOff;
+  button.disabled = S.opusPending === opusKey() || (!S.opus && !record);
+  if (!record) return false;
+  S.opusKey = opusKey();
+  el('opusResult').textContent = t().opusRetained + ' · ' + t().opusAt(record.source.count) + ' · ' +
+    fmt(record.source.frameSecond) + ' · ' + record.response.caption + ' ' + record.response.text;
+  return true;
+}
+function rememberInsight(output) {
+  const record = output.insight;
+  if (!record || record.format !== 'counterpress.retained-insight.v1') return;
+  // The original archive carries the most recent 24 selected model results.
+  // The provider's complete original receipts remain in its own job store.
+  S.insights = [...S.insights.filter(item => item.id !== record.id), structuredClone(record)].slice(-24);
+  archiveUI?.changed();
+}
 function apply(f) {
   S.frame = f;
   if (S.opusKey && S.opusKey !== opusKey()) { S.opusKey = null; el('opusResult').textContent = ''; }
@@ -312,6 +340,7 @@ function apply(f) {
   el('insight').replaceChildren(...insights(f).map(x => node('li', '', x)));
   syncMatchLink();
   ui();
+  drawSavedInsight();
 }
 function applyI18n() {
   const T = t();
@@ -445,7 +474,7 @@ async function newMatch({count = 0} = {}) {
     const s = await api('/api/sessions', 'POST', {scenario, seed});
     if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(s.id), {method: 'DELETE'}).catch(() => {}); return; }
     if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
-    S.session = s; S.match = {scenario, seed}; S.archiveId = null; S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = null;
+    S.session = s; S.match = {scenario, seed}; S.archiveId = null; S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = null; S.insights = [];
     archiveUI?.reset();
     el('matchLink').hidden = true; el('shareStatus').textContent = '';
     el('scrub').max = String(s.total);
@@ -471,6 +500,7 @@ async function openSavedMatch(id, {count, settings} = {}) {
     if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(session.id), {method: 'DELETE'}).catch(() => {}); return false; }
     if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
     const review = archive.review;
+    S.insights = structuredClone(review.insights || []);
     S.session = session; S.match = {scenario: session.scenario, seed: session.seed, preserved: true}; S.archiveId = archive.id;
     S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = review.selectedMomentId;
     el('scenario').value = session.scenario; el('seed').value = String(session.seed);
@@ -529,22 +559,27 @@ async function boot() {
   });
   el('opus').addEventListener('click', async () => {
     const s = S.session;
-    if (!s || !S.opus) return;
+    if (!s) return;
+    if (S.opusPending === opusKey() || drawSavedInsight() || !S.opus) return;
     const k = opusKey(), body = {sessionId: s.id, count: S.cursor, ...view()}, btn = el('opus'), out = el('opusResult');
     const current = () => S.session === s && opusKey() === k;
-    S.opusKey = k; btn.disabled = true; out.textContent = t().opusWait;
+    S.opusKey = k; S.opusPending = k; btn.disabled = true; out.textContent = t().opusWait;
     try {
       for (let i = 0; i < 60 && current(); i++) {
         const d = await api('/api/opus-commentary', 'POST', body);
         if (!current()) return;
-        if (d.state === 'ready' && d.sessionId === s.id && d.recordedCount === body.count) { out.textContent = `${t().opusAt(d.recordedCount)} · ${fmt(d.frameSecond)} · ${d.caption} ${d.text}`; return; }
+        if (d.state === 'ready' && d.sessionId === s.id && d.recordedCount === body.count) {
+          rememberInsight(d);
+          out.textContent = `${t().opusAt(d.recordedCount)} · ${fmt(d.frameSecond)} · ${d.caption} ${d.text}`;
+          return;
+        }
         if (d.state !== 'pending') { out.textContent = t().opusFail; return; }
         if (i === 3) out.textContent = t().opusSlow;
         await new Promise(r => setTimeout(r, 3000));
       }
       if (current()) out.textContent = t().opusSlow;
     } catch (e) { if (current()) out.textContent = e.status === 429 ? t().opusBusy : t().opusFail; }
-    finally { btn.disabled = !S.opus; }
+    finally { if (S.opusPending === k) S.opusPending = null; btn.disabled = S.opusPending === opusKey() || (!S.opus && !currentInsight()); }
   });
   document.addEventListener('keydown', e => {
     if (e.target.closest('input,select,textarea,button') || e.altKey || e.ctrlKey || e.metaKey) return;
@@ -561,7 +596,7 @@ async function boot() {
   archiveUI = createArchiveUI({
     snapshot: () => ({sessionId: S.session?.id, match: S.match, label: S.session?.label,
       hasFrame: !!S.frame && S.frame.sessionId === S.session?.id && S.frame.count === S.cursor,
-      cursor: S.cursor, view: view(), event: S.frame?.event, eventLabel: S.frame?.event ? eventLine(S.frame.event) : '',
+      insights: S.insights, cursor: S.cursor, view: view(), event: S.frame?.event, eventLabel: S.frame?.event ? eventLine(S.frame.event) : '',
       selectedMomentId: S.events.some(event => event.id === S.selectedMomentId && event.type === 'loss') ? S.selectedMomentId : null,
       filters: {outcome: el('reviewFilter').value, period: el('reviewPeriod').value, feedTeam: el('feedTeam').value, feedType: el('feedType').value}}),
     onSaved: id => { S.archiveId = id; syncMatchLink(true); },
