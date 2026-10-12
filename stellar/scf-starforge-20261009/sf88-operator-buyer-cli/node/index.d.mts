@@ -204,6 +204,25 @@ export class Operation {
   /** Reads saved output only. This method never launches a native buyer. */
   recover(): Promise<BuyerResult | null>;
   inspect(): Promise<OperationStatus>;
+  /** Inspect the original definitive unpaid result and any explicit successor; read-only. */
+  inspectUnpaidContinuation(): Promise<UnpaidContinuationStatus>;
+  /** Prepare one selected successor. Does not execute or authorize a payment. */
+  prepareUnpaidContinuation(options: {
+    intentId: string; expectedResultSha256: string; reason: string; signal?: AbortSignal;
+  }): Promise<Operation>;
+  /** Follow an already-prepared explicit lineage; no preparation or execution. */
+  followUnpaidContinuation(): Promise<Operation>;
+}
+export interface UnpaidContinuationStatus {
+  intentId: string; eligible: boolean; reason: string; resultSha256: string | null;
+  source: {
+    intentId: string; operationSha256: string; configSha256: string; bodySha256: string;
+    ticketSha256: string | null; requestSha256: string; attemptSha256: string;
+    resultSha256: string; stdoutSha256: string; evidenceSha256: string; nativeWorkspace: string | null;
+  } | null;
+  continuation: {
+    intentId: string; reason: string; createdAt: string; state: 'PREPARING' | 'PREPARED'; choiceSha256: string;
+  } | null;
 }
 export class BuyerResult extends VerifiedFile {
   readonly record: ResultRecord;
