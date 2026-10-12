@@ -26,6 +26,7 @@ import { ckanWorkspaceTools } from './catalog/ckan-workspace.mjs';
 import { tenderlyWorkspaceTools } from './catalog/tenderly-workspace.mjs';
 import { opencageWorkspaceTools } from './catalog/opencage-workspace.mjs';
 import { stellarExpertWorkspaceTools } from './catalog/stellar-expert-workspace.mjs';
+import { nwsWorkspaceTools } from './catalog/nws-workspace.mjs';
 import { coingeckoWorkspaceTools } from './catalog/coingecko-workspace.mjs';
 import { redisWorkspaceTools } from './catalog/redis-workspace.mjs';
 import { usaSpendingWorkspaceTools } from './catalog/usaspending-workspace.mjs';
@@ -90,6 +91,7 @@ const familyTools = {
   tenderlyWorkspaces: tenderlyWorkspaceTools(tool),
   opencageWorkspaces: opencageWorkspaceTools(tool),
   stellarExpertWorkspaces: stellarExpertWorkspaceTools(tool),
+  nwsWorkspaces: nwsWorkspaceTools(tool),
   coingeckoWorkspaces: coingeckoWorkspaceTools(tool),
   redisWorkspaces: redisWorkspaceTools(tool),
   usaSpendingWorkspaces: usaSpendingWorkspaceTools(tool),
@@ -183,6 +185,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.tenderlyWorkspaces,
   ...familyTools.opencageWorkspaces,
   ...familyTools.stellarExpertWorkspaces,
+  ...familyTools.nwsWorkspaces,
   ...familyTools.coingeckoWorkspaces,
   ...familyTools.redisWorkspaces,
   ...familyTools.usaSpendingWorkspaces,

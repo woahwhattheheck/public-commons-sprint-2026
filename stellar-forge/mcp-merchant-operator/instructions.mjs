@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_nws_",
+    "text": "For site-weather work, select a host-declared NWS workspace and its original UUID. Read the current schema and revision before changing a site, capture, station, annotation, dataset or merchant. Keep the same operationId and exact request after an interrupted reply; inspect the original journal before continuing. Source import uses an exact host-selected package alias and hash. Preserve point mappings, station selection, provider times, unit codes, nulls, coverage and original response bytes. Distinguish cached response bodies from actual wire responses when downloading revalidated source. Query the native dataset with its original URL-encoded query string. Receive only the ordered completed original page intents and retain all five original customer files. Use SHA-pinned byte chunks and the maintained nws-transfer.json receiver to continue a download and reopen the full original files offline."
+  },
+  {
     "prefix": "merchant_n8n_",
     "text": "For n8n merchants, use the configured workspace alias and inspect merchant_n8n_status for the original automation definitions and current worker. Prepare with a retained request UUID and the complete input; the exact retry recovers the same private claim handoff. Review the full job and dispatch before changing their selected revisions. Renew claims with the original UUID, reason and revision; inspect the same job after uncertain cancel, retry or execution recovery. Reconcile an uncertain dispatch against its actual configured workflow and job input before explicitly authorizing a rerun. Export at both current job and dispatch revisions with a stable request UUID; retain exportId and manifestFile.sha256. Use inspect-n8n, download-n8n and reopen-n8n to receive all original files with the same alias, endpoint, manifest digest and private directory across interruption. The original merchant remains the sole job and dispatch owner shared with Applications and its browser."
   },
