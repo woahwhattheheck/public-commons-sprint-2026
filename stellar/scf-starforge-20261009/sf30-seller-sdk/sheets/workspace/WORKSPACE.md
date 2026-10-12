@@ -347,3 +347,7 @@ maintained sheets-source command.
 The original capture, declaration, source, OAuth, publisher, scheduler, dataset
 version and buyer engines are reused directly. A source authoring revision is
 distinct from an original publisher plan and a published dataset snapshot.
+
+## Merchant deployment
+
+After the original publisher records a matching PUBLISHED run, the **Merchant deployment** panel reviews its exact source version and public merchant terms, prepares the original five-file dataset package and stages an immutable SF82 release. It opens the original deployment console for native comparison, selection, start, restart, drain, rollback and receiving. The same source workspace owns that console; closing the workspace drains its owned merchant. Reopen retains packages and selection without starting a merchant. The [deployment guide](../DEPLOYMENT.md) provides the complete browser, CLI, MCP, file download and request recovery workflow, including the original dataset binding and rollback semantics.

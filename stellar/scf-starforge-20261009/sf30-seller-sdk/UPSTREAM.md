@@ -10,6 +10,11 @@ An API owner supplies two small files: its ordinary seller configuration and
 its upstream bindings. Existing OpenAPI-derived `offer` routes work too; the
 launcher does not replace their descriptions, schemas or payment terms.
 
+For proxy-managed merchant hosts, [named transport profiles](UPSTREAM_TRANSPORT.md)
+retain the selected environment reference in the same upstream file and SF82
+release review. JSON, file, OAuth and finite streaming requests use the original
+exchange and close with their accepted source work.
+
 For an existing event or record source, the [streaming workflow](STREAMING.md)
 uses these same bindings with `responseMode: "sse"` or `"ndjson"`. It includes
 a real finite telemetry backend, explicit payment-flow examples, byte/time
@@ -123,10 +128,12 @@ contain whole named segments, such as `/v1/items/:itemId`. Those names must
 exist in the original seller route, such as `/items/:itemId`. Values are read
 from the original validated `pathParams` and encoded as individual segments;
 URLs, dot traversal, slashes and encoded-slash inputs cannot select a new host
-or escape the configured path. A fixed public hostname is resolved at socket
-creation using the original SF31 public-address policy. All answers must pass;
-one copied address is supplied to the shared transport's socket lookup.
-Normal TLS certificate and hostname verification remain enabled.
+or escape the configured path. On the default direct route, the fixed public
+hostname is resolved at socket creation using the original SF31 public-address
+policy. All answers must pass; one copied address is supplied to the shared
+transport's socket lookup. An explicitly selected environment-proxy profile
+uses the trusted proxy's target resolution described in [UPSTREAM_TRANSPORT.md](UPSTREAM_TRANSPORT.md).
+Normal TLS certificate and hostname verification remain enabled for both routes.
 
 For a backend on the **same machine**, `http://127.0.0.1:PORT` is also supported
 with `--allow-loopback-upstream`. That explicit flag does not enable other
@@ -295,3 +302,13 @@ recovery. The transport owner's acceptance exercises the same shared transport.
 These local checks do not claim an external merchant API request or a Stellar
 network payment. One actual merchant endpoint and its original native payment
 flow remain the merchant onboarding exercise, not a new test framework.
+
+## Opening an unpaid offer before installing provider credentials
+
+The original `upstream-serve.mjs` launcher can start in `CHALLENGE_ONLY` mode with valid `headerEnv` and OAuth environment references whose values are not installed yet. The full origins, paths, methods, header names, variable names, OAuth declaration, request limits and merchant routes are still validated. No substitute credential is generated, and no environment value is added to the exported package.
+
+The native launcher enables `deferCredentials` only when it has no facilitator and is not running `--check`. Paid launches and `--check` keep their existing eager credential validation. Install the real provider credentials and restart with the reviewed facilitator configuration before serving paid work. The launcher retains one private environment snapshot for that lifetime.
+
+Embedders may explicitly pass `{deferCredentials: true}` to `compileUpstreamBindings`, `createUpstreamHandlers` or `createUpstreamApplication`. Static header values then resolve through the original shared handler's server-owned headers factory. Resolution runs inside the admitted backend attempt, after capacity admission and before DNS or an HTTP request. Missing, empty, oversized or invalid header values return the original `503 UPSTREAM_CONFIGURATION_UNAVAILABLE` outcome with no backend dispatch. OAuth retains its original lazy token provider; it validates the actual client credentials before starting a token request. Public snapshots do not contain credential values.
+
+This does not defer the merchant's local durable-operation encryption key: configured idempotency admission and stored-operation recovery still require their existing private `keyEnv`. It also does not add a provider retry or alter the payment gate, request/response validation, cache partitioning, or release/package identities.
