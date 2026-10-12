@@ -1,16 +1,27 @@
 # Continue a reserved authorization that never reached dispatch
 
-A native attempt can finish signing an authorization in memory and then lose its filesystem before the signed request is sent. The original transport recorder distinguishes that state from a request whose delivery is uncertain. `Operation.prepareUndispatchedContinuation()` prepares one explicitly selected successor from the retained original request. The successor uses the original Node Buyer review, operator approval, reservation and execution path.
+A native attempt can lose its filesystem after receiving the original payment-required response, or after creating an authorization in memory, before the signed request is sent. The original transport recorder distinguishes that state from a request whose delivery is uncertain. `Operation.prepareUndispatchedContinuation()` prepares one explicitly selected successor from the retained original request. The successor uses the original Node Buyer review, operator approval, reservation and execution path.
 
 This continuation applies to an interrupted direct Node operation whose final native result or evidence was not fully recorded. The source reader must establish all of the following from the existing files:
 
 - The original operation, configuration, request body, ticket and attempt still have their recorded identities.
 - The full native wire reader acquires the original writer lock and validates every retained record. The writer is inactive and there is no signed-dispatch record.
 - The actual generated workspace signer uses the reviewed original environment signer and authorization flow. Its complete source chain is recognized and hash-bound.
-- The original approved request and accepted payment terms match the retained signing input.
+- The original approved request and accepted payment terms match the retained signing input. If the signer was never entered, the original SF31 client reconstructs that input from the retained unsigned 402 response using the same request and term-selection logic; the original SF54 mapper must produce the exact approved request.
 - The original SF36 HMAC audit returns this same request in the `reserved` state, with actual amount zero and empty receipt and proof references.
 
-The signer may have created an authorization in memory. That fact is retained in the source snapshot. The original authorization path builds, simulates and signs; the paid merchant request is performed by the later guarded transport. The durable dispatch marker precedes that transport. The validated absence of this marker supplies the relevant execution boundary.
+When signing was entered, the signer may have created an authorization in memory. The source snapshot preserves that distinction from the earlier response-only boundary. The original authorization path builds, simulates and signs; the paid merchant request is performed by the later guarded transport. The durable dispatch marker precedes that transport. The validated absence of this marker supplies the relevant execution boundary.
+
+## Two original transport boundaries
+
+| Retained wire state | Original input used by the reader | Returned authorization scope |
+| --- | --- | --- |
+| `SIGNING_STARTED_NOT_DISPATCHED`, or another validated state after signing began with no signed dispatch | The exact retained `signing-input` and the reviewed native authorization source | `signedAuthorizationMayExist: true` |
+| `UNSIGNED_RESPONSE_HEADERS_RETAINED`, with no signing records | The original unsigned 402 response, request URL, method, headers and exact body, passed through the original SF31 client | `signedAuthorizationMayExist: false` |
+
+The earlier 402 reader supplies a single retained response to the original SF31 transport and captures its immutable approval intent with a callback that always declines. It provides no real network transport and never invokes the signer. The original SF54/SF36 mapping then verifies the caller's supplied approved request and SHA256. Both paths re-read the complete inactive wire and original source identities before returning.
+
+The returned `signerSources` is a map from each source role to its exact path, byte count and SHA256. Existing signing-input snapshots keep their original values and canonical digest when the earlier-gate support is installed.
 
 ## Select the existing operation
 
@@ -88,3 +99,5 @@ The authorization source reader returns a safe metadata snapshot. Signed payload
 ## Actual receiving case
 
 The first receiving case is the retained OpenAlex greenhouse ground-source page-three operation. Its previous expiry successor entered the original signer, then encountered `ENOSPC`. The native stdout survived while the final SDK result file did not. The full recorder read returned `SIGNING_STARTED_NOT_DISPATCHED`, an inactive writer, and four records ending at `signing-input`. This path turns those recorded facts into the next source-bound original operation while preserving the earlier reservations and accepted source pages.
+
+A second actual receiving case retained the unsigned 402 headers and the original operator-approved request before `ENOSPC` prevented entry to the signer. The reader reconstructed the exact original request, returned `UNSIGNED_RESPONSE_HEADERS_RETAINED` with `signingEntered: false`, and retained the preceding case's snapshot byte-for-byte. Preparing another successor still requires the original reserved-row audit and usable destination storage.
