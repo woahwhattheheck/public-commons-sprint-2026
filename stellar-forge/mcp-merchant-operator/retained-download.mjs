@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { resolve, join, dirname } from 'node:path';
 import { MCP_VERSION } from '../mcp-paid-agent/http-tools.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
-import { failure, identifier, privateSupportDirectory, writePrivate } from './config.mjs';
+import { failure, identifier, privateSupportDirectory, writePrivate } from './host-files.mjs';
 import { acquireStateLease } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');

@@ -1,6 +1,8 @@
 // MIT. Merchant configuration around the original OpenAPI compiler and SF30 upstreams.
 import { createHash, randomUUID } from 'node:crypto';
-import { readFile, writeFile, lstat, mkdir, rename, rm } from 'node:fs/promises';
+import { packageName } from './package-name.mjs';
+export { packageName } from './package-name.mjs';
+import { readFile, writeFile, lstat, mkdir, rename, rm, open } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { importOpenApi, createOpenApiResolver } from '../importer.mjs';
@@ -270,10 +272,6 @@ async function regular(path, limit=LIMIT) {
   if (bytes.length > limit) fail('Local file grew beyond its limit');
   return bytes;
 }
-export function packageName(name) {
-  if (typeof name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(name)) fail('Package name: 1–64 letters, numbers, underscores or hyphens');
-  return name;
-}
 export async function privateParent(path) {
   const full = resolve(path), info = await lstat(full);
   if (!info.isDirectory() || process.platform !== 'win32' && (info.mode & 0o077) !== 0) fail('Use an existing private output directory (mode 0700)');
@@ -330,6 +328,41 @@ async function requireAbsentPackage(folder) {
   throw Object.assign(new Error('Package name already exists. Save under a new name.'), {
     code: 'EEXIST', path: folder, syscall: 'mkdir',
   });
+}
+
+/** Publish a complete original package under an immutable name.
+ * The host-owned builder receives a private, valid package directory so the
+ * original readers can inspect its complete bytes before publication. */
+export async function publishPackage({parent,name}, build) {
+  const base=await privateParent(parent), folder=join(base,packageName(name));
+  if(typeof build!=='function') fail('Package publication requires its original host builder');
+  // Keep this lock inode: unlinking it could split concurrent publishers.
+  // The original kernel lease releases automatically if the writer is killed.
+  const lockPath = join(base, '.sf61-package-' + name + '.lock');
+  const lease = await operationLease(lockPath);
+  const stagingParent = join(base, '.sf61-package-' + name + '.pending-' + randomUUID());
+  const staging = join(stagingParent,name);
+  let ownsStaging = false;
+  try {
+    await requireAbsentPackage(folder);
+    await mkdir(stagingParent, {mode:0o700});
+    ownsStaging = true;
+    await mkdir(staging, {mode:0o700});
+    const result=await build({folder,staging,stagingParent,name});
+    const held = await lease.stat(), named = await lstat(lockPath);
+    if (!named.isFile() || held.dev !== named.dev || held.ino !== named.ino || held.nlink !== 1)
+      throw new Error('Package publication lease changed during preparation');
+    // rename() can replace an empty directory; every original publisher holds
+    // this same destination lease and checks absence before its final rename.
+    await requireAbsentPackage(folder);
+    await rename(staging, folder);
+    const parentHandle=await open(base,'r');
+    try { await parentHandle.sync(); } finally { await parentHandle.close(); }
+    return result;
+  } finally {
+    try { if (ownsStaging) await rm(stagingParent, {recursive:true,force:true}); }
+    finally { await lease.close(); }
+  }
 }
 
 /** Create a portable private package and the actual original compiler output. */
@@ -420,16 +453,7 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
     'The original API description remains unchanged. No endpoint was probed during preparation.',
     '', '## Routes', '', ...prepared.preview.routes.map(r => '- ' + r.method + ' ' + r.publicUrl + ' -> ' + r.upstream + ' (' + r.amountAtomic + ' atomic units)'), ''
   ].join('\n');
-  // Keep this lock inode: unlinking it could split concurrent publishers.
-  // The original kernel lease releases automatically if the writer is killed.
-  const lockPath = join(base, '.sf61-package-' + name + '.lock');
-  const lease = await operationLease(lockPath);
-  const staging = join(base, '.sf61-package-' + name + '.pending-' + randomUUID());
-  let ownsStaging = false;
-  try {
-    await requireAbsentPackage(folder);
-    await mkdir(staging, {mode:0o700});
-    ownsStaging = true;
+  return publishPackage({parent:base,name}, async ({staging}) => {
     for (const [file,content] of Object.entries(files)) await writeFile(join(staging,file), content, {flag:'wx',mode:0o600});
     await compileSeller(['--spec',join(staging,'facade-openapi.json'),'--config',join(staging,'selections.json'),
       '--service-bindings',join(staging,'route-bindings.json'),'--out',join(staging,'compiled')],{report:false});
@@ -437,18 +461,6 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
     await writeFile(join(staging,'merchant-package.json'), manifestBytes, {flag:'wx',mode:0o600});
     // Commands refer to the published name, never the private compiler staging.
     await writeFile(join(staging,'RUN.md'), guide, {flag:'wx',mode:0o600});
-    const held = await lease.stat(), named = await lstat(lockPath);
-    if (!named.isFile() || held.dev !== named.dev || held.ino !== named.ino || held.nlink !== 1)
-      throw new Error('Package publication lease changed during compilation');
-    // rename() can replace an empty directory; absence is checked while every
-    // original savePackage caller holds the same destination lease.
-    await requireAbsentPackage(folder);
-    await rename(staging, folder);
-    ownsStaging = false;
     return {name, folder, manifest, command, preview:prepared.preview};
-  } finally {
-    try { if (ownsStaging) await rm(staging, {recursive:true,force:true}); }
-    finally { await lease.close(); }
-  }
+  });
 }
-

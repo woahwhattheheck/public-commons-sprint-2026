@@ -27,7 +27,7 @@ export function executeJob(source, row, attempt, { env = process.env, signal } =
     };
     try {
       worker = new Worker(new URL('./runner.mjs', import.meta.url), {
-        workerData: { application: source.identity.application, applicationSha256: source.identity.applicationSha256,
+        workerData: { application: source.applicationPath ?? source.identity.application, applicationSha256: source.identity.applicationSha256,
           functionId: row.functionId, input: row.input, jobId: row.id, attemptId: attempt.id,
           output: definition.output, maxOutputBytes: definition.maxOutputBytes },
         env: environment, execArgv: [], stdout: true, stderr: true,

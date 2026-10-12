@@ -1,5 +1,6 @@
 // MIT. Private industrial operator UI; original plan JSON remains the interchange format.
 import { mountQueryAuthor } from './author.mjs';
+import { mountCloudDelivery } from '/cloud.mjs';
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pretty = value => JSON.stringify(value, null, 2);
@@ -13,6 +14,7 @@ const key = urlKey ?? sessionStorage.getItem('duckdb-workspace-key');
 let data, editor, revision = 0, dirty = false, busy = false, review = null;
 let selectedQuery = '', selectedRoute = 0, selectedPackage = '', activeTab = 'queries', previewResult;
 const previewInputs = new Map();
+let cloudUi;
 
 function report(message, error = false) {
   const box = $('#message'); box.hidden = !message; box.textContent = message;
@@ -21,16 +23,23 @@ function report(message, error = false) {
 function setBusy(value) {
   busy = value; document.body.classList.toggle('busy', value);
   for (const button of document.querySelectorAll('button')) button.disabled = value || button.dataset.disabled === 'true';
-  for (const input of document.querySelectorAll('input,textarea,select')) input.disabled = value;
+  for (const input of document.querySelectorAll('input,textarea,select')) input.disabled = value || input.dataset.disabled === 'true';
 }
-async function api(path, payload) {
-  const response = await fetch(path, { method: payload === undefined ? 'GET' : 'POST',
-    headers: { 'x-duckdb-workspace': key ?? '', ...(payload === undefined ? {} : { 'content-type': 'application/json' }) },
-    ...(payload === undefined ? {} : { body: JSON.stringify(payload) }) });
-  const value = await response.json();
+async function api(path, payload, options = {}) {
+  const binary = options.binary === true;
+  const response = await fetch(path, { method: options.method ?? (payload === undefined ? 'GET' : 'POST'),
+    headers: { 'x-duckdb-workspace': key ?? '', ...(payload === undefined ? {} : {
+      'content-type': binary ? 'application/octet-stream' : 'application/json' }) },
+    ...(payload === undefined ? {} : { body: binary ? payload : JSON.stringify(payload) }) });
+  let value;
+  try { const text = await response.text(); value = text ? JSON.parse(text) : {}; }
+  catch {
+    const error = new Error('The workspace response was interrupted or unreadable. Refresh its retained operation before retrying.');
+    error.status = response.status; throw error;
+  }
   if (!response.ok) {
     const error = new Error(value.message ?? value.error ?? 'The operation could not complete.');
-    error.code = value.error; throw error;
+    error.code = value.error; error.status = response.status; throw error;
   }
   return value;
 }
@@ -80,6 +89,7 @@ function markEdited() {
 }
 function showTab(name) {
   activeTab = name;
+  if (name === 'cloud') cloudUi?.render(data?.cloud);
   for (const node of document.querySelectorAll('.tab-panel')) node.hidden = node.id !== name;
   for (const button of document.querySelectorAll('[data-tab]')) {
     if (button.dataset.tab === name) button.setAttribute('aria-current', 'page');
@@ -359,6 +369,35 @@ const authorUi = mountQueryAuthor({ root: $('#query-author'), api, perform, repo
     editor.routes = editor.routes.filter(route => route.query !== name); markEdited(); render();
     report('Removed ' + name + ' and its draft routes. Earlier saved revisions retain their definitions.');
   },
+});
+
+cloudUi = mountCloudDelivery($('#cloud-workspace'), {
+  api, perform,
+  getWorkspace: () => ({ ...data, merchantDirty: dirty, merchantRevision: revision }),
+  download: async (name, content, type, path) => {
+    if (!path) return download(name, content, type);
+    const target = new URL(path, location.origin);
+    if (target.origin !== location.origin || !target.pathname.startsWith('/api/cloud/'))
+      throw new Error('The requested source file is outside this workspace.');
+    const response = await fetch(target.pathname + target.search, { headers: { 'x-duckdb-workspace': key ?? '' } });
+    if (!response.ok) {
+      const failure = await response.json().catch(() => ({}));
+      throw new Error(failure.message ?? failure.error ?? 'The retained source download could not complete.');
+    }
+    download(name, await response.blob(), response.headers.get('content-type') ?? type);
+  },
+  beforeSelect: async context => {
+    if (dirty && context.dirtyChoice === 'save') {
+      review = null; await saveDraft();
+    }
+  },
+  onSelected: async (_result, context) => {
+    review = null; previewResult = undefined; selectedQuery = '';
+    await refresh({ replaceEditor: context.dirtyChoice !== 'keep' });
+    if (context.dirtyChoice === 'keep' && dirty) remember();
+    showTab('author');
+    report('The complete source edition is selected. Review native relations and query choices before preparing its merchant package.');
+  }
 });
 
 await perform('Opening private merchant workspace…', async () => {

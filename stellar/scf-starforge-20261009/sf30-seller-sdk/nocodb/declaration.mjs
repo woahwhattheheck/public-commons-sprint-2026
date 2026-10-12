@@ -23,7 +23,7 @@ export function identifier(value, label = 'ID') {
   if (typeof value !== 'string' || !ID.test(value) || RESERVED.has(value)) throw fault('NOCODB_' + label + '_INVALID');
   return value;
 }
-export function binding(value) {
+export function binding(value, { allowUnordered = false } = {}) {
   if (value.apiVersion !== 'v3') throw fault('NOCODB_API_V3_REQUIRED');
   let url;
   try { url = new URL(value.server); } catch { throw fault('NOCODB_SERVER_INVALID'); }
@@ -35,7 +35,7 @@ export function binding(value) {
   if (viewId !== null) identifier(viewId, 'VIEW_ID');
   if (where !== null && (typeof where !== 'string' || !where.length || where.length > 8192 || /[\u0000-\u001f\u007f]/.test(where)))
     throw fault('NOCODB_FILTER_INVALID');
-  if (!Array.isArray(value.sourceOrder) || !value.sourceOrder.length || value.sourceOrder.length > 8)
+  if (!Array.isArray(value.sourceOrder) || !allowUnordered && !value.sourceOrder.length || value.sourceOrder.length > 8)
     throw fault('NOCODB_SOURCE_ORDER_REQUIRED', 'Choose an explicit stable source order, including the native unique identity fields.');
   const seen = new Set();
   const sourceOrder = value.sourceOrder.map(item => {
@@ -93,14 +93,14 @@ export function selectedFields(queries) {
   if (!result.size) throw fault('NOCODB_PUBLIC_SOURCE_FIELD_REQUIRED', 'Declare at least one actual public field in addition to any record identity.');
   return [...result].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([id, type]) => ({ id, type }));
 }
-export function restOptions(config) {
+export function restOptions(config, { allowUnordered = false } = {}) {
   const connection = config.connection;
   only(connection, ['kind', 'tokenEnv', 'allowHttp', 'pageSize', 'maxPageBytes', 'maxCaptureBytes',
     'maxPages', 'maxRows', 'timeoutMs', 'requestIntervalMs'], 'NOCODB_REST_CONNECTION_INVALID');
   if (connection.kind !== 'rest' || typeof connection.tokenEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(connection.tokenEnv))
     throw fault('NOCODB_TOKEN_REFERENCE_REQUIRED', 'Reference an existing NocoDB read token through its environment variable.');
   if (connection.allowHttp !== undefined && typeof connection.allowHttp !== 'boolean') throw fault('NOCODB_HTTP_OPTION_INVALID');
-  const selected = binding(config), url = new URL(selected.server);
+  const selected = binding(config, { allowUnordered }), url = new URL(selected.server);
   if (url.protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) && connection.allowHttp !== true)
     throw fault('NOCODB_HTTPS_REQUIRED', 'Use HTTPS, or explicitly approve this existing private HTTP host in the source file.');
   return { tokenEnv: connection.tokenEnv,
@@ -123,12 +123,12 @@ export async function readNocoDBSourceFile(filename, { allowUnprojected = false 
   only(config, ['schema', 'server', 'apiVersion', 'baseId', 'tableId', 'viewId', 'where', 'sourceOrder', 'connection', 'queries'],
     'NOCODB_SOURCE_CONFIG_INVALID');
   if (config.schema !== 'stellar-forge.nocodb-source.v1') throw fault('NOCODB_SOURCE_CONFIG_INVALID');
-  const selected = binding(config), queries = compileQueries(config.queries, allowUnprojected);
+  const selected = binding(config, { allowUnordered: allowUnprojected }), queries = compileQueries(config.queries, allowUnprojected);
   if (config.connection?.kind === 'capture') {
     only(config.connection, ['kind', 'file', 'sha256'], 'NOCODB_CAPTURE_CONNECTION_INVALID');
     if (typeof config.connection.file !== 'string' || !config.connection.file || config.connection.file.includes('\0') ||
         !HASH.test(config.connection.sha256 ?? '')) throw fault('NOCODB_CAPTURE_CONNECTION_INVALID');
-  } else restOptions(config);
+  } else restOptions(config, { allowUnordered: allowUnprojected });
   return { config, binding: selected, queries, original, hash: digest(original),
     selectionHash: Object.keys(queries).length ? identity(sourceSelection(config, queries)) : null,
     captureFile: config.connection.kind === 'capture' ? resolve(dirname(filename), config.connection.file) : null };

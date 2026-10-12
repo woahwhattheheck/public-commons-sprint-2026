@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>NocoDB · Source workspace</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<a class="skip" href="#main">Skip to workspace</a>
+<header><div><strong>STELLAR FORGE</strong><h1>NocoDB source workspace</h1><p>Capture · review · retain · publish</p></div><div id="summary" class="summary">Opening private workspace…</div></header>
+<div id="notice" role="status" aria-live="polite" hidden></div>
+<section id="recovery" class="recovery" hidden aria-labelledby="recovery-title"><h2 id="recovery-title">Retained request</h2><p><code id="recovery-id"></code></p><p id="recovery-message"></p><div class="actions"><button id="check-operation" type="button">Check original receipt</button><button id="resume-operation" type="button">Resume retained request</button><button id="retry-operation" type="button">Retry identical request</button><button id="dismiss-operation" type="button">Acknowledge recorded failure</button></div><label id="retry-file-label" hidden>Reselect the same source packet<input id="retry-file" type="file" accept=".json,application/json"></label></section>
+<nav aria-label="Workspace"><button data-view="overview" aria-current="page">Overview</button><button data-view="acquire">Capture source</button><button data-view="review">Review columns</button><button data-view="versions">Saved versions</button><button data-view="deploy">Publish &amp; operate</button></nav>
+<main id="main">
+<fieldset id="workspace-controls" disabled><legend class="visually-hidden">Source workspace controls</legend>
+<section data-panel="overview">
+<div class="section-title"><h2>Retained work</h2><button id="refresh" type="button">Refresh workspace</button></div>
+<p id="workspace-path" class="path"></p><div id="overview-stats" class="stats"></div>
+<h3>Complete observations</h3><p>Every retained observation includes the original table metadata, counts and all response pages. Capture identity and provider order remain fixed.</p><div id="captures" class="table-wrap"></div><div class="pager"><button id="captures-prev" type="button">Previous</button><span id="captures-page"></span><button id="captures-next" type="button">Next</button></div>
+<h3>Recent operations</h3><div id="operations" class="table-wrap"></div><div id="attempt-detail" hidden></div>
+</section>
+<section data-panel="acquire" hidden>
+<h2>Capture from a declared connection</h2><p class="help">This host supplies the read token. Only the selected table metadata and an explicitly requested full capture are read.</p>
+<form id="discover-form"><div class="grid"><label>Connection<select id="connection" required></select></label><label>Base ID<input id="base-id" required autocomplete="off" maxlength="128"></label><label>Table ID<input id="table-id" required autocomplete="off" maxlength="128"></label><label>View ID <span>Optional</span><input id="view-id" maxlength="128" autocomplete="off"></label></div><label>Exact provider filter <span>Optional</span><input id="where" maxlength="8192" autocomplete="off"></label><button type="submit">Inspect actual metadata</button></form>
+<div id="connection-help" class="note"></div>
+<details><summary>Previously inspected tables</summary><div id="discoveries" class="table-wrap"></div><div class="pager"><button id="discoveries-prev" type="button">Previous</button><span id="discoveries-page"></span><button id="discoveries-next" type="button">Next</button></div></details>
+<section id="acquisition" hidden><h3 id="acquisition-title">Table selection</h3><p id="acquisition-source" class="path"></p>
+<div class="grid"><label>Observation title<input id="capture-title" maxlength="128"></label><label>Query name<input id="capture-query" value="catalog" maxlength="48" pattern="[A-Za-z][A-Za-z0-9_]{0,47}"></label></div>
+<h4>Stable provider order</h4><p class="help">Include every native unique identity field. NocoDB keeps native primary keys outside ordinary fields; use <code>record_id</code> for their published identity.</p><div id="source-order"></div><button id="add-order" type="button">Add order field</button>
+<h4>Fields to capture</h4><p class="help">Choose actual scalar fields, their public aliases, types and null policy. Numeric text preserves the original JSON number token. Derived values must match the explicitly selected scalar type.</p><div id="capture-fields" class="table-wrap"></div>
+<button id="capture-live" type="button">Capture every selected page</button><p class="help">A failed observation retains its received files. A new explicit request starts a new observation.</p></section>
+<hr><h2>Import an existing complete observation</h2><p>Choose a portable NocoDB source packet created by this workspace or its <code>packet</code> command. Import verifies its original manifest, response bytes and selected fields without contacting the provider.</p>
+<form id="import-form"><div class="grid"><label>Observation title<input id="import-title" required maxlength="128"></label><label>Original source packet<input id="import-file" type="file" accept=".json,application/json" required></label></div><p id="import-summary" class="help"></p><button type="submit">Import complete original capture</button></form>
+</section>
+<section data-panel="review" hidden>
+<div class="section-title"><h2>Review source columns</h2><button id="load-current-draft" type="button">Reload saved draft</button></div><p id="draft-state">Select a retained observation to begin.</p><div id="capture-binding" class="note"></div>
+<div id="draft-editor" hidden><label>Source title<input id="draft-title" maxlength="128"></label><div class="query-controls"><label>Query<select id="query-select"></select></label><label>Query name<input id="query-name" maxlength="48"></label><button id="rename-query" type="button">Rename query</button><button id="add-query" type="button">Add full-field query</button><button id="remove-query" type="button">Remove query</button></div><p class="help">The original captured field union is retained exactly. Change aliases, scalar encodings and null handling here; choose a published column subset in the original publisher.</p><div id="draft-fields" class="table-wrap"></div><div class="actions"><button id="save-draft" type="button">Save draft</button><button id="preview-draft" type="button">Validate every row</button></div>
+<div id="preview" hidden></div><form id="save-version-form"><h3>Retain reviewed source version</h3><div class="grid"><label>Reviewer<input id="reviewer" required maxlength="128"></label><label>Change note<input id="change-note" required maxlength="2000"></label></div><button id="save-version" type="submit">Freeze and select source version</button></form></div>
+</section>
+<section data-panel="versions" hidden>
+<h2>Saved source versions</h2><p>Each version retains its exact original capture and reviewed projection. Selection prepares the source for a new publisher plan; existing plans and published editions retain their original source.</p><div id="versions" class="table-wrap"></div><div class="pager"><button id="versions-prev" type="button">Previous</button><span id="versions-page"></span><button id="versions-next" type="button">Next</button></div>
+<form id="compare-form"><h3>Compare saved versions</h3><div class="grid"><label>Earlier version<input id="compare-left" type="number" min="1" required></label><label>Later version<input id="compare-right" type="number" min="1" required></label></div><button type="submit">Compare field projections</button></form><div id="comparison"></div>
+</section>
+<section data-panel="deploy" hidden>
+<h2>Publish and operate</h2><p>The existing retained publisher prepares the public dataset, reviews its actual candidate, and records published editions and buyer delivery. These controls use the original merchant release store.</p>
+<div id="publisher-state" class="note"></div><div class="actions"><button id="open-publisher" type="button">Open original publisher</button><button id="stop-publisher" type="button">Stop publisher console</button><a id="publisher-link" target="_blank" rel="noreferrer" hidden>Open publisher window</a></div>
+<h3>Review a published edition for deployment</h3><button id="refresh-deploy" type="button">Refresh original publications</button><div id="published-runs" class="table-wrap"></div><form id="deployment-review-form"><div class="grid"><label>Source version<input id="deployment-version" type="number" min="1" required></label><label>Published run ID<input id="deployment-run" required></label></div><label>Existing merchant terms JSON<textarea id="deployment-terms" rows="8" spellcheck="false" required placeholder='{"origin":"https://…","path":"/data/…","payment":{…}}'></textarea></label><p class="help">Use the actual public origin, fixed route and original payment terms. Reviewing and preparing a package does not send a payment or activate a release.</p><button type="submit">Review original merchant package</button></form>
+<div id="deployment-review" hidden></div><button id="prepare-deployment" type="button" disabled>Prepare reviewed deployment package</button>
+<h3>Prepared packages and release operations</h3><div id="deployment-packages" class="table-wrap"></div><div class="pager"><button id="deploy-prev" type="button">Previous</button><span id="deploy-page"></span><button id="deploy-next" type="button">Next</button></div>
+<form id="stage-form"><div class="grid"><label>Prepared package request ID<input id="stage-package" required></label><label>Package source SHA256<input id="stage-sha" required pattern="[a-f0-9]{64}"></label><label>New release ID<input id="stage-id" required></label><label>Release label<input id="stage-label" required maxlength="240"></label></div><button type="submit">Stage in original release store</button></form>
+<div class="actions"><button id="open-release-console" type="button">Open original release controls</button><button id="close-release-console" type="button">Close release console</button><a id="release-link" target="_blank" rel="noreferrer" hidden>Open release window</a></div><p class="help">The original release console compares and activates the exact staged release, runs or restarts the existing merchant, and retains rollback and customer receiving. Selection and the actually running release remain visible there.</p><div id="release-state"></div>
+</section>
+</fieldset>
+</main><footer>Private local operator · Node 24 · Original NocoDB v3 source and Stellar Forge publication engines</footer>
+<script type="module" src="/browser.mjs"></script>
+</body></html>
+
