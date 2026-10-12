@@ -812,7 +812,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     saveOperatorSettings: value => receivingMutation('SAVE_OPERATOR_SETTINGS', () => receiving.saveOperatorSettings(value)),
     receivingState: () => { assertOpen(); return receiving.state(); },
     receivingOptions: (id, objectId) => { assertOpen(); return receiving.options(id, objectId); },
-    receivedReview: id => { assertOpen(); return receiving.reviewed(id); },
+    receivedReview: async id => { assertOpen(); return { ...await receiving.reviewed(id), reviewId: id }; },
     receive: value => receivingMutation('RECEIVE_OBJECT', () => receiving.receive(value)),
     reviewReceived: value => receivingMutation('REVIEW_RECEIVED_OBJECT', () => receiving.review(value)), createReceived };
 }

@@ -55,6 +55,24 @@ supplier's account limits. Provider tariffs expressed as credits, weighted
 operations or currency continue through their existing provider-specific tariff
 calculation.
 
+## Review and save account changes
+
+The maintained **Supplier accounts** application adds account and binding
+configuration to the original quota inspection workflow. It prepares a complete
+review against the merchant's working upstream file, saves that reviewed source,
+recovers interrupted saves and receives the original operator history.
+
+Open **Supplier accounts** in Applications, or use:
+
+~~~sh
+starforge supplier-accounts serve --state /private/merchant/supplier-workspace --upstreams /private/merchant/upstreams.json
+~~~
+
+Account labels, credential references, quota directories and retained call
+history stay with their original aliases. Saved limits take effect on the
+merchant's next normal start. [Configuration, source recovery, CLI and complete
+handover](workspace/README.md) describe the full operating workflow.
+
 ## Operate the account
 
 Start the original upstream seller with its existing upstream configuration and

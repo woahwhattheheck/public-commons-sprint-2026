@@ -30,10 +30,12 @@ def main():
  parser.add_argument('--out',default='/dev/dce4-wherobots-source-receiving-20261012')
  parser.add_argument('--node',default='/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node')
  parser.add_argument('--arrow-mode',choices=['archive','existing'],default='archive',help='Use the pinned retained CPython3.12 archive or an already installed native Arrow26 runtime')
- parser.add_argument('--consumer-archive',help='Existing retained c287 source carrier path; its pinned bytes and hash stay unchanged')
+ parser.add_argument('--consumer-mode',choices=['merchant','archive'],default='merchant',help='Use every native SF30/SF82 dataset from the same complete merchant receiving operation; archive preserves the earlier explicitly selected consumer route')
+ parser.add_argument('--consumer-archive',help='Optional existing retained c287 source carrier; used only with --consumer-mode archive')
  parser.add_argument('--consumer-node-modules',help='Existing complete native consumer dependency root')
  parser.add_argument('--playwright-node-modules',help='Existing installed Playwright node_modules root')
- parser.add_argument('--merchant-driver',help='Exact selected merchant_receiving.mjs in its complete original repository with the maintained host and dependencies')
+ parser.add_argument('--merchant-driver',help='Exact selected merchant_receiving.mjs in its complete original repository; defaults to the selected --source directory')
+ parser.add_argument('--managed-driver',help='Exact selected examples/managed-receiving.mjs beside source/; defaults to the same original repository')
  parser.add_argument('--library-helper',help='Explicit existing official Library upload helper; required only for save-mode library')
  parser.add_argument('--save-mode',choices=['library','local'],default='local')
  parser.add_argument('--chromium',default='/workspace/scratch/bc0850d7ba23/browser-runtime/chrome-headless-shell')
@@ -73,7 +75,7 @@ def main():
   restored_from={'path':str(resume),'bytes':resume.stat().st_size,'sha256':sha(resume),'files':len(expected)}
  site=host/'runtime/lib/python3.12/site-packages';site.mkdir(parents=True,exist_ok=True)
  delivery=host/'delivery';delivery.mkdir(exist_ok=True)
- report={'schema':'starforge.wherobots.continuous-receiving.v1','operation':'WHEROBOTS-SOURCE-RECEIVING-BD9D-20261012','started_at':now(),'source':manifest,'phases':[],'native_complete':False,'browser_complete':False,'publisher_complete':False,'merchant_complete':False,'saved':[],'resumed_from':restored_from}
+ report={'schema':'starforge.wherobots.continuous-receiving.v1','operation':'WHEROBOTS-SOURCE-RECEIVING-BD9D-20261012','started_at':now(),'source':manifest,'phases':[],'native_complete':False,'browser_complete':False,'publisher_complete':False,'merchant_complete':False,'managed_complete':False,'publisher_mode':args.consumer_mode,'saved':[],'resumed_from':restored_from}
  if (out/'receiving-progress.json').exists():
   previous=(out/'receiving-progress.json').read_bytes();atomic(out/'receiving-attempt-history'/(hashlib.sha256(previous).hexdigest()+'.json'),previous)
  def phase(name,**values):
@@ -102,6 +104,18 @@ def main():
   if target.stat().st_size!=final['size'] or git_sha(target)!=final['sha']:raise RuntimeError('Source postimage changed: '+final['path'])
  json_file(out/'selected-source.json',manifest)
  phase('all_original_source_selected',files=len(manifest['files']),bytes=sum(x['size'] for x in manifest['files']))
+ merchant_driver=Path(args.merchant_driver).resolve() if args.merchant_driver else (base_source/'interoperability/merchant_receiving.mjs').resolve()
+ merchant_source=merchant_driver.parents[1]
+ application_source=host/'application';application_source.mkdir(exist_ok=True)
+ managed_driver=Path(args.managed_driver).resolve() if args.managed_driver else merchant_source.parent/'examples/managed-receiving.mjs'
+ if not manifest.get('managed_files'):raise RuntimeError('Select the complete original managed application source in source-selection.json')
+ for item in manifest['managed_files']:
+  original_file=merchant_source.parent/item['path']
+  if not original_file.is_file() or original_file.stat().st_size!=item['size'] or git_sha(original_file)!=item['sha']:raise RuntimeError('The original managed application source differs: '+item['path'])
+  target=application_source/item['path'];target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(original_file,target)
+ expected_managed=next(x for x in manifest['managed_files'] if x['path']=='examples/managed-receiving.mjs')
+ if not managed_driver.is_file() or git_sha(managed_driver)!=expected_managed['sha']:raise RuntimeError('The selected managed receiving driver differs')
+ phase('original_managed_source_selected',files=len(manifest['managed_files']),bytes=sum(x['size'] for x in manifest['managed_files']))
  if args.arrow_mode=='archive':
   native_profile=json.loads((prepared/'arrow-original-files.json').read_text())
   archive=Path(args.runtime_archive)
@@ -152,18 +166,18 @@ def main():
  archive_path=delivery/'Wherobots_Source_Receiving.zip'
  def package():
   candidates=[]
-  for root,prefix in [(source,'source'),(out,'operation')]:
+  for root,prefix in [(source,'source'),(application_source,'application'),(out,'operation')]:
    for file in root.rglob('*'):
     if not file.is_file():continue
     if '__pycache__' in file.parts or file.name.startswith('internal-') or file.suffix in {'.png','.log'} or file.name.endswith(('-wal','-shm','.lock')):continue
     candidates.append((file,prefix+'/'+file.relative_to(root).as_posix()))
-  for name in ['browser-receiving.cjs','run_once.py','source-selection.json','arrow-original-files.json','stage-consumer.py','native-consumer.mjs','consumer-selection.json']:
+  for name in ['browser-receiving.cjs','run_once.py','source-selection.json','arrow-original-files.json','stage-consumer.py','native-consumer.mjs','consumer-selection.json','README.md']:
    candidates.append((prepared/name,'receiving/'+name))
   listing=[{'path':relative,'bytes':file.stat().st_size,'sha256':sha(file)} for file,relative in candidates]
   temporary=archive_path.with_suffix('.next')
   with zipfile.ZipFile(temporary,'w',zipfile.ZIP_DEFLATED,6) as z:
    for file,relative in candidates:z.write(file,relative)
-   z.writestr('receiving-manifest.json',json.dumps({'schema':'starforge.wherobots.receiving-package.v1','created_at':now(),'source':manifest,'files':listing,'native_complete':report['native_complete'],'browser_complete':report['browser_complete'],'publisher_complete':report['publisher_complete'],'merchant_complete':report['merchant_complete']},indent=2)+'\n')
+   z.writestr('receiving-manifest.json',json.dumps({'schema':'starforge.wherobots.receiving-package.v1','created_at':now(),'source':manifest,'files':listing,'native_complete':report['native_complete'],'browser_complete':report['browser_complete'],'publisher_complete':report['publisher_complete'],'merchant_complete':report['merchant_complete'],'managed_complete':report['managed_complete']},indent=2)+'\n')
   os.replace(temporary,archive_path)
   record={'path':str(archive_path),'bytes':archive_path.stat().st_size,'sha256':sha(archive_path),'files':len(listing)+1};report['archive']=record
   shared=Path('/dev/shm/dce4-wherobots-source-receiving.zip')
@@ -186,35 +200,49 @@ def main():
   phase('native_source_and_customer_checkpoint_saved',archive=checkpoint,library_file_id=first['library_file_id'])
  else:phase('native_source_and_customer_checkpoint_retained',archive=checkpoint)
  publisher_failure=None
- try:
-  consumer_selection=json.loads((prepared/'consumer-selection.json').read_text())
-  if args.consumer_archive:consumer_selection['path']=args.consumer_archive
-  if args.consumer_node_modules:consumer_selection['node_modules']=args.consumer_node_modules
-  json_file(host/'consumer-selection.json',consumer_selection)
-  command('original_consumer_source',[args.python,'-B',str(prepared/'stage-consumer.py'),'--selection',str(host/'consumer-selection.json'),'--out',str(host/'consumer')])
-  command('original_sf30_sf82_receiving',[args.node,'--max-old-space-size=192',str(prepared/'native-consumer.mjs'),native['sf30_package']['directory'],str(host/'consumer/consumer-source.json'),str(out/'native-publisher-receiving.json')])
-  report['publisher_complete']=True
- except Exception as error:publisher_failure=clean(error);report['publisher_error']=publisher_failure
+ if args.consumer_mode=='archive':
+  try:
+   consumer_selection=json.loads((prepared/'consumer-selection.json').read_text())
+   if args.consumer_archive:consumer_selection['path']=args.consumer_archive
+   if args.consumer_node_modules:consumer_selection['node_modules']=args.consumer_node_modules
+   json_file(host/'consumer-selection.json',consumer_selection)
+   command('original_consumer_source',[args.python,'-B',str(prepared/'stage-consumer.py'),'--selection',str(host/'consumer-selection.json'),'--out',str(host/'consumer')])
+   command('original_sf30_sf82_receiving',[args.node,'--max-old-space-size=192',str(prepared/'native-consumer.mjs'),native['sf30_package']['directory'],str(host/'consumer/consumer-source.json'),str(out/'native-publisher-receiving.json')])
+   report['publisher_complete']=True
+  except Exception as error:publisher_failure=clean(error);report['publisher_error']=publisher_failure
  merchant_failure=None
+ connection=out/'merchant-connection.json'
  try:
-  if not args.merchant_driver:raise RuntimeError('Select --merchant-driver from the complete original repository to execute the same full merchant receiving continuation')
-  merchant_driver=Path(args.merchant_driver).resolve()
   merchant_expected=next(x for x in manifest['files'] if x['path']=='interoperability/merchant_receiving.mjs')
-  merchant_source=merchant_driver.parents[1]
   for item in manifest['files']:
    original_file=merchant_source/item['path']
    if not original_file.is_file() or original_file.stat().st_size!=item['size'] or git_sha(original_file)!=item['sha']:raise RuntimeError('The merchant host product source differs: '+item['path'])
   if git_sha(merchant_driver)!=merchant_expected['sha']:raise RuntimeError('The selected original merchant receiving driver differs')
-  connection=out/'merchant-connection.json'
-  connection_value={'schema':'stellar-forge.wherobots-workspace-connection.v1','workspaces':{'reference':{'label':'Original Wherobots source receiving','directory':str(out/'source-workspace'),'workspaceId':native['source_workspace_id'],'python':str(Path(args.python).absolute()),'pythonPath':[str(site),str(source)],'inputs':{}}}}
+  def workspace_entry(label,directory,workspace_id):
+   return {'label':label,'directory':str(directory),'workspaceId':workspace_id,'python':str(Path(args.python).absolute()),'pythonPath':[str(site),str(source)],'inputs':{}}
+  connection_value={'schema':'stellar-forge.wherobots-workspace-connection.v1','workspaces':{
+   'reference':workspace_entry('Original Wherobots source receiving',out/'source-workspace',native['source_workspace_id']),
+   'customer':workspace_entry('Original independently received Wherobots customer',out/'customer-workspace',native['customer_workspace_id'])}}
   if connection.exists() and json.loads(connection.read_text())!=connection_value:raise RuntimeError('Retain the original merchant connection and runtime paths for this continuation')
   json_file(connection,connection_value);os.chmod(connection,0o600)
   command('original_whole_merchant_receiving',[args.node,'--max-old-space-size=256',str(merchant_driver),'--connection',str(connection),'--workspace','reference','--workflow-id',native['workflow_id'],'--edition-id',native['after_edition_id'],'--out',str(out/'merchant-receiving'),'--python',args.python],cwd=merchant_source)
   merchant_result=json.loads((out/'merchant-receiving/operation.json').read_text())
   if merchant_result.get('state')!='COMPLETE' or merchant_result.get('selection',{}).get('workspace_id')!=native['source_workspace_id'] or merchant_result.get('edition_id')!=native['after_edition_id']:raise RuntimeError('The complete merchant receiving result does not bind to the original operation')
   report['merchant_complete']=True
-  phase('original_whole_merchant_receiving_complete',customer=merchant_result['independent_receiving']['workspace_id'],datasets=len(merchant_result['dataset_packages']),edition_id=merchant_result['edition_id'],original_tools=len(merchant_result['tools']))
- except Exception as error:merchant_failure=clean(error);report['merchant_error']=merchant_failure
+  if args.consumer_mode=='merchant':
+   expected_datasets={x['id']:x['rows'] for x in native['datasets']}
+   actual_datasets={x['dataset_id']:x for x in merchant_result['dataset_packages']}
+   if set(expected_datasets)!=set(actual_datasets):raise RuntimeError('Native publisher receiving must include every original dataset')
+   for dataset_id,row_count in expected_datasets.items():
+    dataset=actual_datasets[dataset_id];received=dataset.get('sf30',{});page_receipt=received.get('result',{});page_file=Path(page_receipt.get('path',''))
+    if received.get('state')!='COMPLETE' or received.get('rows')!=row_count or not page_file.is_file() or page_file.stat().st_size!=page_receipt.get('bytes') or sha(page_file)!=page_receipt.get('sha256'):raise RuntimeError('The full native SF30 page result differs: '+dataset_id)
+   json_file(out/'native-publisher-receiving.json',{'schema':'starforge.wherobots.native-publisher-receiving.v2','mode':'original-merchant','completed_at':now(),'workflow_id':native['workflow_id'],'edition_id':native['after_edition_id'],'source_workspace_id':native['source_workspace_id'],'datasets':merchant_result['dataset_packages']})
+   report['publisher_complete']=True
+  phase('original_whole_merchant_receiving_complete',customer=merchant_result['independent_receiving']['workspace_id'],datasets=len(merchant_result['dataset_packages']),edition_id=merchant_result['edition_id'],original_tools=len(merchant_result['tools']),publisher_complete=report['publisher_complete'])
+  phase('complete_native_merchant_checkpoint_retained',archive=package())
+ except Exception as error:
+  merchant_failure=clean(error);report['merchant_error']=merchant_failure
+  if args.consumer_mode=='merchant' and not report['publisher_complete']:publisher_failure=merchant_failure;report['publisher_error']=merchant_failure
  browser_failure=None
  try:
   command('original_browser_receiving',[args.node,'--max-old-space-size=192',str(prepared/'browser-receiving.cjs'),str(source),str(out),args.python,args.chromium])
@@ -222,7 +250,16 @@ def main():
   if not browser.get('complete'):raise RuntimeError('Original full browser result is incomplete')
   report['browser_complete']=True
  except Exception as error:browser_failure=clean(error);report['browser_error']=browser_failure
- report['completed_at']=now();phase('original_receiving_finalized',native_complete=True,browser_complete=report['browser_complete'],publisher_complete=report['publisher_complete'],merchant_complete=report['merchant_complete'])
+ managed_failure=None
+ try:
+  if not connection.is_file():raise RuntimeError('The original source/customer workspace connection has not been retained')
+  command('original_managed_customer_receiving',[args.node,'--max-old-space-size=256',str(managed_driver),'--connection',str(connection),'--workspace','customer','--workflow-id',native['workflow_id'],'--out',str(out/'managed-receiving'),'--python',args.python],cwd=merchant_source.parent)
+  managed_result=json.loads((out/'managed-receiving/receiving.json').read_text())
+  if managed_result.get('state')!='COMPLETE' or managed_result.get('workspace_id')!=native['customer_workspace_id'] or managed_result.get('workflow_id')!=native['workflow_id']:raise RuntimeError('The complete managed receiving result differs from the original customer')
+  report['managed_complete']=True
+  phase('original_managed_customer_receiving_complete',customer=managed_result['workspace_id'],datasets=len(managed_result['datasets']),rows=sum(x['rows'] for x in managed_result['datasets']),files=managed_result['files'])
+ except Exception as error:managed_failure=clean(error);report['managed_error']=managed_failure
+ report['completed_at']=now();phase('original_receiving_finalized',native_complete=True,browser_complete=report['browser_complete'],publisher_complete=report['publisher_complete'],merchant_complete=report['merchant_complete'],managed_complete=report['managed_complete'])
  summary=delivery/'Wherobots_Operated_Receiving.json';json_file(summary,report)
  guide=delivery/'Wherobots_Receiving_Guide.md'
  rows='\n'.join('| '+x['id']+' | '+str(x['rows'])+' | '+str(len(x['columns']))+' |' for x in native['datasets'])
@@ -257,17 +294,19 @@ The original operation/sf30-dataset/ contains the maintained SF30 configuration,
 
 ## Browser and subsequent receiving
 
-Native source receiving completed: yes. Full browser receiving completed: {'yes' if report['browser_complete'] else 'continuation retained'}. Native SF30/SF82 receiving completed: {'yes' if report['publisher_complete'] else 'continuation retained'}. Whole original merchant receiving completed: {'yes' if report['merchant_complete'] else 'continuation retained'}.
+Native source receiving completed: yes. Full browser receiving completed: {'yes' if report['browser_complete'] else 'continuation retained'}. Native SF30/SF82 receiving completed: {'yes' if report['publisher_complete'] else 'continuation retained'}. Whole original merchant receiving completed: {'yes' if report['merchant_complete'] else 'continuation retained'}. Managed customer receiving and reopen completed: {'yes' if report['managed_complete'] else 'continuation retained'}.
 
-operation/merchant-receiving/ retains the actual 27-tool source-host workflow, interrupted and restarted complete export, every source-bound dataset package, independently imported original SDK and complete typed row comparisons when completed. Its connection points to the original source workspace selected above; the source job and its two editions remain the same operation.
+operation/merchant-receiving/ retains the actual 27-tool source-host workflow, interrupted and restarted complete export, every source-bound dataset package, independently imported original SDK and complete typed row comparisons when completed. Every exported dataset also passes through native SF30 admit/handle pagination; each native-sf30-pages.json retains every response, native reader source identities and full SF82 companion descriptors. Its connection points to the original source workspace selected above; the source job and its two editions remain the same operation.
 
 operation/browser/browser-receiving.json records the actual desktop and 390-pixel customer actions, original byte downloads, full row reads, comparison, export, fresh receiving and reopen when completed. Every recorded download is included. The independently created browser customer remains under operation/browser-customer-workspace/.
+
+operation/managed-receiving/ retains the original Applications launcher operating the already received native customer. It contains every row from every edition, the complete original handover, actual process identities, Stop and same-workspace reopen. application/ holds the selected source-owned launcher, provider and receiving guide; use those files at their original Wherobots directory in the selected complete repository.
 
 ## Source and reproduction
 
 The selected source is the original cumulative source {manifest['revision']}. receiving/source-selection.json and receiving-manifest.json list every exact selected file.
 
-The prepared receiving runner supports --arrow-mode existing for an already installed Arrow26 environment, with --python selecting its actual SDK interpreter. Existing worker paths can be supplied through --consumer-archive, --consumer-node-modules, --playwright-node-modules, --node and --chromium; original source-carrier bytes, hash and engine versions remain checked. --merchant-driver selects the actual source/interoperability/merchant_receiving.mjs in its complete original repository layout, including its maintained host and dependencies. Local delivery is the default; an existing official save helper is selected explicitly when needed. The complete original source/interoperability/native_receiving.py is the original receiving driver. Its output-directory stages preserve completed steps. To continue a transferred receiving checkpoint with the prepared runner, use --resume-archive with that exact ZIP and keep the original --out path recorded in operation/operation.json; the runner verifies every member before reopening the same workspace identities. --save-mode local retains the complete files for an equipped worker's existing delivery route; the explicit --save-mode library --library-helper route saves the native checkpoint and replaces it with the completed delivery. Runtime versions and full original Arrow recovery identity remain in operation/runtime-originals.json and operation/operation.json. The complete customer journey is receiving/browser-receiving.cjs.
+The prepared receiving runner supports --arrow-mode existing for an already installed Arrow26 environment, with --python selecting its actual SDK interpreter. Existing worker paths can be supplied through --playwright-node-modules, --node and --chromium. The default --consumer-mode merchant queries every dataset using the current repository's original SF30/SF82 engines. The earlier --consumer-mode archive route remains available with its explicit --consumer-archive and --consumer-node-modules selections and original byte/hash checks. --merchant-driver selects the actual source/interoperability/merchant_receiving.mjs in its complete original repository layout, including its maintained host and dependencies. --managed-driver selects that same repository's examples/managed-receiving.mjs; it is derived from --merchant-driver when omitted. Local delivery is the default; an existing official save helper is selected explicitly when needed. The complete original source/interoperability/native_receiving.py is the original receiving driver. Its output-directory stages preserve completed steps. To continue a transferred receiving checkpoint with the prepared runner, use --resume-archive with that exact ZIP and keep the original --out path recorded in operation/operation.json; the runner verifies every member before reopening the same workspace identities. --save-mode local retains the complete files for an equipped worker's existing delivery route; the explicit --save-mode library --library-helper route saves the native checkpoint and replaces it with the completed delivery. Runtime versions and full original Arrow recovery identity remain in operation/runtime-originals.json and operation/operation.json. The complete customer journey is receiving/browser-receiving.cjs.
 
 Customer adoption can select its existing organization, script, source collections, output definitions and SDK run under the current original commercial workshare. The same application supports reviewed native job submission, recovery, polling, logs and captured outputs through the original SDK and account configuration.
 """
@@ -279,8 +318,8 @@ Customer adoption can select its existing organization, script, source collectio
   final_saved=upload([replacement,{'local_path':str(guide),'purpose':'create_library_file','library_artifact_type':'report'},{'local_path':str(summary),'purpose':'create_library_file','library_artifact_type':'report'}])
   phase('complete_receiving_delivery_saved',archive=final,files=[{'library_file_id':x.get('library_file_id'),'path':x.get('path'),'status':x.get('status')} for x in final_saved])
  else:phase('complete_receiving_files_retained',archive=final,guide=str(guide),summary=str(summary))
- print(json.dumps({'complete':report['browser_complete'] and report['publisher_complete'] and report['merchant_complete'],'archive':final,'native':str(out/'operation.json'),'browser':str(out/'browser/browser-receiving.json'),'saved':final_saved}),flush=True)
- if browser_failure or publisher_failure or merchant_failure:raise RuntimeError(browser_failure or publisher_failure or merchant_failure)
+ print(json.dumps({'complete':report['browser_complete'] and report['publisher_complete'] and report['merchant_complete'] and report['managed_complete'],'archive':final,'native':str(out/'operation.json'),'browser':str(out/'browser/browser-receiving.json'),'managed':str(out/'managed-receiving/receiving.json'),'saved':final_saved}),flush=True)
+ if browser_failure or publisher_failure or merchant_failure or managed_failure:raise RuntimeError(browser_failure or publisher_failure or merchant_failure or managed_failure)
 if __name__=='__main__':
  try:main()
  except BaseException as error:print(json.dumps({'receiving_error':clean(str(error))}),flush=True);raise

@@ -22,6 +22,7 @@ import {
   CLICKHOUSE_SOURCE_SCHEMA,
   GRPC_SOURCE_SCHEMA,
 } from './release-source-contracts.mjs';
+import { prepareReleaseDelivery, verifyReleaseDeliveryStartup } from './release-delivery.mjs';
 import { acquireReleaseLease, releaseProcessOwner, releaseOwnerLiveness, recordedSellerAlive,
   validProcessIdentity, validReleaseLease, sameReleaseLease } from './release-process.mjs';
 import { resolveReleaseInstallation, writeReleaseInstallation } from './release-installation.mjs';
@@ -1077,6 +1078,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
         ...(record.opensearch ? { executionSha256: record.opensearch.executionSha256 } : {}) },
       options: originalOptions });
     const instanceId = randomUUID(), mode = record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
+    const settlementDelivery = { ...await prepareReleaseDelivery(root), instanceId,
+      releaseId: record.id, releaseDigest: record.digest };
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
@@ -1130,13 +1133,16 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     await atomic(join(root, 'runtime.json'), observation);
     if (exitSettled || shutdownRequested) throw new Error(failure ?? 'Original seller stopped before launch.');
     await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes,
-      facilitatorReview: record.facilitatorReview ?? null }, error => error ? fail(error) : done()));
+      facilitatorReview: record.facilitatorReview ?? null, settlementDelivery }, error => error ? fail(error) : done()));
     let report;
     try { report = await ready; } finally { clearTimeout(startupTimer); }
     if (report.originalOffersSha256 !== record.source.offersSha256 ||
         report.originalServiceConfigSha256 !== record.source.serviceConfigSha256 ||
         report.cacheControlAvailable !== Boolean(cacheRoutes.length))
       throw new Error('Original pilot reported a different release source.');
+    if (report.mode !== mode) throw new Error('Original seller reported a different payment mode.');
+    const delivery = await verifyReleaseDeliveryStartup(root, report.settlementDelivery,
+      { instanceId, releaseId: record.id, releaseDigest: record.digest, mode });
     const operations = report.operations ?? null;
     if (Boolean(record.jsonrpc || record.postgres || record.clickhouse || record.opensearch || record.grpc) !== Boolean(operations) || operations && (!/^http:\/\/127\.0\.0\.1:\d+$/.test(operations.url) ||
         operations.availability !== operations.url + '/availability' ||
@@ -1145,7 +1151,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     await originalReadback(report.listener, record, mode);
     if (exitSettled || shutdownRequested) throw new Error('Original seller stopped during startup.');
     Object.assign(observation, { listener: report.listener, phase: 'RUNNING', readyAt: new Date().toISOString(),
-      cacheControlAvailable: report.cacheControlAvailable, ...(operations ? { operations: operations.url } : {}) });
+      cacheControlAvailable: report.cacheControlAvailable, settlementDelivery: delivery,
+      ...(operations ? { operations: operations.url } : {}) });
     await atomic(join(root, 'runtime.json'), observation);
     completion = exited.then(finish);
     void completion.catch(() => {});
@@ -1156,7 +1163,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       })();
       return closing;
     };
-    return { release: publicRelease(record), url: report.listener, mode, child, observation, operations, close, completion };
+    return { release: publicRelease(record), url: report.listener, mode, child, observation, operations,
+      settlementDelivery: delivery, close, completion };
   } catch (error) {
     failure ??= error.message;
     await stopChild();

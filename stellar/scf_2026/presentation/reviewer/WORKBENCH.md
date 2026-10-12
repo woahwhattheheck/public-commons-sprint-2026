@@ -131,3 +131,26 @@ the workbench lease. It deactivates only its own private connection instance.
 The full original command/API receiving guide remains RECEIVING.md. This
 workbench adds no signer, facilitator, RPC observation, provider refresh or
 payment dispatch to the original public receiving exercise.
+
+
+## Continue the same receiving operation through Applications
+
+The complete receiver also accepts `--runtime-directory ABSOLUTE_READY_RUNTIME`.
+Select a maintained installation whose source includes the `grant-reviewer`
+contribution; the receiver checks its original installation, profile, lock and
+source manifest. It attaches that runtime through the original workspace,
+reviews and saves the already received second-operator workbench, connects the
+original managed release, starts it and reattaches to the same live operation.
+The actual browser reads the original complete Buyer result through that managed
+child. Original Stop drains both the workbench and its Buyer. A second start is
+first saved without dispatch, then recovered by reopening the controller and
+continuing its exact request ID. Final Stop and controller reopening retain the
+same application, release, workbench, quotes and result bytes.
+
+The option can also extend an already completed direct receiving operation.
+Pass the same `--operation` and `--source-root`; its complete direct result is
+preserved under its SHA-256 before the journal continues. Completed source,
+native and browser phases are skipped. The managed phase uses the same received
+workbench and does not buy, sign or reacquire data. The final result distinguishes
+completed managed receiving from a direct-only result. The original runtime is
+inspected and adopted; this receiver does not prepare or install dependencies.

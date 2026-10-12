@@ -19,8 +19,10 @@ The parent directory must remain under the operator's control for the complete
 operation, on a filesystem that supports hard links. Destination preparation
 creates a local reservation and a private sibling partial file. This is a local
 file reservation, separate from the buyer's payment reservation.
-Preparation cannot guarantee that disk space or permissions stay available
-throughout a later download; saving can still fail after the buyer returns.
+The ordinary preparation reserves filenames. Use the optional actual-descriptor
+allocator below when the output also needs reserved storage. Permissions, I/O
+errors, process termination and the separate payment journals retain their own
+failure paths.
 
 ```js
 import { prepareBuyerResponseFile } from './response-file.mjs';
@@ -56,6 +58,57 @@ try {
 Start saving promptly when the original buyer returns. SF31's public transport
 has its own deadline, including body consumption; the writer's timeout does not
 extend it. Do not read or clone the original response while saving it.
+
+### Allocate the actual output before purchase
+
+Pass an operator-supplied `reserveFile` function to reserve storage on each live
+descriptor the writer already owns. The same callback contract is used by the
+native Node runtime for its private stdout and stderr files.
+
+```js
+const output = await prepareBuyerResponseFile({
+  destination: '/private/downloads/purchased-dataset.json',
+  maxBytes: 16 * 1024 * 1024,
+  timeoutMs: 30_000,
+  signal: call.signal,
+  reserveFile, // the installed, reviewed destination-descriptor allocator
+});
+```
+
+The callback receives `{fileHandle, path, kind, bytes, signal}`. It is awaited
+during preparation, before the caller enters the buyer. For
+`kind: 'buyer-response'`, `bytes` is the full configured `maxBytes`; for
+`kind: 'buyer-response-reservation'`, it is the exact serialized local
+reservation length. It must allocate the range `[0, bytes)` on the supplied
+descriptor while preserving its identity, logical length, permissions and file
+position. It must retain the caller's ownership of that descriptor. It must not
+close it, rename it, write payload bytes, or substitute another file.
+
+On Linux, a reviewed allocator can apply `fallocate(FALLOC_FL_KEEP_SIZE)` to an
+inherited descriptor. Linux documents that this reserves the specified range
+without increasing logical EOF; subsequent writes within the allocated range
+do not fail for lack of disk space. See the
+[Linux system-call manual](https://man.archlinux.org/man/fallocate.2.en).
+The writer checks that the named file and held descriptor still refer to the
+same inode/device, that the logical length and mode are unchanged, and that the
+descriptor reports at least the requested allocated bytes.
+
+The writer retains those same descriptors through saving or cancellation.
+Unused allocation is truncated on that inode before synchronization and close;
+an interrupted partial preserves its actual logical bytes. The returned writer
+and successful saved record include `allocation` metadata describing the
+reserved descriptors. Ordinary byte limits, SHA-256, stream framing, deadlines,
+exclusive publication and cleanup rules still apply.
+
+The allocator should honor the supplied preparation signal and finish any
+in-progress native allocation before it rejects. A partial allocation or an
+allocation failure closes and cleans this writer's files before preparation can
+return. The callback must reserve the actual descriptors through the later
+write; creating and releasing an unrelated probe does not provide that storage.
+
+These reservations cover the response and its local filename reservation. The
+native runtime and accounting modules must reserve their own result, evidence
+and journal destinations through their original writers.
 
 ### With SF82 evidence recording
 

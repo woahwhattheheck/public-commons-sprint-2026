@@ -31,3 +31,14 @@ export function readCollectionSource(config: LibraryConfig): Promise<{
     id: string; name: string; revision: number; note: string
   }; jobCount: null; withoutFile: 0; rejected: never[]};
 }>;
+
+export function parseCollectionManifest(bytes: Uint8Array): CollectionPackage;
+export interface CollectionObjectSink {
+  write(chunk: Uint8Array): void | Promise<void>;
+  finish(): void | Promise<void>;
+  close(): void | Promise<void>;
+}
+export function readCollectionArchive(archive: string, options?: ArchiveOptions & {
+  onManifest?(manifest: CollectionPackage, originalBytes: Uint8Array): void | Promise<void>;
+  onObject?(object: CollectionPackage['objects'][number]): CollectionObjectSink | undefined | Promise<CollectionObjectSink | undefined>;
+}): ReturnType<typeof inspectCollectionArchive>;
