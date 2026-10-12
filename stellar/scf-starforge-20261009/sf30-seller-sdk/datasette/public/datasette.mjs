@@ -5,7 +5,7 @@ const state = {client: null, health: null, snapshot: null, catalog: [], busy: fa
   pageSize: 25, offsets: {captures: 0, editions: 0, plans: 0, runs: 0, history: 0, browser: 0},
   selection: null, view: null, review: null, sourceReview: null, dirty: false,
   publisher: null, plan: null, run: null, target: null, release: null, journal: [], pending: null, db: null,
-  compare: null, comparisonPage: 0, lastFiles: null};
+  compare: null, comparisonPage: 0, lastFiles: null, sourceTemplate: null, originalSelection: null};
 const uuid = () => crypto.randomUUID();
 const short = value => typeof value === 'string' && value.length > 23 ? value.slice(0, 18) + '…' : String(value ?? '—');
 const count = value => Number.isSafeInteger(value) ? value.toLocaleString() : String(value ?? '—');
@@ -130,7 +130,7 @@ async function saveJournal(value) {
   renderJournal();
 }
 function renderJournal() {
-  state.pending = state.journal.find(item => ['SENDING','UNCERTAIN'].includes(item.state)) ?? null;
+  state.pending = state.journal.find(item => ['SENDING','UNCERTAIN','UPLOADED','RECEIVING'].includes(item.state)) ?? null;
   $('pending').hidden = !state.pending;
   if (state.pending) $('pending-label').textContent = state.pending.operation + ' · ' + state.pending.id + ' · ' + time(state.pending.startedAt);
   const table = document.createElement('table'), head = document.createElement('tr');
@@ -140,7 +140,7 @@ function renderJournal() {
   for (const record of selected.items) {
     const row = document.createElement('tr');
     row.append(node('td', record.operation), node('td', record.input.operationId ?? record.input.runId ?? record.input.uploadId ?? record.input.id ?? record.input.requestId ?? record.id),
-      node('td', record.state), node('td', time(record.startedAt)));
+      node('td', record.state + (record.stage ? ' · ' + record.stage : '')), node('td', time(record.startedAt)));
     const td = document.createElement('td'), button = node('button', 'Save input', {type: 'button', class: 'link'});
     button.addEventListener('click', () => download(JSON.stringify(record, null, 2) + '\n', record.id + '.json'));
     td.append(button); row.append(td); body.append(row);
@@ -149,17 +149,59 @@ function renderJournal() {
   pager('browser-pages', selected.page, offset => {state.offsets.browser = offset; renderJournal();});
 }
 async function readOperation(operation, input = {}) {return state.client.dispatch(operation, input);}
+function originalRun(value, id) {
+  const run = value?.run ?? value;
+  return run && run.id === id && typeof run.state === 'string' ? run : null;
+}
+function runIssue(run) {
+  const issue = run?.data?.error;
+  return typeof issue === 'string' ? issue : issue?.message ?? issue?.code ?? '';
+}
+function savedOutcome(record, value) {
+  if (['publisher.extract','publisher.publish','publisher.recover'].includes(record.operation)) {
+    const run = originalRun(value, record.input.runId);
+    if (!run) return {state: 'UNCERTAIN', message: 'Read the saved original run to resolve this response.'};
+    const suffix = runIssue(run) ? ' · ' + runIssue(run) : '';
+    const message = 'Original run ' + run.id + ' · ' + run.state + suffix;
+    if (['EXTRACTING','PUBLISHING','PUBLICATION_UNKNOWN'].includes(run.state)) return {state: 'UNCERTAIN', message};
+    if (['FAILED','CANCELLED','INTERRUPTED'].includes(run.state) ||
+        record.operation === 'publisher.publish' && run.state !== 'PUBLISHED') return {state: 'FAILED', message};
+    return {state: 'COMPLETE', message};
+  }
+  if (['source.capture','source.adopt'].includes(record.operation)) {
+    if (value?.operationId !== record.input.operationId || value.state !== 'COMPLETE')
+      return {state: 'UNCERTAIN', message: 'The original capture remains available to inspect and continue.'};
+  }
+  return {state: 'COMPLETE'};
+}
+async function retainOutcome(record, value) {
+  const outcome = savedOutcome(record, value), {completedAt, ...original} = record;
+  await saveJournal({...original, ...outcome, result: value, error: null,
+    ...(['COMPLETE','FAILED'].includes(outcome.state) ? {completedAt: new Date().toISOString()} : {})});
+  return outcome;
+}
+function announceRun(operation, value) {
+  const run = value?.run ?? value, issue = runIssue(run);
+  if (operation === 'publisher.publish' && run?.state === 'PUBLISHED')
+    message('Published snapshot ' + run.data.publication.snapshot + ' · Revision ' + run.data.publication.revision + '.');
+  else if (operation === 'publisher.extract' && ['READY','REVIEWED','PUBLISHED'].includes(run?.state))
+    message('The original extraction is ' + run.state + ' and its retained candidate is available.');
+  else message('Original run ' + (run?.state ?? 'outcome pending') + (issue ? ' · ' + issue : '') + '.',
+    ['FAILED','CANCELLED','INTERRUPTED','PUBLICATION_UNKNOWN'].includes(run?.state) ||
+    operation === 'publisher.publish' && run?.state !== 'PUBLISHED');
+}
 async function sendOriginal(record) {
   await saveJournal({...record, state: 'SENDING'});
-  try {
-    const value = await state.client.dispatch(record.operation, record.input);
-    await saveJournal({...record, state: 'COMPLETE', completedAt: new Date().toISOString(), result: value});
-    return value;
-  } catch (error) {
+  let value;
+  try { value = await state.client.dispatch(record.operation, record.input); }
+  catch (error) {
     await saveJournal({...record, state: error.uncertain ? 'UNCERTAIN' : 'FAILED',
-      message: error.message, error: error.code, completedAt: new Date().toISOString()});
+      message: error.message, error: error.code,
+      ...(error.uncertain ? {} : {completedAt: new Date().toISOString()})});
     throw error;
   }
+  await retainOutcome(record, value);
+  return value;
 }
 async function change(operation, input = {}) {
   const id = input.requestId ?? uuid();
@@ -169,24 +211,49 @@ async function change(operation, input = {}) {
   const value = await sendOriginal(record);
   await refresh(); return value;
 }
+function declaredColumns() {
+  const source = $('columns').value.trim();
+  if (!source) return undefined;
+  let columns;
+  try { columns = JSON.parse(source); } catch { throw new Error('Use a JSON array for the ordered original column names.'); }
+  if (!Array.isArray(columns) || !columns.length || columns.length > 10000 ||
+      columns.some(name => typeof name !== 'string' || !name || name.includes('\0') || name.length > 4096) ||
+      new Set(columns).size !== columns.length)
+    throw new Error('Enter distinct, nonempty source column names in the exact returned order.');
+  return columns;
+}
 function sourceSelection() {
-  const url = new URL($('url').value), kind = $('kind').value;
-  const selection = {url: url.href, kind, continuation: $('continuation').value,
-    approvedOrigins: [...new Set([url.origin, ...$('origins').value.split(/\r?\n/).map(value => value.trim()).filter(Boolean)])]};
+  const url = new URL($('url').value), kind = $('kind').value, original = state.sourceTemplate ?? {};
+  const selection = structuredClone(original);
+  selection.url = url.href; selection.kind = kind; selection.continuation = $('continuation').value;
+  selection.approvedOrigins = [...new Set([url.origin, ...$('origins').value.split(/\r?\n/).map(value => value.trim()).filter(Boolean)])];
+  for (const field of ['database','table','query']) delete selection[field];
   if ($('database').value.trim()) selection.database = $('database').value.trim();
   if (kind === 'table' && $('table').value.trim()) selection.table = $('table').value.trim();
   if (kind === 'query') {selection.readOnly = true; if ($('query').value.trim()) selection.query = $('query').value.trim();}
-  if ($('allow-http').checked) selection.allowHttp = true;
-  const metadata = {};
+  else delete selection.readOnly;
+  if ($('allow-http').checked) selection.allowHttp = true; else delete selection.allowHttp;
+  const columns = declaredColumns();
+  if (columns) selection.columns = columns; else delete selection.columns;
+  const metadata = structuredClone(original.metadata ?? {});
   for (const [id, name] of [['source-title','title'],['source-org','source'],['source-url','source_url'],
-    ['license','license'],['license-url','license_url'],['about-url','about_url']])
-    if ($(id).value.trim()) metadata[name] = $(id).value.trim();
-  if (Object.keys(metadata).length) selection.metadata = metadata;
+    ['license','license'],['license-url','license_url'],['about-url','about_url']]) {
+    if ($(id).value.trim()) metadata[name] = $(id).value.trim(); else delete metadata[name];
+  }
+  if (Object.keys(metadata).length) selection.metadata = metadata; else delete selection.metadata;
+  const changed = ['url','kind','database','table','query'].some(key => selection[key] !== original[key]) ||
+    JSON.stringify(selection.columns ?? null) !== JSON.stringify(original.columns ?? null);
+  if (changed) {delete selection.columnSource; delete selection.immutableIdentity;}
+  if (original.url && new URL(original.url).origin !== url.origin) {
+    delete selection.authentication; delete selection.account;
+  }
   return selection;
 }
 function setSourceSelection(selection) {
+  state.sourceTemplate = structuredClone(selection);
   $('url').value = selection.url ?? ''; $('kind').value = selection.kind ?? 'table';
   $('database').value = selection.database ?? ''; $('table').value = selection.table ?? ''; $('query').value = selection.query ?? '';
+  $('columns').value = selection.columns ? JSON.stringify(selection.columns, null, 2) : '';
   $('continuation').value = selection.continuation ?? 'auto'; $('allow-http').checked = selection.allowHttp === true;
   $('origins').value = (selection.approvedOrigins ?? []).join('\n');
   for (const [id, name] of [['source-title','title'],['source-org','source'],['source-url','source_url'],
@@ -233,7 +300,7 @@ async function loadPublisher() {
   renderPublisher();
 }
 async function openSource(kind, id, offset = 0) {
-  state.selection = {kind, id}; state.view = null; state.sourceReview = null; state.dirty = false;
+  state.selection = {kind, id}; state.view = null; state.sourceReview = null; state.dirty = false; state.originalSelection = null;
   $('inspect-title').textContent = kind === 'edition' ? 'Source edition ' + id : 'Capture ' + id;
   $('inspect-state').textContent = 'Reading';
   $('review-controls').hidden = true; $('review-empty').hidden = false; $('saved-edition').hidden = true;
@@ -245,11 +312,15 @@ async function openSource(kind, id, offset = 0) {
   } catch (error) {
     const capture = state.snapshot.captures.find(item => item.operationId === id);
     if (kind === 'capture' && capture && capture.state !== 'COMPLETE') {
-      $('inspect-state').textContent = capture.state;
-      $('inspect-identity').textContent = capture.captureFile;
+      const original = await readOperation('operations.inspect', {operationId: id});
+      if (original.operationId !== id) throw new Error('The saved capture returned a different original operation.');
+      state.originalSelection = original.selection;
+      $('inspect-state').textContent = original.state;
+      $('inspect-identity').textContent = capture.captureFile ?? id;
+      $('observation').textContent = ''; $('attribution').hidden = true;
       $('source-rows').replaceChildren(); $('row-pages').replaceChildren(); $('source-metrics').replaceChildren();
       $('source-details').hidden = true; $('resume-capture').hidden = false;
-      $('use-selection').hidden = !capture.selection; controls(); return null;
+      $('use-selection').hidden = !state.originalSelection; controls(); return null;
     }
     throw error;
   }
@@ -261,6 +332,7 @@ async function sourcePage(offset) {
   state.view = view; renderSource(view);
 }
 function renderSource(value) {
+  state.originalSelection = value.capture.selection;
   $('inspect-state').textContent = value.edition?.state ?? value.capture?.state ?? 'COMPLETE';
   $('inspect-title').textContent = value.edition?.name ?? 'Capture ' + state.selection.id;
   $('inspect-identity').textContent = (value.editionSha256 ? 'Edition ' + value.editionSha256 + '\n' : '') + 'Capture ' + value.captureSha256;
@@ -268,7 +340,8 @@ function renderSource(value) {
     ['Original pages', value.capture.pageCount],['Selection', value.capture.selection.kind]]);
   const window = value.capture.consistency;
   $('observation').textContent = (window?.kind === 'immutable-database' ? 'Source database identity retained. ' : 'Source observation window. ') +
-    time(window?.startedAt) + ' → ' + time(window?.completedAt);
+    time(window?.startedAt ?? window?.observationWindow?.notBefore) + ' → ' +
+    time(window?.completedAt ?? window?.observationWindow?.notAfter);
   const metadata = value.capture.selection.metadata;
   $('attribution').hidden = !metadata;
   if (metadata) $('attribution').replaceChildren(...Object.entries(metadata).map(([key, val]) => node('p', key + ': ' + text(val))));
@@ -276,7 +349,7 @@ function renderSource(value) {
   pager('row-pages', value.page, sourcePage);
   $('resume-capture').hidden = true; $('use-selection').hidden = false; $('source-details').hidden = false;
   $('source-metadata').textContent = JSON.stringify({selection: value.capture.selection, sourceVersion: value.capture.sourceVersion,
-    consistency: value.capture.consistency}, null, 2);
+    consistency: value.capture.consistency, pages: value.capture.pages}, null, 2);
   renderPageFiles(value);
   $('saved-edition').hidden = state.selection.kind !== 'edition';
   if (state.selection.kind === 'edition') {
@@ -286,11 +359,13 @@ function renderSource(value) {
 }
 function renderPageFiles(value) {
   const table = document.createElement('table'), head = document.createElement('tr');
-  for (const label of ['Page','HTTP response','Rows','Original body','Size']) head.append(node('th', label));
+  for (const label of ['Page','Source receipt','Rows','Original body','Size']) head.append(node('th', label));
   const body = document.createElement('tbody'); table.append(head, body);
   for (const [index, page] of (value.capture.pages ?? []).entries()) {
     const row = document.createElement('tr');
-    row.append(node('td', index + 1), node('td', (page.status ?? '—') + ' · ' + (page.responseUrl ?? page.requestedUrl ?? '')),
+    row.append(node('td', index + 1), node('td', (page.status !== null && page.status !== undefined ? 'HTTP ' + page.status :
+        (page.providerReceipt?.provider ?? 'Retained source') + ' · ' + (page.providerReceipt?.status ?? 'Receipt available')) +
+        ' · ' + (page.responseUrl ?? page.requestedUrl ?? '')),
       node('td', page.rowCount ?? page.rows ?? '—'));
     const cell = document.createElement('td');
     cell.append(node('span', page.body?.sha256 ?? '', {class: 'mono'}));
@@ -314,7 +389,8 @@ async function loadReview() {
   $('reset-projection').hidden = state.selection.kind === 'edition';
   $('key').disabled = state.selection.kind === 'edition';
   for (const input of $('projection').querySelectorAll('input,select')) input.disabled = state.selection.kind === 'edition';
-  $('key').value = (state.review.key?.columns ?? []).join(', ');
+  const keys = state.review.key?.columns ?? [];
+  $('key').value = keys.some(key => key.includes(',')) ? JSON.stringify(keys) : keys.join(', ');
   if (state.selection.kind === 'capture') {
     $('edition-id').value = 'edition-' + operationId;
     $('edition-name').value = value.capture.selection.metadata?.title ?? 'Datasette source ' + new Date().toISOString().slice(0, 10);
@@ -323,9 +399,18 @@ async function loadReview() {
 }
 function projectionFields(review, suggested = false) {
   const projection = !suggested && review.projection ? review.projection : review.suggestedProjection;
-  const chosen = new Map(Object.entries(projection ?? {}).map(([name, spec]) => [spec.column, {name, ...spec}]));
-  $('projection').replaceChildren(...review.columns.map(profile => {
-    const spec = chosen.get(profile.name), row = document.createElement('tr'); row.dataset.column = profile.name;
+  const profiles = new Map(review.columns.map(profile => [profile.name, profile]));
+  const entries = Object.entries(projection ?? {}).map(([name, spec]) => {
+    const profile = profiles.get(spec.column);
+    if (!profile) throw new Error('The saved projection refers to an unavailable source column.');
+    return {profile, spec: {...spec, name}};
+  });
+  if (state.selection?.kind !== 'edition') {
+    const selected = new Set(entries.map(entry => entry.profile.name));
+    for (const profile of review.columns) if (!selected.has(profile.name)) entries.push({profile, spec: null});
+  }
+  $('projection').replaceChildren(...entries.map(({profile, spec}) => {
+    const row = document.createElement('tr'); row.dataset.column = profile.name;
     const source = document.createElement('td'); source.append(node('strong', profile.name),
       node('small', Object.entries(profile.types).filter(([, number]) => number).map(([kind, number]) => kind + ' ' + count(number)).join(' · ')),
       node('small', 'Blank ' + count(profile.emptyStringCount) + ' · Null ' + count(profile.nullCount)));
@@ -369,7 +454,13 @@ function projectionInput() {
   if (!Object.keys(result).length) throw new Error('Select at least one source field.');
   return result;
 }
-function keyInput() {return $('key').value.split(',').map(value => value.trim()).filter(Boolean);}
+function keyInput() {
+  const input = $('key').value.trim();
+  const keys = input.startsWith('[') ? JSON.parse(input) : input.split(',').map(value => value.trim()).filter(Boolean);
+  if (!Array.isArray(keys) || keys.some(key => typeof key !== 'string' || !key) || new Set(keys).size !== keys.length)
+    throw new Error('Choose distinct original key columns, using a JSON array when a name contains a comma.');
+  return keys;
+}
 function renderSourceReview() {
   const value = state.sourceReview, container = $('source-review'); container.hidden = !value;
   if (!value) return;
@@ -426,6 +517,9 @@ function renderRun() {
   const saved = value.run, candidate = saved.data.candidate;
   $('run-title').textContent = value.plan.data.title;
   $('run-state').textContent = saved.state; $('run-identity').textContent = saved.id;
+  $('run-outcome').textContent = runIssue(saved) || (saved.state === 'PUBLICATION_UNKNOWN' ?
+    'Reconcile this original run with the retained dataset target.' : '');
+  $('run-outcome').hidden = !$('run-outcome').textContent;
   metrics('run-metrics', [['Rows', candidate?.dataset?.rowCount],['CSV bytes', candidate?.csvBytes],
     ['Dataset version', short(candidate?.dataset?.snapshot)],['Source pages', candidate?.extraction?.pageCount]]);
   if (value.preview) rowTable('candidate-rows', value.preview.fields ?? Object.keys(value.preview.rows?.[0] ?? {}),
@@ -543,18 +637,38 @@ async function inspectPending() {
   if (!record) return;
   await refresh();
   let value;
-  if (record.operation === 'files.upload') value = await state.client.uploadStatus({uploadId: record.input.uploadId});
-  else if (record.input.requestId && state.catalog.some(item => item.operation === 'requests.inspect'))
+  if (record.operation === 'files.upload') {
+    value = await state.client.uploadStatus({uploadId: record.input.uploadId});
+    if (!uploadMatches(value, record.input)) throw new Error('The saved upload selects a different original archive.');
+    if (value.state === 'REJECTED')
+      await saveJournal({...record, state: 'FAILED', lastConfirmed: value,
+        message: value.error?.message ?? 'The original upload was rejected.', error: value.error?.code});
+    else if (value.state === 'COMPLETE') {
+      await saveJournal({...record, state: 'UPLOADED', stage: 'receiving', lastConfirmed: value});
+      message('The original archive is fully uploaded. Continue original input to complete or reopen its receiving operation.');
+    } else {
+      await saveJournal({...record, state: 'UNCERTAIN', stage: 'upload', lastConfirmed: value});
+      message('The original upload prefix is retained. Select the same archive to continue its remaining bytes.');
+    }
+    result('operation-result', value); result('receive-result', value); return;
+  }
+  if (record.input.requestId && state.catalog.some(item => item.operation === 'requests.inspect')) {
     value = await readOperation('requests.inspect', {requestId: record.input.requestId});
-  else if (record.input.operationId || record.input.runId)
-    value = await readOperation('operations.inspect', {operationId: record.input.operationId ?? record.input.runId});
-  else if (record.operation === 'editions.create')
+    if (value.requestId !== record.input.requestId) throw new Error('The native receipt returned a different original request.');
+    if (value.state === 'COMPLETE') await retainOutcome(record, value.result);
+    else if (value.state === 'REJECTED') await saveJournal({...record, state: 'FAILED', result: value,
+      message: value.error?.message ?? 'The original request was rejected.', error: value.error?.code,
+      completedAt: value.completedAt ?? new Date().toISOString()});
+  } else if (['publisher.extract','publisher.publish','publisher.recover'].includes(record.operation)) {
+    value = await readOperation('operations.inspect', {operationId: record.input.runId});
+    if (!originalRun(value, record.input.runId)) throw new Error('The saved run returned a different original identifier.');
+    await retainOutcome(record, value);
+  } else if (['source.capture','source.adopt'].includes(record.operation)) {
+    value = await readOperation('operations.inspect', {operationId: record.input.operationId});
+    if (value.operationId === record.input.operationId && value.state === 'COMPLETE') await retainOutcome(record, value);
+  } else if (['editions.create','source.receive'].includes(record.operation) && record.input.id) {
     value = await readOperation('editions.inspect', {id: record.input.id});
-  else if (record.operation === 'source.receive')
-    value = await readOperation('editions.inspect', {id: record.input.id});
-  else value = {workspace: state.snapshot, originalInput: record.input};
-  if (value.state === 'COMPLETE' && value.requestId === record.input.requestId)
-    await saveJournal({...record, state: 'COMPLETE', result: value.result, completedAt: value.completedAt});
+  } else value = {workspace: state.snapshot, originalInput: record.input};
   result('operation-result', value);
   message('The current original outcome is shown in the operation result.');
 }
@@ -574,9 +688,10 @@ $('kind').addEventListener('change', selectionKind);
 $('example').addEventListener('click', () => {
   setSourceSelection({url: 'https://datasette.io/global-power-plants/global-power-plants.json?primary_fuel=Geothermal&_shape=arrays&_size=50',
     kind: 'table', database: 'global-power-plants', table: 'global-power-plants', continuation: 'auto',
+    approvedOrigins: ['https://datasette.io'], columns: ["rowid","country","country_long","name","gppd_idnr","capacity_mw","latitude","longitude","primary_fuel","other_fuel1","other_fuel2","other_fuel3","commissioning_year","owner","source","url","geolocation_source","wepp_id","year_of_capacity_data","generation_gwh_2013","generation_gwh_2014","generation_gwh_2015","generation_gwh_2016","generation_gwh_2017","generation_data_source","estimated_generation_gwh"],
     metadata: {title: 'Global Power Plant Database', source: 'World Resources Institute',
       source_url: 'http://www.wri.org/publication/global-power-plant-database',
-      license: 'Creative Commons Attribution 4.0 International', license_url: 'https://creativecommons.org/licenses/by/4.0/',
+      license: 'CC Attribution 4.0 License', license_url: 'https://creativecommons.org/licenses/by/4.0/',
       about_url: 'https://github.com/simonw/global-power-plants-datasette'}});
   $('url').focus();
 });
@@ -594,7 +709,8 @@ on('resume-capture', 'click', async () => {
   await change('source.capture', {operationId: id, selection}); await openSource('capture', id);
 });
 on('use-selection', 'click', async () => {
-  const selection = state.view?.capture.selection ?? state.snapshot.captures.find(item => item.operationId === state.selection.id)?.selection;
+  const selection = state.view?.capture.selection ?? state.originalSelection ??
+    state.snapshot.captures.find(item => item.operationId === state.selection.id)?.selection;
   if (selection) {setSourceSelection(selection); document.getElementById('source').scrollIntoView({behavior: 'smooth'});}
 });
 $('cancel').addEventListener('click', async () => {
@@ -637,8 +753,8 @@ on('plan-form', 'submit', async () => {
   message('The source-bound plan is retained with the original publisher.');
 });
 on('extract', 'click', async () => {
-  const runId = uuid(); await change('publisher.extract', {planId: state.plan.id, runId}); await loadRun(runId);
-  message('The original extraction is complete.');
+  const runId = uuid(), value = await change('publisher.extract', {planId: state.plan.id, runId});
+  announceRun('publisher.extract', value); await loadRun(runId);
 });
 on('preview-form', 'submit', async () => {await loadRun(requireRun(), $('preview-query').value);});
 on('recover-run', 'click', async () => {const id = requireRun(); await change('publisher.recover', {runId: id}); await loadRun(id);});
@@ -657,8 +773,8 @@ on('publish-review-form', 'submit', async () => {
 on('publish', 'click', async () => {
   const runId = requireRun(), reviewId = state.run.run.data.review?.id;
   if (!reviewId) throw new Error('Record the current original publication review first.');
-  await change('publisher.publish', {runId, reviewId}); await loadRun(runId);
-  message('The reviewed dataset snapshot is published.');
+  const value = await change('publisher.publish', {runId, reviewId});
+  announceRun('publisher.publish', value); await loadRun(runId);
 });
 on('release-form', 'submit', async () => {
   const input = {runId: requireRun(), payment: json('release-payment'),
@@ -698,8 +814,9 @@ on('pending-inspect', 'click', inspectPending);
 on('pending-retry', 'click', async () => {
   if (!state.pending) return;
   if (state.pending.operation === 'files.upload') {await continueUpload(state.pending); return;}
-  const value = await sendOriginal(state.pending); result('operation-result', value); await refresh();
-  message('The original saved input has completed.');
+  const original = state.pending, value = await sendOriginal(original); result('operation-result', value); await refresh();
+  const current = savedOutcome(original, value);
+  message(current.message ?? 'The original saved input has completed.', current.state !== 'COMPLETE');
 });
 on('pending-download', 'click', async () => {
   if (state.pending) download(JSON.stringify(state.pending, null, 2) + '\n', state.pending.id + '.json');
@@ -745,6 +862,7 @@ function receivingKind() {
   const workspace = $('receive-kind').value === 'workspace';
   $('receive-id-label').hidden = workspace; $('receive-id').required = !workspace;
   $('receive-directory-label').hidden = !workspace; $('receive-directory').required = workspace;
+  $('receive-submit').textContent = workspace ? 'Receive source/publisher workspace' : 'Receive complete source edition';
 }
 $('receive-kind').addEventListener('change', receivingKind);
 
@@ -773,53 +891,85 @@ function uploadReceipt(value) {
 async function continueUpload(record, selected) {
   if (typeof state.client.uploadStatus !== 'function' || typeof state.client.uploadChunk !== 'function')
     throw new Error('Open the installed Datasette client containing the original upload operations.');
-  selected ??= await selectedUploadFile();
-  if (selected.file.name !== record.input.name || String(selected.file.size) !== record.input.bytes ||
-      selected.sha256 !== record.input.sha256)
-    throw new Error('Continue with the same original filename, byte count and archive SHA-256.');
-  let current = null, uploaded = false;
-  try {current = await state.client.uploadStatus({uploadId: record.input.uploadId});}
-  catch (error) {if (error.code !== 'DATASETTE_UPLOAD_NOT_FOUND' || error.status !== 404) throw error;}
-  if (current && !uploadMatches(current, record.input)) throw new Error('The saved upload selects a different original archive.');
+  let current = null, completed = false, receivingStarted = false;
+  const terminal = (message, code) => Object.assign(new Error(message), {code, terminal: true});
   try {
+    try {current = await state.client.uploadStatus({uploadId: record.input.uploadId});}
+    catch (error) {if (error.code !== 'DATASETTE_UPLOAD_NOT_FOUND' || error.status !== 404) throw error;}
+    if (current && !uploadMatches(current, record.input))
+      throw terminal('The saved upload selects a different original archive.', 'BROWSER_UPLOAD_IDENTITY_CHANGED');
     while (current?.state !== 'COMPLETE') {
-      if (current?.state === 'REJECTED') throw new Error(current.error?.message ?? 'The retained archive bytes differ from their declared SHA-256.');
-      const offset = current ? Number(current.receivedBytes) : 0;
-      if (!Number.isSafeInteger(offset) || offset < 0 || offset > selected.file.size)
-        throw new Error('The original upload prefix is invalid.');
+      if (current?.state === 'REJECTED')
+        throw terminal(current.error?.message ?? 'The retained archive bytes differ from their declared SHA-256.',
+          current.error?.code ?? 'DATASETTE_UPLOAD_REJECTED');
+      const total = Number(record.input.bytes), offset = current ? Number(current.receivedBytes) : 0;
+      if (!Number.isSafeInteger(total) || total < 0 || !Number.isSafeInteger(offset) || offset < 0 || offset > total)
+        throw terminal('The original upload prefix is invalid.', 'BROWSER_UPLOAD_PREFIX_INVALID');
       const maximum = Math.min(1024 * 1024, Number(current?.maximumChunkBytes ?? 8 * 1024 * 1024));
-      if (!Number.isSafeInteger(maximum) || maximum < 1) throw new Error('The original upload range limit is invalid.');
-      const length = Math.min(maximum, selected.file.size - offset);
+      if (!Number.isSafeInteger(maximum) || maximum < 1)
+        throw terminal('The original upload range limit is invalid.', 'BROWSER_UPLOAD_LIMIT_INVALID');
+      const length = Math.min(maximum, total - offset);
+      let raw = new Uint8Array(0);
+      if (length > 0) {
+        selected ??= await selectedUploadFile();
+        if (selected.file.name !== record.input.name || String(selected.file.size) !== record.input.bytes ||
+            selected.sha256 !== record.input.sha256)
+          throw new Error('Continue with the same original filename, byte count and archive SHA-256.');
+        raw = new Uint8Array(await selected.file.slice(offset, offset + length).arrayBuffer());
+      }
       const input = {...record.input, offset: String(offset), length: String(length)};
-      const raw = new Uint8Array(await selected.file.slice(offset, offset + length).arrayBuffer());
-      record = {...record, state: 'SENDING', lastRange: {offset: input.offset, length: input.length},
-        lastConfirmed: current};
+      record = {...record, state: 'SENDING', stage: 'upload',
+        lastRange: {offset: input.offset, length: input.length}, lastConfirmed: current};
       await saveJournal(record);
       current = await state.client.uploadChunk(input, raw);
       if (!uploadMatches(current, record.input) || !/^(0|[1-9][0-9]*)$/.test(current.receivedBytes ?? '') ||
-          Number(current.receivedBytes) < offset + length ||
+          Number(current.receivedBytes) < offset + length || Number(current.receivedBytes) > total ||
           current.state !== 'COMPLETE' && Number(current.receivedBytes) === offset && length > 0)
-        throw new Error('The upload did not return the original complete range checkpoint.');
+        throw terminal('The upload did not return the original complete range checkpoint.', 'BROWSER_UPLOAD_CHECKPOINT_INVALID');
       record = {...record, lastConfirmed: current};
       await saveJournal(record); uploadReceipt(current);
-      if (current.state !== 'COMPLETE' && length === 0 && current.state !== 'FINALIZABLE')
-        throw new Error('Read the original upload outcome before continuing finalization.');
+      if (length === 0 && current.state !== 'COMPLETE' && current.state !== 'REJECTED')
+        throw new Error('Read the original upload outcome before continuing its finalization.');
     }
-    if (!current.archiveFile || !current.retainedFile || !uploadMatches(current, record.input))
-      throw new Error('The original completed upload did not identify its retained archive.');
-    await saveJournal({...record, state: 'COMPLETE', result: current, completedAt: new Date().toISOString()});
-    uploaded = true;
+    if (!current.archiveFile || !current.retainedFile || !uploadMatches(current, record.input) ||
+        current.receivedBytes !== record.input.bytes || current.retainedFile.sha256 !== record.input.sha256 ||
+        current.retainedFile.bytes !== record.input.bytes)
+      throw terminal('The original completed upload did not identify its complete retained archive.', 'BROWSER_UPLOAD_ARCHIVE_INVALID');
     const receiving = record.receiving;
+    if (!receiving || !['source','workspace'].includes(receiving.kind))
+      throw terminal('The saved upload has no original receiving destination.', 'BROWSER_RECEIVING_INPUT_MISSING');
+    const operation = receiving.kind === 'workspace' ? 'workspace.receive' : 'source.receive';
     const input = {archiveFile: current.archiveFile, sha256: current.sha256,
       ...(receiving.kind === 'workspace' ? {directory: receiving.directory} : {id: receiving.id})};
-    const value = await change(receiving.kind === 'workspace' ? 'workspace.receive' : 'source.receive', input);
+    if (record.receivingInput && (JSON.stringify(record.receivingInput) !== JSON.stringify(input) ||
+        record.receivingOperation !== operation))
+      throw terminal('The retained receiving input differs from this original archive or destination.', 'BROWSER_RECEIVING_INPUT_CHANGED');
+    record = {...record, state: 'UPLOADED', stage: 'receiving', lastConfirmed: current,
+      receivingOperation: operation, receivingInput: input};
+    await saveJournal(record);
+    message('The complete original archive is retained. Receiving it at the saved destination.');
+    record = {...record, state: 'RECEIVING'};
+    await saveJournal(record);
+    receivingStarted = true;
+    const value = await state.client.dispatch(operation, record.receivingInput);
+    await saveJournal({...record, state: 'COMPLETE', result: value, message: null, error: null,
+      completedAt: new Date().toISOString()});
+    completed = true;
     result('receive-result', value);
-    if (receiving.kind === 'source') await openSource('edition', receiving.id);
-    message(receiving.kind === 'workspace' ? 'The complete workspace is received at ' + value.directory + '. Open that original directory in Applications.' :
+    message(receiving.kind === 'workspace' ? 'The source/publisher workspace is received at ' + value.directory +
+      '. Open that original directory in Applications.' :
       'The complete original source edition is received and ready to inspect.');
+    await refresh();
+    if (receiving.kind === 'source') await openSource('edition', receiving.id);
     return value;
   } catch (error) {
-    if (!uploaded) await saveJournal({...record, state: 'UNCERTAIN', message: error.message, error: error.code});
+    if (!completed) {
+      const retryable = !error.terminal && (!receivingStarted || error.uncertain || error.code === 'DATASETTE_WORKSPACE_BUSY');
+      await saveJournal({...record, state: retryable ? 'UNCERTAIN' : 'FAILED',
+        stage: current?.state === 'COMPLETE' ? 'receiving' : 'upload', lastConfirmed: current,
+        message: error.message, error: error.code,
+        ...(retryable ? {} : {completedAt: new Date().toISOString()})});
+    }
     throw error;
   }
 }
