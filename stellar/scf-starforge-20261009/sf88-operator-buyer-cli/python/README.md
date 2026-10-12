@@ -22,6 +22,14 @@ This package adds durable application operations and result recovery around thos
 
 ## Choose the customer's product workflow
 
+The complete [citation analyst workflow](RESEARCH_CITATIONS.md) adds revision-pinned
+notice review, full editable atomic requests, same-request recovery and a complete
+before/reviewed/current handover through `ResearchWorkspace.citations(...)`.
+It cold receives both original portable formats and joins the existing Analysis
+table, full exports, workbook and editable workspace archive. The included
+`examples/research_citation_analyst.mjs` continues an already completed original
+Research customer operation without creating another review.
+
 The complete [Research document and workbook workflow](RESEARCH_DOCUMENTS.md) joins
 original Documents/Pipelines operation control, verified source editions, native
 Analysis mapping and full typed query exports, customer workbooks and portable
