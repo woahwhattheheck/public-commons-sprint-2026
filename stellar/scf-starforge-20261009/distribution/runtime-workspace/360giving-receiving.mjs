@@ -137,6 +137,7 @@ async function recoverEmptyInitialization(path,allowed,intent){
 export async function runManagedPublisherReceiving({
   runtimeDirectory,sourceWorkspace,pythonExecutable,directory,
   label='360Giving publisher receiving',timeoutMs=180000,pollMs=500,queryPageSize=250,onStage=()=>{},
+  connectionWorkflow,onConnected,
 }={}){
   for(const path of [runtimeDirectory,sourceWorkspace,pythonExecutable,directory])absolute(path);
   need(typeof label==='string'&&label.trim()&&label.length<=100,'RECEIVING_LABEL_REQUIRED');
@@ -145,7 +146,11 @@ export async function runManagedPublisherReceiving({
   need(separate(directory,runtimeDirectory)&&separate(directory,sourceWorkspace),
     'RECEIVING_SEPARATE_DIRECTORY_REQUIRED');
   await privateDirectory(sourceWorkspace);
-  const input={runtimeDirectory,sourceWorkspace,pythonExecutable,label,queryPageSize};
+  need((connectionWorkflow===undefined&&onConnected===undefined)||
+    typeof connectionWorkflow==='string'&&/^[a-z0-9][a-z0-9._-]{0,99}$/.test(connectionWorkflow)&&typeof onConnected==='function',
+    'RECEIVING_CONNECTION_WORKFLOW_INVALID');
+  const input={runtimeDirectory,sourceWorkspace,pythonExecutable,label,queryPageSize,
+    ...(connectionWorkflow===undefined?{}:{connectionWorkflow})};
   const journalPath=join(directory,'receiving-journal.json'),wasPresent=await exists(directory);
   await privateDirectory(directory,{create:!wasPresent});
   if(wasPresent&&!await exists(journalPath))
@@ -167,6 +172,22 @@ export async function runManagedPublisherReceiving({
       await atomicJSON(journalPath,journal);await onStage({stage,at:journal.updatedAt,...details});
     };
     const requestId=purpose=>'p-'+hash({receiving:journal.id,purpose}).slice(0,48);
+    const connectedStage=async(stage,role,connection)=>{
+      if(!onConnected)return;
+      const applications=Object.fromEntries(Object.entries(journal.applications).map(([name,value])=>[name,
+        {id:value.id,workspace:value.workspace,workspaceId:value.workspaceId,
+          connectionFile:join(paths.manager,'applications',value.id,'360giving-connection.json')}]));
+      const context=structuredClone({schema:'stellar-forge.360giving-connected-stage.v1',stage,directory,
+        runtime:journal.runtime,sourceWorkspace,role,connectionFile:connection,
+        workspace:applications[role].workspace,workspaceId:applications[role].workspaceId,applications,
+        exports:journal.exports.map((item,index)=>({...item,receiveRequestId:requestId('receive/'+index)})),
+        comparisons:journal.baseline.datasets.flatMap(dataset=>dataset.comparisons.map(({comparison})=>
+          ({dataset:dataset.key,comparison,requestId:requestId('comparison/'+dataset.key+'/'+comparison.id)})))});
+      const result=await onConnected(context);
+      need(result&&typeof result==='object'&&!Array.isArray(result),'RECEIVING_CONNECTION_RESULT_REQUIRED');
+      journal.connectedStages??={};journal.connectedStages[stage]=result;
+      await checkpoint('CONNECTED_WORKFLOW_COMPLETE',{stageName:stage,workflow:connectionWorkflow});
+    };
     const waitFor=async(read,predicate,label)=>{
       const deadline=Date.now()+timeoutMs;
       while(true){
@@ -420,7 +441,9 @@ export async function runManagedPublisherReceiving({
         }
         const baseline=await observe(connection,'source-original');
         need(hash(baseline.metadata)===hash(journal.sourceContent),'RECEIVING_EXPORTED_SOURCE_CHANGED');
-        journal.baseline=baseline;journal.steps.exported=true;await checkpoint('EXPORTED',{archives:journal.exports.length});
+        journal.baseline=baseline;
+        await connectedStage('source-original','source',connection);
+        journal.steps.exported=true;await checkpoint('EXPORTED',{archives:journal.exports.length});
         await stopRun(record);
       }
       if(!journal.steps.sourceReopened){
@@ -428,6 +451,7 @@ export async function runManagedPublisherReceiving({
         await manager.close();manager=await modelApi.openRuntimeWorkspace({directory:paths.manager});
         const {record,connection}=await ensureRun('source','reopened');
         journal.sourceReopened=await observe(connection,'source-reopened',journal.baseline);
+        await connectedStage('source-reopened','source',connection);
         await stopRun(record);journal.steps.sourceReopened=true;await checkpoint('SOURCE_COLD_REOPEN_COMPLETE');
       }
       for(const record of journal.runs.filter(item=>item.role==='source'))await stopRun(record);
@@ -451,6 +475,7 @@ export async function runManagedPublisherReceiving({
         }
         await replayComparisons(connection);
         journal.received=await observe(connection,'receiver-original',journal.baseline);
+        await connectedStage('receiver-original','receiver',connection);
         await stopRun(record);journal.steps.received=true;await checkpoint('COMPLETE_RECEIVING');
       }
       if(!journal.steps.receiverReopened){
@@ -458,6 +483,7 @@ export async function runManagedPublisherReceiving({
         await manager.close();manager=await modelApi.openRuntimeWorkspace({directory:paths.manager});
         const {record,connection}=await ensureRun('receiver','reopened');
         journal.receiverReopened=await observe(connection,'receiver-reopened',journal.baseline);
+        await connectedStage('receiver-reopened','receiver',connection);
         await stopRun(record);journal.steps.receiverReopened=true;await checkpoint('RECEIVER_COLD_REOPEN_COMPLETE');
       }
       for(const record of journal.runs)await stopRun(record);
@@ -466,7 +492,8 @@ export async function runManagedPublisherReceiving({
         applications:journal.applications,runs:journal.runs,sourceWorkspaceId:sourceMarker.id,receiverWorkspaceId:receiverMarker.id,
         datasets:journal.baseline.metadata.datasets.length,editions:journal.baseline.metadata.editions.length,
         decisions:journal.baseline.metadata.decisions.length,candidates:journal.baseline.metadata.candidates.length,
-        completeContentSha256:journal.baseline.sha256,exports:journal.exports,observations:paths.observations,journal:journalPath};
+        completeContentSha256:journal.baseline.sha256,exports:journal.exports,observations:paths.observations,journal:journalPath,
+        ...(connectionWorkflow===undefined?{}:{connectionWorkflow,connectedStages:journal.connectedStages??{}})};
       await atomicJSON(join(directory,'managed-publisher-result.json'),result);return result;
     }catch(error){
       journal.error={...safeError(error),at:timestamp()};await checkpoint('INTERRUPTED',{error:journal.error.code}).catch(()=>{});

@@ -1,5 +1,8 @@
+import {merchantCommercial} from './support-commercial.mjs';
 import { supportTools, alias, digest, uuid, notificationStatuses, page, text, selected, metadataSchema, termsSchema, exportNames, object } from './catalog/support.mjs';
 import { MerchantSupportIncidentSources } from './support-incidents.mjs';
+import {readServiceCase,changeServiceCase,previewServiceCase,readServiceCaseReport} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/service-cases.mjs';
+import {renderServiceReport,serviceReportCsv,serviceSummary} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/service-commitments.mjs';
 export { supportTools } from './catalog/support.mjs';
 // MIT. Configured MCP access to the original incident, case and workorder lifecycle.
 import { createHash } from 'node:crypto';
@@ -10,8 +13,8 @@ import { incidentStatus, acknowledgeIncident, exportIncident, configureIncidents
 import { readPrivateFile, openIncidentStore } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/incident-store.mjs';
 import { compileConfig as compileWatchConfig, configHash as watchConfigHash } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/incident-config.mjs';
 import { runIncidentWatch } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/watch.mjs';
-import { openCaseStore, caseMetadata, CASE_STATUSES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-store.mjs';
-import { parseWorkspace, serializeWorkspace, MAX_WORKSPACE_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs';
+import { openCaseStore, retainCaseArtifact, caseMetadata, CASE_STATUSES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-store.mjs';
+import { parseWorkspace, serializeWorkspace, workspaceDraft, MAX_WORKSPACE_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs';
 import { importRuntimeHandoff, exportRuntimeHandoff, reviewRuntime, MAX_HANDOFF_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs';
 import { termsDraftFromDocument, termsDocumentFromDraft } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/terms-editor.mjs';
 import { workorderFromSources } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workorder-source.mjs';
@@ -80,7 +83,7 @@ function ownerDraft(terms) {
   }
   return JSON.stringify({ schema: DRAFT_SCHEMA, values });
 }
-function sourcePacket(record, workspace) {
+function sourcePacket(record, workspace, options = {}) {
   const terms = draftTerms(workspace), inputs = { terms: Buffer.from(json(terms)).toString('base64') };
   if (workspace.workorderSource === 'runtime') {
     if (!record.supportText) throw failure('CASE_RUNTIME_REQUIRED', 'This case has no retained runtime capture.');
@@ -94,7 +97,7 @@ function sourcePacket(record, workspace) {
       if (workspace.sources.postBefore) { inputs.postBefore = workspace.sources.postBefore; inputs.postAfter = workspace.sources.postAfter; }
     }
   }
-  const result = workorderFromSources(inputs);
+  const result = workorderFromSources(inputs,options);
   result.packet.caseSource = { id: record.id, revision: record.revision, workspaceSha256: sha(record.workspaceText),
     supportSha256: record.supportText === null ? null : sha(record.supportText) };
   return { ...result, terms };
@@ -107,6 +110,7 @@ async function caseView(record) {
     workspaceSha256: sha(workspaceText), supportSha256: supportText === null ? null : sha(supportText),
     terms, termsIssue, termsText: workspace.termsText,
     ...(workspace.commissioning?{implementation:commissioningSummary(workspace.commissioning)}:{}),
+    ...(workspace.service?{service:serviceSummary(workspace.service)}:{}),
     runtimeReview: supportText === null ? null : reviewRuntime(supportText, workspace.inputs) };
 }
 
@@ -137,6 +141,8 @@ export function parseSupportExportManifest(bytes, exportId) {
       ['owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md'].some(name => names.has(name) !== manifest.workorderIncluded)) invalid();
   const implementationFiles=['merchant-commissioning.json','merchant-implementation.html','merchant-implementation-tasks.csv'];
   if(implementationFiles.some(name=>names.has(name))&&!implementationFiles.every(name=>names.has(name)))invalid();
+  const serviceReportFiles=['merchant-service-report.json','merchant-service-report.csv','merchant-service-report.html'];
+  if(serviceReportFiles.some(name=>names.has(name))&&(!names.has('merchant-service.json')||!serviceReportFiles.every(name=>names.has(name))))invalid();
   return manifest;
 }
 function exportFileType(name) {
@@ -144,10 +150,12 @@ function exportFileType(name) {
 }
 
 export class MerchantSupport {
-  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
+  #config; #store; #commercial; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
   #reads = new RetainedFileReads({ errorPrefix: 'SUPPORT' });
   constructor(config, { environment = process.env } = {}) {
     this.#config = config; this.#environment = environment;
+    this.#commercial=merchantCommercial({cases:()=>this.#cases(),casesDirectory:()=>this.#configured().casesDirectory,
+      exportsDirectory:()=>this.#config.exportsDirectory,reads:this.#reads});
     this.#incidentSources = new MerchantSupportIncidentSources(config.support, {
       profiles: () => this.summary.profiles,
       profile: (alias, sourceDigest) => this.#profile(alias, sourceDigest),
@@ -279,9 +287,8 @@ export class MerchantSupport {
         args.baselineOnly !== undefined && typeof args.baselineOnly !== 'boolean') throw failure('INVALID_PARAMS', 'Invalid saved workorder choice.');
     const metadata = args.metadata === undefined ? record.metadata : caseMetadata({ ...record.metadata, ...args.metadata });
     if (args.metadata !== undefined) exact(args.metadata, Object.keys(metadataSchema.properties));
-    const next = { name: workspace.name, inputs: workspace.inputs, sources: workspace.sources, termsText: workspace.termsText,
-      baselineOnly: args.baselineOnly ?? workspace.baselineOnly, workorderSource: args.workorderSource ?? workspace.workorderSource ?? 'diagnostic',
-      ...(workspace.commissioning?{commissioning:workspace.commissioning}:{}) };
+    const next = workspaceDraft(workspace,{baselineOnly:args.baselineOnly??workspace.baselineOnly,
+      workorderSource:args.workorderSource??workspace.workorderSource??'diagnostic'});
     if (args.terms !== undefined) next.termsText = ownerDraft(args.terms);
     // Keep the original save timestamp: metadata/terms updates do not change source observations,
     // and an identical request can use the original case writer's lost-response retry handling.
@@ -290,38 +297,113 @@ export class MerchantSupport {
     return (await this.#cases()).save({ id: args.id, expectedRevision: args.expectedRevision,
       workspaceText, supportText: record.supportText, metadata });
   }
+  async #exportRequest(exportId) {
+    const root=await privateSupportDirectory(this.#config.exportsDirectory),folder=join(root,identifier(exportId,'Export ID'));
+    let bytes;
+    try{bytes=await readPrivateFile(join(root,'.support-export-request-'+exportId+'.json'),65000);}
+    catch(error){if(error.code!=='ENOENT')throw error;await privateSupportDirectory(folder);
+      bytes=await readPrivateFile(join(folder,'support-export-request.json'),65000);}
+    let intent;try{intent=JSON.parse(decode(bytes));}catch{throw failure('SUPPORT_EXPORT_INVALID','The original export request is unreadable.');}
+    exact(intent,['schema','exportId','request','manifest'],['schema','exportId','request','manifest']);
+    if(intent.schema!=='stellar-forge.merchant-support-export-request.v1'||intent.exportId!==exportId)
+      throw failure('SUPPORT_EXPORT_INVALID','The original export request identity differs.');
+    exact(intent.request,['id','expectedRevision','includeWorkorder'],['id','expectedRevision','includeWorkorder']);
+    caseId(intent.request.id);expected(intent.request.expectedRevision);
+    if(typeof intent.request.includeWorkorder!=='boolean')throw failure('SUPPORT_EXPORT_INVALID','The original workorder selection differs.');
+    const manifest=parseSupportExportManifest(Buffer.from(json(intent.manifest)),exportId);
+    if(manifest.case.id!==intent.request.id||manifest.case.revision!==intent.request.expectedRevision||
+      manifest.workorderIncluded!==intent.request.includeWorkorder||
+      typeof manifest.createdAt!=='string'||!Number.isFinite(Date.parse(manifest.createdAt))||new Date(manifest.createdAt).toISOString()!==manifest.createdAt)
+      throw failure('SUPPORT_EXPORT_INVALID','The original export request and completion plan differ.');
+    return intent;
+  }
   async #export(args) {
-    const record = await this.#selected(args), workspace = await parseWorkspace(record.workspaceText);
-    if (args.includeWorkorder !== undefined && typeof args.includeWorkorder !== 'boolean') throw failure('INVALID_PARAMS', 'includeWorkorder must be a boolean.');
-    const generated = args.includeWorkorder ? sourcePacket(record, workspace) : null;
-    const { workspaceText, supportText, ...summary } = record;
-    const files = [['case.json', json(summary)], ['merchant-workspace.json', workspaceText]];
-    if (supportText !== null) {
-      const handoff = await exportRuntimeHandoff({ workspaceText, supportText, metadata: record.metadata });
-      files.push(['merchant-support.json', handoff.handoff], ['support.html', handoff.html]);
+    if(args.includeWorkorder!==undefined&&typeof args.includeWorkorder!=='boolean')
+      throw failure('INVALID_PARAMS','includeWorkorder must be a boolean.');
+    const exportId=identifier(args.exportId,'Export ID'),request={id:caseId(args.id),
+      expectedRevision:expected(args.expectedRevision),includeWorkorder:args.includeWorkorder??false};
+    const root=await privateSupportDirectory(this.#config.exportsDirectory),folder=join(root,exportId);
+    const matches=manifest=>manifest.case.id===request.id&&manifest.case.revision===request.expectedRevision&&
+      manifest.workorderIncluded===request.includeWorkorder;
+    const status=await this.#exportStatus(exportId);
+    if(status.state==='COMPLETE'){
+      if(!matches(status))throw failure('SUPPORT_EXPORT_CONFLICT','This export ID belongs to a different original case, revision or workorder selection.');
+      return {...status,reused:true};
+    }
+    let intent=null;
+    if(status.state!=='NOT_FOUND'){
+      try{intent=await this.#exportRequest(exportId);}
+      catch(error){if(error.code!=='ENOENT')throw error;
+        throw failure('SUPPORT_EXPORT_REQUEST_REQUIRED','This earlier incomplete export has no retained original request. Its existing files remain available for original-case recovery.');}
+      if(json(intent.request)!==json(request))throw failure('SUPPORT_EXPORT_CONFLICT','This export ID belongs to a different original request.');
+    }
+    const record=intent?await(await this.#cases()).read(request.id,request.expectedRevision):await this.#selected(args);
+    const workspace=await parseWorkspace(record.workspaceText),generatedAt=intent?.manifest.createdAt??new Date().toISOString();
+    const generated=request.includeWorkorder?sourcePacket(record,workspace,{generatedAt}):null;
+    const {workspaceText,supportText,...summary}=record;summary.currentRevision=record.revision;
+    const files=[['case.json',json(summary)],['merchant-workspace.json',workspaceText]];
+    if(supportText!==null){
+      const handoff=await exportRuntimeHandoff({workspaceText,supportText,metadata:record.metadata,generatedAt});
+      files.push(['merchant-support.json',handoff.handoff],['support.html',handoff.html]);
     }
     if(workspace.commissioning)files.push(['merchant-commissioning.json',json(workspace.commissioning)],
       ['merchant-implementation.html',commissioningReport(workspace.commissioning)],
       ['merchant-implementation-tasks.csv',commissioningTasksCsv(workspace.commissioning)]);
-    if (generated) files.push(['owner-terms.json', json(generated.terms)], ['packet.json', json(generated.packet)],
-      ['seller-packet.html', generated.html], ['acceptance-checklist.md', generated.checklist]);
-    const exportId = identifier(args.exportId, 'Export ID'), root = await privateSupportDirectory(this.#config.exportsDirectory), folder = join(root, exportId);
-    const manifest = { schema: EXPORT_SCHEMA, exportId, createdAt: new Date().toISOString(),
-      case: { id: record.id, revision: record.revision, workspaceSha256: sha(workspaceText), supportSha256: supportText === null ? null : sha(supportText) },
-      workorderIncluded: Boolean(generated), files: files.map(([name, body]) => ({ name, bytes: Buffer.byteLength(body), sha256: sha(body) })) };
-    await mkdir(folder, { mode: 0o700 });
-    for (const [name, body] of files) await writePrivate(join(folder, name), body);
-    // Last, create-only: absence means an interrupted export, never a completed handoff.
-    await writePrivate(join(folder, 'support-export.json'), manifest);
-    return { ...manifest, state: 'COMPLETE' };
+    if(workspace.service){
+      files.push(['merchant-service.json',json(workspace.service)]);
+      const selected=workspace.service.reports.find(report=>report.id===workspace.service.draft?.report?.selectedReportId)
+        ??workspace.service.reports.at(-1);
+      if(selected)files.push(['merchant-service-report.json',json(selected)],
+        ['merchant-service-report.csv',serviceReportCsv(selected)],['merchant-service-report.html',renderServiceReport(selected)]);
+    }
+    if(generated)files.push(['owner-terms.json',json(generated.terms)],['packet.json',json(generated.packet)],
+      ['seller-packet.html',generated.html],['acceptance-checklist.md',generated.checklist]);
+    const manifest={schema:EXPORT_SCHEMA,exportId,createdAt:generatedAt,
+      case:{id:record.id,revision:record.revision,workspaceSha256:sha(workspaceText),supportSha256:supportText===null?null:sha(supportText)},
+      workorderIncluded:request.includeWorkorder,files:files.map(([name,body])=>({name,bytes:Buffer.byteLength(body),sha256:sha(body)}))};
+    const resumed=Boolean(intent);
+    if(intent){
+      if(json(intent.manifest)!==json(manifest))
+        throw failure('SUPPORT_EXPORT_SOURCE_CHANGED','The retained case or original export rendering differs from this export request.');
+    }else{
+      intent={schema:'stellar-forge.merchant-support-export-request.v1',exportId,request,manifest};
+      try{
+        // The original atomic case writer publishes the request before the
+        // directory. A stopped process can therefore resume even if mkdir or
+        // the first customer file has not run yet.
+        await retainCaseArtifact(join(root,'.support-export-request-'+exportId+'.json'),Buffer.from(json(intent)));
+      }catch(error){
+        if(error.code!=='CASE_STORAGE_INVALID')throw error;
+        const accepted=await this.#exportRequest(exportId);
+        if(json(accepted.request)!==json(request))throw failure('SUPPORT_EXPORT_CONFLICT','This export ID belongs to a different original request.');
+        return this.#export(args);
+      }
+    }
+    try{await mkdir(folder,{mode:0o700});}catch(error){if(error.code!=='EEXIST')throw error;}
+    await privateSupportDirectory(folder);
+    await retainCaseArtifact(join(folder,'support-export-request.json'),Buffer.from(json(intent)));
+    for(const[name,body]of files)await retainCaseArtifact(join(folder,name),Buffer.from(body));
+    await retainCaseArtifact(join(folder,'support-export.json'),Buffer.from(json(intent.manifest)));
+    return {...intent.manifest,state:'COMPLETE',reused:false,resumed};
   }
   async #exportStatus(exportId) {
     identifier(exportId, 'Export ID'); const folder = join(this.#config.exportsDirectory, exportId);
     try { await privateSupportDirectory(folder); }
-    catch (error) { if (error.code === 'ENOENT') return { exportId, state: 'NOT_FOUND' }; throw error; }
+    catch (error) {
+      if(error.code!=='ENOENT')throw error;
+      let original=null;try{original=await this.#exportRequest(exportId);}catch(requestError){if(requestError.code!=='ENOENT')throw requestError;}
+      return original?{exportId,state:'INCOMPLETE_OR_OTHER_EXPORT',request:{...original.request,exportId},
+        action:'Repeat this original merchant_case_export request to complete the retained delivery.'}:{exportId,state:'NOT_FOUND'};
+    }
     let value;
     try { value = await this.#readExportManifest(exportId); }
-    catch (error) { if (error.code === 'ENOENT') return { exportId, state: 'INCOMPLETE_OR_OTHER_EXPORT', action: 'Inspect this private directory locally; existing output is never overwritten.' }; throw error; }
+    catch (error) {
+      if(error.code!=='ENOENT')throw error;
+      let original=null;try{original=await this.#exportRequest(exportId);}catch(requestError){if(requestError.code!=='ENOENT')throw requestError;}
+      return {exportId,state:'INCOMPLETE_OR_OTHER_EXPORT',...(original?{request:{...original.request,exportId},
+        action:'Repeat this original merchant_case_export request to complete the retained delivery.'}:
+        {action:'Inspect the existing original case files to recover this earlier export.'})};
+    }
     const { manifest } = value;
     for (const file of manifest.files) {
       const bytes = await readPrivateFile(join(folder, file.name), MAX_HANDOFF_BYTES);
@@ -365,6 +447,11 @@ export class MerchantSupport {
     if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant support is closing.');
     try {
       return await (async () => {
+      if(this.#commercial.handles(name))return this.#commercial.call(name,args);
+      if(name==='merchant_service_read')return readServiceCase({store:await this.#cases(),args});
+      if(name==='merchant_service_change')return changeServiceCase({store:await this.#cases(),args,readSnapshot:input=>this.#incidentSources.serviceSnapshot(input)});
+      if(name==='merchant_service_preview')return previewServiceCase({store:await this.#cases(),args});
+      if(name==='merchant_service_report')return readServiceCaseReport({store:await this.#cases(),args});
       if (this.#incidentSources.handles(name)) return this.#incidentSources.call(name, args);
       if (args.incidentSource !== undefined)
         throw failure('SUPPORT_INCIDENT_SOURCE_NOT_FOUND', 'This connection uses its original single incident store; omit incidentSource or select a host source file.');

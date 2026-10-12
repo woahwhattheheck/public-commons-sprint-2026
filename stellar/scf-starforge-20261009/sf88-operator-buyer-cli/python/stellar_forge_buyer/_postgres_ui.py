@@ -13,8 +13,8 @@ HTML = r"""<!doctype html>
 <section id="screen-editions" class="screen" hidden><div class="page-title"><div><h2>Retained dataset editions</h2><p>Read typed records with their original field meanings. Download the source dictionary, manifest and receiving mapping.</p></div></div><div class="two-column"><section class="panel"><div id="edition-list" class="item-list"></div><button id="more-editions" class="stack" type="button" hidden>More editions</button></section><section id="edition-panel" class="panel" hidden><div id="edition-facts"></div><div class="toolbar"><button id="download-manifest" type="button">Original manifest</button><button id="download-mapping" type="button">Column mapping</button><button id="download-edition" type="button">Receiving record</button><button id="download-semantics" type="button" hidden>Original dictionary</button><button id="use-edition" type="button">Use in application view</button></div><div id="edition-meanings" class="stack"></div><div id="edition-rows"></div><div class="toolbar"><button id="rows-previous" type="button">Previous rows</button><span id="rows-label" class="muted"></span><button id="rows-next" type="button">Next rows</button></div><details><summary>Complete edition and mapping</summary><pre id="edition-json"></pre></details></section></div></section>
 <section id="screen-views" class="screen" hidden><div class="page-title"><div><h2>Select the application’s dataset</h2><p>Keep a stable SQL view while retaining each selected edition and its complete history.</p></div></div><section class="panel"><h3>Current application views</h3><div id="view-list" class="item-list"></div></section>
 <section class="panel"><form id="view-form"><div class="form-grid"><label>View name<input id="view-name" required maxlength="63" autocomplete="off" spellcheck="false" placeholder="customer_inventory"></label><label>Retained edition<select id="view-version" required></select></label></div><button type="submit">Review current view and selection</button></form><div id="view-review" class="stack" hidden><div id="view-facts"></div><div id="view-meanings"></div><div id="view-meaning-comparison"></div><button id="activate-view" class="primary" type="button">Select this edition</button><p class="hint">The reviewed current revision is checked by PostgreSQL. A changed column signature requires a new view name.</p></div><div id="view-history" class="stack"></div><button id="more-history" type="button" hidden>More history</button></section></section>
-<section id="screen-compare" class="screen" hidden><div class="page-title"><div><h2>Compare complete editions</h2><p>Compare original field meanings and database mappings, then compare every row by the reviewed source keys.</p></div></div><section class="panel"><form id="compare-form"><div class="form-grid"><label>Previous edition<select id="compare-previous" required></select></label><label>Following edition<select id="compare-current" required></select></label></div><div class="toolbar"><button class="primary" type="submit">Compare all rows</button><button id="compare-meanings" type="button">Compare source meanings</button></div></form><div id="compare-meaning-result" class="stack"></div><div id="compare-result" class="stack"></div><div class="toolbar"><button id="compare-back" type="button" hidden>Previous changes</button><span id="compare-label" class="muted"></span><button id="compare-next" type="button" hidden>More changes</button></div></section></section>
-<section id="screen-recovery" class="screen" hidden><div class="page-title"><div><h2>Operations and recovery</h2><p>Reopen the saved import or view selection after a lost response or process restart.</p></div></div><section class="panel"><div id="request-list" class="item-list"></div><button id="more-requests" class="stack" type="button" hidden>More operations</button></section><section id="request-panel" class="panel" hidden><div id="request-details"></div></section><section class="panel"><h3>Reopen and hand over</h3><p>The operator directory retains mapping reviews and original requests. PostgreSQL retains complete imported rows, original dictionaries and manifests, immutable editions and selected view history. Reopen this directory with the same restored database and schema.</p><p class="hint">Use the database owner’s PostgreSQL backup and restore procedure for the complete receiving schema. Download a selected edition’s mapping, manifest and receiving record from Retained editions for the handover.</p><dl id="reopen-facts" class="facts"></dl></section></section>
+<section id="screen-compare" class="screen" hidden><div class="page-title"><div><h2>Compare complete editions</h2><p>Compare original field meanings and database mappings, then compare every row by the reviewed source keys.</p></div></div><section class="panel"><form id="compare-form"><div class="form-grid"><label>Previous edition<select id="compare-previous" required></select></label><label>Following edition<select id="compare-current" required></select></label></div><div class="toolbar"><button class="primary" type="submit">Compare all rows</button><button id="compare-meanings" type="button">Compare source meanings</button></div></form><div id="compare-meaning-result" class="stack"></div><div id="compare-result" class="stack"></div><div class="toolbar"><button id="compare-back" type="button" hidden>Previous changes</button><span id="compare-label" class="muted"></span><button id="compare-next" type="button" hidden>More changes</button></div></section><section class="panel"><h3>Complete period report</h3><p>Export both selected editions, every row change and their original dictionaries in one report.</p><form id="period-report-form"><div class="form-grid"><label>Previous period label<input id="period-previous-label" required maxlength="240" placeholder="Previous reporting period"></label><label>Current period label<input id="period-current-label" required maxlength="240" placeholder="Current reporting period"></label></div><label>Report title<input id="period-report-title" required maxlength="240" value="Reporting period comparison"></label><button class="primary stack" type="submit">Create complete period report</button></form><div id="period-report-result" class="stack"></div></section></section>
+<section id="screen-recovery" class="screen" hidden><div class="page-title"><div><h2>Operations and recovery</h2><p>Reopen the saved review, import, view selection or complete report after a lost response or process restart.</p></div></div><section class="panel"><div id="request-list" class="item-list"></div><button id="more-requests" class="stack" type="button" hidden>More operations</button></section><section id="request-panel" class="panel" hidden><div id="request-details"></div></section><section class="panel"><h3>Reopen and hand over</h3><p>The operator directory retains mapping reviews and original requests. PostgreSQL retains complete imported rows, original dictionaries and manifests, immutable editions and selected view history. Reopen this directory with the same restored database and schema.</p><p class="hint">Use the database owner’s PostgreSQL backup and restore procedure for the complete receiving schema. Download a selected edition’s mapping, manifest and receiving record from Retained editions for the handover.</p><dl id="reopen-facts" class="facts"></dl></section></section>
 <footer>STELLAR FORGE · CUSTOMER DATA RECEIVING</footer></main></div><script src="/app.js" defer></script></body></html>
 """
 
@@ -47,6 +47,10 @@ let comparison = null, compareOffset = 0, compareBack = [], compareNext = null;
 const editions = new Map();
 const types = ['text','boolean','bigint','numeric','double precision','date','timestamp with time zone','json'];
 const errors = {
+  DATASET_PG_REPORT_SAME_NATIVE_KEYS_REQUIRED: 'Choose editions with the same reviewed source keys. Their aliases and other fields may differ.',
+  DATASET_PG_REPORT_NATIVE_KEY_TYPES_CHANGED: 'The selected editions use different database types for a source key. Review the original key mappings before creating a period comparison.',
+  DATASET_PG_REVIEW_ID_REUSED: 'This saved review ID already belongs to another source, mapping or review note. Reopen its original review or save a new review.',
+  DATASET_PG_REPORT_ARCHIVE_CHANGED: 'The retained report file changed. Reopen its original saved report archive before downloading.',
   DATASET_PG_DUPLICATE_KEY: 'A declared key occurs more than once. Review the original rows and save a corrected key mapping before importing again.',
   DATASET_PG_REVIEWED_INPUT_CHANGED: 'The source changed after review. Inspect the current original delivery and save a new mapping review.',
   DATASET_PG_VIEW_CHANGED: 'The application view changed after this selection was reviewed. Reopen its current view and history before selecting an edition.',
@@ -271,9 +275,10 @@ async function resume(id, local) {
   let result;
   if (local) result = await api(local.route, local.body);
   else result = await api('/api/requests/' + encodeURIComponent(id) + '/resume', {});
-  if (result.state === 'COMPLETE') keepPending(id, null);
+  if (result.state === 'COMPLETE' || result.state === 'REVIEWED') keepPending(id, null);
   await refresh();
-  renderRequest(result);
+  if (result.state === 'REVIEWED') {renderReview(result);show('source');}
+  else renderRequest(result);
   message('The original saved operation is ' + result.state.toLowerCase() + '.');
 }
 async function download(path, filename) {
@@ -374,10 +379,12 @@ function renderReviews() {
 }
 async function saveReview() {
   if (!source) throw new Error('Inspect the original delivery first.');
-  const result = await api('/api/reviews', {
-    report_path:source.source_path,expected_report_sha256:source.source_sha256,mapping:mapping(),
-    reviewer:$('reviewer').value,note:$('review-note').value,
-  });
+  const reviewId = crypto.randomUUID().replaceAll('-', '');
+  const original = {report_path:source.source_path,expected_report_sha256:source.source_sha256,mapping:mapping(),
+    reviewer:$('reviewer').value,note:$('review-note').value,review_id:reviewId};
+  keepPending(reviewId,{route:'/api/reviews',body:original});
+  const result = await api('/api/reviews', original);
+  keepPending(reviewId,null);
   renderReview(result); await refresh();
   message('The complete mapping review is saved. Import this reviewed edition when ready.');
 }
@@ -521,6 +528,52 @@ async function compareEditions(offset = 0) {
   $('compare-back').hidden = !compareBack.length; $('compare-next').hidden = compareNext === null;
   $('compare-label').textContent = rows.length ? 'Changes ' + (offset + 1) + '–' + (offset + rows.length) : '';
 }
+function operationTitle(route) {
+  return {'/api/import':'Import edition','/api/activate':'Select application view',
+    '/api/period-reports':'Complete period report','/api/reviews':'Mapping review'}[route] || 'Saved operation';
+}
+async function downloadReport(record) {
+  const artifact = record.result.artifact, path = '/api/period-reports/' + record.record_id + '/archive';
+  if (typeof window.showSaveFilePicker !== 'function') return download(path,artifact.filename);
+  let handle;
+  try {
+    handle = await window.showSaveFilePicker({suggestedName:artifact.filename,
+      types:[{description:'Complete period report',accept:{'application/zip':['.zip']}}]});
+  } catch (error) {if (error.name === 'AbortError') return;throw error;}
+  const response = await fetch(path,{headers:{'X-Postgres-Capability':token || ''}});
+  if (!response.ok) {
+    const payload = await response.json(), error = new Error(payload.error);error.payload = payload;throw error;
+  }
+  if (!response.body) throw new Error('The complete report download could not open.');
+  const output = await handle.createWritable();
+  await response.body.pipeTo(output);
+  message('The complete report was saved.');
+}
+function reportSummary(record) {
+  const report = record.result.report, artifact = record.result.artifact, totals = report.totals;
+  const panel = make('div');
+  panel.append(make('h3',report.selection.title),facts([
+    ['Previous period',report.selection.previous_label],['Current period',report.selection.current_label],
+    ['Previous rows',report.previous.row_count],['Current rows',report.current.row_count],
+    ['Added',totals.ADDED],['Removed',totals.REMOVED],['Changed',totals.CHANGED],['Unchanged',totals.UNCHANGED],
+    ['Source keys',report.keys.join(', ')],['Created',report.generated_at],
+    ['Download bytes',artifact.bytes],['Changed field definitions',report.meanings.changed_columns],
+  ]),button('Download complete report',() => downloadReport(record),'primary'));
+  panel.append(make('p','Includes both complete datasets, typed columns, every row change, the original manifests and dictionaries, a readable report and the comparison SQL.','hint'));
+  return panel;
+}
+async function createPeriodReport() {
+  const selected = {schema:'stellar-forge.postgres-period-selection.v1',
+    previous_version:$('compare-previous').value,current_version:$('compare-current').value,
+    previous_label:$('period-previous-label').value,current_label:$('period-current-label').value,
+    title:$('period-report-title').value};
+  if (!selected.previous_version || !selected.current_version) throw new Error('Select both retained editions above.');
+  $('period-report-result').replaceChildren(empty('Exporting both complete periods and every row change…'));
+  const result = await request('/api/period-reports',{selection:selected});
+  $('period-report-result').replaceChildren(reportSummary(result));
+  message('The complete report is saved with its original request.');
+}
+
 function renderRequests() {
   $('more-requests').hidden = !requestBefore;
   const local = pending();
@@ -530,7 +583,7 @@ function renderRequests() {
   const known = new Set(requestRows.map(record => record.record_id));
   const rows = requestRows.map(record => {
     const item = make('div',undefined,'item');
-    item.append(make('span',(record.route === '/api/import' ? 'Import edition' : 'Select application view') + ' · ' + record.state.toLowerCase(),'item-title'),
+    item.append(make('span',operationTitle(record.route) + ' · ' + record.state.toLowerCase(),'item-title'),
       make('span',record.created_at,'item-sub'));
     if (record.body.name) item.append(make('span',record.body.name,'item-sub'));
     if (record.error) item.append(make('p',errorText({payload:record.error}), 'hint'));
@@ -545,15 +598,17 @@ function renderRequests() {
       make('span',id,'item-sub mono'),button('Recover original request',() => resume(id,value)));
     rows.unshift(item);
   }
-  $('request-list').replaceChildren(...(rows.length ? rows : [empty('Saved imports and application view selections will appear here.')]));
+  $('request-list').replaceChildren(...(rows.length ? rows : [empty('Saved reviews, imports, application view selections and complete reports will appear here.')]));
 }
 function renderRequest(record) {
   $('request-panel').hidden = false; show('recovery');
-  $('request-details').replaceChildren(make('h3',record.route === '/api/import' ? 'Dataset import' : 'Application view selection'),
+  $('request-details').replaceChildren(make('h3',operationTitle(record.route)),
     facts([['State',record.state],['Created',record.created_at],['Updated',record.updated_at],
       ['Original request',record.record_id],['Warehouse',record.warehouse_id]]));
   if (record.error) $('request-details').append(make('p',errorText({payload:record.error}),'notice'));
-  if (record.result) {
+  if (record.result && record.route === '/api/period-reports') {
+    $('request-details').append(reportSummary(record));
+  } else if (record.result) {
     const value = record.result;
     $('request-details').append(facts([['Outcome',value.import_status || value.status],['Edition',value.version_id || value.version?.version_id],
       ['View',value.qualified_view],['Original selection revision',value.revision]]));
@@ -608,6 +663,7 @@ function invalidateComparison() {
 $('compare-previous').addEventListener('change',invalidateComparison);
 $('compare-current').addEventListener('change',invalidateComparison);
 $('compare-meanings').addEventListener('click', () => run(compareMeanings));
+$('period-report-form').addEventListener('submit', event => {event.preventDefault();run(createPeriodReport);});
 $('mapping-rows').addEventListener('change', () => {
   if (source) $('source-meanings').replaceChildren(meanings(source, mapping()));
 });

@@ -67,6 +67,58 @@ credential environment, finish the current operator action, stop the server
 and start it against the same workspace with the updated environment. The
 saved operation ID, source selection and provider journal remain in place.
 
+## Open through Applications
+
+Choose **Research preservation** in the existing Applications workspace and select
+the retained runtime containing this workbench. Supply the original Python 3.11
+or later executable and the preservation workspace path. The path can identify an
+initialized or received workspace, or a new directory below an existing private
+parent for the first source intake.
+
+Use the private environment file for the original provider credential variable
+names and values. Review shows the selected workspace, parent directory, native
+source files and Python executable. An existing project's original source binding,
+project file and preparation are checked by the maintained preservation reader.
+For a new workspace, the review binds its uncreated path and existing parent.
+
+Save the application, review Start, then Start and Open it. The managed command
+calls this same workbench and original source/store implementation. The native
+process checks the reviewed binding before and after opening its original
+operator lease, and announces its actual workspace, source, Python, process and
+instance. Applications reads that same announcement from the live local
+`/api/launch` endpoint before retaining the Open address. It supports an assigned
+port, a chosen nonzero port, and the canonical local address for port 80.
+
+The **Overview**, **Records**, **Destinations**, **Delivery** and **Activity**
+screens retain their existing source intake, saved review, frozen destination and
+complete handover operations. Stop closes the listener and drains the original
+request threads and current operator worker before releasing its existing
+workspace lock. Repeated stop signals leave that same drain in progress.
+Reopening uses the saved workspace and original destination journals.
+
+The source-owned `preservation-workspace` command exposes the same original
+Node-to-Python wrapper in an installed distribution:
+
+~~~sh
+starforge preservation-workspace --python /absolute/python3 \
+  workbench binding --workspace /absolute/private/research-preservation
+~~~
+
+The binding command is a read of the original selected workspace, source and
+Python. To launch it directly with that review, pass its returned `sha256`:
+
+~~~sh
+starforge preservation-workspace --python /absolute/python3 \
+  workbench serve --workspace /absolute/private/research-preservation \
+  --expected-binding ORIGINAL_RETURNED_SHA256 --port 0
+~~~
+
+The normal native `serve` command continues to work with the original arguments.
+The explicit `--python` prefix selects the given existing interpreter; the
+original `STELLAR_FORGE_PYTHON` environment variable remains available for direct
+CLI use. The same binding and serve implementations travel with the complete
+operator application's original source inventory.
+
 ## Review the complete source
 
 **Records** shows the original record count, current inclusion decisions and

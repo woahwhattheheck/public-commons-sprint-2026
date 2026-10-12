@@ -1,3 +1,5 @@
+import {createImplementationSourceBundle,validateImplementationSourceBundle,
+  implementationSourceMember,validateImplementationSourceFile} from './source-bundle-reference.mjs';
 // MIT. Source-defined implementation and receiving in the original merchant case.
 // Browser and Node share this file. Persistence remains the SF74 case workspace.
 export const COMMISSIONING_SCHEMA = 'stellar-forge.merchant-commissioning.v1';
@@ -224,13 +226,24 @@ export async function validateCommissioning(value) {
   const editionIds=new Set(state.editions.map(row=>row.id));
   ensure(state.activeEditionId===null||editionIds.has(state.activeEditionId),'Selected workorder edition is missing');
   for(const row of state.editions) {
-    record(row,['id','recordedAt','actor','packet','html','checklist','inputs','runtimeMapping','sourceCase'],'workorder edition');
+    record(row,['id','recordedAt','actor','packet','html','checklist','inputs','runtimeMapping','sourceCase','sourceBundle'],'workorder edition');
     utc(row.recordedAt);text(row.actor,200,'operator',{empty:false});
     for(const key of ['packet','html','checklist'])use(row[key]);
     record(row.inputs,INPUTS.filter(key=>key!=='inputs'),'original workorder input references');
-    for(const ref of Object.values(row.inputs))use(ref);
+    for(const [key,ref] of Object.entries(row.inputs)) {
+      if(key==='supportText'&&row.sourceBundle&&!own(state.blobs,ref))hash(ref);
+      else use(ref);
+    }
     ensure(row.inputs.terms,'The original owner terms are missing');
     const packet=packetShape(JSON.parse(blobText(state,row.packet)));
+    if(row.sourceBundle!==undefined) {
+      use(row.sourceBundle.manifest);
+      await validateImplementationSourceBundle(row.sourceBundle,blobText(state,row.sourceBundle.manifest),{
+        packet,termsSha256:row.inputs.terms,sourceCase:row.sourceCase,
+        outputs:{packet:row.packet,html:row.html,checklist:row.checklist}});
+      if(own(state.blobs,row.inputs.supportText))ensure(state.blobs[row.inputs.supportText].bytes===row.sourceBundle.runtimeBytes,
+        'Original runtime size differs from its retained source bundle');
+    }
     const sourceRef=packet.sourceKind==='RUNTIME'?row.inputs.supportText:row.inputs.before;
     ensure(sourceRef&&sourceRef===packet.baseline.sourceSha256,'Workorder source does not match its original input');
     if(packet.sourceKind==='RUNTIME') {
@@ -276,12 +289,20 @@ export async function validateCommissioning(value) {
   const materialIds=new Set(state.materials.map(row=>row.id));
   for(const row of state.materials) {
     record(row,['id','name','mediaType','sha256','kind','description','taskIds','editionId',
-      'recordedAt','actor','reference'],'deliverable');
+      'recordedAt','actor','reference','sourceFile'],'deliverable');
     text(row.name,240,'original filename',{empty:false});
     ensure(!/[/\\]/.test(row.name)&&row.name!=='.'&&row.name!=='..','Use the original basename for a file');
     text(row.mediaType,160,'media type',{empty:false});text(row.kind,160,'deliverable kind',{empty:false});
     text(row.description,16000,'deliverable description');reference(row.reference);
-    use(row.sha256);array(row.taskIds,2000,'deliverable tasks');unique(row.taskIds,'deliverable task');
+    if(row.sourceFile!==undefined) {
+      const edition=state.editions.find(edition=>edition.id===row.editionId);
+      ensure(edition?.sourceBundle,'The original source-bundle edition is missing');
+      const member=validateImplementationSourceFile(row.sourceFile,edition.sourceBundle,
+        blobText(state,edition.sourceBundle.manifest),{sha256:row.sha256});
+      ensure(row.name===member.path.split('/').at(-1),'Keep the original source filename');
+      if(own(state.blobs,row.sha256)) {use(row.sha256);ensure(state.blobs[row.sha256].bytes===member.bytes,'Original material size changed');}
+    } else use(row.sha256);
+    array(row.taskIds,2000,'deliverable tasks');unique(row.taskIds,'deliverable task');
     ensure(row.taskIds.every(x=>taskIds.has(x)),'Deliverable task is missing');
     ensure(row.editionId===null||editionIds.has(row.editionId),'Deliverable workorder is missing');
     utc(row.recordedAt);text(row.actor,200,'deliverable operator',{empty:false});
@@ -471,7 +492,7 @@ export async function previewCommissioningWorkorder(value,result) {
   };
 }
 async function recordWorkorder(state,payload,context) {
-  record(payload,['result','inputs','sourceCase'],'workorder receiving payload');
+  record(payload,['result','inputs','sourceCase','sourceBundle'],'workorder receiving payload');
   record(payload.result,['packet','html','checklist'],'original workorder result');
   const packet=packetShape(payload.result.packet);
   text(payload.result.html,MAX_MATERIAL_BYTES,'original workorder HTML',{empty:false});
@@ -486,11 +507,21 @@ async function recordWorkorder(state,payload,context) {
   const packetSha=await addBlob(state,TEXT.encode(JSON.stringify(packet,null,2)+'\n'));
   const html=await addBlob(state,TEXT.encode(payload.result.html));
   const checklist=await addBlob(state,TEXT.encode(payload.result.checklist));
-  const editionId='edition-'+packetSha.slice(0,32);
+  let sourceBundle;
+  if(payload.sourceBundle!==undefined) {
+    record(payload.sourceBundle,['manifestText','runtimeBytes'],'original source-bundle input');
+    sourceBundle=await createImplementationSourceBundle({...payload.sourceBundle,packet,
+      termsSha256:refs.terms,sourceCase:payload.sourceCase??null,outputs:{packet:packetSha,html,checklist}});
+    await addBlob(state,TEXT.encode(payload.sourceBundle.manifestText));
+    const runtimeSha256=packet.runtimeSource.supportSha256;
+    if(refs.supportText)ensure(refs.supportText===runtimeSha256,'Original runtime differs from the selected bundle');
+    refs.supportText=runtimeSha256;
+  }
+  const editionId='edition-'+(sourceBundle?.manifestSha256??packetSha).slice(0,32);
   const existing=state.editions.find(row=>row.id===editionId);
   const immutable={packet:packetSha,html,checklist,inputs:refs,
     runtimeMapping:packet.sourceKind==='RUNTIME'?copy(payload.inputs.inputs):null,
-    sourceCase:payload.sourceCase??null};
+    sourceCase:payload.sourceCase??null,...(sourceBundle?{sourceBundle}:{})};
   if(existing) {
     ensure(Object.keys(immutable).every(key=>stable(existing[key])===stable(immutable[key])),
       'This workorder packet is already retained with different original inputs','EDITION_CONFLICT');
@@ -531,14 +562,27 @@ function acceptChanges(state,payload) {
   return {adopted};
 }
 async function addMaterial(state,payload,context) {
-  record(payload,['id','name','mediaType','data','kind','description','taskIds','editionId','reference'],'deliverable payload');
+  record(payload,['id','name','mediaType','data','kind','description','taskIds','editionId','reference','sourceFile'],'deliverable payload');
   id(payload.id);ensure(!state.materials.some(row=>row.id===payload.id),'Deliverable identifier already exists','MATERIAL_CONFLICT');
-  const sha256=await addBlob(state,decodeCommissioningBytes(payload.data));
-  const row={id:payload.id,name:payload.name,mediaType:payload.mediaType||'application/octet-stream',
+  const editionId=payload.editionId??state.activeEditionId;
+  let sha256,bytes,name=payload.name,sourceFile;
+  if(payload.sourceFile!==undefined) {
+    ensure(payload.data===undefined,'Choose the original bundle file or supplied file bytes');
+    const edition=state.editions.find(row=>row.id===editionId);
+    ensure(edition?.sourceBundle,'Choose a retained source-bundle workorder');
+    const member=validateImplementationSourceFile(payload.sourceFile,edition.sourceBundle,
+      blobText(state,edition.sourceBundle.manifest));
+    name=member.path.split('/').at(-1);
+    ensure(payload.name===undefined||payload.name===name,'Keep the original source filename');
+    sha256=member.sha256;bytes=member.bytes;sourceFile=member.sourceFile;
+  } else {
+    const original=decodeCommissioningBytes(payload.data);sha256=await addBlob(state,original);bytes=original.length;
+  }
+  const row={id:payload.id,name,mediaType:payload.mediaType||'application/octet-stream',
     sha256,kind:payload.kind||'deliverable',description:payload.description??'',taskIds:payload.taskIds??[],
-    editionId:payload.editionId??state.activeEditionId,recordedAt:context.recordedAt,actor:context.actor,
-    reference:payload.reference??''};
-  state.materials.push(row);return {materialId:row.id,sha256,bytes:state.blobs[sha256].bytes};
+    editionId,recordedAt:context.recordedAt,actor:context.actor,
+    reference:payload.reference??'',...(sourceFile?{sourceFile}:{})};
+  state.materials.push(row);return {materialId:row.id,sha256,bytes};
 }
 async function receive(state,payload,context) {
   record(payload,['id','editionId','taskIds','materialIds','outcome','kind','observedAt','reference','notes','supersedesId'],'receiving payload');
@@ -668,20 +712,79 @@ export function commissioningComparisons(state) {
   }
   return result;
 }
+/** Every retained native bundle travels with the complete case, including
+ * historical editions and original attachments not assigned to a task. */
+export function commissioningSourceBundles(state) {
+  const bundles=new Map();
+  for(const edition of state.editions) {
+    const reference=edition.sourceBundle;if(!reference)continue;
+    const manifestText=blobText(state,reference.manifest);
+    const original=JSON.parse(manifestText),key=reference.manifestSha256;
+    const retained=bundles.get(key);
+    if(retained) {
+      ensure(retained.bundleId===reference.bundleId&&retained.manifestText===manifestText,
+        'Retained source bundle identity changed');
+      retained.editionIds.push(edition.id);continue;
+    }
+    const members=[...original.files.map(file=>file.path),'manifest.json'];
+    bundles.set(key,{bundleId:reference.bundleId,manifestSha256:key,manifestText,
+      editionIds:[edition.id],files:members.map(path=>implementationSourceMember(reference,manifestText,path))});
+  }
+  return [...bundles.values()];
+}
 export function commissioningOriginalFiles(state) {
   const files=[];
   for(const edition of state.editions) {
     for(const [key,name] of [['packet','packet.json'],['html','seller-packet.html'],['checklist','acceptance-checklist.md']])
       files.push({name:edition.id+'/'+name,sha256:edition[key],bytes:state.blobs[edition[key]].bytes});
-    for(const [key,sha256] of Object.entries(edition.inputs))
-      files.push({name:edition.id+'/input-'+key+'.json',sha256,bytes:state.blobs[sha256].bytes});
+    for(const [key,sha256] of Object.entries(edition.inputs)) {
+      const retained=state.blobs[sha256];
+      if(retained)files.push({name:edition.id+'/input-'+key+'.json',sha256,bytes:retained.bytes});
+      else ensure(key==='supportText'&&edition.sourceBundle,
+        'Original workorder input is missing');
+    }
   }
-  for(const row of state.materials)files.push({name:'materials/'+row.id+'/'+row.name,sha256:row.sha256,bytes:state.blobs[row.sha256].bytes});
+  for(const row of state.materials) {
+    const retained=state.blobs[row.sha256];
+    if(retained)files.push({name:'materials/'+row.id+'/'+row.name,sha256:row.sha256,bytes:retained.bytes});
+    else {
+      const edition=state.editions.find(edition=>edition.id===row.editionId);
+      ensure(edition?.sourceBundle&&row.sourceFile,'Original material source is missing');
+      validateImplementationSourceFile(row.sourceFile,edition.sourceBundle,
+        blobText(state,edition.sourceBundle.manifest),{sha256:row.sha256});
+    }
+  }
+  // One complete named inventory per immutable native manifest. Material links
+  // and contained runtime inputs point to these files instead of copying large
+  // originals repeatedly or labeling a whole handoff as an extracted runtime.
+  for(const bundle of commissioningSourceBundles(state))for(const file of bundle.files)
+    files.push({name:'source-bundles/'+bundle.manifestSha256+'/'+file.path,
+      sha256:file.sha256,bytes:file.bytes,role:file.role,sourceFile:copy(file.sourceFile)});
   return files;
 }
 export function commissioningFileBytes(state,sha256) {
-  const blob=state.blobs[hash(sha256)];ensure(blob,'Original file is missing');
+  const blob=state.blobs[hash(sha256)];
+  if(!blob) {
+    let original=commissioningOriginalFiles(state).find(file=>file.sha256===sha256&&file.sourceFile);
+    if(!original) {
+      const edition=state.editions.find(row=>row.sourceBundle&&row.inputs.supportText===sha256);
+      if(edition) {
+        const member=implementationSourceMember(edition.sourceBundle,
+          blobText(state,edition.sourceBundle.manifest),'originals/support.json');
+        original={name:'source-bundles/'+edition.sourceBundle.manifestSha256+'/originals/support.json',
+          ...member,containedRuntime:{sha256,bytes:edition.sourceBundle.runtimeBytes}};
+      }
+    }
+    if(original)throw Object.assign(commissioningError('ORIGINAL_SOURCE_FILE_EXTERNAL',
+      'Open the original source bundle to read this file'),{original});
+    throw commissioningError('ORIGINAL_FILE_MISSING','Original file is missing');
+  }
   return decodeCommissioningBytes(blob.data);
+}
+/** Exact native members available for implementation tasks and receiving. */
+export function commissioningSourceFiles(state,editionId=state.activeEditionId) {
+  const bundle=commissioningSourceBundles(state).find(row=>row.editionIds.includes(editionId));
+  return bundle?bundle.files.map(file=>({...copy(file),editionId})):[];
 }
 const html=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const label=value=>String(value??'').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/_/g,' ');

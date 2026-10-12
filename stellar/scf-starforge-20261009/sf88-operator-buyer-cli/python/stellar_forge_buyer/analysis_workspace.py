@@ -38,6 +38,7 @@ from .analysis_workbooks import AnalysisWorkbooks
 from .workspace_archive import WorkspaceArchives
 from ._analysis_export_http import send_export
 from .response_tables import AnalysisResponses
+from .research_intake import ResearchIntake
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
 from .storage import digest, dump, parse, private_directory, read
@@ -125,7 +126,7 @@ class AnalysisWorkspace:
     their imports and activations. Source registration is an operator action.
     """
 
-    def __init__(self, directory, *, checkout=None, node="node"):
+    def __init__(self, directory, *, checkout=None, node="node", research_connections=None):
         self.database = DatasetDatabase(directory)
         self.checkout = str(Path(checkout).expanduser().resolve()) if checkout else None
         self.node = node
@@ -162,6 +163,7 @@ class AnalysisWorkspace:
             self.profiles = DatasetProfiles(self.database)
             self.reports = AnalysisReports(self.database, encode_cell=_cell, parse_parameters=_parameters, changes=self.changes)
             self.responses = AnalysisResponses(self.database, checkout=self.checkout, node=self.node, encode_cell=_cell)
+            self.research = ResearchIntake(self, connections=research_connections)
             self.exports = AnalysisExports(self.database, identity=self.identity, read_job=self._job, parse_parameters=_parameters)
             self.exports.recover_completed()
             self.workbooks = AnalysisWorkbooks(self.database, identity=self.identity, reports=self.reports)
@@ -178,6 +180,7 @@ class AnalysisWorkspace:
             if self._closed:
                 return
             self._closed = True
+        self.research.close()
         self.exports.close()
         self.workbooks.close()
         self.archives.close()
@@ -290,13 +293,15 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile", "research-capture"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
             raise StateError("ANALYSIS_REQUEST_ID_REQUIRED")
         spec = {"id": job_id}
-        if kind == "workspace-export":
+        if kind == "research-capture":
+            spec.update(self.research.prepare(request))
+        elif kind == "workspace-export":
             spec.update(self.archives.prepare(request))
         elif kind == "profile":
             spec.update(self.profiles.prepare(request))
@@ -344,10 +349,30 @@ class AnalysisWorkspace:
                 if old:
                     if old["kind"] != kind or old["request"] != raw:
                         raise StateError("ANALYSIS_REQUEST_ID_REUSED")
-                    if kind == "workspace-export" and old["status"] in {"INTERRUPTED", "FAILED", "CANCELLED"}:
+                    resumable = (
+                        kind in {"workspace-export", "research-capture"} and
+                        old["status"] in {"INTERRUPTED", "FAILED", "CANCELLED"}) or (
+                        kind in {"response-preview", "response-import"} and
+                        old["status"] == "INTERRUPTED")
+                    if resumable:
                         if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                             raise StateError("ANALYSIS_JOB_RUNNING")
-                        self.archives.resume(job_id)
+                        if kind == "research-capture":
+                            self.research.resume(job_id)
+                        elif kind == "workspace-export":
+                            self.archives.resume(job_id)
+                        else:
+                            # Continue only this already-admitted local request.
+                            # Historical source/preview identities remain exact;
+                            # a newer source alias does not change the request.
+                            original = spec
+                            if kind == "response-import":
+                                original, _ = self.responses._preview(db, spec)
+                            self.responses._source(
+                                db, original["source"], original["source_revision"])
+                            # execute() verifies the retained source and mapped
+                            # bytes again. import_response() atomically reopens
+                            # its manifest-derived version if it already committed.
                         db.execute("UPDATE sf_analysis_jobs SET status='RUNNING',error=NULL,finished_at=NULL WHERE id=?", (job_id,))
                         db.commit()
                         self._executor.submit(self._execute, job_id, kind, spec)
@@ -356,7 +381,9 @@ class AnalysisWorkspace:
                     return self.job(job_id)
                 if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                     raise StateError("ANALYSIS_JOB_RUNNING")
-                if kind == "profile":
+                if kind == "research-capture":
+                    self.research.validate(db, spec)
+                elif kind == "profile":
                     self.profiles.validate(db, spec)
                 elif kind in {"response-preview", "response-import"}:
                     self.responses.validate(db, kind, spec)
@@ -386,6 +413,8 @@ class AnalysisWorkspace:
             if kind == "profile":
                 self.profiles.run(job_id, spec)
                 return
+            elif kind == "research-capture":
+                result = self.research.run(job_id, spec)
             elif kind == "workspace-export":
                 result = self.archives.run(job_id, spec)
             elif kind in {"response-preview", "response-import"}:
@@ -447,7 +476,8 @@ class AnalysisWorkspace:
             if isinstance(exc.__cause__, sqlite3.Error):
                 code += ": " + str(exc.__cause__)
             with self.database._connection() as db:
-                status = "CANCELLED" if kind == "workspace-export" and code == "WORKSPACE_ARCHIVE_CANCELLED" else "FAILED"
+                status = "CANCELLED" if ((kind == "workspace-export" and code == "WORKSPACE_ARCHIVE_CANCELLED") or
+                    (kind == "research-capture" and code == "ANALYSIS_RESEARCH_CANCELLED")) else "FAILED"
                 db.execute("UPDATE sf_analysis_jobs SET status=?,error=?,finished_at=? WHERE id=? AND status='RUNNING'", (status, str(code)[:256], _now(), job_id))
 
     def _job(self, job_id):
@@ -473,6 +503,8 @@ class AnalysisWorkspace:
         elif job["kind"] == "report" and job["result"] is not None:
             with self.database._connection(readonly=True) as db:
                 job["result"] = self.reports._report(db, job_id)
+        elif job["kind"] == "research-capture":
+            job["progress"] = self.research.progress(job_id)
         elif job["kind"] == "query-export":
             job["progress"] = self.exports.progress(job_id)
         elif job["kind"] == "workbook":
@@ -636,6 +668,16 @@ def serve(workspace, *, port=0):
                 with workspace.archives.download(parts[2], parts[4]) as (stream, record):
                     return send_export(self, stream, record)
             if self.command == "GET":
+                if url.path == "/api/research-connections":
+                    if query:
+                        raise StateError("ANALYSIS_RESEARCH_QUERY_INVALID")
+                    return self._reply(200, workspace.research.configuration())
+                if url.path == "/api/research-captures":
+                    if set(query) - {"before", "limit"}:
+                        raise StateError("ANALYSIS_RESEARCH_QUERY_INVALID")
+                    return self._reply(200, workspace.research.captures(
+                        before=int(get("before")) if get("before") is not None else None,
+                        limit=int(get("limit", "20"))))
                 if url.path == "/api/workbook-sources":
                     if set(query) - {"kind", "before", "limit"}:
                         raise StateError("ANALYSIS_WORKBOOK_PAGE_INVALID")
@@ -763,6 +805,12 @@ def serve(workspace, *, port=0):
                 body = parse(raw)
                 if not isinstance(body, dict):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
+                if url.path in {"/api/research-dossiers", "/api/research-sources", "/api/research-review", "/api/research-elements"}:
+                    return self._reply(200, workspace.research.read(url.path.removeprefix("/api/research-"), body))
+                if len(parts) == 4 and parts[:2] == ["api", "research-captures"] and parts[3] == "cancel":
+                    if body:
+                        raise StateError("ANALYSIS_RESEARCH_CANCEL_FIELDS_INVALID")
+                    return self._reply(200, workspace.research.cancel(parts[2]))
                 if url.path == "/api/native-finalized-dataset-source":
                     from .analysis_native_delivery import register_finalized_source
                     return self._reply(200, register_finalized_source(workspace, body))
@@ -843,6 +891,7 @@ def main():
     parser.add_argument("--database", required=True, help="Original private DatasetDatabase directory")
     parser.add_argument("--checkout", help="Matching full native Stellar Forge checkout/runtime, required for imports")
     parser.add_argument("--node", default="node")
+    parser.add_argument("--research-connections", help="Private named original Research connections; browser requests select aliases only")
     commands = parser.add_subparsers(dest="command", required=True)
     launch = commands.add_parser("serve", help="Open the local browser application")
     launch.add_argument("--port", type=int, default=0)
@@ -852,6 +901,11 @@ def main():
     source.add_argument("--session", required=True)
     source.add_argument("--room", help="Existing SF100 room, or a new private destination")
     source.add_argument("--expected-revision", type=int, default=0)
+    research_read = commands.add_parser("research-read", help="Read named Research connections, existing dossiers and retained document editions")
+    research_read.add_argument("--action", required=True, choices=["connections", "dossiers", "sources", "review", "elements", "captures"])
+    research_read.add_argument("--request", help="Private JSON request file with original selected identities")
+    research_capture = commands.add_parser("research-capture", help="Capture one exact reviewed edition into the original source registration; repeat the same request to resume")
+    research_capture.add_argument("--request", required=True)
     response = commands.add_parser("response", help="Register a retained native API response, original typed stream export, or source document")
     response.add_argument("--name", required=True)
     response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp", "object", "document"])
@@ -872,9 +926,33 @@ def main():
     if args.command == "status":
         print(_json(AnalysisWorkspace.read_state(args.database)))
         return
-    workspace = AnalysisWorkspace(args.database, checkout=args.checkout, node=args.node)
+    workspace = AnalysisWorkspace(args.database, checkout=args.checkout, node=args.node,
+                                  research_connections=args.research_connections)
     try:
-        if args.command == "archive-review":
+        if args.command == "research-read":
+            request = parse(read(Path(args.request).expanduser().absolute(), _MAX_BODY)) if args.request else {}
+            if args.action == "connections":
+                if request:
+                    raise StateError("ANALYSIS_RESEARCH_FIELDS_INVALID")
+                result = workspace.research.configuration()
+            elif args.action == "captures":
+                if not isinstance(request, dict) or set(request) - {"before", "limit"}:
+                    raise StateError("ANALYSIS_RESEARCH_FIELDS_INVALID")
+                result = workspace.research.captures(**request)
+            else:
+                result = workspace.research.read(args.action, request)
+            print(_json(result))
+        elif args.command == "research-capture":
+            import time
+            request = parse(read(Path(args.request).expanduser().absolute(), _MAX_BODY))
+            job = workspace.start("research-capture", request)
+            while job["status"] == "RUNNING":
+                time.sleep(0.1)
+                job = workspace.job(job["id"])
+            print(_json(job))
+            if job["status"] != "COMPLETE":
+                raise SystemExit(1)
+        elif args.command == "archive-review":
             print(_json(workspace.archives.review()))
         elif args.command == "workspace-export":
             import time

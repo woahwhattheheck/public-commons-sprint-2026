@@ -176,6 +176,7 @@ All names below begin with `merchant_wqx_`. The [typed client and command guide]
 | `status`, `inventory`, `record`, `result`, `targets` | Inspect configured managed projects, complete inventories, native records, individual original results and exact receiving targets. |
 | `file`, `files`, `file_read`, `file_release` | Retain, list and transfer complete original native output files. |
 | `input_begin`, `input_append`, `input_finish`, `input_status`, `input_files` | Upload exact original bytes with a persistent named input and authoritative retained offset. |
+| `concentration_units`, `concentration_prepare`, `concentration_report` | Standardize complete source cohorts, paired result/unit choices and every independent reported limit; retain full documents and saved reports. |
 | `table_export`, `table_import`, `decisions_preview`, `decisions_save`, `receive` | Exchange full tables, review native changes, save an immutable receiving plan and receive the complete project. |
 | `project_save`, `capture_start`, `capture_import`, `capture_cancel`, `analyze`, `review_save`, `plan_preview`, `plan_save` | Use the existing project revision, source capture, scientific analysis and native plan APIs. |
 | `edition_prepare`, `merchant_stage`, `merchant_start`, `merchant_stop` | Prepare and operate the original water-quality data edition and merchant. |
@@ -201,6 +202,12 @@ const original = await reopenWqxDownload({
 The original native lease serializes a retained file operation. The CLI reserves its selected output before dispatch, so simultaneous callers targeting one output produce a single original dispatch and one complete private result. Different inputs and workspaces retain independent work.
 
 Inventory pages have a whole-list snapshot; record pages have a whole-file hash; target pages have the source plan hash. A changed selection is surfaced with its existing identity so the caller can inspect the current source and continue the correct operation. Changing operations retain their original request IDs when the transport return is interrupted.
+
+## Standardize concentrations and every reported limit
+
+The three concentration methods use the original source-bound concentration workflow and the existing complete file store. Read `concentrationUnits`, prepare one complete source group or explicit cohort with `concentrationPrepare`, then pass its returned `documentRef` directly into the normal table/preview/save flow. `concentrationReport` reopens the full saved JSON or CSV report from either receiving project. All original result IDs, qualifiers and limit records stay attached; blank measured values and unspecified result units remain blank.
+
+[WQX_CONCENTRATIONS.md](WQX_CONCENTRATIONS.md) covers the exact selections, typed methods, CLI commands, whole-file reports, recovery and complete native Potomac receiving. The provider now exposes 37 WQX tools. Its full cohort receiving composes the original native CLI source phase with the merchant MCP, complete tables, eleven exports, two managed projects and cold report reopening.
 
 ## Run the whole receiving operation
 

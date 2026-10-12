@@ -1,16 +1,20 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "research-client",
-  "description": "Operate the original authenticated Research workspace, Documents, managed Pipelines, citation update review, exact original source inspection and complete dossier exports through client, CLI and merchant tools.",
+  "description": "Operate the authenticated Research workspace, complete Europe PMC literature searches, source edition and citation review, Documents/Pipelines, and full Python analyst receiving through client, CLI and Merchant tools.",
   "commands": {
     "research-client": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-cli.mjs",
     "research-crossref-documents": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-document-cli.mjs",
-    "research-citation-workflow": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/citation-review-workflow.mjs"
+    "research-citation-workflow": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/citation-review-workflow.mjs",
+    "research-citation-python-receive": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/research_citation_analyst.mjs",
+    "research-europe-pmc": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/europe-pmc-cli.mjs"
   },
   "commandDescriptions": {
     "research-client": "Operate the original Research listener, Documents/Pipelines, citation review and complete original dossier exports",
     "research-crossref-documents": "Import original Crossref metadata files with exact documentary provenance into a Research edition",
-    "research-citation-workflow": "Run original citation review, browser draft recovery, revision reports and complete portable reopening"
+    "research-citation-workflow": "Run original citation review, browser draft recovery, revision reports and complete portable reopening",
+    "research-citation-python-receive": "Receive a saved citation review through Python, full revision reports, Analysis/workbook and complete customer reopening",
+    "research-europe-pmc": "Operate saved literature queries, original Europe PMC pages, edition comparison, record review and complete dossier/workspace receiving"
   },
   "exports": {
     "./buyer/research-dossiers/client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs",
@@ -22,6 +26,21 @@
     "./buyer/research-dossiers/source-inspection": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/source-inspection.mjs",
     "./buyer/research-dossiers/documents": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/document-workspace-client.mjs",
     "./buyer/research-dossiers/citation-review": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/citation-updates.mjs",
-    "./buyer/research-dossiers/crossref-documents": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-documents.mjs"
-  }
+    "./buyer/research-dossiers/crossref-documents": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-documents.mjs",
+    "./buyer/research-dossiers/python-receiving": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/research_citation_analyst.mjs",
+    "./buyer/research-dossiers/europe-pmc": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/europe-pmc-workspace.mjs",
+    "./buyer/research-dossiers/europe-pmc-client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/europe-pmc-client.mjs",
+    "./buyer/research-dossiers/europe-pmc-source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/europe-pmc/source.mjs",
+    "./merchant/mcp/research-europe-pmc": "./source/stellar-forge/mcp-merchant-operator/research-europe-pmc.mjs"
+  },
+  "components": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/europe-pmc"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/quota.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/config.mjs",
+    "stellar-forge/mcp-merchant-operator/research-europe-pmc.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/research-europe-pmc.mjs",
+    "stellar-forge/mcp-merchant-operator/EUROPE_PMC.md"
+  ]
 }

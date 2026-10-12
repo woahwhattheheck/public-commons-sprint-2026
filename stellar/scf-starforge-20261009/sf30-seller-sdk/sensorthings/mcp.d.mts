@@ -152,7 +152,12 @@ export interface ProviderReceipt extends NativeObject {
   completedAt: string;
   sourceCapturedAt: string | null;
   representation: 'RECORDED_ORIGINAL_APPLICATION_BODY' |
-    'ORIGINAL_APPLICATION_BODY_AFTER_HTTP_CONTENT_DECODING';
+    'ORIGINAL_APPLICATION_BODY_AFTER_HTTP_CONTENT_DECODING' | 'RETAINED_CONNECTOR_UTF8_TEXT';
+  /** Present only for explicit connector text; its MIME type is not a provider HTTP header. */
+  connectorTransfer?: { schema: 'stellar-forge.sensorthings-connector-text.v1'; connector: 'Notion attachment';
+    fileUploadId: string; filename: string; contentType: string; bytes: number; sha256: Sha256;
+    receivedAt: string; timestampBasis: string; httpStatusObserved: false; httpHeadersObserved: false; httpMethodObserved: false;
+    contentTypeBasis: string; };
   complete: boolean;
   error: NativeObject | null;
   sha256: Sha256;
@@ -356,6 +361,9 @@ export interface EditionScope {
   remaining: NativeObject[];
   captureStartedAt: string;
   captureLastResponseAt: string | null;
+  sourceAcquisition?: { representations: ProviderReceipt['representation'][]; connectorPages: number;
+    sourceReceivedAtStart: string | null; sourceReceivedAtEnd: string | null; sourceTimeBasis: string; nativeTimeBasis: string;
+    providerHttpStatusObserved: false; providerHttpHeadersObserved: false; providerHttpMethodObserved: false; };
 }
 export interface SourceFileIdentity extends NativeObject {
   sha256: Sha256;

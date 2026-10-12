@@ -21,6 +21,7 @@ const {openWfsApplication}=await importFile(join(WFS,'application.mjs'));
 const {startWfsWorkspace}=await importFile(join(WFS,'workspace.mjs'));
 const {wfsLoopbackJson}=await importFile(join(WFS,'loopback.mjs'));
 const {exportWfsReceivedFile}=await importFile(join(WFS,'customer.mjs'));
+const {prepareNativeVectorCustomer,verifyNativeVectorCustomer,inspectNativeVectorBrowser}=await importFile(join(WFS,'examples/native-vector-customer.mjs'));
 const {createNativeHttpFactory}=await importFile(join(SCF,'sf30-seller-sdk/native-http-factory.mjs'));
 const {Buyer}=await importFile(join(SCF,'sf88-operator-buyer-cli/node/client.mjs'));
 const {initializeMerchantProvider}=await importFile(join(SOURCE,'stellar-forge/mcp-merchant-operator/providers.mjs'));
@@ -52,7 +53,17 @@ async function save(name,value){
   await atomicJson(dirname(path),path.slice(dirname(path).length+1),value);return value;
 }
 async function retained(name,make){
-  const path=join(ROOT,name);let value=await optionalJson(path,16*1024*1024);if(value!==null)return value;
+  const path=join(ROOT,name);let value;
+  try{value=await optionalJson(path,16*1024*1024);}
+  catch(error){
+    if(error.code!=='PRIVATE_FILE_REQUIRED')throw error;
+    // The original journey lease owns this immutable journal. Recover its
+    // committed inode if interruption left the matching staged link attached.
+    await exactFile(path,await originalMember(ROOT,name,16*1024*1024));
+    value=await optionalJson(path,16*1024*1024);
+  }
+  if(value!==null)return value;
+  if(make===undefined)return null;
   value=await make();await durableDirectory(dirname(path));await exactFile(path,Buffer.from(json(value)));return value;
 }
 async function port(){
@@ -184,6 +195,19 @@ async function run(){
   assert.equal(settings.origin,ORIGIN);
   const originalProject=await initializeWfsProject({directory:project,name:'GeoSolutions WFS original customer workspace'});
   let facilitator,transport,app,browser,mcp,client,playwrightBrowser,configuration,operationFailure;
+  async function nativeBrowser(){
+    if(playwrightBrowser)return playwrightBrowser;
+    const require=createRequire(import.meta.url);let playwright;
+    for(const path of [process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES&&join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'playwright'),
+      join(SOURCE,'node_modules/playwright')].filter(Boolean)){
+      try{playwright=require(path);break;}catch(error){if(error.code!=='MODULE_NOT_FOUND')throw error;}
+    }
+    if(!playwright)throw Error('Use the same installed Playwright runtime for this customer.');
+    playwrightBrowser=await playwright.chromium.launch({headless:true,
+      ...(process.env.WFS_NATIVE_CHROMIUM_EXECUTABLE?{executablePath:process.env.WFS_NATIVE_CHROMIUM_EXECUTABLE}:{}),
+      args:['--disable-dev-shm-usage']});
+    return playwrightBrowser;
+  }
   let selectedEdition=0,pauseFirstPage=!await optionalJson(join(ROOT,'order-cancelled.json'));
   let gateReached,releaseGate;
   const gate=new Promise(done=>{gateReached=done}),continuation=new Promise(done=>{releaseGate=done});
@@ -317,6 +341,8 @@ async function run(){
       await retainDownload('wfs-original-features.geojson','features',{orderId:orders[1]})];
     await step('complete-original-comparison',{comparisonId,counts:comparison.counts,
       sourceSelectionsEqual:comparison.sourceSelectionsEqual,coordinates:featurePage.coordinates,files:sourceOutputs});
+    const vectors=await prepareNativeVectorCustomer({app,call,source,orders,root:ROOT,outputs,retained,step,
+      nativeBrowser,browserUrl:browser.url});
     const publication=await mutation('publish','wfs-original-publication',{orderId:orders[1],profile:'native'});
     const publicationId=publication.publication.id;
     const serving=await call('merchant',{action:'start',publicationId});assert.equal(serving.mode,'NATIVE_SELLER');
@@ -376,6 +402,8 @@ async function run(){
       const original=await getWfsOrder(project,orders[index]),customer=await getWfsOrder(reopened.directory,orders[index]);
       assert.deepEqual(customer.capture,original.capture);
     }
+    await verifyNativeVectorCustomer({directory:reopened.directory,python:PYTHON,expected:vectors,
+      label:'native-vectors-paid-customer-reopen',step});
     const exactXml=await exportWfsReceivedFile({sourceDirectory:received.directory,file:discovered.source.directory+'/response.bin',python:PYTHON});
     assert.equal(hash(exactXml.bytes),source.manifest.capabilities.sha256);
     await exactFile(join(outputs,'customer-GetCapabilities.xml'),exactXml.bytes);
@@ -402,12 +430,14 @@ async function run(){
     await exactFile(join(outputs,'wfs-feature-project.json'),bundleBytes);
     const bundle=JSON.parse(bundleBytes),bundleSummary=inspectWfsProjectBundle(bundle);
     const copy=join(ROOT,'received-whole-project');
-    await receiveWfsProject({directory:copy,bundle,id:'wfs-original-whole-receiving'});
+    await receiveWfsProject({directory:copy,bundle,id:'wfs-original-whole-receiving',python:PYTHON});
+    await verifyNativeVectorCustomer({directory:copy,python:PYTHON,expected:vectors,
+      label:'native-vectors-whole-project-receiving',step});
     const copyState=await readWfsProject(copy);
     await saveWfsQuery({directory:copy,id:'wfs-customer-follow-on-query',expectedRevision:copyState.revision,
       sourceId,schemaId,name:'Customer saved follow-on query',selection:source.selection});
     const changed=await readWfsProject(copy);
-    await receiveWfsProject({directory:copy,bundle,id:'wfs-original-whole-receiving'});
+    await receiveWfsProject({directory:copy,bundle,id:'wfs-original-whole-receiving',python:PYTHON});
     assert.deepEqual(await readWfsProject(copy),changed);
     // Installed CLI consumes these same complete customer files and source records.
     const cli=join(WFS,'cli.mjs');
@@ -415,20 +445,12 @@ async function run(){
     assert.equal(shown.id,changed.id);assert.equal(shown.revision,changed.revision);
     const inspectedBundle=await commandJson(cli,['inspect-bundle','--source',join(outputs,'wfs-feature-project.json')]);
     assert.equal(inspectedBundle.bundleSha256,bundleSummary.bundleSha256);
-    const cliReplayed=await commandJson(cli,['receive','--project',copy,'--source',join(outputs,'wfs-feature-project.json'),'--id','wfs-original-whole-receiving']);
+    const cliReplayed=await commandJson(cli,['receive','--project',copy,'--source',join(outputs,'wfs-feature-project.json'),'--id','wfs-original-whole-receiving','--python',PYTHON]);
     assert.equal(cliReplayed.bundleSha256,bundle.bundleSha256);assert.deepEqual(await readWfsProject(copy),changed);
     await save('outputs/installed-cli-receiving.json',{shown,inspectedBundle,cliReplayed});
     await step('mcp-restart-whole-project-and-installed-receiving',{bytes:bundleBytes.length,sha256:hash(bundleBytes),chunks,
       bundleSha256:bundle.bundleSha256,projectId:changed.id,sourceRevision:bundleSummary.project.revision,customerRevision:changed.revision});
-    const require=createRequire(import.meta.url);let playwright;
-    for(const path of [process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES&&join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'playwright'),
-      join(SOURCE,'node_modules/playwright')].filter(Boolean)){
-      try{playwright=require(path);break;}catch(error){if(error.code!=='MODULE_NOT_FOUND')throw error;}
-    }
-    if(!playwright)throw Error('Use the same installed Playwright runtime for this customer.');
-    playwrightBrowser=await playwright.chromium.launch({headless:true,
-      ...(process.env.WFS_NATIVE_CHROMIUM_EXECUTABLE?{executablePath:process.env.WFS_NATIVE_CHROMIUM_EXECUTABLE}:{}),
-      args:['--disable-dev-shm-usage']});
+    await nativeBrowser();
     const page=await playwrightBrowser.newPage({viewport:{width:1440,height:1000}}),browserErrors=[];
     page.on('pageerror',error=>browserErrors.push(String(error)));
     await page.goto(browser.url,{waitUntil:'networkidle'});
@@ -437,12 +459,13 @@ async function run(){
     await page.locator('nav>[data-section="orders"]').click();
     await page.locator('#orders-body tr').first().getByRole('button',{name:'Open',exact:true}).click();
     await page.waitForFunction(()=>!document.getElementById('order-panel').hidden);
-    for(const section of ['services','queries','orders','comparison','publication','customer','transfer','history']){
+    for(const section of ['services','queries','orders','comparison','publication','customer','vectors','transfer','history']){
       await page.locator('nav>[data-section="'+section+'"]').click();
       await page.screenshot({path:join(outputs,'merchant-'+section+'.png'),fullPage:true});
     }
     await page.goto(originalWindow.url,{waitUntil:'networkidle'});
     await page.waitForFunction(()=>document.getElementById('project-title').textContent==='GeoSolutions WFS original customer workspace');
+    await inspectNativeVectorBrowser({page,expected:vectors,outputs});
     await page.locator('nav>[data-section="orders"]').click();
     await page.locator('#orders-body tr').first().getByRole('button',{name:'Open',exact:true}).click();
     await page.waitForFunction(()=>!document.getElementById('order-panel').hidden);
@@ -452,7 +475,7 @@ async function run(){
     const width=await page.evaluate(()=>({document:document.documentElement.scrollWidth,viewport:innerWidth}));
     assert(width.document<=width.viewport);assert.deepEqual(browserErrors,[]);
     await playwrightBrowser.close();playwrightBrowser=null;
-    await step('actual-source-merchant-and-customer-browser',{screenshots:10,desktop:1440,mobile:width,browserErrors});
+    await step('actual-source-merchant-and-customer-browser',{screenshots:14,desktop:1440,mobile:width,browserErrors});
     await call('merchant',{action:'stop',publicationId});
     await client.close();client=null;await mcp.close();mcp=null;
     await browser.close();browser=null;await app.close();app=null;
@@ -464,7 +487,7 @@ async function run(){
         selection:source.selection,editions:source.manifest.editions.map(edition=>({id:edition.id,rows:edition.numberMatched,
           pages:edition.pages.length,startedAt:edition.startedAt,completedAt:edition.completedAt})),auth:'PUBLIC'},
       projectId:originalProject.id,sourceId,schemaId,queryId,orders,comparisonId,comparisonCounts:comparison.counts,
-      publicationId,editionId:edition.editionId,acquisitions,sourceReceiving:received,customerReopen:reopened,
+      publicationId,editionId:edition.editionId,acquisitions,sourceReceiving:received,customerReopen:reopened,vectors,
       receivedProject:copy,completeTransfer:{bytes:bundleBytes.length,sha256:hash(bundleBytes),chunks,bundleSha256:bundle.bundleSha256},
       installedCli:{projectId:shown.id,customerRevision:shown.revision,reused:cliReplayed.reused},
       fixtureCalls:facilitator.counts,transport:transport.counts,deliverables};

@@ -9,11 +9,13 @@ import { decodeText, labError } from './table.mjs';
 import { readLabZip, writeLabZip } from './zip.mjs';
 import { reviewTable, parseReviewTable, issueTable } from './decisions.mjs';
 import { renderLabReport } from './report.mjs';
+import { reconcileDeliveries } from './reconciliation.mjs';
+import { readReconciliationDecisions, appendReconciliationResult } from './reconciliation-application.mjs';
 const JSON_BYTES=value=>Buffer.from(JSON.stringify(value,null,2)+'\n');
 const SOURCE_LIMIT=16777216,DECISION_LIMIT=4194304;
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 function request(input){
-  const keys=['profile','reviewName','expectedSourceSha256','encoding','decisionFormat','tableScope','tableFields','$files'];
+  const keys=['profile','reviewName','expectedSourceSha256','encoding','decisionFormat','tableScope','tableFields','baselineProfile','baselineEncoding','expectedBaselineSha256','baselineDecisionFormat','reconciliationFormat','$files'];
   if(!plain(input)||Object.keys(input).some(key=>!keys.includes(key))||
     typeof input.profile!=='string'||typeof input.reviewName!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(input.reviewName))
     labError('REQUEST','Select an installed profile and a stable review name.');
@@ -25,6 +27,9 @@ function request(input){
     labError('DECISION_FORMAT','Select the exact decision document representation.');
   if(input.tableScope!==undefined&&!['issues','all'].includes(input.tableScope))
     labError('TABLE_SCOPE','Select issue fields or all selected fields for the editable table.');
+  if(input.expectedBaselineSha256!==undefined&&!/^[0-9a-f]{64}$/.test(input.expectedBaselineSha256))labError('SOURCE_HASH','Use the exact original baseline SHA256.');
+  if(input.baselineEncoding!==undefined&&!['utf-8','windows-1252'].includes(input.baselineEncoding))labError('ENCODING','Select the original baseline encoding.');
+  for(const key of ['baselineDecisionFormat','reconciliationFormat'])if(input[key]!==undefined&&!['json','csv','tsv'].includes(input[key]))labError('DECISION_FORMAT','Select the exact complete decision representation.');
   return input;
 }
 function sourceName(metadata){
@@ -77,7 +82,12 @@ function guide(manifest){
     '## Receiving scope','',
     'Each profile states its actual format and native field checks. The receiving organization supplies its selected format version, current reference values, and final native import result.',
     'The application preserves source laboratory qualifiers, detection limits, reported blank results and units. It records explicit edits in a separate source-bound document.',
-    'Reissue comparison uses the selected profile’s complete identity. Every ambiguous duplicate remains available for review.','',
+    'Reissue comparison uses the selected profile’s complete identity. Every ambiguous duplicate remains available for review.',
+    ...(manifest.reconciliation?['','## Cross-profile receiving','',
+      'Open reconciliation.html for the entire baseline/current comparison, exact source-key context, many-candidate groups and explicit correspondence decisions.',
+      'baseline/report.html opens the complete earlier source with its own field editor. Both original families, both field-decision documents and both native receiving archives are retained.',
+      'Pass the saved correspondence file in the reconciliation slot, baseline field decisions in baseline_decisions, and current field decisions in decisions. Select the exact baselineProfile and the same original files.',
+      'Candidate grouping uses uniquely resolved original laboratory sample IDs where available. Native method, fraction, test type, qualifiers, limits and units remain visible. Correspondence itself changes no native field.']:[]),'',
     'Job: '+manifest.jobId,
     'Original source: '+manifest.sourceSha256,
     'Profile: '+manifest.profile.id+' / '+manifest.profile.version,
@@ -92,8 +102,8 @@ export async function laboratoryReview(input,context){
   const profile=labProfile(input.profile),signal=context.signal,descriptors=context.files.list();
   signal.throwIfAborted();
   if(!Array.isArray(descriptors)||!descriptors.some(file=>file.slot==='source')||
-    descriptors.some(file=>!['source','baseline','decisions'].includes(file.slot)))
-    labError('FILE_SLOTS','Use source, optional baseline and optional decisions file slots.');
+    descriptors.some(file=>!['source','baseline','decisions','baseline_decisions','reconciliation'].includes(file.slot)))
+    labError('FILE_SLOTS','Use the original source, optional baseline, source field decisions and cross-profile correspondence slots.');
   const has=slot=>descriptors.some(file=>file.slot===slot),metadata=slot=>context.files.metadata(slot);
   const parent=resolve(process.env.LAB_EDD_TEMP_ROOT||tmpdir());await mkdir(parent,{recursive:true,mode:0o700});
   const directory=await mkdtemp(join(await realpath(parent),'lab-edd-'+sha256(context.jobId).slice(0,16)+'-'));
@@ -101,7 +111,7 @@ export async function laboratoryReview(input,context){
   try{
     archive=await createScientificArchive(outputPath,{signal});
     const originalNames={};
-    for(const slot of ['source','baseline','decisions'])if(has(slot)){
+    for(const slot of ['source','baseline','decisions','baseline_decisions','reconciliation'])if(has(slot)){
       const meta=metadata(slot),name='original/'+slot+'.'+extension(meta);originalNames[slot]=name;
       await archive.add(name,context.files.stream(slot),{contentType:meta.mediaType??meta.contentType??'application/octet-stream',expected:meta});
     }
@@ -109,18 +119,35 @@ export async function laboratoryReview(input,context){
     const delivery=await inspectDelivery(sourceMembers(sourceBytes,metadata('source'),{signal}),profile,{encoding:input.encoding??'utf-8',signal,processes:context.processes});
     if(input.expectedSourceSha256&&input.expectedSourceSha256!==delivery.source.sourceSha256)
       labError('SOURCE_CHANGED','The selected originals do not match the requested source edition.');
-    let comparison=null;
+    let comparison=null,baseline=null,crossProfile=false;
+    if(!has('baseline')&&(input.baselineProfile||input.expectedBaselineSha256||has('baseline_decisions')||has('reconciliation')))
+      labError('BASELINE_REQUIRED','The selected baseline profile and correspondence require the complete original baseline file.');
     if(has('baseline')){
-      const bytes=await context.files.read('baseline',{maxBytes:SOURCE_LIMIT});
-      const baseline=await inspectDelivery(sourceMembers(bytes,metadata('baseline'),{signal}),profile,{encoding:input.encoding??'utf-8',signal,processes:context.processes});
-      comparison=compareDeliveries(delivery,baseline);
+      const bytes=await context.files.read('baseline',{maxBytes:SOURCE_LIMIT}),baselineProfile=labProfile(input.baselineProfile??input.profile);
+      baseline=await inspectDelivery(sourceMembers(bytes,metadata('baseline'),{signal}),baselineProfile,
+        {encoding:input.baselineEncoding??input.encoding??'utf-8',signal,processes:context.processes});
+      if(input.expectedBaselineSha256&&input.expectedBaselineSha256!==baseline.source.sourceSha256)
+        labError('SOURCE_CHANGED','The complete baseline no longer matches its requested source edition.');
+      crossProfile=baselineProfile.id!==profile.id;
+      comparison=crossProfile?reconcileDeliveries(delivery,baseline):compareDeliveries(delivery,baseline);
     }
+    if(!crossProfile&&(has('baseline_decisions')||has('reconciliation')))
+      labError('CROSS_PROFILE_REQUIRED','Separate baseline field and correspondence decisions require the explicit different-profile source pair.');
     let document;
     if(has('decisions')){
       const bytes=await context.files.read('decisions',{maxBytes:DECISION_LIMIT});
       document=readLabDecisions(delivery,bytes,metadata('decisions'),input.decisionFormat);
     }else document=normalizeDecisions(delivery);
     const review=previewDelivery(delivery,document);
+    let reconciliation=null;
+    if(crossProfile){
+      const baselineDocument=has('baseline_decisions')?readLabDecisions(baseline,
+        await context.files.read('baseline_decisions',{maxBytes:DECISION_LIMIT}),metadata('baseline_decisions'),input.baselineDecisionFormat):normalizeDecisions(baseline);
+      const correspondence=has('reconciliation')?readReconciliationDecisions(comparison,
+        await context.files.read('reconciliation',{maxBytes:16777216}),metadata('reconciliation'),{format:input.reconciliationFormat}):undefined;
+      reconciliation=await appendReconciliationResult({archive,current:delivery,baseline,currentReview:review,
+        baselineDocument,comparison,document:correspondence,context,input,originalNames});
+    }
     let prepared=[],nativeZip=null,nativePreparation;
     try{
       prepared=await renderPreparedFiles(delivery,review,{signal,processes:context.processes});
@@ -141,6 +168,7 @@ export async function laboratoryReview(input,context){
     if(originalNames.baseline)links['Original earlier delivery']=originalNames.baseline;
     if(originalNames.decisions)links['Original supplied decisions']=originalNames.decisions;
     if(comparison)links['Complete reissue comparison']='comparison.json';
+    if(reconciliation){links['Cross-profile correspondence editor']='reconciliation.html';links['Complete baseline editor']='baseline/report.html';links['Saved correspondence decisions']='reconciliation/decisions.json';}
     let directNative=null;
     if(prepared.length===1){
       const ext=/\.(xlsx|xls|csv|tsv|txt)$/i.exec(prepared[0].filename)?.[1].toLowerCase()??'bin';
@@ -162,14 +190,14 @@ export async function laboratoryReview(input,context){
     await archive.add('issues.csv',Buffer.from(issueTable({...delivery,report:review.report})),{contentType:'text/csv'});
     await archive.add('lineage.json',JSON_BYTES(review.report.lineage),{contentType:'application/json'});
     if(comparison)await archive.add('comparison.json',JSON_BYTES(comparison),{contentType:'application/json'});
-    await archive.add('report.html',Buffer.from(renderLabReport(delivery,review,{comparison,links,nativePreparation})),{contentType:'text/html; charset=utf-8'});
+    await archive.add('report.html',Buffer.from(renderLabReport(delivery,review,{comparison:reconciliation?{schema:comparison.schema,comparisonSha256:comparison.comparisonSha256,counts:comparison.counts,byKind:comparison.byKind,completeReview:'reconciliation.html'}:comparison,links,nativePreparation})),{contentType:'text/html; charset=utf-8'});
     const manifest={schema:'starforge.lab-edd-job-result.v1',jobId:context.jobId,functionId:'laboratoryReview',
       reviewName:input.reviewName,profile:delivery.source.profile,sourceSha256:delivery.source.sourceSha256,
       documentSha256:review.documentSha256,reviewSha256:review.reviewSha256,sourceFiles:descriptors,
       request:Object.fromEntries(Object.entries(input).filter(([key])=>key!=='$files')),originalMembers:originalNames,
       report:{summary:review.report.summary,counts:review.report.counts,disposition:review.report.disposition},
       changes:review.changes,comparison:comparison?{disposition:comparison.disposition,counts:comparison.counts}:null,
-      nativePreparation,prepared:nativeZip?{archive:'prepared/receiving-files.zip',bytes:nativeZip.byteLength,sha256:sha256(nativeZip),
+      nativePreparation,reconciliation,prepared:nativeZip?{archive:'prepared/receiving-files.zip',bytes:nativeZip.byteLength,sha256:sha256(nativeZip),
         files:prepared.map(file=>({filename:file.filename,bytes:file.size,sha256:file.sha256,mediaType:file.mediaType??null})),
         directMember:directNative}:null,editableTables:tables};
     await archive.add('README.md',Buffer.from(guide(manifest)),{contentType:'text/markdown; charset=utf-8'});

@@ -32,6 +32,21 @@ review/recovery. `research-crossref-documents` supplies the original-document
 intake; `research-citation-workflow` runs the complete browser and portable-reopen
 workflow using an installed Playwright module and Chromium executable.
 
+## Operate complete literature searches
+
+Open **Literature searches** from the Research header to save Europe PMC query
+revisions, acquire or import original core JSON pages, compare complete retained
+editions and review their native records. The same listener retains every query,
+source occurrence, decision and dossier receiving request. Large acquisitions
+continue in explicitly linked parts with their original cursor and boundary page.
+
+The [literature operator guide](EUROPE-PMC-OPERATOR.md) covers the browser,
+`research-europe-pmc` command, client, source limits and complete workspace
+receiving. The [Merchant guide](../../../../stellar-forge/mcp-merchant-operator/EUROPE_PMC.md)
+covers all twenty original operation tools and six complete export kinds.
+Receive selected editions into existing questions, then use the dossier's
+evidence selection, findings, citation review and full reports.
+
 ## Import original source bundles
 
 [Source bundles](SOURCE_BUNDLES.md) bring a manifest, its named original files,

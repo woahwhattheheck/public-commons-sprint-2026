@@ -8,7 +8,8 @@ import sys
 
 SCHEMA = "stellar-forge.sf49.source-edition-archive.v1"
 MAX_META = 2 * 1024 * 1024
-MAX_EXPANDED = 16 * 1024 ** 3 + 256 * 1024 ** 2
+MAX_SOURCE = 16 * 1024 ** 3
+MAX_FILE = 8 * 1024 ** 3
 
 
 def module():
@@ -27,10 +28,17 @@ def main():
         request = json.loads(raw)
         if not isinstance(request, dict) or request.get("action") not in ("archive", "extract", "inspect"):
             raise ValueError("Use a native source archive action")
+        # The maintained Node carrier obtains this from SF74's exported
+        # MAX_HANDOFF_BYTES, including the installed workspace/Service schema.
+        # This private child field is never part of the public upload request.
+        handoff_bytes = request.pop("nativeHandoffBytes", None)
+        if type(handoff_bytes) is not int or not 0 < handoff_bytes <= MAX_FILE:
+            raise ValueError("Use the original server-derived handoff allowance")
+        max_expanded = MAX_SOURCE + handoff_bytes + 3 * MAX_META
         shared = module()
-        policy = shared.ArchivePolicy(SCHEMA, max_expanded_bytes=MAX_EXPANDED,
+        policy = shared.ArchivePolicy(SCHEMA, max_expanded_bytes=max_expanded,
                                       max_members=72, max_manifest_bytes=MAX_META,
-                                      max_file_bytes=8 * 1024 ** 3,
+                                      max_file_bytes=MAX_FILE,
                                       receipt_name=None, prefix="SF49")
         result = getattr(shared, request["action"])(request, policy=policy)
         sys.stdout.write(json.dumps({"ok": True, "result": result}, ensure_ascii=False,

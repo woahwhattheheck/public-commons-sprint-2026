@@ -1,0 +1,158 @@
+{
+  "schema": "stellar-forge.europe-pmc-public-inputs.v1",
+  "retainedAt": "2026-10-12T11:48:38Z",
+  "description": "Two actual original Europe PMC core searches. The second expands the query scope; it is not a claim of a later provider metadata change. Exact public source bytes are retained with their original transfer provenance. No HTTP status, headers or retrieval timestamp was exposed by the source transfer.",
+  "editions": [
+    {
+      "id": "baseline",
+      "label": "Europe PMC 2023 resource paper",
+      "selection": {
+        "query": "DOI:10.1093/nar/gkad1085",
+        "pageSize": 1,
+        "maxPages": 1000,
+        "synonym": false
+      },
+      "expectedKeys": [
+        "MED:37994696"
+      ],
+      "pages": [
+        {
+          "name": "baseline-page-1.json",
+          "sha256": "f77803f47613df28e9594639a971eeb8d1a2336c8947fb34e12939a06327ebb7",
+          "bytes": 11579,
+          "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1093%2Fnar%2Fgkad1085&format=json&resultType=core&cursorMark=%2A&pageSize=1",
+          "retainedAt": "2026-10-12T11:48:38Z",
+          "provenance": {
+            "source": "original-public-document-transfer",
+            "transfer": {
+              "provider": "notion-attachment",
+              "file_upload_id": "3f7dd772-3100-81a9-9379-00b2fb860364",
+              "filename": "epmcBaselinePageTransfer.json",
+              "content_type": "application/json; charset=utf-8",
+              "content_length": 11579,
+              "status": "uploaded"
+            },
+            "upstreamHttp": {
+              "status": null,
+              "headers": null,
+              "retrievedAt": null
+            },
+            "retainedAt": "2026-10-12T11:48:38Z",
+            "originalUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1093%2Fnar%2Fgkad1085&format=json&resultType=core&cursorMark=%2A&pageSize=1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "expanded",
+      "label": "Europe PMC and EMBL-EBI resource papers",
+      "selection": {
+        "query": "DOI:10.1093/nar/gkad1085 OR DOI:10.1093/nar/gkad1088",
+        "pageSize": 1,
+        "maxPages": 1000,
+        "synonym": false
+      },
+      "expectedKeys": [
+        "MED:37994696",
+        "MED:38015445"
+      ],
+      "pages": [
+        {
+          "name": "expanded-page-1.json",
+          "sha256": "4155312f4e9f68bea85fbfdc726b4333fdb17a32d70c5b8a309417ef12cef6e6",
+          "bytes": 11873,
+          "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1093%2Fnar%2Fgkad1085%20OR%20DOI%3A10.1093%2Fnar%2Fgkad1088&format=json&resultType=core&cursorMark=%2A&pageSize=1",
+          "retainedAt": "2026-10-12T11:48:38Z",
+          "provenance": {
+            "source": "original-public-document-transfer",
+            "transfer": {
+              "provider": "notion-attachment",
+              "file_upload_id": "3f7dd772-3100-8189-9d44-00b205a174b7",
+              "filename": "epmcExtendedPage1Transfer.json",
+              "content_type": "application/json; charset=utf-8",
+              "content_length": 11873,
+              "status": "uploaded"
+            },
+            "upstreamHttp": {
+              "status": null,
+              "headers": null,
+              "retrievedAt": null
+            },
+            "retainedAt": "2026-10-12T11:48:38Z",
+            "originalUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1093%2Fnar%2Fgkad1085%20OR%20DOI%3A10.1093%2Fnar%2Fgkad1088&format=json&resultType=core&cursorMark=%2A&pageSize=1"
+          }
+        },
+        {
+          "name": "expanded-page-2.json",
+          "sha256": "217f13a2e8a24fe76dc3538dcef64ba855ece4e3e43956b59236c0f19dac0750",
+          "bytes": 12531,
+          "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1093%2Fnar%2Fgkad1085+OR+DOI%3A10.1093%2Fnar%2Fgkad1088&cursorMark=AoIIQAi7Dyg0OTU5MjIzOQ%3D%3D&resultType=core&pageSize=1&format=json",
+          "retainedAt": "2026-10-12T11:48:38Z",
+          "provenance": {
+            "source": "original-public-document-transfer",
+            "transfer": {
+              "provider": "notion-attachment",
+              "file_upload_id": "3f7dd772-3100-8102-add6-00b2e9d94af9",
+              "filename": "europe-pmc-expanded-original-page2.json",
+              "content_type": "application/json; charset=utf-8",
+              "content_length": 12531,
+              "status": "uploaded"
+            },
+            "upstreamHttp": {
+              "status": null,
+              "headers": null,
+              "retrievedAt": null
+            },
+            "retainedAt": "2026-10-12T11:48:38Z",
+            "originalUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1093%2Fnar%2Fgkad1085+OR+DOI%3A10.1093%2Fnar%2Fgkad1088&cursorMark=AoIIQAi7Dyg0OTU5MjIzOQ%3D%3D&resultType=core&pageSize=1&format=json"
+          }
+        },
+        {
+          "name": "expanded-page-3.json",
+          "sha256": "b37ed379e1b2a1935c07091b64937aa872b4c2c4fe7fced1332ae6de7f4767c1",
+          "bytes": 237,
+          "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1093%2Fnar%2Fgkad1085+OR+DOI%3A10.1093%2Fnar%2Fgkad1088&cursorMark=AoIIQAi65yg0OTYyMzI5NA%3D%3D&resultType=core&pageSize=1&format=json",
+          "retainedAt": "2026-10-12T11:48:38Z",
+          "provenance": {
+            "source": "original-public-document-transfer",
+            "transfer": {
+              "provider": "notion-attachment",
+              "file_upload_id": "3f7dd772-3100-818b-bc6f-00b2eee01959",
+              "filename": "europe-pmc-expanded-original-terminal-page.json",
+              "content_type": "application/json; charset=utf-8",
+              "content_length": 237,
+              "status": "uploaded"
+            },
+            "upstreamHttp": {
+              "status": null,
+              "headers": null,
+              "retrievedAt": null
+            },
+            "retainedAt": "2026-10-12T11:48:38Z",
+            "originalUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI%3A10.1093%2Fnar%2Fgkad1085+OR+DOI%3A10.1093%2Fnar%2Fgkad1088&cursorMark=AoIIQAi65yg0OTYyMzI5NA%3D%3D&resultType=core&pageSize=1&format=json"
+          }
+        }
+      ]
+    }
+  ],
+  "attribution": [
+    {
+      "doi": "10.1093/nar/gkad1085",
+      "pmcid": "PMC10767826",
+      "title": "Europe PMC in 2023",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://academic.oup.com/nar/article/52/D1/D1668/7442539",
+      "changes": "Original source JSON retained unchanged; the software derives a separate normalized record and export."
+    },
+    {
+      "doi": "10.1093/nar/gkad1088",
+      "pmcid": "PMC10767983",
+      "title": "EMBL’s European Bioinformatics Institute (EMBL-EBI) in 2023",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://academic.oup.com/nar/article/52/D1/D10/7453257",
+      "changes": "Original source JSON retained unchanged; the software derives a separate normalized record and export."
+    }
+  ]
+}

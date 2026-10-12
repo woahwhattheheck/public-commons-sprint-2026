@@ -19,10 +19,18 @@ const canonical = value => Array.isArray(value) ? '[' + value.map(canonical).joi
 const hash = value => digest(canonical(value));
 const equal = (left, right) => canonical(left) === canonical(right);
 export const MERCHANT_CONSOLE_SOURCE_FILES = Object.freeze([
-  ...['serve.mjs', 'operator.mjs', 'config.mjs', 'host-files.mjs', 'catalog.mjs', 'providers.mjs',
-    'provider-lifecycle.mjs', 'instructions.mjs', 'client-exports.mjs', 'retained-file-reads.mjs',
-    'console/managed.mjs', 'console/service.mjs', 'console/store.mjs', 'console/customers.mjs',
-    'console/public/index.html', 'console/public/app.mjs', 'console/public/style.css'].map(path => ROOT + path),
+  ...['serve.mjs', 'operator.mjs', 'config.mjs', 'host-files.mjs', 'host-profile.mjs',
+    'catalog.mjs', 'providers.mjs', 'provider-registry.mjs', 'provider-lifecycle.mjs',
+    'instructions.mjs', 'client-exports.mjs', 'retained-file-reads.mjs', 'retained-download.mjs',
+    'console/managed.mjs', 'console/service.mjs', 'console/store.mjs', 'console/records.mjs',
+    'console/customers.mjs', 'console/openapi-customers.mjs', 'console/openapi-customer-records.mjs',
+    'console/customer-reviewer.mjs', 'console/customer-grpc.mjs', 'console/grpc-customer-records.mjs',
+    'console/grpc-customer-archive.mjs', 'console/grpc-recipes.mjs',
+    'console/workflows.mjs', 'console/workflow-records.mjs',
+    'console/workflow-recipes.mjs', 'console/reviewer-recipes.mjs',
+    'console/public/index.html', 'console/public/app.mjs', 'console/public/style.css',
+    'console/public/workflows.mjs', 'console/public/workflow-recipes.mjs',
+    'console/public/customer-reviewer.mjs', 'console/public/customer-grpc.mjs'].map(path => ROOT + path),
   'stellar-forge/mcp-paid-agent/http-tools.mjs',
   'stellar-forge/mcp-paid-agent/oauth-host.mjs',
   'stellar/scf-starforge-20261009/distribution/runtime-workspace/storage.mjs',

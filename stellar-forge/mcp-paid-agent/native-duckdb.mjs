@@ -356,3 +356,6 @@ export async function inspectDuckDBRegistration(description){
  finally{await client.close();}
 }
 
+
+// Reuse the original exact-number JSON interpretation for host-side CAS reconciliation.
+export {parse as parseNativeDuckDBJSON};
