@@ -38,9 +38,10 @@ async function sendFile(response,file,contentType,{signal,download}={}){
   for await(const chunk of file.chunks({signal})){signal?.throwIfAborted();if(!response.write(chunk))await once(response,'drain',{signal});}
   response.end();
 }
-export async function servePMTilesWorkspace({directory,runtime,port=0,expectedWorkspaceId=null,title='Map release operations'}={}){
+export async function servePMTilesWorkspace({directory,runtime,port=0,expectedWorkspaceId=null,expectedAuthoringPort,title='Map release operations'}={}){
   runtime=typeof runtime==='string'?runtime:clone(runtime);
   need(Number.isInteger(port)&&port>=0&&port<=65535,'PMTILES_PORT_INVALID');
+  need(expectedAuthoringPort===undefined||expectedAuthoringPort===null||(Number.isInteger(expectedAuthoringPort)&&expectedAuthoringPort>=1&&expectedAuthoringPort<=65535),'PMTILES_EXPECTED_AUTHORING_PORT_INVALID');
   const workspace=await openPMTilesWorkspace({directory,expectedWorkspaceId,title});
   let lease,controller,server,closing=null;
   const shutdown=new AbortController(),token=randomBytes(32).toString('hex'),session=randomUUID();
@@ -148,7 +149,9 @@ export async function servePMTilesWorkspace({directory,runtime,port=0,expectedWo
     });
     server.on('connection',socket=>{sockets.add(socket);socket.once('close',()=>sockets.delete(socket));});
     server.requestTimeout=0;server.headersTimeout=30000;
-    const before=workspace.state().authoringPort,selectedPort=port||before||0;
+    const before=workspace.state().authoringPort;
+    need(expectedAuthoringPort===undefined||before===expectedAuthoringPort,'PMTILES_AUTHORING_PORT_CHANGED');
+    const selectedPort=port||before||0;
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(selectedPort,'127.0.0.1',resolve);});
     const actualPort=server.address().port;origin='http://127.0.0.1:'+actualPort;
     await workspace.rememberPort({requestId:'authoring-'+session,expectedWorkspaceId:workspace.state().id,expectedPort:before,port:actualPort});

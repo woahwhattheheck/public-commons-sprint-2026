@@ -3,6 +3,7 @@
   "files": [
     "LICENSE",
     "PORTABLE_HANDOVER.md",
+    "PREVIEW_OPERATIONS.md",
     "README.md",
     "build-runtime.mjs",
     "cli.mjs",
@@ -16,6 +17,7 @@
     "package.py",
     "portable.mjs",
     "preview-entry.mjs",
+    "preview.mjs",
     "server.mjs",
     "sources/ATTRIBUTION.md",
     "sources/README.md",
