@@ -168,3 +168,13 @@ The distribution export `./merchant/openapi-operation-policies` exposes `callOpe
 | Package `operationPolicySha256` | Full retained `operation-policy.json` member identity. |
 
 The original parser checks the optional member and manifest identity together. Whole-package receiving preserves the package UUID, source, compiled files, revision lineage and operating-policy record.
+
+## One complete native receiving journey
+
+Run against the complete installed original distribution with its existing Node 24 runtime and Playwright browser:
+
+```sh
+node --max-old-space-size=256 stellar-forge/mcp-merchant-operator/openapi-operation-policies-journey.mjs EXISTING_PRIVATE_PARENT
+```
+
+The driver first completes the original 1,302-route worksheet and seller journey, then uses those same two consoles and merchant provider for policy edition paging and update, exact older-edition download, native settings and explicit unsets, a large complete application record, interrupted byte receiving, committed-save response loss, host restart and portable recovery, CLI receiving, whole-package export/import, original SF82 402/start/stop, and browser recovery of the frozen submission after later editor changes. It retains one combined result and screenshot in its unique private operation directory. The original worksheet driver remains usable on its own.
