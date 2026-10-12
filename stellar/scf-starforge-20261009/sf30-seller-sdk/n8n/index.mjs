@@ -13,4 +13,4 @@ export {
 export { openN8nMerchant, serveN8nMerchant } from './merchant.mjs';
 export { startN8nWorkspace } from './workspace/server.mjs';
 export { runN8nMerchantCommand } from './cli.mjs';
-
+export { N8N_LAUNCH_SCHEMA, startN8nMerchantLaunch, readN8nMerchantLaunch } from './launch.mjs';

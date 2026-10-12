@@ -26,16 +26,17 @@ const labels = object({ assets: { type: 'array', items: object({
 }, ['network', 'asset', 'symbol', 'decimals']) } }, ['assets']);
 const enums = values => ({ type: 'string', enum: values });
 const SPECS = [
-  ['workspaces', 'List the host-declared expense workspaces and original ledger aliases.', {}, [], true],
-  ['open', 'Explicitly open the original private expense server and its native lifetime lease. Opening does not capture a ledger.', workspace, ['workspace'], false],
+  ['workspaces', 'List the host-declared expense workspaces, original SF36 ledgers and original MCP quote-source aliases.', {}, [], true],
+  ['open', 'Explicitly open the original private expense server and its native lifetime lease. Opening does not capture a source or initiate payment.', workspace, ['workspace'], false],
   ['state', 'Read the original workspace revision and a paged source, cost-center, period or asset-label view.', { ...workspace, view: enums(['summary', 'sources', 'centers', 'periods', 'labels']), ...range }, ['workspace'], true],
-  ['items', 'Find native expense rows and exact coding status in the original statement projection.', { ...workspace, query: text(300, false), sourceId: record, status: enums(['ABSENT','RESERVED','UNCODED','STALE','CODED']), ...range }, ['workspace'], true],
+  ['items', 'Find native expense rows and exact coding status in the original statement projection.', { ...workspace, query: text(300, false), sourceId: record, status: enums(['ABSENT','RESERVED','UNCODED','STALE','CODED','PAYMENT_UNRESOLVED','FAILED_TRANSACTION','NO_SIGNED_DISPATCH','OBSERVATION_REVIEW']), ...range }, ['workspace'], true],
   ['item', 'Inspect one original expense, or page its retained coding editions.', { ...workspace, id: record, view: enums(['current','history']), ...range }, ['workspace','id'], true],
   ['captures', 'Page the original captures for a registered source.', { ...workspace, sourceId: record, ...range }, ['workspace','sourceId'], true],
   ['capture_status', 'Inspect the selected original capture and its paged source changes.', { ...workspace, id: record, ...range }, ['workspace','id'], true],
   ['ledger_register', 'Capture and register one host-declared read-only original SF36 ledger. Retain requestId before submission.', { ...mutation, ledger: alias, name: text(160), provenance: text(6000, false) }, ['workspace','requestId','expectedRevision','ledger'], false],
+  ['mcp_register', 'Capture and register one host-declared original MCP quote store through its read-only native snapshot reader. Saved native transfer observations remain distinct from buyer response and quote price.', { ...mutation, quoteSource: alias, name: text(160), provenance: text(6000, false) }, ['workspace','requestId','expectedRevision','quoteSource'], false],
   ['capture', 'Capture a registered source only when its original locator is declared by this host.', { ...mutation, sourceId: record }, ['workspace','requestId','expectedRevision','sourceId'], false],
-  ['source_rebind', 'Rebind a source to a declared original ledger, preserving the native request-continuity check.', { ...mutation, sourceId: record, ledger: alias, operator: actor, reason: text(3000) }, ['workspace','requestId','expectedRevision','sourceId','ledger','operator','reason'], false],
+  ['source_rebind', 'Rebind the same original source type to exactly one declared ledger or quoteSource alias, preserving native identity continuity.', { ...mutation, sourceId: record, ledger: alias, quoteSource: alias, operator: actor, reason: text(3000) }, ['workspace','requestId','expectedRevision','sourceId','operator','reason'], false],
   ['capture_review', 'Accept or reject the actual retained source edition with a named reviewer and reason.', { ...mutation, id: record, decision: enums(['ACCEPT','REJECT']), operator: actor, reason: text(3000) }, ['workspace','requestId','expectedRevision','id','decision','operator','reason'], false],
   ['center_save', 'Save an original cost center with its native revision check.', { ...mutation, payload: center }, ['workspace','requestId','expectedRevision','payload'], false],
   ['labels_save', 'Save explicitly supplied native asset labels and scales. Amounts remain exact original base-unit strings.', { ...mutation, payload: labels }, ['workspace','requestId','expectedRevision','payload'], false],
@@ -43,13 +44,13 @@ const SPECS = [
   ['coding_save', 'Save a reviewed original allocation whose base-unit lines exactly equal its settled actual.', { ...mutation, id: record, payload: coding }, ['workspace','requestId','expectedRevision','id','payload'], false],
   ['disposition', 'Resolve a displayed original period issue using its current basis and allowed disposition.', { ...mutation, periodId: record,
     payload: object({ item_id: text(160,false), code: text(240), basis: sha, kind: text(100), reason, operator: actor }, ['item_id','code','basis','kind','reason','operator']) }, ['workspace','requestId','expectedRevision','periodId','payload'], false],
-  ['period_report', 'Read a current original period summary or page its exact allocations, exposures, exceptions or native groups.', { ...workspace, id: record, view: enums(['summary','allocations','outstanding_reservations','issues','totals','by_cost_center','by_project','outstanding_totals','source_captures']), ...range }, ['workspace','id'], true],
+  ['period_report', 'Read a current original period summary or page its exact allocations, exposures, exceptions or native groups.', { ...workspace, id: record, view: enums(['summary','allocations','outstanding_reservations','issues','totals','by_cost_center','by_project','outstanding_totals','source_captures','native_payment_outcomes']), ...range }, ['workspace','id'], true],
   ['period_review', 'Save the named reviewer, capacity and conclusion against the current native period context.', { ...mutation, id: record, reviewer: actor, role: actor, notes: text(6000) }, ['workspace','requestId','expectedRevision','id','reviewer','role','notes'], false],
   ['period_close', 'Issue the original ready period using its exact retained review. Same requestId returns the original committed close.', { ...mutation, id: record, reviewId: record }, ['workspace','requestId','expectedRevision','id','reviewId'], false],
   ['period_reopen', 'Reopen the original closed period with a recorded owner and reason, preserving earlier issued editions.', { ...mutation, id: record, operator: actor, reason }, ['workspace','requestId','expectedRevision','id','operator','reason'], false],
   ['history', 'Page retained period reviews and closes, original activity or successful customer request identities.', { ...workspace, kind: enums(['period','activity','requests']), periodId: record, ...range }, ['workspace','kind'], true],
-  ['review', 'Inspect a retained original review and page its frozen data.', { ...workspace, id: record, view: enums(['summary','allocations','outstanding_reservations','issues','totals','by_cost_center','by_project','outstanding_totals','source_captures']), ...range }, ['workspace','id'], true],
-  ['issued', 'Inspect a frozen original accountant edition and page its retained data.', { ...workspace, id: record, view: enums(['summary','allocations','outstanding_reservations','issues','totals','by_cost_center','by_project','outstanding_totals','source_captures']), ...range }, ['workspace','id'], true],
+  ['review', 'Inspect a retained original review and page its frozen data.', { ...workspace, id: record, view: enums(['summary','allocations','outstanding_reservations','issues','totals','by_cost_center','by_project','outstanding_totals','source_captures','native_payment_outcomes']), ...range }, ['workspace','id'], true],
+  ['issued', 'Inspect a frozen original accountant edition and page its retained data.', { ...workspace, id: record, view: enums(['summary','allocations','outstanding_reservations','issues','totals','by_cost_center','by_project','outstanding_totals','source_captures','native_payment_outcomes']), ...range }, ['workspace','id'], true],
   ['request', 'Recover the exact original committed response for a saved requestId after an interrupted reply or restart.', { ...workspace, requestId: request }, ['workspace','requestId'], true],
   ['export', 'Retain an exact original project, accountant packet, source capture or issued view under a stable exportId. Projects require the inspected workspace revision.', { ...workspace, exportId: alias, kind: enums(['project','accountant','capture','issued-json','issued-html']), recordId: record, expectedRevision: number }, ['workspace','exportId','kind'], false],
   ['exports', 'Page saved expense export requests and completed files after restart.', range, [], true],
@@ -85,5 +86,7 @@ export function validateBuyerExpenseArguments(action,args) {
       if(typeof value!=='string'||(spec.minLength!==undefined&&value.length<spec.minLength)||(spec.maxLength!==undefined&&value.length>spec.maxLength)||(spec.pattern&&!new RegExp(spec.pattern).test(value)))invalid(path+' must preserve its declared original string format.');
     }else if(spec.type==='boolean'&&typeof value!=='boolean')invalid(path+' must be a boolean.');
   }
-  visit(args,definition.inputSchema,action);return definition;
+  visit(args,definition.inputSchema,action);
+  if(action==='source_rebind'&&(Object.hasOwn(args,'ledger')===Object.hasOwn(args,'quoteSource')))invalid('source_rebind requires exactly one original ledger or quoteSource alias.');
+  return definition;
 }

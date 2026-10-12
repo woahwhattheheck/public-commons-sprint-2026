@@ -6,6 +6,7 @@ import { resolve, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openGitSource, MAX_SOURCE_FILE_BYTES, MAX_SOURCE_BYTES } from './git-source.mjs';
 import { createBrowserAssetIndex } from './browser-assets.mjs';
+import { distributionPath, contributionPaths, composeDistribution } from './specification.mjs';
 import { readDistributionBuildPin, recoverCompletedDistribution, openDistributionBuild,
   inspectDistributionBuild } from './build-state.mjs';
 
@@ -88,11 +89,14 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   if (pin && pin.sourceCommit !== commit) throw Object.assign(new Error('The selected ref differs from the retained distribution source.'),
     { code: 'DISTRIBUTION_SOURCE_COMMIT_CONFLICT' });
   const byPath = new Map(tree.map(item => [item.path, item]));
-  const initial = source.readFiles([byPath.get(ownPath + '/distribution.json'), byPath.get('LICENSE')]);
-  const spec = JSON.parse(initial.get(ownPath + '/distribution.json'));
+  const specificationPaths = [distributionPath, ...contributionPaths(tree.map(item => item.path))];
+  const initial = source.readFiles([...specificationPaths.map(path => byPath.get(path)), byPath.get('LICENSE')]);
+  const distribution = composeDistribution({ base: JSON.parse(initial.get(distributionPath)),
+    contributions: specificationPaths.slice(1).map(path => ({ path, data: JSON.parse(initial.get(path)) })) });
+  const spec = distribution.spec;
   if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
   const excluded = new Set(spec.excludeFiles ?? []);
-  const explicitRuntime = new Set(spec.supportFiles);
+  const explicitRuntime = new Set([...spec.supportFiles, ...specificationPaths]);
   // Explicit support files include maintained ZIP data and can override a
   // test-like filename. Undeclared archives remain outside source selection;
   // directory, explicit exclusion and regular-file checks still apply.
@@ -102,7 +106,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
   const required = [...Object.values(spec.commands), ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9))];
-  for (const path of [...required, ...spec.supportFiles, ...Object.values(spec.runtimePackageManifests ?? {})])
+  for (const path of [...required, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();
   let totalBytes = 0;
@@ -116,7 +120,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     }
     return loaded;
   };
-  source.progress('selected', { files: selected.length, components: spec.components.length });
+  source.progress('selected', { files: selected.length, components: spec.components.length, contributions: distribution.contributions.length });
   loadSources(selected);
   // The same manifests drive the actual servers. Retain every mapped source
   // and resolve browser imports in its served URL context, not by inventing a
@@ -211,6 +215,9 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     packageName: spec.name, packageVersion: version, sourceCommit: commit,
     sourceRepository: 'https://github.com/woahwhattheheck/public-commons-sprint-2026',
     components: spec.components, sourceBytes: totalBytes,
+    distributionInputs: specificationPaths.map(path => ({ path, gitBlob: byPath.get(path).blob,
+      sha256: digest(sources.get(path)), bytes: sources.get(path).length })),
+    distributionContributions: distribution.contributions.map(({ id, path }) => ({ id, path })),
     files: selected.map(item => ({ path: item.path, packagePath: 'source/' + item.path,
       gitBlob: item.blob, sha256: digest(sources.get(item.path)), bytes: sources.get(item.path).length, mode: item.mode })),
     packageFiles: { 'package.json': digest(metadataBytes), 'README.md': digest(readme), 'LICENSE': digest(license) },
