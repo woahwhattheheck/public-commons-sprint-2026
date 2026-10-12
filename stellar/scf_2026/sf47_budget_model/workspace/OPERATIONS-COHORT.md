@@ -164,3 +164,13 @@ Use the same `--request-id` and exact preparation inputs after an uncertain resu
 | Existing completion preview / prepare | Optional `cohortReviewIds:[...]`, embedded original evidence and native findings |
 
 HTTP writes use the original authenticated local request path. Python callers use `Operations.seed_cohort`, `preview_cohort`, the original `command` method and `export_cohort`. The [API contract](OPERATIONS-API.md), [CLI guide](CLI.md) and [agent integration guide](AGENT.md) retain the complete original workspace lifecycle.
+
+## Maintained agent and same-case receiving
+
+The original typed client exposes `cohortSeed`, `cohortPreview`, `cohortPrepare` and `download('cohort', ...)`; the original MCP provider exposes `merchant_grant_cohort_seed`, `merchant_grant_cohort_preview`, `merchant_grant_cohort_prepare` and the existing export tool with `kind:'cohort'`. Its complete output, byte paging and array paging remain on the original retained-response path. Completion preview and preparation carry the same optional `cohortReviewIds`. See [AGENT.md](AGENT.md) for the exact envelope.
+
+The original `buyer-operations-receiving.mjs` journey accepts the private configuration flag `cohortReceiving:true`. It continues the supplied complete operating case and same paid Inbox. The additive `cohort-operations-receiving.mjs` uses the same browser, original case, frozen request and source identities. It reviews the retained team-operated baseline, leaves unknown award/customer/facilitator facts unentered, freezes the unmet result, shows that result in Completion, and exports/reopens the complete case.
+
+The same retained freeze request is then recovered through both the typed client and original MCP provider. Their original frozen ZIP must match the browser and CLI bytes. The received case keeps the same review and measurement digest while its receiving case/plan IDs remain the native importer identities. No new purchase, provider call, buyer recovery, finalization or grant form submission is part of this receiving journey.
+
+A capture attempt is retained before its original export begins. If the file disappears after an ambiguous attempt, the continuation stops at that original missing publication; it never silently captures another timestamped source under the same attempt. Accepted Operations requests are read back before a later phase starts. The private configuration, source manifest and native result retain the actual run status; authored workflow source alone does not establish that a run completed.
