@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { clone, now } from '../opensearch/workspace/store.mjs';
-import { PROFILE_ID, normalizedDocument, data, fail, canonical, digest } from './core.mjs';
+import { PROFILE_ID, normalizedDocument, sourceDocumentId, businessKey, data, fail, canonical, digest } from './core.mjs';
 import { TABLES, TABLE_KEYS, MAX_PACKAGE_BYTES } from './workspace.mjs';
+import { parseOpenTransDocument } from './opentrans.mjs';
 
 export const PACKAGE_SCHEMA='stellar-forge.supplier-orders-package.v1';
 const SNAPSHOT_SCHEMA='stellar-forge.supplier-orders-snapshot.v1';
@@ -69,7 +70,7 @@ function completeRow(table,row){
     fail('ORDER_PACKAGE_RECORD_CHANGED','The complete immutable document or draft differs from its saved seal.',422,{table,key:rowKey(table,row)});
   if(table==='supplier_order_documents'){
     normalizedDocument(record.document);
-    if(record.kind!==row.kind||record.businessKey!==row.business_key)fail('ORDER_PACKAGE_DOCUMENT_DIFFERS','The indexed document identity differs from its original record.');
+    if(record.kind!==row.kind||record.kind!==record.document.kind||record.documentId!==record.document.documentId||record.businessKey!==row.business_key||record.businessKey!==businessKey(record.document)||record.id!==sourceDocumentId(record.document,record.source?.sha256))fail('ORDER_PACKAGE_DOCUMENT_DIFFERS','The indexed document identity differs from its original source record.');
   }
   if(table==='supplier_order_selections'&&(record.orderId!==row.order_id||record.documentId!==row.document_id))fail('ORDER_PACKAGE_SELECTION_DIFFERS','The indexed selection differs from the original record.');
   if(table==='supplier_order_files'&&(!/^[a-f0-9]{64}$/.test(record.id)||record.id!==record.sha256||!Number.isSafeInteger(record.bytes)||record.bytes<0||record.kind!==row.kind))fail('ORDER_PACKAGE_FILE_INVALID','Invalid immutable complete file record.');
@@ -77,6 +78,27 @@ function completeRow(table,row){
     if(!Array.isArray(record.selectionIds)||record.selectionIds.some(id=>typeof id!=='string'))fail('ORDER_PACKAGE_CURRENT_SELECTION_INVALID','Retain the exact original current document-selection IDs.');
   }
   return record;
+}
+function immutableSourceProjection(document){
+  const {findings,validation,...original}=document;
+  return canonical(original);
+}
+async function bindOriginalDocument(record,existing,directory,incomingFiles){
+  const source=record.source,entry=incomingFiles.get(source?.sha256);
+  if(!entry||entry.bytes!==source.bytes||source.fileId!==source.sha256||
+    record.document.source?.sha256!==source.sha256||record.document.source?.bytes!==source.bytes)
+    fail('ORDER_PACKAGE_ORIGINAL_MISSING','An immutable document has no matching complete original XML source.',422,{documentId:record.id});
+  const projection=immutableSourceProjection(record.document);
+  if(existing){
+    const accepted=decode(existing);
+    if(accepted.source?.sha256===source.sha256&&accepted.source?.bytes===source.bytes&&immutableSourceProjection(accepted.document)===projection)return;
+  }
+  const selected=record.document.source;
+  const reparsed=await parseOpenTransDocument(await readFile(join(directory,entry.path)),{
+    name:selected.name??source.name,provenance:own.call(selected,'provenance')?selected.provenance:source.provenance??null
+  });
+  if(immutableSourceProjection(reparsed)!==projection)
+    fail('ORDER_PACKAGE_SOURCE_PROJECTION_DIFFERS','The retained business document differs from its complete original XML. Recreate the package from the original source workspace.',422,{documentId:record.id,sourceSha256:source.sha256});
 }
 async function* lines(path){
   let pieces=[],length=0;
@@ -183,6 +205,7 @@ export async function readSupplierOrderPackage(workspace,path,{mode='merge',requ
       else if(canonical(existing)===canonical(row))plan.preserved[table]=(plan.preserved[table]??0)+1;
       else plan.foreign[table]=(plan.foreign[table]??0)+1;
       if(table==='supplier_order_documents'){
+        await bindOriginalDocument(record,existing,directory,incomingFiles);
         documents.add(record.id);sources.push(record.source);
         const issuer=record.document.header.supplierId;if(issuer&&issuer!==header.supplierIdentity?.value)fail('ORDER_PACKAGE_SUPPLIER_DIFFERS','A document issuer differs from the original package supplier.');
       }
