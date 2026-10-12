@@ -1,4 +1,6 @@
 // MIT. Coastal source operations over the original workspace, publisher and receiver.
+import {studyInput,findStudy,prepareStudy,studySaveRecord,studyReview,selectedStudyReview,studyRows,studyDigest,STUDY_LIMITS,STUDY_REQUIRED_COLUMNS} from './study.mjs';
+import {writeStudyRelease,uploadStart,chunkInput,retainChunk,compareStudyReturn} from './study-exchange.mjs';
 import {makeBackfillPlan} from './history.mjs';
 import {writeRetainedAnalysisBundle} from './analysis/retained.mjs';
 import {mappingValue,mappingSourceValue,mappingChanges,materializeExport,retainedExport,writeTableExport,writeSourcePackage,writeComparisonExport} from './exports.mjs';
@@ -8,6 +10,8 @@ import {normaliseStation,makeQuery,requestPlan,metadataTasks,decodeSource,fetchC
 import {editionRows,summarizeEdition,exportEdition} from './domain.mjs';
 import {prepareCoastalDataset,queryNativeDataset,nativePublishers,prepareNativeRelease,inspectNativeRelease,controlNativeRelease,inspectBuyer,receiveBuyer,readBuyerOutput} from './dataset.mjs';
 const selected=(rows,id,label)=>{const r=rows.find(x=>x.id===id);if(!r)throw fault('COOPS_SELECTION','Choose a saved '+label+'.',404);return r;};
+const studyFrame=study=>Object.fromEntries(Object.entries(structuredClone(study)).filter(([name])=>name!=='history'));
+const uploadIdentity=upload=>Object.fromEntries(['id','releaseId','studyId','studyRevision','studySha256','format','filename','bytes','createdAt'].map(k=>[k,upload[k]]));
 const key=value=>hashBytes(Buffer.from(value)).slice(0,24),now=()=>new Date().toISOString();
 function errorInfo(error){
  if(['ENOSPC','EDQUOT'].includes(error.code))return{code:'COOPS_STORAGE_FULL',message:'The workspace is full. Its original operation can resume when capacity returns.',status:507,retryable:true};
@@ -26,7 +30,7 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
  text(userAgent,'an identifying user agent',512);
  const store=await openWorkspaceStore(directory,{schema:WORKSPACE_SCHEMA,initialState:{stations:[],backfills:[],mappings:[]}}),
   captures=new Map(),backfills=new Map(),operations=new Map(),controllers=new Map(),publishers=nativePublishers(store);
- await store.mutate(s=>{s.backfills??=[];s.mappings??=[];for(const b of s.backfills)if(['RUNNING','QUEUED'].includes(b.state))b.state='PAUSED';});
+ await store.mutate(s=>{s.backfills??=[];s.mappings??=[];for(const key of ['studies','studyReviews','studyReleases','studyUploads','studyReturns','studyReceivings'])s[key]??=[];for(const b of s.backfills)if(['RUNNING','QUEUED'].includes(b.state))b.state='PAUSED';});
  let closing=false,requestTail=Promise.resolve(),lastRequest=0;
  if(store.read().captures.some(c=>['RUNNING','QUEUED'].includes(c.state)))await store.mutate(s=>{for(const c of s.captures)if(['RUNNING','QUEUED'].includes(c.state))c.state='PAUSED';});
  const capability=()=>({mode:releaseRuntime.facilitator?'NATIVE_X402':'CHALLENGE_ONLY',facilitatorConfigured:Boolean(releaseRuntime.facilitator),port:releaseRuntime.port??0});
@@ -43,7 +47,7 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
   return{schema:'stellar-forge.coops-workspace-view.v1',workspaceId:s.workspaceId,revision:s.revision,stations:s.stations,
    captures:[...s.captures].reverse(),backfills:[...s.backfills].reverse(),mappings:s.mappings,editions:(await editions({limit:100})).editions,editionCount:s.editionIds.length,
    selectedEditionId:s.selectedEditionId,selectedEdition:s.selectedEditionId?await store.edition(s.selectedEditionId):null,
-   annotations:s.annotations,datasets:s.datasets,releases,receipts:s.receipts,exports:s.exports,
+   annotations:s.annotations,studies:s.studies,studyReviews:s.studyReviews,studyReleases:s.studyReleases,studyUploads:s.studyUploads,studyReturns:s.studyReturns,studyReceivings:s.studyReceivings,datasets:s.datasets,releases,receipts:s.receipts,exports:s.exports,
    operations:Object.values(s.operations).slice(-100).reverse().map(({payload,context,materializedResult,...o})=>o),
    capabilities:{inboxConfigured:Boolean(inboxDirectory),releaseRuntime:capability()}};
  }
@@ -151,9 +155,10 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
   if(typeof operationId!=='string'||!/^[A-Za-z0-9_-]{8,100}$/.test(operationId))throw fault('COOPS_OPERATION_ID','Supply the original stable operationId.');
   const digest=hashBytes(Buffer.from(stable({action,payload}))),prior=store.read().operations[operationId];
   if(prior){if(prior.requestSha256!==digest)throw fault('COOPS_OPERATION_CONFLICT','That operation identity belongs to another request.',409);return{...prior,reused:true};}
-  let imported=null,sourceObject=null,mappingSource=null;
+  let imported=null,sourceObject=null,mappingSource=null,studyChunk=null;
   if(action==='capture.import'){imported=normaliseBundle(payload.bundle);sourceObject=await retain(imported.bytes);for(const response of imported.failedResponses)await retain(response.body);}
   if(action==='mapping.save'&&payload.mappingSource!==undefined){const incoming=mappingSourceValue(payload.mappingSource,{requireDecision:true});await retain(incoming.bytes);mappingSource=incoming.source;}
+  if(action==='study.return.chunk'){studyChunk=chunkInput(payload);await retain(studyChunk.bytes);}
   let op;await store.mutate(s=>{
    const prior=s.operations[operationId];if(prior){if(prior.requestSha256!==digest)throw fault('COOPS_OPERATION_CONFLICT','The operation identity changed.',409);op={...prior,reused:true};return;}
    if(!Number.isSafeInteger(expectedRevision)||s.revision!==expectedRevision)throw fault('COOPS_REVISION_CHANGED','The workspace changed. Review its saved state while retaining the pending form.',409,{currentRevision:s.revision});
@@ -187,6 +192,53 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
     if(!prior&&s.mappings.some(m=>m.id===targetId))throw fault('COOPS_MAPPING_TARGET','The original creation identity already belongs to a saved mapping. Inspect that record before choosing a new request.',409);
     op.payload=structuredClone(payload);delete op.payload.mappingSource;
     op.context={mappingSource:structuredClone(mappingSource),mappingTarget:{id:targetId,revision:prior?.revision??null,recordSha256:prior?hashBytes(Buffer.from(stable(prior))):null}};
+   }
+
+   if(action==='study.save'){
+    studyInput(payload);
+    if(!/^[a-f0-9]{64}$/.test(payload.expectedPreviewSha256??''))throw fault('COOPS_STUDY_PREVIEW','Preview this exact selection before saving the study.');
+    const prior=payload.studyId?findStudy(s,payload.studyId):null,targetId=prior?.id??'study-'+key(operationId);
+    if(prior&&prior.revision!==payload.expectedStudyRevision)throw fault('COOPS_STUDY_CHANGED','The selected study changed. Compare its current revision with the retained draft.',409);
+    if(!prior&&s.studies.some(x=>x.id===targetId))throw fault('COOPS_STUDY_CHANGED','This study creation identity already belongs to retained work.',409);
+    for(const m of payload.members)if(!s.editionIds.includes(m.editionId))throw fault('COOPS_STUDY_EDITION','Select original editions retained by this workspace.',404);
+    op.context={studyTarget:{id:targetId,recordSha256:prior?studyDigest(prior):null},
+     mapping:structuredClone(selected(s.mappings,payload.mappingId,'receiving mapping')),
+     annotations:structuredClone(s.annotations.filter(a=>payload.members.some(m=>m.editionId===a.editionId)))};
+   }
+   if(action==='study.review'||action==='study.export'){
+    const study=studyFrame(findStudy(s,payload.studyId,payload.studyRevision));
+    if(study.sha256!==payload.studySha256)throw fault('COOPS_STUDY_CHANGED','Keep the exact selected study digest.',409);
+    if(action==='study.review'){
+     const latest=s.studyReviews.filter(r=>r.studyId===study.id&&r.studyRevision===study.revision).at(-1)??null;
+     if((payload.expectedReviewId??'')!==(latest?.id??''))throw fault('COOPS_STUDY_REVIEW_CHANGED','Review the latest decision for this exact study revision.',409);
+     op.context={study,priorReviewId:latest?.id??null};
+    }else op.context={study,review:structuredClone(selectedStudyReview(s,study,payload.reviewId))};
+   }
+   if(action==='study.return.start'){
+    const release=selected(s.studyReleases,payload.releaseId,'study delivery');
+    op.context={release:structuredClone(release)};
+   }
+   if(action==='study.return.chunk'){
+    const upload=selected(s.studyUploads,payload.uploadId,'returned file');
+    op.payload={uploadId:payload.uploadId,offset:payload.offset};
+    op.context={uploadIdentity:uploadIdentity(upload),chunk:studyChunk.descriptor};
+   }
+   if(action==='study.return.finish'){
+    const upload=selected(s.studyUploads,payload.uploadId,'returned file');
+    if(upload.state==='COMPLETE')op.context={completedReturnId:upload.returnId};
+    else{
+     if(upload.receivedBytes!==upload.bytes)throw fault('COOPS_STUDY_RETURN_INCOMPLETE','Retain every original chunk before comparing the return.',409);
+     if(upload.finishingOperationId&&upload.finishingOperationId!==operationId)throw fault('COOPS_STUDY_RETURN_ACTIVE','Resume the original comparison operation '+upload.finishingOperationId+'.',409);
+     upload.finishingOperationId=operationId;upload.state='COMPARING';
+     op.context={upload:structuredClone(upload),release:structuredClone(selected(s.studyReleases,upload.releaseId,'study delivery'))};
+    }
+   }
+   if(action==='study.receive'){
+    const returned=selected(s.studyReturns,payload.returnId,'completed returned file');
+    if(returned.comparisonSha256!==payload.comparisonSha256)throw fault('COOPS_STUDY_RETURN_CHANGED','Review this exact retained comparison.',409);
+    const prior=s.studyReceivings.filter(r=>r.returnId===returned.id).at(-1)??null;
+    if((payload.expectedDecisionId??'')!==(prior?.id??''))throw fault('COOPS_STUDY_RECEIVING_CHANGED','Review the current decision on this returned file before saving another.',409);
+    op.context={returned:structuredClone(returned),priorDecisionId:prior?.id??null};
    }
    if(action==='dataset.prepare')op.context={mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};
    if(action==='export.create')op.context={annotations:structuredClone(s.annotations.filter(a=>a.editionId===payload.editionId)),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};
@@ -228,6 +280,66 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
      m={id:prior?.id??'mapping-'+id,...value,sourceFile,revision:(prior?.revision??0)+1,createdAt:prior?.createdAt??op.createdAt,updatedAt:op.createdAt,
       history:prior?[...(prior.history??[]),Object.fromEntries(Object.entries(prior).filter(([k])=>k!=='history'))]:[]};
     s.mappings=s.mappings.filter(x=>x.id!==m.id);s.mappings.push(m);return m;});break;}
+
+   case'study.save':{
+    if(!op.context?.studyTarget)throw fault('COOPS_STUDY_REVIEW','The original reserved study target is unavailable. Preserve this request and review a new save.',409);
+    if(op.materializedResult){result=await local(op,()=>op.materializedResult);break;}
+    const prepared=await prepareStudy(store,p,{mapping:op.context.mapping,annotations:op.context.annotations});
+    if(prepared.sha256!==p.expectedPreviewSha256)throw fault('COOPS_STUDY_PREVIEW_CHANGED','The original preview differs from these selected mapping/source decisions. Refresh and review the selection before saving.',409);
+    result=await local(op,s=>{
+     const target=op.context.studyTarget,prior=s.studies.find(x=>x.id===target.id)??null;
+     if((prior?studyDigest(prior):null)!==target.recordSha256)throw fault('COOPS_STUDY_CHANGED','The original selected study changed after this request was reserved. Compare the retained draft with its current record.',409);
+     const saved=studySaveRecord(prior,target.id,prepared,op.createdAt);s.studies=s.studies.filter(x=>x.id!==saved.id);s.studies.push(saved);return saved;
+    });break;
+   }
+   case'study.review':result=await local(op,s=>{
+    const context=op.context;if(!context?.study)throw fault('COOPS_STUDY_REVIEW','The original selected study is not pinned.',409);
+    const latest=s.studyReviews.filter(r=>r.studyId===context.study.id&&r.studyRevision===context.study.revision).at(-1)??null;
+    if((latest?.id??null)!==context.priorReviewId)throw fault('COOPS_STUDY_REVIEW_CHANGED','A later decision changed this study review. Compare it before issuing a new request.',409);
+    const review=studyReview(context.study,p,'study-review-'+id,op.createdAt);s.studyReviews.push(review);return review;
+   });break;
+   case'study.export':{
+    if(!op.context?.study||!op.context?.review)throw fault('COOPS_STUDY_REVIEW','The selected reviewed study must be pinned to the original request.',409);
+    const release=op.materializedResult??await writeStudyRelease(store,{id:'study-release-'+id,study:op.context.study,review:op.context.review,createdAt:op.createdAt});
+    result=await local(op,s=>{
+     selectedStudyReview(s,op.context.study,op.context.review.id);
+     if(!s.studyReleases.some(r=>r.id===release.id))s.studyReleases.push(release);
+     for(const file of release.files)if(!s.exports.some(e=>e.id===file.id))s.exports.push(file);return release;
+    });break;
+   }
+   case'study.return.start':result=await local(op,s=>{
+    const upload=uploadStart(op.context.release,p,'study-upload-'+id,op.createdAt);
+    if(s.studyUploads.some(u=>u.id===upload.id))throw fault('COOPS_STUDY_RETURN_IDENTITY','This original intake identity already exists.',409);
+    s.studyUploads.push(upload);return upload;
+   });break;
+   case'study.return.chunk':result=await local(op,s=>{
+    const upload=selected(s.studyUploads,p.uploadId,'returned file');
+    if(stable(uploadIdentity(upload))!==stable(op.context?.uploadIdentity))throw fault('COOPS_STUDY_RETURN_CHANGED','The original returned file selection changed.',409);
+    return retainChunk(upload,op.context.chunk);
+   });break;
+   case'study.return.finish':{
+    if(op.context?.completedReturnId){result=await local(op,s=>selected(s.studyReturns,op.context.completedReturnId,'completed returned file'));break;}
+    const c=op.context;if(!c?.upload||!c.release)throw fault('COOPS_STUDY_RETURN','The original retained comparison selection is unavailable.',409);
+    const returned=op.materializedResult??await compareStudyReturn(store,{id:'study-return-'+key(c.upload.id),upload:c.upload,release:c.release,createdAt:op.createdAt});
+    result=await local(op,s=>{
+     const upload=selected(s.studyUploads,p.uploadId,'returned file');
+     if(studyDigest(upload)!==studyDigest(c.upload)||upload.finishingOperationId!==op.operationId)throw fault('COOPS_STUDY_RETURN_CHANGED','The original selected file changed during comparison.',409);
+     s.studyReturns.push(returned);for(const file of returned.files)if(!s.exports.some(e=>e.id===file.id))s.exports.push(file);
+     upload.state='COMPLETE';upload.returnId=returned.id;upload.completedAt=op.createdAt;return returned;
+    });break;
+   }
+   case'study.receive':result=await local(op,s=>{
+    const c=op.context;if(!c?.returned)throw fault('COOPS_STUDY_RECEIVING','The original returned comparison is not pinned.',409);
+    const prior=s.studyReceivings.filter(r=>r.returnId===c.returned.id).at(-1)??null;
+    if((prior?.id??null)!==c.priorDecisionId)throw fault('COOPS_STUDY_RECEIVING_CHANGED','A later receiving decision exists. Compare the current decision and retained note before saving.',409);
+    if(!['accepted','follow_up'].includes(p.status))throw fault('COOPS_STUDY_RECEIVING','Choose accepted or follow_up.');
+    if(p.status==='accepted'&&(!c.returned.summary.complete||!c.returned.summary.valid||c.returned.summary.counts.ambiguous))throw fault('COOPS_STUDY_RECEIVING','An unresolved or ambiguous returned file requires follow-up before acceptance.');
+    const decision={id:'study-receiving-'+id,returnId:c.returned.id,releaseId:c.returned.releaseId,studyId:c.returned.studyId,studyRevision:c.returned.studyRevision,
+     comparisonSha256:c.returned.comparisonSha256,returnedSha256:c.returned.original.sha256,status:p.status,actor:text(p.actor,'the actual receiving operator',200),
+     note:text(p.note,'the receiving decision and changes accepted or requiring follow-up',12000),createdAt:op.createdAt,
+     priorDecisionId:c.priorDecisionId,effect:'Retained receiving decision only. Original NOAA responses, mapped delivery files and source reviews are unchanged.'};
+    s.studyReceivings.push(decision);return decision;
+   });break;
    case'capture.start':
    case'capture.import':{
     result=await local(op,s=>{if(!s.captures.some(c=>c.id===id)){
@@ -299,9 +411,11 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
  }
  for(const c of store.read().captures)if(c.pages.length&&!c.editionId)await seal(c.id);
  return{store,schema,view,action,editions,
+  async studyPreview(input){const s=store.read();studyInput(input);for(const m of input.members)if(!s.editionIds.includes(m.editionId))throw fault('COOPS_STUDY_EDITION','Select a retained source edition.',404);return prepareStudy(store,input,{mapping:structuredClone(selected(s.mappings,input.mappingId,'receiving mapping')),annotations:structuredClone(s.annotations)});},
+  studyRows(id,revision,options){return studyRows(store,findStudy(store.read(),id,revision),options);},
   inspectMappingFile(input){const {mapping,source}=mappingSourceValue(input);return{schema:'stellar-forge.coops-mapping-file-preview.v1',mapping,source};},
   async mappingRaw(id,revision){const m=selected(store.read().mappings,id,'model-input mapping'),r=revision===undefined?m:[m,...(m.history??[])].find(x=>x.revision===revision);if(!r?.sourceFile)throw fault('COOPS_MAPPING_SOURCE','Choose a saved mapping revision with its original input file.',404);const bytes=await store.object(r.sourceFile.sha256);if(bytes.length!==r.sourceFile.bytes)throw fault('COOPS_MAPPING_SOURCE_CHANGED','The retained mapping source size changed.',409);return{receipt:structuredClone(r.sourceFile),mappingId:m.id,revision:r.revision,bytes,type:'application/json; charset=utf-8',item:{name:'coops-mapping-source-'+r.sourceFile.sha256+'.json',type:'application/json; charset=utf-8',bytes:bytes.length,sha256:r.sourceFile.sha256}};},
-  async operation(operationId){const op=store.read().operations[operationId];if(!op)return{operationId,state:'NOT_RESERVED'};const {payload,context,materializedResult,...record}=op;return{...record,result:op.resultSha256?JSON.parse((await store.object(op.resultSha256)).toString('utf8')):undefined};},
+  async operation(operationId){const op=store.read().operations[operationId];if(!op)return{operationId,state:'NOT_RESERVED'};const {payload,context,materializedResult,...record}=op;return{...record,...(op.action==='study.return.finish'?{resumeRequest:{action:op.action,payload:structuredClone(op.payload),operationId:op.operationId,expectedRevision:op.expectedRevision}}:{}),result:op.resultSha256?JSON.parse((await store.object(op.resultSha256)).toString('utf8')):undefined};},
   async edition(id){if(!store.read().editionIds.includes(id))throw fault('COOPS_EDITION','Choose a retained edition.',404);return store.edition(id);},
   rows:(id,options)=>store.edition(id).then(e=>editionRows(store,e,options)),
   async raw(id,index){const e=await store.edition(id);if(!Number.isSafeInteger(index)||index<0||index>=e.pages.length)throw fault('COOPS_SOURCE_PAGE','Choose an original response page.');const receipt=e.pages[index];return{receipt,bytes:await store.object(receipt.sha256),type:'application/json; charset=utf-8'};},

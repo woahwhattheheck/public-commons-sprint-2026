@@ -257,3 +257,7 @@ whole native file verification and desktop/mobile editor operation. Its
 private operation. The examples select the two published McCampbell families or
 one original DTS workbook. Each completed receiving edition retains its exact
 original source, selected format and full operator choices.
+
+## Complete cross-profile receiving
+
+[RECONCILIATION.md](RECONCILIATION.md) describes the full EQuIS3/EQuIS4 source comparison, explicit correspondence, independent source-field editors, both native outputs, installed CLI/SDK and the complete original-file receiving configuration. Use `baselineProfile`, the `baseline_decisions` slot and the `reconciliation` slot with the original `laboratoryReview` job. The source-bound result reopens both original families and every corresponding native member.
