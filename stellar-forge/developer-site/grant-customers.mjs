@@ -13,11 +13,11 @@ function need(value, message) { if (!value) throw new Error(message); }
 export function projectGrantMarkdown(markdown, { application = false } = {}) {
   let value = clean(markdown)
     .replace(/\s*·?\s*\[(Original commercial delivery|Original offer and contact operation|Complete commercial and engineering brief|Completed operation)\]\(https:\/\/tokenjunkielabs\.slack\.com\/[^)\s]+\)\.?/g, '')
-    .replace(/\[([^\]]+)\]\(https:\/\/tokenjunkielabs\.slack\.com\/[^)\s]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\(https:\/\/(?:tokenjunkielabs\.slack\.com\/|mail\.google\.com\/mail\/)[^)\s]+\)/g, '$1')
     .replace(/ \. /g, '. ').replace(/\.\s*·\s*\[/g, '. [')
     .replaceAll('enterprise@openfn.org', 'OpenFn’s published enterprise mailbox');
   if (application) {
-    value = value.replace(/\n\*\*Application sources:\*\*[\s\S]*$/, '\n')
+    value = value.replace(/\n\*\*(?:Application sources|Source basis):\*\*[\s\S]*$/, '\n\n**Sources and supporting detail:** The [product and finance companion](./product-and-finance.md) retains the complete installation workflows, customer implementation context, funded packages and resource study. The [source index](./source-index.json) identifies the selected product sources and application edition. Issuer references are the [SCF #46 round](https://communityfund.stellar.org/awards/recxrSMYwAl8vcglg), [Build submission criteria](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria), [budget and deliverable guidance](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines) and [Official Rules](https://stellar.gitbook.io/scf-handbook/scf-awards/official-rules-for-submissions).\n')
       .replace(/§9A connects this task to the existing six funded packages\./g,
         'The [complete customer workflow](./product-and-finance.md#environmental-provider-intake-complete-source-editions-commissioning-and-receiving) connects this task to the existing six funded packages.')
       .replace(/operating sequence and six-package linkage are included in §9A\./g,
@@ -78,7 +78,7 @@ export function projectGrantSourceIndex(value) {
       return publicItem === undefined ? [] : [[key, publicItem]];
     }));
   }
-  return typeof value === 'string' && /^https:\/\/tokenjunkielabs\.slack\.com\//.test(value) ? undefined : value;
+  return typeof value === 'string' && /^https:\/\/(?:tokenjunkielabs\.slack\.com\/|mail\.google\.com\/mail\/)/.test(value) ? undefined : value;
 }
 
 /** Follow each retained customer source URL when rebuilding the public source register. */
