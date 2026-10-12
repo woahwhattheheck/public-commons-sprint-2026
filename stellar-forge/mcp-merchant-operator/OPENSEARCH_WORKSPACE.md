@@ -236,6 +236,19 @@ The archive encoder reads original customer files without opening a seller contr
 
 Controller authentication remains in the owning host. MCP exposes release, instance and generation metadata for operating the original deployment and transferring its customer files.
 
+### Receiving the completed native deployment through MCP
+
+The [managed MCP receiving workflow](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/mcp-managed-journey.mjs) uses the same original connection and completed native deployment journal:
+
+~~~sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/mcp-managed-journey.mjs \
+  --connection /private/operator/opensearch-workspaces.json \
+  --workspace catalog \
+  --directory /private/receiving/catalog-managed-mcp
+~~~
+
+Run it after the original native deployment owner has completed staging, activation, start, upgrade/restart, rollback and actual-seller client generation. It discovers those original completed request IDs, recovers their typed MCP outcomes, compares retained releases, transfers all original customer files and the original archive, checks archive members against those files, and resumes pinned transfers after closing and reopening the workspace. The private output directory receives the original customer artifacts and a complete receiving record.
+
 ## Completed native example
 
 The repository includes the completed original native run and an exportable customer report:
