@@ -1,5 +1,6 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import { usaSpendingTransactionTools, USASPENDING_TRANSACTION_EXPORTS } from './usaspending-transactions.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 
@@ -57,6 +58,7 @@ const query = { type: 'object', additionalProperties: false,
   } };
 
 const EXPORTS = Object.freeze({
+  ...USASPENDING_TRANSACTION_EXPORTS,
   'edition-json': { ext: 'json', type: 'application/json; charset=utf-8', required: ['editionId'], optional: ['includeReviews'] },
   'edition-csv': { ext: 'csv', type: 'text/csv; charset=utf-8', required: ['editionId'], optional: [] },
   workspace: { ext: 'json', type: 'application/json; charset=utf-8', required: [], optional: [] },
@@ -108,8 +110,9 @@ function usaSpendingWorkspaceTools(tool) {
     tool('merchant_usaspending_pause', 'Pause one original running browser job or active capture. Supply exactly one original jobId or captureId, then inspect its retained state.', {
       ...selected, jobId: nativeId, captureId: nativeId,
     }, ['workspace'], { destructive: true }),
-    tool('merchant_usaspending_source_import', 'Import a host-declared original source collection, capture, detail, complete workspace backup or portable dossier through its maintained reader. The source handle selects retained bytes and original hashes, without another provider capture.', {
+    tool('merchant_usaspending_source_import', 'Import a host-declared original source collection, capture, detail, complete workspace, dossier, retained transaction pages or portable transaction capture through its maintained reader. Transaction pages select editionId and awardKey; a portable transaction capture optionally selects editionId and includeReview.', {
       ...selected, source: alias, name: shortText, maxRows: { type: 'integer', minimum: 1, maximum: 250000 },
+      editionId: nativeId, awardKey: {type:'string',minLength:1,maxLength:1024}, includeReview: {type:'boolean'},
     }, ['workspace', 'source'], {}),
     tool('merchant_usaspending_edition', 'Inspect an immutable edition, exact-value totals, paged recipient groups and original source coverage/warnings. Full rows and source bytes are available through export.', {
       ...inEdition, ...page,
@@ -179,7 +182,7 @@ function usaSpendingWorkspaceTools(tool) {
     tool('merchant_usaspending_dossier_compare', 'Compare two retained revisions through the original dossier comparison engine.', {
       ...inDossier, before: { type: 'integer', minimum: 1 }, after: { type: 'integer', minimum: 1 },
     }, ['workspace', 'dossierId', 'before', 'after'], read),
-    tool('merchant_usaspending_export', 'Create and retain a complete native edition, CSV, workspace backup, source response, workshare brief, comparison, merchant file or dossier report. Returns an immutable content-addressed export ID for exact resumable reads across process restarts.', {
+    tool('merchant_usaspending_export', 'Create and retain a complete native edition, CSV, workspace backup, source response, workshare brief, comparison, merchant file, dossier report or transaction capture/source/comparison/brief. Returns an immutable content-addressed export ID for exact resumable reads across process restarts.', {
       ...selected, kind: exportKind, editionId: nativeId, captureId: nativeId,
       page: { type: 'integer', minimum: 1, maximum: 1000000 }, awardKey, before: nativeId, after: nativeId,
       dossierId: nativeId, merchantId: nativeId, includeReviews: { type: 'boolean', default: false },
@@ -191,7 +194,7 @@ function usaSpendingWorkspaceTools(tool) {
     tool('merchant_usaspending_file_release', 'Release one owned temporary file-read snapshot. The complete content-addressed export remains available.', {
       ...selected, readId: { type: 'string', pattern: UUID.source },
     }, ['workspace', 'readId'], read),
-  ];
+  ].concat(usaSpendingTransactionTools(tool,{selected,nativeId,expectedRevision,page,read,digest}));
 }
 
 export { usaSpendingWorkspaceTools, read, selected, UUID, page, nativeId, expectedRevision, query, alias, shortText, inEdition, awardKey, strings, inDossier, exportKind, digest, offset, pageSize, RESEARCH_ID, EXPORTS, DIGEST };
