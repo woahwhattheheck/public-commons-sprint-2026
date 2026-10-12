@@ -8,7 +8,7 @@ import { config, execution, need, InputError } from './config.mjs';
 import { aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
 import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
-import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { checkOperatorChannel } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView, requireCurrentOperationTicket } from './operation-ticket.mjs';
 import { readRequestBody, MAX_REQUEST_BODY_BYTES } from './request-body.mjs';
 import { initializationDirectory, retainInitializationRecord, optionalInitializationBytes } from './initialization.mjs';
@@ -122,17 +122,17 @@ export async function workspaceConfiguration(path, {configuration} = {}) {
   bindWorkspaceConfiguration(cfg, workspace);
   return {directory:workspace.manifest.directory, configuration:cfg};
 }
-/** Original selected keys and evidence RPC stay together through every native caller. */
-export async function workspaceExecution(cfg, path) {
+/** Original keys, host approval channel and evidence RPC stay together in memory. */
+export async function workspaceExecution(cfg, path, {environment = process.env} = {}) {
   const {openWorkspace} = await import('./workspace.mjs');
-  const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true});
+  const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true, environment});
   const op = bindWorkspaceConfiguration(cfg, workspace);
   return {environment:workspace.operatorEnvironment,
     evidenceRpcEndpoint:selectStellarEvidenceEndpoint(op.expect.network,workspace.manifest.signer.rpcUrl)};
 }
 // Preserve the finalizer's original environment-only interface.
-export async function workspaceEnvironment(cfg, path) {
-  return (await workspaceExecution(cfg, path)).environment;
+export async function workspaceEnvironment(cfg, path, options) {
+  return (await workspaceExecution(cfg, path, options)).environment;
 }
 async function ensureAbsent(path, code) {
   try { await lstat(path); fail(code); }
@@ -303,7 +303,7 @@ export async function openQueue(path) {
     return records.sort((a,b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? '') || a.id.localeCompare(b.id));
   }
 
-  async function run(intentId, {signal, workspace} = {}) {
+  async function run(intentId, {signal, workspace, environment = process.env} = {}) {
     need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     const {directory, request, cfg, ticket} = await readRequest(root, intentId);
@@ -314,7 +314,9 @@ export async function openQueue(path) {
       'INBOX_SIGNER_CHANGED_START_FRESH_PROCESS');
     // Resolve/bind the actual operator workspace before claiming this attempt.
     // A wrong workspace or unavailable key file must leave the job QUEUED.
-    const workspaceOptions = workspace === undefined ? {} : await workspaceExecution(cfg, workspace);
+    // Approval transport belongs to the running host, never the saved request.
+    const workspaceOptions = workspace === undefined ? {environment}
+      : await workspaceExecution(cfg, workspace, {environment});
     // A named managed proxy may change between processes; resolve it now,
     // before the permanent attempt, without changing the saved origin/profile.
     if (cfg.buyerTransport !== undefined) resolveBuyerProxy(cfg.buyerTransport);
@@ -322,7 +324,7 @@ export async function openQueue(path) {
     await ensureAbsent(request.evidencePath, 'INBOX_ORIGINAL_EVIDENCE_ALREADY_EXISTS');
     if (request.responseDestination) await ensureAbsent(request.responseDestination, 'INBOX_RESPONSE_DESTINATION_EXISTS');
     need(!signal?.aborted, 'OPERATOR_ABORTED');
-    await checkOperatorTerminal(intentId);
+    await checkOperatorChannel(intentId, {environment:workspaceOptions.environment});
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     requireCurrentOperationTicket(ticket);
     // Permanent single-attempt claim. It is never expired, stolen or retried.
