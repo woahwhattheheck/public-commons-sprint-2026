@@ -439,7 +439,7 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/examples/native-demo
   https://demo.questdb.io/
 ```
 
-Choose retained UTC windows that the selected server actually contains. The final argument is the native HTTP endpoint; the source configuration stores its environment reference. `QUESTDB_SOURCE_PIN` can identify the complete source revision in each retained attempt. The final report is written only after all owned servers and source sessions close.
+Choose retained UTC windows that the selected server actually contains. The final argument is the native HTTP endpoint; the source configuration stores its environment reference. `--source-pin COMMIT` (or `QUESTDB_SOURCE_PIN`) identifies the exact 40-character Git source revision in each retained attempt. The explicit argument also survives a native supervisor that selects its own environment. The final report is written only after all owned servers and source sessions close.
 
 The native operation exercises complete canonical JSON, typed NDJSON and quoted CSV; it also retains the first edition’s independent `/exp` output. It checks native sampling buckets and ASOF symbol, preceding-side, timestamp and one-second tolerance using actual returned rows. A separate hash-verified receiving copy uses the original capture range API. The dataset then carries native NULL, empty text, a nanosecond epoch LONG, native timestamp text, native DECIMAL text and a Boolean through original review, two publications, the snapshot-pinned x402 buyer and fresh-process workbench reopen.
 
