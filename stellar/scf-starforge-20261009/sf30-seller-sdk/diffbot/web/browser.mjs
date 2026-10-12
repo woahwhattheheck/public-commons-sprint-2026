@@ -600,7 +600,7 @@ function renderReviewTable(){
     button('Next page',()=>{ui.page++;persist();},{read:true,disabled:ui.page+1>=pages}),
     button('Select this page',()=>{ui.selected=[...new Set([...ui.selected,...page.map(r=>r.id)])];persist();},{read:true})),
     table(['Select','Original observation','Type / change','Review','Source'],page.map(r=>[
-      element('input',{type:'checkbox',checked:ui.selected.includes(r.id),disabled:!reviewEnabled(),'aria-label':'Select '+r.id,onchange:event=>{ui.selected=event.target.checked?[...new Set([...ui.selected,r.id])]:ui.selected.filter(id=>id!==r.id);persist();}}),
+      element('input',{type:'checkbox',checked:ui.selected.includes(r.id),disabled:!reviewEnabled(),'aria-label':'Select '+r.id,onchange:event=>{ui.selected=event.target.checked?[...new Set([...ui.selected,r.id])]:ui.selected.filter(id=>id!==r.id);persist();render();}}),
       element('div',{},button(r.fields?.title||r.id,()=>{ui.focused=r.id;persist();},{read:true,id:'open-record-'+(report.records.indexOf(r))}),small(r.id)),
       element('div',{},badge(r.kind),small(changeStatus(r.id)),r.conflicts?.length?badge('Version conflict',true):null),
       badge(recordStatus(r)),element('div',{},sourceLink(r.sourceUrl,'Original source page'),small(r.sourceId))
