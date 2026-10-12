@@ -102,7 +102,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     }
     return {profile,drafts,calls,deliveries,hostBound:profile.hostFingerprint===snapshot().configurationFingerprint};
   }
-  async function startCall(input,context) {
+  async function startCall(input,context,workflowGuard) {
     if (closing) throw fail('CONSOLE_CLOSING','The operator interface is closing.',503);
     const draft=store.draft(input.draftId,input.draftRevision), definition=definitions.get(draft.tool);
     if(!definition) throw fail('CONSOLE_TOOL_UNAVAILABLE','This host does not advertise the saved native tool.',400);
@@ -111,7 +111,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     const packet=json({jsonrpc:'2.0',id:input.id,method:'tools/call',params:{name:draft.tool,arguments:args}});
     if(packet.length>operator.maxRequestBytes)
       throw fail('CONSOLE_NATIVE_BODY_TOO_LARGE','The exact native MCP request exceeds this host’s ' + operator.maxRequestBytes + '-byte capacity.',413);
-    const reserved=store.reserve(input,draft,snapshot(),definition);
+    const reserved=store.reserve(input,draft,snapshot(),definition,workflowGuard);
     if(reserved.existing)return {call:callView(reserved.value),reused:true};
     const task=(async()=>{
       try { const result=await operator.call(draft.tool,args,authorization?{authorization:context}:undefined); return store.finish(input.id,result); }

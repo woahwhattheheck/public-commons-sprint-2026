@@ -1,5 +1,6 @@
 // MIT. Saved workflow editions and original native-call lineage in the console database.
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { canonical, digest, fail } from './records.mjs';
 
 export const WORKFLOW_SCHEMA='stellar-forge.merchant-workflow.v1';
@@ -64,11 +65,39 @@ export function normalizeWorkflowSteps(value,profileId,getDraft){
 const runRequest=value=>Object.fromEntries(['id','profileId','workflowId','workflowRevision','workflowSha256','hostFingerprint','inputsJson'].map(name=>[name,value[name]]));
 export const workflowCallId=(runId,stepId)=>'workflow-call-'+digest(canonical([runId,stepId])).slice(0,40);
 export const workflowDraftId=(runId,stepId)=>'workflow-draft-'+digest(canonical([runId,stepId])).slice(0,40);
+function processStart(pid){
+  try{const stat=readFileSync('/proc/'+pid+'/stat','utf8');return stat.slice(stat.lastIndexOf(')')+2).trim().split(/\s+/)[19];}
+  catch{return null;}
+}
+const currentDispatcher={pid:process.pid,processStart:processStart(process.pid)};
+export function workflowDispatchActive(step,workspaceId){
+  const owner=step?.dispatchOwner;if(!owner||owner.workspaceId!==workspaceId)return false;
+  try{process.kill(owner.pid,0);}catch(error){return error.code==='EPERM';}
+  return owner.processStart===null||processStart(owner.pid)===owner.processStart;
+}
 export function installWorkflowTables(db){
   db.exec('CREATE TABLE IF NOT EXISTS workflow_definitions(id TEXT NOT NULL,revision INTEGER NOT NULL,profile_id TEXT NOT NULL REFERENCES profiles(id),value TEXT NOT NULL,PRIMARY KEY(id,revision));'+
     'CREATE INDEX IF NOT EXISTS workflow_definitions_profile ON workflow_definitions(profile_id,id,revision);'+
     'CREATE TABLE IF NOT EXISTS workflow_runs(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),value TEXT NOT NULL);'+
-    'CREATE INDEX IF NOT EXISTS workflow_runs_profile ON workflow_runs(profile_id,id);');
+    'CREATE INDEX IF NOT EXISTS workflow_runs_profile ON workflow_runs(profile_id,id);'+
+    'CREATE TABLE IF NOT EXISTS workflow_call_refs(call_id TEXT PRIMARY KEY,run_id TEXT NOT NULL REFERENCES workflow_runs(id),step_id TEXT NOT NULL);');
+}
+// Runs inside the original native-call reservation transaction, immediately before dispatch.
+export function reserveWorkflowNative(db,workspaceId,request,guard){
+  const ref=db.prepare('SELECT run_id,step_id FROM workflow_call_refs WHERE call_id=?').get(request.id);
+  if(!ref){need(guard===undefined,'CONSOLE_WORKFLOW_REQUEST','Use the original saved workflow step.',409);return;}
+  need(plain(guard)&&guard.runId===ref.run_id&&guard.stepId===ref.step_id,'CONSOLE_WORKFLOW_REQUEST',
+    'Continue this saved request through its original workflow.',409);
+  const run=JSON.parse(db.prepare('SELECT value FROM workflow_runs WHERE id=?').get(ref.run_id).value);
+  const step=run.steps.find(value=>!['COMPLETE','RECOVERED'].includes(value.state));
+  need(run.ownerWorkspaceId===workspaceId&&!run.pauseRequested&&run.state!=='COMPLETE'&&run.revision===guard.expectedRevision&&
+    run.executionHostFingerprint===request.hostFingerprint&&step?.id===ref.step_id&&step.draftId===request.draftId&&
+    step.draftRevision===request.draftRevision&&step.argumentsSha256===request.argumentsSha256,
+    'CONSOLE_WORKFLOW_RUN_CHANGED','Reopen the current saved run and its execution owner before dispatch.',409);
+  step.dispatchOwner={workspaceId,...currentDispatcher};
+  run.state='RUNNING';run.error=null;run.revision++;run.updatedAt=now();
+  run.events.push({sequence:run.revision,at:run.updatedAt,kind:'STEP_DISPATCH_RESERVED',stepId:step.id,callId:request.id,detail:{...step.dispatchOwner}});
+  db.prepare('UPDATE workflow_runs SET value=? WHERE id=?').run(JSON.stringify(run),run.id);
 }
 export function archiveWorkflowRows(db,profileId){
   const definitions=db.prepare('SELECT value FROM workflow_definitions WHERE profile_id=? ORDER BY id,revision').all(profileId).map(row=>JSON.parse(row.value));
@@ -125,14 +154,21 @@ export function validateWorkflowRows(value,{profile,drafts,calls}){
     let pending=false;
     for(let index=0;index<run.steps.length;index++){
       const step=run.steps[index],original=definition.steps[index];
-      fields(step,['id','callId','draftId','draftRevision','state','argumentsSha256','resolvedCallId','resolutionNote','completedAt'],'workflow step progress');
+      fields(step,['id','callId','draftId','draftRevision','state','argumentsSha256','dispatchOwner','resolvedCallId','resolutionNote','completedAt'],'workflow step progress');
       need(step.id===original.id&&step.callId===workflowCallId(run.id,step.id)&&step.draftId===workflowDraftId(run.id,step.id)&&
         ['PENDING','RESERVED','WAITING','COMPLETE','RECOVERED'].includes(step.state),'CONSOLE_WORKFLOW_ARCHIVE_CHANGED','Keep each step with its original native request identity.');
+      if(step.dispatchOwner!==null){
+        fields(step.dispatchOwner,['workspaceId','pid','processStart'],'original native dispatch owner');
+        identifier(step.dispatchOwner.workspaceId);
+        need(Number.isSafeInteger(step.dispatchOwner.pid)&&step.dispatchOwner.pid>0&&
+          (step.dispatchOwner.processStart===null||typeof step.dispatchOwner.processStart==='string'&&/^[0-9]+$/.test(step.dispatchOwner.processStart)),
+          'CONSOLE_WORKFLOW_ARCHIVE','Retain the original native dispatch process identity.');
+      }
       const completed=['COMPLETE','RECOVERED'].includes(step.state);
       need(!pending||!completed,'CONSOLE_WORKFLOW_ARCHIVE','Retain the original sequential step order.');
       if(!completed)pending=true;
       if(step.draftRevision===null){
-        need(step.state==='PENDING'&&step.argumentsSha256===null&&!originalCalls.has(step.callId),
+        need(step.state==='PENDING'&&step.argumentsSha256===null&&step.dispatchOwner===null&&!originalCalls.has(step.callId),
           'CONSOLE_WORKFLOW_ARCHIVE','An unprepared step has no dispatched native request.');
       }else{
         const draft=originalDrafts.get(key(step.draftId,revision(step.draftRevision)));
@@ -140,7 +176,7 @@ export function validateWorkflowRows(value,{profile,drafts,calls}){
         need(draft&&draft.profileId===profile.id&&draft.tool===base.tool&&draft.toolSchemaSha256===base.toolSchemaSha256&&draft.argumentsSha256===sha(step.argumentsSha256),
           'CONSOLE_WORKFLOW_ARCHIVE_CHANGED','Retain the exact prepared native request for this workflow step.');
         const call=originalCalls.get(step.callId);
-        need(!call||call.draftId===step.draftId&&call.draftRevision===step.draftRevision&&call.profileId===profile.id,
+        need(!call||call.draftId===step.draftId&&call.draftRevision===step.draftRevision&&call.profileId===profile.id&&step.dispatchOwner?.workspaceId===call.workspaceId,
           'CONSOLE_WORKFLOW_ARCHIVE_CHANGED','Retain the original step call and its prepared request.');
         if(step.state==='COMPLETE')need(call&&successful(call),'CONSOLE_WORKFLOW_ARCHIVE','A complete step retains its successful original native call.');
         if(step.state==='RECOVERED'){
@@ -179,12 +215,33 @@ export function validateWorkflowRows(value,{profile,drafts,calls}){
 }
 export function importWorkflowRows(db,value){
   if(value===undefined)return;
-  for(const item of value.definitions)
-    need(!db.prepare('SELECT 1 FROM workflow_definitions WHERE id=? LIMIT 1').get(item.id),'CONSOLE_WORKFLOW_IMPORT_CONFLICT','Receive this workflow into a workspace without a conflicting saved workflow identity.',409);
-  for(const run of value.runs)
-    need(!db.prepare('SELECT 1 FROM workflow_runs WHERE id=?').get(run.id),'CONSOLE_WORKFLOW_IMPORT_CONFLICT','Receive this original workflow run into a workspace without that run identity.',409);
-  for(const item of value.definitions)db.prepare('INSERT INTO workflow_definitions VALUES(?,?,?,?)').run(item.id,item.revision,item.profileId,JSON.stringify(item));
-  for(const run of value.runs)db.prepare('INSERT INTO workflow_runs VALUES(?,?,?)').run(run.id,run.profileId,JSON.stringify(run));
+  for(const item of value.definitions){
+    const rows=db.prepare('SELECT profile_id,value FROM workflow_definitions WHERE id=? ORDER BY revision').all(item.id);
+    need(rows.every(row=>row.profile_id===item.profileId),'CONSOLE_WORKFLOW_IMPORT_CONFLICT','This saved workflow belongs to another profile.',409);
+    const old=rows.map(row=>JSON.parse(row.value)).find(row=>row.revision===item.revision);
+    if(old)need(same(old,item),'CONSOLE_WORKFLOW_IMPORT_CONFLICT','This workflow edition has conflicting original contents.',409);
+    else db.prepare('INSERT INTO workflow_definitions VALUES(?,?,?,?)').run(item.id,item.revision,item.profileId,JSON.stringify(item));
+  }
+  for(const incoming of value.runs){
+    const row=db.prepare('SELECT value FROM workflow_runs WHERE id=?').get(incoming.id);
+    let run=incoming;
+    if(row){
+      const old=JSON.parse(row.value);
+      need(old.requestSha256===incoming.requestSha256&&same(runRequest(old),runRequest(incoming))&&old.workspaceId===incoming.workspaceId&&old.createdAt===incoming.createdAt,
+        'CONSOLE_WORKFLOW_IMPORT_CONFLICT','This original run has different saved inputs or lineage.',409);
+      const shorter=old.events.length<=incoming.events.length?old:incoming,longer=shorter===old?incoming:old;
+      need(same(shorter.events,longer.events.slice(0,shorter.events.length)),
+        'CONSOLE_WORKFLOW_IMPORT_CONFLICT','Keep both histories: the same run contains different progress after their common original event.',409);
+      if(old.events.length===incoming.events.length)need(same(old,incoming),'CONSOLE_WORKFLOW_IMPORT_CONFLICT','The same workflow revision has different retained progress.',409);
+      run=longer;
+      if(run!==old)db.prepare('UPDATE workflow_runs SET value=? WHERE id=?').run(JSON.stringify(run),run.id);
+    }else db.prepare('INSERT INTO workflow_runs VALUES(?,?,?)').run(run.id,run.profileId,JSON.stringify(run));
+    for(const step of run.steps){
+      const ref=db.prepare('SELECT run_id,step_id FROM workflow_call_refs WHERE call_id=?').get(step.callId);
+      need(!ref||ref.run_id===run.id&&ref.step_id===step.id,'CONSOLE_WORKFLOW_IMPORT_CONFLICT','Keep native calls attached to their original run steps.',409);
+      if(!ref)db.prepare('INSERT INTO workflow_call_refs VALUES(?,?,?)').run(step.callId,run.id,step.id);
+    }
+  }
 }
 export class WorkflowRecords{
   constructor(store){this.store=store;this.db=store.db;installWorkflowTables(this.db);}
@@ -235,15 +292,17 @@ export class WorkflowRecords{
       const value={schema:WORKFLOW_RUN_SCHEMA,...request,requestSha256,workspaceId:this.store.id,ownerWorkspaceId:this.store.id,executionHostFingerprint:request.hostFingerprint,handover:null,revision:1,
         createdAt:at,updatedAt:at,completedAt:null,state:'READY',pauseRequested:false,error:null,
         steps:definition.steps.map(step=>({id:step.id,callId:workflowCallId(request.id,step.id),draftId:workflowDraftId(request.id,step.id),
-          draftRevision:null,state:'PENDING',argumentsSha256:null,resolvedCallId:null,resolutionNote:'',completedAt:null})),
+          draftRevision:null,state:'PENDING',argumentsSha256:null,dispatchOwner:null,resolvedCallId:null,resolutionNote:'',completedAt:null})),
         events:[{sequence:1,at,kind:'RUN_SAVED',stepId:null,callId:null,detail:{workflowRevision:definition.revision}}]};
       this.db.prepare('INSERT INTO workflow_runs VALUES(?,?,?)').run(value.id,profile.id,JSON.stringify(value));
+      for(const step of value.steps)this.db.prepare('INSERT INTO workflow_call_refs VALUES(?,?,?)').run(step.callId,value.id,step.id);
       return{run:value,reused:false};
     });
   }
-  update(id,kind,mutate,{expectedRevision,stepId=null,callId=null,detail={}}={}){
+  update(id,kind,mutate,{expectedRevision,ownerWorkspaceId,stepId=null,callId=null,detail={}}={}){
     return this.store.transaction(()=>{
       const old=this.run(id);
+      if(ownerWorkspaceId!==undefined)need(old.ownerWorkspaceId===ownerWorkspaceId,'CONSOLE_WORKFLOW_RECEIVING_OWNER','The saved run has moved to its named receiving owner.',409);
       if(expectedRevision!==undefined)need(old.revision===revision(expectedRevision),'CONSOLE_WORKFLOW_RUN_CHANGED','Reopen the current original workflow run.',409);
       const value=clone(old);mutate(value);
       need(same(runRequest(value),runRequest(old))&&value.workspaceId===old.workspaceId,'CONSOLE_WORKFLOW_RUN_CHANGED','Keep the original saved run request and source workspace.',409);
