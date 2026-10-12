@@ -2,6 +2,94 @@
 
 This client operates the existing Buyer runbook application. It shares the browser's Local buyer setup, received SDKs and handoffs, saved acquisition drafts, native buyer attempts, accounting, customer files and recovery records. Each call selects a configured original workspace alias. The application remains responsible for its merchant transport, operator keys, browser review, native ledger and completed purchase.
 
+
+## Connect the running Buyer and Research
+
+The installed `buyer-agent connect` command creates the connection from the original running application's complete launch record. It opens that listener through the maintained Buyer connection, verifies the complete selection and instance on both sides of each read, and saves the resulting connection for the existing agent, Merchant provider and Research host.
+
+Keep the Buyer workspace, accounting operator, agent receiving store and host configuration as separate selections. The Buyer browser workspace uses `stellar-forge.buyer-runbook-workspace.v1`. An SF88 accounting directory contains its original `operator.json`, ledger and `workspace.json`; supply that directory through `--operator`. A Merchant controller or Merchant agent journal is a different application and cannot supply the Buyer launch.
+
+### Select the original launch
+
+For an application already managed by Applications, use its existing complete launch file. The Applications owner continues to start, retain and stop that listener.
+
+The original standalone Buyer command prints one complete launch announcement. When this is the selected native owner, retain that announcement in an owner-private file. Start it in its own terminal and keep that process running:
+
+~~~sh
+umask 077
+node buyer-runbook/cli.mjs workspace \
+  --state /private/customer/buyer-workspace \
+  --operator-settings /private/customer/buyer-operator.json \
+  --claim-envs SF101_CLAIM_TOKEN \
+  --approval-mode browser --port 0 \
+  > /private/customer/buyer-launch.json
+~~~
+
+Select the actual current preset and claim environment name from the original operation. The existing Local buyer setup also supports adopting a host preset through its own review and save flow. Use its returned state and review hashes when saving. The launch file is the native application's own JSON output; keep it with the original listener lifecycle.
+
+In another terminal, commission that running instance:
+
+~~~sh
+node buyer-runbook/agent-cli.mjs connect \
+  --config /private/customer/agent-connections.json \
+  --workspace customer \
+  --launch /private/customer/buyer-launch.json \
+  --storage /private/customer/agent-receiving \
+  --operator /private/customer/original-sf88-operator
+~~~
+
+The installed equivalent is `starforge buyer-agent connect` with the same flags. The configuration parent must already be a canonical owner-private directory. Setup creates the receiving directory with mode 0700, or uses its empty existing directory for a new alias. `--operator` is optional; when supplied, the original SF88 read-only opener verifies its manifest, configuration, network, payer and ledger paths. The default accounting handle is `original`; `--operator-handle` selects another handle.
+
+The result includes the configuration path, exact file digest, workspace alias, source selection digest, current instance and browser URL. `--label` provides the initial single-line display name. Other agent limits and declared input handles retain the defaults and contracts described below.
+
+### Add the same Buyer to Research
+
+To connect a complete Research paid-delivery host in the same operation, include its original checkout and host path:
+
+~~~sh
+node buyer-runbook/agent-cli.mjs connect \
+  --config /private/customer/agent-connections.json \
+  --workspace customer \
+  --launch /private/customer/buyer-launch.json \
+  --storage /private/customer/agent-receiving \
+  --operator /private/customer/original-sf88-operator \
+  --research-host /private/customer/research-commerce-host.json \
+  --research-buyer customer \
+  --checkout /private/customer/original-checkout.json \
+  --merchant original \
+  --claim-env SF101_CLAIM_TOKEN
+~~~
+
+This saves the existing `sf88-research-customer-commerce-host/v1` schema. Its selected Buyer points to the saved `agentFile` and workspace alias. Its merchant points to the original compiled SF101 checkout and declared claim environment name. Setup calls the existing merchant selector to check that checkout and its initialized state/outbox. The resulting Research entry can be selected directly by the Research workspace launcher.
+
+For the original 921BA0 API operation, select its actual retained `checkout.json` and use `SCF_API_NATIVE_CLAIM` when that remains its declared claim variable. The original `operator-workspace` is the optional accounting selection. Its original Buyer Runbook launch comes from the running Buyer application selected by the native owner.
+
+If Research already declares the merchant, `--research-host` alone adds or verifies the Buyer alias. `--research-buyer` defaults to the Buyer workspace alias. Existing merchants and unrelated Buyer aliases retain their full definitions. The command validates new declarations through the maintained Research configuration reader; secret values remain in the native process environment.
+
+### Reopen and receive
+
+Repeat the identical command to verify the same selection and reopen its complete configuration. Additional input handles, existing operator handles and receiving limits on that alias are preserved. A new alias can be appended to the same connection file while retaining every existing alias. A selected alias keeps its native directory, launch file, receiving store and accounting handles. A deliberate application source update also requires the saved complete connection SHA256.
+
+Setup uses the existing local flock owner, complete private stages, exact preimage checks and atomic file replacement. Both configuration documents are prepared before publication. If the process stops after the Buyer configuration is saved, repeating the same command verifies that file and finishes the Research declaration. An existing nonempty receiving store continues through its original saved connection.
+
+A normal application restart with the same source and selection can reuse this configuration after the lifecycle owner updates its launch file. For a deliberate upgrade of the same native application, add `--expected-connection-sha256` with the current configuration digest returned by the previous setup. The command checks that complete preimage, verifies the new actual launch and updates the selected source digest while retaining the same store, aliases, inputs and operation history. Repeating an already completed update reopens the resulting connection. A different native workspace keeps its distinct alias and store. Prior completed downloads and request IDs stay with their original receiving history.
+
+Verify the selected application, then continue the original customer operation:
+
+~~~sh
+node buyer-runbook/agent-cli.mjs --config /private/customer/agent-connections.json workspaces
+node buyer-runbook/agent-cli.mjs --config /private/customer/agent-connections.json call open \
+  --input /private/customer/open-buyer.json
+~~~
+
+~~~json
+{"workspace":"customer"}
+~~~
+
+The existing browser records each operator decision. Continue the same prepared request, run, payment and receiving IDs through the agent actions documented below. The connection command itself reads the launch and optional original operator; the purchasing and receiving actions remain with the established customer workflow.
+
+The existing `./buyer/agent/setup` module also exports `connectBuyerRunbookAgent(options, {signal})` and `BUYER_AGENT_CONNECTION_SETUP`. Its complete options are `connectionFile`, `workspace`, `launchFile`, `storageDirectory`, optional `label`, `operatorDirectory`, `operatorHandle`, `researchFile`, `researchBuyer`, `checkoutFile`, `merchant` `claimEnv` and `expectedConnectionSha256`. Reuse the same original lifecycle owner and connection file from applications that call this API.
+
 ## Start with the running original application
 
 Use the Buyer application in Applications, or start the original workspace with browser approval:
