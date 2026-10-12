@@ -198,9 +198,50 @@ class ReferralReceiving:
             put("Source_References.json", source.jbytes({"profileSha256": review["profileSha256"],
                 "profile": review["profileSnapshot"], "selected": v["sourceRefs"],
                 "source": self.source(edition["sourceId"])}), "complete-primary-source-and-intake-index")
-            operations = [r for r in self.referral_records("exchangeOperations")
-                if self.referral_record("exchangeRequests", r["requestId"])["editionId"] == edition["id"]]
+            editions_by_id = {r["id"]: r for r in self.referral_records("editions")}
+            lineage, seen, current = [], set(), edition
+            while current is not None:
+                if current["id"] in seen:
+                    raise InputError("Recorded referral predecessor chain contains a cycle")
+                seen.add(current["id"])
+                lineage.append(current)
+                predecessor = current.get("predecessorId")
+                if predecessor is None:
+                    current = None
+                elif predecessor not in editions_by_id:
+                    raise InputError("Retain every recorded predecessor before preparing this complete handoff")
+                else:
+                    current = editions_by_id[predecessor]
+            lineage.reverse()
+            lineage_ids = [r["id"] for r in lineage]
+            lineage_history = []
+            operations = []
+            for operation in self.referral_records("exchangeOperations"):
+                request = self.referral_record("exchangeRequests", operation["requestId"])
+                if request["editionId"] not in seen:
+                    continue
+                selected = request["editionId"] == edition["id"]
+                if selected:
+                    operations.append(operation)
+                original_edition = editions_by_id[request["editionId"]]
+                lineage_history.append({"editionId": request["editionId"],
+                    "sourceId": original_edition["sourceId"], "selectedEdition": selected,
+                    "request": request, "operation": operation})
             put("Native_Exchange_History.json", source.jbytes(operations), "actual-native-exchange-history")
+            put("Edition_Lineage.json", source.jbytes({
+                "schema": "stellar-forge.gravity-referral-edition-lineage.v1",
+                "workspaceId": self.workspace_id, "selectedEditionId": edition["id"],
+                "editionIds": lineage_ids, "editions": lineage,
+                "relationships": [{"editionId": r["id"], "predecessorId": r["predecessorId"]}
+                                  for r in lineage if r.get("predecessorId") is not None]}),
+                "complete-recorded-referral-edition-lineage")
+            put("Lineage_Exchange_History.json", source.jbytes({
+                "schema": "stellar-forge.gravity-referral-lineage-history.v1",
+                "workspaceId": self.workspace_id, "selectedEditionId": edition["id"],
+                "scope": "selected-edition-and-recorded-predecessors",
+                "editionIds": lineage_ids, "selectedOperationCount": len(operations),
+                "predecessorOperationCount": sum(not r["selectedEdition"] for r in lineage_history),
+                "rows": lineage_history}), "complete-original-referral-lineage-exchange-history")
             put("Referral_Queue.csv", csv_bytes(["Task record ID", "Original logical ID", "Status", "Owner",
                 "Requester", "Subject", "Authored", "Contact prohibited", "Consent decisions", "Source ID"],
                 [[r["taskId"], r["logicalId"], r["status"], r["owner"], r["requester"], r["subject"],
@@ -218,7 +259,7 @@ class ReferralReceiving:
                   source.jbytes(r.get("sourceRefs", [])).decode().strip(),
                   r.get("decisionId", "")] for r in report["findings"]]), "complete-referral-findings")
             links = ["Assessment.json", "Reviewed_Requirements.json", "Topology.json", "Original_Referrals.json",
-                "Source_References.json", "Native_Exchange_History.json", "Referral_Queue.csv", "Field_Review.csv",
+                "Source_References.json", "Native_Exchange_History.json", "Edition_Lineage.json", "Lineage_Exchange_History.json", "Referral_Queue.csv", "Field_Review.csv",
                 "Findings.csv", "Handoff_Snapshot.json"]
             doc = "<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>" + esc(v["label"]) + "</title><style>" + STYLE + "</style><body><h1>" + esc(v["label"]) + "</h1>"
             doc += "<div class=meta><p>Receiver: " + esc(v["receiver"]) + "</p><p>Purpose: " + esc(v["purpose"]) + "</p><p>Frozen assessment: " + esc(assessment["asOf"]) + "</p><p>Source classification: " + esc(config["classification"]) + ". Selected source version: " + esc(config["sourceVersion"]) + ".</p><p>Workspace: <code>" + esc(self.workspace_id) + "</code></p><p>" + esc(v["note"]) + "</p></div>"
@@ -227,7 +268,9 @@ class ReferralReceiving:
             doc += "<h2>Referral queue</h2>" + table(["Original Task", "Status", "Owner", "Requester", "Subject", "Contact prohibited"], [[r["logicalId"], r["status"], r["owner"], r["requester"], r["subject"], r["contactProhibited"]] for r in tasks])
             doc += "<h2>Review findings</h2>" + table(["Severity", "Original Task", "Finding"], [[r["severity"], r.get("taskId"), r.get("label")] for r in report["findings"]])
             doc += "<h2>Requirements and mapping</h2><p>All 57 original requirements and all 24 original field review rows remain in the editable review. The saved review records its actual owner, disposition and source references.</p>" + table(["Kind", "Counts"], [[k, source.jbytes(vv).decode().strip()] for k, vv in review["counts"].items()])
-            doc += "<h2>Native receiving</h2>" + table(["Operation", "State", "Phase", "Retained source"], [[r["id"], r["state"], r["phase"], r.get("sourceId")] for r in operations])
+            doc += "<h2>Recorded edition lineage</h2><p>The selected assessment, review and purpose remain bound to the selected edition. The recorded predecessor chain retains the original edition and source for each historical exchange.</p>" + table(["Edition", "Label", "Original source", "Selection"], [[r["id"], r["label"], r["sourceId"], "Selected edition" if r["id"] == edition["id"] else "Recorded predecessor"] for r in lineage])
+            doc += "<h2>Selected-edition native receiving</h2><p>Native_Exchange_History.json contains " + str(len(operations)) + " operations bound to the selected edition.</p>" + table(["Operation", "State", "Phase", "Retained source"], [[r["id"], r["state"], r["phase"], r.get("sourceId")] for r in operations])
+            doc += "<h2>Original exchange across the recorded lineage</h2><p>Lineage_Exchange_History.json retains every original request and operation for the selected edition and its recorded predecessors, with their actual edition and source identities.</p>" + table(["Actual edition", "Original Task", "Method", "Operation", "State", "Phase"], [[r["editionId"], r["request"].get("logicalId"), r["request"]["method"], r["operation"]["id"], r["operation"]["state"], r["operation"]["phase"]] for r in lineage_history])
             doc += "<h2>Operator continuation</h2><ol><li>Open the original referral edition, topology and complete source members.</li><li>Review the saved requirement and field dispositions, consent purpose and unresolved reference findings.</li><li>Record authored changes as a new preview and successor edition; retain the original preimage.</li><li>For an authorised selected endpoint, discover its actual capability and retain the complete conditional exchange and readback.</li><li>Attach the actual receiving result and record its destination, operator and original operation ID.</li></ol></body></html>"
             put("Referral_Handoff.html", doc.encode("utf-8"), "readable-complete-referral-handoff")
             registry = self._referral_registry()
