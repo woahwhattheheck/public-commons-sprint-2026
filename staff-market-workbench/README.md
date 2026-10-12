@@ -1,6 +1,6 @@
 # Staff market workbench
 
-A complete local operating workspace for compensation data: retain source editions, review job and survey matches, calculate reproducible market comparisons, review receiving results, track survey cycles, and save or restore the entire workspace. The publisher-intake and receiving modules join the same database and operation history.
+A complete local operating workspace for compensation data: retain source editions, review job and survey matches, calculate reproducible market comparisons, develop editable classification and employee placement plans, compare implementation costs, review receiving results, track survey cycles, and save or restore the entire workspace. Publisher intake, classification and receiving join the same database and operation history.
 
 The application uses original source records and explicitly recorded decisions. Published survey percentiles stay labeled as their original measures. Combining several survey medians produces a weighted consensus of those published medians; it does not establish the median of a pooled employee population.
 
@@ -29,6 +29,7 @@ Every native mutation has a stable operation ID and the revision the operator re
 | Jobs and matches | Review the job's benchmark disposition, compare its content with original survey rows, and save professional match and factor decisions | Select the retained decisions in Market analysis |
 | Market analysis | Calculate the stated source/date basis and review the exact frozen result | Accepted results become available in receiving |
 | Survey cycles | Track selected peers, actual participation, received source editions and close decisions | Retain each cycle with its original source references |
+| Classification and placement | Retain pay structures, job-content decisions and workforce editions; compare placement and phased implementation costs | Review and deliver accepted scenarios with every original input edition |
 | Receiving and annual review | Configure a handback, reconcile a returned file, and compare saved editions | Open a pricing-action decision against its original analysis |
 | Decisions and exports | Reopen the full historical analyses, receiving decisions and accepted reports | Open an original analysis for review or export |
 | Workspace | Save the complete native workspace, restore it, or reconcile an interrupted browser request | Resume the same saved operation and result |
@@ -124,6 +125,8 @@ The archive contains the complete private source data. Choose its receiving dest
 
 ## Native API and extension contract
 
+The complete [classification, placement and cost guide](classification/README.md) includes the source-native Apex public planning case, editable Town pay structures, questionnaire and employee adapters, and accepted implementation options. Its 44-file [Apex input packet](classification/inputs/apex-fy27/README.md) retains the original documents, scope crosswalk and partner workshare.
+
 GET /api/state exposes the workspace and current source/review summaries. GET /api/records/{kind} supports complete paginated access through q, offset, limit, current and source_id. GET /api/document/{source|record|analysis|cycle}/{id} opens the original document. GET /api/original/{source_id} returns its original uploaded bytes.
 
 Mutations use JSON with operation_id and expected_revision:
@@ -140,7 +143,7 @@ Mutations use JSON with operation_id and expected_revision:
 
 Extensions supply host.py with dispatch(workspace, db, action, payload, revision), state(workspace, db), document(workspace, db, kind, identity), and an optional download(workspace, db, kind, identity). The original transaction and operation ledger own all mutations. Read callbacks use a query-only connection. Namespace tables are part of the same database and restore.
 
-POST /api/extensions/{publisher|receiving}/{action} invokes an extension action. Its state, document and download routes preserve that namespace. Browser modules are local static assets under /extensions/{name}/.
+POST /api/extensions/{publisher|receiving|classification}/{action} invokes an extension action. Its state, document and download routes preserve that namespace. Browser modules are local static assets under /extensions/{name}/.
 
 
 A reviewed publisher group can be selected with `publisher_kind=edition|cohort` and `publisher_id=<original hash>` on the survey-record route. Use `current=false` when opening that exact saved edition; the analysis still requires its explicit current or historical source mode. A match can include `publisher_origin: {kind, id}`, which the native transaction validates and retains.

@@ -15,5 +15,8 @@
     "./buyer/goldrush": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/examples/goldrush-stellar-pilot/customer.mjs",
     "./buyer/goldrush/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/examples/goldrush-stellar-pilot/workbench.mjs",
     "./buyer/goldrush/records": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/examples/goldrush-stellar-pilot/wallet-data.mjs"
+  },
+  "applicationProviders": {
+    "goldrush": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/goldrush.mjs"
   }
 }
