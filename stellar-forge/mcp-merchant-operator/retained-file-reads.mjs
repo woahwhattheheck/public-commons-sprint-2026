@@ -40,6 +40,36 @@ const sameIdentity = (left, right, includeCtime = true) =>
  * and offset after release/restart, as before.
  */
 export class RetainedFileReads {
+  #pendingFileCloses = new Map(); #closingScopes = new Set();
+  #closeFile(handle, scope) {
+    if (!handle) return Promise.resolve();
+    let owned = this.#pendingFileCloses.get(handle);
+    if (!owned) { owned = { scope, attempt: null }; this.#pendingFileCloses.set(handle, owned); }
+    if (!owned.attempt) {
+      owned.attempt = Promise.resolve().then(() => handle.close()).then(
+        () => { this.#pendingFileCloses.delete(handle); },
+        error => { owned.attempt = null; throw error; },
+      );
+    }
+    return owned.attempt;
+  }
+  async #drainCloses(scope) {
+    const selected = [...this.#reads.values()].filter(read => scope === undefined || read.scope === scope);
+    const represented = new Set(selected.map(read => read.handle).filter(Boolean));
+    const detached = [...this.#pendingFileCloses].filter(([handle, owned]) =>
+      !represented.has(handle) && (scope === undefined || owned.scope === scope));
+    const results = await Promise.allSettled([
+      ...selected.map(read => this.release(read.scope, read.id)),
+      ...detached.map(([handle, owned]) => this.#closeFile(handle, owned.scope)),
+    ]);
+    const failed = results.filter(value => value.status === 'rejected');
+    if (failed.length) {
+      const error = this.#fail('CLOSE_INCOMPLETE', 'Original file descriptors remain owned; retry closing the same reader or scope.');
+      error.causes = failed.map(value => ({ code: value.reason.code ?? 'FILE_CLOSE_FAILED' }));
+      throw error;
+    }
+  }
+
   #reads = new Map(); #readTail = Promise.resolve(); #readStats = new Map();
   #prefix; #closing = false; #close; #maxSnapshotBytes;
   #opening = new Map(); #scopeClosures = new Map(); #ownedHandles = new WeakSet();
@@ -52,7 +82,7 @@ export class RetainedFileReads {
   #fail(code, message) { return Object.assign(new Error(message), { code: this.#prefix + '_' + code }); }
   get summary() {
     const reads = [...this.#reads.values()];
-    return { activeFileReads: reads.length,
+    return { activeFileReads: reads.length, pendingFileCloses: this.#pendingFileCloses.size,
       snapshotBytes: reads.reduce((sum, read) => sum + (read.native ? 0 : read.size), 0),
       immutableFileBytes: reads.reduce((sum, read) => sum + (read.native ? read.size : 0), 0) };
   }
@@ -72,7 +102,10 @@ export class RetainedFileReads {
   async #dispose(read) {
     if (!read.disposal) {
       read.closed = true; clearTimeout(read.timer); read.memory = null;
-      read.disposal = (async () => { try { await read.handle?.close(); } finally { this.#reads.delete(read.id); } })();
+      read.disposal = (async () => {
+        await this.#closeFile(read.handle, read.scope);
+        read.handle = null; this.#reads.delete(read.id);
+      })().catch(error => { read.disposal = null; throw error; });
     }
     await read.disposal;
   }
@@ -82,25 +115,25 @@ export class RetainedFileReads {
     if (read.scope !== scope) throw this.#fail('READ_CONFLICT', 'Choose a file read owned by this original scope.');
     if (!read.release) {
       read.releasing = true; clearTimeout(read.timer);
-      read.release = (async () => { await read.tail.catch(() => {}); await this.#dispose(read); })();
+      read.release = (async () => { await read.tail.catch(() => {}); await this.#dispose(read); })()
+        .catch(error => { read.release = null; throw error; });
     }
     await read.release;
   }
   closeScope(scope) {
+    this.#closingScopes.add(scope);
     if (!this.#scopeClosures.has(scope)) {
-      // Include admitted loaders, which may not have published their snapshot
-      // yet. New admissions to this scope wait for an explicit later reopen.
       const closing = (async () => {
         await Promise.allSettled([...(this.#opening.get(scope) ?? [])]);
-        await Promise.allSettled([...this.#reads.values()].filter(read => read.scope === scope)
-          .map(read => this.release(scope, read.id)));
+        await this.#drainCloses(scope);
+        this.#closingScopes.delete(scope);
       })().finally(() => { this.#scopeClosures.delete(scope); });
       this.#scopeClosures.set(scope, closing);
     }
     return this.#scopeClosures.get(scope);
   }
   #assertOpening(scope) {
-    if (this.#closing || this.#scopeClosures.has(scope))
+    if (this.#closing || this.#closingScopes.has(scope))
       throw this.#fail('CLOSING', 'Retained file reads for this original scope are closing.');
   }
   #ownNativeHandle(value) {
@@ -161,7 +194,7 @@ export class RetainedFileReads {
     if (bytes > this.#maxSnapshotBytes - this.summary.snapshotBytes)
       throw this.#fail('READ_CAPACITY', 'Finish or release existing reads to make room within the original owner snapshot byte budget.');
   }
-  async #snapshotHandle(directory) {
+  async #snapshotHandle(directory, scope) {
     const temporary = await mkdtemp(join(directory, '.mcp-read-')), path = join(temporary, 'snapshot');
     let handle;
     try {
@@ -170,7 +203,7 @@ export class RetainedFileReads {
       await unlink(path); await rmdir(temporary);
       return handle;
     } catch (error) {
-      await handle?.close().catch(() => {});
+      await this.#closeFile(handle, scope).catch(() => {});
       await unlink(path).catch(() => {}); await rmdir(temporary).catch(() => {}); throw error;
     }
   }
@@ -189,11 +222,11 @@ export class RetainedFileReads {
         throw this.#fail('INVALID_FILE', 'Select an owned private regular source file.');
       if (before.size !== BigInt(original.bytes))
         throw this.#fail('FILE_CHANGED', 'The retained source size differs from its original manifest.');
-      snapshot = await this.#snapshotHandle(directory);
+      snapshot = await this.#snapshotHandle(directory, original.scope);
       const hash = createHash('sha256'), buffer = Buffer.alloc(Math.min(COPY_CHUNK_BYTES, Math.max(original.bytes, 1)));
       let position = 0;
       while (position < original.bytes) {
-        if (this.#closing || this.#scopeClosures.has(original.scope))
+        if (this.#closing || this.#closingScopes.has(original.scope))
           throw this.#fail('CLOSING', 'Retained file reads are closing.');
         const result = await source.read(buffer, 0, Math.min(buffer.length, original.bytes - position), position);
         if (!result.bytesRead) throw this.#fail('FILE_CHANGED', 'The retained source ended before its declared size.');
@@ -214,18 +247,18 @@ export class RetainedFileReads {
       const sha256 = hash.digest('hex');
       if (sha256 !== expectedSha256)
         throw this.#fail('FILE_CHANGED', 'The original file differs from the requested SHA256.');
-      await source.close(); source = null;
+      await this.#closeFile(source, original.scope); source = null;
       const handle = snapshot; snapshot = null;
       return { handle, sha256, size: original.bytes };
     } finally {
-      await Promise.allSettled([source?.close(), snapshot?.close()].filter(Boolean));
+      await Promise.allSettled([this.#closeFile(source, original.scope), this.#closeFile(snapshot, original.scope)]);
     }
   }
   #open({ scope, key, kind, directory, load, loadFile, expectedSha256 }) {
     // Serialize original acquisition, then serve each owner's independent
     // immutable snapshot. Range reads never rerun the original exporter.
     const pending = this.#readTail.then(async () => {
-      if (this.#closing || this.#scopeClosures.has(scope))
+      if (this.#closing || this.#closingScopes.has(scope))
         throw this.#fail('CLOSING', 'Retained file reads are closing.');
       if (this.#reads.size >= SNAPSHOT_COUNT_LIMIT)
         throw this.#fail('READ_CAPACITY', 'Finish or release an existing file read before opening another.');
@@ -262,7 +295,7 @@ export class RetainedFileReads {
           if (expectedSha256 && sha !== expectedSha256)
             throw this.#fail('FILE_CHANGED', 'The original file differs from the requested SHA256.');
           if (bytes.length <= MEMORY_SNAPSHOT_LIMIT) memory = Buffer.from(bytes);
-          else { handle = await this.#snapshotHandle(directory); await handle.writeFile(bytes); }
+          else { handle = await this.#snapshotHandle(directory, scope); await handle.writeFile(bytes); }
         }
         this.#assertOpening(scope);
         const read = { id: randomUUID(), key, scope, kind, size, native, identity, tail: Promise.resolve(),
@@ -275,7 +308,7 @@ export class RetainedFileReads {
           throw this.#fail('SNAPSHOT_UNAVAILABLE', 'The original native descriptor could not be verified. Reopen its original artifact.');
         throw error;
       } finally {
-        await handle?.close().catch(() => {});
+        await this.#closeFile(handle, scope).catch(() => {});
       }
     });
     let opening = this.#opening.get(scope);
@@ -336,8 +369,8 @@ export class RetainedFileReads {
       this.#closing = true;
       this.#close = (async () => {
         await this.#readTail;
-        await Promise.all([...this.#reads.values()].map(read => this.release(read.scope, read.id)));
-      })();
+        await this.#drainCloses();
+      })().catch(error => { this.#close = null; throw error; });
     }
     return this.#close;
   }

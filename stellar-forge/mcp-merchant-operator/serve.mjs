@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { loadOAuthResourceHost } from '../mcp-paid-agent/oauth-host.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeStellarExpertWorkspaceMerchant, initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializeGraphqlWorkspaceMerchant, initializePublisherMerchant, initializeArcgisWorkspaceMerchant, initializeS3WorkspaceMerchant, initializeOpenSearchWorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeODataWorkspaceMerchant, initializeFiscalDataWorkspaceMerchant, initializeGeocodioWorkspaceMerchant, initializeWorldBankWorkspaceMerchant, initializeWebDavWorkspaceMerchant, initializeEdgarWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeOpenCageWorkspaceMerchant, initializeCoinGeckoWorkspaceMerchant, initializeRedisWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializeGrantsWorkspaceMerchant, initializeSourceWorkspaceMerchant, initializeBaserowWorkspaceMerchant, initializeUSGSWorkspaceMerchant, initializeFeedsWorkspaceMerchant, initializeGrpcWorkspaceMerchant, initializeOpenApiWorkspaceMerchant, initializeHarWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, initializeCocartWorkspaceMerchant, initializeMppMerchant, initializeBuyerExpenseMerchant, failure } from './config.mjs';
+import { initializeStellarExpertWorkspaceMerchant, initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializeGraphqlWorkspaceMerchant, initializePublisherMerchant, initializeArcgisWorkspaceMerchant, initializeS3WorkspaceMerchant, initializeOpenSearchWorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeODataWorkspaceMerchant, initializeFiscalDataWorkspaceMerchant, initializeGeocodioWorkspaceMerchant, initializeWorldBankWorkspaceMerchant, initializeWebDavWorkspaceMerchant, initializeEdgarWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeNocoDBWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeOpenCageWorkspaceMerchant, initializeCoinGeckoWorkspaceMerchant, initializeRedisWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializeResearchWorkspaceMerchant, initializeGrantsWorkspaceMerchant, initializeSourceWorkspaceMerchant, initializeBaserowWorkspaceMerchant, initializeUSGSWorkspaceMerchant, initializeFeedsWorkspaceMerchant, initializeGrpcWorkspaceMerchant, initializeOpenApiWorkspaceMerchant, initializeHarWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, initializeCocartWorkspaceMerchant, initializeMppMerchant, initializeBuyerExpenseMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
@@ -50,6 +50,7 @@ const HELP = `Starforge merchant MCP
   init-webdav-workspaces --dir NEW_DIRECTORY --connection WEBDAV_WORKSPACE_CONNECTION.json [--name NAME]
   init-edgar-workspaces --dir NEW_DIRECTORY --connection EDGAR_WORKSPACE_CONNECTION.json [--name NAME]
   init-sheets-workspaces --dir NEW_DIRECTORY --connection SHEETS_WORKSPACE_CONNECTION.json [--name NAME]
+  init-nocodb-workspaces --dir NEW_DIRECTORY --connection NOCODB_WORKSPACE_CONNECTION.json [--name NAME]
   init-ckan-workspaces --dir NEW_DIRECTORY --connection CKAN_WORKSPACE_CONNECTION.json [--workspace ALIAS] [--name NAME]
   init-stellar-expert-workspaces --dir NEW_DIRECTORY --connection STELLAR_EXPERT_CONNECTION.json [--name NAME]
   init-coingecko-workspaces --dir NEW_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json [--name NAME]
@@ -57,6 +58,7 @@ const HELP = `Starforge merchant MCP
   init-opencage-workspaces --dir NEW_DIRECTORY --connection OPENCAGE_WORKSPACE_CONNECTION.json [--name NAME]
   init-redis-workspaces --dir NEW_DIRECTORY --connection REDIS_WORKSPACE_CONNECTION.json [--workspace ALIAS] [--name NAME]
   init-usaspending-workspaces --dir NEW_DIRECTORY --connection USASPENDING_WORKSPACE_CONNECTION.json [--name NAME]
+  init-research-workspaces --dir NEW_DIRECTORY --connection RESEARCH_WORKSPACE_CONNECTION.json [--name NAME]
   init-grants-workspaces --dir NEW_DIRECTORY --connection GRANTS_WORKSPACE_CONNECTION.json [--name NAME]
   grants-download inspect|download|receive ...       (see grants-download --help)
   init-feeds-workspaces --dir NEW_DIRECTORY --connection FEEDS_WORKSPACE_CONNECTION.json [--name NAME]
@@ -99,6 +101,7 @@ const HELP = `Starforge merchant MCP
        [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
        [--catalog CATALOG_CONNECTION_JSON] [--support SUPPORT_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME | --oauth-config OAUTH_RESOURCE.json]
+       [--operator-console-dir PRIVATE_OPERATOR_DIRECTORY]
   pricing status|open|capture|source|preview|save|list|load|selection|apply|manifest|download|close ...
   maintenance open|close|status|job|prepare|execute|reconcile|download ...
   adjustments open|status|events|event|detail|job|preview|prepare|execute|reconcile|download|close ...
@@ -198,12 +201,12 @@ function portNumber(value, fallback) {
   return Number(value);
 }
 export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MCP_ACCESS_TOKEN',
-  environment = process.env, stellarExpertFetchImpl, woocommerceFetchImpl, mppFetchImpl, oauthConfigPath, oauthFetchImpl, accounting } = {}) {
+  environment = process.env, stellarExpertFetchImpl, woocommerceFetchImpl, mppFetchImpl, oauthConfigPath, oauthFetchImpl, accounting, consoleDirectory } = {}) {
   if (!configPath || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tokenEnv)) throw failure('CONFIGURATION_ERROR', 'Supply a merchant configuration and token environment-variable name.');
   port = portNumber(port, 3211);
   const operator = await openMerchantOperator(configPath,
     { stellarExpert: { environment, fetchImpl: stellarExpertFetchImpl }, woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, mpp: { environment, fetchImpl: mppFetchImpl }, opensearch: { environment }, opencage: { env: environment }, grpc: { environment }, openapi: { environment }, arcgis: { environment }, accounting: { ...accounting, environment } });
-  let server, access;
+  let server, access, operatorConsole, draining=false;
   try {
     access = await loadOAuthResourceHost({configPath:oauthConfigPath ?? environment.MCP_OAUTH_CONFIG,
       bearerToken:environment[tokenEnv],fetchImpl:oauthFetchImpl});
@@ -211,7 +214,26 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
       allowedClientOrigins: String(environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean),
       serverName: 'starforge-merchant-operator', serverVersion: '0.1.0',
       instructions: merchantInstructions(operator.tools) });
-    server = createServer(access.wrap(handler));
+    if(consoleDirectory!==undefined){
+      if(typeof consoleDirectory!=='string'||!consoleDirectory)throw failure('CONFIGURATION_ERROR','Supply a private operator console directory.');
+      operatorConsole=await (await import('./console/service.mjs')).createMerchantConsole({
+        operator,configPath,directory:consoleDirectory,...access.transportOptions});
+    }
+    const routed=operatorConsole?async(req,res)=>{
+      try{
+        if(draining){
+          res.writeHead(503,{'content-type':'application/json','cache-control':'no-store'});
+          res.end(JSON.stringify({error:{code:'OPERATOR_CLOSING',message:'The original merchant host is closing.'}}));return;
+        }
+        if(await operatorConsole.handler(req,res))return;
+        await handler(req,res);
+      }catch(error){
+        if(res.headersSent){res.destroy(error);return;}
+        res.writeHead(500,{'content-type':'application/json','cache-control':'no-store'});
+        res.end(JSON.stringify({error:{code:error.code??'CONSOLE_ERROR',message:'The original operator could not return this response.'}}));
+      }
+    }:handler;
+    server = createServer(access.wrap(routed));
     server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
     await new Promise((done, reject) => {
       server.once('error', reject);
@@ -219,25 +241,33 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
     });
   } catch (error) {
     server?.close();
-    try { await operator.close(); } finally { await access?.close(); }
+    try { await operatorConsole?.close(); } finally { try { await operator.close(); } finally { await access?.close(); } }
     throw error;
   }
-  let closing;
+  let closing, stopped;
   const close = () => {
     if (closing) return closing;
+    draining=true;
     closing = (async () => {
-      const stopped = new Promise((done, reject) => server.close(error => error ? reject(error) : done()));
-      // Finish an accepted change before draining the owned original seller.
-      // New calls now receive OPERATOR_CLOSING, and new sockets are refused.
-      try { await access.close(); }
-      finally {
-        try { await operator.close(); }
+      stopped??=new Promise((done, reject) => server.close(error => error&&error.code!=='ERR_SERVER_NOT_RUNNING' ? reject(error) : done()));
+      // Preserve the original customer checkpoints, then let the native owners
+      // cancel/drain accepted provider work before waiting for their returns.
+      try {
+        operatorConsole?.beginClose();
+        const results=await Promise.allSettled([operatorConsole?.close(),operator.close()]);
+        const errors=results.filter(value=>value.status==='rejected').map(value=>value.reason);
+        if(errors.length)throw errors.length===1?errors[0]:Object.assign(new AggregateError(errors,'Original merchant shutdown is incomplete.'),{code:'OPERATOR_SHUTDOWN_INCOMPLETE'});
+      } finally {
+        try { await access.close(); }
         finally { server.closeAllConnections(); await stopped; }
       }
     })();
+    closing.catch(()=>{closing=undefined;});
     return closing;
   };
-  return { operator, server, url: 'http://127.0.0.1:' + server.address().port, maxRequestBytes: operator.maxRequestBytes, authorization:access.describe(), close };
+  const url='http://127.0.0.1:' + server.address().port;
+  return { operator, server, url, maxRequestBytes: operator.maxRequestBytes, authorization:access.describe(),
+    ...(operatorConsole?{consoleUrl:url+'/operator/',operatorConsole}:{}),close };
 }
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
@@ -425,6 +455,13 @@ export async function main(args = process.argv.slice(2)) {
     const result = await initializeGrantsWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
+  if (command === 'init-research-workspaces') {
+    const options = pairs(rest, ['--dir','--connection','--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR','Supply --dir and --connection.');
+    const result = await initializeResearchWorkspaceMerchant({directory:options.get('--dir'),
+      connection:options.get('--connection'),name:options.get('--name')});
+    process.stdout.write(JSON.stringify(result,null,2)+'\n');return result;
+  }
   if (command === 'init-usaspending-workspaces') {
     const options = pairs(rest, ['--dir', '--connection', '--name']);
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
@@ -473,6 +510,12 @@ export async function main(args = process.argv.slice(2)) {
     const options = pairs(rest, ['--dir', '--connection', '--name']);
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
     const result = await initializeSheetsWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'init-nocodb-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeNocoDBWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
   if (command === 'init-mpp') {
@@ -767,13 +810,13 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-mpp, inspect-mpp, download-mpp, init-buyer-expenses, expenses, init-woocommerce, init-cocart-workspaces, inspect-cocart, download-cocart, reopen-cocart, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-graphql-workspaces, init-sheets-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-opencage-workspaces, init-stellar-expert-workspaces, init-coingecko-workspaces, init-redis-workspaces, init-usaspending-workspaces, init-grants-workspaces, grants-download, init-source-workspaces, init-baserow-workspaces, inspect-baserow, download-baserow, reopen-baserow, receive-baserow, init-usgs-workspaces, usgs, init-feeds-workspaces, download-feeds, inspect-feeds, init-grpc-workspaces, inspect-grpc, download-grpc, init-openapi-workspaces, download-openapi, inspect-openapi, reopen-openapi, init-har-workspaces, inspect-har, download-har, init-s3-workspaces, init-opensearch-workspaces, init-publishers, init-arcgis-workspaces, serve, maintenance, adjustments, platforms, statements, inspect-support, inspect-client, inspect-graphql, inspect-s3, download-support, download-client, download-graphql, download-s3, reopen-support, download-python or reopen-python.');
-  const options = pairs(rest, ['--config', '--port', '--token-env', '--oauth-config']);
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-mpp, inspect-mpp, download-mpp, init-buyer-expenses, expenses, init-woocommerce, init-cocart-workspaces, inspect-cocart, download-cocart, reopen-cocart, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-graphql-workspaces, init-sheets-workspaces, init-nocodb-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-opencage-workspaces, init-stellar-expert-workspaces, init-coingecko-workspaces, init-redis-workspaces, init-usaspending-workspaces, init-research-workspaces, init-grants-workspaces, grants-download, init-source-workspaces, init-baserow-workspaces, inspect-baserow, download-baserow, reopen-baserow, receive-baserow, init-usgs-workspaces, usgs, init-feeds-workspaces, download-feeds, inspect-feeds, init-grpc-workspaces, inspect-grpc, download-grpc, init-openapi-workspaces, download-openapi, inspect-openapi, reopen-openapi, init-har-workspaces, inspect-har, download-har, init-s3-workspaces, init-opensearch-workspaces, init-publishers, init-arcgis-workspaces, serve, maintenance, adjustments, platforms, statements, inspect-support, inspect-client, inspect-graphql, inspect-s3, download-support, download-client, download-graphql, download-s3, reopen-support, download-python or reopen-python.');
+  const options = pairs(rest, ['--config', '--port', '--token-env', '--oauth-config', '--operator-console-dir']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),
-    tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', oauthConfigPath:options.get('--oauth-config') });
+    tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', oauthConfigPath:options.get('--oauth-config'), consoleDirectory:options.get('--operator-console-dir') });
   process.stdout.write(JSON.stringify({ schema: 'stellar-forge.merchant-mcp-listener.v1', url: session.url,
-    tools: session.operator.tools.map(tool => tool.name), seller: 'STARTED_ONLY_BY_EXPLICIT_TOOL' }) + '\n');
+    tools: session.operator.tools.map(tool => tool.name), ...(session.consoleUrl?{consoleUrl:session.consoleUrl}:{}), seller: 'STARTED_ONLY_BY_EXPLICIT_TOOL' }) + '\n');
   let stopping = false;
   const stop = async () => {
     if (stopping) return; stopping = true;

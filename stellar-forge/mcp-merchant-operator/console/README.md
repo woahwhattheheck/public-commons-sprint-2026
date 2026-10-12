@@ -112,9 +112,10 @@ Keep the private console directory to reopen the same operator database and part
 | `snapshot()` | Pure configured-host snapshot with the current console identity. |
 | `startCall(input, context)` | Reserves an exact native request and retains its original asynchronous return. |
 | `store` | Original private profile/request SQLite store. |
-| `close()` | Finishes accepted console calls and original customer reads, then closes its own store. |
+| `beginClose()` | Stops new console calls and pauses original customer transfers at retained checkpoints. |
+| `close()` | Waits for accepted native returns and closes its own store after the original owner begins cancellation/drain. |
 
-`startMerchantMcp()` owns the shared listener. On close, it refuses new interface requests, finishes the accepted console work while its original authorization is available, and then closes the existing merchant owner. The console never replaces the provider lifecycle or closes a separate seller owner.
+`startMerchantMcp()` owns the shared listener. On close, it refuses new interface requests, pauses customer transfers at their original checkpoints and starts the existing merchant owner's cancellation/drain immediately. It waits for the accepted native returns and customer cleanup before closing the interface database and original authorization. The console never replaces the provider lifecycle or closes a separate seller owner.
 
 The API uses the native host request capacity for saved and executed requests. The exact MCP call envelope is checked again before native dispatch, including calls imported from a profile archive. The separate history-import route accepts a complete archive up to 128 MiB; importing a history does not run its saved tools.
 
@@ -128,3 +129,17 @@ Static assets use the original loopback host, same-origin requests and a restric
 - `public/index.html`, `public/app.mjs`, `public/style.css`: the industrial browser interface.
 - `../operator.mjs`: pure configured-host snapshot and original operator lifecycle.
 - `../serve.mjs`: opt-in same-listener startup and existing authorization.
+
+## Complete native receiving
+
+The maintained receiver uses the original SF61 example source, original merchant stage/selection/start, the original seller-generated five-file client and the actual browser interface. It retains native request IDs, checks the complete customer archive, closes the owned seller, reopens the same operator history and imports its exact portable profile into another private console directory.
+
+```sh
+node stellar-forge/mcp-merchant-operator/receiving/console-journey.mjs \
+  --directory /private/receiving/merchant-console \
+  --chromium /absolute/path/to/chromium \
+  --playwright-module /absolute/path/to/playwright \
+  --source-commit REVIEWED_SOURCE_COMMIT
+```
+
+Use Node 24 and the existing Chromium/Playwright installation. The output retains `console-native-run.json`, the exact profile archive, the original customer `.tar.gz`, browser views and the original merchant/console workspace. A completed receiving directory returns its existing result on a repeated invocation.

@@ -1,6 +1,6 @@
 # Complete Analysis workspace backups
 
-An Analysis workspace contains the dataset database and the complete outputs produced beside it. Portable workspace backups carry both in one ZIP so a receiving computer can reopen saved analyses, query exports, report downloads and workbook editions together.
+An Analysis workspace contains the dataset database, retained source documents and the complete outputs produced beside it. Portable workspace backups carry these together in one ZIP so a receiving computer can reopen the original inputs, saved analyses, query exports, report downloads and workbook editions.
 
 The feature extends the original `AnalysisWorkspace`, its single job owner, local browser application and native MCP adapter. Every export has one stable operation ID, one retained SQLite snapshot and one immutable result. The existing database-only backup remains available for database maintenance.
 
@@ -68,6 +68,7 @@ Every payload is under `workspace/` and has a relative path, byte count and SHA-
 | Saved content | Location in the received workspace |
 | --- | --- |
 | Consistent dataset and Analysis database | `datasets.sqlite3` |
+| Exact source descriptors and original files for every registered document revision | `analysis-response-documents/` |
 | Complete selected query-export formats and manifests | `analysis-query-exports/` |
 | Completed workbook XLSX, definitions, revisions, complete source cohorts and source handoff | `analysis-workbooks/` |
 | Retained report HTML, JSON or CSV ZIP, and complete change JSON/CSV | `analysis-exports/` |
@@ -76,6 +77,42 @@ Every payload is under `workspace/` and has a relative path, byte count and SHA-
 Saved queries, views, imported scalar types, report publications, comparisons, profile results and original job history travel in the consistent SQLite database. Registered acquisition provenance stays attached to that original data. A receiving service creates its own local lock, launch capability and provider configuration.
 
 The exporter selects completed output identities from its own retained database snapshot. It resolves all current file access below the selected private workspace. Producer absolute paths stay as provenance, including after the archive is received at another location. Original report, change and database-backup downloads resolve the verified local files after receiving.
+
+## Retained source documents
+
+Source documents registered through the existing response workflow travel with
+the complete workspace. The exporter selects every document ID referenced by
+every retained response-source revision in its frozen SQLite snapshot. It
+includes that original `source.json`, the analytical JSON/CSV input and each
+named original file, with their exact relative paths, byte counts and SHA-256.
+
+The normal backup review includes these files in its payload count and size.
+If a registered document or its original bytes are missing or changed, review
+reports `source_document_required_or_changed` and identifies the document
+collection. Restore the matching original source closure there before resuming
+the same backup. The exporter uses the original document reader to validate
+the manifest and source files, and the archive writer checks each selected
+file again while transferring its bytes.
+
+A source registration made after the retained snapshot belongs to a later
+backup. Resuming an interrupted export keeps the original frozen selection
+and checks its document set against that same saved database. An older retained
+plan that omitted a registered source returns
+`WORKSPACE_ARCHIVE_DOCUMENT_SOURCE_SELECTION_CHANGED` before writing an archive.
+Keep that original operation for its history and create a complete backup with
+the current runtime. Unregistered source folders are outside the selected
+document set.
+
+The existing receiver verifies the complete staged document set against the
+restored database before it publishes the workspace. It checks original
+descriptor identities and named files as well as the ordinary archive member
+hashes and database counts. Reopening the received workspace resolves document
+IDs below its new database directory, so its saved mappings and original
+inputs remain usable after the producer's source directory is unavailable.
+
+See [SOURCE_DOCUMENTS.md](python/SOURCE_DOCUMENTS.md) for source registration,
+publisher and capture metadata, exact numeric Text mappings, and the original
+document descriptor contract.
 
 ## Existing service API
 

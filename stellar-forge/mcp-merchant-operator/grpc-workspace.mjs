@@ -472,7 +472,8 @@ export class MerchantGrpcWorkspaces {
     if (this.#close) return this.#close;
     this.#closing = true;
     for (const controller of this.#controllers) controller.abort();
-    this.#close = (async () => { await Promise.allSettled([...this.#pending]); await this.#reads.close(); })();
+    this.#close = (async () => { await Promise.allSettled([...this.#pending]); await this.#reads.close(); })()
+      .catch(error => { this.#close = null; throw error; });
     return this.#close;
   }
 }
