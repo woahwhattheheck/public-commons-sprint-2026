@@ -5,6 +5,10 @@ import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
+import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
+import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
+import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
+import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
@@ -45,6 +49,10 @@ export const APPLICATION_CATALOG = Object.freeze([
   ...eventFeedApplications(common),
   blockscoutApplication(common),
   mppApplication(common),
+  cheesecakeApplication(common),
+  odataApplication(common),
+  jobResultReceiverApplication(common),
+  sheetsApplication(common),
   redisApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
@@ -199,7 +207,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, mppBinding;
+  let terminalPython, eventFeed, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
@@ -208,6 +216,21 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   if (type.id === 'mpp') {
     const original = await prepareMppApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs); mppBinding = original.binding;
+  } else if (type.id === 'stellar-application') {
+    const original = await prepareCheesecakeApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs); selectedResourceKey = original.resourceKey;
+    stellarApplication = original.identity;
+  } else if (type.id === 'odata') {
+    const original = await prepareODataApplication(settings, { ...context, inputPath, selectedExecutable, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'job-result-receiver') {
+    const original = await prepareJobResultReceiverApplication(settings, {
+      inputPath, runtimeDirectory, applicationEnvironment,
+    });
+    args.push(...original.args); inputs.push(...original.inputs); jobResultReceiver = original.identity;
+  } else if (type.id === 'sheets-authoring') {
+    const original = await prepareSheetsApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
     const selected = await prepareEventFeedApplication(type.id, settings, {
       ...context, runtime: { directory: runtimeDirectory }, inputPath, selectedExecutable,
@@ -371,6 +394,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
     ...(mppBinding ? { mppBinding } : {}),
+    ...(stellarApplication ? { stellarApplication } : {}),
+    ...(jobResultReceiver ? { jobResultReceiver } : {}),
+    ...(selectedResourceKey ? { resourceKey: selectedResourceKey } : {}),
     ...(type.terminal ? { terminalPython } : {}),
     ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
 }
@@ -491,7 +517,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
   const value = { schema: 'stellar-forge.application-review.v1', applicationId, previousRevision: previous?.revision ?? null,
     runtimeId, runtime: binding(runtime), kind, settings, label: label.trim(), command,
     homeId: home.id, homeDirectory: home.directory, releaseId: release?.id ?? null,
-    resourceKey: resourceKey(type, settings),
+    resourceKey: command.resourceKey ?? resourceKey(type, settings),
     adoption: adoptionReview ? { requestId: uuidFrom('application-adopt:' + home.id + ':' + adoptionReview.id),
       operation: 'managed-adopt', homeId: home.id, reviewId: adoptionReview.id } : null };
   const id = hash(value).slice(0, 24), path = reviewPath(root, id);
@@ -548,6 +574,8 @@ export async function reviewApplicationStart(root, id) {
   const command = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
     root, runtimeId: saved.runtimeId,
   });
+  need(command.resourceKey === undefined || command.resourceKey === saved.resourceKey,
+    'APPLICATION_STATE_CHANGED', 'Review and save this application with its current private state directory before starting', 409);
   const value = { schema: 'stellar-forge.application-start-review.v1', applicationId: id,
     applicationRevision: saved.revision, runtime: saved.runtime, homeId: home.id, homeRevision: home.revision,
     releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command };
@@ -587,6 +615,8 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
       expectedRevision: home.revision, applicationId: id, command: current.command, args: current.args,
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
+      ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),
+      ...(current.stellarApplication ? { stellarApplication: current.stellarApplication } : {}),
       ...(current.environmentFile ? { environmentFile: current.environmentFile, environmentSha256: current.environmentSha256 } : {}) };
     const value = { schema: 'stellar-forge.application-run.v1', id: requestId, applicationId: id,
       createdAt: now(), revision: saved.revision, reviewId, requestHash, request };

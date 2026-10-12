@@ -2,20 +2,22 @@
 
 A complete receiving application for selected original Stellar merchant requests. It combines the maintained native buyer, exact request review, application authorization, the existing MCP transport and an industrial browser.
 
-Start with [OPERATOR.md](OPERATOR.md) for the complete receiving installation, configuration, review, execution, result and recovery flow. [SCOPE.md](SCOPE.md) describes the Cheesecake Labs implementation workshare and acceptance inputs.
+Start with [INSTALLED.md](INSTALLED.md) to prepare a private receiving application from an installed Starforge runtime and launch it through the Applications workspace or the `stellar-application` command. [OPERATOR.md](OPERATOR.md) covers the complete configuration, review, execution, result and recovery flow. [SCOPE.md](SCOPE.md) describes the Cheesecake Labs implementation workshare and acceptance inputs.
 
 ## Source entry points
 
 | File | Responsibility |
 | --- | --- |
 | `application.mjs` | Original handoff validation, retained subject/request binding, native buyer and fixed agent tools. |
+| `installed.mjs` | Installed runtime selection, private receiving initialization and exact source binding at startup. |
+| `remote-mcp.mjs` | Governed remote MCP requests through the original quote/result stores and aggregate spending ledger. |
 | `configuration.mjs` | Trusted receiving-host paths, operator selection and authorization module. |
 | `cli.mjs` | Source verification, request review, original execution, recovery and result export. |
 | `server.mjs` | Authenticated HTTP application and the maintained MCP transport. |
 | `ui/` | Requests, review, explicit execution confirmation, original operation and result workflow. |
 | `operations/operator_receiving.cjs` | Same-state receiving operation for the supplied reference, real Chromium and server restart. |
 
-The original runtime is selected explicitly from source `f8db4d8cff51ace62bb7b25655131aaed78bdde8`. Configure its actual installed SF88 directory and the exact retained buyer handoff in `application.example.json`; create the private empty state directory before first open.
+The original reference kit uses source `f8db4d8cff51ace62bb7b25655131aaed78bdde8`. New installations follow [INSTALLED.md](INSTALLED.md), which selects the SF88 runtime from the same installed package, validates the complete retained handoff and optional governed remote MCP selection, and creates a separate private state directory. Existing reference configurations continue to use their selected original runtime.
 
 ```sh
 node cli.mjs verify-source --config /private/application.json
