@@ -18,7 +18,8 @@ const safeCompare=(a,b)=>{
  * The transport is meant for an operator-controlled 127.0.0.1 listener.
  * It offers JSON-only responses, no SSE stream, tasks, roots or server push.
  * An embedding application may select toolErrorView(error) to carry its complete
- * error fields through the original isError response. The default wire view stays unchanged.
+ * error fields through the original isError response. Deliberate provider JSON
+ * details remain available with the existing code, reason and recovery fields.
  */
 export function createMcpToolHandler(provider,{bearerToken,authorization,allowedClientOrigins=[],
   serverName='stellar-bazaar-paid-bridge',serverVersion='0.1.0',maxRequestBytes=128*1024,toolErrorView,
@@ -105,10 +106,14 @@ export function createMcpToolHandler(provider,{bearerToken,authorization,allowed
         ? 'discovery_stale_terms' : e.code==='TOOL_NOT_FOUND'
           ? 'mcp_tool_missing' : 'unknown_upstream_error';
       const recovery=explainFailure({stage:name==='bazaar_search'?'discovery':'mcp',reason:recoveryCode});
+      // A provider's deliberate JSON details carry its original operation and
+      // recovery receipt. Do not enumerate Error, cause or authentication context.
+      let details;
+      try { if(plain(e.details)) details=JSON.parse(JSON.stringify(e.details)); } catch {}
       const applicationError=toolErrorView===undefined?{}:toolErrorView(e);
       if(!plain(applicationError))throw new TypeError('toolErrorView must return an object');
       const err={code:e.code??'TOOL_ERROR',reason:e.message??'Error',recovery,
-        ...(e.applied===false?{applied:false}:{}),...applicationError};
+        ...(e.applied===false?{applied:false}:{}),...(plain(details)?{details}:{}),...applicationError};
       return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(err)}],structuredContent:err,isError:true}));
     }
   };

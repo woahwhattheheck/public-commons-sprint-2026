@@ -60,6 +60,8 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
         const error = failure(/^[A-Z][A-Z0-9_]+$/.test(value?.code ?? '') ? value.code : errorPrefix + '_DOWNLOAD_TOOL_FAILED',
           typeof value?.reason === 'string' ? value.reason : 'The original retained-file operation failed.');
         if (value?.applied === false) error.applied = false;
+        if (plain(value?.details)) error.details = value.details;
+        if (plain(value?.recovery)) error.recovery = value.recovery;
         throw error;
       }
       if (!plain(value)) throw failure(errorPrefix + '_DOWNLOAD_REPLY_INVALID', 'The retained-file tool returned no structured result.');
