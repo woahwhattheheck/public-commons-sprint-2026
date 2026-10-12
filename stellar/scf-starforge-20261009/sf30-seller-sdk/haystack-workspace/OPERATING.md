@@ -524,3 +524,7 @@ The general request command returns that action's exact response. For a paged re
 A finished handover should make the intended source selection easy to inspect, carry every accepted tag decision with its original before-values, and identify the saved edition used for the reports. The delivered package gives the next operator the full editable workspace and application; the accompanying register and native grids give them directly usable source-linked outputs.
 
 Open the received application, read the saved edition's register and diagnostics, and compare the retained source identities with the delivery receipt. Continue work from that received history when another review cycle is needed.
+
+## Corrective work and returning operator changes
+
+Open **Work items** to capture findings from the native register or diagnostics, assign work, retain completed evidence, submit a material snapshot and review its disposition. The [complete corrective-work guide](CORRECTIVE_WORK.md) covers the queue, review rounds, downloadable evidence, full reports and original-operator acceptance of returned project changes.
