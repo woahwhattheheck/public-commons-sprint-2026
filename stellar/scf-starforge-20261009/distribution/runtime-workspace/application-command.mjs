@@ -58,7 +58,8 @@ function privateUrl(text) {
   try {
     const url = new URL(text);
     if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
-        !url.port || url.username || url.password || text.length > 4096) return null;
+        Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
+        url.username || url.password || text.length > 4096) return null;
     return url.href;
   } catch { return null; }
 }
