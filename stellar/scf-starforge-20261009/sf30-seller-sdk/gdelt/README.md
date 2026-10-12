@@ -287,3 +287,25 @@ Source/project changes use private, canonical paths and the original flock-backe
 - cli.mjs: the installed complete command surface.
 - mcp-client.mjs + mcp.mjs + mcp-tools.mjs: borrowed agent operations and original retained-file reads.
 - application-provider.mjs + merchant-provider.mjs + mcp-setup.mjs: installed Applications/native registration and original host setup.
+
+## Complete native customer example
+
+[The complete customer example](examples/native-customer-journey.mjs) runs the original source-to-customer workflow with the installed Starforge engines. It reads two official GDELT update pairs, retains an interrupted Event/Mentions acquisition and resumes the same source operation. It then prepares both reviews, compares the retained updates, publishes the original merchant editions, acquires rows and complete source files, and reopens the delivered review offline.
+
+The example also transfers the complete project through the merchant MCP interface across a host restart. It receives that original project, creates a later customer review and repeats receiving to preserve the later revision. Its browser continuation captures the merchant's five sections and the received customer's desktop and mobile views.
+
+Use the existing Node, Python, Playwright and Chromium installations, with the repository source and its installed merchant dependencies:
+
+```sh
+GDELT_NATIVE_SOURCE=/absolute/installed-starforge-source \
+GDELT_NATIVE_CHROMIUM_EXECUTABLE=/absolute/installed-chromium \
+node /absolute/installed-starforge-source/stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/examples/native-customer-journey.mjs \
+  --directory /absolute/original-gdelt-customer \
+  --python /absolute/installed-python
+```
+
+The payment services use the [original local protocol fixture](../stac/examples/gdelt-native-fixture-exports.mjs); the source responses come from the official GDELT service. The result records that execution mode alongside original source, review, publication and acquisition identities. Its private terminal wrapper admits only the planned original buyer reservations.
+
+Keep the same customer directory when continuing this operation. The example retains each source request, step, original project, complete transferred bundle and customer receiving directory. A complete run writes `result.json` and the full `outputs/` files. An interrupted run retains `last-outcome.json` with the original stage and error. The complete output-file inventory contains each relative path, byte count and SHA256.
+
+Closing the application attempts every owned customer window and merchant closure. Closing its browser also closes the original listener if another resource reports an error, then returns the first failure to the caller.
