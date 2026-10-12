@@ -14,8 +14,8 @@ Use the complete source commit and archive returned by the existing product owne
 To build from a checkout containing that selected commit:
 
 ```sh
-node stellar/scf-starforge-20261009/distribution/build.mjs \\
-  --repo /absolute/checkout --ref ORIGINAL_COMMIT \\
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/checkout --ref ORIGINAL_COMMIT \
   --selection laboratory-edd --out /absolute/laboratory-release
 ```
 
@@ -25,7 +25,7 @@ binds the original commit, source tree, complete source files and exact
 `.selection.laboratory-edd`. Resume an interrupted build with the same output:
 
 ```sh
-node stellar/scf-starforge-20261009/distribution/build.mjs \\
+node stellar/scf-starforge-20261009/distribution/build.mjs \
   --repo /absolute/checkout --out /absolute/laboratory-release --resume
 ```
 
@@ -41,13 +41,13 @@ Use Linux, Node 24, Python 3.11 or later, npm and `flock`. Select native Stellar
 `schema`, `mcp` and operator support through the original runtime installer:
 
 ```sh
-node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs prepare \\
-  --dir /absolute/laboratory-runtime \\
-  --archive /absolute/laboratory-release/ORIGINAL.tgz \\
+node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs prepare \
+  --dir /absolute/laboratory-runtime \
+  --archive /absolute/laboratory-release/ORIGINAL.tgz \
   --sha256 ORIGINAL_ARCHIVE_SHA256 --native --feature schema --feature mcp --operator
-node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs install \\
+node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs install \
   --dir /absolute/laboratory-runtime
-node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs inspect \\
+node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs inspect \
   --dir /absolute/laboratory-runtime --load --source
 ```
 
@@ -61,7 +61,7 @@ The runtime retains its package under `package/`, dependency tree under
 READY identity. Run an installed command through:
 
 ```sh
-node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs run \\
+node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs run \
   --dir /absolute/laboratory-runtime -- lab-edd profiles
 ```
 
@@ -71,7 +71,7 @@ The commands below use that runtime's `starforge` executable.
 
 ```sh
 starforge runtime-workspace init --workspace /private/runtime-desk
-starforge runtime-workspace attach --workspace /private/runtime-desk \\
+starforge runtime-workspace attach --workspace /private/runtime-desk \
   --runtime /absolute/laboratory-runtime --label "Laboratory EDD"
 starforge runtime-workspace serve --workspace /private/runtime-desk --port 8465
 ```
@@ -94,7 +94,7 @@ request and process ownership.
 | --- | --- |
 | `equis-lab-3` | Sample, batch and combined test/result/QC files, every physical row and parent identity |
 | `equis-lab-4` | Separate sample, test, result and batch files with complete native identities |
-| `geotech-dts8d` | Original 150-field DTS8D workbook contract, source cells/epoch, explicit literal corrections and native XLSX |
+| `geotech-dts8d` | Original XLSX or BIFF8 XLS, all 150 DTS8D fields, source cells/formulas/epoch, explicit literals and source-bound native XLSX |
 | EQuIS3 ↔ EQuIS4 | Both independent native families, candidate correspondence, explicit pair/separate/defer choices, entity links and full editable tables |
 
 Use [the complete reconciliation guide](../../sf30-seller-sdk/lab-edd/RECONCILIATION.md)
@@ -131,3 +131,18 @@ remain in that original private service directory.
 The selected `lab-edd` contribution now includes the `laboratory-workspaces` merchant provider and `starforge lab-edd-agent`. Follow [the complete operator guide](../../../../stellar-forge/mcp-merchant-operator/LAB_EDD_WORKSPACE.md) to reuse the saved application's paid-job connection and original buyer profile. All 42 tools operate the same source, decision, checkout, native task and result identities. The original paid-job provider remains the merchant/worker owner.
 
 The same full receiving driver walks both public 500-result EDD families, every physical row and correspondence group, CSV/TSV editing, immutable review and five-slot staging, native checkout, complete result delivery and independent cold reopening. Retain its actual `result.json`, source manifest and original runtime tuple with the application edition.
+
+## Original legacy Excel workbooks
+
+The selected installation includes the complete original BIFF8 parser and
+[legacy Excel operator guide](../../sf30-seller-sdk/lab-edd/LEGACY_XLS.md).
+An XLS source retains its exact binary and receives a separately named XLSX
+with a checked conversion binding. The existing Laboratory command, editor,
+42-operation merchant desk, sealed worker and result reader operate that same
+source. Python 3.10+ uses the included unchanged xlrd package.
+This product includes software developed by David Giffin <david@giffin.org>.
+
+The [complete legacy source and receiving package](../../../../deliveries/dts8d-legacy-excel-20261012/README.md)
+includes the actual 11-command native CLI result, full 300-field CSV/TSV review,
+original binary sources and independently reopened XLSX. Its guide provides
+the exact standalone command and retains all source/profile observations.
