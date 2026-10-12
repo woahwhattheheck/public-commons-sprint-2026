@@ -164,6 +164,39 @@ Use the original Applications **Stop** and reopen lifecycle. A subsequent start 
 
 The server and distribution builder consume the same five-route `browser-assets.json`. The ordinary customer HTML, JavaScript and stylesheet, plus the selected original approval panel and stylesheet, remain mapped to their maintained source files.
 
+## Connect a local agent to this customer workspace
+
+Add a private agent directory when opening the same customer application:
+
+~~~sh
+starforge api-pass-workspace serve \
+  --config /srv/starforge/api-customer-config.json \
+  --agent-directory /srv/starforge/api-customer-agent
+~~~
+
+In managed Applications, enter the same path in **Private agent connection directory**, then save, review and start the application. The selected installation must include the customer MCP tools and their original merchant host.
+
+Startup creates a complete local connection and client configuration. The startup record's `agent` field identifies these retained files:
+
+| File or directory | Purpose |
+| --- | --- |
+| `connection.json` | The original workspace ID and launch-file path, named input files and existing purchase handles |
+| `merchant/merchant-mcp.json` | Configuration for the original shared merchant MCP host |
+| `client-settings.json` | Ready-to-import local MCP settings for the named `starforge-api-customer` server |
+| `operations/` | Exact prepared native requests and saved operation outcomes |
+| `exports/` | Complete retained response, review, payment-proof, Buyer-report and customer-history files |
+| `reads/` | The original retained-file reader's resumable transfer state |
+
+Import `client-settings.json` into the local agent host, or merge its named server into that host's existing MCP settings. The generated command selects the current Node executable and the selected installation's original merchant stdio entry. Its environment names the generated merchant configuration. The connection follows the original private customer launch record, so stopping and reopening the customer application preserves its workspace identity and obtains the current session.
+
+The customer alias is `customer`. Use the `merchant_api_pass_` tools to read its passes and allowance, inspect original calls, prepare or reopen work, perform the selected original task and retain the complete output. Purchase decisions continue through the browser or terminal approval channel selected for the customer application. A browser-prepared request can be reopened and operated by its same request and call identifiers.
+
+For new file inputs, the host declares each approved file in `connection.json`, with its exact SHA-256 and one of the supported kinds: `handoff`, `body` or `approved-request`. Existing purchases are declared by their retained directory, customer metadata SHA-256, intent ID and order reference. The tools use those named handles. The request journal captures the resolved original HTTP body before dispatch, retaining the same operation ID and expected revision. A retry reopens that original request and its saved outcome even if its source file is later removed.
+
+Reopening this application retains declared input and purchase handles, existing merchant settings, saved operations and complete exports. It also retains other named servers in `client-settings.json`; its own named entry follows the selected installation. Applications reviews the existing setup files and selected source before starting, then verifies the completed setup and its actual executed entry. Changing host declarations therefore enters the next normal application review.
+
+An interrupted setup continues in the same private directory through the original merchant initializer. The customer launch becomes available to MCP after its connection and client configuration are complete. Original paid work continues to use the same Buyer, Inbox, application request and allowance state.
+
 ## Programmatic use
 
 The installed package exports the customer model, configuration, server and configured CLI lifecycle:
@@ -175,6 +208,7 @@ import {serveConfiguredWorkspace} from
 const app = await serveConfiguredWorkspace({
   configFile: '/srv/starforge/api-customer-config.json',
   approvalMode: 'auto',
+  agentDirectory: '/srv/starforge/api-customer-agent',
   port: 0,
 });
 

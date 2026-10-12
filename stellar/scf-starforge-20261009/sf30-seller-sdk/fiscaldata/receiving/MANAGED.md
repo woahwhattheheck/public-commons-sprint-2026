@@ -83,6 +83,8 @@ For admission, account for the complete Applications controller, original manage
 
 The final structured result is `outputDirectory/result.json`, with schema `stellar-forge.fiscaldata-application-receiving.v1`. A completed result has `status: "COMPLETED"`, the selected runtime and application, every stage, and the original native run identifiers. Standard output prints a compact final identity summary.
 
+Native `/api/action` replies preserve the original `{result, state}` envelope. The receiving adapter checks that envelope and consumes `result` for the edition, query, comparison, and reopen observations.
+
 The complete analyst download is `outputDirectory/downloads/comparison-delivery.tar.gz`. The receiving compares the full file's size and hash to the original model's sealed export. It does not produce a new financial dataset or replace that delivery.
 
 The source connection, Applications workspace, and exported dataset may contain private operator or business context. Keep them in the original declared private location. Browser screenshots are local receiving intermediates under `screenshots/`; inspect them locally and omit them from a durable source or business handoff.

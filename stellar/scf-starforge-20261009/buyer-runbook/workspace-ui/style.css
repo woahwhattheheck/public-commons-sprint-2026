@@ -54,3 +54,19 @@
 #operator-panel code,#operator-current p{overflow-wrap:anywhere}
 #operator-panel details{margin:1rem 0}
 @media(max-width:640px){.operator-settings-grid{grid-template-columns:minmax(0,1fr)}}
+
+
+/* The shared native purchase review lives inside the selected acquisition. */
+.runbook-approval{margin:24px 0;padding:0 0 22px;border-bottom:1px solid var(--line);min-width:0}
+.runbook-approval>.section-heading{margin:0 0 12px;align-items:flex-start}
+.runbook-approval>.section-heading p{margin:5px 0 0}
+.approval-connection{font-size:13px;max-width:76ch}
+.approval-binding{margin:16px 0;padding:14px 16px;border:1px solid var(--line);background:var(--back);border-radius:4px}
+.approval-binding>div{min-width:0}
+.runbook-approval .operator-approval{margin-top:18px;max-width:100%;min-width:0}
+.runbook-approval .approval-budget{min-width:0}
+.runbook-approval .approval-budget th,.runbook-approval .approval-budget td{white-space:normal}
+.runbook-approval .approval-amount{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.runbook-approval .approval-actions button{white-space:normal}
+.runbook-approval .approval-facts dd{min-width:0;overflow-wrap:anywhere}
+@media(max-width:690px){.runbook-approval>.section-heading{gap:10px}.runbook-approval .toolbar{align-items:stretch}.runbook-approval .toolbar button{max-width:100%;white-space:normal}.approval-binding{padding:12px}.runbook-approval .approval-actions{flex-direction:column;align-items:stretch}}
