@@ -87,8 +87,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fuul-programmes/APPLICATIONS.md",
-      "bytes": 20730,
-      "sha256": "c0edde923b00ec831e1fbe0c408d2b94867ad70d297ea8a6765d6b895ffa68b7",
+      "bytes": 21771,
+      "sha256": "346169223bfed05b72f65708a02937f24ec81d668f2b349b941f30411bc785be",
       "contentType": "text/markdown"
     },
     {
@@ -105,8 +105,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fuul-programmes/cli.mjs",
-      "bytes": 19250,
-      "sha256": "910b452b33f89edac82fc1f877fe383bab3bd65bf3723a96ff95b083699e6b1a",
+      "bytes": 19691,
+      "sha256": "d562006a7f521dbabafed280b67a44024f206d89c83148b6d30924191c33b876",
       "contentType": "text/javascript"
     },
     {
@@ -153,8 +153,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fuul-programmes/README.md",
-      "bytes": 20434,
-      "sha256": "ef10693b08292662f2dbab819a34783584d9e831b49ffb8f0a035c3ad971fdb2",
+      "bytes": 20786,
+      "sha256": "4e940a81c1ec6203b03fda9f4a25cf0c27af1841b3608578c1b61760919427f0",
       "contentType": "text/markdown"
     },
     {
@@ -171,8 +171,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fuul-programmes/runtime.mjs",
-      "bytes": 104484,
-      "sha256": "29beffa1843adbbb1c0af9e8d087b1a4168c767f0571583e0d862b6ad88295b9",
+      "bytes": 115361,
+      "sha256": "a254d5447df4486cf6569b5d6899d397180fd87ed0a33ce4160effeeef34ef65",
       "contentType": "text/javascript"
     },
     {
