@@ -1,9 +1,28 @@
 {
   "sourceUrl": "https://scvo.scot/funding/data/a11N2000000pm7VIAQ/connecting-to-care-fund-2024.json",
   "finalUrl": "https://storage.googleapis.com/scvo-platform-assets/scvo/data/funding/archive/connecting-to-care-fund-2024.json",
-  "captureMethod": "complete publisher JSON document code returned by connected content retrieval",
+  "captureMethod": "Original publisher HTTP response with gzip transport and decoded JSON retained",
   "retrievedDate": "2026-10-12",
   "publisher": "Scottish Council for Voluntary Organisations",
   "license": "https://creativecommons.org/licenses/by/4.0/",
-  "contentType": "application/json"
+  "contentType": "application/json",
+  "completedAt": "2026-10-12T04:53:07Z",
+  "httpStatus": 200,
+  "decoded": {
+    "file": "connecting-to-care-fund-2024.json",
+    "bytes": 37456,
+    "sha256": "9ff39c6391a1ba484e9a25ece3f08c3b20151ad443901c84098a3e1ca6d42d9d",
+    "gitBlob": "92e6e5f16ce95f3060a8f980c1ae4fa9cc77779d"
+  },
+  "transport": {
+    "contentEncoding": "gzip",
+    "bytes": 3664,
+    "sha256": "9586eaa4d7d6f8c7fa297e2d96a7997aa12cc0eb59904af93c4765af647ecfb1"
+  },
+  "nativeMapping": {
+    "file": "connecting-to-care-fund-2024-mapping.json",
+    "bytes": 2519,
+    "sha256": "cbc61965dbeef509ef361b80875b7f3a0ae24ac04471a388238a5e871b131753"
+  },
+  "sourceArrayPointer": "/grants"
 }

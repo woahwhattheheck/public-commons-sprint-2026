@@ -72,6 +72,8 @@ Add the candidate JSON Lines to the existing native workspace, build it with the
 ~~~sh
 python publisher.py export \
   --workspace /absolute/publisher-edition \
+  --decisions /absolute/review-decisions.json \
+  --candidate /absolute/publisher-candidate \
   --out /absolute/publisher-receiving.zip
 
 python publisher.py receive \
@@ -88,3 +90,19 @@ The original source-project ZIP remains the native engine's complete reconstruct
 Every command prints one JSON result. Successful native-ready preparation and completed candidate/export/receiving return exit 0. Preparation returns exit 2 with a complete review when official schema errors or duplicate grant identifiers need resolution before the keyed native workflow. File, parsing, schema-resource and selected-source conflicts return exit 1 with a specific message.
 
 Output directories preserve existing bytes. Repeating an unchanged preparation resumes the same original source edition; a different source or changed operator program uses a new edition directory.
+
+## Operate the complete retained publisher editions
+
+The examples contain the exact HTTP-decoded SCVO Digital Ethics Fund 2022 and Connecting to Care Fund 2024 packages, their complete registry entries, acquisition identities and the production profile's generated native mappings. Their SHA-256 values match the original HTTP acquisition. Each fund is a separate dataset.
+
+After installing requirements.txt, run the complete publisher workflow:
+
+~~~sh
+python examples/run_publisher_workflow.py --out /absolute/scvo-publisher-work
+~~~
+
+The command prepares every original grant, runs the pinned official schema, keeps each original grant value during review, adds the operator-selected registry metadata, creates the candidate and full receiving ZIP, and reopens that ZIP and candidate in a second operator directory. It retains all review questions and decisions. Supply --source-root for the same exact original JSON files in another receiving directory and --transport-root when the matching original .transport.bin files are available.
+
+The resulting publisher-operation.json points to both complete editions and their candidate and receiving outputs. Each edition's grants.ndjson and mapping.json also feed the original native file job; the complete original package can feed its /grants JSON-array intake directly.
+
+Supply --decisions and --candidate on export to hand over completed work. The receiving ZIP then includes the exact entered decision file, every candidate file and a review that opens with those saved choices. The second operator reapplies the received decisions using only the received source and program. Omitting those options exports the original prepared source edition for an operator who is starting review.
