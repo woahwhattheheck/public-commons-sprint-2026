@@ -6,7 +6,7 @@ import {openWorkspaceStore,readOwned,privateDirectory,syncDir} from '../stellar-
 import {WORKSPACE_SCHEMA,EDITION_SCHEMA,SOURCE_CONTRACT,ACTIONS,workspaceSchema,sourceConfig,sourceURL,queryURL,sourceDocument,
   serviceCatalog,collection,selectedStream,streamMeaning,linksFromEntity,pointer,entityId,valueCell,plain,fields,integer,text,
   identity,stable,json,sha,now,fault} from './contract.mjs';
-import {retainedGet,decodeResponse,requestReceipt} from './provider.mjs';
+import {retainedGet,decodeResponse,requestReceipt,CONNECTOR_TEXT_REPRESENTATION,RESPONSE_RECEIPT_MAX_BYTES} from './provider.mjs';
 import {rowsPage,summarize,comparison} from './domain.mjs';
 import {prepareSensorThingsDataset,queryNativeDataset,nativePublishers,prepareNativeRelease,inspectNativeRelease,controlNativeRelease,
   inspectBuyer,receiveBuyer,readBuyerOutput} from './dataset.mjs';
@@ -177,10 +177,10 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
   }
   async function retainedClosure(c){
     const files=new Map(),put=async(bytes,role,mediaType='application/json')=>{const info=await store.putObject(bytes);files.set(info.sha256,{...info,role,mediaType});};
-    const addReceipt=async r=>{if(!r)return;files.set(r.sha256,{sha256:r.sha256,bytes:r.bytes,role:r.complete?'provider-response':'incomplete-provider-response',mediaType:r.headers?.['content-type']??'application/octet-stream'});
+    const addReceipt=async r=>{if(!r)return;files.set(r.sha256,{sha256:r.sha256,bytes:r.bytes,role:r.representation===CONNECTOR_TEXT_REPRESENTATION?'connector-source-text':r.complete?'provider-response':'incomplete-provider-response',mediaType:r.connectorTransfer?.contentType??r.headers?.['content-type']??'application/octet-stream'});
       for(const suffix of ['request','response']){
         const p=join(store.root,'receipts','sensorthings-'+r.requestId+'-'+suffix+'.json');
-        await put(await readOwned(p,1024*1024),'original-'+suffix+'-receipt');
+        await put(await readOwned(p,RESPONSE_RECEIPT_MAX_BYTES),'original-'+suffix+'-receipt');
       }};
     for(const id of [...new Set(c.plan.streams.map(x=>x.catalogId))]){
       const catalogue=find(store.read().catalogs,id,'original catalogue');
@@ -189,7 +189,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
     }
     for(const task of c.tasks)for(const attempt of task.attempts){
       const rp=join(store.root,'receipts','sensorthings-'+attempt.requestId+'-request.json');
-      try{await put(await readOwned(rp,1024*1024),'original-request-receipt');}catch(e){if(e.code!=='ENOENT')throw e;}
+      try{await put(await readOwned(rp,RESPONSE_RECEIPT_MAX_BYTES),'original-request-receipt');}catch(e){if(e.code!=='ENOENT')throw e;}
       try{const found=await requestReceipt(store,attempt.requestId);await addReceipt(found.receipt);}catch(e){if(e.code!=='ENOENT')throw e;}
     }
     await put(json(c.source),'source-configuration');await put(json(c.plan),'reviewed-source-plan');
@@ -200,14 +200,22 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
     if(running.has(c.id)&&c.state==='RUNNING')throw fault('CAPTURE_RUNNING','Pause this original capture before sealing a partial source edition.',409);
     const traversalCompleted=c.state==='COMPLETE'&&!c.limitReached&&c.tasks.every(t=>t.state==='COMPLETE');
     if(!traversalCompleted&&(!allowPartial||!reason.trim()))throw fault('PARTIAL_REVIEW','A partial source edition requires an explicit reason and allowPartial=true.',409);
-    const sourceFiles=await retainedClosure(c),scope={traversalCompleted,selectedQuery:c.plan.observationQuery,
+    const sourceFiles=await retainedClosure(c),connectorPages=c.pages.filter(p=>p.receipt.representation===CONNECTOR_TEXT_REPRESENTATION),
+      sourceTimes=c.pages.map(p=>p.receipt.sourceCapturedAt).filter(t=>typeof t==='string'&&Number.isFinite(Date.parse(t))).sort((a,b)=>Date.parse(a)-Date.parse(b)),
+      scope={traversalCompleted,selectedQuery:c.plan.observationQuery,
       status:traversalCompleted?'SELECTED_QUERY_TRAVERSED':'PARTIAL_SOURCE',snapshot:'not_established',
       partialReason:traversalCompleted?null:reason,pages:c.pages.length,receivedBytes:c.totalBytes,
       requests:c.tasks.reduce((n,t)=>n+t.attempts.length,0),remaining:c.tasks.filter(t=>t.state!=='COMPLETE').map(t=>({id:t.id,url:t.url,kind:t.kind,state:t.state,error:t.error})),
-      captureStartedAt:c.createdAt,captureLastResponseAt:c.pages.at(-1)?.receipt.completedAt??null};
+      captureStartedAt:c.createdAt,captureLastResponseAt:c.pages.at(-1)?.receipt.completedAt??null,
+      ...(connectorPages.length?{sourceAcquisition:{representations:[...new Set(c.pages.map(p=>p.receipt.representation))],
+        connectorPages:connectorPages.length,sourceReceivedAtStart:sourceTimes[0]??null,sourceReceivedAtEnd:sourceTimes.at(-1)??null,
+        sourceTimeBasis:'Recorded connector receive times; provider HTTP request timestamps were not exposed.',
+        nativeTimeBasis:'captureStartedAt and captureLastResponseAt describe this native intake of retained source.',
+        providerHttpStatusObserved:false,providerHttpHeadersObserved:false,providerHttpMethodObserved:false}}:{})};
     const body={schema:EDITION_SCHEMA,captureId:c.id,createdAt:c.createdAt,source:c.source,plan:c.plan,pages:c.pages,
       streamMetadata:c.streamMetadata,issues:[{code:'PROVIDER_SNAPSHOT_NOT_ESTABLISHED',severity:'notice',
-        message:'These are original sequential HTTP observations and metadata reads, not an atomic provider snapshot.'},
+        message:connectorPages.length?'These are retained sequential source observations and metadata reads; an atomic provider snapshot was not established.':'These are original sequential HTTP observations and metadata reads, not an atomic provider snapshot.'},
+        ...(connectorPages.length?[{code:'CONNECTOR_HTTP_METADATA_UNOBSERVED',severity:'notice',message:'Complete UTF-8 source texts and both original Notion tool receipts are retained. Provider HTTP status, headers, method and request timestamps were not exposed. Connector MIME and local receipt times are identified separately.'}]:[]),
         ...c.issues,...(!traversalCompleted?[{code:'PARTIAL_SOURCE',severity:'warning',message:reason}]:[])],scope,sourceFiles};
     const id=identity(body),edition={...body,id};await store.saveEdition(edition);
     const summary=await summarize(store,edition),summaryObject=await store.putObject(json(summary));
@@ -483,7 +491,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
   }
   // Holding the existing kernel lease establishes that no earlier workspace
   // writer is alive. Preserve every pending request for explicit reconciliation.
-  try{await store.mutate(s=>{s.sourceReceipts??=[];for(const c of s.captures)if(c.state==='RUNNING'){c.state='INTERRUPTED';c.pauseReason='Reopened after the original process ended; resume this same capture.';}});}
+  try{if(transport?.bindStore)await transport.bindStore(store);await store.mutate(s=>{s.sourceReceipts??=[];for(const c of s.captures)if(c.state==='RUNNING'){c.state='INTERRUPTED';c.pauseReason='Reopened after the original process ended; resume this same capture.';}});}
   catch(error){await publishers.close().catch(()=>{});await store.close().catch(()=>{});throw error;}
   function close(){
     if(closePromise)return closePromise;closing=true;for(const controller of controllers.values())controller.abort();

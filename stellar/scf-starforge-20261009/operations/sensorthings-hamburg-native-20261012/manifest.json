@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.sensorthings-public-source-capture.v1",
   "operationId": "SCF_SENSORTHINGS_HAMBURG_NATIVE_1B40_20261012",
-  "capturedThrough": "2026-10-12 10:52:45 UTC",
+  "capturedThrough": "2026-10-12T11:12:40Z",
   "serviceUrl": "https://iot.hamburg.de/v1.1/",
   "selectedStream": {
     "id": "18571",
@@ -9,54 +9,255 @@
     "cataloguePointer": "/value/0",
     "catalogueReportedCount": 2485,
     "catalogueRowsReceived": 3,
-    "catalogueTraversal": "selected first page only; original continuation retained"
+    "catalogueTraversal": "Selected first page only; its complete source and continuation are retained. The observation window separately follows every returned nextLink."
   },
   "representation": {
     "body": "Complete literal UTF-8 text returned by Notion download_attachment.",
-    "identityBasis": "UTF-8 body length agrees with upload/download content_length; original tool responses retained.",
+    "identityBasis": "Body length agrees with original upload/download content_length. Both complete raw tool responses are retained.",
     "providerHttpStatus": null,
     "providerHttpHeaders": null,
+    "providerHttpMethod": null,
     "providerHttpRequestTimes": null,
-    "notionContentType": "Connector attachment metadata, not a provider HTTP header.",
+    "contentTypeBasis": "Connector attachment metadata; not a provider HTTP header.",
     "receivedAt": "Clock read after the complete connector download returned."
   },
+  "discovery": {
+    "role": "initial-observations",
+    "rows": 12,
+    "scope": "Original descending discovery page only, retained separately from both full fixed-window traversals."
+  },
   "window1": {
-    "schema": "stellar-forge.sensorthings-source-window-read.v1",
+    "state": "COMPLETE_ORIGINAL_QUERY_TRAVERSAL",
     "window": {
       "start": "2026-09-14T00:00:00Z",
       "endExclusive": "2026-10-12T10:31:58Z"
     },
-    "pages": 7,
-    "receivedRows": 660,
-    "reportedCount": 660,
-    "distinctObservationIds": 660,
-    "duplicateObservationIds": [],
-    "resultCodeCounts": {
-      "PREPARING": 82,
-      "SUSPENDEDEVSE": 150,
-      "SUSPENDEDEV": 125,
-      "CHARGING": 120,
-      "FINISHING": 87,
-      "AVAILABLE": 95,
-      "FAULTED": 1
+    "pageCount": 7,
+    "sourceOccurrences": 660,
+    "uniqueIds": 660,
+    "pageChainComplete": true,
+    "declaredCountAgreement": true,
+    "acquisition": {
+      "representation": "complete-connector-text",
+      "sourceHttpStatus": null,
+      "sourceHttpHeaders": null,
+      "providerRequestTimes": null,
+      "atomicSnapshot": "not_established",
+      "firstSourceReceivedAt": "2026-10-12T10:31:58Z",
+      "lastSourceReceivedAt": "2026-10-12T10:50:21Z"
     },
-    "firstObservedTime": "2026-09-14T17:27:57.338Z",
-    "lastObservedTime": "2026-10-12T07:43:27.123Z",
+    "metadataBracket": {
+      "opening": {
+        "filename": "hamburg-18571-datastream-original.json",
+        "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+        "bytes": 1313,
+        "sha256": "f7e21cbabb3a35cf036264c61cb9ff8c4a5c1822141ba2e6fcfb3fe395e19aaa",
+        "receivedAt": "2026-10-12T10:31:58Z",
+        "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+        "receipt": {
+          "filename": "hamburg-18571-datastream-original.receipt.json",
+          "bytes": 3489,
+          "sha256": "12eace4f445e5db9818e0bf62cf5acfdc95fa19806aa5cbb88c1e61ab289eac9"
+        },
+        "httpStatus": null,
+        "httpHeaders": null,
+        "providerRequestTime": null,
+        "clockBasis": "Receiver clock after the complete connector download; not provider request time."
+      },
+      "closing": {
+        "filename": "hamburg-18571-window-1-stream-end-original.json",
+        "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+        "bytes": 1313,
+        "sha256": "f7e21cbabb3a35cf036264c61cb9ff8c4a5c1822141ba2e6fcfb3fe395e19aaa",
+        "receivedAt": "2026-10-12T10:50:21Z",
+        "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+        "receipt": {
+          "filename": "hamburg-18571-window-1-stream-end-original.receipt.json",
+          "bytes": 3529,
+          "sha256": "81310c20d12177744c1960275e977e59376cb483c88750aa13db5c2afd8ebbcd"
+        },
+        "httpStatus": null,
+        "httpHeaders": null,
+        "providerRequestTime": null,
+        "clockBasis": "Receiver clock after the complete connector download; not provider request time."
+      },
+      "sameOriginalBody": true,
+      "sameParsedDocument": true,
+      "changedFields": [],
+      "snapshot": "not_established"
+    },
+    "resultCodes": [
+      {
+        "code": "AVAILABLE",
+        "events": 95
+      },
+      {
+        "code": "CHARGING",
+        "events": 120
+      },
+      {
+        "code": "FAULTED",
+        "events": 1
+      },
+      {
+        "code": "FINISHING",
+        "events": 87
+      },
+      {
+        "code": "PREPARING",
+        "events": 82
+      },
+      {
+        "code": "SUSPENDEDEV",
+        "events": 125
+      },
+      {
+        "code": "SUSPENDEDEVSE",
+        "events": 150
+      }
+    ],
+    "firstObservedUtc": "2026-09-14T17:27:57.338000000Z",
+    "lastObservedUtc": "2026-10-12T07:43:27.123000000Z",
+    "analysisId": "d611f38a6778baba35359d78cbd398e4704e67617ed20ae3412aeeac62bbfb04",
+    "resultSha256": "3da3c2d88c51c88cd1e53aca989ec4c92084df187341364d4867375d0fc2ac94",
     "snapshot": "not_established",
-    "interpretation": "Direct source read only. Event counts are not time-weighted availability, uptime or charging utilization."
+    "stateDurationSeconds": null,
+    "availabilityPercent": null
   },
   "window2": {
-    "state": "IN_PROGRESS",
-    "scope": {
+    "state": "COMPLETE_ORIGINAL_QUERY_TRAVERSAL",
+    "window": {
       "start": "2026-09-14T00:00:00Z",
       "endExclusive": "2026-10-12T10:31:58Z"
     },
-    "paging": {
-      "pages": 0,
-      "rows": 0,
-      "count": 660,
-      "next": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?%24filter=phenomenonTime+ge+2026-09-14T00%3A00%3A00Z+and+phenomenonTime+lt+2026-10-12T10%3A31%3A58Z&%24orderby=phenomenonTime+asc&%24top=100&%24count=true&%24expand=FeatureOfInterest"
-    }
+    "pageCount": 7,
+    "sourceOccurrences": 660,
+    "uniqueIds": 660,
+    "pageChainComplete": true,
+    "declaredCountAgreement": true,
+    "acquisition": {
+      "representation": "complete-connector-text",
+      "sourceHttpStatus": null,
+      "sourceHttpHeaders": null,
+      "providerRequestTimes": null,
+      "atomicSnapshot": "not_established",
+      "firstSourceReceivedAt": "2026-10-12T10:51:29Z",
+      "lastSourceReceivedAt": "2026-10-12T11:12:40Z"
+    },
+    "metadataBracket": {
+      "opening": {
+        "filename": "hamburg-18571-window-2-stream-start-original.json",
+        "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+        "bytes": 1313,
+        "sha256": "f7e21cbabb3a35cf036264c61cb9ff8c4a5c1822141ba2e6fcfb3fe395e19aaa",
+        "receivedAt": "2026-10-12T10:51:29Z",
+        "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+        "receipt": {
+          "filename": "hamburg-18571-window-2-stream-start-original.receipt.json",
+          "bytes": 3539,
+          "sha256": "291d09f8075443593549906be00596e16a95e50dd78f43f3ec1263683cf60806"
+        },
+        "httpStatus": null,
+        "httpHeaders": null,
+        "providerRequestTime": null,
+        "clockBasis": "Receiver clock after the complete connector download; not provider request time."
+      },
+      "closing": {
+        "filename": "hamburg-18571-window-2-stream-end-original.json",
+        "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+        "bytes": 1313,
+        "sha256": "9a6563b36a759a372f74ddd1b04db3639c91c352315e7718ab1166307f192241",
+        "receivedAt": "2026-10-12T11:12:40Z",
+        "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+        "receipt": {
+          "filename": "hamburg-18571-window-2-stream-end-original.receipt.json",
+          "bytes": 3529,
+          "sha256": "337e090315a311bbc8e818e7af41d2c48da6691b753b0f4d4cf1a5935c606eb3"
+        },
+        "httpStatus": null,
+        "httpHeaders": null,
+        "providerRequestTime": null,
+        "clockBasis": "Receiver clock after the complete connector download; not provider request time."
+      },
+      "sameOriginalBody": false,
+      "sameParsedDocument": false,
+      "changedFields": [
+        {
+          "field": "phenomenonTime",
+          "opening": {
+            "state": "value",
+            "type": "string",
+            "value": "2026-04-12T07:47:15.371Z/2026-10-12T07:43:27.123Z"
+          },
+          "closing": {
+            "state": "value",
+            "type": "string",
+            "value": "2026-04-12T07:47:15.371Z/2026-10-12T11:00:59.842Z"
+          }
+        },
+        {
+          "field": "resultTime",
+          "opening": {
+            "state": "value",
+            "type": "string",
+            "value": "2026-04-12T07:47:15.557764Z/2026-10-12T07:43:27.364859Z"
+          },
+          "closing": {
+            "state": "value",
+            "type": "string",
+            "value": "2026-04-12T07:47:15.557764Z/2026-10-12T11:01:04.604773Z"
+          }
+        }
+      ],
+      "snapshot": "not_established"
+    },
+    "resultCodes": [
+      {
+        "code": "AVAILABLE",
+        "events": 95
+      },
+      {
+        "code": "CHARGING",
+        "events": 120
+      },
+      {
+        "code": "FAULTED",
+        "events": 1
+      },
+      {
+        "code": "FINISHING",
+        "events": 87
+      },
+      {
+        "code": "PREPARING",
+        "events": 82
+      },
+      {
+        "code": "SUSPENDEDEV",
+        "events": 125
+      },
+      {
+        "code": "SUSPENDEDEVSE",
+        "events": 150
+      }
+    ],
+    "firstObservedUtc": "2026-09-14T17:27:57.338000000Z",
+    "lastObservedUtc": "2026-10-12T07:43:27.123000000Z",
+    "analysisId": "17065f1bf5f6e8d4ba99031e4b6fc49e770aee8f9f286b8112832e97afb38842",
+    "resultSha256": "9e840fd31abd893bf95ccddbff0a4f08b2253708481b3a1712d4b6b6d744ca3e",
+    "snapshot": "not_established",
+    "stateDurationSeconds": null,
+    "availabilityPercent": null
+  },
+  "comparison": {
+    "id": "bd6c15cebfeea7eb2f6fa2d9ca47f6d3afc312a9ecfac311ca81107a7d364462",
+    "unchangedRecordIds": 660,
+    "added": 0,
+    "removed": 0,
+    "changed": 0,
+    "observationPageBodiesIdentical": true,
+    "closingStreamMetadataChangedInSecond": true,
+    "meaning": "Matching fixed-window observations do not establish an atomic snapshot. Second closing metadata includes a later observation outside the selected window."
   },
   "sourceFiles": [
     {
@@ -330,27 +531,460 @@
       "sha256": "291d09f8075443593549906be00596e16a95e50dd78f43f3ec1263683cf60806",
       "role": "window-2-stream-start",
       "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-page-000-original.json",
+      "gitBlob": "e6afd67080d3b69dac5f47fb23ec44f25909c117",
+      "bytes": 83971,
+      "sha256": "99cb488eb8dcbe1745abf837544ec84842d17d8e583d53073d6fe0d5500eb4f4",
+      "role": "window-2-page-000",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-page-000-original.receipt.json",
+      "gitBlob": "da05aedafc0ffb1eb31c6fd316ed9f20e8a6ad86",
+      "bytes": 106696,
+      "sha256": "2c4a765efbba0999dce7ff30e597b459f073785fce6c2f35a4166c36911aa127",
+      "role": "window-2-page-000",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-page-001-original.json",
+      "gitBlob": "405fcad40ed4a00eaf5fbbf23331e11623c1b3ec",
+      "bytes": 83984,
+      "sha256": "e2652ca8d0211ea21416999b710b627f0fb978f8891e7fc63d32c23a77c8bb35",
+      "role": "window-2-page-001",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-page-001-original.receipt.json",
+      "gitBlob": "5a82a6238f856eb4ed4a864d259b4309489c1ed4",
+      "bytes": 106903,
+      "sha256": "284e3bd2e7fea2f165c2d29d5bb85ceda2a241ed5ab0c50614750511646258a5",
+      "role": "window-2-page-001",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-thing-original.json",
+      "gitBlob": "a229323c9649ec6ac8c866f954310511d8ade92f",
+      "bytes": 741,
+      "sha256": "50dfd472f336f5b4e15bc459408d23721bd6d52f7648494c7112c3128ec56110",
+      "role": "window-2-thing",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-thing-original.receipt.json",
+      "gitBlob": "27a32295f2c2fd968e00cc04700c28eeb7db0999",
+      "bytes": 2809,
+      "sha256": "5ef5c288a3c0fdf074434f5e3e3868081e9a30235577ee96f6509f9373b1d7b0",
+      "role": "window-2-thing",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-page-002-original.json",
+      "gitBlob": "5abde1332d4266ff4300f3cfebad755d19701a91",
+      "bytes": 83978,
+      "sha256": "448eaef53f0462de649d59cb2d4a1dc81592ff1ba91ad04f953fa26e7feb7637",
+      "role": "window-2-page-002",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-page-002-original.receipt.json",
+      "gitBlob": "fc3ffc9ef5f5191105609f70fcb1bbc62df5645b",
+      "bytes": 106897,
+      "sha256": "4d14a4c204b195be0747e5864a6465e3d18716990634bbbe41984f06e4c3797a",
+      "role": "window-2-page-002",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-page-003-original.json",
+      "gitBlob": "bc8d014351091adbf6c85e95c2ea1b1626c327a5",
+      "bytes": 83956,
+      "sha256": "7aac9a8a69c218bb11e800a7f94033c36364a24b2287320b77418fbc69219815",
+      "role": "window-2-page-003",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-page-003-original.receipt.json",
+      "gitBlob": "fba5211fca05b5195175a3c38c22ec27e95bfee0",
+      "bytes": 106875,
+      "sha256": "775109f6c4c675e304e777f9c9bf8b9aa59e1834ae98f09f317817035fe073af",
+      "role": "window-2-page-003",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-page-004-original.json",
+      "gitBlob": "17ea9fb7bb9228b2da2f3f27a76947ff2a98cf36",
+      "bytes": 83980,
+      "sha256": "178f18a043b76c74b7188207c545119fe0f64db4191c5ed38c32fa550c23f56a",
+      "role": "window-2-page-004",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-page-004-original.receipt.json",
+      "gitBlob": "e607c48354f36a25b8d3addc9b129409580fc374",
+      "bytes": 106897,
+      "sha256": "8be8e1fc03d0148fb86f04e165ee764305cfd526ab9e849fdb1ba7d0cd6313e8",
+      "role": "window-2-page-004",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-page-005-original.json",
+      "gitBlob": "ddc032461ece85fa3c5ed9d53413f47a50452980",
+      "bytes": 83976,
+      "sha256": "51b1d8a1e0a089e15d4a053054a78f979931aca39506b269db17e06278e3145e",
+      "role": "window-2-page-005",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-page-005-original.receipt.json",
+      "gitBlob": "23bee9cb9a044565f638883929be32ef63d88ae7",
+      "bytes": 106895,
+      "sha256": "98d81fc30f54a2722e050977f67f1390426f14eea269a6eccce421b512af3d36",
+      "role": "window-2-page-005",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-page-006-original.json",
+      "gitBlob": "fd3bac8f4c28ca5ae2c42616df07358aa4a91203",
+      "bytes": 50187,
+      "sha256": "5686df2a7b3d59408d14081f583885286ad853ce8b68fcc9f24bc56cfeb771ef",
+      "role": "window-2-page-006",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-page-006-original.receipt.json",
+      "gitBlob": "a131ef4247ac883a1748c72343d83a96f49a4534",
+      "bytes": 64934,
+      "sha256": "7bb0b36f24cff699db2cca8b5a4315b73a2e32e60b4a0e29fb1cd283ee69220c",
+      "role": "window-2-page-006",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-sensor-original.json",
+      "gitBlob": "86f7c3bd046a875502cf4e70ff7581cdd567ee83",
+      "bytes": 579,
+      "sha256": "323c1e798774eb8f85016fadb2264e7ef9a6a3afd59b28ba7b8a7de3e8aaf78e",
+      "role": "window-2-sensor",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-sensor-original.receipt.json",
+      "gitBlob": "63109cded26bea5483aefec41d781307bc794833",
+      "bytes": 2582,
+      "sha256": "029929702b6c77d981f6a555c46efaad843e2f5e5d0716a14c650acff233c079",
+      "role": "window-2-sensor",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-observed-property-original.json",
+      "gitBlob": "596bd2e71a5368e9f43705fa7f25a5d7c7ad5c4a",
+      "bytes": 588,
+      "sha256": "21a447114cce909c09eaff361c3d9b78530c0864fbbfa64cf6265cecad8fd2bc",
+      "role": "window-2-observed-property",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-observed-property-original.receipt.json",
+      "gitBlob": "c2d64a4fc72c1be614e3b8a844955271fe0eeb5c",
+      "bytes": 2648,
+      "sha256": "e2d95076ed16f6b1f318546a05e418e185f2b1d7e66fe1ab3822c06a4f235706",
+      "role": "window-2-observed-property",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-locations-original.json",
+      "gitBlob": "8a7b9cd9943d0cb53342fbafa75dac9d73de5b92",
+      "bytes": 602,
+      "sha256": "dfde8ec0f8f0660a9bb25c0985e033f9ff8a9e7dcb580801dc29a4bec6530cfd",
+      "role": "window-2-locations",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-locations-original.receipt.json",
+      "gitBlob": "91072bfe60dc4f73b43379e74f26b51d39edee38",
+      "bytes": 2668,
+      "sha256": "4d017ed2be391be90dd7175116d9819a8b7df636f1ca1f0a80e59873b80dca1f",
+      "role": "window-2-locations",
+      "kind": "receipt"
+    },
+    {
+      "path": "originals/hamburg-18571-window-2-stream-end-original.json",
+      "gitBlob": "5e53a1cb9d0355d0b8e57df3fd19081011c69dfc",
+      "bytes": 1313,
+      "sha256": "9a6563b36a759a372f74ddd1b04db3639c91c352315e7718ab1166307f192241",
+      "role": "window-2-stream-end",
+      "kind": "original"
+    },
+    {
+      "path": "receipts/hamburg-18571-window-2-stream-end-original.receipt.json",
+      "gitBlob": "fea6acca624608ec3ead6d032271e3d0d00b2c6b",
+      "bytes": 3529,
+      "sha256": "337e090315a311bbc8e818e7af41d2c48da6691b753b0f4d4cf1a5935c606eb3",
+      "role": "window-2-stream-end",
+      "kind": "receipt"
     }
   ],
-  "sourceLicence": {
-    "sourceUrl": "https://suche.transparenz.hamburg.de/dataset/elektro-ladestandorte-hamburg36",
-    "sourceEditionDate": "2024-07-02",
-    "name": "Datenlizenz Deutschland Namensnennung 2.0",
-    "url": "https://www.govdata.de/dl-de/by-2-0",
-    "attribution": "Freie und Hansestadt Hamburg, Behörde für Wirtschaft und Innovation",
-    "sourceNote": "The cited original catalogue edition was reread on 2026-10-12; its page links to a newer 2024-08-09 edition. Current service entity metadata is retained separately."
+  "sourceAcquisitionOrder": [
+    {
+      "index": 0,
+      "role": "catalogue",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams?%24filter=properties%2FserviceName+eq+%27HH_STA_E-Ladestationen%27+and+properties%2FlayerName+eq+%27Status_E-Ladepunkt%27&%24orderby=id+asc&%24top=3&%24count=true",
+      "receivedAt": "2026-10-12T10:29:09Z",
+      "body": "originals/hamburg-sensorthings-catalog-original-20261012.json",
+      "receipt": "receipts/hamburg-sensorthings-catalog-original-20261012.receipt.json"
+    },
+    {
+      "index": 1,
+      "role": "selected-stream",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+      "receivedAt": "2026-10-12T10:31:58Z",
+      "body": "originals/hamburg-18571-datastream-original.json",
+      "receipt": "receipts/hamburg-18571-datastream-original.receipt.json"
+    },
+    {
+      "index": 2,
+      "role": "observed-property",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/ObservedProperty",
+      "receivedAt": "2026-10-12T10:31:58Z",
+      "body": "originals/hamburg-18571-observed-property-original.json",
+      "receipt": "receipts/hamburg-18571-observed-property-original.receipt.json"
+    },
+    {
+      "index": 3,
+      "role": "sensor",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Sensor",
+      "receivedAt": "2026-10-12T10:31:58Z",
+      "body": "originals/hamburg-18571-sensor-original.json",
+      "receipt": "receipts/hamburg-18571-sensor-original.receipt.json"
+    },
+    {
+      "index": 4,
+      "role": "thing",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Thing",
+      "receivedAt": "2026-10-12T10:31:58Z",
+      "body": "originals/hamburg-18571-thing-original.json",
+      "receipt": "receipts/hamburg-18571-thing-original.receipt.json"
+    },
+    {
+      "index": 5,
+      "role": "initial-observations",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?%24orderby=phenomenonTime+desc&%24top=12&%24count=true&%24expand=FeatureOfInterest",
+      "receivedAt": "2026-10-12T10:31:58Z",
+      "body": "originals/hamburg-18571-initial-observations-original.json",
+      "receipt": "receipts/hamburg-18571-initial-observations-original.receipt.json"
+    },
+    {
+      "index": 6,
+      "role": "window-1-page-000",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?%24filter=phenomenonTime+ge+2026-09-14T00%3A00%3A00Z+and+phenomenonTime+lt+2026-10-12T10%3A31%3A58Z&%24orderby=phenomenonTime+asc&%24top=100&%24count=true&%24expand=FeatureOfInterest",
+      "receivedAt": "2026-10-12T10:33:03Z",
+      "body": "originals/hamburg-18571-window-1-page-000-original.json",
+      "receipt": "receipts/hamburg-18571-window-1-page-000-original.receipt.json"
+    },
+    {
+      "index": 7,
+      "role": "window-1-page-001",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=100&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-09-21T16%3A38%3A45.636Z%29",
+      "receivedAt": "2026-10-12T10:38:49Z",
+      "body": "originals/hamburg-18571-window-1-page-001-original.json",
+      "receipt": "receipts/hamburg-18571-window-1-page-001-original.receipt.json"
+    },
+    {
+      "index": 8,
+      "role": "window-1-page-002",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=200&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-09-25T07%3A35%3A09.485Z%29",
+      "receivedAt": "2026-10-12T10:41:18Z",
+      "body": "originals/hamburg-18571-window-1-page-002-original.json",
+      "receipt": "receipts/hamburg-18571-window-1-page-002-original.receipt.json"
+    },
+    {
+      "index": 9,
+      "role": "window-1-page-003",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=300&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-09-27T17%3A24%3A25.003Z%29",
+      "receivedAt": "2026-10-12T10:43:19Z",
+      "body": "originals/hamburg-18571-window-1-page-003-original.json",
+      "receipt": "receipts/hamburg-18571-window-1-page-003-original.receipt.json"
+    },
+    {
+      "index": 10,
+      "role": "window-1-page-004",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=400&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-10-01T17%3A07%3A35.51Z%29",
+      "receivedAt": "2026-10-12T10:43:53Z",
+      "body": "originals/hamburg-18571-window-1-page-004-original.json",
+      "receipt": "receipts/hamburg-18571-window-1-page-004-original.receipt.json"
+    },
+    {
+      "index": 11,
+      "role": "window-1-page-005",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=500&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-10-04T15%3A51%3A46.304Z%29",
+      "receivedAt": "2026-10-12T10:47:10Z",
+      "body": "originals/hamburg-18571-window-1-page-005-original.json",
+      "receipt": "receipts/hamburg-18571-window-1-page-005-original.receipt.json"
+    },
+    {
+      "index": 12,
+      "role": "window-1-page-006",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=600&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-10-10T06%3A32%3A45.547Z%29",
+      "receivedAt": "2026-10-12T10:48:06Z",
+      "body": "originals/hamburg-18571-window-1-page-006-original.json",
+      "receipt": "receipts/hamburg-18571-window-1-page-006-original.receipt.json"
+    },
+    {
+      "index": 13,
+      "role": "service-root",
+      "url": "https://iot.hamburg.de/v1.1/",
+      "receivedAt": "2026-10-12T10:48:34Z",
+      "body": "originals/hamburg-service-root-original.json",
+      "receipt": "receipts/hamburg-service-root-original.receipt.json"
+    },
+    {
+      "index": 14,
+      "role": "locations",
+      "url": "https://iot.hamburg.de/v1.1/Things(8490)/Locations",
+      "receivedAt": "2026-10-12T10:49:15Z",
+      "body": "originals/hamburg-8490-locations-original.json",
+      "receipt": "receipts/hamburg-8490-locations-original.receipt.json"
+    },
+    {
+      "index": 15,
+      "role": "window-1-stream-end",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+      "receivedAt": "2026-10-12T10:50:21Z",
+      "body": "originals/hamburg-18571-window-1-stream-end-original.json",
+      "receipt": "receipts/hamburg-18571-window-1-stream-end-original.receipt.json"
+    },
+    {
+      "index": 16,
+      "role": "window-2-stream-start",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+      "receivedAt": "2026-10-12T10:51:29Z",
+      "body": "originals/hamburg-18571-window-2-stream-start-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-stream-start-original.receipt.json"
+    },
+    {
+      "index": 17,
+      "role": "window-2-page-000",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?%24filter=phenomenonTime+ge+2026-09-14T00%3A00%3A00Z+and+phenomenonTime+lt+2026-10-12T10%3A31%3A58Z&%24orderby=phenomenonTime+asc&%24top=100&%24count=true&%24expand=FeatureOfInterest",
+      "receivedAt": "2026-10-12T10:53:32Z",
+      "body": "originals/hamburg-18571-window-2-page-000-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-page-000-original.receipt.json"
+    },
+    {
+      "index": 18,
+      "role": "window-2-page-001",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=100&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-09-21T16%3A38%3A45.636Z%29",
+      "receivedAt": "2026-10-12T10:56:32Z",
+      "body": "originals/hamburg-18571-window-2-page-001-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-page-001-original.receipt.json"
+    },
+    {
+      "index": 19,
+      "role": "window-2-thing",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Thing",
+      "receivedAt": "2026-10-12T10:57:13Z",
+      "body": "originals/hamburg-18571-window-2-thing-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-thing-original.receipt.json"
+    },
+    {
+      "index": 20,
+      "role": "window-2-page-002",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=200&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-09-25T07%3A35%3A09.485Z%29",
+      "receivedAt": "2026-10-12T11:00:28Z",
+      "body": "originals/hamburg-18571-window-2-page-002-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-page-002-original.receipt.json"
+    },
+    {
+      "index": 21,
+      "role": "window-2-page-003",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=300&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-09-27T17%3A24%3A25.003Z%29",
+      "receivedAt": "2026-10-12T11:04:44Z",
+      "body": "originals/hamburg-18571-window-2-page-003-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-page-003-original.receipt.json"
+    },
+    {
+      "index": 22,
+      "role": "window-2-page-004",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=400&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-10-01T17%3A07%3A35.51Z%29",
+      "receivedAt": "2026-10-12T11:05:20Z",
+      "body": "originals/hamburg-18571-window-2-page-004-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-page-004-original.receipt.json"
+    },
+    {
+      "index": 23,
+      "role": "window-2-page-005",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=500&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-10-04T15%3A51%3A46.304Z%29",
+      "receivedAt": "2026-10-12T11:07:51Z",
+      "body": "originals/hamburg-18571-window-2-page-005-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-page-005-original.receipt.json"
+    },
+    {
+      "index": 24,
+      "role": "window-2-page-006",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations?$top=100&$skip=600&$filter=%28%28phenomenonTime+ge+2026-09-14T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-10-12T10%3A31%3A58Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-10-10T06%3A32%3A45.547Z%29",
+      "receivedAt": "2026-10-12T11:08:07Z",
+      "body": "originals/hamburg-18571-window-2-page-006-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-page-006-original.receipt.json"
+    },
+    {
+      "index": 25,
+      "role": "window-2-sensor",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Sensor",
+      "receivedAt": "2026-10-12T11:11:58Z",
+      "body": "originals/hamburg-18571-window-2-sensor-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-sensor-original.receipt.json"
+    },
+    {
+      "index": 26,
+      "role": "window-2-observed-property",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/ObservedProperty",
+      "receivedAt": "2026-10-12T11:12:02Z",
+      "body": "originals/hamburg-18571-window-2-observed-property-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-observed-property-original.receipt.json"
+    },
+    {
+      "index": 27,
+      "role": "window-2-locations",
+      "url": "https://iot.hamburg.de/v1.1/Things(8490)/Locations",
+      "receivedAt": "2026-10-12T11:12:06Z",
+      "body": "originals/hamburg-18571-window-2-locations-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-locations-original.receipt.json"
+    },
+    {
+      "index": 28,
+      "role": "window-2-stream-end",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+      "receivedAt": "2026-10-12T11:12:40Z",
+      "body": "originals/hamburg-18571-window-2-stream-end-original.json",
+      "receipt": "receipts/hamburg-18571-window-2-stream-end-original.receipt.json"
+    }
+  ],
+  "status": {
+    "publicOriginals": "COMPLETE",
+    "functionsV8Calculation": "COMPLETE",
+    "nativeWorkspaceReceiving": "NOT_YET_EXECUTED",
+    "nativeWorkspaceEditionIds": [],
+    "browserReceiving": "NOT_YET_EXECUTED",
+    "customerDelivery": "NOT_YET_EXECUTED"
   },
-  "engine": {
-    "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "mergedPullRequest": 1981,
-    "sourceCommit": "03ebf6d815b332b39e3b54a849cbce395e4203ce",
-    "mergeCommit": "0b05ed243fe187e09edf24dd888ebbaf92cc0da3",
-    "nativeReceivingExecuted": false
+  "attribution": {
+    "name": "Freie und Hansestadt Hamburg, Behörde für Wirtschaft und Innovation",
+    "licenseName": "Datenlizenz Deutschland – Namensnennung – Version 2.0",
+    "licenseUrl": "https://www.govdata.de/dl-de/by-2-0",
+    "evidence": [
+      {
+        "url": "https://suche.transparenz.hamburg.de/dataset/elektro-ladestandorte-hamburg36",
+        "edition": "Metadata edition dated 2 July 2024; links to a newer edition.",
+        "locator": "Beschreibung: operating-status enumeration; Thing/Datastream relationship and UTC statement",
+        "receivedDate": "2026-10-12",
+        "basis": "Publisher page read through the web text provider; no original HTML byte identity is asserted."
+      }
+    ],
+    "scope": "The retained publisher metadata edition is dated July 2024. No claim is made that it independently verifies a later licence revision or current operating company."
   },
-  "semantics": [
-    "Observed state-change records are categorical source observations; counts are not uptime, charging utilization or time-weighted availability.",
-    "No provider-wide, all-station or atomic-snapshot claim.",
-    "The fixed query window has a complete returned continuation chain; this does not prove absence of unpublished observations.",
-    "All included FeatureOfInterest bodies, metadata null values, source IDs and original source time strings are preserved."
+  "sourceInterpretation": [
+    "This stream is an OM_CategoryObservation with literal string codes and null unit fields. It is not a scalar numeric series.",
+    "The source Thing reports ownerThing=Stromnetz Hamburg and infoLastUpdate=2024-07-18T13:12:06.629729Z; current operator identity is not independently established.",
+    "Point observations do not establish continuous status, outage duration, availability, charging utilization or a provider QA approval."
   ]
 }

@@ -1,11 +1,60 @@
-# Hamburg charging-point source operation
+# Hamburg charging-status operating review
 
-This directory retains the public source for `SCF_SENSORTHINGS_HAMBURG_NATIVE_1B40_20261012`. The selected stream is Datastream 18571, **Ladepunkt DE*HHM*E1011*02**. The first fixed window starts at 2026-09-14T00:00:00Z and ends, exclusively, at 2026-10-12T10:31:58Z. Its seven pages contain 660 observations with 660 distinct IDs; the last page has no nextLink. The second actual retrieval of that same window is in progress in this checkpoint.
+This package contains the complete original source for two captures of one fixed SensorThings query and the resulting source-linked operating review. Open [the complete report](reports/window-1/index.html) for the timeline, original rows, source references, gaps, timestamp differences and edition comparison.
 
-Every original JSON file contains the complete literal UTF-8 text returned by the declared public attachment/download connector. Its companion receipt retains both complete tool responses, the exact URL, attachment identity and byte counts. Provider HTTP status, headers and request times were not exposed. Connector attachment content types are recorded separately from provider HTTP headers. The JSON bodies have not been reformatted.
+## Actual observed result
 
-The native SensorThings implementation is merged in PR 1981. The connector-source reader and the same original customer delivery are being integrated. This checkpoint establishes the first complete source window. Node execution, native capture, browser operation and customer receiving have not yet occurred for these source files.
+The selected point is Datastream **18571**, **Ladepunkt DE*HHM*E1011*02**, at Eduard-Rhein-Ufer 1. The fixed window starts **14 September 2026 00:00:00 UTC** and ends, exclusively, **12 October 2026 10:31:58 UTC**. Each actual capture traversed seven original pages and returned **660 unique observations**, with the reported count and complete continuation chain agreeing. The two captures retain **660 unchanged observation IDs**, with no additions, removals or changed records in this fixed window.
 
-The manifest identifies every original and receipt by SHA-256, length and Git blob. The first catalogue page contains 3 of 2,485 reported Datastreams, with its original continuation retained. State-code counts describe received events; they do not measure uptime or charging utilization. Provider observations and metadata are sequential reads, without an atomic snapshot guarantee.
+| Literal reported code | Observations |
+| --- | ---: |
+| AVAILABLE | 95 |
+| CHARGING | 120 |
+| FAULTED | 1 |
+| FINISHING | 87 |
+| PREPARING | 82 |
+| SUSPENDEDEV | 125 |
+| SUSPENDEDEVSE | 150 |
 
-Attribution: **Freie und Hansestadt Hamburg, Behörde für Wirtschaft und Innovation**. The original metadata edition dated 2 July 2024 identifies [Datenlizenz Deutschland Namensnennung 2.0](https://www.govdata.de/dl-de/by-2-0). Its [published source page](https://suche.transparenz.hamburg.de/dataset/elektro-ladestandorte-hamburg36) was reread on 12 October 2026 and links to a newer metadata edition. Current service metadata and observed timestamps are independently retained in the JSON files.
+There are **640 adjacent observed code changes** and **19 adjacent pairs with the same code**. These compare observed points. They do not establish the exact time of a transition or any intermediate state.
+
+One observation reports `FAULTED`: observation **1449254541**, at **17 September 2026 09:05:50.988 UTC**. The previous recorded observation is `AVAILABLE`, 58,636.389 seconds earlier; the next is `AVAILABLE`, 16.627 seconds later. **Fault duration is unknown.** The largest interval between adjacent observations is **93,364.665 seconds**, from 20 September 14:42:07.411 UTC to 21 September 16:38:12.076 UTC. That interval is a source observation gap, not a measured outage.
+
+The first observation arrives 62,877.338 seconds after the requested start and the last precedes the exclusive end by 10,110.877 seconds. No start or end state is imputed. All 29 selected UTC calendar dates have observations, but this does not prove continuous state coverage.
+
+The largest original `resultTime − phenomenonTime` difference is **52,733.471127 seconds** (observation **1447657537**). It compares the two published time fields; it is not a network-latency measurement.
+
+## What changed between captures
+
+All seven observation-page bodies are identical across the two captures. The opening metadata are also unchanged. The second closing Datastream response differs in `phenomenonTime` and `resultTime`: its last reported observation extends to 12 October **11:00:59.842 UTC**, beyond the selected window. Both exact versions are retained. The report exposes that metadata change separately from the unchanged fixed-window records. Neither a completed traversal nor matching records establishes an atomic provider snapshot.
+
+## Source meaning and operator use
+
+The actual observation type is `OM_CategoryObservation`. Results are literal strings and all three unit fields are null. The published status enumeration and the actual ObservedProperty/Sensor sources remain attached; the report does not convert category labels into numeric measurements or silently substitute another OCPP vocabulary.
+
+An operator can use the complete timeline to locate points that need investigation, compare observed status patterns, identify long intervals requiring a source-quality check, inspect changed source metadata, and open the exact source row behind each finding. The ten CSV tables support an editable review workflow. Status duration, availability percentage and charging utilization remain uncalculated because no continuity or validity rule establishes them.
+
+The Thing source reports `ownerThing=Stromnetz Hamburg` and `infoLastUpdate=2024-07-18T13:12:06.629729Z`. That is dated publisher metadata, not independent verification of a current operator or evidence of any customer engagement.
+
+## Complete contents and source custody
+
+- [manifest.json](manifest.json): all **29 original bodies and 29 complete acquisition receipts**, original order, both query scopes and current execution state.
+- [report-recipe.json](report-recipe.json): exact source file identities and comparison settings.
+- [calculation-receipt.json](calculation-receipt.json): executed source identities and complete result/table identities.
+- [reports/window-1/status-report.json](reports/window-1/status-report.json) and [reports/window-2/status-report.json](reports/window-2/status-report.json): complete results, all source rows, pointers, adjacent pairs and interval boundaries.
+- [reports/comparison.json](reports/comparison.json): complete actual second-edition comparison.
+- Five complete CSV tables per capture: status history, observed adjacent pairs, daily observation counts, observation gaps and transition counts.
+
+The three-record catalogue page and twelve-observation discovery page remain original source records. They are not described as a complete service catalogue or substituted for the complete 660-observation window.
+
+The acquisition used the declared Notion attachment source URL and complete text-download operations. Exact literal UTF-8 text, original filenames, lengths and both raw tool responses are retained. Provider HTTP method, status, headers and request timestamps were not exposed by that route and remain unknown. The clock on each receipt records when the complete connector download returned.
+
+## Execution and receiving state
+
+The actual source calculation completed in **Functions V8 at 11:26:24 UTC on 12 October 2026**. It uses original exact-number and time semantics and the reusable `sensorthings/operational.mjs` source. Complete HTML generation also finished. Native Node execution, browser visual inspection, SensorThings workspace intake and merchant/buyer receiving remain separate unfinished operations until their actual receipts exist.
+
+The existing source-preserving SensorThings engine, CLI/MCP, retained-file receiving and original source edition journal remain the intended native receiving path. The source report analysis IDs are not native workspace edition IDs. Reuse the same original operation and source bytes; do not fetch these responses again to reproduce this report.
+
+## Attribution and published metadata
+
+Source attribution: **Freie und Hansestadt Hamburg, Behörde für Wirtschaft und Innovation**. The retained [publisher metadata edition](https://suche.transparenz.hamburg.de/dataset/elektro-ladestandorte-hamburg36), dated July 2024, identifies [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). That edition links to newer metadata; it is not represented here as independent verification of later licensing or operating-company changes. The original API bodies remain unchanged.
