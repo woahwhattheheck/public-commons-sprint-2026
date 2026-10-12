@@ -43,6 +43,7 @@
           <button id="tab-editions" role="tab" aria-selected="true" aria-controls="view-editions" data-view="editions">Editions</button>
           <button id="tab-data" role="tab" aria-selected="false" aria-controls="view-data" data-view="data" tabindex="-1">Data</button>
           <button id="tab-comparison" role="tab" aria-selected="false" aria-controls="view-comparison" data-view="comparison" tabindex="-1">Comparison</button>
+          <button id="tab-nld" role="tab" aria-selected="false" aria-controls="view-nld" data-view="nld" tabindex="-1">NLD commissioning</button>
           <button id="tab-delivery" role="tab" aria-selected="false" aria-controls="view-delivery" data-view="delivery" tabindex="-1">Delivery</button>
         </div>
         <section id="view-editions" class="view" role="tabpanel" aria-labelledby="tab-editions">
@@ -64,6 +65,66 @@
             <button class="primary" type="submit" data-mutation>Compare editions</button>
           </form>
           <div id="comparison-result" class="comparison-result"><p class="empty">Select two editions to inspect their changes.</p></div>
+        </section>
+        <section id="view-nld" class="view" role="tabpanel" aria-labelledby="tab-nld" hidden>
+          <div class="panel-heading"><h2>NLD commissioning</h2><span class="meta">Retained source · reviewed keys · actual target</span></div>
+          <p>Map one complete retained edition into the original NLD SQL workflow. Exact values, source kinds, units and original row references stay available. Target rows outside the selection remain separate.</p>
+          <section class="nld-section"><h3>1. Select the original source and project</h3>
+            <div class="comparison-form">
+              <label>Source edition<select id="nld-source"></select></label>
+              <label>Project<select id="nld-project"><option value="">New reviewed project</option></select></label>
+            </div>
+            <div id="nld-source-context"></div>
+            <form id="nld-prepare-form">
+              <div class="comparison-form">
+                <label>Project title<input id="nld-title" maxlength="200" required></label>
+                <label>Native table name<input id="nld-name" pattern="[A-Za-z][A-Za-z0-9_]{0,47}" maxlength="48" required></label>
+                <label>Namespace<input id="nld-namespace" value="datasette" pattern="[A-Za-z][A-Za-z0-9_]{0,47}" maxlength="48" required></label>
+                <label>Reviewed by<input id="nld-reviewer" maxlength="200" required></label>
+              </div>
+              <label>Mapping and identity decision<textarea id="nld-note" rows="3" maxlength="4000" required placeholder="State why these keys identify the source rows and how units and source years must be interpreted."></textarea></label>
+              <h3>2. Review the complete mapping</h3>
+              <p class="hint">Select the fields to write and their ordered business keys. Numeric spellings stay text in the target. Enable a known subtotal only with an explicit unit, time basis and interpretation; missing or nonnumeric values stay separate.</p>
+              <div id="nld-mapping" class="table-scroll"><p class="empty">Select a complete source edition.</p></div>
+              <div class="row"><button id="nld-load-mapping" type="button">Load saved mapping</button><button class="primary" type="submit" data-mutation>Retain reviewed NLD project</button></div>
+              <details class="advanced"><summary>Original project identity and specification file</summary>
+                <label>Project ID<input id="nld-project-id" pattern="[a-f0-9]{32}" spellcheck="false" required></label>
+                <p class="hint">Keep this ID for the same mapping and native table. A different mapping or target needs a new project.</p>
+                <label>Load a reviewed specification<input id="nld-spec-file" type="file" accept=".json,application/json"></label>
+                <button id="nld-save-spec" type="button">Download current specification</button>
+              </details>
+            </form>
+          </section>
+          <section class="nld-section"><h3>3. Execute or continue the native flow</h3>
+            <form id="nld-run-form" class="comparison-form">
+              <label class="wide">Retained definition<select id="nld-definition" required></select></label>
+              <label>Strategy<select id="nld-strategy"><option value="FULL">Full selected source</option><option value="DELTA">New or changed content keys</option><option value="BACKFILL">Explicit backfill selection</option><option value="BACKFILL_DELTA">Backfill plus delta</option></select></label>
+              <label>Operator<input id="nld-run-operator" maxlength="200" required></label>
+              <label class="wide">Reason<textarea id="nld-run-note" rows="2" maxlength="4000" required></textarea></label>
+              <label>Backfill limit<input id="nld-limit" type="number" min="1" step="1" placeholder="Explicit number of keys"></label>
+              <label>Exact content keys<textarea id="nld-keys" rows="2" spellcheck="false" placeholder="One retained source key per line; use keys or limit."></textarea></label>
+              <details class="advanced wide"><summary>Existing native runtime</summary><label>Python executable<input id="nld-python" placeholder="Existing Python 3.12 or 3.13 with the pinned NLD runtime" spellcheck="false"></label><p>The runtime is verified before dispatch. This action does not install packages or connect to a customer database.</p></details>
+              <button class="primary" type="submit" data-mutation>Run retained native selection</button>
+            </form>
+            <p class="hint">The original request is shown in Operator activity. Continue that request after a lost response. A supplied native UID does not make a second execution safe. Empty incremental selections perform no native target writes.</p>
+            <div id="nld-run-history"></div>
+          </section>
+          <section class="nld-section"><h3>4. Inspect original rows and actual target coverage</h3>
+            <div class="comparison-form">
+              <label>Completed native run<select id="nld-completed-run"></select></label>
+              <label>Rows<select id="nld-row-kind"><option value="source">Retained source projection</option><option value="review">Source ↔ target review</option><option value="target">Complete frozen target</option></select></label>
+            </div>
+            <div id="nld-coverage"></div><div id="nld-table" class="table-scroll"></div>
+            <div class="pagination"><button id="nld-previous" type="button" disabled>Previous</button><span id="nld-page-label" class="meta"></span><button id="nld-next" type="button" disabled>Next</button><button id="nld-read-rows" type="button">Read selected rows</button></div>
+            <div id="nld-report-files" class="table-scroll"></div>
+            <button id="nld-report-resume" type="button" data-mutation>Continue original report and workbook</button>
+          </section>
+          <section class="nld-section"><h3>5. Prepare and reopen complete delivery</h3>
+            <p>The full Analysis archive retains source documents, selected versions, native state/history, target SQLite snapshots, original run receipts, saved queries, reports and workbooks. Reopen it through the existing archive receiver, then restore this same project.</p>
+            <div class="row"><button id="nld-pack" type="button" class="primary" data-mutation>Prepare complete delivery</button><button id="nld-restore" type="button" data-mutation>Restore retained project in this workspace</button></div>
+            <div id="nld-checkpoints"></div>
+            <details class="advanced"><summary>Receiving and revision two</summary><p>Use the Delivery tab to download the complete workspace and SHA-256. Receive it into a new directory with the original Analysis receiver. The source and native IDs remain unchanged. You can then run an explicitly selected backfill or prepare a new reviewed source edition. A new mapping remains a new project; previous results and deliveries stay available.</p></details>
+          </section>
         </section>
         <section id="view-delivery" class="view" role="tabpanel" aria-labelledby="tab-delivery" hidden>
           <h2>Complete customer delivery</h2><p>Export the original Analysis workspace with the retained source, saved reports, workbooks and customer files.</p>

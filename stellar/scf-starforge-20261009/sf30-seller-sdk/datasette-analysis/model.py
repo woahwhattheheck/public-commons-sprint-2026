@@ -328,6 +328,8 @@ class DatasetteAnalysis:
             "Numeric source tokens and disclosed capacity totals remain exact text; counts are integers. "
             "Source capacity, commissioning and generation years retain their historical meaning. "
             "Retrieval time describes the observation window, not present-day plant telemetry.")
+        introduction = plan.get("introduction", introduction)
+        require(isinstance(introduction, str), "DATASETTE_REPORT_INTRODUCTION_INVALID")
         definition = self.analysis.reports.save(report_name, {
             "id": self.identifier(edition["edition_id"] + ":REPORT_DEFINITION"),
             "expected_revision": 0, "title": (edition["title"] + " — Analysis")[:200],
@@ -346,7 +348,7 @@ class DatasetteAnalysis:
         publication = self.analysis.reports.publish(report["id"], {
             "id": self.identifier(edition["edition_id"] + ":REPORT_PUBLICATION"),
             "result_sha256": report["result"]["result_sha256"], "expected_revision": 0,
-            "note": "Complete source edition, exact disclosed capacity and retained source-year context."})
+            "note": plan.get("publication_note", "Complete source edition, exact disclosed capacity and retained source-year context.")})
         section0 = self.analysis.workbooks.source({"kind": "report", "id": publication["id"], "section": 0})
         publication_sha = section0["sha256"]
         edition["report"] = {**publication, "sha256": publication_sha, "job_id": report["id"]}
@@ -367,8 +369,8 @@ class DatasetteAnalysis:
         workbook_definition = self.analysis.workbooks.save(workbook_name, {
             "id": self.identifier(edition["edition_id"] + ":WORKBOOK_DEFINITION"),
             "expected_revision": 0, "title": edition["title"],
-            "notes": "Exact source values and capacity totals remain text. Original nulls display as NULL; "
-                     "empty strings stay empty. Counts are integers. Complete source files travel with the workspace.",
+            "notes": plan.get("workbook_note", "Exact source values and capacity totals remain text. Original nulls display as NULL; "
+                     "empty strings stay empty. Counts are integers. Complete source files travel with the workspace."),
             "sheets": sheets})
         workbook = self._job(edition["edition_id"] + ":WORKBOOK", "workbook", {
             "name": workbook_name, "revision": workbook_definition["revision"],
@@ -642,6 +644,10 @@ class DatasetteAnalysis:
 
     @contextmanager
     def open_download(self, name, *, edition_id=None, export_id=None):
+        if isinstance(name, str) and name.startswith("nld-"):
+            with _sibling("nld_adapter").open_nld_download(self, name) as selected:
+                yield selected
+            return
         record = self._read()
         files = []
         if edition_id is not None or record.get("current_edition"):
@@ -681,6 +687,11 @@ class DatasetteAnalysis:
     def dispatch(self, action, body=None):
         body = {} if body is None else body
         require(isinstance(body, dict), "DATASETTE_REQUEST_OBJECT_REQUIRED")
+        if action in {"nld.status", "nld.rows"}:
+            return _sibling("nld_adapter").DatasetteNld(self).dispatch(action, body)
+        if isinstance(action, str) and action.startswith("nld."):
+            with self._mutex:
+                return _sibling("nld_adapter").DatasetteNld(self).dispatch(action, body)
         if action == "status":
             return self.status()
         if action == "prepare":
