@@ -21,6 +21,7 @@ import { MerchantSheetsWorkspaces, sheetsWorkspaceTools } from './sheets-workspa
 import { MerchantCkanWorkspaces, ckanWorkspaceTools } from './ckan-workspace.mjs';
 import { MerchantTenderlyWorkspaces, tenderlyWorkspaceTools } from './tenderly-workspace.mjs';
 import { MerchantUSASpendingWorkspaces, usaSpendingWorkspaceTools } from './usaspending-workspace.mjs';
+import { datasetLifecycleTools, merchantDatasetOperation, datasetReleaseView } from './dataset-lifecycle.mjs';
 import { MerchantSourceWorkspaces, sourceWorkspaceTools } from './source-workspace.mjs';
 import { MerchantPublisher, publisherTools } from './publisher.mjs';
 import { createReleaseFacilitatorControl } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs';
@@ -98,6 +99,7 @@ export const MERCHANT_TOOLS = [
   ...tenderlyWorkspaceTools(tool),
   ...usaSpendingWorkspaceTools(tool),
   ...sourceWorkspaceTools(tool),
+  ...datasetLifecycleTools(tool),
   ...publisherTools(tool),
   ...pricingTools(tool),
   ...woocommerceTools(tool),
@@ -113,7 +115,8 @@ function releaseView(release) {
   const { handlers, ...options } = runtime;
   return { ...rest, ...(rest.python ? { python: pythonSourceView(rest.python) } : {}),
     ...(rest.duckdb ? { duckdb: duckdbSourceView(rest.duckdb) } : {}),
-    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse) },
+    ...(rest.dataset ? { dataset: datasetReleaseView(rest.dataset) } : {}),
+    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse || rest.dataset) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
@@ -204,6 +207,7 @@ export class MerchantReleaseOperator {
     if (name === 'merchant_publishers' || name.startsWith('merchant_publisher_')) return this.#publishers.call(name, args);
     if (name.startsWith('merchant_fleet_')) return this.#fleet.call(name, args);
     const root = this.#config.releaseStore;
+    if (name.startsWith('merchant_dataset_')) return merchantDatasetOperation(root, name, args);
     if (name.startsWith('merchant_case') || name.startsWith('merchant_incident') || name.startsWith('merchant_notification') || name.startsWith('merchant_support_'))
       return this.#support.call(name, args);
     switch (name) {
@@ -243,7 +247,8 @@ export class MerchantReleaseOperator {
           runtimeChanges: comparison.runtimeChanges.map(change => change.field === 'handlers'
             ? { field: 'applicationConfigured', before: Boolean(change.before), after: Boolean(change.after) }
             : change.field === 'python' ? { ...change, before: pythonSourceView(change.before), after: pythonSourceView(change.after) }
-            : change.field === 'duckdb' ? { ...change, before: duckdbSourceView(change.before), after: duckdbSourceView(change.after) } : change) };
+            : change.field === 'duckdb' ? { ...change, before: duckdbSourceView(change.before), after: duckdbSourceView(change.after) }
+            : change.field === 'dataset' ? { ...change, before: datasetReleaseView(change.before), after: datasetReleaseView(change.after) } : change) };
       }
       case 'merchant_activate': case 'merchant_rollback': {
         const target = identifier(name === 'merchant_activate' ? args.id : args.to);

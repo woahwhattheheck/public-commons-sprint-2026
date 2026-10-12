@@ -10,6 +10,8 @@ import { importOpenApi } from '../../stellar/scf-starforge-20261009/sf61-openapi
 import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-config.mjs';
 import { preparePythonRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-python.mjs';
 import { prepareDuckdbRelease, selectDuckdbInterpreter } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-duckdb.mjs';
+import { prepareDatasetRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-dataset.mjs';
+import { datasetReleaseView } from './dataset-lifecycle.mjs';
 import { prepareS3Release } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-s3.mjs';
 import { preparePostgresRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-postgres.mjs';
 import { prepareMysqlRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-mysql.mjs';
@@ -148,7 +150,7 @@ export function duckdbSourceView(duckdb) {
   return { ...metadata, interpreter: { configured: true, selectionSha256: hash(interpreter) } };
 }
 function sourceDefinition(source, base, alias) {
-  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage', 'sqlitePackage', 'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'postgresPackage', 'mysqlPackage', 'clickhousePackage', 'clickhouseColumnTypes', 'runtime']);
+  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 'datasetPackage', 's3Package', 'jsonrpcPackage', 'sqlitePackage', 'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'postgresPackage', 'mysqlPackage', 'clickhousePackage', 'clickhouseColumnTypes', 'runtime']);
   const runtime = structuredClone(source.runtime ?? {});
   exact(runtime, ['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
   for (const flag of ['allowLocalFacilitator', 'allowLoopbackUpstream'])
@@ -165,7 +167,12 @@ function sourceDefinition(source, base, alias) {
     throw failure('CONFIGURATION_ERROR', 'SQLite snapshot selections require a SQLite workbench package.');
   if (source.clickhouseColumnTypes !== undefined && source.clickhousePackage === undefined)
     throw failure('CONFIGURATION_ERROR', 'A reviewed ClickHouse column map requires its original prepared package.');
-  if (source.clickhousePackage !== undefined) {
+  if (source.datasetPackage !== undefined) {
+    if (Object.keys(source).some(key => !['label', 'datasetPackage', 'runtime'].includes(key) && source[key] !== undefined) ||
+        runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
+      throw failure('CONFIGURATION_ERROR', 'Choose the original dataset package or another source. The versioned dataset owns its native controller and query bindings.');
+    result.datasetPackage = hostPath(source.datasetPackage, base);
+  } else if (source.clickhousePackage !== undefined) {
     if (Object.keys(source).some(key => !['label', 'clickhousePackage', 'clickhouseColumnTypes', 'runtime'].includes(key) && source[key] !== undefined) ||
         runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
       throw failure('CONFIGURATION_ERROR', 'Choose the original prepared ClickHouse package or another source. ClickHouse owns its native typed query bindings.');
@@ -228,6 +235,18 @@ function sourceDefinition(source, base, alias) {
 }
 /** Inspect configured source through the ORIGINAL workspace and upstream readers. */
 export async function inspectMerchantSource(source) {
+  if (source.datasetPackage) {
+    const prepared = await prepareDatasetRelease(source.datasetPackage), { dataset, service } = prepared;
+    return { source: source.alias, label: source.label, sourceType: 'DATASET_RELEASE_PACKAGE',
+      mode: source.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
+      sourceDigests: { source: dataset.sourceSha256, binding: dataset.bindingSha256,
+        config: dataset.sourceConfigSha256, csv: dataset.csvSha256, execution: dataset.executionSha256 },
+      inputPackage: { schema: dataset.schema, baselineSnapshot: dataset.baselineSnapshot, contractSha256: dataset.contractSha256 },
+      application: { type: 'DATASET_RELEASE_PACKAGE', ...datasetReleaseView(dataset) },
+      environment: [], credentialValuesChecked: false,
+      routes: service.routes.map(route => ({ method: 'GET', path: route.path, publicPath: route.path,
+        resource: route.offer.resource, accepts: route.offer.accepts })) };
+  }
   if (source.clickhousePackage) {
     const prepared = await prepareClickHouseRelease(source.clickhousePackage, { columnTypes: source.clickhouseColumnTypes }), { clickhouse } = prepared;
     return { source: source.alias, label: source.label, sourceType: 'CLICKHOUSE_MERCHANT_PACKAGE',
@@ -412,10 +431,10 @@ export async function readMerchantConfig(path) {
   if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces || config.socrataWorkspaces || config.webdavWorkspaces || config.sheetsWorkspaces || config.ckanWorkspaces || config.tenderlyWorkspaces || config.usaSpendingWorkspaces || config.sourceWorkspaces || config.woocommerce) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, sourceWorkspaces, ckanWorkspaces, pricing, woocommerce, releaseStore }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, datasetPackage, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, sourceWorkspaces, ckanWorkspaces, pricing, woocommerce, releaseStore }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
-  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime }, process.cwd(), 'initial');
+  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, datasetPackage, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime }, process.cwd(), 'initial');
   if (source.pythonRoot) {
     const sourceRoot = await realpath(source.pythonRoot);
     const destination = join(await realpath(dirname(root)), basename(root));
@@ -474,7 +493,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(woocommerceConnection ? { woocommerceConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
-        ...(source.clickhousePackage ? { clickhousePackage: source.clickhousePackage,
+        ...(source.datasetPackage ? { datasetPackage: source.datasetPackage }
+          : source.clickhousePackage ? { clickhousePackage: source.clickhousePackage,
           ...(source.clickhouseColumnTypes === undefined ? {} : { clickhouseColumnTypes: source.clickhouseColumnTypes }) }
           : source.postgresPackage ? { postgresPackage: source.postgresPackage }
           : source.mysqlPackage ? { mysqlPackage: source.mysqlPackage }
