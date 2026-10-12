@@ -204,3 +204,40 @@ import {
 The native MCP workspace already creates and closes the adapter. Applications owns its selected listener and managed lifecycle. The collection browser owns the original run child and approval broker. Closing the MCP client or native adapter aborts admitted calls while the original browser operation remains available by request ID. Use explicit Pause when you intend to stop that original run.
 
 The collection host advertises `agentApi: 1` for exact run lookup and retained export IDs. The package includes the original SF88 collection source, SF81 approval source, SF43 tool schema, native buyer adapter and shared customer transport together. Standard source manifests and the existing cumulative installer carry this whole workflow.
+
+
+## Continue an existing collection end to end
+
+The practical [collections-handoff example](examples/collections-handoff.mjs)
+uses an existing native MCP workspace and an existing retained collection. The
+native workspace supplies its actual original buyer, catalog and response limits.
+Choose a private receiving directory alongside the source workspaces:
+
+~~~sh
+node stellar-forge/mcp-paid-agent/examples/collections-handoff.mjs \
+  --native-workspace /PRIVATE/original-native-mcp \
+  --collections /PRIVATE/original-request-collections \
+  --id monthly-customer-handoff \
+  --out /PRIVATE/collection-customer-receiving \
+  --source-ref CHECKED_OUT_40_CHARACTER_GIT_SHA
+~~~
+
+An optional `--collection-sha256` pins a previously inspected original collection
+manifest. The example starts the maintained collection browser, records its
+actual private launch, creates a native receiving adapter with the original
+buyer/catalog, and registers the collection alias. It uses the real generated
+operator module and maintained MCP HTTP listener for inspection and a stable
+five-file export.
+
+The collection browser then closes. The customer receives one durable byte,
+retains the original download checkpoint, and resumes that same directory in
+65,536-byte chunks through MCP. After the MCP listener closes, the original
+customer receiver reopens all five files offline. This continuation uses the
+existing collection snapshot and saved outcomes.
+
+The receiving directory retains `native-result.json`, the five original files
+under `customer-files/`, and the original receiving identities. Repeat the exact
+command after an interruption: the same export ID and MCP port are retained.
+Once complete, the repeated command reopens the customer files offline. A
+recorded failure names its actual phase and preserves the receiving directory.
+Run on the existing Node 24 Linux installation with util-linux `flock`.
