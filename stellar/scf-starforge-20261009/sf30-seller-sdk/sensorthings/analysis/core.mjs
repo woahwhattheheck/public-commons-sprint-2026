@@ -9,12 +9,14 @@ import {retainedGraph,queryRetained} from './sta.mjs';
 import {importViewer} from './viewer.mjs';
 import {importEvidence,safeFile} from './artifacts.mjs';
 import {preparePublication} from './publication.mjs';
-import {exportProject,importProject} from './transfer.mjs';
+import {exportProject,importProject,inspectProjectSnapshot} from './transfer.mjs';
+import {merchantContext,merchantRuntime,createMerchantManager} from './merchant/core.mjs';
+import {selectHistory,captureHistory} from './merchant/history.mjs';
 import {preparePythonSource} from './python-document.mjs';
 import {componentCatalog} from './components.mjs';
 
 const clone=v=>structuredClone(v),find=(rows,id,label)=>{const v=(rows??[]).find(x=>x.id===id);if(!v)throw fault('ANALYSIS_SELECTION','Select an existing '+label+'.',404);return v;};
-const collections=['analysisProjects','analysisVersions','analysisComparisons','analysisEvidence','analysisViewers','analysisPublications','analysisExports','analysisImports','analysisReceipts','analysisPythonSources'];
+const collections=['analysisProjects','analysisVersions','analysisComparisons','analysisEvidence','analysisViewers','analysisPublications','analysisExports','analysisImports','analysisReceipts','analysisPythonSources','analysisMerchant','analysisMerchantHistory'];
 function list(state,name){return state[name]??[];}
 function uniquePush(state,name,value){state[name]??=[];const old=state[name].find(x=>x.id===value.id);if(old&&stable(old)!==stable(value))throw fault('ANALYSIS_IDENTITY','A retained '+name+' identity has different content.',409);if(!old)state[name].push(clone(value));}
 function note(value,label='the operator note'){if(typeof value!=='string'||!value.trim()||value.length>12000)throw fault('ANALYSIS_NOTE','Supply '+label+' of at most 12,000 characters.');return value;}
@@ -24,9 +26,10 @@ function reviewed(state,editionId,expected){
   const latest=selectedReview(state,editionId);
   if(!expected||expected.decision!=='accept'||identity(latest)!==identity(expected))throw fault('ANALYSIS_REVIEW','The exact source review changed. Review this edition before preparing its publication.',409);
 }
-export function analysisContext(state,op,{inboxDirectory=null}={}){
+export function analysisContext(state,op,{inboxDirectory=null,buyerInboxDirectory=null}={}){
   const p=op.payload,c={workspaceId:state.workspaceId};
   actor(p.actor);c.actor=p.actor;
+  if(op.action.startsWith('analysis.merchant.')){c.merchant=merchantContext(state,op,{inboxDirectory,buyerInboxDirectory});return c;}
   if(['analysis.viewer.import','analysis.evidence.import','analysis.import','analysis.receipt.import'].includes(op.action)){
     if(!inboxDirectory)throw fault('ANALYSIS_INBOX','Bind the existing host source inbox before receiving this original file.',409);
     c.inboxDirectory=inboxDirectory;
@@ -64,13 +67,15 @@ export function analysisContext(state,op,{inboxDirectory=null}={}){
         evidence:clone(list(state,'analysisEvidence').filter(x=>x.projectId===c.project.id)),
         publications:clone(list(state,'analysisPublications').filter(x=>x.projectId===c.project.id)),
         receipts:clone(list(state,'analysisReceipts').filter(x=>x.projectId===c.project.id)),
-        viewers:clone(list(state,'analysisViewers')),reviews:clone(state.reviews)};
+        viewers:clone(list(state,'analysisViewers')),reviews:clone(state.reviews),merchant:selectHistory(state,c.project.id)};
     }
   }
   if(op.action==='analysis.receipt.import')c.publication=clone(find(state.analysisPublications,p.publicationId,'publication'));
   return c;
 }
-export function createAnalysisManager({store,edition,inboxDirectory=null}){
+export function createAnalysisManager({store,edition,inboxDirectory=null,buyerInboxDirectory=null,merchantRuntime:runtimeInput={}}){
+  const runtime={...merchantRuntime(runtimeInput,buyerInboxDirectory),inboxDirectory},
+    merchant=createMerchantManager({store,runtime,validateSnapshot:validateImportedSnapshot});
   let graphCache=null,closing=false;
   const initialized=()=>{if(closing)throw fault('ANALYSIS_CLOSED','This original analysis workspace is closed.',503);};
   async function readObject(reference){return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await store.object(reference)));}
@@ -84,19 +89,20 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
       versions:list(s,'analysisVersions').filter(x=>x.projectId===id),
       comparisons:list(s,'analysisComparisons').filter(x=>x.projectId===id),
       evidence:list(s,'analysisEvidence').filter(x=>x.projectId===id),publications:list(s,'analysisPublications').filter(x=>x.projectId===id),
-      receipts:list(s,'analysisReceipts').filter(x=>x.projectId===id),exports:list(s,'analysisExports').filter(x=>x.projectId===id)};
+      receipts:list(s,'analysisReceipts').filter(x=>x.projectId===id),exports:list(s,'analysisExports').filter(x=>x.projectId===id),merchant:merchant.overview(id)};
   }
   function overview(){initialized();const s=store.read();return {schema:'stellar-forge.sensorthings-analysis-view.v1',workspaceId:s.workspaceId,revision:s.revision,
     projects:list(s,'analysisProjects'),viewers:list(s,'analysisViewers'),exports:list(s,'analysisExports'),imports:list(s,'analysisImports'),
-    sourceEditionIds:s.editionIds,pythonSources:list(s,'analysisPythonSources'),meaning:ANALYSIS_MEANING};}
+    sourceEditionIds:s.editionIds,pythonSources:list(s,'analysisPythonSources'),meaning:ANALYSIS_MEANING,
+      merchant:{records:list(s,'analysisMerchant').length,operations:Object.values(s.operations).filter(x=>x.action.startsWith('analysis.merchant.')).length,url:'/analysis/merchant/'}};}
   async function compareRead(id){const r=find(store.read().analysisComparisons,hash(id,'comparison'),'comparison'),value=await readObject(r.sha256);
     const {id:claimed,...body}=value;if(claimed!==id||identity(body)!==id)throw fault('ANALYSIS_COMPARISON','The comparison content changed.',409);return value;}
   async function publication(id){return find(store.read().analysisPublications,id,'publication');}
   async function pythonSource(id){initialized();return find(store.read().analysisPythonSources,id,'prepared Python source document');}
   async function fileRecord(id){
     const s=store.read();
-    for(const name of ['analysisPublications','analysisEvidence','analysisExports','analysisReceipts']){
-      const record=list(s,name).find(x=>x.id===id);if(record)return {record,files:record.files??(record.file?[record.file]:[])};
+    for(const name of ['analysisPublications','analysisEvidence','analysisExports','analysisReceipts','analysisMerchant']){
+      const record=list(s,name).find(x=>x.id===id);if(record)return {record,files:record.files??(record.file?[record.file]:[]),...(name==='analysisMerchant'?{merchantRecord:true}:{})};
     }
     const prepared=list(s,'analysisPythonSources').find(x=>x.id===id);
     if(prepared)return {record:prepared,pythonSource:prepared};
@@ -151,7 +157,7 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
       else {p.headVersionId=value.id;p.title=value.title;}
     });
   }
-  async function snapshot(selection){
+  async function snapshot(selection,op){
     const versions=[],comparisons=[];
     for(const record of selection.versions)versions.push({record,version:await version(record.id),summary:await readObject(record.summarySha256)});
     for(const record of selection.comparisons)comparisons.push({record,comparison:await compareRead(record.id)});
@@ -161,10 +167,56 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
     const viewers=[];for(const id of viewerIds)viewers.push(await viewer(id));
     return {schema:'stellar-forge.sensorthings-analysis-project-snapshot.v1',originalWorkspaceId:store.read().workspaceId,
       project:selection.project,versions,comparisons,evidence:selection.evidence,publications:selection.publications,receipts:selection.receipts,
-      viewers,editions,analysisContract:ANALYSIS_MEANING};
+      viewers,editions,analysisContract:ANALYSIS_MEANING,
+      ...(selection.merchant===undefined?{}:{merchant:await captureHistory(store,op,selection.merchant,selection.project.id)})};
   }
+  function validateImportedSnapshot(snap,state=store.read()){
+    inspectProjectSnapshot(store,snap);
+    const existing=list(state,'analysisProjects').find(x=>x.id===snap.project.id);
+    if(existing&&existing.originWorkspaceId!==snap.project.originWorkspaceId)
+      throw fault('ANALYSIS_RECEIVING','The project ID belongs to another original workspace.',409);
+    const groups=[['analysisVersions',snap.versions.map(x=>x.record)],['analysisComparisons',snap.comparisons.map(x=>x.record)],
+      ['analysisEvidence',snap.evidence],['analysisPublications',snap.publications],['analysisReceipts',snap.receipts],
+      ['analysisMerchant',snap.merchant?.records??[]],['analysisMerchantHistory',snap.merchant?.operations??[]]];
+    for(const [name,rows]of groups)for(const incoming of rows){
+      const known=list(state,name).find(x=>x.id===incoming.id);
+      if(known&&stable(known)!==stable(incoming))throw fault('ANALYSIS_RECEIVING','An existing '+name+' identity differs from the incoming original.',409);
+    }
+    for(const viewer of snap.viewers){const known=list(state,'analysisViewers').find(x=>x.id===viewer.id);
+      if(known&&known.sha256!==sha(json(viewer)))throw fault('ANALYSIS_VIEWER','The imported viewer identity conflicts.',409);}
+  }
+  async function prepareImported(snap,receipt,op){
+    validateImportedSnapshot(snap);
+    const receivedViewers=[];
+    for(const viewer of snap.viewers){const saved=await store.putObject(json(viewer));receivedViewers.push({
+      id:viewer.id,sha256:saved.sha256,upstream:viewer.upstream,archive:viewer.archive,actor:actor(op.payload.actor),createdAt:op.createdAt});}
+    const prior=list(store.read(),'analysisProjects').find(x=>x.id===snap.project.id),
+      result={id:op.operationId,projectId:snap.project.id,originalWorkspaceId:snap.originalWorkspaceId,
+        originalHeadVersionId:snap.project.headVersionId,preservedLocalHeadVersionId:prior?.headVersionId??null,receipt,
+        sourceReviewRequired:snap.editions.filter(x=>selectedReview(store.read(),x.edition.id)?.decision!=='accept').map(x=>x.edition.id)};
+    function adopt(state){
+      validateImportedSnapshot(snap,state);
+      if(!list(state,'analysisProjects').some(x=>x.id===snap.project.id))uniquePush(state,'analysisProjects',snap.project);
+      for(const x of snap.versions)uniquePush(state,'analysisVersions',x.record);
+      for(const x of snap.comparisons)uniquePush(state,'analysisComparisons',x.record);
+      for(const x of snap.evidence)uniquePush(state,'analysisEvidence',x);
+      for(const x of snap.publications)uniquePush(state,'analysisPublications',x);
+      for(const x of snap.receipts)uniquePush(state,'analysisReceipts',x);
+      for(const x of snap.merchant?.records??[])uniquePush(state,'analysisMerchant',x);
+      for(const x of snap.merchant?.operations??[])uniquePush(state,'analysisMerchantHistory',x);
+      for(const x of receivedViewers)if(!list(state,'analysisViewers').some(r=>r.id===x.id))uniquePush(state,'analysisViewers',x);
+      for(const x of snap.editions)if(!state.editionIds.includes(x.edition.id))state.editionIds.push(x.edition.id);
+      uniquePush(state,'analysisImports',result);
+    }
+    return {result,adopt};
+  }
+
   async function execute(op,finish){
     initialized();const p=op.payload,c=op.context.analysis,s=store.read();
+    if(op.action.startsWith('analysis.merchant.')){
+      const incoming=await merchant.execute(op),adoption=incoming.snapshot?await prepareImported(incoming.snapshot,incoming.receipt,op):null;
+      return finish(incoming.record,state=>{if(adoption)adoption.adopt(state);uniquePush(state,'analysisMerchant',incoming.record);});
+    }
     if(op.action==='analysis.create'){
       const e=await edition(p.editionId),projectId='analysis-'+identity({workspaceId:c.workspaceId,operationId:op.operationId,requestSha256:op.requestSha256}).slice(0,24);
       return saveVersion(op,{schema:ANALYSIS_SCHEMA,projectId,parentId:null,editionId:e.id,title:text(p.title,'the analysis title',200),
@@ -240,43 +292,18 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
       return finish(value,state=>{reviewed(state,e.id,c.review);uniquePush(state,'analysisPublications',value);});
     }
     if(op.action==='analysis.export'){
-      const value=await exportProject(store,{snapshot:await snapshot(c.snapshotSelection),id:op.operationId,createdAt:op.createdAt}),
+      const value=await exportProject(store,{snapshot:await snapshot(c.snapshotSelection,op),id:op.operationId,createdAt:op.createdAt}),
         result={...value,projectId:c.project.id};
       return finish(result,state=>uniquePush(state,'analysisExports',result));
     }
     if(op.action==='analysis.import'){
       const incoming=await importProject(store,{...p,inboxDirectory:c.inboxDirectory,id:op.operationId,createdAt:op.createdAt}),
-        snap=incoming.snapshot;
-      if(snap?.schema!=='stellar-forge.sensorthings-analysis-project-snapshot.v1'||!snap.project||!Array.isArray(snap.versions)||!Array.isArray(snap.editions))
-        throw fault('ANALYSIS_RECEIVING','The native receiver did not return the complete original analysis snapshot.',409);
-      for(const x of snap.editions)validateSourceEdition(x.edition);
-      for(const x of snap.versions){const {id,...body}=x.version;
-        if(identity(body)!==id||x.record.id!==id||x.record.projectId!==snap.project.id||body.projectId!==snap.project.id)
-          throw fault('ANALYSIS_RECEIVING','An imported saved version differs from its original project identity.',409);}
-      const receivedViewers=[];
-      for(const x of snap.viewers){const saved=await store.putObject(json(x));receivedViewers.push({id:x.id,sha256:saved.sha256,upstream:x.upstream,archive:x.archive,actor:actor(p.actor),createdAt:op.createdAt});}
-      const prior=list(store.read(),'analysisProjects').find(x=>x.id===snap.project.id),
-        result={id:op.operationId,projectId:snap.project.id,originalWorkspaceId:snap.originalWorkspaceId,
-          originalHeadVersionId:snap.project.headVersionId,preservedLocalHeadVersionId:prior?.headVersionId??null,receipt:incoming.receipt,
-          sourceReviewRequired:snap.editions.filter(x=>selectedReview(store.read(),x.edition.id)?.decision!=='accept').map(x=>x.edition.id)};
-      return finish(result,state=>{
-        const existing=list(state,'analysisProjects').find(x=>x.id===snap.project.id);
-        if(existing&&existing.originWorkspaceId!==snap.project.originWorkspaceId)throw fault('ANALYSIS_RECEIVING','The project ID belongs to another original workspace.',409);
-        if(!existing)uniquePush(state,'analysisProjects',snap.project);
-        for(const x of snap.versions)uniquePush(state,'analysisVersions',x.record);
-        for(const x of snap.comparisons)uniquePush(state,'analysisComparisons',x.record);
-        for(const x of snap.evidence)uniquePush(state,'analysisEvidence',x);
-        for(const x of snap.publications)uniquePush(state,'analysisPublications',x);
-        for(const x of snap.receipts)uniquePush(state,'analysisReceipts',x);
-        for(const x of snap.viewers){const saved=receivedViewers.find(r=>r.id===x.id);
-          const known=list(state,'analysisViewers').find(r=>r.id===x.id);if(known){if(known.sha256!==saved.sha256)throw fault('ANALYSIS_VIEWER','The imported viewer identity conflicts.',409);}
-          else uniquePush(state,'analysisViewers',saved);}
-        for(const x of snap.editions)if(!state.editionIds.includes(x.edition.id))state.editionIds.push(x.edition.id);
-        uniquePush(state,'analysisImports',result);
-      });
+        prepared=await prepareImported(incoming.snapshot,incoming.receipt,op);
+      return finish(prepared.result,prepared.adopt);
     }
     throw fault('ANALYSIS_ACTION','The analysis action is not implemented.');
   }
-  return {overview,project:projectRead,version,summary,rows,streams,comparison:compareRead,publication,pythonSource,viewer,fileRecord,inbox,sta,execute,
-    close(){closing=true;graphCache=null;}};
+  return {overview,project:projectRead,version,summary,rows,streams,comparison:compareRead,publication,pythonSource,viewer,fileRecord,inbox,sta,execute,merchant,
+    verifyMerchantResult:merchant.verifyResult,
+    async close(){closing=true;graphCache=null;await merchant.close();}};
 }

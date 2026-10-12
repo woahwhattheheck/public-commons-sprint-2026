@@ -6,6 +6,7 @@
   <meta name="referrer" content="no-referrer">
   <title>Observation analysis · SensorThings</title>
   <link rel="stylesheet" href="/analysis/style.css">
+  <script type="module" src="/analysis/merchant/session-link.mjs"></script>
   <script type="module" src="/analysis/app.mjs"></script>
 </head>
 <body>
@@ -13,6 +14,7 @@
   <header class="app-header">
     <div><p class="eyebrow">SensorThings workspace</p><h1>Observation analysis</h1></div>
     <div class="session-tools">
+      <a id="analysis-merchant-link" href="/analysis/merchant/">Publication delivery</a>
       <label class="actor-label">Operator <input id="actor" maxlength="200" autocomplete="name" placeholder="Name recorded with changes"></label>
       <button id="refresh" type="button" disabled>Refresh workspace</button>
       <button id="lock" type="button" disabled>Close session</button>

@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {join} from 'node:path';
 import {json,identity,fault} from '../contract.mjs';
+import {createMerchantHttp} from './merchant/http.mjs';
 import {exactJSON} from './sta.mjs';
 const HASH='[a-f0-9]{64}',ID='[A-Za-z0-9_-]{8,100}',MAX_RESPONSE=24*1024*1024;
 function send(res,value,{exact=false}={}){
@@ -17,8 +18,10 @@ function integer(url,key,fallback,maximum){
 }
 export function createAnalysisHttp({workspace}){
   const analysis=workspace.analysis;if(!analysis)throw fault('ANALYSIS_INSTALL','Install the coupled original analysis/core/server modules.',409);
+  const merchant=createMerchantHttp({workspace});
   const uiRoot=fileURLToPath(new URL('./ui/',import.meta.url));
   async function staticHandler(req,res,{url}){
+    if(await merchant.staticHandler(req,res,{url}))return true;
     const assets={'/analysis/':'index.html','/analysis/index.html':'index.html','/analysis/app.mjs':'app.mjs','/analysis/style.css':'style.css'};
     const file=assets[url.pathname];if(!file)return false;
     const bytes=await readFile(join(uiRoot,file)),type=file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.mjs')?'text/javascript; charset=utf-8':'text/css; charset=utf-8';
@@ -27,6 +30,7 @@ export function createAnalysisHttp({workspace}){
     if(req.method==='HEAD')res.end();else res.end(bytes);return true;
   }
   async function handleApi(req,res,{url}){
+    if(await merchant.handleApi(req,res,{url}))return true;
     if(!url.pathname.startsWith('/api/analysis'))return false;
     // Mutations remain POST /api/action and the existing stable operation IDs.
     if(req.method!=='GET')throw fault('ANALYSIS_METHOD','Use the original action endpoint for analysis changes.',405);

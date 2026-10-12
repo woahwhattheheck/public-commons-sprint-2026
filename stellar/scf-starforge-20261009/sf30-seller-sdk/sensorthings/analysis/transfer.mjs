@@ -12,6 +12,8 @@ import {validateSourceEdition,openPrivateFile,hashHeldFile,inspectRetainedFile,T
 import {ANALYSIS_SCHEMA,ANALYSIS_LIMITS} from './schema.mjs';
 import {safeFile,retainedPath,retainStream} from './artifacts.mjs';
 import {normalizeComponentSelection,validateComponentBindings} from './components.mjs';
+import {inspectMerchantHistory} from './merchant/common.mjs';
+import {validateHistoryExtension} from './merchant/history.mjs';
 
 export const PROJECT_TRANSFER_SCHEMA='stellar-forge.sensorthings-analysis-project-transfer.v1';
 export const PROJECT_SNAPSHOT_SCHEMA='stellar-forge.sensorthings-analysis-project-snapshot.v1';
@@ -164,6 +166,8 @@ export function inspectProjectSnapshot(store,snapshot){
     if(r.projectId!==project.id||!p||r.versionId!==p.versionId)fail('TRANSFER_RECEIPT','The original receipt is not bound to the included publication/version.');
     addFile(r.file);
   }
+  for(const file of inspectMerchantHistory(snapshot.merchant,{projectId:project.id,versions,publications}))addFile(file);
+  for(const file of validateHistoryExtension(snapshot.merchant,{projectId:project.id}))addFile(file);
   if(files.size>PROJECT_TRANSFER_LIMITS.files||objects.size+files.size>PROJECT_TRANSFER_LIMITS.members)
     fail('TRANSFER_CAPACITY','The full project exceeds the declared receiving member capacity.',413);
   const sortedObjects=[...objects.values()].sort((a,b)=>a.sha256.localeCompare(b.sha256)),
@@ -421,4 +425,27 @@ export async function importProject(store,{inboxDirectory,filename,expectedSha25
       completedMembers:index,error:{code:e.code??'ANALYSIS_PROJECT_IMPORT_FAILED',message:e.message}}).catch(()=>{});
     throw e;
   }finally{await held.handle.close();}
+}
+
+
+/** Read-only original-format manifest inspection. The complete compressed file
+ * is hash-verified; importProject remains the full member/citation verifier and
+ * the only publisher/adopter. This preview never claims completed receiving. */
+export async function inspectProjectManifest(store,{path,expectedSha256,expectedBytes}){
+  hash(expectedSha256,'input archive');bytes(expectedBytes,PROJECT_TRANSFER_LIMITS.archiveBytes,'input archive');
+  const held=await openPrivateFile(path,{expectedBytes,maximum:PROJECT_TRANSFER_LIMITS.archiveBytes});
+  let lines;
+  try{
+    await hashHeldFile(held.handle,{expectedBytes,expectedSha256,maximum:PROJECT_TRANSFER_LIMITS.archiveBytes});
+    lines=readLines(held.handle);const first=await lines.next();
+    if(first.done)fail('TRANSFER_INCOMPLETE','The original project archive has no manifest.');
+    exactFields(first.value,['kind','manifest']);
+    if(first.value.kind!=='manifest')fail('TRANSFER_ORDER','The project must start with its complete original manifest.');
+    const manifest=first.value.manifest,closure=validateManifest(store,manifest);
+    await lines.return();lines=null;
+    await hashHeldFile(held.handle,{expectedBytes,expectedSha256,maximum:PROJECT_TRANSFER_LIMITS.archiveBytes});
+    return {manifest:copy(manifest),objects:closure.objects.length,files:closure.files.length,
+      inspection:{archiveBytesVerified:true,manifestIdentityVerified:true,memberReceivingVerified:false,
+        meaning:'Read-only archive hash and complete manifest/metadata closure. The original import verifies every member and citation before receiving.'}};
+  }finally{if(lines)await lines.return();await held.handle.close();}
 }
