@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { pathToFileURL } from 'node:url';
 import { inspectMerchantRuntime } from '../../../sf46-release/runtime-package.mjs';
 import { regular, need, plain, absolute, digest } from "../storage.mjs";
+import {defaultResearchConnectionFile,readResearchApplicationConnection,researchConnectionDestination,
+  RESEARCH_CONNECTION_FILES} from '../application-research-connection.mjs';
 
 const PIPELINE_ROOT = 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers';
 const DOCUMENT_FILES = [
@@ -45,6 +47,10 @@ export default {
     description: 'Reopen research questions, original source editions, selections, findings, revision comparison and portable reports.',
     fields: [field('workspaceDirectory', 'Private research dossiers directory', 'path', true,
       'An existing directory or one new directory in an existing private parent.'),
+      field('objectStateDirectory','Original private Object Buyer state','path',false,
+        'Optional existing Object application. Its completed files become available for reviewed Research processing.'),
+      field('connectionFile','Private Research connection file','path',false,
+        'When an Object state is selected, defaults to research-connection.json in this Research directory. Use that same file in the Object application.'),
       field('openalexWorkspaceDirectory', 'Existing OpenAlex research workspace', 'path', false,
         'Optional saved collection with its original queries, editions, pages and review decisions.'),
       field('openalexModule', 'Original OpenAlex workspace module', 'path', false,
@@ -60,12 +66,20 @@ export default {
       field('pipelineSourceConfig', 'Original document-pipeline source selection', 'path', false,
         'Optional private source JSON selecting the retained pipeline jobs directory and original account configuration. Reopening keeps the same saved jobs and source.'), ...common] }]; },
   validateSettings(type, settings) {
+    need(!settings.objectStateDirectory||settings.objectStateDirectory!==settings.workspaceDirectory,
+      'APPLICATION_DISTINCT_RESEARCH_DIRECTORY_REQUIRED','Keep the original Research and Object state in their respective directories.');
     need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
       'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
     need(!settings.crossrefConfig || settings.crossrefState,
       'APPLICATION_CROSSREF_STATE_REQUIRED', 'Choose the original Crossref source directory with its configuration');
   },
   async checkRuntime(type, settings, runtime) {
+    if(settings.objectStateDirectory||settings.connectionFile) {
+      const files=[...RESEARCH_CONNECTION_FILES,...(settings.objectStateDirectory?
+        ['object-inputs.mjs','object-reference.mjs','../object-workspace/research.mjs']:[])];
+      for(const path of files)await regular(join(runtime.sourceRoot,PIPELINE_ROOT,path),4*1024*1024).catch(()=>
+        need(false,'APPLICATION_NOT_IN_RUNTIME','Choose a runtime containing the original Research connection and selected Object input.'));
+    }
     if (settings.documentSourceConfig) {
       for (const path of DOCUMENT_FILES)
         await regular(join(runtime.sourceRoot, PIPELINE_ROOT, path), 4 * 1024 * 1024).catch(() =>
@@ -113,7 +127,7 @@ export default {
       for (const part of ['queries', 'editions'])
         inputs.push(await inputPath(join(settings.openalexWorkspaceDirectory, part), 'directory'));
     }
-    const selectedRuntime = settings.documentSourceConfig || settings.pipelineSourceConfig
+    const selectedRuntime = settings.documentSourceConfig || settings.pipelineSourceConfig || settings.objectStateDirectory || settings.connectionFile
       ? await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false, source: false }) : null;
     if (settings.documentSourceConfig) {
       const selectedInput = await path('documentSourceConfig', 'file');
@@ -145,6 +159,16 @@ export default {
       need(typeof normalizeConfiguration === 'function', 'APPLICATION_PIPELINE_CONTRACT_REQUIRED');
       normalizeConfiguration(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
     }
+    if(settings.objectStateDirectory)await path('objectStateDirectory','directory',false,true);
+    if(settings.objectStateDirectory||settings.connectionFile) {
+      const connectionFile=settings.connectionFile??defaultResearchConnectionFile(settings.workspaceDirectory);
+      const destination=await researchConnectionDestination(connectionFile,workspace,inputPath);
+      inputs.push(destination);
+      if(destination.exists)await readResearchApplicationConnection(selectedRuntime.sourceRoot,connectionFile,
+        settings.workspaceDirectory,{sha256:destination.sha256});
+      option('--connection-file',connectionFile);
+    }
+    option('--object-state',settings.objectStateDirectory);
     option('--dir', settings.workspaceDirectory);
     option('--edition-adapter', settings.editionAdapter);
     option('--openalex-workspace', settings.openalexWorkspaceDirectory);
@@ -163,13 +187,31 @@ export default {
         const crossrefSelected = request.args.includes('--crossref-state');
         const pipelineIndex = request.args.indexOf('--pipeline-source');
         const documentIndex = request.args.indexOf('--document-source');
+        const objectIndex=request.args.indexOf('--object-state');
+        const connectionIndex=request.args.indexOf('--connection-file');
         if (ready.mode !== 'RESEARCH_DOSSIER_WORKSPACE' || directoryIndex < 0 ||
             ready.directory !== request.args[directoryIndex + 1] ||
             crossrefSelected && ready.crossrefConfigured !== true || typeof ready.url !== 'string') return null;
-        if (pipelineIndex < 0 && documentIndex < 0) return ready.url;
+        if (pipelineIndex < 0 && documentIndex < 0 && objectIndex < 0 && connectionIndex < 0) return ready.url;
         if (pipelineIndex >= 0 && ready.pipelineSourceConfigured !== true ||
-            documentIndex >= 0 && ready.documentSourceConfigured !== true) return null;
+            documentIndex >= 0 && ready.documentSourceConfigured !== true ||
+            objectIndex >= 0 && ready.objectSourceConfigured !== true) return null;
         return async () => {
+          const sourceRoot=join(absolute(request.releaseDirectory),'source');
+          if(objectIndex>=0) {
+            const {researchObjectWorkspaceId}=await import(pathToFileURL(join(sourceRoot,PIPELINE_ROOT,'object-reference.mjs')).href);
+            need(ready.objectWorkspaceId===researchObjectWorkspaceId(request.args[objectIndex+1]),
+              'APPLICATION_RESEARCH_OBJECT_STARTUP_CHANGED',
+              'The original Research listener opened a different Object Buyer workspace.');
+          }
+          if(connectionIndex>=0) {
+            const saved=await readResearchApplicationConnection(sourceRoot,request.args[connectionIndex+1],
+              request.args[directoryIndex+1]);
+            need(saved.record.url===ready.url&&saved.workspaceId===ready.workspaceId&&
+              saved.connection.instanceId===ready.instanceId&&typeof ready.instanceId==='string',
+              'APPLICATION_RESEARCH_CONNECTION_STARTUP_CHANGED',
+              'The private connection record must identify this original Research listener.');
+          }
           if (pipelineIndex >= 0) {
             const selected = await pipelineSelection(request.args[pipelineIndex + 1]);
             need(ready.pipelineWorkspaceId === selected.value.workspaceId,
