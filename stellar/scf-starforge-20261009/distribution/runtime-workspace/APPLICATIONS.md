@@ -12,6 +12,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
+| Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -355,3 +356,12 @@ The headless application-review request uses the existing schema:
 ~~~
 
 Pass that private file to **runtime-workspace application-review**, then preserve the returned review ID and the same original save/start request UUIDs through the CLI commands above. The generic Applications UI, output, Stop, Continue and recovery controls require no separate frontend.
+
+
+## Grant planning and delivery
+
+Choose **Grant planning and delivery** to reopen the original SF47 planning and delivery workspace. Select its private directory, an explicit Python executable when needed, and an optional original scenario for an empty workspace. Applications reviews the installed source and starts the original grant command through the maintained managed release.
+
+The original launch keeps the selected runtime source identity and verifies the adopted execution copy before opening SQLite. Open comes from the matching private launch record and authenticated original listener. Stop removes readiness, drains existing requests and closes the original workspace lock; the next reviewed start reopens the same saved plans, revisions and operating cases.
+
+Follow [Grant planning and delivery in Applications](GRANT_APPLICATIONS.md) for the complete selection, operating, export, Stop/reopen and original CLI workflow.
