@@ -81,6 +81,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mcp-stdio / mcp-client-config              Run and register that buyer with a local MCP host
   merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
+  browser-wallet                            Connect Freighter, review native transfers and execute the original buyer
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   merchant-host                             Install, observe and recover the original Linux merchant group
   merchant-recovery                         Create, verify and cold-restore original encrypted merchant snapshots
