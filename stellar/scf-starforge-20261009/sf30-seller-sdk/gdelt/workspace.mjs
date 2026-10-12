@@ -82,7 +82,7 @@ export async function startGdeltWorkspace(options={}){
   server.headersTimeout=10000;server.requestTimeout=120000;server.keepAliveTimeout=1000;
   try{await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',done);});}
   catch(error){if(owned)await application.close();throw error;}
-  origin='http://127.0.0.1:'+server.address().port;
+  origin=new URL('http://127.0.0.1:'+server.address().port).origin;
   const startup={...application.startup(),url:origin+'/#'+token};
   const session={server,application,origin,url:startup.url,startup,
     close(){return closePromise??=(async()=>{

@@ -4,8 +4,9 @@ import { need, plain, jsonBytes, LIMITS } from './model.mjs';
 
 export function gdeltLoopbackUrl(value) {
   let url;try{url=new URL(value);}catch{need(false,'Open the original private GDELT URL.');}
+  const port=url.port===''?80:Number(url.port);
   need(url.protocol==='http:'&&url.hostname==='127.0.0.1'&&!url.username&&!url.password&&!url.search&&
-    url.pathname==='/'&&/^[a-f0-9]{64}$/.test(url.hash.slice(1))&&Number(url.port)>=1&&Number(url.port)<=65535,
+    url.pathname==='/'&&/^[a-f0-9]{64}$/.test(url.hash.slice(1))&&Number.isInteger(port)&&port>=1&&port<=65535,
     'Use the exact original private loopback URL.','GDELT_CONNECTION_INVALID');
   return url;
 }

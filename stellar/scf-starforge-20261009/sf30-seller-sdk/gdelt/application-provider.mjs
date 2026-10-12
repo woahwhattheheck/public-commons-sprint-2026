@@ -62,7 +62,7 @@ export async function gdeltStartup(request,text) {
     /^[a-f0-9-]{36}$/.test(ready.binding?.projectId??'')&&/^[a-f0-9-]{36}$/.test(ready.instanceId??''),
     'The original GDELT startup binding changed.');
   const url=gdeltLoopbackUrl(ready.url);
-  need(port==='0'||Number(port)===Number(url.port),'The original selected browser port changed.');
+  need(port==='0'||Number(port)===(url.port===''?80:Number(url.port)),'The original selected browser port changed.');
   const live=await gdeltLoopbackJson({url:ready.url,path:'/api/launch',maxBytes:16384,timeout:5000});
   need(live?.schema===STARTUP&&live.state==='LISTENING'&&live.instanceId===ready.instanceId&&
     live.binding?.sha256===expected&&live.binding?.directory===directory&&live.binding?.projectId===ready.binding.projectId&&
