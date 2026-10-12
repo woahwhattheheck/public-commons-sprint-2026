@@ -6,6 +6,7 @@ import { PROJECT, BUNDLE, LIMITS, ATTRIBUTION, NOTICE, need, plain, canonical, c
   jsonBytes, isHash, operationId, projectionPolicy, selectedRows, schemaDocument, collectionRows, compareModels } from './model.mjs';
 import { durableDirectory, exactFile, optionalJson, captureGdelt, inspectGdeltCapture, verifyGdeltCapture,
   readGdeltCapture, storeGdeltCapture } from './source.mjs';
+import { GKG_TABLES, GKG_NOTICE, isGkgTable, gkgCoverage } from './gkg.mjs';
 
 const STATE_BYTES=8*1024*1024;
 function validState(state) {
@@ -81,25 +82,29 @@ async function adopt(state,directory,capture,options={}) {
     const bytes=jsonBytes(capture).length;
     need(state.captures.reduce((sum,item)=>sum+item.bytes,0)+bytes<=LIMITS.projectBytes,'Retained original captures exceed256 MiB.');
     await storeGdeltCapture(captureDirectory(directory,capture.captureId),capture,{verified:true});
-    state.captures.push({id:capture.captureId,batch:model.batch,counts:model.counts,bytes,sources:model.sources});
+    state.captures.push({id:capture.captureId,batch:model.batch,counts:model.counts,bytes,sources:model.sources,
+      ...(model.format==='gkg'?{format:'gkg'}:{})});
   }
   state.selectedCapture=capture.captureId;
-  return {captureId:capture.captureId,batch:model.batch,counts:model.counts};
+  return {captureId:capture.captureId,batch:model.batch,counts:model.counts,...(model.format==='gkg'?{format:'gkg'}:{})};
 }
-export async function acquireGdeltCapture({directory,id,expectedRevision,batch,manifest,signal,fetchImpl,python,onProgress}={}) {
-  return transact(directory,{id,expectedRevision,kind:'capture',payload:{batch:batch??null,manifest:manifest??null}},
+export async function acquireGdeltCapture({directory,id,expectedRevision,batch,manifest,format='events-mentions',signal,fetchImpl,python,onProgress}={}) {
+  need(['events-mentions','gkg'].includes(format),'Choose the original source family.');
+  return transact(directory,{id,expectedRevision,kind:'capture',payload:{batch:batch??null,manifest:manifest??null,...(format==='gkg'?{format}:{})}},
     async(state,root)=>{
-      const acquired=await captureGdelt({directory:join(root,'acquisitions',id),batch,manifest,signal,fetchImpl,python,onProgress});
-      // The same capture() invocation already decoded both original archives.
+      const acquired=await captureGdelt({directory:join(root,'acquisitions',id),batch,manifest,format,signal,fetchImpl,python,onProgress});
+      // The same capture() invocation already decoded every selected original archive.
       const model=inspectGdeltCapture(acquired.capture);
       if(!state.captures.some(item=>item.id===acquired.capture.captureId)) {
         const bytes=jsonBytes(acquired.capture).length;
         need(state.captures.length<LIMITS.captures&&state.captures.reduce((sum,item)=>sum+item.bytes,0)+bytes<=LIMITS.projectBytes,'Project source capacity is full.');
         await storeGdeltCapture(captureDirectory(root,acquired.capture.captureId),acquired.capture,{verified:true});
-        state.captures.push({id:acquired.capture.captureId,batch:model.batch,counts:model.counts,bytes,sources:model.sources});
+        state.captures.push({id:acquired.capture.captureId,batch:model.batch,counts:model.counts,bytes,sources:model.sources,
+          ...(model.format==='gkg'?{format:'gkg'}:{})});
       }
       state.selectedCapture=acquired.capture.captureId;
-      return {captureId:acquired.capture.captureId,batch:model.batch,counts:model.counts,acquisitionId:id,reusedSource:acquired.reused};
+      return {captureId:acquired.capture.captureId,batch:model.batch,counts:model.counts,acquisitionId:id,reusedSource:acquired.reused,
+        ...(model.format==='gkg'?{format:'gkg'}:{})};
     });
 }
 export async function importGdeltCapture({directory,id,expectedRevision,capture,signal,python}={}) {
@@ -128,7 +133,7 @@ export async function gdeltRows({directory,captureIds,policy,offset=0,limit=100}
   const selected=selectedRows(models,policy);
   return {schema:'stellar-forge.gdelt-row-view.v1',captureIds:captures.map(item=>item.captureId),policy:selected.policy,
     sourceRows:selected.sourceRows,total:selected.rows.length,offset,limit,rows:selected.rows.slice(offset,offset+limit),
-    attribution:ATTRIBUTION,notice:NOTICE};
+    attribution:ATTRIBUTION,notice:isGkgTable(selected.policy.table)?GKG_NOTICE:NOTICE};
 }
 export async function reviewGdeltCapture({directory,id,expectedRevision,captureIds,policy={},note='',name='GDELT event dataset'}={}) {
   policy=projectionPolicy(policy);
@@ -138,16 +143,18 @@ export async function reviewGdeltCapture({directory,id,expectedRevision,captureI
   const sorted=[...captureIds].sort();
   return transact(directory,{id,expectedRevision,kind:'review',payload:{captureIds:sorted,policy,note,name}},async(state,root)=>{
     const captures=await selectedCaptures(root,sorted),ids=captures.map(item=>item.captureId),models=captures.map(inspectGdeltCapture);
-    const selected=selectedRows(models,policy),related=collectionRows(models,'related-mentions');
+    const selected=selectedRows(models,policy),related=isGkgTable(policy.table)?null:collectionRows(models,'related-mentions');
+    const coverage=isGkgTable(policy.table)?gkgCoverage(models):{
+      events:models.reduce((sum,item)=>sum+item.events.length,0),mentions:related.length,
+      matchedMentions:related.filter(row=>row.event_match==='MATCHED').length,
+      unrepresentedMentions:related.filter(row=>row.event_match==='NOT_IN_COLLECTION').length,
+      ambiguousMentions:related.filter(row=>row.event_match==='AMBIGUOUS').length};
     const reviewId=digest({captureIds:ids,policy,note,name});
     let review=state.reviews.find(item=>item.id===reviewId);
     if(!review) {
       review={schema:'stellar-forge.gdelt-review.v1',id:reviewId,captureIds:ids,policy,note,name,
         reviewedAt:new Date().toISOString(),rowCount:selected.rows.length,sourceRows:selected.sourceRows,
-        batches:captures.map(item=>item.batch),coverage:{events:models.reduce((sum,item)=>sum+item.events.length,0),
-          mentions:related.length,matchedMentions:related.filter(row=>row.event_match==='MATCHED').length,
-          unrepresentedMentions:related.filter(row=>row.event_match==='NOT_IN_COLLECTION').length,
-          ambiguousMentions:related.filter(row=>row.event_match==='AMBIGUOUS').length},
+        batches:captures.map(item=>item.batch),coverage,
         semantics:schemaDocument(policy,ids),attribution:ATTRIBUTION};
       const reviews=await durableDirectory(join(root,'reviews'));
       const prior=await optionalJson(join(reviews,reviewId+'.json'),2*1024*1024);
@@ -305,6 +312,6 @@ export async function receiveGdeltProject({directory,bundle,signal,python}={}) {
 export async function gdeltProjectView(directory) {
   const state=await readGdeltProject(directory);
   return {...clone(state),attribution:ATTRIBUTION,notice:NOTICE,
-    capabilities:{tables:['events','mentions','related-mentions'],maxCaptures:LIMITS.captures,
+    capabilities:{tables:['events','mentions','related-mentions',...GKG_TABLES],sourceFormats:['events-mentions','gkg'],maxCaptures:LIMITS.captures,
       maxRows:LIMITS.rows,standardZipDecoder:'Python3.11+',sourceFiles:'Original paginated dataset transport'}};
 }

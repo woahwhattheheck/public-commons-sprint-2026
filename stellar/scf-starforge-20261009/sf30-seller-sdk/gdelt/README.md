@@ -1,8 +1,8 @@
-# GDELT event desk
+# GDELT article and event desk
 
-GDELT event desk turns complete official GDELT 2.0 Events and Mentions updates into reviewed customer datasets. The operator keeps the original manifest response, both ZIP files, their decoded tables and the exact field meanings. A saved review selects coverage and projection. The original Starforge merchant serves that immutable edition and its complete source files; the original buyer acquires, recovers and delivers the data. A recipient can reopen the received source review as a normal offline event desk.
+GDELT article and event desk turns complete official GDELT 2.0 Events/Mentions or GKG 2.1 article updates into reviewed customer datasets. The operator keeps the original manifest response, every selected ZIP file, its decoded table and the exact field meanings. A saved review selects coverage and projection. The original Starforge merchant serves that immutable edition and its complete source files; the original buyer acquires, recovers and delivers the data. A recipient can reopen the received source review as a normal offline workspace.
 
-The installed command is `starforge gdelt`. Applications registers **GDELT event desk**. The merchant host registers **gdelt-workspaces** and its `merchant_gdelt_*` tools through the source-owned contribution at `distribution/contributions/gdelt-events.json`.
+The installed command is `starforge gdelt`. Applications registers **GDELT article and event desk** under its existing `gdelt-events` application ID. The merchant host registers **gdelt-workspaces** and its `merchant_gdelt_*` tools through the source-owned contribution at `distribution/contributions/gdelt-events.json`.
 
 ## Source and interpretation
 
@@ -23,7 +23,7 @@ The source contract is GDELT's [2.0 Event Database codebook](https://data.gdeltp
 | Comparison | Added, removed and shared rows describe membership of selected source updates. |
 | Source coverage | A chosen update or collection covers those retained files. Related mentions can reference events outside that collection. |
 
-The application handles Events, Mentions and related-mentions tables. It preserves GKG manifest entries as part of the original manifest while selecting the complete Event/Mentions pair. It reads the public source files and retained metadata; source article identifiers remain data cells.
+The application handles Events, Mentions, related-mentions and four GKG article views. An Events/Mentions capture retains the original paired ZIPs. A GKG capture retains the one original 27-field article ZIP from the same official manifest. Existing event operations and source identities keep their original representation. Article identifiers remain data cells; reading GKG does not fetch their source websites.
 
 ## Open the installed application
 
@@ -40,7 +40,7 @@ starforge gdelt serve --project /absolute/event-desk \
 
 Open the private URL from the original startup JSON. The browser has five sections:
 
-1. **Sources:** discover official updates, acquire both files under one operation, import a complete retained capture and choose the collection.
+1. **Sources:** choose Events/Mentions or GKG articles, discover official updates, acquire the selected complete source family under one operation, import a complete retained capture and choose the collection.
 2. **Review & compare:** select the table and exact projected fields, inspect source rows and field meanings, save a review and compare updates.
 3. **Merchant:** choose the saved review and configured public terms, prepare its edition, inspect offers and start the routed merchant.
 4. **Customer:** prepare explicit spending/page limits, run the original acquisition, recover it, deliver files and reopen the complete source review.
@@ -278,8 +278,8 @@ Source/project changes use private, canonical paths and the original flock-backe
 
 ## Implementation map
 
-- model.mjs: original field/code/date/decimal meanings, manifest/TSV parsing, projection and comparison.
-- source.mjs + zip_decode.py: official response custody, paired ZIP acquisition and standard decoding.
+- model.mjs + gkg.mjs: original field/code/date/decimal meanings, manifest/TSV parsing, article occurrence views, projection and comparison.
+- source.mjs + zip_decode.py: official response custody, exact selected Events/Mentions or GKG ZIP acquisition and standard decoding.
 - project.mjs: retained source/review/publication history and complete offline project receiving.
 - merchant.mjs: original dataset version, seller offers, native serving, source-file projection and single-request binding.
 - customer.mjs + source_receive.py: original SF88/SF100 acquisition, delivery, source receiving and offline review reconstruction.
@@ -309,3 +309,97 @@ The payment services use the [original local protocol fixture](../stac/examples/
 Keep the same customer directory when continuing this operation. The example retains each source request, step, original project, complete transferred bundle and customer receiving directory. A complete run writes `result.json` and the full `outputs/` files. An interrupted run retains `last-outcome.json` with the original stage and error. The complete output-file inventory contains each relative path, byte count and SHA256.
 
 Closing the application attempts every owned customer window and merchant closure. Closing its browser also closes the original listener if another resource reports an error, then returns the first failure to the caller.
+
+## GKG article research and customer delivery
+
+The same project supports GKG 2.1 sources through the publisher's [complete GKG codebook](https://data.gdeltproject.org/documentation/GDELT-Global_Knowledge_Graph_Codebook-V2.1.pdf). Choose **GKG articles and entities** in Sources, or use **--format gkg** with the installed source commands. The existing default remains Events/Mentions.
+
+A GKG capture retains its exact official manifest entry, original ZIP bytes and MD5/SHA256, the CRC-checked UTF-8 table and all 27 original cells for every record. Its schema is **stellar-forge.gdelt-gkg-capture.v1**; its codebook and source family participate in its content identity. A GKG acquisition binds **format: "gkg"** to its original operation. Repeating that operation resumes the same source selection.
+
+A project can retain both source families. Each saved review selects one family and one original edition per update timestamp. Events/Mentions projections use event captures; article projections use GKG captures. Project export includes every retained family, original review and publication. Existing event bundles and customer editions reopen with their original identities.
+
+### Select and inspect the original article update
+
+~~~sh
+starforge gdelt discover --project /absolute/article-desk --format gkg \
+  --out /absolute/private/article-discovery.json
+
+starforge gdelt capture --project /absolute/article-desk \
+  --id article-source-20261012-a --revision CURRENT_REVISION \
+  --format gkg --batch RETURNED_UTC14 --discovery RETURNED_DISCOVERY_SHA
+
+starforge gdelt fields --project /absolute/article-desk --table articles
+starforge gdelt fields --project /absolute/article-desk --table article-entities
+~~~
+
+Initialize the selected project once with the existing **init** command. Use the actual returned batch, discovery ID and current project revision. **discovery --id EXISTING_SHA --format gkg** derives the GKG selection from a retained official manifest without another source request. The browser uses this same read when changing source families. It retains a separate projection draft for each table.
+
+GKG's record ID contains the original update timestamp and record sequence. A **T** sequence marker identifies the translated-record form. **DATE** is the original document publication timestamp and can be the explicit value **0** when unknown. Dates mentioned inside the document remain separate occurrences. **DocumentIdentifier** can be a URL or another source identifier, interpreted with **SourceCollectionIdentifier**. The exact pair produces **document_key**; records with that same pair keep their original record IDs and rows.
+
+### Four article views
+
+| Table | Customer rows | Required original identity |
+| --- | --- | --- |
+| articles | One row per GKG record, including all 27 raw source fields, exact document key, translated-record flag and parsed tone values. | source_batch, source_row, GKGRECORDID |
+| article-entities | Each enhanced theme, person, organization, location and AllNames occurrence. | Record identity plus source_field, occurrence_index. |
+| article-measures | Each original tone dimension and each present sparse GCAM entry. | Record identity plus source field and occurrence ordinal. |
+| article-details | Each enhanced count, mentioned date, quotation and amount occurrence. | Record identity plus source field and occurrence ordinal. |
+
+Every occurrence carries **raw_entry**, **parse_status** and its one-based ordinal in the original cell. Duplicate names, repeated entities and unrecognized entries remain represented. A trailing delimiter is treated as the original terminator; empty internal entries retain their own ordinal. The complete raw source field remains available in the article view and original capture.
+
+Enhanced location rows retain Type, FullName, CountryCode, ADM1, ADM2, latitude, longitude, feature identifier and character offset. Geographic country codes use the GKG codebook's FIPS convention. Enhanced counts retain their original count, object and seven-field location block; that source block has no ADM2 field. Approximate source character offsets remain text.
+
+Quoted text preserves everything after the first three original pipe separators. Amount objects can contain commas: the first and last separators select the numeric amount and offset while retaining the entire intervening object. Date resolution and zero date components remain exact source values. All media, original theme/person/organization lists, TranslationInfo and ExtrasXML remain raw article cells, including values that are not expanded into an occurrence view.
+
+Tone values have explicit units in the customer schema. ToneScore is positive word percentage minus negative word percentage, measured in percentage points. PositiveScore, NegativeScore, Polarity, ActivityReferenceDensity and SelfGroupReferenceDensity are percentages. WordCount is a count. Values retain every original decimal digit. A malformed or partial tone field remains visible through its raw cell and parse status.
+
+GCAM rows preserve the original **c<dictionary>.<dimension>** and **v<dictionary>.<dimension>** keys, values and source order. Count dimensions, dictionary scores, **wc** and **nwc** have separate measure kinds. Absent dimensions do not become invented zero rows. Consult GDELT's [GCAM master codebook](https://data.gdeltproject.org/documentation/GCAM-MASTERCODEBOOK.xlsx) for each dictionary's language, definitions and citations.
+
+The article schema preserves decimal, offset, count and code values as text. Numeric range and sort operations on those fields therefore use lexical text order. Original physical row ordinals, occurrence ordinals and the translated-record flag use safe integers. Original empty nullable cells remain distinguishable in the retained raw table.
+
+### Review and publish a useful customer dataset
+
+Four complete policy files are shipped:
+
+- [Article records](examples/gkg-article-policy.json)
+- [Entity occurrences](examples/gkg-entity-policy.json)
+- [Tone and GCAM measures](examples/gkg-measure-policy.json)
+- [Counts, dates, quotations and amounts](examples/gkg-detail-policy.json)
+
+Select fields, equality filters, sorts and exact accepted source values using the same policy contract as the event workspace. Preserve the required identity columns. Review coverage reports the actual article count, distinct document identifiers, translated-record count and records containing enhanced themes/locations.
+
+~~~sh
+starforge gdelt rows --project /absolute/article-desk \
+  --captures ORIGINAL_CAPTURE_SHA \
+  --policy /absolute/installed-gdelt/examples/gkg-entity-policy.json \
+  --offset 0 --limit 100
+
+starforge gdelt review --project /absolute/article-desk \
+  --id article-entity-review --revision CURRENT_REVISION \
+  --captures ORIGINAL_CAPTURE_SHA \
+  --policy /absolute/installed-gdelt/examples/gkg-entity-policy.json \
+  --name "Reviewed article entities"
+
+starforge gdelt publish --project /absolute/article-desk \
+  --id article-entity-publication --revision CURRENT_REVISION \
+  --review RETURNED_REVIEW_SHA --origin https://data.example.com \
+  --path /gdelt --payment /absolute/private/payment.json
+~~~
+
+The publication uses the existing immutable CSV dataset, original merchant offers and original payment configuration. The customer row product and complete source-file product have separate snapshots under that one edition. The shipped dictionary includes field meanings, original source order, approximate-offset interpretation, tone units and occurrence semantics. The full source-file dataset carries **source-set.json**, **gdelt-schema.json** and **review.json**, bound by the original **sources-manifest.json** and chunk identities.
+
+The existing **dataset-prepare → dataset-create → dataset-run → dataset-deliver → dataset-receive → customer-reopen** workflow applies unchanged. Use the original acquisition's explicit page/row/spending limits and same ID for recovery. Offline receiving checks all three delivered files, the source-set identity, the homogeneous GKG capture/codebook binding, every original ZIP and decoded table, and the saved review. The recipient then opens the original article review through the normal application.
+
+### Compare original article windows
+
+**compare** accepts two retained GKG captures. It groups each window by the exact source-collection/document-identifier pair, retains every contributing GKG record and compares original metadata with multiplicity. GKG record ID and publication date are reported on the original records; they are excluded from the metadata multiset so a new source-window identifier alone does not fabricate a content change.
+
+The output distinguishes documents seen only in one selected window, unchanged retained metadata and changed retained metadata. These statuses describe the selected source files. They do not establish article creation/deletion, new real-world events, entity affiliations or relationships between co-occurring names.
+
+### Agent and installed application entry points
+
+Existing **merchant_gdelt_discover**, **merchant_gdelt_discovery** and **merchant_gdelt_capture** accept optional **format: "gkg"**. The discovery tool can select GKG from an already retained manifest. Existing fields/rows/review/comparison/publication tools use the four article table names. The host input reader accepts the exact GKG capture schema under its existing **kind: "capture"** declaration and keeps the host-pinned file SHA256.
+
+The same complete Applications entry, browser owner, merchant provider, native Dataset customer and file-chunk receiver serve the new views. Cancellation remains concurrent with the original active action, and host shutdown closes only its borrowed clients. Complete GKG source files are included by the existing distribution source tree; command and application IDs stay stable.
+
+Limits remain 24 MiB per source ZIP, 64 MiB per original table, 262,144 characters per cell, up to 32 selected captures and one million projected rows. Expanded occurrence views enforce that row allowance independently. Source capture, review and receiving report the exact retained operation when a selected input exceeds its allowance.
