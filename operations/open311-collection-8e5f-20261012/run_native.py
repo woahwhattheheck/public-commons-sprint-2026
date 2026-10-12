@@ -1,4 +1,4 @@
-import sys,tty,json,tempfile,pathlib,hashlib,subprocess,os,base64,zipfile,io,gzip,traceback,re
+import sys,tty,json,tempfile,pathlib,hashlib,subprocess,os,base64,zipfile,io,gzip,traceback,re,urllib.request,urllib.parse,urllib.error,datetime
 if sys.stdin.isatty():
     tty.setraw(sys.stdin.fileno())
 print("OPEN311_NATIVE_READY",flush=True)
@@ -9,6 +9,10 @@ os.chmod(root,0o700)
 repo=root/"source"
 repo.mkdir(mode=0o700)
 reporting_operations={}
+archive_uploads={}
+archive_filename=packet.get("archiveFilename","helsinki-collection-reporting-workspace-8e5f-20261012.zip")
+if not isinstance(archive_filename,str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,180}\.zip",archive_filename):
+    raise RuntimeError("Use a plain ZIP archive filename.")
 manifest=[]
 zipbytes=b""
 node=os.environ.get("CODEX_PRIMARY_RUNTIME_NODE") or "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
@@ -70,7 +74,7 @@ def run_node(runner,configuration,timeout):
         return {"exitCode":None,"stdout":"","stderr":"","timedOut":False,
             "error":{"name":type(error).__name__,"message":str(error)}}
 def archive_descriptor():
-    return {"filename":"helsinki-collection-reporting-workspace-8e5f-20261012.zip",
+    return {"filename":archive_filename,
         "bytes":len(zipbytes),"sha256":hashlib.sha256(zipbytes).hexdigest()}
 def refresh_archive():
     global zipbytes
@@ -161,6 +165,59 @@ def reporting(command):
     refreshed=refresh_archive()
     print("OPEN311_REPORTING_RESULT "+json.dumps({"requestId":request_id,"replayed":False,
         "operation":operation,"archive":refreshed},separators=(",",":")),flush=True)
+def upload_archive(command):
+    upload_id=command.get("uploadId")
+    target=command.get("uploadUrl")
+    if not isinstance(upload_id,str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}",upload_id):
+        raise RuntimeError("Use the exact prepared provider upload ID.")
+    if not isinstance(target,str):
+        raise RuntimeError("Supply the complete original prepared upload URL.")
+    parsed=urllib.parse.urlsplit(target)
+    if parsed.scheme!="https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
+        raise RuntimeError("Use the exact prepared HTTPS upload URL.")
+    descriptor=archive_descriptor()
+    if command.get("archiveSha256")!=descriptor["sha256"] or command.get("bytes")!=descriptor["bytes"]:
+        raise RuntimeError("Select the exact current complete archive bytes and SHA256.")
+    if command.get("method","POST")!="POST":
+        raise RuntimeError("This receiver posts raw bytes to the original prepared Slack upload URL.")
+    payload_hash=hashlib.sha256(canonical({"uploadId":upload_id,"uploadUrl":target,
+        "method":"POST","archive":descriptor}).encode("utf-8")).hexdigest()
+    if upload_id in archive_uploads:
+        previous=archive_uploads[upload_id]
+        if previous["payloadHash"]!=payload_hash:
+            raise RuntimeError("UPLOAD_ID_REUSED: retain the original prepared upload and archive selection.")
+        print("OPEN311_NATIVE_UPLOADED "+json.dumps({"replayed":True,**previous},separators=(",",":")),flush=True)
+        return
+    def utcnow():
+        return datetime.datetime.now(datetime.timezone.utc).isoformat()
+    record={"uploadId":upload_id,"payloadHash":payload_hash,"state":"UPLOADING",
+        "archive":descriptor,"startedAt":utcnow(),"status":None,"uncertain":True}
+    archive_uploads[upload_id]=record
+    operation_dir=root/"archive-uploads"/upload_id
+    write_private(operation_dir/"intent.json",canonical({"uploadId":upload_id,"payloadHash":payload_hash,
+        "uploadUrl":target,"method":"POST","archive":descriptor}))
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self,request,fp,code,msg,headers,newurl):
+            return None
+    request=urllib.request.Request(target,data=zipbytes,method="POST",headers={
+        "Content-Type":"application/zip","Content-Length":str(len(zipbytes))})
+    try:
+        with urllib.request.build_opener(NoRedirect()).open(request,timeout=60) as response:
+            record["status"]=response.status
+            record["providerResponse"]=response.read(4096).decode("utf-8",errors="replace")
+            record["state"]="UPLOADED" if 200<=response.status<300 else "REJECTED"
+            record["uncertain"]=False
+    except urllib.error.HTTPError as error:
+        record["status"]=error.code
+        record["providerResponse"]=error.read(4096).decode("utf-8",errors="replace")
+        record["state"]="REJECTED";record["uncertain"]=False
+    except Exception as error:
+        record["state"]="UNCERTAIN"
+        record["error"]={"name":type(error).__name__,"message":str(error)}
+    record["completedAt"]=utcnow()
+    write_private(operation_dir/"result.json",canonical(record))
+    print("OPEN311_NATIVE_UPLOADED "+json.dumps({"replayed":False,**record},separators=(",",":")),flush=True)
+
 try:
     manifest=materialize(packet["files"],repo)
     runner=root/"commission-collection.mjs"
@@ -191,12 +248,16 @@ try:
         line=sys.stdin.buffer.readline()
         if not line:
             break
+        if not line.strip():
+            continue
         try:
             command=json.loads(line.decode("utf-8"))
             if command.get("op")=="finish":
                 print("OPEN311_NATIVE_FINISHED",flush=True);break
             if command.get("op")=="reporting":
                 reporting(command)
+            elif command.get("op")=="upload":
+                upload_archive(command)
             elif command.get("op")=="artifact":
                 if command.get("archiveSha256") and command["archiveSha256"]!=archive_descriptor()["sha256"]:
                     raise RuntimeError("ARCHIVE_CHANGED: select the latest complete archive SHA256.")
