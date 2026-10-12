@@ -63,8 +63,8 @@ function tourismOperationSaved(action,record){
  if(record.kind==="tourism_export"){tourismSelection.period=record.payload.period.id;tourismSelection.pane="reports";}
  tourismRemember();
 }
-async function tourismDraft(kind){
- const id=tourismSelection[kind],key=kind+":"+(id||"new");
+async function tourismDraft(kind,selected=tourismSelection){
+ const id=selected[kind],key=kind+":"+(id||"new");
  if(tourismDrafts.has(key))return tourismDrafts.get(key);
  const record=id?await tourismEntity("tourism_"+kind,id,tourismRecords("tourism_"+kind).find(r=>r.id===id)?.revision):null;
  let data;
@@ -107,9 +107,14 @@ function tourismToolbar(){
  '<div class="tourism-tabs" role="group" aria-label="Tourism sections">'+tourismPanes.map(p=>tourismButton("pane",({reports:"Reports",sources:"Sources",funds:"Funds",plans:"Forecast plans"})[p],'data-pane="'+p+'" aria-pressed="'+(tourismSelection.pane===p)+'"')).join("")+"</div>";
 }
 async function tourismView(){
- tourismResetWorkspace();tourismRemember();
+ tourismResetWorkspace();
+ const context={fund:null,plan:null,source:null,period:null,report:null,selection:{...tourismSelection}};
  const views={reports:tourismReportView,sources:tourismSourceView,funds:tourismFundView,plans:tourismPlanView};
- return '<div class="tourism-workspace">'+tourismToolbar()+await views[tourismSelection.pane]()+"</div>";
+ const html='<div class="tourism-workspace">'+tourismToolbar()+await views[context.selection.pane](context)+"</div>";
+ return {html,context};
+}
+function tourismCommitView(view){
+ tourismCurrent=view.context;tourismSelection=view.context.selection;tourismRemember();
 }
 function tourismImportView(){
  const p=tourismImport.data,isJson=/\.json$/i.test(tourismImport.file?.name||""),headers=tourismImport.headers;
@@ -129,34 +134,34 @@ function tourismImportView(){
  '<div class="actions">'+tourismButton("import","Retain source for review","",true)+tourismButton("template","Download CSV template",'data-table="'+h(p.table)+'"')+"</div>"+
  tourismParagraph("Collections, distributions, operator cash and published budget statuses have separate source tables. Cash returns identify the original same-fund entry. A correction creates a new source with its predecessor attached.")+"</div>";
 }
-async function tourismSourceView(){
+async function tourismSourceView(context){
  const records=tourismRecords("tourism_source");let detail="";
- if(tourismSelection.source){
-  const selected=records.find(r=>r.id===tourismSelection.source);
+ if(context.selection.source){
+  const selected=records.find(r=>r.id===context.selection.source);
   if(selected){
-   const record=await tourismEntity(selected.kind,selected.id,selected.revision);tourismCurrent.source=record;
+   const record=await tourismEntity(selected.kind,selected.id,selected.revision);context.source=record;
    const p=record.payload,tables=Object.entries(p.tables).filter(([,count])=>count);
-   if(!tables.some(([name])=>name===tourismSelection.table)){tourismSelection.table=tables[0]?.[0]||"collections";tourismSelection.offset=0;}
-   const preview=await request("/api/tourism/preview?"+new URLSearchParams({kind:record.kind,id:record.id,revision:record.revision,table:tourismSelection.table,offset:tourismSelection.offset,limit:100}));
+   if(!tables.some(([name])=>name===context.selection.table)){context.selection.table=tables[0]?.[0]||"collections";context.selection.offset=0;}
+   const preview=await request("/api/tourism/preview?"+new URLSearchParams({kind:record.kind,id:record.id,revision:record.revision,table:context.selection.table,offset:context.selection.offset,limit:100}));
    const headers=[...new Set(preview.rows.flatMap(row=>Object.keys(row)))];
    detail='<div class="panel"><div class="panel-head"><h2>'+h(label(record))+"</h2>"+badge(p.state)+'</div><div class="actions">'+objectButton(p.original,"Original file")+objectButton(p.normalised,"Mapped source JSON")+historyButton(record)+inspectButton(record)+"</div>"+
     tourismParagraph(p.currency+" · "+p.minor_unit+" decimal places · original "+p.original.digest)+
     '<div class="tourism-source-documents">'+p.source_documents.map(doc=>'<p>'+tourismSourceLink(doc.url,doc.title)+(doc.page?" · page "+h(doc.page):"")+"</p>").join("")+"</div>"+
-    '<div class="panel-head">'+tourismSelect("Retained table","tourism-source-table",tables.map(([name,count])=>[name,name+" · "+count+" rows"]),tourismSelection.table)+
-    '<div class="actions">'+tourismButton("source-page","Previous",'data-offset="'+Math.max(0,tourismSelection.offset-100)+'"'+(tourismSelection.offset===0?" disabled":""))+
-    tourismButton("source-page","Next",'data-offset="'+(preview.next_offset??tourismSelection.offset)+'"'+(preview.next_offset==null?" disabled":""))+"</div></div>"+
-    tourismParagraph(preview.rows.length?"Rows "+(tourismSelection.offset+1)+"–"+(tourismSelection.offset+preview.rows.length)+" of "+preview.total:"No rows in this table.")+
+    '<div class="panel-head">'+tourismSelect("Retained table","tourism-source-table",tables.map(([name,count])=>[name,name+" · "+count+" rows"]),context.selection.table)+
+    '<div class="actions">'+tourismButton("source-page","Previous",'data-offset="'+Math.max(0,context.selection.offset-100)+'"'+(context.selection.offset===0?" disabled":""))+
+    tourismButton("source-page","Next",'data-offset="'+(preview.next_offset??context.selection.offset)+'"'+(preview.next_offset==null?" disabled":""))+"</div></div>"+
+    tourismParagraph(preview.rows.length?"Rows "+(context.selection.offset+1)+"–"+(context.selection.offset+preview.rows.length)+" of "+preview.total:"No rows in this table.")+
     (headers.length?rowsTable(headers,preview.rows.map(row=>"<tr>"+headers.map(key=>'<td class="'+(key.endsWith("_minor")?"num":"")+'">'+h(typeof row[key]==="object"?JSON.stringify(row[key]):row[key])+"</td>").join("")+"</tr>")):"")+
     (p.state==="DRAFT"?tourismText("Source review note","tourism-source-review",tourismReviewDrafts.get("source:"+record.id)||"")+
       tourismButton("accept-source","Accept this source edition",'data-id="'+record.id+'" data-revision="'+record.revision+'"',true):
       tourismParagraph("Accepted by "+p.review.actor+". "+p.review.note))+"</div>";
-  }else tourismSelection.source=null;
+  }else context.selection.source=null;
  }
  return tourismImportView()+detail+'<div class="panel"><h2>Source history</h2>'+
  (records.length?rowsTable(["Source","Tables","State",""],records.map(r=>'<tr><td><strong>'+h(label(r))+'</strong><div class="muted">r'+r.revision+(r.payload.parent?" · correction of "+h(r.payload.parent.id):"")+"</div></td><td>"+h(Object.entries(r.payload.tables).map(([name,count])=>name+" "+count).join(" · "))+"</td><td>"+badge(r.payload.state)+'</td><td>'+tourismButton("source-open","Open",'data-id="'+r.id+'"')+"</td></tr>")):empty("No tourism sources","Import the original table or open the public Overland Park working example."))+"</div>";
 }
-async function tourismFundView(){
- const current=await tourismDraft("fund");tourismCurrent.fund=current;const p=current.data;
+async function tourismFundView(context){
+ const current=await tourismDraft("fund",context.selection);context.fund=current;const p=current.data;
  return '<div class="panel" data-tourism-form="fund"><div class="panel-head"><h2>'+(current.record?"Edit fund":"Create fund")+"</h2>"+tourismButton("fund-new","New fund")+"</div>"+tourismDraftNotice(current)+
  '<div class="grid three">'+tourismField("Fund label","tourism-fund-label",p.label,"text",tourismEditAttrs("label"))+
  tourismField("Fund code in cash sources","tourism-fund-code",p.fund_code,"text",tourismEditAttrs("fund_code"))+
@@ -201,8 +206,8 @@ function tourismAdjustmentRows(plan){
  tourismField("Original reference","tourism-adjust-ref-"+i,r.source_ref,"text",'data-tourism-adjustment-field="source_ref"')+
  tourismButton("adjustment-remove","Remove",'data-index="'+i+'"')+"</div>").join("")+"</div>";
 }
-async function tourismPlanView(){
- const current=await tourismDraft("plan");tourismCurrent.plan=current;const p=current.data;
+async function tourismPlanView(context){
+ const current=await tourismDraft("plan",context.selection);context.plan=current;const p=current.data;
  const budgetRows=[];
  for(const source of p.sources){
   const preview=await request("/api/tourism/preview?"+new URLSearchParams({kind:"tourism_source",id:source.id,revision:source.revision,table:"budgets",limit:500}));
@@ -244,8 +249,8 @@ function tourismBudgetTable(report){
  tourismMoneyCell(row.reported_resources_minor,p.currency,p.minor_unit)+tourismMoneyCell(row.reported_expenditures_minor,p.currency,p.minor_unit)+tourismMoneyCell(row.reported_closing_minor,p.currency,p.minor_unit)+
  "<td>"+Object.entries(row.reported_differences).map(([key,number])=>h(key)+": "+h(tourismMoney(number,p.currency,p.minor_unit))).join("<br>")+"</td></tr>"));
 }
-function tourismCashView(report){
- const p=report.fund.payload,cash=report.cash,rows=cash.rows.slice(tourismSelection.cashOffset,tourismSelection.cashOffset+100);
+function tourismCashView(report,selected=tourismSelection){
+ const p=report.fund.payload,cash=report.cash,rows=cash.rows.slice(selected.cashOffset,selected.cashOffset+100);
  return '<details><summary>Operator cash and separate fund accounting</summary>'+tourismParagraph(cash.meaning)+
  '<dl class="tourism-facts"><div><dt>Opening cash, reserve included</dt><dd>'+h(tourismMoney(cash.opening_cash_minor,p.currency,p.minor_unit))+"</dd></div><div><dt>Recorded reserve component</dt><dd>"+
  h(tourismMoney(cash.recorded_reserve_minor,p.currency,p.minor_unit))+"</dd></div><div><dt>Net receipts</dt><dd>"+h(tourismMoney(cash.totals.net_receipts_minor,p.currency,p.minor_unit))+"</dd></div><div><dt>Net expenditures</dt><dd>"+
@@ -254,7 +259,7 @@ function tourismCashView(report){
  (cash.groups.length?rowsTable(["Category / program","Receipts","Receipt returns","Expenditures","Expense returns"],cash.groups.map(r=>"<tr><td>"+h(r.category+" / "+r.program)+"</td>"+
  tourismMoneyCell(r.receipts_minor,p.currency,p.minor_unit)+tourismMoneyCell(r.receipt_returns_minor,p.currency,p.minor_unit)+tourismMoneyCell(r.expenditures_minor,p.currency,p.minor_unit)+tourismMoneyCell(r.expense_returns_minor,p.currency,p.minor_unit)+"</tr>")):"")+
  (rows.length?rowsTable(["Original entry","Date","Direction","Amount","Original return link","Reference"],rows.map(r=>"<tr><td>"+h(r.entry_id)+"</td><td>"+h(r.date)+"</td><td>"+h(r.direction)+"</td>"+tourismMoneyCell(r.amount_minor,p.currency,p.minor_unit)+"<td>"+h(r.original_entry_id)+"</td><td>"+h(r.source_ref)+"</td></tr>")):"")+
- (cash.rows.length>100?'<div class="actions">'+tourismButton("cash-page","Previous entries",'data-offset="'+Math.max(0,tourismSelection.cashOffset-100)+'"'+(!tourismSelection.cashOffset?" disabled":""))+tourismButton("cash-page","Next entries",'data-offset="'+(tourismSelection.cashOffset+100)+'"'+(tourismSelection.cashOffset+100>=cash.rows.length?" disabled":""))+"</div>":"")+"</details>";
+ (cash.rows.length>100?'<div class="actions">'+tourismButton("cash-page","Previous entries",'data-offset="'+Math.max(0,selected.cashOffset-100)+'"'+(!selected.cashOffset?" disabled":""))+tourismButton("cash-page","Next entries",'data-offset="'+(selected.cashOffset+100)+'"'+(selected.cashOffset+100>=cash.rows.length?" disabled":""))+"</div>":"")+"</details>";
 }
 function tourismReviewView(record){
  const p=record.payload,key="period:"+record.id+":"+record.revision;
@@ -274,12 +279,12 @@ function tourismReviewView(record){
  '<div class="actions">'+tourismButton("review","Save report review",'data-id="'+record.id+'" data-revision="'+record.revision+'"',p.state!=="REVIEWED")+
  (p.state==="REVIEWED"?tourismButton("finalize","Finalize reviewed report",'data-id="'+record.id+'" data-revision="'+record.revision+'" data-report-sha="'+p.report.digest+'"',true):"")+historyButton(record)+objectButton(p.report,"Prepared report JSON")+"</div></div>";
 }
-async function tourismReportView(){
- const records=tourismRecords("tourism_period");if(!tourismSelection.period&&records.length)tourismSelection.period=records[0].id;
- const selected=records.find(r=>r.id===tourismSelection.period);let detail="";
+async function tourismReportView(context){
+ const records=tourismRecords("tourism_period");if(!context.selection.period&&records.length)context.selection.period=records[0].id;
+ const selected=records.find(r=>r.id===context.selection.period);let detail="";
  if(selected){
   const record=await tourismEntity(selected.kind,selected.id,selected.revision),report=await tourismReport(record);
-  tourismCurrent.period=record;tourismCurrent.report=report;const p=report.fund.payload,f=report.forecast;
+  context.period=record;context.report=report;const p=report.fund.payload,f=report.forecast;
   const coverage=f.missing_observed_months.length?"Incomplete year: "+f.missing_observed_months.join(", ")+" missing":"Twelve-month reporting schedule";
   detail='<div class="panel"><div class="panel-head"><div><h2>'+h(label(record))+'</h2><p class="muted">'+h(record.payload.start+" through "+record.payload.end+" · collections known through "+record.payload.as_of)+" · r"+record.revision+"</p></div>"+badge(record.payload.state)+'</div>'+
    '<div class="metrics">'+metric(tourismMoney(f.totals.observed_minor,p.currency,p.minor_unit),"Observed collection subtotal")+
@@ -298,7 +303,7 @@ async function tourismReportView(){
    '<details><summary>Published distributions and original budget columns</summary>'+
    tourismParagraph("Published distributions are independent source controls. Budget status and component arithmetic retain the original published values.")+
    rowsTable(["Window","Published distribution","Collection subtotal","Difference","Coverage"],report.controls.map(r=>"<tr><td>"+h(r.start+" – "+r.end)+"</td>"+tourismMoneyCell(r.published_distribution_minor,p.currency,p.minor_unit)+tourismMoneyCell(r.collection_subtotal_minor,p.currency,p.minor_unit)+tourismMoneyCell(r.difference_minor,p.currency,p.minor_unit)+"<td>"+h(r.complete_collection_window?"Complete collection window":"Missing "+r.missing_months.join(", "))+"</td></tr>"))+
-   tourismBudgetTable(report)+"</details>"+tourismCashView(report)+
+   tourismBudgetTable(report)+"</details>"+tourismCashView(report,context.selection)+
    '<details><summary>Annual plan, lodging and demand inputs</summary><div class="tourism-narrative">'+h(report.plan.payload.annual_plan)+"</div>"+
    tourismParagraph(report.lodging.length+" lodging rows and "+report.demand.length+" demand rows are retained in the reporting package. Each remains attached to its exact source; a forecast adjustment must be entered explicitly.")+
    objectButton(record.payload.report,"All saved operating inputs")+"</details>"+
