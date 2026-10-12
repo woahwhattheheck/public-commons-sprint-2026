@@ -69,6 +69,40 @@ The complete connection and managed-application instructions travel in
 and
 `source/stellar/scf-starforge-20261009/distribution/runtime-workspace/REDIS_APPLICATIONS.md`.
 
+## Deploy the application through provider SSH access
+
+The same installed product includes `redis-ssh` for a provider that gives SSH
+access to the database host's loopback interface. Declare the complete
+standalone, Cluster or Sentinel inventory, including every data node, monitor,
+announced address and stable local forwarded port. The application remains on
+the customer's application host; its Redis connection uses the owned local
+forwards.
+
+~~~sh
+starforge redis-ssh profile --deployment /srv/customer/ssh-deployment.json
+starforge redis-ssh prepare --deployment /srv/customer/ssh-deployment.json --input /srv/customer/commissioning-input.json --output /srv/customer/commissioning-via-ssh.json
+starforge redis-ssh run --deployment /srv/customer/ssh-deployment.json --sha256 REVIEWED_DEPLOYMENT_SHA256 -- starforge redis-commission receive --input /srv/customer/commissioning-via-ssh.json --workspace /srv/customer/commission
+~~~
+
+Use the digest returned by the profile review and the original commissioning
+operation's arguments. The compiler preserves its product IDs, routes, expected
+results, payment terms and release selection. OpenSSH reads the exact pinned
+known-host file bytes and the selected identity-file or agent-socket reference.
+The original Redis authentication still applies independently.
+
+Cluster redirection and Sentinel promotion use the retained address map through
+the same forwards. An unknown discovered address requires a revised inventory.
+If any owned SSH process ends, the deployment manager stops the application and
+its descendants, closes the remaining forwards and returns a terminal result to
+the existing host supervisor. A new start reopens the selected saved workspace.
+
+The complete inventory templates and operating guide travel with the installed
+source at
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/deployment/SSH_DEPLOYMENT.md`.
+That guide also explains using the same outer command for the retained Runtime
+workspace, customer export and release console, and receiving both real Redis
+Cluster and Sentinel through OpenSSH.
+
 ## Commission the whole application
 
 Open Commissioning in the same Redis operator workspace. It reviews a complete

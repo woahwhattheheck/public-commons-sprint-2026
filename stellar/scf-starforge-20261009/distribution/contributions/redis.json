@@ -1,20 +1,22 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "redis",
-  "description": "Redis and Valkey application setup, complete commissioning, customer export and cutover",
+  "description": "Redis and Valkey application setup, SSH deployment, complete commissioning, customer export and cutover",
   "commands": {
     "redis": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/cli.mjs",
     "redis-commission": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/commission.mjs",
     "redis-commissioning": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/commission-operator-cli.mjs",
     "redis-customer-export": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/customer-export.mjs",
-    "redis-cutover": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/cutover.mjs"
+    "redis-cutover": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/cutover.mjs",
+    "redis-ssh": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/deployment/ssh.mjs"
   },
   "commandDescriptions": {
     "redis": "Inspect, prepare and operate Redis/Valkey read products",
     "redis-commission": "Create and receive a complete customer Redis/Valkey source contract",
     "redis-commissioning": "Review, run and reopen commissioning in the original Redis operator workspace",
     "redis-customer-export": "Receive complete generated-client response files through the original customer buyer",
-    "redis-cutover": "Compare the same application contract across original Redis and candidate Valkey workspaces"
+    "redis-cutover": "Compare the same application contract across original Redis and candidate Valkey workspaces",
+    "redis-ssh": "Review, prepare and operate an application with its complete owned SSH database topology"
   },
   "exports": {
     "./seller/redis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/merchant.mjs",
@@ -29,7 +31,9 @@
     "./seller/redis/commission": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/commission.mjs",
     "./seller/redis/commissioning": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/commission-workspace.mjs",
     "./seller/redis/customer-export": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/customer-export.mjs",
-    "./seller/redis/cutover": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/cutover.mjs"
+    "./seller/redis/cutover": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/cutover.mjs",
+    "./seller/redis/deployment/ssh": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/deployment/ssh.mjs",
+    "./seller/redis/deployment/ssh-profile": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/deployment/ssh-profile.mjs"
   },
   "runtimePackageManifests": {
     "redis": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/package.json"
@@ -55,6 +59,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/COMMISSIONING.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/COMMISSIONING_OPERATOR.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/CUSTOMER_EXPORT.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/CUTOVER.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/CUTOVER.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/deployment/SSH_DEPLOYMENT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/deployment/example-standalone.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/deployment/example-cluster.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/deployment/example-sentinel.json"
   ]
 }
