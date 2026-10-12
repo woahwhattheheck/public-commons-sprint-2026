@@ -98,7 +98,9 @@ export function createMcpToolHandler(provider,{bearerToken,authorization,allowed
           ? 'mcp_tool_missing' : 'unknown_upstream_error';
       const recovery=explainFailure({stage:name==='bazaar_search'?'discovery':'mcp',reason:recoveryCode});
       const err={code:e.code??'TOOL_ERROR',reason:e.message??'Error',recovery,
-        ...(e.applied===false?{applied:false}:{})};
+        ...(e.applied===false?{applied:false}:{}),
+        // Providers opt in with public recovery fields; never enumerate Error or cause.
+        ...(plain(e.details)?{details:e.details}:{})};
       return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(err)}],structuredContent:err,isError:true}));
     }
   };
