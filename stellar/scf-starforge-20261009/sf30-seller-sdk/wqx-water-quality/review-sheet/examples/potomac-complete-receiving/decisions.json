@@ -1,0 +1,61 @@
+{
+  "schema": "starforge.wqx-review-sheet.v1",
+  "sourcePlanId": "potomac-quarter-open-waters-01",
+  "sourcePlanSha256": "4f9b1f612d1f9cb5bf3c90720d67cc37b5bd8fcd0c51476e669a340cde514610",
+  "decisions": [
+    {
+      "targetId": "wqx-limit-194cb3ac8769cedd75d7d86227010def0d73c97e364d20e10b3aea82259b6497",
+      "action": "keep",
+      "reason": "Keep this exact original method-specific limit type, value, unit, comment and source pointer in the original source and native result comment. Use the separately reported Censoring Level for censored-result receiving where present, preserving any difference from this nominal/method threshold."
+    },
+    {
+      "targetId": "wqx-limit-1ce8d78ff96115242916b33adbf5a9c0eca7ca3501210e5487345f6ed44647b8",
+      "action": "keep",
+      "reason": "Keep this exact original method-specific limit type, value, unit, comment and source pointer in the original source and native result comment. Use the separately reported Censoring Level for censored-result receiving where present, preserving any difference from this nominal/method threshold."
+    },
+    {
+      "targetId": "wqx-limit-371ad57dc5032ae5a9677e7fe13c45b3186ed106aca899a3603351e0b082c85d",
+      "action": "keep",
+      "reason": "Keep this exact original method-specific limit type, value, unit, comment and source pointer in the original source and native result comment. Use the separately reported Censoring Level for censored-result receiving where present, preserving any difference from this nominal/method threshold."
+    },
+    {
+      "targetId": "wqx-limit-9752494b7707396f1c13dd1018aa3833ae38f4581f52e9f08f29554118557b4d",
+      "action": "keep",
+      "reason": "Keep this exact original method-specific limit type, value, unit, comment and source pointer in the original source and native result comment. Use the separately reported Censoring Level for censored-result receiving where present, preserving any difference from this nominal/method threshold."
+    },
+    {
+      "targetId": "wqx-limit-e96325e1ccc033b4f22032254fa32679fb2724e2a238aa904703a88234fe1057",
+      "action": "keep",
+      "reason": "Keep this exact original method-specific limit type, value, unit, comment and source pointer in the original source and native result comment. Use the separately reported Censoring Level for censored-result receiving where present, preserving any difference from this nominal/method threshold."
+    },
+    {
+      "targetId": "wqx-limit-ec1407e829b21cab79b050f3acb25fc76b8aee2a3982ced8449e7e3cb0a95788",
+      "action": "set",
+      "value": "LAB_REPORTING_LEVEL",
+      "reason": "Use each original Censoring Level and exact unit as the receiving reporting-threshold representation in LAB_REPORTING_LEVEL. Preserve Not Detected and the blank result. This is the source-labelled effective reporting/censoring threshold, rather than a newly measured laboratory reporting level or a method-detection estimate. Preserve every original nominal/method limit, including the 35 differing thresholds, with its exact type, value, unit, comment and source pointer. USGS interpretation: https://water.usgs.gov/owq/OFR_99-193/data.html"
+    },
+    {
+      "targetId": "wqx-result-781d93ebc3821f0d1a602a46145b274fd0e01cdce4136e8f2cd2b69626ebd989",
+      "action": "set",
+      "value": "30 - Churn splitter; plastic; 8 L; cubitainer-type spigot",
+      "reason": "Retain code 30, churn-splitter type, plastic material, eight-litre capacity and cubitainer-type spigot. Use semicolon separators and the standard L abbreviation to fit the native sixty-character categorical result field and avoid its comma-stripping rewrite. The exact original 61-character source label remains attached with this explicit before/after receiving choice."
+    },
+    {
+      "targetId": "wqx-settings-34b3f1d6ddbac4bf73e4b6cc9bae0a34b311b5b265b9c3721582865e5dc4728e",
+      "action": "keep",
+      "reason": "Keep the original receiving project identifier 32UFDQN00 and its existing source-bound mapping."
+    },
+    {
+      "targetId": "wqx-settings-6a10af122f3f57b2f31ffac453d17ae76f51bf27fcfca4c097dabf4a6cac4812",
+      "action": "set",
+      "value": "Complete Chain Bridge Q1 2025 receiving. Original organization USGS, project 32UFDQN00 and the existing source location remain selected. All 1,035 results and all 1,112 original limit records are retained. For 452 Not Detected results, preserve the blank result and each exact Censoring Level as the receiving reporting threshold; preserve all method-specific limits and all 35 differences. Eleven pH receiving unit labels use literal None without changing values. One sample-splitter categorical label uses semicolons and 8 L while preserving its original source text. The complete decision document retains the exact source-plan binding and every reason.",
+      "reason": "Document the complete source-bound receiving representation and all original limit-retention choices for the Potomac quarter."
+    },
+    {
+      "targetId": "wqx-translation-081223604394ba4784951b949635d863cd88e8bfe174879eddd43857c4b7b339",
+      "action": "set",
+      "value": "None",
+      "reason": "Represent the source pH unit label 'standard units' with the receiver's literal unit token 'None', as used for pH in EPA's August 2025 WQX detection-limits guide. Preserve all eleven original pH values, the original unit label and every attached limit. This receiving label satisfies the native twelve-character field without rescaling a measurement. https://www.epa.gov/system/files/documents/2025-09/wqxdetectionlimitsbestpracticesguide_final.pdf"
+    }
+  ]
+}
