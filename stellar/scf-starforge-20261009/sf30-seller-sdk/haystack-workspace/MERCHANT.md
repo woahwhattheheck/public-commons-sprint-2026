@@ -123,3 +123,97 @@ Read `merchant_haystack_delivery_read` with the same delivery UUID. Concatenate 
 The original receiver verifies the package and installs the same workspace in its new owned directory. Start the received editable application through its own CLI or select that directory in the maintained Applications view.
 
 For a large native response, the adapter returns a confirmed saved identity when the mutation's complete response exceeds its view. The full original result stays in the native operation history and editable workspace package. Page record collections or retrieve complete file ranges to consume the work.
+
+
+## Complete point-list modelling
+
+The same catalog also exposes the original three-part modelling actions. For example, the native action `semantic.model.read` is `haystack_semantic_model_read` on direct MCP and `merchant_haystack_semantic_model_read` on the maintained merchant host. Their required arguments remain the catalog's original fields, including the reviewed workspace revision and exact model head for writes.
+
+Retain a complete CSV or TSV as a host-selected `point-list` input. Add entries to the existing private connection configuration:
+
+~~~json
+{
+  "points": {
+    "path": "/absolute/private/original-point-list.tsv",
+    "kind": "point-list",
+    "format": "tsv",
+    "delimiter": "\t",
+    "sha256": "THE_COMPLETE_ORIGINAL_64_CHARACTER_SHA256",
+    "name": "original-point-list.tsv",
+    "sourceReference": "THE_ORIGINAL_SOURCE_REFERENCE"
+  },
+  "contractor-return": {
+    "path": "/absolute/private/complete-returned-workspace.json",
+    "kind": "workspace-return",
+    "sha256": "THE_COMPLETE_RETURNED_64_CHARACTER_SHA256",
+    "name": "complete-returned-workspace.json"
+  }
+}
+~~~
+
+These are members of the original workspace's `inputs` object. The file's declared format, delimiter, full bytes and source reference remain bound to that alias. Column positions distinguish repeated or blank headings. A native grid uses `kind: "source"`; it retains its original JSON v4 path and tool.
+
+The workspace's optional `maxReturnBytes` is separate from `maxInputBytes`. Original grids and point lists remain bounded at 32 MiB; complete returned workspaces may be up to 192 MiB. Both limits are enforced before the alias bytes enter the original action. An alias with a different declared purpose cannot be used for that operation.
+
+Use `merchant_haystack_semantic_intake_import_file` with `workspace`, `input`, `expectedSha256`, the original `operationId` and `expectedRevision`. An optional `sourceUrl` supplies a deliberately selected source reference; otherwise the configured reference is used. The host supplies the original filename, format, delimiter and complete file.
+
+Continue the operator workflow through the same catalog:
+
+1. Page `semantic.intakes.list`, then read the complete selected `semantic.intake.read` pages. Each source row retains its original cells and physical line identity.
+2. Use `semantic.model.preview` with explicit column positions, selected original source IDs, naming rules and proposed classes. Read the complete preview before creating its saved model.
+3. Create or save the full model through `semantic.model.create` or `semantic.model.save`. A save retains its expected head and original source context; later workspace or model changes require an explicit comparison.
+4. Inspect `semantic.catalog`, saved models, full model comparison pages and review history. A dictionary entry or reviewed name is an operator decision. It does not establish a live field observation.
+5. Run `semantic.validate` against the exact saved model head using the selected offline Brick runtime. Read `semantic.validation.read` and download **every** output in its returned metadata through `semantic.output.read`. The complete native Boolean, report bytes, runtime identity and source-linked mapping observations remain distinct.
+6. Save `semantic.model.review` for the exact saved version. Retain the actual validation ID where applicable.
+7. Prepare `semantic-report` in JSON, CSV or HTML, `semantic-dictionary` in JSON or CSV, or the complete `workspace` package with the original `delivery.prepare` operation.
+
+Every mutation and delivery has one original UUID and exact payload. A transport interruption keeps that request and its reviewed revision. Read `operation.read`; retry only the identical envelope to recover its original result.
+
+### Complete large JSON views
+
+A complete model, catalogue or returned-model comparison can exceed the merchant host's 8 MiB response capacity. The underlying native HTTP client retains the full response. Read it through the original-content range wrapper rather than omitting rows or model fields.
+
+Call `merchant_haystack_semantic_read` with:
+
+~~~json
+{
+  "workspace": "building",
+  "action": "semantic.model.read",
+  "args": {
+    "expectedRevision": 12,
+    "modelId": "THE_ORIGINAL_MODEL_ID"
+  },
+  "offset": 0,
+  "length": 1048576
+}
+~~~
+
+The response declares `stellar-forge.haystack-semantic-json-range.v1`, the original workspace, action, complete byte count, full SHA-256, chunk SHA-256, base64 bytes and next offset. Keep the **same action, arguments and workspace revision**, add its `expectedResponseSha256`, and continue until `complete`. Verify all offsets and hashes, concatenate every byte, then decode the full UTF-8 JSON. Do not decode individual chunks that may end inside a multibyte character.
+
+The wrapper accepts only declared stable read actions: semantic lists and record reads, the original catalogue and saved-version comparison. Native source/output byte reads retain their existing file-range tools. New previews remain explicit native requests.
+
+### Review a contractor return
+
+Use `merchant_haystack_semantic_return_preview_file` with the original workspace alias, pinned return input, file SHA-256 and reviewed local revision. It invokes the original complete returned-workspace comparison. Optional `offset`, `length` and `expectedResponseSha256` read the same full preview through the range contract above.
+
+Review every returned model. `keep` preserves the complete current local head; `adopt` deliberately chooses the complete returned model against the exact local and incoming heads. The original return retains incoming versions, source files, contexts, native outputs and prior decisions even when the operator keeps a local head. It does not infer a field merge.
+
+Apply the explicit decisions with `merchant_haystack_semantic_return_apply_file`. Supply its original UUID, reviewed revision, author, note, input pin and the unchanged native `decisions` array. Each decision includes `modelId`, `decision`, `expectedLocalHeadId` (null for a new local model) and `expectedIncomingHeadId`. Recover a lost reply with that same selected file and envelope.
+
+The source API also exposes `./seller/haystack/merchant-client`, `./seller/haystack/merchant-tools`, `./seller/haystack/semantic-model` and the complete semantic receiving/browser programmes. The host borrows the original server; its cleanup drains only its own clients.
+
+## Managed Applications and the offline validator
+
+The original **Haystack building turnover and point modelling** application keeps its root workspace URL and adds a **Point-list modelling** related link to `/semantic.html`. Both links use one original application lifecycle, selected workspace UUID and connection record.
+
+Prepare the exact wheel archive through `install_semantic_runtime.py` as described in `SEMANTIC_NATIVE.md`. Keep the virtual environment at its final selected path. In the maintained Applications form, select its existing **environmentFile** field with an owned private JSON file:
+
+~~~json
+{
+  "HAYSTACK_SEMANTIC_PYTHON": "/absolute/private/semantic-runtime/bin/python"
+}
+~~~
+
+The common Applications provider retains that file and its SHA-256 with the saved launch. Start, Open, Stop and reopen use the original controller. The product does not add a second validator selector or process controller. The complete ontology/dependency identity is visible in the modelling view and saved with each actual native result.
+
+`SEMANTIC_BROWSER.mjs` consumes the sole point-modelling programme's existing server and records desktop/mobile operation, exact source downloads, reviewed model edits, interrupted-response recovery, stale peer comparison, complete native outputs and explicit contractor-return decisions. It also exercises the same merchant provider and replays the original saved operations. Actual managed Start/Stop receiving requires the original READY runtime/controller selection and is reported separately until that input is supplied.
