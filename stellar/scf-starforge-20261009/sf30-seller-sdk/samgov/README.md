@@ -113,6 +113,45 @@ To receive original API pages acquired elsewhere, use action import_capture with
 
 To receive an original selected attachment or description body, use action retain_resource with editionId, noticeId, kind, the issued url, filename, mediaType, capturedAt, and contentBase64. The original issued URL must belong to that selected notice. A received file retains status `received_file` and a null request. If the original acquisition includes an HTTP receipt, supply its actual metadata as `response: {request: {method: 'GET', url}, status, headers?}`; its status is retained exactly. Both successfully acquired HTTP resources and original received files carry their bytes into the opportunity handoff. The source index identifies how each source was received.
 
+
+## Receive a saved SAM notice
+
+The same workspace accepts original notice JSON acquired from the SAM website. Receive its original attachment metadata and published history alongside the notice when available. The browser's **Receive saved notice** form accepts these three original files and creates a retained edition. Choose an existing edition in the form to extend that notice collection.
+
+The operator keeps the website response's original data2, notice ID, description bodies, attachment IDs and metadata, publication state, published history entries, and issued response time zone. Each displayed field remains connected to its exact source body and JSON pointer. Received website documents use the retained_notice_document source basis; API search captures keep latest_api_observation.
+
+The CLI accepts the original files directly:
+
+~~~sh
+starforge samgov notice \
+  --workspace /private/sam-opportunities \
+  --notice-file /source/sam-notice-current.json \
+  --resource-index-file /source/sam-notice-attachments.json \
+  --history-file /source/sam-notice-history.json \
+  --name 'Saved notice and issued source register' \
+  --request-id receive-original-notice-1 --expected-revision 0
+~~~
+
+Use --base-edition-id to extend a retained collection. Use --captured-at only when the original acquisition time is known. Otherwise the source records when the file was received here. Exact response bytes remain in their original source objects; the action does not assign an HTTP status to a received file.
+
+The typed action import_notice also accepts an original HTTP receipt:
+
+~~~ts
+await workspace.dispatch('import_notice', {
+  requestId, expectedRevision, name,
+  notice: {contentBase64, filename, capturedAt},
+  resources: {contentBase64: resourcesBase64, filename: resourcesFilename},
+  history: {contentBase64: historyBase64, filename: historyFilename},
+});
+~~~
+
+Each input may additionally supply its original url and response: {request: {method: 'GET', url}, status: 200, headers}. Request URLs must be the original SAM notice, resource-index or history path for that same notice. A source file received without the HTTP envelope keeps received_file and a null request.
+
+Attachment metadata supplies the issued file IDs, names, sizes and access fields. **Receive source file** attaches the actual downloaded bytes at that issued URL; **Capture issued files** uses the original HTTPS transport. Embedded notice descriptions and published history remain readable in the operator and complete exported review. The entire source set follows a selected notice through the original merchant publication and opportunity bridge.
+
+A repeated notice import can extend the selected edition while retaining original files whose issued URLs remain in its current attachment index. Earlier editions and named handoffs retain their prior contents. The portable receiver reconstructs both source formats from their retained bodies and validates the notice, index, history and resource set before advancing the workspace.
+
+
 ## Reviews, selections, and change handling
 
 A notice review belongs to one edition and notice ID. Supported states are unreviewed, watching, qualified, declined, and needs_review. The operator records its owner and notes. A reviewed deadline is separate from the provider's source deadline and has the form:

@@ -3,6 +3,7 @@ import { join,resolve } from 'node:path';
 import { privateDirectory,readJson,writeJson,jsonBytes } from '../../sf88-operator-buyer-cli/node/store.mjs';
 import { openOpportunityStore } from '../../partners/lgndx-opportunity-operations/model.mjs';
 import { MAX_SOURCE_BYTES as OPPORTUNITY_SOURCE_LIMIT } from '../../partners/lgndx-opportunity-operations/sources.mjs';
+import {noticeSourceIds} from './notice-document.mjs';
 import { SOURCE_BASIS,sha,canonical,copy,plain,text,integer,identifier,requireThat,
   SamError,now,reviewDeadline,sourceBuffer } from './core.mjs';
 
@@ -36,8 +37,7 @@ export async function prepareSamOpportunity({
     requireThat(!availableSources.has(source.id),'OPPORTUNITY_SOURCE_DUPLICATE');
     availableSources.set(source.id,source);
   }
-  const requestedIds=[notice.source.sourceId,...notice.resources.filter(resource=>resource.sourceId && (resource.status===200 || resource.status==='received_file'))
-    .map(resource=>resource.sourceId)];
+  const requestedIds=noticeSourceIds(notice,{successfulResourcesOnly:true});
   requireThat(new Set(requestedIds).size===availableSources.size &&
     requestedIds.every(id=>availableSources.has(id)),'OPPORTUNITY_SOURCE_SET_CHANGED');
   const normalizedTitle=text(title??notice.title??notice.solicitationNumber??notice.noticeId,'Opportunity title',500);
@@ -115,7 +115,7 @@ export async function prepareSamOpportunity({
           documentKind,stage:'research',dueAt:selectedDeadline?.at??null,
           timeZone:selectedDeadline?.timeZone??'',notes:'Original SAM notice: '+notice.noticeId+
             '. Raw response deadline: '+(notice.responseDeadLine??'not supplied')+
-            '. Source basis: latest API observation.'}}));
+            '. Source basis: '+(edition.sourceBasis??SOURCE_BASIS)+'.'}}));
     }
     for(const source of sources){
       const name='source-'+source.id;
@@ -144,7 +144,7 @@ export async function prepareSamOpportunity({
         await save();
       }
     }
-    const observation={schema:'stellar-forge.samgov-selected-notice.v1',sourceBasis:SOURCE_BASIS,
+    const observation={schema:'stellar-forge.samgov-selected-notice.v1',sourceBasis:edition.sourceBasis??SOURCE_BASIS,
       workspaceId,sourceRevision:journal.sourceRevision,selection:copy(selection),edition:copy(edition),
       notice:copy(notice),sources:sources.map(source=>{const item=copy(source);delete item.contentBase64;delete item.contentText;return item;}),
       sourceBindings:copy(journal.sourceBindings),deadlineReview:selectedDeadline,bridgeId};

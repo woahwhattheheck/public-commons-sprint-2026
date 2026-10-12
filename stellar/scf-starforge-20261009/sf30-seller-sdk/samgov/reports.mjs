@@ -38,6 +38,7 @@ function contents(packet) {
   const sourceIds = new Set();
   for (const {notice} of rows) {
     if (notice.source?.sourceId) sourceIds.add(notice.source.sourceId);
+    for (const companion of notice.source?.companions || []) sourceIds.add(companion.sourceId);
     for (const resource of notice.resources || []) if (resource.sourceId) sourceIds.add(resource.sourceId);
   }
   const sources = selection ? packet.sources.filter(item => sourceIds.has(item.id)) : packet.sources;
@@ -120,7 +121,7 @@ export function renderSamMarkdown(packet) {
     if (r?.deadline) line('- Reviewed deadline: ' + r.deadline.at + ' · ' + r.deadline.timeZone + ' · ' + r.deadline.reason);
     line('- Operator review: ' + label(r?.status || 'unreviewed') + (r?.owner ? ' · ' + r.owner : ''));
     if (r?.notes) { line(''); line(r.notes); }
-    line(''); line('Edition: ' + e.id + ' · captured ' + e.createdAt + ' · ' + (e.complete ? 'complete search' : 'partial search'));
+    line(''); line('Edition: ' + e.id + ' · captured ' + e.createdAt + ' · ' + (e.complete ? 'complete retained scope' : 'partial retained scope')+' · '+label(e.sourceBasis));
     if (safeUrl(n.uiUrl)) { line(''); line('Notice source: ' + safeUrl(n.uiUrl)); }
     if (n.awardNumber || n.awardAmount) { line(''); line('Award as issued: ' + [n.awardNumber,n.awardAmount,n.awardDate,n.awardeeName,n.awardeeUei].filter(Boolean).join(' · ')); }
     if ((n.pointOfContact || []).length) {
@@ -129,6 +130,18 @@ export function renderSamMarkdown(packet) {
         line('- ' + [contact.fullName || contact.fullname,contact.title,contact.email,contact.phone].filter(Boolean).join(' · '));
     }
     line(''); line('Retained source: ' + n.source?.sourceId + ' · row ' + n.source?.rowPointer + ' · record SHA256 ' + n.recordSha256);
+    if(n.descriptions?.length){
+      line('');line('Issued description:');
+      for(const description of n.descriptions){
+        line('');line(description.body);line('');
+        line('Original pointer: '+description.sourceId+' '+description.rowPointer);
+      }
+    }
+    if(n.noticeHistory?.length){
+      line('');line('Published history:');
+      for(const entry of n.noticeHistory)
+        line('- '+entry.index+' · '+entry.postedDate+' · '+entry.actionType+' · '+entry.opportunityId);
+    }
     for (const resource of n.resources || []) {
       line(''); line('Retained ' + label(resource.kind) + ': ' + sourceCaption(resource));
       if (resource.url) line(resource.url);
@@ -172,11 +185,15 @@ export function renderSamHtml(packet) {
     const contacts = (n.pointOfContact || []).map(contact =>
       '<li>'+esc([contact.fullName || contact.fullname,contact.title,contact.email,contact.phone].filter(Boolean).join(' · '))+'</li>').join('');
     return '<article class="notice"><p class="eyebrow">'+esc(n.solicitationNumber || n.noticeId)+'</p><h3>'+esc(n.title)+'</h3>' +
-      kv([['Organization',n.fullParentPathName],['Notice type',n.type],['Active as issued',n.active],['Posted as issued',n.postedDate],['Deadline as issued',n.responseDeadLine || 'Not supplied'],['Reviewed deadline',r?.deadline ? [r.deadline.at,r.deadline.timeZone,r.deadline.reason].join(' · ') : null],['NAICS / classification',[n.naicsCode,n.classificationCode].filter(Boolean).join(' / ')],['Set-aside',[n.setAsideCode,n.setAsideDescription].filter(Boolean).join(' · ')],['Review',label(r?.status || 'unreviewed')+(r?.owner?' · '+r.owner:'')]]) +
+      kv([['Organization',n.fullParentPathName],['Organization ID',n.organizationId],['Issued time zone',n.issuedTimeZone],['Notice type',n.type],['Active as issued',n.active],['Posted as issued',n.postedDate],['Deadline as issued',n.responseDeadLine || 'Not supplied'],['Reviewed deadline',r?.deadline ? [r.deadline.at,r.deadline.timeZone,r.deadline.reason].join(' · ') : null],['NAICS / classification',[n.naicsCode,n.classificationCode].filter(Boolean).join(' / ')],['Set-aside',[n.setAsideCode,n.setAsideDescription].filter(Boolean).join(' · ')],['Review',label(r?.status || 'unreviewed')+(r?.owner?' · '+r.owner:'')]]) +
       (r?.notes?'<div class="review">'+esc(r.notes)+'</div>':'') +
-      '<p class="muted">'+link(n.uiUrl,'Open issued notice')+' · Edition '+esc(e.id)+' · '+esc(e.createdAt)+' · '+(e.complete?'Complete search':'Partial search')+'</p>' +
+      '<p class="muted">'+link(n.uiUrl,'Open issued notice')+' · Edition '+esc(e.id)+' · '+esc(e.createdAt)+' · '+(e.complete?'Complete retained scope':'Partial retained scope')+' · '+esc(label(e.sourceBasis))+'</p>' +
       (n.awardNumber || n.awardAmount ? '<h4>Award information as issued</h4>'+kv([['Award number',n.awardNumber],['Amount',n.awardAmount],['Award date',n.awardDate],['Awardee',n.awardeeName],['UEI',n.awardeeUei]]) : '') +
       (contacts?'<details><summary>Published contact information</summary><ul>'+contacts+'</ul></details>':'') +
+      (n.descriptions?.length?'<h4>Issued description</h4>'+n.descriptions.map(item=>
+        '<pre>'+esc(item.body)+'</pre><p class="mono">'+esc(item.sourceId+' '+item.rowPointer)+'</p>').join(''):'')+
+      (n.noticeHistory?.length?'<details><summary>Published notice history</summary><div class="table-wrap"><table class="table"><thead><tr><th>Version</th><th>Posted as issued</th><th>Action</th><th>Notice</th></tr></thead><tbody>'+
+        n.noticeHistory.map(item=>'<tr><td>'+esc(item.index)+'</td><td>'+esc(item.postedDate)+'</td><td>'+esc(item.actionType)+'</td><td>'+esc(item.opportunityId)+'</td></tr>').join('')+'</tbody></table></div></details>':'')+
       (resources?'<h4>Retained description and attachments</h4><div class="table-wrap"><table class="table"><thead><tr><th>Kind</th><th>File</th><th>Bytes</th><th>SHA256</th></tr></thead><tbody>'+resources+'</tbody></table></div>':'') +
       (missing.length?'<details><summary>'+missing.length+' issued resource links awaiting retained bytes</summary><ul>'+missing.map(url=>'<li>'+link(url,url)+'</li>').join('')+'</ul></details>':'') +
       '<p class="mono">Notice '+esc(n.noticeId)+' · record '+esc(n.recordSha256)+'<br>Source '+esc(n.source?.sourceId)+' · row '+esc(n.source?.rowPointer)+'</p></article>';
@@ -193,7 +210,7 @@ export function renderSamHtml(packet) {
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>'+esc(view.title)+'</title><style>'+css+'</style></head><body><main><header><p class="eyebrow">Starforge · SAM.gov opportunity intake</p><h1>'+esc(view.title)+'</h1><p class="muted">Workspace '+esc(packet.id)+' · revision '+esc(packet.revision)+' · '+esc(packet.createdAt)+'</p>'+
     (view.handoff?kv([['Named handoff',view.handoff.id],['Source revision reviewed',view.handoff.sourceRevision],['Selection revision',view.handoff.selectionRevision],['Prepared by',view.handoff.createdBy]])+'<p>'+esc(view.handoff.note)+'</p>':'')+
     (view.selection?.notes?'<p>'+esc(view.selection.notes)+'</p>':'')+
-    '</header><h2>Notice register</h2><p>'+view.rows.length+' notice records across '+new Set(view.rows.map(row=>row.edition.id)).size+' retained editions.</p><p class="muted">The public API supplies the latest available notice version. Edition history records this workspace’s captures. Source dates, response deadlines and amounts retain the issued strings.</p>'+
+    '</header><h2>Notice register</h2><p>'+view.rows.length+' notice records across '+new Set(view.rows.map(row=>row.edition.id)).size+' retained editions.</p><p class="muted">Each edition records its original source format and acquisition. Search captures and received notice documents retain their own source history. Source dates, response deadlines and amounts retain the issued strings.</p>'+
     (notices||'<p>No notices are retained in this view.</p>')+changeHtml+'<h2>Retained source index</h2>'+sources+
     '<footer>The companion portable JSON contains the original revision chain, complete retained editions and source objects for receiving.<p class="mono">Packet SHA256 '+esc(packet.sha256)+'</p></footer></main></body></html>\n';
 }

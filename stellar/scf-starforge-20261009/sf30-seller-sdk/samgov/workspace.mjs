@@ -13,6 +13,8 @@ import {
   validateDescriptionUrl, safeHeaders, sourceBuffer, parseSearchPage, noticeRow, reviewDeadline, compareNotices,
 } from './core.mjs';
 import { createSamTransport } from './transport.mjs';
+import {NOTICE_DOCUMENT_FORMAT,NOTICE_DOCUMENT_BASIS,noticeDocumentUrls,validateNoticeDocumentUrl,
+  parseNoticeDocument,noticeDocumentRow,rebuildNotice,noticeSourceIds} from './notice-document.mjs';
 
 const HASH = /^[a-f0-9]{64}$/;
 const MAX_STATE_BYTES = 32 * 1024 * 1024;
@@ -28,7 +30,7 @@ const controlledError = error => ({
 });
 const safeFilename = value => text(value,'Filename',240).replace(/[\\/\x00-\x1f\x7f]/g,'_');
 function validSourceAcquisition(source) {
-  if(!['search_page','description','attachment'].includes(source.kind))return false;
+  if(!['search_page','description','attachment','notice_record','notice_resources','notice_history'].includes(source.kind))return false;
   if(source.status==='received_file')return source.kind!=='search_page' && source.request===null &&
     plain(source.headers) && Object.keys(source.headers).length===0 &&
     Array.isArray(source.redirects) && source.redirects.length===0;
@@ -348,7 +350,7 @@ export async function openSamWorkspace({
       'DUPLICATE_NOTICE_IN_EDITION','Each selected API observation may contain a notice ID once.');
     const body={schema:'stellar-forge.samgov-edition.v1',id,rows};
     const objectSha256=await putObject(jsonBytes(body));
-    const sourceIds=[...new Set(rows.flatMap(row=>[row.source.sourceId,...row.resources.map(item=>item.sourceId)]).filter(Boolean))];
+    const sourceIds=[...new Set(rows.flatMap(row=>noticeSourceIds(row)))];
     const entry={id,name:text(name,'Edition name',500),kind,captureId:captureId??null,parentEditionId,
       querySha256,complete:Boolean(complete),sourceBasis,rowCount:rows.length,sourceCount:sourceIds.length,
       sourceIds,sha256:sha(rows),objectSha256,createdAt:now()};
@@ -600,7 +602,7 @@ export async function openSamWorkspace({
   async function compare(beforeEditionId,afterEditionId){
     ensure();const state=await current(),before=await editionData(beforeEditionId,state),
       after=await editionData(afterEditionId,state);
-    return {before:before.record,after:after.record,sourceBasis:SOURCE_BASIS,
+    return {before:before.record,after:after.record,sourceBasis:before.record.sourceBasis===after.record.sourceBasis?after.record.sourceBasis:'mixed_retained_sources',
       ...compareNotices(before.rows,after.rows)};
   }
   async function importedCapture(state,payload,{at}){
@@ -642,6 +644,51 @@ export async function openSamWorkspace({
     return {queryId,captureId,editionId:edition.id,status:progress.status,complete:progress.status==='complete'};
   }
 
+  async function importedNotice(state,payload,{at}){
+    requireThat(plain(payload.notice),'NOTICE_DOCUMENT_REQUIRED',
+      'Receive the complete original SAM notice document.');
+    const initial=parseNoticeDocument(sourceJSON(sourceBuffer(payload.notice))),id=initial.id,
+      urls=noticeDocumentUrls(id),sources=[],parts={};
+    const inputs=[['notice','notice_record'],['resources','notice_resources'],['history','notice_history']];
+    for(const [field,kind] of inputs){
+      const input=payload[field];if(input===undefined)continue;
+      requireThat(plain(input),'NOTICE_DOCUMENT_INPUT_INVALID');
+      const url=validateNoticeDocumentUrl(input.url??urls[field],kind,id);
+      let receipt={url,request:null,status:'received_file',capturedAt:input.capturedAt??at,
+        filename:input.filename??('sam-'+id+'-'+field+'.json'),mediaType:'application/json',
+        body:sourceBuffer(input),headers:{},redirects:[]};
+      if(input.response!==undefined){
+        requireThat(plain(input.response),'SOURCE_RESPONSE_INVALID');
+        compareRequest(input.response.request,{url});
+        requireThat(input.response.status===200,'NOTICE_DOCUMENT_HTTP_RESPONSE_REQUIRED',
+          'Receive the original successful notice response, or the retained file without an HTTP receipt.');
+        receipt={...receipt,request:{method:'GET',url},status:input.response.status,
+          headers:safeHeaders(input.response.headers??{})};
+      }
+      const source=await retainedSource(receipt,{kind,noticeId:id});sources.push(source);
+      parts[field]=sourceJSON(await objectBytes(source.sha256,MAX_SOURCE_BYTES));
+    }
+    const original=sources[0],companions=sources.slice(1).map(source=>({
+      kind:source.kind,sourceId:source.id,sha256:source.sha256,capturedAt:source.capturedAt,
+      url:source.url,rowPointer:''}));
+    const row=noticeDocumentRow(parts,{sourceId:original.id,sha256:original.sha256,
+      capturedAt:original.capturedAt,url:original.url,rowPointer:'',pageOffset:null,
+      format:NOTICE_DOCUMENT_FORMAT,companions},[]);
+    const parent=payload.editionId?await editionData(payload.editionId,state):null;
+    const previous=parent?.rows.find(item=>item.noticeId===id),available=selectedResources(row);
+    if(previous)row.resources=previous.resources.filter(resource=>
+      available.some(item=>item.kind===resource.kind && item.url===resource.url)).map(copy);
+    const selected=rebuildNotice(row),rows=parent?parent.rows.filter(item=>item.noticeId!==id).concat([selected]):[selected];
+    addSources(state,sources);
+    const basis=rows.every(item=>item.source.format===NOTICE_DOCUMENT_FORMAT)?NOTICE_DOCUMENT_BASIS:'mixed_retained_sources';
+    const edition=await retainEdition(state,{name:payload.name??row.title,kind:'notice_document_observation',
+      parentEditionId:parent?.record.id??null,captureId:null,
+      querySha256:sha({format:NOTICE_DOCUMENT_FORMAT,urls:sources.map(source=>source.url),
+        parentEditionId:parent?.record.id??null}),sourceBasis:basis,
+      complete:parent?parent.record.complete:true,rows});
+    return {editionId:edition.id,parentEditionId:edition.parentEditionId,noticeId:id,
+      sourceIds:sources.map(source=>source.id),sourceBasis:basis};
+  }
   function selectedResources(row,{descriptions=true,attachments=true,resourceUrls}={}){
     requireThat(typeof descriptions==='boolean' && typeof attachments==='boolean','RESOURCE_SELECTION_INVALID');
     const candidates=[];
@@ -712,11 +759,11 @@ export async function openSamWorkspace({
       const received=additions.get(row.noticeId);if(!received)return copy(row);
       const replaced=new Set(received.map(item=>item.kind+'\n'+item.url));
       const resources=row.resources.filter(item=>!replaced.has(item.kind+'\n'+item.url)).concat(received);
-      return noticeRow(row.raw,row.source,resources);
+      return rebuildNotice(row,resources);
     });
     const edition=await retainEdition(state,{name:parent.record.name+' — retained resources',
       kind:'resource_enriched',captureId:parent.record.captureId,parentEditionId:parent.record.id,
-      querySha256:parent.record.querySha256,complete:parent.record.complete,rows});
+      querySha256:parent.record.querySha256,complete:parent.record.complete,sourceBasis:parent.record.sourceBasis,rows});
     journal.completedAt=now();journal.editionIdResult=edition.id;await writeJson(path,journal);
     return {editionId:edition.id,parentEditionId:parent.record.id,operationId,...resultCounts};
   }
@@ -743,12 +790,12 @@ export async function openSamWorkspace({
     addSources(state,[source]);
     const received=resourceRecord(source,payload.kind,payload.url),rows=parent.rows.map(item=>{
       if(item.noticeId!==row.noticeId)return copy(item);
-      return noticeRow(item.raw,item.source,item.resources.filter(resource=>
+      return rebuildNotice(item,item.resources.filter(resource=>
         !(resource.kind===payload.kind && resource.url===payload.url)).concat([received]));
     });
     const edition=await retainEdition(state,{name:parent.record.name+' — retained resource',
       kind:'resource_enriched',captureId:parent.record.captureId,parentEditionId:parent.record.id,
-      querySha256:parent.record.querySha256,complete:parent.record.complete,rows});
+      querySha256:parent.record.querySha256,complete:parent.record.complete,sourceBasis:parent.record.sourceBasis,rows});
     return {sourceId:source.id,editionId:edition.id,parentEditionId:parent.record.id};
   }
   async function dispatch(action,payload={},options={}){
@@ -770,7 +817,7 @@ export async function openSamWorkspace({
       return runCapture(capture.id,options);
     }
     const actions=new Set(['save_query','start_capture','resize_capture','import_capture','save_selection',
-      'review_notice','review_change','create_handoff','capture_resources','retain_resource',
+      'review_notice','review_change','create_handoff','capture_resources','retain_resource','import_notice',
       'prepare_merchant','buyer_review','prepare_buyer','prepare_opportunity']);
     requireThat(actions.has(action),'ACTION_UNKNOWN','Unknown SAM workspace action: '+action);
     return commit(action,payload,async(state,context)=>{
@@ -817,6 +864,7 @@ export async function openSamWorkspace({
         return {captureId:capture.id,maxRecords:maximum,status:'paused'};
       }
       if(action==='import_capture')return importedCapture(state,payload,context);
+      if(action==='import_notice')return importedNotice(state,payload,context);
       if(action==='save_selection'){
         const edition=await editionData(payload.editionId,state),
           noticeIds=uniqueStrings(payload.noticeIds,'Selected notice IDs'),
@@ -880,8 +928,7 @@ export async function openSamWorkspace({
         const {prepareSamMerchant}=await import('./merchant.mjs');
         const prepared=await prepareSamMerchant({directory:join(directory,'merchant',publicationId),
           publicationId,workspaceId:state.id,sourceRevision:state.revision,...selected,
-          sources:state.sources.filter(source=>selected.rows.some(row=>row.source.sourceId===source.id ||
-            row.resources.some(resource=>resource.sourceId===source.id))),
+          sources:state.sources.filter(source=>selected.rows.some(row=>noticeSourceIds(row).includes(source.id))),
           capture:copy(state.captures.find(capture=>capture.id===selected.edition.captureId)??null),
           payment:payload.payment,origin:payload.origin,path:payload.path,
           defaultLimit:payload.defaultLimit,maxLimit:payload.maxLimit});
@@ -930,8 +977,7 @@ export async function openSamWorkspace({
         requireThat(row,'NOTICE_NOT_SELECTED','Select this notice in the retained selection.');
         const {prepareSamOpportunity}=await import('./opportunity.mjs');
         const inputs=[];
-        for(const sourceId of [row.source.sourceId,...row.resources.filter(item=>item.sourceId && (item.status===200 || item.status==='received_file'))
-          .map(item=>item.sourceId)]){
+        for(const sourceId of noticeSourceIds(row,{successfulResourcesOnly:true})){
           const source=await sourceRecord(sourceId,state);
           inputs.push({...copy(source),contentBase64:(await objectBytes(source.sha256,MAX_SOURCE_BYTES)).toString('base64')});
         }
@@ -1027,17 +1073,40 @@ export async function openSamWorkspace({
       requireThat(plain(row) && plain(row.source) && Array.isArray(row.resources) &&
         !ids.has(row.noticeId),'EDITION_ROW_INVALID');ids.add(row.noticeId);
       const source=sources.get(row.source.sourceId);
-      requireThat(source?.kind==='search_page' && source.status===200 &&
-        source.sha256===row.source.sha256 && source.capturedAt===row.source.capturedAt &&
-        source.url===row.source.url,'NOTICE_SOURCE_CHANGED');
+      requireThat(source && source.sha256===row.source.sha256 &&
+        source.capturedAt===row.source.capturedAt && source.url===row.source.url,'NOTICE_SOURCE_CHANGED');
       sourceIds.add(source.id);
-      const pointer=/^\/opportunitiesData\/(0|[1-9]\d*)$/.exec(row.source.rowPointer??'');
-      requireThat(pointer,'NOTICE_SOURCE_POINTER_INVALID');
       let parsed=parsedSources.get(source.id);
       if(!parsed){parsed=sourceJSON(objects.get(source.sha256));parsedSources.set(source.id,parsed);}
-      requireThat(Array.isArray(parsed.opportunitiesData) &&
-        canonical(parsed.opportunitiesData[Number(pointer[1])])===canonical(row.raw) &&
-        String(parsed.offset)===String(row.source.pageOffset),'NOTICE_SOURCE_BYTES_CHANGED');
+      if(row.source.format===NOTICE_DOCUMENT_FORMAT){
+        requireThat(source.kind==='notice_record' && source.noticeId===row.noticeId &&
+          (source.status===200 || source.status==='received_file') && row.source.rowPointer==='' &&
+          row.source.pageOffset===null && canonical(parsed)===canonical(row.raw),'NOTICE_DOCUMENT_SOURCE_CHANGED');
+        validateNoticeDocumentUrl(source.url,'notice_record',row.noticeId);
+        const companions=row.source.companions,parts={notice:parsed};
+        requireThat(Array.isArray(companions) && companions.length<=2 &&
+          new Set(companions.map(item=>item.kind)).size===companions.length,'NOTICE_DOCUMENT_COMPANIONS_CHANGED');
+        for(const companion of companions){
+          const retained=sources.get(companion.sourceId);
+          requireThat(['notice_resources','notice_history'].includes(companion.kind) &&
+            retained && retained.kind===companion.kind && retained.noticeId===row.noticeId &&
+            (retained.status===200 || retained.status==='received_file') &&
+            companion.sha256===retained.sha256 && companion.capturedAt===retained.capturedAt &&
+            companion.url===retained.url && companion.rowPointer==='','NOTICE_DOCUMENT_COMPANION_CHANGED');
+          validateNoticeDocumentUrl(retained.url,retained.kind,row.noticeId);sourceIds.add(retained.id);
+          const key=retained.kind==='notice_resources'?'resources':'history';
+          parts[key]=sourceJSON(objects.get(retained.sha256));
+        }
+        requireThat(canonical(row)===canonical(noticeDocumentRow(parts,row.source,row.resources)),
+          'NOTICE_DOCUMENT_VIEW_CHANGED');
+      }else{
+        requireThat(source.kind==='search_page' && source.status===200,'NOTICE_SOURCE_CHANGED');
+        const pointer=/^\/opportunitiesData\/(0|[1-9]\d*)$/.exec(row.source.rowPointer??'');
+        requireThat(pointer,'NOTICE_SOURCE_POINTER_INVALID');
+        requireThat(Array.isArray(parsed.opportunitiesData) &&
+          canonical(parsed.opportunitiesData[Number(pointer[1])])===canonical(row.raw) &&
+          String(parsed.offset)===String(row.source.pageOffset),'NOTICE_SOURCE_BYTES_CHANGED');
+      }
       const available=selectedResources(row);
       const resourceKeys=new Set();
       for(const resource of row.resources){
@@ -1054,7 +1123,7 @@ export async function openSamWorkspace({
         }else requireThat(resource.status==='unavailable' && resource.sha256===null &&
           resource.bytes===0 && plain(resource.error),'RESOURCE_FAILURE_CHANGED');
       }
-      requireThat(canonical(row)===canonical(noticeRow(row.raw,row.source,row.resources)),'NOTICE_VIEW_CHANGED',
+      requireThat(canonical(row)===canonical(rebuildNotice(row)),'NOTICE_VIEW_CHANGED',
         'The portable notice view differs from its original source record.');
     }
     requireThat(edition.sourceCount===sourceIds.size &&
@@ -1098,7 +1167,7 @@ export async function openSamWorkspace({
         else requireThat(sha(editionRows.get(edition.objectSha256))===edition.sha256,'EDITION_CHANGED');
         if(edition.parentEditionId){
           const parent=record(current,'editions',edition.parentEditionId);
-          requireThat(parent.querySha256===edition.querySha256,'EDITION_PARENT_CHANGED');
+          if(edition.kind!=='notice_document_observation')requireThat(parent.querySha256===edition.querySha256,'EDITION_PARENT_CHANGED');
           if(edition.kind==='resource_enriched'){
             const parentRows=editionRows.get(parent.objectSha256) ??
               packetEdition(parent,objects,sources,parsedSources);
