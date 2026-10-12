@@ -3,9 +3,11 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, lstatSync, chmodSync, realpathSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { validateHostComposition } from '../host-profile.mjs';
 
 export const CONSOLE_SCHEMA = 'stellar-forge.merchant-operator-console.v1';
 export const ARCHIVE_SCHEMA = 'stellar-forge.merchant-operator-profile.v1';
+export const HOST_BINDING_SCHEMA = 'stellar-forge.merchant-host-binding.v1';
 export const digest = value => createHash('sha256').update(value).digest('hex');
 export function fail(code, message, status = 409) {
   return Object.assign(new Error(message), { code, status });
@@ -77,7 +79,8 @@ export class MerchantConsoleStore {
       'CREATE INDEX IF NOT EXISTS drafts_profile ON drafts(profile_id,id,revision)',
       'CREATE INDEX IF NOT EXISTS calls_profile ON calls(profile_id,id)',
       'CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, profile_id TEXT NOT NULL REFERENCES profiles(id), value TEXT NOT NULL)',
-      'CREATE TABLE IF NOT EXISTS imports (sha TEXT PRIMARY KEY, profile_id TEXT NOT NULL, imported_at TEXT NOT NULL)'
+      'CREATE TABLE IF NOT EXISTS imports (sha TEXT PRIMARY KEY, profile_id TEXT NOT NULL, imported_at TEXT NOT NULL)',
+      'CREATE TABLE IF NOT EXISTS host_bindings (profile_id TEXT NOT NULL REFERENCES profiles(id), revision INTEGER NOT NULL, value TEXT NOT NULL, PRIMARY KEY(profile_id,revision))'
     ].join(';'));
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('schema', CONSOLE_SCHEMA);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('id', randomUUID());
@@ -98,6 +101,30 @@ export class MerchantConsoleStore {
     if (!row) throw fail('CONSOLE_PROFILE_NOT_FOUND', 'Select a saved operator profile.', 404);
     return parse(row.value);
   }
+  hostBindings(profileId) {
+    this.profile(profileId);
+    return this.db.prepare('SELECT value FROM host_bindings WHERE profile_id=? ORDER BY revision').all(profileId).map(row=>parse(row.value));
+  }
+  hostBinding(profileId, selectedRevision) {
+    this.profile(profileId);
+    const row=this.db.prepare('SELECT value FROM host_bindings WHERE profile_id=? AND revision=?').get(profileId,revision(selectedRevision));
+    if(!row)throw fail('CONSOLE_HOST_BINDING_NOT_FOUND','Select a retained host-binding revision.',404);
+    return parse(row.value);
+  }
+  #retainHostBinding(profile, origin) {
+    const existing=this.db.prepare('SELECT value FROM host_bindings WHERE profile_id=? AND revision=?').get(profile.id,profile.revision);
+    if(existing) {
+      const value=parse(existing.value);
+      if(value.hostFingerprint!==profile.hostFingerprint||canonical(value.host)!==canonical(profile.host))
+        throw fail('CONSOLE_HOST_BINDING_CONFLICT','This host-binding revision already retains a different host.');
+      return value;
+    }
+    const body={schema:HOST_BINDING_SCHEMA,profileId:profile.id,revision:profile.revision,workspaceId:this.id,
+      recordedAt:now(),origin,hostFingerprint:profile.hostFingerprint,host:profile.host};
+    const value={...body,bindingSha256:digest(canonical(body))};
+    this.db.prepare('INSERT INTO host_bindings VALUES (?,?,?)').run(profile.id,profile.revision,json(value));
+    return value;
+  }
   saveProfile(input, host) {
     const profileId = id(input.id ?? randomUUID());
     const name = title(input.name);
@@ -115,9 +142,12 @@ export class MerchantConsoleStore {
       const value = { id: profileId, name, revision: (old?.revision ?? 0) + 1,
         createdAt: old?.createdAt ?? now(), updatedAt: now(),
         hostFingerprint: old?.hostFingerprint ?? host.configurationFingerprint,
-        host: old?.host ?? host, favorites };
+        host: old?.host ?? host, favorites,
+        ...(old?.bindingRevision!==undefined?{bindingRevision:old.bindingRevision}:!old?{bindingRevision:1}:{}),
+        ...(old?.previousBinding?{previousBinding:old.previousBinding}:{}) };
       this.db.prepare('INSERT INTO profiles(id,revision,value) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,value=excluded.value')
         .run(profileId, value.revision, json(value));
+      if(!old)this.#retainHostBinding(value,'PROFILE_CREATED');
       return value;
     });
   }
@@ -127,10 +157,14 @@ export class MerchantConsoleStore {
       if (old.revision !== revision(input.expectedRevision)) throw fail('CONSOLE_REVISION_CONFLICT', 'Reopen the current profile revision.');
       if (sha(input.expectedHostFingerprint) !== host.configurationFingerprint)
         throw fail('CONSOLE_HOST_CHANGED', 'Inspect the current host configuration before binding.');
-      const value = { ...old, revision: old.revision + 1, updatedAt: now(),
+      if(input.expectedCompositionFingerprint!==undefined&&sha(input.expectedCompositionFingerprint)!==host.composition?.fingerprint)
+        throw fail('CONSOLE_HOST_CHANGED','Refresh the displayed tool and provider composition before rebinding.');
+      if(!this.hostBindings(old.id).length)this.#retainHostBinding(old,'LEGACY_PROFILE');
+      const value = { ...old, revision: old.revision + 1, bindingRevision:old.revision+1, updatedAt: now(),
         hostFingerprint: host.configurationFingerprint, host,
-        previousBinding: { hostFingerprint: old.hostFingerprint, revision: old.revision } };
+        previousBinding: { hostFingerprint: old.hostFingerprint, revision: old.bindingRevision??old.revision } };
       this.db.prepare('UPDATE profiles SET revision=?,value=? WHERE id=?').run(value.revision, json(value), value.id);
+      this.#retainHostBinding(value,'PROFILE_BOUND');
       return value;
     });
   }
@@ -236,7 +270,9 @@ export class MerchantConsoleStore {
     const drafts = this.db.prepare('SELECT value FROM drafts WHERE profile_id=? ORDER BY id,revision').all(profileId).map(row => parse(row.value));
     const calls = this.calls(profileId);
     const deliveries=this.deliveries(profileId);
-    const packet = { schema: ARCHIVE_SCHEMA, sourceWorkspaceId: this.id, profile, drafts, calls, deliveries };
+    const bindings=this.hostBindings(profileId);
+    const packet = { schema: ARCHIVE_SCHEMA, sourceWorkspaceId: this.id, profile, drafts, calls, deliveries,
+      ...(bindings.length?{bindings}:{}) };
     const contentSha256 = digest(canonical(packet));
     return { ...packet, contentSha256 };
   }
@@ -253,6 +289,28 @@ export class MerchantConsoleStore {
     profile.favorites.forEach(toolName);
     if (!plain(profile.host) || profile.host.configurationFingerprint !== profile.hostFingerprint)
       throw fail('CONSOLE_ARCHIVE', 'The profile must retain its original host binding.', 400);
+    try{validateHostComposition(profile.host.composition,digest);}catch(error){throw fail('CONSOLE_ARCHIVE',error.message,400);}
+    const bindings=packet.bindings??[],bindingKeys=new Map();
+    if(!Array.isArray(bindings)||bindings.length>10000)throw fail('CONSOLE_ARCHIVE','Receive the complete retained host-binding history.',400);
+    for(const binding of bindings) {
+      if(!plain(binding)||binding.schema!==HOST_BINDING_SCHEMA||binding.profileId!==profile.id||
+          !plain(binding.host)||binding.host.configurationFingerprint!==binding.hostFingerprint||
+          !['PROFILE_CREATED','PROFILE_BOUND','LEGACY_PROFILE'].includes(binding.origin))
+        throw fail('CONSOLE_ARCHIVE','Retain each original host-binding identity.',400);
+      id(binding.workspaceId);revision(binding.revision);timestamp(binding.recordedAt);sha(binding.hostFingerprint);
+      if(bindingKeys.has(binding.revision)||binding.revision>profile.revision)
+        throw fail('CONSOLE_ARCHIVE','Receive unique host bindings within their original profile revisions.',400);
+      const {bindingSha256,...original}=binding;
+      if(digest(canonical(original))!==sha(bindingSha256))throw fail('CONSOLE_ARCHIVE_CHANGED','A retained host binding changed.',400);
+      try{validateHostComposition(binding.host.composition,digest);}catch(error){throw fail('CONSOLE_ARCHIVE',error.message,400);}
+      bindingKeys.set(binding.revision,binding);
+    }
+    if(bindings.length) {
+      const active=bindingKeys.get(revision(profile.bindingRevision));
+      if(!active||active.hostFingerprint!==profile.hostFingerprint||canonical(active.host)!==canonical(profile.host))
+        throw fail('CONSOLE_ARCHIVE_CHANGED','The current profile must retain its selected original host binding.',400);
+    } else if(profile.bindingRevision!==undefined)
+      throw fail('CONSOLE_ARCHIVE','Include the current profile’s retained host-binding history.',400);
     const draftKeys = new Map(), callKeys = new Set(), deliveryKeys = new Set();
     for (const draft of packet.drafts) {
       if (!plain(draft)) throw fail('CONSOLE_ARCHIVE', 'Receive original draft objects.', 400);
@@ -318,6 +376,7 @@ export class MerchantConsoleStore {
       for (const call of packet.calls)
         if (this.db.prepare('SELECT 1 FROM calls WHERE id=?').get(call.id)) throw fail('CONSOLE_IMPORT_CONFLICT', 'An original call ID already belongs to this workspace.');
       this.db.prepare('INSERT INTO profiles VALUES (?,?,?)').run(profile.id, profile.revision, json(profile));
+      for(const binding of bindings)this.db.prepare('INSERT INTO host_bindings VALUES (?,?,?)').run(profile.id,binding.revision,json(binding));
       for (const draft of packet.drafts) this.db.prepare('INSERT INTO drafts VALUES (?,?,?,?)').run(draft.id, draft.revision, profile.id, json(draft));
       for (const call of packet.calls) this.db.prepare('INSERT INTO calls VALUES (?,?,?)').run(call.id, profile.id, json(call));
       for(const value of packet.deliveries)this.db.prepare('INSERT INTO deliveries VALUES (?,?,?)').run(value.id,profile.id,json(value));
