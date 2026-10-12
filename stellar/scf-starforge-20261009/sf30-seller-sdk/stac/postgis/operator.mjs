@@ -11,9 +11,11 @@ import {claimDirectory, member, writeJSONOnce, readJSON, fileRecord} from './fil
 const ACTIONS = Object.freeze({
   inspect: 'inspect', stage: 'stage', review: 'review', row: 'readRow', promote: 'promote', rollback: 'rollback',
   'export-receiving': 'exportReceiving', 'export-backup': 'exportBackup', 'restore-backup': 'restoreBackup',
-  'recover-operation': 'recoverOperation'
+  'recover-operation': 'recoverOperation',
+  'field-inspect':'inspectField','field-import':'importField','field-source':'readField','field-targets':'fieldTargets',
+  'field-preview':'previewField','field-review':'saveFieldReview','field-stage':'stageField'
 });
-const MUTATIONS = new Set(['stage', 'promote', 'rollback', 'export-receiving', 'export-backup', 'restore-backup']);
+const MUTATIONS = new Set(['stage', 'promote', 'rollback', 'export-receiving', 'export-backup', 'restore-backup','field-import','field-review','field-stage']);
 const MAX_REQUEST_BYTES = 16 * 1024 * 1024;
 
 export async function startOperator({connection, profile: inputProfile, directory, python, port = 0, handleSignals = true}) {
