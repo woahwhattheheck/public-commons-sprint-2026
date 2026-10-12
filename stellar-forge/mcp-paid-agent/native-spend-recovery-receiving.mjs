@@ -72,8 +72,67 @@ await assert.rejects(native.restoreNativeMcpSpendingRecovery(selected));steps.pu
 const current=await native.verifyCurrentNativeMcpSpendingOwner(selected);
 assert.equal(current.currentCheckpoint.rows,3);assert.deepEqual(current.archivePrefix,snapshot.checkpoint);
 assert.equal(current.currentNativeState.boundRequests,3);steps.push('advanced-original-journal-prefix-and-native-state-verified');
+// A newly configured owner can export before any helper invocation. The
+// same original helper later initializes its first history from scoped keys.
+const freshOwner=join(operation,'untouched-owner');await mkdir(freshOwner,{mode:0o700});
+const freshConfig=join(freshOwner,'host.json'),freshState=join(freshOwner,'native-state'),freshLedger=join(freshOwner,'ledger.sqlite');
+const freshPolicy=join(freshOwner,'policy.json');
+await writeFile(freshPolicy,await readFile(s.policy),{mode:0o600,flag:'wx'});
+const freshCfg={...cfg,spending:{...s,policy:freshPolicy,ledger:freshLedger,stateDirectory:freshState}};
+await writeFile(freshConfig,JSON.stringify(freshCfg)+'\n',{mode:0o600,flag:'wx'});
+const untouched=await native.snapshotNativeMcpSpendingRecovery({configFile:freshConfig,
+ output:join(operation,'untouched-encrypted'),passphraseEnv:'MCP_BACKUP_PASSPHRASE',quiesced:true,
+ operationId:'native-recovery-first-backup',environment});
+assert.equal(untouched.ledgerState,'UNINITIALIZED');assert.equal(untouched.nativeInitialized,false);
+assert.equal(untouched.checkpoint,null);assert.equal(untouched.ledgerIdentity,null);
+assert.deepEqual(untouched.nativeState,{boundRequests:0,reservedRequests:0,finalityRecords:0});
+assert.deepEqual(await readdir(freshState),['state.lock']);
+await assert.rejects(readFile(freshLedger),error=>error.code==='ENOENT');
+const freshSelected={...selected,bundle:untouched.bundle,expectedManifestSha256:untouched.manifestSha256,
+ expectedRecordSha256:untouched.recordSha256};
+const freshVerified=await native.verifyNativeMcpSpendingRecovery(freshSelected);
+assert.equal(freshVerified.ledgerState,'UNINITIALIZED');assert.equal(freshVerified.checkpoint,null);
+await rename(freshOwner,freshOwner+'-before');
+const freshRestored=await native.restoreNativeMcpSpendingRecovery(freshSelected);
+assert.equal(freshRestored.status,'NATIVE_SPENDING_OWNER_RESTORED');
+assert.equal(freshRestored.currentLedgerIdentity,null);assert.deepEqual(await readdir(freshState),['state.lock']);
+await assert.rejects(readFile(freshLedger),error=>error.code==='ENOENT');
+const untouchedCurrent=await native.verifyCurrentNativeMcpSpendingOwner(freshSelected);
+assert.equal(untouchedCurrent.currentLedgerState,'UNINITIALIZED');assert.equal(untouchedCurrent.currentCheckpoint,null);
+const firstBinding={...bindings[0],quoteId:randomUUID()};
+firstBinding.request={...firstBinding.request,request_id:firstBinding.quoteId};
+await native.withNativeMcpSpendingRecoveryEnvironment({...freshSelected,environment:recoveredEnvironment},async({environment:scoped})=>{
+ const first=spawnSync(python,['-I','-B',join(source,'stellar-forge/mcp-paid-agent/native-spend-governor.py'),
+  '--actor',s.actor,'--service',s.service,'--policy',freshPolicy,'--ledger',freshLedger,'--state-directory',freshState],
+  {env:scoped,encoding:'utf8',input:JSON.stringify({action:'reserve',binding:firstBinding})});
+ assert.equal(first.status,0,first.stderr);assert.equal(JSON.parse(first.stdout).outcome,'RESERVED');
+});
+const initializedCurrent=await native.verifyCurrentNativeMcpSpendingOwner(freshSelected);
+assert.equal(initializedCurrent.currentLedgerState,'INITIALIZED');assert.equal(initializedCurrent.currentNativeInitialized,true);
+assert.equal(initializedCurrent.currentCheckpoint.rows,1);assert.equal(initializedCurrent.archivePrefix,null);
+await assert.rejects(native.restoreNativeMcpSpendingRecovery(freshSelected));
+steps.push('first-backup-preserves-uninitialized-owner-through-restore-and-original-first-reservation');
+// A different native consumer may share that original SF36 ledger before its
+// own native marker exists; preserve all shared history and native absence.
+const sharedConfig=join(freshOwner,'other-host.json'),sharedState=join(freshOwner,'other-native-state');
+await writeFile(sharedConfig,JSON.stringify({...freshCfg,spending:{...freshCfg.spending,stateDirectory:sharedState}})+'\n',
+ {mode:0o600,flag:'wx'});
+const sharedUntouched=await native.snapshotNativeMcpSpendingRecovery({configFile:sharedConfig,
+ output:join(operation,'shared-untouched-encrypted'),passphraseEnv:'MCP_BACKUP_PASSPHRASE',quiesced:true,
+ operationId:'native-recovery-first-shared-backup',environment});
+assert.equal(sharedUntouched.ledgerState,'INITIALIZED');assert.equal(sharedUntouched.nativeInitialized,false);
+assert.deepEqual(sharedUntouched.checkpoint,initializedCurrent.currentCheckpoint);
+assert.deepEqual(sharedUntouched.nativeState,{boundRequests:0,reservedRequests:0,finalityRecords:0});
+assert.deepEqual(await readdir(sharedState),['state.lock']);
+const sharedVerified=await native.verifyNativeMcpSpendingRecovery({...selected,bundle:sharedUntouched.bundle,
+ expectedManifestSha256:sharedUntouched.manifestSha256,expectedRecordSha256:sharedUntouched.recordSha256});
+assert.deepEqual(sharedVerified.checkpoint,initializedCurrent.currentCheckpoint);
+steps.push('first-native-backup-preserves-existing-shared-ledger-and-absent-native-markers');
 const report={operation:'native-recovery-original-case',status:'PASSED',steps,checkpoint:snapshot.checkpoint,
- nativeState:snapshot.nativeState,recordSha256:snapshot.recordSha256,manifestSha256:snapshot.manifestSha256};
+ nativeState:snapshot.nativeState,recordSha256:snapshot.recordSha256,manifestSha256:snapshot.manifestSha256,
+ untouchedOwner:{ledgerState:untouched.ledgerState,checkpoint:untouched.checkpoint,nativeInitialized:untouched.nativeInitialized,
+  initializedCheckpoint:initializedCurrent.currentCheckpoint,archivePrefix:initializedCurrent.archivePrefix},
+ sharedUntouchedOwner:{checkpoint:sharedUntouched.checkpoint,nativeInitialized:sharedUntouched.nativeInitialized}};
 await writeFile(join(operation,'result.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600});
 return report;
 }
