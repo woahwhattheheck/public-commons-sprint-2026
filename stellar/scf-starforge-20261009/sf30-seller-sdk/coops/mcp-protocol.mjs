@@ -980,6 +980,22 @@ const actions = [
       "editionId",
       "format"
     ]
+  ],
+  [
+    'analysis.export',
+    'Build and retain the complete coastal residual workbook from two original GMT editions. The full offline HTML, editable workbook, all analysis rows, source responses and delivery manifest remain available through the original export file tools.',
+    {
+      observationsEditionId:edition,predictionsEditionId:edition,
+      options:object({
+        begin:string(64),end:string(64),quality:choice(['all','verified','preliminary']),
+        excludeInferred:boolean,excludeToleranceFlags:boolean,
+        maxSigma:decimal(0,Number.MAX_VALUE),
+        upperThreshold:decimal(-Number.MAX_VALUE,Number.MAX_VALUE),
+        lowerThreshold:decimal(-Number.MAX_VALUE,Number.MAX_VALUE)
+      }),
+      analyst:object(Object.fromEntries(['name','project','question','interpretation','followUp'].map(key=>[key,string(32768)])))
+    },
+    ['observationsEditionId','predictionsEditionId']
   ]
 ];
 const actionNames = new Map(actions.map(value => ['merchant_coops_' + value[0].replaceAll('.','_'), value]));
