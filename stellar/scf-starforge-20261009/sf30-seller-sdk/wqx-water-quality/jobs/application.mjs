@@ -8,6 +8,7 @@ import { normalizeAnalysisOptions } from '../analysis.mjs';
 import { normalizeOpenWatersOptions, openWatersPlanSummary } from '../openwaters.mjs';
 import { createScientificArchive } from './archive.mjs';
 import { appendPairedScientificJob, WQX_PAIRED_SOURCE_LIMIT } from './scientific.mjs';
+import { appendCommissioningJob, WQX_COMMISSIONING_SOURCE_LIMIT } from './commissioning.mjs';
 
 export const WQX_JOB_CHOICES_SCHEMA = 'starforge.wqx-job-choices.v1';
 export const WQX_JOB_RESULT_SCHEMA = 'starforge.wqx-scientific-job-result.v1';
@@ -24,7 +25,23 @@ function exact(value, keys, code) {
 }
 async function readJson(files, slot, maxBytes) {
   try {
-    const bytes = await files.read(slot, { maxBytes });
+    let bytes;
+    if (maxBytes <= SOURCE_LIMIT) bytes = await files.read(slot, { maxBytes });
+    else {
+      // The original whole-file read is capped at 64 MiB; larger declared bundles
+      // use the same held sealed-file stream and its original chunk/lifetime checks.
+      const descriptor = files.metadata(slot);
+      if (!Number.isSafeInteger(descriptor.bytes) || descriptor.bytes < 0 || descriptor.bytes > maxBytes)
+        fail('JOB_INPUT_READ_LIMIT_EXCEEDED');
+      const parts = []; let length = 0;
+      for await (const part of files.stream(slot)) {
+        length += part.length;
+        if (length > maxBytes || length > descriptor.bytes) fail('JOB_INPUT_READ_LIMIT_EXCEEDED');
+        parts.push(part);
+      }
+      if (length !== descriptor.bytes) fail('JOB_INPUT_FILE_CHANGED');
+      bytes = Buffer.concat(parts, length); parts.length = 0;
+    }
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   } catch (error) {
     if (error instanceof SyntaxError || error instanceof TypeError) fail('JOB_INPUT_JSON_INVALID');
@@ -108,13 +125,17 @@ function resultGuide(manifest) {
  * Result: standard ZIP containing the exact inputs and complete native scientific outputs.
  */
 export async function waterQualityReview(input, context) {
-  exact(input, ['reviewId', 'planId', 'expectedCaptureSha256', 'expectedReviewSha256', 'expectedScientificReviewSha256', 'mode', '$files'], 'JOB_INPUT_WQX_REQUEST_INVALID');
+  exact(input, ['reviewId', 'planId', 'expectedCaptureSha256', 'expectedReviewSha256', 'expectedScientificReviewSha256',
+    'expectedCommissioningSavedSha256', 'expectedCommissioningReviewSha256', 'mode', '$files'], 'JOB_INPUT_WQX_REQUEST_INVALID');
   const mode = input.mode === undefined ? 'review' : input.mode;
-  if (!['review', 'scientific'].includes(mode)) fail('JOB_INPUT_WQX_MODE_INVALID');
+  if (!['review', 'scientific', 'commissioning'].includes(mode)) fail('JOB_INPUT_WQX_MODE_INVALID');
+  if (mode !== 'commissioning' && (input.expectedCommissioningSavedSha256 !== undefined ||
+      input.expectedCommissioningReviewSha256 !== undefined)) fail('JOB_INPUT_KIWIS_COMMISSIONING_MODE_REQUIRED');
   if (mode === 'review' && input.expectedScientificReviewSha256 !== undefined) fail('JOB_INPUT_WQX_SCIENTIFIC_MODE_REQUIRED');
   operationId(input.reviewId);
   if (input.planId !== undefined) operationId(input.planId);
-  for (const name of ['expectedCaptureSha256', 'expectedReviewSha256', 'expectedScientificReviewSha256'])
+  for (const name of ['expectedCaptureSha256', 'expectedReviewSha256', 'expectedScientificReviewSha256',
+    'expectedCommissioningSavedSha256', 'expectedCommissioningReviewSha256'])
     if (input[name] !== undefined && !HASH.test(input[name])) fail('JOB_INPUT_WQX_EXPECTED_IDENTITY_INVALID');
   if (!context?.files || !context.signal || typeof context.jobId !== 'string') fail('JOB_INPUT_RECEIVER_REQUIRED');
   context.signal.throwIfAborted();
@@ -124,6 +145,11 @@ export async function waterQualityReview(input, context) {
   const hasChoices = sourceFiles.some(file => file.slot === 'choices');
   if (mode === 'scientific' && (hasChoices || input.planId !== undefined || !HASH.test(input.expectedScientificReviewSha256 ?? '')))
     fail('JOB_INPUT_WQX_COMPLETE_SCIENTIFIC_SELECTION_REQUIRED');
+  if (mode === 'commissioning' && (hasChoices || input.planId !== undefined ||
+      input.expectedCaptureSha256 !== undefined || input.expectedReviewSha256 !== undefined ||
+      input.expectedScientificReviewSha256 !== undefined ||
+      !HASH.test(input.expectedCommissioningSavedSha256 ?? '') || !HASH.test(input.expectedCommissioningReviewSha256 ?? '')))
+    fail('JOB_INPUT_KIWIS_COMPLETE_COMMISSIONING_SELECTION_REQUIRED');
   const parent = resolve(process.env.WQX_JOB_TEMP_ROOT || tmpdir());
   await mkdir(parent, { recursive: true, mode: 0o700 });
   const canonicalParent = await realpath(parent);
@@ -138,10 +164,18 @@ export async function waterQualityReview(input, context) {
     if (hasChoices) await archive.add('original/choices.json', context.files.stream('choices'), {
       contentType: 'application/json', expected: context.files.metadata('choices'),
     });
-    let bundle = await readJson(context.files, 'source', mode === 'scientific' ? WQX_PAIRED_SOURCE_LIMIT : SOURCE_LIMIT);
+    let bundle = await readJson(context.files, 'source', mode === 'scientific' ? WQX_PAIRED_SOURCE_LIMIT :
+      mode === 'commissioning' ? WQX_COMMISSIONING_SOURCE_LIMIT : SOURCE_LIMIT);
     if (!object(bundle)) fail('JOB_INPUT_WQX_BUNDLE_REQUIRED');
     const sourceSchema = bundle.schema;
     project = await openWaterQualityProject(join(directory, 'project'));
+    if (mode === 'commissioning') {
+      const delivery = appendCommissioningJob({ project, bundle, archive, context, input, sourceFiles });
+      bundle = null;
+      await delivery;
+      context.signal.throwIfAborted();
+      return await readFile(archivePath);
+    }
     if (mode === 'scientific') {
       const delivery = appendPairedScientificJob({ project, bundle, archive, context, input, sourceFiles });
       bundle = null;
@@ -242,7 +276,7 @@ export async function waterQualityReview(input, context) {
     return await readFile(archivePath);
   } catch (error) {
     if (context.signal.aborted) throw context.signal.reason;
-    if (typeof error.code === 'string' && error.code.startsWith('WQX_')) {
+    if (typeof error.code === 'string' && (error.code.startsWith('WQX_') || error.code.startsWith('KIWIS_'))) {
       const wrapped = new Error('JOB_INPUT_' + error.code, { cause: error });
       wrapped.code = wrapped.message; throw wrapped;
     }
