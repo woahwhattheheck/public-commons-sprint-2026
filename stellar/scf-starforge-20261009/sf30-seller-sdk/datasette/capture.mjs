@@ -220,8 +220,8 @@ async function pageState(directory, operation) {
 }
 async function acceptPage(directory, operation, state, receipt, index) {
   if (receipt.schema !== PAGE || receipt.index !== index || receipt.operationId !== operation.operationId ||
-      receipt.selectionHash !== operation.selectionHash || !state.next || receipt.requestedUrl !== state.next.url ||
-      state.seen.has(receipt.requestedUrl)) throw fault('DATASETTE_PAGE_CHAIN_CHANGED');
+      receipt.selectionHash !== operation.selectionHash || !state.next || !sameRequest(receipt.requestedUrl, state.next.url, operation.selection) ||
+      state.seen.has(normalizedRequest(receipt.requestedUrl, operation.selection))) throw fault('DATASETTE_PAGE_CHAIN_CHANGED');
   validateResponseMetadata(receipt, operation.selection);
   if (!HASH.test(receipt.body?.sha256 ?? '') || !Number.isSafeInteger(receipt.body.bytes) ||
       receipt.body.bytes < 0 || receipt.body.bytes > MAX_PAGE) throw fault('DATASETTE_BODY_RECEIPT_INVALID');
@@ -234,36 +234,92 @@ async function acceptPage(directory, operation, state, receipt, index) {
     throw fault('DATASETTE_PAGE_RECEIPT_BINDING_CHANGED');
   if (state.sourceVersion !== undefined && !same(state.sourceVersion, parsed.sourceVersion))
     throw fault('DATASETTE_SOURCE_VERSION_CHANGED');
-  if (parsed.next && (state.seen.has(parsed.next.url) || parsed.next.url === receipt.requestedUrl))
+  if (parsed.next && (state.seen.has(normalizedRequest(parsed.next.url, operation.selection)) || sameRequest(parsed.next.url, receipt.requestedUrl, operation.selection)))
     throw fault('DATASETTE_REPEATED_CONTINUATION');
-  state.seen.add(receipt.requestedUrl); state.pages.push(receipt); for (const row of parsed.rows) state.rows.push(row);
+  state.seen.add(normalizedRequest(receipt.requestedUrl, operation.selection)); state.pages.push(receipt); for (const row of parsed.rows) state.rows.push(row);
   state.columns = parsed.columns; state.continuation = parsed.continuation; state.next = parsed.next;
   state.sourceVersion = parsed.sourceVersion; state.immutableIdentity = parsed.immutableIdentity;
   state.totalBytes += body.length;
   if (state.totalBytes > MAX_TOTAL || state.rows.length > 1000000) throw fault('DATASETTE_CAPTURE_LIMIT_EXCEEDED');
 }
+function providerImportComplete(receipt) {
+  const provider = receipt.providerReceipt;
+  return object(provider) && ['uploaded', 'complete', 'completed'].includes(provider.status) &&
+    typeof provider.provider === 'string' && !!provider.provider &&
+    [provider.file_upload_id, provider.fileUploadId, provider.id].some(value => typeof value === 'string' && !!value);
+}
+function normalizedRequest(url, selection) {
+  return continuationUrl(url, selection.url, selection).url;
+}
+function sameRequest(left, right, selection) {
+  return normalizedRequest(left, selection) === normalizedRequest(right, selection);
+}
+function nullableTime(value) {
+  return value === null || value === undefined || (typeof value === 'string' && Number.isFinite(Date.parse(value)));
+}
+function observedWindow(pages) {
+  const lower = [], upper = [];
+  for (const page of pages) {
+    const window = page.retrievalWindow;
+    const before = window?.notBefore ?? window?.not_before ?? null;
+    const after = window?.notAfter ?? window?.not_after ?? null;
+    if (page.startedAt) lower.push(page.startedAt);
+    if (page.completedAt) upper.push(page.completedAt);
+    if (page.retrievedAt) { lower.push(page.retrievedAt); upper.push(page.retrievedAt); }
+    if (before) lower.push(before); if (after) upper.push(after);
+  }
+  lower.sort((a, b) => Date.parse(a) - Date.parse(b));
+  upper.sort((a, b) => Date.parse(a) - Date.parse(b));
+  return { notBefore: lower[0] ?? null, notAfter: upper.at(-1) ?? null,
+    basis: 'retained-retrieval-observations',
+    exactStartKnown: pages.every(page => !!page.startedAt),
+    exactEndKnown: pages.every(page => !!page.completedAt) };
+}
 function validateResponseMetadata(receipt, selection) {
-  if (!Number.isInteger(receipt.status) || receipt.status < 200 || receipt.status >= 300)
+  const knownStatus = receipt.status !== null && receipt.status !== undefined;
+  if (knownStatus && (!Number.isInteger(receipt.status) || receipt.status < 200 || receipt.status >= 300))
     throw fault('DATASETTE_HTTP_STATUS', 'The retained response status is ' + receipt.status + '.');
-  if (typeof receipt.startedAt !== 'string' || typeof receipt.completedAt !== 'string' ||
-      !Number.isFinite(Date.parse(receipt.startedAt)) || !Number.isFinite(Date.parse(receipt.completedAt)) ||
-      Date.parse(receipt.completedAt) < Date.parse(receipt.startedAt)) throw fault('DATASETTE_RETRIEVAL_TIMES_INVALID');
+  if (!knownStatus && !providerImportComplete(receipt))
+    throw fault('DATASETTE_IMPORT_COMPLETION_REQUIRED', 'Retain the successful file-import provider receipt with the source body.');
+  for (const field of ['startedAt', 'completedAt', 'retrievedAt'])
+    if (!nullableTime(receipt[field])) throw fault('DATASETTE_RETRIEVAL_TIMES_INVALID');
+  if (receipt.startedAt && receipt.completedAt && Date.parse(receipt.completedAt) < Date.parse(receipt.startedAt))
+    throw fault('DATASETTE_RETRIEVAL_TIMES_INVALID');
+  const window = receipt.retrievalWindow;
+  if (window !== undefined && window !== null) {
+    if (!object(window)) throw fault('DATASETTE_RETRIEVAL_WINDOW_INVALID');
+    const before = window.notBefore ?? window.not_before, after = window.notAfter ?? window.not_after;
+    if (typeof before !== 'string' || typeof after !== 'string' || !nullableTime(before) || !nullableTime(after) ||
+        Date.parse(after) < Date.parse(before)) throw fault('DATASETTE_RETRIEVAL_WINDOW_INVALID');
+  }
   headerPairs(receipt.headers);
-  const final = continuationUrl(receipt.responseUrl, receipt.requestedUrl, selection);
-  if (final.url !== receipt.responseUrl) throw fault('DATASETTE_RESPONSE_TRANSPORT_CHANGED');
   if (!Array.isArray(receipt.redirects)) throw fault('DATASETTE_REDIRECT_RECEIPT_INVALID');
-  let requested = receipt.requestedUrl;
+  const requested = normalizedRequest(receipt.requestedUrl, selection);
+  const final = normalizedRequest(receipt.responseUrl, selection);
+  if (requested !== final) throw fault('DATASETTE_RESPONSE_SELECTION_CHANGED');
+  if (final !== receipt.responseUrl) throw fault('DATASETTE_RESPONSE_TRANSPORT_CHANGED');
+  let target = receipt.requestedUrl;
   for (const redirect of receipt.redirects) {
-    if (redirect.url !== requested || ![301, 302, 303, 307, 308].includes(redirect.status))
+    if (redirect.url !== target || ![301, 302, 303, 307, 308].includes(redirect.status))
       throw fault('DATASETTE_REDIRECT_RECEIPT_INVALID');
     const next = continuationUrl(redirect.location, redirect.url, selection);
-    if (next.url !== redirect.nextUrl) throw fault('DATASETTE_REDIRECT_RECEIPT_INVALID');
-    requested = next.url;
+    if (next.url !== redirect.nextUrl || !sameRequest(next.url, receipt.requestedUrl, selection))
+      throw fault('DATASETTE_REDIRECT_RECEIPT_INVALID');
+    target = next.url;
   }
-  if (receipt.responseUrl !== requested) throw fault('DATASETTE_REDIRECT_CHAIN_MISSING');
+  if (receipt.redirects.length && receipt.responseUrl !== target)
+    throw fault('DATASETTE_REDIRECT_CHAIN_CHANGED');
+  if (providerImportComplete(receipt)) {
+    const provider = receipt.providerReceipt, sourceUrl = provider.source_url ?? provider.sourceUrl;
+    if (typeof sourceUrl !== 'string' || !sameRequest(sourceUrl, receipt.responseUrl, selection))
+      throw fault('DATASETTE_IMPORT_SOURCE_CHANGED');
+    const length = provider.content_length ?? provider.contentLength;
+    if (length !== undefined && length !== receipt.body.bytes) throw fault('DATASETTE_IMPORT_LENGTH_CHANGED');
+  }
 }
+
 async function commitAttempt(directory, operation, state, attempt) {
-  if (attempt.state !== 'COMPLETE' || attempt.requestedUrl !== state.next?.url ||
+  if (attempt.state !== 'COMPLETE' || !state.next || !sameRequest(attempt.requestedUrl, state.next.url, operation.selection) ||
       attempt.operationId !== operation.operationId || attempt.selectionHash !== operation.selectionHash ||
       attempt.index !== state.pages.length + 1) throw fault('DATASETTE_ATTEMPT_BINDING_CHANGED');
   validateResponseMetadata(attempt, operation.selection);
@@ -274,7 +330,11 @@ async function commitAttempt(directory, operation, state, attempt) {
     index: attempt.index, requestedUrl: attempt.requestedUrl, advertisedUrl: state.next.advertisedUrl,
     transportUpgrade: state.next.transportUpgrade, responseUrl: attempt.responseUrl, status: attempt.status,
     headers: attempt.headers, omittedSensitiveHeaders: attempt.omittedSensitiveHeaders ?? [], redirects: attempt.redirects,
-    startedAt: attempt.startedAt, completedAt: attempt.completedAt, acquisition: attempt.acquisition,
+    startedAt: attempt.startedAt ?? null, completedAt: attempt.completedAt ?? null,
+    retrievedAt: attempt.retrievedAt ?? null, retrievalWindow: attempt.retrievalWindow ?? null,
+    providerReceipt: attempt.providerReceipt ?? null, responseUrlBasis: attempt.responseUrlBasis ?? null,
+    redirectObservability: attempt.redirects.length || attempt.requestedUrl === attempt.responseUrl ? 'complete' : 'endpoints-only',
+    originalReceipt: attempt.originalReceipt ?? null, recovery: attempt.recovery ?? null, acquisition: attempt.acquisition,
     importedAt: attempt.importedAt ?? null, body: attempt.body, attemptFile: attempt.file,
     columns: parsed.columns, columnsDeclaredByResponse: parsed.declaredColumns, rowCount: parsed.rows.length,
     continuation: parsed.continuation, next: parsed.next, truncated: parsed.truncated,
@@ -284,15 +344,16 @@ async function commitAttempt(directory, operation, state, attempt) {
   await immutableFile(directory, 'pages/' + pageName(receipt.index), bytes(receipt));
   return receipt;
 }
-async function completeAttempts(directory, state) {
+async function completeAttempts(directory, state, selection) {
   const names = (await readdir(join(directory, 'attempts'))).filter(name => name.endsWith('.json')).sort();
   const results = [];
   for (const name of names) {
     const value = await readJson(join(directory, 'attempts', name), MAX_META);
-    if (value.state === 'COMPLETE' && value.status >= 200 && value.status < 300 && value.index === state.pages.length + 1 && value.requestedUrl === state.next?.url)
+    if (value.state === 'COMPLETE' && ((value.status >= 200 && value.status < 300) || providerImportComplete(value)) &&
+        value.index === state.pages.length + 1 && state.next && sameRequest(value.requestedUrl, state.next.url, selection))
       results.push(value);
   }
-  return results.sort((a, b) => a.completedAt.localeCompare(b.completedAt) || a.file.localeCompare(b.file));
+  return results.sort((a, b) => String(a.completedAt ?? a.retrievedAt ?? a.importedAt).localeCompare(String(b.completedAt ?? b.retrievedAt ?? b.importedAt)) || a.file.localeCompare(b.file));
 }
 async function collectMembers(directory, current = '', result = []) {
   for (const name of (await readdir(join(directory, current))).sort()) {
@@ -320,17 +381,17 @@ async function status(directory, operation, state) {
 async function finish(directory, operation, state) {
   if (state.next || !state.pages.length) return status(directory, operation, state);
   const files = await collectMembers(directory);
-  const first = state.pages[0], last = state.pages.at(-1);
+  const first = state.pages[0], last = state.pages.at(-1), observationWindow = observedWindow(state.pages);
   const capture = { schema: CAPTURE, state: 'COMPLETE', operationId: operation.operationId,
     selection: operation.selection, selectionHash: operation.selectionHash,
-    startedAt: first.startedAt, completedAt: last.completedAt, committedAt: stamp(),
+    startedAt: first.startedAt ?? null, completedAt: last.completedAt ?? null, observationWindow, committedAt: stamp(),
     columns: state.columns, columnSource: operation.selection.columnSource ??
       (first.columnsDeclaredByResponse ? { kind: 'first-page-envelope', bodySha256: first.body.sha256 } : { kind: 'explicit-selection' }),
     rowCount: state.rows.length, pageCount: state.pages.length, continuation: state.continuation,
     sourceVersion: state.sourceVersion ?? null,
     consistency: state.immutableIdentity ? { kind: 'immutable-database', identity: state.immutableIdentity,
-      startedAt: first.startedAt, completedAt: last.completedAt } :
-      { kind: 'observation-window', startedAt: first.startedAt, completedAt: last.completedAt,
+      startedAt: first.startedAt ?? null, completedAt: last.completedAt ?? null, observationWindow } :
+      { kind: 'observation-window', startedAt: first.startedAt ?? null, completedAt: last.completedAt ?? null, observationWindow,
         note: 'The remote service did not provide a verified immutable database identity spanning these pages.' },
     pages: state.pages, files };
   const content = bytes(capture);
@@ -423,7 +484,7 @@ export async function captureDatasette(options) {
     if (!Number.isSafeInteger(pageLimit) || pageLimit < 1) throw fault('DATASETTE_PAGE_LIMIT_INVALID');
     let fetched = 0;
     while (state.next) {
-      const adopted = (await completeAttempts(directory, state))[0];
+      const adopted = (await completeAttempts(directory, state, operation.selection))[0];
       if (adopted) { await commitAttempt(directory, operation, state, adopted); continue; }
       if (fetched >= pageLimit) break;
       if (options.signal?.aborted) throw fault('DATASETTE_CAPTURE_CANCELLED');
@@ -452,36 +513,56 @@ export async function adoptDatasettePages({ directory, operationId, selection, p
   try {
     const operation = await initialize(directory, operationId, selection);
     const state = await pageState(directory, operation);
-    for (const original of pages) {
+    for (const input of pages) {
+      const providerReceipt = input.providerReceipt ?? input.provider_receipt ?? null;
+      const original = {
+        ...input, requestedUrl: input.requestedUrl ?? input.requested_url,
+        responseUrl: input.responseUrl ?? input.final_url, status: input.status ?? null,
+        startedAt: input.startedAt ?? input.started_at ?? null, completedAt: input.completedAt ?? input.completed_at ?? null,
+        retrievedAt: input.retrievedAt ?? input.retrieved_at ?? null,
+        retrievalWindow: input.retrievalWindow ?? input.retrieval_window ?? providerReceipt?.retrieval_window ?? null,
+        responseUrlBasis: input.responseUrlBasis ?? input.final_url_basis ?? null,
+        providerReceipt, originalReceipt: input.originalReceipt ?? null,
+      };
       const body = importedBytes(original);
       if (body.length > MAX_PAGE) throw fault('DATASETTE_PAGE_BYTE_LIMIT');
       if (original.sha256 && original.sha256 !== digest(body)) throw fault('DATASETTE_IMPORTED_BODY_HASH_MISMATCH');
-      const retained = state.pages.find(page => page.requestedUrl === original.requestedUrl);
+      const retained = state.pages.find(page => sameRequest(page.requestedUrl, original.requestedUrl, operation.selection));
       if (retained) {
         const incomingHeaders = retainHeaders(original.headers);
-        if (retained.body.sha256 !== digest(body) || retained.responseUrl !== original.responseUrl ||
-            retained.status !== original.status || retained.startedAt !== original.startedAt ||
-            retained.completedAt !== original.completedAt || !same(retained.headers, incomingHeaders.headers) ||
-            !same(retained.redirects, original.redirects ?? [])) throw fault('DATASETTE_ORIGINAL_PAGE_CONFLICT');
+        if (retained.body.sha256 !== digest(body) || retained.requestedUrl !== original.requestedUrl ||
+            retained.responseUrl !== original.responseUrl || retained.status !== original.status ||
+            (retained.startedAt ?? null) !== original.startedAt || (retained.completedAt ?? null) !== original.completedAt ||
+            (retained.retrievedAt ?? null) !== original.retrievedAt ||
+            !same(retained.retrievalWindow ?? null, original.retrievalWindow) ||
+            !same(retained.providerReceipt ?? null, original.providerReceipt) ||
+            !same(retained.headers, incomingHeaders.headers) || !same(retained.redirects, original.redirects ?? []))
+          throw fault('DATASETTE_ORIGINAL_PAGE_CONFLICT');
         continue;
       }
-      if (!state.next || original.requestedUrl !== state.next.url) throw fault('DATASETTE_IMPORTED_PAGE_OUT_OF_ORDER');
-      const pending = (await completeAttempts(directory, state))[0];
+      if (!state.next || !sameRequest(original.requestedUrl, state.next.url, operation.selection))
+        throw fault('DATASETTE_IMPORTED_PAGE_OUT_OF_ORDER');
+      const pending = (await completeAttempts(directory, state, operation.selection))[0];
       if (pending) {
         if (pending.body.sha256 !== digest(body)) throw fault('DATASETTE_ORIGINAL_PAGE_CONFLICT');
         await commitAttempt(directory, operation, state, pending); continue;
       }
       const id = identity({ operationId, index: state.pages.length + 1, requestedUrl: original.requestedUrl,
-        bodySha256: digest(body), startedAt: original.startedAt, completedAt: original.completedAt });
+        bodySha256: digest(body), startedAt: original.startedAt, completedAt: original.completedAt,
+        retrievedAt: original.retrievedAt, retrievalWindow: original.retrievalWindow, providerReceipt });
       const file = 'attempts/import-' + id + '.json';
       const bodyReceipt = await immutableFile(directory, 'attempts/import-' + id + '.body', body);
       const attempt = { schema: 'stellar-forge.datasette-response-attempt.v1', file,
         operationId, selectionHash: operation.selectionHash, state: 'COMPLETE', index: state.pages.length + 1,
         requestedUrl: original.requestedUrl, responseUrl: original.responseUrl, status: original.status,
         ...retainHeaders(original.headers), redirects: original.redirects ?? [],
-        startedAt: original.startedAt, completedAt: original.completedAt,
-        acquisition: 'adopted-original-http-response', importedAt: stamp(),
-        body: { ...bodyReceipt, complete: true, encoding: original.bodyRepresentation ?? 'retained-http-response-body' } };
+        startedAt: original.startedAt, completedAt: original.completedAt, retrievedAt: original.retrievedAt,
+        retrievalWindow: original.retrievalWindow, providerReceipt,
+        originalReceipt: original.originalReceipt, responseUrlBasis: original.responseUrlBasis,
+        recovery: original.recovery ?? null,
+        acquisition: providerImportComplete(original) ? 'adopted-provider-file-import' : 'adopted-original-http-response',
+        importedAt: stamp(),
+        body: { ...bodyReceipt, complete: true, encoding: original.bodyRepresentation ?? 'retained-source-response-body' } };
       validateResponseMetadata(attempt, operation.selection);
       await immutableFile(directory, file, bytes(attempt));
       await commitAttempt(directory, operation, state, attempt);
@@ -522,8 +603,9 @@ export async function readDatasetteCapture(captureFile, { expectedSha256 } = {})
   const state = await pageState(directory, operation);
   if (state.next || !state.pages.length || state.pages.length !== capture.pageCount ||
       state.rows.length !== capture.rowCount || !same(state.columns, capture.columns) ||
-      !same(state.pages, capture.pages) || capture.startedAt !== state.pages[0].startedAt ||
-      capture.completedAt !== state.pages.at(-1).completedAt || !same(capture.sourceVersion, state.sourceVersion ?? null) ||
+      !same(state.pages, capture.pages) || capture.startedAt !== (state.pages[0].startedAt ?? null) ||
+      capture.completedAt !== (state.pages.at(-1).completedAt ?? null) ||
+      (capture.observationWindow && !same(capture.observationWindow, observedWindow(state.pages))) || !same(capture.sourceVersion, state.sourceVersion ?? null) ||
       capture.consistency?.kind !== (state.immutableIdentity ? 'immutable-database' : 'observation-window') ||
       (state.immutableIdentity && !same(capture.consistency.identity, state.immutableIdentity)) || state.pages.some(page =>
         !declared.has('pages/' + pageName(page.index)) || !declared.has(page.body.file) ||

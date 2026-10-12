@@ -58,7 +58,7 @@ export interface DatasetteOperationInputs {
   };
   'source.inspect': PageSelection & { operationId: string };
   'source.review': SourceReview & { operationId: string };
-  'editions.create': SourceReview & { id: string; operationId: string; name: string };
+  'editions.create': { id: string; operationId: string; name: string; key: string[]; projection: JsonObject };
   'editions.list': Record<string, never>;
   'editions.inspect': PageSelection & { id: string };
   'editions.compare': { left: string; right: string };
@@ -80,13 +80,13 @@ export interface DatasetteOperationInputs {
   /** Native buyer fields retain the existing publisher's buyer input contract. */
   'publisher.prepare-buyer': JsonObject & { runId: string };
   'release.prepare': {
-    runId: string; outputDirectory: string; payment: JsonObject; origin: string; path?: string;
+    runId: string; outputDirectory?: string; payment: JsonObject; origin: string; path?: string;
   };
   'release.stage': {
-    packageDirectory: string; releaseDirectory: string; id: string; label?: string; runtime?: JsonValue;
+    packageDirectory: string; releaseDirectory?: string; id: string; label?: string; runtime?: JsonValue;
   };
-  'source.export': { editionId: string; outputFile: string };
-  'source.receive': { archiveFile: string; directory: string };
+  'source.export': { editionId: string; outputFile?: string };
+  'source.receive': { archiveFile: string; sha256: string; directory?: string; id?: string };
   'operations.cancel': { operationId: string };
 }
 export type DatasetteOperation = keyof DatasetteOperationInputs;

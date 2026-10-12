@@ -1,19 +1,18 @@
 // MIT. One operator workspace over retained Datasette sources and the original merchant publisher.
-import { lstat, readdir, mkdir } from 'node:fs/promises';
+import { lstat, readdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
   absolute, privateDirectory, acquireWorkspace, readJson, readPrivate, createFile,
   atomicJson, bytes, digest, identity, object, fault, stamp,
 } from '../postgres/publisher/files.mjs';
-import { captureDatasette, adoptDatasettePages, readDatasetteCapture } from './capture.mjs';
+import { captureDatasette, adoptDatasettePages, readDatasetteCapture, inspectDatasetteOperation } from './capture.mjs';
 import {
   reviewDatasetteCapture, createDatasetteEdition, readDatasetteEdition,
   compareDatasetteEditions, exportDatasetteEdition, receiveDatasettePackage,
 } from './editions.mjs';
 import { isJsonNumber, numericToken, exactCell } from './json.mjs';
-import { openDatasettePublisher } from './model.mjs';
-import { prepareDatasetteRelease, stageDatasetteRelease } from './release.mjs';
+import { retainedDatasetteFiles } from './files.mjs';
 
 export const DATASETTE_WORKSPACE_SCHEMA = 'stellar-forge.datasette-workspace.v1';
 const HASH = /^[a-f0-9]{64}$/;
@@ -44,6 +43,12 @@ const descriptions = [
   ['release.stage', 'Stage that package in the maintained merchant release store.', ['packageDirectory', 'id']],
   ['source.export', 'Export a complete named edition, review and original capture for receiving.', ['editionId']],
   ['source.receive', 'Receive and verify a complete original source-edition package.', ['archiveFile', 'sha256']],
+  ['files.list', 'List complete retained source, edition, publisher, customer and export files.', []],
+  ['files.inspect', 'Read the exact identity and size of a retained file.', ['path']],
+  ['files.read', 'Read a complete byte range of an identified original file.', ['path', 'sha256']],
+  ['workspace.export', 'Export complete source editions, publisher history and customer work for independent receiving.', []],
+  ['workspace.receive', 'Receive the complete archived workspace and its original history.', ['archiveFile', 'directory', 'sha256']],
+  ['operations.inspect', 'Reopen a saved source or publisher operation by its original identifier.', ['operationId']],
   ['operations.cancel', 'Cancel the currently running source capture or extraction.', ['operationId']],
 ];
 export const DATASETTE_OPERATIONS = Object.freeze(descriptions.map(([operation, description, required]) =>
@@ -120,6 +125,7 @@ export async function openDatasetteWorkspace({
     for (const name of ['captures', 'editions', 'exports', 'imports'])
       await privateDirectory(join(directory, name), true);
 
+    const files = retainedDatasetteFiles({ directory, workspaceId: settings.workspaceId });
     const capturePath = operationId => join(directory, 'captures', identifier(operationId, 'capture operation'), 'capture.json');
     const editionPath = id => join(directory, 'editions', identifier(id, 'edition identifier'), 'edition.json');
     const selectedSource = join(directory, 'selected-source.json');
@@ -165,6 +171,7 @@ export async function openDatasetteWorkspace({
     async function withPublisher(action) {
       if (!await selected()) throw fault('DATASETTE_EDITION_SELECTION_REQUIRED', 'Select a saved source edition first.', 409);
       if (publisher) return action(publisher);
+      const { openDatasettePublisher } = await import('./model.mjs');
       publisher = await openDatasettePublisher({
         directory: publisherDirectory, create: !await exists(join(publisherDirectory, 'workspace.json')),
         sourceFile: selectedSource, targetDirectory, environment,
@@ -190,6 +197,27 @@ export async function openDatasetteWorkspace({
     function operations() { return DATASETTE_OPERATIONS; }
 
     async function execute(operation, input, controller) {
+      if (operation === 'files.list') return files.list(input);
+      if (operation === 'files.inspect') return files.inspect(input);
+      if (operation === 'files.read') return files.read(input);
+      if (operation === 'workspace.export') {
+        const { exportDatasetteWorkspace } = await import('./archive.mjs');
+        const outputFile = input.outputFile === undefined ? join(directory, 'exports', 'workspace-' + randomUUID() + '.zip') : absolute(input.outputFile, 'workspace archive file');
+        const result = await exportDatasetteWorkspace({ directory, workspace: { directory, workspaceId: settings.workspaceId }, outputFile });
+        if (outputFile.startsWith(directory + '/')) result.retainedFile = await files.inspect({ path: files.relativeName(result.archiveFile ?? outputFile), sha256: result.sha256 });
+        return result;
+      }
+      if (operation === 'workspace.receive') {
+        const { receiveDatasetteWorkspace } = await import('./archive.mjs');
+        return receiveDatasetteWorkspace({ archiveFile: absolute(input.archiveFile, 'workspace archive'), directory: absolute(input.directory, 'received workspace directory'), sha256: input.sha256 });
+      }
+      if (operation === 'operations.inspect') {
+        const id = identifier(input.operationId, 'saved operation');
+        const sourceDirectory = join(directory, 'captures', id);
+        if (await exists(join(sourceDirectory, 'operation.json'))) return inspectDatasetteOperation(sourceDirectory);
+        if (UUID.test(id)) return withPublisher(value => ({ run: value.run(id) }));
+        throw fault('DATASETTE_OPERATION_NOT_FOUND', 'Choose a saved source operation or extraction.', 404);
+      }
       if (operation === 'source.capture' || operation === 'source.adopt') {
         const operationId = identifier(input.operationId, 'capture operation');
         const options = { directory: join(directory, 'captures', operationId), operationId,
@@ -205,8 +233,10 @@ export async function openDatasetteWorkspace({
         const id = identifier(input.id, 'edition identifier'), file = capturePath(input.operationId);
         const review = await reviewDatasetteCapture(file, { key: input.key ?? [], projection: input.projection });
         if (!review.approved) throw fault('DATASETTE_SOURCE_REVIEW_REQUIRED', 'Review the complete key and column projection before saving this edition.', 409);
-        return createDatasetteEdition({ captureFile: file, directory: join(directory, 'editions', id),
-          name: text(input.name, 'an edition name'), review, operationId: identifier(input.operationId) });
+        const value = await createDatasetteEdition({ captureFile: file, directory: join(directory, 'editions', id),
+          name: text(input.name, 'an edition name', 128), review, operationId: identifier(input.operationId) });
+        return { id, editionFile: value.editionFile, editionSha256: value.editionSha256,
+          edition: value.edition, review: value.review, ...captureView(value, input) };
       }
       if (operation === 'editions.list') return listEditions();
       if (operation === 'editions.inspect') {
@@ -230,18 +260,25 @@ export async function openDatasetteWorkspace({
         const outputFile = input.outputFile === undefined ?
           join(directory, 'exports', identifier(input.editionId) + '.datasette.json.gz') :
           absolute(input.outputFile, 'source export file');
-        return exportDatasetteEdition({ editionFile: editionPath(input.editionId), outputFile });
+        const result = await exportDatasetteEdition({ editionFile: editionPath(input.editionId), outputFile });
+        if (outputFile.startsWith(directory + '/')) result.retainedFile = await files.inspect({ path: files.relativeName(outputFile), sha256: result.sha256 });
+        return result;
       }
       if (operation === 'source.receive') {
         const destination = input.directory === undefined ?
           join(directory, 'editions', identifier(input.id ?? 'received-' + randomUUID())) :
           absolute(input.directory, 'received source directory');
-        return receiveDatasettePackage({ archiveFile: absolute(input.archiveFile, 'source archive file'),
-          directory: destination, ...(input.sha256 === undefined ? {} : { sha256: input.sha256 }) });
+        const value = await receiveDatasettePackage({ archiveFile: absolute(input.archiveFile, 'source archive file'),
+          directory: destination, sha256: input.sha256 });
+        return { directory: value.directory, archiveSha256: value.archiveSha256, reused: value.reused ?? false,
+          files: value.files, editionFile: value.editionFile, editionSha256: value.editionSha256,
+          edition: value.edition, review: value.review, ...captureView(value, input) };
       }
-      if (operation === 'release.stage')
+      if (operation === 'release.stage') {
+        const { stageDatasetteRelease } = await import('./release.mjs');
         return stageDatasetteRelease({ ...input,
           releaseDirectory: input.releaseDirectory ?? join(directory, 'releases') });
+      }
       return withPublisher(async value => {
         if (operation === 'publisher.status') return value.status(input);
         if (operation === 'publisher.source') return value.source();
@@ -262,7 +299,8 @@ export async function openDatasetteWorkspace({
             ranges: Object.keys(columns).filter(name => ['integer', 'number'].includes(columns[name].type)) };
           return value.savePlan({ title: text(input.title, 'a publication plan title', 128),
             query: queryName, input: input.input ?? {}, dataset,
-            extraction: { order, ...(input.extraction ?? {}) }, sourceHash: input.sourceHash ?? source.hash });
+            extraction: { order, ...(input.extraction ?? {}) }, sourceHash: input.sourceHash ?? source.hash },
+            input.requestId === undefined ? {} : { requestId: input.requestId });
         }
         if (operation === 'publisher.extract') {
           if (!UUID.test(input.runId ?? '')) throw fault('EXTRACTION_ID_INVALID', 'Retain an extraction UUID before starting this operation.');
@@ -273,6 +311,7 @@ export async function openDatasetteWorkspace({
             if (existing.plan !== Number(input.planId)) throw fault('DATASETTE_EXTRACTION_INPUT_CHANGED', 'This extraction belongs to another saved plan.', 409);
             return { run: existing, reused: true };
           }
+          controller.signal.throwIfAborted();
           const started = value.startExtraction(Number(input.planId), { id: input.runId });
           active.cancel = () => value.cancel(started.id);
           return { run: await started.completion, reused: false };
@@ -296,8 +335,11 @@ export async function openDatasetteWorkspace({
         if (operation === 'publisher.prepare-buyer') {
           const { runId, ...buyerInput } = input; return value.prepareBuyer(runId, buyerInput);
         }
-        if (operation === 'release.prepare') return prepareDatasetteRelease({ ...input, publisher: value,
-          outputDirectory: input.outputDirectory ?? join(directory, 'exports', 'release-' + identifier(input.runId)) });
+        if (operation === 'release.prepare') {
+          const { prepareDatasetteRelease } = await import('./release.mjs');
+          return prepareDatasetteRelease({ ...input, publisher: value,
+            outputDirectory: input.outputDirectory ?? join(directory, 'exports', 'release-' + identifier(input.runId)) });
+        }
         throw fault('DATASETTE_OPERATION_UNKNOWN');
       });
     }
@@ -308,10 +350,12 @@ export async function openDatasetteWorkspace({
       if (operation === 'operations.cancel') {
         if (!active || active.operationId !== input.operationId)
           throw fault('DATASETTE_OPERATION_NOT_ACTIVE', 'Read the current workspace operation before cancelling it.', 409);
-        active.controller.abort();
-        if (active.cancel) await active.cancel();
-        return { operationId: active.operationId, cancelling: true };
+        const current = active;
+        current.controller.abort();
+        if (current.cancel) await current.cancel();
+        return { operationId: current.operationId, cancelling: true };
       }
+      if (operation === 'operations.inspect') return execute(operation, input, new AbortController());
       if (active) throw fault('DATASETTE_WORKSPACE_BUSY', 'The workspace is continuing ' + active.operation + '.', 409);
       const controller = new AbortController();
       const selectedOperation = { operation, operationId: input.operationId ?? input.runId ?? randomUUID(),
