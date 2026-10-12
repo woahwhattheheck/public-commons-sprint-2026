@@ -2,6 +2,7 @@
 """MIT. Whole public-registry capture, review, source receiving and original publishing."""
 from __future__ import annotations
 import argparse
+import json
 from contextlib import contextmanager
 import os
 from pathlib import Path
@@ -47,8 +48,11 @@ def main(argv=None):
     parser.add_argument("--request-id",help="Original action UUID, preserved when reconciling an uncertain response")
     sub=parser.add_subparsers(dest="command",required=True)
     for command in ["init","status"]:sub.add_parser(command)
+    sub.add_parser("binding",help="Read the original workspace, selected Python and PRS identity without opening its writer")
     serve=sub.add_parser("serve",help="Open one borrowed browser/MCP console over this workspace")
     serve.add_argument("--port",type=int,default=0);serve.add_argument("--console-url-file")
+    serve.add_argument("--expected-binding",help="Require the reviewed ClinicalTrials workspace, Python, PRS and source")
+    serve.add_argument("--startup-format",choices=["legacy","json"],default="legacy")
     configure=sub.add_parser("configure");configure.add_argument("--file",required=True)
     action=sub.add_parser("act",help="Call any original registry, PRS or publisher action")
     action.add_argument("action")
@@ -71,27 +75,50 @@ def main(argv=None):
     operation=sub.add_parser("operation");operation.add_argument("id")
     contract=sub.add_parser("contract");contract.add_argument("name",choices=sorted(CONTRACTS));contract.add_argument("--out",required=True)
     args=parser.parse_args(argv)
+    binding=None
+    if args.command=="binding":
+        from managed import inspect_binding
+        print(json.dumps(inspect_binding(args.workspace),ensure_ascii=False,separators=(",",":"),allow_nan=False),flush=True)
+        return 0
+    if args.command=="serve":
+        if not 0<=args.port<=65535:raise InputError("Port must be from 0 to 65535")
+        if args.startup_format=="json" or args.expected_binding is not None:
+            from managed import require_binding
+            binding=require_binding(args.workspace,args.expected_binding)
     ws=Workspace(args.workspace,create=args.command=="init")
     def act(name,payload=None,request_id=None):
         return ws.act(name,payload or {},
             expected_revision=args.expected_revision if args.expected_revision is not None else ws._meta("revision",0),
             request_id=request_id or args.request_id or str(uuid.uuid4()))
     try:
+        if binding is not None:
+            binding=require_binding(str(ws.root),binding["sha256"])
         command=args.command
         if command in {"init","status"}:result=ws.state()
         elif command=="serve":
             server=OperatorServer(ws,args.port)
             stopped=threading.Event()
             previous={}
-            def stop(*_):stopped.set()
+            worker=None
+            def stop(*_):
+                server.launch=None
+                stopped.set()
             for sig in [signal.SIGINT,signal.SIGTERM]:previous[sig]=signal.signal(sig,stop)
             try:
                 with published_connection(args.console_url_file,server.url):
+                    if binding is not None:
+                        from managed import startup
+                        server.launch=startup(server,binding,args.console_url_file)
                     worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
-                    print(json_bytes({"url":server.url,"workspace":str(ws.root),"consoleUrlFile":args.console_url_file}).decode(),flush=True)
+                    if args.startup_format=="json":
+                        print(json.dumps(server.launch,ensure_ascii=False,separators=(",",":"),allow_nan=False),flush=True)
+                    else:
+                        print(json_bytes({"url":server.url,"workspace":str(ws.root),"consoleUrlFile":args.console_url_file}).decode(),flush=True)
                     stopped.wait()
-                    server.shutdown();worker.join()
             finally:
+                server.launch=None
+                if worker is not None and worker.is_alive():
+                    server.shutdown();worker.join()
                 server.server_close()
                 for sig,handler in previous.items():signal.signal(sig,handler)
             return 0
