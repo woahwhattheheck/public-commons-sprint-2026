@@ -106,7 +106,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   for (const root of spec.components)
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
-  const required = [...Object.values(spec.commands), ...Object.values(product.bin), product.readme,
+  const required = [...Object.values(spec.commands), ...Object.values(spec.applicationProviders ?? {}),
+    ...Object.values(product.bin), product.readme,
     ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9))];
   for (const path of [...required, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
