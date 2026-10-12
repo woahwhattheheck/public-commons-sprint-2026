@@ -2,7 +2,7 @@
 
 The `haystack-turnover` selection delivers the complete native building-data application through the maintained source builder, installer, Applications lifecycle and Merchant host.
 
-The operator imports original Haystack JSON v4, inspects source-local site/equipment/point records, reviews complete typed tag edits, saves editions, compares revisions and hands an editable project to a receiving operator.
+The operator imports original Haystack JSON v4, inspects source-local site/equipment/point records, reviews complete typed tag edits, saves editions, compares revisions, assigns corrective work and reviews the receiving team's completed work with its full evidence.
 
 | Surface | Entry |
 | --- | --- |
@@ -12,6 +12,7 @@ The operator imports original Haystack JSON v4, inspects source-local site/equip
 | Browser/Node SDK | `./seller/haystack` |
 | Native grid API | `./seller/haystack/types` |
 | Durable workspace | `./seller/haystack/workspace` |
+| Corrective work API | `./seller/haystack/corrective-work` |
 | Complete receiving | `./seller/haystack/portable` |
 | Managed agent | `haystack-workspaces` provider |
 | Selected installation | `--selection haystack-turnover` |
@@ -89,11 +90,21 @@ Compare editions using every original changed row and tag. Pair different origin
 
 The browser preserves each pending operation's UUID, reviewed revision and exact input before it sends the request. When a response is interrupted, reconnect to the original workspace and recover that operation.
 
+## Assign, complete and return corrective work
+
+Open **Work items** from an original source record or complete diagnostic. Record the full task, responsible person, due date and priority. Attach complete files, operator observations or an original native tag proposal, then submit the work against its reviewed source material.
+
+The reviewer can verify that exact submitted material, reopen it for another round or record an explicit accepted exception. The full event history and every evidence file stay with the original project.
+
+When a recipient returns a complete editable workspace, preview every item in the original project's **Work items** view. Choose keep or accept for each item, and resolve fields changed by both operators. Later returns use the already accepted recipient history, preserving deliberate follow-up edits and reversals.
+
+Read the complete [corrective-work guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/CORRECTIVE_WORK.md) for assignment, evidence, review, return comparison, reports, large-file access and native actions.
+
 ## Hand over an editable project
 
-Create a complete workspace delivery through the browser or CLI. It carries the full saved state, every original source, all proposals/reviews and editions, original mutation outcomes, and every portable application file.
+Create a complete workspace delivery through the browser or CLI. It carries the full saved state, every original source, all proposals/reviews and editions, every corrective-work event and evidence file, original mutation outcomes, and all 41 portable application files.
 
-The operator guide's receiving command installs it into a new directory. Start its own `application/cli.mjs` against that directory, or select it in the same managed Applications view. The receiving team can continue native source import, review, comparison and delivery under the original workspace identity.
+The operator guide's receiving command installs it into a new directory. Start its own `application/cli.mjs` against that directory, or select it in the same managed Applications view. The receiving team can continue native source import, tag review, assignments, evidence, corrective-work review and delivery under the original workspace identity.
 
 Deliver the selected managed installation archive and runtime transfer alongside the customer package when the recipient needs the full Merchant environment. Private project data stays in its selected project directory across runtime upgrades.
 
@@ -113,3 +124,14 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/RECEIVING
 ~~~
 
 Retain that operation directory when continuing it. The programme saves original inputs, full useful reports, the editable workspace package and actual outcomes as it progresses.
+
+The complementary corrective-work programme operates the full Charlie source through assignment, complete evidence, independent native proposal reviews, concurrent operators, repeated recipient returns, browser work and complete independent receiving:
+
+~~~sh
+mkdir -p /absolute/haystack-corrective-operation
+flock -n /absolute/haystack-corrective-operation/programme.lock \
+  node stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/CORRECTIVE_RECEIVING.mjs \
+  /absolute/haystack-corrective-operation
+~~~
+
+Use the same original operation directory when continuing. It retains full original requests, operator browser drafts, complete useful reports and the editable receiving package.

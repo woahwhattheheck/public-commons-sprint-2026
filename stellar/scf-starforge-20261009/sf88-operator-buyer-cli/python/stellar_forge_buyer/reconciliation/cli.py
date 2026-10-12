@@ -14,6 +14,12 @@ def add_parser(commands):
     actions.add_parser("status")
     review = actions.add_parser("review", help="Read all source/target mapping and window contracts")
     review.add_argument("--definition", required=True, help="UTF-8 JSON definition file; no mutation")
+    preview = actions.add_parser("normalization-preview", help="Read original values and exact reviewed unit/time conversion on a display page")
+    preview.add_argument("--definition", required=True)
+    preview.add_argument("--side", choices=("source", "target"), required=True)
+    preview.add_argument("--column-name", required=True)
+    preview.add_argument("--offset", type=int, default=0)
+    preview.add_argument("--limit", type=int, default=25)
     for kind in ("pairs", "runs", "reports", "operations"):
         item = actions.add_parser(kind)
         item.add_argument("--offset", type=int, default=0)
@@ -33,7 +39,7 @@ def add_parser(commands):
     resume = actions.add_parser("resume", help="Explicitly continue the original retained reconciliation request")
     resume.add_argument("id")
     resume.add_argument("--workspace-id", required=True)
-    for kind in ("groups", "rows", "fields", "decisions", "changes"):
+    for kind in ("groups", "rows", "fields", "normalizations", "decisions", "changes"):
         item = actions.add_parser(kind)
         item.add_argument("id", help="Run ID, or immutable report ID for changes")
         item.add_argument("--offset", type=int, default=0)
@@ -41,10 +47,12 @@ def add_parser(commands):
         if kind == "groups":
             item.add_argument("--category")
             item.add_argument("--duplicates", choices=("true", "false"))
-        if kind == "fields":
+        if kind in {"fields", "normalizations"}:
             item.add_argument("--group-id", type=int)
             item.add_argument("--column-name")
-            item.add_argument("--state", help="Exact retained numeric/exact/missing/duplicate comparison state")
+            item.add_argument("--state", help="Exact retained field comparison or normalization conversion state")
+            if kind == "normalizations":
+                item.add_argument("--side", choices=("source", "target"))
         if kind == "rows":
             item.add_argument("--side", choices=("source", "target"))
             item.add_argument("--status", choices=("INCLUDED", "QUARANTINED", "EXCLUDED_WINDOW"))
@@ -72,6 +80,9 @@ def dispatch(workspace, args):
         return native.status()
     if action == "review":
         return native.review(_body(args.definition))
+    if action == "normalization-preview":
+        return native.normalization_preview(_body(args.definition), side=args.side, column_name=args.column_name,
+                                            offset=args.offset, limit=args.limit)
     if action in {"pairs", "runs", "reports", "operations"}:
         options = {"offset": args.offset, "limit": args.limit}
         if action == "runs":
@@ -87,13 +98,15 @@ def dispatch(workspace, args):
         return native.perform("pairs" if action == "save-pair" else action, _body(args.request_file))
     if action == "resume":
         return native.resume(args.id, args.workspace_id)
-    if action in {"groups", "rows", "fields"}:
+    if action in {"groups", "rows", "fields", "normalizations"}:
         options = {"offset": args.offset, "limit": args.limit}
         if action == "groups":
             options.update(category=args.category,
                            duplicates=None if args.duplicates is None else args.duplicates == "true")
-        elif action == "fields":
+        elif action in {"fields", "normalizations"}:
             options.update(group_id=args.group_id, column_name=args.column_name, state=args.state)
+            if action == "normalizations":
+                options["side"] = args.side
         else:
             options.update(side=args.side, status=args.status, group_id=args.group_id)
         return native.grid(args.id, action, **options)

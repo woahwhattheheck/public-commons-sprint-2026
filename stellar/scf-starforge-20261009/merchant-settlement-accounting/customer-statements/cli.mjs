@@ -20,11 +20,13 @@ export const CUSTOMER_STATEMENTS_HELP=[
   'orders-assign      --input assignments.json (revision, actor, customerId, orders:[{orderRef,label}]).',
   'bindings           Optional --customer UUID --offset 0 --limit 100.',
   'usage-import       --file original-usage.json --revision N --actor NAME [--name LABEL].',
-  'preview            --input selection.json (customerId, runId; optional usageId, from/until, replacesId).',
+  'usage-period       --input period.json (usageOpeningId, usageId); inspect complete native snapshot activity.',
+  'preview            --input selection.json (customerId, runId; optional usageId, usageOpeningId, from/until, replacesId).',
   'retain             --input retention.json (selection + revision, actor, requestId, previewSha256).',
   'statements         Optional --customer UUID --status RETAINED --offset 0 --limit 100.',
   'show               --id UUID.',
   'export             --id UUID --file statement.json|statement.csv|usage.csv|statement.html|manifest.json|status.json',
+  '                   Period statements also include period.csv|period-summary.csv|usage-opening.json|usage-closing.json.',
   '                   --output /absolute/new-file (or - for stdout).',
   'withdraw           --id UUID --input withdrawal.json (revision, actor, reason).',
   '',
@@ -99,7 +101,8 @@ export async function customerStatementsMain(argv=process.argv.slice(2)){
       need(values.file,'USAGE_FILE_REQUIRED','Supply the original usage JSON with --file.');
       const content=(await readInputFile(values.file,MAX_USAGE_BYTES)).toString('utf8');
       result=await statements.importUsage({revision:Number(values.revision),actor:values.actor,name:values.name??'Service usage',content});
-    }else if(command==='preview')result=await statements.preview(await input(values.input));
+    }else if(command==='usage-period')result=await statements.previewUsagePeriod(await input(values.input));
+    else if(command==='preview')result=await statements.preview(await input(values.input));
     else if(command==='retain')result=await statements.retain(await input(values.input));
     else if(command==='statements')result=await statements.listStatements({customerId:values.customer,status:values.status,offset:values.offset,limit:values.limit});
     else if(command==='show')result=await statements.detail(values.id);

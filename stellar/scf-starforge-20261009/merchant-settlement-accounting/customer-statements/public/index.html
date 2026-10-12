@@ -58,9 +58,16 @@
         <form id="preview-form">
           <label>Customer<select name="customerId" id="statement-customer" required></select></label>
           <label>Completed accounting run<select name="runId" id="statement-run" required></select></label>
-          <label>Service usage capture<select name="usageId" id="statement-usage"><option value="">Purchases only</option></select></label>
+          <label>Service reporting<select name="usageMode" id="statement-usage-mode"><option value="snapshot">Cumulative usage snapshot</option><option value="period">Activity between two native snapshots</option></select></label>
+          <label>Service usage capture / closing snapshot<select name="usageId" id="statement-usage"><option value="">Purchases only</option></select></label>
+          <div id="service-period-fields" class="inset" hidden>
+            <label>Opening native snapshot<select name="usageOpeningId" id="statement-usage-opening"><option value="">Choose opening snapshot</option></select></label>
+            <p class="muted">Choose two complete exports of the same original API pass. Their saved capture times define the observed interval. Earlier reserved work and recovered results remain in the comparison.</p>
+            <button id="inspect-period" type="button">Inspect service period</button>
+          </div>
+          <div id="service-period-preview" hidden></div>
           <div class="form-grid"><label>Recorded purchases from (UTC)<input name="from" type="datetime-local" step="1"></label><label>Until, exclusive (UTC)<input name="until" type="datetime-local" step="1"></label></div>
-          <small>Leave both dates empty to use all purchases in the selected report. Service units always use the capture’s cumulative totals.</small>
+          <small>Leave both purchase dates empty to include an older prepaid order. Service dates come from its selected snapshots; the original purchase is recorded once.</small>
           <label>Correction of retained statement<select name="replacesId" id="statement-replaces"><option value="">New statement</option></select></label>
           <button type="submit">Prepare statement</button>
         </form>

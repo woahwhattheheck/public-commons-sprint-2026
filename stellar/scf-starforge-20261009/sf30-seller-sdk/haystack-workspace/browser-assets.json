@@ -57,6 +57,13 @@
         "fixtures.json",
         "application/json"
       ]
+    ],
+    [
+      "/CORRECTIVE_WORK.md",
+      [
+        "CORRECTIVE_WORK.md",
+        "text/markdown; charset=utf-8"
+      ]
     ]
   ]
 }

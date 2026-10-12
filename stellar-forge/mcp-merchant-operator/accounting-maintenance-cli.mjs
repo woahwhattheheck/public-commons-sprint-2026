@@ -6,7 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { resolve, join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { acquireStateLease } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs';
-import { writePrivate, privateSupportDirectory } from './config.mjs';
+import { writePrivate, privateSupportDirectory } from './host-files.mjs';
 import { accountingMaintenanceArguments, connectAccountingMaintenanceClient } from './accounting-maintenance-client.mjs';
 
 const REQUEST = 'stellar-forge.accounting-maintenance-request.v1';

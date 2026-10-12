@@ -8,6 +8,27 @@ const text={type:'string'};
 const page={offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:100}};
 const map={type:'array',maxItems:10000,items:{type:'object',additionalProperties:false,required:['original','canonical'],
  properties:{original:{type:'string',maxLength:4096},canonical:{type:'string',maxLength:4096}}}};
+const coefficient={type:'string',minLength:1,maxLength:256,
+ pattern:'^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$'};
+const affineSide={type:'object',additionalProperties:false,required:['unit','scale','offset'],
+ properties:{unit:{type:'string',minLength:1,maxLength:240},scale:coefficient,offset:coefficient}};
+const timeSide={oneOf:[
+ {type:'object',additionalProperties:false,required:['format','offset'],
+  properties:{format:{enum:['native','iso8601']},offset:{type:'string',pattern:'^(?:embedded|[+-][0-9]{2}:[0-9]{2})$'}}},
+ {type:'object',additionalProperties:false,required:['format','offset'],
+  properties:{format:{enum:['unix-seconds','unix-milliseconds','unix-microseconds','unix-nanoseconds']},offset:{const:'utc'}}}
+]};
+export const reconciliationNormalization=Object.freeze({oneOf:[
+ {type:'object',additionalProperties:false,required:['mode','canonical_type','canonical_unit','source','target','basis'],
+  properties:{mode:{const:'numeric-affine'},canonical_type:{type:'string',pattern:'^(?:BIGINT|HUGEINT|DECIMAL\\(([1-9]|[12][0-9]|3[0-8]),(0|[1-9]|[12][0-9]|3[0-8])\\))$'},
+   canonical_unit:{type:'string',minLength:1,maxLength:240},source:affineSide,target:affineSide,
+   basis:{type:'string',minLength:1,maxLength:4000}}},
+ {type:'object',additionalProperties:false,required:['mode','canonical_type','source','target','basis'],
+  properties:{mode:{const:'time-utc'},canonical_type:{const:'TIMESTAMPTZ'},source:timeSide,target:timeSide,
+   basis:{type:'string',minLength:1,maxLength:4000}}}
+],description:'Explicit lossless original source-unit or time conversion. Affine numeric VALUEs use exact scale and offset strings and a nonzero scale, preserving all source values. Canonical DECIMAL precision is <=38 with scale<=precision; no rounding. Time KEY/VALUEs require reviewed native/ISO/Unix representation and embedded/fixed offsets; exact UTC microseconds, no timezone guess. Failed conversions remain retained and quarantine their original row. No literal value maps on a converted field; tolerance unit must equal canonical_unit.'});
+export const reconciliationNormalizationStates=Object.freeze(['CONVERTED','NULL_PRESERVED','NOT_NUMERIC','NON_FINITE',
+ 'OUT_OF_RANGE','PRECISION_LOSS','INVALID_TIME','OFFSET_REQUIRED','OFFSET_CONFLICT','SUBMICROSECOND','NUMERIC_LIMIT']);
 export const reconciliationNumericRule=Object.freeze({
  type:'object',additionalProperties:false,required:['mode','absolute','relative','unit','nulls','basis'],
  properties:{mode:{const:'numeric-tolerance'},
@@ -15,7 +36,7 @@ export const reconciliationNumericRule=Object.freeze({
   relative:{type:'string',minLength:1,maxLength:256,pattern:'^[+]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$'},
   unit:{type:'string',minLength:1,maxLength:240},nulls:{enum:['equal','uncomparable']},
   basis:{type:'string',minLength:1,maxLength:4000}},
- description:'Explicit native numeric VALUE rule only; finite nonnegative decimal strings, exponent magnitude<=256, relative<=1. Difference <= absolute + relative*max(abs(source),abs(target)); source unit is reviewed, never converted. Unique pairs only; duplicate multiplicities stay exact.'
+ description:'Explicit native numeric VALUE rule only; finite nonnegative decimal strings, exponent magnitude<=256, relative<=1. Difference <= absolute + relative*max(abs(source),abs(target)); the unit is reviewed and must match canonical_unit when separate normalization is selected. Unique pairs only; duplicate multiplicities stay exact.'
 });
 export const reconciliationFieldStates=Object.freeze(['EXACT_EQUAL','EXACT_DIFFERENT','NULLS_EQUAL','WITHIN_TOLERANCE',
  'OUTSIDE_TOLERANCE','NULL_NOT_COMPARABLE','NON_FINITE_NOT_COMPARABLE','DUPLICATE_NOT_PAIRED','ONE_SIDED','QUARANTINED']);
@@ -24,11 +45,11 @@ export const reconciliationDefinition=Object.freeze({
  properties:{name,label:{type:'string',minLength:1,maxLength:240},source_edition:id,target_edition:id,
   columns:{type:'array',minItems:1,maxItems:64,items:{type:'object',additionalProperties:false,
    required:['name','source','target','role'],properties:{name,source:text,target:text,role:{enum:['key','value']},
-    meaning:text,source_map:map,target_map:map,comparison:reconciliationNumericRule}}},
+    meaning:text,source_map:map,target_map:map,comparison:reconciliationNumericRule,normalization:reconciliationNormalization}}},
   window_column:{anyOf:[name,{type:'null'}]},windows:{type:'array',maxItems:32,items:{type:'object',additionalProperties:false,
    required:['id','start','end','basis'],properties:{id:name,start:text,end:text,basis:{enum:['native','lexical']}}}},
   notes:text},
- description:'Exact source/target field and SQL-type matching, at least one key. Empty value maps preserve identity; explicit VARCHAR maps quarantine every unmapped non-null value. Windows are nonoverlapping half-open intervals; no implicit trimming, rounding, units or timezone conversion. Optional numeric value comparison rules require explicit exact-string allowances, source unit, null policy and basis.'
+ description:'Reviewed source/target fields with at least one key. Native SQL types must match unless an explicit lossless normalization chooses a common canonical type. Empty value maps preserve identity; explicit VARCHAR maps quarantine unmapped values. Windows are nonoverlapping half-open canonical intervals with exact bounds. Numeric allowances require exact-string amounts, a reviewed source/canonical unit, null policy and basis. Every original value/conversion remains retained; no implicit rounding or timezone inference.'
 });
 const subject={oneOf:[
  {type:'object',additionalProperties:false,required:['kind','group_id'],properties:{kind:{const:'group'},group_id:{type:'integer',minimum:1}}},
@@ -38,6 +59,9 @@ const spec=(required,properties,description)=>({required,properties,description}
 export const nativeDuckDBReconciliationOperations=Object.freeze({
  'reconcile-status':spec([],{},'Read paired-workflow counts in the SAME original warehouse; no new service or capture.'),
  'reconcile-review':spec(['definition'],{definition:reconciliationDefinition},'Read and hash the complete mapping, native types, source meanings and window contracts before saving.'),
+ 'reconcile-normalization-preview':spec(['definition','side','column_name'],
+  {definition:reconciliationDefinition,side:{enum:['source','target']},column_name:name,...page},
+  'Read an exact page of original source values and reviewed unit/time conversions before saving. No new request, source, import or mutation; returned total is the full immutable edition.'),
  'reconcile-pairs':spec([],{...page},'Page retained pair definitions and current revisions.'),
  'reconcile-pair':spec(['pair_id'],{pair_id:id,revision:{type:'integer',minimum:1}},'Read a retained pair or an exact historical revision.'),
  'reconcile-save-pair':spec(['request_id','expected_revision','definition','review_sha256'],
@@ -55,7 +79,10 @@ export const nativeDuckDBReconciliationOperations=Object.freeze({
   status:{enum:['INCLUDED','QUARANTINED','EXCLUDED_WINDOW']},group_id:{type:'integer',minimum:1}},
   'Page every original observation, including quarantined and outside-window rows; offsets are display controls only.'),
  'reconcile-fields':spec(['run_id'],{run_id:id,...page,group_id:{type:'integer',minimum:1},column_name:name,
-  state:{enum:reconciliationFieldStates}},'Page every retained per-field native value, exact signed/absolute difference and reviewed allowance for a rule-enabled run. No duplicate row pairing; original runs without recorded rules return FIELDS_NOT_RECORDED.'),
+  state:{enum:reconciliationFieldStates}},'Page every retained per-field native value, exact signed/absolute difference and reviewed allowance for a rule- or normalization-enabled run. Raw values remain original; numeric arithmetic is canonical after an explicit conversion. No duplicate row pairing; old runs without recorded fields return FIELDS_NOT_RECORDED.'),
+ 'reconcile-normalizations':spec(['run_id'],{run_id:id,...page,side:{enum:['source','target']},
+  group_id:{type:'integer',minimum:1},column_name:name,state:{enum:reconciliationNormalizationStates}},
+  'Page every original conversion record, raw value, exact canonical candidate/result and failure state in the retained run. Failed values remain in full accounting.'),
  'reconcile-row':spec(['run_id','side','row'],{run_id:id,side:{enum:['source','target']},row:{type:'integer',minimum:1}},
   'Read the original retained native row and its exact canonical interpretation.'),
  'reconcile-decisions':spec(['run_id'],{run_id:id,...page},'Page append-only engineer decisions and their exact revision sequence.'),
@@ -74,5 +101,5 @@ export const nativeDuckDBReconciliationOperations=Object.freeze({
  'reconcile-resume':spec(['request_id'],{request_id:requestId},'Explicitly resume exactly the retained original body under its native writer; never choose a replacement ID.'),
  'reconcile-export-manifest':spec(['export_id'],{export_id:id},'Read the small exact manifest descriptor for a complete reconciliation handoff, including packages whose full file list exceeds the tool response size. Read its original bytes with file.'),
  'reconcile-export':spec(['request_id','report_id'],{request_id:requestId,report_id:id},
-  'Export complete CSV/Parquet for all frozen recipes (including fields for numeric-rule reports), exact original sources, guide/report and original sparse warehouse handoff. Use original operation/resume for this export journal, and export-read/file for all declared bytes.')
+  'Export complete CSV/Parquet for all frozen recipes (including fields and complete normalizations when reviewed), exact original sources, guide/report and original sparse warehouse handoff. Use original operation/resume for this export journal, and export-read/file for all declared bytes.')
 });

@@ -36,7 +36,7 @@ export function parseReconciliationManifest(bytes,exportId){
  need(Array.isArray(result.queries)&&Array.isArray(result.sources),'DUCKDB_RECONCILIATION_MANIFEST_INVALID');
  const kinds=new Set();
  for(const query of result.queries){
-  need(plain(query)&&['rows','groups','decisions','changes','fields'].includes(query.kind)&&!kinds.has(query.kind)&&
+  need(plain(query)&&['rows','groups','decisions','changes','fields','normalizations'].includes(query.kind)&&!kinds.has(query.kind)&&
    sha(query.query_id)&&sha(query.export_id)&&Number.isSafeInteger(query.revision)&&query.revision>0&&
    Number.isSafeInteger(query.rows)&&query.rows>=0&&query.directory==='queries/'+query.kind,
    'DUCKDB_RECONCILIATION_MANIFEST_INVALID');
@@ -49,7 +49,14 @@ export function parseReconciliationManifest(bytes,exportId){
   need(plain(result.comparison_rules)&&result.comparison_rules.schema==='stellar-forge.duckdb-reconciliation.numeric-rules.v1'&&
    Array.isArray(result.comparison_rules.columns)&&result.comparison_rules.columns.length>0&&kinds.has('fields'),
    'DUCKDB_RECONCILIATION_COMPARISON_RULES_CHANGED');
- }else need(!kinds.has('fields'),'DUCKDB_RECONCILIATION_COMPARISON_RULES_CHANGED');
+ }
+ if(result.normalizations!==undefined){
+  need(plain(result.normalizations)&&result.normalizations.schema==='stellar-forge.duckdb-reconciliation.normalizations.v1'&&
+   Array.isArray(result.normalizations.columns)&&result.normalizations.columns.length>0&&kinds.has('normalizations'),
+   'DUCKDB_RECONCILIATION_NORMALIZATIONS_CHANGED');
+ }else need(!kinds.has('normalizations'),'DUCKDB_RECONCILIATION_NORMALIZATIONS_CHANGED');
+ need(kinds.has('fields')===(result.comparison_rules!==undefined||result.normalizations!==undefined),
+  'DUCKDB_RECONCILIATION_COMPARISON_FIELDS_CHANGED');
  const editions=new Set();
  for(const source of result.sources){
   need(plain(source)&&sha(source.edition_id)&&!editions.has(source.edition_id)&&
@@ -144,6 +151,7 @@ export async function openDuckDBReconciliationClient({url,client:provided,worksp
   workspace,workspaceId,endpoint:transport.endpoint,
   status:()=>call('reconcile-status'),
   review:definition=>call('reconcile-review',{definition}),
+  normalizationPreview:(definition,options)=>call('reconcile-normalization-preview',{definition,...options}),
   pairs:options=>call('reconcile-pairs',options),
   pair:(pair_id,revision)=>call('reconcile-pair',{pair_id,...(revision===undefined?{}:{revision})}),
   savePair:request=>call('reconcile-save-pair',request),
@@ -153,6 +161,7 @@ export async function openDuckDBReconciliationClient({url,client:provided,worksp
   groups:(run_id,options={})=>call('reconcile-groups',{run_id,...options}),
   rows:(run_id,options={})=>call('reconcile-rows',{run_id,...options}),
   fields:(run_id,options={})=>call('reconcile-fields',{run_id,...options}),
+  normalizations:(run_id,options={})=>call('reconcile-normalizations',{run_id,...options}),
   row:(run_id,side,row)=>call('reconcile-row',{run_id,side,row}),
   decisions:(run_id,options={})=>call('reconcile-decisions',{run_id,...options}),
   decide:request=>call('reconcile-decide',request),

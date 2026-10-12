@@ -20,13 +20,28 @@ export type StatementPrepareOptions<K extends AccountingStatementOperationKind =
       ? StatementOperationConnection & { kind: K; arguments: StatementInputMap[K] }
       : never;
 export interface PreparedStatementOperation<K extends AccountingStatementOperationKind = AccountingStatementOperationKind> {
-  directory: string; kind: K; requestSha256: string; arguments: AccountingStatementOperationArguments[K]; phase: 'PREPARED';
+  directory: string; kind: K; requestSha256: string; arguments: AccountingStatementOperationArguments[K]; phase: 'PREPARED'; reused: boolean;
 }
 export function prepareAccountingStatementOperation(options: StatementPrepareOptions<'retain'>): Promise<PreparedStatementOperation<'retain'>>;
 export function prepareAccountingStatementOperation<K extends StatementMutationKind>(
   options: StatementOperationConnection & { kind: K; arguments: StatementInputMap[K] },
 ): Promise<PreparedStatementOperation<K>>;
 export function prepareAccountingStatementOperation(options: StatementPrepareOptions): Promise<PreparedStatementOperation>;
+
+export interface ObservedStatementOperation {
+  directory: string; kind: AccountingStatementOperationKind; requestSha256: string; preparedAt: string;
+  url: string; workspace: string; tokenEnv: string; arguments: AccountingStatementOperationArguments[AccountingStatementOperationKind];
+  preview?: AccountingStatementPreview; phase: string;
+  state: null | {
+    schema: 'stellar-forge.accounting-statement-client-state.v1'; requestSha256: string; phase: string;
+    preparedAt: string; updatedAt: string; submissionAttempted: boolean;
+    observation: StatementOperationObservation | StatementOperationSubmission | null;
+    sendingAt?: string; sendError?: {code: string; message: string} | null; lookupError?: {code: string; message: string} | null;
+  };
+}
+/** Read-only inspection of original atomic saved progress, including an unfinished preparation. */
+export function observeAccountingStatementOperation(options: {directory: string}): Promise<ObservedStatementOperation>;
+
 export type StatementOperationObservation = StatementLookupResult | CustomerReconciliation |
   AssignmentReconciliation | UsageReconciliation | WithdrawalReconciliation;
 export type StatementOperationSubmission = CustomerSaveResult | CustomerAssignmentResult |
@@ -62,3 +77,34 @@ export function downloadAccountingStatementStatus(options: {
   client: StatementDownloadClient; statementId: string; output: string; signal?: AbortSignal;
 }): Promise<{ output: string; workspace: string; statementId: string; file: StatementFileMetadata; complete: true }>;
 export function main(args?: string[]): Promise<unknown>;
+
+export type {
+  StatementCycleProblem, StatementCyclePhase, StatementCycleReview, StatementCycleManifest,
+  StatementCycleDelivery, StatementCycleRow, StatementCycleReport, StatementCycleClient, StatementCyclePrepareOptions, StatementCycleRunOptions,
+} from './accounting-statement-cycle.mjs';
+export {
+  prepareAccountingStatementCycle, runAccountingStatementCycle, inspectAccountingStatementCycle, observeAccountingStatementCycle,
+} from './accounting-statement-cycle.mjs';
+
+export type {
+  StatementDossierCycle, StatementDossierCustomer, StatementDossierPlan, StatementDossierSelectedPlan,
+  StatementDossierPass, StatementDossierStatementIdentity, StatementDossierCounts, StatementDossierRow,
+  StatementDossierCustomerGroup, StatementDossierGroups, StatementDossierFile, StatementDossierStatement,
+  StatementDossierManifest, StatementDossierSnapshot, StatementDossierExport,
+} from './accounting-statement-customer-dossier.mjs';
+export {
+  inspectAccountingStatementCustomerDossiers, exportAccountingStatementCustomerDossier, readAccountingStatementCustomerDossier,
+} from './accounting-statement-customer-dossier.mjs';
+
+export type {
+  ServicePlannerCapture, ServicePlannerNativeCapture, ServicePlannerCustomer, ServicePlannerBinding, ServicePlannerRun,
+  ServicePlannerStatement, ServicePlannerPeriod, ServicePlannerNote, ServicePlannerCoverage, ServicePlannerSuggestion,
+  ServicePlannerRow, ServicePlannerInventory, ServicePlannerChoice, ServiceClosePlanRow, ServiceClosePlan,
+} from './accounting-statement-service-planner.mjs';
+export const readAccountingStatementServicePlanner: typeof import('./accounting-statement-service-planner.mjs').readAccountingStatementServicePlanner;
+export function compileAccountingStatementServicePlan(
+  options: Parameters<typeof import('./accounting-statement-service-planner.mjs').compileAccountingStatementServicePlan>[0]
+): Promise<import('./accounting-statement-service-planner.mjs').ServiceClosePlan>;
+export const prepareAccountingStatementServiceCycle: typeof import('./accounting-statement-service-planner.mjs').prepareAccountingStatementServiceCycle;
+export function renderAccountingStatementServicePlanCsv(plan: import('./accounting-statement-service-planner.mjs').ServiceClosePlan): Promise<string>;
+export function renderAccountingStatementServicePlanHtml(plan: import('./accounting-statement-service-planner.mjs').ServiceClosePlan): Promise<string>;

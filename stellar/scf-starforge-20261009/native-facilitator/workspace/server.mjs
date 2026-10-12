@@ -8,8 +8,8 @@ import { pathToFileURL } from 'node:url';
 import { openProfileStore, requireValue, fail } from './store.mjs';
 import { createFacilitatorController } from './controller.mjs';
 
-const assets = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/style.css','style.css']]);
-const mime = {'index.html':'text/html; charset=utf-8','browser.mjs':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'};
+const assets = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/catalog-browser.mjs','catalog-browser.mjs'],['/style.css','style.css']]);
+const mime = {'index.html':'text/html; charset=utf-8','browser.mjs':'text/javascript; charset=utf-8','catalog-browser.mjs':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'};
 const headers = {'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer',
   'cross-origin-resource-policy':'same-origin','content-security-policy':"default-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"};
 function fields(value, allowed) {
@@ -57,6 +57,17 @@ export async function startWorkspace({directory, ownershipDirectory, create = fa
         'FACILITATOR_WORKSPACE_AUTH_REQUIRED', 401);
       if (req.method === 'GET') {
         if (path === '/api/status') return send(200, snapshot());
+        if (path === '/api/catalog') {
+          const params = new URLSearchParams(url.searchParams);
+          requireValue(params.getAll('runtimeId').length === 1 &&
+            params.getAll('expectedVersion').length <= 1, 'FACILITATOR_CATALOG_QUERY_INVALID');
+          const runtimeId = params.get('runtimeId'), version = params.get('expectedVersion');
+          requireValue(version === null || /^(0|[1-9][0-9]*)$/.test(version),
+            'FACILITATOR_CATALOG_VERSION_INVALID');
+          params.delete('runtimeId');params.delete('expectedVersion');
+          return send(200, controller.catalog({runtimeId,query:params.toString(),
+            expectedVersion:version === null ? null : Number(version)}));
+        }
         if (path === '/api/profiles') return send(200, await store.list({after:url.searchParams.get('after') ?? ''}));
         if (path === '/api/profile' || path === '/api/download') {
           const profile = await store.read(url.searchParams.get('name'));

@@ -2,7 +2,7 @@
 // MIT. Customer operations compose the maintained conversion browser and service.
 import { constants } from 'node:fs';
 import { open, lstat, readdir, statfs, rename } from 'node:fs/promises';
-import { join, dirname, resolve } from 'node:path';
+import { join, dirname, resolve, basename, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
@@ -59,6 +59,13 @@ export async function startCustomerWorkspace({ directory, port = 0 } = {}) {
   let closing = false;
   const transferDirectory = id => join(transferRoot, tokenId(id));
   const recordPath = id => join(transferDirectory(id), 'operation.json');
+  function receivingDestination(value) {
+    need(value.type === 'restore' && typeof value.destinationName === 'string' &&
+      RESTORE_NAME.test(value.destinationName), 'CUSTOMER_TRANSFER_INVALID');
+    // Installation names belong to this customer cohort. Historical absolute
+    // paths remain in receipts; reopening follows the current real parent.
+    return join(dirname(customer.root), value.destinationName);
+  }
   async function saved(id) {
     // Atomic replacement can unlink an already-open previous operation record,
     // changing that inode's ctime. Retry this mutable status read through the
@@ -200,6 +207,7 @@ export async function startCustomerWorkspace({ directory, port = 0 } = {}) {
   }
   async function receive(id) {
     const value = await saved(id);
+    const destination = receivingDestination(value);
     await write({ ...value, state: 'RECEIVING', error: undefined });
     const archive = join(transferDirectory(id), 'incoming.zip');
     const verified = await archiveOperation(['verify', '--archive', archive,
@@ -211,16 +219,23 @@ export async function startCustomerWorkspace({ directory, port = 0 } = {}) {
       receipt = JSON.parse(await readPrivate(receiptPath, 32 * 1024 * 1024));
       need(receipt.schema === 'erp-reconciliation.customer-restore-receipt.v1' &&
         receipt.customerId === verified.customerId && receipt.archiveSha256 === verified.archiveSha256 &&
-        receipt.directory === value.destination && receipt.manifestSha256 === verified.manifestSha256,
-        'CUSTOMER_TRANSFER_INVALID');
-      const reopened = await openCustomer(value.destination);
+        typeof receipt.directory === 'string' && isAbsolute(receipt.directory) &&
+        basename(receipt.directory) === value.destinationName &&
+        receipt.manifestSha256 === verified.manifestSha256, 'CUSTOMER_TRANSFER_INVALID');
+      if (receipt.directory !== destination) {
+        // A relocated interrupted operation must still contain the complete
+        // original published customer, before consuming its historical receipt.
+        await archiveOperation(['reconcile', '--archive', archive,
+          '--destination', destination, '--sha256', verified.archiveSha256]);
+      }
+      const reopened = await openCustomer(destination);
       need(reopened.configuration.customerId === verified.customerId, 'CUSTOMER_IDENTITY_CONFLICT');
     } else {
-      if (await exists(value.destination)) {
+      if (await exists(destination)) {
         const matched = await archiveOperation(['reconcile', '--archive', archive,
-          '--destination', value.destination, '--sha256', verified.archiveSha256]);
-        receipt = { ...matched, customer: await customerSummary(value.destination) };
-      } else receipt = await restoreCustomer({ archive, directory: value.destination,
+          '--destination', destination, '--sha256', verified.archiveSha256]);
+        receipt = { ...matched, customer: await customerSummary(destination) };
+      } else receipt = await restoreCustomer({ archive, directory: destination,
         sha256: verified.archiveSha256 });
       // Receiving is durable before opening or capturing the new browser.
       await atomic(receiptPath, receipt, true);
@@ -401,12 +416,13 @@ export async function startCustomerWorkspace({ directory, port = 0 } = {}) {
             const value = await originalStatus(id);
             if (value.type !== 'restore' || value.state !== 'READY')
               fail('RECEIVING_NOT_READY', 'Finish receiving this customer before opening its restored workspace.', 409);
-            const selected = await openCustomer(value.destination);
+            const destination = receivingDestination(value);
+            const selected = await openCustomer(destination);
             need(selected.configuration.customerId === customer.configuration.customerId, 'CUSTOMER_IDENTITY_CONFLICT');
             if (closing) fail('CUSTOMER_CLOSING', 'The customer workspace is closing.', 503);
             let opening = receivedSessions.get(id);
             if (!opening) {
-              opening = startCustomerWorkspace({ directory: value.destination, port: 0 });
+              opening = startCustomerWorkspace({ directory: destination, port: 0 });
               receivedSessions.set(id, opening);
               opening.catch(() => { if (receivedSessions.get(id) === opening) receivedSessions.delete(id); });
             }

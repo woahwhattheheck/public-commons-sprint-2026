@@ -53,6 +53,9 @@ the original `0.1.0-source.g0123456789ab` version form.
 
 | Selection | Product | Original Applications | Complete installed workflow |
 | --- | --- | --- | --- |
+| `merchant-receivables` | Customer invoices, native Stellar collection and refunds, service calendars, payment plans, dated collections and cash planning, Xero handovers and customer closing | Merchant receivables, payment plans, service agreements, receivables Xero, customer closing and Runtime management | [Complete installed financial workflow](../../../products/merchant-receivables/README.md) |
+| `merchant-payment-plans` | Reviewed customer installment editions, historical allocations and complete collection schedules | Customer payment plans, Merchant receivables and Runtime management | [Payment-plan operation](../../../products/merchant-payment-plans/README.md) |
+| `merchant-service-agreements` | Accepted service quotation and renewal sources, dated recurring billing calendars and original receivables drafts | Merchant service agreements, Merchant receivables and Runtime management | [Service billing operation](../../../products/merchant-service-agreements/README.md) |
 | `haystack-turnover` | Native building grids, source-local equipment and points, typed tag review, saved editions and complete editable turnover receiving | Haystack building turnover; Runtime management | [Complete installed operator guide](../../../products/haystack/OPERATING.md) |
 | `human-services-directory` | Original HSDS and FHIR directory sources, complete editions and comparisons, reviewed mapping and service selection, Gravity clinical joins and editable customer handoffs | Human Services Directory; Gravity Referrals; FHIR Bulk Data; eLTSS Care Plans; Runtime management | [Complete directory programme and receiving](../../../products/human-services-directory/OPERATING.md) |
 | `source-tables` | Complete CSV and TSV source authoring, typed field meaning, retained editions and comparisons, native merchant resources and editable customer handover | Source Tables; Runtime management | [Complete installation and operation](../../../products/source-tables/OPERATING.md) |
@@ -271,3 +274,11 @@ workspace for continued work.
 ## Complete Groundwater installation receiving
 
 The existing `groundwater-reports` product is exercised through its original managed source review, package build, selected runtime install, lock-bound offline transfer, independent install and saved-build reopen. The [complete receiving guide](receiving/GROUNDWATER.md) and its caller retain one source-build request and verify all 64 scientific files in both installations. The separate `groundwater-report` selection remains the Report Desk product. Scientific execution continues through its existing workspace and owner.
+
+## Merchant invoicing, collections and customer handover
+
+Build `merchant-receivables` to receive the complete invoice and customer-account product from one source commit. Its Applications entries operate original receipts and credits, verified Stellar invoice collection and refunds, customer payment plans, accepted service calendars, Xero customer handovers and complete statement closing. Collections and Cash planning open within the same Receivables process.
+
+The `merchant-receivables` contribution carries both the invoice server and its eagerly imported payment-plan browser manifest. It also retains the original Stellar network catalogue and native SDK package manifest, so the payment verifier has the same selected dependencies in Receivables, Payment plans, Service agreements and Xero builds. Native features are installed through the original Runtime workflow, using the package's declared versions.
+
+Follow the [financial operating guide](../../../products/merchant-workspace/FINANCIAL_OPERATIONS.md) from original transfer reconciliation through invoices, allocations, refunds, schedules and customer delivery. The [receivables product guide](../../../products/merchant-receivables/README.md) gives the exact source build, Runtime preparation, managed Applications, customer closing and durable CLI/MCP steps. The source selections retain all existing accounting and quotation components; every saved operation continues in its original private workspace.
