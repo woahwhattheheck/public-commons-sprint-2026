@@ -1062,6 +1062,8 @@
     "./partners/unstructured": "./source/stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
     "./partners/unstructured/commerce": "./source/stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
     "./merchant/mcp/coingecko": "./source/stellar-forge/mcp-merchant-operator/coingecko-workspace.mjs",
+    "./merchant/mcp/fiscaldata": "./source/stellar-forge/mcp-merchant-operator/fiscaldata-workspace.mjs",
+    "./seller/fiscaldata/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/portable.mjs",
     "./merchant/mcp/mpp": {
       "types": "./source/stellar-forge/mcp-merchant-operator/mpp-console.d.mts",
       "import": "./source/stellar-forge/mcp-merchant-operator/mpp-console.mjs"
