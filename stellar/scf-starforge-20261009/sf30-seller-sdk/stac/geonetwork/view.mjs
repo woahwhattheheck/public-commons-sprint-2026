@@ -254,7 +254,7 @@ export async function mountCatalogueView({root,api,context}={}){
           inspection=null;chosenCollections=new Set();render();
           const received=await request('/api/catalogue/inspect-delivery',{method:'POST',body:{deliveryDirectory:selectedDirectory}});
           if(disposed||identityChanged||generation!==deliveryGeneration||attempt!==inspectionRequest||deliveryDirectory!==selectedDirectory)return;
-          if(received.directory!==selectedDirectory)throw new Error('The inspected delivery does not match the selected directory. Select and inspect the original delivery again.');
+          deliveryDirectory=absolutePath(received.directory,'inspected original delivery directory');
           inspection=received;chosenCollections=new Set();render();
         },{disabled:working>0}),
         inspection?element('div',{},details('delivery-manifest','Verified delivery manifest',inspection.manifest),
