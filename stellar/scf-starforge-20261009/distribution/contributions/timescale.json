@@ -6,13 +6,15 @@
     "dataset-timescale": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/cli.mjs",
     "timescale-agent": "stellar-forge/mcp-merchant-operator/timescale-workspace-launcher.mjs",
     "timescale-download": "stellar-forge/mcp-merchant-operator/timescale-workspace-download-cli.mjs",
-    "timescale-native-demo": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/native-demo.mjs"
+    "timescale-native-demo": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/native-demo.mjs",
+    "timescale-native-receiving": "stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs"
   },
   "commandDescriptions": {
     "dataset-timescale": "Capture and review native Timescale editions, operate exact refresh/job plans, publish original datasets and receive complete projects.",
     "timescale-agent": "Open the same saved Timescale browser, merchant publisher and MCP owner through installed Applications.",
     "timescale-download": "Resume every original Timescale package file with exact manifest, workspace, digest and byte-offset binding.",
-    "timescale-native-demo": "Continue one explicitly isolated native Timescale2.30.2 full product demonstration with retained original inputs."
+    "timescale-native-demo": "Continue one explicitly isolated native Timescale2.30.2 full product demonstration with retained original inputs.",
+    "timescale-native-receiving": "Continue the completed native Timescale project through its same merchant/browser, paused full-file transfer and portable customer reopening."
   },
   "exports": {
     "./seller/timescale": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/model.mjs",
@@ -32,7 +34,8 @@
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/README.md",
     "stellar-forge/mcp-merchant-operator/TIMESCALE_WORKSPACE.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/native-demo.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/native-demo.mjs",
+    "stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs"
   ],
   "browserAssets": [
     {

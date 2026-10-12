@@ -252,6 +252,24 @@ The receive result identifies the new workspace directory and target directory w
 
 The immutable received package and reopened working copy have different roles. Preserve the package as the exact handoff; subsequent captures, plans and publications occur in the working project through its native owner.
 
+## Continue a completed native receiving operation
+
+The installed timescale-native-receiving command consumes the native demonstration’s completed native-demo.json and original workspace. It uses the same registered merchant owner and browser, inspects the two retained editions and every native table, verifies the original completed request recovery, reads the saved publication, and starts a complete customer export. Its file transfer pauses after a durable original chunk, resumes the same receiver, verifies the complete package, receives a separate working project and reopens both the portable project and original merchant owner.
+
+Provide the existing Playwright module and Chromium executable for the original browser segment. This command does not create a second Timescale database, seed data or issue another refresh:
+
+~~~sh
+starforge timescale-native-receiving \
+  --native-result "$HOME/timescale-operations/native/native-demo.json" \
+  --directory "$HOME/timescale-operations/native-receiving" \
+  --playwright /absolute/existing/playwright/module.mjs \
+  --chromium /absolute/existing/chromium
+~~~
+
+The source-native run retains receiving.json under that exact directory. Every phase reuses its recorded original identities. After interruption, invoke the same command with the same completed native result and receiving directory. Saved listener ports are reused so a partial download keeps the original endpoint binding; an occupied port fails without adopting another service. MCP credentials are generated only in process memory and are never included in this record. The immutable package, download checkpoint and reopened working project remain distinct.
+
+The continuation uses the original completed source-capture UUID to demonstrate result recovery; that call must return its retained COMPLETE outcome and does not recapture the database. The browser and MCP export actions are new retained exports of the same project. Record a successful native run only after its actual receiving.json says complete and its owned handles have closed.
+
 ## Source and native operation
 
 The source-owned distribution contribution is distribution/contributions/timescale.json. It registers dataset-timescale, timescale-agent, timescale-download, the native demonstration command, complete SDK exports, the original PostgreSQL dependency manifest, browser assets and both source-owned provider declarations. It does not add central catalog/observer branches or a new installer.
