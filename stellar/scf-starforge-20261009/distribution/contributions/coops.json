@@ -67,6 +67,7 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/RECEIVING.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/DELIVERY.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/STUDIES.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/study-input-columns.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/study-input-columns.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/coastal-receiving-selection.json"
   ]
 }
