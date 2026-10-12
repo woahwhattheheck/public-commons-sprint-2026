@@ -216,6 +216,7 @@ def build_layer(workspace, definition, *, progress=None):
             layer.setRenderer(core.QgsSingleBandGrayRenderer(provider, bands["gray"]))
         else:
             layer.setRenderer(core.QgsMultiBandColorRenderer(provider, *bands["rgb"]))
+        layer.setDefaultContrastEnhancement()
     if definition.get("styleFile"):
         record = descriptor(definition["styleFile"])
         style_path = member(workspace.root, record["path"])
@@ -263,6 +264,33 @@ def add_to_project(workspace, project=None, *, progress=None):
         project.setCrs(built[0].crs())
     return {"layers": [{"layerId": row["id"], "nativeLayerId": layer.id(), "native": describe_layer(layer)}
                        for row, layer in zip(state["layers"], built)]}
+
+
+def zoom_managed(iface, workspace):
+    core = native()
+    project = core.QgsProject.instance()
+    state = workspace.read()
+    layers = [layer for layer in project.mapLayers().values()
+              if layer.customProperty("starforge/workspaceId") == state["id"]]
+    require(layers, "MANAGED_LAYERS_REQUIRED", "Apply this workspace's retained layers to the map first.")
+    canvas = iface.mapCanvas()
+    destination = canvas.mapSettings().destinationCrs()
+    require(destination.isValid(), "MAP_CRS_REQUIRED", "Select the native map canvas CRS.")
+    combined = None
+    for layer in layers:
+        if not layer.isValid() or layer.extent().isEmpty():
+            continue
+        box = core.QgsCoordinateTransform(layer.crs(), destination, project).transformBoundingBox(layer.extent())
+        if combined is None:
+            combined = core.QgsRectangle(box)
+        else:
+            combined.combineExtentWith(box)
+    require(combined is not None and not combined.isEmpty(), "SPATIAL_EXTENT_REQUIRED",
+            "The selected original layers have no nonempty spatial extent to zoom to.")
+    combined.scale(1.05)
+    canvas.setExtent(combined)
+    canvas.refresh()
+    return {"layers": len(layers), "crs": _crs(destination)}
 
 
 def _style_resources(workspace, body):

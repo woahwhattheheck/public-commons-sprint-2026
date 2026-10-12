@@ -23,7 +23,7 @@ from qgis.core import QgsProject
 from .model import (QgisWorkspace, ReceivingSource, receive_package, read_json, file_digest,
                     value_sha, QgisReceivingError, require, utc_now)
 from .qgis_project import (inspect_asset, add_to_project, capture_styles, save_project,
-                           reopen_project, native_version)
+                           reopen_project, native_version, zoom_managed)
 
 USER_ROLE = Qt.ItemDataRole.UserRole
 GRAY = """
@@ -259,6 +259,7 @@ class ReceivingDock(QDockWidget):
         button("Apply to QGIS map", self.apply_layers, controls)
         second = QHBoxLayout()
         layout.addLayout(second)
+        button("Zoom to layers", lambda: self.run("Zoom to retained map layers", lambda: zoom_managed(self.iface, self.need_workspace())), second)
         button("Native layer properties", self.layer_properties, second)
         button("Capture current styles", self.capture_styles, second)
 
