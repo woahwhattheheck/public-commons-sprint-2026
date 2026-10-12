@@ -6,6 +6,7 @@ import base64
 import contextlib
 import csv
 import hashlib
+import gzip
 import io
 import json
 import math
@@ -127,11 +128,11 @@ def main():
             save(journal_path,state)
             return result
         data=fixture()
-        fixture_path=root/"protocol-source.json"
+        fixture_path=root/"protocol-source.json.gz"
         original_fixture=encoded(data).encode()+b"\n"
         if fixture_path.exists():
-            assert fixture_path.read_bytes()==original_fixture
-        else: atomic_write(fixture_path,original_fixture)
+            assert gzip.decompress(fixture_path.read_bytes())==original_fixture
+        else: atomic_write(fixture_path,gzip.compress(original_fixture,compresslevel=6,mtime=0))
         service=Service(root/"workspace")
         receiver=None
         try:

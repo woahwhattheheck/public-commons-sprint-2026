@@ -139,7 +139,7 @@ def snapshot_files(job_path, operation):
         files[name] = body
     return job, state, files
 
-def capture_csv(state, files, null_token):
+def capture_csv(state, files, null_token, job=None):
     columns = state.get("columns", [])
     if not columns or len(columns) > 64 or len(set(columns)) != len(columns):
         raise ValueError("Retain the exact unique projected native columns.")
@@ -147,8 +147,14 @@ def capture_csv(state, files, null_token):
     writer = csv.writer(output, lineterminator="\r\n")
     writer.writerow(columns)
     rows = 0
-    for page in state.get("pages", []):
+    pages = state.get("pages", [])
+    for index, page in enumerate(pages, 1):
         result = json.loads(files[page["path"]].decode("utf-8"))
+        if (page.get("request", {}).get("page") != index
+            or page.get("truncated") != result.get("truncated")
+            or (job and result.get("query") != job.get("query_name"))
+            or (index < len(pages) and result.get("truncated") is not True)):
+            raise ValueError("The original committed page sequence or query boundary differs.")
         if (result.get("schema") != "stellar-forge.mssql-result.v1"
             or result.get("snapshot") != "single-statement-database-isolation"
             or not isinstance(result.get("truncated"), bool)
@@ -194,7 +200,7 @@ def package_result(job_path, operation, *, checkpoint=False):
         },
     }
     if job["action"] == "capture" and state.get("columns"):
-        body, rows = capture_csv(state, files, null_token)
+        body, rows = capture_csv(state, files, null_token, job)
         filename = "capture/rows.csv"
         files[filename] = body
         result["capture"] = {"path": filename, "bytes": len(body), "sha256": digest(body), "rows": rows}
@@ -269,6 +275,12 @@ def read_result(data):
         or result.get("null_token") != "__SQL_NULL_" + digest(files["job.json"])[:20] + "__"
         or bool(result.get("complete")) != (state.get("status") == "complete")):
         raise ValueError("The receiving result metadata differs from its complete original native state.")
+    if job.get("action") == "capture":
+        if (bool(state.get("columns")) != bool(result.get("capture"))
+            or (result.get("complete") and (not state.get("pages") or not result.get("capture")))):
+            raise ValueError("A completed capture must retain its exact native pages and full CSV.")
+    elif result.get("capture") or state.get("pages") or state.get("rows", 0):
+        raise ValueError("A catalog/preflight operation cannot claim captured query rows.")
     for item in [*state.get("pages", []), *state.get("observations", [])]:
         name = relative(item["path"])
         if name not in files or len(files[name]) != item.get("bytes") or digest(files[name]) != item.get("sha256"):
@@ -289,10 +301,10 @@ def read_result(data):
         if path not in files or len(files[path]) != item["bytes"] or digest(files[path]) != item["sha256"]:
             raise ValueError("The returned original source inputs differ.")
     if result.get("capture"):
-        csv_data, rows = capture_csv(state, files, result["null_token"])
+        csv_data, rows = capture_csv(state, files, result["null_token"], job)
         capture = result["capture"]
         if (capture.get("path") != "capture/rows.csv" or files.get("capture/rows.csv") != csv_data
-            or capture.get("sha256") != digest(csv_data) or capture.get("rows") != rows
+            or capture.get("sha256") != digest(csv_data) or capture.get("bytes") != len(csv_data) or capture.get("rows") != rows
             or result.get("rows") != rows):
             raise ValueError("The receiving CSV does not equal all committed native rows.")
     return result, job, state, files

@@ -2,11 +2,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import {gunzipSync} from 'node:zlib';
 import {executeJob} from '../tools/sql-server/capture.mjs';
 import {readMssqlSourceFile} from '../tools/sql-server/core/mssql/config.mjs';
 import {compileMssqlQueries,bindMssqlParameters} from '../tools/sql-server/core/mssql/declaration.mjs';
 const args=Object.fromEntries(process.argv.slice(2).map(a=>{const n=a.indexOf('=');return[a.slice(2,n),a.slice(n+1)];}));
-const fixture=JSON.parse(await fs.readFile(args.fixture,'utf8'));
+const fixtureBytes=await fs.readFile(args.fixture);
+const fixture=JSON.parse((args.fixture.endsWith('.gz')?gunzipSync(fixtureBytes):fixtureBytes).toString('utf8'));
 if(fixture.schema!=='commons-bi-sql-protocol-example/1')throw Error('EXPLICIT_PRACTICE_INPUT_REQUIRED');
 const root=path.resolve(args.operation);
 await fs.mkdir(root,{recursive:true,mode:0o700});
