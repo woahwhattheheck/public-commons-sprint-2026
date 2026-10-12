@@ -85,8 +85,8 @@ export async function runPaymentPlansCli(argv = process.argv.slice(2)) {
     const running = await createReceivablesServer({...options, port});
     const binding = accountingWorkspaceBinding(running.workspace.directory, running.workspace.state);
     const url = new URL('/payment-plans/', running.url).href;
-    process.stdout.write(json({schema: 'stellar-forge.merchant-payment-plans-startup.v1',
-      directory: running.workspace.directory, workspaceId: binding.workspaceId, sourcesSha256: binding.sourcesSha256, url}));
+    process.stdout.write(JSON.stringify({schema: 'stellar-forge.merchant-payment-plans-startup.v1',
+      directory: running.workspace.directory, workspaceId: binding.workspaceId, sourcesSha256: binding.sourcesSha256, url}) + '\n');
     let closing = false;
     const close = async () => { if (closing) return; closing = true; await running.close(); };
     const onSignal = () => close().catch(error => { process.stderr.write(error.message + '\n'); process.exitCode = 1; });
