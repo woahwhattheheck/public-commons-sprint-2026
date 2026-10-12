@@ -6,7 +6,7 @@ The original composer turns the selected application Markdown and detailed compa
 
 Use the complete current developer-site checkout. Keep the accepted nine-answer application, detailed product and finance companion, page shell and source index together under `dist/`. Select the full current canonical manuscript when receiving new text; a subsection or earlier donor page is not a replacement for the cumulative edition.
 
-The original customer projection receives the accepted complete Webhook and OpenFn sections and keeps meaningful correspondence labels in the public reader. Its source-index projection retains the selected public source identities and measured file metadata. Use that same maintained projection when receiving the current manuscript.
+The original customer projection receives the accepted complete Webhook, referral-implementation and recurring-subscription sections and both OpenFn commissioning paragraphs. Each selected H2 carries all its more detailed headings, and repeated composition updates it in place while retaining the companion’s other chapters and six-package allocation. Meaningful correspondence labels remain in the public reader. Its source-index projection retains the selected public source identities and measured file metadata. Use that same maintained projection when receiving the current manuscript.
 
 The economic and coastal selections each use one actual merged product commit. Datasette uses two: its original source/publisher commit and its customer Analysis commit. Those commits belong to separate maintained contributions. After the first selection, the source index retains them for subsequent composition.
 
@@ -27,7 +27,7 @@ node stellar-forge/developer-site/grant-compose.mjs \
 
 Omit `--manuscript` when rendering edits already saved in the application and companion downloads. Omit a product's commit flags to retain its selection from the source index. The two Datasette commits are required together for a new selection.
 
-Composition preserves all nine original answer headings and every unrelated companion section. Selected installation subsections are replaced once, and the existing tenth section receives the product entry. Source identifiers and hashes are refreshed from the complete result. The guided product opening and submission navigation are then composed into the same edition. Repeating the same composition produces identical files.
+Composition preserves all nine original answer headings and every unrelated companion section. Selected installation subsections are replaced once, and the existing tenth section receives the product entry. Source identifiers and hashes are refreshed from the complete result. The command reads its installed composer and customer module to refresh their source identities; when a manuscript is supplied, it also records the selected nine-answer front’s current size and hash. The guided product opening and submission navigation are then composed into the same edition. Repeating the same composition produces identical files.
 
 ## Receive the four reader files
 
@@ -57,7 +57,7 @@ The declared browser manifest includes the original routes and six complete comp
 
 The workspace uses the existing `/drafts.mjs` and the same application/source-index files. Its complete source travels under the original developer-site component in the grant-reviewer product.
 
-The HTML reader and downloadable Markdown have different relative locations. The composer adjusts the companion link only in the rendered HTML. Markdown sibling links remain relative to `grant-data/`.
+The HTML reader and downloadable Markdown have different relative locations. The composer adjusts companion and source-index links only in the rendered HTML. Markdown sibling links remain relative to `grant-data/`.
 
 ## Use the existing local command and Site
 
