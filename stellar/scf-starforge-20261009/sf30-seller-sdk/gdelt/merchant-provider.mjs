@@ -4,7 +4,7 @@ import { gdeltWorkspaceTools } from './mcp-tools.mjs';
 export default defineMerchantProvider({
   schema:MERCHANT_PROVIDER_SCHEMA,id:'gdelt-workspaces',family:'gdeltWorkspaces',
   title:'GDELT event desks',order:365,catalogOrder:365,configKey:'gdeltWorkspaces',summary:true,dependencies:[],
-  concurrency:'host',concurrentTools:[],shutdown:'drain',maxRequestBytes:131072,
+  concurrency:'host',concurrentTools:['merchant_gdelt_cancel'],shutdown:'provider',maxRequestBytes:131072,
   configuration:{input:'gdeltWorkspaceConnection',privateExports:true,
     read:async(value,{hostPath})=>(await import('./mcp-client.mjs')).readGdeltWorkspaceConfiguration(hostPath(value))},
   tools:gdeltWorkspaceTools,load:()=>import('./mcp.mjs'),
