@@ -244,8 +244,16 @@ export class PortfolioWorkspace{
       if(replaces){try{await runbooks.operation(input.nativeRequestId);need(false,'PORTFOLIO_NATIVE_ALREADY_SAVED','The original client request is committed. Reconcile that saved command before preparing further work.',409);}catch(error){if(error.code!=='RUNBOOK_OPERATION_NOT_FOUND')throw error;}}
     });
     const nativeRequestSha256=hash({kind,target,input:nativeRequest});
-    return this.mutate('command_prepared',input,(state,actor)=>{
+    return this.mutate('command_prepared',input,async(state,actor)=>{
       need(state.commands.length<5000,'PORTFOLIO_COMMAND_LIMIT','This portfolio retains 5000 prepared client requests.');
+      if(replaces){
+        need(!state.commands.some(command=>command.replacesCommandId===replaces.id),'PORTFOLIO_CORRECTION_CHANGED','Correct the latest saved request in the original replacement chain.',409);
+        await this.child(commission.alias,async({runbooks})=>{
+          exact(runbooks.workspaceId,commission.clientWorkspaceId,'PORTFOLIO_CLIENT_CHANGED','Open the original client workspace.');
+          try{await runbooks.operation(input.nativeRequestId);need(false,'PORTFOLIO_NATIVE_ALREADY_SAVED','Reconcile the committed original client request before preparing further work.',409);}
+          catch(error){if(error.code!=='RUNBOOK_OPERATION_NOT_FOUND')throw error;}
+        });
+      }
       const reused=state.commands.find(command=>command.clientWorkspaceId===nativeRequest.workspaceId&&command.nativeRequest.requestId===nativeRequest.requestId);
       need(!reused||replaces&&reused.action===action&&reused.target===target,'PORTFOLIO_NATIVE_REQUEST_IN_USE','Continue the existing saved client request for this UUID, or select it explicitly for correction.',409);
       const value={id:input.requestId,originWorkspaceId:this.workspaceId,createdAt:now(),actor,clientId:input.clientId,commissionId:commission.id,
@@ -268,7 +276,8 @@ export class PortfolioWorkspace{
     });
   }
   async execute(id,input){
-    await this.workspace.tail;const command=clone(this.commandRow(id)),{commandSha256,...value}=command;
+    return this.workspace.serial(async()=>{
+    const command=clone(this.commandRow(id)),{commandSha256,...value}=command;
     exact(commandSha256,hash(value),'PORTFOLIO_COMMAND_CHANGED','The saved original client request changed.');
     exact(input.expectedCommandSha256,commandSha256,'PORTFOLIO_COMMAND_CHANGED','Select the exact prepared client request.');
     exact(command.originWorkspaceId,this.workspaceId,'PORTFOLIO_RECEIVED_COMMAND','Received requests remain with their original workspace; prepare a local request after receiving the client source.');
@@ -280,9 +289,11 @@ export class PortfolioWorkspace{
         exact(retained.operation.requestSha256,command.nativeRequestSha256,'PORTFOLIO_NATIVE_REQUEST_CHANGED','This native UUID belongs to different request bytes.');
         return this.envelope({commandId:command.id,commandSha256,clientAlias:command.alias,clientWorkspaceId:runbooks.workspaceId,native:retained.operation.result,recovered:true});
       }catch(error){if(error.code!=='RUNBOOK_OPERATION_NOT_FOUND')throw error;}
+      need(!this.state.commands.some(next=>next.replacesCommandId===command.id),'PORTFOLIO_COMMAND_REPLACED','Execute the latest reviewed correction; the historical request remains available for reconciliation.',409);
       const method=actionMap[command.action][1];
       const native=command.target?await runbooks[method](command.target,clone(command.nativeRequest)):await runbooks[method](clone(command.nativeRequest));
       return this.envelope({commandId:command.id,commandSha256,clientAlias:command.alias,clientWorkspaceId:runbooks.workspaceId,native,recovered:false});
+    });
     });
   }
   async storage(){const root=await this.runbooks.storage('portfolio');await ensureRunbookDirectory(root);return root;}
