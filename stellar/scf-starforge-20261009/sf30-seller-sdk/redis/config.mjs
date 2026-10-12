@@ -4,6 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { record } from '../sqlite/parameters.mjs';
 import { compileRedisQueries, describeRedisQueries } from './declaration.mjs';
 import { createRedisQuerySource } from './source.mjs';
+import { validateUpstashEndpoint } from './upstash-rest.mjs';
 const ENV = /^[A-Z_][A-Z0-9_]{0,127}$/;
 const validText = value => typeof value === 'string' && value.isWellFormed() && value.length > 0 && value.length <= 1024 && !/[\x00-\x1f\x7f]/.test(value);
 export function validateRedisSourceConfig(config) {
@@ -17,16 +18,22 @@ export function validateRedisSourceConfig(config) {
       throw new TypeError('REDIS_SOURCE_LIMIT_INVALID:' + name);
   if ((config.maxPending ?? 32) < (config.maxConnections ?? 4)) throw new TypeError('REDIS_PENDING_BELOW_CONNECTION_LIMIT');
   const c = config.connection;
-  if (Object.keys(c).some(key => !['host', 'port', 'database', 'username', 'passwordEnv', 'tls', 'caFile'].includes(key)) ||
-      !validText(c.host) || /[\s/\\]/.test(c.host) ||
-      c.port !== undefined && (!Number.isInteger(c.port) || c.port < 1 || c.port > 65535) ||
-      c.database !== undefined && (!Number.isInteger(c.database) || c.database < 0 || c.database > 65535) ||
-      c.username !== undefined && !validText(c.username) || c.passwordEnv !== undefined && !ENV.test(c.passwordEnv))
-    throw new TypeError('REDIS_CONNECTION_PROFILE_INVALID');
-  if (!['verify-full', 'local-plaintext'].includes(c.tls ?? 'verify-full')) throw new TypeError('REDIS_TLS_MODE_INVALID');
-  if (c.tls === 'local-plaintext' && !['127.0.0.1', '::1', 'localhost'].includes(c.host))
-    throw new TypeError('REDIS_PLAINTEXT_REQUIRES_LOOPBACK');
-  if (c.caFile !== undefined && (!validText(c.caFile) || c.tls === 'local-plaintext')) throw new TypeError('REDIS_CA_FILE_INVALID');
+  if (c.transport === 'upstash-rest') {
+    if (Object.keys(c).some(key => !['transport', 'endpoint', 'tokenEnv'].includes(key)) || !ENV.test(c.tokenEnv ?? ''))
+      throw new TypeError('REDIS_HTTP_CONNECTION_PROFILE_INVALID');
+    validateUpstashEndpoint(c.endpoint);
+  } else {
+    if (Object.keys(c).some(key => !['host', 'port', 'database', 'username', 'passwordEnv', 'tls', 'caFile'].includes(key)) ||
+        !validText(c.host) || /[\s/\\]/.test(c.host) ||
+        c.port !== undefined && (!Number.isInteger(c.port) || c.port < 1 || c.port > 65535) ||
+        c.database !== undefined && (!Number.isInteger(c.database) || c.database < 0 || c.database > 65535) ||
+        c.username !== undefined && !validText(c.username) || c.passwordEnv !== undefined && !ENV.test(c.passwordEnv))
+      throw new TypeError('REDIS_CONNECTION_PROFILE_INVALID');
+    if (!['verify-full', 'local-plaintext'].includes(c.tls ?? 'verify-full')) throw new TypeError('REDIS_TLS_MODE_INVALID');
+    if (c.tls === 'local-plaintext' && !['127.0.0.1', '::1', 'localhost'].includes(c.host))
+      throw new TypeError('REDIS_PLAINTEXT_REQUIRES_LOOPBACK');
+    if (c.caFile !== undefined && (!validText(c.caFile) || c.tls === 'local-plaintext')) throw new TypeError('REDIS_CA_FILE_INVALID');
+  }
   compileRedisQueries(config.queries);
   if (config.bindings !== undefined) {
     if (!record(config.bindings)) throw new TypeError('REDIS_BINDINGS_INVALID');
@@ -61,6 +68,12 @@ export async function readRedisSourceFile(filename) {
 }
 export async function resolveRedisConnection(declaration, environment = process.env) {
   const c = validateRedisSourceConfig(declaration.config).connection;
+  if (c.transport === 'upstash-rest') {
+    const token = environment[c.tokenEnv];
+    if (typeof token !== 'string' || token.length < 1 || token.length > 16384 || /[^\x21-\x7e]/.test(token))
+      throw new TypeError('REDIS_HTTP_TOKEN_ENV_UNAVAILABLE');
+    return { transport: 'upstash-rest', endpoint: validateUpstashEndpoint(c.endpoint), token };
+  }
   let password, ca;
   if (c.passwordEnv !== undefined) {
     password = environment[c.passwordEnv];

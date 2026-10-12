@@ -1,0 +1,194 @@
+{
+  "schema": "tjl.ciim-feed-native-journey.v1",
+  "completedAt": "2026-10-12T00:29:43Z",
+  "sourceSha256": "18da311eaaf3164f2d388b4eb832811a208034c56c451c68bc1fd5de55920ee2",
+  "sourceEdition": "cottage-directory-source-20261011",
+  "sourceManifestSha256": "dc3007be6419c4ac6708721789c0b9d29461a80dad6bbb24328d430532fefe65",
+  "sourceQuerySha256": "eab8974d98c1cbd69c4d942a1d7d1ebe73c76f0cdb1d4c20a5b73106c1aed1ff",
+  "sourcePages": 2,
+  "records": 169,
+  "harvestPages": 4,
+  "sameTokenPayloadReused": true,
+  "frozenHarvestReopened": true,
+  "unchangedSourcePreservesWithdrawal": true,
+  "metadataFieldIssues": {
+    "creator": 6,
+    "language": 11,
+    "rights": 63
+  },
+  "http": [
+    {
+      "bytes": 763,
+      "label": "Identify",
+      "method": "GET",
+      "sha256": "8e5d7548ce35f1f88aa398d3050df909cde2a2289805b7202a566a358403c1ff",
+      "status": 200
+    },
+    {
+      "bytes": 644,
+      "label": "ListMetadataFormats",
+      "method": "GET",
+      "sha256": "d293c280b43cd3f9120031960cb3745b4f12a519d9ef4dc9abb942a0691561de",
+      "status": 200
+    },
+    {
+      "bytes": 477,
+      "label": "ListSets",
+      "method": "GET",
+      "sha256": "b6975905902dfbdfe6ee61ee36d29ed6623ec1a584c18090727542f8c6ec3b49",
+      "status": 200
+    },
+    {
+      "bytes": 127301,
+      "label": "harvest-001",
+      "method": "GET",
+      "sha256": "cd5b92bc21f9426851b5edb57553b2fc943c7cd5f91b9422ba4f4d382a3e7e84",
+      "status": 200
+    },
+    {
+      "bytes": 126857,
+      "label": "harvest-002",
+      "method": "GET",
+      "sha256": "b28aefa313621fd22c596ee6c06c8087135783b94d3716de9f21ab2b778df4a2",
+      "status": 200
+    },
+    {
+      "bytes": 139027,
+      "label": "harvest-003",
+      "method": "GET",
+      "sha256": "682950501b4b769b2c4d532987f64dd14ef832f4bc303c1f59a304ad65068af7",
+      "status": 200
+    },
+    {
+      "bytes": 52980,
+      "label": "harvest-004",
+      "method": "GET",
+      "sha256": "99bada09baf02481e3c1eea192f465514404d409bf8c80bc73db2a8163951fea",
+      "status": 200
+    },
+    {
+      "bytes": 126857,
+      "label": "continuation-repeat",
+      "method": "GET",
+      "sha256": "b28aefa313621fd22c596ee6c06c8087135783b94d3716de9f21ab2b778df4a2",
+      "status": 200
+    },
+    {
+      "bytes": 645,
+      "label": "withdrawn-record",
+      "method": "GET",
+      "sha256": "79f0fdb346bfbd22553988681862dcbbaf4df57804d2e318143bbcd3bff8a476",
+      "status": 200
+    },
+    {
+      "bytes": 3326,
+      "label": "single-original-record",
+      "method": "POST",
+      "sha256": "47e815eca3a02494c668b0b2e2c7bcfcd212c4c2772b552b436580fafde5f012",
+      "status": 200
+    },
+    {
+      "bytes": 7976,
+      "label": "identifiers",
+      "method": "GET",
+      "sha256": "e1fc17c95b79ea712b2d0e0efe43c832801f52102a662fa14396435c459069c0",
+      "status": 200
+    },
+    {
+      "bytes": 127386,
+      "label": "incremental-day",
+      "method": "GET",
+      "sha256": "176730ebae545853c91872f66991234df20e45a5d70b72ca3e95297079a0ab87",
+      "status": 200
+    },
+    {
+      "bytes": 434,
+      "label": "protocol-error-1",
+      "method": "GET",
+      "sha256": "4027bd926815ffefd0b31b8da106162cc45609473465a008adba8f9adb18bb6f",
+      "status": 200
+    },
+    {
+      "bytes": 437,
+      "label": "protocol-error-2",
+      "method": "GET",
+      "sha256": "c117b9dabf9791a71d52c0eb420e6fb25a113baab2873a93ffadf3b5377697c1",
+      "status": 200
+    },
+    {
+      "bytes": 426,
+      "label": "protocol-error-3",
+      "method": "GET",
+      "sha256": "cd40a16fc5517f60fa661ecfeb3390592ea23870e8e989e68c185e2787fb70db",
+      "status": 200
+    },
+    {
+      "bytes": 485,
+      "label": "protocol-error-4",
+      "method": "GET",
+      "sha256": "97ff999ff0142311b185cfc233678386f0e869130b6fc01895817e6322057f65",
+      "status": 200
+    },
+    {
+      "bytes": 469,
+      "label": "protocol-error-5",
+      "method": "GET",
+      "sha256": "820a62f54560ba0ac3404f417180e0ed9cdae116b57160100b1e5e86ce2a40de",
+      "status": 200
+    },
+    {
+      "bytes": 699,
+      "label": "protocol-error-6",
+      "method": "GET",
+      "sha256": "98cedde123ff9a414d11969721c73a890bfa7c2cda27c581c3aa9d9de7041276",
+      "status": 200
+    },
+    {
+      "bytes": 703,
+      "label": "protocol-error-7",
+      "method": "GET",
+      "sha256": "d6d6e6a0e99c7bac3b9f0733ce657e46297b87d0d20773820790509d354bd60c",
+      "status": 200
+    },
+    {
+      "bytes": 434,
+      "label": "protocol-error-8",
+      "method": "GET",
+      "sha256": "953f27b38f87dbabffb1a3b2f211938d11690a54b8875424b41f0dd539cf6f91",
+      "status": 200
+    },
+    {
+      "bytes": 126857,
+      "label": "continuation-after-reopen",
+      "method": "GET",
+      "sha256": "b28aefa313621fd22c596ee6c06c8087135783b94d3716de9f21ab2b778df4a2",
+      "status": 200
+    }
+  ],
+  "publicationRevision": 1,
+  "reopenedRevision": 2,
+  "reopenedActive": 168,
+  "reopenedWithdrawn": 1,
+  "backup": {
+    "bytes": 417792,
+    "sha256": "3bf397bb58835829545b018539c81cfe5b6fa9e41da1cafd9b48da1feb85b1eb"
+  },
+  "canonicalCompatibility": {
+    "state": "COMPLETE",
+    "nativeQueryAndRequest": [
+      {
+        "sha256": "cce43c7767745bd69c3d31dbdd0ab6f4b42cde51cab9591a16ec720903b14a6f",
+        "differsFromFeedCanonical": true
+      },
+      {
+        "sha256": "e2d3cd5d578339322a5f6e596c10b247b25ef6ab4e4517ef2565ff2765510d59",
+        "differsFromFeedCanonical": true
+      }
+    ],
+    "retainedPreparedUnchanged": true,
+    "sourceSha256": "82c6f4e0958e3a0518953abc91ab100eaa4da884066efb186fcf22a1b0a385f7",
+    "sourceBytes": 43538,
+    "records": 169,
+    "pages": 2
+  }
+}

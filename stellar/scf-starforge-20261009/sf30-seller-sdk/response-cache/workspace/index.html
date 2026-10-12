@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cache operations · Starforge</title>
+<link rel="stylesheet" href="/cache-operations/style.css">
+<script type="module" src="/cache-operations/app.mjs"></script>
+</head>
+<body>
+<header><div><a id="back" href="/">Starforge merchant</a><h1>Cache operations</h1><p>Review retained responses, source activity and operating policy.</p></div><p id="identity" class="quiet"></p></header>
+<main>
+<p id="notice" role="status" aria-live="polite">Opening the private workspace…</p>
+<section aria-labelledby="source-heading">
+<div class="section-head"><h2 id="source-heading">Merchant source</h2><span id="revision" class="quiet"></span></div>
+<div class="toolbar"><label>Source<select id="source"></select></label><button id="refresh">Refresh history</button><button id="inspect">Inspect running cache</button><label>Snapshot label<input id="capture-label" maxlength="160" placeholder="Before traffic change"></label><button id="capture">Save current snapshot</button></div>
+<div id="live-summary" class="quiet">Choose a source to inspect its running cache.</div>
+<div id="routes" class="table-wrap"></div>
+</section>
+<div class="columns">
+<section aria-labelledby="history-heading">
+<div class="section-head"><h2 id="history-heading">Saved snapshots</h2><span id="history-count" class="quiet"></span></div>
+<div id="snapshots" class="record-list"></div>
+<div class="toolbar"><button id="previous">Previous</button><button id="next">Next</button></div>
+</section>
+<section aria-labelledby="policy-heading">
+<h2 id="policy-heading">Review an operating change</h2>
+<p class="quiet">Select a saved snapshot and its exact route. The runtime checks the reviewed process and control revision when the change is applied.</p>
+<p id="review-source" class="quiet">Select a saved snapshot.</p>
+<form id="policy-form">
+<label>Route<select id="route" required></select></label>
+<label>Operation<select id="action"><option value="configure">Change retention policy</option><option value="invalidate">Invalidate retained responses</option></select></label>
+<div id="policy-fields" class="fields">
+<label>Maximum freshness, milliseconds<input id="ttlMs" type="number" min="1" max="3600000" step="1" required></label>
+<label>Maximum retained responses<input id="maxEntries" type="number" min="1" max="100000" step="1" required></label>
+<label>Total cache bytes<input id="maxBytes" type="number" min="1" max="268435456" step="1" required></label>
+<label>Largest retained response, bytes<input id="maxEntryBytes" type="number" min="1" max="16777216" step="1" required></label>
+</div>
+<label>Operator note<textarea id="note" rows="3" maxlength="2000" placeholder="Why this route needs a different freshness or memory budget"></textarea></label>
+<button id="prepare" class="primary" type="submit">Prepare exact change</button>
+</form>
+<div id="prepared" aria-live="polite"></div>
+</section>
+</div>
+<section aria-labelledby="comparison-heading">
+<div class="section-head"><h2 id="comparison-heading">Compare and restore policy</h2></div>
+<div class="toolbar"><label>Earlier snapshot<select id="compare-before"></select></label><label>Later snapshot<select id="compare-after"></select></label><button id="compare">Compare saved snapshots</button></div>
+<div id="comparison"></div>
+<p class="quiet">To restore a prior policy, choose its snapshot below. Save a fresh snapshot first; restoration uses that fresh runtime review.</p>
+<div class="toolbar"><label>Prior policy snapshot<select id="restore-target"></select></label><button id="restore-policy">Prepare selected route’s prior policy</button></div>
+</section>
+<section id="retained-policy" aria-labelledby="retained-policy-heading" hidden>
+<h2 id="retained-policy-heading">Save policy for restart</h2>
+<p>Choose the observed policy to carry into a new saved merchant package.</p>
+<p id="policy-snapshot" class="quiet">Save and select a current operating snapshot first.</p>
+<form id="retained-policy-form">
+<label>New package name<input id="policy-package-name" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" maxlength="64" autocomplete="off"></label>
+<fieldset><legend>Routes to retain</legend><div id="policy-package-routes" class="fields"></div></fieldset>
+<label>Reason for retaining this policy<textarea id="policy-package-note" rows="3" maxlength="2000"></textarea></label>
+<button id="policy-review" type="submit">Review saved package settings</button>
+</form>
+<div id="retained-policy-review" aria-live="polite"></div>
+<button id="policy-save" class="primary">Save or recover this package</button>
+<div id="retained-policy-result"></div>
+<h3>Retained package reviews</h3>
+<div class="toolbar"><label>Review<select id="policy-review-list"></select></label><button id="policy-open">Reopen selected review</button><span id="policy-review-count" class="quiet"></span><button id="policy-review-previous">Previous</button><button id="policy-review-next">Next</button></div>
+</section>
+<section aria-labelledby="changes-heading">
+<div class="section-head"><h2 id="changes-heading">Operating history</h2><span id="change-count" class="quiet"></span></div>
+<div id="changes" class="record-list"></div>
+</section>
+<section aria-labelledby="handover-heading">
+<h2 id="handover-heading">Handover and receiving</h2>
+<p class="quiet">The portable history contains the saved original inspections, reviewed commands, outcomes and notes. Source credentials and control-file locations stay on their host.</p>
+<div class="toolbar"><button id="report">Download operating report</button><button id="export">Download complete history</button><label>Receive a history file<input id="archive" type="file" accept="application/json,.json"></label><button id="restore">Import into this empty workspace</button></div>
+</section>
+</main>
+<footer>Starforge · Original merchant cache and native seller operations</footer>
+</body>
+</html>

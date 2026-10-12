@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
     "@x402/core": "2.28.0",
     "@x402/extensions": "2.28.0",
     "@x402/mcp": "2.28.0",
-    "@x402/stellar": "2.28.0"
+    "@x402/stellar": "2.28.0",
+    "jose": "6.2.12"
   }
 }

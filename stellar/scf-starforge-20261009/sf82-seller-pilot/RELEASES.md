@@ -18,6 +18,12 @@ original private query package and generated client. Its existing operator
 workspace can stage directly into this lifecycle and retain the reviewed native
 schema with the selected source and full payment contract.
 
+For prepared OpenSearch merchants, use
+[OpenSearch managed deployments](OPENSEARCH_RELEASES.md). A saved query package
+enters the same original release store and process manager. Its merchant workspace
+provides source comparison, selection, restart, rollback and retained customer
+handover with the exact named-query execution identity.
+
 For a facilitator change on an already prepared merchant, use
 [Retained facilitator review](FACILITATORS.md). It reads actual native capabilities,
 retains every generated payment alternative with the same source, and checks that

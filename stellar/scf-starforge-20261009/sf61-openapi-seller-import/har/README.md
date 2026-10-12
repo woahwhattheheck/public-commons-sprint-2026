@@ -166,3 +166,10 @@ node --test stellar/scf-starforge-20261009/sf61-openapi-seller-import/har/workfl
 Format references: [HAR 1.2 specification](https://www.softwareishard.com/blog/har-12-spec/)
 and [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.1.html). The exported 3.1 document
 is accepted by the original SF61 3.0/3.1 compiler.
+
+## Refresh from a later capture
+
+Use [capture refresh](REFRESH.md) to retain the previous approved source and a new
+HAR together, compare their observations, migrate unchanged operator decisions,
+review changed routes, and export or package the new source through the same
+native implementations. Start with `starforge openapi har refresh --help`.
