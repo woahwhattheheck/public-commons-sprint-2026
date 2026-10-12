@@ -170,7 +170,7 @@ async function selectedInput({operationId,engines,migration,runtime}){
     const value=input[side];value.operationId=operationId+'-'+side;value.requestId=operationId+'-'+side+'-create';
     value.setup.label='Original native '+(side==='baseline'?'Redis':'Valkey')+' application';
     value.setup.source.connection={topology:'standalone',host:'127.0.0.1',port:engines[side].port,database:2,
-      username:'cutover_reader',passwordEnv:envNames[side],tls:'allow-plaintext'};
+      username:'cutover_reader',passwordEnv:envNames[side],tls:'local-plaintext'};
     value.setup.source.maxConnections=2;value.setup.source.maxPending=8;
     value.setup.source.connectTimeoutMs=3000;value.setup.source.startupTimeoutMs=5000;
     value.setup.plan.publicOrigin='https://native-cutover.customer.example';
@@ -310,8 +310,8 @@ export async function runRedisValkeyCutoverJourney({directory,redisServer=proces
     check(engines.baseline.identity.serverName==='redis'&&!engines.baseline.identity.valkeyVersion,
       'The baseline must identify as the actual Redis engine.');
     const version=engines.baseline.identity.redisCompatibilityVersion?.split('.').map(Number);
-    check(version?.length>=2&&version[0]>=6&&(version[0]<7||version[0]===7&&version[1]<=2),
-      'This original RDB migration journey requires Redis OSS 6.x through 7.2.');
+    check(version?.length>=2&&version[0]===7&&version[1]<=2,
+      'This original RDB migration journey requires Redis OSS 7.0 through 7.2.');
     await seed(engines.baseline.client);await reader(engines.baseline,environment[envNames.baseline]);
     await engines.baseline.client.save();
     const originalRdb=join(root,'redis-data','dump.rdb'),migration=await fileIdentity(originalRdb);
