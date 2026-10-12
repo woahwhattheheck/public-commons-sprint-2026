@@ -26,7 +26,7 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/zotero/cli.mjs serve \
 
 The command prints a nonsecret origin and the private connection-file path. Open the URL in that private file. The fragment capability is removed from the address bar and remains only in the browser document's memory. Opening the same saved directory after closing creates a new current connection.
 
-The original Research server also accepts --zotero-state /absolute/private/zotero-workspace. Its authenticated Zotero control opens one owned child using the already selected Dossier store. The child returns evidence to that same store.
+The included original Research bridge opens one owned child using the already selected Dossier store and returns evidence to that same store. The shared Research owner is composing the optional --zotero-state flag and authenticated navigation control with the current extraction and appraisal host. The standalone command above opens the complete Zotero operator against an existing Research directory.
 
 ## Select and capture a library
 
