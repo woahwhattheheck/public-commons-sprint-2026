@@ -390,3 +390,65 @@ Finite recursive message values remain supported; same-instance reference cycles
 excessive depth and a shared 100,000-evaluation budget produce explicit schema
 errors. A malformed schema cannot become a successful negation. The complete
 source/typed method export remains available beside the generated customer package.
+
+## Reflected endpoint to the original merchant and customer
+
+Declare a named host source profile in the existing connection file:
+
+```json
+{
+  "schema": "stellar-forge.grpc-workspace-connection.v1",
+  "workspaces": {
+    "analytics": {
+      "consoleUrlEnv": "GRPC_WORKSPACE_URL",
+      "reflections": {
+        "upstream": {
+          "label": "Analytics native endpoint",
+          "sourceFile": "./private/source.json",
+          "protocol": "auto"
+        }
+      },
+      "captures": {},
+      "files": {}
+    }
+  }
+}
+```
+
+The source file uses the existing `stellar-forge.grpc-source.v1` connection schema
+with host-owned TLS/metadata environment names. The original workspace process
+uses its own environment when connecting. An exact saved revision can supply the
+same source instead of a profile.
+
+1. Read `merchant_grpc_workspaces` and `merchant_grpc_status`; retain the observed
+   `baseRevision`, or null for a new store.
+2. Call `merchant_grpc_reflection_inventory` with `{workspace, profile}` or
+   `{workspace, revision}`. It returns native protocol, service names and inventory SHA256.
+3. Call `merchant_grpc_reflection_capture` with the same source selection, explicit
+   `services`, returned `protocol` and `expectedInventorySha256`, current
+   `baseRevision` and one UUID `operationId`. The original workspace retains exact
+   descriptor/import bytes and their source/type comparison.
+4. Inspect or recover the result through `merchant_grpc_reflection_open` with its
+   `captureId`. Supply `baseRevision` to compare those same bytes with another saved
+   revision. Large complete captures use the existing result manifest and downloader.
+   Manifest topic `reflection-capture` identifies this acquisition; its
+   `original.operationId` preserves the capture UUID.
+5. Call `merchant_grpc_reflection_save` with the reviewed `captureId`,
+   `expectedCaptureSha256`, current `baseRevision`, title and complete `plan`.
+   Use an empty route list when choosing and pricing methods afterward. This returns
+   the normal saved revision without querying the endpoint again.
+6. Continue through existing method inspection, source/terms save, review, explicit
+   same-ID application call, preparation and the original release lifecycle. Export
+   the saved revision and all seven customer files through the complete receiving tools.
+
+`merchant_grpc_inventory` also accepts `kind: "reflections"` and pages every retained
+capture summary with the existing stable snapshot contract. Captures and merchant
+revisions have separate identities; an acquisition can be compared with later
+revisions while its descriptor bytes and operation ID remain fixed.
+
+Automatic reflection uses v1 and falls back to v1alpha only for UNIMPLEMENTED.
+One native bidirectional stream holds the complete acquisition and its cache of
+previously returned descriptors. Source schema `sf30-grpc-descriptor-source-v1`
+retains opaque FileDescriptorProto bytes, selected services, imports and endpoint
+observation. The native operator guide’s reflection section covers browser editing,
+the installed CLI and original source/customer receiving.
