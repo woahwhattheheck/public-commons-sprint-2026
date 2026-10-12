@@ -1148,7 +1148,11 @@
     "./seller/opensearch/catalog/mapping": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/mapping.mjs",
     "./seller/opensearch/catalog/input": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/input.mjs",
     "./seller/opensearch/catalog/exports": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/exports.mjs",
-    "./seller/opensearch/catalog/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/transfer.mjs"
+    "./seller/opensearch/catalog/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/transfer.mjs",
+    "./partners/stellar-application/project": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/project.mjs",
+    "./partners/stellar-application/project-receive": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/project-receive.mjs",
+    "./partners/stellar-application/project-cli": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/project-cli.mjs",
+    "./buyer/mcp/spending-recovery": "./source/stellar-forge/mcp-paid-agent/native-spend-recovery.mjs"
   },
   "nativePeers": {
     "@x402/core": {
