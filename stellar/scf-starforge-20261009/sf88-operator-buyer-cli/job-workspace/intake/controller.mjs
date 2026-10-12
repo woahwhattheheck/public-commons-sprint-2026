@@ -338,9 +338,14 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
       return summary(updated);
     });
   }
-  async function cancel(id) {
+  async function cancel(id, { taskId } = {}) {
     return serial(async () => {
       active(); const value = await readRow(id), task = tasks.get(id);
+      if (taskId !== undefined) {
+        need(typeof taskId === 'string' && taskId.length > 0 && taskId.length <= 128, 'JOB_INTAKE_TASK_INVALID');
+        if (!task) return summary(value);
+        need(task.public.id === taskId, 'JOB_INTAKE_TASK_CHANGED', 409);
+      }
       inputFiles.cancel(id);
       if (task) {
         task.public = { ...task.public, state: 'CANCELLING' };
@@ -434,10 +439,16 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
       const value = await readRow(id); need(value.handoffBase64 !== null, 'JOB_INTAKE_TICKET_REQUIRED', 409);
       return Buffer.from(value.handoffBase64, 'base64');
     },
-    async wait(id) {
-      const task = tasks.get(id); if (task) await task.promise;
-      const value = await readRow(id);
-      return { ...summary(value), input: structuredClone(value.input), function: structuredClone(value.merchant.function),
+    async wait(id, { taskId } = {}) {
+      const task = tasks.get(id);
+      if (taskId !== undefined) {
+        need(typeof taskId === 'string' && taskId.length > 0 && taskId.length <= 128, 'JOB_INTAKE_TASK_INVALID');
+        if (task) need(task.public.id === taskId, 'JOB_INTAKE_TASK_CHANGED', 409);
+      }
+      if (task) await task.promise;
+      const value = await readRow(id), view = summary(value);
+      if (taskId !== undefined) need(view.task?.id === taskId, 'JOB_INTAKE_TASK_CHANGED', 409);
+      return { ...view, input: structuredClone(value.input), function: structuredClone(value.merchant.function),
         history: structuredClone(value.history) };
     },
     close() {
