@@ -5,6 +5,12 @@ source filtering, route selection, exact batch prices, source-bound import/expor
 and retained draft reconciliation to the original merchant configuration and
 native package/release workflow.
 
+The [reusable operation policy workflow](OPERATION_POLICIES.md) adds named,
+immutable operating-policy editions to that same route worksheet. Review complete
+before-and-after settings, keep explicit route overrides, and save the exact
+reviewed native package. Its complete policy record travels with package export,
+receiving, reopening and the ordinary SF82 release workflow.
+
 The [complete package transfer workflow](PACKAGE_TRANSFER.md) exports the original
 source, plan, generated merchant and compiled files as a resumable package,
 receives it through this workspace's original publisher, and stages initial or

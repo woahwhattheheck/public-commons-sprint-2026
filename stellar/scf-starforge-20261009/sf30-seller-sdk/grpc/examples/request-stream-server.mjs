@@ -7,9 +7,10 @@ import { setTimeout as pause } from 'node:timers/promises';
 import { captureProtoSource, compileProtoSource } from '../proto.mjs';
 
 export async function startRequestStreamExample({ port = 0,
-  authorization = process.env.GRPC_REQUEST_STREAM_DEMO_AUTHORIZATION } = {}) {
+  authorization = process.env.GRPC_REQUEST_STREAM_DEMO_AUTHORIZATION, observeCall } = {}) {
   if (typeof authorization !== 'string' || !authorization)
     throw new Error('Set GRPC_REQUEST_STREAM_DEMO_AUTHORIZATION in the server and merchant environments.');
+  if (observeCall !== undefined && typeof observeCall !== 'function') throw new TypeError('observeCall must be a function.');
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid local example port.');
   const protoSource = await captureProtoSource({ directory: fileURLToPath(new URL('./proto/', import.meta.url)),
     entrypoints: ['request-streams.proto'] });
@@ -24,6 +25,8 @@ export async function startRequestStreamExample({ port = 0,
       if (call.metadata.get('authorization')[0] !== authorization)
         throw error(grpc.status.UNAUTHENTICATED, 'Example authorization required.');
       calls++;
+      if (observeCall) await observeCall({ number: calls, method: callback
+        ? '/forge.requeststreams.RecordBatch/Upload' : '/forge.requeststreams.RecordBatch/Exchange' });
       const records = []; let bytes = 0, count = 0;
       for await (const record of call) {
         controller.signal.throwIfAborted();
@@ -32,7 +35,7 @@ export async function startRequestStreamExample({ port = 0,
         receivedMessages++;
         if (record.delay_ms) await pause(record.delay_ms, undefined, { signal: controller.signal });
         if (record.reject) throw error(grpc.status.UNAVAILABLE, 'Deliberate local request-stream failure.');
-        bytes += record.payload?.length ?? 0;
+        bytes += record.payload === undefined ? 0 : Buffer.from(record.payload, 'base64').length;
         if (callback) records.push(record);
         else if (!call.write(record)) await new Promise((done, reject) => {
           const finish = issue => {

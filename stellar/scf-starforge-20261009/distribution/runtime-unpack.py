@@ -14,7 +14,7 @@ import tarfile
 SCHEMA = "stellar-forge.merchant-distribution-manifest.v1"
 PACKAGE = "@tokenjunkielabs/starforge-merchant"
 MAX_ARCHIVE = 64 * 1024 * 1024
-MAX_SOURCE = 64 * 1024 * 1024
+MAX_SOURCE = 128 * 1024 * 1024
 MAX_FILE = 4 * 1024 * 1024
 
 
