@@ -53,10 +53,12 @@ function nativeRequest(value){
 async function pending(request){
   const record={...request,schema:PENDING_SCHEMA,workspaceId:S.view.workspaceId,savedAt:new Date().toISOString()};
   if(request.action==='source.import')record.originalSource=await bundleIdentity(request.payload.bundle);
+  if(request.action==='delivery.reconcile')record.originalCustomerFile={...await bundleIdentity(request.payload.customerFile),deliveryId:request.payload.deliveryId};
   const saved={...record};
   if(record.originalSource&&JSON.stringify(saved).length>=64000){
     delete saved.payload;saved.needsOriginalSource=true;
   }
+  if(record.originalCustomerFile&&JSON.stringify(saved).length>=64000){delete saved.payload;saved.needsOriginalCustomerFile=true;}
   sessionStorage.setItem(pendingKey(request.operationId),JSON.stringify(saved));
   S.pending=record;
 }
@@ -64,7 +66,7 @@ function completePending(operationId){
   sessionStorage.removeItem(pendingKey(operationId));
   S.pending=retainedRequests()[0]??null;
 }
-async function originalRequest(operationId,{sourceBundle}={}){
+async function originalRequest(operationId,{sourceBundle,customerFile}={}){
   const retained=(S.pending?.operationId===operationId?S.pending:null)||
     retainedRequests().find(item=>item.operationId===operationId);
   const operation=await api('/api/operation?operationId='+encodeURIComponent(operationId));
@@ -79,6 +81,13 @@ async function originalRequest(operationId,{sourceBundle}={}){
         const identity=await bundleIdentity(payload.bundle);
         if(identity.sha256!==retained.originalSource.sha256||identity.bytes!==retained.originalSource.bytes)
           throw new Error('The retained source bundle differs from this original browser operation.');
+      }
+    }else if(operation.action==='delivery.reconcile'){
+      if(!/^[a-f0-9]{64}$/.test(payload?.customerFileObjectSha256??''))throw new Error('The original receiving operation has no retained customer file.');
+      payload={deliveryId:payload.deliveryId,customerFile:await api('/api/objects/'+payload.customerFileObjectSha256)};
+      if(retained?.originalCustomerFile){
+        const identity=await bundleIdentity(payload.customerFile),original=retained.originalCustomerFile;
+        if(identity.sha256!==original.sha256||identity.bytes!==original.bytes||payload.deliveryId!==original.deliveryId)throw new Error('The retained customer file differs from this original browser operation.');
       }
     }else if(retained?.payload&&JSON.stringify(canonical(retained.payload))!==JSON.stringify(canonical(payload)))
       throw new Error('The retained original operation belongs to different inputs.');
@@ -95,6 +104,15 @@ async function originalRequest(operationId,{sourceBundle}={}){
     S.pending=retained;S.section='sources';render();$('#source-import').open=true;$('#source-file').focus();
     notify('Select the same original source bundle to continue '+operationId+'. Its source identity and operation ID are retained.');
     return null;
+  }
+  if(retained?.needsOriginalCustomerFile){
+    if(customerFile){
+      const identity=await bundleIdentity(customerFile),original=retained.originalCustomerFile;
+      if(identity.sha256!==original?.sha256||identity.bytes!==original?.bytes)throw new Error('Choose the same original customer CSV for this retained receiving operation.');
+      return {operationId,action:'delivery.reconcile',payload:{deliveryId:original.deliveryId,customerFile},expectedRevision:S.view.revision};
+    }
+    S.pending=retained;I.deliveryId=retained.originalCustomerFile.deliveryId;S.section='integration';render();$('#integration-customer-file').focus();
+    notify('Select the same original customer CSV to continue '+operationId+'. Its file identity, source delivery and operation ID are retained.');return null;
   }
   throw new Error('Choose a retained original operation from this workspace.');
 }
@@ -150,8 +168,8 @@ function renderSelection(){
 }
 function render(){
   if(!S.view)return;S.rowGeneration++;updateHeader();renderSelection();
-  $('#navigation').innerHTML=[['sources','Sources'],['portfolios','Portfolios'],['review','Review'],['changes','Changes'],['publication','Publication'],['customer','Customer'],['handover','Handover']].map(([id,label])=>'<button type="button" data-command="section" data-section="'+id+'" aria-current="'+(S.section===id?'page':'false')+'">'+label+'</button>').join('');
-  const screens={sources:renderSources,portfolios:renderPortfolio,review:renderReview,changes:renderChanges,publication:renderPublication,customer:renderCustomer,handover:renderHandover};
+  $('#navigation').innerHTML=[['sources','Sources'],['portfolios','Portfolios'],['review','Review'],['changes','Changes'],['integration','Data integration'],['publication','Publication'],['customer','Customer'],['handover','Handover']].map(([id,label])=>'<button type="button" data-command="section" data-section="'+id+'" aria-current="'+(S.section===id?'page':'false')+'">'+label+'</button>').join('');
+  const screens={sources:renderSources,portfolios:renderPortfolio,review:renderReview,changes:renderChanges,integration:renderIntegration,publication:renderPublication,customer:renderCustomer,handover:renderHandover};
   $('#main').innerHTML=screens[S.section]();
   if(['portfolios','review'].includes(S.section)&&version())void loadRows().catch(e=>notify(e.message,true));
 }
@@ -295,7 +313,8 @@ function criteria(form){
 }
 async function executeCommand(target){
   const command=target.dataset.command,id=target.dataset.id;
-  if(command==='section'){S.detail=null;S.detailGeneration++;S.section=target.dataset.section;S.offset=0;S.search='';S.sort='';render();return;}
+  if(command?.startsWith('integration-')){await integrationCommand(target);return;}
+  if(command==='section'){I.generation++;S.detail=null;S.detailGeneration++;S.section=target.dataset.section;S.offset=0;S.search='';S.sort='';render();return;}
   if(command==='table'){S.detail=null;S.detailGeneration++;S.table=target.dataset.table;S.offset=0;S.search='';S.sort='';render();return;}
   if(command==='previous'||command==='next'){S.offset=command==='previous'?Math.max(0,S.offset-100):S.rows?.nextOffset??S.offset;await loadRows();return;}
   if(command==='new-portfolio'){S.section='portfolios';render();$('#portfolio-editor').open=true;if(target.dataset.edition)$('#portfolio-edition').value=target.dataset.edition;$('#portfolio-name').focus();return;}
@@ -338,6 +357,7 @@ async function executeCommand(target){
 }
 async function submitForm(event){
   const form=event.target,data=new FormData(form),id=form.id,submitter=event.submitter?.value;
+  if(id.startsWith('integration-')){await integrationForm(form,data);return;}
   if(id==='table-form'){S.search=String(data.get('search')||'');S.sort=String(data.get('sort')||'');S.direction=String(data.get('direction')||'asc');S.offset=0;await loadRows();return;}
   if(id==='capture-form'){
     const disasters=split(data.get('capture-disasters'));if(disasters.some(v=>!(/^[1-9]\d*$/.test(v))))throw new Error('Enter positive disaster numbers separated by commas.');
@@ -372,6 +392,164 @@ async function submitForm(event){
   if(id==='release-form'){const r=await act('release.prepare',{datasetId:String(data.get('dataset')),origin:String(data.get('release-origin')),path:String(data.get('release-path')),payment:JSON.parse(String(data.get('release-payment')))});S.releaseStates[r.id]={release:r.release,publisher:r.publisher,selection:r.selection};render();notify('Original merchant release staged.');return;}
   if(id==='buyer-form'){const intentIds=split(data.get('buyer-intents'));S.buyer=await act(submitter==='receive'?'buyer.receive':'buyer.inspect',{intentIds});render();notify(submitter==='receive'?'Complete original customer dataset received.':'Original buyer selection inspected.');return;}
 }
+
+// Original project data exchange: mappings, files and decisions use this workspace's actions.
+const I={document:null,offset:0,generation:0,selected:new Set(),draft:null,mappingId:'',deliveryId:'',receivingReviewer:'',receivingNote:''};
+const integrationRows=key=>S.view[key]||[];
+function integrationDraft(){
+  if(I.draft)return I.draft;
+  try{I.draft=JSON.parse(sessionStorage.getItem('openfema-mapping-draft:'+S.view.workspaceId)||'null');}catch{}
+  if(!I.draft||typeof I.draft.text!=='string')I.draft={text:JSON.stringify(S.schema.delivery.stagingMapping,null,2),previousMappingId:null};
+  return I.draft;
+}
+function saveIntegrationDraft(text,previousMappingId=integrationDraft().previousMappingId){
+  I.draft={text,previousMappingId};sessionStorage.setItem('openfema-mapping-draft:'+S.view.workspaceId,JSON.stringify(I.draft));
+}
+const integrationOptions=(key,label)=>integrationRows(key).slice().reverse().map(row=>({value:row.id,label:label(row)}));
+const deliveryLabel=row=>date(row.createdAt)+' · '+number(row.summary.rows)+' projects · '+short(row.versionId);
+function integrationLink(record,label='Complete ZIP'){
+  return record.export?.downloadUrl?button('download',label,'data-path="'+esc(record.export.downloadUrl)+'"'):'';
+}
+function integrationCounts(counts){return Object.entries(counts||{}).filter(([,n])=>n).map(([name,n])=>esc(name)+' '+number(n)).join(' · ')||'No project rows';}
+function renderIntegration(){
+  const maps=integrationRows('deliveryMappings'),reviews=integrationRows('deliveryMappingReviews'),deliveries=integrationRows('projectDeliveries'),receivings=integrationRows('deliveryReconciliations'),draft=integrationDraft();
+  const mapOptions=integrationOptions('deliveryMappings',r=>r.name+' · '+r.targetKind+' · '+short(r.mappingSha256));
+  const reviewedOptions=mapOptions.filter(o=>reviews.some(r=>r.mappingId===o.value));
+  const deliveryOptions=integrationOptions('projectDeliveries',deliveryLabel);
+  const mapRows=maps.slice().reverse().map(row=>'<tr><td>'+esc(row.name)+'<small>'+esc(row.targetName)+' · '+esc(row.targetKind)+'</small></td><td>'+number(row.columns)+'<small class="mono">'+short(row.mappingSha256)+'</small></td><td>'+esc(reviews.filter(r=>r.mappingId===row.id).map(r=>r.reviewer).join(', ')||'Awaiting field review')+'</td><td>'+button('integration-map','Open / edit new version','data-id="'+esc(row.id)+'"')+'</td></tr>').join('');
+  const deliveryRows=deliveries.slice().reverse().map(row=>'<tr><td>'+esc(date(row.createdAt))+'<small class="mono">'+short(row.versionId)+'</small></td><td>'+number(row.summary.rows)+'<small>'+number(row.summary.excluded)+' excluded from totals</small></td><td>'+number(row.summary.issues)+'</td><td>'+button('integration-open','Open register','data-kind="delivery" data-id="'+esc(row.id)+'"')+' '+integrationLink(row)+'</td></tr>').join('');
+  const receivingRows=receivings.slice().reverse().map(row=>'<tr><td>'+esc(row.file.name)+'<small>'+number(row.file.bytes)+' bytes · '+short(row.file.sha256)+'</small></td><td>'+number(row.summary.customerRows)+'</td><td>'+integrationCounts(row.summary.counts)+'</td><td>'+button('integration-open','Review receiving','data-kind="reconciliation" data-id="'+esc(row.id)+'"')+' '+integrationLink(row)+'</td></tr>').join('');
+  const compared=integrationRows('deliveryComparisons').slice().reverse().map(row=>'<tr><td>'+esc(date(row.createdAt))+'</td><td>'+esc(row.sameScope?'Same source scope':'Different source scope')+'<small>'+esc(row.sameMapping?'Same field mapping':'Different field mapping')+'</small></td><td>'+number(row.summary.sourceChanges)+' source changes · '+number(row.summary.reviewChanges)+' review changes</td><td>'+button('integration-open','Open comparison','data-kind="comparison" data-id="'+esc(row.id)+'"')+' '+integrationLink(row)+'</td></tr>').join('');
+  return heading('Data integration','Map a complete source portfolio to a reviewed file schema, reconcile an original customer CSV, and retain every edition and decision in this workspace.')+
+    '<p class="small">Source identity is disaster number plus GM project ID. Customer records awaiting obligation remain in the received customer file. Each of the four USD measures retains its own exact decimal value.</p>'+
+    '<details class="panel" id="integration-mapping-editor"><summary>1. Destination mapping and retained draft</summary><p>Start with the neutral staging format or edit its target columns to match the destination’s actual schema. A null source marks a customer-owned column. The complete target schema text stays with the saved mapping.</p>'+
+    '<div class="actions">'+button('integration-default','Load staging format')+input('integration-schema-file','Original destination schema file','','file','accept=".json,.csv,.txt,.md"')+button('integration-schema-load','Receive schema into draft')+'</div>'+
+    '<form id="integration-mapping-form">'+area('integration-mapping-json','Mapping JSON',draft.text)+'<p class="small">Draft retained in this browser. Saving creates a new immutable mapping; earlier mappings and reviews remain available.</p><button class="primary">Save mapping version</button></form>'+
+    '<details><summary>Available source and analyst fields</summary><div class="table-wrap"><table><thead><tr><th>Source path</th><th>Meaning</th><th>Type</th></tr></thead><tbody>'+Object.entries(S.schema.delivery.fields).map(([key,field])=>'<tr><td class="mono">'+esc(key)+'</td><td>'+esc(field.label)+'<small>'+esc(field.meaning||'')+'</small></td><td>'+esc(field.kind)+(field.owner==='review'?' · analyst decision':'')+'</td></tr>').join('')+'</tbody></table></div></details></details>'+
+    '<section class="panel"><h3>Saved mappings</h3>'+(mapRows?'<div class="table-wrap"><table><thead><tr><th>Mapping / destination</th><th>Fields / identity</th><th>Reviewed by</th><th>Open</th></tr></thead><tbody>'+mapRows+'</tbody></table></div>':empty('Create a mapping','The staging format includes all 31 source, amount, analyst and provenance columns.'))+
+    '<form id="integration-review-form"><div class="form-grid"><div><label for="integration-review-map">Exact mapping</label><select id="integration-review-map" name="mappingId" required>'+options(mapOptions,I.mappingId)+'</select></div>'+input('integration-mapping-reviewer','Field reviewer','','text','required maxlength="200"')+'</div>'+area('integration-mapping-note','Field review and target conventions')+'<button>Record field review</button></form></section>'+
+    '<section class="panel"><h3>2. Export a complete source version</h3><form id="integration-export-form"><div class="form-grid"><div><label for="integration-export-map">Reviewed mapping</label><select id="integration-export-map" name="mappingId" required>'+options(reviewedOptions,I.mappingId)+'</select></div><div><label for="integration-export-version">Saved portfolio version</label><select id="integration-export-version" name="versionId" required>'+options(versionOptions(),version()?.id)+'</select></div><div><label for="integration-customer-base">Preserve customer-owned cells from</label><select id="integration-customer-base" name="customerReconciliationId">'+options(integrationOptions('deliveryReconciliations',r=>r.file.name+' · '+short(r.mappingSha256)),'','No received customer file')+'</select></div></div><p class="small">An existing customer base must use the same mapping. Its unique source-linked customer columns carry forward; the full original customer file and unlinked records remain in the ZIP.</p><button class="primary">Save complete delivery</button></form>'+
+    (deliveryRows?'<div class="table-wrap"><table><thead><tr><th>Saved delivery / version</th><th>Projects</th><th>Mapping issues</th><th>Files</th></tr></thead><tbody>'+deliveryRows+'</tbody></table></div>':'')+'</section>'+
+    '<section class="panel" id="integration-receiving"><h3>3. Receive the original customer CSV</h3><form id="integration-reconcile-form"><div class="form-grid"><div><label for="integration-reconcile-delivery">Original source delivery</label><select id="integration-reconcile-delivery" name="deliveryId" required>'+options(deliveryOptions,I.deliveryId)+'</select></div>'+input('integration-customer-file','Complete UTF-8 customer CSV','','file','accept=".csv,text/csv" required')+'</div><p class="small">Up to 16 MiB. Source values, customer-only rows, duplicated identities and invalid review cells are retained for reconciliation. Original files stay byte-for-byte intact.</p><button class="primary">Save and reconcile customer file</button></form>'+
+    (receivingRows?'<div class="table-wrap"><table><thead><tr><th>Original customer file</th><th>Rows</th><th>Receiving result</th><th>Review / files</th></tr></thead><tbody>'+receivingRows+'</tbody></table></div>':'')+'</section>'+
+    '<section class="panel"><h3>4. Compare retained deliveries</h3><form id="integration-compare-form"><div class="form-grid"><div><label for="integration-before">Earlier delivery</label><select id="integration-before" name="beforeDeliveryId" required>'+options(deliveryOptions,deliveries.at(-2)?.id)+'</select></div><div><label for="integration-after">Later delivery</label><select id="integration-after" name="afterDeliveryId" required>'+options(deliveryOptions,deliveries.at(-1)?.id)+'</select></div></div><p class="small">Newly observed, not observed, changed source fields and changed analyst decisions are separate. Scope changes remain explicit.</p><button>Save comparison</button></form>'+
+    (compared?'<div class="table-wrap"><table><thead><tr><th>Saved comparison</th><th>Scope / mapping</th><th>Changes</th><th>Files</th></tr></thead><tbody>'+compared+'</tbody></table></div>':'')+'</section>'+
+    renderIntegrationDocument();
+}
+function integrationDocumentRows(){
+  if(!I.document)return [];
+  const {kind,value}=I.document;
+  if(kind==='delivery')return value.manifest.rows;
+  if(kind==='reconciliation')return [...value.rows,...value.sourceOnly];
+  return [...value.newlyObserved.map(row=>({change:'NEWLY_OBSERVED',record:row})),...value.notObserved.map(row=>({change:'NOT_OBSERVED',record:row})),...value.sourceChanges.map(row=>({change:'SOURCE_CHANGE',record:row})),...value.reviewChanges.map(row=>({change:'REVIEW_CHANGE',record:row}))];
+}
+function renderIntegrationDocument(){
+  if(!I.document)return '';
+  const {kind,record,value}=I.document,body=kind==='delivery'?value.manifest:value,rows=integrationDocumentRows(),page=rows.slice(I.offset,I.offset+50);
+  const proposalRows=new Set(kind==='reconciliation'?value.reviewProposals.map(row=>row.rowNumber):[]);
+  const headings=kind==='delivery'?['Identity','Project / applicant','Source amount / inclusion','Open']:kind==='reconciliation'?['Apply review','Customer row / identity','Receiving / changes','Open']:['Change','Original record','Open'];
+  const rowHtml=page.map((row,index)=>{
+    const open=button('integration-row','Details','data-index="'+(I.offset+index)+'"');
+    if(kind==='delivery'){
+      const project=value.portfolio.projects.find(p=>p.subject===row.subject);
+      return '<tr><td class="mono">'+esc(row.disasterNumber)+' / '+esc(row.projectId)+'</td><td>'+esc(project?.projectTitle)+'<small>'+esc(project?.applicantName)+'</small></td><td>'+esc(project?.federalObligated?.decimal)+' USD federal<small>'+esc(project?.included?'Included in totals':'Excluded from totals')+'</small></td><td>'+open+'</td></tr>';
+    }
+    if(kind==='reconciliation')return '<tr><td>'+(proposalRows.has(row.rowNumber)?'<input type="checkbox" class="integration-review-row" value="'+row.rowNumber+'" aria-label="Select analyst review from customer row '+row.rowNumber+'"'+(I.selected.has(row.rowNumber)?' checked':'')+'>':'—')+'</td><td>'+esc(row.rowNumber??'Source only')+'<small class="mono">'+esc(row.key||row.customerKey||'Unlinked customer record')+'</small></td><td>'+tag(row.status)+'<small>'+number(row.differences?.length)+' source differences · '+number(row.reviewChanges?.length)+' review changes</small></td><td>'+open+'</td></tr>';
+    const record=row.record;return '<tr><td>'+tag(row.change)+'</td><td class="mono">'+esc(record.subject||record.key||record.id||JSON.stringify(record).slice(0,200))+'</td><td>'+open+'</td></tr>';
+  }).join('');
+  const current=version(),currentOwner=S.view.portfolios.find(p=>p.id===record.portfolioId);
+  const canApply=kind==='reconciliation'&&current?.portfolioId===record.portfolioId&&current?.id===currentOwner?.currentVersionId&&current?.editionId===record.editionId;
+  const totals=kind==='delivery'?'<div class="form-grid">'+[['Project cost',body.summary.projectCostMinor],['Federal obligations',body.summary.federalObligatedMinor],['Total obligations',body.summary.totalObligatedMinor],['Mitigation',body.summary.mitigationMinor]].map(([label,amount])=>'<div><strong>'+esc(label)+'</strong><p>'+dollars(amount)+' USD</p></div>').join('')+'</div>':'';
+  return '<section class="panel" id="integration-document"><h3>'+esc(kind==='delivery'?'Complete mapped project register':kind==='reconciliation'?'Customer receiving and analyst review':'Delivery changes')+'</h3><p>'+esc(date(record.createdAt))+' · '+number(rows.length)+' complete rows retained</p><div class="actions">'+integrationLink(record)+button('download','Complete retained JSON','data-path="/api/objects/'+esc(record.documentSha256)+'"')+'</div>'+totals+
+    '<details><summary>Scope, mapping and counts</summary><pre>'+esc(JSON.stringify({summary:body.summary,sourceScope:body.sourceScope,criteria:body.criteria,mapping:body.mapping?.name,mappingSha256:body.mappingSha256,sameScope:body.sameScope,sameMapping:body.sameMapping,interpretation:body.interpretation,treatment:body.treatment,customerBase:body.customerBase},null,2))+'</pre></details>'+
+    (kind==='reconciliation'?'<p>Only checked, valid analyst fields enter a new portfolio version. Source differences remain reconciliation items. Each selected review must still match its original export baseline.</p><div class="actions">'+button('integration-select-reviews','Select all valid review changes ('+value.reviewProposals.length+')')+button('integration-clear-reviews','Clear selection')+'</div>':'')+
+    (rows.length?'<div class="table-wrap"><table><thead><tr>'+headings.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rowHtml+'</tbody></table></div><div class="actions">'+button('integration-page','Previous 50','data-offset="'+Math.max(0,I.offset-50)+'" '+(I.offset===0?'disabled':''))+'<span>'+number(I.offset+1)+'–'+number(Math.min(I.offset+50,rows.length))+' of '+number(rows.length)+'</span>'+button('integration-page','Next 50','data-offset="'+(I.offset+50)+'" '+(I.offset+50>=rows.length?'disabled':''))+'</div>':empty('No project changes or rows in this selection','The saved source scope, declarations, customer input and complete report remain available.'))+
+    (kind==='reconciliation'&&value.reviewProposals.length?'<form id="integration-apply-form"><p><span id="integration-selected-count">'+number(I.selected.size)+'</span> analyst rows selected. '+esc(canApply?'Current displayed version is eligible for these decisions.':'Select this receiving’s current portfolio and source edition in the header before applying decisions.')+'</p><div class="form-grid">'+input('integration-import-reviewer','Receiving analyst',I.receivingReviewer,'text','required maxlength="200"')+input('integration-import-note','Reason for applying selected review fields',I.receivingNote,'text','required maxlength="12000"')+'</div><button class="primary" '+(!canApply?'disabled':'')+'>Save selected decisions in new version</button></form>':'')+'</section>';
+}
+async function openIntegrationDocument(kind,id){
+  const key={delivery:'projectDeliveries',reconciliation:'deliveryReconciliations',comparison:'deliveryComparisons'}[kind];
+  const record=integrationRows(key).find(row=>row.id===id);if(!record)throw new Error('Choose a retained delivery or receiving from this workspace.');
+  const generation=++I.generation,workspaceId=S.view.workspaceId;
+  const value=await api('/api/objects/'+record.documentSha256);
+  if(generation!==I.generation||S.view.workspaceId!==workspaceId)return;
+  I.document={kind,record,value};I.offset=0;I.selected=new Set();I.receivingReviewer='';I.receivingNote='';S.section='integration';render();$('#integration-document').scrollIntoView({block:'start'});
+}
+async function readCustomerFile(file){
+  if(!file)throw new Error('Choose the complete original customer CSV.');
+  if(file.size>S.schema.delivery.customerFileLimit)throw new Error('Choose a complete customer CSV within 16 MiB.');
+  return {name:file.name,content:new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer())};
+}
+async function integrationCommand(target){
+  const command=target.dataset.command,id=target.dataset.id;
+  if(command==='integration-default'){saveIntegrationDraft(JSON.stringify(S.schema.delivery.stagingMapping,null,2),null);render();$('#integration-mapping-editor').open=true;return;}
+  if(command==='integration-map'){
+    const record=integrationRows('deliveryMappings').find(r=>r.id===id);if(!record)throw new Error('Choose a retained mapping.');
+    const generation=++I.generation,workspaceId=S.view.workspaceId,mapping=await api('/api/objects/'+record.objectSha256);
+    if(generation!==I.generation||workspaceId!==S.view.workspaceId)return;
+    I.mappingId=id;saveIntegrationDraft(JSON.stringify(mapping,null,2),id);render();$('#integration-mapping-editor').open=true;return;
+  }
+  if(command==='integration-schema-load'){
+    const file=$('#integration-schema-file').files[0];if(!file||file.size>2*1024*1024)throw new Error('Choose the complete original schema text within 2 MiB.');
+    const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer()),mapping=JSON.parse($('#integration-mapping-json').value);
+    mapping.target={...mapping.target,kind:'customer_supplied',evidence:{name:file.name,content:text}};
+    saveIntegrationDraft(JSON.stringify(mapping,null,2));render();$('#integration-mapping-editor').open=true;
+    notify('Original schema received into the draft. Set its destination name, reference and exact field mapping, then save and review the mapping.');return;
+  }
+  if(command==='integration-open'){await openIntegrationDocument(target.dataset.kind,id);return;}
+  if(command==='integration-page'){I.offset=Math.max(0,Math.min(Number(target.dataset.offset),Math.max(0,integrationDocumentRows().length-1)));render();$('#integration-document').scrollIntoView({block:'start'});return;}
+  if(command==='integration-row'){
+    const row=integrationDocumentRows()[Number(target.dataset.index)];if(!row)throw new Error('Open a row in the retained document.');
+    openDialog('Complete original row and comparison','<pre>'+esc(JSON.stringify(row,null,2))+'</pre>');return;
+  }
+  if(command==='integration-select-reviews'||command==='integration-clear-reviews'){
+    if(I.document?.kind!=='reconciliation')throw new Error('Open the original customer reconciliation.');
+    I.selected=new Set(command==='integration-select-reviews'?I.document.value.reviewProposals.map(row=>row.rowNumber):[]);render();$('#integration-document').scrollIntoView({block:'start'});return;
+  }
+}
+async function integrationForm(form,data){
+  const id=form.id;
+  if(id==='integration-mapping-form'){
+    const draft=integrationDraft(),mapping=JSON.parse(String(data.get('integration-mapping-json')));
+    const saved=await act('delivery.mapping.save',{mapping,...(draft.previousMappingId?{previousMappingId:draft.previousMappingId}:{})});
+    I.mappingId=saved.id;saveIntegrationDraft(JSON.stringify(mapping,null,2),saved.id);render();notify('Mapping version saved with its complete original destination schema.');return;
+  }
+  if(id==='integration-review-form'){
+    const mapping=integrationRows('deliveryMappings').find(r=>r.id===data.get('mappingId'));if(!mapping)throw new Error('Select the exact saved mapping.');
+    await act('delivery.mapping.review',{mappingId:mapping.id,expectedMappingSha256:mapping.mappingSha256,reviewer:String(data.get('integration-mapping-reviewer')||''),note:String(data.get('integration-mapping-note')||'')});
+    I.mappingId=mapping.id;render();notify('Field review recorded for the selected immutable mapping.');return;
+  }
+  if(id==='integration-export-form'){
+    const customerReconciliationId=String(data.get('customerReconciliationId')||'');
+    const saved=await act('delivery.export',{mappingId:String(data.get('mappingId')),versionId:String(data.get('versionId')),...(customerReconciliationId?{customerReconciliationId}:{})});
+    I.deliveryId=saved.id;await openIntegrationDocument('delivery',saved.id);notify('Complete project delivery saved with mapping, source portfolio and report.');return;
+  }
+  if(id==='integration-reconcile-form'){
+    const deliveryId=String(data.get('deliveryId')),customerFile=await readCustomerFile($('#integration-customer-file').files[0]),identity=await bundleIdentity(customerFile);
+    const retained=[...(S.pending?[S.pending]:[]),...retainedRequests()].find(r=>r.action==='delivery.reconcile'&&r.originalCustomerFile?.deliveryId===deliveryId&&r.originalCustomerFile?.sha256===identity.sha256&&r.originalCustomerFile?.bytes===identity.bytes);
+    const request=retained?await originalRequest(retained.operationId,{customerFile}):null;
+    const saved=await act('delivery.reconcile',{deliveryId,customerFile},request);
+    I.deliveryId=deliveryId;await openIntegrationDocument('reconciliation',saved.id);notify('Original customer CSV retained and every row reconciled.');return;
+  }
+  if(id==='integration-apply-form'){
+    if(I.document?.kind!=='reconciliation')throw new Error('Open the retained customer receiving.');
+    if(!I.selected.size)throw new Error('Select the valid analyst review rows to apply.');
+    const saved=await act('delivery.review.apply',{reconciliationId:I.document.record.id,versionId:version()?.id,rowNumbers:[...I.selected].sort((a,b)=>a-b),reviewer:String(data.get('integration-import-reviewer')||''),note:String(data.get('integration-import-note')||'')});
+    I.selected=new Set();render();notify(number(saved.applied)+' analyst decisions saved in a new native portfolio version.');return;
+  }
+  if(id==='integration-compare-form'){
+    const saved=await act('delivery.compare',{beforeDeliveryId:String(data.get('beforeDeliveryId')),afterDeliveryId:String(data.get('afterDeliveryId'))});
+    await openIntegrationDocument('comparison',saved.id);notify('Complete delivery comparison retained.');return;
+  }
+}
+document.addEventListener('input',event=>{
+  if(event.target.id==='integration-import-reviewer')I.receivingReviewer=event.target.value;
+  if(event.target.id==='integration-import-note')I.receivingNote=event.target.value;
+  if(event.target.id==='integration-mapping-json')try{saveIntegrationDraft(event.target.value);}catch(error){notify('The mapping remains in the editor; browser draft storage is full. Save the mapping or download this text before leaving.',true);}
+});
+document.addEventListener('change',event=>{
+  if(event.target.matches('.integration-review-row')){const row=Number(event.target.value);if(event.target.checked)I.selected.add(row);else I.selected.delete(row);const count=$('#integration-selected-count');if(count)count.textContent=number(I.selected.size);}
+});
+
 document.addEventListener('click',event=>{const target=event.target.closest('button[data-command]');if(target){void executeCommand(target).catch(error=>notify(error.message,true));}});
 document.addEventListener('submit',event=>{if(event.target.matches('form')){event.preventDefault();void submitForm(event).catch(error=>notify(error.message,true));}});
 $('#selection').addEventListener('change',event=>{

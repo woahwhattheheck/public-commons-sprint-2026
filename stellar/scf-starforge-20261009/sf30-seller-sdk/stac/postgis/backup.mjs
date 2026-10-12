@@ -1,4 +1,6 @@
 import {resolve} from 'node:path';
+import {publicationSnapshot,requirePublicationSnapshot} from './publication-snapshot.mjs';
+import {backupFieldSources,validateBackupFields} from './field.mjs';
 import {createHash} from 'node:crypto';
 import {inspectCommittedOutput, requireAvailableOutput} from './operation-output.mjs';
 import {BACKUP, META, need, id, hash, integer, canonical, digest, qi, ql, physicalName,
@@ -86,19 +88,23 @@ export async function openBackup(directory, expectedManifestSha256) {
     need(digest(request) === operation.request_sha256 && result.operationId === operation.operation_id &&
       result.requestSha256 === operation.request_sha256, 'POSTGIS_BACKUP_ORIGINAL_OPERATION_CHANGED');
   }
+  await validateBackupFields(root,manifest,metadata);
   return {directory: root, manifest, manifestFile, metadata};
 }
 
-export async function exportDatabaseBackup({db, profile, root, sourceOptions, operationId, directory}) {
+export async function exportDatabaseBackup({db, profile, root, sourceOptions, operationId, directory, expectedPublication}) {
   id(operationId);
   need(typeof directory === 'string' && directory.length, 'POSTGIS_BACKUP_DESTINATION_REQUIRED');
   const request = {schema: 'starforge.postgis-backup-request.v1', operationId,
-    projectId: profile.projectId, directory: resolve(directory)};
+    projectId: profile.projectId, directory: resolve(directory),
+    ...(expectedPublication===undefined?{}:{expectedPublication:publicationSnapshot(expectedPublication)})};
   async function verifiedResult(result) {
     const artifact = await inspectCommittedOutput({kind: 'backup', projectId: profile.projectId,
       operationId, requestSha256: result.requestSha256, directory: request.directory,
       manifestFile: result.manifestFile}, openBackup);
     requireAvailableOutput(artifact, operationId);
+    requirePublicationSnapshot({editionId:result.manifest.editionId,revision:result.manifest.revision,
+      layers:result.metadata.currentLayerObservations},request.expectedPublication);
     return {...result, artifact};
   }
   const committed = await db.transaction(async client => {
@@ -113,7 +119,9 @@ export async function exportDatabaseBackup({db, profile, root, sourceOptions, op
   if (completed) need(completed.manifest.operationId === operationId &&
     completed.manifest.requestSha256 === digest(request), 'POSTGIS_ORIGINAL_BACKUP_OPERATION_CHANGED');
   const result = await db.mutate(operationId, 'export-backup', request, async (client, current, requestSha256) => {
-    if (completed) return {...completed, recoveredCompletedFile: true};
+    if (completed) {requirePublicationSnapshot({editionId:completed.manifest.editionId,revision:completed.manifest.revision,
+      layers:completed.metadata.currentLayerObservations},request.expectedPublication);
+      return {...completed, recoveredCompletedFile: true};}
     const editionIds = (await client.query('SELECT edition_id FROM ' + db.q(META.editions) +
       ' WHERE project_id=$1 ORDER BY edition_id', [profile.projectId])).rows.map(row => row.edition_id);
     const editions = [];
@@ -122,9 +130,11 @@ export async function exportDatabaseBackup({db, profile, root, sourceOptions, op
       [layer.baselineTable, layer.liveTable].filter(Boolean))));
     const currentEdition = editions.find(edition => edition.editionId === current.activeEditionId);
     const observations = currentEdition ? await db.describeLayers(client, currentEdition) : [];
+    requirePublicationSnapshot({editionId:current.activeEditionId,revision:current.revision,layers:observations},request.expectedPublication);
     const operations = (await client.query('SELECT project_id,operation_id,kind,request_sha256,' +
       'request_json::text,result_json::text,committed_at::text FROM ' + db.q(META.operations) +
       ' WHERE project_id=$1 ORDER BY committed_at,operation_id', [profile.projectId])).rows;
+    const fieldSources = await backupFieldSources({root,output,operations});
     const tables = [], sources = [];
     for (const edition of editions) {
       const original = await openRetainedSource(member(root, edition.source.directory),
@@ -176,6 +186,7 @@ export async function exportDatabaseBackup({db, profile, root, sourceOptions, op
       editionId: current.activeEditionId, revision: current.revision, createdAt,
       database: db.environment, metadata: metadataFile,
       identities: {file: identityFile, rowCount: identityCount.toString()}, tables, sources,
+      ...(fieldSources.length ? {fieldSources} : {}),
       files: await listFiles(output, new Set(['postgis-backup.json']))};
     await writeJSONOnce(member(output, 'postgis-backup.json'), manifest);
     return openBackup(output);
@@ -208,6 +219,7 @@ export async function restoreDatabaseBackup({db, profile, root, sourceOptions, o
       const exists = (await client.query('SELECT to_regclass($1) AS relation', [db.q(layer.relation)])).rows[0].relation;
       need(exists === null, 'POSTGIS_RESTORE_EXISTING_RELATION_CONFLICT', layer.relation);
     }
+    await validateBackupFields(original.directory,original.manifest,original.metadata,{destination:root});
     const editions = [];
     for (const saved of original.metadata.editions) {
       const edition = parseExactJSON(canonical(saved));

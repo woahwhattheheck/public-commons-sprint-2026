@@ -19,11 +19,11 @@ The files in this directory have these responsibilities:
 | `complete-source-input.json` | Original twelve-member input/source bundle, preserved at SHA-256 `f153feb61d1f6adaa9549b9d63c5ce0972ab9ec4d910e380af5938d1cd5c0350`. |
 | `receive-and-continue.py` | Complete caller with both qualified archive inputs, actual optional-Git admission and the existing source/application continuation loop. |
 | `one-allocation.py` | Complete wrapper that verifies original source/builders, runs the caller, captures full results and uploads the complete archive through the maintained transfer engine. |
-| `native-receiving.py` | Full original native-02 dispatch, with twenty exact-byte intake members and the existing carrier embedded. Private provider selections arrive through standard input. |
+| `native-receiving.py` | Complete original dispatch with twenty exact-byte intake members, the existing carrier and a retained terminal for following source or transfer commands. Private provider selections arrive from an owned request file. |
 
 The original bundle includes the selected private input, its original shared predecessor, both preceding native callers, and all eight selected product source bodies. The dispatch replaces only the selected receiving caller, supplies the current wrapper and retains the earlier caller/wrapper preimages with native-01's actual result and transfer reconciliation.
 
-The existing Commons carrier is `integrations/shared_equipment/native_one_allocation.py`, full SHA-256 `18508b5c566d13c7d6f4a4ec680f2d34c84d12fcc741f38a466b4679aeea66b9`, merged in Commons PR 35330. Its original put/run/read/pack/upload behavior is retained. `OPENFEMA_OPERATION_ID` selects this operation's identity. The non-TTY dispatch supplies the complete command stream in one allocation.
+The existing Commons carrier is `integrations/shared_equipment/native_one_allocation.py`, full SHA-256 `18508b5c566d13c7d6f4a4ec680f2d34c84d12fcc741f38a466b4679aeea66b9`, merged in Commons PR 35330. Its original put/run/read/pack/upload behavior is retained. `OPENFEMA_OPERATION_ID` selects this operation's identity. The dispatch supplies the complete initial command stream in one allocation. When launched with a terminal and an owned private request file, it then reads following commands from that same terminal so the source cache, delivery archive and upload logs remain available.
 
 ## Selected source archives
 
@@ -67,32 +67,47 @@ All three complete modules are retained with the native delivery source. The exi
 
 The wrapper calls `UploadRequest.parse` with the actual final archive, `PreparedUpload.parse` with the complete original returned object, and `SignedUrlUploader.upload` with a fresh empty private state directory. A reservation with a null size remains unchanged; the request measures the actual finished archive. The uploader's successful index determines the transfer result.
 
-## Whole native dispatch
+## Whole native dispatch and retained terminal
 
-Reconcile the original operation and any existing returned native handle before dispatching. One owner executes the same native-02 operation.
+Reconcile the original operation and any returned native handle before dispatching. The original native-02 run completed its source phase at 17:09:38 UTC: 4,546 Git objects / 45,107,825 raw bytes were retained, with 467 exact blobs / 6,836,872 bytes still needed for the selected whole product. Its complete archive has 4,607 members, 16,015,069 bytes and SHA-256 `c844ec20fb579e99f847f7bbf704a4b50bd6b75f9f168d389be515d1901ac0db`. The maintained uploader returned an empty success set, and the independent original-file read returned File is not ready. Its non-TTY allocation ended before its private upload diagnostics could be read.
 
-Prepare both pinned source versions through the existing materialization contract. Prepare the final `SCF_STAC_Managed_Applications_Native_20261012.zip` upload through the original file-provider contract. The private input document has two fields:
+The following attempt continues this same operation with `attemptLabel: "native-03"`. The label distinguishes original logs, transfer selections and shared result filenames. Preserve the completed native-02 results. One owner holds the actual native handle throughout acquisition, application receiving, transfer and provider finalization.
+
+Prepare both pinned source versions through the existing materialization contract. Prepare the final `SCF_STAC_Managed_Applications_Native_20261012.zip` upload through the original file-provider contract. Write the complete private request into an owned file with mode 0600 in the same allocation:
 
 - `archiveTransfers`: the complete original db3d9 transfer object followed by the complete original d16e transfer object.
 - `upload`: the complete original opaque upload object.
+- `attemptLabel`: `native-03` for the continuation after completed native-02. Labels use letters, digits and hyphens; omission retains the original native-02 default.
 
-Run the complete procedure with that private document on standard input:
+Launch the actual command with the execution tool's terminal setting enabled, passing the private file as an argument:
 
 ```sh
-python3 -B -u native-receiving.py < PRIVATE_REQUEST.json
+python3 -B -u native-receiving.py PRIVATE_REQUEST.json
 ```
 
-The procedure downloads and verifies both complete archives, applies their returned attributes, reads the unchanged original bundle, verifies all twenty intake members and runs the selected wrapper through the original carrier. The fixed source receiver then expands any residual source closure using the original tree and invokes the maintained STAC application continuation.
+The request-file argument leaves the original terminal available. Standard-input redirection consumes that channel; it retains the earlier one-shot behavior and ends the private allocation when the preloaded commands finish.
 
-The continuation performs the real source build, predecessor installation/upgrade, installed-source verification, managed-application receiving and lifecycle. Its own full outputs determine completion.
+The procedure downloads and verifies both complete archives, applies their returned attributes, reads the unchanged original bundle, verifies all twenty intake members and runs the selected wrapper through the original carrier. The fixed source receiver expands source closure against the original tree and invokes the maintained STAC application continuation when complete. The continuation performs the real source build, predecessor installation/upgrade, installed-source verification, managed-application receiving and lifecycle.
 
-## Results and following continuation
+After the initial put and run, the input adapter reads the next command from the original terminal. The existing carrier, its command implementations and operation phases remain in the same process. Its original `read`, `put` and `run` commands are available for the next action. Read specific result files or logs by their known paths; the original `status` command also enumerates the whole source tree and can produce a very large response.
+
+## Results, transfer recovery and finalization
 
 The wrapper retains full stdout/stderr, source and runtime outputs, selected input, original callers, all operation/builder source and maintained upload modules. It creates and CRC-checks the complete ZIP and records its exact bytes, SHA-256, member count and transfer outcome. Private provider selections and transfer logs stay in the owning allocation.
 
-After the original transfer reports success, finalize its complete original opaque object through the same provider contract. Apply returned attributes to the exact archive if its allocation remains available. The whole non-TTY procedure retains the selected full result files and copies the complete ZIP to shared storage when capacity permits.
+Keep the returned terminal handle active while inspecting the run. For native-03, `transfer-native-03.json` reports the transfer outcome and `upload-native-03/transfer-0.log`, `upload-native-03/logs/` and `upload-native-03/jobs/` contain the maintained uploader's original private diagnostics. These can include provider credentials, so inspect them privately and retain only sanitized public error details. An empty successful-index set does not identify its underlying cause; use the original log and original-file readiness result to choose the following action.
 
-A nonzero source outcome retains the receiver's full source cache and missing-object list in the delivery. Subsequent source receiving can reuse the completed archive instead of repeating acquisition. A pre-process dispatch failure changes no native state; an actual returned process or uncertain transfer is reconciled from its existing identifiers before continuation.
+A nonzero source outcome retains the full source cache and missing-object list. Qualified additional source can be received into this same allocation and passed to the unchanged source receiver. The remaining source must satisfy the selected Git object hashes; the application continuation determines actual build and installation completion.
+
+After a successful transfer, finalize the complete original opaque object through the same provider contract while this allocation remains active. Apply the returned attributes to the exact archive. Once the file has been finalized and independently read back, stop the existing carrier:
+
+```json
+{"command":"stop"}
+```
+
+Stopping the carrier triggers the existing shared-output retention step. It preserves selected full result files under the attempt label and copies the complete ZIP if sufficient shared space remains. Existing same-label results must match exactly. The archive copy uses an exclusive temporary file and removes only the temporary file created by that copy.
+
+A failed process creation changes no native state. An actual returned process or uncertain transfer is reconciled using its existing identifiers and logs before another execution or transfer. The retained terminal is the source recovery boundary; keep it alive until the actual output and provider result have been preserved.
 
 ## Related completed receiving
 

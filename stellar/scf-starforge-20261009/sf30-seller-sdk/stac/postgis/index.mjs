@@ -1,4 +1,5 @@
 import {resolve} from 'node:path';
+import {publicationSnapshot,requirePublicationSnapshot} from './publication-snapshot.mjs';
 import {createHash} from 'node:crypto';
 import {META, REVIEW, RECEIVING, need, normalizeProfile, canonical, digest, sha256, id, hash, integer,
   qi, physicalName, fieldParameter, parseExactJSON} from './contract.mjs';
@@ -6,6 +7,7 @@ import {privateDirectory, member, claimDirectory, writeJSONOnce, readJSON, fileR
   copyVerified, listFiles, retainVectorSource, openRetainedSource, sourceFeatures, validateSourceMapping,
   openReceiving} from './files.mjs';
 import {createDatabase} from './database.mjs';
+import {createFieldWorkflow,runFieldReader} from './field.mjs';
 import {exportDatabaseBackup, restoreDatabaseBackup, openBackup} from './backup.mjs';
 import {inspectCommittedOutput, requireAvailableOutput} from './operation-output.mjs';
 
@@ -23,6 +25,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
   const profileSha256 = digest(profile), sourceOptions = python ? {python} : {};
   await writeJSONOnce(member(root, 'profiles/' + profileSha256 + '.json'), profile);
   const db = await createDatabase(connection, profile);
+  const field = createFieldWorkflow({db,profile,root,sourceOptions});
   const currentTime = async client => (await client.query(
     "SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS time")).rows[0].time;
   const sourcePath = source => member(root, source.directory);
@@ -92,10 +95,10 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       artifact};
   }
 
-  async function stage({operationId, sourceDirectory, expectedManifestSha256}) {
+  async function stage({operationId, sourceDirectory, expectedManifestSha256, fieldReviewOperationId}) {
     id(operationId, 'operationId'); hash(expectedManifestSha256);
     const request = {schema: 'starforge.postgis-stage-request.v1', operationId,
-      projectId: profile.projectId, profileSha256, sourceManifestSha256: expectedManifestSha256};
+      projectId: profile.projectId, profileSha256, sourceManifestSha256: expectedManifestSha256, ...(fieldReviewOperationId ? {fieldReviewOperationId:id(fieldReviewOperationId)} : {})};
     const editionId = 'edition-' + digest(request).slice(0, 40);
     const saved = await db.transaction(async client => {
       const result = await db.savedOperation(client, operationId, digest(request));
@@ -108,6 +111,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     return db.mutate(operationId, 'stage', request, async (client, current, requestSha256) => {
       const srids = await db.sridDefinitions(client, profile);
       const crsObservation = await validateSourceMapping(original, profile, srids, sourceOptions);
+      const fieldCorrection = fieldReviewOperationId ? await field.validateStage(client,current,fieldReviewOperationId,expectedManifestSha256) : null;
       const stageLayers = [];
       const selected = new Map(profile.layers.map(layer => [layer.sourceLayerId, layer]));
       const batches = new Map(profile.layers.map(layer => [layer.id, []]));
@@ -178,7 +182,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       const source = {directory: relativeSource, manifest: original.manifestFile,
         captureSha256: original.manifest.sourceCapture.sha256, selectionSha256: original.manifest.selectionSha256,
         sourceEdition: original.manifest.sourceEdition, selectionId: original.capture.selection.id,
-        crsObservation, sourceEngine: original.receiving.engine};
+        crsObservation, sourceEngine: original.receiving.engine, ...(fieldCorrection ? {fieldCorrection} : {})};
       await client.query('INSERT INTO ' + db.q(META.editions) +
         '(project_id,edition_id,request_sha256,source_json,profile_json,layers_json,state) VALUES($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,\'staged\')',
         [profile.projectId, editionId, requestSha256, canonical(source), canonical(profile), canonical(stageLayers)]);
@@ -224,10 +228,12 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       }
       summaries.push({layerId: layer.id, ...counts});
     }
+    const fieldReview = successor.source.fieldCorrection ? await field.plan(client,successor.source.fieldCorrection.reviewOperationId,current) : null;
     const body = {schema: REVIEW, projectId: profile.projectId, editionId: successor.editionId,
       previousEditionId: current.activeEditionId, expectedRevision: current.revision, profileSha256,
       sourceManifestSha256: successor.source.manifest.sha256, completeRowStateSha256: fullHash.digest('hex'),
-      summaries, changes};
+      summaries, changes, ...(fieldReview ? {fieldCorrection:{reviewOperationId:fieldReview.operation.operationId,
+        reviewSha256:fieldReview.review.reviewSha256,counts:fieldReview.review.counts}} : {})};
     return {...body, reviewSha256: digest(body)};
   }
 
@@ -301,18 +307,22 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
         }
         await db.installRoles(client, item.liveTable, layer);
       }
+      const fieldCorrection = await field.apply(client,current,successor);
+      const fieldCorrections = [...(previous?.source.fieldCorrections || [])];
+      if(fieldCorrection) fieldCorrections.push({promotionOperationId:operationId,reviewOperationId:fieldCorrection.reviewOperationId});
+      if(fieldCorrections.length) successor.source.fieldCorrections = fieldCorrections;
       const acceptedAt = await currentTime(client);
       successor.state = 'accepted'; successor.acceptedAt = acceptedAt;
       await client.query('UPDATE ' + db.q(META.editions) +
-        " SET layers_json=$3::jsonb,state='accepted',accepted_at=$4::timestamptz WHERE project_id=$1 AND edition_id=$2",
-        [profile.projectId, editionId, canonical(successor.layers), acceptedAt]);
+        " SET layers_json=$3::jsonb,state='accepted',accepted_at=$4::timestamptz,source_json=$5::jsonb WHERE project_id=$1 AND edition_id=$2",
+        [profile.projectId, editionId, canonical(successor.layers), acceptedAt, canonical(successor.source)]);
       await client.query('UPDATE ' + db.q(META.projects) +
         ' SET active_edition_id=$2,revision=revision+1,profile_json=$3::jsonb,profile_sha256=$4,updated_at=$5::timestamptz WHERE project_id=$1',
         [profile.projectId, editionId, canonical(profile), profileSha256, acceptedAt]);
       await db.switchViews(client, successor, previous, profile);
       return {schema: 'starforge.postgis-promotion-result.v1', projectId: profile.projectId, editionId,
         revision: expectedRevision + 1, previousEditionId: current.activeEditionId, acceptedAt,
-        reviewSha256, decisions, layers: await db.describeLayers(client, successor)};
+        reviewSha256, decisions, ...(fieldCorrection ? {fieldCorrection} : {}), layers: await db.describeLayers(client, successor)};
     });
   }
 
@@ -344,16 +354,18 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     });
   }
 
-  async function exportReceiving({operationId, directory: destination}) {
+  async function exportReceiving({operationId, directory: destination, expectedPublication}) {
     id(operationId);
     need(typeof destination === 'string' && destination.length, 'POSTGIS_RECEIVING_DESTINATION_REQUIRED');
     const request = {schema: 'starforge.postgis-receiving-request.v1', operationId,
-      projectId: profile.projectId, directory: resolve(destination)};
+      projectId: profile.projectId, directory: resolve(destination),
+      ...(expectedPublication===undefined?{}:{expectedPublication:publicationSnapshot(expectedPublication)})};
     async function verifiedResult(result) {
       const artifact = await inspectCommittedOutput({kind: 'receiving', projectId: profile.projectId,
         operationId, requestSha256: result.requestSha256, directory: request.directory,
         manifestFile: result.manifestFile}, openReceiving);
       requireAvailableOutput(artifact, operationId);
+      requirePublicationSnapshot(result.manifest,request.expectedPublication);
       return {...result, artifact};
     }
     const committed = await db.transaction(async client => {
@@ -369,7 +381,8 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       existing.manifest.projectId === profile.projectId && existing.manifest.requestSha256 === digest(request),
       'POSTGIS_EXISTING_RECEIVING_OPERATION_CHANGED');
     const result = await db.mutate(operationId, 'export-receiving', request, async (client, current, requestSha256) => {
-      if (existing) return {...existing, recoveredCompletedFile: true};
+      if (existing) {requirePublicationSnapshot(existing.manifest,request.expectedPublication);
+        return {...existing, recoveredCompletedFile: true};}
       let observation;
       try { observation = await readJSON(member(output, 'database-observation.json')); }
       catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -385,6 +398,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
             schema: db.environment.schema, postgresVersion: db.environment.postgresVersion,
             postgisVersion: db.environment.postgisVersion, metadataRelation: META.projects},
           source: selected.source, profile: selected.profile, layers: await db.describeLayers(client, selected)};
+        requirePublicationSnapshot(observation,request.expectedPublication);
         // Freeze the actual complete native observation before any source copies.
         // A retry completes this original historical receipt even if later edits
         // or a successor exist. Each consumer independently checks currentness.
@@ -393,6 +407,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       need(observation.schema === 'starforge.postgis-receiving-observation.v1' &&
         observation.projectId === profile.projectId && observation.operationId === operationId &&
         observation.requestSha256 === requestSha256, 'POSTGIS_ORIGINAL_NATIVE_OBSERVATION_CHANGED');
+      requirePublicationSnapshot(observation,request.expectedPublication);
       const retained = await db.edition(client, observation.editionId);
       need(canonical(retained.source) === canonical(observation.source) &&
         canonical(retained.profile) === canonical(observation.profile),
@@ -406,13 +421,14 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       await writeJSONOnce(member(output, 'profile.json'), observation.profile);
       const sourceManifest = await fileRecord(member(output, 'source/vector-export.json'), 'source/vector-export.json');
       const mapping = await fileRecord(member(output, 'profile.json'), 'profile.json');
+      const fieldEvidence = await field.receivingEvidence(client,retained,output);
       const receipt = {schema: RECEIVING, projectId: profile.projectId, operationId, requestSha256,
         editionId: observation.editionId, revision: observation.revision, acceptedAt: observation.acceptedAt,
         observedAt: observation.observedAt, database: observation.database,
         source: {manifest: sourceManifest, captureSha256: observation.source.captureSha256,
           selectionSha256: observation.source.selectionSha256, sourceEdition: observation.source.sourceEdition,
           selectionId: observation.source.selectionId},
-        mapping, layers: observation.layers,
+        mapping, layers: observation.layers, ...(fieldEvidence ? {fieldEvidence} : {}),
         files: await listFiles(output, new Set(['postgis-receiving.json']))};
       await writeJSONOnce(member(output, 'postgis-receiving.json'), receipt);
       return openReceiving(output);
@@ -420,13 +436,24 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     return verifiedResult(result);
   }
 
-  async function exportBackup({operationId, directory: destination}) {
-    return exportDatabaseBackup({db, profile, root, sourceOptions, operationId, directory: destination});
+  async function exportBackup({operationId, directory: destination, expectedPublication}) {
+    return exportDatabaseBackup({db, profile, root, sourceOptions, operationId, directory: destination, expectedPublication});
   }
   async function restoreBackup({operationId, directory: source, expectedManifestSha256}) {
     return restoreDatabaseBackup({db, profile, root, sourceOptions, operationId,
       directory: source, expectedManifestSha256});
   }
+  async function stageField({operationId,reviewOperationId}) {
+    id(operationId);id(reviewOperationId);
+    const committed=await db.transaction(client=>db.committedOperation(client,operationId),{readOnly:true});
+    if(committed){need(committed.kind==='stage'&&committed.request.fieldReviewOperationId===reviewOperationId,
+      'POSTGIS_ORIGINAL_OPERATION_REQUEST_CONFLICT');return {...committed.result,replayed:true};}
+    const source=await field.stageSource(reviewOperationId);
+    return stage({operationId,...source,fieldReviewOperationId:reviewOperationId});
+  }
   return {inspect, operationHistory, recoverOperation, stage, review, readRow, promote, rollback, exportReceiving, exportBackup, restoreBackup,
+    inspectField:request=>runFieldReader({...request,command:'inspect'},sourceOptions),
+    importField:field.importField,readField:field.readField,fieldTargets:field.targets,
+    previewField:field.preview,saveFieldReview:field.saveReview,stageField,
     close: () => db.close(), profile, directory: root};
 }

@@ -2,7 +2,7 @@
 // Agent access to the ORIGINAL, separately owned DuckDB customer service.
 import {createHash} from 'node:crypto';
 import {readdir} from 'node:fs/promises';
-import {join,resolve,isAbsolute,dirname,relative} from 'node:path';
+import {join,resolve,isAbsolute,dirname,relative,basename} from 'node:path';
 import {
  initializationDirectory as directory, initializationBytes as bytes,
  optionalInitializationBytes as optionalBytes, retainInitializationRecord as retainRecord
@@ -12,6 +12,7 @@ import {createSavedFileReader} from './native-file.mjs';
 import {nativeDuckDBOperations,nativeDuckDBActions,nativeDuckDBSchema} from './native-duckdb-schema.mjs';
 export {nativeDuckDBActions,nativeDuckDBSchema};
 import {dispatchDuckDBReconciliation} from './native-duckdb-reconciliation.mjs';
+import {dispatchDuckDBTimescale} from './native-duckdb-timescale.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-duckdb.v1';
 const CUSTOMER='stellar-forge.sf100.duckdb-workspace.v1';
@@ -107,6 +108,13 @@ function publicRecord(value){
  if(plain(record.body)){const {report_path,...body}=record.body;record.body=body;}
  return record;
 }
+function publicTimescaleRecord(value){
+ const record=publicRecord(value);
+ if(plain(record?.result))record.result=publicRecord(record.result);
+ if(Array.isArray(record?.operations))record.operations=record.operations.map(publicTimescaleRecord);
+ if(Array.isArray(record?.reviews))record.reviews=record.reviews.map(publicRecord);
+ return record;
+}
 function queryString(value){
  const entries=Object.entries(value).filter(([,x])=>x!==undefined);
  return entries.length?'?'+new URLSearchParams(entries.map(([k,v])=>[k,String(v)])):'';
@@ -180,9 +188,11 @@ export function createNativeDuckDB({manifest,isClosed=()=>false}={}){
   const record=await json(join(aliases,name(alias)+'.json'),1024*1024);
   need(record.schema===SCHEMA&&record.name===alias&&record.nativeWorkspace===nativeRoot&&
    ID.test(record.workspaceId??'')&&Array.isArray(record.sources),'MCP_DUCKDB_REGISTRATION_CHANGED');
+  need(record.timescaleReports===undefined||Array.isArray(record.timescaleReports)&&record.timescaleReports.length<=256,
+   'MCP_DUCKDB_REGISTRATION_CHANGED');
   localPath(record.database);localPath(record.exportRoot);localPath(record.handoffRoot);return record;
  }
- async function inspectRegistration({name:alias,database,sources=[]}={}){
+ async function inspectRegistration({name:alias,database,sources=[],timescaleReports=[]}={}){
   available();name(alias);localPath(database);await directory(database);
   need(Array.isArray(sources)&&sources.length<=256,'MCP_DUCKDB_SOURCES_INVALID');
   const control=await json(join(database,'duckdb-launch.json'));
@@ -199,12 +209,32 @@ export function createNativeDuckDB({manifest,isClosed=()=>false}={}){
    selected.push({...source,manifestSha256:hash(original.manifest_sha256),
     sourceBindingSha256:hash(original.source_binding_sha256),rows:positive(original.row_count,true)});
   }
-  Object.assign(record,{exportRoot:connection.identity.export_root,handoffRoot:connection.identity.handoff_root,sources:selected});
+  need(Array.isArray(timescaleReports)&&timescaleReports.length<=256,'MCP_DUCKDB_TIMESCALE_REPORTS_INVALID');
+  const timescaleNames=new Set(),nativeReports=[];
+  for(const source of timescaleReports){
+   need(plain(source)&&Object.keys(source).every(k=>['name','reportPath','sha256'].includes(k)),
+    'MCP_DUCKDB_TIMESCALE_REPORT_INVALID');
+   name(source.name);need(!timescaleNames.has(source.name),'MCP_DUCKDB_SOURCE_ALIAS_DUPLICATED');timescaleNames.add(source.name);
+   localPath(source.reportPath);hash(source.sha256);
+   // The existing Python owner verifies the complete file, native history and
+   // source digests. No JavaScript parse rewrites the original number tokens.
+   const inspected=await request(connection,'/api/timescale-intake/inspect',
+    {report_path:source.reportPath,sha256:source.sha256,filename:basename(source.reportPath)});
+   need(inspected.report_id===source.sha256&&inspected.sha256===source.sha256&&
+    Number.isSafeInteger(inspected.bytes)&&inspected.bytes>0&&inspected.bytes<=256000000&&
+    Number.isSafeInteger(inspected.source_count)&&inspected.source_count>=0,'MCP_DUCKDB_ORIGINAL_REPORT_CHANGED');
+   nativeReports.push({...source,filename:inspected.filename,bytes:inspected.bytes,
+    commissioningWorkspaceId:inspected.commissioning_workspace_id,commissioningId:inspected.commissioning_id,
+    revision:inspected.revision,digest:inspected.digest,sourceCount:inspected.source_count});
+  }
+  Object.assign(record,{exportRoot:connection.identity.export_root,handoffRoot:connection.identity.handoff_root,sources:selected,
+   ...(nativeReports.length?{timescaleReports:nativeReports}:{})});
   return {record,connection};
  }
  function hostBinding(record,connection,status){
   return {schema:SCHEMA,name:record.name,workspaceId:record.workspaceId,database:record.database,
-   browserUrl:connection.browserUrl,sources:record.sources.map(({reportPath,...source})=>source),status};
+   browserUrl:connection.browserUrl,sources:record.sources.map(({reportPath,...source})=>source),
+   timescaleReports:(record.timescaleReports??[]).map(({reportPath,...source})=>source),status};
  }
  async function register(description,{expectedWorkspaceId}={}){
   const {record,connection}=await inspectRegistration(description);
@@ -268,6 +298,49 @@ export function createNativeDuckDB({manifest,isClosed=()=>false}={}){
    file:await readSaved({destination:path,bytes:selected.bytes??selected.size,sha256:selected.sha256,
     contentType:selected.mime??null},args)};
  }
+ async function timescaleFile(record,connection,args,signal){
+  const reportId=hash(args.report_id),expected=hash(args.sha256);
+  const original=await request(connection,'/api/timescale-intake/reports/'+reportId,undefined,signal);
+  need(original.report_id===reportId&&original.sha256===reportId,'MCP_DUCKDB_TIMESCALE_REPORT_CHANGED');
+  const declared=args.filename==='original-commissioning.json'
+   ?{name:args.filename,bytes:original.bytes,sha256:original.sha256}
+   :args.filename==='TIMESCALE_INTAKE.md'?original.receiving_guide
+   :args.filename==='intake-receiving.json'?original.receiving_manifest:null;
+  need(declared?.name===args.filename&&declared.sha256===expected&&
+   Number.isSafeInteger(declared.bytes)&&declared.bytes>0&&declared.bytes<=256000000,
+   'MCP_DUCKDB_TIMESCALE_FILE_CHANGED');
+  const offset=args.byteOffset??0,limit=args.maxBytes??32768;
+  need(Number.isSafeInteger(offset)&&offset>=0&&offset<=declared.bytes&&
+   Number.isSafeInteger(limit)&&limit>=1&&limit<=65536,'MCP_DUCKDB_RANGE_INVALID');
+  const count=Math.min(limit,declared.bytes-offset),etag='"sha256-'+expected+'"';
+  let raw=Buffer.alloc(0);
+  if(count){
+   const end=offset+count-1,route='/api/timescale-intake/reports/'+reportId+
+    '/file?name='+encodeURIComponent(args.filename);
+   let response;
+   try{
+    response=await fetch(new URL(route,connection.url),{method:'GET',redirect:'error',cache:'no-store',
+     headers:{Origin:connection.url.origin,'X-DuckDB-Capability':connection.capability,
+      'X-DuckDB-Workspace-ID':record.workspaceId,Range:'bytes='+offset+'-'+end,
+      'If-Match':etag,'If-Range':etag,'Accept-Encoding':'identity'},
+     signal:AbortSignal.any([shutdown.signal,AbortSignal.timeout(30000),...(signal?[signal]:[])])});
+    need(response.status===206||response.status===200&&offset===0&&count===declared.bytes,
+     'MCP_DUCKDB_TIMESCALE_RANGE_RESPONSE_INVALID');
+    need(response.headers.get('etag')===etag&&response.headers.get('x-content-sha256')===expected&&
+     response.headers.get('content-length')===String(count)&&!response.headers.get('content-encoding')&&
+     (response.status!==206||response.headers.get('content-range')==='bytes '+offset+'-'+end+'/'+declared.bytes),
+     'MCP_DUCKDB_TIMESCALE_RANGE_IDENTITY_CHANGED');
+    raw=await responseBytes(response,count);
+    need(raw.length===count,'MCP_DUCKDB_TIMESCALE_RANGE_INCOMPLETE');
+   }finally{await response?.body?.cancel().catch(()=>{});}
+  }
+  return {reportId,filename:args.filename,workspaceId:record.workspaceId,file:{
+   contentType:args.filename.endsWith('.md')?'text/markdown;charset=utf-8':'application/json',
+   bytes:declared.bytes,sha256:expected,byteOffset:offset,returnedBytes:raw.length,
+   encoding:'base64',data:raw.toString('base64'),
+   nextByteOffset:offset+raw.length<declared.bytes?offset+raw.length:null,
+   verifiedRetainedFile:true,transport:'original-authenticated-http-range'}};
+ }
  async function dispatch(args={},context={}){
   available();need(plain(args)&&Object.keys(args).every(k=>['action','duckdbWorkspace','duckdbOperation','duckdbRequest'].includes(k))&&
    args.action==='duckdb'&&plain(context)&&(context.signal===undefined||context.signal instanceof AbortSignal),'MCP_DUCKDB_ARGUMENTS_INVALID');
@@ -279,7 +352,10 @@ export function createNativeDuckDB({manifest,isClosed=()=>false}={}){
   const get=route=>request(connection,route,undefined,context.signal);
   const post=(route,value,options)=>request(connection,route,value,context.signal,options);
   let value;
-  if(op.startsWith('reconcile-'))value=publicRecord(await dispatchDuckDBReconciliation({operation:op,body,get,post,workspaceId:record.workspaceId}));
+  if(op.startsWith('timescale-intake-'))value=publicTimescaleRecord(await dispatchDuckDBTimescale({
+   operation:op,body,get,post,workspaceId:record.workspaceId,registeredReports:record.timescaleReports??[],
+   readFile:value=>timescaleFile(record,connection,value,context.signal)}));
+  else if(op.startsWith('reconcile-'))value=publicRecord(await dispatchDuckDBReconciliation({operation:op,body,get,post,workspaceId:record.workspaceId}));
   else if(op==='state'){
    const views=await get('/api/catalog/views?offset=0&limit=100');
    value={workspaceId:record.workspaceId,engine:'DuckDB',schema:CUSTOMER,views:views.views,

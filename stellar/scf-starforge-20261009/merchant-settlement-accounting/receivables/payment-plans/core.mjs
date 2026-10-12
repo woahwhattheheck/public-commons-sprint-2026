@@ -17,6 +17,27 @@ export function addDays(date, days) {
   const result = new Date(Date.parse(date + 'T00:00:00Z') + days * 86400000).toISOString().slice(0, 10);
   return dateValue(result);
 }
+function monthLength(year, month) {
+  if (month === 2) return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+/** Calculate from the original date so a short month never shifts the next anchor. */
+export function addMonths(date, months, monthAnchor = 'DAY_OF_MONTH') {
+  dateValue(date);
+  need(Number.isSafeInteger(months) && months >= 0, 'INVALID_PLAN_MONTHS',
+    'Use a nonnegative whole number of calendar months.');
+  need(['DAY_OF_MONTH', 'END_OF_MONTH'].includes(monthAnchor), 'INVALID_PLAN_MONTH_ANCHOR',
+    'Choose the original day of the month or the last day of each month.');
+  const [year, month, day] = date.split('-').map(Number);
+  const target = year * 12 + month - 1 + months;
+  need(Number.isSafeInteger(target) && target < 120000, 'PAYMENT_PLAN_DATE_RANGE',
+    'Keep every installment within the supported four-digit calendar years.');
+  const targetYear = Math.floor(target / 12), targetMonth = target % 12 + 1;
+  const lastDay = monthLength(targetYear, targetMonth);
+  const targetDay = monthAnchor === 'END_OF_MONTH' ? lastDay : Math.min(day, lastDay);
+  return dateValue(String(targetYear).padStart(4, '0') + '-' +
+    String(targetMonth).padStart(2, '0') + '-' + String(targetDay).padStart(2, '0'));
+}
 function invoiceFor(data, id) {
   identifier(id, 'invoice');
   const invoice = data.invoices.find(row => row.id === id);
@@ -65,17 +86,30 @@ export function generateInstallments(value, invoice, data) {
   const balanceDate = dateValue(value.balanceDate, 'balance date');
   const currency = currencyOf(invoice.document.currency), balance = invoiceSummary(invoice, data, balanceDate);
   const amount = minor(balance.amountDue, currency, 'invoice balance', {positive: true});
-  const count = Number(value.count), intervalDays = Number(value.intervalDays ?? 30);
+  const count = Number(value.count), calendarMonths = value.intervalMonths !== undefined;
   need(Number.isSafeInteger(count) && count >= 1 && count <= 1000,
     'INVALID_INSTALLMENT_COUNT', 'Choose one to 1,000 installments.');
-  need(Number.isSafeInteger(intervalDays) && intervalDays >= 1 && intervalDays <= 3660,
-    'INVALID_INSTALLMENT_INTERVAL', 'Choose a positive whole number of days between installments.');
+  need(!calendarMonths || value.intervalDays === undefined, 'AMBIGUOUS_INSTALLMENT_INTERVAL',
+    'Choose either calendar months or a fixed day interval.');
+  const interval = Number(calendarMonths ? value.intervalMonths : value.intervalDays ?? 30);
+  need(Number.isSafeInteger(interval) && interval >= 1 && interval <= (calendarMonths ? 120 : 3660),
+    'INVALID_INSTALLMENT_INTERVAL', calendarMonths ?
+      'Choose one to 120 calendar months between installments.' :
+      'Choose one to 3,660 days between installments.');
+  const monthAnchor = value.monthAnchor ?? 'DAY_OF_MONTH';
+  need(['DAY_OF_MONTH', 'END_OF_MONTH'].includes(monthAnchor) &&
+      (calendarMonths || value.monthAnchor === undefined), 'INVALID_PLAN_MONTH_ANCHOR',
+    'Choose a month anchor only for a calendar-month schedule.');
   const firstDueDate = dateValue(value.firstDueDate, 'first due date');
   need(firstDueDate >= balanceDate, 'INSTALLMENT_BEFORE_BALANCE', 'The first installment must fall on or after the balance date.');
+  need(!calendarMonths || monthAnchor !== 'END_OF_MONTH' ||
+      addMonths(firstDueDate, 0, monthAnchor) === firstDueDate, 'PAYMENT_PLAN_FIRST_MONTH_END',
+    'For an end-of-month schedule, select the last day of the first due month.');
   const each = amount / BigInt(count);
   need(each > 0n, 'INSTALLMENT_BELOW_PRECISION', 'Use fewer installments for this currency amount.');
   const installments = Array.from({length: count}, (_, index) => ({
-    id: 'installment-' + (index + 1), dueDate: addDays(firstDueDate, index * intervalDays),
+    id: 'installment-' + (index + 1), dueDate: calendarMonths ?
+      addMonths(firstDueDate, index * interval, monthAnchor) : addDays(firstDueDate, index * interval),
     amount: money(index === count - 1 ? amount - each * BigInt(count - 1) : each, currency),
     label: 'Installment ' + (index + 1),
   }));

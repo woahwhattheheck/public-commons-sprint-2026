@@ -41,6 +41,8 @@ from .response_tables import AnalysisResponses
 from .research_intake import ResearchIntake
 from .analysis_synthesis import AnalysisSynthesis
 from . import synthesis_http
+from .analysis_lineage import AnalysisLineage
+from . import lineage_http
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
 from .storage import digest, dump, parse, private_directory, read
@@ -128,7 +130,7 @@ class AnalysisWorkspace:
     their imports and activations. Source registration is an operator action.
     """
 
-    def __init__(self, directory, *, checkout=None, node="node", research_connections=None):
+    def __init__(self, directory, *, checkout=None, node="node", research_connections=None, lineage_connections=None):
         self.database = DatasetDatabase(directory)
         self.checkout = str(Path(checkout).expanduser().resolve()) if checkout else None
         self.node = node
@@ -173,6 +175,7 @@ class AnalysisWorkspace:
             self.workbooks.recover_completed()
             self.archives = WorkspaceArchives(self.database, identity=self.identity, read_job=self._job)
             self.archives.recover_completed()
+            self.lineage = AnalysisLineage(self, connections=lineage_connections)
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -183,6 +186,7 @@ class AnalysisWorkspace:
             if self._closed:
                 return
             self._closed = True
+        self.lineage.close()
         self.synthesis.close()
         self.research.close()
         self.exports.close()
@@ -297,13 +301,15 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile", "research-capture", "synthesis"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile", "research-capture", "synthesis", "lineage-publish"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
             raise StateError("ANALYSIS_REQUEST_ID_REQUIRED")
         spec = {"id": job_id}
-        if kind == "synthesis":
+        if kind == "lineage-publish":
+            spec.update(self.lineage.prepare(request))
+        elif kind == "synthesis":
             spec.update(self.synthesis.prepare(request))
         elif kind == "research-capture":
             spec.update(self.research.prepare(request))
@@ -356,14 +362,16 @@ class AnalysisWorkspace:
                     if old["kind"] != kind or old["request"] != raw:
                         raise StateError("ANALYSIS_REQUEST_ID_REUSED")
                     resumable = (
-                        kind in {"workspace-export", "research-capture", "synthesis"} and
+                        kind in {"workspace-export", "research-capture", "synthesis", "lineage-publish"} and
                         old["status"] in {"INTERRUPTED", "FAILED", "CANCELLED"}) or (
                         kind in {"response-preview", "response-import"} and
                         old["status"] == "INTERRUPTED")
                     if resumable:
                         if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                             raise StateError("ANALYSIS_JOB_RUNNING")
-                        if kind == "synthesis":
+                        if kind == "lineage-publish":
+                            self.lineage.resume(db, spec)
+                        elif kind == "synthesis":
                             self.synthesis.validate(db, spec)
                             self.synthesis.resume(job_id)
                         elif kind == "research-capture":
@@ -390,7 +398,9 @@ class AnalysisWorkspace:
                     return self.job(job_id)
                 if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                     raise StateError("ANALYSIS_JOB_RUNNING")
-                if kind == "synthesis":
+                if kind == "lineage-publish":
+                    self.lineage.validate(db, spec)
+                elif kind == "synthesis":
                     self.synthesis.validate(db, spec)
                 elif kind == "research-capture":
                     self.research.validate(db, spec)
@@ -424,6 +434,8 @@ class AnalysisWorkspace:
             if kind == "profile":
                 self.profiles.run(job_id, spec)
                 return
+            elif kind == "lineage-publish":
+                result = self.lineage.run(job_id, spec)
             elif kind == "synthesis":
                 result = self.synthesis.run(job_id, spec)
             elif kind == "research-capture":
@@ -491,7 +503,8 @@ class AnalysisWorkspace:
             with self.database._connection() as db:
                 status = "CANCELLED" if ((kind == "workspace-export" and code == "WORKSPACE_ARCHIVE_CANCELLED") or
                     (kind == "research-capture" and code == "ANALYSIS_RESEARCH_CANCELLED") or
-                    (kind == "synthesis" and code == "ANALYSIS_SYNTHESIS_CANCELLED")) else "FAILED"
+                    (kind == "synthesis" and code == "ANALYSIS_SYNTHESIS_CANCELLED") or
+                    (kind == "lineage-publish" and code == "ANALYSIS_LINEAGE_CANCELLED")) else "FAILED"
                 db.execute("UPDATE sf_analysis_jobs SET status=?,error=?,finished_at=? WHERE id=? AND status='RUNNING'", (status, str(code)[:256], _now(), job_id))
 
     def _job(self, job_id):
@@ -517,6 +530,8 @@ class AnalysisWorkspace:
         elif job["kind"] == "report" and job["result"] is not None:
             with self.database._connection(readonly=True) as db:
                 job["result"] = self.reports._report(db, job_id)
+        elif job["kind"] == "lineage-publish":
+            job["progress"] = self.lineage.progress(job_id)
         elif job["kind"] == "synthesis":
             job["progress"] = self.synthesis.progress(job_id)
         elif job["kind"] == "research-capture":
@@ -651,6 +666,7 @@ def serve(workspace, *, port=0):
                 return self._reply(400, {"error": "ANALYSIS_ROUTE_INVALID"})
             assets = {"/": (_analysis_ui.HTML, "text/html;charset=utf-8"), "/app.js": (_analysis_ui.JS, "text/javascript;charset=utf-8"), "/style.css": (_analysis_ui.CSS, "text/css;charset=utf-8")}
             assets.update(synthesis_http.assets())
+            assets.update(lineage_http.assets())
             assets.update({"/profiles": (_analysis_profiles_ui.HTML, "text/html;charset=utf-8"),
                            "/profiles.js": (_analysis_profiles_ui.JS, "text/javascript;charset=utf-8"),
                            "/profiles.css": (_analysis_profiles_ui.CSS, "text/css;charset=utf-8")})
@@ -665,6 +681,8 @@ def serve(workspace, *, port=0):
             get = lambda key, default=None: query.get(key, [default])[0]
             parts = url.path.strip("/").split("/")
             if synthesis_http.get(self, workspace, url, query, parts):
+                return
+            if lineage_http.get(self, workspace, url, query, parts):
                 return
             if (self.command in {"GET", "HEAD"} and len(parts) == 4
                     and parts[:2] == ["api", "workbook-runs"] and parts[3] == "file"):
@@ -828,6 +846,8 @@ def serve(workspace, *, port=0):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
                 if synthesis_http.post(self, workspace, url, parts, body):
                     return
+                if lineage_http.post(self, workspace, url, parts, body):
+                    return
                 if url.path in {"/api/research-dossiers", "/api/research-sources", "/api/research-review", "/api/research-elements"}:
                     return self._reply(200, workspace.research.read(url.path.removeprefix("/api/research-"), body))
                 if len(parts) == 4 and parts[:2] == ["api", "research-captures"] and parts[3] == "cancel":
@@ -915,6 +935,7 @@ def main():
     parser.add_argument("--checkout", help="Matching full native Stellar Forge checkout/runtime, required for imports")
     parser.add_argument("--node", default="node")
     parser.add_argument("--research-connections", help="Private named original Research connections; browser requests select aliases only")
+    parser.add_argument("--lineage-connections", help="Named original OpenLineage startup/token files; browser requests select aliases only")
     commands = parser.add_subparsers(dest="command", required=True)
     launch = commands.add_parser("serve", help="Open the local browser application")
     launch.add_argument("--port", type=int, default=0)
@@ -929,6 +950,17 @@ def main():
     research_read.add_argument("--request", help="Private JSON request file with original selected identities")
     research_capture = commands.add_parser("research-capture", help="Capture one exact reviewed edition into the original source registration; repeat the same request to resume")
     research_capture.add_argument("--request", required=True)
+    lineage_read = commands.add_parser("lineage-read", help="Read original completed jobs, reviewed sources, saved publications and receipts")
+    lineage_read.add_argument("--action", required=True, choices=["configuration", "jobs", "review", "plans", "plan", "job"])
+    lineage_read.add_argument("--request", help="JSON request with the original selected IDs")
+    lineage_plan = commands.add_parser("lineage-plan", help="Freeze an exact reviewed lineage source with its original collector selection")
+    lineage_plan.add_argument("--request", required=True)
+    lineage_publish = commands.add_parser("lineage-publish", help="Publish or explicitly continue the same original plan/job/source key")
+    lineage_publish.add_argument("--request", required=True)
+    lineage_download = commands.add_parser("lineage-download", help="Save a verified original publication handover or member")
+    lineage_download.add_argument("--plan-id", required=True)
+    lineage_download.add_argument("--name", required=True, choices=["events.json", "plan.json", "native-bindings.json", "receipts.json", "report.html", "manifest.json", "handover.zip"])
+    lineage_download.add_argument("--out", required=True)
     response = commands.add_parser("response", help="Register a retained native API response, original typed stream export, or source document")
     response.add_argument("--name", required=True)
     response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp", "object", "document"])
@@ -950,7 +982,8 @@ def main():
         print(_json(AnalysisWorkspace.read_state(args.database)))
         return
     workspace = AnalysisWorkspace(args.database, checkout=args.checkout, node=args.node,
-                                  research_connections=args.research_connections)
+                                  research_connections=args.research_connections,
+                                  lineage_connections=args.lineage_connections)
     try:
         if args.command == "research-read":
             request = parse(read(Path(args.request).expanduser().absolute(), _MAX_BODY)) if args.request else {}
@@ -975,6 +1008,53 @@ def main():
             print(_json(job))
             if job["status"] != "COMPLETE":
                 raise SystemExit(1)
+        elif args.command == "lineage-read":
+            request = parse(read(Path(args.request).expanduser().absolute(), _MAX_BODY)) if args.request else {}
+            if not isinstance(request, dict):
+                raise StateError("ANALYSIS_LINEAGE_FIELDS_INVALID")
+            if args.action == "configuration":
+                if request:
+                    raise StateError("ANALYSIS_LINEAGE_FIELDS_INVALID")
+                result = workspace.lineage.configuration()
+            elif args.action in {"jobs", "plans"}:
+                if set(request) - {"before", "limit"}:
+                    raise StateError("ANALYSIS_LINEAGE_FIELDS_INVALID")
+                result = getattr(workspace.lineage, args.action)(**request)
+            elif args.action == "review":
+                result = workspace.lineage.review(request)
+            elif args.action == "plan":
+                if set(request) != {"id"}:
+                    raise StateError("ANALYSIS_LINEAGE_FIELDS_INVALID")
+                result = workspace.lineage.plan(request["id"])
+            else:
+                if set(request) != {"id"}:
+                    raise StateError("ANALYSIS_LINEAGE_FIELDS_INVALID")
+                result = workspace.job(request["id"])
+            print(_json(result))
+        elif args.command == "lineage-plan":
+            request = parse(read(Path(args.request).expanduser().absolute(), _MAX_BODY))
+            print(_json(workspace.lineage.save_plan(request)))
+        elif args.command == "lineage-publish":
+            import time
+            request = parse(read(Path(args.request).expanduser().absolute(), _MAX_BODY))
+            job = workspace.start("lineage-publish", request)
+            while job["status"] == "RUNNING":
+                time.sleep(0.1)
+                job = workspace.job(job["id"])
+            print(_json(job))
+            if job["status"] != "COMPLETE":
+                raise SystemExit(1)
+        elif args.command == "lineage-download":
+            from .storage import write
+            result = workspace.lineage.download(args.plan_id, args.name)
+            destination = Path(args.out).expanduser().absolute()
+            if destination.exists():
+                if digest(read(destination, len(result["bytes"]) + 1)) != result["sha256"]:
+                    raise StateError("ANALYSIS_LINEAGE_DOWNLOAD_DESTINATION_CHANGED")
+            else:
+                write(destination, result["bytes"], exclusive=True)
+            print(_json({"path": str(destination), "bytes": len(result["bytes"]),
+                         "sha256": result["sha256"], "filename": result["filename"], "mime": result["mime"]}))
         elif args.command == "archive-review":
             print(_json(workspace.archives.review()))
         elif args.command == "workspace-export":

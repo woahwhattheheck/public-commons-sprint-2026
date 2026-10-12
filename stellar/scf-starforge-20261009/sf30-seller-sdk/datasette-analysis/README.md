@@ -77,11 +77,26 @@ starting with a letter and using letters, numbers and underscores. All source va
 columns are carried by the maintained source reader and original importer.
 Use a separate prepared edition for a deliberate later source observation.
 
+The browser captures the selected file, descriptor, Analysis name and continuation
+choice together before uploading. It checks the complete upload length and SHA-256.
+Edits made while that original submission is in flight remain in the form for the
+next source selection. Only the submitted, unchanged file selection is replaced
+with its confirmed retained host path. Data pages and comparison filters keep
+the latest selected edition, cursor and filter when earlier responses arrive later.
+
 For the WRI Global Power Plant Database, capacity and generation fields are
 historical published observations. Their original source years, nulls, source
 links, country identifiers and attribution remain part of the selected data.
 Review gppd_idnr over the complete edition before using it as a comparison key.
 The Datasette rowid remains a locator within its own source edition.
+
+Reviewed column names remain unchanged in the complete source rows, saved SQL,
+profiles and key review. Domain reports follow the edition's explicit mapping
+from original field meanings to those reviewed names. Renaming a capacity,
+country, fuel, year, coordinate or attribution column therefore preserves its
+original analysis. The saved review records that semantic mapping. An edition
+with no reviewed semantic fields keeps its complete generic row and quality
+analysis.
 
 Source references:
 [Datasette example](https://datasette.io/global-power-plants),
@@ -128,7 +143,10 @@ python3 stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/cli.py
 A repeated ID with its identical original action returns the existing request.
 Changing the action or source selection requires a new request ID. Restarted
 incomplete requests appear as INTERRUPTED and retain their previous inputs,
-progress and attempt history. Continue them from Operator activity or request
+progress and attempt history. Accepted request receipts remain available when a
+subsequent status refresh fails; use Refresh or the same request ID to retrieve
+the latest state. A completed receipt takes precedence over an older in-flight
+status response. Continue interrupted requests from Operator activity or request
 --resume; the composer resumes its original native jobs.
 
 For an offline CLI operation, stop the browser server and omit --connect.
@@ -227,6 +245,24 @@ to the host integration's Python module path. The original native merchant
 Analysis tools can continue using the existing /api/* Analysis actions on this
 same server.
 
+### Saved customer SQL on the same listener
+
+The typed client also exposes `analysis_state()`, `saved_query(name)`,
+`save_query(name, fields, expected_revision=...)`,
+`start_query(fields, job_id=...)` and `analysis_job(job_id)`. These call the
+original Analysis state, saved-query and job endpoints through the same
+capability and loopback connection. Saved names and retained job IDs are
+validated before the request. Creating a saved query uses expected revision 0;
+editing one uses its returned revision. Query execution keeps the original job
+ID and the actual view bindings returned by `analysis_state()`.
+
+The complete `receiving.py --customer-country USA` journey uses these methods
+to save and run its original country selection, export the edited workspace,
+receive it independently and reopen both the saved query and exact result.
+The same retained receiving operation and request IDs continue that journey
+following interruption. Its original source programme supplies the full reviewed
+edition and matching installed Analysis runtime.
+
 ## HTTP and model integration
 
 All domain APIs use the original X-Analysis-Capability header. The full
@@ -241,6 +277,11 @@ original Analysis routes keep their existing handler and contracts.
 | GET /api/datasette/requests/ID | Read one original request |
 | POST /api/datasette/requests/ID/resume | Continue with the saved inputs |
 | GET /api/datasette/download | Stream a selected original file |
+| GET /api/state | Original Analysis view bindings and current workspace state |
+| GET /api/queries/NAME | Read the saved customer SQL and its revision |
+| POST /api/queries/NAME | Save customer SQL with the selected expected revision |
+| POST /api/start/query | Start or reopen the original stable Analysis job |
+| GET /api/jobs/ID | Read the original customer query job and result |
 
 The model contract is
 DatasetteAnalysis(analysis, operation_id=..., progress=...). dispatch handles
