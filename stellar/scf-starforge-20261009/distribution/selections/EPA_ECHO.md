@@ -102,7 +102,7 @@ The bundled source is `source/stellar/scf-starforge-20261009/sf30-seller-sdk/epa
 
 The original projections contain four facilities, 25 permits, ten compliance summaries, 4,836 quarterly fields, 54 inspections, eight enforcement records, 6,624 metadata rows and 9,300 source fields. These are the retained example’s source records. Its source dates and report provenance travel with the edition.
 
-Open every table’s following pages through the returned opaque cursors. Retain the original source identifiers while filtering or sorting. Facility reports and printable reports are available from their original records. Capture another dated edition to compare additions, removals and changes against the selected prior edition.
+Open every source table’s following pages using its offset, limit and returned nextOffset. Retain the original source identifiers while filtering or sorting. Dataset query pages use their separate opaque cursor contract. Facility reports and printable reports are available from their original records. Capture another dated edition to compare additions, removals and changes against the selected prior edition.
 
 Staff review records carry the selected source record, responsible team, notes and due date. If another actor changes the workspace while a form is open, review the current revision and save the retained entered values through the original compare-and-swap flow.
 
