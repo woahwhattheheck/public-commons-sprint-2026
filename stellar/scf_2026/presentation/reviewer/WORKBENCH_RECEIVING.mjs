@@ -38,6 +38,24 @@ if (journal.state === 'COMPLETE') {
   await lease.close(); process.stdout.write(JSON.stringify({status:'REUSED_COMPLETE', resultFile, resultSha256:sha(await readFile(resultFile)),
     runId:result.runId}) + '\n'); process.exit(0);
 }
+async function finalizeResult() {
+  const codeRoot = fileURLToPath(new URL('./', import.meta.url)), code = {};
+  for (const name of ['workspace.mjs','workbench-model.mjs','workbench.mjs','application-provider.mjs','workbench-ui/app.mjs'])
+    code[name] = sha(await readFile(join(codeRoot, name)));
+  const result = {...journal, state:'COMPLETE', schema:'stellar-forge.grant-reviewer-receiving-result.v1', node:process.version,
+    originalPurchaseTransactions:1, originalQuoteAttempts:2, newPaymentTransactions:0,
+    sourceCodeSha256:code, fullManagedAdoption:'separate maintained distribution operation'};
+  await writeSourceFile(resultFile, Buffer.from(JSON.stringify(result, null, 2) + '\n'), {replace:true});
+  journal.state = 'COMPLETE';
+  await writeSourceFile(journalFile, Buffer.from(JSON.stringify(journal, null, 2) + '\n'), {replace:true});
+  process.stdout.write(JSON.stringify({status:'COMPLETE', runId:journal.runId, phases:Object.keys(journal.phases).length,
+    resultFile, resultSha256:sha(await readFile(resultFile)), ownedBrowserClosed:true, ownedWorkbenchesClosed:true}) + '\n');
+}
+if (journal.state === 'FINALIZING' && journal.ownedBrowserClosed && journal.ownedWorkbenchesClosed) {
+  try { await finalizeResult(); } finally { await lease.close(); }
+  process.exit(0);
+}
+
 let saving = Promise.resolve(), activePhase = 'setup', browser, context, page, stopping = false;
 const applications = new Map(), consoleErrors = [];
 const save = () => {
@@ -348,16 +366,6 @@ try {
   }
   process.removeListener('SIGINT', signal); process.removeListener('SIGTERM', signal);
 }
-if (journal.state === 'FINALIZING') {
-  const codeRoot = fileURLToPath(new URL('./', import.meta.url)), code = {};
-  for (const name of ['workspace.mjs','workbench-model.mjs','workbench.mjs','application-provider.mjs','workbench-ui/app.mjs'])
-    code[name] = sha(await readFile(join(codeRoot, name)));
-  const result = {...journal, state:'COMPLETE', schema:'stellar-forge.grant-reviewer-receiving-result.v1', node:process.version,
-    originalPurchaseTransactions:1, originalQuoteAttempts:2, newPaymentTransactions:0,
-    sourceCodeSha256:code, fullManagedAdoption:'separate maintained distribution operation'};
-  await writeSourceFile(resultFile, Buffer.from(JSON.stringify(result, null, 2) + '\n'), {replace:true});
-  journal.state = 'COMPLETE'; await save();
-  process.stdout.write(JSON.stringify({status:'COMPLETE', runId:journal.runId, phases:Object.keys(journal.phases).length,
-    resultFile, resultSha256:sha(await readFile(resultFile)), ownedBrowserClosed:true, ownedWorkbenchesClosed:true}) + '\n');
-} else process.stdout.write(JSON.stringify({status:journal.state, runId:journal.runId, error:journal.error,
+if (journal.state === 'FINALIZING') await finalizeResult();
+else process.stdout.write(JSON.stringify({status:journal.state, runId:journal.runId, error:journal.error,
   ownedBrowserClosed:true, ownedWorkbenchesClosed:true}) + '\n');
