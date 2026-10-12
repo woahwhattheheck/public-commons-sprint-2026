@@ -70,7 +70,9 @@ async function* csvRecords(filename, format) {
     if (cells.length > MAX_COLUMNS) fail('CATALOG_COLUMN_LIMIT', `Row ${row} exceeds ${MAX_COLUMNS} columns.`);
   };
   const finish = () => {
-    push(); const record = cells; cells = []; recordCharacters = 0; row++;
+    const blank = recordCharacters <= 1 && field === '' && cells.length === 0 && mode === 0;
+    push(); const record = cells; Object.defineProperty(record, 'emptyPhysicalLine', { value: blank });
+    cells = []; recordCharacters = 0; row++;
     return record;
   };
   for await (const text of utf8(filename)) {
@@ -139,7 +141,7 @@ export async function* readCatalogRows(filename, rawFormat = {}) {
   if (format.kind === 'csv' || format.kind === 'tsv') {
     let names = format.hasHeader ? null : format.columns;
     for await (const values of csvRecords(filename, format)) {
-      if (values.length === 1 && values[0] === '') continue;
+      if (values.emptyPhysicalLine) continue;
       if (!names) {
         names = columns(values);
         if (format.columns && JSON.stringify(names) !== JSON.stringify(format.columns))

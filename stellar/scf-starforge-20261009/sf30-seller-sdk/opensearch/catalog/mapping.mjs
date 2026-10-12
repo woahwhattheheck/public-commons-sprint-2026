@@ -243,7 +243,8 @@ export async function compileCatalogMapping(value, resolveSource) {
   function operation(row, mode) {
     if (mode === 'full') return 'upsert';
     if (!mapping.delta) fail('CATALOG_DELTA_MAPPING_REQUIRED', 'Declare the original delta operation field and its upsert/delete values.');
-    const value = scalar(read(mapping.delta.operation, row, 'Delta operation'), 'Delta operation', false, 80);
+    const original = read(mapping.delta.operation, row, 'Delta operation');
+    const value = scalar(typeof original === 'boolean' ? String(original) : original, 'Delta operation', false, 80);
     if (mapping.delta.upsertValues.includes(value)) return 'upsert';
     if (mapping.delta.deleteValues.includes(value)) return 'delete';
     fail('CATALOG_DELTA_OPERATION_INVALID', 'The source row has an undeclared delta operation.');

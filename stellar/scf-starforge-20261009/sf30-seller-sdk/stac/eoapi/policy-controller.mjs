@@ -110,13 +110,14 @@ export function createDeploymentPolicyController({ workspace, reviewerFor } = {}
           } else if (route === '/inspect') {
             exact(body, ['package']);
             const { validateDeploymentPolicyPackage } = await import('./policy-workspace.mjs');
-            const validated = validateDeploymentPolicyPackage(body.package);
+            const validated = typeof workspace.inspectPackage === 'function'
+              ? await workspace.inspectPackage(body) : validateDeploymentPolicyPackage(body.package);
             result = { digest: validated.digest, policyDigest: validated.compilation.digest,
               sourceWorkspaceId: body.package.sourceWorkspaceId, approval: validated.approval,
               policy: validated.policy, compilation: validated.compilation,
               files: body.package.files.map(({ path, mime, bytes, sha256 }) => ({ path, mime, bytes, sha256 })), bytes: validated.bytes };
           } else if (route === '/receive') {
-            exact(body, ['package', 'expectedRevision']); expected(body);
+            exact(body, ['package', 'packageText', 'expectedRevision']); expected(body);
             result = await workspace.importPackage(body);
           } else return { status: 404, body: { error: 'EOAPI_POLICY_ROUTE_NOT_FOUND' } };
         } else return { status: 404, body: { error: 'EOAPI_POLICY_ROUTE_NOT_FOUND' } };

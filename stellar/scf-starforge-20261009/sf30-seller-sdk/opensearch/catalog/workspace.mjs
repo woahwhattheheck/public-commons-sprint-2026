@@ -6,7 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { WorkspaceError, clone, canonical, digest, identifier, now } from '../workspace/store.mjs';
 import { catalogInputFormat, readCatalogRows } from './input.mjs';
 import { normalizeCatalogMapping, compileCatalogMapping, catalogText, catalogIdentifier,
-  catalogMaterialFields } from './mapping.mjs';
+  catalogMaterialFields, catalogQuantity } from './mapping.mjs';
 import { exportCatalog, createCatalogQueryDraft } from './exports.mjs';
 import { exportCatalogBundle, importCatalogBundle } from './transfer.mjs';
 
@@ -174,6 +174,10 @@ export class OpenSearchCatalogWorkspace {
       const tenantId = catalogText(request.tenantId, 'Tenant ID', 256);
       if (prior && prior.tenantId !== tenantId) fail('CATALOG_TENANT_IMMUTABLE', 'Create a separate catalog for a different tenant.');
       const mapping = normalizeCatalogMapping(request.mapping), at = now();
+      const checkLookups = value => { if (!value || typeof value !== 'object') return;
+        if (value.lookup?.sourceId) this.source(value.lookup.sourceId);
+        for (const child of Object.values(value)) if (child && typeof child === 'object') checkLookups(child); };
+      checkLookups(mapping);
       const result = { schema: CATALOG_SCHEMA, id: prior?.id ?? randomUUID(), revision: (prior?.revision ?? 0) + 1,
         title: catalogText(request.title, 'Catalog title', 120), tenantId, mapping, mappingSha256: digest(mapping),
         activeEditionId: prior?.activeEditionId ?? null, createdAt: prior?.createdAt ?? at, updatedAt: at };
@@ -214,15 +218,18 @@ export class OpenSearchCatalogWorkspace {
   upload(meta, bytes) {
     const selected = { requestId: identifier(meta.requestId, 'request ID'), name: catalogText(meta.name, 'Source name', 240),
       format: catalogInputFormat(meta.format), bytes: meta.bytes, sha256: meta.sha256, provenance: provenance(meta.provenance) };
-    return this.perform('catalog-upload', selected, async () => {
+    return this.perform('catalog-upload', selected, async operation => {
       const source = { schema: SOURCE_SCHEMA, id: sourceIdentity(selected), ...selected, createdAt: now() };
       delete source.requestId;
       await this.retainBytes(selected, bytes, this.sourcePath(source.id));
-      const sample = [];
+      const sample = []; let sampleBytes = 0, sampled = 0;
+      source.columns = source.format.columns ?? [];
       for await (const row of readCatalogRows(this.sourcePath(source.id), source.format)) {
-        sample.push(row.record); if (sample.length >= 8) break;
+        if (!sampled) source.columns = Object.keys(row.record);
+        sampled++; const size = Buffer.byteLength(json(row.record));
+        if (size + sampleBytes <= 32768) { sample.push(row.record); sampleBytes += size; }
+        if (sampled >= 8) break;
       }
-      source.columns = sample[0] ? Object.keys(sample[0]) : source.format.columns ?? [];
       source.sample = sample;
       this.store.transaction(() => {
         const previous = parse(this.db.prepare('SELECT record_json FROM catalog_sources WHERE id=?').get(source.id));
@@ -230,12 +237,13 @@ export class OpenSearchCatalogWorkspace {
           if (sourceIdentity(previous) !== source.id) fail('CATALOG_SOURCE_CONFLICT', 'The saved source identity changed.', 409);
           Object.assign(source, previous);
         } else this.db.prepare('INSERT INTO catalog_sources VALUES(?,?)').run(source.id, json(source));
+        this.complete(operation, { source });
       });
       return { source };
     });
   }
   async preview(request) {
-    return this.perform('catalog-preview', request, async () => {
+    return this.perform('catalog-preview', request, async operation => {
       positiveRevision(request.expectedRevision);
       const catalog = this.catalog(request.catalogId, request.expectedRevision);
       const mode = request.mode ?? 'full';
@@ -252,7 +260,7 @@ export class OpenSearchCatalogWorkspace {
       const remove = this.db.prepare('DELETE FROM catalog_materials WHERE edition_id=? AND material_key=?');
       if (mode === 'delta') this.store.transaction(() =>
         this.db.prepare('INSERT INTO catalog_materials SELECT ?,material_key,material_id,sha256,record_json FROM catalog_materials WHERE edition_id=?').run(editionId, base.id));
-      let batch = [], inputRows = 0;
+      let batch = [], batchBytes = 0, inputRows = 0;
       const flush = () => {
         if (!batch.length) return;
         this.store.transaction(() => {
@@ -270,10 +278,11 @@ export class OpenSearchCatalogWorkspace {
             }
           }
         });
-        batch = [];
+        batch = []; batchBytes = 0;
       };
       for await (const row of readCatalogRows(source.path, source.format)) {
-        inputRows++; batch.push(row); if (batch.length >= 250) flush();
+        inputRows++; batch.push(row); batchBytes += Buffer.byteLength(json(row.record));
+        if (batch.length >= 250 || batchBytes >= 2 * 1024 * 1024) flush();
       }
       flush();
       if (!inputRows && mode === 'full') fail('CATALOG_EMPTY_FULL_IMPORT', 'A full replacement must contain at least one material. Use reviewed explicit deletions to retire a catalog.');
@@ -294,6 +303,7 @@ export class OpenSearchCatalogWorkspace {
       this.store.transaction(() => {
         this.db.prepare('INSERT INTO catalog_editions VALUES(?,?,?,?)').run(value.id, catalog.id, at, json(value));
         this.buildSearchIndex(value);
+        this.complete(operation, { edition: value });
       });
       return { edition: value };
     });
@@ -353,7 +363,18 @@ export class OpenSearchCatalogWorkspace {
     return { ...value, currentStatus: current?.sha256 === value.materialSha256 ? value.status : 'NEEDS_REVIEW',
       currentMaterial: current };
   }
-  suggest({ catalogId, text, customerId = '', offset = 0, limit = 30 }) {
+  facets({ catalogId, editionId }) {
+    const catalog = this.catalog(catalogId), id = editionId ?? catalog.activeEditionId;
+    if (!id) return { editionId: null, facets: { category: [], manufacturer: [], unit: [] } };
+    const edition = this.edition(id);
+    if (edition.catalogId !== catalog.id) fail('CATALOG_EDITION_FOREIGN', 'The selected edition belongs to another catalog.');
+    const facets = {};
+    for (const name of ['category','manufacturer','unit']) {
+      facets[name] = this.db.prepare("SELECT json_extract(record_json,'$." + name + "') value,COUNT(*) count FROM catalog_materials WHERE edition_id=? AND json_extract(record_json,'$." + name + "') IS NOT NULL GROUP BY value ORDER BY count DESC,value").all(id);
+    }
+    return { editionId: id, facets };
+  }
+  suggest({ catalogId, text, customerId = '', category, manufacturer, unit, offset = 0, limit = 30 }) {
     const catalog = this.catalog(catalogId); ({ offset, limit } = page(offset, limit));
     const term = catalogText(text, 'Customer description or part number', 2000, true) ?? '';
     if (typeof customerId !== 'string' || customerId.length > 256 || customerId.includes('\0')) fail('CATALOG_CUSTOMER_INVALID', 'Use the original customer identifier.');
@@ -362,22 +383,50 @@ export class OpenSearchCatalogWorkspace {
     const decision = term ? parse(this.db.prepare('SELECT record_json FROM catalog_decisions WHERE catalog_id=? AND context_key=?')
       .get(catalog.id, digest([customerId, descriptionKey(term)]))) : null;
     const approved = decision ? this.decisionView(decision, catalog) : null;
-    const tokens = term.match(/[\p{L}\p{N}]+/gu)?.slice(0, 24) ?? [];
-    const expression = tokens.map(token => '"' + token.replaceAll('"','""') + '"*').join(' AND ');
-    const identity = catalogIdentifier(term, edition.mapping.identifierPolicy);
-    let identities;
-    if (!term) identities = this.db.prepare('SELECT material_key,3 priority,0 rank FROM catalog_materials WHERE edition_id=? ORDER BY material_id').all(edition.id);
-    else {
-      const exact = this.db.prepare('SELECT DISTINCT material_key,1 priority,0 rank FROM catalog_refs WHERE edition_id=? AND value=?').all(edition.id, identity);
-      const ranked = expression ? this.db.prepare('SELECT material_key,2 priority,bm25(catalog_terms) rank FROM catalog_terms WHERE catalog_terms MATCH ? AND edition_id=? ORDER BY rank,material_key').all(expression, edition.id) : [];
-      const seen = new Set(); identities = [];
-      if (approved?.currentStatus === 'APPROVED') { identities.push({ material_key: approved.materialKey, priority: 0, rank: 0 }); seen.add(approved.materialKey); }
-      for (const item of [...exact, ...ranked]) if (!seen.has(item.material_key)) { seen.add(item.material_key); identities.push(item); }
+    const filters = [], args = [];
+    for (const [name, value] of Object.entries({ category, manufacturer, unit })) if (value !== undefined && value !== null && value !== '') {
+      filters.push("json_extract(m.record_json,'$." + name + "')=?");
+      args.push(catalogText(value, 'Selected ' + name, 256));
     }
-    const rows = identities.slice(offset, offset + limit);
-    return { editionId: edition.id, candidates: rows.map(row => ({ material: this.material(edition.id, row.material_key),
-      reason: ['approved-customer-match','exact-identifier','catalog-text','catalog-browse'][row.priority] })),
-      approved, total: identities.length, nextOffset: offset + rows.length < identities.length ? offset + rows.length : null };
+    const scope = 'm.edition_id=?' + (filters.length ? ' AND ' + filters.join(' AND ') : '');
+    const selectedArgs = [edition.id, ...args];
+    const reason = ['approved-customer-match','exact-identifier','catalog-text','catalog-browse'];
+    const candidates = []; let total = 0, remainingOffset = offset;
+    const append = (from, where, values, priority, order) => {
+      const all = count(this.db, 'SELECT COUNT(*) n FROM ' + from + ' WHERE ' + where, ...values);
+      total += all;
+      if (remainingOffset >= all) { remainingOffset -= all; return; }
+      const room = limit - candidates.length;
+      if (room > 0) {
+        const rows = this.db.prepare('SELECT m.record_json FROM ' + from + ' WHERE ' + where + ' ORDER BY ' + order + ' LIMIT ? OFFSET ?')
+          .all(...values, room, remainingOffset);
+        candidates.push(...rows.map(row => ({ material: parse(row), reason: reason[priority] })));
+      }
+      remainingOffset = 0;
+    };
+    if (!term) append('catalog_materials m', scope, selectedArgs, 3, 'm.material_id,m.material_key');
+    else {
+      const approvedKey = approved?.currentStatus === 'APPROVED' ? approved.materialKey : '';
+      append('catalog_materials m', scope + ' AND m.material_key=?', [...selectedArgs, approvedKey], 0, 'm.material_key');
+      const identity = term.length <= 1024 ? catalogIdentifier(term, edition.mapping.identifierPolicy) : '';
+      const exact = 'EXISTS(SELECT 1 FROM catalog_refs r WHERE r.edition_id=m.edition_id AND r.material_key=m.material_key AND r.value=?)';
+      append('catalog_materials m', scope + ' AND m.material_key<>? AND ' + exact,
+        [...selectedArgs, approvedKey, identity], 1, 'm.material_id,m.material_key');
+      const tokens = term.match(/[\p{L}\p{N}]+/gu)?.slice(0, 24) ?? [];
+      const expression = tokens.map(token => '"' + token + '"*').join(' AND ');
+      if (expression) append('catalog_terms JOIN catalog_materials m ON m.edition_id=catalog_terms.edition_id AND m.material_key=catalog_terms.material_key',
+        scope + ' AND catalog_terms MATCH ? AND m.material_key<>? AND NOT ' + exact,
+        [...selectedArgs, expression, approvedKey, identity], 2, 'bm25(catalog_terms),m.material_key');
+    }
+    return { editionId: edition.id, candidates, approved, total, nextOffset: offset + candidates.length < total ? offset + candidates.length : null };
+  }
+  quantity({ catalogId, materialKey, expectedMaterialSha256, quantity, unit }) {
+    const catalog = this.catalog(catalogId);
+    if (!catalog.activeEditionId) fail('CATALOG_EDITION_REQUIRED', 'Select the reviewed catalog edition first.');
+    const material = this.material(catalog.activeEditionId, materialKey);
+    if (!material || material.sha256 !== expectedMaterialSha256) fail('CATALOG_MATCH_CHANGED', 'Review the current selected material before converting its quantity.', 409);
+    return { materialId: material.materialId, editionId: catalog.activeEditionId,
+      quantity: catalogQuantity(material, quantity, unit) };
   }
   saveDecision(request) {
     return this.sync('catalog-decision', request, () => {

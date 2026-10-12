@@ -13,6 +13,35 @@ tokens, source declarations and internal source metadata stay in private host
 storage; the prepared seller contains only the reviewed dataset and its public
 contract.
 
+## Choose the operating surface
+
+Use the source workspace for the complete operator journey. It discovers the
+actual table, retains its observation, supports field and null-policy review,
+saves immutable source versions, and opens the original publisher and release
+console. The original command-line capture and publisher remain available for
+automated or existing operations.
+
+| Task | Complete guide |
+| --- | --- |
+| Set up a private connection, inspect native fields, capture or import, review and select source versions | [Source workspace](WORKSPACE.md) |
+| Save the existing workspace in Applications, review its selected source, start, open, stop and reopen | [Applications integration](APPLICATIONS.md) |
+| Prepare the reviewed publication, merchant package, release console and customer client | [Deployment and receiving](DEPLOYMENT.md) |
+| Run the complete source-to-customer workflow against original provider captures | [Native customer receiving](RECEIVING.md) |
+| Complete the same receiving operation with dedicated free Stellar testnet accounts, original page approvals and actual paid delivery | [Testnet receiving](TESTNET_RECEIVING.md) |
+| Supply the pinned upstream database to a real NocoDB instance | [Provider input](PROVIDER_INPUT.md) |
+
+The receiving driver uses the real captured film and actor tables on its
+selected host. It compares every projected value, retains publication
+revisions, prepares pinned buyers, exercises the original managed deployment
+and reopens the received customer package. The core driver covers the real
+merchant challenge, buyer configuration and original customer handoff. The
+explicit testnet continuation runs that same core and then purchases the
+complete reviewed film edition through the original native facilitator,
+approval, Governor and buyer engines. Its actual result retains transfer,
+accounting and delivered-data identities. Source publication and runtime
+execution are recorded separately; a completed transfer requires the returned
+native payment result.
+
 ## Install and select the source
 
 Use the complete maintained source or installed distribution on Linux with its
@@ -24,6 +53,7 @@ There is no additional npm dependency for NocoDB.
 Installed commands:
 
 - `starforge nocodb-source` — discovery, capture, import, freeze and deployment.
+- `starforge nocodb-workspace` — complete source authoring browser and CLI.
 - `starforge nocodb-publisher` — the existing publisher CLI and browser.
 - `starforge nocodb-deployment` — the retained release bridge and original console.
 
@@ -52,10 +82,11 @@ Discover actual IDs and native types without reading records:
 starforge nocodb-source discover --source /private/nocodb/source.json
 ```
 
-For discovery, `queries` may be an empty object, and the source order may
-still contain its placeholder field ID. The result lists the selected table,
-field IDs, titles, native types and available view summaries. Replace the
-order with actual stable unique identity field IDs before capture. The generated-ID
+For metadata discovery, `queries` may be an empty object and `sourceOrder`
+may be empty. This exception applies only to discovery. The result lists the
+selected table, field IDs, titles, native types and available view summaries.
+Choose actual stable unique identity field IDs before capture; ordinary source
+inspection, saved plans and every data read still require a nonempty order. The generated-ID
 hint in discovery does not identify external primary keys. Actual returned
 id_fields supplies those keys; capture requires every observed native primary-key
 field in sourceOrder and directs public primary-key selections to $recordId. Data reads
@@ -331,3 +362,4 @@ SHA-256 ac144bee5a391326598e9e1a0b18833d18c87b04dff196db07d07dfa4bd65681.
 That is the API contract reference, not a running-service version or a completed
 customer capture. An actual provider installation and its returned responses
 remain the source of each native observation.
+

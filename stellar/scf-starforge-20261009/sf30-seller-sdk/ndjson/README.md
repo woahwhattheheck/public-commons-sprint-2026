@@ -238,3 +238,7 @@ NDJSON parsing has no new package dependencies. It uses Python's standard JSON, 
 ## Managed releases and customer receiving
 
 The original retained merchant can now prepare an SF82 dataset release with the complete source, mapping, lineage and matching versioned customer SDK. The original version controller owns initialization, later edition publication, historical activation and restart recovery. Customers receive their original SF88 acquisition and restore the same reviewed source edition into the original NDJSON workspace, with native queries, keyed comparison and original project export. See [release and receiving guide](consumer/README.md) for the complete workflow, APIs and commands.
+
+## Managed Applications
+
+The [managed JSON Lines application](MANAGED_APPLICATIONS.md) opens this same retained source console from the original runtime Applications catalog, with explicit Python selection, review/save/start/open/stop/reopen and an optional original merchant MCP connection file.
