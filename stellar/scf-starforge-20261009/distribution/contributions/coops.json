@@ -5,12 +5,14 @@
   "commands": {
     "coops-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/workspace.mjs",
     "coops": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/cli.mjs",
-    "coops-mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/mcp-client.mjs"
+    "coops-mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/mcp-client.mjs",
+    "coops-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs"
   },
   "commandDescriptions": {
     "coops-workspace": "Operate retained coastal observations, datum evidence, historical studies, analyst decisions and native delivery",
     "coops": "Capture, resume, review and export original NOAA coastal source work",
-    "coops-mcp": "Use the same coastal workspace through native merchant tools and complete retained-file receiving"
+    "coops-mcp": "Use the same coastal workspace through native merchant tools and complete retained-file receiving",
+    "coops-analysis": "Open a retained coastal analysis input or workbook and write the complete offline analyst delivery"
   },
   "exports": {
     "./seller/coops": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/core.mjs",
@@ -27,7 +29,10 @@
     "./merchant-mcp/coops/protocol": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/mcp-protocol.mjs",
     "./merchant-mcp/coops/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/merchant-provider.mjs",
     "./merchant-mcp/coops/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/merchant-setup.mjs",
-    "./applications/coops": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/application.mjs"
+    "./applications/coops": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/application.mjs",
+    "./seller/coops/analysis/core": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/core.mjs",
+    "./seller/coops/analysis/bundle": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs",
+    "./seller/coops/analysis/retained": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/retained.mjs"
   },
   "browserAssets": [
     {
@@ -46,6 +51,12 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/MCP.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/MANAGED.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/la-jolla-reference.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/model-input-columns.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/model-input-columns.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/style.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/core.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/app.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs"
   ]
 }
