@@ -4775,3 +4775,11 @@ applications' stores.
 See the [award research operating guide](../sf30-seller-sdk/usaspending/README.md)
 and [complete dossier receiving guide](../sf30-seller-sdk/usaspending/DOSSIER.md)
 for configuration, original acquisition, operator use and portable handover.
+
+## Federal award research for agents
+
+The existing `merchant-mcp` command includes `init-usaspending-workspaces`.
+Agents can operate the original award capture, enrichment, analyst workshare,
+merchant preparation, buyer delivery receiving and cited dossier applications,
+with their original browser jobs and complete resumable exports. Setup and the
+full workflow are in [USAspending research through MCP](../../../stellar-forge/mcp-merchant-operator/USASPENDING-WORKSPACE.md).

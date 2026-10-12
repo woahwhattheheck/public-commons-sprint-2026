@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Pure tool schema: safe to import without the local analytical host or filesystem.
+import {nativeWorkbookOperations} from './native-analysis-workbooks-schema.mjs';
 const name={type:'string',pattern:'^[A-Za-z][A-Za-z0-9_-]{0,63}$'};
 const id={type:'string',pattern:'^[a-f0-9]{32}$'};
 const hash={type:'string',pattern:'^[a-f0-9]{64}$'};
@@ -94,6 +95,7 @@ export const nativeAnalysisOperations=Object.freeze({
     'Read an original completed full-query export through the shared verified native descriptor/hash cache, at most 64 KiB per call. Native manifest and source query retain exact types and source bindings; no whole-file HTTP reread or new export.'),
   backup:spec(['id'],{id},'Create the original portable SQLite backup containing imported rows, recipes, histories, reports and publications. External native files/registrations remain host-side.'),
   file:spec(['id'],{id,...range},'Read a completed report-export/change-export/backup through the original verified descriptor, at most 64 KiB per call. Reuse sha256 across ranges.'),
+  ...nativeWorkbookOperations,
 
 });
 export const nativeAnalysisActions=Object.freeze(['analysis']);
