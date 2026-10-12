@@ -13,7 +13,7 @@ const clone = value => JSON.parse(canonicalJson(value));
 const requireValue = (ok, message, code = 'INVALID_PARAMS') => { if (!ok) throw failure(code, message); };
 const connectionFields = ['id', 'name', 'baseUrl', 'jurisdictionId', 'discoveryUrl', 'apiKeyEnv',
   'apiKeyParameter', 'allowHttp', 'pagination', 'extendedAttributes', 'responseLimit',
-  'statusValues', 'queryExtensions', 'timeoutMs', 'maxResponseBytes', 'attribution'];
+  'statusValues', 'queryExtensions', 'timeoutMs', 'maxResponseBytes', 'attribution', 'responseLimitParameter'];
 function pathText(value, label) {
   requireValue(typeof value === 'string' && value.length > 0 && value.length <= 8192 &&
     !/[\x00-\x1f\x7f]/.test(value), 'Select the host ' + label + '.');
@@ -86,7 +86,7 @@ export async function readOpen311HostInput(entry, name, expectedSha256) {
   let value;
   try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
   catch { throw failure('OPEN311_INPUT_INVALID', 'The original workspace input must contain complete UTF-8 JSON.'); }
-  requireValue(value?.schema === 'commons.open311.workspace-export.v1' && plain(value.payload) && plain(value.manifest),
+  requireValue(['commons.open311.workspace-export.v1', 'commons.open311.workspace-export.v2'].includes(value?.schema) && plain(value.payload) && plain(value.manifest),
     'Select a complete original Open311 workspace export.', 'OPEN311_INPUT_INVALID');
   return { input, bytes, value, sha256, name: basename(input.path) };
 }
@@ -123,6 +123,10 @@ export class Open311MerchantClient {
   configure(input) { return this.call('merchant_open311_connection_put', input); }
   capture(input) { return this.call('merchant_open311_capture', input); }
   captureInfo(id) { return this.call('merchant_open311_capture_info', { id }); }
+  createCollection(input) { return this.call('merchant_open311_collection_create', input); }
+  runCollection(input) { return this.call('merchant_open311_collection_run', input); }
+  pauseCollection(input) { return this.call('merchant_open311_collection_pause', input); }
+  collectionInfo(input) { return this.call('merchant_open311_collection_info', input); }
   services(input) { return this.call('merchant_open311_services', input); }
   requests(input) { return this.call('merchant_open311_requests', input); }
   request(input) { return this.call('merchant_open311_request', input); }

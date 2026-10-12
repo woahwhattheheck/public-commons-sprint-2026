@@ -7,7 +7,8 @@ from pathlib import Path, PurePosixPath
 
 BUSINESS = "SCF-RESEARCH-CLIENT-NCC-D9B53-20261012"
 NATIVE_ID = BUSINESS + "-CONTINUATION-01"
-ROOT = Path("/dev/research-original-d9b53-20261012")
+ORIGINAL_ROOT = Path("/dev/research-original-d9b53-20261012")
+ROOT = ORIGINAL_ROOT
 OLD_RECORD = "afcbd27354ac49caef9d4bd81b64256b55bbbe1892b04dd08265929708ffba9d"
 CHECKPOINT = {"bytes": 13190478, "sha256": "0fb2bef1bcbbec1a9717df8f27539e4c2015431088b6f37a27684a60b7134b20"}
 KEEPER_SHA = "f8f57631eb579b4f887b2762203ca7c63c3ddd44bc3fb83e7b62aadf3d20e758"
@@ -107,8 +108,36 @@ def relative(name):
 emit({"state": "awaiting-linked-continuation-input", "operationId": BUSINESS,
       "nativeOperationId": NATIVE_ID, "directory": str(ROOT), "pid": os.getpid()})
 payload = globals().get("INPUT_PAYLOAD")
+input_directory = None
 if payload is None:
-    payload = json.loads(sys.stdin.readline())
+    if len(sys.argv) == 3 and sys.argv[1] == "--input-file":
+        input_path = Path(sys.argv[2]).resolve(strict=True)
+        input_directory = input_path.parent
+        payload = json.loads(ordinary(input_path))
+    else:
+        need(len(sys.argv) == 1, "Use --input-file with the complete selected receiving input")
+        payload = json.loads(sys.stdin.readline())
+def input_source(field, file_field):
+    if field in payload:
+        need(file_field not in payload, "Select one complete source carrier for " + field)
+        return payload[field]
+    need(input_directory is not None and isinstance(payload.get(file_field), str),
+         "The selected " + field + " source is absent")
+    selected = input_directory / str(relative(payload[file_field]))
+    return ordinary(selected).decode("utf-8")
+payload["keeper"] = input_source("keeper", "keeperFile")
+payload["ownerSource"] = input_source("ownerSource", "ownerSourceFile")
+if "originalPointerFile" in payload:
+    need("originalPointerText" not in payload and input_directory is not None,
+         "Select one original pointer observation")
+    payload["originalPointerText"] = ordinary(
+        input_directory / str(relative(payload["originalPointerFile"]))).decode("utf-8")
+prior_input = payload.get("priorAttempt")
+if isinstance(prior_input, dict) and input_directory is not None:
+    for field, file_field in (("ownerSource", "ownerSourceFile"), ("nativeOutput", "nativeOutputFile")):
+        if file_field in prior_input:
+            need(field not in prior_input, "Select one prior observation source")
+            prior_input[field] = ordinary(input_directory / str(relative(prior_input[file_field]))).decode("utf-8")
 need(payload.get("schema") == "sf88.research-client.linked-native-continuation-input.v1",
      "Use the selected complete linked continuation input")
 need(payload.get("operationId") == BUSINESS and payload.get("nativeOperationId") == NATIVE_ID,
@@ -133,7 +162,7 @@ host_binding = payload.get("hostBinding")
 selected_observation_root = Path("/dev/shm/d9b53-research-original-continuation-01")
 if host_binding is not None:
     required = {"schema", "node", "sharedControl", "helperDirectory"}
-    allowed = required | {"observationDirectory"}
+    allowed = required | {"observationDirectory", "caseDirectory", "controlMode", "hostReference"}
     need(isinstance(host_binding, dict) and required <= set(host_binding)
          and set(host_binding) <= allowed
          and host_binding["schema"] == "sf88.research-client.native-host-binding.v1",
@@ -144,22 +173,50 @@ if host_binding is not None:
     selected_node = Path(selected_node).resolve(strict=True)
     need(stat.S_ISREG(selected_node.lstat().st_mode) and os.access(selected_node, os.X_OK),
          "The selected Node executable is unavailable")
-    selected_control = selected_directory(host_binding["sharedControl"], "Existing shared control")
+    control_mode = host_binding.get("controlMode", "existing")
+    need(control_mode in ("existing", "initialize"),
+         "Use the existing receiving-host control or its first native-controller initialization")
+    selected_control = selected_directory(host_binding["sharedControl"], "Receiving shared control",
+                                          allow_new=control_mode == "initialize")
+    if control_mode == "initialize":
+        # This is the first adoption on the selected separate host. It uses the
+        # original controller and the host's one selected capacity namespace.
+        # Existing ledgers are reused and never replaced.
+        selected_control.mkdir(mode=0o700, exist_ok=True)
+        for selected_part in ("capacity", "capacity/memory", "capacity/disk"):
+            target = selected_control / selected_part
+            target.mkdir(mode=0o700, exist_ok=True)
+            need(stat.S_ISDIR(target.lstat().st_mode), "The selected native capacity path is not ordinary")
     HELPER = selected_directory(host_binding["helperDirectory"], "Existing Library helper")
     need((HELPER / "library_upload.py").is_file(), "The original Library helper is unavailable")
+    ROOT = selected_directory(host_binding.get("caseDirectory", str(ORIGINAL_ROOT)),
+                              "Original case on the receiving host", allow_new=True)
     selected_observation_root = selected_directory(
         host_binding.get("observationDirectory", str(selected_observation_root)),
         "Original continuation observations", allow_new=True)
+    host_reference = host_binding.get("hostReference")
+    need(host_reference is None or (isinstance(host_reference, str) and 0 < len(host_reference) <= 2000),
+         "Use the receiving owner's original host observation")
     host_binding = {
         "schema": "sf88.research-client.native-host-binding.v1",
         "node": str(selected_node), "sharedControl": str(selected_control),
-        "helperDirectory": str(HELPER), "observationDirectory": str(selected_observation_root)}
+        "helperDirectory": str(HELPER), "observationDirectory": str(selected_observation_root),
+        "caseDirectory": str(ROOT), "controlMode": control_mode, "hostReference": host_reference}
 keeper = payload["keeper"].encode("utf-8")
 need(len(keeper) == 38913 and digest(keeper) == KEEPER_SHA, "Select the merged complete keeper")
-selected_url = urllib.parse.urlsplit(payload["checkpointUrl"])
-need(selected_url.scheme == "https" and selected_url.netloc and not selected_url.username
-     and not selected_url.password and not selected_url.fragment,
-     "Use the original checkpoint's current HTTPS materialization URL")
+checkpoint_file = payload.get("checkpointFile")
+need((checkpoint_file is not None) != ("checkpointUrl" in payload),
+     "Select one complete local checkpoint file or its current materialization URL")
+if checkpoint_file is not None:
+    need(isinstance(checkpoint_file, str) and Path(checkpoint_file).is_absolute(),
+         "Use the receiving host's complete original checkpoint file")
+    checkpoint_file = Path(checkpoint_file).resolve(strict=True)
+    need(fingerprint(checkpoint_file) == CHECKPOINT, "The selected local original checkpoint changed")
+else:
+    selected_url = urllib.parse.urlsplit(payload["checkpointUrl"])
+    need(selected_url.scheme == "https" and selected_url.netloc and not selected_url.username
+         and not selected_url.password and not selected_url.fragment,
+         "Use the original checkpoint's current HTTPS materialization URL")
 shared_keeper_dir = (selected_observation_root / "source" if host_binding is not None
                      else Path("/dev/shm/d9b53-native-retention-source"))
 shared_keeper_dir.mkdir(parents=True, mode=0o700, exist_ok=True)
@@ -238,20 +295,21 @@ mirror(shared_attempt / "prior-owner-7703.stdout", prior_output)
 namespace = {"__name__": "hosted_artifact_retention", "__file__": str(out / "hosted-artifact-retention.py")}
 exec(compile(keeper, namespace["__file__"], "exec"), namespace)
 retain_artifact = namespace["retain_artifact"]
-archive_path = out / "original-checkpoint.tar.gz"
-request = urllib.request.Request(payload["checkpointUrl"],
-                                 headers={"User-Agent": "Commons-Research-Original-Continuation/1"})
-with urllib.request.urlopen(request, timeout=30) as response:
-    need(urllib.parse.urlsplit(response.geturl()).scheme == "https", "Checkpoint left HTTPS")
-    fd = os.open(archive_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    count = 0
-    with os.fdopen(fd, "wb") as stream:
-        for block in iter(lambda: response.read(1024 * 1024), b""):
-            count += len(block)
-            need(count <= CHECKPOINT["bytes"], "Checkpoint exceeds its original length")
-            stream.write(block)
-        stream.flush()
-        os.fsync(stream.fileno())
+archive_path = checkpoint_file if checkpoint_file is not None else out / "original-checkpoint.tar.gz"
+if checkpoint_file is None:
+    request = urllib.request.Request(payload["checkpointUrl"],
+                                     headers={"User-Agent": "Commons-Research-Original-Continuation/1"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        need(urllib.parse.urlsplit(response.geturl()).scheme == "https", "Checkpoint left HTTPS")
+        fd = os.open(archive_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        count = 0
+        with os.fdopen(fd, "wb") as stream:
+            for block in iter(lambda: response.read(1024 * 1024), b""):
+                count += len(block)
+                need(count <= CHECKPOINT["bytes"], "Checkpoint exceeds its original length")
+                stream.write(block)
+            stream.flush()
+            os.fsync(stream.fileno())
 need(fingerprint(archive_path) == CHECKPOINT, "The original saved checkpoint changed")
 with tarfile.open(archive_path, "r:gz") as carrier:
     members = carrier.getmembers()
@@ -266,7 +324,7 @@ with tarfile.open(archive_path, "r:gz") as carrier:
     old_raw = carrier.extractfile(by_name["owner-return.json"]).read()
     original = json.loads(old_raw)
     need(original["schema"] == "sf88.research-client.original-operation-owner-return.v1"
-         and original["operationId"] == BUSINESS and original["directory"] == str(ROOT)
+         and original["operationId"] == BUSINESS and original["directory"] == str(ORIGINAL_ROOT)
          and original["state"] == "attention" and original["nativeExitCode"] == 1
          and original["nativeResult"] is None and original["nativeArtifacts"] is None,
          "Continue only the retained pre-dispatch failure, preserving any later product result")
@@ -301,17 +359,29 @@ with tarfile.open(archive_path, "r:gz") as carrier:
 del members, by_name, wanted, old_raw
 # The original compressed carrier is already durably retained. Release only
 # this verified download after all selected members are checked and placed.
-archive_path.unlink()
+if checkpoint_file is None:
+    archive_path.unlink()
 gc.collect()
 original_config_bytes = ordinary(ROOT / "case-input.json")
 original_config = json.loads(original_config_bytes)
+need(len(original_config_bytes) == 3951 and digest(original_config_bytes) ==
+     "c2793b58e98143918df30263534d2049077f10fcdf7094012d894418336091d7",
+     "Preserve the exact original checkpoint case input")
+need(original_config["directory"] == str(ORIGINAL_ROOT)
+     and original_config["portable"]["path"] ==
+         str(ORIGINAL_ROOT / "private-inputs/current-master.research.json.gz"),
+     "The historical original runtime selectors changed")
 config = dict(original_config)
 host_binding_receipt = None
 if host_binding is not None:
     # The original case input remains byte-exact. Only native runtime selectors
     # differ in this stable companion input; every customer/source field is copied.
+    config["directory"] = str(ROOT)
     config["node"] = host_binding["node"]
     config["sharedControl"] = host_binding["sharedControl"]
+    config["controllerSource"] = str(ROOT / "controller/host")
+    config["portable"] = {**original_config["portable"],
+                         "path": str(ROOT / "private-inputs/current-master.research.json.gz")}
     host_config_bytes = (json.dumps(config, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
     host_config_path = ROOT / "case-input-host.json"
     if host_config_path.exists():
@@ -325,7 +395,12 @@ if host_binding is not None:
                              "bytes": len(original_config_bytes), "sha256": digest(original_config_bytes)},
         "selectedCaseInput": {"path": str(host_config_path),
                              "bytes": len(host_config_bytes), "sha256": digest(host_config_bytes)},
-        "originalNode": original_config["node"], "originalSharedControl": original_config["sharedControl"]}
+        "originalDirectory": str(ORIGINAL_ROOT), "selectedDirectory": str(ROOT),
+        "relocated": ROOT != ORIGINAL_ROOT,
+        "runtimeFields": ["directory", "node", "sharedControl", "controllerSource", "portable.path"],
+        "originalNode": original_config["node"], "originalSharedControl": original_config["sharedControl"],
+        "originalControllerSource": original_config["controllerSource"],
+        "originalPortablePath": original_config["portable"]["path"]}
     binding_bytes = (json.dumps(host_binding_receipt, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
     binding_path = ROOT / "native-host-binding.json"
     if binding_path.exists():
@@ -407,12 +482,12 @@ emit({"state": "closed-source-exact-copy-release", "operationId": BUSINESS,
 pointer_path = Path("/workspace/shared/swarm/jobs/runtime-consumers/38f2dbec9aa66e70016b207797e8733076ee7e12703a2fba05d6999cdb9ae394.json")
 pointer = {"path": str(pointer_path), "observedBy": "root AF native owner 65054",
            "bytes": 2021, "sha256": OLD_POINTER_SHA}
-if pointer_path.exists():
+if ROOT == ORIGINAL_ROOT and pointer_path.exists():
     body = ordinary(pointer_path)
     need(len(body) == 2021 and digest(body) == OLD_POINTER_SHA,
          "The original pointer advanced after its retained observation; reconcile that owner")
     parsed = json.loads(body)
-    need(parsed.get("record") == str(ROOT / "records" / OLD_RECORD)
+    need(parsed.get("record") == str(ORIGINAL_ROOT / "records" / OLD_RECORD)
          and parsed.get("operation_id") == BUSINESS, "The original runtime pointer changed identity")
     write(out / "observed-original-runtime-pointer.json", body)
     pointer.update(currentBytes=len(body), currentSha256=digest(body),
@@ -422,6 +497,7 @@ elif payload.get("originalPointerText") is not None:
     need(len(body) == 2021 and digest(body) == OLD_POINTER_SHA, "Original pointer observation differs")
     write(out / "observed-original-runtime-pointer.json", body)
     pointer["retainedFromOriginalOwner"] = True
+    pointer["historicalOnReceivingHost"] = ROOT != ORIGINAL_ROOT
 
 original_launcher = ordinary(ROOT / "inbox/worker-research-launch.py")
 need(len(original_launcher) == 1872
@@ -446,7 +522,9 @@ lineage = {
     "operationId": BUSINESS, "nativeOperationId": NATIVE_ID, "directory": str(ROOT),
     "checkpoint": {**CHECKPOINT, "libraryFileId": "libfile_7c37e4e4f2688191be83dda72f8c9549",
                    "fileId": "file_000000003a2c81f7b31db5c3cfe6f128"},
-    "originalRecord": str(ROOT / "records" / OLD_RECORD),
+    "originalDirectory": str(ORIGINAL_ROOT),
+    "originalRecord": str(ORIGINAL_ROOT / "records" / OLD_RECORD),
+    "retainedOriginalRecord": str(ROOT / "records" / OLD_RECORD),
     "originalOwner": {"sessionId": 26032, "sourceSha256": "0507320ebf0fbba555f3dd18ba53ff8fbe008ff0fc54c75f13bd5b94d13c324a",
                       "returnedOutcome": "unavailable"},
     "checkpointOwner": {"sessionId": 39550, "nativeExitCode": 1,
@@ -484,8 +562,11 @@ for name in ("process.json", "supervisor-launch.json", "state.json"):
     identities = [row.get("process"), row.get("supervisor")]
     if name == "process.json":
         identities.append(row)
-    need(not any(identity and native.alive(identity) for identity in identities),
-         "The original native child or supervisor is still live; continue that owner")
+    if ROOT == ORIGINAL_ROOT:
+        need(not any(identity and native.alive(identity) for identity in identities),
+             "The original native child or supervisor is still live; continue that owner")
+    # The old record is literal provenance on a different receiving host.
+    # Its old PID/start namespace is never reinterpreted as a local process.
 new_record = ROOT / "records" / hashlib.sha256(NATIVE_ID.encode("utf-8")).hexdigest()
 # An absent original namespace is reconstructed only before command dispatch.
 # Never overwrite a surviving shared registration or a live original supervisor.
