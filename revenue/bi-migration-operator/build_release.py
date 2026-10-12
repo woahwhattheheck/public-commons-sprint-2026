@@ -19,7 +19,8 @@ def included_files():
     files = [ROOT / name for name in TOP_LEVEL]
     for directory in DIRECTORIES:
         files += [path for path in (ROOT / directory).rglob("*") if path.is_file()
-                  and "__pycache__" not in path.parts and path.suffix != ".pyc"
+                  and not set(path.relative_to(ROOT).parts) & {"__pycache__", "node_modules", ".venv", ".git", "operation", "operations", "private", "sql-jobs"}
+                  and not path.is_symlink() and path.suffix != ".pyc"
                   and not path.name.endswith(".bi-backup")]
     # The six complete CSV files are already contained in examples/sandag/data.zip.
     return sorted({p for p in files if p.is_file()

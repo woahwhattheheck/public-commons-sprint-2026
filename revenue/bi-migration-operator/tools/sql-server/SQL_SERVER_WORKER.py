@@ -55,7 +55,10 @@ def atomic(path, data):
     fd, temporary = tempfile.mkstemp(prefix=".sql-write-", dir=path.parent)
     try:
         with os.fdopen(fd, "wb") as stream:
-            os.fchmod(stream.fileno(), 0o600)
+            if hasattr(os, "fchmod"):
+                os.fchmod(stream.fileno(), 0o600)
+            else:
+                os.chmod(temporary, 0o600)
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
