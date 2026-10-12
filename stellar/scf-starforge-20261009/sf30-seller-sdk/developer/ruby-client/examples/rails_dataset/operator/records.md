@@ -259,7 +259,18 @@ starforge ruby-runtime run --directory PRIVATE_RUNTIME --id ENVIRONMENT \
   --runtime-source PRIVATE_RUBY_ENVIRONMENT/support --out PRIVATE_RECORDS_JOURNEY
 ```
 
-The result includes `workingCapture` for the full managed export above. Use the same application's original identity with a retained export UUID. The complete example's `reopen --out PRIVATE_RECORDS_JOURNEY --runtime-source INSTALLED_SUPPORT` entry checks the receiving application without its original producer path.
+The result includes `workingCapture` for the full managed export above. Use the same application's original identity with a retained export UUID.
+
+For the whole managed archive journey, the maintained continuation consumes the completed original managed customer directory:
+
+```sh
+node /absolute/source/stellar/scf-starforge-20261009/distribution/ruby-runtime/examples/customer-records.mjs \
+  --managed-directory ORIGINAL_COMPLETED_MANAGED_JOURNEY --recipient-port AVAILABLE_PORT
+```
+
+It invokes the Ruby record journey in the original selected environment, verifies its exact capture, exports the complete runtime TAR and installs that archive offline in its own receiving directory. While the producer is parked, it compares the entire original CSV and JSON, opens every received records page, stops the Rails process and reopens the complete working application. Source capture, export, receiving and verification each retain their original operation UUID before dispatch. A restarted command resumes those same operations.
+
+The continuation writes `committed-records/records-customer-result.json` beside the original managed result, with the selected working capture, complete archive descriptor, original and received observations, records page outputs and the receiving application's complete file inventory. A completed repeat verifies those files and the same received application. The complete example's `reopen --out PRIVATE_RECORDS_JOURNEY --runtime-source INSTALLED_SUPPORT` entry checks the receiving application without its original producer path.
 
 The executable retains its own original selection and operation UUIDs under the selected output directory. Repeating the same command resumes those operations; a completed repeat verifies the same result and receiving files. It uses the existing received source and selected Ruby bundle. Its complete output includes the native record/export results, rendered application pages, original attachments, file digests and independent receiving observation.
 

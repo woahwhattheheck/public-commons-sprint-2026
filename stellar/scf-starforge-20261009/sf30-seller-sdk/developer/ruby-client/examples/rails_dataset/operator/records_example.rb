@@ -194,7 +194,8 @@ module Starforge
           need(found.positive? && found == selected_query.fetch("total"),"DATASET_RECORDS_COMPLETE_FILTER")
         end
         {"capture_id"=>capture_id,"capture_sha256"=>capture.fetch("sha256"),
-          "query_id"=>query_id,"rows"=>rows,"row_order_sha256"=>digest.hexdigest,
+          "query_id"=>query_id,"query"=>query.slice("id","query","total","pages","page_size"),
+          "rows"=>rows,"row_order_sha256"=>digest.hexdigest,
           "counts"=>capture.fetch("counts"),"attachment_links"=>links,
           "attachment_files"=>attachment_files.values.sort_by { |item| item.fetch("name") },
           "exports"=>exports,"filtered_query"=>selected_query && selected_query.slice("id","query","total","pages")}
