@@ -71,3 +71,13 @@ The actual application/worker path completed these connected operations:
 This complete operating run used the included explicit local protocol carrier and the unchanged released driver declaration/type contract. It opened zero SQL Server connections. Actual SQL Server execution uses the same prepared native job with the operator's configured host, credentials and existing pinned driver installation. Each received page retains the source driver's `single-statement-database-isolation` label and its own observed boundary.
 
 Reproduce the complete retained operation through `examples/SQL_SERVER_JOURNEY.py`; then use `examples/SQL_SERVER_UI.mjs` to continue its completed state through the actual browser. The UI entrypoint does not start native capture jobs. Full instructions are in [tools/sql-server/GUIDE.md](tools/sql-server/GUIDE.md).
+
+### Completed browser receiving and continuation
+
+The same operating example completed its browser continuation at **03:37:52.593 UTC on 12 October 2026**. All five SQL screens—Connections & catalog, Queries & review, Capture jobs, Model bindings, and Receiving—completed at both 1,440-pixel desktop and 390-pixel mobile widths without horizontal overflow or browser errors.
+
+The browser saved the existing profile and reviewed query as revision 3, applied the complete physical-field model mapping as plan revision 4, and downloaded the original native job and result. Their exact hashes matched the retained objects. The full 1,169,248-byte updated workstream package was received into the existing second workspace as 23 heads, including the original source history. That receiver reopened the same receipt. The original cold-restored workspace reopened the same 5,037-row, eight-page native job. Browser receiving and reopening started zero native capture jobs or SQL Server connections.
+
+The UI exercise's private `UI-STATE.json`, `UI-RESULT.json`, downloads and screenshots retain its progress. Its final result SHA256 is `ff04115afc5bf6ae362ee9c42b90ac74d5099876457642b45056a185c88a9c1b`. Source and receiving browsers and their servers closed after the operation. An interrupted continuation uses that same operation directory.
+
+An independent review by the original SQL driver team also completed the calculated-column join: SQL mappings select physical model fields only, while calculated columns retain their original DAX and metadata. Its original Store → SQL mapping → native 13-file Power BI project → reopen exercise preserved exact 38-digit values, NULL and Boolean values, accepted a legacy saved mapping, and retained the DAX. Its UI check exposed physical selectors and no calculated-only submission. These final source postimages are included in this release.
