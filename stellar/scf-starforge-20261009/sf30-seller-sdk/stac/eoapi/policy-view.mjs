@@ -42,7 +42,7 @@ function blankPolicy() {
   return { schema: SCHEMA, title: '', deployment: { id: '', publicUrl: '', rootPath: '', eoapiVersion: '',
     authProxyVersion: '', sourceRef: '', rootPathSkipPrefixes: [] },
   upstream: { url: '', networkBoundary: '', conformsTo: [] },
-  identity: { discoveryUrl: '', audiences: [], policyOwner: '' },
+  identity: { mode: 'oidc', discoveryUrl: '', audiences: [], policyOwner: '' },
   routing: { defaultPublic: false, publicEndpoints: {}, privateEndpoints: {} }, filtering: { items: null, collections: null },
   cors: { origins: [], methods: ['GET', 'POST', 'OPTIONS'], headers: ['Authorization', 'Content-Type'],
     exposeHeaders: [], credentials: true, maxAge: 600 }, collectionRights: [],
@@ -217,7 +217,7 @@ export function mountDeploymentPolicy(element, { dispatch, reviewer = '', onAppr
     if (value.identity.mode === 'public') {
       if (!value.identity.discoveryUrl) delete value.identity.discoveryUrl;
       if (Array.isArray(value.identity.audiences) && value.identity.audiences.length === 0) delete value.identity.audiences;
-    } else if (editor.identity?.mode === undefined) delete value.identity.mode;
+    } else if (editor.identity?.mode === undefined && !dirty) delete value.identity.mode;
     return value;
   }
   async function request(method, path, body) {
