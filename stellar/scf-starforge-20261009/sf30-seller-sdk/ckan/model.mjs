@@ -4,12 +4,13 @@ import { initReleaseStore } from '../../sf82-seller-pilot/releases.mjs';
 import { mkdir, lstat, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { object, bytes, digest, identity, readJson, createFile, atomicJson, privateDirectory,
-  acquireWorkspace, fault, stamp } from '../postgres/publisher/files.mjs';
+  acquireWorkspace, readPrivate, fault, stamp } from '../postgres/publisher/files.mjs';
 import { catalogOrigin, captureSelection, captureCkanResource, ExactCkanNumber, readCkanCapture, requestCkan, searchCkan } from './capture.mjs';
 import { createCkanWorkspaceArchive, receiveCkanWorkspaceArchive, assertCkanWorkspaceReceived } from './archive.mjs';
 import { compileQueries, readCkanSourceFile } from './declaration.mjs';
 import { bindCkanCapture, projectCkanValue } from './source.mjs';
 import { describeCkanSemantics, projectCkanSemantics, checkCkanSemanticReview, compareCkanSemantics } from './semantics.mjs';
+import { createCkanReviewedRefreshes } from './reviewed-refresh.mjs';
 import { openCkanPublisher } from './publisher/model.mjs';
 import { exportCkanMerchantPackage, stageCkanMerchantRelease, readCkanMerchantBuyerOffer,
   prepareCkanMerchantBuyer } from './publisher/release.mjs';
@@ -77,7 +78,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
       const checked = captureSelection({ catalogOrigin: origin, packageId: 'initial', resourceId: 'initial', authTokenEnv });
       state = { schema: 'stellar-forge.ckan-workbench.v1', catalogOrigin: checked.catalogOrigin,
         ...(authTokenEnv ? { authTokenEnv } : {}), createdAt: stamp(), updatedAt: stamp(),
-        editions: [], sources: [], publications: [], exports: [], buyerRequests: [], operation: null };
+        editions: [], sources: [], publications: [], exports: [], buyerRequests: [], refreshes: [], operation: null };
       for (const name of ['editions', 'sources', 'publications', 'datasets', 'merchant-packages', 'buyer-requests'])
         await privateDirectory(join(directory, name), true);
       await createFile(join(directory, 'workbench.json'), bytes(state));
@@ -85,12 +86,15 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
     if (state.schema !== 'stellar-forge.ckan-workbench.v1' || !Array.isArray(state.editions) ||
         !Array.isArray(state.sources) || !Array.isArray(state.publications) || !Array.isArray(state.exports))
       throw fault('CKAN_PROJECT_INVALID');
+    if (state.refreshes === undefined) state.refreshes = [];
+    if (!Array.isArray(state.refreshes)) throw fault('CKAN_PROJECT_INVALID');
     catalogOrigin(state.catalogOrigin);
     if (origin && catalogOrigin(origin) !== state.catalogOrigin || authTokenEnv && authTokenEnv !== state.authTokenEnv)
       throw fault('CKAN_PROJECT_BINDING_CHANGED');
     if (state.operation?.state === 'RUNNING') {
       state.operation.state = 'INTERRUPTED'; state.operation.error = 'PROCESS_INTERRUPTED';
       for (const edition of state.editions) if (edition.state === 'CAPTURING') edition.state = 'INTERRUPTED';
+      for (const refresh of state.refreshes) if (refresh.state === 'PREPARING') refresh.state = 'INTERRUPTED';
       await persist();
     }
     const find = (collection, value) => {
@@ -152,7 +156,45 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
         await persist(); throw error;
       }
     }
+    async function createSourceSelection(editionId, input, { sourceId = randomUUID(), refresh } = {}) {
+      const capture = await selectedCapture(editionId);
+      if (input.expectedCaptureSha256 !== capture.manifestSha256) throw fault('CKAN_REVIEWED_EDITION_CHANGED');
+      const query = input.query ?? 'dataset', queries = compileQueries({ [query]: { projection: input.projection } });
+      const semantics = projectCkanSemantics(capture, queries[query].projection);
+      const semanticReview = semantics ? { sha256: semantics.sha256, definitionSha256: semantics.definitionSha256 } : null;
+      const config = { schema: 'stellar-forge.ckan-source.v1', catalogOrigin: state.catalogOrigin,
+        packageId: capture.manifest.packageId, resourceId: capture.manifest.resourceId,
+        connection: { kind: 'capture', file: '../editions/' + editionId + '/capture.json', sha256: capture.manifestSha256 },
+        queries: { [query]: { projection: input.projection, ...(semanticReview ? { semanticReview } : {}) } } };
+      bindCkanCapture(capture, config, queries[query]);
+      const preview = capture.rows.slice(0, 20).map(row => Object.fromEntries(Object.entries(queries[query].projection)
+        .map(([alias, spec]) => [alias, projectCkanValue(row[spec.field], spec)])));
+      const value = sourceId, file = join(directory, 'sources', value + '.json'), raw = bytes(config);
+      try { await createFile(file, raw); }
+      catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        const retained = await readPrivate(file, 1048576);
+        if (digest(retained) !== digest(raw)) {
+          if (state.sources.some(item => item.id === value) || retained.length >= raw.length ||
+              !raw.subarray(0, retained.length).equals(retained)) throw fault('CKAN_REFRESH_SOURCE_CHANGED');
+          await atomicJson(join(directory, 'sources'), value + '.json', config);
+        }
+      }
+      const entry = { id: value, title: text(input.title ?? capture.manifest.packageTitle, 'a data product title', 128),
+        editionId, query, file, sha256: digest(raw), createdAt: stamp(), projection: queries[query].projection, ...(refresh ?? {}),
+        ...(semanticReview ? { semanticReview, semanticIssues: semantics.issues } : {}) };
+      const prior = state.sources.find(item => item.id === value);
+      if (prior) {
+        if (prior.sha256 !== entry.sha256 || prior.editionId !== entry.editionId ||
+            prior.refreshDecisionSha256 !== entry.refreshDecisionSha256) throw fault('CKAN_REFRESH_SOURCE_CHANGED');
+        return { ...structuredClone(prior), preview, semantics };
+      }
+      state.sources.push(entry); await persist(); return { ...entry, preview, semantics };
+    }
+    const reviewedRefreshes = createCkanReviewedRefreshes({ directory, state, find, selectedCapture,
+      launch, persist, createSource: createSourceSelection });
     const api = {
+      ...reviewedRefreshes,
       directory,
       status: () => structuredClone({ ...state, directory, active: active ? active.operation.id : null }),
       async search(input = {}) {
@@ -230,26 +272,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
         return projectCkanSemantics(capture, query.projection);
       },
       saveSource(editionId, input) {
-        return launch('save field selection', async () => {
-          const capture = await selectedCapture(editionId);
-          if (input.expectedCaptureSha256 !== capture.manifestSha256) throw fault('CKAN_REVIEWED_EDITION_CHANGED');
-          const query = input.query ?? 'dataset', queries = compileQueries({ [query]: { projection: input.projection } });
-          const semantics = projectCkanSemantics(capture, queries[query].projection);
-          const semanticReview = semantics ? { sha256: semantics.sha256, definitionSha256: semantics.definitionSha256 } : null;
-          const config = { schema: 'stellar-forge.ckan-source.v1', catalogOrigin: state.catalogOrigin,
-            packageId: capture.manifest.packageId, resourceId: capture.manifest.resourceId,
-            connection: { kind: 'capture', file: '../editions/' + editionId + '/capture.json', sha256: capture.manifestSha256 },
-            queries: { [query]: { projection: input.projection, ...(semanticReview ? { semanticReview } : {}) } } };
-          bindCkanCapture(capture, config, queries[query]);
-          const preview = capture.rows.slice(0, 20).map(row => Object.fromEntries(Object.entries(queries[query].projection)
-            .map(([alias, spec]) => [alias, projectCkanValue(row[spec.field], spec)])));
-          const value = randomUUID(), file = join(directory, 'sources', value + '.json'), raw = bytes(config);
-          await createFile(file, raw);
-          const entry = { id: value, title: text(input.title ?? capture.manifest.packageTitle, 'a data product title', 128),
-            editionId, query, file, sha256: digest(raw), createdAt: stamp(), projection: queries[query].projection,
-            ...(semanticReview ? { semanticReview, semanticIssues: semantics.issues } : {}) };
-          state.sources.push(entry); await persist(); return { ...entry, preview, semantics };
-        });
+        return launch('save field selection', () => createSourceSelection(editionId, input));
       },
       async sourceSemantics(sourceId) {
         const source = find('sources', sourceId), selected = await readCkanSourceFile(source.file);
@@ -259,11 +282,17 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
       },
       createPublication(sourceId, input = {}) {
         return launch('prepare dataset candidate', async (signal, progress) => {
-          const source = find('sources', sourceId), selected = await readCkanSourceFile(source.file), query = selected.queries[source.query];
+          const source = find('sources', sourceId);
+          await reviewedRefreshes.assertRefreshPublicationSource(source);
+          const selected = await readCkanSourceFile(source.file), query = selected.queries[source.query];
+          if (selected.hash !== source.sha256 || identity(query.projection) !== identity(source.projection) ||
+              identity(query.semanticReview ?? null) !== identity(source.semanticReview ?? null)) throw fault('CKAN_REFRESH_SOURCE_CHANGED');
           const value = randomUUID(), targetDirectory = join(directory, 'datasets', value);
           const publisher = await openCkanPublisher({ directory: join(directory, 'publications', value), create: true,
             sourceFile: source.file, targetDirectory });
-          const entry = { id: value, sourceId, title: source.title, targetDirectory, createdAt: stamp(), state: 'PREPARING' };
+          const entry = { id: value, sourceId, title: source.title, targetDirectory, createdAt: stamp(), state: 'PREPARING',
+            ...(source.refreshId ? { refreshId: source.refreshId, refreshDecisionSha256: source.refreshDecisionSha256,
+              previousSourceId: source.previousSourceId, previousPublicationId: source.previousPublicationId } : {}) };
           state.publications.push(entry); await persist();
           try {
             const plan = await publisher.savePlan({ title: source.title, query: source.query, input: {}, sourceHash: selected.hash,
@@ -293,6 +322,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
       },
       reviewPublication(value, input) {
         return launch('review dataset candidate', () => withPublisher(value, async (publisher, entry) => {
+          await reviewedRefreshes.assertRefreshPublicationSource(find('sources', entry.sourceId));
           const current = await publisher.candidate(entry.runId);
           if (current.manifest.candidateDigest !== input.expectedCandidateDigest) throw fault('CKAN_CANDIDATE_REVIEW_CHANGED');
           const run = await publisher.review(entry.runId, { reviewer: input.reviewer, note: input.note, initialize: true });
@@ -308,6 +338,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
       publishDataset(value, reviewId) {
         return launch('publish dataset version', () => withPublisher(value, async (publisher, entry) => {
           const current = publisher.run(entry.runId);
+          if (current.state !== 'PUBLISHED') await reviewedRefreshes.assertRefreshPublicationSource(find('sources', entry.sourceId));
           const run = current.state === 'PUBLISHED' ? current : await publisher.publish(entry.runId, reviewId);
           entry.run = run; entry.state = run.state; await persist();
           if (run.state !== 'PUBLISHED') throw fault(run.data.error ?? 'CKAN_PUBLICATION_INCOMPLETE');
