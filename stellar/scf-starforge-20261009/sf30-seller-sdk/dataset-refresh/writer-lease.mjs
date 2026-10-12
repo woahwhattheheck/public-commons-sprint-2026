@@ -33,7 +33,11 @@ export function acquireDatasetLease(directory) {
       result.status === 73 ? 'The dataset version store already has a live writer.'
         : 'The dataset writer lease could not be acquired.');
     assertHeld();
-    return Object.freeze({ assertHeld, async close() {
+    return Object.freeze({ assertHeld, identity() {
+      assertHeld();
+      const held = fstatSync(fd, { bigint: true });
+      return Object.freeze({ device: held.dev.toString(), inode: held.ino.toString() });
+    }, async close() {
       if (!closed) { closed = true; closeSync(fd); }
     } });
   } catch (error) { closed = true; closeSync(fd); throw error; }
