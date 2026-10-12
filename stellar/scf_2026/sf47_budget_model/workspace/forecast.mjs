@@ -102,6 +102,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
   }
   function readEditor(){
     const form=$('[data-forecast-form]');if(!form)throw new Error('Choose Reforecast current case to edit assumptions.');
+    const explicitGrants=new Set(inputState.grantReceipts.map(row=>Number(row.tranche)));
     const inputs={name:value(form,'name'),asOfDate:value(form,'asOfDate'),calendarStart:value(form,'calendarStart'),
       openingCash:{amountUsd:optional(form,'openingAmount'),basis:value(form,'openingBasis'),sourceIds:selectedValues(form,'openingSources'),note:value(form,'openingNote')},
       capacity:{weeklyHours:optional(form,'weeklyHours'),note:value(form,'capacityNote')},note:value(form,'forecastNote'),
@@ -109,7 +110,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
         remainingCostUsd:optional(row,'remainingCostUsd'),remainingHours:optional(row,'remainingHours'),
         startDate:optional(row,'startDate'),endDate:optional(row,'endDate'),paymentMode:value(row,'paymentMode'),directCashIds:selectedValues(row,'directCashIds'),note:value(row,'note')})),
       invoiceOverrides:[...form.querySelectorAll('[data-forecast-invoice]')].map(row=>({invoiceId:row.dataset.forecastInvoice,dueDate:optional(row,'dueDate'),include:row.querySelector('[name=include]').checked,note:value(row,'note')})),
-      grantReceipts:[...form.querySelectorAll('[data-forecast-grant]')].map(row=>({tranche:Number(row.dataset.forecastGrant),date:optional(row,'date'),include:row.querySelector('[name=include]').checked,note:value(row,'note')})),
+      grantReceipts:[...form.querySelectorAll('[data-forecast-grant]')].map(row=>({tranche:Number(row.dataset.forecastGrant),date:optional(row,'date'),include:row.querySelector('[name=include]').checked,note:value(row,'note')})).filter(row=>explicitGrants.has(row.tranche)||row.date!==null||row.include===false||row.note!==''),
       commercial:[...form.querySelectorAll('[data-forecast-commercial]')].map(row=>({id:row.dataset.forecastCommercial,title:value(row,'title'),
         caseRef:value(row,'caseRef'),stage:value(row,'stage'),selected:row.querySelector('[name=selected]').checked,
         priceUsd:value(row,'priceUsd'),totalDeliveryCostUsd:value(row,'totalDeliveryCostUsd'),remainingHours:value(row,'remainingHours'),

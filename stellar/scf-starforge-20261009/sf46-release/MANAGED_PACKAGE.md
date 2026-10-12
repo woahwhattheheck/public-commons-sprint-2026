@@ -100,21 +100,32 @@ manifested source into the release.
 
 ## Storage during preparation and installation
 
-Preparation and installation use the original manifest-bound source files
-through a create-only filesystem copy. On a filesystem that supports reflinks,
-Node requests copy-on-write storage; otherwise it performs an ordinary copy.
-Every destination has a separate inode, receives the declared source mode, and
-is checked against its complete byte count and SHA-256 before the existing
-whole-release verification and promotion. The original source is never linked
-for writing or modified by this operation.
+Preparation copies the original manifest-bound source files into a private
+release directory. Each destination has a separate inode, receives the declared
+source mode, and is checked against its complete byte count and SHA-256. Node
+requests copy-on-write storage where reflinks are supported and otherwise uses
+an ordinary copy. The retained original runtime is never consumed, linked for
+writing, or modified by this operation.
 
-The prepared package, installed release and original runtime retain all their
-ordinary files and paths. A portable archive or transfer therefore remains
-complete on a host without reflink support. No additional dependency or
-installation flag is required. Keep the full logical source-copy space in the
-operation's disk allowance because an unsupported filesystem uses the normal
-copy path. The existing private staging directories, update lock, runtime
-attachment, cleanup and activation order remain the installation lifecycle.
+Runtime adoption then hands its own newly prepared directory to the existing
+installer. On the same filesystem, the installer moves that private directory
+into its locked installation stage instead of allocating another complete
+source copy. It verifies the entire staged release before promotion, prepares
+the original runtime attachment, and selects the release only after that
+attachment succeeds. Interrupted attachment recovery reuses the same installed
+release through the existing adoption workflow.
+
+This transfer applies only to the adopter's private preparation. Ordinary
+bundle installation keeps the caller's bundle and uses verified create-only
+copies. A cross-filesystem adoption also uses that complete copy path. The
+installed release and original runtime retain their ordinary files, and
+portable archives remain complete without reflink support. No CLI flag or
+additional dependency is required.
+
+Reserve space for the complete fallback copy unless the actual source and
+installation placement establishes the same-filesystem transfer. The original
+home lock, staging cleanup, attachment and activation order still govern the
+operation; the adopter cleans its own temporary parent after success or failure.
 
 ## Start the original merchant workspace
 

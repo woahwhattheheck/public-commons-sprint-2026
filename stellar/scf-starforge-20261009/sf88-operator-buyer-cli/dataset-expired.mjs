@@ -216,6 +216,96 @@ async function originalFiles(page,cfg,source) {
 }
 
 
+
+const EXPIRED_WIRE='stellar-forge.sf88.expired-wire-archive.v1';
+const EXPIRED_WIRE_FILES=new Set(['source.json','unsigned-request.json','unsigned-dispatch.json',
+  'unsigned-response.json','unsigned-error.json','signing-input.json','signing-result.json',
+  'signing-error.json','signed-request.json','signed-dispatch.json','signed-response.json','signed-error.json']);
+
+/** Archive the actual released attempt's complete original wire under its
+ * existing Dataset history. The worker's authenticated proof retains every
+ * selected byte; the original wire lock stays held across its directory rename. */
+async function archiveExpiredWire(page,cfg,plan,source,selection,environment,signal) {
+  const wireDirectory=join(cfg.evidenceDir,'wire-'+digest(cfg.operation.intentId));
+  const archivedDirectory=join(plan.historyDirectory,'wire');
+  const planPath=join(plan.historyDirectory,'wire-plan.json');
+  const selected=source.files.filter(item=>item.role.startsWith('wire-'));
+  const originalExists=await exists(wireDirectory),archivedExists=await exists(archivedDirectory);
+  if(selected.length===0) {
+    need(!originalExists&&!archivedExists&&!await exists(planPath),
+      'DATASET_EXPIRY_ORIGINAL_WIRE_NOT_IN_RELEASE');
+    return;
+  }
+  need(selected.length<=EXPIRED_WIRE_FILES.size&&
+    new Set(selected.map(item=>item.role)).size===selected.length&&selected.every(item=>{
+      const name=item.role.slice(5)+'.json';
+      return EXPIRED_WIRE_FILES.has(name)&&item.path===join(wireDirectory,name)&&
+        (item.state==='ABSENT'&&item.bytes===0&&(item.sha256===undefined||item.sha256===null)||
+         HASH.test(item.sha256??'')&&Number.isSafeInteger(item.bytes)&&item.bytes>=1&&item.bytes<=MAX);
+    }),'DATASET_EXPIRY_RELEASED_WIRE_SELECTION_INVALID');
+  const files=selected.filter(item=>item.state!=='ABSENT').map(item=>({
+    name:item.role.slice(5)+'.json',bytes:item.bytes,sha256:item.sha256,
+  })).sort((a,b)=>a.name.localeCompare(b.name));
+  need(files.some(item=>item.name==='source.json'),'DATASET_EXPIRY_RELEASED_WIRE_SOURCE_REQUIRED');
+  const wirePlan={schema:EXPIRED_WIRE,intentId:cfg.operation.intentId,
+    attemptSha256:plan.attemptSha256,configurationSha256:plan.configurationSha256,
+    sourceSha256:plan.sourceSha256,proofSha256:plan.proofSha256,generation:plan.generation,
+    releaseJournalMac:plan.releaseJournalMac,wireDirectory,archivedDirectory,files};
+  const saved=await json(planPath,true);
+  if(saved)need(canonical(saved)===canonical(wirePlan),'DATASET_EXPIRY_WIRE_ARCHIVE_PLAN_CHANGED');
+  else {
+    need(originalExists&&!archivedExists,'DATASET_EXPIRY_ORIGINAL_WIRE_UNAVAILABLE');
+    const retainedWire=await readAttemptWireCheckpoint({cfg,includeWire:true});
+    const wire=retainedWire?.snapshot;
+    const originalAttempt=parse(await file(join(plan.historyDirectory,'attempt.json'),{limit:8192}));
+    need(wire&&wire.writerActive===false&&wire.intentId===cfg.operation.intentId&&
+      wire.configValueSha256===plan.configurationSha256&&
+      wire.sourceSha256===files.find(item=>item.name==='source.json').sha256&&
+      typeof retainedWire.source?.recordedAt==='string'&&
+      Number.isFinite(Date.parse(retainedWire.source.recordedAt))&&
+      Date.parse(retainedWire.source.recordedAt)>=Date.parse(originalAttempt.startedAt)&&
+      files.every(item=>item.name==='source.json'||
+        wire.records[item.name.slice(0,-5)]?.sha256===item.sha256&&
+        wire.records[item.name.slice(0,-5)]?.bytes===item.bytes),
+      'DATASET_EXPIRY_RELEASED_ORIGINAL_WIRE_CHANGED');
+    await writeRecord(planPath,wirePlan);
+  }
+  need(!(originalExists&&archivedExists)&&(originalExists||archivedExists),
+    'DATASET_EXPIRY_WIRE_ARCHIVE_CONFLICT');
+  const currentDirectory=originalExists?wireDirectory:archivedDirectory;
+  await directory(currentDirectory);
+  const held=await wireOwnership(currentDirectory);
+  try {
+    const present=(await readdir(currentDirectory)).filter(name=>name!=='active.lock').sort();
+    need(canonical(present)===canonical(files.map(item=>item.name).sort()),
+      'DATASET_EXPIRY_RELEASED_WIRE_CHANGED');
+    for(const item of files) {
+      const raw=await file(join(currentDirectory,item.name));
+      need(raw.length===item.bytes&&digest(raw)===item.sha256,'DATASET_EXPIRY_RELEASED_WIRE_CHANGED');
+    }
+    const checked=await worker('read',cfg,selection,environment,signal);
+    need(checked.source_sha256===plan.sourceSha256&&checked.proof_sha256===plan.proofSha256&&
+      checked.generation===plan.generation&&checked.current_generation===plan.generation&&
+      checked.release_journal_mac===plan.releaseJournalMac,
+      'DATASET_EXPIRY_RELEASED_WIRE_GENERATION_CHANGED');
+    need(!signal?.aborted,'OPERATOR_ABORTED');
+    if(originalExists) {
+      await rename(wireDirectory,archivedDirectory);
+      await syncDirectory(dirname(wireDirectory));await syncDirectory(plan.historyDirectory);
+    }
+    const receiptPath=join(plan.historyDirectory,'wire-archived.json');
+    const receipt=await json(receiptPath,true);
+    if(receipt)need(receipt.schema===EXPIRED_WIRE&&
+      receipt.outcome==='ORIGINAL_EXPIRED_WIRE_DURABLY_ARCHIVED'&&
+      receipt.attemptSha256===plan.attemptSha256&&receipt.releaseJournalMac===plan.releaseJournalMac&&
+      receipt.planSha256===digest(jsonBytes(wirePlan)),'DATASET_EXPIRY_WIRE_ARCHIVE_RECEIPT_CHANGED');
+    else await writeRecord(receiptPath,{schema:EXPIRED_WIRE,
+      outcome:'ORIGINAL_EXPIRED_WIRE_DURABLY_ARCHIVED',attemptSha256:plan.attemptSha256,
+      releaseJournalMac:plan.releaseJournalMac,planSha256:digest(jsonBytes(wirePlan)),
+      archivedAt:new Date().toISOString()});
+  }finally{await held.close();}
+}
+
 const UNAPPROVED='stellar-forge.sf88.unapproved-expired-successor.v1';
 const WIRE_FILES=new Set(['source.json','unsigned-request.json','unsigned-dispatch.json',
   'unsigned-response.json','unsigned-error.json']);
@@ -436,6 +526,7 @@ export async function continueExpiredPage(page,cfg,{selection,expectedAttemptSha
       'DATASET_EXPIRY_ORIGINAL_FILE_CHANGED');await retained(path,raw);}
     need(raw.length===selected.bytes&&digest(raw)===selected.sha256,'DATASET_EXPIRY_HISTORY_CHANGED');
   }
+  await archiveExpiredWire(page,cfg,plan,source,selection,environment,signal);
   const archived=join(history,'archived.json');
   if(!await json(archived,true))await writeRecord(archived,{schema:SCHEMA,attemptSha256:expectedAttemptSha256,
     outcome:'ORIGINAL_EXPIRED_BYTES_DURABLY_ARCHIVED',releaseJournalMac:plan.releaseJournalMac,
