@@ -3,6 +3,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
+import { composeGrantEntry } from './grant-entry.mjs';
+import { attachGrantSubmission } from './grant-submission.mjs';
+import { projectGrantMarkdown, receiveGrantCustomerSections, projectGrantSourceIndex, receiveGrantCustomerSources } from './grant-customers.mjs';
 import { receiveDatasetteApplication, datasetteSourceSelection, addDatasetteGrantSources, receiveDatasetteExistingWork } from './grant-datasette.mjs';
 
 const DEFAULT_DIRECTORY = join(dirname(fileURLToPath(import.meta.url)), 'dist');
@@ -137,7 +140,8 @@ export function composeGrantApplication({
 }) {
   need(typeof fredCommit === 'string' && /^[a-f0-9]{40}$/.test(fredCommit), 'Select the actual merged economic product commit.');
   need(coopsCommit === null || (typeof coopsCommit === 'string' && /^[a-f0-9]{40}$/.test(coopsCommit)), 'Select the actual merged coastal product commit.');
-  const application = clean(applicationMarkdown), companion = clean(productAndFinanceMarkdown);
+  const application = projectGrantMarkdown(applicationMarkdown, { application: true });
+  const companion = projectGrantMarkdown(productAndFinanceMarkdown);
   const datasetteSelection = datasetteSourceSelection({ analysisCommit: datasetteCommit, publisherCommit: datasettePublisherCommit });
   if (datasetteSelection) need(companion.includes('## Datasette editions and customer analysis\n'), 'Retain the selected complete Datasette installation with its source commits.');
   if (coopsCommit) need(companion.includes(COASTAL_HEADING + '\n'), 'Retain the selected complete coastal installation with its source commit.');
@@ -149,15 +153,15 @@ export function composeGrantApplication({
   need(articleAt >= 0 && existingAt > articleAt, 'Use the complete existing grant.html shell and existing-work section.');
   const answer = application.slice(application.indexOf('## '));
   const renderedAnswer = renderGrantMarkdown(answer).replace(
-    /href="\.\/product-and-finance\.md(?=["#?])/g,
-    'href="./grant-data/product-and-finance.md'
+    /href="\.\/(product-and-finance\.md|source-index\.json)(?=["#?])/g,
+    'href="./grant-data/$1'
   );
-  const html = receiveDatasetteExistingWork(templateHtml.slice(0, articleAt) + ARTICLE + renderedAnswer + templateHtml.slice(existingAt), datasetteSelection || {});
-  const index = JSON.parse(JSON.stringify(sourceIndex));
+  let html = receiveDatasetteExistingWork(templateHtml.slice(0, articleAt) + ARTICLE + renderedAnswer + templateHtml.slice(existingAt), datasetteSelection || {});
+  let index = JSON.parse(JSON.stringify(sourceIndex));
   need(index.schema === 'stellar-forge.grant-reviewer-source-index.v1', 'Use the original application source-index schema.');
   index.application = { ...index.application, bytes: bytes(application), sha256: digest(application), git_blob: gitBlob(application), canonical_manuscript: canonicalManuscript };
   index.product_and_finance = { ...index.product_and_finance, bytes: bytes(companion), sha256: digest(companion), git_blob: gitBlob(companion),
-    basis: 'Original product and finance companion with the current recurring economic-report installation from the canonical application; the six-package budget and original cost assumptions are retained.' };
+    basis: 'Complete maintained product and finance companion. Accepted customer installations share the existing six funded packages and original cost assumptions.' };
   const source = {
     id: 'economic-recurring', kind: 'maintained-product',
     source_commit: fredCommit, repository: MERCHANT_ROOT,
@@ -188,11 +192,16 @@ export function composeGrantApplication({
     };
     const coastalAt = index.sources.findIndex(item => item.id === coastalSource.id);
     if (coastalAt >= 0) index.sources[coastalAt] = coastalSource; else index.sources.push(coastalSource);
-    index.product_and_finance.basis += ' The selected coastal model-input installation retains the same funded packages and its separately proposed commercial scope.';
     index.narrative_source.coastal_product_commit = coopsCommit;
     index.narrative_source.coastal_application_operation = COASTAL_OPERATION;
   }
   const datasetteSources = addDatasetteGrantSources(index, datasetteSelection || {}, { canonicalManuscript });
+  receiveGrantCustomerSources(index, companion);
+  index = projectGrantSourceIndex(index);
+  const reviewerEntry = composeGrantEntry(html);
+  const submission = attachGrantSubmission({ templateHtml: reviewerEntry.html, sourceIndex: index });
+  html = submission.templateHtml;
+  index = submission.sourceIndex;
   const indexText = JSON.stringify(index, null, 2) + '\n';
   const files = {
     'grant.html': html,
@@ -201,7 +210,7 @@ export function composeGrantApplication({
     'grant-data/source-index.json': indexText,
   };
   return { files, sourcePins: Object.fromEntries(Object.entries(files).map(([path, body]) => ['/' + path, gitBlob(body)])),
-    application: index.application, productAndFinance: index.product_and_finance, economicSource: source, coastalSource, datasetteSources };
+    application: index.application, productAndFinance: index.product_and_finance, economicSource: source, coastalSource, datasetteSources, reviewerEntry: reviewerEntry.entry, submissionWorkspace: index.submission_workspace };
 }
 
 function argumentsFor(argv) {
@@ -233,6 +242,7 @@ export async function runGrantComposition(argv = process.argv.slice(2)) {
   let companion = manuscript ? receiveEconomicApplication(productAndFinanceMarkdown, manuscript) : productAndFinanceMarkdown;
   if (manuscript && coopsCommit) companion = receiveCoastalApplication(companion, manuscript);
   if (manuscript && datasetteSelection) companion = receiveDatasetteApplication(companion, manuscript);
+  if (manuscript) companion = receiveGrantCustomerSections(companion, manuscript);
   const result = composeGrantApplication({
     applicationMarkdown: manuscript ? extractReviewerApplication(manuscript) : applicationMarkdown,
     productAndFinanceMarkdown: companion, templateHtml, sourceIndex: index,
@@ -241,7 +251,7 @@ export async function runGrantComposition(argv = process.argv.slice(2)) {
   });
   for (const [path, body] of Object.entries(result.files)) await writeFile(join(directory, path), body);
   if (options['--source-pins-output']) await writeFile(resolve(options['--source-pins-output']), JSON.stringify(result.sourcePins, null, 2) + '\n');
-  return { sourcePins: result.sourcePins, application: result.application, productAndFinance: result.productAndFinance, economicSource: result.economicSource, coastalSource: result.coastalSource, datasetteSources: result.datasetteSources };
+  return { sourcePins: result.sourcePins, application: result.application, productAndFinance: result.productAndFinance, economicSource: result.economicSource, coastalSource: result.coastalSource, datasetteSources: result.datasetteSources, reviewerEntry: result.reviewerEntry, submissionWorkspace: result.submissionWorkspace };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   runGrantComposition().then(result => process.stdout.write(JSON.stringify(result, null, 2) + '\n')).catch(error => {
