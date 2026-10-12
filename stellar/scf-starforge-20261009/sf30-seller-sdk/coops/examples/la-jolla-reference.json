@@ -1,0 +1,51 @@
+{
+  "schema": "stellar-forge.coops-study-recipe.v1",
+  "role": "public_reference",
+  "name": "La Jolla coastal source review",
+  "profile": {
+    "stationId": "9410230",
+    "label": "La Jolla (Scripps Pier) · public reference",
+    "owner": "Enter the responsible receiving team",
+    "note": "Regional coastal datum and observation reference. This station has not been established as a project boundary or a site-specific hydraulic model.",
+    "active": true
+  },
+  "capture": {
+    "label": "Original January 1–7, 2025 water-level observations",
+    "products": [
+      "water_level"
+    ],
+    "beginDate": "2025-01-01",
+    "endDate": "2025-01-07",
+    "units": "metric",
+    "timeZone": "gmt",
+    "datum": "MLLW",
+    "predictionInterval": "6"
+  },
+  "historical_extension": {
+    "action": "backfill.preview",
+    "beginDate": "2021-01-01",
+    "endDate": "2025-12-31",
+    "note": "An explicit optional five-calendar-year source review. Applying this recipe does not start capture; inspect the original request plan and select the desired products first."
+  },
+  "original_sources": [
+    {
+      "url": "https://tidesandcurrents.noaa.gov/stationhome.html?id=9410230",
+      "role": "NOAA station identity"
+    },
+    {
+      "url": "https://api.tidesandcurrents.noaa.gov/api/prod/",
+      "role": "Data API request contract"
+    },
+    {
+      "url": "https://api.tidesandcurrents.noaa.gov/api/prod/responseHelp.html",
+      "role": "Original quality and flag definitions"
+    },
+    {
+      "url": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/",
+      "role": "Station and datum metadata contract"
+    }
+  ],
+  "supplied_observations": false,
+  "source_capture_status": "NOT_CAPTURED_BY_THIS_RECIPE",
+  "note": "Explicit public-source choices only. This file is not a NOAA response, a captured edition, client data or a completed engineering assessment."
+}

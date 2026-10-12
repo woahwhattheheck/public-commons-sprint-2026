@@ -7,7 +7,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openGitSource, MAX_SOURCE_FILE_BYTES, MAX_SOURCE_BYTES } from './git-source.mjs';
 import { createBrowserAssetIndex } from './browser-assets.mjs';
 import { productPackageMetadata } from './product-package.mjs';
-import { distributionPath, contributionPaths, composeDistribution } from './specification.mjs';
+import { distributionPath, contributionDirectory, contributionPaths, composeDistribution } from './specification.mjs';
+import { sourceSelectionDirectory, sourceSelectionPath, validateSourceSelection,
+  selectedContributionPaths, requireSourceSelectionMatch } from './source-selection.mjs';
 import { readDistributionBuildPin, recoverCompletedDistribution, openDistributionBuild,
   inspectDistributionBuild } from './build-state.mjs';
 
@@ -70,18 +72,20 @@ process.stdout.write(JSON.stringify(result));
 }
 
 export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref, output,
-  offline = false, resume = false, python = 'python3', onProgress = () => {} }) {
+  offline = false, resume = false, selection, python = 'python3', onProgress = () => {} }) {
   if (typeof output !== 'string' || !output) throw new TypeError('An output directory is required');
   if (typeof resume !== 'boolean' || typeof onProgress !== 'function') throw new TypeError('Expected a resume boolean and progress callback');
+  sourceSelectionPath(selection);
   const repo = resolve(repository), out = resolve(output);
   let pin;
   if (resume) {
-    const receipt = await recoverCompletedDistribution(out, ref);
+    const receipt = await recoverCompletedDistribution(out, ref, selection);
     if (receipt) {
       onProgress({ phase: 'reused', sourceCommit: receipt.sourceCommit, archive: receipt.archive, sha256: receipt.sha256 });
       return { ...receipt, reused: true };
     }
     pin = await readDistributionBuildPin(out);
+    if (pin) selection = requireSourceSelectionMatch(pin.sourceSelection, selection);
     if (ref === undefined && !pin) throw Object.assign(new Error('Resume this partial legacy output with its original --ref COMMIT.'),
       { code: 'DISTRIBUTION_ORIGINAL_REF_REQUIRED' });
   }
@@ -90,26 +94,45 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   if (pin && pin.sourceCommit !== commit) throw Object.assign(new Error('The selected ref differs from the retained distribution source.'),
     { code: 'DISTRIBUTION_SOURCE_COMMIT_CONFLICT' });
   const byPath = new Map(tree.map(item => [item.path, item]));
-  const specificationPaths = [distributionPath, ...contributionPaths(tree.map(item => item.path))];
+  const recipePath = sourceSelectionPath(selection);
+  const recipeEntry = recipePath ? byPath.get(recipePath) : null;
+  if (recipePath && !recipeEntry) throw new TypeError('Missing original source selection: ' + recipePath);
+  const recipeBytes = recipeEntry ? source.readFiles([recipeEntry]).get(recipePath) : null;
+  const recipe = recipeBytes ? validateSourceSelection(JSON.parse(recipeBytes), recipePath) : undefined;
+  const allContributionPaths = contributionPaths(tree.map(item => item.path));
+  const selectedPaths = recipe ? selectedContributionPaths(allContributionPaths, recipe) : allContributionPaths;
+  const specificationPaths = [distributionPath, ...selectedPaths, ...(recipePath ? [recipePath] : [])];
+  for (const path of [...specificationPaths, 'LICENSE'])
+    if (!byPath.has(path)) throw new TypeError('Missing original distribution input: ' + path);
   const initial = source.readFiles([...specificationPaths.map(path => byPath.get(path)), byPath.get('LICENSE')]);
   const distribution = composeDistribution({ base: JSON.parse(initial.get(distributionPath)),
-    contributions: specificationPaths.slice(1).map(path => ({ path, data: JSON.parse(initial.get(path)) })) });
+    contributions: selectedPaths.map(path => ({ path, data: JSON.parse(initial.get(path)) })), selection: recipe });
   const spec = distribution.spec;
   const product = productPackageMetadata(spec.product);
   if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
   const excluded = new Set(spec.excludeFiles ?? []);
-  const explicitRuntime = new Set([...spec.supportFiles, ...specificationPaths, ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {})]);
+  const required = [...Object.values(spec.commands), ...Object.values(product.bin), product.readme,
+    ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9)),
+    ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {})];
+  const explicitRuntime = new Set([...spec.supportFiles, ...specificationPaths,
+    ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {}),
+    ...(recipe ? [...required, ...Object.values(spec.runtimePackageManifests ?? {}),
+      ...(spec.browserAssets ?? []).flatMap(entry => [entry.server, entry.manifest])] : [])]);
+  const originalInputs = new Set([...specificationPaths, product.readme]);
+  const selectionIncludes = path => !recipe || !(
+    path.startsWith(contributionDirectory + '/') || path.startsWith(sourceSelectionDirectory + '/')) ||
+    originalInputs.has(path);
+  // A selected archive carries only its original declarations, even when its
+  // complete distribution component contains other product contribution files.
   // Explicit support files include maintained ZIP data and can override a
   // test-like filename. Undeclared archives remain outside source selection;
   // directory, explicit exclusion and regular-file checks still apply.
-  const selected = tree.filter(item => isRuntimeFile(item.path, explicitRuntime.has(item.path)) && !excluded.has(item.path) &&
+  const selected = tree.filter(item => selectionIncludes(item.path) &&
+    isRuntimeFile(item.path, explicitRuntime.has(item.path)) && !excluded.has(item.path) &&
     (spec.components.some(root => item.path.startsWith(root + '/')) || explicitRuntime.has(item.path)));
   for (const root of spec.components)
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
-  const required = [...Object.values(spec.commands), ...Object.values(product.bin), product.readme,
-    ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9)),
-    ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {})];
   for (const path of [...required, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();
@@ -124,7 +147,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     }
     return loaded;
   };
-  source.progress('selected', { files: selected.length, components: spec.components.length, contributions: distribution.contributions.length });
+  source.progress('selected', { files: selected.length, components: spec.components.length, contributions: distribution.contributions.length,
+    ...(recipe ? { sourceSelection: recipe.id } : {}) });
   loadSources(selected);
   // The same manifests drive the actual servers. Retain every mapped source
   // and resolve browser imports in its served URL context, not by inventing a
@@ -138,7 +162,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const enqueue = (target, importer, discovered) => {
     if (names.has(target)) return;
     const item = byPath.get(target);
-    if (!item || excluded.has(target) || !isRuntimeFile(target, explicitRuntime.has(target))) {
+    if (!item || excluded.has(target) || !selectionIncludes(target) || !isRuntimeFile(target, explicitRuntime.has(target))) {
       missingModules.push(importer + ' -> ' + target);
       return;
     }
@@ -198,7 +222,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
       optionalPeers[name] = value;
     }
   }
-  const version = spec.version + '-source.g' + commit.slice(0, 12);
+  const version = spec.version + '-source.g' + commit.slice(0, 12) + (recipe ? '.selection.' + recipe.id : '');
   const metadata = {
     name: spec.name, version, private: true, type: 'module', license: 'MIT',
     description: product.description,
@@ -218,6 +242,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     schema: 'stellar-forge.merchant-distribution-manifest.v1',
     packageName: spec.name, packageVersion: version, sourceCommit: commit,
     sourceRepository: product.sourceRepository,
+    ...(recipe ? { sourceSelection: { id: recipe.id, title: recipe.title, path: recipePath,
+      gitBlob: recipeEntry.blob, sha256: digest(recipeBytes), bytes: recipeBytes.length } } : {}),
     components: spec.components, sourceBytes: totalBytes,
     distributionInputs: specificationPaths.map(path => ({ path, gitBlob: byPath.get(path).blob,
       sha256: digest(sources.get(path)), bytes: sources.get(path).length })),
@@ -252,7 +278,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     const materialization = await operation.materialize();
     const packed = await operation.pack({ python });
     const receipt = { status: 'PACKAGED', packageName: spec.name, packageVersion: version,
-      sourceCommit: commit, ...packed, sourceFiles: selected.length, sourceBytes: totalBytes,
+      sourceCommit: commit, ...(manifest.sourceSelection ? { sourceSelection: manifest.sourceSelection } : {}),
+      ...packed, sourceFiles: selected.length, sourceBytes: totalBytes,
       sourceAcquisition: source.metrics(), materialization };
     await operation.complete(receipt);
     source.progress('packaged', { files: selected.length, archiveBytes: receipt.archiveBytes, sha256: receipt.sha256 });
@@ -262,7 +289,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
 
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
-    console.log('node build.mjs --out DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH] [--offline] [--resume] [--python EXECUTABLE]\n' +
+    console.log('node build.mjs --out DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH] [--selection ID|all] [--offline] [--resume] [--python EXECUTABLE]\n' +
       'node build.mjs --out DIRECTORY --status'); return;
   }
   const options = {};
@@ -271,8 +298,8 @@ async function main(args) {
     if (args[i] === '--offline' && !offline) { offline = true; continue; }
     if (args[i] === '--resume' && !resume) { resume = true; continue; }
     if (args[i] === '--status' && !status) { status = true; continue; }
-    if (!['--out', '--repo', '--ref', '--python'].includes(args[i]) || Object.hasOwn(options, args[i]) || !args[i + 1])
-      throw new TypeError('Expected --out DIRECTORY [--repo CHECKOUT] [--ref COMMIT] [--offline] [--resume] [--python EXECUTABLE]');
+    if (!['--out', '--repo', '--ref', '--selection', '--python'].includes(args[i]) || Object.hasOwn(options, args[i]) || !args[i + 1])
+      throw new TypeError('Expected --out DIRECTORY [--repo CHECKOUT] [--ref COMMIT] [--selection ID|all] [--offline] [--resume] [--python EXECUTABLE]');
     options[args[i]] = args[i + 1];
     i++;
   }
@@ -281,7 +308,7 @@ async function main(args) {
     console.log(json(await inspectDistributionBuild({ output: options['--out'] })).trimEnd()); return;
   }
   console.log(json(await buildDistribution({ output: options['--out'], repository: options['--repo'], ref: options['--ref'], offline, resume,
-    python: options['--python'],
+    selection: options['--selection'], python: options['--python'],
     onProgress: event => process.stderr.write('[starforge build] ' + JSON.stringify(event) + '\n') })).trimEnd());
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
