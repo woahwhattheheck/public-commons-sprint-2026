@@ -13,6 +13,7 @@ export function pmtilesCommerceTools(tool){
     tool('merchant_pmtiles_'+suffix,description,fields,required,flags);
   const release={releaseId:id,releaseDigest:sha};
   const original={buyer:id,purchaseRequestId:id};
+  const range={offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:250}};
   return [
     row('output_status','Read the original SF82 selection/runtime, this workspace’s paid releases and host-selected runtime profiles.',scoped({}),['workspace']),
     row('output_request','Read the exact retained paid-output lifecycle request and its first completed result after an interrupted client reply.',request({}),['workspace','requestId']),
@@ -51,6 +52,13 @@ export function pmtilesCommerceTools(tool){
       scoped(original),['workspace','buyer','purchaseRequestId'],{...write,openWorld:true}),
     row('purchase_recover','Recover the original SF88 interrupted payment/receipt operation before continuing its same object plan. Completed purchases reopen their original assembled file.',
       scoped(original),['workspace','buyer','purchaseRequestId'],{...write,openWorld:true}),
+    row('purchase_accounting','Read one original SF88/SF36 reservation and finalization range for this exact purchase, using the host-selected original operator workspace. Returns the unchanged native range and command identity.',
+      scoped({...original,...range}),['workspace','buyer','purchaseRequestId']),
+    row('purchase_finalize','Finalize one original SF88/SF36 accounting range. Repeated ranges use the original governor’s idempotent finalizer; nextOffset selects the next retained chunk range.',
+      scoped({...original,...range}),['workspace','buyer','purchaseRequestId'],{...write,openWorld:true}),
+    row('purchase_accounting_recover','Read the retained original accounting/finalization command after a lost reply. Supply commandId for one exact command, or omit it for the latest command and last complete response.',
+      scoped({...original,commandId:{type:'string',pattern:'^(accounting|finalize)-[A-Za-z0-9]{6}$'}}),
+      ['workspace','buyer','purchaseRequestId']),
     row('purchase_adopt','Adopt the complete purchased map/style/resource through original PMTiles ObjectDelivery with its retained rights and original payment/assembly identity.',
       request(original),['workspace','requestId','buyer','purchaseRequestId'],write),
     row('purchase_receive','Receive the complete purchased operations ZIP through the original portable receiver into a host-selected customer target. Reuses the exact archive and first receiving receipt across restarts.',
