@@ -195,3 +195,9 @@ This product uses the FEMA OpenFEMA API. FEMA does not endorse this product.
 The [complete retained source example](examples/recorded-dr4724/README.md) includes all 195 projects, 43 applicant registrations, two declaration areas, the standalone report, all six full CSV tables and complete original-row portfolio JSON. The original domain/report functions generate the exact-cent totals from the twelve retained official responses. Its manifest identifies the original source and implementation.
 
 [Open the complete report](https://chatgpt.com/space/page_3e4298551d048191a72a621dabdf9ace). The complete native source, MCP, merchant, buyer and portable-workspace journey is documented above.
+
+## Complete native commissioning
+
+The [original receiving driver](examples/native-portfolio-receiving.mjs) runs the complete retained DR4724 source through portfolio review, immutable native datasets, authenticated MCP file receiving, the operator browser, complete workspace export and restored-workspace receiving. It retains the original source, requests, operation journal and received files so an interrupted operation can continue from its existing state.
+
+The [testnet commissioning guide](examples/TESTNET.md), [private host input example](examples/testnet-input.example.json) and [pinned runtime dependencies](examples/testnet-runtime-package.json) add one original SF82/SF88 testnet purchase while the selected merchant is live. The original facilitator, approval, spending journal and on-chain observer remain responsible for the transfer; the same operation receives all five complete customer files and then completes the workspace restore. Run the [host commissioner](examples/testnet-commissioning.mjs) with the actual private input paths and preserve its complete operation directory for recovery.
