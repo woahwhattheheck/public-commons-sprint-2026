@@ -11,6 +11,8 @@ import { absolute, object, bytes, digest, identity, readPrivate, readJson, priva
 import { acquireDatasetLease } from '../dataset-refresh/writer-lease.mjs';
 import { acquireReleaseLease } from '../../sf82-seller-pilot/release-process.mjs';
 import { releaseStatus, installReleaseHandler, inspectReleaseInstallation } from '../../sf82-seller-pilot/releases.mjs';
+import { compileQueries } from './declaration.mjs';
+import { readCkanRefreshComparison } from './refresh.mjs';
 import { inspectCkanMerchantPackage } from './publisher/release.mjs';
 import { CKAN_SOURCE_LOCATIONS_SCHEMA, ckanWorkspaceMember } from './source-locations.mjs';
 
@@ -21,7 +23,7 @@ const HASH = /^[a-f0-9]{64}$/;
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const RELEASE_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const ROOTS = new Set(['editions', 'sources', 'publications', 'datasets', 'merchant-packages',
-  'buyer-requests', 'seller-releases', 'transfers']);
+  'buyer-requests', 'seller-releases', 'transfers', 'refreshes']);
 const INTERNAL = new Set(['publisher.lock', '.ckan-receive.json', 'workspace-archives', 'workspace-incoming']);
 const PATH_KEYS = new Set(['directory', 'file', 'out', 'path', 'sourceFile', 'targetDirectory', 'root', 'packageDirectory']);
 const exists = async path => { try { return await lstat(path); } catch (error) { if (error.code === 'ENOENT') return null; throw error; } };
@@ -37,7 +39,8 @@ function projectState(value) {
   if (!object(value) || value.schema !== 'stellar-forge.ckan-workbench.v1' ||
       typeof value.catalogOrigin !== 'string' || typeof value.createdAt !== 'string')
     throw fault('CKAN_PROJECT_INVALID');
-  for (const key of ['editions', 'sources', 'publications', 'exports', 'buyerRequests']) {
+  for (const key of ['editions', 'sources', 'publications', 'exports', 'buyerRequests',
+    ...(value.refreshes === undefined ? [] : ['refreshes'])]) {
     if (!Array.isArray(value[key])) throw fault('CKAN_PROJECT_INVALID');
     const ids = new Set();
     for (const item of value[key]) {
@@ -156,6 +159,10 @@ function summary(state) {
       snapshot: item.dataset?.snapshot, releaseId: item.staged?.release?.id ?? null,
       releaseDigest: item.staged?.release?.digest ?? null })),
     buyerRequests: state.buyerRequests.map(item => ({ id: item.id, exportId: item.exportId })),
+    refreshes: (state.refreshes ?? []).map(item => ({ id: item.id, sourceId: item.sourceId,
+      afterEditionId: item.afterEditionId, state: item.state, comparisonSha256: item.comparisonSha256 ?? null,
+      decisionSha256: item.decisionSha256 ?? null, acceptedSourceId: item.acceptedSourceId ?? null,
+      previousPublicationId: item.previousPublicationId ?? null })),
     operation: state.operation ? { id: state.operation.id, kind: state.operation.kind, state: state.operation.state } : null };
 }
 /** workbenchBytes is the original state captured immediately before the owning
@@ -388,7 +395,7 @@ async function relocate(root, archive, history, signal) {
   const state = rebase(initial, archive.manifest.source.directory, root), rewritten = [];
   const locations = { schema: CKAN_SOURCE_LOCATIONS_SCHEMA, projectCreatedAt: initial.createdAt,
     catalogOrigin: initial.catalogOrigin, sources: [] };
-  const originals = new Map(archive.manifest.files.map(file => [file.path, file]));
+  const originals = new Map(archive.manifest.files.map(file => [file.path, file])), sourceConfigs = new Map();
   for (const source of state.sources) {
     abort(signal);
     const member = 'sources/' + source.id + '.json', raw = await readPrivate(join(root, member), 262144);
@@ -401,13 +408,47 @@ async function relocate(root, archive, history, signal) {
         config.catalogOrigin !== state.catalogOrigin ||
         originals.get('editions/' + edition.id + '/capture.json')?.sha256 !== edition.manifestSha256)
       throw fault('CKAN_RECEIVE_SOURCE_BINDING_CHANGED');
-    source.file = join(root, member);
+    source.file = join(root, member); sourceConfigs.set(source.id, config);
     if (typeof config.connection.file !== 'string') throw fault('CKAN_RECEIVE_SOURCE_BINDING_CHANGED');
     if (config.connection.file.startsWith('/')) locations.sources.push({ file: source.id + '.json',
       sourceSha256: source.sha256, originalCaptureFile: config.connection.file,
       captureSha256: edition.manifestSha256, captureFile: 'editions/' + edition.id + '/capture.json' });
     else if (resolve(dirname(join(root, member)), config.connection.file) !== join(root, 'editions', edition.id, 'capture.json'))
       throw fault('CKAN_RECEIVE_SOURCE_BINDING_CHANGED');
+  }
+  for (const refresh of state.refreshes ?? []) {
+    abort(signal);
+    const before = state.sources.find(item => item.id === refresh.sourceId);
+    const after = state.editions.find(item => item.id === refresh.afterEditionId);
+    if (!before || !after || before.sha256 !== refresh.sourceSha256 ||
+        before.editionId !== refresh.beforeEditionId || after.manifestSha256 !== refresh.afterCaptureSha256)
+      throw fault('CKAN_RECEIVE_REFRESH_BINDING_CHANGED');
+    if (!refresh.comparisonSha256) continue;
+    const comparison = await readCkanRefreshComparison({ directory: join(root, 'refreshes', refresh.id),
+      expectedSha256: refresh.comparisonSha256 });
+    if (comparison.comparison.before.manifestSha256 !== refresh.beforeCaptureSha256 ||
+        comparison.comparison.after.manifestSha256 !== refresh.afterCaptureSha256 ||
+        identity(comparison.comparison.keys) !== identity(refresh.keys))
+      throw fault('CKAN_RECEIVE_REFRESH_BINDING_CHANGED');
+    if (!refresh.decisionSha256) continue;
+    const member = 'refreshes/' + refresh.id + '/decision.json';
+    const raw = await readPrivate(join(root, member), 1048576);
+    const decision = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw));
+    if (digest(raw) !== refresh.decisionSha256 || decision.intent?.refreshId !== refresh.id ||
+        decision.intent?.comparisonSha256 !== refresh.comparisonSha256 ||
+        decision.intent?.sourceId !== refresh.sourceId || decision.intent?.sourceSha256 !== refresh.sourceSha256)
+      throw fault('CKAN_RECEIVE_REFRESH_DECISION_CHANGED');
+    if (refresh.state === 'ACCEPTED') {
+      const accepted = state.sources.find(item => item.id === refresh.acceptedSourceId);
+      const config = accepted && sourceConfigs.get(accepted.id);
+      const query = config && compileQueries(config.queries)[accepted.query];
+      if (decision.intent.decision !== 'accept' || !accepted || !query ||
+          accepted.refreshId !== refresh.id || accepted.refreshDecisionSha256 !== refresh.decisionSha256 ||
+          accepted.editionId !== refresh.afterEditionId || decision.intent.acceptedSourceId !== accepted.id ||
+          identity({ query: accepted.query, projection: query.projection }) !== decision.intent.selection?.projectionSha256 ||
+          identity(query.semanticReview ?? null) !== identity(decision.intent.selection?.semanticReview ?? null))
+        throw fault('CKAN_RECEIVE_REFRESH_DECISION_CHANGED');
+    }
   }
   for (const publication of state.publications) {
     const member = 'publications/' + publication.id + '/workspace.json';
