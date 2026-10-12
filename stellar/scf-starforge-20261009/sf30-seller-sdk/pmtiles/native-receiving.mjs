@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. One complete original-source producer, browser, package and cold receiving operation.
 import {dirname,join,resolve,isAbsolute} from 'node:path';
+import {createHash} from 'node:crypto';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {readFile,mkdir} from 'node:fs/promises';
 import {readJson,writeJson,exists,privateDirectory} from '../../sf88-operator-buyer-cli/node/store.mjs';
@@ -87,16 +88,17 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
       await current.waitForFunction(id=>document.querySelector('#identity')?.textContent.includes(id),targetServer.workspaceId,{timeout:30000});
       return {context:opened,page:current};
     }
-    async function openNativeMap(current,targetServer,releaseId){
+    async function openNativeMap(current,targetServer,releaseId,attribution='Map tiles by Stamen Design'){
       const active=targetServer.controller.state().preview;
       if(!active?.alive||active.releaseId!==releaseId)
         await targetServer.controller.execute('preview',{requestId:'receiving-preview-'+digest({releaseId}).slice(0,32),
           expectedWorkspaceId:targetServer.workspaceId,releaseId},{signal});
       await current.locator('#refresh').click();
       await current.waitForFunction(release=>document.querySelector('#mapStatus')?.textContent.includes(release),releaseId,{timeout:30000});
+      await current.waitForFunction(()=>document.querySelector('#mapStatus')?.dataset.state==='ready',null,{timeout:60000});
       await current.locator('#map canvas').first().waitFor({state:'visible',timeout:30000});
       await current.waitForFunction(()=>[...document.querySelectorAll('#map canvas')].some(canvas=>canvas.width>0&&canvas.height>0),null,{timeout:30000});
-      await current.locator('#rights').getByText('Map tiles by Stamen Design',{exact:false}).waitFor({state:'visible'});
+      await current.locator('#rights').getByText(attribution,{exact:false}).waitFor({state:'visible'});
     }
     async function savedBrowserState(current,target){
       const value=await current.evaluate(()=>({origin:location.origin,entries:Object.fromEntries(Object.keys(localStorage)
@@ -230,10 +232,56 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
       await step('same-tab-restart',async()=>({origin:originalOrigin,workspaceId,
         draft:await page.locator('#editionNotes').inputValue(),version:await page.locator('#expectedVersion').inputValue(),
         storage:await savedBrowserState(page,join(root,'browser-records','post-restart-storage.json'))}));
+      const vectorSource=await readJson(join(HERE,'sources','sample-vector.json'),MAX_METADATA_BYTES);
+      need(vectorSource.schema==='starforge.pmtiles-vector-source.v1'&&
+        vectorSource.sourceCommit==='aec8fa1341222fdddb3318e9ffa8e18e19b312f7'&&
+        vectorSource.blob==='bd5f906fb433787604abbae0ad405f3197b97b49'&&vectorSource.bytes===6601156,
+        'PMTILES_ORIGINAL_VECTOR_SOURCE_CHANGED');
+      const vectorWorkspace=server.controller.workspace;
+      const vectorArchive=await vectorWorkspace.acquire({...common,requestId:'original-florence-acquisition',
+        kind:'pmtiles',name:'protomaps-vector-firenze.pmtiles',url:vectorSource.url,maxBytes:vectorSource.bytes,
+        rights:{license:vectorSource.license.spdx,attribution:vectorSource.license.attribution,sourceUrl:vectorSource.sourceUrl}},{signal});
+      need(vectorArchive.bytes===vectorSource.bytes,'PMTILES_ORIGINAL_VECTOR_LENGTH_CHANGED');
+      const gitHash=createHash('sha1').update(Buffer.from('blob '+vectorArchive.bytes+'\0'));
+      let vectorBytes=0;
+      for await(const chunk of vectorWorkspace.resourceFile(vectorArchive.id).chunks({signal})){
+        vectorBytes+=chunk.length;gitHash.update(chunk);
+      }
+      const observedBlob=gitHash.digest('hex');
+      need(vectorBytes===vectorSource.bytes&&observedBlob===vectorSource.blob,'PMTILES_ORIGINAL_VECTOR_BLOB_CHANGED');
+      const vectorStylePath=join(HERE,'sources','sample-vector-style.json');
+      const vectorStyleBytes=await fileDescriptor(vectorStylePath,{signal});
+      const vectorStyle=await vectorWorkspace.importLocal({...common,requestId:'original-florence-style',
+        kind:'style',name:'sample-vector-style.json',path:vectorStylePath,expected:vectorStyleBytes,
+        rights:{license:vectorSource.style.spdx,attribution:'2021 and later, Protomaps LLC and contributors',
+          sourceUrl:'https://github.com/protomaps/PMTiles/blob/'+vectorSource.sourceCommit+'/'+vectorSource.example.path}},{signal});
+      const vectorEdition=await vectorWorkspace.saveEdition({...common,requestId:'original-vector-replacement-edition',
+        editionId:next.id,expectedVersion:next.version,edition:{name:'Original Florence vector replacement',
+          notes:'Complete source and style replacement using the retained official Florence MVT archive and original four-layer example.',
+          style:vectorStyle.id,archives:[{sourceId:'example_source',resourceId:vectorArchive.id,type:'vector'}],
+          sprite:null,glyphs:[],layerDecisions:[],view:{center:vectorSource.style.center,zoom:vectorSource.style.zoom}}});
+      need(vectorEdition.version===4,'PMTILES_ORIGINAL_VECTOR_EDITION_CHANGED');
+      const comparison=vectorWorkspace.compare({leftId:next.id,leftVersion:next.version,rightId:vectorEdition.id,rightVersion:vectorEdition.version});
+      const vectorInspection=await server.controller.execute('inspect',{...common,requestId:'original-vector-inspection',
+        editionId:vectorEdition.id,version:vectorEdition.version},{signal});
+      const vectorReview=await server.controller.execute('review',{...common,requestId:'original-vector-review',
+        editionId:vectorEdition.id,version:vectorEdition.version,inspectionRequestId:'original-vector-inspection',
+        expectedCurrentRelease:secondRelease.id,reviewer:input.reviewer,
+        note:'The complete original Florence MVT source, matching four-layer style, actual source-layer metadata and baseline replacement were reviewed.'},{signal});
+      const vectorRelease=await server.controller.execute('prepare-release',{...common,requestId:'original-vector-release',
+        reviewId:vectorReview.id,reviewSha256:vectorReview.reviewSha256},{signal});
+      const vectorPublication=await server.controller.execute('publish',{...common,requestId:'original-vector-publication',
+        releaseId:vectorRelease.id,manifestSha256:vectorRelease.manifestSha256,expectedCurrentRelease:secondRelease.id},{signal});
+      need(!vectorPublication.previewError,'PMTILES_VECTOR_NATIVE_PREVIEW_FAILED',vectorPublication.previewError?.message);
+      await openNativeMap(page,server,vectorRelease.id,vectorSource.license.attribution);
+      await page.screenshot({path:join(root,'original-florence-vector-map.png'),fullPage:true});
+      await step('original-vector-source-replacement',async()=>({source:vectorSource,archive:vectorArchive,gitBlobSha1:observedBlob,
+        style:vectorStyle,edition:vectorEdition,comparison,inspection:vectorInspection,review:vectorReview,release:vectorRelease,
+        publication:vectorPublication,screenshot:await fileDescriptor(join(root,'original-florence-vector-map.png'),{signal})}));
       const packageResult=await uiAction('complete-package','package','#packageWorkspace',{
         before:async()=>{await page.locator('#packageDirectory').fill(join(root,'package-stage'));await page.locator('#packageDestination').fill(join(root,'regional-map-release.zip'));}
       });
-      need(packageResult.result.workspaceId===workspaceId&&packageResult.result.workspace.currentRelease===secondRelease.id,'PMTILES_PACKAGE_WORKSPACE_CHANGED');
+      need(packageResult.result.workspaceId===workspaceId&&packageResult.result.workspace.currentRelease===vectorRelease.id,'PMTILES_PACKAGE_WORKSPACE_CHANGED');
       const downloadPath=join(root,'downloaded-regional-map-release.zip');
       if(!await exists(downloadPath)){
         const awaited=page.waitForEvent('download',{timeout:600000});await page.locator('#downloadPackage').click();
@@ -250,11 +298,15 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
       const receiveInputPath=join(root,'receiving-input.json');await retainJson(receiveInputPath,receiveInput);
       const received=await nativeResult(root,'original-complete-package-receiving',
         [process.execPath,join(HERE,'cli.mjs'),'receive-package','--input',receiveInputPath],{signal,leaseFd});
-      need(received.value.status==='COMPLETE'&&received.value.workspaceId===workspaceId&&received.value.currentRelease===secondRelease.id,
+      need(received.value.status==='COMPLETE'&&received.value.workspaceId===workspaceId&&received.value.currentRelease===vectorRelease.id,
         'PMTILES_COLD_RECEIVING_INCOMPLETE');
       await step('cold-complete-native-receiving',async()=>received);
       server=await servePMTilesWorkspace({directory:receiveInput.workspaceDirectory,expectedWorkspaceId:workspaceId,runtime:received.value.runtimeProfile,port:0});
       ({context,page}=await browserAt(server,join(root,'browser-customer')));
+      await openNativeMap(page,server,vectorRelease.id,vectorSource.license.attribution);
+      const restoredVector=await uiAction('customer-restore-vector','restore','#restore');
+      const previousId=restoredVector.result.restoration?.restoredReleaseId??restoredVector.result.restoredReleaseId;
+      need(previousId===secondRelease.id&&server.controller.state().currentRelease===secondRelease.id,'PMTILES_COLD_VECTOR_RESTORE_CHAIN_CHANGED');
       await openNativeMap(page,server,secondRelease.id);
       const restored=await uiAction('customer-restore','restore','#restore');
       const restoredId=restored.result.restoration?.restoredReleaseId??restored.result.restoredReleaseId;
@@ -262,7 +314,7 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
       await openNativeMap(page,server,firstRelease.id);
       const coldState=server.controller.state();
       await page.screenshot({path:join(root,'cold-customer-restored-map.png'),fullPage:true});
-      await step('cold-customer-restoration',async()=>({receiving:received.value,restored,state:coldState,
+      await step('cold-customer-restoration',async()=>({receiving:received.value,restoredVector,restored,state:coldState,
         screenshot:await fileDescriptor(join(root,'cold-customer-restored-map.png'),{signal})}));
       await context.close();context=null;await server.close();server=null;
       const cliState=await nativeResult(root,'original-cold-cli-state',[process.execPath,join(HERE,'cli.mjs'),'state',
@@ -273,7 +325,8 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
       need(nativeTileResponses.some(row=>row.status===200),'PMTILES_BROWSER_NATIVE_TILE_NOT_OBSERVED');
       const result={schema:'starforge.pmtiles-native-receiving-result.v1',status:'PMTILES_RECEIVING_COMPLETE',operationId:input.operationId,
         requestSha256,workspaceId,sourceSelection,runtimeSha256:runtime.runtimeSha256,browserIdentity,
-        firstReleaseId:firstRelease.id,secondReleaseId:secondRelease.id,restoredReleaseId:firstRelease.id,
+        firstReleaseId:firstRelease.id,secondReleaseId:secondRelease.id,vectorReleaseId:vectorRelease.id,
+        vectorSource:{...vectorSource,sha256:vectorArchive.sha256,resourceId:vectorArchive.id,gitBlobSha1:observedBlob},restoredReleaseId:firstRelease.id,
         package:packageResult.result,receiving:received.value,cliState:cliState.value,
         browserErrors,nativeTileResponses,completedAt:timestamp()};
       await retainJson(join(root,'native-result.json'),result);return result;

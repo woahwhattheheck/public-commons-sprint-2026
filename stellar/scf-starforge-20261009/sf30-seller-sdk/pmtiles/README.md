@@ -332,6 +332,36 @@ Use PORTABLE_HANDOVER.md for complete extraction, source receiving, compatible-h
 
 For a workspace-only handover use export with {requestId, expectedWorkspaceId, destination}, then receive-workspace with {requestId, source, destination, expectedWorkspaceId, expectedSha256}. expectedSha256 is the returned handover manifest SHA. An installed matching runtime remains necessary for native map preview.
 
+## Run the complete original receiving journey
+
+The included native-receiving.mjs is one producer, browser and customer operation. It uses the actual installed pmtiles, Martin, PMTiles JavaScript, MapLibre and OpenLayers implementations, plus the existing Playwright/Chromium host. Give it one private absolute input file:
+
+~~~json
+{
+  "schema": "starforge.pmtiles-native-receiving.v1",
+  "operationId": "CAMPT0CAMP-PMTILES-RELEASE-OPERATIONS-20261012",
+  "directory": "/srv/map-native-receiving",
+  "runtimeProfile": "/srv/map-runtime/runtime.json",
+  "playwrightModule": "/srv/browser/node_modules/playwright/index.mjs",
+  "chromiumExecutable": "/srv/browser/chromium",
+  "reviewer": "The operating engineer's actual name"
+}
+~~~
+
+Use actual existing paths. In place of runtimeProfile, runtimeBuild may contain the complete original runtime-build input described above. Keep the original operation ID and input after a process or response interruption.
+
+~~~sh
+node /ABS/source/sf30-seller-sdk/pmtiles/native-receiving.mjs /srv/map-inputs/native-receiving.json
+~~~
+
+The operation carries the complete included Stamen archive through native inspection, immutable review/release and the real map. It then saves an edition through the actual browser, loses that response after the real save, retains later local text, reconciles the original request and saves the subsequent edit. Stop and Start reopen the same origin and unfinished browser draft.
+
+The next source selection acquires the complete official Florence MVT archive from its immutable upstream Git revision, through the original workspace HTTPS acquisition. Before selecting its edition, the receiver checks the full 6,601,156-byte body against Git blob bd5f906fb433787604abbae0ad405f3197b97b49. The actual SHA256, body and complete HTTP response join the workspace's original source record. Its matching original water/buildings/roads/pois style is retained with the upstream example and license declaration under sources/. The selected vector edition replaces the raster source and style, is inspected against actual vector-layer metadata, and opens through the same Martin/OpenLayers application.
+
+The browser downloads the complete frozen package. A fresh customer directory receives it through the original CLI, renders the received vector release, restores its prior raster release and then restores the original baseline. CLI reopen confirms the same workspace and retained receiving history. The result is native-result.json with the actual source/runtime/browser identities, three release IDs, complete package and receiving results, observed native tile responses and map screenshots. The original step records, browser request/response files, native outputs and full source captures remain beside it.
+
+The first Florence acquisition needs public HTTPS access to the retained immutable source URL. Later same-operation continuations reuse the complete captured file. Normal customer package receiving and rendering use the delivered source/runtime files.
+
 ## Source formats and practical limits
 
 The initial product supports PMTiles v3 archives with MVT vector tiles or PNG, JPEG, WebP and AVIF image tiles. Each style source must bind a supported original archive; unrelated external GeoJSON, video or image-source types require their original adapter before this PMTiles release path can accept them. MLT archives and unknown tile types are rejected by the explicit format mapping.
@@ -351,4 +381,4 @@ The frozen workspace includes all source/history selected by that workspace. Cho
 - [OpenLayers original attributed PMTiles image example](https://openlayers.org/en/latest/examples/pmtiles-image.html)
 - [MapLibre style specification](https://maplibre.org/maplibre-style-spec/)
 
-Exact retrieved source identities and applicable original licenses are in sources/SOURCE_MANIFEST.json. The complete original sample is sources/stamen-toner-z0-z3.pmtiles; its expected bytes and SHA are in sources/sample.json.
+Exact retrieved source identities and applicable original licenses are in sources/SOURCE_MANIFEST.json. The complete included raster sample is sources/stamen-toner-z0-z3.pmtiles; its expected bytes and SHA are in sources/sample.json. sources/sample-vector.json pins the complete Florence archive's immutable original Git source, byte count and blob identity for acquisition by the same native receiving operation. sources/sample-vector-style.json, the original example and REUSE.toml preserve its matching style and original licensing.

@@ -297,6 +297,34 @@
       "retrievedAt": "2026-10-12T11:52:26+00:00",
       "sha256": "c71a930e912283568f2cc4525c9c131271b09d1d900bc55f777ca61c59e6bb09",
       "bytes": 219
+    },
+    {
+      "id": "pmtiles-florence-original-example",
+      "scope": "public",
+      "provider": "github_fetch_blob",
+      "repository": "protomaps/PMTiles",
+      "revision": "aec8fa1341222fdddb3318e9ffa8e18e19b312f7",
+      "path": "js/examples/maplibre.html",
+      "blob": "a66fe909a983154ca8c9dae45b8e98717c6f231d",
+      "url": "https://github.com/protomaps/PMTiles/blob/aec8fa1341222fdddb3318e9ffa8e18e19b312f7/js/examples/maplibre.html",
+      "bytes": 3269,
+      "sha256": "24ef53b6c6515229a28c6e7e1b93cf37bf7b0273f35c31a1180e9fc4323d74e7",
+      "deliveredPath": "upstream/PMTILES_FLORENCE_EXAMPLE.html",
+      "retainedReadAt": "2026-10-12T12:46:28Z"
+    },
+    {
+      "id": "pmtiles-original-reuse-license",
+      "scope": "public",
+      "provider": "github_fetch_file",
+      "repository": "protomaps/PMTiles",
+      "revision": "aec8fa1341222fdddb3318e9ffa8e18e19b312f7",
+      "path": "REUSE.toml",
+      "blob": "2bff79ca48673033e9abbc7aa0adadde25702843",
+      "url": "https://github.com/protomaps/PMTiles/blob/aec8fa1341222fdddb3318e9ffa8e18e19b312f7/REUSE.toml",
+      "bytes": 897,
+      "sha256": "c2dca063c06bbc5e5a186575530b39789a99d5d5a0b166fbe1dd51944dfc4f13",
+      "deliveredPath": "upstream/PMTILES_REUSE.toml",
+      "retainedReadAt": "2026-10-12T12:46:28Z"
     }
   ],
   "webSources": [
@@ -387,7 +415,9 @@
     "license": "ODbL-1.0",
     "attribution": "© OpenStreetMap Contributors",
     "licenseEvidenceBlob": "2bff79ca48673033e9abbc7aa0adadde25702843",
-    "url": "https://github.com/protomaps/PMTiles/blob/aec8fa1341222fdddb3318e9ffa8e18e19b312f7/spec/v3/protomaps%28vector%29ODbL_firenze.pmtiles"
+    "url": "https://github.com/protomaps/PMTiles/blob/aec8fa1341222fdddb3318e9ffa8e18e19b312f7/spec/v3/protomaps%28vector%29ODbL_firenze.pmtiles",
+    "receivingDescriptor": "sample-vector.json",
+    "completeAcquisition": "Original native workspace HTTPS capture verifies full bytes and Git blob identity, then retains actual SHA256/body/response in the customer workspace package."
   },
   "files": [
     {
@@ -480,7 +510,32 @@
       "sha256": "b96efe3ea10b98632c0c0dc229d000b604ebdad6b2f1321ea11d9de931df1ce5",
       "kind": "original licensed archive",
       "expectedBlob": "8d170ca89ecf3197d14366db63679f198a198101"
+    },
+    {
+      "relativePath": "sample-vector.json",
+      "bytes": 1658,
+      "sha256": "8fbc127359928b6cc101d38761243490d32cd721e4a9fa9294ca812e18163625",
+      "kind": "original vector receiving descriptor or derived exact style"
+    },
+    {
+      "relativePath": "sample-vector-style.json",
+      "bytes": 1021,
+      "sha256": "81a7a10c62b1a2e9e81d321ad47ca5791ab8f3b780a10f32ababf569282a6a1b",
+      "kind": "original vector receiving descriptor or derived exact style"
+    },
+    {
+      "relativePath": "upstream/PMTILES_FLORENCE_EXAMPLE.html",
+      "bytes": 3269,
+      "sha256": "24ef53b6c6515229a28c6e7e1b93cf37bf7b0273f35c31a1180e9fc4323d74e7",
+      "kind": "original upstream source"
+    },
+    {
+      "relativePath": "upstream/PMTILES_REUSE.toml",
+      "bytes": 897,
+      "sha256": "c2dca063c06bbc5e5a186575530b39789a99d5d5a0b166fbe1dd51944dfc4f13",
+      "kind": "original upstream source"
     }
   ],
-  "manifestExcludesSelf": true
+  "manifestExcludesSelf": true,
+  "updatedAt": "2026-10-12T12:46:28Z"
 }
