@@ -14,7 +14,7 @@ import subprocess
 import sys
 import uuid
 
-PACKET_SHA256 = "7a098fefcb5ad745810602f5d994a723f0e10317acb27bd85db2ac4f723a1fa0"
+PACKET_SHA256 = "247ec42540837f4031316f586f7df51344a0bf94e0c61772801c1b949bda4128"
 SOURCE_COMMIT = "fe7329e0595d7ab77eddc832bee27785f13e9a4d"
 OPERATION = "SCF-SUPPORT-SERVICE-COMMITMENTS-24EA-20261012"
 
@@ -107,10 +107,22 @@ def main():
     if hashlib.sha256(packet_bytes).hexdigest() != PACKET_SHA256:
         raise RuntimeError("Original Service source packet bytes differ")
     packet = json.loads(packet_bytes)
-    if packet.get("operationId") != OPERATION or packet.get("authoredCommit") != SOURCE_COMMIT or len(packet["files"]) != 118:
+    if packet.get("operationId") != OPERATION or packet.get("authoredCommit") != SOURCE_COMMIT or len(packet["files"]) != 527:
         raise RuntimeError("Unexpected Service receiving source")
     if set(packet["files"]) != set(packet["file_blobs"]):
         raise RuntimeError("The complete source and original blob index differ")
+    predecessors = {}
+    for retained in packet.get("previousSelections", []):
+        index = retained.get("file_blobs")
+        digest = retained.get("packetSha256")
+        if (not isinstance(index, dict) or retained.get("files") != len(index)
+                or not isinstance(digest, str) or len(digest) != 64
+                or any(value not in "0123456789abcdef" for value in digest)
+                or digest in predecessors):
+            raise RuntimeError("The retained predecessor selection is malformed")
+        if any(packet["file_blobs"].get(name) != blob for name, blob in index.items()):
+            raise RuntimeError("The complete selection changed an original predecessor file")
+        predecessors[digest] = index
 
     root = Path(args.work_dir).expanduser().resolve()
     source = root / "source"
@@ -238,14 +250,33 @@ def main():
                 value = prior["value"]
                 if value.get("commit") != SOURCE_COMMIT:
                     raise RuntimeError("The existing runtime custody selects a different original source")
-                if value.get("packetSha256") not in (None, PACKET_SHA256):
+                prior_packet = value.get("packetSha256")
+                prior_index = value.get("files")
+                if prior_packet == PACKET_SHA256:
+                    expected_index = packet["file_blobs"]
+                elif prior_packet in predecessors:
+                    expected_index = predecessors[prior_packet]
+                elif prior_packet is None:
+                    # Legacy custody may precede the explicit packet hash. Its
+                    # retained index still has to be one complete known selection.
+                    candidates = [packet["file_blobs"], *predecessors.values()]
+                    expected_index = next((index for index in candidates if prior_index == index), None)
+                    if expected_index is None and prior_index is None:
+                        expected_index = packet["file_blobs"]
+                    if expected_index is None:
+                        raise RuntimeError("The legacy runtime custody contains a different original file index")
+                else:
                     raise RuntimeError("The existing runtime custody selects different original packet bytes")
-                if value.get("files") not in (None, packet["file_blobs"]):
+                if prior_index is not None and prior_index != expected_index:
                     raise RuntimeError("The existing runtime custody contains a different original file index")
-                if value.get("packetSha256") is None:
-                    # All 118 actual source bytes above have already matched the retained blob map.
+                if prior_packet != PACKET_SHA256:
+                    # Every selected file above has been checked against its
+                    # original Git blob, including the complete unchanged predecessor.
                     selection.setdefault("adoptedCustody", []).append({
-                        "path": str(path), "sha256": prior["sha256"], "verifiedFiles": len(packet["files"])})
+                        "path": str(path), "sha256": prior["sha256"],
+                        "fromPacketSha256": prior_packet,
+                        "verifiedPredecessorFiles": len(expected_index),
+                        "verifiedFiles": len(packet["files"])})
         write_json(root / "source-selection.json", selection)
         write_json(native / "runtime-custody.json", {key: value for key, value in selection.items() if key != "files"})
         emit({"event": "service-source-ready", "commit": SOURCE_COMMIT, "files": len(packet["files"]),
