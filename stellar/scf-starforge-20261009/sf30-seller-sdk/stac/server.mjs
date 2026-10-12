@@ -75,7 +75,7 @@ async function streamAsset(req,res,workspace,assetId,{preview=false}={}){
  * Getters are local views. Provider operations run only through explicit POST routes.
  * The returned URL carries a one-process session key in its fragment.
  */
-export async function startStacServer({workspace,eoapi,processing=null,host='127.0.0.1',port=0,maxRequestBytes=128*1024*1024}={}){
+export async function startStacServer({workspace,eoapi,prescient=null,processing=null,host='127.0.0.1',port=0,maxRequestBytes=128*1024*1024}={}){
   if(!workspace||typeof workspace.getState!=='function')throw new TypeError('An initialized STAC workspace is required.');
   if(!['127.0.0.1','::1','localhost'].includes(host))throw new Error('The analyst server binds to loopback only.');
   if(!Number.isInteger(Number(port))||Number(port)<0||Number(port)>65535)throw new Error('Port must be an integer from 0 through 65535.');
@@ -94,6 +94,8 @@ export async function startStacServer({workspace,eoapi,processing=null,host='127
   }
   const bootstrap=randomToken(),session=randomToken(),csrf=randomToken();
   let origin='',authority='',cookieName='',closing=false;
+  if(prescient&&(typeof prescient.getState!=='function'||typeof prescient.dispatch!=='function'))
+    throw new TypeError('A Prescient controller must expose getState and dispatch.');
   const jobs=new Map();
   const staticCache=new Map();
   const staticAssets=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
@@ -143,7 +145,7 @@ export async function startStacServer({workspace,eoapi,processing=null,host='127
         if(closing)throw fail(503,'The local operator is closing.','SERVER_CLOSING');
         if(req.headers.origin!==origin||!equal(req.headers['x-csrf-token'],csrf))throw fail(403,'This action must come from the active local operator session.','CSRF_REQUIRED');
       }
-      if(method==='GET'&&path==='/api/state'){json(res,200,{workspace:await workspace.getState(),jobs:[...jobs.values()].map(summarizeJob),eoapi:Boolean(eoapi),capabilities:{processing:processingCapabilities||{enabled:false}}});return;}
+      if(method==='GET'&&path==='/api/state'){json(res,200,{workspace:await workspace.getState(),jobs:[...jobs.values()].map(summarizeJob),eoapi:Boolean(eoapi),capabilities:{processing:processingCapabilities||{enabled:false},prescient:{enabled:Boolean(prescient)}}});return;}
       if(method==='GET'&&path==='/processing/view.mjs'){
         if(!processingView)throw fail(404,'Processing history is not configured for this workspace.','PROCESSING_NOT_CONFIGURED');
         res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','content-length':processingView.length});res.end(processingView);return;
@@ -159,6 +161,12 @@ export async function startStacServer({workspace,eoapi,processing=null,host='127
         const query=Object.create(null);
         for(const [key,value]of url.searchParams){if(Object.hasOwn(query,key))query[key]=Array.isArray(query[key])?[...query[key],value]:[query[key],value];else query[key]=value;}
         json(res,200,await processingReads[name]({query,stacWorkspace:workspace}));return;
+      }
+      if(path.startsWith('/api/prescient/')){
+        if(!prescient)throw fail(404,'Open the configured Prescient operator for this workspace.','PRESCIENT_RUNTIME_REQUIRED');
+        const body=method==='POST'?await bodyJSON(req,maxRequestBytes):{};
+        json(res,200,await prescient.dispatch({method,path:path.slice('/api/prescient'.length),body}));
+        return;
       }
       if(path.startsWith('/api/eoapi/')){
         if(!eoapi)throw fail(404,'Start the customer onboarding operator to open this view.','EOAPI_RUNTIME_REQUIRED');

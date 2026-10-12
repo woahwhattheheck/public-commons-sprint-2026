@@ -78,6 +78,20 @@
         "processing/view.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/prescient/view.mjs",
+      [
+        "prescient/view.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/prescient/view.css",
+      [
+        "prescient/view.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
