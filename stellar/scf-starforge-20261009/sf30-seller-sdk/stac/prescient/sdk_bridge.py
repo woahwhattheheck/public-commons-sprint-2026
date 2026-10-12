@@ -83,6 +83,9 @@ def durable_directory(path):
         missing.append(cursor)
         cursor = cursor.parent
     require(cursor.is_dir(), "PRESCIENT_PRIVATE_ROOT_INVALID")
+    # A prior process may have created this entry before syncing its parent.
+    sync_directory(cursor)
+    sync_directory(cursor.parent)
     for directory in reversed(missing):
         try:
             directory.mkdir(mode=0o700)
