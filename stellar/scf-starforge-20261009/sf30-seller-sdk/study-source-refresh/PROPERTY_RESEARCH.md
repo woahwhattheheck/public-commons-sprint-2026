@@ -4,7 +4,7 @@ Property research extends the original study workspace with complete source docu
 
 ## Open the application
 
-Start the original `study_refresh.py serve` command with an absolute private workspace. Open its printed local URL, connect with its local token, and choose **Property research**.
+Start the original `python3 cli.py --workspace /absolute/private/workspace serve` command with an absolute private workspace. Open its printed local URL, connect with its local token, and choose **Property research**.
 
 The five screens cover the full workflow:
 
