@@ -52,7 +52,7 @@ The selected OpenSearch archive is 252,915,665 bytes. Its SHA-512 is efd2a88766e
 
 Publisher archive: https://artifacts.opensearch.org/releases/core/opensearch/2.15.0/opensearch-min-2.15.0-linux-x64.tar.gz
 
-An existing cached archive can be selected with --search-archive. It is hashed before extraction. An existing yente executable can be selected with --yente-bin. The receiver checks all five installed distribution versions and compares every installed yente Python source file against the original published wheel. This distinguishes the selected release from later main-branch code that retains the same package version.
+An existing cached archive can be selected with --search-archive. It is hashed before extraction. Select an existing Yente Python console script with --yente-bin and its actual interpreter with --yente-python. If the interpreter option is omitted, the script’s sibling `python` must exist. For a system installation whose interpreter is named `python3`, supply that actual path explicitly. The receiver preserves a virtual environment’s Python invocation path, records the resolved binary and `pyvenv.cfg` identity, and launches the original console script through that same selected interpreter. Preparation rejects a missing or changed interpreter before native execution; the native receiver checks all five installed distribution versions and compares every installed Yente Python source file against the original published wheel before provisioning or starting OpenSearch. This distinguishes the selected release from later main-branch code that retains the same package version.
 
 The source index version from yente differs from a dataset's indexed edition. The native catalog must return un_sc_sanctions in current, with version and index_version both equal to 20261012000104-kls and index_current true. The original /readyz endpoint must also return HTTP 200.
 
@@ -95,7 +95,8 @@ Optional selections:
 --python ACTUAL_PYTHON_EXECUTABLE
 --search-user EXISTING_NONROOT_ACCOUNT
 --search-archive ACTUAL_PINNED_OPENSEARCH_TAR
---yente-bin ACTUAL_ORIGINAL_YENTE_EXECUTABLE
+--yente-bin ACTUAL_ORIGINAL_YENTE_CONSOLE_SCRIPT
+--yente-python ACTUAL_PYTHON_FOR_THAT_YENTE_ENVIRONMENT
 --runtime-consumers-root EXISTING_SHARED_RUNTIME_REGISTRY
 --records-root SAME_ORIGINAL_RECORDS_DIRECTORY
 --allow-private-development-packages

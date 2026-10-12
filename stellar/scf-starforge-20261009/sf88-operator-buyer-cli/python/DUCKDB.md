@@ -426,3 +426,8 @@ The warehouse uses one native thread and a 128 MB memory limit by default. Pytho
 callers can select `memory_limit` and `threads` when opening a workspace.
 Use the same retained workspace between calls. Revisions and immutable editions
 allow a later session to continue the analysis from its actual saved state.
+
+
+## GIS layers and spatial exchange
+
+The same customer workspace now includes reviewed original geometry, retained GIS layers, spatial SQL and complete GeoPackage/GeoParquet receiving. See [GIS.md](GIS.md) for installation, layer review, map/selection/analysis, exact field representations, portable receiving and the original ArcGIS native continuation.

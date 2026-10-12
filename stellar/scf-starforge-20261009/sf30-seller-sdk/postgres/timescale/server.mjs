@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { startPostgresPublisherServer } from '../publisher/server.mjs';
 import { identity, fault } from '../publisher/files.mjs';
 import { exportTimescaleWorkspace } from './package.mjs';
+import { remediationHttp } from './remediation-http.mjs';
 async function jsonBody(req){
   if(!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type']??''))throw fault('JSON_REQUIRED','Send application/json.',415);
   const chunks=[];let size=0;
@@ -12,7 +13,9 @@ async function jsonBody(req){
 async function startTimescaleWorkspaceServer({workspace,port=8446,ownsWorkspace=true,schedule=null}={}){
   if(!workspace||typeof workspace.startCapture!=='function')throw new TypeError('Open the original Timescale workspace first.');
   const assets=await Promise.all([['/timescale/app.mjs','app.mjs','text/javascript; charset=utf-8'],
-    ['/timescale/style.css','style.css','text/css; charset=utf-8']].map(async([path,file,type])=>
+    ['/timescale/style.css','style.css','text/css; charset=utf-8'],
+    ['/timescale/remediation.mjs','remediation.mjs','text/javascript; charset=utf-8'],
+    ['/timescale/remediation.css','remediation.css','text/css; charset=utf-8']].map(async([path,file,type])=>
       ({path,type,bytes:await readFile(new URL('./public/'+file,import.meta.url))})));
   const mutations={
     '/api/timescale/capture':value=>workspace.startCapture(value),
@@ -26,12 +29,14 @@ async function startTimescaleWorkspaceServer({workspace,port=8446,ownsWorkspace=
     '/api/timescale/extract':value=>workspace.startPublicationExtraction(value),
     '/api/timescale/export':value=>exportTimescaleWorkspace(workspace,value)
   };
+  const handleRemediation=remediationHttp({workspace,jsonBody});
   let closing;
   const listener=await startPostgresPublisherServer({publisher:workspace.publisher,port,ownsPublisher:ownsWorkspace,schedule,extension:{
-    assets,head:'<link rel="stylesheet" href="/timescale/style.css"><script type="module" src="/timescale/app.mjs"></script>',
+    assets,head:'<link rel="stylesheet" href="/timescale/style.css"><link rel="stylesheet" href="/timescale/remediation.css"><script type="module" src="/timescale/app.mjs"></script><script type="module" src="/timescale/remediation.mjs"></script>',
     async handle({req,res,url,send}){
       if(!url.pathname.startsWith('/api/timescale/'))return false;
       const path=url.pathname,query=url.searchParams;
+      if(await handleRemediation({req,res,url,send}))return true;
       if(req.method==='GET'){
         if(path==='/api/timescale/status')send(200,workspace.status({limit:query.has('limit')?Number(query.get('limit')):25,offset:query.has('offset')?Number(query.get('offset')):0}));
         else if(path==='/api/timescale/edition')send(200,await workspace.edition(query.get('id')));

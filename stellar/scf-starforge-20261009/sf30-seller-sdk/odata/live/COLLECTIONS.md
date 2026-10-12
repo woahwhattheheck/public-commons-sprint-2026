@@ -349,3 +349,101 @@ selected Analysis/Workspaces operation with this one complete source. Its actual
 830-row result, original selected keys and amounts come from those retained
 inputs. A native operating result should record the source and receiving
 identities returned by that actual operation.
+
+## Collections in the original live service
+
+The source-owned `collection-store.mjs` joins the complete receiver to the original live service. It keeps collections under the selected service:
+
+```text
+live/products/<service-id>/collections/<collection-id>/
+```
+
+A collection uses one immutable reviewed profile, its original compiled package, operation and source binding. The operator selects the saved response identifiers in their actual continuation order. An optional buyer identifier selects that response's original reviewed request file. When a buyer identifier is omitted, the first request is the package's saved request and every later request is the previous receiving's saved next request. The core receiver verifies every request and response again, including the complete cursor chain and final page.
+
+The original live-operations state sequence owns collection creation and receiving. Pass that existing function when opening a collection controller:
+
+```javascript
+import { openServiceCollections } from './live/collection-store.mjs';
+const collections = await openServiceCollections({
+  directory: join(products, profile.id),
+  profile,
+  sequence, // The existing live-operations sequence and state.lock.
+});
+const result = await collections.collect({
+  id: 'orders-complete',
+  title: 'Selected complete Orders collection',
+  pages: originalReceivingIds.map(receivedId => ({receivedId})),
+});
+```
+
+The profile is read back from the selected service directory, and its retained package is recompiled through the original reader. Every response identifier must equal the SHA-256 of its exact saved response. Its original receiving record must name the same operation and metadata. Selected buyer handoffs bind their exact request digest and source metadata. The resulting collection must have the original service's source binding, metadata, operation, service root and merchant origin.
+
+### Original operator hooks
+
+The existing owner can keep the current `profile`, `preparedProfile`, `sequence`, `detail`, `file` and workspace transfer flows:
+
+| Original surface | Source-owned call | Customer result |
+|---|---|---|
+| Live service detail | `collections.list()` | Completed collections with row/page counts, query, keys, completion, supplier counts and acquisition window; unfinished collections remain visible. |
+| Receive complete selection | `collections.collect({id,pages,title,fields,limits})` | Same selected request chain, immutable rows and full Analysis source. Repeating the same input resumes its selected collection. |
+| Inspect selection | `collections.inspect(id)` | Complete collection metadata and the exact retained file inventory. |
+| Read rows | `collections.rows(id,{offset,limit})` | Original row order, native scalars and explicit collection identity. |
+| Download | `collections.file(id,name)` | Only a declared file, re-read under the original collection lease and verified against its bytes and digest. |
+| Receive Analysis source | `collections.restore({id,sourceManifest,expectedSha256})` | The same complete collection returns from the customer-held Analysis source document. |
+| Whole workspace backup | `serviceCollectionFiles({directory,profile})` | The complete core and Analysis subtree as original transfer file records. |
+| Restore review | `validateServiceCollectionTransfer({profile,files})` | Complete paths and original digest closure, before the native workspace writes files. |
+| Restore completion | `verifyServiceCollections({directory,profile})` | Every collection reopens through the full original engine before the workspace publishes its received state. |
+
+A service collection controller takes the service's immutable profile. Its `collect` and `restore` methods enter the provided original sequence themselves. Do not wrap them in a second call to the same sequence.
+
+For source-document receiving, `expectedSha256` is the actual reviewed digest of the selected `analysis/source.json`. The controller first reads the document's original collection manifest and checks its service identity. The complete core restore then verifies the source packets, original transformation, typed projection and every retained request/response before returning the identical collection.
+
+A collection with unfinished manifest or Analysis publication is shown as `INCOMPLETE`. Repeating its original receive input completes that same directory. The whole-service backup requires the selected collections to be complete so an interrupted operation cannot quietly disappear from a customer workspace transfer.
+
+### Transfer composition
+
+The following hooks extend the existing `stellar-forge.odata-transfer.v1` source format. Existing captures, source editions, semantic exports, original buyer requests and received responses continue to use their original transfer records.
+
+Inside `workspace.backup`, while its existing `live/state.lock` is held, append each service's complete collection files:
+
+```javascript
+const retained = await serviceCollectionFiles({
+  directory: join(root, 'live', 'products', record.id),
+  profile: record,
+});
+files.push(...retained.files);
+```
+
+The returned paths already begin with `live/products/<service>/collections/<collection>/`. They include `collection.json`, `selection.json`, all core-manifest files, `analysis/source.json`, the exact selected analytical data, the original collection manifest and transformation, and every compressed original-page packet. Runtime locks and temporary aliases are outside the transfer selection.
+
+Before writing a receiving bundle, the existing restore can recognize only the declared collection subtree:
+
+```javascript
+const selected = parseCollectionTransferPath(file.path);
+const collectionPath = selected && (bundle.state.liveProducts || []).some(
+  service => service.id === selected.serviceId,
+);
+if (!originalPermitted.test(file.path) && !collectionPath) {
+  throw fault('ODATA_TRANSFER_PATH', 'Unsupported transfer file.');
+}
+for (const profile of bundle.state.liveProducts || []) {
+  validateServiceCollectionTransfer({profile, files: bundle.files});
+}
+```
+
+`validateServiceCollectionTransfer` checks canonical base64, original bytes and hashes, unique members, the selected service/operation, the complete original collection manifest, the selected request digest and the complete Analysis document. It rejects orphan files, missing originals and conflicting content-addressed identities. This helper returns the exact admitted paths; the original workspace restore owns publication.
+
+After the original `writeNew` loop has retained all validated files, and before its existing `store.mutate` publishes the received workspace state, call:
+
+```javascript
+for (const profile of bundle.state.liveProducts || []) {
+  await verifyServiceCollections({
+    directory: join(root, 'live', 'products', profile.id),
+    profile,
+  });
+}
+```
+
+The final call invokes `openCollection` under each original collection lease. It recompiles the original source/query, checks the complete request chain, cumulative rows, declared-key uniqueness, exact source values and selected analytical output, and verifies the original document closure again at the receiving location. The original OData restore journal still owns same-input replay and final state publication.
+
+The native workspace HTTP request reader currently accepts 64 MiB. A larger complete transfer can use the original filesystem `workspace.restore` caller or the independently retained Analysis Workspace Transfer. Keep the full source selection together when choosing the receiving route.

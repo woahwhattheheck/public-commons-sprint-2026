@@ -1,8 +1,10 @@
 // MIT. Industrial local cost operations; all accounting and allocation math stays on the server.
+import { createReceivedCostView } from './receiving-browser.mjs';
+const receivedView=createReceivedCostView(),receivedDraftShelf=[];
 const $=id=>document.getElementById(id);
 const tabs=[['source','Saved pricing source'],['originals','Original files'],['mapping','Map charge columns'],
   ['charges','Charges and allocations'],['coverage','Cost scope and coverage'],['review','Review and save'],
-  ['history','Saved editions'],['pricing','Apply costs to pricing'],['exports','Exports and recovery']];
+  ['history','Saved editions'],['pricing','Apply costs to pricing'],['receive','Receive cost reviews'],['exports','Exports and recovery']];
 let state,tab='source',busy=false,draft=null,draftDirty=false,pricing=null,selectedEdition=null,review=null,proposal=null;
 let allSources=[],allPricing=[],allEditions=[],exportsList=[],selectedSource=null,inspection=null,selectedLine=null,chargeFilter='';
 let pendingUpload=null,pendingSave=null,pendingApply=null,pendingExport=null,editRevision=null,comparison=null;
@@ -97,7 +99,7 @@ function render(){
   updateDraftStatus();$('content').replaceChildren();
   if(!state)return;
   ({source:renderSource,originals:renderOriginals,mapping:renderMapping,charges:renderCharges,coverage:renderCoverage,
-    review:renderReview,history:renderHistory,pricing:renderPricing,exports:renderExports}[tab])();
+    review:renderReview,history:renderHistory,pricing:renderPricing,receive:renderReceived,exports:renderExports}[tab])();
 }
 function renderSource(){
   let selected=draft?.pricingVersion??allPricing[0]?.version??'';
@@ -328,19 +330,23 @@ function renderReview(){
   $('content').append(section('Review and save',field('Cost edition name',draft.label,v=>{draft.label=v;changed();},{max:160}),
     field('What was entered or corrected in this edition',draft.reason,v=>{draft.reason=v;changed();},{type:'textarea'}),
     el('div',{class:'actions'},button('Calculate cost review',async()=>{
-      review=await cost('preview',{book:draft});render();status('Exact allocation, unassigned amounts, source periods and cost proposal readiness calculated.');
+      const sent=JSON.stringify(draft),result=await cost('preview',{book:JSON.parse(sent)});
+      if(JSON.stringify(draft)!==sent){review=null;render();throw new Error('The draft changed during calculation. Calculate the current draft before saving its review.');}
+      review=result;render();status('Exact allocation, unassigned amounts, source periods and cost proposal readiness calculated.');
     }),button(pendingSave?'Recover previous save':'Save immutable edition',async()=>{
-      const now=JSON.stringify(draft);
       pendingSave??={requestId:crypto.randomUUID(),expectedRevision:editRevision,book:structuredClone(draft)};
       const sent=pendingSave;let result;
       try{result=await cost('save',sent);}catch(error){
         if(error.status===409){pendingSave=null;state=await api('/api/economics/state');editRevision=state.revision;
           status('A newer edition is saved. Your draft remains; review it against the latest state before retrying.',true);}throw error;
       }
-      pendingSave=null;editRevision=result.revision;selectedEdition=await cost('edition',{edition:result.edition});
-      if(now===JSON.stringify(sent.book)){draft=structuredClone(selectedEdition.input);draftDirty=false;}
-      review={report:selectedEdition.report,context:selectedEdition.context};await refresh();
-      status(result.replayed?'The original save is recovered.':'Cost edition saved. Its original sources and allocations are retained.');
+      const saved=await cost('edition',{edition:result.edition});await refresh();
+      const unchanged=JSON.stringify(draft)===JSON.stringify(sent.book);
+      pendingSave=null;editRevision=result.revision;selectedEdition=saved;
+      if(unchanged){draft=structuredClone(saved.input);draftDirty=false;review={report:saved.report,context:saved.context};}
+      else {draftDirty=true;review=null;}
+      render();status(unchanged?(result.replayed?'The original save is recovered.':'Cost edition saved. Its original sources and allocations are retained.'):
+        'The requested edition is saved. Your newer edits remain in the local draft; calculate and save them as the next edition.');
     },{primary:true})),
     facts([['Charge lines',draft.lines.length],['Mapped originals',draft.imports.length],['Context sources',draft.contextSourceIds.length]]),
     draft.imports.some(x=>x.excludedRows?.length)?inspect('Explicit original row exclusions',draft.imports.filter(x=>x.excludedRows?.length).map(x=>({
@@ -446,8 +452,30 @@ function renderPricing(){
       link('Review exact payment-price decisions',lastPricingSave.next.paymentChanges)),
     inspect('Retained cost-to-pricing link',lastPricingSave.link)));
 }
+function renderReceived(){
+  receivedView.render({host:$('content'),state,cost,refresh,status,el,note,muted,button,link,section,field,select,
+    table,facts,inspect,renderReport,redraw:render,pricingReviews:allPricing,loadMorePricing:()=>loadMore('PRICING'),
+    savedDrafts:receivedDraftShelf.map(row=>({id:row.id,label:row.draft.label||'Unnamed cost draft',pricingVersion:row.draft.pricingVersion})),
+    async restoreDraft(id){
+      const at=receivedDraftShelf.findIndex(row=>row.id===id);if(at<0)throw new Error('This saved local editor state is no longer open.');
+      const selected=receivedDraftShelf.splice(at,1)[0];
+      if(draft)receivedDraftShelf.push({id:crypto.randomUUID(),draft,pricing,selectedEdition,review,proposal,editRevision,draftDirty,pendingSave,pendingApply,selectedLine});
+      ({draft,pricing,selectedEdition,review,proposal,editRevision,draftDirty,pendingSave,pendingApply,selectedLine}=selected);
+      goto('review');status('Original local editor state restored, including its retained pending save.');
+    },
+    async onAdopt(book){
+      const source=await cost('pricing',{version:book.pricingVersion});await refresh();
+      if(draft)receivedDraftShelf.push({id:crypto.randomUUID(),draft,pricing,selectedEdition,review,proposal,editRevision,draftDirty,pendingSave,pendingApply,selectedLine});
+      draft=structuredClone(book);pricing=source;selectedEdition=null;review=null;proposal=null;pendingSave=null;pendingApply=null;
+      selectedLine=draft.lines[0]?.id??null;draftDirty=true;editRevision=state.revision;goto('coverage');
+    }});
+}
+
 function renderExports(){
   let chosen=selectedEdition?.edition??allEditions[0]?.edition??'';
+  $('content').append(section('Complete package capacity',
+    muted('Each selected edition export or complete workspace backup is limited to 512 MiB in total. That total includes original source files, received archive bytes, local copies and receiving lineage.'),
+    muted('Received originals remain individually downloadable from Receive cost reviews. An oversized export leaves the complete workspace and originals available; preserve that private workspace directory for a larger host transfer.')));
   $('content').append(section('Export a saved cost edition',
     muted('Contains its original files, exact mapped input, full allocations and unassigned amounts, source bindings, original pricing report and saved cost-to-pricing links.'),
     select('Saved cost edition',chosen,editionOptions(),v=>chosen=v),
@@ -479,6 +507,6 @@ function renderExports(){
 }
 $('refresh').addEventListener('click',()=>run(async()=>{await refresh();status('Saved source and history refreshed. Your current draft remains in this tab.');}));
 window.addEventListener('beforeunload',event=>{
-  if(draftDirty||pendingSave||pendingApply||pendingUpload||pendingExport){event.preventDefault();event.returnValue='';}
+  if(draftDirty||pendingSave||pendingApply||pendingUpload||pendingExport||receivedView.hasPending()||receivedDraftShelf.some(row=>row.draftDirty||row.pendingSave||row.pendingApply)){event.preventDefault();event.returnValue='';}
 });
 run(async()=>{await refresh();status('Supplier cost workspace ready. Choose an original saved pricing review.');});

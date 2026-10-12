@@ -778,3 +778,16 @@ documents the complete workflow and its original IDs, revisions and file hashes.
 ## STAC imagery and Cirrus processing workspaces
 
 [STAC.md](STAC.md) connects the existing authenticated imagery and processing host to the typed Node client, `starforge stac-workspace` customer CLI and 29 `merchant_stac_*` tools. The complete flow covers saved source/query review, original capture and continuation, full item and comparison views, analyst decisions, original asset bytes, reports and portable receiving/reopen. Host configuration supplies private connection and input aliases; browser and agents keep the same original workspace, revision and operation IDs. `init-stac-workspaces --dir NEW_DIRECTORY --connection STAC_WORKSPACE_CONNECTION.json` adds that original host to this merchant without starting another imagery server.
+
+
+## Managed settlement delivery
+
+The owned merchant fleet exposes the original SF98 delivery workspace for each declared release store. Native SF82 children retain an original source outbox across releases; independently configured accounting and fulfillment destinations keep their own cursor, HMAC environment reference, retry state and original delivery journal.
+
+Use merchant_fleet_delivery_status with tenant and slot to inspect the actual producer, source fingerprint, destination revisions and worker ownership. merchant_fleet_delivery_control forwards the original enroll, pause, sync, drain, start, stop and requeue operations. Input is the original action-specific object. merchant_fleet_delivery_events returns native receipt/outcome pages and exact revisions for maintenance.
+
+For receiving, merchant_fleet_delivery_transfer captures a new immutable ID using expectedSourceFingerprint from status. Inspect named captures with merchant_fleet_delivery_transfers and merchant_fleet_delivery_manifest. The manifest exposes the original complete exchange and its receiving arguments. merchant_fleet_delivery_file reads its exact member bytes using expectedFingerprint, name and expectedSha256, with the existing readId/offset continuation. merchant_fleet_delivery_file_release closes an owned temporary read.
+
+The managed browser’s Settlement delivery section mounts the full original destinations application on the same private origin and streams complete receiving packages. Previously initialized stopped slots remain usable; retained transfer inspection and downloads are independent of live-source availability. Closing the MCP owner cancels original delivery and transfer work before waiting for active serialized calls.
+
+See [Managed settlement delivery](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/DELIVERY.md) for the complete native lifecycle, CLI examples, destination settings, archive layout and original receiving commands.

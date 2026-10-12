@@ -1,14 +1,28 @@
 {
   "schema": "stellar-forge.semantic-customer-continuation-source.v1",
-  "operation": "SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC-REMAINING-1",
+  "operation": "SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC-REMAINING-2",
   "predecessor": {
-    "operation": "SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC",
-    "record": "ec4c1aaf128c412ebaaf39e64ed8c9afbc1bf5eeee0ae53bc6319530742bc893",
-    "result": "/workspace/scratch/d1ccf784531e/scf-native-semantic-receiving/operation/results.json",
-    "resultSha256": "ac457ee2bc8bb422ce0786eabc4295d8d0cda248d268ea336c7492d084b83435",
+    "operation": "SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC-REMAINING-1",
+    "record": "9c13d65beec5623018bae1792352f1acc004fb5cb375f1210b7eebcc682caf2a",
+    "result": "/workspace/scratch/d1ccf784531e/scf-native-semantic-receiving/operation-remaining1/results.json",
+    "resultBytes": 8071,
+    "resultSha256": "31f0936d55b9a61540c8ef07e2a403fd39ead0b48d0943d6c81efa78ea5ab03d",
     "observedStatus": "INTERRUPTED",
-    "observedStages": [],
-    "outputSha256": "f5c07a69b44ee49d480070c32554872b8d6b541c63fbb5e3c7ae9aea17d7a8d4"
+    "observedStages": [
+      "original-finalized-room-received",
+      "original-analysis-imported",
+      "complete-query-delivered",
+      "customer-report-published"
+    ],
+    "original": {
+      "operation": "SCF-NATIVE-SEMANTIC-RECEIVING-20261012-D1CC",
+      "record": "ec4c1aaf128c412ebaaf39e64ed8c9afbc1bf5eeee0ae53bc6319530742bc893",
+      "result": "/workspace/scratch/d1ccf784531e/scf-native-semantic-receiving/operation/results.json",
+      "resultSha256": "ac457ee2bc8bb422ce0786eabc4295d8d0cda248d268ea336c7492d084b83435",
+      "observedStatus": "INTERRUPTED",
+      "observedStages": [],
+      "outputSha256": "f5c07a69b44ee49d480070c32554872b8d6b541c63fbb5e3c7ae9aea17d7a8d4"
+    }
   },
   "source": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
@@ -34,6 +48,15 @@
       "selectedCommit": "82b6d91a6aac4a555809ed464652c04b6f83d38c",
       "sourceMaterialized": false,
       "reason": "Historical specification lacks the Geocodio browser alias declaration supplied by the completed db3d source."
+    },
+    "completedClosure": {
+      "path": "/workspace/scratch/d1ccf784531e/scf-native-semantic-receiving/source-closure-db3d.json",
+      "sha256": "717a81061275b594f5ff5993538dd85b3ccb0f1d2fe82926ce981c07de532669",
+      "files": 3488,
+      "upstreamSelectedFiles": 3481,
+      "components": 64,
+      "contributions": 5,
+      "staticLinkedModules": 86
     }
   },
   "input": {
