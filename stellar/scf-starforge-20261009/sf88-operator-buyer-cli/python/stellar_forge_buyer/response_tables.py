@@ -577,7 +577,8 @@ class AnalysisResponses:
 
     def register(self, name, input_kind, *, config=None, result=None, stream=None, manifest=None,
                  session=None, destination=None, format="json", expected_revision=0,
-                 native_workspace=None, native_kind=None, native_id=None, native_inbox=None, expected_native=None):
+                 native_workspace=None, native_kind=None, native_id=None, native_inbox=None, expected_native=None,
+                 document_files=None):
         if not isinstance(name, str) or not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}", name):
             raise StateError("ANALYSIS_NAME_INVALID")
         if type(expected_revision) is not int or expected_revision < 0:
@@ -586,7 +587,7 @@ class AnalysisResponses:
             from .response_documents import retain_document
             if not manifest:
                 raise StateError("ANALYSIS_DOCUMENT_MANIFEST_REQUIRED")
-            retained = retain_document(manifest, self.database.directory)
+            retained = retain_document(manifest, self.database.directory, source_files=document_files)
             paths = {"document_id": retained["document_id"]}
         elif input_kind == "native":
             from .analysis_native_sources import native_source_paths
