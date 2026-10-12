@@ -46,7 +46,7 @@ A definite failure before the helper process starts is retained as `helper-not-s
 - `{"action":"record-finalized","archive_sha256":"...","result":{...}}` to adopt the actual original finalized save item.
 - `{"action":"retry-custody"}` to finish a failed local archive step while the same reservation is live.
 
-If the supervisor ends without a saved receipt, the outer process retains a metadata-only recovery state. It does not move archive or upload work outside the released allocation.
+If the supervisor ends without a saved receipt, the outer process retains a metadata-only recovery state. In that original private namespace, `{"action":"resume-native"}` can continue an undispatched queue. If an original launch failure is present, select `{"action":"resume-native","recover_failure":"EXACT_RESULT_JSON_SHA256"}`. The courier freshly checks the original request and the absence of a live owner, process, command output, completion allocation or stop request. It passes the exact failure digest to the maintained `resume_capacity` contract, which validates and retains that failure under its original record lock. The same source, record, operation and finalizer are reused. A started command remains attached to its original outcome. Archive and upload work stays inside the resumed supervisor’s reservation.
 
 ## Restore the retained continuation
 
