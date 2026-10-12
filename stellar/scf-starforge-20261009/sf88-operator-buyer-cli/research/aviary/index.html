@@ -45,7 +45,7 @@ details{border-top:1px solid #ddd;padding-top:12px;margin-top:18px}summary{curso
 <h2>Saved source and migration</h2><p class="muted">Keep original source records, field choices and file relationships together from preparation through receiving.</p>
 <div id="metrics" class="metrics"></div>
 <div class="grid two"><div><h3>Original source</h3><div id="sourceSummary"></div></div><div><h3>Current mapping</h3><div id="mappingSummary"></div></div></div>
-<div class="toolbar"><button data-go="mapping" class="primary">Review mappings</button><button data-go="preview">Review records</button><a class="button" href="/review" target="_blank" rel="noopener">Open printable review</a></div>
+<div class="toolbar"><button data-go="mapping" class="primary">Review mappings</button><button data-go="preview">Review records</button><a class="button" href="/review" target="_blank" rel="noopener">Open saved printable review</a></div>
 <h3>Saved work</h3><div id="jobList"></div>
 <h3>Recent activity</h3><div id="events"></div>
 </section>
@@ -62,17 +62,19 @@ details{border-top:1px solid #ddd;padding-top:12px;margin-top:18px}summary{curso
 </section>
 <section id="preview" class="tab panel" hidden>
 <h2>Record and rights review</h2>
-<div class="toolbar"><label for="previewKind">Table</label><select id="previewKind"><option value="resources">Resources</option><option value="media">Media</option><option value="transcripts">Transcripts</option><option value="indexes">Indexes</option><option value="supplemental">Supplemental files</option></select><button id="refreshPreview">Refresh saved review</button><span id="previewCount" class="muted"></span></div>
-<div id="issues"></div><div class="table-wrap"><table><thead><tr><th>Include</th><th>Source key</th><th>Title / file</th><th>Parent</th><th>Rights / description</th><th>Source row</th></tr></thead><tbody id="previewRows"></tbody></table></div>
+<div class="toolbar"><label for="previewKind">Table</label><select id="previewKind"><option value="resources">Resources</option><option value="media">Media</option><option value="transcripts">Transcripts</option><option value="indexes">Indexes</option><option value="supplemental">Supplemental files</option></select><button id="refreshPreview">Refresh current review</button><span id="previewCount" class="muted"></span></div><p id="previewStatus" class="source-note"></p>
+<div id="issues"></div><div class="table-wrap"><table><thead><tr><th>Include</th><th>Source key</th><th>Title / file</th><th>Parent</th><th>Rights / description</th><th>Source row</th><th>Complete record</th></tr></thead><tbody id="previewRows"></tbody></table></div>
 <div class="toolbar"><button id="previousPage">Previous</button><button id="nextPage">Next</button><button id="saveReview" class="primary">Save review choices</button></div>
 </section>
 <section id="transfer" class="tab panel" hidden>
-<h2>Original migration</h2><p class="muted">Choose the receiving Aviary organization and collection. Continuing a saved operation uses its original provider IDs and completed file parts.</p>
+<h2>Original migration</h2><p class="muted">Choose a saved operation to continue its original provider IDs and completed file parts, or prepare a new target in the separate draft.</p>
+<div class="grid two"><div><label for="savedOperation">Saved operation</label><select id="savedOperation"><option value="">New migration plan</option></select></div><div class="toolbar"><button id="newOperation">Open new plan draft</button></div></div><p id="planState" class="source-note"></p>
 <div class="grid"><div><label for="baseUrl">Aviary organization URL</label><input id="baseUrl" type="url" placeholder="https://yourorganization.aviaryplatform.com"></div>
 <div><label for="collectionId">Collection ID</label><input id="collectionId" inputmode="numeric" placeholder="Existing collection ID"></div>
 <div><label for="tokenEnv">API token environment variable</label><input id="tokenEnv" value="AVIARY_TOKEN"></div></div>
 <div class="grid two"><div><label for="operationId">Saved operation ID</label><input id="operationId"></div><div><label for="organizationId">Organization header, if required</label><input id="organizationId"></div></div>
 <div class="toolbar"><button id="planMigration" class="primary">Save migration plan</button><button id="runMigration">Run / continue original migration</button><button id="refreshTransfer">Refresh progress</button></div>
+<details id="savedConfiguration" hidden><summary>Complete saved target configuration</summary><pre id="selectedConfiguration"></pre></details>
 <div id="runSummary"></div><div class="table-wrap"><table><thead><tr><th>Operation item</th><th>Progress</th><th>Provider ID</th><th>Last update</th><th>Details</th></tr></thead><tbody id="actionRows"></tbody></table></div>
 <details><summary>Reconcile a request whose response was interrupted</summary><p class="muted">Use the original record found in Aviary. The workbench reads it and checks its parent and descriptive fields against the original request before attaching the ID.</p>
 <div class="grid"><div><label for="reconcileAction">Original action</label><select id="reconcileAction"></select></div><div><label for="providerId">Original Aviary record ID</label><input id="providerId"></div><div><label for="reconcileNote">How the original record was located</label><input id="reconcileNote"></div></div><div class="toolbar"><button id="reconcile">Reconcile original record</button></div></details>
@@ -80,7 +82,8 @@ details{border-top:1px solid #ddd;padding-top:12px;margin-top:18px}summary{curso
 </section>
 <section id="delivery" class="tab panel" hidden>
 <h2>Packages and receiving</h2><p class="muted">The native package contains Aviary’s five CSVs and selected media assets. The complete workspace also includes original source, mapping revisions, operation history, exported transcripts and the application.</p>
-<div class="toolbar"><button id="buildPackage" class="primary">Build native Aviary package</button><button id="exportWorkspace">Export complete workspace</button><button id="exportTranscripts">Download transcript formats</button><a class="button" href="/review" target="_blank" rel="noopener">Open review</a></div>
+<p id="deliveryRevision" class="source-note"></p>
+<div class="toolbar"><button id="buildPackage" class="primary">Build native Aviary package</button><button id="exportWorkspace">Export complete workspace</button><button id="exportTranscripts">Download transcript formats</button><a class="button" href="/review" target="_blank" rel="noopener">Open saved review</a></div>
 <div id="artifactList"></div>
 <h3>Receive a complete workspace</h3><pre>python3 -B aviary.py receive --source Aviary_Complete_Workspace.zip --output received
 python3 -B received/application/aviary.py serve --workspace received/workspace</pre>
