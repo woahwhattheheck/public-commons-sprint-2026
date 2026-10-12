@@ -10,12 +10,14 @@ const hash={type:'string',pattern:'^[a-f0-9]{64}$'};
 const uuid={type:'string',pattern:'^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$'};
 const id=text(240),note=text(20000,0);
 const warehouseRequest={type:'string',pattern:'^[a-f0-9]{32}$'};
-const warehouseMapping={type:'object',additionalProperties:true,properties:{
-  keys:array(text(2000),128),
-  columns:array(object({source:text(2000),column:text(63),
+const warehouseSourceField={type:'string',minLength:1};
+const warehouseMapping=object({
+  schema:choice(['stellar-forge.postgres-dataset-mapping.v1']),
+  keys:array(warehouseSourceField,32),
+  columns:{...array(object({source:warehouseSourceField,column:text(63),
     type:choice(['text','boolean','bigint','numeric','double precision','date','timestamp with time zone','json']),
-    nullable:{type:'boolean'}},['source','column','type','nullable']),128)
-},required:['keys','columns']};
+    nullable:{type:'boolean'}},['source','column','type','nullable']),1024),minItems:1}
+},['schema','keys','columns']);
 const indicator=object({name:text(240),tableId:id,field:text(2000),
   operation:choice(['rows','nonempty','sum','mean','minimum','maximum','distinct','frequency']),
   equals:{type:['string','number','boolean','null']}},['tableId','operation']);
