@@ -45,8 +45,15 @@ export async function captureChildProcessIdentity(pid) {
     const own = await sample(ownStat.procPid);
     const matches = candidate => candidate.namespace === ownNamespace &&
       candidate.namespacePids.at(-1) === pid && candidate.parentProcPid === own.procPid;
+    const childCandidate = async procPid => {
+      // A container PID may name an unrelated host process in this procfs.
+      // Establish parent ownership before following a namespace link.
+      const candidate = procStat(await readFile('/proc/' + procPid + '/stat', 'utf8'));
+      if (candidate.parentProcPid !== own.procPid) return null;
+      return sample(procPid);
+    };
     let child = null;
-    try { const direct = await sample(pid); if (matches(direct)) child = direct; }
+    try { const direct = await childCandidate(pid); if (direct && matches(direct)) child = direct; }
     catch (error) { if (!vanished(error)) throw error; }
     if (!child) {
       // A container may expose a parent namespace's procfs. Resolve the child's
@@ -55,9 +62,9 @@ export async function captureChildProcessIdentity(pid) {
       if (entries.length > 131072) return unavailable('PROCESS_TABLE_LIMIT');
       for (const name of entries) {
         let candidate;
-        try { candidate = await sample(Number(name)); }
+        try { candidate = await childCandidate(Number(name)); }
         catch (error) { if (vanished(error)) continue; throw error; }
-        if (!matches(candidate)) continue;
+        if (!candidate || !matches(candidate)) continue;
         if (child) return unavailable('CHILD_IDENTITY_AMBIGUOUS');
         child = candidate;
       }

@@ -1,10 +1,10 @@
 // MIT — Durable Node applications on the original SF88 CLI.
 import { inspectPreapprovalRecovery, preparePreapprovalRecovery, executePreapprovalRecovery,
-  recoverPreapprovalResult, readPreapprovalRecovery } from './preapproval-recovery.mjs';
+  recoverPreapprovalResult, readPreapprovalRecovery, readSelectedPreapprovalReview } from './preapproval-recovery.mjs';
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { NativeRuntime } from './runtime.mjs';
+import { NativeRuntime, unstartedAttempt } from './runtime.mjs';
 import { WorkspaceRecovery } from './workspace-recovery.mjs';
 import {AcquisitionWorkspace} from './acquisitions.mjs';
 import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs';
@@ -329,6 +329,8 @@ export class Operation {
   async review({ signal } = {}) {
     checkSignal(signal);
     const { meta } = await this._bound();
+    if (await exists(join(this.directory, 'preapproval-continuation.json')))
+      return readSelectedPreapprovalReview(this);
     const native = await this.buyer.runtime.checked(['--review', '--config', this.configPath],
       { stateDirectory: this.buyer.stateDirectory, mode: 'OFFLINE_REVIEW', signal });
     await this._bound();
@@ -339,6 +341,8 @@ export class Operation {
       bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null,
       ...(meta.nativeWorkspace === undefined ? {} : { nativeWorkspace: meta.nativeWorkspace }),
       native, reviewedAt: now() };
+    if (await exists(join(this.directory, 'preapproval-continuation.json')))
+      return readSelectedPreapprovalReview(this);
     await writeJson(join(this.directory, 'review.json'), review);
     checkSignal(signal);
     return copy(review);
@@ -396,12 +400,14 @@ export class Operation {
         },
       });
     } catch (error) {
-      await writeJson(attemptPath, { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
+      await writeJson(attemptPath, unstartedAttempt(attempt, error) ??
+        { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
       throw error;
     }
     if (run.output?.mode !== NATIVE_RESULT || run.output.intentId !== this.intentId) {
-      await writeJson(attemptPath, { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
-        exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
+      await writeJson(attemptPath, unstartedAttempt(attempt, run) ??
+        { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
+          exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
       throw new BuyerError(run.errorCode ?? 'NATIVE_RESULT_INVALID', { operation: this, exitCode: run.exitCode });
     }
     const record = { schema: SCHEMA, intentId: this.intentId, configSha256: meta.configSha256,
