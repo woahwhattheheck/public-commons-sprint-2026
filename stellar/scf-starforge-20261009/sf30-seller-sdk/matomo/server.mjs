@@ -48,6 +48,9 @@ export async function startMatomoWorkspace({port=0,...options}={}) {
         const id=url.searchParams.get('id'),offset=Number(url.searchParams.get('offset')??0),limit=Number(url.searchParams.get('limit')??25);
         if(url.pathname==='/api/identity'){send(200,{schema:'stellar-forge.matomo-listener.v1',instanceId,workspaceId:model.store.settings.id,sourceSha256:model.store.settings.sourceSha256,revision:model.store.revision(),pid:process.pid});return;}
         if(url.pathname==='/api/state'){send(200,model.state());return;}
+        if(url.pathname==='/api/original'){if(!model.origin)throw fault('MATOMO_PRODUCT_ORIGINAL_REQUIRED');send(200,await model.origin.page({table:url.searchParams.get('table')??'history',offset,limit}));return;}
+        if(url.pathname==='/api/original/files'){if(!model.origin)throw fault('MATOMO_PRODUCT_ORIGINAL_REQUIRED');send(200,model.origin.files({offset,limit}));return;}
+        if(url.pathname==='/api/original/merchant'){if(!model.origin)throw fault('MATOMO_PRODUCT_ORIGINAL_REQUIRED');send(200,await model.origin.merchant(id));return;}
         if(url.pathname==='/api/action'){const value=operationStatus(identifier(id));if(!value)throw fault('MATOMO_ACTION_NOT_FOUND',undefined,404);send(200,{action:value,revision:model.store.revision()});return;}
         if(url.pathname==='/api/catalog'){send(200,{catalog:model.captures.catalog(id)});return;}
         if(url.pathname==='/api/capture'){send(200,{capture:model.captures.capture(id),tables:model.captures.tables(id)});return;}
@@ -68,7 +71,7 @@ export async function startMatomoWorkspace({port=0,...options}={}) {
           const disposition='attachment; filename="'+value.name.replace(/[^A-Za-z0-9_.-]/g,'_')+'"';
           if(value.content){res.writeHead(200,{...headers,'Content-Type':value.mediaType,'Content-Disposition':disposition,'Content-Length':value.content.length});res.end(value.content);return;}
           if(value.stream){res.writeHead(200,{...headers,'Content-Type':value.mediaType,'Content-Disposition':disposition});await pipeline(Readable.from(value.stream),res);return;}
-          const pin=await hashPrivate(value.path,1073741824);
+          const pin=await hashPrivate(value.path,value.byteLimit??1073741824);
           if(value.sha256&&value.sha256!==pin.hash)throw fault('MATOMO_ARTIFACT_CHANGED');
           const handle=await open(value.path,constants.O_RDONLY|constants.O_NOFOLLOW);
           try{

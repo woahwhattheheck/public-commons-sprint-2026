@@ -90,6 +90,25 @@ def register(subparsers, common):
     deployment = target.add_mutually_exclusive_group(required=True)
     deployment.add_argument("--deployment", help="Original deployment ID from this operations case")
     deployment.add_argument("--deployment-file", help="JSON fields for a new original deployment")
+    target = command("implementation-source", "Read the complete original SF74 implementation and selected observation cutoff", case=True, output=True)
+    target.add_argument("--source", required=True, help="Original attached source ID")
+    target.add_argument("--as-of", required=True, help="Canonical UTC observation cutoff including milliseconds")
+    target.add_argument("--expected-version", type=int, required=True)
+    for verb in ("implementation-preview", "implementation-prepare"):
+        target = command(verb, "Review or freeze exact original implementation observations and explicit case links", case=True, output=True)
+        target.add_argument("--inputs", required=True, help="Explicit reviewed implementation inputs JSON")
+        if verb == "implementation-prepare":
+            mutation(target, version=True)
+            target.add_argument("--expected-preview-sha256", required=True)
+        else:
+            target.add_argument("--expected-version", type=int, required=True)
+    target = command("implementation-export", "Export a complete frozen implementation review and all original files", case=True)
+    target.add_argument("--review", required=True)
+    target.add_argument("--output", required=True)
+    target = command("implementation-original", "Download one exact embedded original from the retained implementation source", case=True)
+    target.add_argument("--source", required=True)
+    target.add_argument("--sha256", required=True)
+    target.add_argument("--output", required=True)
     target = command("cohort-seed", "Open the original proposed 7/14-day acceptance rule and explicit input", case=True, output=True)
     target.add_argument("--tranche", type=int, choices=(2, 3), required=True)
     target.add_argument("--expected-version", type=int, required=True)
@@ -264,6 +283,25 @@ def operate(workspace, args):
                     raise Problem("New deployment fields must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
             result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
                 "requestId": args.request_id, "note": args.note, "action": "support.receive", "data": data})
+    elif action == "implementation-source":
+        result = ops.seed_implementation(args.case, {"expectedVersion": args.expected_version,
+            "sourceId": args.source, "asOfAt": args.as_of})
+    elif action == "implementation-export":
+        return {"reviewId": args.review, "output": publish(args.output, ops.export_implementation(args.case, args.review))}
+    elif action == "implementation-original":
+        metadata, raw = ops.implementation_original(args.case, args.source, args.sha256)
+        return {"original": metadata, "output": publish(args.output, raw)}
+    elif action in ("implementation-preview", "implementation-prepare"):
+        try:
+            inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Implementation inputs must be a complete UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "implementation-preview":
+            result = ops.preview_implementation(args.case, {"expectedVersion": args.expected_version, "inputs": inputs})
+        else:
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "implementation.prepare",
+                "data": {"inputs": inputs, "expectedPreviewSha256": args.expected_preview_sha256}})
     elif action == "cohort-seed":
         result = ops.seed_cohort(args.case, {"expectedVersion": args.expected_version, "tranche": args.tranche})
     elif action == "cohort-export":

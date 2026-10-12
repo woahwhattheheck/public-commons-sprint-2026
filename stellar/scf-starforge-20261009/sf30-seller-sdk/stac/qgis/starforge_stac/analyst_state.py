@@ -34,7 +34,8 @@ ANALYST_MODULES = (
 )
 ANALYST_ROOT_FILES = (
     "analyst.mjs", "application.mjs", "application-provider.mjs",
-    "analyst-browser-assets.json", "ANALYST.md", "plugin-package.py", "cli.mjs", "bridge.mjs",
+    "analyst-browser-assets.json", "ANALYST.md", "ANALYST_NATIVE.md",
+    "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs",
 )
 
 

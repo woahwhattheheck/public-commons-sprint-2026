@@ -302,8 +302,8 @@ def dashboard(context, as_of=None):
     }
 
 
-def preview(context, data, cohort_reviews=None, cohort_history=None):
-    data = object_value(data, ("receiptId", "asOfDate", "summary", "cohortReviewIds"), "completion preview")
+def preview(context, data, cohort_reviews=None, cohort_history=None, implementation_reviews=None):
+    data = object_value(data, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds"), "completion preview")
     as_of = day(data.get("asOfDate") or today(), "Completion calendar date")
     original = receipt(context, data.get("receiptId"), active=True, as_of=as_of)
     clock = _clock(context, original, as_of)
@@ -346,6 +346,8 @@ def preview(context, data, cohort_reviews=None, cohort_history=None):
     }
     if context.get("completionPlans"):
         business["completionPlans"] = context["completionPlans"]
+    if "implementationReviewIds" in data and context.get("installationRefs"):
+        business["installationRefs"] = deepcopy(context["installationRefs"])
     source = {"programId": context["program"]["id"], "version": context["program"]["version"],
               "planContentSha256": context["plan"]["contentSha256"], "businessSha256": digest(business)}
     result = {"schema": PREVIEW_SCHEMA, "source": source, "rule": deepcopy(RULE), "asOfDate": as_of,
@@ -362,6 +364,17 @@ def preview(context, data, cohort_reviews=None, cohort_history=None):
         retained, extra_issues = completion_evidence(context, cohort_reviews, clock["tranche"], as_of, cohort_history)
         result["cohortEvidence"] = retained
         result["cohortHistory"] = deepcopy(cohort_history or [])
+        result["issues"].extend(extra_issues)
+        result["ready"] = not result["issues"]
+    if "implementationReviewIds" in data:
+        from operations_implementation import completion_evidence as implementation_evidence
+        ids = data["implementationReviewIds"]
+        if not isinstance(ids, list) or len(ids) > 20 or any(not isinstance(x, str) for x in ids) or len(ids) != len(set(ids)):
+            domain.fail("Choose distinct original implementation reviews.", "INVALID_COMPLETION")
+        if implementation_reviews is None or [x["id"] for x in implementation_reviews] != ids:
+            domain.fail("The selected original implementation reviews are unavailable.", "COMPLETION_IMPLEMENTATION", 409)
+        retained, extra_issues = implementation_evidence(context, implementation_reviews, clock["tranche"], as_of)
+        result["implementationEvidence"] = retained
         result["issues"].extend(extra_issues)
         result["ready"] = not result["issues"]
     result["previewSha256"] = digest(result)
@@ -448,10 +461,11 @@ def command(ops, context, name, data, actor, next_version):
                 "extensionId": extension["id"]}
 
     if name == "completion.prepare":
-        object_value(data, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "expectedPreviewSha256"), "completion preparation")
+        object_value(data, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds", "expectedPreviewSha256"), "completion preparation")
         reviews = ops._cohort_reviews(program_id, data["cohortReviewIds"]) if "cohortReviewIds" in data else None
-        candidate = preview(context, {key: data[key] for key in ("receiptId", "asOfDate", "summary", "cohortReviewIds") if key in data},
-                            reviews, ops._cohort_history(program_id) if reviews is not None else None)
+        evidence = ops._implementation_reviews(program_id, data["implementationReviewIds"]) if "implementationReviewIds" in data else None
+        candidate = preview(context, {key: data[key] for key in ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds") if key in data},
+                            reviews, ops._cohort_history(program_id) if reviews is not None else None, evidence)
         if candidate["previewSha256"] != domain.sha(data.get("expectedPreviewSha256"), "Reviewed completion preview", False):
             domain.fail("The completion source changed after preview. Reopen and preview the current case.", "COMPLETION_PREVIEW_CONFLICT", 409)
         if not candidate["ready"]:
@@ -539,7 +553,13 @@ def validate_preparation(review):
             domain.fail("The retained cohort evidence is invalid.", "INVALID_COMPLETION")
         cohorts = [x["review"] for x in candidate["cohortEvidence"]]
         values["cohortReviewIds"] = [x["id"] for x in cohorts]
-    recalculated = preview(context, values, cohorts, candidate.get("cohortHistory"))
+    implementation_reviews = None
+    if "implementationEvidence" in candidate:
+        if not isinstance(candidate["implementationEvidence"], list) or len(candidate["implementationEvidence"]) > 20:
+            domain.fail("The retained implementation evidence is invalid.", "INVALID_COMPLETION")
+        implementation_reviews = [x["review"] for x in candidate["implementationEvidence"]]
+        values["implementationReviewIds"] = [x["id"] for x in implementation_reviews]
+    recalculated = preview(context, values, cohorts, candidate.get("cohortHistory"), implementation_reviews)
     if recalculated != candidate or candidate["source"]["businessSha256"] != review["businessSha256"]:
         domain.fail("The original prepared completion differs from its complete frozen source.", "INVALID_COMPLETION")
 
@@ -564,6 +584,9 @@ def validate_import(context, plans, reviews, events, maximum_version):
         for evidence in review["completion"].get("cohortEvidence", []):
             if original_reviews.get(evidence["reviewId"]) != evidence["review"]:
                 domain.fail("The completion archive is missing its exact original cohort review.", "INVALID_COMPLETION")
+        for evidence in review["completion"].get("implementationEvidence", []):
+            if original_reviews.get(evidence["reviewId"]) != evidence["review"] or evidence["review"]["version"] >= review["version"]:
+                domain.fail("The completion archive is missing its exact earlier implementation review.", "INVALID_COMPLETION")
         if "cohortEvidence" in review["completion"]:
             from operations_cohort import history_from_events
             if history_from_events(events[:review["version"] - 1]) != review["completion"].get("cohortHistory"):
@@ -631,6 +654,22 @@ def review_files(review, read_source):
                           'with the complete source files. This preparation does not record an issuer decision.</p>'
                           '<table><thead><tr><th>Review</th><th>Window / cutoff</th><th>At preparation</th><th>Measurement SHA-256</th>'
                           '</tr></thead><tbody>' + ''.join(cohort_rows) + '</tbody></table>')
+    implementation_section = ""
+    if candidate.get("implementationEvidence"):
+        implementation_rows = []
+        for evidence in candidate["implementationEvidence"]:
+            original = evidence["review"]["implementation"]
+            values, counts = original["inputs"], original["summary"]
+            implementation_rows.append('<tr><td><a href="implementation/' + e(evidence["reviewId"]) + '/implementation.html">' +
+                e(values["name"]) + '</a><br>' + e(evidence["reviewId"]) + '</td><td>' + e(values["asOfAt"]) +
+                '</td><td>' + e(counts["technicalAcceptedTasks"]) + ' technical / ' + e(counts["customerAcceptedTasks"]) +
+                ' customer accepted tasks</td><td>' + e(evidence["previewSha256"]) + '</td></tr>')
+        implementation_section = ('<h2>Frozen implementation evidence</h2><p>These selected original SF74 observations retain '
+            'their task, file, measurement and distinct technical/customer receiving identities. The full source and every original '
+            'embedded file accompany their explicit Operations and Installation links. This evidence does not create a payment, '
+            'customer response or issuer decision.</p><table><thead><tr><th>Review</th><th>Observed and recorded through</th>'
+            '<th>Separate receiving</th><th>Frozen selection SHA-256</th></tr></thead><tbody>' +
+            ''.join(implementation_rows) + '</tbody></table>')
     page = ('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
             '<title>Tranche completion</title><style>body{font:16px system-ui;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#202020}'
             'table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;text-align:left;vertical-align:top;padding:.6rem}'
@@ -641,7 +680,7 @@ def review_files(review, read_source):
             '\nApplicable confirmed deadline: ' + e(candidate["clock"]["deadlineOn"]) +
             '</p><h2>Completed result</h2><p>' + e(candidate["summary"]) +
             '</p><table><thead><tr><th>Package</th><th>Original work</th><th>Success criteria</th><th>Owners</th><th>Completed</th><th>Result</th>'
-            '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table>' + cohort_section + '<p><a href="' + e(RULE["sourceUrl"]) +
+            '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table>' + cohort_section + implementation_section + '<p><a href="' + e(RULE["sourceUrl"]) +
             '">SCF tranche guidelines</a></p><small>Prepared ' + e(review["createdAt"]) + ' · ' + e(review["id"]) +
             ' · original source ' + e(review["businessSha256"]) + '</small></html>')
     files = {"completion.json": (canonical(review) + "\n").encode(),
@@ -659,6 +698,11 @@ def review_files(review, read_source):
         for evidence in candidate["cohortEvidence"]:
             for name, raw in file_map(evidence["review"], read_source).items():
                 files["cohorts/" + evidence["reviewId"] + "/" + name] = raw
+    if candidate.get("implementationEvidence"):
+        from operations_implementation import file_map as implementation_files
+        for evidence in candidate["implementationEvidence"]:
+            for name, raw in implementation_files(evidence["review"], read_source).items():
+                files["implementation/" + evidence["reviewId"] + "/" + name] = raw
     if sum(map(len, files.values())) > MAX_BUNDLE:
         domain.fail("The complete prepared form exceeds the original archive bound.", status=413)
     manifest = {"schema": "stellar-forge.sf47-completion-files.v1", "reviewId": review["id"],

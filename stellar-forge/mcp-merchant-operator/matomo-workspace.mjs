@@ -327,6 +327,18 @@ export class MerchantMatomoWorkspaces {
       return {workspace,instanceId:entry.instanceId,result:view(result,root),revision:entry.model.store.revision()};
     }
     switch(name) {
+      case 'merchant_matomo_original_records':
+        exact(input,['table','offset','limit']);
+        if(!entry.model.origin)throw failure('MATOMO_PRODUCT_ORIGINAL_REQUIRED','Choose a received editable source workspace.');
+        return {workspace,origin:entry.model.origin.summary(),page:view(await entry.model.origin.page({table:input.table??'history',...paging(input,50)}),root)};
+      case 'merchant_matomo_original_files':
+        exact(input,['offset','limit']);
+        if(!entry.model.origin)throw failure('MATOMO_PRODUCT_ORIGINAL_REQUIRED','Choose a received editable source workspace.');
+        return {workspace,files:entry.model.origin.files(paging(input,50))};
+      case 'merchant_matomo_original_merchant':
+        exact(input,['originalMerchantId'],['originalMerchantId']);
+        if(!entry.model.origin)throw failure('MATOMO_PRODUCT_ORIGINAL_REQUIRED','Choose a received editable source workspace.');
+        return view(await entry.model.origin.merchant(nativeId(input.originalMerchantId)),root);
       case 'merchant_matomo_status':
         exact(input,[]);return this.#state(entry);
       case 'merchant_matomo_operation': {

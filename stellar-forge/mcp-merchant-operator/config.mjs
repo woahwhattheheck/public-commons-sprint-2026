@@ -41,7 +41,7 @@ export async function readFleetConfiguration(raw, base, releaseStore) {
 export async function readSupportConfiguration(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'casesDirectory', 'incidentsDirectory', 'incidentSourcesFile', 'defaultIncidentSource', 'handoffs', 'workspaces', 'profiles'], ['schema', 'casesDirectory']);
+  exact(raw, ['schema', 'casesDirectory', 'sourceDirectory', 'packagesDirectory', 'packageSourcesFile', 'incidentsDirectory', 'incidentSourcesFile', 'defaultIncidentSource', 'handoffs', 'workspaces', 'profiles'], ['schema', 'casesDirectory']);
   if (raw.schema !== SUPPORT_CONFIG_SCHEMA) throw failure('CONFIGURATION_ERROR', 'Expected an original merchant support connection.');
   const base = dirname(path), aliases = kind => {
     const source = raw[kind] ?? {};
@@ -68,7 +68,13 @@ export async function readSupportConfiguration(path) {
     }
   } else if (raw.defaultIncidentSource !== undefined)
     throw failure('CONFIGURATION_ERROR', 'A default incident source requires the original incident sources file.');
-  return { casesDirectory: await privateSupportDirectory(hostPath(raw.casesDirectory, base)),
+  const casesDirectory=await privateSupportDirectory(hostPath(raw.casesDirectory,base));
+  const sourceDirectory=raw.sourceDirectory===undefined?join(casesDirectory,'source-bundles'):hostPath(raw.sourceDirectory,base);
+  const packagesDirectory=raw.packagesDirectory===undefined?join(dirname(casesDirectory),basename(casesDirectory)+'-packages'):hostPath(raw.packagesDirectory,base);
+  if(sourceDirectory===casesDirectory||packagesDirectory===casesDirectory||packagesDirectory===sourceDirectory)
+    throw failure('CONFIGURATION_ERROR','Use distinct original case, source and complete-package directories.');
+  return { casesDirectory,sourceDirectory,packagesDirectory,
+    ...(raw.packageSourcesFile===undefined?{}:{packageSourcesFile:hostPath(raw.packageSourcesFile,base)}),
     ...(incidentSourcesFile === undefined ? {} : { incidentSourcesFile, incidentSources,
       ...(defaultIncidentSource === undefined ? {} : { defaultIncidentSource }) }),
     incidentsDirectory: raw.incidentsDirectory === undefined ? null

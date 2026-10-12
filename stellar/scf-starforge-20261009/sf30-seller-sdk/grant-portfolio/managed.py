@@ -42,8 +42,36 @@ def _regular(path, *, private=False, limit=None):
     return info
 
 
-def _read(path, *, private=False, limit=32 * 1024 * 1024):
+def _publication_links(path, info, prefix):
+    """Accept only the complete publisher's private temporary hardlink alias."""
+    if info.st_nlink == 1:
+        return True
+    if info.st_nlink != 2:
+        return False
+    for candidate in path.parent.iterdir():
+        if not candidate.name.startswith(prefix):
+            continue
+        try:
+            alias = candidate.lstat()
+        except FileNotFoundError:
+            continue
+        if (alias.st_dev, alias.st_ino) == (info.st_dev, info.st_ino) and (
+                stat.S_ISREG(alias.st_mode) and alias.st_uid == os.getuid()
+                and not alias.st_mode & 0o077):
+            return True
+    # The publisher may have removed the matching alias during this inspection.
+    attached = path.lstat()
+    return (attached.st_dev, attached.st_ino, attached.st_size, attached.st_mtime_ns,
+            attached.st_mode, attached.st_uid, attached.st_gid, attached.st_nlink) == (
+            info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns,
+            info.st_mode, info.st_uid, info.st_gid, 1)
+
+
+def _read(path, *, private=False, limit=32 * 1024 * 1024, publication_prefix=None):
     info = _regular(path, private=private, limit=limit)
+    publication = publication_prefix is not None and _publication_links(path, info, publication_prefix)
+    if publication_prefix is not None and not publication:
+        raise BindingError("The original publication has an unexpected hardlink")
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     descriptor = os.open(path, flags)
     with os.fdopen(descriptor, "rb") as handle:
@@ -53,12 +81,20 @@ def _read(path, *, private=False, limit=32 * 1024 * 1024):
         data = handle.read(limit + 1)
         after = os.fstat(handle.fileno())
     attached = path.lstat()
+    # Removing the publisher's verified temporary alias changes only ctime and
+    # link count. The complete bytes, permissions and attached inode stay fixed.
+    alias_removed = publication and info.st_nlink == 2 and after.st_nlink == 1
     if len(data) != info.st_size or len(data) > limit or (
-            after.st_size, after.st_mtime_ns, after.st_ctime_ns) != (
-            info.st_size, info.st_mtime_ns, info.st_ctime_ns) or (
+            after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns,
+            after.st_mode, after.st_uid, after.st_gid) != (
+            info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns,
+            info.st_mode, info.st_uid, info.st_gid) or (
+            after.st_ctime_ns != info.st_ctime_ns and not alias_removed) or (
             attached.st_dev, attached.st_ino) != (info.st_dev, info.st_ino):
         raise BindingError("Original source or metadata changed during reading")
-    return data, info
+    if publication_prefix is not None and not _publication_links(path, after, publication_prefix):
+        raise BindingError("The original publication hardlink changed during reading")
+    return data, after
 
 
 def sourceFileList():
@@ -161,7 +197,7 @@ def connection_record(filename, binding):
     if not stat.S_ISDIR(parent.st_mode) or parent.st_uid != os.getuid() or parent.st_mode & 0o077:
         raise BindingError("Keep the original connection in a private operator-owned directory")
     try:
-        data, info = _read(selected, private=True, limit=32768)
+        data, info = _read(selected, private=True, limit=32768, publication_prefix=".grant-console-")
     except FileNotFoundError:
         return {"exists": False, "path": str(selected)}
     try:
@@ -181,7 +217,7 @@ def connection_record(filename, binding):
             or not Path(value["sourceRoot"]).is_absolute()
             or not isinstance(value["python"], dict)
             or not isinstance(value["pid"], int) or isinstance(value["pid"], bool) or value["pid"] <= 0
-            or not isinstance(value["console"], str) or info.st_nlink != 1):
+            or not isinstance(value["console"], str)):
         raise BindingError("The existing connection belongs to a different original workspace or launch")
     try:
         url = urlsplit(value["console"])

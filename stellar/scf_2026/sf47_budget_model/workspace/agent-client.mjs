@@ -65,9 +65,21 @@ const cohortReviewIds = value => {
   for (const selected of value) id(selected, 'review');
   return value;
 };
+const implementationReviewIds = value => {
+  need(Array.isArray(value) && value.length <= 20 && new Set(value).size === value.length,
+    'GRANT_INVALID_INPUT', 'Select at most 20 distinct original frozen implementation reviews.');
+  for (const selected of value) id(selected, 'review');
+  return value;
+};
+const implementationCutoff = value => {
+  need(typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) &&
+    Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value,
+    'GRANT_INVALID_INPUT', 'Use the exact implementation cutoff in UTC with milliseconds.');
+  return value;
+};
 const COMPLETION_FIELDS = Object.freeze({
   save:{allowed:['inputs'], required:['inputs']},
-  prepare:{allowed:['receiptId','asOfDate','summary','expectedPreviewSha256','cohortReviewIds'],
+  prepare:{allowed:['receiptId','asOfDate','summary','expectedPreviewSha256','cohortReviewIds','implementationReviewIds'],
     required:['receiptId','asOfDate','summary','expectedPreviewSha256']},
   extension:{allowed:['receiptId','confirmedOn','deadlineOn','reference','sourceIds','confirmationNote'],
     required:['receiptId','confirmedOn','deadlineOn','reference']},
@@ -88,6 +100,7 @@ function completionCommandBody(action, body) {
   if (data.outcomeId !== undefined) id(data.outcomeId,'outcome');
   if (data.inputs !== undefined) object(data.inputs,'Completion assignments');
   if (data.cohortReviewIds !== undefined) cohortReviewIds(data.cohortReviewIds);
+  if (data.implementationReviewIds !== undefined) implementationReviewIds(data.implementationReviewIds);
   for (const key of ['asOfDate','confirmedOn','deadlineOn','submittedOn','date'])
     if (data[key] !== undefined) completionDate(data[key]);
   for (const key of ['expectedPreviewSha256','expectedReviewSha256'])
@@ -495,6 +508,26 @@ export class GrantWorkspaceClient {
     object(inputs,'Original cohort review inputs'); sha(expectedPreviewSha256);
     return this.command(caseId,{...original,action:'cohort.prepare',data:{inputs,expectedPreviewSha256}});
   }
+  implementationSource(caseId, expectedVersion, sourceId, asOfAt) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version'); id(sourceId,'source');
+    if (asOfAt !== undefined) implementationCutoff(asOfAt);
+    return this.#request('/api/operations/'+caseId+'/implementation-source',
+      {body:{expectedVersion,sourceId,...(asOfAt === undefined ? {} : {asOfAt})},mutation:false});
+  }
+  implementationPreview(caseId, expectedVersion, inputs) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version');
+    object(inputs,'Original implementation review inputs');
+    return this.#request('/api/operations/'+caseId+'/implementation-preview',
+      {body:{expectedVersion,inputs},mutation:false});
+  }
+  implementationPrepare(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion','requestId','actor','note','inputs','expectedPreviewSha256'],
+      ['expectedVersion','requestId','actor','inputs','expectedPreviewSha256']);
+    const {inputs,expectedPreviewSha256,...original}=body;
+    object(inputs,'Original implementation review inputs'); sha(expectedPreviewSha256);
+    return this.command(caseId,{...original,action:'implementation.prepare',data:{inputs,expectedPreviewSha256}});
+  }
   completionSeed(caseId, expectedVersion, tranche) {
     id(caseId,'operation'); integer(expectedVersion,'Current case version'); integer(tranche,'Completion tranche',1,3);
     return this.#request('/api/operations/'+caseId+'/completion-seed',
@@ -502,8 +535,9 @@ export class GrantWorkspaceClient {
   }
   completionPreview(caseId, expectedVersion, inputs) {
     id(caseId,'operation'); integer(expectedVersion,'Current case version');
-    exact(inputs,['receiptId','asOfDate','summary','cohortReviewIds'],['receiptId','summary']);
+    exact(inputs,['receiptId','asOfDate','summary','cohortReviewIds','implementationReviewIds'],['receiptId','summary']);
     if (inputs.cohortReviewIds !== undefined) cohortReviewIds(inputs.cohortReviewIds);
+    if (inputs.implementationReviewIds !== undefined) implementationReviewIds(inputs.implementationReviewIds);
     id(inputs.receiptId,'cash');
     if (inputs.asOfDate !== undefined) completionDate(inputs.asOfDate);
     text(inputs.summary,'Completed tranche result',20000,true);
@@ -583,6 +617,8 @@ export class GrantWorkspaceClient {
       source:() => '/api/operations/' + id(args.caseId, 'operation') + '/sources/' + id(args.sourceId, 'source'),
       completion:() => '/api/operations/' + id(args.caseId,'operation') + '/completion-reviews/' + id(args.reviewId,'review') + '/export.zip',
       cohort:() => '/api/operations/' + id(args.caseId,'operation') + '/cohort-reviews/' + id(args.reviewId,'review') + '/export.zip',
+      implementation:() => '/api/operations/' + id(args.caseId,'operation') + '/implementation-reviews/' + id(args.reviewId,'review') + '/export.zip',
+      'implementation-original':() => '/api/operations/' + id(args.caseId,'operation') + '/implementation-originals/' + id(args.sourceId,'source') + '/' + sha(args.sha256),
     };
     need(Object.hasOwn(routes, kind), 'GRANT_INVALID_DOWNLOAD', 'Choose a complete original grant export or source.');
     return this.#request(routes[kind](), {});
