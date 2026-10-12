@@ -8,6 +8,7 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import {privateDirectory,writeJson,digest,jsonBytes as canonicalBytes} from '../node/store.mjs';
 import {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,researchWorkspaceId,researchSummary,researchPage,researchSection,researchComparison,researchCrossrefReview} from './workspace-protocol.mjs';
 import { openDossierStore } from './dossier.mjs';
+import {inspectResearchResponse,inspectRetainedSource,readRetainedSourceFile} from './source-inspection.mjs';
 import { openClinicalTrialsWorkspace } from './clinical-trials-workspace.mjs';
 import { handleClinicalTrialsRoute } from './clinical-trials-routes.mjs';
 import { receiveOpenAlexEdition } from './openalex.mjs';
@@ -31,6 +32,7 @@ const TYPES = Object.freeze({
   'clinical-trials.js': 'text/javascript; charset=utf-8',
   'clinical-trials.css': 'text/css; charset=utf-8',
   'source-bundles.js': 'text/javascript; charset=utf-8',
+  'source-inspection.js': 'text/javascript; charset=utf-8',
   'source-bundles.css': 'text/css; charset=utf-8',
 });
 const MAX_SOURCE_BUNDLE_BODY = 128 * 1024 * 1024 + 65536; // A 64 MiB bundle inside the rawText JSON string.
@@ -120,7 +122,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     typeof openalexWorkspace?.exportFiles === 'function', 'OPENALEX_WORKSPACE_API_REQUIRED');
   const store = await openDossierStore(directory, {providers});
   const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
-  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,
+  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,sourceInspection:true,
     savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
   await store.list();
   const unstructured = await openUnstructuredWorkspace({dossiers:store,...(documentSource ?? {})});
@@ -155,8 +157,9 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       'Referrer-Policy': 'no-referrer',
       'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     };
+    let sourceProjection='full';
     const send = (status, data, type = 'application/json; charset=utf-8', filename) => {
-      const content = Buffer.isBuffer(data) ? data : jsonBytes(data);
+      const content = Buffer.isBuffer(data) ? data : jsonBytes(sourceProjection==='inspection'?inspectResearchResponse(data):data);
       res.writeHead(status, {...headers, 'Content-Type': type, 'Content-Length': content.length,
         ...(filename ? {'Content-Disposition': 'attachment; filename="' + safeFilename(filename) + '"'} : {})});
       res.end(content);
@@ -166,6 +169,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       requireValue(!req.headers.origin || req.headers.origin === origin, 'ORIGIN_REFUSED');
       const url = new URL(req.url, origin);
       const path = url.pathname;
+      sourceProjection=url.searchParams.get('sourceProjection')??'full';
+      requireValue(['full','inspection'].includes(sourceProjection),'RESEARCH_SOURCE_PROJECTION_INVALID');
       const projection = url.searchParams.get('projection') ?? 'full';
       requireValue(['full','metadata'].includes(projection),'RESEARCH_PROJECTION_INVALID');
       if ((req.method === 'GET' || req.method === 'HEAD') && (path === '/' || Object.hasOwn(TYPES, path.slice(1)))) {
@@ -259,9 +264,26 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         if(selected!==null)options.selected=selected==='true';
         send(200,await researchSection(store,id,options));return;
       }
+      const sourceMatch=action.match(/^retained-editions\/(e_[a-f0-9]{64})\/occurrences\/([^/]+)(?:\/(content|record|file))?$/);
+      if(req.method==='GET'&&sourceMatch){
+        const options={editionId:sourceMatch[1],key:pathId(sourceMatch[2])};
+        if(url.searchParams.has('revision'))options.revision=revisionQuery(url.searchParams.get('revision'));
+        if(!sourceMatch[3]){send(200,await inspectRetainedSource(store,id,options));return;}
+        const selected={...options,part:sourceMatch[3]};
+        if(url.searchParams.has('name'))selected.name=url.searchParams.get('name');
+        if(url.searchParams.has('sha256'))selected.expectedSha256=url.searchParams.get('sha256');
+        const result=await readRetainedSourceFile(store,id,selected);
+        res.setHeader('X-Research-Dossier-Revision',String(result.selection.revision));
+        res.setHeader('X-Research-Edition-Id',result.selection.editionId);
+        res.setHeader('X-Research-Occurrence-Id',result.selection.occurrenceId);
+        res.setHeader('X-Research-Source-Sha256',result.sha256);
+        send(200,result.bytes,result.contentType,result.filename);return;
+      }
       const retainedMatch=action.match(/^retained-editions\/(e_[a-f0-9]{64})$/);
       if(req.method==='GET'&&retainedMatch){
-        const retained=await store.readRetainedEdition(id,retainedMatch[1]);
+        const retained=await store.readRetainedEdition(id,retainedMatch[1],url.searchParams.has('revision')?
+          {revision:revisionQuery(url.searchParams.get('revision'))}:{});
+        res.setHeader('X-Research-Dossier-Revision',String(retained.revision));
         send(200,retained.bytes,'application/json; charset=utf-8',retainedMatch[1]+'.research-source.json');return;
       }
       if (await handleClinicalTrialsRoute({workspace:clinicalTrials,dossierId:id,action,req,url,

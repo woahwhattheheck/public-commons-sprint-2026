@@ -1,6 +1,7 @@
 // MIT. Shared contract for an attachment to the original authenticated Research workspace.
 import {createHash} from 'node:crypto';
 import {need,object} from '../node/store.mjs';
+import {inspectResearchSources,inspectResearchComparison} from './source-inspection.mjs';
 
 import {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,RESEARCH_SECTIONS,RESEARCH_PAGE_LIMIT,RESEARCH_CONTROL_LIMIT,RESEARCH_COMPARISON_SECTIONS} from './workspace-contracts.mjs';
 export {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,RESEARCH_SECTIONS,RESEARCH_PAGE_LIMIT,RESEARCH_CONTROL_LIMIT,RESEARCH_COMPARISON_SECTIONS} from './workspace-contracts.mjs';
@@ -40,7 +41,7 @@ export async function researchSection(store,id,{section,revision,offset=0,limit=
   let values;
   if(section==='sources'){
     const view=await store.get(id,{revision:metadata.revision,references:false,includeHistory:false});
-    values=view.sources.filter(row=>(questionId===undefined||row.citations.some(c=>c.questionId===questionId))&&
+    values=inspectResearchSources(view.sources).filter(row=>(questionId===undefined||row.citations.some(c=>c.questionId===questionId))&&
       (selected===undefined||row.selected===selected));
   }else if(section==='revisions'){
     need(questionId===undefined&&selected===undefined&&!query,'RESEARCH_FILTER_INVALID');
@@ -57,6 +58,7 @@ export async function researchSection(store,id,{section,revision,offset=0,limit=
 }
 
 export function researchComparison(value,{section='overview',offset=0,limit=30}={}){
+  value=inspectResearchComparison(value);
   const sections={added:value.added,removed:value.removed,changed:value.changed,questions:value.questions,
     editions:value.editions,availability:value.availability,'findings-added':value.findings.added,
     'findings-removed':value.findings.removed,'findings-changed':value.findings.changed};
