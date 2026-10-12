@@ -45,6 +45,47 @@ Move fields into the issuer's order. Removing a field retains its preceding vers
 
 **Download form map** retains the exact form profile, field prompts, limits, selected answer IDs and field text. Opening that map in another working draft retains the prior mapping before importing the selected one.
 
+## Use the original SF47 budget and delivery plan
+
+Open **Planning edition** in the submission editor. **Receive native plan or planning ZIP** accepts either:
+
+- The complete planning ZIP exported by the original SF47 workspace, including every saved plan revision, its exact original scenario file and the native manifest.
+- One complete saved plan JSON from the native CLI's `show --part all` output. This carries the selected revision, full scenario, planning inputs and original calculation.
+
+The original Grant Operations case export contains its complete planning export as `planning.zip`. Select that member when receiving a case's plan. The complete operations case remains in Grant Operations.
+
+From the repository, the existing native commands are:
+
+```sh
+python stellar/scf_2026/sf47_budget_model/workspace/cli.py show \
+  --workspace /private/original-planning-workspace \
+  --plan ORIGINAL_PLAN_ID --part all \
+  --output /private/receiving/plan.json
+
+python stellar/scf_2026/sf47_budget_model/workspace/cli.py export \
+  --workspace /private/original-planning-workspace \
+  --plan ORIGINAL_PLAN_ID --expected-revision CURRENT_SAVED_REVISION \
+  --output /private/receiving/planning.zip
+```
+
+Use the original saved plan ID and revision shown by that workspace. The original commands publish to a new output filename. If using the original browser workspace, its native ZIP export carries the same complete planning edition.
+
+Receiving retains the exact file bytes, filename, SHA-256 and native revisions in the submission draft. ZIP receiving reads all eleven native entries, verifies their original manifest and source identities, and receives the matching current projections and revision history. Full JSON receiving verifies the saved scenario/planning content identity and its native calculation reference. The native calculator remains the source of the budget, conditional payments, cash requirement and contributor allocation.
+
+Select a retained file and revision. The editor shows the requested award, complete priced packages, work windows, completion measures and three tranche groups. Expand **Conditional payment schedule and native cash requirement** to inspect the original four payment amounts, conditions, modeled payment days and working-capital input. The delivery cost of each tranche and the conditional payment schedule remain separate values.
+
+Use all original packages for the complete canonical **Delivery** answer. A selected subset can prepare an individual issuer field. Change prices, hours, scope or modeled dates in the original native workspace, save the new plan revision, then receive that complete edition here.
+
+**Prepare preview from selected native plan** builds a self-contained budget and roadmap: the requested award or selected package total, estimated hours, timing, each full deliverable and completion assessment, exact package prices, and the original conditional payment allocation. Edit the preview as needed. A changed package selection requires a fresh preview for that selection.
+
+Choose the canonical **Delivery** answer, an existing issuer field, or a new issuer field. Choose whether to replace its text or append to it. Expand the complete target preview to read exactly what will result; an existing issuer field also shows its recorded limits. Review the preview and press **Apply reviewed plan to draft**. The previous full submission version is retained. A new field opens in the existing field editor so its actual issuer label, prompt and limits can be recorded.
+
+Review **Project** and **Delivery capacity** alongside a revised budget to keep the requested award, schedule and funding assumptions consistent across the full application. The existing required-content review connects these answers. Applying a planning preview is an editorial change to the selected draft target.
+
+**Save version**, browser reopening, complete draft download/import and source refresh retain every received planning file and the selected review. Receiving a later application source preserves the applied Delivery text as an edited answer with its original manuscript baseline. Restoring an earlier version restores that version's planning selection, notes, preview and application history; every original planning file remains available. A version from before planning reception can be restored with no selected plan, and the retained files can then be selected again.
+
+The complete draft uses the existing 16 MiB logical allowance. Receiving checks the complete candidate draft before replacing the current editor state. Each original planning file is stored once per draft; saved editorial versions refer to its retained identity. Original file downloads reproduce the received JSON or ZIP bytes.
+
 ## Review the required content
 
 **Required content** connects the nine answers to the issuer's current published criteria. Record an editorial status and a precise note locating the supporting content. The status is the operator's review decision.
@@ -68,6 +109,7 @@ Before opening another draft, the workspace preserves unsaved current work. If a
 - The issuer profile, prompts, field limits, answer selections and field text.
 - The saved required-content review.
 - Every retained working version and its selected source edition.
+- Every received native planning file, its complete saved revisions, selected packages, editorial preview and application history.
 - A SHA-256 over the full draft body.
 
 **Open draft file** reads the complete export, checks its body and every original source edition, and preserves the current working draft before opening it. Save the received draft in that browser to continue. **Saved versions** can restore an earlier working state; the state being replaced is also retained.
@@ -80,12 +122,15 @@ The existing grant-compose.mjs imports attachGrantSubmission from grant-submissi
 
 Continue using the existing composer options, selected product commits and source-pins output. The submission workspace reads the updated application edition on its next source refresh. It does not require an additional copy of the manuscript or a separate submission-data file.
 
-The current browser-assets.json includes:
+The existing registerGrantSubmissionAssets function declares the complete submission routes:
 
 - /grant-submission.html
 - /grant-submission.css
 - /grant-submission-core.mjs
 - /grant-submission-workspace.mjs
+- /grant-plan-core.mjs
+- /grant-plan-source.mjs
+- /grant-plan-workspace.mjs
 
 The original /drafts.mjs and application/source-index routes remain its dependencies. Publish the complete existing dist directory through the original Site project and retain its current audience. The static browser carries its own working drafts; the established application and issuer-form workflow carry the submitted edition.
 
