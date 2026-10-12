@@ -111,6 +111,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -435,7 +439,8 @@
     "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
     "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs",
     "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
-    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
+    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
+    "api-pass-workspace": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1061,7 +1066,11 @@
     "./buyer/research-dossiers/unstructured-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/unstructured-workspace.mjs",
     "./partners/unstructured": "./source/stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
     "./partners/unstructured/commerce": "./source/stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
-    "./merchant/mcp/coingecko": "./source/stellar-forge/mcp-merchant-operator/coingecko-workspace.mjs"
+    "./merchant/mcp/coingecko": "./source/stellar-forge/mcp-merchant-operator/coingecko-workspace.mjs",
+    "./merchant/api-pass-workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/model.mjs",
+    "./merchant/api-pass-workspace/config": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/configuration.mjs",
+    "./merchant/api-pass-workspace/server": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/server.mjs",
+    "./merchant/api-pass-workspace/cli": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs"
   },
   "nativePeers": {
     "@x402/core": {

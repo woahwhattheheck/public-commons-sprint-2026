@@ -7,6 +7,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
+| API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
@@ -452,3 +453,17 @@ The existing **Merchant recovery** selection also retains each declared capture-
 ## Economic data editions
 
 Choose **Economic data editions** to reopen the initialized FRED project, retained public tables or explicit API vintages, saved reviews and merchant editions, and the original configured buyer. The standard managed terminal carries customer approval; the same application stops and reopens its project and buyer journal. Select the original merchant port already routed by the publication HTTPS origin separately from the private UI port. The complete input, source, customer, export and receiving workflow is in [FRED Applications](FRED_APPLICATIONS.md).
+
+## API-pass customer workspace
+
+Select **API-pass customer** and the private configuration produced by the maintained `api-pass-workspace configure` command. The configured customer workspace and the selected **Private customer workspace** must name the same directory. That directory retains connections, passes, exact request bodies, saved responses and operation history. The original Buyer state, Inbox and optional customer accounting workspace retain their existing paths.
+
+**Purchase approval channel** accepts `auto`, `browser` or `terminal`. Auto checks the selected original runtime's browser approval capability and uses its existing terminal channel when that capability is absent. Browser requires the original broker and its selected native helper. An optional **Selected original approval broker** names that original module. The managed PTY remains available through the original **Terminal Python executable**, which defaults to `/usr/bin/python3`. Private host proxy settings belong in the existing environment configuration.
+
+Review, save, finish the original runtime connection if required, then review and start the application. The review retains the configuration, prior workspace state and eight product files. Before starting, the adapter compares the selected installation and the adopted execution copy. The actual startup record must match the launched descendant process, loopback listener, original configuration and authenticated customer session before **Open application** becomes available.
+
+In the customer workspace, select a connection and adopt an existing pass or prepare an original purchase. Saved request identities reopen the same response. Recovery continues the selected original operation and joins its authenticated proof, buyer history and statement files. Closing the browser retains these selections and records.
+
+Use the ordinary Applications **Stop**, **Review start** and **Start reviewed application** controls to reopen the same customer directory. Each start reviews the current state, and the existing application resource lease serializes managed use of that directory.
+
+The complete [API-pass customer guide](../../sf101-merchant-receiver/api-access/workspace/README.md) covers configuration, connection setup, purchase approval, exact request recovery, customer reports, browser operations and installed package imports.
