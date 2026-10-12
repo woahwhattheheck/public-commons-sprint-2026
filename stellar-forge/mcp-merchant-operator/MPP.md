@@ -79,7 +79,7 @@ The MCP connection selects that file and the running console:
 }
 ~~~
 
-Store this as `/srv/mpp/mcp-connection.json`. Relative host paths resolve against that file. The reader verifies the existing private workspace and retains its original creation identity. One connection may declare up to 16 consoles and 32 customer aliases per console.
+Store this as `/srv/mpp/mcp-connection.json`. Use the origin announced by the original console. Port 80 is announced as `http://127.0.0.1`; the connection reader also accepts the equivalent explicit `http://127.0.0.1:80` and normalizes it to that same origin. Relative host paths resolve against that file. The reader verifies the existing private workspace and retains its original creation identity. One connection may declare up to 16 consoles and 32 customer aliases per console.
 
 Tool arguments select these aliases and supply merchant contracts, offer inputs and original operation IDs. Host files select filesystem paths, executable runtimes, credential environment references and customer spend limits. Tool results expose the public payer, actor/service names, reviewed limits, source digests and contract terms.
 

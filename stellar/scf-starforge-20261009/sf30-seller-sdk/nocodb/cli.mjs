@@ -15,7 +15,8 @@ const HELP = 'NocoDB source and retained dataset publisher\n\n' +
   '  import --source PRIVATE_SOURCE.json --capture ORIGINAL_CAPTURE.json --out NEW_PRIVATE_CAPTURE_DIRECTORY\n' +
   '  freeze --source PRIVATE_SOURCE.json --capture ORIGINAL_CAPTURE.json --out NEW_PRIVATE_SOURCE.json\n' +
   '  publisher --help\n' +
-  '  deployment --help\n\n' +
+  '  deployment --help\n' +
+  '  workspace --help\n\n' +
   'Discover reads only table metadata; queries may be empty while selecting actual field IDs.\n' +
   'Capture retains the table schema, every original response page, then the schema again.\n' +
   'Import copies one complete original capture without changing its provider history.\n' +
@@ -41,6 +42,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (argv.length === 1 && argv[0] === '--help') { process.stdout.write(HELP); return; }
   if (argv[0] === 'publisher') return publisherMain(argv.slice(1));
   if (argv[0] === 'deployment') return (await import('./deployment-cli.mjs')).main(argv.slice(1));
+  if (argv[0] === 'workspace') return (await import('./workspace/cli.mjs')).main(argv.slice(1));
   const { command, options } = parse(argv);
   const selected = await readNocoDBSourceFile(options['--source'], { allowUnprojected: command === 'discover' });
   let result;

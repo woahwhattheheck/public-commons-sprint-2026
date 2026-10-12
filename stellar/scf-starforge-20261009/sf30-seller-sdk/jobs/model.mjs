@@ -1,7 +1,8 @@
 // MIT. Purchased jobs over ORIGINAL SF30/SF98 settlement; application execution has its own durable lifetime.
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { join } from 'node:path';
-import { readJobMerchant, validateJobInput, digest, JOB_ID, HASH, jobError, plain } from './config.mjs';
+import { validateJobInput, digest, JOB_ID, HASH, jobError, plain } from './config.mjs';
+import { readJobMerchantSource } from './source-binding.mjs';
 import { openJobStore } from './store.mjs';
 import { executeJob } from './execution.mjs';
 import { openOutbox, instrumentNativeSettlement, SCHEMA as NATIVE_EVENT_SCHEMA } from '../../sf98-merchant-delivery/outbox.mjs';
@@ -42,8 +43,9 @@ function summary(row) {
 
 export async function openJobMerchant({ configPath, directory, env = process.env } = {}) {
   if (typeof configPath !== 'string') fail('JOB_CONFIG_PATH_REQUIRED');
-  const source = await readJobMerchant(configPath);
-  const store = await openJobStore(directory, source);
+  // Read the current physical binding while the original store lease is held.
+  const store = await openJobStore(directory, () => readJobMerchantSource({ configPath, directory }));
+  const source = store.source;
   let outbox;
   try { outbox = await openOutbox(join(directory, 'outbox')); }
   catch (error) { await store.close(); throw error; }
@@ -283,6 +285,23 @@ export async function openJobMerchant({ configPath, directory, env = process.env
       if (!tokenValid(token)) fail('JOB_CLAIM_TOKEN_INVALID');
       const row = await store.renewClaim(id, expectedRevision, digest(token), why);
       return handoff(row, token);
+    },
+    async withdrawPrepared({ id, token, expectedRevision, reason: why } = {}) {
+      assertOpen(); revision(expectedRevision); reason(why);
+      if (typeof id !== 'string' || !JOB_ID.test(id)) fail('JOB_NOT_FOUND', 404);
+      const row = await store.update(id, undefined, current => {
+        // Capability and phase are checked in the same original store operation
+        // as cancellation. A concurrently staged purchase wins or loses atomically.
+        if (!tokenMatches(current, token)) fail('JOB_NOT_FOUND', 404);
+        if (current.state === 'CANCELLED' && current.submittedAt === null && current.settlement === null)
+          return null;
+        if (current.revision !== expectedRevision) fail('JOB_REVISION_CHANGED', 409);
+        if (current.state !== 'PREPARED' || current.submittedAt !== null || current.settlement !== null)
+          fail('JOB_WITHDRAWAL_NOT_AVAILABLE', 409);
+        current.state = 'CANCELLED';
+        return history(current, 'customer-withdrawn', { reason: why });
+      });
+      return customerView(row);
     },
     async admitJob(functionId, context) {
       try {
