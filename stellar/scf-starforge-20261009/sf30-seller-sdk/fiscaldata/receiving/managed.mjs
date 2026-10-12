@@ -107,7 +107,13 @@ async function fiscalSession(address){
    need(response.ok,'The original Fiscal operation failed: '+json(value??{status:response.status}),value?.code);
    return {value,bytes,status:response.status,sha256:response.headers.get('x-content-sha256')};
   },
-  async action(action,payload){return (await this.request('api/action',{action,payload})).value;}
+  async action(action,payload){
+   const value=(await this.request('api/action',{action,payload})).value;
+   need(value&&typeof value==='object'&&Object.hasOwn(value,'result')&&
+    value.state?.schema==='stellar-forge.fiscaldata-workspace.v1',
+    'The original Fiscal action did not return its result and workspace state.');
+   return value.result;
+  }
  };
 }
 
