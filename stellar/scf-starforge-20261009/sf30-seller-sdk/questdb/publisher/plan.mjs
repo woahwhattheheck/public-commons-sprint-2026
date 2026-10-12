@@ -2,6 +2,7 @@
 import { join } from 'node:path';
 import { loadCsvDataset } from '../../dataset-handler.mjs';
 import { csvLine } from '../../postgres/publisher/plan.mjs';
+import { canonicalCsvLine } from '../result.mjs';
 import { readPrivate, bytes, digest, identity, createFile, fault } from '../../postgres/publisher/files.mjs';
 import { validateQuestDbSource } from '../config.mjs';
 import { compileQuestDbQueries, describeQuestDbQueries, bindQuestDbParameters } from '../declaration.mjs';
@@ -35,7 +36,7 @@ export async function captureQuestDbPublicationPlan(sourceFile,directory,input){
     if(!['string','integer','number','boolean'].includes(value.type)||value.nullable!==undefined&&typeof value.nullable!=='boolean')throw fail('INVALID_DATASET_COLUMN');
     return[name,{type:value.type,nullable:value.nullable??false}];
   }));
-  const dataset={schema:'stellar-forge.csv-dataset.v1',file:'data.csv',name:input.dataset.name,columns,
+  const dataset={schema:'stellar-forge.csv-dataset.v1',file:'data.csv',name:input.dataset.name,columns,nullEncoding:'unquoted-empty',
     filters:input.dataset.filters??[],ranges:input.dataset.ranges??[],sorts:input.dataset.sorts??[],
     maxBytes:extraction.maxBytes,maxRows:extraction.maxRows,maxCellChars:input.dataset.maxCellChars??65536,
     defaultLimit:input.dataset.defaultLimit??50,maxLimit:input.dataset.maxLimit??250,maxPageBytes:input.dataset.maxPageBytes??921600};
@@ -62,9 +63,9 @@ export function checkQuestDbDatasetColumnTypes(columns,types){
   }
 }
 export function encodeQuestDbDatasetRow(row,dataset){
-  return csvLine(Object.entries(dataset.columns).map(([name,spec])=>{
+  return canonicalCsvLine(Object.entries(dataset.columns).map(([name,spec])=>{
     if(!Object.hasOwn(row,name))throw fail('DATASET_SOURCE_FIELD_MISSING');
-    const value=row[name];if(value===null){if(!spec.nullable)throw fail('DATASET_NULL_NOT_ALLOWED');return'';}
+    const value=row[name];if(value===null){if(!spec.nullable)throw fail('DATASET_NULL_NOT_ALLOWED');return null;}
     let text;
     if(spec.type==='string'){
       if(!['string','boolean'].includes(typeof value))throw fail('DATASET_SOURCE_ENCODING_INVALID');text=String(value);
@@ -81,8 +82,6 @@ export function encodeQuestDbDatasetRow(row,dataset){
       if(compareDecimal(text,value)!==0)throw fail('DATASET_NUMBER_REQUIRES_EXACT_STRING');
     }
     if(text.length>dataset.maxCellChars)throw fail('DATASET_CELL_TOO_LARGE');
-    if(text===''&&spec.nullable)throw fail('DATASET_EMPTY_NULL_CONFLICT',
-      'The paid CSV loader uses empty nullable cells for NULL. Keep this field non-nullable when appropriate, or review an explicit SQL projection; the native capture preserves both values.');
     return text;
   }));
 }
