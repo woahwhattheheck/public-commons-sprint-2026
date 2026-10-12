@@ -98,7 +98,7 @@ export function weekCsv(raw){
   const report=inspectWeek(raw),rows=[['Date','Day status','Load','Start','Finish','Power kW','Energy kWh','Optimized cost USD','Earliest feasible day USD','Optimized day USD','Planning note']];
   for(const day of report.days){
     if(day.status!=='planned'){rows.push([day.date,day.status,'','','','','','','','',day.reason||'No flexible loads scheduled']);continue;}
-    for(const item of day.plan.optimized.items)rows.push([day.date,day.status,item.label,hour(item.start),hour(item.end),item.kw,item.kwh,item.cost,day.plan.baseline.cost,day.plan.optimized.cost,'Hypothetical schedule']);
+    for(const item of day.plan.optimized.items)rows.push([day.date,day.status,item.label,hour(item.start),hour(item.end),item.kw,round(item.kwh),item.cost,day.plan.baseline.cost,day.plan.optimized.cost,'Hypothetical schedule']);
   }
   function cell(value){
     let text=String(value);
@@ -134,7 +134,13 @@ export function weekCalendar(raw,{recordId,createdAt}){
       lines.push('BEGIN:VEVENT','UID:'+recordId+'-'+day.date+'-'+item.id+'@gridkind.local','DTSTAMP:'+timestamp,
         'DTSTART:'+stamp(day.date,item.start),'DTEND:'+stamp(day.date,item.end),
         'SUMMARY:'+calendarText(item.label+' · GridKind plan'),
-        'DESCRIPTION:'+calendarText(report.input.name+'\nHypothetical flexible-load schedule at the entered local clock time.\n'+item.kw+' kW; '+item.kwh+' kWh; modeled cost $'+item.cost.toFixed(4)+'.\n'+report.input.days[index].scenario.maxKw+' kW shared circuit cap. Open GridKind to plan and approve the daily simulation.'),
+        'DESCRIPTION:'+calendarText(report.input.name+'\nHypothetical flexible-load schedule at the entered local clock time.\n'+item.kw+' kW; '+round(item.kwh)+' kWh; modeled cost +item.cost.toFixed(4)+'.\n'+report.input.days[index].scenario.maxKw+' kW shared circuit cap. Open GridKind to plan and approve the daily simulation.'),
+        'STATUS:TENTATIVE','TRANSP:TRANSPARENT','END:VEVENT');
+    }
+  }
+  lines.push('END:VCALENDAR');return lines.map(fold).join('\r\n')+'\r\n';
+}
++item.cost.toFixed(4)+'.\n'+report.input.days[index].scenario.maxKw+' kW shared circuit cap. Open GridKind to plan and approve the daily simulation.'),
         'STATUS:TENTATIVE','TRANSP:TRANSPARENT','END:VEVENT');
     }
   }
