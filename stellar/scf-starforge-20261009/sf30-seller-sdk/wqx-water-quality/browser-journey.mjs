@@ -17,16 +17,29 @@ export async function inspectWaterQualityWorkspace({ directory, outputDirectory,
   outputDirectory = await privateDirectory(resolve(outputDirectory));
   const { chromium } = createRequire(import.meta.url)(playwrightModule ?? process.env.PLAYWRIGHT_MODULE ?? 'playwright');
   const deniedSource = { async request() { throw new Error('This retained browser workflow unexpectedly requested new source.'); } };
-  let workspace, receiver, browser, context;
+  let workspace, receiver, browser, context, interrupted = false;
   const errors = [], mutations = [], downloads = [], screenshots = [];
+  const checkInterrupted = () => {
+    if (interrupted) throw Object.assign(new Error('The original browser continuation was interrupted.'), { code: 'WQX_BROWSER_INTERRUPTED' });
+  };
+  const close = async () => {
+    const results = await Promise.allSettled([
+      async () => context?.close(), async () => browser?.close(),
+      async () => receiver?.close(), async () => workspace?.close()
+    ].map(operation => operation()));
+    const failed = results.find(result => result.status === 'rejected');
+    if (failed) throw failed.reason;
+  };
+  const interrupt = () => { interrupted = true; void close().catch(() => {}); };
+  process.once('SIGINT', interrupt); process.once('SIGTERM', interrupt);
   try {
-    workspace = await startWaterQualityWorkspace({ directory, buyer, transport: deniedSource });
+    workspace = await startWaterQualityWorkspace({ directory, buyer, transport: deniedSource }); checkInterrupted();
     const originalProject = projectSnapshot ?? await workspace.project.read(), originalReview = await workspace.project.readReview(reviewId);
     const originalEdition = await workspace.project.readEdition(editionId);
     const capture = await workspace.project.capture(originalReview.captureId);
     browser = await chromium.launch({ headless: true, ...(browserExecutable ?? process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: browserExecutable ?? process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}),
-      args: ['--no-sandbox', '--disable-dev-shm-usage'] });
-    context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
+      args: ['--no-sandbox', '--disable-dev-shm-usage'] }); checkInterrupted();
+    context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true }); checkInterrupted();
     const page = await context.newPage(); page.setDefaultTimeout(30000);
     page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => { if (request.method() === 'POST') mutations.push(new URL(request.url()).pathname); });
@@ -140,7 +153,7 @@ export async function inspectWaterQualityWorkspace({ directory, outputDirectory,
     const widths = await page.evaluate(() => ({ viewport: innerWidth, content: document.documentElement.scrollWidth })); assert(widths.content <= widths.viewport);
     const mobileShot = join(outputDirectory, 'water-quality-mobile.png'); await page.screenshot({ path: mobileShot, fullPage: true }); screenshots.push(mobileShot);
 
-    receiver = await startWaterQualityWorkspace({ directory: join(outputDirectory, 'received-in-browser'), transport: deniedSource });
+    receiver = await startWaterQualityWorkspace({ directory: join(outputDirectory, 'received-in-browser'), transport: deniedSource }); checkInterrupted();
     const receivingPage = await context.newPage(); receivingPage.setDefaultTimeout(30000);
     receivingPage.on('pageerror', error => errors.push(error.message));
     receivingPage.on('request', request => { if (request.method() === 'POST') mutations.push(new URL(request.url()).pathname); });
@@ -161,6 +174,10 @@ export async function inspectWaterQualityWorkspace({ directory, outputDirectory,
       customerPageRows: pageDelivery.rows.length, customerContinuationPrepared: continued.intentId,
       exactOriginalCsvSha256: sourceMember.sha256, receivedReviewArchiveSha256: received.archiveSha256,
       mobile: widths, browserErrors: errors, mutations, downloads, screenshots };
+    checkInterrupted();
     await atomicJson(outputDirectory, 'browser-result.json', result); return result;
-  } finally { await context?.close(); await browser?.close(); await receiver?.close(); await workspace?.close(); }
+  } finally {
+    process.off('SIGINT', interrupt); process.off('SIGTERM', interrupt);
+    await close();
+  }
 }
