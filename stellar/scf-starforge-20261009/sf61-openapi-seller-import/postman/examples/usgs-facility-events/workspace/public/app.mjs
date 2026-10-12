@@ -517,7 +517,7 @@ document.addEventListener('click',event=>{
     if(action==='select-edition'){
       const op=operation(target);
       await api(route('selection'),{method:'POST',data:{id:target.dataset.id,revision:state.project.revision,operationId:op}});
-      await refresh();render();notice('Operating edition selected.');return;
+      clearOperation(target);await refresh();render();notice('Operating edition selected.');return;
     }
     if(action==='review-event'){await openReview(Number(target.dataset.index));notice('');return;}
     if(action==='older-history'){historyLimit+=50;renderHistory();notice('');return;}
@@ -541,7 +541,7 @@ document.addEventListener('change',event=>{
   if(form){remember(form);clearOperation(form);if(input.type==='file')fileDrafts.set(draftKey(form)+':'+input.name,[...input.files]);}
   if(form?.id==='query-form'){queryVisibility();controls();}
   if(form?.id==='edition-form'&&input.name==='sourceIds')chosenSources=new Set([...input.selectedOptions].map(value=>value.value));
-  if(input.dataset.source){if(input.checked)chosenSources.add(input.dataset.source);else chosenSources.delete(input.dataset.source);adoptSources([...chosenSources]);$('#selected-source-count').textContent=chosenSources.size+' responses selected for the next report (maximum 16).';}
+  if(input.dataset.source){const selected=new Set(chosenSources);if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);adoptSources([...selected]);$('#selected-source-count').textContent=chosenSources.size+' responses selected for the next report (maximum 16).';}
 });
 for(const dialog of all('dialog'))dialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
 async function boot(){
