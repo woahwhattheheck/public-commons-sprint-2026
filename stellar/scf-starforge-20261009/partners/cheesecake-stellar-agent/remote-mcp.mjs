@@ -164,6 +164,8 @@ export async function attachRemoteMcpApplication({application,configurationFile,
     typeof authorize === 'function','APPLICATION_HOST_AUTHORIZATION_REQUIRED');
   const selected = await inspectRemoteMcp(configurationFile,{sourceRoot});
   const {config,sourceSha256,requests,policies,mcpJson} = selected;
+  need(Array.isArray(application.selectedIntentIds) && application.selectedIntentIds.every(intent => !requests.has(intent)),
+    'APPLICATION_REMOTE_INTENT_COLLISION');
   const applicationId = application.identity.applicationId;
   const root = join(absolute(stateDirectory),'remote-mcp');
   await privateDirectory(root);
@@ -219,7 +221,8 @@ export async function attachRemoteMcpApplication({application,configurationFile,
     const [native,quotes,results] = await Promise.all([
       nativeSource(sourceRoot,'agent-server.mjs'),nativeSource(sourceRoot,'quote-store.mjs'),
       nativeSource(sourceRoot,'result-store.mjs')]);
-    operator = await import(pathToFileURL(config.operatorModule).href);
+    const operatorModule = await import(pathToFileURL(config.operatorModule).href);
+    operator = typeof operatorModule.openOperator === 'function' ? await operatorModule.openOperator() : operatorModule;
     need(['approve','signPayment','spendingStatus','reconcilePayment','close'].every(key =>
       typeof operator[key] === 'function'),'APPLICATION_REMOTE_GOVERNED_OPERATOR_REQUIRED');
     quoteStore = new quotes.SqliteQuoteStore({directory:join(root,'quotes')});
@@ -232,7 +235,8 @@ export async function attachRemoteMcpApplication({application,configurationFile,
         await executionAuthority(quote);
         const allowed = await operator.approve(quote);
         // A host grant may change while the native terminal waits for a human.
-        await executionAuthority(quote);
+        try { await executionAuthority(quote); }
+        catch (error) { broker.cancel({quoteId:quote.quoteId}); throw error; }
         return allowed === true;
       },
       signPayment:async quote => {
@@ -336,10 +340,11 @@ export async function attachRemoteMcpApplication({application,configurationFile,
     }
     return {format,partial:false,binding:publicBinding(entry,record),
       result:{nativeStatus:quote.status,recordedAt:new Date(quote.updatedAt ?? quote.createdAt).toISOString(),
-        deliveryStatus:file.status,file:fileMetadata(file),representation:'MCP_CALL_TOOL_RESULT'},
+        deliveryStatus:file.status,file:fileMetadata(file),representation:file.representation},
       ...(format === 'file' ? {} : {data})};
   }
   const remote = {
+    selectedIntentIds:Object.freeze([...application.selectedIntentIds,...requests.keys()]),
     identity:{...application.identity,remoteMcp:{schema:SCHEMA,sourceSha256,requests:requests.size,
       responseByteLimit:MAX_RESULT,readiness:structuredClone(operator.readiness?.aggregateSpending ?? null)}},
     responseByteLimit(intentId) { return requests.has(intentId) ? MAX_RESULT :
