@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MIT. Durable source-carrier operations using the host's existing connected-tool adapter.
 import { constants } from 'node:fs';
-import { lstat, mkdir, open, readFile, realpath, rename, unlink } from 'node:fs/promises';
+import { link, lstat, mkdir, open, readFile, realpath, rename, unlink } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -104,7 +104,15 @@ async function atomicText(path, text, { immutable = false } = {}) {
   try {
     handle = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
     await handle.writeFile(text, 'utf8'); await handle.sync(); await handle.close(); handle = null;
-    await rename(temporary, path); await syncDirectory(dirname(path));
+    if (immutable) {
+      try { await link(temporary, path); }
+      catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        const retained = await readText(path, maxPrivateBytes);
+        if (retained !== text) fail('The retained original file differs: ' + path, 'SOURCE_CARRIER_RETAINED_CHANGED');
+      }
+    } else await rename(temporary, path);
+    await syncDirectory(dirname(path));
   } finally {
     await handle?.close();
     await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
