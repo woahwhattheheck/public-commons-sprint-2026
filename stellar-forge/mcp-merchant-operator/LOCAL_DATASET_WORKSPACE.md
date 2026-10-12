@@ -25,7 +25,9 @@ The customer selection needs three existing values:
 | Database directory | The absolute directory of the original DuckDB workspace |
 | Customer workspace ID | The original DuckDB workspace's saved 32-character hexadecimal ID |
 
-Use a customer alias matching \`[a-z0-9][a-z0-9_-]{0,63}\`. The connection's optional\nworkspace \`label\` supplies a readable display name. Read the actual customer\nstatus to obtain the saved ID. Keep that ID when moving
+Use a customer alias matching `[a-z0-9][a-z0-9_-]{0,63}`. The connection's optional
+workspace `label` supplies a readable display name. Read the actual customer
+status to obtain the saved ID. Keep that ID when moving
 a complete handoff to a new working directory. Each local delivery workspace
 also has its own persisted UUID; the startup and operator display both identities.
 
@@ -205,10 +207,7 @@ may move independently later.
 **Queries and reports** works with the original customer's read-only SQL and
 saved recipes.
 
-Open an existing recipe before editing it, or begin a new recipe draft. Save
-the exact SQL and parameter text. The current native adapter keeps the original
-parameter text so large numeric values are not silently changed by a browser
-number conversion.
+Open an existing recipe before editing it, or begin a new recipe draft. Save the exact SQL and parameter text. The adapter returns `parameters_text` using the original saved Python serialization, so reopening a recipe does not reconstruct large integer parameters through browser numbers. The existing Python JSON handling of decimal numbers is unchanged. For precision-sensitive decimal parameters, use quoted strings and explicit SQL casts: for example, `CAST(? AS DECIMAL(18,6))` with `["123456789.123456"]`.
 
 **Run preview** returns the selected preview size. The preview shows whether
 more rows exist. Use **Export complete saved result** for the entire saved
@@ -346,7 +345,8 @@ Keep these values from the actual opened operation.
 The installed launcher obtains both calls from one `startMerchantMcp` owner.
 An embedding application should close the returned launcher handle when done;
 the normal host closes its resources. A direct consumer of the catalog must use
-the original close operation with its workspace alias, delivery workspace ID,\ninstance ID and publisher-instance ID.
+the original close operation with its workspace alias, delivery workspace ID,
+instance ID and publisher-instance ID.
 
 The native package API is:
 
