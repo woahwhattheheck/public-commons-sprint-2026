@@ -1,20 +1,24 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "timescale",
-  "description": "Native Timescale operations, source editions, publication and complete agent receiving",
+  "description": "Native Timescale operations, assigned remediation, publication and complete typed agent/customer receiving",
   "commands": {
     "dataset-timescale": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/cli.mjs",
     "timescale-agent": "stellar-forge/mcp-merchant-operator/timescale-workspace-launcher.mjs",
     "timescale-download": "stellar-forge/mcp-merchant-operator/timescale-workspace-download-cli.mjs",
     "timescale-native-demo": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/native-demo.mjs",
-    "timescale-native-receiving": "stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs"
+    "timescale-native-receiving": "stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs",
+    "timescale-client": "stellar-forge/mcp-merchant-operator/timescale-client-cli.mjs",
+    "timescale-remediation-receiving": "stellar-forge/mcp-merchant-operator/timescale-remediation-receiving.mjs"
   },
   "commandDescriptions": {
     "dataset-timescale": "Capture and review native Timescale editions, operate exact refresh/job plans, publish original datasets and receive complete projects.",
     "timescale-agent": "Open the same saved Timescale browser, merchant publisher and MCP owner through installed Applications.",
     "timescale-download": "Resume every original Timescale package file with exact manifest, workspace, digest and byte-offset binding.",
     "timescale-native-demo": "Continue one explicitly isolated native Timescale2.30.2 full product demonstration with retained original inputs.",
-    "timescale-native-receiving": "Continue the completed native Timescale project through its same merchant/browser, paused full-file transfer and portable customer reopening."
+    "timescale-native-receiving": "Continue the completed native Timescale project through its same merchant/browser, paused full-file transfer and portable customer reopening.",
+    "timescale-client": "Use the original Timescale MCP owner for native operations, assigned work, exact report files and full resumable customer packages.",
+    "timescale-remediation-receiving": "Continue the original native project through assigned work, later current-state review, reopened full-report transfer and complete portable history."
   },
   "exports": {
     "./seller/timescale": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/model.mjs",
@@ -27,7 +31,9 @@
     "./merchant/mcp/timescale/launcher": "./source/stellar-forge/mcp-merchant-operator/timescale-workspace-launcher.mjs",
     "./merchant/mcp/timescale/download": "./source/stellar-forge/mcp-merchant-operator/timescale-workspace-download.mjs",
     "./merchant/mcp/timescale/provider": "./source/stellar-forge/mcp-merchant-operator/providers/timescale-workspaces.mjs",
-    "./seller/timescale/remediation": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/remediation.mjs"
+    "./seller/timescale/remediation": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/remediation.mjs",
+    "./merchant/mcp/timescale/client": "./source/stellar-forge/mcp-merchant-operator/timescale-client.mjs",
+    "./merchant/mcp/timescale/remediation-report": "./source/stellar-forge/mcp-merchant-operator/timescale-remediation-report.mjs"
   },
   "runtimePackageManifests": {
     "timescale": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json"
@@ -38,7 +44,12 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/native-demo.mjs",
     "stellar-forge/mcp-merchant-operator/timescale-workspace-native-receiving.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/browser-receiving.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/REMEDIATION.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/REMEDIATION.md",
+    "stellar-forge/mcp-merchant-operator/TIMESCALE_CLIENT.md",
+    "stellar-forge/mcp-merchant-operator/timescale-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/timescale-remediation-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/ubuntu-native-demo.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/UBUNTU_NATIVE.md"
   ],
   "browserAssets": [
     {

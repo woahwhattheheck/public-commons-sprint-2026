@@ -24,9 +24,11 @@ SCHEMA = "stellar-forge.git-object-receiving.v1"
 STATE_SCHEMA = "stellar-forge.git-object-cache.v1"
 OID = re.compile(r"^[a-f0-9]{40}$")
 FILE_LIMIT = 2 * 1024 * 1024
-SOURCE_LIMIT = 64 * 1024 * 1024
+SOURCE_LIMIT = 128 * 1024 * 1024
 METADATA_LIMIT = 8 * 1024 * 1024
-ARCHIVE_STREAM_LIMIT = 128 * 1024 * 1024
+COMPRESSED_ARCHIVE_LIMIT = 64 * 1024 * 1024
+# Payload plus bounded tar headers, padding and skipped original members.
+ARCHIVE_STREAM_LIMIT = 256 * 1024 * 1024
 
 class SourceError(Exception):
     pass
@@ -138,7 +140,7 @@ def validate_metadata(value):
              "Only an original regular source path can be received: " + str(path))
         need(isinstance(row.get("size"), int) and 0 <= row["size"] <= FILE_LIMIT, "Source file exceeds its original limit")
         selected.append(row)
-    need(sum(row["size"] for row in selected) <= SOURCE_LIMIT, "Required source exceeds the maintained 64 MiB budget")
+    need(sum(row["size"] for row in selected) <= SOURCE_LIMIT, "Required source exceeds the maintained 128 MiB budget")
     objects.append((source["commit"], "commit", commit))
     return source, entries, selected, objects
 
@@ -306,7 +308,7 @@ class ArchiveStream:
         requested = remaining + 1 if size is None or size < 0 else min(size, remaining + 1)
         data = self.source.read(min(requested, 65536))
         self.bytes += len(data)
-        need(self.bytes <= ARCHIVE_STREAM_LIMIT, "Expanded source archive exceeds 128 MiB")
+        need(self.bytes <= ARCHIVE_STREAM_LIMIT, "Expanded source archive exceeds 256 MiB")
         return data
 
 def receive_archive(expected_sha256, filename, cache, missing):
@@ -320,7 +322,7 @@ def receive_archive(expected_sha256, filename, cache, missing):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     with os.fdopen(fd, "rb") as stream:
         before = os.fstat(stream.fileno())
-        need(stat.S_ISREG(before.st_mode) and before.st_size <= SOURCE_LIMIT,
+        need(stat.S_ISREG(before.st_mode) and before.st_size <= COMPRESSED_ARCHIVE_LIMIT,
              "Compressed source archive exceeds 64 MiB")
         digest = hashlib.sha256()
         hashed_bytes = 0
@@ -438,7 +440,7 @@ def receive(args):
             if path not in selected_paths:
                 selected.append(row)
                 selected_paths.add(path)
-        need(sum(row["size"] for row in selected) <= SOURCE_LIMIT, "Expanded source exceeds the maintained 64 MiB budget")
+        need(sum(row["size"] for row in selected) <= SOURCE_LIMIT, "Expanded source exceeds the maintained 128 MiB budget")
         cache = ObjectCache(repository)
         # Interrupted writes leave only our unreferenced temporary objects.
         for temporary in (repository / "objects").glob("??/tmp_obj_*.receiving"):

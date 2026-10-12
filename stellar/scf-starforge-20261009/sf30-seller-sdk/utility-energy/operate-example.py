@@ -37,9 +37,9 @@ def main():
             actual=hashlib.sha1(("blob "+str(len(data))+"\0").encode()+data).hexdigest()
             if actual!=original["git_blob_sha"]:raise InputError("Original GBA file differs: "+original["path"])
         with Workspace(out/"seller",create=True) as ws:
-            full=act(ws,"source.import",{"path":str(HERE/"fixtures"/"test_usage_data.xml"),"name":"Green Button Alliance full original","provider":"greenbutton"})
+            full=act(ws,"source.import",{"path":str(HERE/"examples"/"test_usage_data.xml"),"name":"Green Button Alliance full original","provider":"greenbutton"})
             if full["counts"]["intervals"]!=1340:raise InputError("The full original GBA source must contain all 1,340 readings")
-            single=act(ws,"source.import",{"path":str(HERE/"fixtures"/"test_usage_data_01.xml"),"name":"Green Button Alliance original day edition","provider":"greenbutton"})
+            single=act(ws,"source.import",{"path":str(HERE/"examples"/"test_usage_data_01.xml"),"name":"Green Button Alliance original day edition","provider":"greenbutton"})
             if single["counts"]["intervals"]!=96:raise InputError("The original GBA day source must contain all 96 readings")
             examples=load_json((HERE/"contracts"/"utilityapi-examples.json").read_bytes())
             received=[]
