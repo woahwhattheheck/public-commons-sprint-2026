@@ -16,6 +16,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import selectors
 import stat
 import subprocess
 import sys
@@ -34,6 +35,8 @@ MAX_SOURCE = 64 * 1024 * 1024
 MAX_ARCHIVE = 2 * 1024 ** 3
 PROGRESS = None
 LEASES = ()
+LOG_DIRECTORY = None
+LOG_LIMIT_BYTES = 1024 * 1024
 
 
 def encoded(value):
@@ -127,6 +130,7 @@ def owned(root, lease_fd):
     global LEASES
     root = private(root)
     fd = os.open(root / "engine.lock", os.O_CREAT | os.O_RDWR, 0o600)
+    log_fd = None
     try:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -136,28 +140,124 @@ def owned(root, lease_fd):
         if lease_fd is not None:
             need(stat.S_ISREG(os.fstat(lease_fd).st_mode), "The original worker lease must be a regular file")
             inherited = (lease_fd,)
-        LEASES = tuple(set((fd, *inherited)))
+        if LOG_DIRECTORY is not None:
+            logs = private(LOG_DIRECTORY)
+            info = logs.stat()
+            need(logs.resolve() == logs and info.st_uid == os.getuid() and not info.st_mode & 0o077,
+                 "The selected log directory must be private and owned")
+            log_fd = os.open(logs / ".engine-log.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+            info = os.fstat(log_fd)
+            need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
+                 and not info.st_mode & 0o077, "The shared engine log lease must be private")
+            try:
+                fcntl.flock(log_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise RuntimeError("The selected engine log directory is still owned by its original process") from None
+        LEASES = tuple(set((fd, *inherited, *((log_fd,) if log_fd is not None else ()))))
         yield
     finally:
         LEASES = ()
+        if log_fd is not None:
+            os.close(log_fd)
         os.close(fd)
 
 
+def selected_log(root, stage):
+    logs = private(LOG_DIRECTORY if LOG_DIRECTORY is not None else root / "logs")
+    need(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,159}", stage), "Invalid original engine log stage")
+    path = logs / (stage + ".log")
+    if LOG_DIRECTORY is not None:
+        info = logs.stat()
+        need(logs.resolve() == logs and info.st_uid == os.getuid() and not info.st_mode & 0o077,
+             "The selected log directory must be private and owned")
+        if not path.exists():
+            reserved = sorted(logs.glob(".reserve-*"))
+            need(reserved, "Preallocate an original engine log before starting this stage: " + stage)
+            candidate = reserved[0]
+            info = candidate.lstat()
+            need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
+                 and not info.st_mode & 0o077 and info.st_size == 0
+                 and info.st_blocks * 512 >= LOG_LIMIT_BYTES,
+                 "The selected original log reservation is not ready")
+            os.link(candidate, path)
+            candidate.unlink()
+        info = path.lstat()
+        need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
+             and not info.st_mode & 0o077 and info.st_blocks * 512 >= LOG_LIMIT_BYTES
+             and info.st_size <= LOG_LIMIT_BYTES,
+             "The selected original log must retain its preallocated capacity")
+    return path
+
+
+def captured_child(child, log, capture, initial_bytes):
+    """Keep complete child bytes within the explicitly reserved output limits."""
+    output, stdout_seen, log_seen, log_written = [], 0, 0, initial_bytes
+    stdout_truncated = log_truncated = False
+    deadline = None
+    with selectors.DefaultSelector() as selected:
+        selected.register(child.stdout, selectors.EVENT_READ, "stdout")
+        selected.register(child.stderr, selectors.EVENT_READ, "stderr")
+        while selected.get_map():
+            for key, _ in selected.select(timeout=0.25):
+                block = os.read(key.fileobj.fileno(), CHUNK)
+                if not block:
+                    selected.unregister(key.fileobj)
+                    key.fileobj.close()
+                    continue
+                previous = stdout_seen
+                if key.data == "stdout":
+                    stdout_seen += len(block)
+                if key.data == "stdout" and capture:
+                    keep = max(0, MAX_JSON - previous)
+                    output.append(block[:keep])
+                    stdout_truncated |= len(block) > keep
+                else:
+                    log_seen += len(block)
+                    keep = max(0, LOG_LIMIT_BYTES - log_written)
+                    retained = block[:keep]
+                    if retained:
+                        log.write(retained)
+                        log.flush()
+                        os.fsync(log.fileno())
+                        log_written += len(retained)
+                    log_truncated |= len(block) > keep
+                if (stdout_truncated or log_truncated) and deadline is None:
+                    child.terminate()
+                    deadline = time.monotonic() + 10
+            if deadline is not None and child.poll() is None and time.monotonic() >= deadline:
+                child.kill()
+                deadline = None
+        child.wait()
+    return b"".join(output), {
+        "stdoutBytesObserved": stdout_seen, "capturedStdoutLimitBytes": MAX_JSON if capture else None,
+        "stdoutTruncated": stdout_truncated, "logBytesObserved": log_seen,
+        "logBytesWritten": log_written - initial_bytes, "logLimitBytes": LOG_LIMIT_BYTES,
+        "logTruncated": log_truncated}
+
+
 def run(root, stage, argv, capture=False):
-    logs = private(root / "logs")
+    path = selected_log(root, stage)
     environment = {key: value for key, value in os.environ.items()
                    if key in ("PATH", "LANG", "LC_ALL", "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "NO_PROXY",
                               "https_proxy", "http_proxy", "all_proxy", "no_proxy", "SSL_CERT_FILE", "SSL_CERT_DIR")}
     environment.update(TMPDIR=str(private(root / "tmp")), PYTHONNOUSERSITE="1",
                        PYTHONDONTWRITEBYTECODE="1", PIP_DISABLE_PIP_VERSION_CHECK="1")
     argv = list(map(str, argv))
-    record = progress(root, stage, state="RUNNING", startedAt=time.time(), argv=argv)
-    with (logs / (stage + ".log")).open("ab") as log:
+    initial_bytes = path.stat().st_size if path.exists() else 0
+    record = progress(root, stage, state="RUNNING", startedAt=time.time(), argv=argv,
+                      log=str(path), logStart=initial_bytes)
+    with path.open("ab") as log:
         child = subprocess.Popen(argv, cwd=root, env=environment, stdin=subprocess.DEVNULL,
-                                 stdout=subprocess.PIPE if capture else log, stderr=log, pass_fds=LEASES)
-        progress(root, stage, **{key: value for key, value in record.items() if key not in ("stage", "updatedAt")}, pid=child.pid)
+                                 stdout=subprocess.PIPE if capture or LOG_DIRECTORY is not None else log,
+                                 stderr=subprocess.PIPE if LOG_DIRECTORY is not None else log, pass_fds=LEASES)
+        progress(root, stage, **{key: value for key, value in record.items()
+                               if key not in ("stage", "updatedAt")}, pid=child.pid)
         try:
-            output, _ = child.communicate()
+            if LOG_DIRECTORY is not None:
+                output, counts = captured_child(child, log, capture, initial_bytes)
+            else:
+                output, _ = child.communicate()
+                counts = {}
         except BaseException:
             child.terminate()
             try:
@@ -166,9 +266,14 @@ def run(root, stage, argv, capture=False):
                 child.kill()
                 child.wait()
             raise
-    progress(root, stage, state="COMPLETED" if child.returncode == 0 else "FAILED",
-             exitCode=child.returncode, log=str(logs / (stage + ".log")), startedAt=record["startedAt"])
-    need(child.returncode == 0, stage + " exited " + str(child.returncode) + "; read " + str(logs / (stage + ".log")))
+        log.flush()
+        os.fsync(log.fileno())
+    limited = counts.get("stdoutTruncated") or counts.get("logTruncated")
+    progress(root, stage, state="COMPLETED" if child.returncode == 0 and not limited else "FAILED",
+             exitCode=child.returncode, log=str(path), logStart=initial_bytes,
+             logEnd=path.stat().st_size, startedAt=record["startedAt"], **counts)
+    need(not limited, stage + " exceeded its reserved output; retained bytes and truncation are recorded at " + str(path))
+    need(child.returncode == 0, stage + " exited " + str(child.returncode) + "; read " + str(path))
     return (output or b"").decode() if capture else None
 
 
@@ -191,11 +296,11 @@ def platform_key(info):
 
 def wheel_metadata(path):
     with zipfile.ZipFile(path) as archive:
-        # A wheel owns one top-level metadata directory. Vendored distributions
-        # may retain their own nested metadata without changing this identity.
+        # Vendored distributions may carry their own nested dist-info metadata.
+        # Only the top-level metadata belongs to the wheel being installed.
         names = [name for name in archive.namelist()
                  if name.count("/") == 1 and name.endswith(".dist-info/METADATA")]
-        need(len(names) == 1 and archive.getinfo(names[0]).file_size <= MAX_JSON, "Wheel has no single package metadata identity")
+        need(len(names) == 1 and archive.getinfo(names[0]).file_size <= MAX_JSON, "Wheel has no single top-level package metadata identity")
         data = email.parser.Parser().parsestr(archive.read(names[0]).decode())
     return {"name": normalized(data["Name"]), "version": data["Version"]}
 
@@ -649,11 +754,13 @@ def activate(root, installation_id, expected):
 
 
 def main():
-    global PROGRESS
+    global PROGRESS, LOG_DIRECTORY, LOG_LIMIT_BYTES
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True)
     parser.add_argument("--lease-fd", type=int)
     parser.add_argument("--progress-file")
+    parser.add_argument("--log-directory")
+    parser.add_argument("--log-limit-bytes", type=int, default=1024 * 1024)
     sub = parser.add_subparsers(dest="command", required=True)
     selected = sub.add_parser("resolve")
     for name in ("python", "source", "release-id", "release-digest"):
@@ -672,6 +779,9 @@ def main():
     selected.add_argument("--installation", required=True); selected.add_argument("--expected-installation")
     args = parser.parse_args()
     root = private(args.root)
+    need(4096 <= args.log_limit_bytes <= 64 * 1024 * 1024, "Select explicit supported log capacity")
+    LOG_DIRECTORY = Path(args.log_directory).absolute() if args.log_directory else None
+    LOG_LIMIT_BYTES = args.log_limit_bytes
     PROGRESS = Path(args.progress_file).absolute() if args.progress_file else None
     with owned(root, args.lease_fd):
         if args.command == "resolve":

@@ -2,7 +2,7 @@
 
 This is one runnable customer journey through the maintained WordPress source workspace, the original Socrata publisher, SF82 release operator, and SF88/SF100 buyer and source-file delivery. It creates a private native WordPress 6.8.3 installation and retains its original responses, editions, merchant sessions, and acquired source.
 
-The component selection is pinned in `component-source.json` to commit `37706cdb5256b1877d3acbd334009501323df1c1`. The selector verifies all 19 component files against their native Git blob identities. The runtime launcher separately binds the managed component's original 17-file source inventory.
+The component selection is pinned in `component-source.json` to its exact published composition commit. The selector verifies all 19 component files against their native Git blob identities. The runtime launcher separately binds the managed component's original 17-file source inventory.
 
 ## Select the existing equipment
 
@@ -94,7 +94,9 @@ node /absolute/installed-release/source/stellar/scf-starforge-20261009/sf30-sell
   --config /absolute/operation/selected.json
 ```
 
-Use the selected native operation ID for registration, status, logs and recovery. The complete command owns its PHP server, source operator, release children, browser, and received-workspace CLI. It closes those resources before recording the final result.
+Use the selected native operation ID for registration, status, logs and recovery. The complete command owns its PHP server, source operator, release children, browser, and received-workspace CLI. It closes those resources before recording the final result. Select the complete component map before this operation's first registration. A retained selector and journey checkpoint continue to use their original source selection.
+
+The source workspace and local operator retain a failed close for retry on the same owner. The workspace writer is released only after its source jobs and original publishers have closed successfully. Successful cleanup remains shared across concurrent Stop calls. The local operator normalizes its announced origin, including the default HTTP port, so the browser and selected Applications listener use the same address.
 
 The native operation includes WordPress/PHP, Node, Python and Chromium in one equipment namespace. Its declaration must account for that whole process envelope and the private database, captures, source packet, original buyer responses and delivery files. It reuses installed runtimes.
 

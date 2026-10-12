@@ -17,6 +17,11 @@ node odata/live/cli.mjs COMMAND [options]
   serve --package DIRECTORY --state PRIVATE_DIRECTORY [--port 8423 --operations-port 8424] [--facilitator HTTPS_URL]
   buyer --package DIRECTORY --operation ID --request request.json --intent STABLE_INTENT --out NEW_DIRECTORY [--request-directory FINAL_DIRECTORY]
   receive --package DIRECTORY --operation ID --response saved-response.json --out NEW_DIRECTORY
+  collection --package DIRECTORY --input exchanges.json --out PRIVATE_DIRECTORY
+  collection-inspect --directory DIRECTORY
+  collection-restore --manifest ORIGINAL_ANALYSIS_SOURCE.json --out PRIVATE_DIRECTORY [--sha256 SHA256]
+  collection-rows --directory DIRECTORY [--offset 0 --limit 100]
+  collection-analysis-mapping --directory DIRECTORY --source REGISTERED_NAME --revision NUMBER --out mapping.json
 
 Use original odata/cli.mjs to connect, inspect metadata, and save/review queries.
 A selection.json is {"operation":"Orders","request":{"pageSize":100,"top":830}}.
@@ -31,6 +36,12 @@ function parse(args){const [command,...rest]=args,options={};for(let i=0;i<rest.
 const required=(value,name)=>{if(!value)throw new TypeError('--'+name+' is required');return value;};
 export async function main(args=process.argv.slice(2)){
   if(!args.length||args.includes('--help')){console.log(HELP);return;}
+  const collectionCommands={collection:'receive','collection-inspect':'inspect','collection-restore':'restore',
+    'collection-rows':'rows','collection-analysis-mapping':'analysis-mapping'};
+  if(Object.hasOwn(collectionCommands,args[0])){
+    const {main:collectionMain}=await import('./collection-cli.mjs');
+    return collectionMain([collectionCommands[args[0]],...args.slice(1)]);
+  }
   const {command,options:o}=parse(args),options={allowLoopback:o['allow-loopback']==='true'};
   let result;
   if(command==='template'){

@@ -9,7 +9,11 @@ import { fault, integer } from './declaration.mjs';
 
 export const HELP = `Stellar Forge | Snowflake retained data workspace
 
+  init        --directory PRIVATE_DIR
+  inspect     --directory PRIVATE_DIR
   serve       --directory PRIVATE_DIR [--port 0]
+              [--source-root SOURCE_ROOT --expected-workspace-id UUID
+               --expected-source-sha256 SHA256]
   source-save --directory PRIVATE_DIR --source SOURCE_JSON
   status      --directory PRIVATE_DIR [--request-id ORIGINAL_UUID]
   capture     --directory PRIVATE_DIR --query NAME [--input ARGUMENTS_JSON]
@@ -51,7 +55,9 @@ resume-publication --directory DIR --publication-id UUID continues that request.
 Keep foreground commands open; Ctrl-C closes their owned operation lifetimes.
 `;
 const COMMANDS = {
-  serve: ['directory', 'port'], 'source-save': ['directory', 'source'],
+  init: ['directory'], inspect: ['directory'],
+  serve: ['directory', 'port', 'source-root', 'expected-workspace-id', 'expected-source-sha256'],
+  'source-save': ['directory', 'source'],
   status: ['directory', 'request-id'], capture: ['directory', 'query', 'input', 'request-id'],
   resume: ['directory', 'request-id'], cancel: ['directory', 'request-id'],
   receive: ['directory', 'manifest'], list: ['directory', 'kind', 'offset', 'limit'],
@@ -95,10 +101,29 @@ export async function main(args = process.argv.slice(2)) {
   if (!parsed) { process.stdout.write(HELP); return; }
   const { command, values: o } = parsed, directory = resolve(o.directory);
   const port = () => number(o.port, 0, 0, 65535, 'port');
+  if (command === 'inspect') {
+    const { inspectSnowflakeWorkspace } = await import('./managed.mjs');
+    const result = await inspectSnowflakeWorkspace(directory); print(result); return result;
+  }
   if (command === 'serve') {
-    const { startSnowflakeWorkspace } = await import('./server.mjs');
-    const session = await startSnowflakeWorkspace({ directory, port: port() });
-    print({ workspace: session.url, directory });
+    const selection = ['source-root', 'expected-workspace-id', 'expected-source-sha256'];
+    const managed = selection.some(name => o[name] !== undefined);
+    if (managed && !selection.every(name => o[name]))
+      throw fault('SNOWFLAKE_MANAGED_SELECTION_REQUIRED', 'Managed launch requires all reviewed source and workspace fields.');
+    let session;
+    if (managed) {
+      const { startManagedSnowflakeWorkspace } = await import('./managed.mjs');
+      session = await startManagedSnowflakeWorkspace({
+        directory, port: port(), sourceRoot: resolve(o['source-root']),
+        expectedWorkspaceId: o['expected-workspace-id'],
+        expectedSourceSha256: o['expected-source-sha256'],
+      });
+      process.stdout.write(JSON.stringify(session.startup) + '\n');
+    } else {
+      const { startSnowflakeWorkspace } = await import('./server.mjs');
+      session = await startSnowflakeWorkspace({ directory, port: port() });
+      print({ workspace: session.url, directory });
+    }
     const stop = () => session.close().catch(error => { console.error(error.message); process.exitCode = 1; });
     process.once('SIGINT', stop); process.once('SIGTERM', stop);
     return session;
@@ -113,6 +138,7 @@ export async function main(args = process.argv.slice(2)) {
       limit: number(o.limit, 50, 1, 200, 'limit') };
     switch (command) {
       case 'source-save': result = workspace.saveSource(await jsonFile(o.source)); break;
+      case 'init': result = await workspace.state(); break;
       case 'status': result = o['request-id'] ? workspace.store.operation(o['request-id']) : await workspace.state(); break;
       case 'capture': {
         const operation = workspace.begin({ queryName: o.query, arguments: o.input ? await jsonFile(o.input) : {},

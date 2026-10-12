@@ -296,10 +296,16 @@ export async function openWordPressSource({ directory, source, environment = pro
     else { const value = await state(jobId); if (value.status !== 'complete') { value.status = 'paused'; value.error = { code: 'WORDPRESS_CAPTURE_PAUSED', message: 'Resume this original capture to continue its saved cursor.' }; await save(value); } }
     return inspect(jobId);
   }
-  const close = () => closePromise ??= (async () => {
-    closed = true; const entries = [...active.values()];
-    for (const entry of entries) entry.controller.abort();
-    await Promise.allSettled(entries.map(entry => entry.promise)); await release();
-  })();
+  const close = () => {
+    if (closePromise) return closePromise;
+    const disposing = (async () => {
+      closed = true; const entries = [...active.values()];
+      for (const entry of entries) entry.controller.abort();
+      await Promise.allSettled(entries.map(entry => entry.promise)); await release();
+    })();
+    closePromise = disposing;
+    void disposing.catch(() => { if (closePromise === disposing) closePromise = null; });
+    return disposing;
+  };
   return { directory, source, sourceSha256: identity(source), create, run, wait, cancel, inspect, list, completion, response, records, sample, close };
 }

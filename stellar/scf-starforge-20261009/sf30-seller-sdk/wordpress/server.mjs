@@ -36,7 +36,7 @@ const integerParam=(url,name,fallback)=>Number(url.searchParams.get(name)??fallb
 export async function start({directory,port=0,environment=process.env,python='python3',fetchImpl=fetch,onEvent,expectedWorkspaceId,expectedWorkspaceIdentity}={}) {
   if(!Number.isSafeInteger(port)||port<0||port>65535)fail('WORDPRESS_PORT','Choose a valid local listening port.');
   const workspace=await openWordPressWorkspace({directory,environment,python,fetchImpl,onEvent,expectedWorkspaceId,expectedWorkspaceIdentity});
-  const token=randomBytes(32).toString('hex'),instanceId=randomUUID();let origin,closing;
+  const token=randomBytes(32).toString('hex'),instanceId=randomUUID();let origin,closing,stopped;
   const server=http.createServer(async(request,response)=>{
     let authorized=false;
     try {
@@ -124,12 +124,23 @@ export async function start({directory,port=0,environment=process.env,python='py
   server.requestTimeout=0;server.headersTimeout=15000;server.keepAliveTimeout=5000;
   server.on('clientError',(_,socket)=>socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'));
   try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
-    origin='http://127.0.0.1:'+server.address().port;
+    origin=new URL('http://127.0.0.1:'+server.address().port).origin;
   }catch(error){await workspace.close();throw error;}
-  const close=()=>closing??=(async()=>{
-    const stopped=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
-    server.closeIdleConnections?.();
-    try{await workspace.close();}finally{await stopped;}
-  })();
+  const close=()=>{
+    if(closing)return closing;
+    if(!stopped){
+      const stopping=new Promise((resolve,reject)=>server.close(error=>error&&error.code!=='ERR_SERVER_NOT_RUNNING'?reject(error):resolve()));
+      stopped=stopping;server.closeIdleConnections?.();
+      void stopping.catch(()=>{if(stopped===stopping)stopped=null;});
+    }
+    const disposing=(async()=>{
+      const results=await Promise.allSettled([stopped,workspace.close()]);
+      const errors=results.filter(row=>row.status==='rejected').map(row=>row.reason);
+      if(errors.length)throw new AggregateError(errors,'The original WordPress operator is still closing.');
+    })();
+    closing=disposing;
+    void disposing.catch(()=>{if(closing===disposing)closing=null;});
+    return disposing;
+  };
   return {url:origin,directory,token,workspace,close,pid:process.pid,instanceId,...await workspace.health()};
 }

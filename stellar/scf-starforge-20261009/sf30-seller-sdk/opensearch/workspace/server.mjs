@@ -13,6 +13,7 @@ const ASSETS = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/deployment.mjs', ['deployment.mjs', 'text/javascript; charset=utf-8']],
   ['/catalog.mjs', ['catalog.mjs', 'text/javascript; charset=utf-8']],
+  ['/supplier.mjs', ['supplier.mjs', 'text/javascript; charset=utf-8']],
   ['/file-sha256.mjs', ['file-sha256.mjs', 'text/javascript; charset=utf-8']],
   ['/relevance.mjs', ['../relevance/public.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
 function send(res, status, value) {
@@ -118,6 +119,20 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
         if (path === '/api/catalog/state') {
           catalogQuery(url, []);
           return send(res, 200, await workspace.catalog.state());
+        }
+        if (path.startsWith('/api/catalog/supplier/')) {
+          const action = path.slice('/api/catalog/supplier/'.length), supplier = workspace.catalog.supplier;
+          const fields = { profile: [], state: ['catalogId'], plan: ['planId'], history: ['planId'],
+            product: ['planId','materialKey'], review: ['reviewId'], row: ['reviewId','materialKey'],
+            rows: ['reviewId','offset','limit','status','search'], export: ['reviewId','format','expectedReviewSha256'] }[action];
+          if (!fields) throw new WorkspaceError('WORKSPACE_SUPPLIER_ROUTE_INVALID', 'Supplier route not found.', 404);
+          const input = catalogQuery(url, fields);
+          if (action === 'export') return catalogDownload(res, supplier.export(input));
+          const result = action === 'profile' ? supplier.templates() : action === 'state' ? supplier.state(input)
+            : action === 'plan' ? supplier.plan(input.planId) : action === 'history' ? { revisions: supplier.planHistory(input.planId) }
+            : action === 'product' ? supplier.currentProduct(input) : action === 'review' ? supplier.review(input.reviewId)
+            : action === 'row' ? supplier.reviewRow(input) : supplier.rows(input);
+          return send(res, 200, result);
         }
         if (path.startsWith('/api/catalog/')) {
           const parts = path.slice('/api/catalog/'.length).split('/');
@@ -234,7 +249,8 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
         if (path === '/api/catalog/suggest') return send(res, 200, await workspace.catalog.suggest(input));
         if (path === '/api/catalog') {
           const { action, ...values } = input;
-          const actions = { save: 'save', preview: 'preview', select: 'select', decision: 'saveDecision', 'create-draft': 'createDraft' };
+          const actions = { save: 'save', preview: 'preview', select: 'select', decision: 'saveDecision', 'create-draft': 'createDraft',
+            'supplier-save': 'supplierSave', 'supplier-correction': 'supplierCorrection', 'supplier-review': 'supplierReview' };
           const method = Object.hasOwn(actions, action) ? actions[action] : null;
           if (!method) throw new WorkspaceError('WORKSPACE_CATALOG_ACTION_INVALID', 'Choose a declared catalog action.', 400);
           const result = await workspace.catalog[method](values);
@@ -253,7 +269,7 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
       return send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
     }).catch(error => {
       if (res.writableEnded || res.destroyed) return;
-      const known = error instanceof WorkspaceError || /^OPENSEARCH_|^MERCHANT_|^QUERY_|^SELLER_/.test(error?.code ?? '');
+      const known = error instanceof WorkspaceError || /^OPENSEARCH_|^MERCHANT_|^QUERY_|^SELLER_|^SUPPLIER_/.test(error?.code ?? '');
       let requestRecorded;
       if (operationId !== undefined) {
         try { workspace.operation(operationId); requestRecorded = true; }

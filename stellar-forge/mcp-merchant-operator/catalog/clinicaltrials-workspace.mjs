@@ -20,7 +20,9 @@ const actionNames = [
   'cohort.configure', 'version.inspect', 'capture.start', 'capture.select', 'capture.advance',
   'capture.resume', 'capture.pause', 'review.record', 'mapping.default', 'mapping.save',
   'edition.build', 'edition.compare', 'dataset.query', 'merchant.configure', 'package.export',
-  'prs.candidate', 'prs.plan', 'prs.apply', 'prs.reconcile', 'prs.preview'
+  'prs.candidate', 'prs.plan', 'prs.apply', 'prs.reconcile', 'prs.preview',
+  'batch.create', 'batch.links', 'batch.plan', 'batch.apply', 'batch.preview', 'batch.select',
+  'batch.reconcile', 'batch.review', 'batch.export'
 ];
 const originalTools = sourceWorkspaceTools((name, description, properties, required, annotations) =>
   ({ name, description, properties, required, annotations }));
@@ -32,7 +34,7 @@ export function clinicalTrialsWorkspaceTools(tool) {
     tool('merchant_clinicaltrials_workspaces', 'List the declared original ClinicalTrials consoles, file handles and active verified downloads.', {}, [], read),
     tool('merchant_clinicaltrials_status', 'Read the same original ClinicalTrials state, revision, cohort, captures, reviews, PRS and publishing history used by its browser.', selection, ['workspace'], read),
     tool('merchant_clinicaltrials_inventory', 'Page retained ClinicalTrials captures, reviews, PRS documents/plans/reconciliations or native source inventories at an exact snapshot.',
-      { ...selection, kind: { type: 'string', enum: ['captures', 'reviews', 'prs', 'prsPlans', 'prsReconciliations', 'prsPreviews', 'exports', 'sources', 'plans', 'builds', 'comparisons'] }, ...pagination }, ['workspace', 'kind'], read),
+      { ...selection, kind: { type: 'string', enum: ['captures', 'reviews', 'prs', 'prsPlans', 'prsReconciliations', 'prsPreviews', 'batches', 'batchExports', 'exports', 'sources', 'plans', 'builds', 'comparisons'] }, ...pagination }, ['workspace', 'kind'], read),
     tool('merchant_clinicaltrials_capture', 'Inspect a retained provider capture and its original source pages, request, provider version and completeness.', { ...selection, captureId: id }, ['workspace', 'captureId'], read),
     tool('merchant_clinicaltrials_studies', 'Page the actual retained study cohort. Preserve the original capture and continue its returned offset; query searches the saved studies.',
       { ...selection, captureId: id, offset: pagination.offset, limit: pagination.limit, query: { type: 'string', maxLength: 200 } }, ['workspace', 'captureId'], read),
@@ -44,9 +46,13 @@ export function clinicalTrialsWorkspaceTools(tool) {
     tool('merchant_clinicaltrials_prs_reconciliation', 'Read the complete original typed PRS-to-study reconciliation and retained source decisions.', { ...selection, reportId: id }, ['workspace', 'reportId'], read),
     tool('merchant_clinicaltrials_prs_preview', 'Read the complete retained original full or partial PRS upload composition, selected documents and candidate report.', { ...selection, previewId: id }, ['workspace', 'previewId'], read),
     tool('merchant_clinicaltrials_prs_catalog', 'Read the maintained PRS engine catalog of source-bound protocol and results fields and original reconciliation rules.', selection, ['workspace'], read),
+    tool('merchant_clinicaltrials_batch', 'Read the complete retained disclosure batch, client entries, findings, dispositions, original history and declared deliveries.',
+      { ...selection, batchId: id }, ['workspace', 'batchId'], read),
+    tool('merchant_clinicaltrials_batch_entry', 'Read one original batch entry with input/current XML identity and its retained modernization, composition and source-reconciliation reports.',
+      { ...selection, batchId: id, entryId: digest }, ['workspace', 'batchId', 'entryId'], read),
     tool('merchant_clinicaltrials_operation', 'Recover the exact original request after an interrupted reply. Preserves UNKNOWN/RUNNING/COMPLETE/FAILED/INTERRUPTED and native result or error.',
       { ...selection, requestId: mutation.requestId }, ['workspace', 'requestId'], read),
-    tool('merchant_clinicaltrials_action', 'Execute an original ClinicalTrials action with the reviewed revision and a retained UUID. Supports cohort/capture/review/mapping/edition/query/merchant/package, original PRS, publisher and dossier actions. Inspect the same operation after uncertainty.',
+    tool('merchant_clinicaltrials_action', 'Execute an original ClinicalTrials action with the reviewed revision and a retained UUID. Supports cohort/capture/review/mapping/edition/query/merchant/package, original PRS and disclosure-batch, publisher and dossier actions. Inspect the same operation after uncertainty.',
       { ...mutation, action: { anyOf: [{ type: 'string', enum: actionNames }, { type: 'string', pattern: '^(publisher|dossier)\\.[a-z][a-z0-9_.-]{0,95}$' }] }, payload: { type: 'object' } },
       ['workspace', 'action', 'payload', 'expectedRevision', 'requestId'], { openWorld: true }),
     tool('merchant_clinicaltrials_files', 'Inspect declared complete file identities before source, PRS or portable receiving. Returns original byte count and SHA256 without host path or credential values.',
@@ -60,8 +66,8 @@ export function clinicalTrialsWorkspaceTools(tool) {
       ['workspace','file','expectedSha256','originalId','reviewedBy','note','expectedRevision','requestId'], {}),
     tool('merchant_clinicaltrials_restore', 'Receive one complete declared ClinicalTrials package through the existing receiving console and its original workspace lease.',
       { ...mutation, file: alias, expectedSha256: digest }, ['workspace', 'file', 'expectedSha256', 'expectedRevision', 'requestId'], {}),
-    tool('merchant_clinicaltrials_file_prepare', 'Retain one complete declared native export, capture source member, contract, PRS XML/report or original publisher file for verified resumable delivery. Reads the original bytes once.',
-      { ...selection, kind: { type: 'string', enum: ['export', 'source', 'contract', 'prs', 'publisher'] },
+    tool('merchant_clinicaltrials_file_prepare', 'Retain one complete declared native cohort or batch export, capture source member, contract, PRS XML/report or original publisher file for verified resumable delivery. Reads the original bytes once.',
+      { ...selection, kind: { type: 'string', enum: ['export', 'batch', 'source', 'contract', 'prs', 'publisher'] },
         exportId: id, captureId: id, documentId: id, file: { type: 'string', minLength: 1, maxLength: 512 },
         name: id, publisherKind: { type: 'string', enum: PUBLISHER_KINDS }, id, expectedRevision: mutation.expectedRevision, prsKind: { type: 'string', enum: ['xml', 'report'] }, expectedSha256: digest },
       ['workspace', 'kind'], {}),
