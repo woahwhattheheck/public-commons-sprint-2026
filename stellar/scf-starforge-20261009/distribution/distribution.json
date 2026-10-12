@@ -61,7 +61,8 @@
     "stellar/scf-starforge-20261009/mpp-charge",
     "stellar/mercury-event-operations",
     "stellar/scf-starforge-20261009/partners/open-meteo-operations",
-    "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api"
+    "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api",
+    "stellar/scf-starforge-20261009/partners/coingecko-stellar-market"
   ],
   "browserAssets": [
     {
@@ -349,7 +350,8 @@
     "socrata-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs",
     "census-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/cli.mjs",
     "crossref": "stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/cli.mjs",
-    "crossref-dossier": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-cli.mjs"
+    "crossref-dossier": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-cli.mjs",
+    "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -797,7 +799,11 @@
     "./seller/crossref/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/config.mjs",
     "./seller/crossref/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/source.mjs",
     "./seller/crossref/metadata": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/metadata.mjs",
-    "./buyer/research-dossiers/crossref": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref.mjs"
+    "./buyer/research-dossiers/crossref": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref.mjs",
+    "./partners/coingecko": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/provider.mjs",
+    "./partners/coingecko/contracts": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/contracts.mjs",
+    "./partners/coingecko/market": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/market.mjs",
+    "./partners/coingecko/workspace": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/workspace/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
