@@ -17,14 +17,16 @@ REPOSITORY = "woahwhattheheck/public-commons-sprint-2026"
 REPOSITORY_PREFIX = "revenue/umich-audit-operator"
 SOURCE_FILES = (
     "LICENSE", "README.md", "DEMONSTRATION.md", "EXCHANGE.md",
-    "SOURCE_ACQUISITION.md", "requirements.txt", "run.py", "build_release.py",
+    "SOURCE_ACQUISITION.md", "INSTITUTIONAL_ACCESS.md", "requirements.txt", "run.py", "build_release.py",
     "audit_operator/__init__.py", "audit_operator/store.py", "audit_operator/model.py",
     "audit_operator/archive.py", "audit_operator/service.py", "audit_operator/exchange.py",
     "audit_operator/reporting.py", "audit_operator/host.py",
-    "ui/index.html", "ui/style.css", "ui/app.js",
+    "audit_operator/identity.py", "audit_operator/identity_http.py", "audit_operator/identity_oidc.py",
+    "ui/index.html", "ui/style.css", "ui/app.js", "ui/identity.js", "ui/identity.css",
     "examples/EXCHANGE_PRACTICE.py", "examples/OPERATOR_PRACTICE.py", "examples/UI_RECEIVING.mjs",
-    "reference/audit-domain-contract.json", "reference/event-catalog.json",
-    "tools/materialize_reference.py", "tools/extract_event_catalog.py",
+    "examples/INSTITUTIONAL_RECEIVING.py", "examples/INSTITUTIONAL_RECEIVING.mjs",
+    "reference/audit-domain-contract.json", "reference/event-catalog.json", "reference/institutional-identity-contract.json",
+    "tools/materialize_reference.py", "tools/extract_event_catalog.py", "tools/package_institutional_delivery.py",
 )
 MANIFEST = "SOURCE_MANIFEST.json"
 MAX_SOURCE_FILE = 4 * 1024 * 1024
