@@ -129,6 +129,27 @@
       ]
     ],
     [
+      "/runbooks.mjs",
+      [
+        "runbooks.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/runbooks.html",
+      [
+        "runbooks.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/runbooks.css",
+      [
+        "runbooks.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
       "/cryptoworth.mjs",
       [
         "cryptoworth.mjs",

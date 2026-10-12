@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 // MIT. Owner-local SQL Server merchant workspace; host CLI owns paths and credentials.
 import { createServer } from 'node:http';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { readFile, unlink } from 'node:fs/promises';
+import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createMssqlWorkspace } from './model.mjs';
+import { createMssqlOperator } from './operator.mjs';
+import { initializeMssqlOperator, inspectMssqlOperatorBinding, privateDirectory, readJSON,
+  exists, replace, need, syncDirectory } from './operator-store.mjs';
 import { createMssqlNativeFactory } from '../merchant.mjs';
 
 const FILES = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
@@ -31,9 +33,12 @@ async function body(req) {
 
 export async function startMssqlMerchantWorkspace({ model, port = 8441, ...options } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('WORKSPACE_PORT_INVALID');
-  model ??= await createMssqlWorkspace(options);
-  const files = new Map(await Promise.all([...FILES].map(async ([url, [name, type]]) =>
-    [url, { type, bytes: await readFile(new URL('./public/' + name, import.meta.url)) }])));
+  model ??= await createMssqlOperator(options);
+  let files;
+  try {files = new Map(await Promise.all([...FILES].map(async ([url, [name, type]]) =>
+    [url, { type, bytes: await readFile(new URL('./public/' + name, import.meta.url)) }])));}
+  catch(error){await model.close();throw error;}
+  const instanceId = randomUUID();
   const capability = randomBytes(32).toString('hex'), tickets = new Map(), sockets = new Set(), downloads = new Set();
   let origin, closing = false, closePromise;
   const authorized = req => {
@@ -67,8 +72,16 @@ export async function startMssqlMerchantWorkspace({ model, port = 8441, ...optio
         return res.end(ticket.bytes);
       }
       if (!authorized(req)) return json(res, 403, { error: 'WORKSPACE_CAPABILITY_REQUIRED' });
+      if (req.headers['x-mssql-workspace-id'] !== undefined && req.headers['x-mssql-workspace-id'] !== model.workspaceId)
+        return json(res, 409, {error:'MSSQL_WORKSPACE_IDENTITY_CHANGED'});
+      const query = (allowed, numbers=[]) => {
+        if ([...url.searchParams.keys()].some(key=>!allowed.includes(key)) ||
+            new Set(url.searchParams.keys()).size!==[...url.searchParams.keys()].length)
+          throw Object.assign(new Error('MSSQL_WORKSPACE_QUERY_INVALID'),{status:422});
+        return Object.fromEntries([...url.searchParams].map(([key,value])=>[key,numbers.includes(key)?Number(value):value]));
+      };
       if (req.method === 'GET') {
-        if (url.pathname === '/api/info' && !url.search) return json(res, 200, await model.info());
+        if (url.pathname === '/api/info' && !url.search) return json(res, 200, { ...await model.info(), instanceId, pid:process.pid });
         if (url.pathname === '/api/runtime' && !url.search) return json(res, 200, { runtime: await model.runtime() });
         if (url.pathname === '/api/catalog' && !url.search) return json(res, 200, await model.catalog());
         if (url.pathname === '/api/table' && [...url.searchParams.keys()].join(',') === 'name') return json(res, 200, await model.catalog(url.searchParams.get('name')));
@@ -76,9 +89,21 @@ export async function startMssqlMerchantWorkspace({ model, port = 8441, ...optio
         if (url.pathname === '/api/releases' && (!url.search || [...url.searchParams.keys()].join(',') === 'page'))
           return json(res, 200, await model.list(Number(url.searchParams.get('page') ?? 0)));
       }
+      if (req.method === 'GET') {
+        if (url.pathname === '/api/operator/reviews') return json(res,200,await model.reviewList(query(['after','limit'],['limit'])));
+        if (url.pathname === '/api/operator/review') return json(res,200,await model.reviewLoad(query(['reviewId']).reviewId));
+        if (url.pathname === '/api/operator/operations') return json(res,200,await model.operationList(query(['after','limit'],['limit'])));
+        if (url.pathname === '/api/operator/operation') return json(res,200,await model.operationLoad(query(['operationId']).operationId));
+        if (url.pathname === '/api/transfer/exports') return json(res,200,await model.exports(query(['after','limit'],['limit'])));
+        if (url.pathname === '/api/transfer/manifest') return json(res,200,await model.exportManifest(query(['exportId']).exportId));
+        if (url.pathname === '/api/transfer/file') return json(res,200,await model.exportFile(query(
+          ['exportId','file','expectedManifestSha256','expectedSha256','readId','offset','limit'],['offset','limit'])));
+      }
       if (req.method === 'POST' && !url.search) {
         const actions = { '/api/review': 'review', '/api/preview': 'preview', '/api/prepare': 'prepare',
-          '/api/run': 'run', '/api/stop': 'stop', '/api/export-client': 'exportClient' };
+          '/api/run': 'run', '/api/stop': 'stop', '/api/export-client': 'exportClient',
+          '/api/operator/stage':'stage','/api/transfer/export':'exportSource',
+          '/api/transfer/receive':'receiveSource','/api/transfer/file-release':'exportFileRelease' };
         if (Object.hasOwn(actions, url.pathname)) {
           const result = await model[actions[url.pathname]](await body(req));
           if (url.pathname === '/api/export-client') {
@@ -103,7 +128,7 @@ export async function startMssqlMerchantWorkspace({ model, port = 8441, ...optio
   try { await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); }); }
   catch (error) { await model.close(); throw error; }
   origin = `http://127.0.0.1:${server.address().port}`;
-  return { url: origin + '/#' + capability, origin, model, server,
+  return { url: origin + '/#' + capability, origin, model, server, instanceId,
     close() {
       if (closePromise) return closePromise;
       closing = true;
@@ -125,21 +150,32 @@ export async function startMssqlMerchantWorkspace({ model, port = 8441, ...optio
 
 export async function main(args = process.argv.slice(2)) {
   const help = 'SQL Server merchant browser workspace\n' +
-    '  node mssql/cli.mjs workspace --source /private/source.json --state /private/mssql-workspace\n' +
+    '  mssql-workspace init|inspect --source /private/source.json --state /private/mssql-workspace\n' +
+    '  mssql-workspace --source /private/source.json --state /private/mssql-workspace\n' +
     '    [--port 8441] [--seller-port 0] [--operations-port 0]\n' +
-    '    [--facilitator HTTPS_URL] [--allow-local-facilitator]\n' +
-    'Open the printed workspace URL. Keep the launching terminal for native operator approval.';
+    '    [--facilitator HTTPS_URL] [--allow-local-facilitator] [--release-store /private/releases]\n' +
+    '    [--connection-file /private/connection.json]\n' +
+    'Open the printed workspace URL or start this initialized workspace through Applications.';
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(help + '\n'); return null; }
+  const action = ['init','inspect'].includes(args[0]) ? args[0] : null;
+  if (action) args = args.slice(1);
   const options = new Map();
   for (let i = 0; i < args.length; i++) {
     const key = args[i];
     if (options.has(key)) throw new TypeError('WORKSPACE_DUPLICATE_OPTION');
     if (key === '--allow-local-facilitator') { options.set(key, true); continue; }
-    if (!['--source', '--state', '--port', '--seller-port', '--operations-port', '--facilitator'].includes(key) ||
+    if (!['--source', '--state', '--port', '--seller-port', '--operations-port', '--facilitator',
+      '--release-store','--expected-workspace-id','--expected-profile-id','--connection-file'].includes(key) ||
         !args[i + 1] || args[i + 1].startsWith('--')) throw new TypeError(help);
     options.set(key, args[++i]);
   }
   if (!options.has('--source') || !options.has('--state')) throw new TypeError(help);
+  if (action) {
+    need([...options.keys()].every(key=>['--source','--state'].includes(key)),'MSSQL_WORKSPACE_OPTION_INVALID');
+    const selected={sourceFile:resolve(options.get('--source')),stateDirectory:resolve(options.get('--state'))};
+    const result=await (action==='init'?initializeMssqlOperator(selected):inspectMssqlOperatorBinding(selected));
+    process.stdout.write(JSON.stringify(result)+'\n');return result;
+  }
   const port = (key, fallback) => {
     const value = options.get(key) ?? String(fallback);
     if (!/^\d{1,5}$/.test(value) || Number(value) > 65535) throw new TypeError('WORKSPACE_PORT_INVALID');
@@ -149,8 +185,40 @@ export async function main(args = process.argv.slice(2)) {
     allowLocalFacilitator: options.has('--allow-local-facilitator') });
   const session = await startMssqlMerchantWorkspace({ sourceFile: resolve(options.get('--source')),
     stateDirectory: resolve(options.get('--state')), port: port('--port', 8441), sellerPort: port('--seller-port', 0),
-    operationsPort: port('--operations-port', 0), nativeFactory });
-  process.stdout.write(JSON.stringify({ workspace: session.url, state: session.model.stateDirectory }) + '\n');
+    operationsPort: port('--operations-port', 0), nativeFactory,
+    ...(options.has('--release-store')?{releaseStore:resolve(options.get('--release-store'))}:{}),
+    ...(options.has('--expected-workspace-id')?{expectedWorkspaceId:options.get('--expected-workspace-id')}:{}),
+    ...(options.has('--expected-profile-id')?{expectedProfileId:options.get('--expected-profile-id')}:{}),
+  });
+  let startup,connectionFile;
+  try {
+    const selected=await session.model.info();
+    connectionFile=options.has('--connection-file')?resolve(options.get('--connection-file')):
+      join(selected.stateDirectory,'operator','connection.json');
+    startup={schema:'stellar-forge.mssql-workspace-startup.v1',workspace:session.url,state:selected.stateDirectory,
+      workspaceId:selected.workspaceId,workspaceCreatedAt:selected.workspaceCreatedAt,
+      workspaceIdentitySha256:selected.workspaceIdentitySha256,profileId:selected.profileId,sourceFile:selected.sourceFile,
+      instanceId:session.instanceId,pid:process.pid};
+    await privateDirectory(dirname(connectionFile));
+    if(await exists(connectionFile)) {
+      const prior=await readJSON(connectionFile,16384);
+      need(prior.schema===startup.schema && prior.workspaceId===startup.workspaceId,'MSSQL_CONNECTION_FILE_IN_USE');
+    }
+    await replace(connectionFile,startup);
+  } catch(error) {await session.close();throw error;}
+  const originalClose=session.close;
+  session.close=async()=>{
+    try {await originalClose();}
+    finally {
+      if(await exists(connectionFile)) {
+        const current=await readJSON(connectionFile,16384);
+        if(current.schema===startup.schema && current.instanceId===session.instanceId) {
+          await unlink(connectionFile);await syncDirectory(dirname(connectionFile));
+        }
+      }
+    }
+  };
+  process.stdout.write(JSON.stringify({...startup,connectionFile})+'\n');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => session.close().catch(() => { process.exitCode = 1; }));
   return session;
 }

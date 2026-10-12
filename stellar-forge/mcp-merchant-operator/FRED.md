@@ -2,7 +2,7 @@
 
 Operate a retained FRED economic product from the installed command, a typed JavaScript client, or the existing authenticated merchant MCP host. All three paths attach to the original economic workspace: the same project, source captures, reviews, publication, merchant listener, configured SF88 buyer and saved customer intents.
 
-The client covers official source intake, complete public-table imports, combined macro editions, observations and revision comparisons, projection review, publication, merchant control, customer preparation/execution/recovery, complete downloads and project receiving. The MCP family contains 28 tools and loads its runtime only when that configured family is used.
+The client covers official source intake, complete public-table imports, combined macro editions, observations and revision comparisons, projection review, publication, merchant control, customer preparation/execution/recovery, complete downloads and project receiving. The MCP family contains 30 tools and loads its runtime only when that configured family is used.
 
 ## Start or reconnect the original workspace
 
@@ -204,3 +204,14 @@ try {
 ~~~
 
 The definitions expose the original launch binding, project/revision structures, source and publication inputs, exact file selections, raw Buffer downloads and recoverable error fields. The client accepts an AbortSignal per operation; timeoutMs controls the client observation window up to 30 minutes. Full request capacity is 128 MiB and full response capacity is 256 MiB, matching the original workspace and bundle contracts. The original source model applies its own source limits.
+
+
+## Author and deliver an analyst briefing
+
+The installed economic client now includes the complete saved-report workflow. Use `briefing-preview --capture SHA --briefing-file JSON`, then save `review --id ID --revision N --capture SHA --briefing-file JSON` with the original note/projection. Open it with `briefing --review SHA`. Full `download --kind briefing --review SHA --format html|csv|json|manifest --out FILE` verifies the original saved file descriptor and complete response bytes.
+
+The agent tools are `merchant_fred_briefing_preview` and `merchant_fred_briefing`; `merchant_fred_review` accepts the optional normalized analyst selection, and `merchant_fred_file_read` accepts briefing/reviewId/format. The typed Node client exposes `previewBriefing`, `briefing` and the extended file/review types. Existing `publish`, `prepare`, `buy` and `recover` deliver the complete report through the original configured merchant and buyer.
+
+[BRIEFINGS.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fred/BRIEFINGS.md) gives the full authoring, exact period/unit/missing-value rules, native customer and project reopening flow. [The completed offline macro report](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/briefing.html) includes all actual report data and local downloads; [its complete original capture](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/macro-source.capture.json) imports directly into the existing project. The source keeps all 2,219 observations; its January 2024–September 2026 briefing selects 75 observations and produces 150 exact comparisons.
+
+A project containing saved briefings exports the explicit v2 bundle, including the complete report files for every reviewed briefing. The native receiver validates the original source/calculations/files and restores those same bytes. Source-only projects continue using their original v1 bundle and edition identities.

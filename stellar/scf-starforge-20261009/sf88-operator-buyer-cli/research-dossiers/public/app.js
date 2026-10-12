@@ -3,6 +3,7 @@ import {createCrossrefPanel} from './crossref.js';
 import {createUnstructuredPanel} from './unstructured.js';
 import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
 import {createClinicalTrialsPanel} from './clinical-trials.js';
+import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -93,6 +94,7 @@ import {createClinicalTrialsPanel} from './clinical-trials.js';
     documentPanel.updateBusy();
     pipelinePanel.updateBusy();
     clinicalTrialsPanel.updateBusy();
+    sourceBundlePanel.updateBusy();
   }
   async function api(path, {method = 'GET', body, file, download = false} = {}) {
     const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
@@ -189,6 +191,7 @@ import {createClinicalTrialsPanel} from './clinical-trials.js';
     documentPanel.setDossier(view);
     pipelinePanel.setDossier(view);
     clinicalTrialsPanel.setDossier(view);
+    sourceBundlePanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -333,6 +336,8 @@ import {createClinicalTrialsPanel} from './clinical-trials.js';
   }
   function renderExcerpt(source, variant) {
     const content = variant?.content ?? source.content ?? source.abstract ?? source.description ?? source.snippet;
+    const bundle=renderSourceBundleFiles($('detail-bundle-files'),content);
+    $('detail-excerpt').hidden=bundle;if(bundle)return;
     $('detail-excerpt').textContent = content === undefined || content === null || content === '' ?
       'This source has no current excerpt. Its original reference and your saved analysis remain available.' : text(content);
     $('detail-excerpt').classList.toggle('typed-content', content !== null && typeof content === 'object');
@@ -684,6 +689,9 @@ import {createClinicalTrialsPanel} from './clinical-trials.js';
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   const clinicalTrialsPanel = createClinicalTrialsPanel({root:$('view-clinical-trials'),tab:$('clinical-trials-tab'),api,task,notify,
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const sourceBundlePanel=createSourceBundlePanel({root:$('source-bundle-dialog'),openButton:$('source-bundle-open'),
+    api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {
     if (!state.busy) button.closest('dialog').close();

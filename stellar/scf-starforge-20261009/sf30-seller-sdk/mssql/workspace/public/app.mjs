@@ -4,7 +4,9 @@ const tokenKey = 'starforge.mssql.workspace.capability';
 if (/^#[a-f0-9]{64}$/.test(location.hash)) { sessionStorage.setItem(tokenKey, location.hash.slice(1)); history.replaceState(null, '', location.pathname); }
 const token = sessionStorage.getItem(tokenKey) ?? '';
 const state = { relation: null, endpoints: [], filters: [], orders: [], payments: [], editing: null,
-  review: null, selected: null, runtime: null, page: 0, busy: false, preview: null, previewPage: 0, endpointDirty: false };
+  review: null, selected: null, runtime: null, page: 0, busy: false, preview: null, previewPage: 0, endpointDirty: false,
+  workspaceId:null, pending:null, database:null, stageAvailable:false,
+  history:{reviews:null,operations:null,exports:null} };
 const errors = {
   SOURCE_SCHEMA_CHANGED: 'The table schema changed. Reopen each affected endpoint, review its fields and save the updated choices.',
   SOURCE_PROFILE_CHANGED: 'The private source profile changed. Refresh the database tables and review a new release.',
@@ -32,20 +34,148 @@ function node(tag, attrs = {}, children = []) {
 const option = (value, label = value) => node('option', { value, textContent: label });
 const button = (label, action, className = 'small') => node('button', { type: 'button', textContent: label, className, onclick: action });
 function notice(text, kind = '') { $('status').textContent = text; $('status').className = 'status ' + kind; }
-async function api(path, value) {
+async function api(path, value, bodyText) {
   const response = await fetch(path, { headers: { 'x-workspace-token': token,
+    ...(state.workspaceId?{'x-mssql-workspace-id':state.workspaceId}:{}),
     ...(value === undefined ? {} : { 'content-type': 'application/json' }) },
-  ...(value === undefined ? {} : { method: 'POST', body: JSON.stringify(value) }) });
+  ...(value === undefined ? {} : { method: 'POST', body: bodyText??JSON.stringify(value) }) });
   const result = await response.json();
-  if (!response.ok) throw new Error((result.field ? result.field + ': ' : '') + (errors[result.error] ?? result.detail ?? result.error));
+  if (!response.ok) throw Object.assign(new Error((result.field ? result.field + ': ' : '') +
+    (errors[result.error] ?? result.detail ?? result.error)),{status:response.status,code:result.error});
   return result;
+}
+function requestDatabase() {
+  return new Promise((done,reject)=>{
+    const opening=indexedDB.open('starforge.mssql.operator.v1',1);
+    opening.onupgradeneeded=()=>opening.result.createObjectStore('pending',{keyPath:'workspaceId'});
+    opening.onsuccess=()=>done(opening.result);
+    opening.onerror=()=>reject(opening.error);
+  });
+}
+function savedRequest(mode, action) {
+  if(!state.database)throw new Error('The browser could not open its saved-operation storage. Reopen this workspace before sending a retained operation.');
+  return new Promise((done,reject)=>{
+    const transaction=state.database.transaction('pending',mode);
+    const request=action(transaction.objectStore('pending'));
+    transaction.oncomplete=()=>done(request.result);
+    transaction.onabort=()=>reject(transaction.error??new Error('The saved operation could not be retained.'));
+    transaction.onerror=()=>reject(transaction.error);
+  });
+}
+function updateSavedRequest(record,expectedOperationId=null) {
+  if(!state.database)throw new Error('The browser saved-operation store is unavailable.');
+  return new Promise((done,reject)=>{
+    const transaction=state.database.transaction('pending','readwrite'),store=transaction.objectStore('pending');
+    const original=store.get(state.workspaceId);let selected;
+    original.onsuccess=()=>{
+      const prior=original.result??null;
+      if(record) {selected=prior??record;if(!prior)store.put(record);}
+      else {selected=prior?.operationId===expectedOperationId?null:prior;if(prior?.operationId===expectedOperationId)store.delete(state.workspaceId);}
+    };
+    transaction.oncomplete=()=>done(selected);
+    transaction.onabort=()=>reject(transaction.error??new Error('The original saved operation could not be updated.'));
+    transaction.onerror=()=>reject(transaction.error);
+  });
+}
+function renderPending() {
+  $('pending-panel').hidden=!state.pending;
+  $('build-view').inert=Boolean(state.pending);
+  $('selected-actions').inert=Boolean(state.pending);$('stage-controls').inert=Boolean(state.pending);
+  if(state.pending) {
+    $('pending-summary').textContent='The original '+state.pending.kind+' request is saved as '+state.pending.operationId+'. Retry it to reopen its retained outcome.';
+    $('pending-request').textContent=state.pending.bodyText;
+  }
+}
+async function finishPending(record) {
+  if(record.workspaceId!==state.workspaceId)throw new Error('This saved request belongs to a different SQL Server workspace.');
+  let result;
+  try {result=await api(record.path,JSON.parse(record.bodyText),record.bodyText);}
+  catch(error) {
+    if(error.status>=400&&error.status<500) {
+      state.pending=await updateSavedRequest(null,record.operationId);renderPending();
+    }
+    throw error;
+  }
+  if(result.workspaceId!==state.workspaceId)throw new Error('The returned operation belongs to a different SQL Server workspace.');
+  if(record.kind==='review'&&result.reviewId!==record.operationId||
+     record.kind==='preview'&&result.operationId!==record.operationId||
+     record.kind==='export'&&result.exportId!==record.operationId)
+    throw new Error('The original operation identity changed in the returned response.');
+  state.pending=await updateSavedRequest(null,record.operationId);renderPending();
+  return result;
+}
+async function retained(kind,path,input) {
+  if(!state.workspaceId)throw new Error('Reopen the original workspace identity before continuing.');
+  if(state.pending)throw new Error('Retry the saved '+state.pending.kind+' operation above before sending another retained operation.');
+  const operationId=crypto.randomUUID(),payload={...input,operationId};
+  const record={workspaceId:state.workspaceId,kind,path,operationId,bodyText:JSON.stringify(payload)};
+  state.pending=await updateSavedRequest(record);renderPending();
+  if(state.pending.operationId!==operationId)throw new Error('Another tab retained an original operation. Retry that saved request before continuing.');
+  return finishPending(record);
+}
+function loadChoices(choice,newRelease=false) {
+  state.endpoints=structuredClone(choice.endpoints);state.editing=null;state.endpointDirty=false;
+  state.relation=null;state.filters=[];state.orders=[];$('endpoint-form').reset();$('table-select').value='';
+  $('column-rows').replaceChildren();$('save-endpoint').textContent='Add endpoint to release';
+  $('release-id').value=newRelease?choice.releaseId.slice(0,59)+'_next':choice.releaseId;
+  $('release-label').value=choice.label;$('public-origin').value=choice.publicOrigin;
+  state.payments=(choice.paymentOptions??[choice.payment]).map(payment=>({...payment,
+    maxTimeoutSeconds:String(payment.maxTimeoutSeconds),extraText:payment.extra===undefined?'':JSON.stringify(payment.extra,null,2)}));
+  invalidateReview();renderOrders();renderFilters();renderPayments();renderEndpoints();setView('build');
+}
+async function openReview(id) {
+  if(state.pending)throw new Error('Finish the saved operation before replacing the open review.');
+  const saved=await api('/api/operator/review?reviewId='+encodeURIComponent(id));
+  if(saved.workspaceId!==state.workspaceId)throw new Error('The review belongs to a different workspace.');
+  loadChoices(saved.choices);state.review=saved.review;renderReview();
+  notice(Date.now()>Date.parse(saved.review.expiresAt)?
+    'Opened the original choices. Review this release again before another native query or preparation.':
+    'Opened the original review and its complete source choices.');
+}
+function renderExport(value) {
+  $('transfer-details').hidden=false;
+  $('transfer-result').textContent=JSON.stringify(value,null,2);
+  $('transfer-guide').textContent='Receive all '+value.files+' original files with mssql-download receive. '+
+    'Select your existing merchant MCP URL, workspace alias and this workspace ID; use export ID '+value.exportId+
+    ' and expected manifest SHA256 '+value.manifestSha256+'.';
+}
+async function originalOperation(id) {
+  const saved=await api('/api/operator/operation?operationId='+encodeURIComponent(id));
+  $('operation-details').hidden=false;$('operation-result').textContent=JSON.stringify(saved,null,2);
+  if(saved.request.kind==='preview'&&saved.state==='COMPLETED') {
+    state.preview=saved.result;state.previewPage=0;renderPreview();setView('build');
+  }
+  notice(saved.state==='COMPLETED'?'Opened the exact retained operation outcome.':'Opened the original saved request and its current state.');
+}
+async function listHistory(kind,append=false) {
+  const route=kind==='exports'?'/api/transfer/exports':'/api/operator/'+kind;
+  const previous=append?state.history[kind]:null;
+  const result=await api(route+'?limit=25'+(previous?'&after='+encodeURIComponent(previous):''));
+  const target=$(kind+'-list');if(!append)target.replaceChildren();
+  for(const item of result.items) {
+    let title,detail,open;
+    if(kind==='reviews') {
+      title=item.label;detail=item.releaseId+' · '+new Date(item.expiresAt).toLocaleString()+(item.expired?' · renew before execution':'');
+      open=()=>openReview(item.reviewId);
+    } else if(kind==='operations') {
+      title=item.kind+' · '+item.state;detail=item.operationId+' · '+new Date(item.createdAt).toLocaleString();
+      open=()=>originalOperation(item.operationId);
+    } else {
+      title=item.kind+' · '+item.releaseId;detail=item.exportId+' · '+item.files+' files · '+item.bytes+' bytes';
+      open=async()=>renderExport(await api('/api/transfer/manifest?exportId='+encodeURIComponent(item.exportId)));
+    }
+    target.append(button('',()=>work('Opening the original saved '+kind+'…',open),'release-item'));
+    target.lastChild.append(node('strong',{textContent:title}),node('span',{textContent:detail}));
+  }
+  if(!target.children.length)target.append(node('p',{className:'muted',textContent:'No saved '+kind+' yet.'}));
+  state.history[kind]=result.nextCursor;$(kind+'-more').disabled=!result.hasMore;
 }
 async function work(label, action) {
   if (state.busy) return;
   state.busy = true; $('main').inert = true; $('main').classList.add('busy'); notice(label, 'working');
   try { await action(); }
   catch (error) { notice(error.message || 'The workspace connection was interrupted.', 'error'); }
-  finally { state.busy = false; $('main').inert = false; $('main').classList.remove('busy'); renderRuntime(); }
+  finally { state.busy = false; $('main').inert = false; $('main').classList.remove('busy'); renderRuntime(); renderPending(); }
 }
 function invalidateReview() {
   state.review = null; $('review-panel').hidden = true; $('confirm-review').checked = false; $('prepare-release').disabled = true;
@@ -203,7 +333,7 @@ function renderReview() {
   $('review-endpoints').replaceChildren(...review.endpoints.map(endpoint => node('article', { className: 'review-endpoint' }, [
     node('div', { className: 'section-heading' }, [node('h3', { textContent: endpoint.route.method + ' ' + endpoint.route.path }),
       button('Preview approved example', () => work('Running the original private query against the database…', async () => {
-        state.preview = await api('/api/preview', { reviewId: review.reviewId, planId: review.planId, endpointId: endpoint.route.id });
+        state.preview = await retained('preview','/api/preview', { reviewId: review.reviewId, planId: review.planId, endpointId: endpoint.route.id });
         state.previewPage = 0; renderPreview(); $('preview-panel').scrollIntoView({ block: 'start' }); notice('The original source returned the private operator example.');
       }))]),
     node('p', { textContent: endpoint.query.columns.length + ' output fields · at most ' + endpoint.query.maxRows + ' rows · ' + endpoint.query.maxBytes + ' bytes · ' + endpoint.query.timeoutMs + ' ms' }),
@@ -244,7 +374,8 @@ function renderSelected() {
     node('h3', { textContent: 'Original merchant routes' }), node('ul', {}, selected.routes.map(route => node('li', { textContent: route.method + ' ' + route.url + ' · ' + route.paymentOptions + ' payment option' + (route.paymentOptions === 1 ? '' : 's') }))),
     node('details', {}, [node('summary', { textContent: 'Verified prepared files' }), node('pre', { textContent: selected.files.map(file => file.name + ' · ' + file.bytes + ' bytes · ' + file.sha256).join('\n') })]),
     node('p', { className: 'hint', textContent: 'The customer archive contains the original JavaScript client, TypeScript declarations, package metadata, client guide and OpenAPI. Start this private release here or use the native SQL Server run command with the package directory.' }));
-  $('selected-actions').hidden = false; renderRuntime();
+  $('selected-actions').hidden = false; $('stage-controls').hidden=!state.stageAvailable;
+  $('stage-id').value=selected.releaseId.toLowerCase().replace(/_/g,'-'); renderRuntime();
 }
 async function openRelease(id) {
   state.selected = await api('/api/release?id=' + encodeURIComponent(id)); state.runtime = state.selected.runtime;
@@ -297,12 +428,12 @@ $('add-filter').addEventListener('click', () => {
 });
 $('add-payment').addEventListener('click', addPayment);
 $('terms-form').addEventListener('submit', event => { event.preventDefault(); work('Compiling current schema, typed inputs and original payment terms…', async () => {
-  state.review = await api('/api/review', choices()); renderReview(); $('review-panel').scrollIntoView({ block: 'start' });
+  state.review = await retained('review','/api/review', {choices:choices()}); renderReview(); $('review-panel').scrollIntoView({ block: 'start' });
   notice('Review the fixed SQL, exact inputs, public contract and payment terms before preparation.');
 }); });
-$('confirm-review').addEventListener('change', () => { $('prepare-release').disabled = !state.review || !$('confirm-review').checked; });
+$('confirm-review').addEventListener('change', () => { $('prepare-release').disabled = !state.review || Date.now()>Date.parse(state.review.expiresAt) || !$('confirm-review').checked; });
 $('prepare-release').addEventListener('click', () => work('Preparing the original private SQL Server package and customer client…', async () => {
-  state.selected = await api('/api/prepare', { reviewId: state.review.reviewId, planId: state.review.planId });
+  state.selected = await retained('prepare','/api/prepare', { reviewId: state.review.reviewId, planId: state.review.planId });
   state.runtime = state.selected.runtime; await listReleases(); renderSelected(); setView('saved');
   notice((state.selected.reopened ? 'Reopened' : 'Prepared') + ' ' + state.selected.releaseId + ' with the original source, seller, operations contract and customer client.');
 }));
@@ -324,20 +455,45 @@ $('export-client').addEventListener('click', () => work('Exporting the original 
   notice('Customer client exported · ' + result.bytes + ' bytes · SHA256 ' + result.sha256);
 }));
 $('load-draft').addEventListener('click', () => {
-  const choice = state.selected.choices; state.endpoints = structuredClone(choice.endpoints); state.editing = null; state.endpointDirty = false;
-  $('release-id').value = choice.releaseId.slice(0, 59) + '_next'; $('release-label').value = choice.label; $('public-origin').value = choice.publicOrigin;
-  state.payments = (choice.paymentOptions ?? [choice.payment]).map(payment => ({ ...payment,
-    maxTimeoutSeconds: String(payment.maxTimeoutSeconds), extraText: payment.extra ? JSON.stringify(payment.extra, null, 2) : '' }));
-  invalidateReview(); renderPayments(); renderEndpoints(); setView('build');
+  loadChoices(state.selected.choices,true);
   notice('Loaded the release as a new draft. Edit an endpoint to refresh its current schema before reviewing changes.');
 });
+for(const kind of ['reviews','operations','exports']) {
+  $(kind+'-refresh').addEventListener('click',()=>work('Reading original '+kind+'…',()=>listHistory(kind)));
+  $(kind+'-more').addEventListener('click',()=>work('Reading more original '+kind+'…',()=>listHistory(kind,true)));
+}
+for(const kind of ['merchant','customer'])$('retain-'+kind).addEventListener('click',()=>work('Retaining the complete original '+kind+' transfer…',async()=>{
+  const selected=state.selected;
+  const result=await retained('export','/api/transfer/export',{releaseId:selected.releaseId,
+    manifestSha256:selected.manifestSha256,kind});
+  renderExport(result);await listHistory('exports');notice('The complete original '+kind+' transfer is ready for receiving.');
+}));
+$('stage-release').addEventListener('click',()=>work('Staging the original merchant in its selected seller release store…',async()=>{
+  if(!$('stage-id').reportValidity())throw new Error('Choose the seller release ID.');
+  const result=await api('/api/operator/stage',{releaseId:state.selected.releaseId,
+    manifestSha256:state.selected.manifestSha256,id:$('stage-id').value});
+  $('operation-details').hidden=false;$('operation-result').textContent=JSON.stringify(result,null,2);
+  notice('The original prepared source is staged in the configured seller release store.');
+}));
+$('retry-operation').addEventListener('click',()=>work('Reopening the exact saved operation…',async()=>{
+  const record=state.pending;if(!record)return;
+  const result=await finishPending(record);
+  if(record.kind==='review') {loadChoices(JSON.parse(record.bodyText).choices);state.review=result;renderReview();}
+  if(record.kind==='preview') {state.preview=result;state.previewPage=0;renderPreview();setView('build');}
+  if(record.kind==='prepare') {state.selected=result;state.runtime=result.runtime;await listReleases();renderSelected();setView('saved');}
+  if(record.kind==='export') {renderExport(result);await listHistory('exports');}
+  await listHistory('operations');
+  notice('Reopened the original '+record.kind+' outcome under the same operation UUID.');
+}));
 
 addPayment(); renderOrders(); renderFilters(); renderEndpoints();
 await work('Opening the private SQL Server workspace…', async () => {
-  const info = await api('/api/info'); state.runtime = info.runtime;
+  const info = await api('/api/info'); state.runtime = info.runtime; state.workspaceId=info.workspaceId;state.stageAvailable=info.stageAvailable;
+  state.database=await requestDatabase();state.pending=await savedRequest('readonly',store=>store.get(state.workspaceId))??null;renderPending();
   $('profile').textContent = info.source.database + ' · ' + info.source.host + ' · ' + info.source.user + ' · ' + info.source.tls;
   $('mode').textContent = info.mode === 'CHALLENGE_ONLY' ? 'Challenge only' : 'Native facilitator'; renderRuntime();
-  await refreshCatalog(); await listReleases();
+  await listReleases();for(const kind of ['reviews','operations','exports'])await listHistory(kind);
+  try {await refreshCatalog();}catch(error){notice(error.message+' Saved releases, reviews and operations remain open.','error');return;}
   notice(info.mode === 'CHALLENGE_ONLY' ? 'Ready. A facilitator can be selected in the launcher for native paid execution. Build and inspect releases here.' : 'Ready. Build a release from the actual database schema and run the original native seller.');
 });
 setInterval(async () => {

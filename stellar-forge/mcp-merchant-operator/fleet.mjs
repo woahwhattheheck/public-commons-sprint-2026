@@ -113,6 +113,10 @@ export class MerchantFleet {
             merchant_fleet_review: 'review', merchant_fleet_prepare: 'prepare', merchant_fleet_activate: 'activate',
             merchant_fleet_rollback_review: 'reviewRollback', merchant_fleet_rollback: 'rollback', merchant_fleet_retire: 'retire',
             merchant_fleet_operations: 'operations', merchant_fleet_client_list: 'clientList',
+            merchant_fleet_delivery_status: 'deliveryStatus', merchant_fleet_delivery_control: 'deliveryControl',
+            merchant_fleet_delivery_events: 'deliveryEvents', merchant_fleet_delivery_transfers: 'deliveryTransfers',
+            merchant_fleet_delivery_transfer: 'deliveryTransfer', merchant_fleet_delivery_manifest: 'deliveryTransferManifest',
+            merchant_fleet_delivery_file: 'deliveryFile', merchant_fleet_delivery_file_release: 'deliveryFileRelease',
             merchant_fleet_client_status: 'clientInspect', merchant_fleet_client_generate: 'clientGenerate',
             merchant_fleet_client_adopt: 'clientAdopt', merchant_fleet_client_manifest: 'clientManifest',
             merchant_fleet_client_file: 'clientFile', merchant_fleet_client_file_release: 'clientFileRelease',
@@ -127,6 +131,7 @@ export class MerchantFleet {
           const held = this.#owned();
           const result = await held.operator[method](args);
           if (!['catalog', 'operations', 'clientList', 'clientInspect', 'clientManifest', 'clientFile', 'clientFileRelease',
+            'deliveryStatus', 'deliveryEvents', 'deliveryTransfers', 'deliveryTransferManifest', 'deliveryFile', 'deliveryFileRelease',
             'discoveryStatus', 'discoveryEnrollment', 'discoverySource', 'discoveryHistory', 'discoveryConsume',
             'discoveryReviewEnrollment', 'discoveryReview'].includes(method))
             this.#lastOperation = { action: method, outcome: 'RETURNED', managerId: held.id, at: new Date().toISOString() };
@@ -137,6 +142,7 @@ export class MerchantFleet {
   }
   cancelStaging() { return this.#held?.operator.cancelStaging() ?? false; }
   cancelClientTransfers() { return this.#held?.operator.cancelClientTransfers() ?? false; }
+  cancelDeliveryOperations() { return this.#held?.operator.cancelDeliveryOperations() ?? false; }
   async close() {
     this.#closing = true;
     if (this.#held) await this.#stop(this.#held.id);

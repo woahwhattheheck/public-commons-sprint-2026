@@ -30,6 +30,7 @@ p.add_argument("--node", required=True)
 p.add_argument("--search-user")
 p.add_argument("--search-home")
 p.add_argument("--yente-bin")
+p.add_argument("--yente-python", help="Actual interpreter for the selected installed Yente console script")
 p.add_argument("--allow-private-development-packages", action="store_true")
 args = p.parse_args()
 ROOT = pathlib.Path(args.directory).resolve()
@@ -286,7 +287,15 @@ def provision_yente():
     global selected_yente_wheel
     selected_yente_wheel = original_yente_wheel()
     if args.yente_bin:
-        return pathlib.Path(args.yente_bin).resolve()
+        yente = pathlib.Path(os.path.abspath(os.path.expanduser(args.yente_bin)))
+        python = (pathlib.Path(os.path.abspath(os.path.expanduser(args.yente_python)))
+                  if args.yente_python else yente.parent / "python")
+        for selected in (yente, python):
+            if not selected.is_file() or not os.access(selected, os.X_OK):
+                raise RuntimeError("Select an existing executable Yente script and its --yente-python: " + str(selected))
+        return yente, python
+    if args.yente_python:
+        raise RuntimeError("--yente-python requires --yente-bin")
     if not (3, 11) <= sys.version_info[:2] <= (3, 14):
         raise RuntimeError("The original yente release requires Python 3.11 through 3.14")
     venv = RUNTIME / "yente-venv"
@@ -351,7 +360,45 @@ def provision_yente():
         environment=env, timeout=1200)
     record("icu_runtime", {"version": icu, "includes": str(header_root), "libraryDirectory": str(libdir),
                            "pythonIncludes": str(python_include), "private": bool(private_root)})
-    return venv / "bin/yente"
+    return venv / "bin/yente", venv / "bin/python"
+
+def verify_yente_runtime(yente, native_python):
+    # Validate the selected installed engine before provisioning or starting Java.
+    # The actual dataset manifest is created later from the original workspace.
+    inspection_manifest = RUNTIME / "engine-inspection-manifest.json"
+    write_json(inspection_manifest, {"catalogs": [], "datasets": []})
+    native_env = dict(os.environ)
+    native_env.update({"YENTE_MANIFEST": str(inspection_manifest), "YENTE_AUTO_REINDEX": "false"})
+    version_source = """
+import hashlib, importlib.metadata as m, json, pathlib, sys, zipfile
+import yente
+from yente import settings
+from yente.search.versions import get_system_version, build_index_name
+expected = {'yente':'5.5.0','followthemoney':'4.9.2','nomenklatura':'4.10.0','rigour':'2.1.2','PyICU':'2.16.2'}
+versions = {name:m.version(name) for name in expected}
+if versions != expected or settings.INDEX_VERSION != '016':
+    raise RuntimeError('Selected installed engine dependency versions differ: ' + repr(versions))
+wheel = pathlib.Path(sys.argv[1])
+if hashlib.sha256(wheel.read_bytes()).hexdigest() != sys.argv[2]:
+    raise RuntimeError('Selected original wheel changed')
+package = pathlib.Path(yente.__file__).resolve().parent
+compared = []
+with zipfile.ZipFile(wheel) as archive:
+    for name in archive.namelist():
+        if name.startswith('yente/') and name.endswith('.py'):
+            target = package / name[len('yente/'):]
+            if not target.is_file() or target.read_bytes() != archive.read(name):
+                raise RuntimeError('Installed yente source differs from original wheel: ' + name)
+            compared.append(name)
+if not compared:
+    raise RuntimeError('The original wheel contained no selected yente source')
+print(json.dumps({'packages':versions,'indexVersion':settings.INDEX_VERSION,
+ 'systemVersion':get_system_version(),'datasetIndex':build_index_name('un_sc_sanctions','20261012000104-kls'),
+ 'sourceRelease':'258c0a1fbcd9e7f70acdb113f19c28b7eac282b8','wheelSha256':sys.argv[2],
+ 'originalSourceFilesCompared':len(compared),'pythonInvocation':sys.executable,'pythonPrefix':sys.prefix}))
+"""
+    run("yente_version", [str(native_python), "-c", version_source, str(selected_yente_wheel),
+                         YENTE_WHEEL_SHA256], environment=native_env, timeout=30)
 
 def provision_search(account):
     # Only this operation's mutable installation is configured. Its original
@@ -450,7 +497,8 @@ try:
     record("selected_worker", {"uid": os.getuid(), "gid": os.getgid(),
            "searchUser": account.pw_name if account else pwd.getpwuid(os.geteuid()).pw_name,
            "node": args.node, "python": sys.version, "directory": str(ROOT)})
-    yente = provision_yente()
+    yente, native_python = provision_yente()
+    verify_yente_runtime(yente, native_python)
     home = relocate_search(provision_search(account), account)
     java = home / "jdk/bin/java"
     if not java.exists():
@@ -515,40 +563,9 @@ try:
                       "YENTE_AUTO_REINDEX": "false", "YENTE_DATA_PATH": str(ROOT / "tmp"),
                       "YENTE_VERIFY_CHECKSUM": "true", "YENTE_INDEX_AUTO_REPLICAS": "0",
                       "YENTE_LOG_JSON": "true"})
-    native_python = yente.parent / "python"
-    version_source = """
-import hashlib, importlib.metadata as m, json, pathlib, sys, zipfile
-import yente
-from yente import settings
-from yente.search.versions import get_system_version, build_index_name
-expected = {'yente':'5.5.0','followthemoney':'4.9.2','nomenklatura':'4.10.0','rigour':'2.1.2','PyICU':'2.16.2'}
-versions = {name:m.version(name) for name in expected}
-if versions != expected or settings.INDEX_VERSION != '016':
-    raise RuntimeError('Selected installed engine dependency versions differ: ' + repr(versions))
-wheel = pathlib.Path(sys.argv[1])
-if hashlib.sha256(wheel.read_bytes()).hexdigest() != sys.argv[2]:
-    raise RuntimeError('Selected original wheel changed')
-package = pathlib.Path(yente.__file__).resolve().parent
-compared = []
-with zipfile.ZipFile(wheel) as archive:
-    for name in archive.namelist():
-        if name.startswith('yente/') and name.endswith('.py'):
-            target = package / name[len('yente/'):]
-            if not target.is_file() or target.read_bytes() != archive.read(name):
-                raise RuntimeError('Installed yente source differs from original wheel: ' + name)
-            compared.append(name)
-if not compared:
-    raise RuntimeError('The original wheel contained no selected yente source')
-print(json.dumps({'packages':versions,'indexVersion':settings.INDEX_VERSION,
- 'systemVersion':get_system_version(),'datasetIndex':build_index_name('un_sc_sanctions','20261012000104-kls'),
- 'sourceRelease':'258c0a1fbcd9e7f70acdb113f19c28b7eac282b8','wheelSha256':sys.argv[2],
- 'originalSourceFilesCompared':len(compared)}))
-"""
-    run("yente_version", [str(native_python), "-c", version_source, str(selected_yente_wheel),
-                         YENTE_WHEEL_SHA256], environment=native_env, timeout=30)
-    run("yente_original_reindex", [str(yente), "reindex"], environment=native_env, timeout=600)
+    run("yente_original_reindex", [str(native_python), str(yente), "reindex"], environment=native_env, timeout=600)
     api_url = "http://127.0.0.1:" + str(yente_port)
-    service = background("yente", [str(yente), "serve"], environment=native_env)
+    service = background("yente", [str(native_python), str(yente), "serve"], environment=native_env)
     poll_ready("yente", api_url, service, "/readyz")
     profile = matching.save_profile(domain, {
         "label": "Original yente 5.5 / OpenSearch 2.15 native receiving",

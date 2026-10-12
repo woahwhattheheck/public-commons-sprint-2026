@@ -133,8 +133,9 @@ function drawPlan() {
     if (raw) { input = JSON.parse(raw); if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Use a recovery JSON object.'); }
     await run('tenant-plans/' + plan.id + '/recover',input);
   }));
-  if (plan.datasetUid) actions.append(nativeButton('Read processing status',() => run('tenant-plans/' + plan.id + '/status')),
-    nativeButton('Receive full publication',() => run('tenant-plans/' + plan.id + '/receive')));
+  if (plan.datasetUid) actions.append(nativeButton('Read processing status',() => run('tenant-plans/' + plan.id + '/status')));
+  if (plan.datasetUid && plan.workflow?.some(step => step.key === 'publish'))
+    actions.append(nativeButton('Receive full publication',() => run('tenant-plans/' + plan.id + '/receive')));
   actions.append(nativeButton('Prepare delivery',async () => {
     const result = await run('tenant-plans/' + plan.id + '/export');
     if (result?.id) message('Delivery prepared. Download the complete package below.');

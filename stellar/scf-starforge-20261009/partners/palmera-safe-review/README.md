@@ -55,6 +55,12 @@ import { readPublicSafe } from '@tokenjunkielabs/starforge-merchant/buyer/safe-r
 
 The package includes the original native buyer, Tenderly customer and analysis source dependencies. The calling application supplies its existing Palmera / Safe SDK, provider and wallet connection. For the public receiving input, the loader resolves Protocol Kit from that exact caller-owned Palmera package and checks both recorded SDK versions.
 
+## Browser operator and Applications
+
+Open the complete [Safe buyer operator workspace](operator/OPERATOR.md) with the installed `safe-review-workspace` command or the **Safe simulation buyer** entry in Applications. It carries capture and saved selection receiving, original preparation/import, retained review selection, explicit native purchase and recovery, result comparison, and full handover receiving through one private industrial interface.
+
+The existing Applications lifecycle retains its reviewed paths, original workspace/configuration identity and same managed request on continuation. The browser uses the original Buyer state and analysis workspace supplied to the CLI below.
+
 ## 1. Capture the transaction already selected in Palmera
 
 The application integration uses the original objects directly:
@@ -308,3 +314,4 @@ A changed selection, plan, ticket, native configuration or completed file produc
 | `handover.mjs` | Original customer/analysis export join and portable receiving. |
 | `report.mjs` | Offline industrial review index. |
 | `cli.mjs` | Complete operator workflow and original analysis listener. |
+| `operator/` | Full private browser controller, original Applications provider and operating guide. |

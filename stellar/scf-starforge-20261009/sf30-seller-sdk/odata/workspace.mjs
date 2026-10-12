@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { discoverService, compileQuery, fetchPage } from './source.mjs';
 import { projectODataSemantics, odataCaptureManifest } from './semantics.mjs';
 import { acquireReleaseLease } from '../../sf82-seller-pilot/release-process.mjs';
+import { serviceCollectionFiles,parseCollectionTransferPath,validateServiceCollectionTransfer,verifyServiceCollections } from './live/collection-store.mjs';
 import { openState, atomic, readJson, retain, writeNew, identifier, digest, stable, formatted, fault, now } from './state.mjs';
 
 const copy = value => structuredClone(value);
@@ -335,6 +336,8 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
             try{bytes=await readFile(join(root,path));}catch(error){if(error.code==='ENOENT')continue;throw error;}
             files.push({path,sha256:digest(bytes),bodyBase64:bytes.toString('base64')});}}
       }
+      const collections=await serviceCollectionFiles({directory:join(root,'live','products',record.id),profile:record});
+      files.push(...collections.files);
     }
     return {schema:'stellar-forge.odata-transfer.v1',exportedAt:now(),state:saved,files};
     }finally{await liveLease?.close();}
@@ -344,10 +347,13 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
       throw fault('ODATA_TRANSFER_SCHEMA','Use an original OData workspace transfer.');
     const transferSha256=digest(formatted(bundle)),current=await store.read();
     if(current.restoredFrom?.sha256===transferSha256){const {sha256,...counts}=current.restoredFrom;return counts;}
-    if(current.connections.length||current.editions.length||current.plans.length)throw fault('ODATA_RESTORE_TARGET','Restore into an empty workspace.',409);
+    if(current.connections.length||current.editions.length||current.plans.length||current.liveProducts?.length)throw fault('ODATA_RESTORE_TARGET','Restore into an empty workspace.',409);
     const permitted=/^(sources\/[a-f0-9]{64}|exports\/[a-f0-9]{64}\/(dataset\.csv|dataset\.json|source\.json|rows\.json|seller\.json|semantics\.json|table-schema\.json|capture\/(manifest\.json|metadata\.csdl|service\.json|(?:pages|rows)\/[a-f0-9]{64}\.json))|live\/products\/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\/(profile\.json|package\/[a-z-]+\.json|buyers\/[a-f0-9]{64}\/(request|offers|buyer|handoff|response)\.json|receiving\/[a-f0-9]{64}\/(original-response\.json|rows\.jsonl|receiving\.json|next-request\.json)))$/;
     const seen=new Set(),validated=[];
-    for(const file of bundle.files){if(!permitted.test(file.path)||seen.has(file.path))throw fault('ODATA_TRANSFER_PATH','The transfer contains an unsupported or repeated file path.');
+    for(const file of bundle.files){
+      const collection=parseCollectionTransferPath(file?.path);
+      const retainedCollection=collection&&(bundle.state.liveProducts||[]).some(record=>record.id===collection.serviceId);
+      if(!file||(!permitted.test(file.path)&&!retainedCollection)||seen.has(file.path))throw fault('ODATA_TRANSFER_PATH','The transfer contains an unsupported or repeated file path.');
       const bytes=Buffer.from(file.bodyBase64,'base64');if(digest(bytes)!==file.sha256)throw fault('ODATA_TRANSFER_HASH','A transfer file differs from its original hash.',409);
       if(file.path.startsWith('sources/')&&file.path.slice(8)!==file.sha256)throw fault('ODATA_TRANSFER_HASH','Source identity differs from its original bytes.',409);
       seen.add(file.path);validated.push({path:file.path,bytes});}
@@ -357,6 +363,7 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
     for(const record of bundle.state.exports){identifier(record.id);for(const name of record.files)required.add('exports/'+record.id+'/'+name);}
     for(const record of bundle.state.liveProducts||[]){
       for(const path of liveFilePaths(record))required.add(path);
+      validateServiceCollectionTransfer({profile:record,files:bundle.files});
       const original=validated.find(file=>file.path==='live/products/'+record.id+'/profile.json');
       if(!original||stable(JSON.parse(original.bytes.toString('utf8')))!==stable(record))throw fault('ODATA_LIVE_PROFILE','The transferred live profile differs from its saved identity.',409);
     }
@@ -371,13 +378,16 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
     if([...required].some(path=>!seen.has(path)))throw fault('ODATA_TRANSFER_MISSING','The transfer omits a referenced source, export, or live service file.');
     for(const file of validated){const target=join(root,file.path);await mkdir(resolve(target,'..'),{recursive:true,mode:0o700});
       try{await writeNew(target,file.bytes);}catch(error){if(error.code!=='EEXIST')throw error;if(digest(await readFile(target))!==digest(file.bytes))throw fault('ODATA_RESTORE_CHANGED','A receiving file differs.',409);}}
+    let collectionCount=0;
+    for(const record of bundle.state.liveProducts||[])collectionCount+=(await verifyServiceCollections({
+      directory:join(root,'live','products',record.id),profile:record})).length;
     return store.mutate(state=>{
       if(state.restoredFrom?.sha256===transferSha256){const {sha256,...counts}=state.restoredFrom;return counts;}
-      if(state.connections.length||state.editions.length||state.plans.length)throw fault('ODATA_RESTORE_TARGET','The receiving workspace changed during restore.',409);
+      if(state.connections.length||state.editions.length||state.plans.length||state.liveProducts?.length)throw fault('ODATA_RESTORE_TARGET','The receiving workspace changed during restore.',409);
       const revision=state.revision;Object.assign(state,copy(bundle.state));state.revision=revision;state.restoredAt=now();
       for(const record of state.exports)record.directory=join(root,'exports',record.id);
       for(const record of state.editions)if(record.status==='IMPORTING')record.status='PAUSED';
-      const counts={connections:state.connections.length,editions:state.editions.length,exports:state.exports.length,liveProducts:state.liveProducts?.length||0};
+      const counts={connections:state.connections.length,editions:state.editions.length,exports:state.exports.length,liveProducts:state.liveProducts?.length||0,collections:collectionCount};
       state.restoredFrom={sha256:transferSha256,...counts};return counts;});
   }
   async function close(){closed=true;for(const control of running.values())control.abort();await Promise.allSettled([...completions.values()]);await store.settle();}

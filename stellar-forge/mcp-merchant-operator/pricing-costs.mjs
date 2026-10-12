@@ -9,9 +9,12 @@ import { exact, failure, identifier, line, plain } from './config.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { PricingCostArchiveReads } from './pricing-cost-files.mjs';
 import { MAX_SOURCE, MAX_DOCUMENT } from '../../stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/economics/common.mjs';
+import { MAX_BUNDLE } from '../../stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/economics/archive.mjs';
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const fail=(code,message)=>failure('PRICING_COST_'+code,message);
+const inputKinds={SOURCE:'costInputs',BOOK:'costBooks',PACKAGE:'costPackages'};
+const inputLimit=kind=>kind==='SOURCE'?MAX_SOURCE:kind==='PACKAGE'?MAX_BUNDLE:MAX_DOCUMENT;
 
 
 
@@ -38,7 +41,7 @@ const fail=(code,message)=>failure('PRICING_COST_'+code,message);
 
 export function normalizePricingCostSources(item,baseDirectory){
   const result={};
-  for(const [name,kind]of [['costInputs','SOURCE'],['costBooks','BOOK']]){
+  for(const [name,kind]of Object.entries(inputKinds).map(([kind,name])=>[name,kind])){
     if(item[name]===undefined)continue;
     if(!plain(item[name])||Object.keys(item[name]).length>64)throw fail('CONFIGURATION','Declare at most 64 named '+kind.toLowerCase()+' inputs per workspace.');
     const inputs=Object.create(null);
@@ -50,12 +53,12 @@ export function normalizePricingCostSources(item,baseDirectory){
   }return result;
 }
 function declared(settings,kind,input){
-  const values=settings[kind==='SOURCE'?'costInputs':'costBooks']??{};
+  const values=settings[inputKinds[kind]]??{};
   if(!Object.hasOwn(values,input))throw fail('INPUT_NOT_CONFIGURED','Choose a declared '+kind.toLowerCase()+' alias from cost_inputs.');
   return values[input];
 }
 async function inputHandle(settings,kind,input,expected){
-  const selected=declared(settings,kind,input),maximum=kind==='SOURCE'?MAX_SOURCE:MAX_DOCUMENT;
+  const selected=declared(settings,kind,input),maximum=inputLimit(kind);
   const handle=await open(selected.path,constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0))
     .catch(()=>{throw fail('INPUT_UNAVAILABLE','The selected host input cannot be opened as its original regular file.');});
   try{
@@ -88,9 +91,18 @@ async function* exactInput(opened){
   if(after.size!==opened.metadata.bytes||hash.digest('hex')!==opened.metadata.sha256)
     throw fail('INPUT_CHANGED','The original input changed during capture. No altered source is committed.');
 }
-async function selectedBook(settings,args){
-  if(Object.hasOwn(args,'book')===Object.hasOwn(args,'bookSource'))
-    throw fail('BOOK_SELECTION','Choose exactly one complete inline book or inspected bookSource.');
+async function selectedBook(settings,args,model){
+  if(['book','bookSource','receivedDraft'].filter(key=>Object.hasOwn(args,key)).length!==1)
+    throw fail('BOOK_SELECTION','Choose exactly one complete inline book, inspected bookSource or original receivedDraft.');
+  if(args.receivedDraft!==undefined){
+    const source=args.receivedDraft;
+    const saved=await model.receiving.savedDraft(source.packageId,source.requestId);
+    const adjustments=args.bookAdjustments??{};
+    if(!plain(adjustments)||Object.keys(adjustments).some(key=>!['label','reason','periodAlignment','coverage'].includes(key)))
+      throw fail('BOOK_SELECTION','Received-draft adjustments may set the local label, reason, period alignment and complete route coverage.');
+    return {...structuredClone(saved.book),...structuredClone(adjustments)};
+  }
+  if(args.bookAdjustments!==undefined)throw fail('BOOK_SELECTION','Book adjustments belong to one selected receivedDraft.');
   if(args.book!==undefined){
     if(Buffer.byteLength(JSON.stringify(args.book))>96*1024)
       throw fail('BOOK_INPUT_REQUIRED','Select a host-declared complete book for inputs above 96 KiB; keep the existing MCP transport limit.');
@@ -153,6 +165,11 @@ function limitedCells(page){
   const result={...page,items:page.items.map(show)};
   return {...result,displayTruncatedCells:truncated,originalBytesAvailable:true};
 }
+function originView(value){
+  if(!value)return undefined;
+  const {routeMappings,sourceMappings,lineMappings,...header}=value;
+  return {...header,routeMappingCount:routeMappings?.length??0,sourceMappingCount:sourceMappings?.length??0,lineMappingCount:lineMappings?.length??0};
+}
 function reportView(value,args={}){
   const report=value.report,input=value.input??{},selected=args.view??'routes';
   const routeCosts=(report.routes??[]).flatMap(route=>(route.costs??[]).map(cost=>{
@@ -165,12 +182,13 @@ function reportView(value,args={}){
     groups:report.groups??[],coverage:input.coverage??[],imports:input.imports??[],
     sources:value.sourceSummary??value.binding?.sources??[],pricingLinks:value.pricingLinks??[],context:(value.context??[]).map(contextView)};
   const {routes,lines,issues,groups,...summary}=report;
-  const {input:_,report:__,context:___,sourceSummary:____,binding,pricingLinks,groups:headerGroups,...header}=value;
+  const {input:_,report:__,context:___,sourceSummary:____,binding,pricingLinks,groups:headerGroups,receivedOrigin,...header}=value;
   return {...header,input:{schema:input.schema,label:input.label,pricingVersion:input.pricingVersion,period:input.period,
       reason:input.reason,periodAlignment:input.periodAlignment,lineCount:input.lines?.length??0,
       importCount:input.imports?.length??0,contextSourceCount:input.contextSourceIds?.length??0},
     report:{...summary,routeCount:routes?.length??0,lineCount:lines?.length??0,issueCount:issues?.length??0,groupCount:groups?.length??0},
-    binding:binding?{...binding,sources:undefined,sourceCount:binding.sources.length}:undefined,
+    binding:binding?{...binding,receivedFrom:originView(binding.receivedFrom),sources:undefined,sourceCount:binding.sources.length}:undefined,
+    receivedOrigin:originView(receivedOrigin),
     page:selected==='allocations'?allocationPage(report.lines??[],args):pageOf(lists[selected]??[],args,selected),
     completeFiles:'Use cost_manifest/cost_file to retain complete original edition files.'};
 }
@@ -198,7 +216,7 @@ export class MerchantPricingCosts {
       files={...value.files,'edition-manifest.json':{bytes:bytes.length,sha256:sha(bytes)}};
       metadata={edition:id,revision:sha(bytes),requestId:value.requestId,pricingVersion:value.pricingVersion,nativeManifestSha256:sha(bytes)};
     }else{
-      original=await model.exportFile(id);
+      original=await (kind==='received'?model.receiving.archiveFile(id):model.exportFile(id));
       files={[original.filename]:{bytes:original.bytes,sha256:original.sha256}};
       metadata={requestId:id};
     }
@@ -208,7 +226,7 @@ export class MerchantPricingCosts {
     return {manifest,bytes,manifestFile:{name:'manifest.json',bytes:bytes.length,sha256:sha(bytes)}};
   }
   async #request(model,args){
-    const kind={SOURCE:'SOURCES',EDITION:'EDITIONS',EXPORT:'EXPORTS'}[args.kind];let after=null;
+    const kind={SOURCE:'SOURCES',EDITION:'EDITIONS',EXPORT:'EXPORTS',RECEIVED:'RECEIVED'}[args.kind];let after=null;
     do{
       const result=await model.list({kind,after,limit:100});
       const found=result.items.find(row=>(row.requestId??row.sourceId)===args.requestId);
@@ -222,8 +240,9 @@ export class MerchantPricingCosts {
     const model=await this.#native(),{workspace,offset,limit,view,...input}=args;
     switch(name){
       case 'merchant_pricing_cost_state':{
-        const {editions,sources,pricingReviews,exports,...state}=await model.state();
+        const {editions,sources,pricingReviews,exports,receivedPackages,...state}=await model.state();
         return {...state,hostInputs:Object.keys(this.#settings.costInputs??{}).length,hostBooks:Object.keys(this.#settings.costBooks??{}).length,
+          hostPackages:Object.keys(this.#settings.costPackages??{}).length,
           ...this.#archives.summary};
       }
       case 'merchant_pricing_cost_list':{
@@ -233,10 +252,10 @@ export class MerchantPricingCosts {
         })};
       }
       case 'merchant_pricing_cost_inputs':{
-        const rows=[];for(const kind of ['SOURCE','BOOK']){
+        const rows=[];for(const kind of Object.keys(inputKinds)){
           if(args.kind&&args.kind!==kind)continue;
-          for(const [input,value]of Object.entries(this.#settings[kind==='SOURCE'?'costInputs':'costBooks']??{}))
-            rows.push({kind,input,label:value.label,maximumBytes:kind==='SOURCE'?MAX_SOURCE:MAX_DOCUMENT});
+          for(const [input,value]of Object.entries(this.#settings[inputKinds[kind]]??{}))
+            rows.push({kind,input,label:value.label,maximumBytes:inputLimit(kind)});
         }return {page:pageOf(rows,args,'inputs')};
       }
       case 'merchant_pricing_cost_input':{
@@ -253,6 +272,36 @@ export class MerchantPricingCosts {
         const opened=await inputHandle(this.#settings,'SOURCE',args.input,args);
         try{return await model.upload({requestId:args.requestId,metadata:args.metadata,body:exactInput(opened),origin:'MCP_HOST_SOURCE'});}
         finally{await opened.handle.close();}
+      }
+      case 'merchant_pricing_cost_receive':{
+        const prior=await model.receiving.request(args.requestId);
+        if(prior.status==='COMMITTED'){
+          const row=prior.record;
+          if(row.sha256!==args.expectedSha256||row.bytes!==args.expectedBytes||row.label!==args.label||row.name!==args.name)
+            throw fail('REQUEST_CHANGED','The committed received package differs from its selected original or label.');
+          return {status:'COST_PACKAGE_RECEIVED',...row,replayed:true};
+        }
+        const opened=await inputHandle(this.#settings,'PACKAGE',args.input,args);
+        try{return await model.receiving.receive({...input,body:exactInput(opened)});}
+        finally{await opened.handle.close();}
+      }
+      case 'merchant_pricing_cost_received':{
+        if(view==='drafts')return {packageId:args.packageId,page:pageOf((await model.receiving.draftSummaries(args.packageId)).items,args,'drafts')};
+        const value=await model.receiving.inspect(args.packageId),{files,sources,pricing,...rest}=value;
+        if(view==='files')return {packageId:value.packageId,sha256:value.sha256,bytes:value.bytes,page:pageOf(files,args,'files')};
+        return reportView({...rest,sourceSummary:sources},args);
+      }
+      case 'merchant_pricing_cost_receiving_review':{
+        const value=await model.receiving.reviewDraft(input),{book,origin,selection,...rest}=value;
+        if(['routeMappings','sourceMappings','lineMappings'].includes(view))
+          return {packageId:args.packageId,reviewSha256:value.reviewSha256,origin:originView(origin),page:pageOf(origin[view],args,view)};
+        return reportView({...rest,input:book,receivedOrigin:origin},args);
+      }
+      case 'merchant_pricing_cost_receiving_draft':{
+        const result=await model.receiving.importDraft(input),{book,origin,...rest}=result;
+        return {...rest,receivedDraft:{packageId:result.packageId,requestId:result.requestId},
+          input:{label:book.label,pricingVersion:book.pricingVersion,period:book.period,lineCount:book.lines.length,
+            sourceCount:origin.sourceMappings.length,coverage:book.coverage.length},origin:originView(origin)};
       }
       case 'merchant_pricing_cost_capture':return model.capture(input);
       case 'merchant_pricing_cost_source':{
@@ -274,8 +323,8 @@ export class MerchantPricingCosts {
       case 'merchant_pricing_cost_weights':{
         const {allocations,...result}=await model.weights(input);return {...result,page:pageOf(allocations,args,'allocations')};
       }
-      case 'merchant_pricing_cost_preview':return reportView(await model.preview({book:await selectedBook(this.#settings,args)}),args);
-      case 'merchant_pricing_cost_save':return model.save({requestId:args.requestId,expectedRevision:args.expectedRevision,book:await selectedBook(this.#settings,args)});
+      case 'merchant_pricing_cost_preview':return reportView(await model.preview({book:await selectedBook(this.#settings,args,model)}),args);
+      case 'merchant_pricing_cost_save':return model.save({requestId:args.requestId,expectedRevision:args.expectedRevision,book:await selectedBook(this.#settings,args,model)});
       case 'merchant_pricing_cost_request':return this.#request(model,args);
       case 'merchant_pricing_cost_edition':return reportView(await model.edition(args.edition),args);
       case 'merchant_pricing_cost_compare':{
@@ -306,11 +355,12 @@ export class MerchantPricingCosts {
           if(!Object.hasOwn(original.manifest.files,args.file))throw fail('FILE_NOT_FOUND','Choose one exact file from the selected cost manifest.');
           if(args.kind==='source')return {name:args.file,bytes:(await model.sourceDownload(args.id)).bytes};
           if(args.kind==='edition')return {name:args.file,bytes:await model.download(args.id,args.file==='edition-manifest.json'?'manifest.json':args.file)};
-          return {file:{name:args.file,...original.manifest.files[args.file]},descriptor:await model.exportFile(args.id)};
+          return {file:{name:args.file,...original.manifest.files[args.file]},
+            descriptor:await (args.kind==='received'?model.receiving.archiveFile(args.id):model.exportFile(args.id))};
         };
         const selectors={scope:workspace,kind:'cost-'+args.kind,key:JSON.stringify([args.kind,args.id,args.file,args.expectedManifestSha256]),
           directory:this.#settings.directory,readId:args.readId,offset,limit,expectedSha256:args.expectedSha256,load};
-        const value=await (args.kind==='export'&&args.file!=='manifest.json'?this.#archives.read(selectors):this.#files.read(selectors));
+        const value=await (['export','received'].includes(args.kind)&&args.file!=='manifest.json'?this.#archives.read(selectors):this.#files.read(selectors));
         return {kind:args.kind,id:args.id,manifestSha256:args.expectedManifestSha256,...value};
       }
       case 'merchant_pricing_cost_file_release':

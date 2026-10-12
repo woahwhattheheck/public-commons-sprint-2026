@@ -32,5 +32,8 @@
     "./seller/opendatasoft/automation": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/client.mjs",
     "./seller/opendatasoft/automation/contract": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/contract.mjs",
     "./seller/opendatasoft/automation/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/workspace.mjs"
+  },
+  "merchantProviders": {
+    "opendatasoft-workspaces": "stellar-forge/mcp-merchant-operator/providers/opendatasoft-workspaces.mjs"
   }
 }

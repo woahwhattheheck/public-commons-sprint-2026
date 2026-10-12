@@ -249,3 +249,10 @@ For a real provider, use its current private target, credentials, descriptor
 closure and method contract. Native gRPC ordered server-stream semantics and
 terminal status are documented in the
 [official gRPC core concepts](https://grpc.io/docs/what-is-grpc/core-concepts/).
+
+## Bidirectional inputs
+
+The same response engine also receives native bidirectional methods. Enable
+both stream policies and review the finite ordered input sequence described in
+[Request streams](REQUEST_STREAMS.md). Its original input half-close and native
+OK terminal join this same retained NDJSON and customer receiving lifecycle.
