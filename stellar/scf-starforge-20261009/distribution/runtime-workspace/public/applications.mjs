@@ -56,6 +56,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   operationReview.hidden = true;
   const open = element('a', 'Open application'); open.target = '_blank'; open.rel = 'noopener noreferrer'; open.referrerPolicy = 'no-referrer'; open.hidden = true;
   const urlNote = element('p', '', 'note');
+  const relatedApplications = element('div', undefined, 'actions');
+  relatedApplications.hidden = true;
   const reviewStart = button('Review start', () => act(async () => {
     const app = selected(); if (!app) return;
     startReview = await api('/api/applications/start-review', { applicationId: app.id });
@@ -77,7 +79,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   }));
   const editButton = button('Edit settings', () => edit(selected()));
   actions.append(open, reviewStart, stop, reconnect, continueRun, editButton);
-  selectedPanel.append(selectedTitle, details, actions, urlNote, operationReview);
+  selectedPanel.append(selectedTitle, details, actions, relatedApplications, urlNote, operationReview);
   const history = element('section', undefined, 'panel'); history.hidden = true;
   history.append(element('h3', 'Original operations'));
   const historyRows = element('div'); history.append(historyRows);
@@ -216,6 +218,16 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     editButton.disabled = active || unsettled;
     open.hidden = !current?.privateUrl;
     if (current?.privateUrl) open.href = current.privateUrl; else open.removeAttribute('href');
+    open.textContent = app.kind === 'mercury-feed' ? 'Open event feed' : 'Open application';
+    relatedApplications.replaceChildren(...(current?.privateLinks ?? []).flatMap(link => {
+      let url;
+      try { url = new URL(link.url); } catch { return []; }
+      if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port ||
+          url.username || url.password || typeof link.label !== 'string') return [];
+      const anchor = element('a', link.label); anchor.href = url.href; anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer'; anchor.referrerPolicy = 'no-referrer'; return [anchor];
+    }));
+    relatedApplications.hidden = !relatedApplications.childElementCount;
     urlNote.textContent = current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts.' :
       active ? current.stop ? 'The original application is draining its work and stopping.' : 'Waiting for the original application to print its local session URL.' :
         current?.url ? 'This operation has ended. Its retained URL is historical; review a new start to open the same saved application data.' :

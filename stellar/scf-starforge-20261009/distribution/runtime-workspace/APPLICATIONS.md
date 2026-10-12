@@ -186,3 +186,10 @@ A successful serve prints one JSON startup line with schema `stellar-forge.block
 
 Use the same merchant-state directory for restart, provider-key rotation and a selected price rollback. Reopening an application resumes its merchant controls and saved account history. Buyer execution continues through the original separately reviewed SF88 intent. The Applications catalogue and observer are composed by the original runtime-workspace owner; select a source release containing `application-blockscout.mjs` and its matching startup CLI.
 
+## Mercury source, paid event feed and subscription
+
+Choose **Mercury event operations** to reopen the complete original Mercury/feed bundle with its reviewed Python executable or original installed Python identity. Applications retains the bundle/source identities and captures both the original source console and the private feed desk from the actual session announcement. A saved merchant is opened alongside them. Its four destination/listener ports remain those in the original bundle.
+
+Choose **Event-feed buyer** to reopen an initialized original SF88 subscription. Its exact definition and source runtime are retained, and its original terminal keeps explicit approval available for new collection. Both applications use the existing review, managed launch, stop, retained run and recovery paths.
+
+[The complete event-operation guide](EVENT_FEED_APPLICATIONS.md) covers installed source/runtime selection, private configuration, bundle and buyer initialization, the original operating controls, source-first snapshot/restore, buyer recovery and immutable exports.

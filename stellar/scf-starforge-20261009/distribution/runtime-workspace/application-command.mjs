@@ -5,6 +5,7 @@ import { StringDecoder } from 'node:string_decoder';
 import { open, readdir, lstat, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { eventFeedOutputReader, eventFeedStartup, verifyEventFeedLaunch } from './application-event-feed.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, operationId,
   recordId, operationLease, operationRunning, tailFile, plain, need, digest, now } from './storage.mjs';
 
@@ -37,6 +38,7 @@ export async function applicationEnvironment(path, expectedSha256) {
   return { environment: { ...process.env, ...value }, sha256 };
 }
 export async function prepareApplicationCommand(request, directory, originalArgs) {
+  await verifyEventFeedLaunch(request, directory);
   const { environment } = await applicationEnvironment(request.environmentFile, request.environmentSha256);
   if (request.terminal) {
     for (const name of ['terminal-inputs', 'terminal-pending']) {
@@ -63,6 +65,7 @@ function privateUrl(text) {
 export function observeApplicationOutput(request, directory) {
   let buffer = '', seen = false, datasetMarker = false, saveError = null, closed = false, saving = Promise.resolve();
   const decoder = new StringDecoder('utf8');
+  const eventOutput = eventFeedOutputReader(request);
   function line(text) {
     if (seen || !request.applicationId) return;
     // Read only the maintained CLI's startup announcement. Later user-entered
@@ -82,6 +85,24 @@ export function observeApplicationOutput(request, directory) {
           source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
         });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (eventOutput) {
+      for (const value of eventOutput(text)) {
+        saving = saving.then(async () => {
+          if (seen) return;
+          const startup = await eventFeedStartup(request, directory, value);
+          const url = startup && privateUrl(startup.url);
+          if (!url) return;
+          seen = true;
+          await saveJSON(join(directory, 'application-url.json'), {
+            schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+            operationId: directory.split('/').at(-1), command: request.command,
+            source: 'original-command-stdout', observedAt: now(), url,
+            links: startup.links, original: startup.original,
+          });
+        }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      }
       return;
     }
     let candidate = null;
