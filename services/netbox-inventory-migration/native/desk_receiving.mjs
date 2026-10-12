@@ -74,9 +74,15 @@ async function getOrCreate(label){
   await page.getByRole('button',{name:'New project',exact:true}).click();
   const dialog=page.getByRole('dialog');await dialog.getByLabel('Project name',{exact:true}).fill(label);
   await dialog.getByRole('button',{name:'Create project',exact:true}).click();
-  await page.getByRole('heading',{name:'Project settings',exact:true}).waitFor();
-  state=await api('/api/state');const selected=state.projects.filter(item=>item.label===label);
-  requireValue(selected.length===1,'The original browser-created project was not retained.');return selected[0];
+  // The first project's heading may already be present in a fresh browser.
+  // Join the actual saved project by its unique label after this create.
+  for(let n=0;n<120;n++){
+    state=await api('/api/state');const selected=state.projects.filter(item=>item.label===label);
+    requireValue(selected.length<=1,'The original browser-created project is ambiguous.');
+    if(selected.length===1)return selected[0];
+    await page.waitForTimeout(250);
+  }
+  throw new Error('The original create remains available for same-label reconciliation.');
 }
 async function screenshot(name,width=1440){
   await page.setViewportSize({width,height:width===390?844:1000});
@@ -85,6 +91,11 @@ async function screenshot(name,width=1440){
   const file=path.join(entry.output,name);await page.screenshot({path:file,fullPage:true});
   const raw=fs.readFileSync(file),value={name,bytes:raw.length,sha256:sha(raw),geometry};
   result.screenshots=result.screenshots.filter(x=>x.name!==name).concat(value);save();return value;
+}
+function receivedEdition(projectValue,operation){
+  const matches=projectValue.editions.filter(item=>item.kind==='received'&&item.operation_id===operation);
+  requireValue(matches.length<=1,'The original received operation has ambiguous customer editions.');
+  return matches[0];
 }
 async function restoreArchive(id,file){
   await openProject(id);
@@ -95,16 +106,25 @@ async function restoreArchive(id,file){
   return project(id);
 }
 async function waitEdition(id,edition,wanted){
-  let resumed=new Set();
+  const resumed=new Set();
   for(let n=0;n<240;n++){
     const value=await detail(id,edition);
-    if(wanted.includes(value.edition.state))return value;
     const current=value.actions?.find(item=>item.id===value.edition.active_action_id);
     if(current?.state==='FAILED')throw new Error('Original saved action failed: '+JSON.stringify(current.error));
+    if(wanted.includes(value.edition.state)){
+      if(current&&!['COMPLETE','FAILED'].includes(current.state))return(await waitAction(id,edition,current.id)).detail;
+      return value;
+    }
     if(current?.state==='RECOVERY_REQUIRED'&&!resumed.has(current.id)){
       await openProject(id,'Native review',edition);
       const join=page.getByRole('button',{name:'Join saved action',exact:true});
       await join.waitFor();await join.click();resumed.add(current.id);
+    }
+    if(value.edition.state==='AWAITING_NATIVE_RESULT'&&(!current||current.state==='COMPLETE')){
+      // A completed local action can still be waiting on its original native
+      // job. Observe that same job/journal through a fresh read-only recovery.
+      const observed=await nativeRecovery(id,edition);
+      if(wanted.includes(observed.detail.edition.state))return observed.detail;
     }
     if(value.edition.state==='CORRECTION_REQUIRED')throw new Error('The original native edition requires its saved correction: '+JSON.stringify(value.corrections));
     await page.waitForTimeout(1500);
@@ -129,11 +149,13 @@ async function waitAction(id,edition,identity){
 }
 async function nativeRecovery(id,edition){
   let value=await detail(id,edition),action=value.actions.filter(item=>item.kind==='recover').at(-1);
+  if(action?.state==='COMPLETE'&&value.edition.state==='AWAITING_NATIVE_RESULT')action=null;
   if(!action){
+    const priorIds=new Set(value.actions.map(item=>item.id));
     await openProject(id,'Native review',edition);
     await page.getByRole('button',{name:'Recover native result',exact:true}).click();
     for(let n=0;n<120;n++){
-      value=await detail(id,edition);action=value.actions.filter(item=>item.kind==='recover').at(-1);
+      value=await detail(id,edition);action=value.actions.filter(item=>item.kind==='recover'&&!priorIds.has(item.id)).at(-1);
       if(action)break;
       await page.waitForTimeout(250);
     }
@@ -198,8 +220,8 @@ try{
       actual_tenant_id:fixture.tenant_id};
   });
   const received=await stage('03-original-handover-receiving',async()=>{
-    let value=await project(id),edition=value.editions.find(x=>x.archive_sha256===archiveSha);
-    if(!edition){value=await restoreArchive(id,entry.archive);edition=value.editions.find(x=>x.archive_sha256===archiveSha);}
+    let value=await project(id),edition=receivedEdition(value,original.operation_id);
+    if(!edition){value=await restoreArchive(id,entry.archive);edition=receivedEdition(value,original.operation_id);}
     requireValue(edition,'The original archive has no retained edition.');
     const actual=await detail(id,edition.id);
     requireValue(actual.result?.state==='APPLIED'&&actual.result.receipt_sha256===original.receipt_sha256,
@@ -323,8 +345,9 @@ try{
     await connect();
     const second=await getOrCreate('Received customer handover · b9d2');
     const file=delivery.files.find(item=>item.selection==='handover.zip');
-    let value=await project(second.id),edition=value.editions.find(item=>item.archive_sha256===file.sha256);
-    if(!edition){value=await restoreArchive(second.id,file.path);edition=value.editions.find(item=>item.archive_sha256===file.sha256);}
+    requireValue(sha(fs.readFileSync(file.path))===file.sha256,'The selected complete customer archive changed.');
+    let value=await project(second.id),edition=receivedEdition(value,prepared.operation_id);
+    if(!edition){value=await restoreArchive(second.id,file.path);edition=receivedEdition(value,prepared.operation_id);}
     requireValue(edition?.operation_id===prepared.operation_id,'The fresh customer workspace restored another operation.');
     await openProject(second.id,'Native review',edition.id);
     let current=await detail(second.id,edition.id);
