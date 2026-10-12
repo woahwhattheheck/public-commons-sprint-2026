@@ -65,8 +65,9 @@ function ownedConnection(native, topology) {
  * Consume the resolved private connection object, never a serialized merchant
  * profile. Address/secret validation belongs to connection-profile.mjs.
  */
-export async function createRedisConnectionFactory(connection, { connectTimeoutMs = 5000 } = {}) {
-  if (!object(connection) || !Number.isInteger(connectTimeoutMs) || connectTimeoutMs < 100 || connectTimeoutMs > 30000)
+export async function createRedisConnectionFactory(connection, { connectTimeoutMs = 5000, maxQueryTimeoutMs = 0 } = {}) {
+  if (!object(connection) || !Number.isInteger(connectTimeoutMs) || connectTimeoutMs < 100 || connectTimeoutMs > 30000 ||
+      !Number.isInteger(maxQueryTimeoutMs) || maxQueryTimeoutMs < 0 || maxQueryTimeoutMs > 30000)
     invalid();
   const topology = connection.topology ?? 'standalone';
   if (!['standalone', 'cluster', 'sentinel'].includes(topology)) invalid();
@@ -89,6 +90,10 @@ export async function createRedisConnectionFactory(connection, { connectTimeoutM
     throw new RedisConnectionError('REDIS_DRIVER_UNAVAILABLE');
 
   const commandOptions = { timeout: 0, typeMapping: { [RESP_TYPES.BLOB_STRING]: Buffer } };
+  // Keep the application query deadline authoritative after connection. The
+  // socket deadline bounds stalled native cleanup and leaves the query 100ms
+  // to report its own timeout before socket inactivity can preempt it.
+  const dataInactivityMs = Math.max(connectTimeoutMs, maxQueryTimeoutMs + 100);
   const optionsFor = (options = {}, { control = false, discovery = false } = {}) => ({
     ...options,
     RESP: 2,
@@ -99,12 +104,12 @@ export async function createRedisConnectionFactory(connection, { connectTimeoutM
     // Native AUTH/HELLO handshakes bypass commandOptions.timeout. A finite
     // inactivity deadline also covers a seed that accepts TCP and stays silent.
     // Native pings start only after readiness and wait for each PING response.
-    ...(discovery ? { pingInterval: Math.max(50, Math.floor(connectTimeoutMs / 2)) } : {}),
+    ...(discovery ? { pingInterval: Math.max(50, Math.floor((control ? connectTimeoutMs : dataInactivityMs) / 2)) } : {}),
     socket: {
       ...options.socket,
       connectTimeout: connectTimeoutMs,
       reconnectStrategy: false,
-      ...(discovery ? { socketTimeout: connectTimeoutMs } : {}),
+      ...(discovery ? { socketTimeout: control ? connectTimeoutMs : dataInactivityMs } : {}),
     },
   });
 
@@ -117,11 +122,9 @@ export async function createRedisConnectionFactory(connection, { connectTimeoutM
       const defaults = optionsFor({ ...connection.defaults, database: 0 }, { discovery: true });
       // Explicit seed options share the same authentication and TLS as every
       // discovered node. The only per-seed settings are its socket endpoint.
-      const rootNodes = connection.rootNodes.map(node => ({
-        ...defaults,
-        socket: { ...defaults.socket, ...node.socket,
-          connectTimeout: connectTimeoutMs, socketTimeout: connectTimeoutMs, reconnectStrategy: false },
-      }));
+      const rootNodes = connection.rootNodes.map(node => optionsFor({
+        ...defaults, socket: { ...defaults.socket, ...node.socket },
+      }, { control: true, discovery: true }));
       native = createCluster({
         RESP: 2, rootNodes, defaults, commandOptions,
         useReplicas: false, minimizeConnections: true,
