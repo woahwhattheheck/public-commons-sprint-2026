@@ -120,6 +120,13 @@ class NativeMPXJ:
                 raise PortfolioError("native_runtime", "Install the pinned MPXJ and JPype requirements and a Java runtime.", str(error)) from error
             if not jpype.isJVMStarted():
                 jpype.startJVM(*self.jvm_args, convertStrings=False)
+                if threading.current_thread() is not threading.main_thread():
+                    # JNI attaches the launching thread as non-daemon. A disposable
+                    # request worker must release that attachment before returning;
+                    # otherwise DestroyJavaVM waits for its already-ended thread.
+                    java_thread = jpype.JClass("java.lang.Thread")
+                    java_thread.detach()
+                    java_thread.attachAsDaemon()
             actual = str(jpype.JClass("org.mpxj.MPXJ").VERSION)
             require(actual == MPXJ_VERSION, "native_version",
                     "Use the selected MPXJ " + MPXJ_VERSION + " runtime.", {"actual": actual})
