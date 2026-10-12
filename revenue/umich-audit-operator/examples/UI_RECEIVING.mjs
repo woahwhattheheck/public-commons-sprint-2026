@@ -20,43 +20,46 @@ if(journal.status==='COMPLETE'&&fs.existsSync(resultFile)){console.log(fs.readFi
 save();
 const tmp=path.join(root,'browser-temp');fs.mkdirSync(tmp,{recursive:true,mode:0o700});process.env.TMPDIR=tmp;
 const python=options.python||'python3';
-if(!fs.existsSync(path.join(workspace,'workspace.sqlite'))){
- if(!options.seed)throw new Error('Use an existing retained workspace, or explicitly pass --seed for a fresh Practice receiving install.');
- const seeded=spawnSync(python,['-B','-c',SEED_CODE,source,workspace],{encoding:'utf8',maxBuffer:1024*1024});
- if(seeded.status!==0)throw new Error('Practice receiving install failed: '+seeded.stderr+seeded.stdout);
- journal.seed=JSON.parse(seeded.stdout);save();
-}
 let browser,context,serverChild;
 const readyFile=path.join(root,'HOST-READY.json'),serverLog=path.join(root,'HOST.log');
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function healthy(ready){try{return (await fetch(ready.origin+'/health',{signal:AbortSignal.timeout(1500)})).ok;}catch{return false;}}
 let ready=fs.existsSync(readyFile)?JSON.parse(fs.readFileSync(readyFile)):null;
-if(!ready||!await healthy(ready)){
- const log=fs.openSync(serverLog,'a',0o600);
- serverChild=spawn(python,['-B',path.join(source,'run.py'),'serve','--workspace',workspace,'--port','0','--ready-file',readyFile],{cwd:source,stdio:['ignore',log,log],env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
- fs.closeSync(log);
- const deadline=Date.now()+30000;
- while(Date.now()<deadline){
-  if(serverChild.exitCode!==null)throw new Error('Original host exited: '+fs.readFileSync(serverLog,'utf8').slice(-8000));
-  if(fs.existsSync(readyFile)){ready=JSON.parse(fs.readFileSync(readyFile));if(await healthy(ready))break;}
-  await wait(200);
- }
- if(!ready||!await healthy(ready))throw new Error('Original loopback host did not become ready; its original log and ready file are retained.');
-}
-const token=fs.readFileSync(path.join(workspace,'operator.key'),'utf8').trim();
 const errors=[];
 const phase=async(name,fn)=>{if(journal.phases[name])return journal.phases[name];journal.active_phase=name;save();const r=await fn();journal.phases[name]=r;journal.active_phase=null;save();return r;};
-let playwright;
-for(const module of [options.playwright,process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES&&path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'playwright'),'playwright','playwright-core'].filter(Boolean)){
- try{playwright=require(module);break;}catch{}
-}
-if(!playwright?.chromium)throw new Error('Use --playwright with the already installed Playwright module path.');
+let playwright,token;
 async function jsonAPI(ctx,route,query={}){
  const url=ready.origin+route+'?'+new URLSearchParams({workspace:ready.workspace,...query});
  const r=await ctx.request.get(url);const value=await r.json();if(!r.ok())throw new Error(route+' '+r.status()+' '+JSON.stringify(value));return value;
 }
 let page;
 try{
+ for(const module of [options.playwright,process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES&&path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'playwright'),'playwright','playwright-core'].filter(Boolean)){
+ try{playwright=require(module);break;}catch{}
+}
+if(!playwright?.chromium)throw new Error('Use --playwright with the already installed Playwright module path.');
+if(options.chromium&&!fs.existsSync(options.chromium))throw new Error('The specified existing Chromium binary is absent.');
+if(!fs.existsSync(path.join(workspace,'workspace.sqlite'))){
+ if(!options.seed)throw new Error('Use an existing retained workspace, or explicitly pass --seed for a fresh Practice receiving install.');
+ const seeded=spawnSync(python,['-B','-c',SEED_CODE,source,workspace],{encoding:'utf8',maxBuffer:1024*1024});
+ if(seeded.status!==0)throw new Error('Practice receiving install failed: '+seeded.stderr+seeded.stdout);
+ journal.seed=JSON.parse(seeded.stdout);save();
+}
+if(!ready||!await healthy(ready)){
+ const log=fs.openSync(serverLog,'a',0o600);
+ serverChild=spawn(python,['-B',path.join(source,'run.py'),'serve','--workspace',workspace,'--port','0','--ready-file',readyFile],{cwd:source,stdio:['ignore',log,log],env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
+ fs.closeSync(log);
+ let hostSpawnError=null;serverChild.once('error',error=>{hostSpawnError=error;});
+ const deadline=Date.now()+30000;
+ while(Date.now()<deadline){
+  if(hostSpawnError)throw hostSpawnError;
+  if(serverChild.exitCode!==null||serverChild.signalCode!==null)throw new Error('Original host exited: '+fs.readFileSync(serverLog,'utf8').slice(-8000));
+  if(fs.existsSync(readyFile)){ready=JSON.parse(fs.readFileSync(readyFile));if(await healthy(ready))break;}
+  await wait(200);
+ }
+ if(!ready||!await healthy(ready))throw new Error('Original loopback host did not become ready; its original log and ready file are retained.');
+}
+token=fs.readFileSync(path.join(workspace,'operator.key'),'utf8').trim();
  browser=await playwright.chromium.launch({headless:true,...(options.chromium?{executablePath:options.chromium}:{}),args:['--no-sandbox','--disable-dev-shm-usage']});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
  page=await context.newPage();page.setDefaultTimeout(20000);
@@ -202,7 +205,13 @@ try{
  console.log(JSON.stringify(result));
 }catch(error){journal.status='CONTINUATION_REQUIRED';journal.error={message:error.message,at:new Date().toISOString()};save();throw error;}
 finally{
- if(context){try{await context.request.post(ready.origin+'/api/shutdown?'+new URLSearchParams({workspace:ready.workspace}),{headers:{'X-Audit-Request':'1','Content-Type':'application/json'},data:{}});}catch{}}
- if(browser)await browser.close();
- if(serverChild&&serverChild.exitCode===null)await Promise.race([new Promise(resolve=>serverChild.once('exit',resolve)),wait(6000)]);
+ if(context&&ready){try{await context.request.post(ready.origin+'/api/shutdown?'+new URLSearchParams({workspace:ready.workspace}),{headers:{'X-Audit-Request':'1','Content-Type':'application/json'},data:{}});}catch{}}
+ if(browser){try{await browser.close();}catch{}}
+ if(serverChild){
+  const alive=()=>serverChild.exitCode===null&&serverChild.signalCode===null;
+  const ended=()=>new Promise(resolve=>serverChild.once('exit',resolve));
+  if(alive())await Promise.race([ended(),wait(1500)]);
+  if(alive()){serverChild.kill('SIGTERM');await Promise.race([ended(),wait(4000)]);}
+  if(alive()){serverChild.kill('SIGKILL');await Promise.race([ended(),wait(2000)]);}
+ }
 }
