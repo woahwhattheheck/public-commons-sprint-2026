@@ -425,7 +425,8 @@
     "grpc-contract": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/cli.mjs",
     "grpc-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
     "grpc-example": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/server.mjs",
-    "stellar-application": "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/installed.mjs"
+    "stellar-application": "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/installed.mjs",
+    "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -961,6 +962,7 @@
     "./seller/geocodio/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/workspace.mjs",
     "./seller/geocodio/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/server.mjs",
     "./merchant/mcp/opensearch": "./source/stellar-forge/mcp-merchant-operator/opensearch-workspace.mjs",
+    "./merchant/mcp/opensearch/deployment": "./source/stellar-forge/mcp-merchant-operator/opensearch-deployment.mjs",
     "./seller/mssql": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/merchant.mjs",
     "./seller/mssql/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/source.mjs",
     "./seller/mssql/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/config.mjs",
@@ -1032,6 +1034,9 @@
     "./partners/stellar-application/configuration": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/configuration.mjs",
     "./partners/stellar-application/server": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/server.mjs",
     "./partners/stellar-application/installed": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/installed.mjs",
+    "./merchant/mcp/sec-edgar": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-tools.mjs",
+    "./merchant/mcp/sec-edgar-transfer": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-transfer.mjs",
+    "./merchant/mcp/sec-edgar-download": "./source/stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
     "./seller/jobs/recovery": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/paid-jobs.mjs",
     "./seller/jobs/recovery/cli": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/paid-jobs-cli.mjs",
     "./seller/jobs/source-binding": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/source-binding.mjs",
