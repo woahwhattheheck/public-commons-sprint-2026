@@ -1,12 +1,12 @@
 # Original buyer expense operation from MCP and customer code
 
-The merchant MCP host can operate the original SF36 expense workspace through its existing Python HTTP application. This is an accounting continuation of an already retained buyer ledger. It does not create a buyer, make a payment, read a signer, change a reservation, or introduce another ledger.
+The merchant MCP host can operate the original SF36 expense workspace through its existing Python HTTP application. This is an accounting continuation of already retained SF36 ledgers or original MCP quote/payment observations. It does not create a buyer, make a payment, read a signer, change a reservation, or introduce another ledger.
 
-The same source captures, exact atomic allocation lines, outstanding reservations, named period reviews, immutable closes and reopen history are available to the browser and customer tools. All financial rules remain in `sf36-spend-governor/expense-workspace/{store,domain,native}.py`; the source reader remains the original `statement.py`.
+The same source captures, exact atomic allocation lines, outstanding reservations, named period reviews, immutable closes and reopen history are available to the browser and customer tools. All financial rules remain in `sf36-spend-governor/expense-workspace/{store,domain,native}.py`; SF36 source reading remains in original `statement.py`, and MCP reading uses original `SqliteQuoteStore.readSnapshot` plus its saved SF86 observations.
 
 ## Declare the original host inputs
 
-Create an owned mode-0600 JSON file. Paths in this file are operator configuration, not MCP arguments. The workspace can be an existing original expense workspace or a new private workspace. Each original ledger needs its own explicit alias and truthful provenance.
+Create an owned mode-0600 JSON file. Paths in this file are operator configuration, not MCP arguments. The workspace can be an existing original expense workspace or a new private workspace. Each original ledger or MCP quote directory needs its own explicit alias and truthful provenance.
 
 ```json
 {
@@ -21,13 +21,20 @@ Create an owned mode-0600 JSON file. Paths in this file are operator configurati
           "name": "Original buyer ledger",
           "provenance": "Operator-owned original SF36 buyer; retain its actual source and purchase references here."
         }
+      },
+      "quoteSources": {
+        "remote_tools": {
+          "path": "/srv/starforge/original-mcp-buyer",
+          "name": "Original native MCP purchases",
+          "provenance": "Operator-owned original quote store; retain the actual purchase and saved reconciliation references."
+        }
       }
     }
   }
 }
 ```
 
-Use Python 3.11 or newer on POSIX. A declared absolute Python executable is also supported. Relative file paths resolve against the private connection file. Distinct workspace aliases must have distinct directories. The configuration reader opens no ledger and starts no application.
+Use Python 3.11 or newer on POSIX. A declared absolute Python executable is also supported. Relative file paths resolve against the private connection file. Distinct workspace aliases must have distinct directories. The configuration reader opens no buyer source and starts no application. New MCP captures use the same Node executable that owns this MCP host; callers cannot select executables or arbitrary source paths.
 
 Initialize the existing MCP host without a seller:
 
@@ -56,7 +63,7 @@ All tool names below begin `merchant_buyer_expense_`. `expenses tools` and `buye
 | Step | Tools | Original behavior |
 | --- | --- | --- |
 | Select and open | `workspaces`, `open`, `state` | Explicitly open one declared original workspace. Read its current revision, sources, centers, labels and periods. |
-| Register or refresh | `ledger_register`, `capture`, `source_rebind` | Use only a declared original ledger. Registration captures once; later capture retains a pending edition. Rebind keeps the original request-continuity checks. |
+| Register or refresh | `ledger_register`, `mcp_register`, `capture`, `source_rebind` | Use a declared original source of the matching type. Registration captures once; later captures are pending editions. Rebind keeps original native identity continuity. |
 | Review source changes | `captures`, `capture_status`, `capture_review` | Page actual native deltas and retain the named accept/reject decision. Complete original captures remain downloadable. |
 | Allocate actual expense | `items`, `item`, `center_save`, `labels_save`, `coding_save` | Exact string amounts must sum to the original settled actual. Recognition date, project and account code are operator decisions. Network and asset remain separate. |
 | Resolve the period | `period_save`, `period_report`, `disposition` | Preserve outstanding reservations and missing-source indications. Resolve only the actual displayed issue with its current basis and allowed disposition. |
@@ -65,7 +72,15 @@ All tool names below begin `merchant_buyer_expense_`. `expenses tools` and `buye
 | Receive the whole project | `export`, `exports`, `export_status`, `manifest`, `file`, `file_release` | Retain native files under a stable export ID. Download their pinned bytes and receive the included original application. |
 | Finish | `close` | Close the exact instance owned by this host, drain its accepted requests and release the original workspace lease. |
 
-State/history/report tools accept `offset` and `limit` (1–200). Report views expose the original allocations, outstanding reservations, issues, totals, cost-center/project groups, outstanding totals and source-capture references. They never add unlike assets or label reservations as settled expense.
+State/history/report tools accept `offset` and `limit` (1–200). Report views expose the original allocations, outstanding reservations, issues, totals, cost-center/project groups, outstanding totals, source-capture references and `native_payment_outcomes`. They never add unlike assets, label reservations as settled expense, or turn MCP quote prices into reservations.
+
+## Original MCP purchase to accountant
+
+`mcp_register` selects a `quoteSource` alias and the same `requestId` / `expectedRevision` contract as ledger registration. Its SDK name is `mcpRegister`. A later `capture` uses the registered source kind and must still match a host-declared locator. `source_rebind` takes exactly one `ledger` or `quoteSource` alias, which must match the retained source type.
+
+The native reader opens original `quotes.sqlite` read-only and preserves each quote's accepted terms, dispatch state, buyer result and saved original payment observation. Only an exact-bound saved native SF86 `TRANSFER_MATCHED` observation supplies settled actual for allocation. Seller-confirmed results and unresolved or failed payment observations remain visible in the same period workflow. The fixed reader performs no network request, reconciliation, signing or payment. Use the original buyer recovery operation first when its report is absent, then explicitly capture and review that source.
+
+MCP quote creation day is a source date, not a settlement date. Recognition remains the operator's explicit decision. The same exact matched transfer cannot close as two included charges through duplicated source captures or another currently closed period. Raw original observation/result metadata is available in capture exports, and `native_payment_outcomes` is a paged report/review/issued view. Purchased result bodies remain with the original buyer.
 
 ## Transactional request recovery
 
@@ -172,7 +187,7 @@ A stable export ID retains its original request before preparation. A completed 
 
 The trusted `receive.py` checks the reviewed whole-archive SHA256, complete member set, every retained file hash/byte count, known native SQLite tables/columns, workspace identity, revision and successful-request count. It extracts only known original project members into a new private destination, with exact-archive continuation after an interrupted receive. It executes no archive code or SQL. Old version-1 projects without request history are identified as legacy and acquire the additive table on normal original opening.
 
-The received package includes the original Python application, source statement reader, public UI, instructions and consistent workspace database. Opening it needs no repository checkout. It retains captured statement snapshots and accountant history; the original buyer ledger, wallet and signing material remain outside it. No source capture or payment is replayed during receiving. Existing local ledger locators can be rebound through the original source workflow if a later deliberate refresh is required.
+The received package includes the original Python application, source statement reader, complete native MCP quote-reader files, public UI, instructions and consistent workspace database. Opening it needs no repository checkout. It retains captured statement snapshots and accountant history; the original buyer ledgers, quote databases, purchased output bodies, wallet and signing material remain outside it. No source capture or payment is replayed during receiving. Existing local source locators can be rebound through the original source workflow if a later deliberate refresh is required. Saved state opens with Python alone; only a new MCP source capture needs the host's Node 22.13+ or Node 24 runtime. Receiving verifies the advertised native reader feature, required files and original source kinds.
 
 ## Completed original operating continuation
 

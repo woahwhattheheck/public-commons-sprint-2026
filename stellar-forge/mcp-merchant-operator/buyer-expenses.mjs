@@ -58,17 +58,20 @@ export async function readBuyerExpenseConfiguration(path) {
   if(!Object.keys(raw.workspaces).length)throw fail('CONFIGURATION','Declare at least one original expense workspace.');
   const workspaces={};
   for(const [name,value] of Object.entries(raw.workspaces)) {
-    identifier(name);exact(value,['directory','python','ledgers'],['directory']);
+    identifier(name);exact(value,['directory','python','ledgers','quoteSources'],['directory']);
     const directory=hostPath(value.directory,dirname(path));
     const python=value.python ?? 'python3';
     if(typeof python!=='string'||python.includes('\0')||(python!=='python3'&&!isAbsolute(python)))throw fail('CONFIGURATION','Select python3 or a host-declared absolute Python interpreter path.');
-    const ledgers={};exact(value.ledgers ?? {},Object.keys(value.ledgers ?? {}));
-    for(const [key,source] of Object.entries(value.ledgers ?? {})) {
-      identifier(key);exact(source,['path','name','provenance'],['path','name','provenance']);
-      if(typeof source.name!=='string'||!source.name.trim()||source.name.length>160||typeof source.provenance!=='string'||source.provenance.length>6000)throw fail('CONFIGURATION','Declare the original ledger name and source provenance.');
-      ledgers[key]={path:hostPath(source.path,dirname(path)),name:source.name,provenance:source.provenance};
+    const bindings={};
+    for(const kind of ['ledgers','quoteSources']) {
+      const selected=value[kind] ?? {};exact(selected,Object.keys(selected));bindings[kind]={};
+      for(const [key,source] of Object.entries(selected)) {
+        identifier(key);exact(source,['path','name','provenance'],['path','name','provenance']);
+        if(typeof source.name!=='string'||!source.name.trim()||source.name.length>160||typeof source.provenance!=='string'||source.provenance.length>6000)throw fail('CONFIGURATION','Declare the original source name and provenance.');
+        bindings[kind][key]={path:hostPath(source.path,dirname(path)),name:source.name,provenance:source.provenance};
+      }
     }
-    workspaces[name]={directory,python,ledgers};
+    workspaces[name]={directory,python,...bindings};
   }
   if(new Set(Object.values(workspaces).map(v=>v.directory)).size!==Object.keys(workspaces).length)throw fail('CONFIGURATION','Use one alias for each original expense directory.');
   return {schema:BUYER_EXPENSE_CONNECTION_SCHEMA,workspaces};
@@ -131,7 +134,7 @@ export class MerchantBuyerExpenses {
     if(existing?.closing){await this.#closeOne(name,existing.instanceId);existing=this.#sessions.get(name);}
     if(existing&&existing.child.exitCode===null&&existing.child.signalCode===null)return {workspace:name,instanceId:existing.instanceId,workspaceId:existing.workspaceId,...compactReport(await this.#get(existing,'/api/state'))};
     if(existing)this.#sessions.delete(name);
-    const child=spawn(selection.python,['-B',SERVER,'--state',selection.directory,'--port','0'],{stdio:['ignore','pipe','pipe'],shell:false});
+    const child=spawn(selection.python,['-B',SERVER,'--state',selection.directory,'--port','0','--node',process.execPath],{stdio:['ignore','pipe','pipe'],shell:false});
     const session={child,exited:exited(child),instanceId:randomUUID(),active:new Set(),closing:false};
     child.stderr.on('data',()=>{});let output='',timer;
     try {
@@ -169,12 +172,13 @@ export class MerchantBuyerExpenses {
   }
   async #sourceAllowed(s,selection,sourceId) {
     const source=(await this.#get(s,'/api/state')).sources.find(v=>v.id===sourceId);
-    let declared=Boolean(source&&Object.values(selection.ledgers).some(v=>v.path===source.path));
-    if(source&&!declared)for(const value of Object.values(selection.ledgers)){
+    const bindings=(source?.kind ?? 'sf36_ledger')==='mcp_quote'?selection.quoteSources:selection.ledgers;
+    let declared=Boolean(source&&Object.values(bindings ?? {}).some(v=>v.path===source.path));
+    if(source&&!declared)for(const value of Object.values(bindings ?? {})){
       try{if(await realpath(value.path)===source.path){declared=true;break;}}
       catch(error){if(!['ENOENT','ENOTDIR'].includes(error.code))throw error;}
     }
-    if(!declared)throw fail('LEDGER_NOT_DECLARED','The host must declare this registered original ledger before a new capture.');
+    if(!declared)throw fail('SOURCE_NOT_DECLARED','The host must declare this registered original source under its matching source type before a new capture.');
   }
   async #mutate(s,args,path,payload={}) {
     if(!new RegExp(request.pattern).test(args.requestId)||!Number.isSafeInteger(args.expectedRevision)||args.expectedRevision<0)throw fail('REQUEST','Retain the exact requestId and reviewed whole revision.');
@@ -239,7 +243,7 @@ export class MerchantBuyerExpenses {
   }
   async #execute(name,args) {
     const action=name.slice(PREFIX.length);
-    if(action==='workspaces')return {...this.summary,workspaces:Object.entries(this.#config?.workspaces ?? {}).map(([workspace,s])=>({workspace,ledgers:Object.entries(s.ledgers).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),open:this.#sessions.has(workspace)}))};
+    if(action==='workspaces')return {...this.summary,workspaces:Object.entries(this.#config?.workspaces ?? {}).map(([workspace,s])=>({workspace,ledgers:Object.entries(s.ledgers ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),quoteSources:Object.entries(s.quoteSources ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),open:this.#sessions.has(workspace)}))};
     if(action==='exports'){const root=await this.#rootReady(),names=(await readdir(root)).filter(v=>/^[a-z0-9][a-z0-9_-]{0,63}$/.test(v)).sort();const selected=page(names,args.offset,args.limit);return {...selected,items:await Promise.all(selected.items.map(id=>this.#exportStatus(id)))};}
     if(action==='export_status')return this.#exportStatus(args.exportId);
     if(action==='manifest'){const s=await this.#exportStatus(args.exportId);if(s.state!=='COMPLETE')throw fail('EXPORT_PENDING','Resume the retained original export request.');return {exportId:args.exportId,state:'MANIFEST_RETAINED',manifestFile:s.manifestFile};}
@@ -258,8 +262,16 @@ export class MerchantBuyerExpenses {
       case 'captures':return get('/api/sources/'+part(args.sourceId)+'/captures'+suffix);
       case 'capture_status':return get('/api/captures/'+part(args.id)+suffix);
       case 'ledger_register':{const ledger=selection.ledgers[identifier(args.ledger)];if(!ledger)throw fail('LEDGER_NOT_DECLARED','Select a host-declared original ledger.');return this.#mutate(s,args,'/api/sources',{path:ledger.path,name:args.name??ledger.name,provenance:args.provenance??ledger.provenance});}
+      case 'mcp_register':{const source=selection.quoteSources?.[identifier(args.quoteSource)];if(!source)throw fail('SOURCE_NOT_DECLARED','Select a host-declared original MCP quote source.');return this.#mutate(s,args,'/api/sources',{kind:'mcp_quote',path:source.path,name:args.name??source.name,provenance:args.provenance??source.provenance});}
       case 'capture':await this.#sourceAllowed(s,selection,args.sourceId);return this.#mutate(s,args,'/api/sources/'+part(args.sourceId)+'/capture');
-      case 'source_rebind':{const ledger=selection.ledgers[identifier(args.ledger)];if(!ledger)throw fail('LEDGER_NOT_DECLARED','Select a host-declared original ledger.');return this.#mutate(s,args,'/api/sources/'+part(args.sourceId)+'/rebind',{path:ledger.path,operator:args.operator,reason:args.reason});}
+      case 'source_rebind':{
+        const kind=args.quoteSource===undefined?'sf36_ledger':'mcp_quote';
+        const source=(kind==='mcp_quote'?selection.quoteSources:selection.ledgers)?.[identifier(args.quoteSource??args.ledger)];
+        if(!source)throw fail('SOURCE_NOT_DECLARED','Select a host-declared original source of the registered type.');
+        const registered=(await get('/api/state')).sources.find(v=>v.id===args.sourceId);
+        if(!registered||(registered.kind??'sf36_ledger')!==kind)throw fail('SOURCE_KIND','Rebind the same original source type; a quote store is not an SF36 ledger.');
+        return this.#mutate(s,args,'/api/sources/'+part(args.sourceId)+'/rebind',{path:source.path,operator:args.operator,reason:args.reason});
+      }
       case 'capture_review':return this.#mutate(s,args,'/api/captures/'+part(args.id)+'/decision',{decision:args.decision,operator:args.operator,reason:args.reason});
       case 'center_save':return this.#mutate(s,args,'/api/centers',args.payload);
       case 'labels_save':return this.#mutate(s,args,'/api/labels',args.payload);

@@ -7,9 +7,15 @@ import os
 import tempfile
 import zipfile
 from domain import Problem
+from native_mcp import reader_path
 
 APP_FILES = ("native.py", "domain.py", "store.py", "exports.py", "portable.py", "server.py",
-             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py")
+             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py")
+MCP_READER_FILES = ("stellar-forge/mcp-paid-agent/expense-statement.mjs",
+                    "stellar-forge/mcp-paid-agent/quote-store.mjs",
+                    "stellar-forge/mcp-paid-agent/remote-mcp.mjs",
+                    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/terms.mjs",
+                    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/networks.json")
 PREPARE = '''from pathlib import Path,PurePosixPath
 import hashlib,json,os
 root=Path(__file__).resolve().parent
@@ -42,9 +48,15 @@ Use Python 3.11 or newer on a POSIX host. Extract privately, then open the inclu
 
 Open the complete private URL printed by that command. No repository checkout or dependency installation is required.
 
-All source captures, original native row identities, allocation editions, exception decisions, period reviews, issued exports and activity history are retained in the included workspace. Sources keep their original ledger locators. Opening this project does not read a ledger or a key. To refresh a source after moving the original buyer, use Sources → Rebind and select the same original ledger; the application compares its retained request identities before accepting the new locator.
+All source captures, original native row identities, allocation editions, exception decisions, period reviews, issued exports and activity history are retained in the included workspace. Sources keep their original type and locator. Opening the project does not read an original buyer source or a key. To refresh after moving the original buyer, use Sources → Rebind and select the same original ledger or MCP quote directory; the application compares its retained native identities before accepting the new locator.
 
-The original buyer ledger, signer and wallet keys are outside this expense project. Its retained statement snapshots and accountant editions open independently. New captures use the original SF36 read-only statement API. Native reservations, settled actual and unused capacity retain their original meanings. The operator supplies recognition dates and expense allocations; units remain separate by network and asset.
+The original buyer ledgers, quote databases, signers, wallet keys and purchased result bodies remain outside this expense project. Retained captures and accountant editions open independently. New SF36 captures use the unchanged read-only statement API. New MCP captures use the included original SqliteQuoteStore reader in one read-only transaction; they require Node 22.13+ or Node 24. Supply the host interpreter explicitly when needed:
+
+    python3 app/sf36-spend-governor/expense-workspace/server.py --state project --port 0 --node /absolute/path/to/node
+
+No Node process starts until an operator explicitly captures an MCP source. The saved original SF86 payment observation determines whether a matched transfer is available for allocation; seller response, result metadata and quoted amount remain separate. The expense reader neither contacts an RPC nor initiates, signs or retries a payment. Reconcile an unresolved original payment through its existing buyer operation, then capture and review that source edition here.
+
+Native SF36 reservations, settled actual and unused capacity retain their original meanings. MCP quotes create no reservations in this workspace. Quote creation day is a source date, not a payment or accounting date. The operator supplies recognition dates and exact allocations; units remain separate by network and asset. A transfer shared by source rows requires explicit review, and the same exact matched event cannot be included twice in one period.
 
 Use Period review to inspect current source/coding decisions, name the reviewer and save a review. Issue a ready edition for a frozen accountant packet. Reopening requires a recorded reason and preserves all previously issued editions. The Complete project download retains runnable source and a consistent SQLite backup for subsequent receiving. Successful optional customer requests are retained in that same database. The trusted installed receive.py can verify and receive the complete ZIP with --archive, --directory and --expected-sha256; it executes no archive code or SQL and can continue only the same exact incomplete receive.
 """
@@ -68,6 +80,12 @@ def _complete_project(store, state):
         entries["app/sf36-spend-governor/expense-workspace/" + name] = path.read_bytes()
     for name in ("statement.py", "governor.py", "STATEMENTS.md"):
         entries["app/sf36-spend-governor/" + name] = (app.parent / name).read_bytes()
+    native_root = reader_path().parents[2]
+    for name in MCP_READER_FILES:
+        path = native_root / name
+        if path.is_symlink():
+            raise ValueError("Original MCP reader source cannot be a symlink")
+        entries["app/" + name] = path.read_bytes()
     with tempfile.TemporaryDirectory(prefix=".private-export-", dir=store.root) as scratch:
         path = Path(scratch) / "workspace.sqlite"
         store.backup_to(path)
@@ -77,6 +95,8 @@ def _complete_project(store, state):
     entries["manifest.json"] = (json.dumps({"schema": "stellar-forge.buyer-expense-private-project.v1",
         "workspace": state["id"], "revision": state["revision"],
         "request_recovery": "sqlite-transaction-v1",
+        "mcp_quote_capture": "native-readonly-v1",
+        "source_kinds": sorted({source.get("kind", "sf36_ledger") for source in state["sources"]}),
         "request_count": store.connection.execute("SELECT COUNT(*) FROM api_requests").fetchone()[0],
         "files": [{"path": name, "bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()} for name, value in sorted(entries.items())]}, indent=2) + "\n").encode()
     output = io.BytesIO()

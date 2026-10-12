@@ -12,7 +12,7 @@ import stat
 import threading
 
 from domain import Problem, SCHEMA, now, canonical, identifier, text, day, digest, row_key, basis, native_changes, validate_coding, period_view
-from native import capture_ledger, parse_labels
+from native import capture_source, parse_labels
 
 DDL = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -53,12 +53,13 @@ def page(values, offset=0, limit=50):
 
 
 class Store:
-    def __init__(self, directory):
+    def __init__(self, directory, node_executable=None):
         self.root = Path(directory).expanduser().resolve()
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
         private_directory(self.root)
         self.lock = threading.RLock()
         self.closed = False
+        self.node_executable = node_executable
         self.connection = None
         self.request_context = None
         self.lease = os.open(self.root / "operator.lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
@@ -210,13 +211,16 @@ class Store:
         result = []
         for source in self._bodies("sources"):
             view = dict(source)
+            view["kind"] = source.get("kind", "sf36_ledger")
             view["pending"] = [r[0] for r in self.connection.execute("SELECT id FROM captures WHERE source_id=? AND status='PENDING' ORDER BY created_at,id", (source["id"],))]
             if source.get("current_capture"):
                 captured = self._get("captures", source["current_capture"])
                 report = captured["report"]
                 view.update(capture_time=report["captured_at"], projection_sha256=report["source"]["projection_sha256"],
                             journal_events=report["source"]["journal_events"], last_sequence=report["source"]["last_sequence"],
-                            rows=report["source"]["reservations"], portfolio=report["portfolio"])
+                            rows=report["source"]["reservations"], portfolio=report["portfolio"],
+                            record_kind=report["source"].get("record_kind", "reservations"),
+                            source_basis=report.get("basis"), date_basis=report.get("date_basis"))
             result.append(view)
         return result
 
@@ -231,7 +235,10 @@ class Store:
                     "capture_id": value["capture_id"], "missing": bool(value["missing"]), "row": row}
             item["basis"] = basis(row, item["missing"])
             item["coding"] = heads.get(item["id"])
-            item["status"] = ("ABSENT" if item["missing"] else "RESERVED" if row["state"] == "reserved" else
+            nonexpense = {"reserved":"RESERVED", "unresolved":"PAYMENT_UNRESOLVED",
+                          "failed":"FAILED_TRANSACTION", "not_dispatched":"NO_SIGNED_DISPATCH",
+                          "observation_review":"OBSERVATION_REVIEW"}
+            item["status"] = ("ABSENT" if item["missing"] else nonexpense[row["state"]] if row["state"] in nonexpense else
                               "UNCODED" if not item["coding"] else "STALE" if item["coding"]["basis"] != item["basis"] else "CODED")
             items.append(item)
         return items
@@ -271,13 +278,16 @@ class Store:
 
     def register_source(self, payload, expected):
         name = text(payload.get("name"), "Source name", maximum=160)
-        path = text(payload.get("path"), "Original ledger path", maximum=4096)
+        path = text(payload.get("path"), "Original source location", maximum=4096)
+        kind = payload.get("kind", "sf36_ledger")
+        if kind not in ("sf36_ledger", "mcp_quote"):
+            raise Problem("SOURCE_KIND", "Choose an original SF36 ledger or native MCP quote workspace")
         provenance = text(payload.get("provenance", ""), "Source provenance", maximum=6000, optional=True)
-        native = capture_ledger(path)
+        native = capture_source(path, kind, self.node_executable)
         def operation():
             if any(s["path"] == native["path"] or s["identity"] == native["identity"] for s in self._bodies("sources")):
-                raise Problem("SOURCE_ALREADY_REGISTERED", "This original ledger is already registered; refresh or rebind that source", 409)
-            source = {"id": identifier("source"), "name": name, "path": native["path"], "identity": native["identity"],
+                raise Problem("SOURCE_ALREADY_REGISTERED", "This original source is already registered; refresh or rebind that source", 409)
+            source = {"id": identifier("source"), "name": name, "kind": kind, "path": native["path"], "identity": native["identity"],
                       "provenance": provenance, "created_at": now(), "current_capture": None}
             self._put("sources", source)
             return {"id": source["id"], "source": source, "capture": self._new_capture(source, native)}
@@ -286,14 +296,16 @@ class Store:
     def capture(self, ident, expected):
         with self.lock:
             source = self._get("sources", ident)
-        native = capture_ledger(source["path"])
+        native = capture_source(source["path"], source.get("kind", "sf36_ledger"), self.node_executable)
         return self._change(expected, "source.capture", lambda: self._new_capture(self._get("sources", ident), native))
 
     def rebind(self, ident, payload, expected):
-        path = text(payload.get("path"), "Original ledger path", maximum=4096)
+        path = text(payload.get("path"), "Original source location", maximum=4096)
         reason = text(payload.get("reason"), "Rebinding reason", maximum=3000)
         operator = text(payload.get("operator"), "Source owner", maximum=240)
-        native = capture_ledger(path)
+        with self.lock:
+            kind = self._get("sources", ident).get("kind", "sf36_ledger")
+        native = capture_source(path, kind, self.node_executable)
         def operation():
             source = self._get("sources", ident)
             if any(s["id"] != ident and (s["path"] == native["path"] or s["identity"] == native["identity"]) for s in self._bodies("sources")):
@@ -302,7 +314,7 @@ class Store:
                 before = self._get("captures", source["current_capture"])["report"]["rows"]
                 after = {r["request_id"]: r for r in native["report"]["rows"]}
                 if any(r["request_id"] not in after or after[r["request_id"]]["request_digest"] != r["request_digest"] for r in before):
-                    raise Problem("LEDGER_CONTINUITY", "This ledger does not retain the registered source's original request identities; register a distinct source instead", 409)
+                    raise Problem("LEDGER_CONTINUITY", "This source does not retain the registered original request identities; register a distinct source instead", 409)
             source["rebindings"] = source.get("rebindings", []) + [{"from": source["path"], "to": native["path"], "reason": reason, "operator": operator, "at": now()}]
             source.update(path=native["path"], identity=native["identity"])
             self._put("sources", source)
@@ -422,7 +434,21 @@ class Store:
     def report(self, ident):
         with self.lock:
             period = self._get("periods", ident)
-            view = period_view(period, self._items(), self._source_views(), {c["id"]: c for c in self._bodies("centers")}, self._dispositions(ident))
+            closed_transfers = []
+            for other in self._bodies("periods"):
+                if other["id"] == ident or other["state"] != "CLOSED" or not other.get("latest_close"):
+                    continue
+                issued = self._get("closes", other["latest_close"])
+                seen = set()
+                for line in issued.get("allocations", []):
+                    transfer = (line.get("native_payment") or {}).get("transfer_identity")
+                    if transfer and (transfer, line["item_id"]) not in seen:
+                        seen.add((transfer, line["item_id"]))
+                        closed_transfers.append({"transfer_identity":transfer, "period_id":other["id"],
+                            "period_name":other["name"], "close_id":issued["id"], "item_id":line["item_id"],
+                            "source_capture":line["source_capture"], "recognition_date":line["recognition_date"]})
+            view = period_view(period, self._items(), self._source_views(), {c["id"]: c for c in self._bodies("centers")},
+                               self._dispositions(ident), closed_transfers)
             labels = json.loads(self.connection.execute("SELECT value FROM meta WHERE key='labels'").fetchone()[0])
             view["labels"] = labels
             view["context_sha256"] = digest([view["context_sha256"], labels])

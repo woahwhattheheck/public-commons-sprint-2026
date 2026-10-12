@@ -29,8 +29,8 @@ class Server(ThreadingHTTPServer):
     block_on_close = True
     allow_reuse_address = False
 
-    def __init__(self, directory, port=0):
-        self.store = Store(directory)
+    def __init__(self, directory, port=0, node_executable=None):
+        self.store = Store(directory, node_executable=node_executable)
         self.token = secrets.token_urlsafe(32)
         try:
             super().__init__(("127.0.0.1", port), Handler)
@@ -222,10 +222,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state", required=True, help="Private expense workspace directory, separate from the original buyer ledger")
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--node", help="Host Node 22.13+ or 24 executable for original MCP quote captures")
     args = parser.parse_args()
     if not 0 <= args.port <= 65535:
         parser.error("--port must be from 0 to 65535")
-    server = Server(args.state, args.port)
+    server = Server(args.state, args.port, node_executable=args.node)
     stopping = threading.Event()
     def stop(*_):
         if not stopping.is_set():
