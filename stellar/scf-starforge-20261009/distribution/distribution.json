@@ -387,7 +387,8 @@
     "dataset-feeds": "stellar/scf-starforge-20261009/sf30-seller-sdk/feeds/cli.mjs",
     "atlas": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
     "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs",
-    "upstream-tls": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/cli.mjs"
+    "upstream-tls": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/cli.mjs",
+    "fred": "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -883,7 +884,12 @@
     "./seller/arcgis/workbench": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/model.mjs",
     "./seller/arcgis/workbench/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/server.mjs",
     "./seller/upstream-tls": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/profile.mjs",
-    "./seller/upstream-tls/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/config.mjs"
+    "./seller/upstream-tls/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/config.mjs",
+    "./seller/fred": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/merchant.mjs",
+    "./seller/fred/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/model.mjs",
+    "./seller/fred/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/source.mjs",
+    "./seller/fred/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/project.mjs",
+    "./seller/fred/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/workspace.mjs"
   },
   "nativePeers": {
     "@x402/core": {
