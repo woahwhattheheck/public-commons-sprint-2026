@@ -300,3 +300,26 @@ The browser saves a prepared mutation's complete payload, original revision, and
 A completed capture and its immutable source edition remain together after process restart. An interrupted page resumes its retained request and source result. A named handoff continues to reference its original revision after later source changes, merchant preparation, or review edits.
 
 The private operator validates its loopback host and browser origin, uses a tab-specific bearer token, and serves only its bundled assets. Its pages use no external scripts or styles. Provider response values render as text; retained HTML source is read as source text in the operator and can be downloaded as its original bytes.
+
+## Complete original receiving journey
+
+`receive.mjs` operates one selected original notice packet through the CLI, source
+review, both issued attachment files, immutable named handoffs, the original
+merchant and buyer preparation, the opportunity bridge, desktop/mobile browser
+work and a fresh receiving workspace. Each step checkpoints its original request
+and reuses it after an interrupted process. The receiving workspace compares both
+complete sets of named formats and every original source hash.
+
+Run with an existing Node runtime and Playwright/Chromium installation. Select a
+private `SAM_NATIVE_ROOT`, the complete repository or installed `SAM_SOURCE_ROOT`,
+`SAM_PLAYWRIGHT_MODULE`, `SAM_CHROMIUM`, and a private `SAM_NATIVE_INPUT` JSON file.
+The input selects `operationId`, `operator`, `noticeId`, `historyEntries`,
+`attachmentCount`, `attachmentFiles`, a reviewed `deadline`, the original public
+`payment` terms, a configured HTTPS `origin`, and an original buyer `intentId`.
+Its `files` map supplies the complete notice, resources and history JSON files
+and each issued attachment by absolute `path` and exact `sha256`. Attachment
+entries also supply their original `resourceId`, `mediaType` and `capturedAt`.
+Keep the private input and original source files outside the public source tree.
+The native journey starts the original local challenge seller and prepares its
+advertised buyer request; the workspace's existing paid runtime remains the path
+for authorized execution of that prepared request.
