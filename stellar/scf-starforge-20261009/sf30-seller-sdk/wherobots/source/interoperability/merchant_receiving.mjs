@@ -18,6 +18,11 @@ const stable=value=>JSON.stringify(value&&typeof value==="object"?
   Array.isArray(value)?value.map(item=>JSON.parse(stable(item))):
   Object.fromEntries(Object.keys(value).sort().map(key=>[key,JSON.parse(stable(value[key]))])):value);
 const exists=filename=>access(filename).then(()=>true,error=>{if(error.code==="ENOENT")return false;throw error;});
+async function nativeSourceIdentity(relative){
+  const filename=fileURLToPath(new URL(relative,import.meta.url)),bytes=await readFile(filename);
+  return {path:filename,bytes:bytes.length,sha256:sha(bytes),
+    git_blob:createHash("sha1").update(Buffer.from("blob "+bytes.length+String.fromCharCode(0))).update(bytes).digest("hex")};
+}
 const flags={};
 for(let index=2;index<process.argv.length;index+=2){
   const name=process.argv[index],value=process.argv[index+1];
@@ -124,10 +129,61 @@ try{
        source.source_binding_sha256!==edition.source_binding_sha256||!originals.length||
        originals.length!==source.sourceFiles.length||stable(source.sourceFiles)!==stable(source.original_objects))
       throw new Error("The complete original SF30/SF82 dataset receiving binding differs.");
+    // Query every exported snapshot through the same original SF30 reader.
+    // Full responses retain the source-defined CSV projection and exact native cursor.
+    const nativePages=[],pageLimits=[],seenCursors=new Set();let cursor=null,queriedRows=0;
+    let pageLimit=Math.min(100,description.maxLimit);
+    if(!Number.isSafeInteger(pageLimit)||pageLimit<1)throw new Error("The original SF30 reader did not declare its page limit.");
+    do{
+      let response;
+      for(;;){
+        const context={query:{limit:String(pageLimit),...(cursor?{cursor}:{})}};
+        const admitted=loaded.admit(context);
+        response=admitted===true?loaded.handle(context):admitted;
+        if(response?.status===413&&pageLimit>1){
+          pageLimits.push({cursor,limit:pageLimit,response});
+          pageLimit=Math.max(1,Math.floor(pageLimit/2));continue;
+        }
+        if(admitted!==true||response?.status!==200)
+          throw Object.assign(new Error("The original SF30 query did not complete."),
+            {code:"WHEROBOTS_SF30_RECEIVING",details:{dataset_id:dataset.id,cursor,limit:pageLimit,response}});
+        break;
+      }
+      const body=response.body;
+      if(body?.schema!=="stellar-forge.dataset-page.v1"||
+         body.dataset?.snapshot!==description.snapshot||
+         body.dataset?.rowCount!==description.rowCount||
+         response.headers?.["x-dataset-snapshot"]!==description.snapshot||
+         !Array.isArray(body.rows)||body.page?.returned!==body.rows.length||
+         body.page?.total!==description.rowCount||
+         body.page?.limit!==pageLimit)
+        throw new Error("The original SF30 response changed its dataset snapshot or complete page binding.");
+      nativePages.push({request:{limit:pageLimit,cursor},response});
+      queriedRows+=body.rows.length;
+      const next=body.page.nextCursor;
+      if(queriedRows>description.rowCount||
+         next!==null&&(typeof next!=="string"||!next||!body.rows.length||next===cursor||seenCursors.has(next)))
+        throw new Error("The original SF30 cursor did not advance through one complete snapshot.");
+      if(next!==null)seenCursors.add(next);cursor=next;
+    }while(cursor!==null);
+    if(queriedRows!==description.rowCount)throw new Error("The original SF30 reader omitted exported rows.");
+    const pagesDirectory=path.join(output,"native-publisher-datasets");await mkdir(pagesDirectory,{recursive:true,mode:0o700});
+    const pagesFile=path.join(pagesDirectory,sha(dataset.id)+".json");
+    const publisherResult={schema:"stellar-forge.wherobots-native-publisher-receiving.v1",
+      dataset_id:dataset.id,edition_id:edition.id,source_binding_sha256:source.source_binding_sha256,
+      description,rows:queriedRows,pages:nativePages,limit_adjustments:pageLimits,
+      companions:originals,companion_count:originals.length,
+      companion_bytes:originals.reduce((total,item)=>total+item.bytes,0),
+      native_source:{loader:await nativeSourceIdentity("../../../dataset-handler.mjs"),
+        source_files_reader:await nativeSourceIdentity("../../../../sf82-seller-pilot/release-dataset.mjs")}};
+    await save(pagesFile,publisherResult);
+    const pagesBytes=await readFile(pagesFile);
     datasetPackages.push({dataset_id:dataset.id,edition_id:edition.id,row_count:description.rowCount,
       snapshot:description.snapshot,source_files:originals.length,
       manifest_sha256:retained.manifest_sha256,directory:retained.directory,files:retained.files.length,
-      bytes:retained.bytes,source_binding_sha256:source.source_binding_sha256});
+      bytes:retained.bytes,source_binding_sha256:source.source_binding_sha256,
+      sf30:{state:"COMPLETE",rows:queriedRows,pages:nativePages.length,
+        result:{path:pagesFile,bytes:pagesBytes.length,sha256:sha(pagesBytes)}}});
   }
   const receivingEnv={...process.env,PYTHONDONTWRITEBYTECODE:"1"};
   if(entry.pythonPath?.length)receivingEnv.PYTHONPATH=[
