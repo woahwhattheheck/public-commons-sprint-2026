@@ -15,6 +15,8 @@ This module keeps native acquisition, complete source editions, operator decisio
 
 Run acquisition with Python 3.10 or newer and the original compatible SDK pair, databento 0.87.0 and databento-dbn 0.70.x. Account commands use the SDK's declared HTTP dependencies. The native DBN decoder is the original extension from that pair; offline decoding does not import the HTTP client.
 
+The maintained CLI exposes databento-acquire, databento-workspace, and databento-warehouse with the same underlying source commands. The direct commands below work from this module's source directory.
+
 The workbench requires Node 22.13 or newer because the original workspace uses built-in node:sqlite. Its --source-root points to the original repository root or the installed package's source directory. Omitting it derives that same root from this module's location. It never modifies the installed package.
 
 All acquisition-wide options appear **before** the command. Workbench options appear **after** its command. No API key is passed as a command argument.
@@ -385,6 +387,57 @@ node workbench.mjs reopen \
 The export is the original native portable format. Reopen uses its create-only import into a new directory. It preserves workspace identity, revisions, binary sources, completed previews, stages/releases, customers, and retained files according to the original model. It does not recreate a source store or run acquisition to restore the workspace.
 
 The operator handoff's operator/workspace.python-workspace.json is also an original portable bundle. Select that file directly when reopening a complete operator handoff.
+
+## 10. Receive the complete customer delivery into a local warehouse
+
+The included [customer receiving guide](receiving/README.md) covers the complete original SQLite receiver. It uses Python 3.11 or newer and the standard library. Its maintained command is starforge databento-warehouse; the direct source entry is receiving/receiver.py. The Node warehouse.mjs entry forwards the same arguments and uses DATABENTO_PYTHON_EXECUTABLE when the operator selects an interpreter.
+
+Start with the **customer-audience** complete handoff from section 7:
+
+~~~sh
+starforge databento-warehouse init --warehouse /customer/warehouse
+
+starforge databento-warehouse receive \
+  --warehouse /customer/warehouse \
+  --delivery-directory /producer/complete-customer-handoff
+
+starforge databento-warehouse status --warehouse /customer/warehouse
+starforge databento-warehouse inspect \
+  --warehouse /customer/warehouse --delivery ACTUAL_DELIVERY_ID
+~~~
+
+The receive result provides the delivery ID derived from the original manifest bytes. The receiver verifies the full manifest, streams both original mapped data files, preserves exact row bytes and JSON kinds, and retains original source/assessment metadata. It stages the delivery. A later named customer selection uses the actual current head:
+
+~~~sh
+starforge databento-warehouse activate \
+  --warehouse /customer/warehouse --delivery ACTUAL_DELIVERY_ID \
+  --expected-generation ACTUAL_GENERATION --expected-delivery ACTUAL_HEAD_OR_none \
+  --actor "Customer operator" --reason "Selected this reviewed source scope" \
+  --operation-id customer-select-001
+~~~
+
+Use the head displayed by status. The initial empty head is generation0/delivery none. The decision retains the actor, reason, stable operation ID, and expected head. Rollback has the same argument shape and selects an edition previously selected in that same warehouse.
+
+Query the selected delivery through its original output labels, then export the complete selection:
+
+~~~sh
+starforge databento-warehouse query --warehouse /customer/warehouse --limit 50
+starforge databento-warehouse export \
+  --warehouse /customer/warehouse --out /customer/retained-export
+
+starforge databento-warehouse backup \
+  --warehouse /customer/warehouse --out /customer/warehouse-backup
+starforge databento-warehouse restore \
+  --bundle /customer/warehouse-backup --out /customer/reopened-warehouse
+~~~
+
+The customer export includes an HTML reading view, complete selected CSV/NDJSON, source lineage, and the relevant named customer decisions. An unfiltered export reproduces the original customer data bytes. Filtered exports explicitly retain their own selection alongside original provenance.
+
+The receiver preserves the original assessment and reference/source scope. Selecting a reference session for local analysis does not turn that source into a production/preview cutover comparison.
+
+Its durable import resumes the same committed original prefix after interruption. Backup uses SQLite's native snapshot operation; restore verifies the saved files and opens a new warehouse directory with all completed data, decisions, and indexes. Export, backup, and restore destinations are create-only. The warehouse needs actual capacity for original row bytes, exact cells, SQLite structures, and the chosen exported/backup files.
+
+The producer's operator workspace and private review notes stay separate from this customer receiver. The direct CLI and full integration API are in receiving/README.md; no second source processor or web server is introduced.
 
 ## Native limits and meaningful capacity
 
