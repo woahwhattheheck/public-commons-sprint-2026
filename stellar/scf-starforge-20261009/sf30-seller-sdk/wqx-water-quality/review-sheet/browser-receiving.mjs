@@ -242,7 +242,7 @@ export async function runReviewSheetBrowserReceiving(input) {
         args: [...new Set(['--no-sandbox', '--disable-dev-shm-usage', ...config.browserArgs])],
         ...(temp || config.browserLibraryPaths.length ? { env: { ...process.env,
           ...(temp ? { TMPDIR: temp, TMP: temp, TEMP: temp } : {}),
-          ...(config.browserLibraryPaths.length ? { LD_LIBRARY_PATH: [...config.browserLibraryPaths, process.env.LD_LIBRARY_PATH ?? ''].filter(Boolean).join(':') } : {}) } : {}) });
+          ...(config.browserLibraryPaths.length ? { LD_LIBRARY_PATH: [...config.browserLibraryPaths, process.env.LD_LIBRARY_PATH ?? ''].filter(Boolean).join(':') } : {}) } } : {}) });
       const browserVersion = browser.version();
       async function idle() {
         await page.waitForFunction(() => document.getElementById('tab-review-sheets').getAttribute('aria-busy') === 'false');
