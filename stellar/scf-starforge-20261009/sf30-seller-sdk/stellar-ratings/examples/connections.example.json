@@ -1,0 +1,16 @@
+{
+  "bluechip": {
+    "provider": "bluechip",
+    "baseUrl": "https://backend.bluechip.org/api/1.2/"
+  },
+  "horizon": {
+    "provider": "horizon",
+    "network": "public",
+    "baseUrl": "https://horizon.stellar.org"
+  },
+  "stellarExpert": {
+    "provider": "stellar-expert",
+    "network": "public",
+    "baseUrl": "https://api.stellar.expert"
+  }
+}
