@@ -7,7 +7,8 @@ import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { MerchantClientExports, readOwnedSellerCatalog } from './client-exports.mjs';
 import { exact, failure, identifier, line, readMerchantConfig, inspectMerchantSource, pythonSourceView, duckdbSourceView } from './config.mjs';
 import { MerchantDiscovery, discoveryTools } from './discovery.mjs';
-import { cacheControlTools, merchantCacheStatus, merchantCacheInvalidate } from './controls.mjs';
+import { cacheControlTools, merchantCacheStatus, merchantCacheInvalidate, merchantCacheInspect,
+  merchantCacheConfigure, merchantCachePurge, merchantCacheOperation } from './controls.mjs';
 import { MerchantFleet, fleetControlTools } from './fleet.mjs';
 import { MerchantAccounting, accountingTools } from './accounting.mjs';
 import { MerchantSupport, supportTools } from './support.mjs';
@@ -221,6 +222,10 @@ export class MerchantReleaseOperator {
       case 'merchant_discovery_apply': return this.#discovery.apply(args);
       case 'merchant_cache_status': return merchantCacheStatus(root);
       case 'merchant_cache_invalidate': this.#owned(args.instanceId); return merchantCacheInvalidate(root, args);
+      case 'merchant_cache_inspect': this.#owned(args.instanceId); return merchantCacheInspect(root, args);
+      case 'merchant_cache_configure': this.#owned(args.instanceId); return merchantCacheConfigure(root, args);
+      case 'merchant_cache_purge': this.#owned(args.instanceId); return merchantCachePurge(root, args);
+      case 'merchant_cache_operation': this.#owned(args.instanceId); return merchantCacheOperation(root, args);
       case 'merchant_inspect': return releaseView(await inspectRelease(root, identifier(args.id)));
       case 'merchant_stage': {
         const alias = identifier(args.source, 'Source alias'), source = this.#config.sources[alias];

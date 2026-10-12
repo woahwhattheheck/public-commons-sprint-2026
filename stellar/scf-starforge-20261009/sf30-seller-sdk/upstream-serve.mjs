@@ -110,6 +110,8 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
   if (application.supplierQuotaSnapshot) session.supplierQuotaSnapshot = application.supplierQuotaSnapshot;
   session.operationControl = application.operationControl;
   session.invalidateUpstreamCache = application.invalidateCache;
+  session.cacheBinding = application.cacheBinding;
+  session.cacheManagement = application.cacheManagement;
   const nativeClose = session.close.bind(session);
   let closing, cleanup;
   const closeApplication = () => cleanup ??= session.lifecycle.whenIdle().then(() => application.close());
