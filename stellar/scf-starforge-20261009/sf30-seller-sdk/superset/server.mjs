@@ -166,7 +166,7 @@ export async function startSupersetWorkspaceServer({directory,workspaceDirectory
   });
   try{
     await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,host,done);});
-    origin='http://127.0.0.1:'+server.address().port;
+    origin=new URL('http://127.0.0.1:'+server.address().port).origin;
     launch={schema:SUPERSET_OPERATOR_LAUNCH_SCHEMA,state:'running',operatorId,instanceId,pid:process.pid,
       directory,workspaceDirectory,url:origin,serverFile:join(selectedSource.executionSourceDirectory,'server.mjs'),
       serverSha256:selectedSource.serverSha256,sourceDirectory:selectedSource.selection.sourceDirectory,
