@@ -55,6 +55,12 @@ The actual source calculation completed in **Functions V8 at 11:26:24 UTC on 12 
 
 The existing source-preserving SensorThings engine, CLI/MCP, retained-file receiving and original source edition journal remain the intended native receiving path. The source report analysis IDs are not native workspace edition IDs. Reuse the same original operation and source bytes; do not fetch these responses again to reproduce this report.
 
+## Reproduce and receive the complete product
+
+[The complete native receiving guide](NATIVE_RECEIVING.md) provides both installed commands and the original operation IDs. `sensorthings-receive-hamburg` consumes the exact [native-recording.json](native-recording.json) through the existing source journal, receives both original editions, retains source review and prepares native datasets and full source archives. `sensorthings-report` reproduces both analyses, verifies their exact expected identities and exports all original bodies, receipts and complete report tables to a separate delivery directory. Completed reports reopen by verifying their saved file identities.
+
+The complete recording is 2,965,230 bytes with SHA-256 `34fb0322092a51525e94beda0d6c3b21548b7261d65d80909b27eb6fa6a2d466`. These commands do not fetch replacement source data. The exact calculation source used for the already-completed V8 result is retained under [calculation-source/](calculation-source/), separately from the current installed reproduction command.
+
 ## Attribution and published metadata
 
 Source attribution: **Freie und Hansestadt Hamburg, Behörde für Wirtschaft und Innovation**. The retained [publisher metadata edition](https://suche.transparenz.hamburg.de/dataset/elektro-ladestandorte-hamburg36), dated July 2024, identifies [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). That edition links to newer metadata; it is not represented here as independent verification of later licensing or operating-company changes. The original API bodies remain unchanged.

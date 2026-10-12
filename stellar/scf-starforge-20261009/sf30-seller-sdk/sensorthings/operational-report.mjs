@@ -27,7 +27,7 @@ function dotPlot(report){
  }
  return svg+'<text x="'+(width-right)+'" y="'+(height-3)+'" text-anchor="end">UTC · each mark is one observed instant</text></svg>';
 }
-export function renderStatusReport(report,{comparison=null,attribution='',licenseUrl='',title='Charging-point operations review'}={}){
+export function renderStatusReport(report,{comparison=null,attribution='',licenseUrl='',title='Charging-point operations review',executionNote=null}={}){
  if(report?.schema!==STATUS_WINDOW_SCHEMA||typeof report.resultSha256!=='string')throw new Error('A complete calculated status report is required.');
  if(comparison&&(comparison.schema!==STATUS_COMPARISON_SCHEMA||comparison.firstReportId!==report.id))throw new Error('The comparison must name this exact first report.');
  const countMax=Math.max(1,...report.eventCounts.map(v=>v.events));
@@ -89,7 +89,7 @@ export function renderStatusReport(report,{comparison=null,attribution='',licens
   (owner?'<p>The Thing reports <code>ownerThing</code> = <strong>'+esc(owner.value)+'</strong>; <code>infoLastUpdate</code> = '+esc(report.metadata.thing.reportedInfoLastUpdate.value)+'. This is the publisher’s dated attribution, not independent confirmation of the current operator.</p>':'')+
   '<p>Both complete connector tool responses are retained for every source body. HTTP status, headers and provider request timestamps were not exposed. Receiving clocks record when each complete connector download returned. Matching metadata brackets do not establish an atomic snapshot.</p><h3>Source interpretation findings</h3>'+findings+
   '<h3>Complete source index</h3>'+sources+'<h3>Calculated identity</h3><p class="identity">Analysis: <code>'+esc(report.id)+'</code><br>Calculated result: <code>'+esc(report.resultSha256)+'</code>'+(comparison?'<br>Comparison: <code>'+esc(comparison.id)+'</code>':'')+
-  '</p><p>The calculation receipt pins the reusable source, original parsing functions, input identities and output files. This report was calculated from the actual originals in Functions V8. Native workspace, browser and customer receiving outcomes remain separate until actually executed.</p></section>'+
+  '</p><p>'+esc(executionNote??'The calculation receipt pins the reusable source, original parsing functions, input identities and output files. Native workspace, browser and customer receiving outcomes retain their separate actual execution receipts.')+'</p></section>'+
   '<footer>'+(attribution?'<p>Source attribution: '+esc(attribution)+(licenseUrl?' · <a href="'+esc(licenseUrl)+'">Source licence</a>':'')+'.</p>':'')+
   '<p>Original literals and up to nine fractional timestamp digits are retained. CSV exports preserve missing/null/value distinctions and prefix formula-like strings for spreadsheet safety; original JSON stays unchanged.</p><button class="print-button" onclick="window.print()">Print this report</button></footer></main>'+CLIENT+'</body></html>';
 }
