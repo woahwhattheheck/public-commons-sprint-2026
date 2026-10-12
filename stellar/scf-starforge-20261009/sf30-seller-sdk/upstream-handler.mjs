@@ -105,7 +105,7 @@ function queryMapping(value) {
   const result = new Map(), outputs = new Set();
   for (const [source, target] of pairs) {
     if (typeof source !== 'string' || typeof target !== 'string' ||
-        !/^[A-Za-z_][A-Za-z0-9_.-]{0,79}$/.test(source) || !/^\$?[A-Za-z_][A-Za-z0-9_.-]{0,79}$/.test(target) ||
+        !/^[A-Za-z_][A-Za-z0-9_.-]{0,79}$/.test(source) || !/^\$?[A-Za-z_][A-Za-z0-9_.-]{0,79}(?:\[[A-Za-z_][A-Za-z0-9_.-]{0,79}\])?$/.test(target) ||
         result.has(source) || outputs.has(target)) throw new TypeError('Invalid or ambiguous query mapping');
     result.set(source, target); outputs.add(target);
   }
@@ -161,12 +161,12 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'agent', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream', 'supplierQuota', 'tls']);
+    'maxInFlight', 'allowLocal', 'lookup', 'agent', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream', 'supplierQuota', 'tls', 'retainErrorResponse']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, agent, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json', supplierQuota, tls } = options;
+    maxInFlight = 16, allowLocal = false, lookup, agent, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json', supplierQuota, tls, retainErrorResponse = false } = options;
   if (!['json','form-data'].includes(bodyType) || bodyType==='form-data'&&!requiresJsonBody(method)) throw new TypeError('Invalid upstream bodyType');
   if (!supportsSellerMethod(method) || !['json', 'bytes', 'sse', 'ndjson'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       typeof cachePolicyMetadata !== 'boolean' ||
@@ -177,7 +177,8 @@ export function createUpstreamHandler(options = {}) {
     throw new TypeError('Invalid supplier quota controller');
   integer(timeoutMs, 1, 120000, 'timeoutMs');
   integer(maxRequestBytes, 1, 16 * 1048576, 'maxRequestBytes');
-  integer(maxResponseBytes, 1, 16 * 1048576, 'maxResponseBytes');
+  integer(maxResponseBytes, 1, 64 * 1048576, 'maxResponseBytes');
+  if (typeof retainErrorResponse !== 'boolean') throw new TypeError('retainErrorResponse must be a boolean');
   integer(maxInFlight, 1, 256, 'maxInFlight');
   const streaming = ['sse','ndjson'].includes(responseType);
   if (streaming && (method === 'HEAD' || idempotency !== undefined || responseContract !== undefined || cachePolicyMetadata))
@@ -307,7 +308,7 @@ export function createUpstreamHandler(options = {}) {
           if (status === 402) return bad(502, 'UPSTREAM_PAYMENT_REQUIRED', status);
           if (status === 401 || status === 403) return bad(502, 'UPSTREAM_AUTH_FAILED', status);
           if (status < 200 || status > 599 || status === 206) return bad(502, 'UPSTREAM_STATUS_UNSUPPORTED', status);
-          if (status >= 400) {
+          if (status >= 400 && !retainErrorResponse) {
             const result = failure(status, 'UPSTREAM_REQUEST_FAILED', status);
             const retryAfter = res.headers['retry-after'];
             if ((status === 429 || status === 503) && !responseHop.has('retry-after') && typeof retryAfter === 'string' && retryAfter.length <= 128 &&
@@ -368,8 +369,8 @@ export function createUpstreamHandler(options = {}) {
               try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(content)); }
               catch { return bad(502, 'UPSTREAM_JSON_INVALID'); }
             }
-            const contractError = responseCheck?.validate({ status, body: content, value,
-              contentType: responseHop.has('content-type') ? undefined : res.headers['content-type'] });
+            const contractError = status < 400 ? responseCheck?.validate({ status, body: content, value,
+              contentType: responseHop.has('content-type') ? undefined : res.headers['content-type'] }) : null;
             if (contractError) return bad(502, contractError, status);
             finish({ status, headers: resultHeaders, body: content, ...metadata });
           });

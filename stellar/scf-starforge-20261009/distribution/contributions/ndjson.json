@@ -21,5 +21,8 @@
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/jobs/index.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/jobs/application.mjs"
     }
+  },
+  "applicationProviders": {
+    "ndjson": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/ndjson.mjs"
   }
 }
