@@ -173,3 +173,7 @@ The launcher supports `--help` without initializing a workspace. All commands al
 The current source is the original [SF47 budget model](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/stellar/scf_2026/sf47_budget_model). Its current candidate retains the original remaining-work and deployment acceptance inputs. Local contributors, hours, rates, capital and payment dates are saved operator assumptions, and grant inflows use the selected scenario's conditional timing. The command-line operator preserves those distinctions in the same computed report and complete handover.
 
 The earlier source integration [PR1167](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1167) bound the deployment acceptance plan to the current scenario. Follow the current saved source digest and the workspace owner's current source release when comparing a received plan. The CLI calls the original model for every calculation and keeps the original imported scenario alongside subsequent edits.
+
+## Operating forecasts
+
+The original `operations` command includes `forecast-preview`, `forecast-save`, `forecasts`, `forecast-show` and `forecast-export`. Use the same case ID, explicit expected version and stable request ID. Saving additionally requires the exact reviewed preview SHA-256 and complete input JSON. Full examples and source/receiving semantics are in [FORECAST.md](FORECAST.md). The ordinary case `export` and `import` commands carry all immutable saved forecasts with the original source and work/payment records.

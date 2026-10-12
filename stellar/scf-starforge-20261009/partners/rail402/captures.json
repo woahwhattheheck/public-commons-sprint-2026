@@ -1,0 +1,40 @@
+{
+  "schema": "stellar-forge.rail402.captures.v1",
+  "operationId": "RAIL402-MERCHANT-ADOPTION-20261012-8F43",
+  "merchantSourceCommit": "53b476149d43886e7ed37bc3c7c3cd1ee68f9cf8",
+  "captures": [
+    {
+      "id": "weather",
+      "path": "/rail402-source-weather.json",
+      "label": "Query request · GET",
+      "behavior": "Returns the requested city with fixed demonstration weather values.",
+      "sha256": "44de843d81cadec7dd57408397487f9ae69fb34f28aec89451257a37a75be645",
+      "capturedAt": "2026-10-12T03:09:18.592604+00:00",
+      "url": "https://demo.rail402.dev/weather?city=Ankara",
+      "method": "GET",
+      "amount": "10000"
+    },
+    {
+      "id": "profile",
+      "path": "/rail402-source-profile.json",
+      "label": "Path request · GET",
+      "behavior": "Returns the requested identifier with a demonstration profile.",
+      "sha256": "8d5a8453617ce1094e31691e48259bdfc2c87f32356886ce1af62a9f97ba5ac2",
+      "capturedAt": "2026-10-12T03:09:26.811223+00:00",
+      "url": "https://demo.rail402.dev/users/42",
+      "method": "GET",
+      "amount": "10000"
+    },
+    {
+      "id": "translate",
+      "path": "/rail402-source-translate.json",
+      "label": "JSON request · POST",
+      "behavior": "Echoes the request text and target language as the original payment/discovery demonstration.",
+      "sha256": "c5e86f7d72d455a522016c83e7fc3a40cd72109d61c50e314558a1b0b0e80f52",
+      "capturedAt": "2026-10-12T03:09:33.774219+00:00",
+      "url": "https://demo.rail402.dev/translate",
+      "method": "POST",
+      "amount": "20000"
+    }
+  ]
+}

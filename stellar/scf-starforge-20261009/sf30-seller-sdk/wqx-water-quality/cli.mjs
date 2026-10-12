@@ -24,6 +24,10 @@ const HELP = [
   'export         Export --review ID --format html|json|csv|geojson --out FILE.',
   'pack-review    Export complete private source and review (--review ID --out FILE).',
   'receive        Open that complete review in an empty project (--bundle FILE).',
+  'open-waters    Preview --review ID --options FILE; use --id PLAN to retain those choices.',
+  'water-plans    List saved Open Waters plans, or read --id PLAN.',
+  'water-export   Export --plan ID --format locations|results|crosswalk|report|references|bundle --out FILE.',
+  'water-receive  Receive --bundle FILE into an empty private project.',
   'edition        Prepare --review ID --id EDITION.',
   'editions       List editions, or read --id EDITION.',
   'stage          Prepare --edition ID --origin HTTPS_ORIGIN --payment terms.json [--path /water-quality].',
@@ -133,6 +137,17 @@ export async function main(argv = process.argv.slice(2)) {
       const result = await project.exportReview({ reviewId: required(options, 'review'), format: options.format ?? 'html' });
       return output(result.bytes, required(options, 'out'));
     }
+    if (command === 'open-waters') {
+      const input = { reviewId: required(options, 'review'), options: options.options ? await jsonFile(options.options) : {},
+        expectedReviewSha256: options['review-sha256'] };
+      return output(options.id ? await project.saveOpenWaters({ ...input, planId: options.id }) : await project.previewOpenWaters(input), options.out);
+    }
+    if (command === 'water-plans') return output(options.id ? await project.readOpenWaters(options.id) : await project.listOpenWaters(), options.out);
+    if (command === 'water-export') {
+      const result = await project.exportOpenWaters({ planId: required(options, 'plan'), format: options.format ?? 'report' });
+      return output(result.bytes, required(options, 'out'));
+    }
+    if (command === 'water-receive') return output(await project.receiveOpenWaters({ bundle: await jsonFile(required(options, 'bundle')) }), options.out);
     if (command === 'edition') return output(await project.prepareEdition({ editionId: required(options, 'id'), reviewId: required(options, 'review') }), options.out);
     if (command === 'editions') return output(options.id ? await project.readEdition(options.id) : await project.listEditions(), options.out);
     if (command === 'stage') return output(await project.stageEdition({ editionId: required(options, 'edition'), origin: required(options, 'origin'),

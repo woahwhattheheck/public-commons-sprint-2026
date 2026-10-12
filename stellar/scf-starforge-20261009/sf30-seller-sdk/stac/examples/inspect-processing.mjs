@@ -94,14 +94,14 @@ export async function inspectProcessingView({
 
     await panel.getByLabel('Saved processing edition',{exact:true}).selectOption(history.id);
     const expectedContinuations=history.tasks.filter(value=>value.continuationAvailable&&value.latestCaptureSha256).length;
+    const continuationReviews=panel.locator('summary').filter({hasText:/^Review native page continuation$/});
+    requireValue(await continuationReviews.count()===expectedContinuations,'The saved continuation reviews differ from the retained task state.');
+    for(let index=0;index<expectedContinuations;index++)await continuationReviews.nth(index).click();
     const continuationCount=await panel.getByRole('button',{name:'Continue from last native payload',exact:true}).count();
     requireValue(continuationCount===expectedContinuations,'The explicit continuation controls differ from the retained task state.');
-    if(expectedContinuations){
-      const detail=panel.locator('details').filter({has:page.getByRole('button',{name:'Continue from last native payload',exact:true})}).first();
-      await detail.locator('summary').first().click();
-      requireValue(await panel.getByRole('button',{name:'Prepare continuation for an external capture',exact:true}).first().isVisible(),
-        'The original external continuation handover control is missing.');
-    }
+    if(expectedContinuations)requireValue(
+      await panel.getByRole('button',{name:'Prepare continuation for an external capture',exact:true}).first().isVisible(),
+      'The original external continuation handover control is missing.');
     await stage('retained-coverage-and-continuation',{tasks:history.tasks.length,explicitContinuations:continuationCount});
 
     const runsRead=savedResponse(page,'runs');
