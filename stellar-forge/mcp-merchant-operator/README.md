@@ -121,6 +121,14 @@ be delivered after the original seller stops. Use
 `merchant_opensearch_deployment_adopt_client` with the original inspected
 `filesSha256` to recover an intact customer export's completion manifest.
 
+## Material catalogs and supplier deliveries
+
+Use the [material and supplier operator](OPENSEARCH_MATERIALS.md) for the complete supplier workflow on an existing OpenSearch workspace: retain original inputs, map materials, select editions, record customer matches, correct recipient submissions, export full deliveries, and receive the same workspace at the customer. The source CLI, browser, MCP and typed client share those original records and request IDs.
+
+Native **ETIM xChange 2.0** intake retains the full catalogue/supplier/product tree and exact numeric tokens. Its recipient profiles support original ETIM deliveries and selected 2BA rules. The operator exposes complete FULL/CHANGE effects and exports native JSON, recipient JSONL and impact CSV. Existing Sonepar/BMEcat delivery remains available from its original profile. Complete portable handovers include source files, correction history and the immutable recipient chain.
+
+The typed client and **opensearch-materials-client** CLI can download the complete export, resume the same files after a host restart, and receive the original bundle while preserving newer customer work. The [complete xChange receiving guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/XCHANGE_NATIVE.md) runs the publisher example through those entry points.
+
 ## Operate a saved Redis merchant
 
 Connect an existing Redis workspace with `init-redis-workspaces --dir NEW_HOST
