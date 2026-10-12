@@ -24,7 +24,7 @@
       "parameters": {
         "profile": "equis-lab-4",
         "baselineProfile": "equis-lab-3",
-        "reviewName": "McCampbell complete source correspondence",
+        "reviewName": "mccampbell-cross-profile-source-receiving-01",
         "expectedSourceSha256": "7ce006eade0db042557c7d69182feab9da294a9f49d1c318f852771e6d0e9015",
         "expectedBaselineSha256": "db4ac5c96d687b19c8a5b2dece909c3a338361258d213c2a0a84f482b0c0afc6",
         "encoding": "utf-8",
