@@ -88,6 +88,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const continueRun = button('Continue original start', () => act(async () => {
     const app = selected();
     await api('/api/applications/recover', { applicationId: app.id, operationId: app.current.id });
+    followOperation(app.id, app.current.id);
     await refresh(); await refreshWorkspace();
   }));
   const editButton = button('Edit settings', () => edit(selected()));
@@ -124,6 +125,10 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     historyScope++; historyLoading = false; historyApplicationId = applicationId;
     historyData = null; historyCursor = null; historyTrail = [];
     delete historyRows.dataset.signature;
+  }
+  function followOperation(applicationId, operationId) {
+    if (selectedId !== applicationId) return;
+    resetHistory(applicationId); selectedRun = operationId ?? null;
   }
   function renderHistoryNavigation() {
     const page = historyData?.applicationId === selectedId ? historyData : null;
@@ -290,7 +295,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       let result;
       try { result = await retainedRequest('/api/applications/start', { applicationId: reviewed.applicationId, reviewId: reviewed.id }); }
       finally { start.disabled = false; }
-      selectedRun = result.operationId; startReview = null;
+      followOperation(reviewed.applicationId, result.operationId);
+      if (startReview === reviewed) startReview = null;
       await refresh(); await refreshWorkspace(); message(reviewed.command.pythonCommand && !reviewed.command.pythonCommand.ready ?
         'The original workbook command is starting. Its operating result and output appear below.' :
         'The original application is starting. Its private URL will appear when its CLI prints it.');
@@ -409,7 +415,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const recoverRequest = button('Recover last application request', () => act(async () => {
     const pending = readSaved('pending'); if (!pending) return;
     const result = await api(pending.route, pending.body);
-    selectedId = result.applicationId ?? selectedId; selectedRun = result.operationId ?? selectedRun;
+    selectedId = result.applicationId ?? selectedId;
+    followOperation(selectedId, result.operationId);
     saveSaved('pending', null); await refresh(); await refreshWorkspace();
   }));
   header.append(recoverRequest);
