@@ -131,3 +131,9 @@ See [DEMONSTRATION.md](DEMONSTRATION.md) for the supplied public native files, c
 The SQL Server workspace adds private connection/catalog inspection, typed and reviewed keyset queries, durable multi-page capture/cancellation/continuation, original native result receiving, model field mapping, full comparisons and portable workstream receiving. Original record histories and exact native job inputs remain together through conflict resolution and encrypted recovery.
 
 Start with [the complete SQL Server operating guide](tools/sql-server/GUIDE.md). The existing host additionally uses Node22.16+ and mssql12.7.4 for actual SQL Server reads. One existing driver installation is reused across immutable jobs; portable job/result packages support a separately equipped host. Password values remain in that selected host's environment.
+
+## Azure monthly source acquisition
+
+The **Azure exports** workspace completes native export discovery, an existing export's monthly execution and original run history, manifest selection, resumable ETag-pinned partition transfer, staff header review, original Agency billing import and portable receiving. It retains original CSV/Gzip/Parquet files and freezes the selected source/review/partition identities into finalized statement downloads. Ordinary file imports retain their existing identities. See [AZURE_EXPORTS_GUIDE.md](AZURE_EXPORTS_GUIDE.md) for the complete operator flow, connection fields, structured operations, receiving and recovery.
+
+Run `python examples/AZURE_EXPORTS_JOURNEY.py --output ./azure-example` for the complete authored operating journey over the original 12-agency billing inputs, then reopen `./azure-example/workspace` with the ordinary launcher. CSV/Gzip uses the existing runtime; native Parquet additionally uses `requirements-azure.txt`.
