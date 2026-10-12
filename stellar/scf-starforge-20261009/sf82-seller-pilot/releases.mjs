@@ -1,5 +1,5 @@
 // MIT. Version original SF61 exports and SF30 native merchant sources through SF82.
-import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile } from 'node:fs/promises';
+import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile, realpath, link } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
@@ -209,8 +209,63 @@ async function mutate(root, action) {
   const release = await lock(root, 'state.lock');
   try { return await action(); } finally { await release(); }
 }
-export async function initReleaseStore(root) {
+export async function initReleaseStore(root, { resume = false } = {}) {
+  if (typeof resume !== 'boolean') throw new TypeError('Release initialization resume must be boolean.');
   root = resolve(root);
+  if (resume) {
+    // The original state lease serializes this recovery with ordinary mutations.
+    // A complete state is returned unchanged; no active selection is recreated.
+    if (process.platform !== 'linux') throw new TypeError('Resuming release initialization requires the original Linux state lease.');
+    try { await mkdir(root, { mode: 0o700 }); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    const requirePrivate = async path => {
+      const info = await lstat(path);
+      if (!info.isDirectory() || info.isSymbolicLink() || info.mode & 0o077 || await realpath(path) !== path)
+        throw new TypeError('Resume only the original canonical private release directory.');
+    };
+    await requirePrivate(root);
+    const lifetime = await acquireReleaseLease(root, 'state.lock');
+    try {
+      // lstat distinguishes an absent initial state from invalid retained bytes.
+      let exists = true;
+      try { await lstat(join(root, 'state.json')); }
+      catch (error) { if (error.code !== 'ENOENT') throw error; exists = false; }
+      if (exists) return { root, ...await readReleaseState(root) };
+      const allowed = new Set(['releases', '.sf82-state.lock.lifetime']);
+      const pendingState = /^state\.json\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/;
+      if ((await readdir(root)).some(name => !allowed.has(name) && !pendingState.test(name)))
+        throw new TypeError('Preserve the uninitialized release store: it contains other retained entries.');
+      const releases = join(root, 'releases');
+      try { await mkdir(releases, { mode: 0o700 }); }
+      catch (error) { if (error.code !== 'EEXIST') throw error; }
+      await requirePrivate(releases);
+      if ((await readdir(releases)).length)
+        throw new TypeError('Preserve releases whose original state is missing.');
+      const state = { schema: STORE, createdAt: new Date().toISOString(), generation: 0,
+        active: null, previous: null, history: [] };
+      const temporary = join(root, 'state.json.' + randomUUID() + '.tmp');
+      let ownedTemporary = false;
+      try {
+        const handle = await open(temporary, 'wx', 0o600);
+        ownedTemporary = true;
+        try { await handle.writeFile(JSON.stringify(state, null, 2) + '\n'); await handle.sync(); }
+        finally { await handle.close(); }
+        await lifetime.assert();
+        let published = true;
+        try { await link(temporary, join(root, 'state.json')); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; published = false; }
+        // Exclusive publication also preserves a concurrent legacy initializer,
+        // whose default path predates the original kernel state lease.
+        await syncDirectory(root);
+        return { root, ...(published ? state : await readReleaseState(root)) };
+      } finally {
+        if (ownedTemporary) {
+          await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+          await syncDirectory(root);
+        }
+      }
+    } finally { await lifetime.close(); }
+  }
   await mkdir(root, { mode: 0o700 });
   await mkdir(join(root, 'releases'), { mode: 0o700 });
   const state = { schema: STORE, createdAt: new Date().toISOString(), generation: 0,
