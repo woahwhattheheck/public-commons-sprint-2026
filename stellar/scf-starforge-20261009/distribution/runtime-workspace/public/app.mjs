@@ -1,6 +1,7 @@
 import { initImageWorkspace, imageOperationRecovery } from './image.mjs';
 import { createRuntimeTransferView } from './transfer.mjs';
 import { createManagedWorkspaceView } from './managed.mjs';
+import { createApplicationsWorkspaceView } from './applications.mjs';
 // MIT. Industrial operator presentation; original runtime records remain authoritative.
 const $ = id => document.getElementById(id);
 const make = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -31,6 +32,7 @@ function switchView(name) {
   document.querySelectorAll('[data-view]').forEach(node => { if (node.dataset.view === name) node.setAttribute('aria-current', 'page'); else node.removeAttribute('aria-current'); });
   prefs();
   if (name === 'managed') managed.refresh().catch(error);
+  if (name === 'applications') applications.refresh().catch(error);
   if (name === 'transfers') transfers.refresh().catch(error);
 }
 document.querySelectorAll('[data-view]').forEach(node => node.addEventListener('click', () => switchView(node.dataset.view)));
@@ -132,6 +134,11 @@ function renderOperations() {
       ? imageOperationRecovery(job)
       : 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
     const actions = make('div', undefined, 'actions');
+    if (job.applicationId) {
+      const openApplication = make('button', 'Open application'); openApplication.type = 'button';
+      openApplication.addEventListener('click', () => applications.choose(job.applicationId).catch(error));
+      actions.append(openApplication);
+    }
     if (job.homeId) {
       const home = make('button', 'Open managed home'); home.type = 'button';
       home.addEventListener('click', () => managed.choose(job.homeId).catch(error)); actions.append(home);
@@ -185,7 +192,7 @@ async function refresh({ quiet = false } = {}) {
         if (saved?.selectedId && value.runtimes.some(item => item.id === saved.selectedId)) {
           selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId }));
         }
-        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'transfers'].includes(saved?.view) && view === requestedView) view = saved.view;
+        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers'].includes(saved?.view) && view === requestedView) view = saved.view;
         logSelection = saved?.logSelection ?? null;
       } catch {}
     }
@@ -388,12 +395,15 @@ const transfers = createRuntimeTransferView({ root: $('transfer-workspace'), api
   getToken: () => token, getView: () => view, operation, refreshWorkspace: refresh, openLog, switchView, message, error });
 const managed = createManagedWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
   openLog, switchView, message, error });
+const applications = createApplicationsWorkspaceView({ root: $('applications-workspace'), api, getState: () => state,
+  refreshWorkspace: refresh, switchView, message, error });
 window.addEventListener('hashchange', () => {
   if (!location.hash) return;
   token = location.hash.slice(1); sessionStorage.setItem(tokenKey, token);
   history.replaceState(null, '', location.pathname);
   images.reset();
   managed.reset();
+  applications.reset();
   transfers.reset();
   initial = true; state = undefined; selectedId = null; selectedArchive = null;
   profileReview = null; handoff = null; logSelection = null; view = 'runtime';

@@ -266,6 +266,7 @@
     "buyer-runbook": "stellar/scf-starforge-20261009/buyer-runbook/cli.mjs",
     "merchant-readiness": "stellar/scf-starforge-20261009/sf101-merchant-account-readiness/merchant-cli.mjs",
     "dataset-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workspace.mjs",
+    "hud-income-limits": "stellar/scf-starforge-20261009/sf30-seller-sdk/hud-income-limits/cli.mjs",
     "workbook": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook/cli.mjs",
     "workbook-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook-customer/cli.mjs",
     "workbook-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook-customer/examples/run-workbook-receiver.mjs",
@@ -343,7 +344,8 @@
     "merchant-accounting-platforms": "stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs",
     "linkup-research": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/linkup-dossier-cli.mjs",
     "socrata": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/cli.mjs",
-    "socrata-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs"
+    "socrata-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs",
+    "census-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -561,6 +563,13 @@
     "./buyer/workbook": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook-customer/index.mjs",
     "./buyer/workbook/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook-customer/examples/receive-workbook.mjs",
     "./buyer/workbook/receiver": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook-customer/examples/run-workbook-receiver.mjs",
+    "./seller/hud-income-limits": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/hud-income-limits/application.mjs",
+    "./seller/hud-income-limits/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/hud-income-limits/release.mjs",
+    "./seller/hud-income-limits/contract": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/hud-income-limits/contract.mjs",
+    "./seller/hud-income-limits/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/hud-income-limits/driver.mjs",
+    "./seller/hud-income-limits/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/hud-income-limits/server.mjs",
+    "./seller/hud-income-limits/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/hud-income-limits/delivery.mjs",
+    "./seller/hud-income-limits/releases": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/hud-income-limits/sf82.mjs",
     "./seller/workbook": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook/bridge.mjs",
     "./seller/workbook/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook/cli.mjs",
     "./buyer/dataset-acquisition": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-session.mjs",
@@ -766,6 +775,11 @@
     "./seller/arcgis/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/deployment.mjs",
     "./seller/opensearch/relevance": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/native.mjs",
     "./seller/opensearch/relevance/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/workspace.mjs",
+    "./seller/census-acs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/source.mjs",
+    "./seller/census-acs/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs",
+    "./seller/census-acs/publisher/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/plan.mjs",
+    "./seller/census-acs/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/release.mjs",
+    "./merchant/mcp/usaspending": "./source/stellar-forge/mcp-merchant-operator/usaspending-workspace.mjs",
     "./merchant/remote-recovery/workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/model.mjs",
     "./merchant/remote-recovery/workspace/server": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/server.mjs"
   },
