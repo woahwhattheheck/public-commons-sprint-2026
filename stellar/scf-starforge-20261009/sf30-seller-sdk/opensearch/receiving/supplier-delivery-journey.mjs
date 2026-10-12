@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import { readFile, mkdir, open, link, unlink } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { dirname, join, resolve } from 'node:path';
+import { createHash, randomUUID } from 'node:crypto';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Writable } from 'node:stream';
 import { execFile } from 'node:child_process';
@@ -22,11 +22,21 @@ const INPUTS={
   'SampleFile_bmecat_etim_V5_T_NEW_CATALOG_ETIM10.xml':'50568f0357c982a853eaf523475d18d6f2a594d0c8a392143a4df50007cddf8e',
   'bmecat_etim_501.xsd':'821e4dbcec9fa32b64df4298531adc5d3cdab68507686317dd08e8266378b005'
 };
+async function syncDirectory(path) {
+  const directory=await open(dirname(path),'r');
+  try{await directory.sync();}finally{await directory.close();}
+}
 async function originalFile(path,body) {
-  let file;
-  try { file=await open(path,'wx',0o600); }
-  catch(error){if(error.code!=='EEXIST'||!Buffer.from(await readFile(path)).equals(Buffer.from(body)))throw error;return;}
-  try{await file.writeFile(body);await file.sync();}finally{await file.close();}
+  const expected=Buffer.from(body);
+  try{assert.ok((await readFile(path)).equals(expected),'The retained original file differs: '+path);return;}
+  catch(error){if(error.code!=='ENOENT')throw error;}
+  const temporary=path+'.'+randomUUID()+'.part',file=await open(temporary,'wx',0o600);
+  try{
+    await file.writeFile(expected);await file.sync();await file.close();
+    try{await link(temporary,path);}
+    catch(error){if(error.code!=='EEXIST')throw error;assert.ok((await readFile(path)).equals(expected),'The retained original file differs: '+path);}
+    await syncDirectory(path);
+  }finally{await file.close().catch(()=>{});await unlink(temporary).catch(()=>{});}
 }
 async function operation(workspace,id,action) {
   let value;
@@ -36,18 +46,53 @@ async function operation(workspace,id,action) {
     {code:value.error?.code??'SUPPLIER_JOURNEY_OPERATION_INCOMPLETE',operation:value});
   return value.result;
 }
-async function output(path,descriptor) {
-  try{return{name:path.split('/').at(-1),...await hashCatalogFile(path),retained:true};}
+async function output(path,descriptor,operationId) {
+  const name=basename(path),receiptPath=path+'.receipt.json';
+  const retained=async receipt=>{
+    assert.equal(receipt.schema,'stellar-forge.supplier-export-receipt.v1');
+    assert.equal(receipt.operationId,operationId);assert.equal(receipt.name,name);
+    assert.match(receipt.temporary,/^supplier-export-[0-9a-f-]{36}\.part$/);
+    const temporary=join(dirname(path),receipt.temporary);
+    let actual;
+    try{actual=await hashCatalogFile(path);}
+    catch(error){
+      if(error.code!=='ENOENT')throw error;
+      const pending=await hashCatalogFile(temporary);
+      assert.equal(pending.bytes,receipt.bytes);assert.equal(pending.sha256,receipt.sha256);
+      try{await link(temporary,path);}catch(error){if(error.code!=='EEXIST')throw error;}
+      await syncDirectory(path);actual=await hashCatalogFile(path);
+    }
+    assert.equal(actual.bytes,receipt.bytes,'Retained export size: '+name);
+    assert.equal(actual.sha256,receipt.sha256,'Retained export identity: '+name);
+    await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});
+    return{name,bytes:receipt.bytes,sha256:receipt.sha256,type:receipt.type,retained:true};
+  };
+  let receipt;
+  try{receipt=JSON.parse(await readFile(receiptPath,'utf8'));}
   catch(error){if(error.code!=='ENOENT')throw error;}
-  const temporary=path+'.'+process.pid+'.part',file=await open(temporary,'wx',0o600);
-  let done=false;
+  if(receipt)return retained(receipt);
+  const temporaryName='supplier-export-'+randomUUID()+'.part',temporary=join(dirname(path),temporaryName);
+  const file=await open(temporary,'wx',0o600);let committed=false;
   try{
     const values=typeof descriptor.body==='string'||Buffer.isBuffer(descriptor.body)?[descriptor.body]:descriptor.body;
     for await(const value of values)await file.writeFile(value);
-    await file.sync();done=true;
-  }finally{await file.close();if(!done)await unlink(temporary).catch(()=>{});}
-  try{await link(temporary,path);}finally{await unlink(temporary).catch(()=>{});}
-  return{name:path.split('/').at(-1),...await hashCatalogFile(path),type:descriptor.type};
+    await file.sync();await file.close();
+    const actual=await hashCatalogFile(temporary);
+    // A filename left by an earlier version is adopted only after comparing a fresh complete export.
+    try{
+      const existing=await hashCatalogFile(path);
+      assert.equal(existing.bytes,actual.bytes,'Unreceipted export differs from the current delivery: '+name);
+      assert.equal(existing.sha256,actual.sha256,'Unreceipted export differs from the current delivery: '+name);
+    }catch(error){if(error.code!=='ENOENT')throw error;}
+    receipt={schema:'stellar-forge.supplier-export-receipt.v1',operationId,name,
+      bytes:actual.bytes,sha256:actual.sha256,type:descriptor.type,temporary:temporaryName};
+    // Commit identity before installing the final name or advancing to another workspace phase.
+    await originalFile(receiptPath,JSON.stringify(receipt)+'\n');committed=true;
+    const result=await retained(receipt);return{...result,retained:false};
+  }finally{
+    await file.close().catch(()=>{});
+    if(!committed)await unlink(temporary).catch(()=>{});
+  }
 }
 const XML_CHECK=String.raw`
 import json,sys
@@ -106,7 +151,7 @@ export async function runSupplierDeliveryJourney({directory,inputsDirectory=join
   };
   const phases=[],exports=[],startedAt=new Date().toISOString();
   const record=(phase,value)=>phases.push({phase,...value});
-  const emit=async(name,descriptor)=>{const value=await output(join(directory,'exports',name),descriptor);exports.push(value);return value;};
+  const emit=async(name,descriptor)=>{const value=await output(join(directory,'exports',name),descriptor,operationId);exports.push(value);return value;};
   let producer,receiver,running;
   try{
     producer=await openWorkspace('producer');
