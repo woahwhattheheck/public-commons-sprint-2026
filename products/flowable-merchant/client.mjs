@@ -126,6 +126,14 @@ export class FlowableProductClient {
   dispatchTask(input) { return this.call('dispatchTask', input); }
   prepareMigration(input) { return this.call('prepareMigration', input); }
   dispatchMigration(input) { return this.call('dispatchMigration', input); }
+  readDecisionPortfolio(input) { return this.call('readDecisionPortfolio', input); }
+  readDecisionDefinition(input) { return this.call('readDecisionDefinition', input); }
+  readDecisionExecution(input) { return this.call('readDecisionExecution', input); }
+  captureDecisionPortfolio(input) { return this.call('captureDecisionPortfolio', input); }
+  prepareDecisionRelease(input) { return this.call('prepareDecisionRelease', input); }
+  dispatchDecisionRelease(input) { return this.call('dispatchDecisionRelease', input); }
+  prepareDecisionEvaluation(input) { return this.call('prepareDecisionEvaluation', input); }
+  dispatchDecisionEvaluation(input) { return this.call('dispatchDecisionEvaluation', input); }
   reconcileOperation(input) { return this.call('reconcileOperation', input); }
   exportWorkspace(input) { return this.call('exportWorkspace', input); }
   inspectDelivery(input) { return this.call('inspectDelivery', input); }

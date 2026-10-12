@@ -602,7 +602,8 @@ def run_locked(args, root):
         "spring.datasource.url=jdbc:h2:file:" + str(database / "flowable") + ";DB_CLOSE_ON_EXIT=FALSE",
         "spring.datasource.username=flowable", "spring.datasource.password=" + runtime["databasePassword"],
         "spring.datasource.driver-class-name=org.h2.Driver", "flowable.database-schema-update=true",
-        "flowable.history-level=full", "flowable.async-executor-activate=false",
+        "flowable.history-level=full", "flowable.dmn.enabled=true", "flowable.dmn.history-enabled=true",
+        "flowable.dmn.servlet.path=/dmn-api", "flowable.async-executor-activate=false",
         "flowable.async-history-executor-activate=false", "flowable.rest.app.create-demo-definitions=false",
         "flowable.rest.app.authentication-mode=verify-privilege",
         "flowable.rest.app.admin.user-id=" + runtime["username"], "flowable.rest.app.admin.password=" + runtime["password"],
@@ -615,6 +616,7 @@ def run_locked(args, root):
     else:
         atomic(properties_path, properties.encode("utf-8"))
     base = "http://127.0.0.1:" + str(runtime["port"]) + "/flowable-rest/service"
+    dmn_base = "http://127.0.0.1:" + str(runtime["port"]) + "/flowable-rest/dmn-api"
     credentials = {"username": runtime["username"], "password": runtime["password"]}
     engine_saved = next((item for item in reversed(state["processes"]) if item["role"] == "flowable" and same_process(item)), None)
     engine_process = None
@@ -640,6 +642,10 @@ def run_locked(args, root):
             status, value, raw = native_json(base, credentials, "/repository/process-definitions?size=1")
             return status == 200 and isinstance(value.get("data"), list)
         wait_ready(ready, engine_process, "Original Flowable8 REST engine", seconds=240)
+        def dmn_ready():
+            status, value, raw = native_json(dmn_base, credentials, "/dmn-repository/decisions?size=1")
+            return status == 200 and isinstance(value.get("data"), list)
+        wait_ready(dmn_ready, engine_process, "Original Flowable8 DMN REST engine", seconds=240)
         reviewer = ensure_reviewer(root, base, credentials, runtime["reviewerUserId"])
         environment["FLOWABLE_NATIVE_USERNAME"] = runtime["username"]
         environment["FLOWABLE_NATIVE_PASSWORD"] = runtime["password"]
@@ -653,8 +659,10 @@ def run_locked(args, root):
             save(private_environment_path, private_environment)
         connection = {"id": "native-flowable", "label": "Original Flowable8 process engine", "baseUrl": base,
                       "usernameEnv": "FLOWABLE_NATIVE_USERNAME", "passwordEnv": "FLOWABLE_NATIVE_PASSWORD"}
+        dmn_connection = {"id": "native-flowable-dmn", "label": "Original Flowable8 decision engine", "baseUrl": dmn_base,
+                          "usernameEnv": "FLOWABLE_NATIVE_USERNAME", "passwordEnv": "FLOWABLE_NATIVE_PASSWORD"}
         configuration = {"schema": "stellar-forge.flowable-native-journey.v1", "operation": OPERATION,
-            "sourceRevision": args.source_revision, "installedVersion": VERSION, "connection": connection,
+            "sourceRevision": args.source_revision, "installedVersion": VERSION, "connection": connection, "dmnConnection": dmn_connection,
             "runtimeDirectory": str(runtime_root), "installedSourceRoot": str(installed_source),
             "environmentFile": str(private_environment_path),
             "adminUserId": runtime["username"], "reviewerUserId": runtime["reviewerUserId"],
