@@ -18,3 +18,20 @@ dialog{width:min(900px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflo
 @media print{.sidebar,.topbar-actions,.actions,button,#pending-panel,#conflict-panel{display:none!important}.workspace-shell{display:block}.topbar,main{padding:10px}.panel{break-inside:avoid;border-color:#aaa}.table-wrap{overflow:visible}body{background:#fff}.notice{display:none}}
 
 .query-columns{max-height:420px}.query-columns table{min-width:880px}.query-columns th{position:sticky;top:0;z-index:1}.query-columns td{min-width:130px}.query-columns td:first-child{min-width:210px}.query-bound,.query-equals{display:grid;gap:6px}.query-columns input:not([type=checkbox]){min-width:130px}
+
+/* Keep record actions and received files in the reading order on small screens. */
+.record-cell-label{display:none}.record-cell-value{min-width:0}
+@media(max-width:650px){
+ .record-table-wrap{overflow:visible}
+ .record-table{display:block;min-width:0;width:100%}
+ .record-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ .record-table tbody,.record-table tr{display:block;width:100%}
+ .record-table tr{padding:9px 12px;border-bottom:1px solid #ccc}
+ .record-table tr:last-child{border-bottom:0}
+ .record-table td{display:grid;grid-template-columns:minmax(80px,30%) minmax(0,1fr);gap:6px 12px;padding:7px 0;border:0;min-width:0}
+ .record-table .record-cell-label{display:block;color:#606060;font-size:12px;font-weight:650}
+ .record-table .record-cell-full{grid-template-columns:minmax(0,1fr)}
+ .record-table .record-cell-value>p:last-child,.record-table .record-cell-value>div>p:last-child{margin-bottom:0}
+ .record-table .form-actions{padding-top:0}
+ .record-table button{max-width:100%;min-height:42px}
+}

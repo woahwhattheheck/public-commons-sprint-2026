@@ -21,6 +21,7 @@ import tempfile
 import threading
 
 from .datasets import DatasetDelivery
+from . import duckdb_semantics as _semantics
 from .duckdb_agent import initialize_identity, read_identity, copy_sparse
 from .errors import StateError
 from .storage import digest, dump, lock, parse, private_directory, read, sync_directory, unique_object, write
@@ -467,7 +468,8 @@ class DuckDBWorkspace:
             used.add(name.casefold())
             columns.append({"source": field, "name": name, "type": kind, "nullable": "null" in types[field] or not observed})
         return {**result, "preview": preview, "observed_types": {field: sorted(value) for field, value in types.items()},
-                "default_columns": columns}
+                "default_columns": columns,
+                **_semantics.delivery_fields(delivery, result["manifest"], columns, document=True)}
 
     def review_import(self, report_path, columns=None, keys=None):
         inspected = self.inspect_delivery(report_path)
@@ -497,15 +499,16 @@ class DuckDBWorkspace:
         for row in self._rows(delivery, inspected["fields"], inspected["row_count"]):
             for column in mapped:
                 _convert(row[column["source"]], column)
+        semantic_fields = _semantics.delivery_fields(delivery, source["manifest"], mapped)
         identity = {"schema": SCHEMA, "manifest_sha256": inspected["manifest_sha256"],
                     "source_binding_sha256": inspected["source_binding_sha256"], "columns": mapped, "keys": keys}
         review = {**identity, "review_id": digest(_json(identity).encode()), "report_path": inspected["report_path"],
                   "row_count": inspected["row_count"], "created_at": _now(), "preview": inspected["preview"],
-                  "observed_types": inspected["observed_types"]}
+                  "observed_types": inspected["observed_types"], **semantic_fields}
         with self._guard(), self._connection(writeable=True) as db:
             existing = db.execute("SELECT record FROM sf_reviews WHERE id=?", [review["review_id"]]).fetchone()
             if existing:
-                return parse(existing[0].encode())
+                return {**parse(existing[0].encode()), **semantic_fields}
             db.execute("INSERT INTO sf_reviews VALUES(?,?,?)", [review["review_id"], review["created_at"], _json(review)])
         return review
 
@@ -519,12 +522,14 @@ class DuckDBWorkspace:
             review = self._record(db, "sf_reviews", review_id)
             existing = db.execute("SELECT record FROM sf_editions WHERE id=?", [review_id]).fetchone()
             if existing:
-                return {**parse(existing[0].encode()), "import_status": "UNCHANGED"}
+                return {**_semantics.edition_fields(db, parse(existing[0].encode())),
+                        "import_status": "UNCHANGED"}
             delivery, manifest_raw, source = self._delivery(review["report_path"])
             if source["manifest_sha256"] != review["manifest_sha256"] or source["source_binding_sha256"] != review["source_binding_sha256"]:
                 raise StateError("DUCKDB_REVIEWED_DELIVERY_CHANGED")
             table = "sf_edition_" + review_id
             columns = review["columns"]
+            semantic_fields = _semantics.delivery_fields(delivery, source["manifest"], columns)
             definitions = ["sf_row BIGINT PRIMARY KEY"] + [_qid(c["name"]) + " " + c["type"] + ("" if c["nullable"] else " NOT NULL") for c in columns]
             db.execute("BEGIN")
             try:
@@ -573,17 +578,34 @@ class DuckDBWorkspace:
                 record = {"schema": SCHEMA, "edition_id": review_id, "sequence": sequence, "table": table,
                           "created_at": _now(), "row_count": count, "columns": columns, "keys": review["keys"],
                           "row_order_column": "sf_row", "source": {**source, "files": files},
-                          "review_id": review_id, "manifest_sha256": digest(manifest_raw)}
+                          "review_id": review_id, "manifest_sha256": digest(manifest_raw), **semantic_fields}
                 db.execute("INSERT INTO sf_editions VALUES(?,?,?)", [review_id, sequence, _json(record)])
+                received = _semantics.edition_fields(db, record)
                 db.commit()
-                return {**record, "import_status": "IMPORTED"}
+                return {**received, "import_status": "IMPORTED"}
             except BaseException:
                 db.rollback()
                 raise
 
     def edition(self, edition_id):
         with self._guard(), self._connection() as db:
-            return self._record(db, "sf_editions", _hex(edition_id))
+            return _semantics.edition_fields(db, self._record(db, "sf_editions", _hex(edition_id)))
+
+    def semantics(self, edition_id):
+        with self._guard(), self._connection() as db:
+            return _semantics.edition_context(db, self._record(db, "sf_editions", _hex(edition_id)))
+
+    def semantics_bytes(self, edition_id):
+        with self._guard(), self._connection() as db:
+            return _semantics.dictionary_bytes(db, self._record(db, "sf_editions", _hex(edition_id)))
+
+    def compare_semantics(self, before_id, after_id):
+        with self._guard(), self._connection() as db:
+            before = self._record(db, "sf_editions", _hex(before_id))
+            after = self._record(db, "sf_editions", _hex(after_id))
+            return {"before_id": before_id, "after_id": after_id,
+                    **_semantics.compare_contexts(_semantics.edition_context(db, before),
+                        _semantics.edition_context(db, after), before["columns"], after["columns"])}
 
     def editions(self, limit=100, before=None):
         if type(limit) is not int or not 1 <= limit <= 1000 or before is not None and (type(before) is not int or before < 1):
@@ -657,8 +679,10 @@ class DuckDBWorkspace:
                 result = db.execute(sql, parameters)
                 columns = [{"name": c[0], "type": str(c[1])} for c in result.description]
                 rows = result.fetchmany(max_rows + 1)
+                meanings = _semantics.query_context(db, sql, views)
                 db.commit()
-                return {"columns": columns, "rows": _wire(rows[:max_rows]), "truncated": len(rows) > max_rows, "views": views}
+                return {"columns": columns, "rows": _wire(rows[:max_rows]), "truncated": len(rows) > max_rows,
+                        "views": views, "source_meanings": meanings}
             except BaseException:
                 db.rollback()
                 raise
@@ -788,6 +812,7 @@ class DuckDBWorkspace:
                             # valid WITH/ORDER/LIMIT clauses retain their meaning.
                             db.execute("CREATE TEMP TABLE sf_export_result AS " + sql, query["parameters"])
                             rows = db.execute("SELECT count(*) FROM sf_export_result").fetchone()[0]
+                            meanings = _semantics.query_context(db, sql, views)
                             projection, columns, query_columns, encodings = _parquet_result(db)
                             db.execute("COPY (SELECT " + projection
                                        + " FROM sf_export_result) TO ? (FORMAT PARQUET, COMPRESSION ZSTD)",
@@ -797,7 +822,8 @@ class DuckDBWorkspace:
                             os.chmod(partial, 0o600)
                             execution = {"export_id": request["export_id"], "rows": rows, "columns": columns,
                                          "query_columns": query_columns, "column_encodings": encodings,
-                                         "views": views, "parquet": _descriptor(partial, "result.parquet")}
+                                         "views": views, "parquet": _descriptor(partial, "result.parquet"),
+                                         "source_meanings": meanings}
                             execution["parquet"]["path"] = str(parquet)
                             # Identity is durable before publication, so a
                             # reopened export accepts only these exact bytes.
@@ -835,12 +861,17 @@ class DuckDBWorkspace:
                         dump(execution_file, execution)
                         publish(csv_partial, csv, execution["csv"])
             verify(csv, execution.get("csv"), "DUCKDB_RETAINED_QUERY_RESULT_CHANGED")
-            files = [_descriptor(path) for path in (parquet, csv, request_file, execution_file)]
+            meanings, dictionary_files = None, []
+            if "source_meanings" in execution:
+                with self._connection() as db:
+                    meanings, dictionary_files = _semantics.export_dictionaries(db, execution["source_meanings"], target)
+            files = [_descriptor(path) for path in (parquet, csv, request_file, execution_file)] + dictionary_files
             record = {**request, "state": "COMPLETE", "completed_at": _now(), "rows": rows,
                       "columns": columns, "query_columns": execution.get("query_columns", columns),
                       "column_encodings": execution.get("column_encodings", []),
                       "files": files, "csv_null_marker": "\\N",
-                      "source_editions": sorted({view["edition_id"] for view in views})}
+                      "source_editions": sorted({view["edition_id"] for view in views}),
+                      **({"source_meanings": meanings} if meanings is not None else {})}
             dump(complete, record, exclusive=True)
             # The manifest describes members; its download record also includes
             # the manifest without creating a self-referential digest.
@@ -891,7 +922,9 @@ class DuckDBWorkspace:
                     "comparison_columns": comparable,
                     "comparison_basis": "Common columns with identical SQL types; structural changes are listed separately.",
                     "source_scope": {"before": before["source"]["manifest"]["dataset"],
-                                     "after": after["source"]["manifest"]["dataset"]}}
+                                     "after": after["source"]["manifest"]["dataset"]},
+                    "source_meanings": _semantics.compare_contexts(_semantics.edition_context(db, before),
+                        _semantics.edition_context(db, after), before["columns"], after["columns"])}
 
     def export_source(self, edition_id, destination):
         edition_id = _hex(edition_id)

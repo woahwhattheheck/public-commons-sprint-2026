@@ -6,7 +6,8 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { fileURLToPath } from 'node:url';
 import { grpcEnvironmentNames } from '../sf30-seller-sdk/grpc/config.mjs';
 
-export const GRPC_SOURCE_SCHEMA = 'stellar-forge.grpc-seller-source.v1';
+import { GRPC_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { GRPC_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'grpc/package';
 const CAPS = Object.freeze({
   'source.json': 65536, 'proto-source.json': 8388608, 'merchant-plan.json': 262144,

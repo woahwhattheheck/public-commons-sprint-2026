@@ -11,6 +11,9 @@ finalized delivery report or the unchanged scan of an original finalized SF100
 data room. Each imported edition keeps the native source files, mapping, review
 and source identifiers inside `warehouse.duckdb`.
 
+
+For field dictionaries, reviewed aliases, source-definition comparison and complete query exports with retained meaning, see [Source definitions in DuckDB](DUCKDB_SEMANTICS.md).
+
 ## Install and open
 
 ### From the installed merchant runtime

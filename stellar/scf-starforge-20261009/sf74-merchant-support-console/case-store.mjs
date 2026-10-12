@@ -1,3 +1,5 @@
+import { CASE_STATUSES } from './case-statuses.mjs';
+export { CASE_STATUSES } from './case-statuses.mjs';
 // MIT. Optional private case persistence for the original SF74 workspace.
 import {constants} from 'node:fs';
 import {mkdir, lstat, open, readdir, rename, unlink, link, readlink, readFile} from 'node:fs/promises';
@@ -11,7 +13,7 @@ const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}
 const REVISION = /^[a-f0-9]{64}$/;
 const encoder = new TextEncoder(), decoder = new TextDecoder('utf-8', {fatal:true});
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
-export const CASE_STATUSES = Object.freeze(['new', 'in_progress', 'waiting', 'ready', 'closed', 'archived']);
+
 const META_KEYS = ['merchant', 'owner', 'status', 'followUpOn', 'nextAction', 'notes'];
 const CASE_LIMIT = 2000;
 const fail = (code, detail, status = 422) => Object.assign(new Error(detail), {code, status});
