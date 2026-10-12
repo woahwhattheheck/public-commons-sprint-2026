@@ -197,11 +197,11 @@ export async function exportRefresh(directory, revision, destination) {
     operationId: packet.manifest.operationId, previousReviewSha256: packet.manifest.lineage.previousReviewSha256 };
 }
 
-export async function packageRefresh({ directory, revision, planFile, parent, name }) {
+export async function packageRefresh({ directory, revision, planFile, parent, name, operationPolicy }) {
   const packet = await openRefresh(directory);
   requireLineage(packet, (await readRevision(packet.candidate, revision)).review);
   const { saveHarMerchant } = await import('./merchant.mjs');
-  return saveHarMerchant({ workspace: packet.candidate.root, revision, planFile, parent, name });
+  return saveHarMerchant({ workspace: packet.candidate.root, revision, planFile, parent, name, operationPolicy });
 }
 
 export async function copyRefresh(directory, destination) {
