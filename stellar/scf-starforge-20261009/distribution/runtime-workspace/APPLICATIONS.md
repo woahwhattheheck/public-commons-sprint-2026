@@ -12,6 +12,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
+| Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -324,3 +325,12 @@ The original startup record contains schema stellar-forge.redis-workspace-startu
 **Open application** exposes the original product editor, full merchant terms, source review, saved revisions, real database preview and native next-page inputs. Prepare customer OpenAPI/client files from a saved revision, stage the prepared package, then open the original release controls for seller start, stop, upgrade, rollback and customer handoff.
 
 **Stop application** closes that original authoring server and its owned release console. After it has stopped, a new reviewed start reopens the same workspace ID, saved revisions, requests, customer packages and release store with a fresh private URL. The Redis workspace's own Continue action resumes an original interrupted request; launching Applications preserves its normal recovery semantics.
+
+
+## Grant planning and delivery
+
+Choose **Grant planning and delivery** to reopen the original SF47 planning and delivery workspace. Select its private directory, an explicit Python executable when needed, and an optional original scenario for an empty workspace. Applications reviews the installed source and starts the original grant command through the maintained managed release.
+
+The original launch keeps the selected runtime source identity and verifies the adopted execution copy before opening SQLite. Open comes from the matching private launch record and authenticated original listener. Stop removes readiness, drains existing requests and closes the original workspace lock; the next reviewed start reopens the same saved plans, revisions and operating cases.
+
+Follow [Grant planning and delivery in Applications](GRANT_APPLICATIONS.md) for the complete selection, operating, export, Stop/reopen and original CLI workflow.
