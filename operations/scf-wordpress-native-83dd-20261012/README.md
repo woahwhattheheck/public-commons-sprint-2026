@@ -4,6 +4,8 @@ This packet prepares and launches the existing operation `scf-wordpress-native-r
 
 ## Receive the five exact inputs
 
+The directly readable `launch.py` is the same exact source embedded in the carrier; `courierSource` binds its byte length and SHA-256. `checkpoint_frames.py` is the caller-side control-frame receiver, bound by `checkpointReceiver`.
+
 Read `carrier.json` as UTF-8 JSON and validate schema `stellar-forge.wordpress-native-carrier.v1`. Its four complete public inputs are `input.json`, `prepare.py`, `host-selection.json` and `launch.py`. Fetch the fifth input, `host-finalizer.json`, from the exact private repository, ref, path and Git blob in `privateInputs`. Validate every byte length and SHA-256 before transfer. That private packet stays on the receiving host.
 
 Use the accompanying `receiver.py`, whose digest is also recorded in the carrier. It accepts exactly these five input names. Its write and commit actions enforce offsets and identical retries. It parses Python inputs before committing them. A retained receiver reporting a different input set must be reconciled before selecting this receiver; source transfer has no native launch side effect.
@@ -46,7 +48,7 @@ A definite failure before the helper process starts is retained as `helper-not-s
 - `{"action":"record-finalized","archive_sha256":"...","result":{...}}` to adopt the actual original finalized save item.
 - `{"action":"retry-custody"}` to finish a failed local archive step while the same reservation is live.
 
-If the supervisor ends without a saved receipt, the outer process retains a metadata-only recovery state. In that original private namespace, `{"action":"resume-native"}` can continue an undispatched queue. If an original launch failure is present, select `{"action":"resume-native","recover_failure":"EXACT_RESULT_JSON_SHA256"}`. The courier freshly checks the original request and the absence of a live owner, process, command output, completion allocation or stop request. It passes the exact failure digest to the maintained `resume_capacity` contract, which validates and retains that failure under its original record lock. The same source, record, operation and finalizer are reused. A started command remains attached to its original outcome. Archive and upload work stays inside the resumed supervisor’s reservation.
+If the supervisor ends without a saved receipt, the outer process retains the original recovery state and, when the command is still undispatched, a bounded exact control checkpoint. In that original private namespace, `{"action":"resume-native"}` can continue an undispatched queue. If an original launch failure is present, select `{"action":"resume-native","recover_failure":"EXACT_RESULT_JSON_SHA256"}`. The courier freshly checks the original request and the absence of a live owner, process, command output, completion allocation or stop request. It passes the exact failure digest to the maintained `resume_capacity` contract, which validates and retains that failure under its original record lock. The same source, record, operation and finalizer are reused. A started command remains attached to its original outcome. Archive and upload work stays inside the resumed supervisor’s reservation.
 
 ## Restore the retained continuation
 
@@ -59,3 +61,89 @@ python -B launch.py --restore /absolute/SCF_WordPress_Native_83DD_20261012.zip -
 Restoration checks the complete archive digest, member identities and hashes. It refuses conflicting private files or an active original owner, restores selected donor references and performs no launch. Inspect the original result before choosing its maintained continuation. A completed operation remains completed; a started failure retains its original WordPress, approval, acquisition, budget and payment identities.
 
 Actual native installation, payment, receiving and resource closure are reported by that original native result.
+
+## Recover a registration failure before the command starts
+
+The native runtime remains the authority for registration, locks, process ownership and failed-start recovery. Its original `result.json` is never rewritten by this courier. A registration failure now produces an additional private error record with the actual exception type, message, errno and filename when Python supplies them. A missing errno remains missing.
+
+Every `status` request freshly reads the original native owner state and exact control files. Its `native.result` contains the full SHA-256 and byte count of the original `result.json`, including native `error_type`. Its `native.error_details` retains the caught exception. The ready `native.resume_request` is either the exact supported JSON action or null with explicit reasons. Send that returned action unchanged. The maintained native runtime rechecks the original registration and failure under its own lock.
+
+```json
+{"action":"status"}
+```
+
+A known failed start returns a request shaped like this, with the **actual** digest:
+
+```json
+{"action":"resume-native","recover_failure":"EXACT_RESULT_JSON_SHA256"}
+```
+
+A retained queue without a failed-start result returns `{"action":"resume-native"}`. A dispatch marker, live original owner, completed result, unreadable control or incomplete checkpoint restoration prevents that action from being offered. Once the command has started, its existing native continuation and complete private archive remain authoritative.
+
+### Read the actual original error
+
+Use the fixed `record` or `courier` scope. Relative paths stay inside those exact original roots; links, traversal and the native lock are rejected. Each range identifies the entire file by SHA-256 and returns exact base64 bytes, total byte count and `next_offset`. A provided SHA-256 must still match, so ranges cannot silently join different versions. Hashing streams through a small buffer.
+
+```json
+{"action":"control-read","scope":"courier","path":"native-launch-error.json","offset":0,"limit":16384}
+{"action":"control-read","scope":"courier","path":"native-launch-error.txt","offset":0,"limit":16384}
+{"action":"control-read","scope":"record","path":"result.json","offset":0,"limit":16384}
+```
+
+The courier captures an exception in memory before attempting to save it. If a local control write fails, the returned error includes that actual persistence failure and the bounded checkpoint still contains the caught original exception. It does not substitute a guessed capacity diagnosis.
+
+## Preserve a pre-dispatch checkpoint across session loss
+
+Before waiting after an eligible failed start, the courier takes the original record lock for a stable, small control snapshot. It preserves all physical native controls except the lock, the four initial project source/host/launcher artifacts, the exact caught error and an existing courier-adoption record. It refuses a started project, native dispatch/completion/stop state, linked members or more than 2 MiB of control bytes. The resulting JSON has a 4 MiB upper bound. It contains the original request and failure bytes, not reconstructed values.
+
+This control checkpoint does not run a WordPress child, create the full application ZIP or invoke the save helper. Those larger operations continue inside the original supervisor's admission. The checkpoint uses a small in-process compression buffer and emits its complete transfer frames even if its private file cannot be written.
+
+The `checkpoint-ready` event gives raw and compressed byte counts and SHA-256 values. It is followed by:
+
+1. `checkpoint-begin`, selecting the original operation and both exact identities.
+2. Contiguous `checkpoint-write` ranges, with offsets and base64 bytes.
+3. `checkpoint-commit`, binding the complete compressed stream.
+
+The courier also attempts to retain the exact small JSON at the shared original custody path, ending in `.checkpoint.json`. A successful `shared_path` is reported; an actual write failure remains visible. Save that shared file promptly through the existing persistent file workflow. Retain complete transfer frames when the shared write cannot complete. The receiving orchestrator must keep the original untruncated JSON-line stream; it can fetch any missing exact ranges before releasing the private session. The accompanying `checkpoint_frames.py` materializes one selected checkpoint into a private local JSON file, validates both hashes and refuses truncated or conflicting ranges:
+
+```sh
+python -B checkpoint_frames.py \
+  --input /absolute/original-courier.jsonl \
+  --sha256 ACTUAL_CHECKPOINT_SHA256 \
+  --output /absolute/private/SCF_WordPress_Control_Checkpoint.json
+```
+
+Save that exact small file through the operator's existing persistent file workflow and retain the returned file identity and version. The source carrier contains no private checkpoint. The emitted native failure digest remains the selection for recovery.
+
+A lost portion of the transfer can be retrieved from the same retained courier without rereading the entire record:
+
+```json
+{"action":"checkpoint-read","sha256":"ACTUAL_CHECKPOINT_SHA256","offset":0,"limit":12288}
+```
+
+These offsets refer to compressed bytes. Repeat the same selection and advance using `next_offset`. `{"action":"checkpoint"}` obtains the current eligible checkpoint; an unchanged checkpoint retains the same raw digest. Ordinary status and heartbeat responses stay concise and never resend its full data.
+
+### Restore through the original receiver
+
+Prepare the same five reviewed inputs and complete original source/host closure on the receiver. Replay the retained `checkpoint-begin`, `checkpoint-write` and `checkpoint-commit` objects directly to `receiver.py`. The receiver preserves identical range retries and verifies the complete compressed and decoded packet before committing it. The checkpoint is a separate control transfer; it does not add another source input.
+
+Then send:
+
+```json
+{"action":"checkpoint-restore","sha256":"ACTUAL_CHECKPOINT_SHA256"}
+```
+
+The receiver invokes the same courier's control restore, which verifies every member and destination before writes, checks the actual original owner, and restores under the native record lock. Conflicting or additional existing native state is preserved. A restore journal retains the exact checkpoint selection; interrupted restoration can repeat that same packet. Request visibility comes last, and native launch refuses an unfinished restore.
+
+The same restore is available directly when the exact private JSON file is already on the receiving host:
+
+```sh
+python -B launch.py --restore-checkpoint \
+  /absolute/private/SCF_WordPress_Control_Checkpoint.json \
+  --sha256 ACTUAL_CHECKPOINT_SHA256
+python -B launch.py --status
+```
+
+Restoration performs no native launch. Enter the ordinary courier with the receiver's existing `launch` action, inspect its fresh status, and send the returned original `resume_request`. The original operation, request bytes, failure history, source, commissioning command and capacity declarations remain selected. A checkpoint from the earlier published 880e6514 launcher keeps that exact `NATIVE_LAUNCH.py` artifact and records the new courier as an explicit source adoption.
+
+The first observed commissioning registration failure was at 2026-10-12 17:23:35 UTC in record `3743770b3d824a0db0dfa2b852050bd9618995b369cdac90daad5701150bae1a`. Its returned native metadata was `launch_failed / runtime_registration_failed / OSError`; the native command had not started. The original five-input and 1,048-file source closure remain selected. The repaired courier retains each available original control and actual error detail so subsequent recovery selects those exact bytes through the maintained native runtime.
