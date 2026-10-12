@@ -9,7 +9,7 @@ Use the unchanged original inspectOpenApi/merchantOAuthSelection, normalizeOAuth
 Export:
 `openApiConnectionSetupAction(root, {action, runtimeId, runtimeDirectory, context = {}, input = {}}, {policy = {}} = {})`
 
-`root` is the original initialized Applications workspace, supplied by the server. Default setup directory is root/oauth-setup and grant root is root/oauth-grants. The server may configure exact canonical private overrides through policy; no HTTP request selects destination paths. These roots remain separate from merchant project directories. Roots are original operator-owned 0700 directories. Every generated file is private and every path is checked before use. Setup metadata records root identity and refuses a replaced root.
+`root` is the original initialized Applications workspace, supplied by the server. Default setup directory is root/oauth-setup, grant root is root/oauth-grants, and native accounting selection root is root/oauth-accounting. The server may configure exact canonical private overrides through policy; no HTTP request selects destination paths. These roots remain separate from merchant project directories. Roots are original operator-owned 0700 directories. Every generated file is private and every path is checked before use. Setup metadata records root identity and refuses a replaced root.
 
 Context (existing form inputs, read-only):
 `{environmentFile: null|string, connectionsFile: null|string, port: integer, allowLoopbackOAuth: boolean}`.
@@ -21,11 +21,12 @@ The original connectionsFile is read through readOAuthHostConnections. The curre
 
 ## Envelope and commands
 
-The facade returns a direct JSON result. The common authenticated server may use its existing response envelope. It must expose the authenticated POST /api/applications/openapi-setup/{catalog,import-source,inspect-source,review,commit,status,activate,download,recover} routes. Each body is {runtimeId,context,input}, and the original model resolves runtimeId through its retained entries before calling the facade. Use the original server's action endpoints and current Applications request token/origin checks. The facade exports OPENAPI_SETUP_ROUTES and openApiSetupBodyLimit(action): import-source accepts at most 25,231,360 bytes (sixfold escaping of the 4 MiB original plus 64 KiB envelope); review accepts at most 32 MiB; other actions retain 32,768 bytes. Retained reviews are at most 16 MiB, source inspections 32 MiB and individual private JSON records 64 MiB. Context paths and selected operation paths are bounded to 4,096 UTF-8 bytes. It must not register these actions on the ordinary SF61 merchant endpoint.
+The facade returns a direct JSON result. The common authenticated server may use its existing response envelope. It must expose the authenticated POST /api/applications/openapi-setup/{catalog,import-source,import-provider,inspect-source,review,commit,status,activate,download,recover} routes. Each body is {runtimeId,context,input}, and the original model resolves runtimeId through its retained entries before calling the facade. Use the original server's action endpoints and current Applications request token/origin checks. The facade exports OPENAPI_SETUP_ROUTES and openApiSetupBodyLimit(action): import-source accepts at most 25,231,360 bytes (sixfold escaping of the 4 MiB original plus 64 KiB envelope); review accepts at most 32 MiB; other actions retain 32,768 bytes. Retained reviews are at most 16 MiB, source inspections 32 MiB and individual private JSON records 64 MiB. Context paths and selected operation paths are bounded to 4,096 UTF-8 bytes. It must not register these actions on the ordinary SF61 merchant endpoint.
 
 Supported action names:
 - catalog
 - source.import
+- source.provider
 - source.inspect
 - review
 - commit
@@ -99,7 +100,7 @@ replacesProfileSha256 is required when a new definition intentionally replaces a
 
 All selections in one profile must use the same exact retained source/security scheme and resolved authorization/token endpoints. Backend origins are derived from the selected operations. Every required scope must be included and every selected scope must be declared by the source. The backend constructs schema/source/endpoints/resourceOrigins/pkceMethod:S256 and normalizes the original profile; HTTP fields cannot override them.
 
-The new-definition path authors generic authorizationCode profiles. Existing QuickBooks or other maintained registered profiles can be retained unchanged; provider-specific accounting authoring stays in its original product.
+Generic definitions continue to use the original authorizationCode operation selection. Native QuickBooks and Xero definitions use the selected runtime's original provider factory through [providers.mjs](providers.mjs), with the exact shipped source identity. The native union and host-only accounting binding are specified below and in [ACCOUNTING_SETUP.md](ACCOUNTING_SETUP.md). Existing aliases and their grants remain explicit retained entries in either workflow.
 
 ## review
 
@@ -175,12 +176,159 @@ The current console owns the setup engine. The selected runtime must be an origi
 
 The facade rechecks workspace.json and the exact entries/runtimeId.json record, then binds installationId, profileId/profileSha256, lockSha256, sourceCommit/sourceManifestSha256 and canonical sourceRoot. Reviews normalize each public profile with that selected runtime. Before setup publication, activation and retained publication recovery, its own inspectOpenApiLaunch reads the exact generated registry and private environment and confirms every alias, directory, source SHA, profile SHA and callback. Mutable token/grant state is not copied into a setup edition.
 
-startRuntimeWorkspace and openRuntimeWorkspace accept openApiSetupPolicy as trusted host configuration. Its only keys are directory, grantRoot and allowLoopbackOAuth. The default roots are the private oauth-setup and oauth-grants children of the original workspace. The policy is never a field in the HTTP body. Local-provider permission must still be present for a retained local-provider mutation; a prior review does not bypass a later host restriction. RUNTIME_UNAVAILABLE (409) is a safe capability or prepared-runtime validation error.
+startRuntimeWorkspace and openRuntimeWorkspace accept openApiSetupPolicy as trusted host configuration. Its only keys are directory, grantRoot, selectionRoot and allowLoopbackOAuth. The default roots are the private oauth-setup, oauth-grants and oauth-accounting children of the original workspace. The policy is never a field in the HTTP body. Local-provider permission must still be present for a retained local-provider mutation; a prior review does not bypass a later host restriction. RUNTIME_UNAVAILABLE (409) is a safe capability or prepared-runtime validation error.
 
 Decode source files using TextDecoder('utf-8', {fatal:true, ignoreBOM:true}) when reading original bytes into sourceText, and verify that UTF-8 re-encoding matches those bytes. Preserve CRLF and an existing UTF-8 BOM. The original source parser decides whether the document is supported; no decoding step silently changes its source identity.
 
 ## Installed CLI
 
-Run starforge oauth-connection setup --help. It forwards to setup/cli.mjs and uses the same original workspace/facade; the existing init, status, connect, refresh, disconnect, revoke and QuickBooks commands remain unchanged.
+Run starforge oauth-connection setup --help. It forwards to setup/cli.mjs and uses the same original workspace/facade; the existing init, status, connect, refresh, disconnect, revoke, QuickBooks and Xero commands remain unchanged.
 
 Every setup action accepts --workspace ROOT and --runtime ID. --context PRIVATE.json supplies the current four context fields; --input PRIVATE.json supplies the action input. import-source instead takes --source FILE, --label TEXT, --request-id ID and --expected-revision N and preserves the exact original file bytes. --allow-loopback-oauth grants explicit development-provider permission to this CLI invocation, separately from the context setting. download can use --out FILE in an existing private parent, with exclusive publication and no overwrite. Normal JSON output contains only the public result; environment and grant files have no download action.
+
+## Native QuickBooks and Xero registration
+
+The selected READY runtime supplies its original [QuickBooks factory](../quickbooks.mjs)
+or [Xero factory](../xero.mjs), descriptor bytes and profile authority. The setup
+adapter loads only these fixed module paths. It checks the actual descriptor hash,
+the provider's reported source SHA and scheme, and the factory-produced profile.
+It never reads a browser-selected module, endpoint or grant path.
+
+Catalog adds providers[]. Each entry is either
+{provider,label,enabled:false,reason}, or:
+{provider,label,enabled:true,kind,source:{sha256,bytes,scheme,file},factorySha256,
+registrationFields,environments}.
+provider is quickbooks or xero. kind is intuit-quickbooks or xero-accounting.
+Only QuickBooks returns the sandbox/production environment choices.
+A missing native provider disables that provider, while compatible generic setup
+remains available.
+
+### source.provider / import-provider
+
+Authenticated POST import-provider, with the original envelope, accepts:
+{requestId,expectedRevision,provider,sourceSha256}.
+Use the exact sourceSha256 returned by the selected provider catalog. The command
+copies that runtime's shipped original descriptor into the existing retained
+source store. Result is {revision,source,inspection,choices,provider,factorySha256}.
+
+The command journal retains its original provider, source ID, source byte count,
+label and factory hash. An unchanged retry, request status and recovery use those
+retained source bytes. If no command reached the journal, the caller must still
+select the current catalog source before importing. A native descriptor may have
+zero generic operation choices; the provider factory supplies its source-bound
+accounting profile.
+
+### Provider definition union
+
+The complete review.entries array accepts these variants alongside ordinary
+generic definitions and {retainAlias,expectedProfileSha256}:
+
+| Field | QuickBooks | Xero |
+| --- | --- | --- |
+| provider | quickbooks | xero |
+| alias, directoryEnv, sourceId | Required | Required |
+| clientId, clientSecretEnv, callbackOrigin | Required registered values or reference | Required registered values or reference |
+| label | Optional; original factory default | Optional; original factory default |
+| environment | Required sandbox or production | Omitted |
+| factorySha256 | Optional input pin; retained normalized definition includes it | Same |
+| replacesProfileSha256 | Required for a different profile replacing an existing alias | Same |
+
+A provider entry does not accept selections, scopes, authMethod, endpoints,
+resource origins, authorization parameters or PKCE overrides. The original factory
+derives those fields. QuickBooks retains its confidential Basic client and native
+PKCE-none dialect; Xero retains its confidential Basic client, S256 and original
+accounting/offline scopes.
+
+callbackOrigin is the actual registered provider callback origin. The original
+profile authority derives the final profile-specific callback path, and review
+shows the complete URI. Its listener port must agree with context.port. Original
+provider rules continue to reject unsupported development callback combinations;
+the explicit host local-provider policy does not override a factory's own rules.
+
+Review normalizes the original factory output, records its source/factory pin and
+requires the named client secret in the original effective environment. Commit
+uses the same immutable edition and original initializeOAuthConnection path.
+The same profile retains its store; a changed source/client/profile uses a new
+owned store. Recovery revalidates the retained definition through the selected
+runtime factory before publication.
+
+## Trusted accounting host binding
+
+The facade exports:
+resolveOpenApiSetupEdition(root,
+ {runtimeId,runtimeDirectory?,editionId,alias,expectedProfileSha256},
+ {policy?})
+
+The core exports:
+resolveOAuthSetupEdition(options,{editionId,alias,expectedProfileSha256}).
+
+This is a host-only API. It is deliberately unreachable by string setup actions
+or normal HTTP routes. The result contains effective private environment values
+and must never be serialized to an HTTP response, ordinary log, browser storage
+or public artifact. An authenticated request to the provider's own facade may
+select only the exact edition, alias and profile; the host resolves all paths
+and private values from this result.
+
+The resolver reopens and verifies the immutable edition, the selected original
+runtime's managed inspector, every registry/profile/directory identity, the
+current original grant status, and the exact provider source. It returns:
+
+- schema: stellar-forge.oauth-setup-host-edition.v1.
+- ownerWorkspaceId, workspaceId, revision, currentEditionId, edition summary,
+  runtimeBinding and provider.
+- prepared with the same four application settings.
+- registry {path,sha256,connections:[{alias,directoryEnv}]}.
+- environmentFile {path,sha256} and PRIVATE environment containing the original
+  effective values for this immutable environment edition.
+- entry with its original reviewed public profile, directory and directory
+  identity; status from the original OAuth store.
+- selection {directory,key,owner,rootIdentity,directoryIdentity} for the existing
+  provider's company or tenant selection.
+
+The selection root is host-owned, separate from setup editions, grants and
+installed source. Its child key binds workspaceId, alias and profileSha256.
+The private setup-owner.json marker additionally binds the original owner
+workspace, provider and selection key. A nonempty unowned location or a different
+marker is rejected. Resolving creates only the owned selection location and
+marker. Original provider helpers own company/tenant selection files, previews,
+compare-and-swap saves and accounting clients.
+
+The key excludes edition ID and grant ID so reuse of the same alias/profile
+retains existing company or tenant selection history. This does not make an old
+selection valid for a new grant: the original provider helper checks its current
+grant and native realm/tenant binding before saving, reading native data or
+opening the accounting client. Selection of an older setup edition does not
+rewind grant state or hot-swap a running accounting process.
+
+openApiSetupEditionSummary(binding) is the explicit safe projection for an
+authenticated operator view or command output. It returns schema
+stellar-forge.oauth-setup-accounting-binding.v1, edition, provider, prepared,
+alias, directoryEnv, profileSha256, source, callbackUri,
+grant:{id,state,scopes}, and selection:{directory,key,owner}.
+It excludes the private environment and original grant-file bytes.
+
+The installed provider-binding action accepts --workspace, --runtime and
+--input containing {editionId,alias,expectedProfileSha256}. It calls the private
+resolver and prints only this safe projection. It does not open a consent flow,
+select a company/tenant or start accounting.
+
+Native-specific safe setup errors include PROVIDER_UNAVAILABLE, SOURCE_CHANGED
+and PROFILE_CHANGED. Original provider consent, selection and accounting errors
+retain their own native error namespaces in their owning facade.
+
+## Installed TypeScript contracts
+
+The source-owned oauth-connection-setup distribution contribution publishes
+types-first conditional exports:
+
+| Installed subpath under @tokenjunkielabs/starforge-merchant | Module |
+| --- | --- |
+| /seller/oauth-connections/setup | workspace.mjs / workspace.d.mts |
+| /seller/oauth-connections/setup/model | model.mjs / model.d.mts |
+| /seller/oauth-connections/setup/providers | providers.mjs / providers.d.mts |
+| /seller/oauth-connections/setup/applications | Applications facade and its declaration |
+
+The declarations distinguish public results from PrivateSetupHostEdition and
+model the native definition union, complete desired registry, retained command
+recovery and selected-edition host inputs. Existing OAuth/provider exports and
+the original oauth-connection setup command remain the executable authorities.
