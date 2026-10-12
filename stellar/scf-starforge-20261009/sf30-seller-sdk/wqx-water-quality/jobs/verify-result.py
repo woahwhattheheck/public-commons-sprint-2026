@@ -45,9 +45,10 @@ def write_json(path, value):
     os.link(temp, path, follow_symlinks=False)
     temp.unlink()
 
-def verify(path, output, selected):
+def verify(path, output, selected, extraction_directory=None):
     path = pathlib.Path(path).resolve(strict=True)
     output = pathlib.Path(output).absolute()
+    extraction_root = pathlib.Path(extraction_directory).absolute() if extraction_directory else output.parent / "extracted"
     archive = digest_file(path)
     if archive["bytes"] > 64 * 1024 * 1024:
         raise ValueError("Scientific ZIP exceeds its declared result limit")
@@ -92,7 +93,7 @@ def verify(path, output, selected):
                 raise ValueError("Select a native complete receiving bundle")
             if name not in expected:
                 raise ValueError("Selected native receiving bundle is absent")
-            destination = output.parent / "extracted" / name
+            destination = extraction_root / name
             destination.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
             reference = expected[name]
             if destination.exists():
@@ -122,8 +123,9 @@ def main():
     parser.add_argument("archive")
     parser.add_argument("--out", required=True)
     parser.add_argument("--extract", action="append", default=[])
+    parser.add_argument("--extraction-directory")
     options = parser.parse_args()
-    result = verify(options.archive, options.out, options.extract)
+    result = verify(options.archive, options.out, options.extract, options.extraction_directory)
     print(json.dumps(result, separators=(",", ":"), ensure_ascii=False))
 
 if __name__ == "__main__":

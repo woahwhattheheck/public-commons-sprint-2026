@@ -207,7 +207,9 @@ export async function openCrossrefWorkspace({directory,dossiers,source,identity}
           relations:row.metadata.crossref.relation??{},referenceCount:row.metadata.crossref['reference-count']??null,
           sourceOccurrences:row.metadata.sourceOccurrences}))}};
   }
-  async function receive(id,{expectedRevision,expectedPlanSha256,expectedEditionSha256}={}){
+  async function receive(id,{expectedRevision,expectedPlanSha256,expectedEditionSha256,projection='full'}={}){
+    need(['full','metadata'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+    const receivedView=(dossierId,value)=>projection==='metadata'?value:fullView(dossierId,value);
     const path=folder(id);
     return withPrivateLock(path,'operation.lock',async()=>{
       const selected=await plan(id),current=await state(id);
@@ -217,7 +219,7 @@ export async function openCrossrefWorkspace({directory,dossiers,source,identity}
       if(current.phase==='IMPORTED'){
         need(before.editions.some(row=>row.questionId===selected.request.questionId&&row.raw?.sha256===current.editionSha256),
           'CROSSREF_RECEIVED_EDITION_MISSING');
-        return {operation:current,receipt:current.received,dossier:await fullView(selected.request.dossierId,before)};
+        return {operation:current,receipt:current.received,dossier:await receivedView(selected.request.dossierId,before)};
       }
       const pending=current.pendingReceive;
       const retained=before.editions.find(row=>row.questionId===selected.request.questionId&&row.raw?.sha256===current.editionSha256&&
@@ -235,7 +237,7 @@ export async function openCrossrefWorkspace({directory,dossiers,source,identity}
           sourceSha256:current.editionSha256,coverage:value.usage.coverage,metadataRecords:value.results.length,
           receivedAt:pending.startedAt,reconciled:true};
         const saved=await save(id,{...current,phase:'IMPORTED',error:null,received:receipt,pendingReceive:null});
-        return {operation:saved,receipt,dossier:await fullView(selected.request.dossierId,before)};
+        return {operation:saved,receipt,dossier:await receivedView(selected.request.dossierId,before)};
       }
       need(before.revision===revision(expectedRevision),'REVISION_CONFLICT');
       const question=before.questions.find(row=>row.id===selected.request.questionId);
@@ -246,7 +248,7 @@ export async function openCrossrefWorkspace({directory,dossiers,source,identity}
       const imported=await receiveCrossrefEdition(dossiers,selected.request.dossierId,{
         questionId:selected.request.questionId,label:selected.request.label,captures:value.originalResponses,
         dois:selected.payload.dois,expectedRevision,acquisition:value.usage.acquisition,
-        sourceReference:selected.payload.sourceTerms,
+        sourceReference:selected.payload.sourceTerms,projection,
         origin:{mode:'CROSSREF_RESEARCH_WORKSPACE',operationId:id,planSha256:selected.sha256}});
       const receipt={dossierId:imported.dossierId,questionId:imported.questionId,originalRevision:imported.originalRevision,
         revision:imported.revision,duplicate:imported.duplicate,sourceSha256:imported.sourceSha256,coverage:imported.coverage,

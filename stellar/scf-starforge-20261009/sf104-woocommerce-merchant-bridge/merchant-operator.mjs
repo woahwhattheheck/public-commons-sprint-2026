@@ -5,6 +5,7 @@ import {join, resolve} from 'node:path';
 import {fields, publicUrl, reference} from './buyer.mjs';
 import {openOutbox, SCHEMA as OUTBOX_SCHEMA} from '../sf98-merchant-delivery/outbox.mjs';
 import {createPublicHttpsFetch} from '../sf31-buyer-client/public-transport.mjs';
+import {createErpMethods} from './merchant-erp-client.mjs';
 import {reconcileRpc, reconcileReportedReceipt} from '../sf86-rpc-transfer-reconcile/verify.mjs';
 import {checkOriginalTerms, checkReportedTerms, networkProfile} from '../sf86-rpc-transfer-reconcile/terms.mjs';
 import {originalRecordFromEvidence} from '../sf86-rpc-transfer-reconcile/cli.mjs';
@@ -49,13 +50,13 @@ export function compileOperator(raw) {
 
 export async function loadOperator(path) { return compileOperator(await readJson(resolve(path), 65536)); }
 
-async function responseJson(response) {
+async function responseJson(response, maxBytes = MAX_RESPONSE) {
   need(response instanceof Response && response.body && !response.redirected, 'WOO_OPERATOR_RESPONSE_INVALID');
   const reader = response.body.getReader(), chunks = []; let size = 0;
   try {
     for (;;) {
       const {value, done} = await reader.read(); if (done) break;
-      size += value.byteLength; need(size <= MAX_RESPONSE, 'WOO_OPERATOR_RESPONSE_TOO_LARGE'); chunks.push(value);
+      size += value.byteLength; need(size <= maxBytes, 'WOO_OPERATOR_RESPONSE_TOO_LARGE'); chunks.push(value);
     }
   } catch (error) { await reader.cancel().catch(() => {}); throw error; }
   finally { reader.releaseLock(); }
@@ -69,16 +70,19 @@ export function createMerchantClient(config, {env = process.env, fetchImpl} = {}
     !/[:\x00-\x1f\x7f]/.test(username) && typeof password === 'string' && password.length >= 1 &&
     password.length <= 1024 && !/[\x00-\x1f\x7f]/.test(password), 'WOO_OPERATOR_AUTH_REQUIRED');
   need(fetchImpl === undefined || typeof fetchImpl === 'function', 'WOO_OPERATOR_FETCH_INVALID');
-  const transport = fetchImpl ?? (config.allowLocal ? fetch : createPublicHttpsFetch({timeoutMs:config.timeoutMs}));
+  const transportFor = timeoutMs => fetchImpl ?? (config.allowLocal ? fetch : createPublicHttpsFetch({timeoutMs,
+    sourceAuthorization:{origin:new URL(config.siteUrl).origin,scheme:'Basic'}}));
+  const transport = transportFor(config.timeoutMs);
   const authorization = 'Basic ' + Buffer.from(username + ':' + password).toString('base64');
-  const requestUrl = async (url, body) => {
-    const response = await transport(url, {
-      method:body ? 'POST' : 'GET', redirect:'manual', signal:AbortSignal.timeout(config.timeoutMs),
+  const requestUrl = async (url, body, {maxBytes = MAX_RESPONSE, timeoutMs = config.timeoutMs} = {}) => {
+    const selectedTransport = timeoutMs === config.timeoutMs ? transport : transportFor(timeoutMs);
+    const response = await selectedTransport(url, {
+      method:body ? 'POST' : 'GET', redirect:'manual', signal:AbortSignal.timeout(timeoutMs),
       headers:{authorization, accept:'application/json', ...(body ? {'content-type':'application/json'} : {})},
       ...(body ? {body:JSON.stringify(body)} : {}),
     });
     need(response.status < 300 || response.status >= 400, 'WOO_OPERATOR_REDIRECT_REFUSED');
-    const value = await responseJson(response);
+    const value = await responseJson(response, maxBytes);
     if (response.status === 401 || response.status === 403) need(false, 'WOO_OPERATOR_AUTH_REFUSED');
     if (body) return {httpStatus:response.status, response:value};
     need(response.status === 200, safeCode(value.status, 'WOO_OPERATOR_ORDER_READ_FAILED'));
@@ -120,6 +124,7 @@ export function createMerchantClient(config, {env = process.env, fetchImpl} = {}
     return {schema:'stellar-forge.sf104.merchant-console-status.v1', siteUrl:config.siteUrl, ...value};
   };
   return Object.freeze({
+    ...createErpMethods({requestUrl,siteUrl:config.siteUrl}),
     consoleStatus, orders,
     inspect:order => request(order), release:(order, body) => request(order, body),
     inspectRefunds:order => request(order, undefined, '/refunds', validateRefundOrder),
