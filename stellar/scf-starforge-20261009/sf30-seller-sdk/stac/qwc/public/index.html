@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>QWC publication operator</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div><span class="eyebrow">StarForge · GIS delivery</span><h1>QWC publication operator</h1><p id="workspace-title">Opening the original workspace…</p></div>
+    <div class="actions"><button id="refresh" type="button">Refresh</button><button id="stop" type="button">Stop console</button></div>
+  </header>
+  <div id="notice" role="status" aria-live="polite"></div>
+  <section id="job-panel" class="job" hidden aria-label="Current native operation">
+    <div><strong id="job-title"></strong><p id="job-progress"></p><p id="job-detail" class="muted"></p></div>
+    <div class="actions"><button id="resume-job" type="button" hidden>Continue same operation</button><button id="cancel-job" type="button">Cancel operation</button></div>
+  </section>
+  <main>
+    <aside>
+      <nav class="primary-nav" aria-label="Operator sections">
+        <button id="show-editions" type="button">Saved editions</button>
+        <button id="show-new" type="button">Prepare edition</button>
+        <button id="show-receive" type="button">Receive handover</button>
+        <button id="show-host" type="button">Selected host</button>
+      </nav>
+      <section id="edition-nav"><h2>Original editions</h2><div id="edition-list"></div><div class="actions pager"><button id="previous-page" type="button">Previous</button><button id="next-page" type="button">Next</button></div></section>
+      <section id="receiving-nav"><h2>Received publications</h2><div id="receiving-list"></div></section>
+    </aside>
+    <div class="content">
+      <section id="empty-panel" class="panel"><h2>Complete map editions</h2><p>Prepare a saved native QGIS map, review its selected source and host changes, then generate and publish through the existing QWC installation.</p><p>Each edition keeps its original source, project, native configuration and host before-images. Open an edition to continue it, restore its previous deployment, or hand the complete publication to another operator.</p></section>
+
+      <section id="new-panel" class="panel" hidden>
+        <h2>Prepare a native edition</h2>
+        <p>Choose one map already saved by the original QGIS workspace. Preparation receives its full source and creates the native publication project for review.</p>
+        <form id="source-form">
+          <label>Original QGIS workspace directory<input id="gis-directory" required spellcheck="false" placeholder="/absolute/path/to/customer-qgis"></label>
+          <div class="actions"><button type="submit">Read saved maps</button></div>
+        </form>
+        <form id="edition-form" hidden>
+          <div class="summary-strip" id="gis-summary"></div>
+          <label>Saved native map<select id="project-id" required></select></label>
+          <div id="source-layers"></div>
+          <div class="form-grid">
+            <label>Customer operation ID<input id="operation-id" required pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,119}" spellcheck="false"></label>
+            <label>Edition request ID<input id="request-id" required pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,119}" spellcheck="false"></label>
+            <label>Operator<input id="actor" required maxlength="240" autocomplete="name"></label>
+            <label>Theme title<input id="theme-title" required maxlength="500"></label>
+          </div>
+          <fieldset><legend>Native print layout</legend>
+            <div class="form-grid">
+              <label>Layout selection<select id="print-mode"><option value="none">Keep saved layouts</option><option value="existing">Use an existing named layout</option><option value="map-page">Add a native map page</option></select></label>
+              <label>Layout name<input id="print-name" placeholder="Customer map" maxlength="240"></label>
+              <label>Paper<select id="print-paper"><option>A4</option><option>A3</option></select></label>
+              <label>Orientation<select id="print-orientation"><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></label>
+            </div>
+          </fieldset>
+          <fieldset><legend>Existing role views for receiving</legend>
+            <p class="muted">Record the real ConfigDB role and the native layer names expected for that view. Private request headers are referenced by environment-variable name. The existing QWC permission projection supplies access.</p>
+            <div id="role-rows"></div><button id="add-role" type="button">Add existing role view</button>
+          </fieldset>
+          <details><summary>Native theme options</summary><label>Additional options merged into the selected original theme<textarea id="theme-options" rows="6" spellcheck="false">{}</textarea></label><p class="muted">The selected theme ID, native map route and title remain bound to this edition.</p></details>
+          <div class="actions"><button type="submit" class="primary">Receive source and prepare review</button></div>
+        </form>
+      </section>
+
+      <section id="edition-panel" class="panel" hidden>
+        <div class="section-heading"><div><span id="edition-phase" class="eyebrow"></span><h2 id="edition-title"></h2><p id="edition-identity" class="mono muted"></p></div><a id="viewer-link" class="button" target="_blank" rel="noopener noreferrer" hidden>Open existing QWC viewer</a></div>
+        <div id="edition-summary"></div>
+        <section><h3>Native layers</h3><div id="edition-layers"></div></section>
+        <section><h3>Layouts and role views</h3><div id="edition-layouts"></div><div id="edition-roles"></div></section>
+        <section id="review-section"><h3>Publication sequence</h3><ol id="publication-sequence"></ol><div id="host-change-summary"></div><p id="review-sha" class="mono muted"></p></section>
+        <section id="deployment-section" hidden><h3>Host deployment</h3><div id="deployment-summary"></div><div id="deployment-files"></div></section>
+        <div class="actions operation-actions">
+          <button id="publish-edition" class="primary" type="button">Generate and publish reviewed edition</button>
+          <button id="rollback-edition" type="button">Restore previous deployment</button>
+          <button id="verify-edition" type="button">Verify retained files</button>
+          <button id="download-review" type="button">Save review</button>
+          <button id="download-publication" type="button">Save publication</button>
+        </div>
+        <section id="export-section" hidden><h3>Complete operator handover</h3><p>The private archive contains the original GIS source, native project, selected host configuration, generated outputs, complete deployment history and source needed to reopen the edition.</p>
+          <form id="export-form"><label>Export identity<input id="export-id" required pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,119}" spellcheck="false"></label><div class="actions"><button type="submit">Prepare complete archive</button><button id="download-export" type="button" hidden>Download complete archive</button></div></form>
+          <div id="export-result"></div>
+        </section>
+        <details id="file-details" hidden><summary>Retained native and source files</summary><div id="publication-files"></div><div class="actions"><button id="files-previous" type="button">Previous files</button><button id="files-next" type="button">Next files</button></div></details>
+        <details><summary>Original review and deployment records</summary><pre id="edition-json"></pre></details>
+      </section>
+
+      <section id="receive-panel" class="panel" hidden>
+        <h2>Receive a complete publication</h2><p>Select the complete original archive and its SHA-256 from the export receipt. Receiving preserves the project’s original relative paths and joins the native QGIS receiver.</p>
+        <form id="receive-form">
+          <label>Original complete archive<input id="receive-file" type="file" accept=".zip,application/zip" required></label>
+          <label>Original archive SHA-256<input id="receive-sha" required pattern="[a-f0-9]{64}" spellcheck="false" class="mono"></label>
+          <div class="form-grid"><label>Receiving identity<input id="receiver-id" required pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,119}" spellcheck="false"></label><label>Existing QGIS Python<input id="receive-python" spellcheck="false" placeholder="/absolute/path/to/qgis-python"></label></div>
+          <progress id="upload-progress" max="1" value="0" hidden></progress><p id="upload-status" class="muted"></p>
+          <div class="actions"><button type="submit" class="primary">Receive original publication</button></div>
+        </form>
+      </section>
+
+      <section id="received-panel" class="panel" hidden>
+        <span class="eyebrow">Independent receiving</span><h2 id="received-title"></h2><div id="received-summary"></div>
+        <section><h3>Original native map</h3><div id="received-layers"></div></section>
+        <label>Existing QGIS Python executable<input id="reopen-python" spellcheck="false" placeholder="/absolute/path/to/qgis-python"></label>
+        <div class="actions"><button id="reopen-received" class="primary" type="button">Reopen with native QGIS</button><button id="verify-received" type="button">Verify every received file</button><button id="download-received-publication" type="button">Save original publication</button></div>
+        <div id="reopen-result"></div>
+        <details><summary>Original receiving record</summary><pre id="received-json"></pre></details>
+      </section>
+
+      <section id="host-panel" class="panel" hidden><h2>Selected existing host</h2><p>The original workspace retains this host profile. Source preparation, native generation, publication and rollback continue against these same paths and service identities.</p><div id="host-profile"></div><details><summary>Complete retained host profile</summary><pre id="host-json"></pre></details></section>
+    </div>
+  </main>
+  <footer>Original QGIS project · Native QWC ConfigGenerator · Complete operator handover</footer>
+</body>
+</html>
