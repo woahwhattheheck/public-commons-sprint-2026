@@ -15,6 +15,7 @@ from store import DDL
 from credit_store import CREDIT_TABLES
 from accountant_store import ACCOUNTANT_TABLES
 from portable import CREDIT_READER_FILES, ACCOUNTANT_READER_FILES
+from native_node import READER_FILES as NODE_READER_FILES, FEATURE as NODE_FEATURE
 from domain import SCHEMA
 
 FORMAT = "stellar-forge.buyer-expense-private-project.v1"
@@ -37,6 +38,9 @@ GOVERNED_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in ("native_gov
 GOVERNED_REQUIRED.update("app/stellar-forge/mcp-paid-agent/" + n for n in
     ("expense-governed-statement.mjs", "native-spend-binding.mjs", "native-spend-configuration.mjs"))
 GOVERNED_FEATURE = "original-spending-readonly-v1"
+
+NODE_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in ("native_node.py", "node_store.py", "NODE_OPERATIONS.md")}
+NODE_REQUIRED.update("app/" + n for n in NODE_READER_FILES)
 
 CREDIT_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in
     ("native_woo.py", "credits.py", "credit_store.py", "credit-reader-files.json")}
@@ -100,6 +104,72 @@ def trusted_schema():
         db.close()
 
 
+
+def inspect_node_sources(database, manifest):
+    """Bind retained original bytes and native projections without running Node."""
+    from native_node import original_bytes, project_original, FORMAT
+    from domain import canonical
+    sources = {row[0]: json.loads(row[1]) for row in database.execute("SELECT id,body FROM sources")
+               if json.loads(row[1]).get("kind") == "node_operation"}
+    retained = {}
+    for source_id, source in sources.items():
+        identity = source.get("identity")
+        if (source.get("id") != source_id or not isinstance(identity, dict) or
+                set(identity) != {"kind", "sha256"} or identity.get("kind") != "node_operation" or
+                source.get("path") != "node-operation:" + str(identity.get("sha256")) or
+                not source.get("immutable_intake")):
+            raise ValueError("An original Node source differs from its retained identity.")
+        for ident, parent, status, created, body in database.execute(
+                "SELECT id,parent_id,status,created_at,body FROM captures WHERE source_id=?", (source_id,)):
+            value = json.loads(body)
+            snapshot = value.get("snapshot", {})
+            original = original_bytes(snapshot)
+            inspected = snapshot.get("inspection", {})
+            carrier = json.loads(original)
+            if (value.get("id") != ident or value.get("source_id") != source_id or value.get("parent_id") != parent or
+                    value.get("status") != status or value.get("created_at") != created or
+                    value.get("identity") != identity or value.get("path") != source["path"] or
+                    snapshot.get("schema") != NODE_FEATURE or len(original) != snapshot.get("source_bytes") or
+                    inspected.get("schema") != FORMAT or inspected.get("sourceSha256") != snapshot["source_sha256"] or
+                    inspected.get("sourceBytes") != len(original) or inspected.get("sourceIdentitySha256") != identity["sha256"] or
+                    carrier.get("schema") != "stellar-forge.node-operation-accounting-export.v1" or
+                    carrier.get("intentId") != inspected.get("intentId") or carrier.get("commandId") != inspected.get("commandId") or
+                    carrier.get("contextSha256") != inspected.get("contextSha256") or
+                    carrier.get("result", {}).get("native") != inspected.get("native") or
+                    carrier.get("authority") != inspected.get("authority") or
+                    value.get("node_intake", {}).get("data_context") != source.get("data_context")):
+                raise ValueError("A retained Node capture lost its exact original source/result binding.")
+            projected = project_original(inspected, source["data_context"])
+            if canonical(projected) != canonical(value.get("report")):
+                raise ValueError("A Node source projection differs from its retained native result.")
+            retained[ident] = value
+        current = source.get("current_capture")
+        if current is not None and (current not in retained or retained[current]["source_id"] != source_id or
+                                    retained[current]["status"] != "ACCEPTED"):
+            raise ValueError("An original Node source is missing its current accepted capture.")
+    for ident, source_id, request_id, capture_id, body in database.execute(
+            "SELECT id,source_id,request_id,capture_id,body FROM items"):
+        if source_id not in sources:
+            continue
+        captured = retained.get(capture_id)
+        if (captured is None or captured["source_id"] != source_id or captured["status"] != "ACCEPTED" or
+                captured["report"]["rows"][0]["request_id"] != request_id or
+                canonical(captured["report"]["rows"][0]) != canonical(json.loads(body))):
+            raise ValueError("A current Node item lost its accepted original row.")
+    for body, in database.execute("SELECT body FROM closes"):
+        for frozen in json.loads(body).get("native_captures", []):
+            if frozen.get("source_id") not in sources:
+                continue
+            original = retained.get(frozen.get("id"))
+            if original is None or any(canonical(frozen.get(key)) != canonical(original.get(key))
+                                       for key in ("source_id", "snapshot", "report", "identity")):
+                raise ValueError("An issued Node source differs from its original frozen capture.")
+    counts = {"node_operation_count": len(sources), "node_capture_count": len(retained)}
+    if any(type(manifest.get(key)) is not int or manifest[key] != value for key, value in counts.items()):
+        raise ValueError("The complete project is missing original Node source or capture history.")
+    return counts
+
+
 def inspect_database(path, manifest):
     database = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
     try:
@@ -137,8 +207,12 @@ def inspect_database(path, manifest):
             raise ValueError("The project manifest does not match its original native workspace revision.")
         source_kinds = sorted({json.loads(row[0]).get("kind", "sf36_ledger") for row in
                                database.execute("SELECT body FROM sources")})
-        if any(kind not in ("sf36_ledger", "mcp_quote", "governed_mcp", "woo_refund", "merchant_adjustments") for kind in source_kinds):
+        if any(kind not in ("sf36_ledger", "mcp_quote", "governed_mcp", "woo_refund", "merchant_adjustments", "node_operation") for kind in source_kinds):
             raise ValueError("The retained source kind is not supported by this original receiver.")
+        node_feature = manifest.get("node_operation_capture")
+        if node_feature not in (None, NODE_FEATURE) or "node_operation" in source_kinds and node_feature != NODE_FEATURE:
+            raise ValueError("The original Node source requires its complete supported reader and intake history.")
+        node_counts = inspect_node_sources(database, manifest) if node_feature else {"node_operation_count": 0, "node_capture_count": 0}
         if "governed_mcp" in source_kinds and manifest.get("governed_mcp_capture") != GOVERNED_FEATURE:
             raise ValueError("The governed MCP source requires its original binding and spending readers.")
         if any(kind in source_kinds for kind in ("mcp_quote", "governed_mcp")) and manifest.get("mcp_quote_capture") != "native-readonly-v1":
@@ -177,7 +251,7 @@ def inspect_database(path, manifest):
         return {"workspace": meta["id"], "revision": revision, "successful_requests": count,
                 "accountant_return_count": accountant_count,
                 "credit_count": credit_count, "refund_packet_count": packet_count, "data_context": context,
-                "source_kinds": source_kinds,
+                "source_kinds": source_kinds, **node_counts,
                 "legacy_request_history": legacy, "tables": len(tables)}
     finally:
         database.close()
@@ -242,6 +316,11 @@ def receive(archive, directory, expected_sha256):
                 raise ValueError("The governed MCP feature requires its original complete quote/spending source closure.")
             if governed:
                 extra = extra | GOVERNED_REQUIRED
+            node_feature = manifest.get("node_operation_capture")
+            if node_feature not in (None, NODE_FEATURE) or node_feature and not feature:
+                raise ValueError("The Node source feature requires its original native application closure.")
+            if node_feature:
+                extra = extra | NODE_REQUIRED
             required = REQUIRED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
             allowed = ALLOWED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
             # Earlier accountant-enabled editions omitted this guide; current complete exports include it.
