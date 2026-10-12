@@ -117,6 +117,20 @@ def serve(warehouse, directory, *, port=0):
                         return self._reply(200, warehouse.compare(values["previous"], values["current"],
                             offset=integer(int(values.get("offset", "0")), maximum=2000000),
                             limit=integer(int(values.get("limit", "50")), minimum=1)))
+                    if url.path in {"/api/semantics", "/api/semantics-file"}:
+                        fields(values, ("version_id",))
+                        version_id = values["version_id"]
+                        if url.path == "/api/semantics":
+                            return self._reply(200, warehouse.semantics(version_id))
+                        raw = warehouse.semantics_bytes(version_id)
+                        if raw is None:
+                            return self._reply(404, {"error": "DATASET_PG_LEGACY_EDITION_HAS_NO_DICTIONARY"})
+                        return self._reply(200, raw, "application/json",
+                                           "semantics-" + version_id + ".json")
+                    if url.path == "/api/semantic-compare":
+                        fields(values, ("previous", "current"))
+                        comparison = warehouse.compare_semantics(values["previous"], values["current"])
+                        return self._reply(200, comparison)
                     if url.path == "/api/manifest":
                         fields(values, ("version_id",))
                         return self._reply(200, warehouse.manifest_bytes(values["version_id"]),
