@@ -13,6 +13,7 @@ import {buildPacket, buildRuntimePacket, renderHtml, renderChecklist} from '../s
 import {openCaseStore, inspectCaseWriter, recoverCaseWriter, CASE_STATUSES, caseMetadata} from './case-store.mjs';
 import {MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 import {openIncidentSources, incidentProblem} from './incident-sources.mjs';
+import {inspectSupportSelection, supportSelectionSha256, createSupportLaunch, supportListenerIdentity} from './managed-launch.mjs';
 import {inspectRuntimeFiles, reviewRuntime, exportRuntimeHandoff, importRuntimeHandoff,
   MAX_RUNTIME_BYTES, MAX_HANDOFF_BYTES} from './runtime-support.mjs';
 
@@ -143,7 +144,7 @@ export function workorderFromSources(input) {
 }
 
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
-export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null} = {}) {
+export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null, launchRecord = () => null} = {}) {
   let active = false;
   const server = createServer(async (req, res) => {
     for (const [key, value] of Object.entries(HEADERS)) res.setHeader(key, value);
@@ -158,6 +159,16 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
     const route = (req.url || '').split('?')[0];
     if (req.method === 'GET' && route === '/health') {
       json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore),handoffsEnabled:Boolean(handoffDesk),incidentsEnabled:Boolean(incidentDesk)}); return;
+    }
+    if (route === '/api/support-launch') {
+      if (req.method !== 'GET') {json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
+      if ((req.headers.origin && req.headers.origin !== ownOrigin) ||
+          (req.headers['sec-fetch-site'] && !['same-origin','none'].includes(req.headers['sec-fetch-site']))) {
+        json(res,403,{error:'ORIGIN_MISMATCH'});return;
+      }
+      if (new URL(req.url,ownOrigin).search) {json(res,400,{error:'UNEXPECTED_QUERY'});return;}
+      const identity=supportListenerIdentity(launchRecord());
+      json(res,identity?200:404,identity??{error:'MANAGED_STARTUP_DISABLED'});return;
     }
     if (req.method === 'GET' && Object.hasOwn(ASSETS, route)) {
       try {
@@ -402,25 +413,43 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
   return server;
 }
 
-export async function start({port = 0, allowLoopback = false, runCapture = capture, casesDir = null, handoffSources = null, incidentSources = null, environment = process.env} = {}) {
+export async function start({port = 0, allowLoopback = false, runCapture = capture, casesDir = null, handoffSources = null,
+  incidentSources = null, environment = process.env, startupFormat = 'text', expectedSelectionSha256 = null} = {}) {
   if (!Number.isSafeInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid port');
+  if (!['text','json'].includes(startupFormat)) throw new TypeError('Startup format must be text or json');
+  if (expectedSelectionSha256 !== null &&
+      (startupFormat !== 'json' || !/^[a-f0-9]{64}$/.test(expectedSelectionSha256)))
+    throw new TypeError('Managed startup requires the reviewed selection SHA-256 and JSON format');
+  if (startupFormat === 'json' && (casesDir === null || incidentSources === null || handoffSources !== null))
+    throw new TypeError('Managed startup requires private cases and incident source profiles');
   const caseStore = casesDir === null ? null : await openCaseStore(casesDir);
   const handoffDesk = handoffSources === null ? null : await (await import('./handoff-store.mjs')).openHandoffDesk({configPath:handoffSources,casesDir,environment});
-  let incidentDesk;
-  try {incidentDesk = incidentSources === null ? null : await openIncidentSources({configPath:incidentSources,environment});}
-  catch(error){await handoffDesk?.close();throw error;}
-  const server = createConsoleServer({allowLoopback, runCapture, caseStore,handoffDesk,incidentDesk});
+  let incidentDesk,selection=null,launch=null;
+  try {
+    incidentDesk = incidentSources === null ? null : await openIncidentSources({configPath:incidentSources,environment});
+    if(startupFormat==='json') {
+      selection=await inspectSupportSelection({casesDir,incidentSources,allowLoopback,
+        incidentSelection:incidentDesk.configuration()});
+      if(expectedSelectionSha256!==null&&supportSelectionSha256(selection)!==expectedSelectionSha256)
+        throw Object.assign(new Error('The selected support configuration changed; review the current application before starting.'),
+          {code:'SUPPORT_APPLICATION_SELECTION_CHANGED'});
+    }
+  } catch(error) {await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close()]);throw error;}
+  const server = createConsoleServer({allowLoopback, runCapture, caseStore,handoffDesk,incidentDesk,launchRecord:()=>launch});
   try {await new Promise((resolveListen, reject) => {
     server.once('error', reject);server.listen(port, '127.0.0.1', resolveListen);
   });}catch(error){await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close()]);throw error;}
+  const url='http://127.0.0.1:'+server.address().port+'/';
+  if(selection)launch=createSupportLaunch(selection,url);
   let closing;
   const close=()=>closing??=(async()=>{
+    if(launch)launch.state='STOPPING';
     const results=await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close()]);
     await new Promise((done,reject)=>{server.close(error=>error?reject(error):done());server.closeAllConnections();});
     const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
   })();
-  server.once('close',()=>{void Promise.allSettled([handoffDesk?.close(),incidentDesk?.close()]);});
-  return {server, url: `http://127.0.0.1:${server.address().port}/`,close};
+  server.once('close',()=>{if(launch)launch.state='STOPPED';void Promise.allSettled([handoffDesk?.close(),incidentDesk?.close()]);});
+  return {server,url,close,launch};
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -437,27 +466,28 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         if (writerAction) throw new TypeError('Choose one case writer operation');
         writerAction = flag; continue;
       }
-      if (!['--port','--cases-dir','--handoff-sources','--incident-sources'].includes(flag)) throw new TypeError('Unknown option: ' + flag);
+      if (!['--port','--cases-dir','--handoff-sources','--incident-sources','--startup-format','--expected-selection-sha256'].includes(flag)) throw new TypeError('Unknown option: ' + flag);
       const value = separator < 0 ? args[++index] : token.slice(separator + 1);
       if (!value || value.startsWith('--')) throw new TypeError('Missing value for ' + flag);
       if (flag === '--port' && !/^\d+$/.test(value)) throw new TypeError('Invalid port');
-      options[{'--port':'port','--cases-dir':'casesDir','--handoff-sources':'handoffSources','--incident-sources':'incidentSources'}[flag]] = flag === '--port' ? Number(value) : value;
+      options[{'--port':'port','--cases-dir':'casesDir','--handoff-sources':'handoffSources','--incident-sources':'incidentSources','--startup-format':'startupFormat','--expected-selection-sha256':'expectedSelectionSha256'}[flag]] = flag === '--port' ? Number(value) : value;
     }
     if (writerAction) {
-      if (!options.casesDir || seen.has('--port') || seen.has('--allow-loopback') || seen.has('--handoff-sources') || seen.has('--incident-sources'))
+      if (!options.casesDir || seen.has('--port') || seen.has('--allow-loopback') || seen.has('--handoff-sources') || seen.has('--incident-sources') || seen.has('--startup-format') || seen.has('--expected-selection-sha256'))
         throw new TypeError('A case writer operation requires --cases-dir and does not start a server');
       const action = writerAction === '--inspect-case-writer' ? inspectCaseWriter : recoverCaseWriter;
       process.stdout.write(JSON.stringify(await action(options.casesDir), null, 2) + '\n');
     } else {
-      const {url,close} = await start(options);
+      const {url,close,launch} = await start(options);
       let stopping=false;
       const stop=()=>{if(stopping)return;stopping=true;void close().catch(()=>{process.stderr.write('SF74 shutdown could not finish. Retained work remains available.\n');process.exitCode=1;});};
       process.once('SIGINT',stop);process.once('SIGTERM',stop);
-      process.stdout.write('Open locally: '+url+'\n' +
+      if(launch)process.stdout.write(JSON.stringify(launch)+'\n');
+      else process.stdout.write('Open locally: '+url+'\n' +
         (options.casesDir ? 'Merchant case desk enabled.\n' : 'Session mode. Use --cases-dir /absolute/private/directory to retain merchant cases.\n'));
     }
   } catch (error) {
-    process.stderr.write('SF74: ' + String(error.message) + '\nUsage: node server.mjs [--cases-dir /absolute/private/directory] [--handoff-sources PRIVATE_CONFIG.json] [--incident-sources PRIVATE_CONFIG.json] [--port 8784] [--allow-loopback]\n' +
+    process.stderr.write('SF74: ' + String(error.message) + '\nUsage: node server.mjs [--cases-dir /absolute/private/directory] [--handoff-sources PRIVATE_CONFIG.json] [--incident-sources PRIVATE_CONFIG.json] [--port 8784] [--allow-loopback] [--startup-format text|json] [--expected-selection-sha256 SHA256]\n' +
       '       node server.mjs --cases-dir /absolute/private/directory --inspect-case-writer|--recover-case-writer\n');
     process.exitCode = 1;
   }
