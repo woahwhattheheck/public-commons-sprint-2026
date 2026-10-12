@@ -110,12 +110,45 @@ async function get(host,route){
   return body;
 }
 async function response(route,method,action){
-  // Drain the body while this response still belongs to its original page.
-  const pending=page.waitForResponse(r=>new URL(r.url()).pathname===route&&r.request().method()===method,{timeout:180000})
-    .then(async r=>{const body=await r.json();ensure(r.ok(),route+' returned '+r.status()+': '+safe(body.error||'local operation failed'));return body;});
-  const [body]=await Promise.all([pending,Promise.resolve().then(action)]);
-  await idle();
-  return body;
+  // Capture the one original request before its response reaches the page.
+  // route.fetch retains its body independently of Chromium's inspector cache.
+  const origin=new URL(page.url()).origin;
+  const matches=url=>url.origin===origin&&url.pathname===route;
+  let deliver,fail,timer,inFlight,claimed=false;
+  const pending=new Promise((resolve,reject)=>{
+    deliver=resolve;fail=reject;
+    timer=setTimeout(()=>reject(new Error('The original '+method+' '+route+' response did not complete.')),180000);
+  });
+  pending.catch(()=>{});
+  const intercept=routed=>{
+    if(claimed||routed.request().method()!==method)return routed.continue();
+    claimed=true;
+    inFlight=(async()=>{
+      let original,fulfilled=false;
+      try{
+        original=await routed.fetch({timeout:180000,maxRedirects:0,maxRetries:0});
+        const bytes=await original.body();
+        // Deliver the unchanged status, headers and complete original bytes.
+        await routed.fulfill({response:original,body:bytes});fulfilled=true;
+        const body=JSON.parse(bytes.toString('utf8'));
+        ensure(original.ok(),route+' returned '+original.status()+': '+safe(body.error||'local operation failed'));
+        deliver(body);
+      }catch(error){
+        if(!fulfilled)try{await routed.abort('failed');}catch{}
+        fail(error);
+      }finally{if(original)await original.dispose().catch(()=>{});}
+    })();
+    return inFlight;
+  };
+  await page.route(matches,intercept);
+  try{
+    const [body]=await Promise.all([pending,Promise.resolve().then(action)]);
+    await idle();return body;
+  }finally{
+    clearTimeout(timer);
+    await page.unroute(matches,intercept);
+    if(inFlight)await inFlight;
+  }
 }
 async function phase(name,action){
   if(result.completed.includes(name))return;

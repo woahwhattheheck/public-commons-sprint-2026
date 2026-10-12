@@ -283,6 +283,22 @@ The recipe saves `publisher-reference/publisher-acquisition.json`, the original 
 
 The original datastream uses an indoor-temperature label while the supplied thermometer description uses an outdoor label. The datastream also retains the publisher's original result-time interval. The recipe preserves these source inconsistencies and makes no correction or provenance claim beyond the committed example. Source/license identities and the separately observed public-service errors are documented in [SOURCES.md](SOURCES.md).
 
+
+### Recorded native reference result
+
+The original operation completed on 12 October 2026. The [complete native result](examples/ogc-room-temperature-native-result.json) records one original publisher observation, its native dataset export, independent project receiving, exact packet re-export and a closed-workspace reopen.
+
+| Identity | Recorded value |
+|---|---|
+| Source packet | `2bdad5aeac5282f6750afd9e9d3b85d9b6e188464cbcf90f9190ba74224c2541` |
+| Native build | `c87829609aeeef2790ac7ac91d283b9e0a7590e628c6a747281c886199d66879` |
+| Native snapshot | `682277ab88cf03fc229118faca289c61d1f19e05ca3c41403d72991460edb0e0` |
+| Portable project | 6137 bytes; SHA256 `976fbe48b0264411d776bb76469bb9fc1e0fd13d6e175c9251f8f45736a19a1a` |
+| Receiving scope | One single observation resource; `require-exhausted` within that explicit scope |
+| Original result | `23.5`, with the original observation JSON and schema unit retained |
+
+The producer and independent receiver returned the same ordered-row hash and original values. This result covers the committed illustrative resource; it does not claim a complete live sensor collection. Browser and installed-product receiving have separate result records.
+
 ## Retention and errors
 
 The source acquisition journal retains query/request identity, completed pages, progress, safe provider errors and the actual retry deadline. HTTP 429/503 deadlines are retained per connection; retrying before the deadline is rejected locally. There is no automatic account rotation, background acquisition or endless retry.
