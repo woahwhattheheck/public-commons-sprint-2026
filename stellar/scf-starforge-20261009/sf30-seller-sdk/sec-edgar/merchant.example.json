@@ -1,0 +1,64 @@
+{
+  "schema": "stellar-forge.sec-edgar-merchant.v1",
+  "title": "SEC company data",
+  "publicOrigin": "https://merchant.example",
+  "products": [
+    {
+      "id": "appleFacts",
+      "path": "/data/apple/facts",
+      "kind": "facts",
+      "cik": "0000320193",
+      "editionId": "apple-facts-20261011",
+      "sourceSha256": "73a86c6aedc31f77cac2ea4df5f80f0b3bd7e6eb58bb4e01444fbedf3afb9c43",
+      "description": "Apple reported assets and net income, preserving each original SEC filing version.",
+      "concepts": [
+        "us-gaap:Assets",
+        "us-gaap:NetIncomeLoss"
+      ],
+      "forms": [],
+      "maxPageSize": 100,
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "taxonomy": "us-gaap",
+        "concept": "Assets",
+        "unit": "USD",
+        "limit": "25"
+      }
+    },
+    {
+      "id": "genpactFilings",
+      "path": "/data/genpact/filings",
+      "kind": "filings",
+      "cik": "0001398659",
+      "editionId": "genpact-filings-20261011",
+      "sourceSha256": "fca3d62aff9f2dac8c6c4c201970b8d128269387b71461c77ecae84d845eb1e7",
+      "description": "Genpact filing index from the selected SEC submissions capture, with original document links.",
+      "concepts": [],
+      "forms": [],
+      "maxPageSize": 100,
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "limit": "25"
+      }
+    }
+  ]
+}
+

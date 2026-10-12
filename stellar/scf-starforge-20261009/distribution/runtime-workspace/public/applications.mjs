@@ -25,7 +25,7 @@ async function textHash(text) {
 }
 export function createApplicationsWorkspaceView({ root, api, getState, refreshWorkspace, switchView, message, error }) {
   let data = null, selectedId = null, selectedRun = null, editingId = null, configurationReview = null, startReview = null;
-  let loading = false, sending = false, scope = 0, initial = true;
+  let loading = false, sending = false, scope = 0, settingsScope = 0, initial = true;
   const key = name => 'starforge-applications-' + getState()?.workspaceId + '-' + name;
   const readSaved = name => { try { return JSON.parse(sessionStorage.getItem(key(name)) ?? 'null'); } catch { return null; } };
   const saveSaved = (name, value) => { try { if (value === null) sessionStorage.removeItem(key(name)); else sessionStorage.setItem(key(name), JSON.stringify(value)); } catch {} };
@@ -115,18 +115,35 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     try { await action(); } catch (issue) { if (own === scope) error(issue); }
   }
   function renderSettings(values = {}) {
-    const type = currentType(); settings.replaceChildren();
+    const type = currentType(), generation = ++settingsScope; settings.replaceChildren();
     description.textContent = type?.description ?? '';
     for (const item of type?.fields ?? []) {
-      const node = element('input'); node.name = item.name; node.id = 'application-setting-' + item.name;
-      node.type = item.type === 'boolean' ? 'checkbox' : item.type === 'port' ? 'number' : 'text';
+      const isInstallation = item.name === 'installationId' && type.python;
+      const node = element(isInstallation ? 'select' : item.type === 'json' ? 'textarea' : 'input');
+      node.name = item.name; node.id = 'application-setting-' + item.name;
+      if (!isInstallation && item.type !== 'json')
+        node.type = item.type === 'boolean' ? 'checkbox' : item.type === 'port' ? 'number' : 'text';
+      if (item.type === 'json') { node.rows = 5; node.spellcheck = false; }
       node.required = item.required; node.autocomplete = 'off';
       if (item.type === 'boolean') node.checked = values[item.name] === true;
-      else node.value = values[item.name] ?? (item.type === 'port' ? '0' : '');
+      else if (!isInstallation) node.value = values[item.name] ?? (item.type === 'port' ? '0' : '');
       if (item.type === 'port') { node.min = '0'; node.max = '65535'; }
       const row = field(item.label, node);
       if (item.description) row.append(element('p', item.description, 'note'));
       settings.append(row);
+      if (isInstallation) {
+        node.replaceChildren(new Option('Loading installed environments', ''));
+        const selectedRuntime = runtime.value;
+        api(query('/api/python/state', { runtimeId: selectedRuntime })).then(value => {
+          if (generation !== settingsScope || selectedRuntime !== runtime.value || !node.isConnected) return;
+          const entries = value.installations ?? [];
+          node.replaceChildren(new Option(entries.length ? 'Choose an installed environment' : 'Install or inspect an environment in Python first', ''),
+            ...entries.map(entry => new Option(entry.source.name + ' ' + entry.source.version + ' · ' +
+              (entry.extras.join(', ') || 'base') + ' · ' + entry.id.slice(0, 12), entry.id)));
+          node.value = entries.some(entry => entry.id === values[item.name]) ? values[item.name] :
+            entries.some(entry => entry.id === value.active?.installation) ? value.active.installation : '';
+        }).catch(issue => { if (generation === settingsScope) { node.replaceChildren(new Option('Python inventory unavailable', '')); error(issue); } });
+      }
     }
     configurationReview = null; reviewResult.hidden = true;
   }
@@ -150,13 +167,19 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   }
   kind.addEventListener('change', () => renderSettings());
   form.addEventListener('input', () => { configurationReview = null; reviewResult.hidden = true; });
-  runtime.addEventListener('change', () => { configurationReview = null; reviewResult.hidden = true; });
+  runtime.addEventListener('change', () => {
+    const values = configurationValue().settings;
+    configurationReview = null; reviewResult.hidden = true;
+    if (currentType()?.python) renderSettings({ ...values, installationId: undefined });
+  });
   form.addEventListener('submit', event => {
     event.preventDefault(); act(async () => {
       configurationReview = await api('/api/applications/review', configurationValue());
       const reviewed = configurationReview;
       const rows = facts([
-        ['Original command', 'starforge ' + reviewed.command.command + ' ' + reviewed.command.args.map(value => JSON.stringify(value)).join(' ')],
+        ['Original command', reviewed.command.pythonCommand ? reviewed.command.pythonCommand.executable + ' ' +
+          reviewed.command.pythonCommand.argv.map(value => JSON.stringify(value)).join(' ') :
+          'starforge ' + reviewed.command.command + ' ' + reviewed.command.args.map(value => JSON.stringify(value)).join(' ')],
         ['Runtime', reviewed.runtime.directory], ['Source commit', reviewed.runtime.sourceCommit],
         ['Managed home', reviewed.homeDirectory], ['Connection', reviewed.releaseId ? 'Existing original release ' + reviewed.releaseId : 'Adopt this original ready runtime'],
         ['Input', reviewed.command.terminal ? 'Connected original terminal, explicit operator responses' : 'Original application output'],
@@ -187,10 +210,14 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       try { result = await retainedRequest('/api/applications/start', { applicationId: reviewed.applicationId, reviewId: reviewed.id }); }
       finally { start.disabled = false; }
       selectedRun = result.operationId; startReview = null;
-      await refresh(); await refreshWorkspace(); message('The original application is starting. Its private URL will appear when its CLI prints it.');
+      await refresh(); await refreshWorkspace(); message(reviewed.command.pythonCommand && !reviewed.command.pythonCommand.ready ?
+        'The original workbook command is starting. Its operating result and output appear below.' :
+        'The original application is starting. Its private URL will appear when its CLI prints it.');
     }));
     operationReview.replaceChildren(element('h3', 'Start review'), facts([
-      ['Original command', reviewed.command.command + ' ' + reviewed.command.args.map(value => JSON.stringify(value)).join(' ')],
+      ['Original command', reviewed.command.pythonCommand ? reviewed.command.pythonCommand.executable + ' ' +
+        reviewed.command.pythonCommand.argv.map(value => JSON.stringify(value)).join(' ') :
+        reviewed.command.command + ' ' + reviewed.command.args.map(value => JSON.stringify(value)).join(' ')],
       ['Release', reviewed.releaseId], ['Source', reviewed.runtime.sourceCommit],
       ['Inputs', reviewed.command.inputs.map(item => item.path).join('\n')],
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
@@ -229,7 +256,10 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       anchor.rel = 'noopener noreferrer'; anchor.referrerPolicy = 'no-referrer'; return [anchor];
     }));
     relatedApplications.hidden = !relatedApplications.childElementCount;
-    urlNote.textContent = current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts.' :
+    const workbookCommand = ['python-workbooks', 'python-workbook-delivery'].includes(app.kind);
+    urlNote.textContent = workbookCommand ? (active ? 'The original workbook command is running. Its output is retained below.' :
+      current ? 'The original workbook command has ended. Open its retained outcome and complete output below.' :
+      'Review a start to run this original workbook command.') : current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts.' :
       active ? current.stop ? 'The original application is draining its work and stopping.' : 'Waiting for the original application to print its local session URL.' :
         current?.url ? 'This operation has ended. Its retained URL is historical; review a new start to open the same saved application data.' :
           'Save and review a start to receive the original application URL.';
@@ -341,6 +371,27 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   }
   return {
     refresh,
+    async beginPython(descriptor) {
+      data = await api('/api/applications/state');
+      const type = data.catalog.find(item => item.python && item.command === descriptor.command);
+      if (!type) throw new Error('This Applications revision does not include the selected original Python command.');
+      const value = name => descriptor.args[descriptor.args.indexOf(name) + 1];
+      kind.replaceChildren(...data.catalog.map(item => new Option(item.title, item.id)));
+      const savedRuntime = getState()?.runtimes.find(item => item.id === descriptor.runtime.runtimeId);
+      if (![...runtime.options].some(item => item.value === descriptor.runtime.runtimeId))
+        runtime.append(new Option(savedRuntime?.label ?? descriptor.runtime.directory, descriptor.runtime.runtimeId));
+      editingId = null; configurationReview = startReview = null;
+      label.value = type.title; runtime.value = descriptor.runtime.runtimeId; kind.value = type.id;
+      const values = { installationId: descriptor.installationId };
+      if (descriptor.command === 'analysis') {
+        values.databaseDirectory = value('--database');
+        if (descriptor.args.includes('--node')) values.nodeExecutable = value('--node');
+        values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;
+      } else values.argumentsJSON = JSON.stringify(descriptor.args, null, 2);
+      renderSettings(values); configuration.open = true;
+      switchView('applications'); configuration.scrollIntoView({ block: 'nearest' });
+      label.focus();
+    },
     async choose(id) { selectedId = id; selectedRun = null; switchView('applications'); await refresh(); },
     reset() {
       scope++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;

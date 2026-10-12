@@ -3195,6 +3195,28 @@ For a session review, replace `--history` with that version's `--snapshot` file.
 The included [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
 describes history enablement, range selection, source retention and comparisons.
 
+### Plan volume, quote and cost scenarios
+
+In the same `revenue-workspace`, open **Scenario planning** at `/planning`.
+Load a saved pricing review, then compare up to twelve explicit demand, quoted
+price and cost scenarios against that review's original seller configuration
+and selected operations capture. Set optional monthly contribution and margin
+targets to inspect break-even prices, equal unit-price uplifts, or paid-volume
+suggestions that preserve the entered service mix.
+
+Name and save the comparison to reopen its original values, download the plan
+JSON, comparison CSV or selected merchant terms. **Use selected scenario in
+pricing review** imports the chosen commercial assumptions into the existing
+review with the current operations capture. Review and save that draft before
+continuing through the original price-change workflow.
+
+The [scenario planning guide](../sf97-merchant-revenue-ops/PLANNING.md) is included
+at `source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/PLANNING.md`.
+Embedded applications can use `./merchant/scenario-planning` for
+`createScenarioReview` and `./merchant/scenario-workspace` for
+`openPlanningWorkspace`. The existing `./merchant/revenue-workspace`
+`startWorkspace` serves the combined pricing and planning UI and API.
+
 ### Turn a saved pricing review into a merchant price change
 
 In **Saved reviews**, choose **Prepare price change**, enter the explicit atomic
@@ -4840,3 +4862,8 @@ The package also exposes `@tokenjunkielabs/starforge-merchant/partners/coingecko
 provides `startMarketWorkspace`. Original source collection and browser
 continuation instructions travel with the component in
 `workspace/acceptance/README.md`.
+
+
+## Merchant cache operations
+
+`starforge cache-operations` opens the maintained cache operating workspace or performs its native commands. The original `openapi-workspace` also opens these controls directly for a saved merchant package. Saved activity snapshots, retention comparisons, live changes, restoration, interrupted-response recovery, HTML reporting and complete history receiving share the original seller's cache manager. See the [operating guide](../sf30-seller-sdk/response-cache/workspace/README.md). Installed exports are `@tokenjunkielabs/starforge-merchant/seller/response-cache/workspace`, its `/server`, and `/report`.

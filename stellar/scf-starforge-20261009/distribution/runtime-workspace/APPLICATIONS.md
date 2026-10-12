@@ -8,14 +8,22 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | --- | --- | --- |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
+| Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
+| Analysis and workbook workspace | Selected Python environment: analysis | Original analysis database, workbook sources, reviewed refresh, reports and deliveries |
+| Workbook build and receiving | Selected Python environment: workbooks | Original build, receive, inspect and copy commands with retained output |
+| Workbook delivery and refresh | Selected Python environment: workbookDelivery | Original recipe or reviewed refresh and its retained delivery operation |
+| Paid application jobs | job-workspace serve | Prepared job checkout, original review and execution, verified results, customer library and collections |
 | Object buyer workspace | buyer-object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
 | GoldRush wallet research | goldrush workbench | Retained wallets, requests, source comparisons, notes and original buyer approval |
 | Research dossiers | research-workspace | Questions, saved source editions, findings, comparison and portable reports |
 | Buyer expenses | buyer-expenses | Statement captures, allocation, period review and accountant editions |
 | Blockscout token merchant | blockscout serve | Original provider desk, seller operations, quota and attempt recovery |
+| Mercury event operations | mercury-feed run | Original source console, signed feed, merchant terms and saved event lifecycle |
+| Event-feed buyer | buyer-event-feed workspace | Original subscription, received pages, durable cursor, terminal approval and immutable exports |
+| Tenderly simulation merchant | tenderly-workspace | Pinned EVM requests, original merchant, saved-provider observation review, exact-generation recovery and complete customer results |
 | Merchant recovery | merchant-recovery-remote workspace serve | Off-host inventory, original transfer journals and encrypted cold restore |
 | Commerce session | commerce-console start | An initialized SF66 session, original buyer/delivery/recovery and terminal approval |
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
@@ -50,6 +58,79 @@ Select the existing private object state. An optional original product profile s
 The first operator settings file creates the original received/operator-settings.json path reference. A later start can omit that setting and reuse the saved path. Selecting a different path for the same state is rejected; the original prepared product files and their buyer workspace remain unchanged. The optional Analysis Python executable is resolved and reviewed before launch.
 
 The original Object Buyer URL opens its receiving, acquisition, accounting, downloads and analysis controls. Its per-chunk or whole-purchase approval stays in the connected original terminal. Retained customer acquisitions are never replayed by opening this application.
+
+## Installed Python applications
+
+The Python entries use the original commands from a retained environment. Open **Python & workbooks**, select or inspect the installed environment, prepare the original command, and choose its Applications action. The maintained form keeps that exact installation and arguments for **Review application → Save application → Review start → Start**. Analysis exposes its original private workspace; workbook commands retain their complete output and result in the same managed operation. Follow [Python runtime workspace](../python-runtime/WORKSPACE.md) for source/interpreter review, exact wheels, receiving, activation and the complete application workflow.
+
+## Paid application jobs
+
+Choose **Applications → New application → Paid application jobs**. Select a READY
+runtime containing the original `job-workspace` checkout and SF88 customer source.
+The runtime supplies the original buyer dependencies. Choose the private customer
+directory and exactly one existing operator source:
+
+| Setting | Use |
+| --- | --- |
+| Private job customer directory | Reopen the same customer records, or create one directory in an existing private parent. |
+| Original initialized operator workspace | The original private directory with its workspace.json and operator.json. |
+| Original private Node buyer profile | The existing private profile file, used instead of an operator workspace. |
+| Terminal Python executable | The existing Python standard-library PTY; the default is /usr/bin/python3. |
+| Private environment JSON | Optional host-local environment values used by the original signer or buyer. |
+| Local port | Use 0 for the original customer host to choose an available loopback port. |
+
+**Review application** retains the selected operator input files and the exact
+installed runtime. The native source directory is derived from that installation.
+The resulting command has this form:
+
+~~~text
+starforge job-workspace serve --state ABS_PRIVATE_CUSTOMER --operator-workspace ABS_ORIGINAL_OPERATOR --runtime ABS_SELECTED_SOURCE_SF88 --port 0
+~~~
+
+The profile selection replaces `--operator-workspace` with
+`--operator-profile`. **Save application → Review start → Start reviewed
+application** uses the same managed adoption, reviewed arguments and original
+PTY as other buyer applications. Saving creates the one reviewed customer
+directory when needed.
+
+### Open the customer and complete its job
+
+**Open application** opens the original **Checkout** view. Import the prepared
+merchant ticket into that view, review its terms and source, and use the original
+buyer execution action. The connected terminal presents the original approval
+when required; its input receipt stays with this managed operation.
+
+The original customer retains the checkout revision and attempt. Accepted jobs
+continue in **Jobs**, where the customer follows execution and retrieves the
+verified result. **Resource library** and **Collections** open on that same
+private customer host and preserve the original received files and references.
+Use the customer's existing recovery action for a retained interrupted attempt.
+
+The catalog observes the original startup schema, reads
+`job-workspace-launch.json` through the selected source's
+`readJobWorkspaceLaunch`, and matches the selected state, native source,
+operator, PID, instance, private record and requested port. Its **Open
+application** link comes from the verified `checkoutUrl`. The source reader also
+validates the Jobs, library and collections routes on the same private host.
+
+### Stop, reopen and upgrade
+
+**Stop application** uses the existing managed PTY and original shutdown drain.
+The customer finishes closing its active child and accepted-result intake before
+releasing its customer lease. Closing the Applications browser or console server
+alone leaves the original managed process available for reopening.
+
+Reopen Applications to recover the same run and its retained terminal receipts.
+After a completed stop, review a new start with the same customer directory and
+operator source. The customer reopens its original checkouts, attempts, accepted
+jobs, result library and collections. Existing checkouts retain their originally
+selected source and operator; an installed upgrade supplies the source for future
+ticket imports. Review the updated original input files before starting if the
+operator configuration has changed.
+
+## Dataset buyer
+
+Choose **Dataset buyer** to open the original SF88 customer receiver with its private state, optional retained session profile and original operator selection. The selected installed runtime supplies the matching analysis source; the optional Python executable retains its selected environment. Follow [Dataset buyer in Applications](DATASET_BUYER_APPLICATIONS.md) for acquisition review, already received rows/files, analysis, stop, recovery and reopening.
 
 ## Environment
 
@@ -186,6 +267,10 @@ A successful serve prints one JSON startup line with schema `stellar-forge.block
 
 Use the same merchant-state directory for restart, provider-key rotation and a selected price rollback. Reopening an application resumes its merchant controls and saved account history. Buyer execution continues through the original separately reviewed SF88 intent. The Applications catalogue and observer are composed by the original runtime-workspace owner; select a source release containing `application-blockscout.mjs` and its matching startup CLI.
 
+
+## Tenderly simulation merchant
+
+Select the original or received private workspace, an optional initial product plan, the original HTTPS facilitator and its private environment reference. Applications binds the exact workspace identity and plan bytes to its queued original command, captures that command’s actual private startup URL, and uses the existing managed stop/reopen path. The full profile → request → merchant → saved-provider recovery → customer-result workflow stays in the original product. Follow [Tenderly in Applications](../../partners/tenderly-stellar-pilot/workspace/APPLICATIONS.md) for complete initialization, operating, receiving and MCP handover.
 ## Mercury source, paid event feed and subscription
 
 Choose **Mercury event operations** to reopen the complete original Mercury/feed bundle with its reviewed Python executable or original installed Python identity. Applications retains the bundle/source identities and captures both the original source console and the private feed desk from the actual session announcement. A saved merchant is opened alongside them. Its four destination/listener ports remain those in the original bundle.
