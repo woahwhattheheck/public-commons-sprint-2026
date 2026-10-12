@@ -48,6 +48,13 @@ the launch-record path. The browser offers four connected views:
 source profiles, native semantics, query exports, reports, workbooks and archive
 history. The Datasette source selection remains attached to that same database.
 
+### Successive delivery folders
+
+When `export --destination` selects a host folder, each export writes its complete
+files beneath a child named with that export ID. The returned `directory` is the
+actual delivery folder. A new export keeps previous deliveries intact; replaying
+an existing export ID reuses its original archive and that edition's product files.
+
 ## Select the complete source
 
 The composer consumes a handover with schema
