@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "pmtiles-merchant-mcp",
+  "description": "Original PMTiles release authoring, native publication and portable receiving through the existing merchant operator.",
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/pmtiles-workspace.mjs",
+    "stellar-forge/mcp-merchant-operator/pmtiles-download.mjs",
+    "stellar-forge/mcp-merchant-operator/pmtiles-cli.mjs",
+    "stellar-forge/mcp-merchant-operator/PMTILES_WORKSPACE.md",
+    "stellar-forge/mcp-merchant-operator/catalog/pmtiles-workspace.mjs",
+    "stellar-forge/mcp-merchant-operator/providers/pmtiles-workspaces.mjs",
+    "stellar-forge/mcp-merchant-operator/pmtiles-native-receiving.mjs"
+  ],
+  "commands": {
+    "pmtiles-mcp": "stellar-forge/mcp-merchant-operator/pmtiles-cli.mjs"
+  },
+  "commandDescriptions": {
+    "pmtiles-mcp": "Operate saved PMTiles releases and receive their original complete packages through authenticated merchant MCP."
+  },
+  "exports": {
+    "./pmtiles/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/workspace.mjs",
+    "./pmtiles/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/server.mjs",
+    "./pmtiles/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/portable.mjs",
+    "./pmtiles/mcp": "./source/stellar-forge/mcp-merchant-operator/pmtiles-workspace.mjs",
+    "./pmtiles/download": "./source/stellar-forge/mcp-merchant-operator/pmtiles-download.mjs"
+  },
+  "merchantProviders": {
+    "pmtiles-workspaces": "stellar-forge/mcp-merchant-operator/providers/pmtiles-workspaces.mjs"
+  }
+}
