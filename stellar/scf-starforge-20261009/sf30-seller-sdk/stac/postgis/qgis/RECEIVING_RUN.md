@@ -66,7 +66,7 @@ The operation subdirectory retains the exact handoff, child requests, child resu
 
 Native reopen and refresh reports contain actual observation timestamps. The first completed report remains unchanged. A resumed native read saves its full timestamped report as a separate SHA-named observation and compares all substantive fields with the original; only the defined native `checkedAt` field is excluded from that comparison. A changed binding, role, field contract, count, extent, or other report value leaves both observations retained for review. The original successful complete-row check keeps its original `readAt` and result. These observation files and their exact hashes are included in the final receiving result.
 
-A rendered PNG carries its original receiving operation, source, project-input hash, and connection-reference hash as image metadata. If publication succeeded before its small result record was written, the continuation checks those exact original bindings and retains that image. It does not overwrite a different image. A previously published archive is reopened, bound to the frozen snapshot, and validated by the same complete receiving engine.
+A rendered PNG carries its original receiving operation, source, project-input hash, and connection-reference hash as image metadata. If publication succeeded before its small result record was written, the continuation checks those exact original bindings and retains that image. It does not overwrite a different image. A previously published archive is reopened, bound to the frozen snapshot, and validated by the same complete receiving engine. Its source import, native check, selection/successor review and saved project are recovered from the exact original committed requests in that snapshot. The original native reports and map bytes are verified from their retained observations. This path does not reopen or refresh the current office selection. An unrelated later office action can therefore coexist with completion of the already frozen archive, provided all original events and requests remain intact. The final exported revision and history counts stay frozen; currentOriginalWorkspace reports the separately observed current identity, revision, history counts and advancedSinceExport. A recorded archive that has disappeared must be restored from its exact retained bytes.
 
 An interrupted receiving directory stays attached to the original archive. The original engine verifies any already extracted files and completes that same receiving operation. It never replaces a different or independently modified workspace.
 
@@ -81,6 +81,36 @@ The output directory contains:
 - `PostGIS_QGIS_Received_Map.png` and `PostGIS_QGIS_Reopened_Map.png`: actual renders when a visible geometry extent exists.
 - The original operation subdirectory, containing its requests and recovery records.
 
-The QGIS profile, its authentication database, libpq credential files, and database server contents remain external. A receiving host must configure the corresponding local service/authentication reference before opening a database-backed map. A source package remains inspectable when those native connections are unavailable; a successful live map reopen is reported only after the actual provider checks finish.
+The QGIS profile, its authentication database, libpq credential files, and database server contents remain external. The profile must have no parent/child overlap with the original workspace, accepted source package, receiving copy or output directory. This is checked before QGIS starts, so an output/qgis/profile configuration cannot place private authentication files in the complete handover. A receiving host must configure the corresponding local service/authentication reference before opening a database-backed map. A source package remains inspectable when those native connections are unavailable; a successful live map reopen is reported only after the actual provider checks finish.
 
 The final result's `noDatabaseMutation` describes this QGIS receiving phase. It does not describe or replace the parent workflow's earlier explicit database staging and promotion. No native execution outcome is asserted merely because this continuation source is packaged.
+
+
+## Continue a reviewed successor in the same existing QGIS workspace
+
+The handoff may contain successor:
+
+~~~json
+{
+  "workspaceId": "ACTUAL_EXISTING_QGIS_WORKSPACE_ID",
+  "expectedRevision": 0,
+  "leftSourceId": "EXACT_OLD_POSTGIS_RECEIPT_MANIFEST_SHA256",
+  "decisions": [
+    {
+      "layerId": "ACTUAL_EXISTING_LOGICAL_MAP_LAYER_ID",
+      "decision": "update"
+    }
+  ],
+  "note": "ATTRIBUTED_REASON_FOR_ACCEPTING_THIS_DATABASE_SUCCESSOR"
+}
+~~~
+
+These are configuration placeholders; use the actual original workspace ID/revision and receipt SHA. Every existing map layer selecting leftSourceId needs its own explicit keep/update/remove decision. An update may also supply the original maintained connection object with local service/authentication references. The handoff's layerIds remain receipt layer IDs; decisions use logical map layer IDs.
+
+With successor present, the driver requires the existing ordinary workspace.sqlite and matching original workspace ID. It never initializes a replacement. It retains the initial workspace snapshot, imports and natively checks the exact accepted right-hand receipt, then calls the existing workspace.review_successor with the saved original request before native project save/reopen. Logical layer IDs, styles, unrelated selections, original field maps and history remain preserved.
+
+A keep choice retains the old source binding. Its native preflight can be stale when the original stable view now serves the successor; full receiving requires resolvable selected layers. The driver does not conceal that mismatch or refresh an old receipt as if it were current.
+
+The remainder of this original programme is unchanged: native role-visible inspection, project save/reopen/refresh, actual map images, complete original workspace export, independent receiving and native reopen. The result adds successor.originalWorkspaceId, leftSourceId, rightSourceId, startingRevision, original reviewRequestId, complete review and originalWorkspaceReused=true.
+
+The [accepted field publication caller](../FIELD_PUBLICATION.md) supplies this exact handoff from its final accepted database receipt and original operator decisions. It retains one child operation and the same selected private profile/service/role; no second QGIS engine or native job is created.

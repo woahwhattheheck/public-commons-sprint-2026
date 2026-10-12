@@ -1,10 +1,13 @@
 # CSKT DEWR content and GIS migration workspace
 
-A complete source-review and WordPress delivery product extending the original CSKT preflight. It connects the published WordPress inventory to named editorial revisions, document versions, original ArcGIS resources, immutable migration releases and native destination recovery.
+A complete source-review, native WordPress delivery and public website product extending the original CSKT preflight. It connects the published WordPress inventory to named editorial revisions, document versions, original ArcGIS resources, immutable migration releases, native destination recovery and a complete staff-maintained website.
 
 The project is grounded in the [CSKT DEWR website RFP](https://csktwatercompact.com/wp-content/uploads/2026/10/DEWR_Website_RFP_Final.pdf) and the [original procurement page](https://csktwatercompact.com/documents-and-links/). The RFP permits a recommended CMS. This implementation retains WordPress and provides the content/GIS migration arm described in `commercial/WORKSHARE.md`.
 
 ## Product
+
+- **Public website:** a complete neutral WordPress theme with native page and collection templates, responsive menus, breadcrumbs, section navigation, search and filters, current/archive browsing, accessible reading styles and before/after image presentation.
+- **Native site operation:** Staff and Careers/Procurement editors, native revisions and attachments, selected landing pages and menus, scheduled announcement selection, public contact settings, aggregate reporting and complete report exports. Follow [PUBLIC_SITE.md](destination/PUBLIC_SITE.md) and [SITE_CMS_API.md](destination/SITE_CMS_API.md).
 
 - **Source intake:** complete original WordPress pages, posts and public media records, paginated provider totals, source identities, retained source versions and changed/absent-source review.
 - **Staff review:** named administrator, reviewer and editor roles; side-by-side original content and draft; retain, revise, archive, remove and consolidate dispositions; version history and individual or batch review.
@@ -70,4 +73,4 @@ Build the receiving team’s ZIP from this maintained directory:
 python3 package-source.py --output /private/delivery/CSKT_DEWR_Migration_Workspace.zip --commit GIT_COMMIT_SHA
 ```
 
-Replace `GIT_COMMIT_SHA` with the complete commit containing the selected source. The archive contains the application, WordPress plugin, capture tools and public source catalogs, staff and destination guides, priced workshare and proposal. Its `DELIVERY.json` records the selected source files and their SHA-256 values. Capture the original site into the private source directory described in `source/CONTRACT.md`, then import that corpus into the receiving workspace.
+Replace `GIT_COMMIT_SHA` with the complete commit containing the selected source. The archive contains the application, complete WordPress plugin and public theme, capture tools and public source catalogs, migration and website staff guides, native site receiving module, priced migration workshare and proposal. Its `DELIVERY.json` records the selected source files and their SHA-256 values. Capture the original site into the private source directory described in `source/CONTRACT.md`, then import that corpus into the receiving workspace.

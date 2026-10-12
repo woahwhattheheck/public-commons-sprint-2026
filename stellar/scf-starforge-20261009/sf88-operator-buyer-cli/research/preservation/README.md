@@ -29,13 +29,15 @@ later catalogue revision can advance independently.
 
 | Destination | Native package and continuation |
 | --- | --- |
-| Archivematica | This guide: reviewed BagIt transfer with the original source closure |
+| Archivematica | [Complete transfer, ingest, AIP/DIP and receiving workflow](ARCHIVEMATICA.md), [released provider contract](ARCHIVEMATICA_PROVIDER_CONTRACT.md) |
 | RODA | [Package and submission agreement](RODA.md), [REST upload and ingest continuation](RODA_REST.md) |
 | Preservica | [OPEX producer and operator workflow](PRESERVICA.md), [deployed provider contract](PRESERVICA_PROVIDER_CONTRACT.md) |
+| LIBNOVA | [Original BagIt, mapped metadata and Function receiving](LIBNOVA.md), [provider contract](LIBNOVA_PROVIDER_CONTRACT.md) |
 
 The optional Node wrapper routes the same applications through
 `cli.mjs workbench`, `cli.mjs roda`, `cli.mjs roda-client`,
-`cli.mjs preservica` and `cli.mjs preservica-client`.
+`cli.mjs preservica`, `cli.mjs preservica-client`, `cli.mjs libnova`,
+`cli.mjs libnova-client`, `cli.mjs archivematica` and `cli.mjs archivematica-client`.
 Existing preservation commands remain directly available through the wrapper.
 
 ## Start with an existing edition
@@ -429,3 +431,18 @@ the LIBNOVA producer/client, both guides, dependency declaration, frozen
 source, original operation and retained results. The installed **Research
 preservation** application keeps the original workspace and the same managed
 Python/source checks when opening a LIBNOVA destination.
+
+## Continue the same reviewed collection in Archivematica
+
+The [Archivematica operator guide](ARCHIVEMATICA.md) covers the complete native
+receiving arm for the reviewed BagIt produced here. It selects the actual mounted
+transfer-source location, pinned Dashboard/Storage deployment, processing
+configuration and receiving locations. Preparation retains the byte-identical
+original ZIP and full record/member inventory.
+
+The saved destination continues the original transfer and SIP, presents actual
+processing choices, supports the selected backlog arrangement and verifies AIP
+original files plus reviewed metadata through the released METS/PREMIS
+relationships. A selected DIP is tracked separately. The original request history,
+receiving reports and all four provider source/guide files travel with the
+complete workbench or standalone provider snapshot.

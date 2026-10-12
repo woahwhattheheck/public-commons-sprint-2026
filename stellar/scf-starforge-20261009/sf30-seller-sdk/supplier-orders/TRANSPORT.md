@@ -1,5 +1,10 @@
 # Configured supplier HTTPS intake and delivery
 
+For daily document preparation, sending, provider-result recovery and customer
+handover, start with the [customer operating guide](GUIDE.md). This reference is
+for the host operator configuring the agreed HTTPS connection and for client
+implementers using its retained records.
+
 This is the HTTPS continuation of the existing supplier order workspace. It receives complete original ORDER XML into the same source/document store, and sends a reviewed native confirmation, dispatch notification or invoice through a channel configured by the host operator. The existing order revisions, original XML, file downloads, operation IDs and portable customer package remain authoritative.
 
 The public Unite interface documentation establishes an onboarding sequence—consultation, development/test, then access setup and activation—and identifies openTRANS 1.0 and HTTPS as the usual choices. It does not publish a universal account URL, authentication scheme, transport acknowledgment body or retry guarantee. Configure the actual connection sheet agreed for the supplier. The implementation does not infer those details from an HTTP success code or a receipt-only ORDERRESPONSE. The latter is a business response that Unite says it does not process as an availability confirmation.
@@ -22,7 +27,7 @@ The following is a template. The reserved example domains, credentials, statuses
       "id": "supplier-test",
       "title": "Agreed supplier test connection",
       "mode": "test",
-      "supplierId": "ACTUAL_UNITE_SUPPLIER_NUMBER",
+      "supplierId": "ACTUAL_AGREED_SUPPLIER_IDENTIFIER",
       "agreement": { "reference": "Actual onboarding connection sheet and revision" },
       "incoming": {
         "url": "https://supplier.example.invalid/edi/order",
@@ -75,14 +80,22 @@ Every URL must be canonical HTTPS without credentials, query parameters or fragm
 
 For acknowledgments, declare accepted 2xx statuses and any statuses the agreement explicitly establishes as *definitely not accepted*. Do not treat every 4xx/5xx as safe to retry. If the agreement prescribes an exact response body, set exactBodySha256 to its complete SHA-256. receiptHeader is an optional dedicated response header. maxResponseBytes bounds retained response bytes; a larger or interrupted response remains UNKNOWN with its retained prefix and observed length, never a false acknowledgment. A complete response is retained even when its status is unrecognized.
 
+A channel marked **Test** still performs a real HTTPS POST to its configured
+endpoint. Select the endpoint owner's actual test service and agreement. The label
+does not create a simulator, activate an account or certify an integration.
+
 The configuration is snapshotted when the workspace opens. Close and reopen after editing its channel fields. Channel fingerprints include the negotiated public selection and credential reference names. Rotating the value of an existing credential does not revise the business channel.
 
 ## Start intake and the private desk
 
+Use absolute workspace, configuration and request-file paths with the installed
+launcher. Several browser clients may share one running host. Close that host
+before starting a separate CLI or merchant host over the same workspace.
+
 ~~~sh
 starforge supplier-orders serve \
-  --workspace ./supplier-workspace \
-  --transport-config ./supplier-channels.json \
+  --workspace /srv/supplier-orders/supplier \
+  --transport-config /srv/supplier-orders/config/channels.json \
   --https-intake
 ~~~
 
@@ -92,8 +105,8 @@ To run just the receiving listener:
 
 ~~~sh
 starforge supplier-orders intake \
-  --workspace ./supplier-workspace \
-  --transport-config ./supplier-channels.json
+  --workspace /srv/supplier-orders/supplier \
+  --transport-config /srv/supplier-orders/config/channels.json
 ~~~
 
 The receiver accepts authenticated raw XML POST up to 64 MiB, validates complete EOF and content length, retains the original bytes, and then invokes the existing native openTRANS parser. It only accepts ORDER documents for its declared supplier. Original DTD and business findings remain available in the same workspace.
@@ -108,7 +121,7 @@ Intake authentication failures do not retain the submitted body. Busy/closing/tr
 
 ## Review, prepare and send
 
-In the private desk, create and review the original confirmation, dispatch or invoice through the existing draft workflow. Prepare its complete native XML first. The transport panel then selects that exact prepared document and a declared channel, shows their identities, and creates a delivery intent with an operator reason.
+In the private desk, create and review the confirmation, dispatch or invoice through the draft workflow. Prepare its complete native XML first. Open **EDI deliveries → Configured channels** to inspect the available connection. On the prepared document, choose **Prepare transmission**; review the exact document and channel identities, give the reason and retain the ready transmission. **Send this document** makes the separate explicit transfer.
 
 Preparation checks the current original order branch, saved draft revision, native review and supplier identity. The pending intent pins the complete file and channel. The operator may select that same prepared document into current quantities before transport. This exact one-document advance from its pinned source branch is accepted. Send rechecks the same business selection and prospective fulfilment atomically before recording SENDING. If the source branch or draft has advanced, prepare the intended current XML and cancel the obsolete intent.
 
@@ -116,15 +129,15 @@ The full explicit CLI path is:
 
 ~~~sh
 starforge supplier-orders transport-channels \
-  --workspace ./supplier-workspace --transport-config ./supplier-channels.json
+  --workspace /srv/supplier-orders/supplier --transport-config /srv/supplier-orders/config/channels.json
 
 starforge supplier-orders prepare-transmission \
-  --workspace ./supplier-workspace --transport-config ./supplier-channels.json \
-  --request ./prepare-transmission.json
+  --workspace /srv/supplier-orders/supplier --transport-config /srv/supplier-orders/config/channels.json \
+  --request /srv/supplier-orders/requests/prepare-transmission.json
 
 starforge supplier-orders send-transmission \
-  --workspace ./supplier-workspace --transport-config ./supplier-channels.json \
-  --request ./send-transmission.json
+  --workspace /srv/supplier-orders/supplier --transport-config /srv/supplier-orders/config/channels.json \
+  --request /srv/supplier-orders/requests/send-transmission.json
 ~~~
 
 A preparation request uses actual returned document/channel hashes:
@@ -169,7 +182,8 @@ One Send makes one HTTPS POST. The complete source is rehashed before use; the s
 
 On process interruption, the original native operation owner is reconciled through the existing workspace store. An ended SENDING attempt becomes UNKNOWN, preserving its source and attempt ID. It is never automatically replayed. A still-live owner remains active.
 
-Resolve requires actual provider evidence:
+In the browser, **Record provider result** records actual provider evidence for
+an unknown outcome. The corresponding native `resolve` request is:
 
 ~~~json
 {
@@ -186,21 +200,21 @@ Use ACKNOWLEDGED when that is the actual readback. An optional evidenceFileId pl
 
 ~~~sh
 starforge supplier-orders resolve-transmission \
-  --workspace ./supplier-workspace --request ./provider-readback.json
+  --workspace /srv/supplier-orders/supplier --request /srv/supplier-orders/requests/provider-readback.json
 starforge supplier-orders retry-transmission \
-  --workspace ./supplier-workspace --request ./deliberate-retry.json
+  --workspace /srv/supplier-orders/supplier --request /srv/supplier-orders/requests/deliberate-retry.json
 ~~~
 
-Retry has requestId, transmissionId, expectedRevision and reason. It creates READY only. An additional explicit Send, with its own original request ID and current revision, performs the later attempt. Cancel uses the same four fields. Acknowledged deliveries cannot be cancelled or replayed through these actions.
+The native `retry` request has requestId, transmissionId, expectedRevision and reason. In the browser, **Prepare another attempt** performs this step and creates READY only. A separate **Send this document** action, with its own request ID and current revision, performs the later POST. Cancel uses the same four fields. Acknowledged deliveries cannot be cancelled or replayed through these actions.
 
 HTTP acknowledgment does not assert order acceptance, inventory reservation, invoice approval or payment. recipientProcessing remains NOT_REPORTED for outgoing transfers. A receipt-only ORDERRESPONSE must not be substituted for the actual availability/cancellation confirmation required by the business interface.
 
 ## History, APIs and full receiving
 
 ~~~sh
-starforge supplier-orders transmissions --workspace ./supplier-workspace --direction outgoing
-starforge supplier-orders transmission --workspace ./supplier-workspace --id ORIGINAL_TRANSMISSION_ID
-starforge supplier-orders transmission-history --workspace ./supplier-workspace --id ORIGINAL_TRANSMISSION_ID --offset 0 --limit 50
+starforge supplier-orders transmissions --workspace /srv/supplier-orders/supplier --direction outgoing
+starforge supplier-orders transmission --workspace /srv/supplier-orders/supplier --id ORIGINAL_TRANSMISSION_ID
+starforge supplier-orders transmission-history --workspace /srv/supplier-orders/supplier --id ORIGINAL_TRANSMISSION_ID --offset 0 --limit 50
 ~~~
 
 The public native class is workspace.transport. Methods are channels, list, get, history, prepare, send, retry, resolve and cancel. Lists and histories have bounded complete pages and nextOffset; history also returns transmissionId and the current revision. No record is silently truncated. The whole original events remain in the package.
@@ -224,8 +238,9 @@ The original Merchant supplier-order provider exposes matching transport_channel
 Whole export and customer receive remain the original operations:
 
 ~~~sh
-starforge supplier-orders export --workspace ./supplier-workspace --request-id supplier-handover-001 --out ./supplier-workspace.zip
-starforge supplier-orders receive --workspace ./customer-workspace --input ./supplier-workspace.zip --request-id supplier-receive-001
+starforge supplier-orders export --workspace /srv/supplier-orders/supplier --request-id supplier-handover-001 --out /srv/supplier-orders/handover/customer-orders.zip
+starforge supplier-orders receive --workspace /srv/supplier-orders/customer --input /srv/supplier-orders/handover/customer-orders.zip --request-id supplier-inspect-001 --mode inspect
+starforge supplier-orders receive --workspace /srv/supplier-orders/customer --input /srv/supplier-orders/handover/customer-orders.zip --request-id supplier-receive-001 --mode merge
 ~~~
 
 The package includes original documents, source XML, transmissions and their complete event histories, retained response/evidence files, source order revisions and original operations. Import verifies new transmission seals and file/document references before merge. Existing current customer selections and newer local revisions retain the original conflict-preserving behavior.
@@ -234,35 +249,43 @@ Imported transmission rows are historical. Neither matching IDs nor an imported 
 
 The runtime drains actual send/intake tasks before closing their workspace. The separate HTTPS listener stops accepting requests, waits for original receiving operations and closes its sockets. A failed close retains the owner for a retry. Non-serving CLI operations close before printing terminal JSON.
 
-## Native integration receiving
+## Maintainer verification with local HTTPS
+
+This section describes an optional product verification operation. Daily operators
+use the installed desk and their negotiated connection. Choose one of the
+invocations below for a new verification; preserve that selection and the same
+operation ID/directories when resuming it.
 
 The installed export supplier-orders/https-receiving provides a complete local TLS receiving program over the retained original publisher ORDER and the native draft/parser/workspace. It uses an isolated local certificate, declared test channel and peer receipt store. It exercises actual authenticated intake, explicit confirmation/dispatch/invoice delivery, lost acknowledgment and actual retained peer readback, controlled non-acceptance/retry, source/history/portable customer reopening and full lifetime closure. It does not connect to a live Unite or implementation-partner endpoint.
 
 This is an executable local integration, not a certification result. Record its actual returned operation/report before asserting completion. A blocked native runtime is a pending receiving operation; it is not a successful test or a live integration.
 
 
-Run the receiving from the selected source or installed module with the actual existing browser runtime:
+Run from the verified package root, or use the corresponding path in the selected
+source checkout. Supply the actually installed browser module and executable:
 
 ~~~sh
 node source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-https-native.mjs \
-  --directory ./https-receiving \
-  --producer ./https-producer \
-  --customer ./https-customer \
-  --operation supplier-order-https-native-2769-20261012 \
+  --directory /srv/supplier-orders/verification/https-receiving \
+  --producer /srv/supplier-orders/verification/https-producer \
+  --customer /srv/supplier-orders/verification/https-customer \
+  --operation supplier-https-verification \
   --browser-module /actual/installed/playwright \
   --browser-executable /actual/installed/chromium
 ~~~
 
 The program requires existing OpenSSL for its private local test certificate and the original Linux flock helper. Its native typed client calls the actual Merchant supplier-order MCP dispatch; the separate real browser uses the original private HTTP API and downloads the complete retained response. Input/output requests and native operations are retained in the selected receiving directory. Reopen the same directories and operation after interruption. The native test channel is fixed to loopback; no supplier configuration or document is sent to a remote partner.
 
-To continue the already completed installed release and original 27-tool customer workflow, pass both full reports:
+When the verification is intended to continue an already completed installed
+release and its 27-tool customer workflow, choose this invocation with both full
+reports instead:
 
 ~~~sh
 node source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-https-native.mjs \
-  --directory ./https-receiving --producer ./https-producer --customer ./https-customer \
-  --operation supplier-order-https-native-2769-20261012 \
-  --baseline-report ./installed/receiving/baseline/receiving/report.json \
-  --operator-report ./installed/receiving/operator/operator-report.json \
+  --directory /srv/supplier-orders/verification/https-receiving --producer /srv/supplier-orders/verification/https-producer --customer /srv/supplier-orders/verification/https-customer \
+  --operation supplier-https-verification \
+  --baseline-report /srv/supplier-orders/verification/installed/receiving/baseline/receiving/report.json \
+  --operator-report /srv/supplier-orders/verification/installed/receiving/operator/operator-report.json \
   --browser-module /actual/installed/playwright \
   --browser-executable /actual/installed/chromium
 ~~~

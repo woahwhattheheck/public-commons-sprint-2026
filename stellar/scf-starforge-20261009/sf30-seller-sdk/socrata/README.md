@@ -427,3 +427,10 @@ GET /api/publisher/exports/:kind/:id
 ```
 
 Supported kinds are `draft-csv`, `draft-review`, `buyer-config`, `session-manifest`, `session-csv`, `session-jsonl` and `session-review`. The original publisher validates the retained ID and reads its own export; the route does not accept arbitrary filesystem paths.
+
+
+## Property source and receiving workflow
+
+The **Property operations** section adds original HPD baseline inspection, separately retained Propply report editions, explicit property identity reviews, account-contract-bound RentCheck template/inspection/report receiving, and selected merchant resources. The same original workspace lease, serialized actions and portable package retain the complete source and request history. Existing HPD editions, publication and buyer records keep their original models.
+
+The full [property operating guide](../property-operations/OPERATING.md) covers actual API boundaries, one-call dispatch and uncertain-create recovery, host credential references, reviewed customer rights, original publisher/buyer continuation and complete reopen. Vendor calls are disabled unless the original host explicitly enables the selected contract. Installing the feature does not acquire a report or create an inspection.

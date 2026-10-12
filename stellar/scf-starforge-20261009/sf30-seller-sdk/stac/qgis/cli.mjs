@@ -28,6 +28,7 @@ const ACTIONS = Object.freeze({
   'workspace-history': {command:'history',required:['workspace']},
   'workspace-operation': {command:'operation',required:['workspace','request-id']},
   'field': {command:'field',required:['workspace','input']},
+  'parcels': {command:'parcels',required:['workspace','input']},
   'project-export': {command:'export',required:['workspace','file'],optional:['revision']},
   'project-receive': {command:'receive',required:['workspace','file'],optional:['expected-sha256']},
   'native-inspect': {command:'native-inspect',required:['workspace','input'],native:true},
@@ -79,6 +80,10 @@ export const QGIS_HELP = [
   '  starforge stac-qgis field --workspace DIR --input ORIGINAL_FIELD_ACTION_JSON',
   '  Native field actions use nativeRuntime from that same original action file.',
   '',
+  'Original parcel review, accountable entities and assessment portfolios:',
+  '  starforge stac-qgis parcels --workspace DIR --input ORIGINAL_PARCEL_ACTION_JSON',
+  '  Complete source intake, staff reviews, portfolio and map publication use the original workspace journal.',
+  '',
   'Complete project receiving:',
   '  starforge stac-qgis project-export --workspace DIR --file NEW_ZIP [--revision REVISION]',
   '  starforge stac-qgis project-receive --workspace RECEIVER_DIR --file ZIP [--expected-sha256 SHA256]',
@@ -90,7 +95,7 @@ export const QGIS_HELP = [
   'Install the generated ZIP through QGIS Plugins > Manage and Install Plugins > Install from ZIP.',
   'The desktop operates the same original workspace, maps, edition review and receiving archive.',
   'The existing stac qgis-export, qgis-open and qgis-plugin aliases remain available.',
-  'Read qgis/OPERATIONS.md, VECTOR_RECEIVING.md and FIELD_OPERATIONS.md for complete handover.'
+  'Read qgis/OPERATIONS.md, VECTOR_RECEIVING.md, FIELD_OPERATIONS.md and PARCELS.md for complete handover.'
 ].join('\n') + '\n';
 
 function flags(argv) {

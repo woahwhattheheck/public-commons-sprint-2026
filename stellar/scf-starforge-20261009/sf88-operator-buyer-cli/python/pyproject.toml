@@ -24,6 +24,7 @@ agents = [
 ]
 
 [project.scripts]
+stellar-forge-analysis-project = "stellar_forge_buyer.analysis_projects:main"
 stellar-forge-dbnomics-analysis = "stellar_forge_buyer.dbnomics:main"
 stellar-forge-duckdb = "stellar_forge_buyer.duckdb_cli:main"
 stellar-forge-postgres = "stellar_forge_buyer.postgres_cli:main"
@@ -37,8 +38,9 @@ stellar-forge-synthesis = "stellar_forge_buyer.synthesis_cli:main"
 stellar-forge-worldbank-analysis = "stellar_forge_buyer.worldbank_analysis:main"
 
 [tool.setuptools]
-packages = ["stellar_forge_buyer", "stellar_forge_buyer.reconciliation"]
+packages = ["stellar_forge_buyer", "stellar_forge_buyer.reconciliation", "stellar_forge_buyer.timescale_intake"]
 
 
 [tool.setuptools.package-data]
 "stellar_forge_buyer.reconciliation" = ["OPERATING.md", "public/*.html", "public/*.js", "public/*.css", "browser-receiving.mjs"]
+"stellar_forge_buyer.timescale_intake" = ["OPERATING.md", "public/*.html", "public/*.js", "public/*.css", "browser-receiving.mjs"]

@@ -6,7 +6,7 @@ The installed selection includes both **Open311 municipal service operations** a
 
 ## Runtime and package
 
-Use Node.js 22.13 or newer with its built-in SQLite support. Start the commands from an exact source checkout or from the installed merchant package. The reporting component adds no external database, subscription or hosted compute.
+Use Node.js 22.16 or newer for the complete installed merchant package. Direct reporting modules require Node.js 22.13 or newer with built-in SQLite support. Start the commands from an exact source checkout or from the installed merchant package. The reporting component adds no external database, subscription or hosted compute.
 
 The maintained source selection is `open311-reporting`. Build it from the repository revision you intend to install:
 

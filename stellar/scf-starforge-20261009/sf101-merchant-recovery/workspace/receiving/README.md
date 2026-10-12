@@ -172,3 +172,9 @@ The process prints concise stage/result paths. Preserve the private files throug
 - Original connected CLI, merchant catalog/client/provider and their full operation contract: `workspace/cli.mjs`, `merchant-catalog.mjs`, `merchant-client.mjs`, `merchant-provider.mjs` and `MCP.md`.
 
 These source references describe the implemented workflow. The actual owner’s returned receiving record supplies the execution date, selected host, source hashes and observed result.
+
+## Complete source and service runner
+
+The [complete source and service guide](service-run/RUN_ORIGINAL.md) supplies the full application checkout, standalone original journey, actual service-account setup and both producing commands. Its published package retains all 1,685 original files in 32 independently verified source parts, including the developer portal's computed static assets.
+
+Use `service-run/materialize-original-source.py` to receive that exact source beside the package. The optional `service-run/launch-original-controller.py` runs the selected complete supervisor and maintained Library child from one host selection. The supervisor checks the real service UID/GID before creating its original root, prepares dependencies, runs the original journey and this operator receiver, and saves the whole case through the current Library workflow. The guide documents retained-process continuation, source resolution and complete output custody.

@@ -1,8 +1,8 @@
 {
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "grant-reviewer",
-  "title": "Grant purchase reviewer",
-  "description": "Original grant purchase review, complete retained Buyer results, merchant access and receiving handover",
+  "title": "SCF application, submission review and grant purchase reviewer",
+  "description": "Complete SCF application, editable drafts, named review and author revision, explicit carry-forward, original planning and handover, grant purchases and independent receiving",
   "base": {
     "commands": [
       "installation",
@@ -49,7 +49,7 @@
   "supportFiles": [],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Review and receive the original Stellar grant purchase through Applications and merchant MCP",
+    "description": "Read the complete SCF application, prepare and review its saved submission, retain complete handovers and operate the original grant purchase through Applications and merchant MCP",
     "readme": "stellar/scf-starforge-20261009/distribution/selections/GRANT_REVIEWER.md"
   },
   "excludeFiles": [

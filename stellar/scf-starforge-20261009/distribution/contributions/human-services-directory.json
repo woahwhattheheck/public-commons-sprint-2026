@@ -1,0 +1,18 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "human-services-directory",
+  "description": "Original HSDS and FHIR Human Services Directory sources, complete editions and comparisons, reviewed mapping and service selection, Gravity referral joins, and editable handoffs.",
+  "commands": {
+    "human-services-directory": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/cli.mjs"
+  },
+  "commandDescriptions": {
+    "human-services-directory": "Acquire and import original directory sources, review all mappings, select a service, join the selected original clinical resources and receive the complete workspace."
+  },
+  "exports": {
+    "./seller/human-services-directory": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/merchant.mjs",
+    "./buyer/human-services-directory": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/customer.mjs"
+  },
+  "components": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory"
+  ]
+}

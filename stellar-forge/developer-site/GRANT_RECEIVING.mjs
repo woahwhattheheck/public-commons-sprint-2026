@@ -275,7 +275,22 @@ export async function inspectGrantApplication(page, {
     const contents = await page.locator('nav[aria-label="Application sections"] a').evaluateAll(items => items.map(item => ({
       id: item.hash.slice(1), text: item.textContent.trim(),
     })));
-    need(contents.length === 10 && new Set(contents.map(item => item.id)).size === 10, 'The complete ten-section application navigation is missing.');
+    const expectedSections = [
+      'project-and-requested-outcome',
+      'customer-problem-need-and-adoption',
+      'why-stellar-and-what-we-contribute',
+      'defined-architecture-and-operating-behavior',
+      'working-product-and-demonstrated-results',
+      'three-funded-tranches-and-six-priced-deliverables',
+      'threat-response-and-outcome-measurement',
+      'delivery-capacity-payment-timing-and-sustainability',
+      'applicant-experience-and-submission',
+      'open-the-existing-work',
+    ];
+    if (originals.selected.get('/grant.html').bytes.toString('utf8').includes('<!-- grant-reviewer-entry:start -->')) {
+      expectedSections.unshift('review-the-product');
+    }
+    need(same(contents.map(item => item.id), expectedSections), 'Retain every original application section and the selected working-product opening.');
     for (const item of contents) {
       await anchor(item.id);
       need((await page.locator('#' + item.id).innerText()).trim(), 'An application section is empty: ' + item.id);

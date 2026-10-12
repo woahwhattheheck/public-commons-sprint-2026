@@ -41,4 +41,87 @@ The customer module needs the existing Node Research application and Python 3's 
 
 The separate native commissioning builder uses the already installed Codex primary runtime and @oai/artifact-tool to create and visually inspect an original demonstration layout. It is an authoring tool for the receiving programme, not a new customer runtime dependency.
 
-See INTEGRATION.md for the original factory, validation, HTTP, static and portable joins. See native/RECEIVING.md for the same-store original-study continuation. The CLI mirrors the same selected-dossier API and writes an output only when an existing file is absent or byte-identical.
+See INTEGRATION.md for the original factory, validation, HTTP, static and portable joins. See native/RECEIVING.md for the same-store original-study continuation. The original direct-store CLI remains available for its existing receiving programme. The installed `research-client template-*` commands attach to the already-running Research application and use its original private connection file, workspace identity and download writer. See the complete operating examples below.
+
+
+## Open the installed workbook workflow
+
+Start **Research** from the existing Applications console, select the actual dossier, and open **Workbook exchange**. The link carries the original session capability in its fragment. The workbook page reads the running application's workspace identity before loading any saved request. Browser request state is keyed by that workspace and dossier; a new listener at the same address cannot pick up another workspace's request.
+
+Return to the selected dossier with **Back to Research**. Unaccepted mapping/release or extraction-draft preparation prompts before leaving. An accepted action is already part of the original dossier. Whole-workspace Export and Receive carry its complete workbook and review history.
+
+The assigned reviewer can download the unchanged pending request, inspect its original saved operation and retry that same request. A server `REVISION_CONFLICT` keeps the old uncommitted request available for download while a new review is prepared against the current revision. A lost reply keeps the original pending request. If the server has returned a saved operation but refreshing the view or clearing browser storage fails, the page preserves that accepted response and explains how to reopen it.
+
+All native workbook inspection and patching continue through the original host's configured extraction Python and AbortSignal.
+
+## Complete installed command line
+
+Read `research-client template-help` for every option. Every command except help uses the original application's private connection file and actual dossier directory:
+
+```sh
+research-client template-view \
+  --connection-file /private/research-connection.json \
+  --directory /private/research-store --id DOSSIER \
+  --section templates --limit 200
+```
+
+Use the returned original revision for all later pages, records and publication rows. `template-record` returns the complete inspection or comparison. Its full original blobs remain downloadable even when a browser preview is shortened.
+
+For an original workbook, retain a JSON options file containing its filename and optional format/delimiter. Compute the original file's SHA256 and pass that value with `--source-file`. The file is fully checked before the same running application's workbook inspector receives it:
+
+```sh
+research-client template-stage-template \
+  --connection-file /private/research-connection.json \
+  --directory /private/research-store --id DOSSIER \
+  --input workbook-options.json --source-file "Client template.xlsx" \
+  --sha256 ORIGINAL_FILE_SHA256
+```
+
+The whole staged response contains the original workbook and inspection references. Create the explicit `retain-template` request with the selected reviewer, original request ID, expected revision and reason, then save that request as JSON and use `template-review`. Subsequent `template-stage-mapping`, `template-stage-release`, `template-stage-return` and `template-stage-return-review` follow the same preview, retain, review sequence.
+
+`template-prepare-extraction-draft` takes the original return-review ID, assigned actor, result-set ID and saved request ID. `template-accept-extraction-draft` receives its unchanged extraction request, returned request blob and retained receipt ID. The existing extraction commands still perform submission, independent review and resolution.
+
+Download the exact whole workbook through the existing file writer:
+
+```sh
+research-client template-download \
+  --connection-file /private/research-connection.json \
+  --directory /private/research-store --id DOSSIER \
+  --revision ORIGINAL_REVISION --blob ORIGINAL_BLOB_SHA256 \
+  --filename "Client results.xlsx" --out /private/delivery/client-results.xlsx
+```
+
+The actual byte count and SHA256 are returned. The chosen blob identity is checked against the saved complete file. The writer preserves an existing destination. Spaces and Unicode in the original workbook filename remain intact; an output path is always the caller's explicit destination. Omit `--filename` when downloading an inspection or other non-workbook blob.
+
+For full editable receiving, use the existing `research-client export` and `reopen` commands. Both JSON and gzip include historical template files, releases, actual client returns, mappings, review decisions, original extraction request and receipt records.
+
+## Typed SDK attachment
+
+The original Research client exposes the complete workbook family while retaining its connection-file reread, workspace binding, timeout, AbortSignal, pending-operation lifetime and exclusive file writer:
+
+```js
+import {ResearchWorkspaceClient} from './workspace-client.mjs';
+
+const client = new ResearchWorkspaceClient({
+  connectionFile: '/private/research-connection.json',
+  directory: '/private/research-store',
+});
+try {
+  await client.status();
+  const templates = client.templateExchange(dossierId);
+  const overview = await templates.page({}, {signal});
+  const selected = await templates.record({
+    revision: overview.revision, kind: 'release', recordId: releaseId,
+  }, {signal});
+  await templates.download(
+    selected.record.workbook.sha256,
+    '/private/delivery/client-results.xlsx',
+    {revision: overview.revision, filename: selected.record.filename},
+    {signal},
+  );
+} finally {
+  await client.close();
+}
+```
+
+`createTemplateExchangeClient` retains its original browser-fetch interface. The installed attachment supplies the existing Research JSON, blob and download transports directly. Its complete declaration covers all staged actions, original reviews, publications, saved operations, extraction-draft acceptance and whole-file downloads.

@@ -11,9 +11,9 @@ function csvCell(value) {
 }
 function csv(items) {
   const columns = ['serviceRequestId','serviceCode','serviceName','status','requestedAt','updatedAt',
-    'expectedAt','agency','address','description','latitude','longitude','collectionId','captureId',
+    'expectedAt','sourceStatusNotes','agency','address','description','latitude','longitude','collectionId','captureId',
     'sourceSha256','observationCount','versionCount','reviewStatus','assignee','dueDate','reviewNote','needsReview'];
-  const rows = items.map(item => ({ ...item, reviewStatus:item.review?.status ?? 'new',
+  const rows = items.map(item => ({ ...item, sourceStatusNotes:item.source?.status_notes ?? null, reviewStatus:item.review?.status ?? 'new',
     assignee:item.review?.assignee ?? '', dueDate:item.review?.dueDate ?? '',
     reviewNote:item.review?.note ?? '', needsReview:item.review?.needsReview ?? false }));
   return [columns.map(csvCell).join(','), ...rows.map(row => columns.map(key => csvCell(row[key])).join(','))].join('\r\n')+'\r\n';
@@ -30,7 +30,7 @@ function report({collection, projection, workspace}) {
   const windows=collection.nodes.map(window=>{
     const capture=window.captureId?sources.get(window.captureId):null;
     return '<tr><td>'+escape(window.id)+(window.parentId?'<br><span class="meta">Parent '+escape(window.parentId)+'</span>':'')+
-      '</td><td>'+escape(window.startDate)+'<br>'+escape(window.endDate)+'</td><td>'+escape(window.state)+
+      '</td><td>'+escape(window.startDate)+'<br>'+escape(window.endDate)+(window.page == null ? '' : '<br>Page '+escape(window.page))+'</td><td>'+escape(window.state)+
       (window.problem?'<br>'+escape(window.problem):'')+'</td><td>'+escape(capture?.rowCount ?? '')+
       (capture?'<br><span class="meta">Limit '+escape(capture.responseLimit)+'</span>':'')+'</td><td>'+
       escape(capture?.capturedAt ?? '')+'<br><span class="mono">'+escape(capture?.sourceSha256 ?? '')+'</span></td></tr>';
@@ -40,7 +40,7 @@ function report({collection, projection, workspace}) {
     escape(capture.sourceBytes)+'</td><td class="mono">'+escape(capture.sourceSha256)+'</td></tr>').join('');
   const itemRows=projection.items.map(item=>'<tr><td>'+escape(item.serviceRequestId)+'<br><span class="meta">'+
     escape(item.requestedAt)+'</span></td><td>'+escape(item.status)+'<br><span class="meta">'+
-    escape(item.updatedAt)+'</span></td><td><strong>'+escape(item.serviceName || item.serviceCode || 'Unclassified')+
+    escape(item.updatedAt)+'</span>'+(item.source?.status_notes ? '<p>Source disposition: '+escape(item.source.status_notes)+'</p>' : '')+'</td><td><strong>'+escape(item.serviceName || item.serviceCode || 'Unclassified')+
     '</strong><br>'+escape(item.agency)+'<br>'+escape(item.address)+'<p>'+escape(item.description)+'</p></td><td>'+
     escape(item.review?.status ?? 'new')+'<br>'+escape(item.review?.assignee)+'<br>'+escape(item.review?.dueDate)+
     '<p>'+escape(item.review?.note)+'</p>'+(item.review?.needsReview?'<strong>Source changed since this review</strong>':'')+
@@ -67,23 +67,25 @@ function report({collection, projection, workspace}) {
     '@media print{body{margin:12mm;max-width:none}thead{display:table-header-group}tr{break-inside:avoid}h2,h3,h4{break-after:avoid}pre{font-size:9px}}'+
     '</style><h1>'+escape(collection.name)+'</h1><p>'+escape(collection.connection.name)+' · '+escape(collection.state)+
     '</p><p class="meta">Workspace '+escape(workspace.workspaceId)+' · Revision '+escape(workspace.revision)+' · Collection '+escape(collection.id)+
-    '</p><h2>Collected population and interpretation</h2><p>The selected provider query follows its creation-date and declared provider filters. '+
+    '</p><h2>Collected population and interpretation</h2><p>The selected provider query follows its saved time basis and declared provider filters. '+
     'Each retained response is an observation at its recorded time. The worklist uses the latest observed original version of each request within this collection; '+
     'a timestamp tie is resolved by capture identity. Repeated and changed versions remain in the original source inventory and version sections. '+
     'Internal review refers to its selected source version.</p><table>'+pairs([
-      ['Requested start',collection.query.start_date],['Requested end',collection.query.end_date],
+      ['Date basis',collection.policy.timeBasis ?? 'created'],['Traversal',collection.policy.strategy ?? 'windows'],
+      ['Selected start',collection.policy.timeBasis === 'updated' ? collection.query.updated_after : collection.query.start_date],
+      ['Selected end',collection.policy.timeBasis === 'updated' ? collection.query.updated_before : collection.query.end_date],
       ['First source observation',summary.firstObservedAt],['Last source observation',summary.lastObservedAt],
       ['Collection state',summary.state],['All terminal windows below their declared cap',summary.capResolved ? 'Yes':'No'],
       ['Unique service requests',counts.uniqueRequests],['Original returned row occurrences',counts.returnedRows],
       ['Additional occurrences of an existing request',counts.duplicateObservations],['Requests with multiple original versions',counts.changedRequests],
       ['Retained successful response bodies',counts.originalCaptureCount],['Unresolved capped windows',counts.limitedWindows],
       ['Failed windows',counts.failedWindows],['Occurrences outside recorded date bounds',counts.outOfWindowRows],
-      ['Occurrences without a usable requested datetime',counts.unknownDateRows],
+      ['Occurrences without a usable selected datetime',counts.unknownDateRows],
       ['Initial window maximum, days',collection.policy.maxWindowDays],['Selected boundary quantum, milliseconds',collection.policy.queryQuantumMs],
       ['Selected minimum interval, milliseconds',collection.policy.minimumWindowMs],['Selected boundary overlap, milliseconds',collection.policy.boundaryOverlapMs]
-    ])+'</table><p>Rows outside the recorded bounds and rows without a usable requested datetime remain visible. '+
+    ])+'</table><p>Rows outside the recorded bounds and rows without a usable selected datetime remain visible. '+
     'An unresolved capped interval remains a specific selection for further operator review. The selected quantum and overlap are collection settings; '+
-    'the connection supplies the documented response ceiling. Refinement retains every capped parent before querying its children.</p>'+
+    'the connection supplies the documented response ceiling. Window refinement retains every capped parent; page traversal retains each full page before advancing and finishes on a short page. An updated-time feed describes changed cases in that exact provider selection. Provider data can change while pages are being collected.</p>'+
     '<h3>Original selection</h3><pre>'+escape(JSON.stringify(collection.requestedQuery,null,2))+'</pre>'+
     '<h3>Effective collection filters</h3><pre>'+escape(JSON.stringify(collection.query,null,2))+'</pre>'+
     '<h2>Source credit</h2><table>'+pairs([['Publisher',attribution.publisher],['Dataset',attribution.title],
@@ -93,7 +95,7 @@ function report({collection, projection, workspace}) {
     grouped(projection.items,'status','Unstated').map(([label,count])=>'<tr><td>'+escape(label)+'</td><td>'+count+'</td></tr>').join('')+
     '</tbody></table><table><thead><tr><th>Service code</th><th>Unique requests</th></tr></thead><tbody>'+
     grouped(projection.items,'serviceCode','Unclassified').map(([label,count])=>'<tr><td>'+escape(label)+'</td><td>'+count+'</td></tr>').join('')+
-    '</tbody></table><h2>Every planned and refined window</h2><table><thead><tr><th>Window</th><th>Start / end</th><th>Traversal state</th>'+
+    '</tbody></table><h2>Every planned window and source page</h2><table><thead><tr><th>Window</th><th>Start / end</th><th>Traversal state</th>'+
     '<th>Returned rows</th><th>Observed / original response SHA-256</th></tr></thead><tbody>'+windows+'</tbody></table>'+
     '<h2>Consolidated request review</h2><table><thead><tr><th>Request / created</th><th>Source status / updated</th><th>Service, location and description</th>'+
     '<th>Internal review</th><th>Selected original and history</th></tr></thead><tbody>'+itemRows+'</tbody></table>'+

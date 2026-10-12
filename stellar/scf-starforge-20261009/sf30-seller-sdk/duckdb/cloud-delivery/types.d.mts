@@ -99,7 +99,7 @@ export interface ComparisonRecord {
 export interface ComparisonPage extends ComparisonRecord {
  findings:JsonObject[];offset:number;limit:number;total:number;nextOffset:number|null;
 }
-export interface AuthoringEntry { plan:JsonObject; cursor?:JsonObject }
+export interface AuthoringEntry { plan:JsonObject; cursor?:string|null }
 export interface MerchantDraft {
  revision:number;operationId:OperationId;sourceSha256:Sha256;planSha256:Sha256;savedAt:string;
  plan:JsonObject;authoring:AuthoringEntry[];origin:JsonObject|null;
@@ -160,7 +160,7 @@ export interface CloudToolArguments {
  merchant_cloud_received_draft:WorkspaceInput & {receivingId:OperationId};
  merchant_cloud_upload_status:OwnerInput & {editionId:EditionId;fileId:string};
  merchant_cloud_upload_chunk:OwnerInput & {editionId:EditionId;fileId:string;offset:ByteCount;data:string;sha256:Sha256};
- merchant_cloud_catalog:WorkspaceInput & {sourceSha256:Sha256;cursor?:JsonObject};
+ merchant_cloud_catalog:WorkspaceInput & {sourceSha256:Sha256;cursor?:string};
  merchant_cloud_author_review:WorkspaceInput & {entry:AuthoringEntry;sourceSha256:Sha256};
  merchant_cloud_author_reopen:WorkspaceInput & {entry:AuthoringEntry;sourceSha256:Sha256};
  merchant_cloud_draft:WorkspaceInput & {revision:number};

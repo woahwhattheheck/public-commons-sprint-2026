@@ -53,6 +53,8 @@ the original `0.1.0-source.g0123456789ab` version form.
 
 | Selection | Product | Original Applications | Complete installed workflow |
 | --- | --- | --- | --- |
+| `human-services-directory` | Original HSDS and FHIR directory sources, complete editions and comparisons, reviewed mapping and service selection, Gravity clinical joins and editable customer handoffs | Human Services Directory; Gravity Referrals; FHIR Bulk Data; eLTSS Care Plans; Runtime management | [Complete directory programme and receiving](../../../products/human-services-directory/OPERATING.md) |
+| `source-tables` | Complete CSV and TSV source authoring, typed field meaning, retained editions and comparisons, native merchant resources and editable customer handover | Source Tables; Runtime management | [Complete installation and operation](../../../products/source-tables/OPERATING.md) |
 | `openlineage-operations` | Native Python and Java producer intake, original compressed/source bytes, job/run/dataset lineage, saved reviews and complete editable customer receiving | OpenLineage operations; Runtime management | [Complete installed operation and producer guide](../../../products/openlineage/OPERATING.md) |
 | `dbnomics` | Exact economic series and source revisions, saved analyst reports, native publication, complete editable workspace and customer receiving | DBnomics economic workspace; Runtime management | [Operating guide](../../../products/dbnomics/OPERATING.md) |
 | `coastal-operations` | Original NOAA editions, reviewed multi-station studies, complete model-input/source delivery, returned-file comparison, coastal workbooks and native customer files | Coastal source operations; Runtime management | [Operating guide](../../../products/coops/OPERATING.md) |
@@ -207,3 +209,25 @@ that Applications and merchant provider catalogs contain its selected entries,
 that installed command help matches its registrations, and that the original
 product can complete its saved native journey. Reopen the same output with
 `--resume`, and confirm an explicit different selection cannot reuse it.
+
+## Flowable process operations and customer receiving
+
+Use [flowable-merchant.json](selections/flowable-merchant.json) to compose the
+complete installed Flowable workspace, native process source, typed client,
+Applications integration and merchant MCP provider. The original process
+engine handles deployment, human tasks, native migration validation and
+execution; the saved workspace retains complete request and source/history
+receiving.
+
+~~~sh
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/tjlabs-stellar-merchant-workspace \
+  --ref FULL_ORIGINAL_COMMIT --selection flowable-merchant \
+  --out /absolute/flowable-release --offline
+~~~
+
+Follow [FLOWABLE_MERCHANT.md](selections/FLOWABLE_MERCHANT.md) for the complete
+build/install/Open workflow, actual engine receiving and customer handover.
+The recipe includes the source-owned `flowable-workspaces`,
+`merchant-provider-flowable-workspaces` and `flowable-product`
+contributions, the original browser assets and complete installed guides.

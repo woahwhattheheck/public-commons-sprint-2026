@@ -82,7 +82,7 @@ Review validates the complete existing archive, selection closure and report che
 
 `createMerchantWorkflowReports({ store, requireTool, requireOpen, isActiveCall })` exposes `view`, `review` and `receive`. The existing Console service supplies its current dispatcher predicate as `isActiveCall: call => active.has(call.id)`.
 
-The store exports `validateConsoleArchive(packet)` so report review and original profile import share one validator. Existing schema checks, host-binding history and the import transaction remain the source of receiving behavior.
+`archive-contract.mjs` owns `validateConsoleArchive(packet)`. Report review and the original profile store import that same validator; the store also retains its original validation and schema exports for existing callers. The shared contract reads the retained records without opening a database. Existing schema checks, host-binding history, recurring-series validation and the import transaction remain the source of receiving behavior.
 
 `public/workflow-report-format.mjs` provides the HTML, steps CSV and changes CSV formatters. `public/workflow-reports.mjs` supplies the report and receiving interface within the existing Workflows page. The page forwards its existing `loadProfiles` callback to reopen the received selection.
 
@@ -223,3 +223,33 @@ try {
 The client exposes host/profile reads, workflow/run listing, report construction, review, receiving, current history and resumed capture. Offline helpers reopen original report files and render all export formats. The typed interfaces preserve selected run IDs, revisions, complete native request/result records, changed-value presence, receiving results and file identities.
 
 The client reuses `OpenApiWorkflowClient` for connection pinning, bearer transport, origin handling, cancellation and failed-write outcome reporting. The report backend remains the existing `workflow-reports.mjs` service; all control and receiving pass through its existing authorization and import engine. Recurring periods use their original run IDs, and installed series behavior stays in the maintained series-aware Console store and service.
+
+## Direct offline report integration
+
+The installed distribution also exports `./merchant/console/report-files`, with adjacent TypeScript declarations. This entry reads, validates, renders and reopens complete saved reports independently of the online client. A source checkout can import the same module directly:
+
+```js
+import {
+  readWorkflowReportFile,
+  writeWorkflowReportExports,
+  reopenWorkflowReportExports
+} from './stellar-forge/mcp-merchant-operator/console/workflow-report-files.mjs';
+
+const packet = await readWorkflowReportFile('./received/report.json');
+const written = await writeWorkflowReportExports({
+  directory: './private-reports/received-period',
+  packet
+});
+const original = await reopenWorkflowReportExports({
+  directory: written.directory
+});
+console.log(original.selection, original.contentSha256, original.files);
+```
+
+The offline module loads the original archive and workflow contracts, portable formatters, and local file operations. It does not open SQLite, register merchant providers, start a Console, or load the package download transport. The command-line `inspect`, `export` and `reopen` paths use this same entry; the online client loads when an online command is selected.
+
+`client-files.mjs` owns the existing atomic file implementation. Its `writeConsoleWorkflowFile` function writes a complete string, buffer or JSON value; the existing OpenAPI `writeOpenApiWorkflowFile` export remains an alias to that function. Streaming publication and completed-file inspection keep their existing exports. File modes, private-directory checks, exact-byte conflict handling, synchronization and interrupted-link recovery follow the same implementation.
+
+`OpenApiWorkflowClient.downloadPackage` loads its existing package download module when that method is called. All package selection, digest checks, download/resume behavior and error handling continue through the original package downloader. The authenticated report and recurring-series clients retain their original Console transport.
+
+The native merchant server still owns SQLite, provider registration and execution. The report file entry can therefore be embedded in a local report receiver without importing the server's storage implementation. Existing report imports, commands, file names, report packets, digests and receiving routes remain compatible.

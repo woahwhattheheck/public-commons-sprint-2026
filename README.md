@@ -48,3 +48,9 @@ See `permitpulse_pilot/` for the commercialization-only synthetic pilot carrier.
 Five runnable application candidates now live in this public repository: [ClaimProof Commerce](claimproof-commerce/README.md), [DisburseLens](paypal-disburselens-2026/README.md), [RenewalGuard](paypal-renewalguard-2026/README.md), [CartWitness](paypal26-cartwitness/README.md), and [DisputeLedger](paypal26-disputeledger/README.md).
 
 [View the judge-entry guide](docs/PAYPAL_AI_2026_ENTRY_READINESS.md) for run commands, source references and required entry steps. These public prototypes are not verified Devpost submissions. The contest deadline is November 12, 2026, noon PST.
+
+## Human Services Directory product
+
+The [complete directory product](products/human-services-directory/README.md) joins original HSDS and FHIR service-directory source with the maintained Gravity referral workspace. It includes complete source acquisition and indices, reviewed mapping and service selection, explicit clinical bindings, editable handoffs, the operator UI, native and connected CLIs, typed Merchant SDK/MCP and installed Applications.
+
+Build the `human-services-directory` selection using the [operating guide](products/human-services-directory/OPERATING.md), then continue the original native, browser, connected and installed application programme with the [receiving guide](products/human-services-directory/RECEIVING.md).

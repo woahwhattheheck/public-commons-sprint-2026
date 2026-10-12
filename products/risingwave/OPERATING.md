@@ -71,6 +71,58 @@ feature. Its package lock records the resolved client and transitive packages. T
 browser, workbench client and dedicated MCP transport use the product's
 original Node modules.
 
+## Start the selected native RisingWave runtime
+
+The original receiving operation uses RisingWave 3.1.0. Keep its selected
+executable, process owner and private database directory together through
+native receiving and installed Applications receiving.
+
+For the original Linux x86_64 runtime, the pinned
+[release archive](https://github.com/risingwavelabs/risingwave/releases/download/v3.1.0/risingwave-v3.1.0-x86_64-unknown-linux.tar.gz)
+is 201,363,854 bytes with SHA-256
+`3e42052148bcd5cf9df076f983005f7164a8ee77d83128ab51e02489c9a7e629`.
+Reuse the selected verified executable, and bind its absolute path as
+RISINGWAVE_BIN. Set RISINGWAVE_STORE_ROOT, RISINGWAVE_LISTEN_ADDR,
+RISINGWAVE_MEMORY_BYTES, RISINGWAVE_PARALLELISM and
+RISINGWAVE_COMPACTOR_THREADS from that original receiver's host and runtime
+selection. The memory value is the budget for the whole RisingWave process.
+
+The pinned 3.1.0
+[single-node argument contract](https://github.com/risingwavelabs/risingwave/blob/45baf6460ea942e4ff57a5aa057d5b8db7f3b563/src/cmd_all/src/single_node.rs)
+uses --store-directory, also available through
+RW_SINGLE_NODE_STORE_DIRECTORY. Single-node mode is the default when no
+subcommand is supplied. Start that selected instance in its owning process:
+
+~~~sh
+"$RISINGWAVE_BIN" \
+  --store-directory "$RISINGWAVE_STORE_ROOT" \
+  --listen-addr "$RISINGWAVE_LISTEN_ADDR" \
+  --total-memory-bytes "$RISINGWAVE_MEMORY_BYTES" \
+  --parallelism "$RISINGWAVE_PARALLELISM" \
+  --compaction-worker-threads-number "$RISINGWAVE_COMPACTOR_THREADS"
+~~~
+
+With the default local storage configuration, the selected directory retains
+state_store and the SQLite metadata file meta_store/single_node.db. Keep both
+with the original operation. The single-node source fixes the internal meta,
+dashboard, compute and compactor ports at 5690, 5691, 5688 and 6660;
+--listen-addr selects the frontend address. Use the same retained instance
+for the native and managed stages.
+
+Keep the original RISINGWAVE_URL in the private environment configuration
+and point it at this selected database. The native receiving command selects
+its explicit local/TLS options. Closing the native workbench writer hands
+that workspace to Applications; the database continues serving the same
+source while the managed workbench opens, closes and reopens.
+
+The maintained `risingwave-runtime` command completes the local bootstrap above.
+It resumes the pinned archive, verifies the executable, preserves the original
+private state/environment and keeps one foreground instance through receiving.
+`prepare`, `inspect` and `serve` retain the original configuration and process;
+`inspect --connect` checks the actual database through the selected pg driver.
+The [complete local runtime guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/LOCAL_RUNTIME.md)
+contains the exact preparation, host resource selection and interruption workflow.
+
 ## Connect to the actual source
 
 Create a private source file containing environment reference names:
@@ -464,6 +516,17 @@ It adopts that original workbench, receives both complete captures and every
 difference through the selected MCP runtime, downloads both published editions
 and the original buyer file, and completes stop and fresh-process reopen.
 Keep the original native server and environment references available throughout.
+
+The included [browser continuation](../../stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/browser-workbench.mjs)
+opens both managed launches with the existing Playwright and Chromium runtime.
+Pass its absolute installed path with --browser-module. It visits all saved
+report mappings and subscription reviews, receives fourteen capture files and
+all four comparison files through the visible download controls, opens both
+published run panels and the original customer offer, and downloads the saved
+source and merchant terms. Each phase retains seven desktop and three mobile
+views with the complete original file comparisons. The Applications guide
+provides the exact invocation, inherited browser environment and retained
+output paths.
 
 
 The native receiving operator in the

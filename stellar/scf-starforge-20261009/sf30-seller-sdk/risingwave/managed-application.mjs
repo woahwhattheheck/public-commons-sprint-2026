@@ -52,7 +52,8 @@ export const RISINGWAVE_APPLICATION_SOURCE_FILES = Object.freeze([
   "workspace/public/index.html",
   "workspace/public/app.mjs",
   "workspace/public/recovery.mjs",
-  "workspace/public/style.css"
+  "workspace/public/style.css",
+  "examples/browser-workbench.mjs"
 ]);
 
 export function risingwaveApplication(common = []) {
