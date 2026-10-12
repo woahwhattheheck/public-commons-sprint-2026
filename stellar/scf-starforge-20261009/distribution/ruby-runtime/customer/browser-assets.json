@@ -43,6 +43,13 @@
         "customer.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/editions.mjs",
+      [
+        "editions.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

@@ -16,6 +16,8 @@ const METHODS = Object.freeze({
   '/api/customer/select': 'selectCustomer', '/api/customer/adopt': 'adoptCustomer',
   '/api/customer/advance': 'advanceCustomer', '/api/customer/resume': 'resumeCustomer',
   '/api/customer/cancel': 'cancelCustomer',
+  '/api/editions/source': 'previewApplicationEditionSource', '/api/editions/stage': 'stageApplicationEdition',
+  '/api/editions/prepare': 'prepareApplicationEdition', '/api/editions/commit': 'commitApplicationEdition',
 });
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 function headers(mime = 'application/json; charset=utf-8') {
@@ -75,7 +77,7 @@ function byteRange(value, size) {
 }
 
 export async function serveRubyCustomerWorkspace({ workspace, port = 8475 } = {}) {
-  if (!workspace || !['inspect', 'operation', 'log', 'openFile', 'receive', 'customer', 'customers', 'advanceCustomer', 'openCustomerFile', 'close'].every(key => typeof workspace[key] === 'function') ||
+  if (!workspace || !['inspect', 'operation', 'log', 'openFile', 'receive', 'customer', 'customers', 'advanceCustomer', 'openCustomerFile', 'applicationEditions', 'applicationEdition', 'openEditionFile', 'stageApplicationEdition', 'prepareApplicationEdition', 'commitApplicationEdition', 'previewApplicationEditionSource', 'close'].every(key => typeof workspace[key] === 'function') ||
     !Number.isInteger(port) || port < 0 || port > 65535)
     throw new TypeError('Open the maintained Ruby runtime and choose a valid local port.');
   const initial = await workspace.inspect(), uploads = await openRubyRuntimeUploads({ directory: initial.directory });
@@ -85,6 +87,7 @@ export async function serveRubyCustomerWorkspace({ workspace, port = 8475 } = {}
     ['/style.css', 'runtime-style.css', 'text/css; charset=utf-8'],
     ['/runtime-browser.mjs', 'runtime-browser.mjs', 'text/javascript; charset=utf-8'],
     ['/panel.mjs', 'panel.mjs', 'text/javascript; charset=utf-8'],
+    ['/editions.mjs', 'editions.mjs', 'text/javascript; charset=utf-8'],
     ['/customer.css', 'customer.css', 'text/css; charset=utf-8'],
   ].map(async ([path, name, mime]) => [path, { bytes: await readFile(new URL('./' + name, import.meta.url)), mime }])));
   let origin, cookieName, closing = null;
@@ -104,7 +107,9 @@ export async function serveRubyCustomerWorkspace({ workspace, port = 8475 } = {}
       : validToken(cookieValue(req.headers.cookie, cookieName));
     const download = async url => {
       const name = scalar(url,'name');
-      const file = url.pathname==='/api/customer/file'
+      const file = url.pathname==='/api/edition/file'
+        ? await workspace.openEditionFile({id:scalar(url,'id'),editionId:scalar(url,'editionId'),reviewId:scalar(url,'reviewId',false),name})
+        : url.pathname==='/api/customer/file'
         ? await workspace.openCustomerFile({id:scalar(url,'id'),name})
         : await workspace.openFile({operationId:scalar(url,'operationId'),name});
       if (!file?.handle || !Number.isSafeInteger(file.bytes) || file.bytes < 0 ||
@@ -163,12 +168,15 @@ export async function serveRubyCustomerWorkspace({ workspace, port = 8475 } = {}
         if (path === '/api/customer') return send(200,await workspace.customer({id:scalar(url,'id')}));
         if (path === '/api/customers') return send(200,await workspace.customers({
           offset:integer(url,'offset',0,Number.MAX_SAFE_INTEGER),limit:integer(url,'limit',25,100)}));
+        if (path === '/api/editions') return send(200,await workspace.applicationEditions({id:scalar(url,'id'),
+          offset:integer(url,'offset',0,Number.MAX_SAFE_INTEGER),limit:integer(url,'limit',25,100)}));
+        if (path === '/api/edition') return send(200,await workspace.applicationEdition({id:scalar(url,'id'),editionId:scalar(url,'editionId')}));
         if (path === '/api/application') return send(200, await workspace.application({ id: scalar(url, 'id') }));
         if (path === '/api/receive-upload/status') return send(200, await uploads.status({ operationId: scalar(url, 'operationId') }));
-        if (path === '/api/file' || path === '/api/customer/file') return download(url);
+        if (path === '/api/file' || path === '/api/customer/file' || path === '/api/edition/file') return download(url);
         throw fault('RUBY_DESK_NOT_FOUND', 'This runtime view was not found.', 404);
       }
-      if (req.method === 'HEAD' && ['/api/file','/api/customer/file'].includes(path)) return download(url);
+      if (req.method === 'HEAD' && ['/api/file','/api/customer/file','/api/edition/file'].includes(path)) return download(url);
       if (req.method === 'PUT' && path === '/api/receive-upload') {
         if (!/^application\/(?:x-tar|octet-stream)(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''))
           throw fault('RUBY_DESK_ARCHIVE_TYPE', 'Upload the original complete TAR archive.', 415);
