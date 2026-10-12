@@ -109,6 +109,7 @@ def serve(root,port=0):
                 if url.path=="/api/records":return self.send(200,ws.records(q["edition"],offset,limit,q.get("query","")))
                 if url.path=="/api/history":return self.send(200,ws.history(q["kind"],offset,limit))
                 if url.path=="/api/default-mapping":return self.send(200,ws.default_mapping())
+                if url.path=="/api/metadata-mapping":return self.send(200,ws.metadata_mapping(q["edition"]))
                 if url.path=="/api/object":
                     kind=q["kind"];ident=q["id"]
                     if kind=="observation": value=ws.observation(ident)

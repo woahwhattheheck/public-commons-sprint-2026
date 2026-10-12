@@ -139,3 +139,18 @@ The console binds to `127.0.0.1`, requires its actual Host/Origin and session to
 - [OAI-PMH 2.0 specification](https://www.openarchives.org/OAI/openarchivesprotocol.html): identifiers, records, datestamps, deletion headers, sets, selective harvests, protocol errors and continuations.
 - [Zenodo OAI-PMH documentation](https://developers.zenodo.org/#oai-pmh): endpoint, metadata formats, page size, token expiry and request limits.
 - [DataCite metadata schemas](https://schema.datacite.org/): current schemas; actual captured namespaces and ListMetadataFormats drive each projection.
+
+
+## Project the actual repository metadata
+
+In Projection, choose **Use repository metadata fields** after selecting a reviewed edition. The application inspects an actual active record's expanded XML names. Dublin Core and DataCite kernel-4, including the OAI DataCite envelope, have editable presets. Other formats use the original record inspector and explicit mapping editor.
+
+The DataCite preset retains the repository identifier and datestamp separately from the metadata identifier and its declared type. It exposes titles, creator names, subjects, related identifiers, rights, rights URIs and descriptions as JSON-array strings, preserving repeated values and order. Publication year is an explicit nullable integer; publisher, resource type, language and version are explicit nullable strings. Missing arrays become an explicitly selected empty array. The complete original XML remains available for attributes, entity relationships and richer future mappings.
+
+The original dataset engine supplies identifier, date, metadata identifier, publication year, publisher, resource type and language filters/sorts, plus publication-year ranges. The metadata preset allows up to 1 MiB of UTF-16 cell text so complete long descriptions can be preserved; the editable 64 MiB dataset budget and native response page budget remain explicit. Saving the mapping checks every row of the complete edition before creating a dataset. The preset is an editable operator choice; it does not change a source record.
+
+Use `python cli.py --workspace /absolute/workspace metadata-mapping --edition EDITION` to print the same plan for native use.
+
+### Portable transport and private sessions
+
+Source exports retain the exact original XML and HTTP response bodies. The portable request log omits Cookie, Set-Cookie, Set-Cookie2, Authorization and Proxy-Authorization header values and lists the omitted header names. Each exchange retains a SHA-256 binding to its original canonical private exchange, and the capture manifest declares this transport policy. The complete original headers remain in the private workspace and its full backup. Publisher plans and merchant source packages carry the declared portable source bytes.
