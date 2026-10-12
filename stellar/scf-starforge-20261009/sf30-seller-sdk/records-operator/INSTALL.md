@@ -273,3 +273,11 @@ The provider implements the original `stellar-forge.runtime-application-provider
 A complete receiving operation records the actual source pin, workspace ID, launch source SHA, original application/start operation IDs where an installed Applications runtime is used, observed authenticated workspace, Stop result, fresh listener reopening and unchanged saved history. Source-native managed operation and installed Applications adoption are recorded separately. A source commit or parsed module alone is not an installed receiving result.
 
 The private walkthrough or a customer's actual first operation can append these managed steps after its already completed source/review/export phases, reusing the same workbench and retained operation journal. It should not run another baseline calculation merely to prove that the application launcher reopened saved work.
+
+## Workbook-capable source and existing Applications
+
+The Records source closure now includes `workbook.py`, `web/workbook.mjs` and [WORKBOOKS.md](WORKBOOKS.md). The original asset manifest serves the workbook module alongside its four existing routes. The managed launch identity includes both executable new leaves, so the same Applications review/save/start/Open/Stop workflow reports a changed installed source accurately.
+
+An existing saved Records application keeps its immutable source until explicit adoption. Use `records-workspace status`, then `records-workspace adopt-workbooks --dir OPERATION --revision CURRENT_REVISION` from the maintained installed product. Review the new original source/binding in Applications before starting it. Custom source differences require an explicit native-editor merge and are not overwritten by the adoption command.
+
+The complete original-workbook CLI is `records-workspace workbook --dir OPERATION --revision REVISION --workbook ID --out NEW_DIRECTORY`; it retains all selected rows, original source/documents, the full native portable and complete operating application. `operator/application/` contains 22 files for a workbook-capable saved revision, plus the separate installation declaration. Follow WORKBOOKS.md to reopen that same portable with the original maintained runtime. No new provider registration, server, database or managed process owner is introduced.
