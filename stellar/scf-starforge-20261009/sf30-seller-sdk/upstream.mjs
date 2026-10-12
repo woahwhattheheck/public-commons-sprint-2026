@@ -14,6 +14,8 @@ import { compileOAuthClientCredentials, createOAuthClientCredentials } from './o
 import { compileOAuthConnection } from './oauth-connections/profile.mjs';
 import { createOAuthConnectionProvider } from './oauth-connections/provider.mjs';
 import { compileUpstreamCache, createConfiguredCachedUpstream } from './response-cache/config.mjs';
+import { createCacheControlBinding } from './response-cache/bind.mjs';
+import { createCacheManagement } from './response-cache/control.mjs';
 import { compileUpstreamStreamPolicy } from './upstream-stream.mjs';
 import { compileSupplierAccounts } from './supplier-quota/config.mjs';
 import { createSupplierQuotaRegistry, attachSupplierQuota } from './supplier-quota/application.mjs';
@@ -355,6 +357,9 @@ export function createUpstreamApplication(config,bindings,options={}) {
   const operationControl = createUpstreamOperationControl(compiled,originals,{
     closeHandlers:closeOptions => closeUpstreamHandlers(originals,closeOptions)});
   const caches = new Map(Object.entries(originals).filter(([,handler]) => handler.cache).map(([name,handler]) => [name,handler.cache]));
+  const cacheBinding = createCacheControlBinding(caches, { routeIds: Object.fromEntries([...caches.keys()].map(name =>
+    [name, config.routes.filter(route => route.handler === name).map(route => route.id)])) });
+  const cacheManagement = createCacheManagement(cacheBinding);
   const service = structuredClone(config);
   service.maxRequestBytes=Math.max(config.maxRequestBytes??1048576,...Object.values(compiled).map(binding=>binding.maxRequestBytes));
   let sequence = 0;
@@ -367,18 +372,15 @@ export function createUpstreamApplication(config,bindings,options={}) {
     handlers[name] = handler.admit;
     route.admit = name;
   }
-  return {config:service,handlers:Object.freeze(handlers),operationControl,
+  return {config:service,handlers:Object.freeze(handlers),operationControl,cacheBinding,cacheManagement,
     ...(supplierQuotas.names.length ? {supplierQuotaSnapshot:() => supplierQuotas.snapshot()} : {}),
-    invalidateCache:name => {
-      if (name !== undefined && !caches.has(name)) bad('Unknown cached upstream binding');
-      return Object.fromEntries([...caches].filter(([id]) => name === undefined || id === name).map(([id,cache]) => [id,cache.invalidate()]));
-    },
+    invalidateCache:cacheBinding.invalidate,
     close:options => operationControl.close(options),
     snapshot:() => ({
     schema:'stellar-forge.seller-upstream-availability.v1',capturedAt:new Date().toISOString(),
     bindings:Object.entries(compiled).map(([name,binding]) => ({name,method:binding.method,
       routes:service.routes.filter(route=>route.handler===name).map(route=>({id:route.id,path:route.path})),
-      protected:binding.availability !== null,...(binding.cache ? {cachePolicy:binding.cache} : {}),...originals[name].snapshot()})),
+      protected:binding.availability !== null,...(binding.cache ? {cachePolicy:{...binding.cache,...caches.get(name).inspect().policy}} : {}),...originals[name].snapshot()})),
     semantics:{availability:'Original backend response health, not payment or settlement status',
       recovery:'One backend trial; admitted requests are not capacity reservations',
       retention:supplierQuotas.names.length ? 'Availability uses process memory; supplier quotas retain the original account ledger across restarts' : 'Process memory; restart resets availability and counters',
