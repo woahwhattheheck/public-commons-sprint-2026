@@ -1,8 +1,8 @@
 # Counterpress Compass
 
-Counterpress Compass turns a live stream of synthetic football events into a useful coach and fan review: follow possession changes, locate counterpress moments, inspect the original play sequence, compare the two clubs, and save the match with tactical notes for later replay.
+Counterpress Compass turns a live stream of synthetic football events into match review and broadcast stories. Follow possession changes, inspect pressing sequences, build a player recap, compare club performance and prepare an editable caption rundown from the same original match.
 
-The original Node/HTTP/SSE application runs locally with no package installation or provider call. It supports casual and analyst views in English and Spanish, independent viewer sessions, saved match collections, exact event bookmarks, and portable match packages. Player-focused recaps keep observed actions, half-by-half club context and a replay playlist in the same saved review. The Microsoft Inside the Game competition specifies football-realistic synthetic events; Harbor FC, Metro Rovers and their players are invented.
+The original Node/HTTP/SSE application runs locally with no package installation or provider call. It supports casual and analyst views in English and Spanish, independent viewer sessions, saved match collections, exact event bookmarks, and portable match packages. Player-focused recaps keep observed actions, half-by-half club context and a replay playlist in the same saved review. The broadcast workspace builds personalized story drafts, retains authored captions and recording times, and exports an independent HTML handover, editable match and WebVTT captions. The Microsoft Inside the Game competition specifies football-realistic synthetic events; Harbor FC, Metro Rovers and their players are invented.
 
 ## Run the application
 
@@ -43,6 +43,30 @@ The **Player recap and replay playlist** section uses the plays already observed
 Each sequence opens its original outcome or plays from immediately before the loss through the actual closing event. The playlist stays available while the match is rewound. **Save playlist moments** stores the selected sequence endpoints through the existing saved-match controls; player, half, outcome and the observed position return when the review is reopened or imported.
 
 The half comparison shows press frequency against observed losses and regain efficiency against resolved attempts. The clock and last recorded action are displayed separately. Download a complete source-linked JSON recap or a printable standalone HTML report; the ordinary match download continues to provide the full portable replay. See [Player recaps](PLAYER_RECAP.md).
+
+## Prepare a broadcast story
+
+Open **Broadcast handover** from the saved-match controls, or visit **/broadcast-handover**. Choose a saved match or import its complete package. The handover starts at the saved replay cutoff; **Use full match** explicitly makes the entire retained match available.
+
+**Build a personalized rundown** prepares a short story for the selected team and player. Choose the observed match or a half, **Match story** or **Recovery highlights**, and the number of plays. The draft uses the existing recap's original sequence outcomes, player roles and closing events. It presents the chosen plays in match order, with a caption, a selection reason and links to the original start and outcome.
+
+Review the suggestions and use **Add selected plays** to insert them together. Existing caption text, order and recording times stay editable. **Use story title and summary** applies the suggested title and adds the source-period context to the production notes. You can also add individual pressing sequences, player actions or saved moments.
+
+Open your local recording, then set each caption's video in and out points. The video plays on your device; the saved handover retains its filename, duration and your timing choices. Video time and the original match clock remain separate so the rundown can follow an edited highlight reel.
+
+| Delivery | What the recipient gets |
+| --- | --- |
+| Editable match · JSON | Complete original events, review, saved tool explanations, player recap and authored broadcast cues |
+| Readable handover · HTML | An independent document with captions, original evidence, team context, event replay and editable-match download |
+| Timed captions · WebVTT | Captions placed at the in and out points you selected in the recording |
+
+**Save handover** retains the rundown with the existing match. **Save a copy** creates a separately editable match in your collection. Reopen a saved handover or import its downloaded JSON to continue production. See [Broadcast handover](BROADCAST_HANDOVER.md) for the complete editor and API guide.
+
+### Try the included H10 story
+
+Import [the retained high-press match](demo/player-recap-high-press-2026.json) in the match player. It contains all 941 original events, the H10 replay selection and its saved playlist. The player opens immediately before the loss at 52:44.6. Replay the sequence to the original H10 recovery at 52:49.6.
+
+Open that saved match in **Broadcast handover**, select **Use full match**, then build five **Recovery highlights** for **H10** over the **Whole observed match**. The generated story includes plays across both halves, including the same 52:44.6–52:49.6 recovery. Preview its original evidence, add the selected captions and edit them for your recording. The complete walkthrough and five original sequence intervals are in the [operator guide](BROADCAST_HANDOVER.md#existing-h10-example).
 
 ## What the match model means
 
@@ -89,7 +113,7 @@ Coaches use the existing **Saved matches**, **Coach review**, export and import 
 
 Microsoft's [official Inside the Game rules](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md) require registration by **October 20, 2026 at noon Pacific** and submission by **October 27, 2026 at 11:59 PM Pacific**. Delivery includes public source, a public video under two minutes demonstrating actual functionality, and free functioning access or a test build for judges. The solution must use permitted Microsoft technology and fit the entered category.
 
-The [original browser recorder](demo/README.md) launches the real application and captures its actual HTTP/SSE gameplay. Existing entrant and Microsoft integration owners retain their platform delivery and runtime work. Repository source, the captured local run and the provider's actual entry status are separate records.
+The [browser recorder](demo/README.md) launches the application and captures its actual HTTP/SSE gameplay. The product tour can follow one original match from a pressing sequence and player recap into the personalized broadcast draft, caption editing and portable handover. Include the configured Microsoft tool workflow in the running-product demonstration.
 
 ## Source map
 
@@ -100,6 +124,10 @@ The [original browser recorder](demo/README.md) launches the real application an
 | `src/live_sessions.mjs` | Independent session lifecycle, retained-event restoration and native frames |
 | `src/server.mjs` | HTTP/SSE player, archive APIs and optional commentary routes |
 | `src/match_archive.mjs` | Durable original matches, review revisions and portable packages |
+| `src/player_recap.mjs`, `web/player-recap.js` | Original player roles, half context and replay playlist |
+| `src/broadcast_rundown.mjs`, `web/rundown-builder.js` | Personalized story selection, source preview and bulk caption insertion |
+| `src/broadcast_handover.mjs` | Source-bound captions, saved review normalization and HTML/WebVTT delivery |
+| `web/broadcast-handover.html`, `.js`, `.css` | Bilingual broadcast editor, local recording and portable handover |
 | `src/retained_insight.mjs` | Original insight continuity and saved source binding |
 | `src/opus_agent_bridge.mjs`, `counterpress/microsoft_agent_worker.py` | Microsoft Agent Framework tool workflow and original guarded runner |
 | `src/receive_agent_insight.mjs` | Complete original worker-output receiving into a portable match |
@@ -123,4 +151,4 @@ Open **Broadcast handover** to turn a saved match into an editable production ru
 
 The player recap, bookmarks, coaching notes, retained explanations and broadcast draft are preserved together through original-match saves and portable import/export. The broadcaster composes a newer non-broadcast review revision only while the broadcaster draft itself remains unchanged in the saved base.
 
-The [complete recorder](demo/README.md) follows player → saved explanation → H10 recap/replay → coach comparison → broadcaster editing → standalone delivery. It records the actual browser, closes it before encoding, restarts the persistent application, attaches the actual encoded clip and receives the complete editable review in an independent browser collection.
+The [complete recorder](demo/README.md) follows player → saved explanation → H10 recap/replay → coach comparison → automatic story draft → broadcaster editing → standalone delivery. It records the actual browser, closes it before encoding, restarts the persistent application, attaches the actual encoded clip and receives the complete editable review in an independent browser collection.

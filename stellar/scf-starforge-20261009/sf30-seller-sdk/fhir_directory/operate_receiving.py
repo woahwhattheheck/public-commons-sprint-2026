@@ -35,8 +35,17 @@ def input_file(path):
     observed=file_identity(path)
     return {key:observed[key] for key in ("bytes","sha256")}
 
+def private_parents(path):
+    target=Path(path);pending=[];current=target
+    while not current.exists():
+        if current.is_symlink():raise InputError("Original receiving destination contains a symbolic link")
+        pending.append(current);current=current.parent
+    private_directory(current)
+    for current in reversed(pending):private_directory(current)
+    return target
+
 def put(path,data):
-    path=Path(path);private_directory(path.parent)
+    path=Path(path);private_parents(path.parent)
     if path.exists():
         if path.is_symlink()or path.read_bytes()!=data:raise ConflictError("Original receiving input changed: "+path.name)
     else:original_workspace.private_write(path,data)
@@ -45,7 +54,7 @@ def put(path,data):
 def copy_original(source_path,destination,expected=None):
     source_path=Path(source_path);destination=Path(destination);observed=file_identity(source_path)
     if expected and any(observed[k]!=expected[k]for k in ("bytes","sha256")):raise InputError("Original input failed its complete byte identity")
-    private_directory(destination.parent)
+    private_parents(destination.parent)
     if destination.exists():
         received=file_identity(destination)
         if any(received[k]!=observed[k]for k in("bytes","sha256")):raise ConflictError("Retained original input differs")

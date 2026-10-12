@@ -12,7 +12,7 @@ import {legacyJourney} from './legacy-journey.mjs';
 
 const HERE=dirname(fileURLToPath(import.meta.url)), ROOT=resolve(HERE,'..');
 const options={};
-const allowed=new Set(['out','chromium','playwright','ffmpeg','ffprobe','match','review','recap-match','journey']);
+const allowed=new Set(['out','chromium','playwright','ffmpeg','ffprobe','match','review','recap-match','journey','browser-process-mode','resume']);
 for(let i=2;i<process.argv.length;i+=2){
   const key=process.argv[i]?.replace(/^--/,''),value=process.argv[i+1];
   if(!allowed.has(key)||!process.argv[i].startsWith('--')||!value||Object.hasOwn(options,key))
@@ -23,11 +23,15 @@ if(!options.out||!options.chromium)throw new Error('--out and --chromium are req
 const mode=options.journey||(options.match?'integrated':'core');
 if(!['core','integrated'].includes(mode))throw new Error('Choose core or integrated');
 if(mode==='integrated'&&(!options.match||!options.review))throw new Error('The integrated journey uses the original completed match and coach review');
-const output=resolve(options.out),require=createRequire(import.meta.url);
+if(options['browser-process-mode']&&!['single','multiple'].includes(options['browser-process-mode']))throw new Error('Choose single or multiple browser process mode');
+if(options.resume&&options.resume!=='true')throw new Error('Use --resume true to finish an interrupted capture');
+const output=resolve(options.out),recoveryPath=join(output,'capture-recovery.private.json'),require=createRequire(import.meta.url);
 const {chromium}=require(options.playwright||'playwright');
-await fs.mkdir(output,{recursive:false,mode:0o700});
-await fs.mkdir(join(output,'frames'),{mode:0o700});
-await fs.mkdir(join(output,'archives'),{mode:0o700});
+if(!options.resume){
+  await fs.mkdir(output,{recursive:false,mode:0o700});
+  await fs.mkdir(join(output,'frames'),{mode:0o700});
+  await fs.mkdir(join(output,'archives'),{mode:0o700});
+}else if(!(await fs.stat(output)).isDirectory())throw new Error('The captured output directory is missing');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const source={};
 async function inventory(dir){
@@ -41,7 +45,8 @@ async function inventory(dir){
 await inventory(ROOT);
 let gitHead=null;
 try{gitHead=execFileSync('git',['rev-parse','HEAD'],{cwd:ROOT,encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim();}catch{}
-const startedAt=new Date().toISOString(),trace=[],captions=[],frames=[],pageErrors=[],requests=[],hosts=[];
+let startedAt=new Date().toISOString();
+const trace=[],captions=[],frames=[],pageErrors=[],requests=[],hosts=[];
 const temporary=process.env.TMPDIR||join(output,'temporary');
 await fs.mkdir(temporary,{recursive:true,mode:0o700});
 let host,browser,context,cdp,page,recordStart=0,frameQueue=Promise.resolve(),recording=false,captureError=null;
@@ -128,12 +133,12 @@ function encode(args){
     let stderr='';
     child.stderr.on('data',data=>{stderr=(stderr+data).slice(-6000);});
     child.once('error',reject);
-    child.once('exit',code=>code===0?resolve():reject(new Error('ffmpeg exited '+code+': '+stderr)));
+    child.once('exit',(code,signal)=>code===0?resolve():reject(new Error('ffmpeg exited '+code+'/'+signal+': '+stderr)));
   });
 }
 async function openBrowser(origin,storageState){
   browser=await chromium.launch({executablePath:resolve(options.chromium),headless:true,
-    args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu'],env:{...process.env,TMPDIR:temporary}});
+    args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu',...(options['browser-process-mode']==='single'?['--single-process','--no-zygote']:[])],env:{...process.env,TMPDIR:temporary}});
   browserVersion=browser.version();
   context=await browser.newContext({viewport:{width:1600,height:900},deviceScaleFactor:1,
     acceptDownloads:true,...(storageState?{storageState}:{})});
@@ -149,91 +154,132 @@ const journey=mode==='integrated'
   ? await (await import('./integrated-journey.mjs')).createIntegratedJourney({root:ROOT,output,options})
   : legacyJourney();
 let videoResult=null,health=null,journeyResult=null,browserVersion=null,duration=null;
+const runtime={get page(){return page;},get context(){return context;},get origin(){return host.origin;},
+  output,trace,wait,scene,at,seconds,restartApplication,get browser(){return browser;},
+  get video(){return videoResult;},hash,stamp};
+let recovery=null,capturedSource=source,receivingStorage=null,originalPort=null;
+async function saveRecovery(){
+  await fs.writeFile(recoveryPath,JSON.stringify(recovery,null,2)+'\n',{mode:0o600});
+}
 try{
-  const app=await startApplication();const origin=app.origin;
-  health=await (await fetch(origin+'/health')).json();
-  await openBrowser(origin);
-  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('#play:enabled').waitFor();
-  const runtime={get page(){return page;},get context(){return context;},get origin(){return host.origin;},
-    output,trace,wait,scene,at,seconds,restartApplication,get browser(){return browser;},
-    get video(){return videoResult;},hash,stamp};
-  await journey.prepare?.(runtime);
-  if(pageErrors.length)throw new Error('Application browser error: '+pageErrors.join('; '));
-  cdp=await context.newCDPSession(page);
-  cdp.on('Page.screencastFrame',event=>{
-    void cdp.send('Page.screencastFrameAck',{sessionId:event.sessionId}).catch(()=>{});
-    if(!recording||captureError)return;
-    const capturedAt=seconds(),file='frames/frame-'+String(frames.length).padStart(6,'0')+'.jpg';
-    const bytes=Buffer.from(event.data,'base64');
-    frameBytes+=bytes.length;
-    if(frameBytes>192*1024*1024){captureError=new Error('The current capture exceeded its frame allocation');return;}
-    frames.push({file,at:capturedAt});
-    frameQueue=frameQueue.then(()=>fs.writeFile(join(output,file),bytes)).catch(error=>{captureError=error;});
-    resolveFirst();
-  });
-  recordStart=performance.now();recording=true;
-  await cdp.send('Page.startScreencast',{format:'jpeg',quality:90,maxWidth:1600,maxHeight:900,everyNthFrame:1});
-  await Promise.race([firstFrame,wait(5000).then(()=>{throw new Error('Chromium produced no screen frames');})]);
-  await journey.run(runtime);
-  await at(journey.duration);
-  duration=seconds();
-  recording=false;await cdp.send('Page.stopScreencast');await frameQueue;
-  if(captureError)throw captureError;
-  if(!captions.length||frames.length<20||duration>=118)throw new Error('The complete recording is outside its capture contract');
-  captions.at(-1).end=duration;
-  if(pageErrors.length)throw new Error('Application browser error: '+pageErrors.join('; '));
-  // Original frame intervals are retained in the encoded clip.
-  let concat='';
-  for(let i=0;i<frames.length;i++){
-    const start=i===0?0:frames[i].at,end=i+1<frames.length?frames[i+1].at:duration;
-    concat+="file '"+frames[i].file+"'\nduration "+Math.max(.001,end-start).toFixed(6)+'\n';
+  if(options.resume){
+    recovery=JSON.parse(await fs.readFile(recoveryPath,'utf8'));
+    if(recovery.schema!=='counterpress.capture-recovery.v1'||recovery.mode!==mode||
+      !['captured','encoded'].includes(recovery.phase))throw new Error('The capture recovery record is not usable');
+    if(!(recovery.duration>0&&recovery.duration<118)||recovery.frames.length<20)
+      throw new Error('The original complete capture is required');
+    startedAt=recovery.startedAt;duration=recovery.duration;frameBytes=recovery.frameBytes;
+    capturedSource=recovery.source;gitHead=recovery.gitHead;health=recovery.health;browserVersion=recovery.browserVersion;
+    frames.push(...recovery.frames);captions.push(...recovery.captions);trace.push(...recovery.trace);
+    requests.push(...recovery.requests);pageErrors.push(...recovery.pageErrors);
+    originalPort=recovery.originalPort;receivingStorage=recovery.receivingStorage;
+    await journey.restore?.(recovery.journey);
+    announce({resuming:true,phase:recovery.phase,duration,frames:frames.length});
+  }else{
+    const app=await startApplication();const origin=app.origin;
+    health=await (await fetch(origin+'/health')).json();
+    await openBrowser(origin);
+    await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('#play:enabled').waitFor();
+    await journey.prepare?.(runtime);
+    if(pageErrors.length)throw new Error('Application browser error: '+pageErrors.join('; '));
+    cdp=await context.newCDPSession(page);
+    cdp.on('Page.screencastFrame',event=>{
+      void cdp.send('Page.screencastFrameAck',{sessionId:event.sessionId}).catch(()=>{});
+      if(!recording||captureError)return;
+      const capturedAt=seconds(),file='frames/frame-'+String(frames.length).padStart(6,'0')+'.jpg';
+      const bytes=Buffer.from(event.data,'base64');
+      frameBytes+=bytes.length;
+      if(frameBytes>192*1024*1024){captureError=new Error('The current capture exceeded its frame allocation');return;}
+      frames.push({file,at:capturedAt});
+      frameQueue=frameQueue.then(()=>fs.writeFile(join(output,file),bytes)).catch(error=>{captureError=error;});
+      resolveFirst();
+    });
+    recordStart=performance.now();recording=true;
+    await cdp.send('Page.startScreencast',{format:'jpeg',quality:90,maxWidth:1600,maxHeight:900,everyNthFrame:1});
+    await Promise.race([firstFrame,wait(5000).then(()=>{throw new Error('Chromium produced no screen frames');})]);
+    await journey.run(runtime);
+    await at(journey.duration);
+    duration=seconds();
+    recording=false;await cdp.send('Page.stopScreencast');await frameQueue;
+    if(captureError)throw captureError;
+    if(!captions.length||frames.length<20||duration>=118)throw new Error('The complete recording is outside its capture contract');
+    captions.at(-1).end=duration;
+    if(pageErrors.length)throw new Error('Application browser error: '+pageErrors.join('; '));
+    // Original frame intervals are retained in the encoded clip.
+    let concat='';
+    for(let i=0;i<frames.length;i++){
+      const start=i===0?0:frames[i].at,end=i+1<frames.length?frames[i+1].at:duration;
+      concat+="file '"+frames[i].file+"'\nduration "+Math.max(.001,end-start).toFixed(6)+'\n';
+    }
+    concat+="file '"+frames.at(-1).file+"'\n";
+    await fs.writeFile(join(output,'capture.concat'),concat);
+    await fs.writeFile(join(output,'captions.srt'),captions.map((c,i)=>(i+1)+'\n'+stamp(c.start)+' --> '+stamp(c.end)+'\n'+c.text+'\n').join('\n'));
+    await fs.writeFile(join(output,'captions.vtt'),'WEBVTT\n\n'+captions.map((c,i)=>(i+1)+'\n'+stamp(c.start,'.')+' --> '+stamp(c.end,'.')+'\n'+c.text+'\n').join('\n'));
+    const assTime=time=>stamp(time,'.').slice(0,-1);
+    const assHeader='[Script Info]\nScriptType: v4.00+\nPlayResX: 1600\nPlayResY: 1000\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,DejaVu Sans,28,&H00FFFFFF,&H00FFFFFF,&H00202020,&H00202020,0,0,0,0,100,100,0,0,1,0,0,2,32,32,28,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n';
+    const assText=text=>text.replace(/\\/g,'\\\\').replace(/{/g,'\\{').replace(/}/g,'\\}').replace(/\r?\n/g,'\\N');
+    await fs.writeFile(join(output,'captions.ass'),assHeader+captions.map(c=>'Dialogue: 0,'+assTime(c.start)+','+assTime(c.end)+',Default,,0,0,0,,'+assText(c.text)).join('\n')+'\n');
+    announce({capturedFrames:frames.length,frameBytes,duration});
+  
+    receivingStorage=journey.receive?await context.storageState():null;originalPort=host.port;
+    recovery={schema:'counterpress.capture-recovery.v1',phase:'captured',mode,startedAt,source,gitHead,
+      browserVersion,health,duration,frameBytes,frames,captions,trace,requests,pageErrors,requestsComplete:true,
+      originalPort,receivingStorage,journey:journey.checkpoint?.()??null};
+    await saveRecovery();
+    await context.close();context=null;await browser.close();browser=null;await closeApplication();
   }
-  concat+="file '"+frames.at(-1).file+"'\n";
-  await fs.writeFile(join(output,'capture.concat'),concat);
-  await fs.writeFile(join(output,'captions.srt'),captions.map((c,i)=>(i+1)+'\n'+stamp(c.start)+' --> '+stamp(c.end)+'\n'+c.text+'\n').join('\n'));
-  await fs.writeFile(join(output,'captions.vtt'),'WEBVTT\n\n'+captions.map((c,i)=>(i+1)+'\n'+stamp(c.start,'.')+' --> '+stamp(c.end,'.')+'\n'+c.text+'\n').join('\n'));
-  const assTime=time=>stamp(time,'.').slice(0,-1);
-  const assHeader='[Script Info]\nScriptType: v4.00+\nPlayResX: 1600\nPlayResY: 1000\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,DejaVu Sans,28,&H00FFFFFF,&H00FFFFFF,&H00202020,&H00202020,0,0,0,0,100,100,0,0,1,0,0,2,32,32,28,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n';
-  const assText=text=>text.replace(/\\/g,'\\\\').replace(/{/g,'\\{').replace(/}/g,'\\}').replace(/\r?\n/g,'\\N');
-  await fs.writeFile(join(output,'captions.ass'),assHeader+captions.map(c=>'Dialogue: 0,'+assTime(c.start)+','+assTime(c.end)+',Default,,0,0,0,,'+assText(c.text)).join('\n')+'\n');
-  announce({capturedFrames:frames.length,frameBytes,duration});
-  const receivingStorage=journey.receive?await context.storageState():null;
-  const originalPort=host.port;
-  await context.close();context=null;await browser.close();browser=null;await closeApplication();
-  announce({encoding:true,duration,frames:frames.length});
-  await encode(['-hide_banner','-loglevel','error','-f','concat','-safe','0','-i','capture.concat',
-    '-vf','scale=1600:900:flags=lanczos,pad=1600:1000:0:0:color=0x202020,tpad=stop_mode=clone:stop_duration='+Math.ceil(duration)+',fps=24,subtitles=captions.ass',
-    '-t',duration.toFixed(3),'-c:v','libx264','-threads','2','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-movflags','+faststart','Counterpress_Compass_Running_Demo.mp4']);
-  const encodedDuration=Number(execFileSync(options.ffprobe||'ffprobe',['-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',
-    join(output,'Counterpress_Compass_Running_Demo.mp4')],{encoding:'utf8'}).trim());
+  const videoPath=join(output,'Counterpress_Compass_Running_Demo.mp4');
+  if(recovery.phase!=='encoded'){
+    announce({encoding:true,duration,frames:frames.length});
+    await encode(['-hide_banner','-loglevel','error','-y','-filter_threads','1','-filter_complex_threads','1',
+      '-threads','1','-f','concat','-safe','0','-i','capture.concat',
+      '-vf','scale=1600:900:flags=lanczos,pad=1600:1000:0:0:color=0x202020,tpad=stop_mode=clone:stop_duration='+Math.ceil(duration)+',fps=24,subtitles=captions.ass',
+      '-t',duration.toFixed(3),'-c:v','libx264','-threads','1','-preset','veryfast','-crf','20',
+      '-pix_fmt','yuv420p','-movflags','+faststart','Counterpress_Compass_Running_Demo.mp4']);
+  }
+  const encodedDuration=Number(execFileSync(options.ffprobe||'ffprobe',['-v','error','-show_entries','format=duration',
+    '-of','default=noprint_wrappers=1:nokey=1',videoPath],{encoding:'utf8'}).trim());
   if(!Number.isFinite(encodedDuration)||encodedDuration>=120||Math.abs(encodedDuration-duration)>.1)
     throw new Error('Encoded video does not retain the captured duration');
-  const video=await fs.readFile(join(output,'Counterpress_Compass_Running_Demo.mp4'));
+  const video=await fs.readFile(videoPath);
   videoResult={file:'Counterpress_Compass_Running_Demo.mp4',bytes:video.length,sha256:hash(video),
     capturedDurationSeconds:duration,encodedDurationSeconds:encodedDuration,actualBrowserFrames:frames.length,captioned:true,audio:false};
-  // Reopen the original persisted application after encoding, then attach the actual delivered video.
-  // The collection capability stays in this process; it is never part of the public handover.
+  if(recovery.phase==='encoded'&&recovery.video.sha256!==videoResult.sha256)
+    throw new Error('The completed recording changed after encoding');
+  recovery.phase='encoded';recovery.video=videoResult;await saveRecovery();
+  // Reopen the saved collection, then attach the actual delivered recording.
+  // This private recovery state is excluded from all exported handovers.
   if(journey.receive){
-    const reopened=await startApplication(originalPort);
-    trace.push({operation:'application-restart',originalPort,port:reopened.port,afterEncoding:true});
+    const reopened=await startApplication(originalPort||0);
+    trace.push({operation:'application-restart',originalPort,port:reopened.port,afterEncoding:true,
+      recoveredFromCapturedPackages:Boolean(recovery.importCapturedCoach)});
     await openBrowser(reopened.origin,receivingStorage);
+    if(recovery.importCapturedCoach){
+      if(!journey.restoreCaptured)throw new Error('This journey cannot receive captured packages');
+      await journey.restoreCaptured(runtime,recovery.importCapturedCoach);
+      recovery.importCapturedCoach=null;recovery.originalPort=host.port;
+      recovery.receivingStorage=await context.storageState();recovery.journey=journey.checkpoint();
+      await saveRecovery();
+    }
     announce({receiving:true,encodedDurationSeconds:encodedDuration});
     journeyResult=await journey.receive(runtime);
     if(pageErrors.length)throw new Error('Application browser error: '+pageErrors.join('; '));
     await context.close();context=null;await browser.close();browser=null;await closeApplication();
   }
-  const manifest={schema:'counterpress.running-demo.v2',startedAt,completedAt:new Date().toISOString(),mode,gitHead,sourceSha256:source,
-    browserVersion,viewport:{width:1600,height:900},video:videoResult,journey:journeyResult,
-    application:{nodeHttp:true,sseRequests:requests.filter(r=>r.path.endsWith('/stream')).length,
-      synthetic:true,configuration:health,providerRequests:requests.filter(r=>['/api/foundry-draft','/api/opus-commentary','/api/opus-agent-insight'].includes(r.path)),
+  const manifest={schema:'counterpress.running-demo.v2',startedAt,completedAt:new Date().toISOString(),mode,gitHead,
+    sourceSha256:capturedSource,receivingSourceSha256:source,browserVersion,viewport:{width:1600,height:900},
+    video:videoResult,journey:journeyResult,recovery:recovery.provenance??null,
+    application:{nodeHttp:true,sseRequests:recovery.requestsComplete?requests.filter(r=>r.path.endsWith('/stream')).length:null,
+      requestLogIncludesCapture:recovery.requestsComplete,synthetic:true,configuration:health,
+      providerRequests:requests.filter(r=>['/api/foundry-draft','/api/opus-commentary','/api/opus-agent-insight'].includes(r.path)),
       publicUpload:false,entrySubmission:false},
     closure:{browserClosed:true,servers:hosts.map(h=>({pid:h.child.pid,port:h.port,closed:h.closed,exitCode:h.child.exitCode,signal:h.child.signalCode}))},pageErrors};
   await fs.writeFile(join(output,'journey.json'),JSON.stringify({chapters:trace,http:requests},null,2)+'\n');
   await fs.writeFile(join(output,'capture-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
-  // Completed screen-frame intermediates have served their only consumer.
-  await fs.rm(join(output,'frames'),{recursive:true});
-  await fs.rm(join(output,'capture.concat'));
+  await fs.rm(join(output,'frames'),{recursive:true});await fs.rm(join(output,'capture.concat'));
+  await fs.rm(recoveryPath);
   announce({complete:true,output,video:videoResult,journey:journeyResult});
+
 }finally{
   recording=false;
   const errors=[];

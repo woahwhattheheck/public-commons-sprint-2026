@@ -51,6 +51,7 @@ function selection(args){
   else if(value.kind==='source')need(keys.length===1&&keys[0]==='sourceId','Select one complete original source file.');
   else if(value.kind==='returned')need(keys.length===1&&keys[0]==='returnId','Select one complete reviewer file.');
   else if(value.kind==='operation')need(keys.length===1&&keys[0]==='operationId','Select one original operation.');
+  else if(value.kind==='report')need(keys.length===1&&['editionId','dispatchId'].includes(keys[0]),'Select one saved source edition or reviewed dispatch.');
   else if(value.kind.startsWith('dispatch-'))need(keys.length===1&&keys[0]==='dispatchId','Select one reviewed dispatch.');
   else need(keys.length===1&&keys[0]==='editionId','Select one saved follow-through edition.');
   if(value.kind!=='source')need(!value.fileId,'An original file selection belongs to a source export.');
