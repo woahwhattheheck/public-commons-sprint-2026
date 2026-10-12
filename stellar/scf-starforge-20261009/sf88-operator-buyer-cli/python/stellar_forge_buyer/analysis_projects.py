@@ -68,6 +68,8 @@ def private(path):
     info = path.lstat()
     if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
         raise ValueError("Select a private directory owned by this operator: " + str(path))
+    sync(path)
+    sync(path.parent)
     return path
 
 
@@ -79,12 +81,25 @@ def sync(path):
         os.close(descriptor)
 
 
+def retained_receipt(path, raw):
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(descriptor, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size != len(raw):
+            raise ValueError("Keep the original complete receipt: " + str(path))
+        if stream.read() != raw or stamp(before) != stamp(os.fstat(stream.fileno())):
+            raise ValueError("The original operation selection differs: " + str(path))
+        os.fsync(stream.fileno())
+    sync(path.parent)
+
+
 def publish(path, raw):
     """Create one immutable command receipt; the original engines own their state."""
-    if os.path.lexists(path):
-        if original(path) != raw:
-            raise ValueError("The original operation selection differs: " + str(path))
+    try:
+        retained_receipt(path, raw)
         return
+    except FileNotFoundError:
+        pass
     fd, name = tempfile.mkstemp(prefix="." + path.name + "-", dir=path.parent)
     temporary = Path(name)
     try:
@@ -92,10 +107,14 @@ def publish(path, raw):
             stream.write(raw)
             stream.flush()
             os.fsync(stream.fileno())
-        os.link(temporary, path)
-        sync(path.parent)
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            pass
+        retained_receipt(path, raw)
     finally:
         temporary.unlink(missing_ok=True)
+        sync(path.parent)
 
 
 @contextmanager
@@ -203,6 +222,17 @@ def summary(selection, project):
             **({"archive": selection["archive"]} if "archive" in selection else {})}
 
 
+def sync_project_directories(root, manifest):
+    directories = {root}
+    for row in manifest["files"]:
+        directory = (root / row["path"]).parent
+        while directory != root:
+            directories.add(directory)
+            directory = directory.parent
+    for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
+        sync(directory)
+
+
 def materialize(project, cache, selection, helper):
     if selection["kind"] == "directory":
         return project
@@ -212,6 +242,8 @@ def materialize(project, cache, selection, helper):
         if cache.exists():
             private(cache)
             helper.inspect_project(cache, expected_manifest_sha256=selection["manifest_sha256"])
+            sync_project_directories(cache, selection["manifest"])
+            sync(cache.parent)
             return cache
         stage = Path(tempfile.mkdtemp(prefix="." + cache.name + "-", dir=cache.parent))
         try:
@@ -233,6 +265,7 @@ def materialize(project, cache, selection, helper):
                     raise ValueError("The selected project manifest changed before extraction.")
                 publish(stage / "project-manifest.json", raw)
             helper.inspect_project(stage, expected_manifest_sha256=selection["manifest_sha256"])
+            sync_project_directories(stage, selection["manifest"])
             os.rename(stage, cache)
             sync(cache.parent)
         finally:
