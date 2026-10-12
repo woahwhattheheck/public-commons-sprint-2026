@@ -76,6 +76,7 @@ export async function startODataServer({workspace,port=8797,liveServiceId,liveOp
           void workspace.capture(input.id,{pageBudget:input.pageBudget||10000}).catch(()=>{});return send(res,202,{id:input.id,status:'IMPORTING'});}
         case '/api/pause':result=await workspace.pause(input.id);break;
         case '/api/review':result=await workspace.reviewEdition(input);break;
+        case '/api/semantics':result=await workspace.semantics(input);break;
         case '/api/export':result=await workspace.exportEdition(input);break;
         case '/api/query':result=await workspace.queryExport(input);break;
         case '/api/restore':result=await workspace.restore(input);break;

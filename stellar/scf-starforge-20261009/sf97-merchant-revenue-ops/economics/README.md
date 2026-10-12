@@ -124,6 +124,32 @@ A useful operator handover identifies the merchant configuration, supplier and a
 
 ## Recover the whole private workspace
 
+The installed **Applications → Merchant pricing and scenario planning** form
+accepts the original TAR in **Complete pricing and supplier-cost backup**.
+Select a new private pricing directory, the original merchant configuration and
+its original observation source. **Review application** and **Review start**
+show the complete archive digest, byte/file counts, included source and saved
+edition counts, and whether the target is new, interrupted or already restored.
+The original native writer receives those reviewed bytes before the same pricing
+process opens. **Supplier costs**, **Scenario planning** and pricing history all
+use that restored directory. The
+[Applications receiving guide](../../distribution/runtime-workspace/PRICING_APPLICATIONS.md#receive-a-complete-merchant-workspace-in-applications)
+covers the full browser and CLI journey.
+
+For direct receiving, inspect the original backup first:
+
+```bash
+node stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/cli.mjs \
+  --inspect-cost-workspace /private/merchant/pricing-cost-backup.tar \
+  --state /private/merchant/restored-pricing-cost
+```
+
+This reads the full original archive and checks the selected destination without
+creating a workspace or opening a listener. Retain its `sourceArchiveSha256`.
+Use that exact value as the optional `--expected-cost-backup-sha256` argument
+on the restore command below; Applications supplies it automatically. The native
+writer checks the whole archive digest before publishing any receiving files.
+
 Use the original workspace command and a new private state directory:
 
 ```bash

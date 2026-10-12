@@ -110,9 +110,14 @@ function semanticHeaders(headers, semantics, snapshot) {
   let values;
   try { values = new Headers(headers); }
   catch { throw new InputError('DATASET_RESPONSE_HEADERS_INVALID'); }
-  need(values.get('x-ckan-semantics-sha256') === semantics.sha256 &&
-    values.get('x-dataset-snapshot') === snapshot, 'DATASET_SEMANTIC_RESPONSE_HEADERS_CHANGED');
-  return {'x-ckan-semantics-sha256':semantics.sha256,'x-dataset-snapshot':snapshot};
+  const header = semantics.schema === 'stellar-forge.ckan-semantics.v1' ? 'x-ckan-semantics-sha256' :
+    semantics.schema === 'stellar-forge.odata-semantics.v1' ? 'x-dataset-semantics-sha256' : null;
+  need(header !== null && values.get(header) === semantics.sha256 &&
+    values.get('x-dataset-snapshot') === snapshot &&
+    ['x-ckan-semantics-sha256','x-dataset-semantics-sha256'].every(name =>
+      !values.has(name) || values.get(name) === semantics.sha256),
+    'DATASET_SEMANTIC_RESPONSE_HEADERS_CHANGED');
+  return {[header]:semantics.sha256,'x-dataset-snapshot':snapshot};
 }
 
 /** Bind a validated semantic page to actual retained native response headers. */

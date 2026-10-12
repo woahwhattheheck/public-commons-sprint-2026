@@ -1,12 +1,18 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "wqx-water-quality",
-  "description": "WQX water-quality observations",
+  "description": "WQX scientific review, managed projects, full native receiving and merchant MCP operation with complete resumable files",
   "commands": {
-    "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs"
+    "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs",
+    "water-quality-managed": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/managed.mjs",
+    "water-quality-decisions": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/cli.mjs",
+    "merchant-wqx": "stellar-forge/mcp-merchant-operator/wqx-workspace-cli.mjs"
   },
   "commandDescriptions": {
-    "water-quality": "Review WQX samples, detection limits and complete paid data editions"
+    "water-quality": "Review WQX samples, detection limits and complete paid data editions",
+    "water-quality-managed": "Open, receive and manage the original private water-quality project",
+    "water-quality-decisions": "Review complete source-bound receiving choices, exchange editable tables and receive full projects",
+    "merchant-wqx": "Operate original water-quality projects, complete bulk decisions and resumable native files"
   },
   "exports": {
     "./seller/water-quality": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/merchant.mjs",
@@ -14,6 +20,38 @@
     "./seller/water-quality/samples": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/samples.mjs",
     "./seller/water-quality/analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/analysis.mjs",
     "./seller/water-quality/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/project.mjs",
-    "./seller/water-quality/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs"
+    "./seller/water-quality/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs",
+    "./seller/water-quality/managed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/managed.mjs",
+    "./seller/water-quality/open-waters": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/openwaters.mjs",
+    "./seller/water-quality/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/application.mjs",
+    "./seller/water-quality/decisions": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/workflow.mjs",
+    "./seller/water-quality/decisions/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/model.mjs",
+    "./seller/water-quality/decisions/table": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/csv.mjs",
+    "./merchant/mcp/wqx-workspaces": "./source/stellar-forge/mcp-merchant-operator/wqx-workspace.mjs",
+    "./merchant/mcp/wqx-client": "./source/stellar-forge/mcp-merchant-operator/wqx-workspace-client.mjs",
+    "./merchant/mcp/wqx-cli": "./source/stellar-forge/mcp-merchant-operator/wqx-workspace-cli.mjs",
+    "./merchant/mcp/wqx-setup": "./source/stellar-forge/mcp-merchant-operator/wqx-workspace-setup.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "wqx-water-quality": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/wqx-water-quality.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/WQX_WORKSPACE.md",
+    "stellar-forge/mcp-merchant-operator/WQX_WORKSPACE_CLIENT.md",
+    "stellar-forge/mcp-merchant-operator/wqx-workspace-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/wqx-workspace-cli.d.mts",
+    "stellar-forge/mcp-merchant-operator/wqx-workspace-setup.d.mts",
+    "stellar-forge/mcp-merchant-operator/wqx-workspace-connection.example.json",
+    "stellar-forge/mcp-merchant-operator/wqx-workspace-receiving.mjs",
+    "stellar-forge/mcp-merchant-operator/wqx-workspace-receiving.example.json"
+  ],
+  "merchantProviders": {
+    "wqx-water-quality": "stellar-forge/mcp-merchant-operator/providers/wqx-water-quality.mjs"
   }
 }

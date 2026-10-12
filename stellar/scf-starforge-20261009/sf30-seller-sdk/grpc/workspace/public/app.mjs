@@ -1,4 +1,5 @@
 // MIT. Browser controls for the original retained gRPC workspace.
+import { mountGrpcUpgrades } from './upgrade.mjs';
 const $ = id => document.getElementById(id);
 const storageKey = 'stellar-forge.grpc-workspace:' + location.origin;
 let token = location.hash.slice(1);
@@ -9,10 +10,16 @@ try {
 let inventory = null, adopted = null, editorBase = null, source = null, protoSource = null;
 let plan = { schema: 'stellar-forge.grpc-merchant-plan.v1', publicOrigin: '', routes: [] };
 let methodPath = null, selectedRoute = null, methodSchema = null, dirty = false, routeDirty = false, planDirty = false, requestDirty = false, busy = false;
-let latestAttempt = null, methodTicket = 0;
+let latestAttempt = null, methodTicket = 0, activeCallId = null;
+let reflectedInventory = null, reflectionPreview = null, reflectionPage = 0;
+let reflectionSelection = new Set(), reflectionSourceFingerprint = null;
 const customerFiles = ['methods.json', 'openapi.json', 'client/seller-client.mjs', 'client/seller-client.d.mts',
   'client/seller-openapi.json', 'client/package.json', 'client/README.md'];
 const pretty = value => JSON.stringify(value, null, 2);
+const sourceFingerprint = value => JSON.stringify(value, function (key, item) {
+  return item && typeof item === 'object' && !Array.isArray(item) ?
+    Object.fromEntries(Object.keys(item).sort().map(name => [name, item[name]])) : item;
+});
 const short = value => value ? value.slice(0, 12) : 'none';
 function notice(message, kind = '') { $('notice').textContent = message; $('notice').dataset.kind = kind; }
 function object(value, name) {
@@ -74,6 +81,9 @@ function buttons() {
     adopted.id !== inventory?.currentRevision || !plan.routes.length;
   $('call').disabled = !adopted || !methodPath || dirty || routeDirty || planDirty ||
     adopted.id !== inventory?.currentRevision || !plan.routes.some(route => route.grpcMethod === methodPath);
+  $('reflection-capture').disabled = !reflectedInventory || !reflectionSelection.size;
+  $('reflection-save').disabled = !reflectionPreview || routeDirty || planDirty ||
+    reflectionPreview.comparisonBaseRevision !== editorBase;
   $('apply-route').disabled = !methodPath;
   $('remove-route').disabled = !selectedRoute;
   $('workspace-title').textContent = $('title').value || 'gRPC merchant';
@@ -116,8 +126,19 @@ function readSource() {
   }
   const metadata = parse('metadata', 'Metadata references');
   if (!Array.isArray(metadata)) throw new Error('Metadata references must be a JSON array.');
-  return { schema: 'stellar-forge.grpc-source.v1', target: $('target').value.trim(), transport,
-    metadata, limits: object(parse('limits', 'Call limits'), 'Call limits') };
+  const limits = object(parse('limits', 'Call limits'), 'Call limits');
+  if (Object.hasOwn(limits, 'stream')) throw new Error('Use the dedicated server-stream limits below; remove stream from the call-limits JSON.');
+  if ($('stream-enabled').checked) {
+    const stream = {};
+    for (const [id, key] of [['stream-bytes', 'maxBytes'], ['stream-records', 'maxRecords'], ['stream-idle', 'idleTimeoutMs']]) {
+      const control = $(id);
+      if (!control.checkValidity()) { control.reportValidity(); throw new Error('Correct the server-stream limits.'); }
+      stream[key] = Number(control.value);
+      if (!Number.isSafeInteger(stream[key])) throw new Error('Stream limits must be whole numbers.');
+    }
+    limits.stream = stream;
+  }
+  return { schema: 'stellar-forge.grpc-source.v1', target: $('target').value.trim(), transport, metadata, limits };
 }
 function fillSource(value) {
   source = structuredClone(value); $('target').value = value.target ?? '';
@@ -125,13 +146,28 @@ function fillSource(value) {
   for (const [id, key] of [['server-name', 'serverName'], ['ca-env', 'caEnv'],
     ['certificate-env', 'certificateEnv'], ['private-key-env', 'privateKeyEnv']])
     $(id).value = value.transport?.[key] ?? '';
-  $('metadata').value = pretty(value.metadata ?? []); $('limits').value = pretty(value.limits ?? {});
+  $('metadata').value = pretty(value.metadata ?? []);
+  const limits = structuredClone(value.limits ?? {}), stream = limits.stream;
+  delete limits.stream; $('limits').value = pretty(limits);
+  $('stream-enabled').checked = Boolean(stream);
+  $('stream-bytes').value = stream?.maxBytes ?? 67108864;
+  $('stream-records').value = stream?.maxRecords ?? 100000;
+  $('stream-idle').value = stream?.idleTimeoutMs ?? 10000;
+  streamControls();
   $('tls-fields').hidden = $('transport').value !== 'tls';
+}
+function streamControls() {
+  const enabled = $('stream-enabled').checked;
+  $('stream-limits').hidden = !enabled;
+  for (const id of ['stream-bytes', 'stream-records', 'stream-idle']) $(id).disabled = !enabled;
 }
 function renderSource() {
   const files = protoSource?.files ?? [], builtins = protoSource?.builtins ?? [];
-  $('source-summary').textContent = protoSource ? files.length + ' local files · ' + builtins.length +
-    ' standard descriptor files · SHA256 ' + protoSource.sha256 : 'No source captured.';
+  const descriptor = protoSource?.schema === 'sf30-grpc-descriptor-source-v1';
+  if (protoSource) $('source-mode').value = descriptor ? 'reflection' : 'files';
+  renderSourceMode();
+  $('source-summary').textContent = protoSource ? files.length + (descriptor ? ' exact binary descriptor files · ' : ' local files · ') +
+    builtins.length + ' standard descriptor files · SHA256 ' + protoSource.sha256 : 'No source captured.';
   $('source-file').replaceChildren();
   if (!files.length) { const option = node('option', 'No captured files'); option.value = ''; $('source-file').append(option); }
   for (const file of files) { const option = node('option', file.path); option.value = file.path; $('source-file').append(option); }
@@ -139,15 +175,98 @@ function renderSource() {
 }
 function showSourceFile() {
   const file = protoSource?.files?.find(file => file.path === $('source-file').value);
-  const content = file?.content ?? 'No captured source.';
+  $('source-download').disabled = !file;
+  const content = file?.descriptorBase64 ? 'FileDescriptorProto: ' + file.path + '\n' + file.bytes +
+    ' original binary bytes · SHA256 ' + file.sha256 + '\n\nOriginal base64:\n' + file.descriptorBase64 :
+    file?.content ?? 'No captured source.';
   $('source-text').textContent = content.length > 131072 ? content.slice(0, 131072) +
     '\n… Display limited to 128 KiB. The complete source remains in this saved revision.' : content;
 }
+
+function renderSourceMode() {
+  const reflection = $('source-mode').value === 'reflection';
+  $('file-intake').hidden = reflection; $('reflection-intake').hidden = !reflection;
+}
+function invalidateReflection() {
+  reflectedInventory = null; reflectionSourceFingerprint = null; reflectionSelection.clear(); reflectionPreview = null;
+  renderReflectionServices(); renderReflectionPreview();
+}
+function renderReflectionServices() {
+  const area = $('reflection-services'); area.replaceChildren();
+  const query = $('reflection-filter').value.trim().toLowerCase();
+  const services = (reflectedInventory?.services ?? []).filter(name => name.toLowerCase().includes(query));
+  reflectionPage = Math.max(0, Math.min(reflectionPage, Math.ceil(services.length / 100) - 1));
+  const begin = reflectionPage * 100;
+  for (const name of services.slice(begin, begin + 100)) {
+    const label = node('label', undefined, 'reflection-service'), selected = document.createElement('input');
+    selected.type = 'checkbox'; selected.value = name; selected.checked = reflectionSelection.has(name);
+    selected.addEventListener('change', () => {
+      if (selected.checked && reflectionSelection.size >= 256) {
+        selected.checked = false; notice('Choose up to 256 services for one retained source.', 'error'); return;
+      }
+      if (selected.checked) reflectionSelection.add(name); else reflectionSelection.delete(name);
+      reflectionPreview = null; renderReflectionPreview(); renderReflectionCount(); buttons();
+    });
+    label.append(selected, node('span', name)); area.append(label);
+  }
+  if (!services.length) area.append(node('p', reflectedInventory ? 'No services match this filter.' : 'Discover this endpoint’s services first.'));
+  $('reflection-previous').disabled = reflectionPage === 0;
+  $('reflection-next').disabled = begin + 100 >= services.length;
+  $('reflection-page').textContent = services.length ? (begin + 1) + '–' + Math.min(begin + 100, services.length) + ' of ' + services.length : '0 services';
+  renderReflectionCount();
+}
+function renderReflectionCount() {
+  $('reflection-count').textContent = reflectionSelection.size + ' selected · ' + (reflectedInventory?.services.length ?? 0) + ' advertised';
+  $('reflection-inventory').textContent = reflectedInventory ? reflectedInventory.protocol + ' · ' +
+    reflectedInventory.source.target + ' · inventory SHA256 ' + reflectedInventory.sha256 :
+    'No current endpoint inventory.';
+}
+function renderReflectionPreview() {
+  const value = reflectionPreview; $('reflection-preview').hidden = !value;
+  if (!value) { buttons(); return; }
+  const info = value.summary;
+  $('reflection-preview-summary').textContent = info.protocol + ' · ' + info.target + ' · ' +
+    info.services.length + ' selected services · ' + info.files + ' exact descriptors · ' + info.bytes +
+    ' bytes. Compare to revision ' + short(value.comparisonBaseRevision) + '. Capture SHA256 ' + info.captureSha256;
+  const area = $('reflection-file-list'); area.replaceChildren();
+  for (const file of value.protoSource.files) {
+    const item = card(file.path, file.bytes + ' bytes · SHA256 ' + file.sha256); area.append(item);
+  }
+  const methods = $('reflection-methods'); methods.replaceChildren();
+  for (const method of value.methods) methods.append(node('li', method.path + ' · ' +
+    method.requestType + ' → ' + method.responseType + (method.selectable ? (method.responseStream ? ' · server stream' : '') : ' · streamed request; visible only')));
+  const differences = $('reflection-comparison'); differences.replaceChildren();
+  for (const name of ['files', 'services', 'methods', 'messages', 'enums']) {
+    const change = value.comparison[name], details = document.createElement('details');
+    details.append(node('summary', name + ': ' + change.added.length + ' added, ' + change.removed.length +
+      ' removed, ' + change.changed.length + ' changed'));
+    details.append(node('pre', pretty(change))); differences.append(details);
+  }
+  const types = pretty({ messages: value.inventory.messages, enums: value.inventory.enums });
+  $('reflection-types').textContent = types.length > 131072 ? types.slice(0, 131072) +
+    '\n… Display limited to 128 KiB. Download the complete capture for every typed record.' : types;
+  $('reflection-save-hint').textContent = value.comparisonBaseRevision === editorBase ?
+    'Save uses these retained descriptor bytes and this exact editor base. Keep the draft routes, or clear them and choose methods after saving.' :
+    'Open this capture from Saved work to compare the same bytes with the current revision before saving.';
+  buttons();
+}
+async function reopenReflection(id) {
+  if (!confirmReplacement('Opening a retained capture with the current saved merchant plan', { whole: true })) return;
+  await refresh();
+  if (inventory.currentRevision) await adopt(await json('open', { revision: inventory.currentRevision }));
+  else { editorBase = null; adopted = null; protoSource = null; clearMethod(); }
+  reflectionPreview = await json('reflection-open', { id, baseRevision: editorBase });
+  fillSource(reflectionPreview.request.source); dirty = true;
+  reflectedInventory = null; reflectionSelection = new Set(reflectionPreview.protoSource.services);
+  $('source-mode').value = 'reflection'; renderSourceMode(); renderReflectionServices(); renderReflectionPreview(); view('source');
+  notice('Retained descriptor bytes reopened and compared with ' + short(editorBase) + '.');
+}
+
 function renderMethods() {
   $('method-list').replaceChildren();
   for (const method of adopted?.methods ?? []) {
     const item = card(method.path, method.requestType + ' → ' + method.responseType +
-      (method.selectable ? '' : ' · streaming; visible only'));
+      (method.requestStream ? ' · client-streaming input; visible only' : method.responseStream ? ' · server stream / NDJSON' : ' · unary / JSON'));
     item.classList.toggle('selected', method.path === methodPath);
     const choose = button('Open method', () => work(() => chooseMethod(method.path), 'Opening captured method…'), true);
     choose.disabled = !method.selectable; item.append(choose); $('method-list').append(item);
@@ -254,13 +373,14 @@ async function chooseMethod(path, routeId = null) {
   $('method-heading').textContent = path; $('method-types').textContent =
     result.method?.requestType && result.method?.responseType ? result.method.requestType + ' → ' + result.method.responseType :
       adopted.methods.find(row => row.path === path)?.requestType + ' → ' + adopted.methods.find(row => row.path === path)?.responseType;
+  $('method-types').textContent += adopted.methods.find(row => row.path === path)?.responseStream ? ' · NDJSON records' : ' · one JSON response';
   $('method-schema').textContent = pretty(result);
   $('request').value = pretty(route?.example ?? {}); $('request').setCustomValidity('');
   $('field-form').inert = false; planDirty = false; requestDirty = false;
   fillRoute(route); renderFields(route?.example ?? {}); renderMethods(); buttons();
 }
 function applyRoute() {
-  if (!methodPath) throw new Error('Select a unary method.');
+  if (!methodPath) throw new Error('Select a unary or server-streaming method.');
   if (planDirty) throw new Error('Apply or discard the complete plan JSON before changing one route.');
   const input = requestValue();
   const id = $('route-id').value.trim(), terms = parse('payments', 'Payment options');
@@ -285,14 +405,16 @@ function savedCurrent() {
   return adopted.id;
 }
 async function refresh() {
-  inventory = await json('state'); renderInventory(); buttons();
+  inventory = await json('state'); renderInventory(); upgradePanel.update(inventory); buttons();
 }
 async function adopt(revision) {
   // The editor base belongs to this exact response, never to a later inventory refresh.
+  reflectionPreview = null; reflectedInventory = null; reflectionSelection.clear();
   adopted = revision; editorBase = revision.id; source = structuredClone(revision.source);
   protoSource = structuredClone(revision.protoSource); plan = structuredClone(revision.plan);
   $('title').value = revision.title; fillSource(source); renderSource();
   clearMethod(); dirty = false; routeDirty = false; planDirty = false; renderMethods();
+  renderReflectionServices(); renderReflectionPreview();
   await refresh();
 }
 function renderRuntime(value) {
@@ -330,6 +452,14 @@ function renderInventory() {
       await adopt(await json('open', { revision: revision.id })); notice('Saved revision opened. Its exact ID is the editor’s save base.'); view('source');
     }), true)); $('history').append(item);
   }
+  $('reflection-history').replaceChildren();
+  for (const capture of inventory.reflections ?? []) {
+    const item = card(capture.target + ' · ' + short(capture.id), capture.createdAt + ' · ' +
+      capture.services.length + ' services · ' + capture.files + ' descriptors');
+    item.append(button('Open capture and compare', () => work(() => reopenReflection(capture.id)), true));
+    $('reflection-history').append(item);
+  }
+  if (!inventory.reflections?.length) $('reflection-history').append(node('p', 'No reflected source captures yet.'));
   $('intents').replaceChildren();
   for (const intent of inventory.intents) {
     const item = card(short(intent.id), 'Revision ' + short(intent.revision) + ' · preparation not yet fully published');
@@ -378,8 +508,23 @@ function showAttempt(value) {
   if (!value) { $('call-status').textContent = 'No operation with that ID is retained.'; return; }
   $('call-status').append(node('strong', value.phase + ' · ' + value.id));
   if (value.nextAction) $('call-status').append(node('p', value.nextAction));
+  const capture = value.stream ?? (value.output?.type === 'grpc-ndjson' ? value.output : null);
+  if (capture) {
+    $('call-status').append(node('p', (capture.complete ? 'Complete native stream' : 'Partial or unconfirmed stream') +
+      ' · ' + capture.records + ' complete records · ' + capture.bytes.toLocaleString() + ' retained bytes' +
+      (capture.grpcStatus ? ' · native ' + capture.grpcStatus : ' · no retained native terminal')));
+    $('call-status').append(node('p', 'SHA256 ' + capture.sha256, 'mono'));
+    $('call-status').append(button('Download retained NDJSON', () => work(async () => {
+      const retained = await json('stream-download', { id: value.id });
+      const anchor = document.createElement('a');
+      anchor.href = retained.url; anchor.download = retained.filename; anchor.rel = 'noreferrer';
+      document.body.append(anchor); anchor.click(); anchor.remove();
+      notice('Browser download started for ' + retained.filename + ' · ' + retained.bytes.toLocaleString() +
+        ' bytes · SHA256 ' + retained.sha256 + (retained.complete ? ' · complete' : ' · partial or unconfirmed'));
+    }, 'Checking the retained file and opening its exact byte download…'), true));
+  }
   const output = pretty({ method: value.method, input: value.input, ...(value.outputRetained ? { output: value.output } : {}),
-    ...(value.error ? { error: value.error } : {}) });
+    ...(value.stream ? { stream: value.stream } : {}), ...(value.error ? { error: value.error } : {}) });
   $('call-output').textContent = output.length > 131072 ? output.slice(0, 131072) + '\n… Use Download exact outcome for the complete retained JSON.' : output;
   $('call-status').append(button('Download exact outcome', () => saveBlob(new Blob([pretty(latestAttempt) + '\n'],
     { type: 'application/json' }), 'grpc-operation-' + value.id + '.json'), true));
@@ -394,10 +539,16 @@ async function download(action, value) {
   const blob = await response.blob(); saveBlob(blob, filename);
   notice('Downloaded ' + filename + ' · SHA256 ' + response.headers.get('x-content-sha256'));
 }
+const upgradePanel = mountGrpcUpgrades({ root: $('view-upgrades'), json, work, notice, storageKey,
+  mayAdopt: () => confirmReplacement('Opening the reviewed upgrade', { whole: true }),
+  onAdopt: async revision => { await adopt(revision); view('methods'); } });
 for (const item of document.querySelectorAll('nav button')) item.addEventListener('click', () => view(item.dataset.view));
 $('source-file').addEventListener('change', showSourceFile);
-for (const id of ['title', 'target', 'transport', 'server-name', 'ca-env', 'certificate-env', 'private-key-env', 'metadata', 'limits'])
-  $(id).addEventListener('input', () => { if (id === 'transport') $('tls-fields').hidden = $('transport').value !== 'tls'; changed(); });
+for (const id of ['title', 'target', 'transport', 'server-name', 'ca-env', 'certificate-env', 'private-key-env', 'metadata', 'limits',
+  'stream-bytes', 'stream-records', 'stream-idle'])
+  $(id).addEventListener('input', () => { if (id === 'transport') $('tls-fields').hidden = $('transport').value !== 'tls';
+    if (id !== 'title') invalidateReflection(); changed(); });
+$('stream-enabled').addEventListener('change', () => { streamControls(); invalidateReflection(); changed(); });
 for (const id of ['route-id', 'route-path', 'service-name', 'public-origin', 'description', 'payments'])
   $(id).addEventListener('input', () => { routeDirty = true; buttons(); });
 $('plan').addEventListener('input', () => { planDirty = true; buttons(); });
@@ -440,6 +591,68 @@ $('save').addEventListener('click', () => work(async () => {
   const saved = await json('save', { source: readSource(), protoSource, plan, baseRevision: editorBase, title: $('title').value.trim() });
   await adopt(saved); notice('Source and complete merchant plan saved as ' + short(saved.id) + '.');
 }, 'Saving and compiling the exact source and terms…'));
+
+$('source-mode').addEventListener('change', renderSourceMode);
+$('source-download').addEventListener('click', () => {
+  const file = protoSource?.files.find(row => row.path === $('source-file').value);
+  if (!file) return;
+  const content = file.descriptorBase64 ? Uint8Array.from(atob(file.descriptorBase64), character => character.charCodeAt(0)) : file.content;
+  saveBlob(new Blob([content], { type: file.descriptorBase64 ? 'application/octet-stream' : 'text/plain;charset=utf-8' }),
+    file.path.split('/').at(-1) + (file.descriptorBase64 ? '.descriptor.pb' : ''));
+});
+$('reflection-filter').addEventListener('input', () => { reflectionPage = 0; renderReflectionServices(); });
+$('reflection-previous').addEventListener('click', () => { reflectionPage--; renderReflectionServices(); });
+$('reflection-next').addEventListener('click', () => { reflectionPage++; renderReflectionServices(); });
+$('reflection-clear').addEventListener('click', () => {
+  reflectionSelection.clear(); reflectionPreview = null; renderReflectionServices(); renderReflectionPreview(); buttons();
+});
+$('reflection-discover').addEventListener('click', () => work(async () => {
+  const result = await json('reflection-inventory', { source: readSource(), protocol: $('reflection-protocol').value });
+  fillSource(result.source); dirty = true; reflectedInventory = result; reflectionPage = 0;
+  reflectionSourceFingerprint = sourceFingerprint(readSource()); reflectionSelection.clear(); reflectionPreview = null;
+  renderReflectionServices(); renderReflectionPreview(); buttons();
+  notice('Discovered ' + result.services.length + ' services through native ' + result.protocol + ' reflection.');
+}, 'Reading this endpoint’s native reflection inventory…'));
+$('reflection-capture').addEventListener('click', () => work(async () => {
+  if (!reflectedInventory || reflectionSourceFingerprint !== sourceFingerprint(readSource()))
+    throw new Error('Discover services again after changing this connection.');
+  if (!reflectionSelection.size) throw new Error('Select at least one service.');
+  const id = crypto.randomUUID();
+  try { sessionStorage.setItem(storageKey + ':last-reflection', id); } catch {}
+  try {
+    reflectionPreview = await json('reflection-capture', { id, source: reflectedInventory.source,
+      protocol: reflectedInventory.protocol, services: [...reflectionSelection],
+      expectedInventorySha256: reflectedInventory.sha256, baseRevision: editorBase });
+  } catch (issue) {
+    const retained = await json('reflection-open', { id, baseRevision: editorBase }).catch(() => null);
+    if (!retained) throw issue;
+    reflectionPreview = retained;
+  }
+  renderReflectionPreview(); await refresh(); buttons();
+  notice('Exact descriptor/import bytes captured. Review the source changes, then save this capture.');
+}, 'Capturing selected service descriptors and their complete import closure…'));
+$('reflection-save').addEventListener('click', () => work(async () => {
+  if (!reflectionPreview) throw new Error('Capture and review the selected services first.');
+  if (routeDirty || planDirty) throw new Error('Apply or discard pending route or complete plan edits first.');
+  if (sourceFingerprint(readSource()) !== sourceFingerprint(reflectionPreview.request.source))
+    throw new Error('Reopen the retained capture or discover the edited connection first.');
+  if (!confirmReplacement('Saving this exact reflected source and its merchant plan', { request: true })) return;
+  const nextPlan = structuredClone(plan);
+  if (!$('reflection-keep-routes').checked) nextPlan.routes = [];
+  const saved = await json('reflection-save', { id: reflectionPreview.id,
+    expectedCaptureSha256: reflectionPreview.captureSha256, baseRevision: editorBase,
+    title: $('title').value.trim(), plan: nextPlan });
+  await adopt(saved); notice('Reviewed reflected source saved as ' + short(saved.id) + '. Select its native methods and terms.');
+}, 'Saving the approved captured bytes through the original revision workflow…'));
+$('reflection-download').addEventListener('click', () => {
+  if (reflectionPreview) saveBlob(new Blob([pretty(reflectionPreview) + '\n'], { type: 'application/json' }),
+    'grpc-reflection-' + reflectionPreview.id + '.json');
+});
+$('reflection-source-download').addEventListener('click', () => {
+  if (reflectionPreview) saveBlob(new Blob([pretty(reflectionPreview.protoSource) + '\n'], { type: 'application/json' }),
+    'grpc-descriptor-source-' + reflectionPreview.protoSource.sha256 + '.json');
+});
+
 $('capture').addEventListener('click', () => work(async () => {
   if (routeDirty || planDirty) throw new Error('Apply or discard the pending route or complete plan edits first.');
   if (!confirmReplacement('Capturing the source and reopening the saved request example', { request: true })) return;
@@ -454,6 +667,7 @@ $('example').addEventListener('click', () => work(async () => {
   const example = await json('example'); fillSource(example.source); plan = example.plan;
   adopted = null; protoSource = null; planDirty = false; clearMethod();
   renderSource(); renderMethods();
+  $('source-mode').value = 'files'; renderSourceMode();
   $('proto-directory').value = example.protoDirectory; $('entrypoints').value = example.entrypoints.join('\n');
   $('title').value = 'Included analytics example'; dirty = true; routeDirty = false; fillRoute(null); renderRoutes(); buttons();
   notice('Example connection and plan loaded into the draft. Start its documented local server, then Capture and save source.');
@@ -479,6 +693,7 @@ $('prepare').addEventListener('click', () => work(async () => {
 $('call').addEventListener('click', () => work(async () => {
   const revision = savedCurrent(), input = requestValue(), id = crypto.randomUUID();
   try { sessionStorage.setItem(storageKey + ':last-call', id); } catch {}
+  activeCallId = id; $('cancel-call').hidden = false; $('cancel-call').disabled = false;
   try {
     const result = await json('call', { id, revision, method: methodPath, input });
     showAttempt(result); await refresh(); view('operate');
@@ -488,8 +703,18 @@ $('call').addEventListener('click', () => work(async () => {
     if (retained) { showAttempt(retained); await refresh(); view('operate');
       notice('Recovered the retained upstream outcome for ' + short(id) + ': ' + retained.phase + '.', retained.phase === 'COMPLETED' ? '' : 'error'); }
     else throw new Error(issue.message + ' Operation ID ' + id + ' remains selected for readback; it was not automatically retried.');
-  }
+  } finally { activeCallId = null; $('cancel-call').hidden = true; }
 }, 'Running one intentional upstream request and retaining its outcome…'));
+$('cancel-call').addEventListener('click', async () => {
+  const id = activeCallId;
+  if (!id) return;
+  $('cancel-call').disabled = true;
+  try {
+    const result = await json('cancel-call', { id });
+    notice(result.cancellationRequested ? 'Cancellation requested. Waiting for the original native terminal and retained response file…' :
+      'The call has already settled. Its original outcome will be shown.');
+  } catch (issue) { notice(issue.message, 'error'); if (activeCallId === id) $('cancel-call').disabled = false; }
+});
 $('stop').addEventListener('click', () => work(async () => {
   await json('stop', {}); await refresh(); notice('Merchant drained and stopped.');
 }, 'Draining the original seller and closing its upstream channel…'));
@@ -510,7 +735,7 @@ $('release-close').addEventListener('click', () => work(async () => {
 $('refresh').addEventListener('click', () => work(async () => {
   await refresh(); notice('Inventory refreshed. The editor still uses its exact opened revision as the save base.');
 }));
-window.addEventListener('beforeunload', event => { if (dirty || routeDirty || planDirty || requestDirty) { event.preventDefault(); event.returnValue = ''; } });
+window.addEventListener('beforeunload', event => { if (dirty || routeDirty || planDirty || requestDirty || activeCallId || upgradePanel.hasDraft()) { event.preventDefault(); event.returnValue = ''; } });
 await work(async () => {
   if (!/^[a-f0-9]{64}$/.test(token)) throw new Error('Open the complete private workspace URL printed by its original server.');
   await refresh();
@@ -519,7 +744,14 @@ await work(async () => {
   let last;
   try { last = sessionStorage.getItem(storageKey + ':last-call'); } catch {}
   if (last) showAttempt(await json('attempt', { id: last }).catch(() => null));
+  let lastReflection;
+  try { lastReflection = sessionStorage.getItem(storageKey + ':last-reflection'); } catch {}
+  if (lastReflection) {
+    const retained = await json('reflection-open', { id: lastReflection, baseRevision: editorBase }).catch(() => null);
+    if (retained) { reflectionPreview = retained; renderReflectionPreview(); }
+  }
   notice('Private workspace ready. Source and credential values stay on this merchant host.');
+  await upgradePanel.resume();
 }, 'Opening saved merchant work…');
 setInterval(() => {
   if (busy || document.hidden || !token) return;

@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-arcgis-workspaces",
+  "description": "Original arcgis workspaces MCP provider",
+  "merchantProviders": {
+    "arcgis-workspaces": "stellar-forge/mcp-merchant-operator/providers/arcgis-workspaces.mjs"
+  }
+}

@@ -26,8 +26,10 @@ const HELP = `Starforge dataset customer workspace
 
 Receive the merchant's original offer file, review the dataset query and caps,
 then create and continue the original private acquisition. Keep this terminal
-open for native per-page purchase approval. Existing host-selected native
-sessions can be attached through --profile. No browser path input is executed.
+open for native per-page purchase approval. Local buyer setup reviews and saves
+the original host preset; --operator-settings can seed that same setup. Existing
+host-selected native sessions can be attached through --profile. Signing and
+Python references use the original host preset validator and initializer.
 The optional analysis configuration opens the original Python workspace from
 the finalized original session and room. Ctrl+C drains owned work and preserves
 every native page, purchase and delivered file.
@@ -59,6 +61,8 @@ export async function startDatasetWorkspace({ stateDirectory, profilePath = null
     ['/', 'index.html', 'text/html; charset=utf-8'], ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, name, type]) => [path, { type, raw: await readFile(new URL('./public/' + name, import.meta.url)) }])));
+  assets.set('/buyer-runbook/workspace-ui/operator.mjs', { type: 'text/javascript; charset=utf-8',
+    raw: await readFile(new URL('../../buyer-runbook/workspace-ui/operator.mjs', import.meta.url)) });
   const model = await openDatasetWorkspace({ stateDirectory, profilePath, operatorSettings, analysis });
   const capability = randomBytes(32).toString('hex'), secret = Buffer.from(capability);
   const tickets = new Map(), sockets = new Set(), transfers = new Set();
@@ -104,6 +108,15 @@ export async function startDatasetWorkspace({ stateDirectory, profilePath = null
       check(supplied.length === secret.length && timingSafeEqual(supplied, secret), 'DATASET_CAPABILITY_REQUIRED', 'Open the complete private link from the launching terminal.', 401);
       if (req.method === 'GET') {
         if (url.pathname === '/api/state' && !url.search) return json(200, await model.state());
+        if (url.pathname === '/api/operator' && !url.search) return json(200, await model.operatorState());
+        const operatorRevision = /^\/api\/operator\/(preset-[a-f0-9]{64})$/.exec(url.pathname);
+        if (operatorRevision && !url.search) return json(200, await model.operatorRevision(operatorRevision[1]));
+        const operatorFile = /^\/files\/operator\/(preset-[a-f0-9]{64})\/settings\.json$/.exec(url.pathname);
+        if (operatorFile && !url.search) {
+          const saved = await model.operatorAttachment(operatorFile[1]);
+          return reply(200, 'application/json; charset=utf-8', saved.bytes,
+            { 'content-disposition': 'attachment; filename="' + saved.name + '"', 'x-content-sha256': saved.sha256 });
+        }
         if (url.pathname === '/api/source') { const value = params(url, ['id']); return json(200, await model.source(value.id)); }
         if (url.pathname === '/api/session') { const value = params(url, ['id']); return json(200, await model.session(value.id)); }
         if (url.pathname === '/api/job') { const value = params(url, ['id']); return json(200, model.job(value.id)); }
@@ -116,6 +129,8 @@ export async function startDatasetWorkspace({ stateDirectory, profilePath = null
         }
       }
       const actions = {
+        '/api/operator/review': ['settings', 'expectedStateSha256', 'note', 'sourceRevision'],
+        '/api/operator/save': ['settings', 'expectedStateSha256', 'note', 'sourceRevision', 'expectedReviewSha256'],
         '/api/receive': ['name', 'base64'],
         '/api/review': ['sourceId', 'name', 'rowIndex', 'acceptIndex', 'query', 'maxPages', 'maxRows', 'maxPageBytes', 'maxTotalAtomic', 'dailyAtomic'],
         '/api/prepare': ['reviewId'], '/api/start': ['actionId', 'session', 'kind', 'expectedRevision', 'alias'],
@@ -123,7 +138,9 @@ export async function startDatasetWorkspace({ stateDirectory, profilePath = null
       };
       check(req.method === 'POST' && !url.search && actions[url.pathname], 'DATASET_ROUTE_NOT_FOUND', undefined, 404);
       check(req.headers.origin === origin, 'DATASET_ORIGIN_REQUIRED', undefined, 403);
-      const value = await input(req, actions[url.pathname], url.pathname === '/api/receive' ? 4 * Math.ceil(CATALOG_LIMIT / 3) + 4096 : 16384);
+      const value = await input(req, actions[url.pathname], url.pathname === '/api/receive' ? 4 * Math.ceil(CATALOG_LIMIT / 3) + 4096 : url.pathname.startsWith('/api/operator/') ? 20480 : 16384);
+      if (url.pathname === '/api/operator/review') return json(200, await model.reviewOperatorSettings(value));
+      if (url.pathname === '/api/operator/save') return json(200, await model.saveOperatorSettings(value));
       if (url.pathname === '/api/receive') return json(201, await model.receive(value));
       if (url.pathname === '/api/review') return json(200, await model.review(value));
       if (url.pathname === '/api/prepare') return json(201, await model.prepare(value.reviewId));

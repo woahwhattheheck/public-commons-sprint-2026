@@ -3,14 +3,15 @@ import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { link, unlink } from 'node:fs/promises';
-import { OPENAPI_SETUP_ROUTES, openApiConnectionSetupAction } from '../../../distribution/runtime-workspace/openapi-connection-setup.mjs';
-import { MAX_SOURCE_BYTES, need, plain, revision, setupError } from './model.mjs';
+import { OPENAPI_SETUP_ROUTES, openApiConnectionSetupAction, resolveOpenApiSetupEdition, openApiSetupEditionSummary } from '../../../distribution/runtime-workspace/openapi-connection-setup.mjs';
+import { MAX_SOURCE_BYTES, need, plain, fields, revision, setupError } from './model.mjs';
 import { absolute, privateDirectory, readPrivate, createFile, syncDirectory } from '../../postgres/publisher/files.mjs';
 import { regular } from '../../../distribution/runtime-workspace/storage.mjs';
 
 const HELP=String.raw`Usage:
   starforge oauth-connection setup catalog --workspace ROOT --runtime ID [--context PRIVATE.json]
   starforge oauth-connection setup import-source --workspace ROOT --runtime ID --source OPENAPI --label TEXT --request-id ID --expected-revision N [--context PRIVATE.json]
+  starforge oauth-connection setup import-provider --workspace ROOT --runtime ID --input PRIVATE.json [--context PRIVATE.json]
   starforge oauth-connection setup inspect-source --workspace ROOT --runtime ID --input PRIVATE.json
   starforge oauth-connection setup review --workspace ROOT --runtime ID --context PRIVATE.json --input PRIVATE.json
   starforge oauth-connection setup commit --workspace ROOT --runtime ID --context PRIVATE.json --input PRIVATE.json
@@ -18,6 +19,7 @@ const HELP=String.raw`Usage:
   starforge oauth-connection setup recover --workspace ROOT --runtime ID --input PRIVATE.json
   starforge oauth-connection setup activate --workspace ROOT --runtime ID --input PRIVATE.json
   starforge oauth-connection setup download --workspace ROOT --runtime ID --input PRIVATE.json [--out FILE]
+  starforge oauth-connection setup provider-binding --workspace ROOT --runtime ID --input PRIVATE.json
 
 ROOT is the original runtime operator workspace; ID is one of its existing runtime
 entries. The current console prepares setup for a compatible verified READY runtime.
@@ -26,7 +28,8 @@ uses the same action fields as the Applications setup API. Context and input fil
 are private regular UTF-8 JSON. The original OpenAPI file may be JSON or YAML and
 is retained byte-for-byte; its imported size is at most 4 MiB.
 
-All writes use the host-owned oauth-setup and oauth-grants children of ROOT.
+Setup editions and grants use the host-owned oauth-setup and oauth-grants children
+of ROOT. Native accounting selections use its separate oauth-accounting child.
 Existing declared environment values are preserved in a private immutable edition.
 Profiles reference existing client secrets by environment name; never put secret
 values into setup inputs. --allow-loopback-oauth explicitly enables development
@@ -38,12 +41,23 @@ retained operation even if the current form context has changed. A committed
 edition returns the four settings to apply through original Applications
 Save -> Review start -> Start. Setup does not authorize an account or hot-swap a
 running application. Downloads exclude private environment and grant files.
+
+Native provider import input: {requestId,expectedRevision,provider,sourceSha256};
+provider is quickbooks or xero, and sourceSha256 comes from catalog.providers.
+Provider review entries use the original factory and registered client/callback;
+they cannot override endpoints, scopes, auth method or PKCE. QuickBooks requires
+an explicit sandbox/production environment; Xero has no environment selector.
+provider-binding input is {editionId,alias,expectedProfileSha256}. It resolves the
+exact immutable edition and prepares its profile-owned native selection directory.
+Command output is an explicit safe summary: no private environment values or grant
+file bytes are printed. Native company/tenant selection and consent stay with the
+original accounting application.
 `;
 const BOOL=new Set(['allow-loopback-oauth']);
 function argumentsFor(argv) {
   const [action,...rest]=argv;
   if(!action || ['--help','help'].includes(action))return {action:'help'};
-  need(Object.hasOwn(OPENAPI_SETUP_ROUTES,action),'INPUT_INVALID','Choose a setup action from --help.');
+  need(Object.hasOwn(OPENAPI_SETUP_ROUTES,action) || action==='provider-binding','INPUT_INVALID','Choose a setup action from --help.');
   const allowed=new Set(['workspace','runtime','context','input','allow-loopback-oauth',
     ...(action==='import-source'?['source','label','request-id','expected-revision']:[]),
     ...(action==='download'?['out']:[])]);
@@ -107,9 +121,18 @@ export async function setupMain(argv=process.argv.slice(2),{write=value=>process
       input={sourceText,label:args.label,requestId:args['request-id'],
         expectedRevision:revision(Number(args['expected-revision']))};
     }
-    const result=await openApiConnectionSetupAction(absolute(args.workspace),{
+    const policy={allowLoopbackOAuth:args['allow-loopback-oauth']===true};
+    let result;
+    if(args.action==='provider-binding') {
+      fields(input,['editionId','alias','expectedProfileSha256'],'native provider binding');
+      const bound=await resolveOpenApiSetupEdition(absolute(args.workspace),{
+        runtimeId:args.runtime,editionId:input.editionId,alias:input.alias,
+        expectedProfileSha256:input.expectedProfileSha256,
+      },{policy});
+      result=openApiSetupEditionSummary(bound);
+    } else result=await openApiConnectionSetupAction(absolute(args.workspace),{
       action:args.action,runtimeId:args.runtime,context,input,
-    },{policy:{allowLoopbackOAuth:args['allow-loopback-oauth']===true}});
+    },{policy});
     if(args.out) {
       await publicDownload(args.out,result);
       const {content,...metadata}=result;
