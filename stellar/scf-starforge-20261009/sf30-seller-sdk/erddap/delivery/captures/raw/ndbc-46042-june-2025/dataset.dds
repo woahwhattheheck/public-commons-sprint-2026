@@ -1,0 +1,34 @@
+Dataset {
+  Sequence {
+    Float32 longitude;
+    Float32 latitude;
+    Float64 time;
+    Int16 WD;
+    Float32 WSPD;
+    Float32 GST;
+    Float32 WVHT;
+    Float32 DPD;
+    Float32 APD;
+    Int16 MWD;
+    Float32 BAR;
+    Float32 ATMP;
+    Float32 WTMP;
+    Float32 DEWP;
+    Float32 VIS;
+    Float32 PTDY;
+    Float32 TIDE;
+    Float32 WSPU;
+    Float32 WSPV;
+    String station;
+    String station_id;
+    String station_name;
+    String station_location;
+    String station_type;
+    String timezone;
+    String owner_code;
+    String owner_name;
+    String country_code;
+    String data_coverage_start;
+    String data_coverage_end;
+  } s;
+} s;
