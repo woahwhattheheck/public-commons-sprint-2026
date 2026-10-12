@@ -97,7 +97,8 @@ export async function prepareOpenSearchRelease(packageDirectory) {
       id: route.id, offer: route.offer, handler() { throw new Error('Release inspection only'); }, admit() { return true; },
     })));
     const openapi = compileSellerOpenApi(routes, { mode: 'CHALLENGE_ONLY' });
-    if (!isDeepStrictEqual(parse(retained['openapi.json']), openapi) ||
+    // Compare the emitted JSON contract; compiler maps can have a null prototype.
+    if (stable(parse(retained['openapi.json'])) !== stable(openapi) ||
         !retained['openapi.json'].equals(retained['client/seller-openapi.json']))
       fail('The prepared OpenSearch OpenAPI or generated customer contract differs from its source.');
     const client = await inspectSellerClientExport({ directory: join(directory, 'client') });
