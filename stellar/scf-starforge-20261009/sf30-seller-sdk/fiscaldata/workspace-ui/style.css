@@ -15,3 +15,21 @@ h1,h2,h3,h4,p{margin:0}h1{font-size:23px;line-height:1.15;letter-spacing:-.4px;f
 /* Retained capture state remains readable inside the horizontally scrollable table. */
 #captures-list th:nth-child(2),#captures-list td:nth-child(2){min-width:104px}
 
+
+/* Saved source refresh uses the original monochrome workspace controls. */
+.refresh-layout{display:grid;grid-template-columns:minmax(230px,0.65fr) minmax(0,1.7fr);gap:20px;align-items:start}
+.refresh-layout>*{min-width:0}
+.refresh-picker .select-list{max-height:540px;overflow:auto}
+#refresh-plan-form>div.form-grid{padding:0;gap:16px}
+#refresh-window{border:1px solid var(--border,#d6d8dc);padding:16px!important;border-radius:3px}
+.refresh-run-status{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.refresh-review,.refresh-baseline{border-top:1px solid var(--border,#d6d8dc);padding-top:18px}
+#refresh-root .readout dd{overflow-wrap:anywhere;min-width:0}
+#refresh-root .button-row select{min-width:0;max-width:100%;flex:1 1 240px}
+#refresh-root .details{margin-top:16px}
+#refresh-root .table-wrap{max-width:100%;overflow:auto}
+#refresh-root .notice{margin-top:14px}
+@media(max-width:980px){.refresh-layout{grid-template-columns:1fr}.refresh-picker .select-list{max-height:280px}}
+@media(max-width:600px){#refresh-root .form-grid{grid-template-columns:1fr}#refresh-root .span-2{grid-column:1}
+ #refresh-root .button-row>*{max-width:100%}#refresh-root .readout{grid-template-columns:1fr}
+ #refresh-root .form-actions{align-items:stretch}#refresh-root .form-actions button{width:100%}}

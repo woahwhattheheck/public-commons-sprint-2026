@@ -10,7 +10,9 @@
     "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/merchant-setup.mjs",
     "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/connection.mjs",
     "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/connection.d.mts",
-    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/MCP.md"
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/MCP.md",
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.d.mts"
   ],
   "merchantProviders": {
     "recovery-workspaces": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/merchant-provider.mjs"
@@ -24,6 +26,16 @@
     "./merchant/recovery/workspace/connection": {
       "types": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/connection.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/connection.mjs"
+    },
+    "./merchant/mcp/recovery/receive": {
+      "types": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.mjs"
     }
+  },
+  "commands": {
+    "merchant-recovery-mcp-receive": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.mjs"
+  },
+  "commandDescriptions": {
+    "merchant-recovery-mcp-receive": "Receive an existing recovery workspace through native merchant MCP and reopen its retained verification and transfers."
   }
 }

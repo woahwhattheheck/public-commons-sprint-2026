@@ -38,7 +38,7 @@ export async function readResearchWorkspaceConfiguration(file){
       throw failure('CONFIGURATION_ERROR','Declare original source handles.');
     for(const[name,source]of Object.entries(value.sources??{})){
       identifier(name);exact(source,['file','kind','sha256','provider','sourceReference'],['file','kind','sha256']);
-      if(!['research','reference','portable','clinicaltrials-packet'].includes(source.kind)||!['portable','clinicaltrials-packet'].includes(source.kind)&&
+      if(!['research','reference','portable','clinicaltrials-packet','source-bundle'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle'].includes(source.kind)&&
         (typeof source.provider!=='string'||!/^[a-z][a-z0-9_-]{0,79}$/.test(source.provider)))
         throw failure('CONFIGURATION_ERROR','Each source declares its original kind and provider.');
       if(source.sourceReference!==undefined&&(typeof source.sourceReference!=='string'||source.sourceReference.length>4000)||
@@ -326,6 +326,19 @@ export class MerchantResearchWorkspaces{
             return compactDossier(await c.receiveReference(id,{...request,reference}));
           }
           return compactDossier(await c.receiveResearchFile(id,{...request,file:source.file,sha256:source.sha256}));
+        }
+        case 'merchant_research_source_bundle_preview':{
+          const source=this.#source(entry,args.source,['source-bundle']);
+          return c.previewSourceBundleFile(id,{questionId:args.questionId,file:source.file,sha256:source.sha256});
+        }
+        case 'merchant_research_source_bundle_receive':{
+          const source=this.#source(entry,args.source,['source-bundle']);
+          if(args.expectedBundleSha256!==undefined&&args.expectedBundleSha256!==source.sha256)
+            throw failure('RESEARCH_SOURCE_BUNDLE_CHANGED','The reviewed bundle hash differs from the selected original source.');
+          return compactDossier(await c.receiveSourceBundleFile(id,{
+            questionId:args.questionId,expectedRevision:args.expectedRevision,
+            expectedBundleSha256:args.expectedBundleSha256??source.sha256,
+            file:source.file,sha256:source.sha256}));
         }
         case 'merchant_research_openalex_editions':return c.openAlexEditions();
         case 'merchant_research_receive_openalex':return compactDossier(await c.receiveOpenAlex(id,input));

@@ -103,7 +103,9 @@ export class ResearchWorkspaceClient{
   #json(route,body,options={}){
     return this.#run(async()=>{
       const bytes=body===undefined?undefined:JSON.stringify(body);
-      need(bytes===undefined||Buffer.byteLength(bytes)<=96*1024*1024+65536,'RESEARCH_REQUEST_TOO_LARGE');
+      const maximum=/^\/api\/dossiers\/[^/]+\/source-bundles\/(?:preview|receive)(?:\?projection=metadata)?$/.test(route)
+        ?128*1024*1024+65536:96*1024*1024+65536;
+      need(bytes===undefined||Buffer.byteLength(bytes)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
       return this.#request(route,{...options,body:bytes,headers:{...(options.headers??{}),
         ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response)));
     });
@@ -144,6 +146,24 @@ export class ResearchWorkspaceClient{
   async receiveResearchFile(id,{file,sha256,...input}){
     const bytes=await readResearchHostFile(resolve(file),64*1024*1024,{sha256});
     return this.receiveResearchBytes(id,{...input,bytes});
+  }
+  previewSourceBundleBytes(id,{bytes,...input}){
+    need(bytes instanceof Uint8Array&&bytes.length<=64*1024*1024,'RESEARCH_RESPONSE_TOO_LARGE');
+    const rawText=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+    return this.#json(dossierPath(id)+'/source-bundles/preview',{...input,rawText});
+  }
+  async previewSourceBundleFile(id,{file,sha256,...input}){
+    const bytes=await readResearchHostFile(resolve(file),64*1024*1024,{sha256});
+    return this.previewSourceBundleBytes(id,{...input,bytes});
+  }
+  receiveSourceBundleBytes(id,{bytes,...input}){
+    need(bytes instanceof Uint8Array&&bytes.length<=64*1024*1024,'RESEARCH_RESPONSE_TOO_LARGE');
+    const rawText=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+    return this.#json(dossierPath(id)+'/source-bundles/receive?projection=metadata',{...input,rawText});
+  }
+  async receiveSourceBundleFile(id,{file,sha256,...input}){
+    const bytes=await readResearchHostFile(resolve(file),64*1024*1024,{sha256});
+    return this.receiveSourceBundleBytes(id,{...input,bytes});
   }
   clinicalTrials(){
     return createClinicalTrialsClient({

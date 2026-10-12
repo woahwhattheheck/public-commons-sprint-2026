@@ -86,7 +86,14 @@ export async function openTimescaleClient(options={}){
       const methods={merchant_timescale_remediation_report_manifest:'report-manifest',
         merchant_timescale_remediation_report_file:'report-file',merchant_timescale_remediation_report_file_release:'report-file-release'};
       if(!Object.hasOwn(methods,tool))throw failure('TIMESCALE_CLIENT_METHOD','Use an original remediation report file operation.');
-      return invoke(methods[tool],args,callOptions);
+      try{return await invoke(methods[tool],args,callOptions);}
+      catch(error){
+        // The shared original reader uses TIMESCALE; this receiver owns only
+        // the report transport's retry code, not another descriptor/cache.
+        if(tool==='merchant_timescale_remediation_report_file'&&args.readId&&error.code==='TIMESCALE_READ_NOT_FOUND')
+          throw Object.assign(failure('TIMESCALE_REPORT_READ_NOT_FOUND',error.message),{cause:error});
+        throw error;
+      }
     }};
   const reportFiles=reportReceiver(scope);
   function receiving(input={}){

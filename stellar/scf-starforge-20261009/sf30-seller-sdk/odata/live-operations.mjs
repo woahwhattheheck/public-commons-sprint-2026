@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { acquireReleaseLease } from '../../sf82-seller-pilot/release-process.mjs';
 import { templateFromWorkspace,prepareFromWorkspace,writePackage,readPackage,prepareBuyerHandoff,receivePage } from './live/client.mjs';
+import { openServiceCollections } from './live/collection-store.mjs';
 import { startODataMerchant } from './live/merchant.mjs';
 import { atomic,readJson,writeNew,formatted,digest,stable,identifier,fault,now } from './state.mjs';
 
@@ -109,7 +110,17 @@ export async function openODataLiveOperations({workspace,nativeFactoryFor,env=pr
     }catch(error){if(error instanceof SyntaxError)throw fault('ODATA_LIVE_RESPONSE_JSON','Choose the original merchant JSON response.',422);throw error;}
     finally{await rm(source,{force:true});await rm(stage,{recursive:true,force:true});}
   });}
-  async function file({id,kind='package',recordId,name}){await profile(id);
+  async function collectionStore(id){const record=await profile(id);
+    return openServiceCollections({directory:join(products,record.id),profile:record,sequence});}
+  const collections=async({id})=>(await collectionStore(id)).list();
+  const collection=async({id,collectionId})=>(await collectionStore(id)).inspect(collectionId);
+  const collectionRows=async({id,collectionId,offset=0,limit=100})=>(await collectionStore(id)).rows(collectionId,{offset,limit});
+  const collect=async({id,collectionId,pages,title,fields,limits})=>(await collectionStore(id)).collect({id:collectionId,pages,title,fields,limits});
+  const restoreCollection=async({id,collectionId,sourceManifest,expectedSha256})=>
+    (await collectionStore(id)).restore({id:collectionId,sourceManifest,expectedSha256});
+  async function file({id,kind='package',recordId,name}){
+    if(kind==='collection')return (await collectionStore(id)).file(recordId,name);
+    await profile(id);
     const allowed=kind==='package'?packageFiles:kind==='buyer'?[...buyerFiles,'response.json']:kind==='receiving'?receivedFiles:null;
     if(!allowed?.includes(name))throw fault('ODATA_LIVE_FILE','Live service file not found.',404);
     const directory=kind==='package'?join(products,id,'package'):join(products,id,kind==='buyer'?'buyers':'receiving',identifier(recordId));
@@ -123,5 +134,5 @@ export async function openODataLiveOperations({workspace,nativeFactoryFor,env=pr
     return {...record,plan:prepared.plan,selection:prepared.selection,runtime:publicRun(running.get(id)),
       buyers:await list('buyers','handoff.json'),received:await list('receiving','receiving.json')};}
   async function close(){closing=true;await tail;let failure;for(const id of [...running.keys()])try{await stopOne(id);}catch(error){failure??=error;}if(failure)throw failure;}
-  return {root,status,prepare,start,stop,buyer,receive,file,detail,close};
+  return {root,status,prepare,start,stop,buyer,receive,collections,collection,collectionRows,collect,restoreCollection,file,detail,close};
 }

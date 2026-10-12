@@ -4,6 +4,8 @@ The maintained merchant operator opens host-selected OpenSearch workspaces and e
 
 An agent can reopen a captured result, review its native scope, edit a complete evaluation set, evaluate competing query definitions, select an evaluated variant and prepare its original paid merchant package. Generated client, OpenAPI, native result and customer report bytes are available as pinned file reads.
 
+For complete supplier/material ingestion, mapping, customer matches, supplier corrections, BMEcat delivery and resumable bundle receiving, use the [material and supplier operator guide](OPENSEARCH_MATERIALS.md). These tools use the same configured aliases and the same original workspace.
+
 ## Host configuration
 
 Set the optional connection reference in the existing merchant operator configuration:
