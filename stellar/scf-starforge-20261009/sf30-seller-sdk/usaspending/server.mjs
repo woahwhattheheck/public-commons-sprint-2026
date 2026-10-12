@@ -27,6 +27,7 @@ async function readBody(req){
 export async function serveWorkspace(workspace,{port=8783,receivingRoot}={}){
   integer(port,'Port',0,65535);const secret=randomBytes(32).toString('base64url'),jobs=new Map(),pending=new Set(),startedAt=now();
   const receiving=receivingRoot?await realpath(resolve(receivingRoot)):null;
+  const identity=Object.freeze({schema:'stellar-forge.usaspending-research.v1.session',workspaceId:workspace.db.prepare('SELECT value FROM workspace_meta WHERE key=?').get('id').value,directory:workspace.directory,instanceId:workspace.instance,pid:process.pid,startedAt});
   let origin,closed=false,closing;
   function send(res,status,value,{type='application/json; charset=utf-8',filename}={}){
     const body=Buffer.isBuffer(value)?value:Buffer.from(type.startsWith('application/json')?JSON.stringify(value):String(value));
@@ -61,6 +62,7 @@ export async function serveWorkspace(workspace,{port=8783,receivingRoot}={}){
     }
     authorize(req);
     if(req.method==='GET'){
+      if(path==='/api/identity')return send(res,200,identity);
       if(path.startsWith('/api/transactions/')){const r=transactionGet(workspace,url);return send(res,r.status??200,r.value,r.options??{});}
       if(path==='/api/state')return send(res,200,{...workspace.state(),server:{startedAt,receivingEnabled:!!receiving},jobs:[...jobs.values()].map(v=>v.job)});
       if(path==='/api/rows'){
@@ -115,5 +117,5 @@ export async function serveWorkspace(workspace,{port=8783,receivingRoot}={}){
   await new Promise((yes,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',yes);});
   origin='http://127.0.0.1:'+server.address().port;
   const close=()=>closing??=(async()=>{closed=true;for(const {controller}of jobs.values())controller.abort(new Error('Operator closed this workspace'));for(const controller of workspace.active.values())controller.abort(new Error('Workspace closing'));await Promise.allSettled([...pending]);await new Promise((yes,no)=>{server.close(error=>error?no(error):yes());server.closeIdleConnections();});workspace.close();return {closed:true};})();
-  return {server,origin,url:origin+'/#'+secret,close};
+  return {server,origin,url:origin+'/#'+secret,identity,close};
 }

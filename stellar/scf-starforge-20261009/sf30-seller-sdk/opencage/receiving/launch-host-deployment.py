@@ -75,7 +75,31 @@ def main() -> int:
                "--output", str(output), "--source-manifest", str(manifest),
                "--manifest-sha256", supplied["sourceManifestSha256"],
                "--package-identity", supplied["packageIdentity"]]
-    runtime = {str(host), str(source), str(node), str(package), str(flock),
+    previous = supplied.get("previousNative")
+    previous_paths = set()
+    if previous is not None:
+        if not isinstance(previous, dict) or set(previous) != {
+            "record", "requestSha256", "resultSha256", "artifactsSha256"
+        }:
+            raise ValueError("Select all four original previous-native bindings")
+        previous_record = Path(previous["record"]).absolute()
+        if previous_record.resolve(strict=True) != previous_record or not previous_record.is_dir():
+            raise ValueError("Select the canonical original previous native record")
+        for name in ("request", "result", "artifacts"):
+            expected = previous[name + "Sha256"]
+            if not isinstance(expected, str) or len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
+                raise ValueError("Select the exact original previous-native file SHA256")
+            retained = regular(str(previous_record / (name + ".json")))
+            if hashlib.sha256(retained.read_bytes()).hexdigest() != expected:
+                raise ValueError("The selected original previous-native file changed")
+        command.extend([
+            "--previous-native", str(previous_record),
+            "--previous-request-sha256", previous["requestSha256"],
+            "--previous-result-sha256", previous["resultSha256"],
+            "--previous-artifacts-sha256", previous["artifactsSha256"],
+        ])
+        previous_paths.add(str(previous_record))
+    runtime = {str(host), str(source), str(node), str(package), str(flock), *previous_paths,
                *[str(Path(path).resolve(strict=True)) for path in args.runtime_path]}
     out = output.relative_to(project).as_posix()
     values = argparse.Namespace(
