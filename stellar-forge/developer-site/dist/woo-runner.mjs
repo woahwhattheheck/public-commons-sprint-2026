@@ -96,19 +96,22 @@ async function smallResponse(response) {
   return new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks));
 }
 
-async function originalSource(toolkit) {
+async function originalSource(toolkit, agent = false) {
   need(typeof toolkit === 'string' && isAbsolute(toolkit), 'Choose the absolute root of the original checkout or installed source package with --toolkit.');
   for (const base of [join(toolkit,SOURCE), join(toolkit,'source',SOURCE)]) {
     try {
-      await regular(join(base,ENTRIES.seller));
+      await regular(join(base,agent ? AGENT_ENTRIES.agentStdio : ENTRIES.seller));
     } catch (error) { if (error.code === 'ENOENT') continue; throw error; }
-    for (const path of [...Object.values(ENTRIES), ...PLUGIN.map(file => WOO + '/' + file)]) {
+    for (const path of (agent ? [...Object.values(AGENT_ENTRIES), WOO + '/merchant-operator.mjs']
+      : [...Object.values(ENTRIES), ...PLUGIN.map(file => WOO + '/' + file)])) {
       try { await regular(join(base,path)); }
       catch { throw new Error(`This toolkit is missing ${path}. Use the complete maintained SF104 distribution or source checkout.`); }
     }
     return base;
   }
-  throw new Error('This toolkit has no original SF104 seller. Upgrade the maintained source package or select the full source checkout.');
+  throw new Error(agent
+    ? 'This toolkit has no original merchant MCP stdio entry. Select its maintained source package or checkout.'
+    : 'This toolkit has no original SF104 seller. Upgrade the maintained source package or select the full source checkout.');
 }
 
 async function sourceCommand(base, entry, args) {
@@ -343,7 +346,7 @@ export async function main(args = process.argv.slice(2)) {
   need(['plugin','prepare','inspect','preflight','serve','deliver','status','buyer','operator','queue','refund','agent-init','agent-inspect','agent-client','agent-stdio'].includes(action), 'Choose an action shown by --help.');
   if (action.startsWith('agent-')) {
     need(options[0] === '--toolkit' && options[1], 'Select --toolkit /absolute/checkout-or-installed-package first.');
-    const base = await originalSource(options[1]);
+    const base = await originalSource(options[1],true);
     await agentAction(base,action,options.slice(2),forwarded); return;
   }
   need(options[0] === '--toolkit' && (action === 'plugin' ? options.length === 4 && options[2] === '--out' : options.length === 2), 'Supply --toolkit /absolute/checkout-or-installed-package; plugin also requires --out /absolute/new-directory.');
