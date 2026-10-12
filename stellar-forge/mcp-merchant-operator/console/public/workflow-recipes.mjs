@@ -281,6 +281,7 @@ export function createWorkflowRecipes({
     },value=>openInstallation(value.id),state.profile?'No recipe installations in this profile.':'Select a profile.');
   }
   function adoptRecipe(recipe,sourceText){
+    if(!model?.intentReady)throw new Error('Let this profile’s original recipe action load first.');
     if(model.pending)throw new Error('Recover the retained original installation before replacing its recipe.');
     model.recipe=copy(recipe);model.recipeText=sourceText??recipeText(recipe);model.name=recipe.name;
     model.inputsText='{}';model.id=uid();model.acceptToolChanges=[];model.review=null;model.reviewVersion=null;
@@ -331,7 +332,8 @@ export function createWorkflowRecipes({
     const request={id:model.id,profileId:profile.id,name,recipe,inputs,acceptToolChanges:[...model.acceptToolChanges].sort()};requestBytes(request);return request;
   }
   async function review(){
-    const ctx=context(),selectedModel=model;if(!model||model.pending)throw new Error('Recover the retained original installation before preparing another review.');
+    const ctx=context(),selectedModel=model;if(!model?.intentReady)throw new Error('Let this profile’s original recipe action load first.');
+    if(model.pending)throw new Error('Recover the retained original installation before preparing another review.');
     const request=reviewRequest(),version=model.version,sequence=++model.reviewSeq;model.reviewing=true;sync();
     try{
       const packet=await api('workflow-recipe-review',{method:'POST',body:request,epoch:ctx.session});
@@ -485,22 +487,26 @@ export function createWorkflowRecipes({
     renderPending();renderList();sync();
   }
   function sync(){
-    const selected=Boolean(state.profile&&model),selection=getSelection(),pending=Boolean(model?.pending),
+    const ctx=context(),selected=Boolean(state.profile&&model&&identity===[ctx.workspaceId,ctx.profileId].join('/')&&session===ctx.session),
+      ready=selected&&Boolean(model?.intentReady),selection=getSelection(),pending=Boolean(model?.pending),
       writing=Boolean(model?.installing)||mutationActive(),reviewed=model?.review?.review;
+    panel.dataset.profileId=selected?ctx.profileId:'';
+    panel.dataset.intentReady=String(ready);
+    panel.setAttribute('aria-busy',String(Boolean(selected&&(!ready||writing||model?.reviewing||model?.exporting))));
     syncSelection();
     launcher.disabled=!selected;exportButton.disabled=!selected||!selection.id||selection.dirty;
     for(const id of ['workflow-recipe-file','workflow-recipe-json','workflow-recipe-load','workflow-recipe-name','workflow-recipe-inputs'])
-      ui[id].disabled=!selected||pending||writing;
-    ui['workflow-recipe-review'].disabled=!selected||!model?.recipe||pending||writing||Boolean(model?.reviewing);
+      ui[id].disabled=!ready||pending||writing;
+    ui['workflow-recipe-review'].disabled=!ready||!model?.recipe||pending||writing||Boolean(model?.reviewing);
     ui['workflow-recipe-install'].disabled=!selected||!model?.intentReady||pending||writing||!reviewed?.canInstall||
       model?.reviewVersion!==model?.version||reviewed?.hostFingerprint!==state.host?.configurationFingerprint||
       reviewed?.profileRevision!==state.profile?.revision||Boolean(state.host?.console.closing)||
       Boolean(model?.installation?.installation.id===model?.id);
     ui['workflow-recipe-recover'].disabled=!selected||!model?.intentReady||!pending||writing;
     ui['workflow-recipe-open-installed'].disabled=!selected||!model?.installation||writing;
-    ui['workflow-recipe-new-copy'].disabled=!selected||(!model?.recipe&&!model?.installation)||pending||writing;
+    ui['workflow-recipe-new-copy'].disabled=!ready||(!model?.recipe&&!model?.installation)||pending||writing;
     ui['workflow-recipe-export-prepare'].disabled=!selected||!selection.id||selection.dirty||model?.exporting;
-    ui['workflow-recipe-export-download'].disabled=!model?.exportRecipe;ui['workflow-recipe-export-use'].disabled=!model?.exportRecipe||pending||writing;
+    ui['workflow-recipe-export-download'].disabled=!model?.exportRecipe;ui['workflow-recipe-export-use'].disabled=!ready||!model?.exportRecipe||pending||writing;
     for(const checkbox of ui['workflow-recipe-tools'].querySelectorAll('[data-recipe-accept-tool]'))checkbox.disabled=pending||writing;
   }
   for(const id of ['workflow-recipe-json','workflow-recipe-name','workflow-recipe-inputs'])ui[id].addEventListener('input',invalidate);
