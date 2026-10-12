@@ -622,3 +622,8 @@ execute methods handle its fresh approval and result.
 
 See [Authorization-expiry continuation](EXPIRED_CONTINUATION.md) for the complete
 source receiving, preparation, approval and restart flow.
+
+
+### Authorization retained before dispatch
+
+Use [UNDISPATCHED_CONTINUATION.md](./UNDISPATCHED_CONTINUATION.md) when an interrupted original native authorization has a validated wire checkpoint with no signed dispatch. `Operation.prepareUndispatchedContinuation()` keeps the original reservation and prepares one source-bound successor for the normal approval flow. `followContinuation()` reopens existing unpaid, expired and undispatched choices.
