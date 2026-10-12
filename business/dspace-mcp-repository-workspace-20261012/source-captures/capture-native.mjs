@@ -39,17 +39,19 @@ globalThis.fetch=async(input,init={})=>{
  const url=new URL(request.url);
  if(url.origin!==new URL(base).origin||!url.pathname.startsWith(new URL(base).pathname+'/api/'))throw new Error('Source request left the selected public DSpace API.');
  const id=String(++sequence).padStart(4,'0');
- const receivedAt=new Date().toISOString();
+ const startedAt=new Date().toISOString();
+ let response=null,receivedAt=null;
  try{
-  const response=await nativeFetch(request,{signal:AbortSignal.timeout(60000)});
+  response=await nativeFetch(request,{signal:AbortSignal.timeout(60000)});
+  receivedAt=new Date().toISOString();
   const body=Buffer.from(await response.clone().arrayBuffer());
   const type=response.headers.get('content-type')||'application/octet-stream';
   const path='responses/'+id+(/json/i.test(type)?'.json':/text/i.test(type)?'.txt':'.bin');
   const file=await put(path,body,{content_type:type});
-  manifest.requests.push({id,method:request.method,url:request.url,status:response.status,received_at:receivedAt,content_type:type,response_headers:{'content-type':response.headers.get('content-type'),date:response.headers.get('date')},body_file:path,body_sha256:file.sha256,body_bytes:file.bytes});
+  manifest.requests.push({id,method:request.method,url:request.url,status:response.status,started_at:startedAt,received_at:receivedAt,body_completed_at:new Date().toISOString(),response_url:response.url,redirected:response.redirected,content_type:type,response_headers:{'content-type':response.headers.get('content-type'),date:response.headers.get('date')},body_file:path,body_sha256:file.sha256,body_bytes:file.bytes});
   await save();return response;
  }catch(error){
-  manifest.requests.push({id,method:request.method,url:request.url,status:null,received_at:receivedAt,error:String(error)});
+  manifest.requests.push({id,method:request.method,url:request.url,status:response?.status??null,started_at:startedAt,received_at:receivedAt,response_url:response?.url??null,error:String(error)});
   await save();throw error;
  }
 };
@@ -151,4 +153,3 @@ try{
  manifest.status='FAILED';manifest.completed_at=new Date().toISOString();manifest.failures.push({at:manifest.completed_at,error:String(error)});
  await save();console.error(String(error));process.exitCode=1;
 }finally{globalThis.fetch=nativeFetch;}
-
