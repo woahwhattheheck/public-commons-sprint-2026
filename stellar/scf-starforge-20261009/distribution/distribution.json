@@ -205,8 +205,7 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/examples/ecb-reference-rates.sdmx.zip",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/macrobond/examples/ecb-reference-rates.macrobond.zip",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/checkout-basket.php",
-    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/BASKET.md",
-    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/MANAGED.md"
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/BASKET.md"
   ],
   "commands": {
     "opencage-workbench": "stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/cli.mjs",
@@ -458,8 +457,7 @@
     "baserow-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment-cli.mjs",
     "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
     "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
-    "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs",
-    "woo-managed": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/managed.mjs"
+    "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs"
   },
   "exports": {
     "./seller/opencage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/index.mjs",
@@ -1142,8 +1140,7 @@
     "./grant/demo": {
       "types": "./source/stellar/scf_2026/presentation/reviewer/workspace.d.mts",
       "import": "./source/stellar/scf_2026/presentation/reviewer/workspace.mjs"
-    },
-    "./merchant/woocommerce/managed": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/managed.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {

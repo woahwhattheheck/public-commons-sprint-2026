@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "woo-managed",
+  "description": "Managed Woo merchant and original outbox delivery",
+  "commands": {
+    "woo-managed": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/managed.mjs"
+  },
+  "commandDescriptions": {
+    "woo-managed": "Review, start, inspect and stop the original Woo merchant with its retained delivery worker"
+  },
+  "exports": {
+    "./merchant/woocommerce/managed": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/managed.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/MANAGED.md"
+  ]
+}
