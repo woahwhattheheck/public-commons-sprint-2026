@@ -71,6 +71,17 @@ A failed publisher page does not prevent capture of the remaining sources. The s
 
 For publisher pages that need normal browser navigation, use an existing Playwright/Chromium installation and add --publisher-browser. The script first records the direct response, then opens the original public page in a fresh browser context. It retains the browser’s actual main-document response bytes and labels browser decompression explicitly. Add --browser-executable /absolute/path/to/chromium only when selecting an already installed browser. Successful original captures are reused in either mode.
 
+When Playwright is installed in the Node runtime, add `--publisher-browser-runtime node`. Optional `--node-executable` and `--playwright-module` arguments select the existing Node binary and Playwright module entrypoint. The companion `examples/capture-publisher-page.mjs` returns the same original response bodies and capture records; the Python collector validates them and retains failed attempts before continuing. For example:
+
+~~~bash
+python3 -B examples/receive_usgs_example.py \
+  --packet examples/usgs-example-input.json \
+  --directory /absolute/aviary-usgs-example \
+  --publisher-browser --publisher-browser-runtime node \
+  --browser-executable /absolute/path/to/chromium \
+  --playwright-module /absolute/node_modules/playwright/index.mjs
+~~~
+
 The optional --api-documentation switch captures the Aviary documentation HTML and specification locator. The exact reviewed OpenAPI document is identified in the provider contract; capturing a documentation page does not update that reviewed contract automatically.
 
 The result includes:
@@ -362,7 +373,7 @@ python3 -B application/aviary.py receive \
   --output /absolute/received-aviary-migration
 ~~~
 
-The output directory must be new. Receive verifies archive members/hashes, original source and workspace ID. Use its returned paths to reopen:
+Receive binds the exact archive and manifest to the selected output. It verifies each original member, source and workspace ID, resumes complete members or exact interrupted media prefixes in private staging, and publishes the whole directory atomically. Repeat the same command after interruption. If the workspace was already received, the command reopens it while preserving later mapping revisions, provider actions and transcript downloads. An earlier receiver’s partial directory is adopted only after every retained member or prefix matches the original archive. An output bound to another archive returns its explicit identity conflict. Use the returned paths to reopen:
 
 ~~~bash
 python3 -B /absolute/received-aviary-migration/application/aviary.py show \
@@ -408,8 +419,26 @@ python3 -B examples/run-aviary-receiving.py \
   --out /absolute/aviary-native-receiving
 ~~~
 
-The program starts two local HTTP origins and runs the complete client workflow with the required organization header, a resource found on the second collection page, original resource/media/attachment operations and a local thumbnail. It exercises a lost creation response, an interrupted multipart upload, lost completion/metadata responses with delayed provider readback, exact transcript downloads and a cold process reopening the exported application. It checks that completed records, accepted parts, completion requests and metadata updates keep their original identities through recovery. The separately supplied USGS directory retains its actual publisher-source inventory alongside this application receiving journey.
+The program starts two local HTTP origins and runs the complete client workflow with the required organization header, a resource found on the second collection page, original resource/media/attachment operations and a local thumbnail. It exercises a lost creation response, an interrupted multipart upload, lost completion/metadata responses with delayed provider readback, exact transcript downloads and a cold process reopening the exported application. It checks that completed records, accepted parts, completion requests and metadata updates keep their original identities through recovery. During complete workspace receiving it kills an owned copy process after the original media prefix is durably written, resumes that same inode through native receiving, and repeats the receive after a later saved mapping revision to confirm the original review and API progress are preserved. The separately supplied USGS directory retains its actual publisher-source inventory alongside this application receiving journey.
 
 The result is receiving-result.json. The output directory retains the original input, HTTP and storage records, byte hashes, portable-workspace.zip, completed-workspace.zip and cold-reopen-result.json. A repeat with the same source and output directory reconciles its saved artifacts and continues the same operation.
 
-The eight runtime/application files travel in a complete workspace handoff with that workspace's original input. The public-source collector and the local receiving program are available in the repository's examples directory for a new example capture or a new application receiving exercise.
+The ten runtime/application files travel in a complete workspace handoff with that workspace's original input. The public-source collector and the local receiving program are available in the repository's examples directory for a new example capture or a new application receiving exercise.
+
+
+### Complete browser receiving
+
+`examples/run-aviary-browser-receiving.mjs` opens a saved public-source workspace and the completed original API receiving workspace through the actual local application. It assigns keys, saves mapping edits entered while an earlier response is in flight, saves and restores a reasoned resource exclusion, reviews all five source tables, builds and downloads the native package, and exports and cold-reopens the complete public workspace. The final migration view reopens the existing operation and confirms that switching between it and a new target draft preserves both the original provider IDs and the draft fields. Desktop and narrow screenshots, downloaded packages and the full receiving record are retained under the chosen output directory.
+
+~~~bash
+node examples/run-aviary-browser-receiving.mjs \
+  --application /absolute/research/aviary \
+  --workspace /absolute/public-usgs-workspace \
+  --provider-workspace /absolute/api-receiving/received/workspace \
+  --operation-id aviary-http-receiving-6ba15-20261012 \
+  --out /absolute/browser-receiving \
+  --browser-executable /absolute/path/to/chromium \
+  --playwright-module /absolute/node_modules/playwright/index.mjs
+~~~
+
+Use the actual application and received workspace from `run-aviary-receiving.py`. The browser journey reads that saved provider operation and creates its public-source packages through the workbench. Capture results, screenshots and generated files belong to the executed run; its output directory must be retained through delivery.
