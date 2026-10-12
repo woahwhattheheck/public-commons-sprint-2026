@@ -98,6 +98,10 @@ openfema restore --archive complete-workspace.zip --workspace NEW_ABSOLUTE_PRIVA
 
 Every command prints the exact saved native IDs. Supply --operation-id ORIGINAL_ID to reopen the same inputs after interruption. All actions also remain available through openfema action --request ACTION_JSON and POST /api/action with the displayed revision.
 
+## Use the original merchant tools
+
+The same saved mapping and project exchange are available through the original merchant Apps and typed MCP client. A host declares the complete mapping and customer CSV files with their SHA-256 identities; each small action selects the declared alias. `openfema-merchant-exchange` completes the mapping review, full delivery, customer receiving, selected analyst decisions, comparison and original workspace archive in one resumable receiving directory. See [MCP.md](MCP.md#complete-mapped-project-exchange) for the complete host configuration and command. The archive remains in the merchant’s existing private customer-exports directory and can be downloaded again after its browser session or merchant restarts.
+
 ## Recorded-source commissioning
 
 The original [DR4724 example](examples/recorded-dr4724/README.md) contains 195 actual published obligated projects, 43 applicants and two declaration areas. It supplies a complete populated source for mapping, receiving and analyst handover. The original dataset pages and numeric lexemes rebuild its entire portfolio exactly.

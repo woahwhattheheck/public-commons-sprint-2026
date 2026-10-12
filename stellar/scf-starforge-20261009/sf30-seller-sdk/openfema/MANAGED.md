@@ -36,9 +36,13 @@ Use the same browser to select a complete retained source cohort, create a portf
 
 Handover exposes every retained browser request for this workspace and the native operation history. Continue reopens the original action and complete retained source. A source import whose initial request never reached the service prompts for the same source file and keeps its original operation ID. Switching portfolio versions invalidates a pending record selection, so a review remains tied to the exact displayed record.
 
+The Data integration view saves the full destination schema and mapping, records its explicit review, receives a complete customer CSV and applies selected analyst changes in the current portfolio. The same workflow exports complete project and reconciliation ZIPs, retains customer-owned columns and compares source editions and reviews. The browser accepts the full native mapping and CSV limits described in [DATA_INTEGRATION.md](DATA_INTEGRATION.md).
+
 The merchant tool surface performs the same operations through that running browser service. Typed call payloads, action outcomes, whole source/export receiving and offline verification are documented in [MCP.md](MCP.md). An interrupted action remains associated with its original operation ID; read that record and continue it rather than starting a duplicate.
 
 Stopping the application drains its original capture and action work, then closes the native publisher children before releasing the workspace writer. Concurrent close callers share that drain. If a child close fails, the same owner retains it for the next close attempt.
+
+The installed `openfema-merchant-exchange` command completes mapping, customer-file receiving, selected review, all exchange downloads and full workspace archive receiving through the same service. The host declares immutable file inputs in its existing connection. The complete archive is retained in the merchant's original receiving directory, and remains downloadable after the browser or merchant restarts.
 
 Complete portable creation/restoration belongs to the original OpenFEMA workspace and receiving guide. The launcher opens the resulting actual directory through its native identity reader. A different restored UUID, if deliberately created by that workflow, must be selected as that distinct workspace in the host connection; never relabel an unrelated store as an earlier UUID.
 
