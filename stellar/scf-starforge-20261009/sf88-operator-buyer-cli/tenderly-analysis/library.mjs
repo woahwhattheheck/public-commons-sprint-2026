@@ -2,7 +2,7 @@
 import { readdir, realpath } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { BuyerResult } from '../node/result.mjs';
-import { privateDirectory, readBytes, writeBytes, writeJson, readJson, digest, exists } from '../node/store.mjs';
+import { privateDirectory, readBytes, writeBytes, writeJson, readJson, digest, exists, matchingWriteTemporaries } from '../node/store.mjs';
 import { analyzeSimulation, compareSimulations, canonical, object, requireValue, AnalysisError,
   MAX_RESPONSE_BYTES, TABLE_COLUMNS, tableCsv } from './analyze.mjs';
 import { renderReview } from './report.mjs';
@@ -220,10 +220,12 @@ export async function exportCapture(workspace, id, destination) {
   await privateDirectory(out);
   requireValue(await realpath(out) === out, 'EXPORT_SYMLINK_REFUSED');
   const retained = await readdir(out);
-  requireValue(retained.every(name => Object.hasOwn(expected,name)), 'EXPORT_DESTINATION_CONFLICT',
+  const temporaries = await matchingWriteTemporaries(out, Object.values(expected));
+  requireValue(retained.every(name => Object.hasOwn(expected,name) || temporaries.has(name)), 'EXPORT_DESTINATION_CONFLICT',
     'The export directory contains files outside this capture export.');
-  // Check all existing bytes before extending either an empty or interrupted export.
-  for (const name of retained) await exactExisting(join(out,name),expected[name]);
+  // Check all published bytes; matching original temporary files remain untouched.
+  for (const name of retained)
+    if (Object.hasOwn(expected,name)) await exactExisting(join(out,name),expected[name]);
   // The intent binds the original response, request and native buyer record before payload writes.
   for (const [name,data] of Object.entries(files)) await exactWrite(join(out,name),data);
   // The final manifest is published only after every expected file is retained.
