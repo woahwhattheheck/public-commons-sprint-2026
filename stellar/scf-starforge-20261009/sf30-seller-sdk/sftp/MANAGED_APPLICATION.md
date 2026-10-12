@@ -43,8 +43,15 @@ merchant versions are saved by its original browser with a revision check.
 
 ## Review and save
 
-Choose a READY runtime containing the SFTP Applications provider and all original
-SFTP source/browser files. Open **Applications → New application → SFTP source
+Choose a READY runtime containing the SFTP Applications provider, all original
+SFTP source/browser files, **native payment support**, the **sftp** feature and
+the original operator surface. Its retained dependency profile must include
+ssh2, @x402/core, @x402/stellar and @x402/extensions. These are the packages used
+by the actual SSH transport and native seller factory. The original installer
+resolves their source-declared versions and lockfile. Applications reports the
+specific missing packages during Review if a different READY profile was selected.
+
+Open **Applications → New application → SFTP source
 and dataset publishers**.
 
 | Setting | Use |
@@ -203,6 +210,7 @@ inspection, preparation and authenticated startup reader.
 | sftpApplication(common) | Original Applications choice and operator settings. |
 | inspectSftpApplicationWorkspace(directory) | Read saved identity, source/report/product bindings and customer files. |
 | inspectSftpApplicationSource(sourceRoot) | Bind the original direct launch and browser files. |
+| checkSftpApplicationRuntime(runtime) | Check the selected READY profile's original SSH and native payment peers. |
 | prepareSftpApplication(settings, context) | Prepare the existing command, original inputs and shared resource key. |
 | reviewedSftpApplication(request, operationDirectory) | Read the common retained run and exact start review. |
 | verifySftpApplicationLaunch(request, operationDirectory) | Check the retained workbench and executing source before launch. |
