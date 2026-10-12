@@ -51,7 +51,7 @@ export async function startMerchantStdioHost({ configPath, environment = process
   };
   try {
     const readyHost = await ready; clearTimeout(startupTimer);
-    if (!Number.isSafeInteger(readyHost.maxRequestBytes) || readyHost.maxRequestBytes < 1 || readyHost.maxRequestBytes > 2 * 1024 * 1024)
+    if (!Number.isSafeInteger(readyHost.maxRequestBytes) || readyHost.maxRequestBytes < 1 || readyHost.maxRequestBytes > 8 * 1024 * 1024)
       throw failure('MCP_MERCHANT_HOST_REQUEST_LIMIT_INVALID');
     return { ...readyHost, close, closed, durable: true, paymentAdapterConnected: false };
   } catch (error) {

@@ -125,6 +125,80 @@ ends its wallet session. Cancelling the buyer interrupts that same retained
 request and propagates cancellation through the original buyer before its paid
 request can proceed.
 
+## Recover this browser's authorization
+
+The page keeps a private session draft for the current request. It records the
+claim identity before asking the service to reserve the request, and records
+**PROMPTED** before invoking Freighter. Reloading a page never opens a wallet
+prompt automatically.
+
+| Retained state in this tab | Original continuation |
+| --- | --- |
+| Claim reserved, prompt not opened | **Continue reserved request** reopens that exact claim, checks the account and network, and opens its first wallet prompt. |
+| Freighter prompt already opened | Complete the existing prompt. After a reload, the page will not open another prompt for that claim. **Cancel authorization request** or the original deadline ends an abandoned claim. |
+| Signature returned, service response uncertain | **Return saved signature** sends the same returned bytes after a fresh account/network check. It does not ask Freighter to sign again. |
+| Rejection response uncertain | **Return saved rejection** completes that original claim with the saved rejection. |
+| Original service reports a terminal result | The page clears its completed draft and shows the authoritative retained history. |
+
+A returned signature is saved before any further extension call. If a subsequent
+account/network check fails, select the original payer and network again, then
+choose **Return saved signature** while that original request remains live.
+The local and native deadlines still apply. A cancelled, expired or interrupted
+request is never reopened by returning a saved signature.
+
+Keep private session storage enabled. The page uses the browser's **Web Locks**
+API to distinguish a reloaded tab from a duplicated tab whose session storage
+was cloned. Only the connection-owning tab can claim or recover its prompt.
+A duplicate tab can show the current history, but it does not inherit the active
+connection or open the copied prompt.
+
+Browser liveness is sent independently every three seconds, including while
+the extension prompt is open. The original buyer's existing result poll supplies
+its own liveness. After 15 seconds without either relevant heartbeat, the
+connection or active request expires on the next original state operation.
+A late heartbeat cannot reconnect an expired connection. A missing browser
+interrupts a signing request; a missing buyer interrupts its active request.
+These checks do not extend the configured local request deadline or the native
+signature-expiration ledger.
+
+## Open the wallet from Applications
+
+Use an installed runtime containing this source, the original native dependencies
+and the **freighter-wallet** feature. First prepare the wallet with the original
+**browser-wallet prepare** command above. Applications opens that existing
+directory; preparation, signing and payment are not triggered by opening it.
+
+In the existing runtime workspace:
+
+1. Choose **Applications → New application → Freighter buyer wallet**.
+2. Select the READY runtime and the **Existing private browser-wallet workspace**.
+   Keep the original SF88 operator directory at its retained path. Use local
+   port **0** unless a particular free port is required.
+3. Choose **Review application**, **Save application**, **Review start**, and
+   **Start reviewed application**.
+4. Choose **Open application** after the original wallet CLI announces its
+   verified private URL. Connect Freighter in that page.
+5. Run the original **browser-wallet execute --workspace … --operator-workspace …**
+   continuation above, or the original customer's maintained execution action.
+
+The binding reviews the original wallet, operator, native configuration and
+provider file hashes. Before the managed worker starts the command, it checks
+those same original start-review inputs. The startup observer reads the original
+private wallet and launch records and matches the wallet ID, instance, buyer
+digest, requested port and actual URL. It exposes the private browser capability
+through the existing Applications operation only.
+
+**Stop application** uses the existing managed process and the original wallet
+shutdown. Reopen Applications to recover a still-running operation and its same
+URL. After a confirmed stop, review another start using the same wallet directory;
+the service creates a fresh connection while retaining its original request
+history. Changing wallet configuration requires a new review. A stale original
+wallet process lease uses **recover-lock** above; Applications does not remove it
+or invent a new wallet.
+
+See [Applications](../../distribution/runtime-workspace/APPLICATIONS.md#freighter-buyer-wallet)
+for the installed lifecycle and its headless commands.
+
 ## Inspect, close and reopen
 
 ~~~sh
@@ -224,7 +298,7 @@ request ID binds wallet identity, derived buyer hash, network, payer and the
 exact native preimage.
 
 The provider enqueues once and reconciles an uncertain POST by reading that
-same ID. Claim revisions keep multiple pages on one signing session. Completed,
+same ID. Claim revisions and per-tab connection ownership keep multiple pages on one signing session. Completed,
 rejected, expired and interrupted requests stay terminal. Cancellation is bound
 before native simulation, including a buyer cancelled before the wallet call.
 
