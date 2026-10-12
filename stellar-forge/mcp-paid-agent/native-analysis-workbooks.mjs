@@ -77,7 +77,9 @@ export function createNativeWorkbookActions({reads,parse}={}){
     need(job.id===identifier&&job.kind==='workbook'&&job.status==='COMPLETE'&&object(job.result),
       'MCP_ANALYSIS_COMPLETE_WORKBOOK_REQUIRED');
     const native=job.result,expected=join(record.database,'analysis-workbooks',identifier);
-    need(native.schema===WORKBOOK&&native.id===identifier&&native.directory===expected&&
+    // The original result retains its producer directory after a customer copy.
+    // Only this host-selected database plus the validated job ID selects files.
+    need(native.schema===WORKBOOK&&native.id===identifier&&typeof native.directory==='string'&&
       native.name===job.request?.name&&native.revision===job.request?.revision&&
       native.definition_sha256===job.request?.definition_sha256,
       'MCP_ANALYSIS_WORKBOOK_BELONGS_TO_OTHER_BUILD');
