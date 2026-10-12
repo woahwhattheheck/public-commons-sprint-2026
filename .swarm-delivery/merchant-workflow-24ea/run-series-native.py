@@ -14,7 +14,9 @@ if "payload" not in globals():
     parser.add_argument("--node-modules")
     parser.add_argument("--chromium")
     parser.add_argument("--playwright-module")
-    parser.add_argument("--dependency-transfers", help="Private JSON file containing the two retained original package download references")
+    dependency_source = parser.add_mutually_exclusive_group()
+    dependency_source.add_argument("--dependency-transfers", help="Private JSON file containing the two retained original package download references")
+    dependency_source.add_argument("--dependency-archives", help="Complete original public package capsule for native offline receiving")
     parser.add_argument("--library-helpers", help="Directory with the complete current Library upload helper and both companions")
     args = parser.parse_args()
     payload = json.loads(Path(args.source_packet).read_bytes())
@@ -22,7 +24,11 @@ if "payload" not in globals():
              "chromium": "chromiumPath", "playwright_module": "playwrightModule", "restore_archive": "restoreArchive"}
     payload.setdefault("runtime", {}).update({names[key]: value for key, value in vars(args).items() if key in names and value})
     if args.dependency_transfers:
+        payload.pop("dependencyArchives", None)
         payload["dependencyTransfers"] = json.loads(Path(args.dependency_transfers).read_bytes())
+    if args.dependency_archives:
+        payload.pop("dependencyTransfers", None)
+        payload["dependencyArchives"] = json.loads(Path(args.dependency_archives).read_bytes())
     if args.library_helpers:
         helper_root = Path(args.library_helpers)
         payload["libraryHelpers"] = {name: (helper_root / name).read_text() for name in
@@ -116,28 +122,64 @@ node = selected_file([runtime.get("node"), os.environ.get("CODEX_PRIMARY_RUNTIME
 module_roots = [Path(value).resolve() for value in [runtime.get("nodeModules"),
     "/workspace/scratch/9345d3fc660b/native-runtime/node_modules", os.environ.get("CODEX_PRIMARY_RUNTIME_NODE_MODULES"),
     "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules"] if value]
-# Receive only the missing original public packages, with their complete registry metadata.
+def original_package(name, version):
+    for module_root in module_roots:
+        candidate = module_root / name
+        manifest_path = candidate / "package.json"
+        if not manifest_path.is_file():
+            continue
+        manifest = json.loads(manifest_path.read_text())
+        if manifest.get("name") == name and manifest.get("version") == version and not manifest.get("dependencies"):
+            return candidate
+    return None
+
+# Receive complete original public packages from retained archive bytes or current download references.
 transfers = payload.get("dependencyTransfers", [])
+retained_dependencies = payload.get("dependencyArchives")
+if transfers and retained_dependencies:
+    raise RuntimeError("Select one complete original dependency carrier.")
+if retained_dependencies:
+    if (retained_dependencies.get("schema") != "commons.original-public-npm-archives.v1"
+            or retained_dependencies.get("operationId") != operation):
+        raise RuntimeError("Select the original merchant dependency source.")
+    transfers = retained_dependencies["packages"]
 if transfers:
     import urllib.request, io
     expected_packages = {"yaml": ("2.9.1", 112114), "re2js": ("2.8.6", 213596)}
-    if {item["name"] for item in transfers} != set(expected_packages):
-        raise RuntimeError("Select both original retained dependency packages.")
+    if len(transfers) != len(expected_packages) or {item["name"] for item in transfers} != set(expected_packages):
+        raise RuntimeError("Select both complete original retained dependency packages.")
     extra_root = root / "native-extra-packages"
     extra_root.mkdir(parents=True, exist_ok=True, mode=0o700)
     for transfer in transfers:
         name = transfer["name"]
         version, expected_bytes = expected_packages[name]
-        with urllib.request.urlopen(transfer["metadataUrl"], timeout=60) as response:
-            metadata_bytes = response.read()
+        if retained_dependencies:
+            if transfer["version"] != version:
+                raise RuntimeError("Retain the selected original dependency version: " + name)
+            metadata_bytes = transfer["metadataText"].encode("utf-8")
+            archive_bytes = base64.b64decode(transfer["archiveBase64"], validate=True)
+            for body, size_key, digest_key in ((metadata_bytes, "metadataBytes", "metadataSha256"),
+                                                (archive_bytes, "archiveBytes", "archiveSha256")):
+                if size_key in transfer and len(body) != transfer[size_key]:
+                    raise RuntimeError("Receive the complete original dependency body: " + name)
+                if digest_key in transfer and hashlib.sha256(body).hexdigest() != transfer[digest_key]:
+                    raise RuntimeError("Receive the unchanged original dependency body: " + name)
+        else:
+            with urllib.request.urlopen(transfer["metadataUrl"], timeout=60) as response:
+                metadata_bytes = response.read()
+            with urllib.request.urlopen(transfer["archiveUrl"], timeout=60) as response:
+                archive_bytes = response.read()
         metadata = json.loads(metadata_bytes)
         if metadata.get("name") != name or metadata.get("version") != version:
             raise RuntimeError("Receive the original complete npm metadata: " + name)
-        with urllib.request.urlopen(transfer["archiveUrl"], timeout=60) as response:
-            archive_bytes = response.read()
         integrity = "sha512-" + base64.b64encode(hashlib.sha512(archive_bytes).digest()).decode()
         if len(archive_bytes) != expected_bytes or integrity != metadata["dist"]["integrity"]:
             raise RuntimeError("The original npm archive differs: " + name)
+        installed = original_package(name, version)
+        if installed is not None:
+            emit({"event": "ORIGINAL_NATIVE_DEPENDENCY_REUSED", "name": name, "version": version,
+                  "path": str(installed.resolve()), "originalArchiveIntegrity": integrity})
+            continue
         package_root = extra_root / name
         package_root.mkdir(parents=True, exist_ok=True, mode=0o700)
         with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
@@ -166,6 +208,11 @@ if transfers:
         emit({"event": "ORIGINAL_NATIVE_DEPENDENCY_RECEIVED", "name": name, "version": version,
               "bytes": len(archive_bytes), "integrity": integrity, "license": manifest.get("license")})
     module_roots.append(extra_root)
+    payload.pop("dependencyArchives", None)
+    transfers.clear()
+    if retained_dependencies:
+        retained_dependencies.clear()
+    del archive_bytes, metadata_bytes, transfer
 base = next((path for path in module_roots if (path / "@x402/core/package.json").is_file()), None)
 if base is None:
     raise RuntimeError("Select the existing full @x402 2.28.0 dependency directory in payload.runtime.nodeModules.")
@@ -185,17 +232,17 @@ for origin in base.iterdir():
     if origin.name.startswith("@") and origin.is_dir():
         for package in origin.iterdir():
             link_package(package, dependencies / origin.name / package.name)
-    elif not origin.name.startswith("."):
+    elif not origin.name.startswith(".") and origin.name not in ("yaml", "re2js"):
         link_package(origin, dependencies / origin.name)
-for name in ("yaml", "re2js"):
-    if not (dependencies / name / "package.json").is_file():
-        origin = next((path / name for path in module_roots if (path / name / "package.json").is_file()), None)
-        if origin is None:
-            raise RuntimeError("Receive the complete existing " + name + " package into the selected dependency directory.")
-        link_package(origin, dependencies / name)
-expected = {"@x402/core": "2.28.0", "@x402/stellar": "2.28.0", "@x402/extensions": "2.28.0", "@stellar/stellar-sdk": "16.3.1"}
+for name, version in {"yaml": "2.9.1", "re2js": "2.8.6"}.items():
+    origin = original_package(name, version)
+    if origin is None:
+        raise RuntimeError("Receive the complete original " + name + " " + version + " package into the selected dependency directory.")
+    link_package(origin, dependencies / name)
+expected = {"@x402/core": "2.28.0", "@x402/stellar": "2.28.0", "@x402/extensions": "2.28.0",
+            "@stellar/stellar-sdk": "16.3.1", "yaml": "2.9.1", "re2js": "2.8.6"}
 versions = {}
-for name in [*expected, "yaml", "re2js"]:
+for name in expected:
     versions[name] = json.loads((dependencies / name / "package.json").read_text())["version"]
     if name in expected and versions[name] != expected[name]:
         raise RuntimeError("Select the original installed " + name + " " + expected[name])

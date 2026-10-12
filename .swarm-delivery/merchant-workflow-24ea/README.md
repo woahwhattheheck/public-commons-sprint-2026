@@ -1,4 +1,6 @@
-# Merchant Workflow and Recipes native receiving
+# Merchant workflow, recipes and recurring native receiving
+
+Use the [recurring merchant continuation](#recurring-merchant-continuation) for the complete original programme: the seven-call baseline, eight-call recipe, two eight-call customer periods, complete customer receiving and restoration of the delivered archive. Its `run-series-native.py` and `series-source-map.json` carry the full 693-file source selection and the two original public dependency archives. The original 501-file source and first-phase commands are retained below for continuation of earlier prepared work.
 
 This source selection runs the complete original two-workspace merchant workflow and reusable recipe receiving operation merged in PR 1998.
 
@@ -109,17 +111,39 @@ python3 run-series-native.py \
 ```
 
 The installed application dependencies must supply `@x402/core`,
-`@x402/stellar` and `@x402/extensions` 2.28.0, Stellar SDK 16.3.1,
-`yaml` and `re2js`. The runner creates a small read-only dependency view by linking each complete
-installed package at its real location. Node resolves that package's own imports
-through its original installed dependency tree. Runtime paths are explicit arguments, so the
-original receiving owner can use the equipped Linux worker. When the selected
-worker needs the original `yaml` 2.9.1 or `re2js` 2.8.6 packages, a private
-`--dependency-transfers` JSON file may provide their original complete metadata
-and archive download URLs. The runner checks the exact package names, versions,
-archive lengths and npm SHA-512 integrity, extracts only these two complete
-packages, and retains their original archives and metadata. Existing different
-package bytes remain protected.
+`@x402/stellar` and `@x402/extensions` 2.28.0 and Stellar SDK 16.3.1.
+The complete source packet also carries the original public `yaml` 2.9.1 and
+`re2js` 2.8.6 archives and their unmodified npm metadata in
+`dependencyArchives`. Receiving these two packages needs no registry connection
+or expiring download URL. Their original licenses remain in the archives.
+
+The runner checks each retained metadata body and decoded archive against its
+byte count and SHA-256, then verifies the original npm SHA-512 integrity,
+package name, version and manifest. The original compressed archive lengths
+are 112,114 bytes for `yaml` and 213,596 bytes for `re2js`. Matching installed
+packages are reused. Only a missing selected package is extracted, into the
+operation's private dependency directory, with its complete archive and metadata.
+
+A small read-only dependency view links every installed package at its real
+location, preserving Node's resolution of that package's own imports through
+its original dependency tree. The view selects the exact `yaml` and `re2js`
+versions above even when another version exists in the shared installation.
+It verifies all six selected application package versions before launching the
+original merchant programme.
+
+An existing standalone capsule can be supplied with `--dependency-archives`.
+The compatibility option `--dependency-transfers` selects a private JSON array
+containing both original metadata and archive download URLs. These command-line
+options are mutually exclusive and explicitly replace the packet's corresponding
+dependency carrier. A held receiver should supply one carrier.
+
+`receive-public-dependencies.py --output /absolute/owned/merchant-original-public-dependencies.json`
+receives this same complete public source capsule on an equipped native worker.
+It preserves the original tarballs and complete metadata, verifies their package
+identities and integrity, and prints the complete capsule's byte count,
+SHA-256 and Git blob identity. Its optional `--transfers` input accepts fresh
+download URLs for the already-retained original files. The complete returned
+capsule belongs with this source selection.
 
 A held receiver may omit `payload.files` when all 693 selected source files
 already exist on that same worker. The runner verifies each existing file
