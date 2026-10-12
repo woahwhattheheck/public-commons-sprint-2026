@@ -1,0 +1,44 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "gridfabric-plaid",
+  "description": "Complete GridFabric Plaid source, report and event operator with original callback custody, reviewed device intent and management dispatch recovery, SQLite ownership and full portable receiving",
+  "commands": {
+    "gridfabric-plaid": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/cli.mjs"
+  },
+  "commandDescriptions": {
+    "gridfabric-plaid": "Review source and mappings, serve original Plaid callbacks and reports, reconcile original management/device operations and reopen the complete customer workspace."
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/core.cjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/model.cjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sqlite-store.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/files.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/operator.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/delivery.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/server.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/cli.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/public/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/public/style.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/public/app.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/DOMAIN_OPERATIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/contracts/plaid-public-contract.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/contracts/management-examples.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/contracts/SOURCES.md",
+    "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
+    "operations/scf-gridfabric-plaid-receiving-20261012/generate-functional-input.mjs",
+    "operations/scf-gridfabric-plaid-receiving-20261012/functional-input-manifest.json",
+    "operations/scf-gridfabric-plaid-receiving-20261012/FUNCTIONAL_INPUTS.md",
+    "operations/scf-gridfabric-plaid-receiving-20261012/run-receiving.mjs",
+    "operations/scf-gridfabric-plaid-receiving-20261012/run-browser.mjs",
+    "operations/scf-gridfabric-plaid-receiving-20261012/README.md",
+    "operations/scf-gridfabric-plaid-receiving-20261012/receiving-config.example.json",
+    "operations/scf-gridfabric-plaid-receiving-20261012/source-manifest.json"
+  ],
+  "exports": {
+    "./seller/gridfabric-plaid": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/cli.mjs",
+    "./seller/gridfabric-plaid/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/operator.mjs",
+    "./seller/gridfabric-plaid/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/server.mjs",
+    "./seller/gridfabric-plaid/delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/delivery.mjs"
+  }
+}

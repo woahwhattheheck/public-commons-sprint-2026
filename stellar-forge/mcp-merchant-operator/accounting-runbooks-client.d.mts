@@ -17,13 +17,18 @@ export type Resource=
   {id:string;title:string;kind:'note';text:string}|
   {id:string;title:string;kind:'file';fileId:string};
 export interface Procedure { id:string; title:string; instructions:string; required:boolean; resourceIds:string[] }
+/** A named subset of procedures, saved in an immutable edition. Procedure order follows the edition. */
+export interface ProcedureProfile { id:string; name:string; description:string; stepIds:string[] }
+export interface ProcedureProfileInput { id:string; name:string; description?:string; stepIds:string[] }
 export interface EditionInput {
   actor:string; runbookId?:string; expectedEditionId?:string|null;
-  name:string; client:string; description?:string; resources?:Resource[]; steps:Procedure[];
+  name:string; client:string; description?:string; resources?:Resource[]; steps:Procedure[]; profiles?:ProcedureProfileInput[];
 }
 export interface PeriodInput {
   actor:string;runbookId:string;editionId:string;label:string;preparer:string;reviewer:string;dueDate:string;
   previousCycleId?:string|null;
+  /** Omit for all procedures; otherwise select a profile in editionId. Fixed for this period. */
+  profileId?:string;
 }
 export type PeriodSourceInput=
   {sourceKind:'files';sourceLabel:string;sourceNote?:string;sourceFileIds:string[]}|
@@ -32,7 +37,7 @@ export interface WorkInput { actor:string;stepId:string;status:WorkStatus;note?:
 export interface AssignmentInput { actor:string;expectedAssignmentSha256:string;note:string;preparer?:string;reviewer?:string;dueDate?:string }
 export interface Assignments { preparer:string;reviewer:string;dueDate:string }
 export interface Assignment extends Assignments {
-  cycleId:string;runbookId:string;editionId:string;phase:CyclePhase;workSha256:string;handoverId:string|null;sha256:string;
+  cycleId:string;runbookId:string;editionId:string;profileId?:string;phase:CyclePhase;workSha256:string;handoverId:string|null;sha256:string;
 }
 export interface HandoverHeader {
   id:string;at:string;actor:string;from:Assignments;to:Assignments;note:string;phase:CyclePhase;
@@ -79,7 +84,7 @@ export interface BookHeader {
 }
 export interface EditionHeader {
   id:string;number:number;name:string;client:string;description:string;actor:string;createdAt:string;
-  originWorkspaceId:string;stepCount:number;resourceCount:number;
+  originWorkspaceId:string;stepCount:number;resourceCount:number;profileCount?:number;
 }
 export interface SourceHeader {
   kind:'accountant'|'files';originWorkspaceId:string;fileCount:number;
@@ -88,7 +93,7 @@ export interface SourceHeader {
   source?:Record<string,unknown>;summary?:Record<string,unknown>;
 }
 export interface CycleHeader {
-  id:string;runbookId:string;editionId:string;label:string;phase:CyclePhase;preparer:string;reviewer:string;
+  id:string;runbookId:string;editionId:string;profileId?:string;profileName?:string;label:string;phase:CyclePhase;preparer:string;reviewer:string;
   dueDate:string;previousCycleId:string|null;readOnly:boolean;originWorkspaceId:string;createdAt:string;updatedAt:string;
   source:SourceHeader;progress:{total:number;pending:number;complete:number;blocked:number;notApplicable:number};
   submissionCount:number;reviewCount:number;historyCount:number;assignmentSha256:string;handoverCount:number;
@@ -105,7 +110,7 @@ export interface CloseHeader { id:string;label:string;runId:string }
 export interface SourceFile { name:string;bytes:number;sha256:string;type?:string;id?:string }
 export interface StatusViews { books:BookHeader;cycles:CycleHeader;files:RetainedFile;received:ReceivedPacket }
 export interface SourceViews { handoffs:HandoffHeader;revisions:HandoffRevision;closes:CloseHeader;files:RetainedFile }
-export interface BookViews { editions:EditionHeader;steps:Procedure;resources:Resource }
+export interface BookViews { editions:EditionHeader;steps:Procedure;profiles:ProcedureProfile;resources:Resource }
 export interface CycleViews {
   steps:Procedure&{work:WorkRecord};resources:Resource;source_files:SourceFile;
   submissions:SubmissionHeader;submission_work:{stepId:string;title:string;work:WorkRecord};

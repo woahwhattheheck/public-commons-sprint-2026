@@ -1,0 +1,55 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./public/",
+  "routes": [
+    [
+      "/receivables",
+      [
+        "index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/receivables/",
+      [
+        "index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/receivables/index.html",
+      [
+        "index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/receivables/app.mjs",
+      [
+        "app.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/receivables/styles.css",
+      [
+        "styles.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/receivables/client.mjs",
+      [
+        "../client.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/receivables/config.json",
+      [
+        "config.json",
+        "application/json; charset=utf-8"
+      ]
+    ]
+  ]
+}

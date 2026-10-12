@@ -32,8 +32,22 @@ function originalURL(value) {
   'ELTSS_BROWSER_ORIGINAL_URL_REQUIRED', 'Use the private address emitted by the selected native operator.');
   return url;
 }
-export async function originalEltssState(urlText, native) {
+export async function originalEltssState(urlText, native, { workspace } = {}) {
   const url = originalURL(urlText);
+  if (workspace !== undefined) {
+    workspace = absolute(workspace);
+    const operatorResponse = await fetch(new URL('/api/operator', url), {
+      headers: { Authorization: 'Bearer ' + url.hash.slice(1) }, redirect: 'error',
+      signal: AbortSignal.timeout(60000),
+    });
+    need(operatorResponse.ok, 'ELTSS_BROWSER_NATIVE_READ_FAILED',
+      'Original operator returned HTTP ' + operatorResponse.status);
+    const operator = await operatorResponse.json();
+    need(operator?.schema === 'stellar-forge.eltss-operator-connection.v1' &&
+      operator.active === true && operator.workspace === workspace &&
+      operator.workspaceId === native.workspaceId && operator.url === url.href.split('#', 1)[0],
+      'ELTSS_BROWSER_WORKSPACE_CHANGED', 'The original listener differs from the explicitly selected receiving workspace.');
+  }
   const response = await fetch(new URL('/api/state', url), {
     headers: { Authorization: 'Bearer ' + url.hash.slice(1) }, redirect: 'error',
     signal: AbortSignal.timeout(60000),
@@ -76,13 +90,15 @@ export async function eltssBrowserReady(page) {
   need(!await error.isVisible(), 'ELTSS_BROWSER_OPERATOR_ERROR', await error.textContent());
 }
 
-export async function operateEltssBrowser({ page, url, native, output }) {
+export async function operateEltssBrowser({ page, url, native, output, workspace }) {
   originalEltssReceiving(native); originalURL(url); output = absolute(output);
+  const selectedWorkspace = workspace === undefined ? native.workspace : absolute(workspace);
   await mkdir(output, { recursive: true, mode: 0o700 }); await privateDirectory(output);
   const lease = await operationLease(join(output, 'browser.lock'));
   const journalPath = join(output, 'BROWSER_JOURNEY.json'), resultPath = join(output, 'OPERATED_ELTSS_BROWSER.json');
   const binding = { nativeOperation: native.operation, nativeCompletedAt: native.completedAt,
-    workspace: native.workspace, workspaceId: native.workspaceId,
+    workspace: selectedWorkspace, workspaceId: native.workspaceId,
+    ...(selectedWorkspace !== native.workspace ? { originalWorkspace: native.workspace } : {}),
     sourceIds: native.sourceIds, editionIds: native.editionIds, reviewSetIds: native.reviewSetIds,
     assessmentIds: native.assessmentIds, buildIds: native.buildIds, handoffIds: native.handoffIds };
   let journal;
@@ -144,7 +160,7 @@ export async function operateEltssBrowser({ page, url, native, output }) {
     }
     need(JSON.stringify(journal.binding) === JSON.stringify(binding),
       'ELTSS_BROWSER_RECEIVING_CHANGED', 'Continue the same completed native receiving selection.');
-    const before = await originalEltssState(url, native);
+    const before = await originalEltssState(url, native, { workspace: selectedWorkspace });
     if (journal.completedAt) {
       const result = await readJSON(resultPath);
       for (const file of [...Object.values(result.screens), ...Object.values(result.downloads)]) {
@@ -254,7 +270,7 @@ export async function operateEltssBrowser({ page, url, native, output }) {
     await nav('overview'); await screen('11-compact-overview');
     await page.setViewportSize({ width: 1440, height: 1080 });
     await page.reload(); await eltssBrowserReady(page); await screen('12-reopened-workspace');
-    const after = await originalEltssState(url, native);
+    const after = await originalEltssState(url, native, { workspace: selectedWorkspace });
     journal.observations.after = await save('ORIGINAL_WORKSPACE_AFTER.json', after);
     for (const key of ['sources', 'plans', 'builds', 'editions', 'reviewSets', 'assessments', 'decisions',
       'corrections', 'editionComparisons', 'handoffs', 'receivings', 'artifacts']) {
@@ -264,7 +280,9 @@ export async function operateEltssBrowser({ page, url, native, output }) {
     }
     need(errors.length === 0, 'ELTSS_BROWSER_SCRIPT_FAILED', JSON.stringify(errors));
     const result = { schema: SCHEMA, operation: OPERATION, completedAt: now(), binding,
-      workspace: native.workspace, workspaceId: native.workspaceId, sourceIds: native.sourceIds,
+      workspace: selectedWorkspace, workspaceId: native.workspaceId,
+      ...(selectedWorkspace !== native.workspace ? { originalWorkspace: native.workspace } : {}),
+      sourceIds: native.sourceIds,
       editionIds: native.editionIds, reviewSetIds: native.reviewSetIds, assessmentIds: native.assessmentIds,
       buildIds: native.buildIds, handoffIds: native.handoffIds, fieldCount: 56,
       assessedCells: cellPages[0].total, screens: journal.screens, downloads: journal.downloads,
@@ -286,7 +304,7 @@ export async function main(args = process.argv.slice(2)) {
   const options = {};
   for (let i = 0; i < args.length; i += 2) {
     const key = args[i], value = args[i + 1];
-    need(['--receiving', '--startup', '--out', '--playwright', '--chromium'].includes(key) &&
+    need(['--receiving', '--startup', '--out', '--workspace', '--playwright', '--chromium'].includes(key) &&
       value && !value.startsWith('--') && !Object.hasOwn(options, key),
     'ELTSS_BROWSER_ARGUMENTS', 'Use --receiving OPERATED_ELTSS.json --startup ORIGINAL_STARTUP.json --out PRIVATE_OUTPUT.');
     options[key] = absolute(value);
@@ -295,11 +313,12 @@ export async function main(args = process.argv.slice(2)) {
     need(options[key], 'ELTSS_BROWSER_ARGUMENT_REQUIRED', key + ' is required.');
   need(Number(process.versions.node.split('.')[0]) >= 22, 'ELTSS_BROWSER_NODE_REQUIRED');
   const native = originalEltssReceiving(await readJSON(options['--receiving']));
+  const selectedWorkspace = options['--workspace'] ?? native.workspace;
   const startup = await readJSON(options['--startup']);
   need(startup.schema === 'stellar-forge.eltss-startup.v1' &&
-    startup.workspace === native.workspace && startup.workspaceId === native.workspaceId,
+    startup.workspace === selectedWorkspace && startup.workspaceId === native.workspaceId,
   'ELTSS_BROWSER_STARTUP_CHANGED');
-  await originalEltssState(startup.url, native);
+  await originalEltssState(startup.url, native, { workspace: selectedWorkspace });
   let playwright;
   if (options['--playwright']) playwright = await import(pathToFileURL(options['--playwright']).href);
   else {
@@ -315,7 +334,7 @@ export async function main(args = process.argv.slice(2)) {
   try {
     const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1080 } });
     const page = await context.newPage();
-    const result = await operateEltssBrowser({ page, url: startup.url, native, output: options['--out'] });
+    const result = await operateEltssBrowser({ page, url: startup.url, native, output: options['--out'], workspace: selectedWorkspace });
     process.stdout.write(JSON.stringify({ state: 'complete', operation: result.operation,
       workspaceId: result.workspaceId, result: join(options['--out'], 'OPERATED_ELTSS_BROWSER.json'),
       screens: Object.keys(result.screens).length, files: Object.keys(result.downloads).length }) + '\n');

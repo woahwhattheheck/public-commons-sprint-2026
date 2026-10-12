@@ -27,10 +27,10 @@ export async function openLocalInputs(paths,{signal}={}){
   }
   try{
     for(const [slot,path]of Object.entries(paths)){
-      if(!['source','baseline','decisions'].includes(slot))labError('FILE_SLOT','Unknown input slot.');
+      if(!['source','baseline','decisions','baseline_decisions','reconciliation'].includes(slot))labError('FILE_SLOT','Unknown input slot.');
       const file=await open(resolve(path),'r');
       try{
-        const stat=await file.stat(),maximum=slot==='decisions'?4194304:16777216;
+        const stat=await file.stat(),maximum=['decisions','baseline_decisions'].includes(slot)?4194304:16777216;
         if(!stat.isFile()||stat.size>maximum)labError('LOCAL_INPUT','Select an original regular file within the declared slot limit.');
         const filename=basename(path),entry={file,meta:{slot,filename,bytes:stat.size,sha256:'',mediaType:mediaType(filename)}};
         entries.set(slot,entry);for await(const part of streamEntry(entry,false)){void part;}

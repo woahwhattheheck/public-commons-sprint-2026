@@ -4,14 +4,14 @@ import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {mkdir,unlink} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
-import {openCentralCommissioning} from './commissioning/open.mjs';
-import {readCentralCommissioningInputs} from './host-inputs.mjs';
+import {openCentralWarehouse} from './warehouse/open.mjs';
+import {readCentralCommissioningInputs,readCentralWarehouseProfiles} from './host-inputs.mjs';
 import {createCentralServer} from './server.mjs';
 import {restoreCentralArchive} from './archive.mjs';
 import {ODK_CONNECTION_SCHEMA,ODK_CONNECTION_FILENAME,ODK_STARTUP_SCHEMA,ODK_HASH,
   odkNeed,odkAbsolute,odkPrivateDirectory,odkWritePrivateJson,odkReadPrivateJson} from './connection.mjs';
 
-const OPTIONS=['workspace','operator','port','restore-archive','restore-sha256','commissioning-connection','commissioning-environment'];
+const OPTIONS=['workspace','operator','port','restore-archive','restore-sha256','commissioning-connection','commissioning-environment','warehouse-profiles'];
 export function centralManagedOptions(argv){
   const raw={};
   for(let i=0;i<argv.length;i+=2){
@@ -32,6 +32,7 @@ export function centralManagedOptions(argv){
   odkNeed(!raw['commissioning-environment']||raw['commissioning-connection'],
     'ODK_COMMISSIONING_CONNECTION','Choose the original host connection for this private authorization file.');
   return {directory,operator,port:Number(raw.port??0),
+    ...(raw['warehouse-profiles']?{warehouseProfilesFile:odkAbsolute(raw['warehouse-profiles'])}:{}),
     ...(raw['commissioning-connection']?{commissioningConnectionFile:odkAbsolute(raw['commissioning-connection'])}:{}),
     ...(raw['commissioning-environment']?{commissioningEnvironmentFile:odkAbsolute(raw['commissioning-environment'])}:{}),
     ...(raw['restore-archive']?{restoreArchive:odkAbsolute(raw['restore-archive']),restoreSha256:raw['restore-sha256']}:{})};
@@ -42,12 +43,15 @@ export async function startManagedCentralWorkspace(options){
     'ODK_RESTORE_SELECTION_INVALID','Select the original archive and its exact reviewed SHA-256 together.');
   const selected=centralManagedOptions(['--workspace',options.directory,'--operator',options.operator||'Central field operator',
     '--port',String(options.port??0),
+    ...(options.warehouseProfilesFile?['--warehouse-profiles',options.warehouseProfilesFile]:[]),
     ...(options.restoreArchive?['--restore-archive',options.restoreArchive,'--restore-sha256',options.restoreSha256]:[]),
     ...(options.commissioningConnectionFile?['--commissioning-connection',options.commissioningConnectionFile]:[]),
     ...(options.commissioningEnvironmentFile&&options.commissioningConnectionFile?
       ['--commissioning-environment',options.commissioningEnvironmentFile]:[])]);
   odkNeed(!options.commissioningEnvironmentFile||options.commissioningConnection||options.commissioningConnectionFile,
     'ODK_COMMISSIONING_CONNECTION','Select the original host connection before loading its authorization alias.');
+  const warehouseInputs=await readCentralWarehouseProfiles({profiles:options.warehouseProfiles,
+    profilesFile:selected.warehouseProfilesFile});
   let restored=null;
   if(selected.restoreArchive)restored=await restoreCentralArchive({archive:selected.restoreArchive,
     directory:selected.directory,expectedSha256:selected.restoreSha256,signal:options.signal});
@@ -57,17 +61,25 @@ export async function startManagedCentralWorkspace(options){
     connectionFile:selected.commissioningConnectionFile,environmentFile:options.commissioningEnvironmentFile});
   let owner,workspace,server,connection,closePromise;
   try{
-    owner=await openCentralCommissioning({directory:before.path,connection:hostInputs.connection,
+    owner=await openCentralWarehouse({directory:before.path,connection:hostInputs.connection,
+      profiles:warehouseInputs.profiles,
       ...(options.fetchImpl?{fetchImpl:options.fetchImpl}:{})});
     workspace=owner.workspace;
     server=await createCentralServer({workspace,host:'127.0.0.1',port:selected.port,
-      token:(await import('node:crypto')).randomBytes(32).toString('hex'),extensions:[owner.extension]});
+      token:(await import('node:crypto')).randomBytes(32).toString('hex'),extensions:owner.extensions});
     const mounted=await fetch(server.origin+'/api/commissioning/state',{headers:{Authorization:'Bearer '+server.token},
       redirect:'error',signal:AbortSignal.timeout(10000)});
     odkNeed(mounted.ok,'ODK_COMMISSIONING_MOUNT','The original commissioner did not open on this managed listener.',502);
     const observed=await mounted.json(),commissioned=owner.commissioning.state();
     odkNeed(observed.schema===commissioned.schema&&observed.workspaceId===commissioned.workspaceId,
       'ODK_COMMISSIONING_IDENTITY','The original commissioner differs from the managed workspace.',409);
+    const warehouseMounted=await fetch(server.origin+'/api/warehouse/state',{headers:{Authorization:'Bearer '+server.token},
+      redirect:'error',signal:AbortSignal.timeout(10000)});
+    odkNeed(warehouseMounted.ok,'ODK_WAREHOUSE_MOUNT','The warehouse did not open on this managed listener.',502);
+    const observedWarehouse=await warehouseMounted.json(),warehouseState=owner.warehouse.state();
+    odkNeed(observedWarehouse.schema===warehouseState.schema&&observedWarehouse.workspaceId===commissioned.workspaceId&&
+      Number.isSafeInteger(observedWarehouse.revision)&&observedWarehouse.revision>=0,'ODK_WAREHOUSE_IDENTITY',
+      'The warehouse differs from the managed Central workspace.',409);
     const identity=await odkPrivateDirectory(workspace.directory),state=await workspace.state();
     odkNeed(identity.dev===before.dev&&identity.ino===before.ino,
       'ODK_DIRECTORY_CHANGED','The selected original workspace directory changed during opening.',409);
@@ -90,7 +102,9 @@ export async function startManagedCentralWorkspace(options){
     })());
     return {...server,directory:identity.path,workspace,operator:selected.operator,connection,
       instanceId:value.instanceId,restored,commissioning:owner.commissioning,
-      commissioningUrl:server.origin+'/commissioning/#token='+encodeURIComponent(server.token),close};
+      commissioningUrl:server.origin+'/commissioning/#token='+encodeURIComponent(server.token),
+      warehouse:owner.warehouse,warehouseProfilesSha256:warehouseInputs.source?.sha256??null,
+      warehouseUrl:server.origin+'/warehouse/#token='+encodeURIComponent(server.token),close};
   }catch(error){
     await server?.close().catch(()=>{});
     await owner?.close().catch(()=>{});
@@ -101,7 +115,8 @@ export function centralStartup(service){
   return {schema:ODK_STARTUP_SCHEMA,status:'ODK_WORKSPACE_READY',directory:service.directory,
     operator:service.operator,workspaceId:service.connection.value.workspaceId,instanceId:service.instanceId,
     pid:service.connection.value.pid,connectionFile:service.connection.path,
-    connectionSha256:service.connection.sha256,origin:service.origin,url:service.url,commissioningUrl:service.commissioningUrl};
+    connectionSha256:service.connection.sha256,origin:service.origin,url:service.url,commissioningUrl:service.commissioningUrl,
+    warehouseUrl:service.warehouseUrl,warehouseProfilesSha256:service.warehouseProfilesSha256};
 }
 const HELP='ODK Central managed workspace\n\n'+
   'starforge odk-central-workspace --workspace /private/central --operator "Field data operator" [--port 0]\n'+
@@ -109,8 +124,10 @@ const HELP='ODK Central managed workspace\n\n'+
   '  --restore-sha256 SHA256         Exact reviewed archive hash; required with --restore-archive\n\n'+
   '  --commissioning-connection PATH  Original private Central host connection or bootstrap JSON\n'+
   '  --commissioning-environment PATH Original private JSON containing that Authorization alias\n\n'+
-  'Commissioning opens at /commissioning/ on this same private listener.\n'+
+  '  --warehouse-profiles PATH      Original private PostgreSQL warehouse profile selection\n\n'+
+  'Commissioning and Warehouse open at /commissioning/ and /warehouse/ on this same listener.\n'+
   'Use commissioning <command> for source agreements, original periods and complete handover.\n'+
+  'Use warehouse <command> for approved periods, reviewed SQL imports and full period reports.\n'+
   'Data subcommands include state, capture, report, export, publisher transfers and release controls.\n'+
   'Applications reviews, saves, starts, opens and stops this same leased workspace.\n'+
   'Its private odk.connection.json connects the CLI and typed tools to the existing listener.\n'+
@@ -123,6 +140,7 @@ export async function runManagedCentralCli(argv=process.argv.slice(2),{
   if(argv.length===0||argv.length===1&&['help','--help'].includes(argv[0])){
     stdout.write(HELP);return {help:true};
   }
+  if(argv[0]==='warehouse')return (await import('./warehouse/cli.mjs')).runCentralWarehouseCli(argv.slice(1));
   if(argv[0]==='commissioning')return (await import('./commissioning/cli.mjs')).runCommissioningCli(argv.slice(1));
   if(argv[0]==='serve')argv=argv.slice(1);
   else if(!argv[0].startsWith('--'))return (await import('./cli.mjs')).runCentralCli(argv);

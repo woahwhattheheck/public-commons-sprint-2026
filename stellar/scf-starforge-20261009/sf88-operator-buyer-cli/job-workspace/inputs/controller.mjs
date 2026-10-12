@@ -214,6 +214,49 @@ export async function openJobInputFiles({ directory, lease, readRequest, editFil
         return { uploads, bytes };
       });
     },
+    withSelected(id, { slots, expectedRevision, signal } = {}, consume) {
+      need(Array.isArray(slots) && slots.length > 0 && slots.length <= 16 &&
+        slots.every(slot => typeof slot === 'string') && new Set(slots).size === slots.length &&
+        Number.isSafeInteger(expectedRevision) && expectedRevision >= 0 && typeof consume === 'function',
+        'JOB_INPUT_READ_SELECTION_INVALID');
+      return run(id, 'source-read', signal, async ownedSignal => {
+        const row = await readRequest(id);
+        need(row.revision === expectedRevision, 'JOB_INTAKE_REVISION_CONFLICT', 409);
+        const descriptors = selected(row), opened = [];
+        let result, failure;
+        try {
+          const files = {};
+          for (const slot of slots) {
+            ownedSignal.throwIfAborted();
+            const descriptor = descriptors[slot];
+            need(descriptor, 'JOB_INPUT_SLOT_NOT_SELECTED', 404);
+            const uploadId = identity(row, slot, descriptor), plan = store.plan(uploadId, row.claimToken);
+            need(canonical(plan.file) === canonical(descriptor), 'JOB_INPUT_SELECTION_CHANGED', 409);
+            const held = await store.openFile(uploadId, row.claimToken, { signal: ownedSignal });
+            opened.push(held);
+            files[slot] = { file: held.file, descriptor: structuredClone(descriptor),
+              uploadId, plan: structuredClone(plan) };
+          }
+          result = await consume({
+            requestId: row.id, revision: row.revision, reference: row.reference,
+            merchant: { origin: row.merchant.origin, catalogSha256: row.merchant.catalogSha256,
+              functionId: row.merchant.function.id, functionSha256: row.merchant.function.functionSha256 },
+            input: structuredClone(row.input), files, signal: ownedSignal,
+          });
+          ownedSignal.throwIfAborted();
+          for (const held of opened)
+            need(sameFile(held.info, await held.file.stat()), 'JOB_INPUT_SOURCE_CHANGED', 409);
+          const after = await readRequest(id);
+          need(canonical(after.input) === canonical(row.input), 'JOB_INPUT_SELECTION_CHANGED', 409);
+        } catch (error) { failure = error; }
+        const closed = await Promise.allSettled(opened.map(held => held.file.close()));
+        const errors = closed.filter(value => value.status === 'rejected').map(value => value.reason);
+        if (errors.length) throw new AggregateError([...(failure ? [failure] : []), ...errors],
+          'JOB_INPUT_SELECTED_READ_CLOSE_FAILED');
+        if (failure) throw failure;
+        return result;
+      });
+    },
     async upload(row, { signal, onProgress = () => {} } = {}) {
       active(); checkReady(row);
       if (!row.merchant.function.inputFiles || row.requestAttempts > 0) return;

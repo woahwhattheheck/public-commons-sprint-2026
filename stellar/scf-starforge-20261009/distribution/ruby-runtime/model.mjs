@@ -1,5 +1,6 @@
 // MIT. Managed Ruby, exact Bundler installations and the original received Rails application.
 import { spawn } from 'node:child_process';
+import { applicationEditionMethods } from './editions/model.mjs';
 import { access, open, realpath, lstat, readdir } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -239,8 +240,9 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
   async function retainSupport(path) {
     await directory(join(path, 'support'), true);
     const entries = [];
-    for (const name of ['engine.rb', 'application.rb']) {
+    for (const name of ['engine.rb', 'application.rb', 'editions/native.rb']) {
       const bytes = await regular(join(HERE, name), 4 * 1024 * 1024);
+      await treeDirectories(join(path, 'support'), dirname(join(path, 'support', name)));
       await once(join(path, 'support', name), bytes); entries.push({ name, bytes: bytes.length, sha256: digest(bytes) });
     }
     return entries;
@@ -318,7 +320,7 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
         return operation({ operationId: key });
       }
       await assertNoBusy(environmentId, applicationId, key);
-      if (['export','verify'].includes(action) && applicationId) await stoppedApplication(environmentId, applicationId);
+      if (['export','verify','application-edition'].includes(action) && applicationId) await stoppedApplication(environmentId, applicationId);
       const content = { ...identity, createdAt: now() }, input = { ...content, sha256: hashObject(content) };
       await once(join(path, 'request.json'), json(input));
       await initialState(path, input);
@@ -370,7 +372,7 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
         if (observed.active || observed.phase === 'SUCCEEDED') return false;
         need(['QUEUED','FAILED','INTERRUPTED','CANCELLED'].includes(observed.phase), 'RUBY_OPERATION_STATE_INVALID');
         await assertNoBusy(input.environmentId, input.applicationId, key);
-        if (['export','verify'].includes(input.action) && input.applicationId) await stoppedApplication(input.environmentId, input.applicationId);
+        if (['export','verify','application-edition'].includes(input.action) && input.applicationId) await stoppedApplication(input.environmentId, input.applicationId);
         await saveJSON(join(opPath(key), 'state.json'), { ...current, phase: 'QUEUED',
           generation: (current.generation ?? 0) + 1, error: null, updatedAt: now() }, true);
         return true;
@@ -490,7 +492,10 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
     return { handle, bytes: descriptor.bytes, sha256: descriptor.sha256, name,
       type: descriptor.type ?? (name.endsWith('.tar') ? 'application/x-tar' : name.endsWith('.json') ? 'application/json' : 'text/plain; charset=utf-8') };
   }
+  const editionMethods = applicationEditionMethods({root,appSelection,selected,envPath,selectionAdmission,
+    admit,spawnWorker,operation,operationsFor});
   return {
+    ...Object.fromEntries(Object.entries(editionMethods).map(([key,fn]) => [key,call(fn)])),
     directory: root, inspect: call(inspect), probe: call(probeRuby), create: call(createEnvironment),
     start: call(start), run: call(run), resume: call(resume), cancel: call(cancel), operation: call(operation), log: call(log),
     application: call(application), registerApplication: call(registerApplication), launchApplication: call(launchApplication),

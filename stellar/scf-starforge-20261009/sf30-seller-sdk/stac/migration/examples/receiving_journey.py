@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 from pathlib import Path
@@ -348,6 +349,47 @@ def _independent_receiver(workspace, output, software_id=None):
     return original
 
 
+def _publish_selected_projects(workspace, root, config, actor, builds):
+    selected = config.get("cartography")
+    if selected is None:
+        return None
+    require(isinstance(selected, dict) and set(selected) == {"baseline", "corrected", "correctionNote"},
+            "JOURNEY_PUBLICATIONS", "Select the complete original two-project publication and reviewed correction note.")
+    specs = {}
+    identities = {}
+    for stage in ("baseline", "corrected"):
+        choice = selected[stage]
+        require(isinstance(choice, dict)
+                and set(choice) <= {"editionId", "definitionId", "requestId", "specJson"}
+                and {"editionId", "definitionId", "specJson"} <= set(choice)
+                and isinstance(choice["specJson"], str),
+                "JOURNEY_PUBLICATION_SELECTION", "Select a retained edition, project definition and exact original publication JSON.")
+        matches = [project for build in builds if build["editionId"] == choice["editionId"]
+                   and ("requestId" not in choice or build["requestId"] == choice["requestId"])
+                   for project in build["projects"] if project["definitionId"] == choice["definitionId"]]
+        require(len(matches) == 1, "JOURNEY_PUBLICATION_SELECTION",
+                "Select one actual project from this original edition build.", stage=stage)
+        spec = native_files.parse_json(choice["specJson"])
+        require(isinstance(spec, dict) and spec.get("projectId") in (None, matches[0]["projectId"]),
+                "JOURNEY_PUBLICATION_SELECTION", "Preserve the actual saved project identity in the reviewed publication.")
+        spec = copy.deepcopy(spec)
+        spec["projectId"] = matches[0]["projectId"]
+        specs[stage] = spec
+        identities[stage] = {"editionId": choice["editionId"], "definitionId": choice["definitionId"],
+                             "projectId": matches[0]["projectId"],
+                             "specCanonicalJson": native_files.canonical(spec)}
+    _keep(root, "publication-selection.json", identities)
+    from migration.examples.cartography_journey import publish_original_projects
+    published = publish_original_projects(
+        workspace, root / "publications", operation_id=config["operationId"], actor=actor,
+        baseline=specs["baseline"], corrected=specs["corrected"],
+        correction_note=selected["correctionNote"], progress=_progress)
+    original, _ = read_json(root / "publications" / "result.json")
+    require(original["receivingSoftwareId"] == published["receivingSoftwareId"],
+            "JOURNEY_PUBLICATION_SOFTWARE", "Retain the source edition used by the actual completed publication.")
+    return original
+
+
 @_native_operation
 def perform(config_file, remap=None):
     config, _ = read_json(config_file)
@@ -380,7 +422,7 @@ def perform(config_file, remap=None):
         return {**result, "locations": locations}
 
     requests = set()
-    source_ids, built_projects, delivery_software = [], [], []
+    source_ids, built_projects, delivery_software, original_builds = [], [], [], []
     for index, selected in enumerate(config["editions"], 1):
         require(isinstance(selected, dict) and isinstance(selected.get("editionId"), str),
                 "JOURNEY_EDITION", "Use the original retained migration edition IDs.")
@@ -412,13 +454,17 @@ def perform(config_file, remap=None):
         _keep(root, "builds/" + value_sha(request_id) + ".json", original)
         source_ids.append(result["projectBuild"]["sourceId"])
         built_projects.extend(result["projectBuild"]["projects"])
+        original_builds.append({"editionId": selected["editionId"], "requestId": request_id,
+                                "projects": result["projectBuild"]["projects"]})
         delivered = result["delivery"]
         require(isinstance(delivered.get("softwareId"), str) and delivered["softwareId"],
                 "MIGRATION_SOFTWARE_SELECTION", "Retain the complete software edition used by this original project delivery.")
         delivery_software.append({"editionId": selected["editionId"], "requestId": request_id,
                                   "deliveryId": delivered["id"], "softwareId": delivered["softwareId"]})
 
-    selected_software_id = config.get("softwareId", delivery_software[-1]["softwareId"])
+    publications = _publish_selected_projects(workspace, root, config, actor, original_builds)
+    selected_software_id = config.get("softwareId", publications["receivingSoftwareId"] if publications
+                                       else delivery_software[-1]["softwareId"])
     _select_software(workspace, selected_software_id)
     comparisons = []
     for index in range(1, len(source_ids)):
@@ -461,6 +507,7 @@ def perform(config_file, remap=None):
         "workspaceId": inspected["workspaceId"], "revision": inspected["revision"],
         "editionIds": [row["editionId"] for row in config["editions"]], "sourceIds": source_ids,
         "builtProjects": built_projects, "comparisons": comparisons, "archive": archive,
+        **({"publications": publications} if publications is not None else {}),
         "receivingSoftware": {"selectedId": selected_software_id, "projectDeliveries": delivery_software},
         "snapshotSha256": inspected["snapshotSha256"], "files": inspected["fileCount"],
         "receiving": incoming["receipt"], "reopened": reopened, "independent": independent,

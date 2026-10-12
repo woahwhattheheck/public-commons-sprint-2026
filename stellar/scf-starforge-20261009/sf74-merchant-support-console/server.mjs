@@ -33,6 +33,7 @@ const ASSETS = Object.freeze({
   '/adjustments.mjs': ['adjustments.mjs', 'text/javascript; charset=utf-8'],
   '/adjustments.css': ['adjustments.css', 'text/css; charset=utf-8'],
   '/commercial': ['commercial.html', 'text/html; charset=utf-8'],
+  '/COMMERCIAL_IMPLEMENTATION.md': ['COMMERCIAL_IMPLEMENTATION.md', 'text/markdown; charset=utf-8'],
   '/commercial/receiving-desk.mjs': ['commercial/receiving-desk.mjs', 'text/javascript; charset=utf-8'],
   '/commercial/receiving-desk.css': ['commercial/receiving-desk.css', 'text/css; charset=utf-8'],
   '/commercial/RECEIVING.md': ['commercial/RECEIVING.md', 'text/markdown; charset=utf-8'],
@@ -382,7 +383,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
           }
           json(res,200,result);return;
         }
-        const commercial=/^\/api\/cases\/([a-f0-9-]+)\/commercial(?:\/(preview|save-draft|publish|receive|receive-pricing|compare|download|receiving-status|receiving-capture|receiving-inspect|receiving-attach|receiving-case|receiving-restore))?$/.exec(route);
+        const commercial=/^\/api\/cases\/([a-f0-9-]+)\/commercial(?:\/(preview|preview-implementation|adopt-implementation|save-draft|publish|receive|receive-pricing|compare|download|receiving-status|receiving-capture|receiving-inspect|receiving-attach|receiving-case|receiving-restore))?$/.exec(route);
         if(commercial) {
           if(!commercialDesk){json(res,503,{error:'COMMERCIAL_DISABLED',detail:'Open the original merchant workspace with its private case directory.'});return;}
           if(req.method==='GET'&&!commercial[2]) {
@@ -400,7 +401,8 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
             const selected=commercial[2].slice('receiving-'.length),action=selected==='case'?'inspect-case':selected;
             json(res,200,await commercialReceivingDesk.call(action,{id:commercial[1],...input}));return;
           }
-          const method={'save-draft':'saveDraft','receive-pricing':'receivePricing'}[commercial[2]]??commercial[2];
+          const method={'save-draft':'saveDraft','receive-pricing':'receivePricing',
+            'preview-implementation':'previewImplementation','adopt-implementation':'adoptImplementation'}[commercial[2]]??commercial[2];
           const result=await commercialDesk[method]({id:commercial[1],...input});
           if(method==='download') {
             const file=result.descriptor;

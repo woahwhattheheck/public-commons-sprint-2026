@@ -9,7 +9,7 @@
 <body>
 <a class="skip-link" href="#portfolio-main">Skip to portfolio</a>
 <header class="app-header">
-  <div><a class="back-link" href="/">Merchant accounting</a><h1>Client portfolio</h1><p class="muted">Commission clients, schedule their closes and retain each handover.</p></div>
+  <div><a class="back-link" href="/">Merchant accounting</a><h1>Client portfolio</h1><p class="muted">Commission clients, plan recurring work and retain each close handover.</p></div>
   <div class="header-controls"><label class="compact">Operator name<input id="operator-name" maxlength="160" autocomplete="name" required></label><button type="button" id="refresh-all">Refresh</button></div>
 </header>
 <div id="connection-status" class="connection" role="status" aria-live="polite">Opening the original accounting workspace…</div>
@@ -55,14 +55,14 @@
   </div>
  </section>
  <section id="view-calendar" class="view hidden" aria-labelledby="calendar-title">
-  <div class="section-heading"><div><h2 id="calendar-title">Close calendar</h2><p class="muted">Preview dates, assignments and original source selections before publishing a complete plan.</p></div><button type="button" id="new-plan">New close plan</button></div>
+  <div class="section-heading"><div><h2 id="calendar-title">Close calendar</h2><p class="muted">Preview procedure sets, dates, assignments and original sources before publishing a complete plan.</p></div><button type="button" id="new-plan">New close plan</button></div>
   <div class="desk">
    <aside class="panel"><h3>Published plans</h3><div id="plan-list" class="list"></div></aside>
    <div id="plan-detail" class="stack"><div class="empty">Select a published plan or prepare a new close schedule.</div></div>
   </div>
  </section>
  <section id="view-commands" class="view hidden" aria-labelledby="commands-title">
-  <div class="section-heading"><div><h2 id="commands-title">Original client execution</h2><p class="muted">Prepare exact client operations, execute them once and reconcile their saved results.</p></div><div class="actions"><button type="button" id="new-command">Prepare client operation</button><button type="button" id="refresh-commands">Refresh execution</button></div></div>
+  <div class="section-heading"><div><h2 id="commands-title">Original client execution</h2><p class="muted">Prepare client operations for the selected procedure set, execute them once and reconcile their saved results.</p></div><div class="actions"><button type="button" id="new-command">Prepare client operation</button><button type="button" id="refresh-commands">Refresh execution</button></div></div>
   <div class="desk">
    <aside class="panel"><label>Find an operation<input id="command-search" type="search" autocomplete="off"></label><div id="command-list" class="list"></div></aside>
    <div id="command-detail" class="stack"><div class="empty">Select a retained operation or prepare one from a published close plan.</div></div>

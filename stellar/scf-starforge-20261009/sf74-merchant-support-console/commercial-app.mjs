@@ -20,13 +20,25 @@ async function call(action,args={}) {
   const id=current(),token=selectionEpoch;
   const body=checked(args,id);
   const result=await request('/api/cases/'+id+'/commercial/'+action,{
-    ...body,...(['save-draft','publish','receive','receive-pricing','receiving-attach'].includes(action)?{actor:'Local commercial operator'}:{})});
+    ...body,...(['save-draft','publish','receive','receive-pricing','adopt-implementation','receiving-attach'].includes(action)&&
+      !(action==='adopt-implementation'&&Object.hasOwn(body,'actor'))?{actor:'Local commercial operator'}:{})});
   if(token!==selectionEpoch)throw new Error('The selected original case changed while the request returned.');
   return result;
 }
 const desk=mountCommercialDesk({root:$('quotation-root'),services:{
   async read(){const id=current(),token=selectionEpoch;const value=await request('/api/cases/'+id+'/commercial');if(token!==selectionEpoch)throw new Error('The selected original case changed.');return value;},
   preview:args=>call('preview',args),saveDraft:args=>call('save-draft',args),publish:args=>call('publish',args),
+  previewImplementation:args=>call('preview-implementation',args),adoptImplementation:args=>call('adopt-implementation',args),
+  openImplementation(args={}) {
+    const id=current();checked(args,id);
+    const url=new URL('/',location.href);url.searchParams.set('case',id);url.hash='implementation';
+    location.assign(url.href);
+  },
+  openCasePackage(args={}) {
+    const id=current();checked(args,id);
+    const url=new URL('/',location.href);url.searchParams.set('case',id);url.hash='case-packages';
+    location.assign(url.href);
+  },
   receive:args=>call('receive',args),receivePricing:args=>call('receive-pricing',args),compare:args=>call('compare',args),
   receivingStatus:args=>call('receiving-status',args),receivingCapture:args=>call('receiving-capture',args),
   receivingInspect:args=>call('receiving-inspect',args),receivingAttach:args=>call('receiving-attach',args),

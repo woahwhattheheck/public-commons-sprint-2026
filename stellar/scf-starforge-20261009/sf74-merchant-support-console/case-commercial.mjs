@@ -1,5 +1,7 @@
 // MIT. Commercial documents through the original SF74 case and commissioning writer.
 import {createHash} from 'node:crypto';
+import {commercialImplementationView,readCommercialImplementationTransfers,
+  previewCommercialImplementation,adoptCommercialImplementation} from './case-commercial-implementation.mjs';
 import {parseWorkspace} from './workspace-file.mjs';
 import {operateCaseCommissioning} from './case-commissioning.mjs';
 import {MAX_MATERIAL_BYTES,encodeCommissioningBytes} from './commissioning.mjs';
@@ -82,12 +84,32 @@ export function openCaseCommercial({store,workspaceId}={}) {
     const next=await readContext(args.id);
     return {state:'COMPLETE',requestId:args.requestId,replayed:Boolean(prior)||original.replayed,
       document:{id:document.id,kind,sha256:sha256(jsonBytes(document))},case:recordRef(next.record),
-      view:commercialView(next.context),...(kind==='QUOTE'?{quote:quoteById(next.context,document.id)}:{}),
+      view:view(next.context),...(kind==='QUOTE'?{quote:quoteById(next.context,document.id)}:{}),
       ...(kind==='PRICING'?{pricingSourceId:document.payload.id}:{})};
+  }
+  function view(context) {
+    const original= commercialView(context),transfers=readCommercialImplementationTransfers(context);
+    return {...original,implementation:commercialImplementationView(context),requests:[
+      ...original.requests,...transfers.history.map(row=>({requestId:row.id,action:'adoptImplementation',
+        state:'COMPLETE',documentSha256:row.material.sha256}))]};
+  }
+  async function previewImplementation(args) {
+    fields(args,['id','scope','expectedRevision','quoteId','quoteSha256','acceptanceId','resolutions']);scope(args);
+    const {record,context}=await readContext(args.id);revision(args,record);
+    return previewCommercialImplementation(context,args);
+  }
+  async function adoptImplementation(args) {
+    fields(args,['id','scope','expectedRevision','requestId','actor','note','quoteId','quoteSha256',
+      'acceptanceId','reviewSha256','resolutions']);scope(args);
+    const {record,workspace,context}=await readContext(args.id);
+    const result=await adoptCommercialImplementation({store,record,workspace,context,args});
+    const next=await readContext(args.id);
+    return {...result,case:recordRef(next.record),view:view(next.context),
+      implementation:commercialImplementationView(next.context)};
   }
   async function read(args) {
     fields(args,['id','revision']);const {record,context}=await readContext(args.id,args.revision??null);
-    return {...commercialView(context),case:recordRef(record)};
+    return {...view(context),case:recordRef(record)};
   }
   async function preview(args) {
     fields(args,['id','scope','expectedRevision','draft']);scope(args);
@@ -158,5 +180,5 @@ export function openCaseCommercial({store,workspaceId}={}) {
     return {scope:context.scope,case:recordRef(record),quoteId:quote.id,quoteSha256:quote.sha256,
       descriptor:{filename,bytes:body.length,sha256:sha256(body),mediaType},body};
   }
-  return {read,preview,saveDraft,publish,receive,receivePricing,compare,download};
+  return {read,preview,saveDraft,publish,receive,receivePricing,compare,download,previewImplementation,adoptImplementation};
 }
