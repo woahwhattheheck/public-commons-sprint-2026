@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { open, lstat, mkdtemp, rm, realpath } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { absolute, privateDirectory, readBytes, parseJson, object, need, BuyerError, safeCode } from './store.mjs';
+import { captureChildProcessIdentity } from './process-identity.mjs';
 
 export class NativeRuntime {
   constructor({ runtimeDirectory, node = process.execPath, environment = process.env,
@@ -62,7 +63,9 @@ export class NativeRuntime {
         } catch { localError = 'NATIVE_START_FAILED'; resolveClose(); return; }
         child.once('error', () => { localError ??= 'NATIVE_PROCESS_ERROR'; });
         child.once('spawn', () => {
-          startRecording = Promise.resolve().then(() => started?.(child.pid)).catch(() => stop('ATTEMPT_STATE_WRITE_FAILED'));
+          startRecording = Promise.resolve().then(async () => {
+            if (started) await started(child.pid, await captureChildProcessIdentity(child.pid));
+          }).catch(() => stop('ATTEMPT_STATE_WRITE_FAILED'));
         });
         child.once('close', (code, nativeSignal) => {
           closed = true; exitCode = code; exitSignal = nativeSignal; resolveClose();
@@ -120,3 +123,4 @@ export class NativeRuntime {
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
 }
+
