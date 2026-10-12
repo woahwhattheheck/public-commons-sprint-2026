@@ -359,7 +359,8 @@ class Run:
         args = [cfg["python"], "-B", str(inputs/"git-object-receiving.py"), "--metadata", str(inputs/"metadata.json"),
                 "--commit", cfg["commit"], "--directory", str(git_cache), "--git", cfg["git"]]
         for path in cfg["git_donors"]: args += ["--donor-repository", path]
-        args += ["--donor-archive", cfg["archive_donor"]["sha256"], cfg["archive_donor"]["path"]]
+        if cfg.get("archive_donor"):
+            args += ["--donor-archive", cfg["archive_donor"]["sha256"], cfg["archive_donor"]["path"]]
         for path in source_incoming: args += ["--incoming", path]
         args += ["--materialize", str(source)]
         out = self.command("source-receiving", args)
