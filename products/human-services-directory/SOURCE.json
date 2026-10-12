@@ -48,9 +48,9 @@
     },
     {
       "role": "complete-native-domain-ui-and-receiving",
-      "gitBlob": "fe84eba80479141bd52ee8eb8fc39d674011eb03",
-      "bytes": 451226,
-      "sha256": "3db7875a3047f5a9f71b9e0cc4aa6c851ada1868e8f0aae5a33714cfe7c6e4cc"
+      "gitBlob": "774215d722f163afae8a7cce46bf76d0906e7e55",
+      "bytes": 454779,
+      "sha256": "04aa15d56dec52e827a38bc412877f72dca97007ce0fdc41b56b00e9953d15e9"
     },
     {
       "role": "complete-connected-applications-and-operating-guides",

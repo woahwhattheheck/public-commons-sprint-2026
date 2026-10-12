@@ -1,6 +1,6 @@
 /* MIT. Full UI receiving of the original Directory/Gravity workspace. */
 import {createHash} from "node:crypto";
-import {readFile,writeFile,mkdir,stat,rename,open} from "node:fs/promises";
+import {readFile,writeFile,mkdir,stat,rename,open,copyFile,chmod} from "node:fs/promises";
 import {existsSync} from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -72,11 +72,27 @@ export async function operateDirectoryBrowser({page,browser,receiving,native,wor
  journal.screens.overview=await screenshot(page,output,"01-original-overview");await update();
  const imported=receiving.connectedInputs.sourceImports.find(r=>r.key==="original-csv")||receiving.connectedInputs.sourceImports[0];need(imported,"Original Directory source import is absent");
  const file=await identity(imported.file);need(file.bytes===imported.bytes&&file.sha256===imported.sha256,"Original browser source file bytes differ");
+ await phase("00-reviewed-draft-roundtrip",{sourceMappingId:receiving.mappingIds[0],case:"supplied-null-incomplete-draft-reload"},async()=>{
+  const draft=bindInput(receiving,"03-reviewed-directory-mapping");draft.label="";draft.actor=ACTOR;draft.predecessorId=null;
+  const rule={id:"browser-explicit-null-draft",table:"service",targetType:"HealthcareService",targetPath:"/comment",operation:"constant",value:null,reason:"Draft-only receiving of an explicitly authored JSON null; no source conversion or native mapping is saved by this check."};
+  draft.rules=[...draft.rules,rule];const index=draft.rules.length-1;
+  await navigate(page,"mappings");await fillDraft(page,"mapping-save",draft,output);await page.getByText(rule.id,{exact:true}).click();
+  need(await page.locator('[data-include="mapping-save.rules['+index+'].value"]').isChecked(),"Opening the complete rule dropped its supplied constant value");
+  need(JSON.parse(await page.locator('[data-field="mapping-save.rules['+index+'].value"]').inputValue())===null,"Opening the complete rule changed its literal JSON null");
+  const first=await downloaded(page,output,"Directory_Reviewed_Incomplete_Draft.json",()=>page.getByRole("button",{name:"Save draft",exact:true}).click());
+  const saved=JSON.parse(await readFile(first.file,"utf8"));need(saved.input.label===""&&saved.input.predecessorId===null,"The complete saved draft dropped an unfinished label or explicit nullable reference");
+  need(saved.input.rules[index].value===null&&Object.hasOwn(saved.input.rules[index],"value"),"The saved draft omitted the original constant null");
+  const session=await page.evaluate(id=>JSON.parse(sessionStorage.getItem("directory.draft."+id+".mapping-save")),receiving.workspaceId);need(canon(session)===canon(saved.input),"Explicit Save draft did not persist the same complete input");
+  await page.reload();await directoryBrowserReady(page);
+  const reopened=await downloaded(page,output,"Directory_Reopened_Incomplete_Draft.json",()=>page.getByRole("button",{name:"Save draft",exact:true}).click());
+  const restored=JSON.parse(await readFile(reopened.file,"utf8"));need(canon(restored.input)===canon(saved.input),"Reload changed the saved complete draft");
+  return{sourceMappingId:receiving.mappingIds[0],constantNullPreserved:true,nullableReferencePreserved:true,unfinishedDraftPreserved:true,sessionRoundtrip:true,first,reopened,nativeWrite:false};
+ });
  await phase("01-original-source-through-ui",{sourceId:imported.sourceId,file:{bytes:file.bytes,sha256:file.sha256},profile:imported.profile},async()=>{
-  await navigate(page,"intake");await fillDraft(page,"source-import",imported.profile,output);await page.getByTestId("source-input-file").setInputFiles(imported.file);
+  await navigate(page,"intake");await fillDraft(page,"source-import",imported.profile,output);const relocated=path.join(await privateDir(path.join(output,"inputs")),"received-copy-"+path.basename(imported.file));await copyFile(imported.file,relocated);await chmod(relocated,0o600);const relocatedIdentity=await identity(relocated);need(relocatedIdentity.bytes===file.bytes&&relocatedIdentity.sha256===file.sha256,"Portable original source copy differs");await page.getByTestId("source-input-file").setInputFiles(relocated);
   const response=page.waitForResponse(r=>/^\/api\/directory\/imports\/[^/]+\/content$/.test(new URL(r.url()).pathname)&&r.request().method()==="PUT",{timeout:180000});
   await page.getByTestId("source-import-submit").click();const r=await response,v=await r.json();need(r.ok(),v.error||"Original source UI intake failed");need(v.id===imported.sourceId,"Original profile/complete input changed its native source identity");
-  await page.waitForFunction(()=>document.querySelector("#draft-state")?.textContent==="Ready");return{id:v.id,originalFile:v.originalFile};
+  await page.waitForFunction(()=>document.querySelector("#draft-state")?.textContent==="Ready");return{id:v.id,originalFile:v.originalFile,reviewedFilename:imported.profile.filename,localFilename:path.basename(relocated),portableSource:relocatedIdentity};
  });
  journal.screens.intake=await screenshot(page,output,"02-original-source-intake");await update();
  const editionInput={label:"Directory browser receiving — original source edition",actor:ACTOR,sourceIds:[imported.sourceId],scope:"subset",predecessorId:receiving.selectedDirectoryEditionId,note:"Explicit UI receiving edition over the unchanged original publisher source."};
