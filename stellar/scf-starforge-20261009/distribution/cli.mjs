@@ -23,12 +23,17 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  frictionless                              Capture table packages, review fields and publish original merchant editions
+  sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
+  buyer-collections                         Review, retain and operate original paid request collections
+  buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
   census-publisher                         Publish Census ACS observations and complete original source deliveries
   usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
   usaspending-dossier                       Receive award editions, write research findings and recover source packets
   weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   water-quality                             Review WQX samples, detection limits and complete paid data editions
+  fred                                      Acquire, review and operate retained economic data editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
   mercury-feed                              Operate original Mercury events, paid feeds and joined recovery
@@ -57,7 +62,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   jobs                                      Prepare and operate durable paid application jobs
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
+  upstream-tls                               Review supplier certificate references and inspect local TLS credentials
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
+  cache-operations                          Review cache activity, change retention and recover saved operations
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -67,12 +74,15 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
+  mcp-analysis-archive                      Download and reopen original portable Analysis archives
+  mcp-oauth                                 Configure, discover and receive the original OAuth MCP resource
   mcp-buyer                                 Run the existing private HTTP buyer and operator console
   mcp-results                               Read, export and recover original saved MCP results
   mcp-data                                  Serve prepared SQLite/PostgreSQL/DuckDB/ClickHouse queries over MCP
   mcp-stdio / mcp-client-config              Run and register that buyer with a local MCP host
   merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
+  browser-wallet                            Connect Freighter, review native transfers and execute the original buyer
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   merchant-host                             Install, observe and recover the original Linux merchant group
   merchant-recovery                         Create, verify and cold-restore original encrypted merchant snapshots
@@ -110,6 +120,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
+  mssql                                      Inspect, prepare and operate a native SQL Server merchant
+  mssql-workspace                            Build and receive SQL Server data products in the browser
   mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
   sheets-source                              Capture, inspect and prepare selected Google Sheets columns
   sheets-publisher                           Review and publish retained Sheet observations as datasets
@@ -148,6 +160,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-serve / catalog                     Host and operate live seller discovery
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   catalog-workspace                          Review signed declarations and retained catalog operations
+  atlas                                     Browse retained catalog offers and prepare buyer requests
+  atlas-workspace                           Export, inspect and receive retained Atlas workspaces
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
   buyer-runbook                              Plan, run and recover multi-resource acquisitions
@@ -168,6 +182,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
+  merchant-accounting-statements             Retain, recover and deliver original customer statements through MCP
   merchant-accounting-platforms              Review, retain and reconcile original QuickBooks and Xero operations
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application

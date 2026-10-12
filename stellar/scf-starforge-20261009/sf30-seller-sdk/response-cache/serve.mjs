@@ -4,12 +4,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readSellerConfig, startSellerService } from '../serve.mjs';
 import { bindResponseCaches } from './bind.mjs';
-import { startCacheControl } from './control.mjs';
+import { startCacheControl, createCacheManagement } from './control.mjs';
 
 export async function startCachedSeller({ config, handlers, policy, socketPath, controlFile,
   closeSource, ...sellerOptions } = {}) {
   if (closeSource !== undefined && typeof closeSource !== 'function') throw new TypeError('closeSource must be a function');
   const binding = bindResponseCaches({ config, handlers, policy });
+  const cacheManagement = createCacheManagement(binding);
   let seller, control, closing;
   const close = () => closing ??= (async () => {
     let failure;
@@ -22,8 +23,8 @@ export async function startCachedSeller({ config, handlers, policy, socketPath, 
   })();
   try {
     seller = await startSellerService({ ...sellerOptions, config: binding.config, handlers: binding.handlers });
-    if (socketPath || controlFile) control = await startCacheControl({ socketPath, controlFile, binding });
-    return { ...seller, binding, socketPath: control?.socketPath, controlFile: control?.controlFile, close };
+    if (socketPath || controlFile) control = await startCacheControl({ socketPath, controlFile, binding, management: cacheManagement });
+    return { ...seller, binding, cacheBinding: binding, cacheManagement, socketPath: control?.socketPath, controlFile: control?.controlFile, close };
   } catch (error) { await close().catch(() => {}); throw error; }
 }
 

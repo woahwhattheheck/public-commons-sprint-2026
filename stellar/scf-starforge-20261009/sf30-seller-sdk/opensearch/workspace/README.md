@@ -2,6 +2,8 @@
 
 Author a named query, inspect its native OpenSearch contract, capture a durable result edition, and prepare the original Stellar Forge merchant and generated customer client. The workspace uses the same source adapter and merchant compiler as the command-line product.
 
+MCP agents can operate the same retained workspace through [the merchant MCP workflow](../../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md). Host-declared aliases expose saved query revisions, native evaluations, judgment history and complete customer file reads. The browser and MCP share the original operation IDs, results and prepared packages.
+
 ## Open an existing source
 
 Use the original OpenSearch source declaration and its credential environment. The adapter requires Node 22.16 or later and the supported native OpenSearch version described in the [source guide](../README.md). Workspace storage uses Node's built-in SQLite module and the existing browser.

@@ -240,7 +240,7 @@ const components = [
     "title": "OpenSearch workspace",
     "code": "SEARCH / RELEVANCE",
     "kind": "seller",
-    "description": "Author native searches, retain result editions, review judged query variants and export the original merchant, customer client and relevance report.",
+    "description": "Author native searches, compare judged variants and export the original merchant, customer client and relevance report through the workspace or merchant MCP.",
     "path": "sf30-seller-sdk/opensearch/workspace/README.md"
   },
   {

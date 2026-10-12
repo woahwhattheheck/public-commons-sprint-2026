@@ -11,6 +11,10 @@ const commands = {init:[], enqueue:['--config'], list:[], show:['--intent'],
   'recover-missing-receipt':['--intent','--workspace','--transaction','--request-sha']};
 let signalExit;
 async function main(args) {
+  if (args[0] === 'review-jobs') {
+    const {main: reviewJobs} = await import('./review-jobs/cli.mjs');
+    return reviewJobs(args.slice(1));
+  }
   if (args[0] === 'library') {
     const {main: resourceLibrary} = await import('./resource-library/cli.mjs');
     return resourceLibrary(args.slice(1));
@@ -20,6 +24,7 @@ async function main(args) {
       'Commands: init | enqueue --config ABS | list | show --intent ID | execute --intent ID [--workspace ABS] | recover --intent ID | finalize --intent ID --workspace ABS [--outbox ABS --merchant-route ID] | cancel --intent ID | report --out ABS [--workspace ABS]\n' +
       'Missing receipt: inspect-missing-receipt | read-missing-receipt | recover-missing-receipt --transaction HASH --request-sha HASH; each requires --intent ID --workspace ABS. Read/recover accept --attempt ID --config-sha HASH --node ABS.\n' +
       'Delivered resources: library --help (search, preview, download and retain analyst reviews).\n' +
+      'Customer review jobs: review-jobs --help (source, native request, review, delivery and recovery).\n' +
       'Execute invokes the original SF88 operator approval for one exact intent. An attempted intent is never replayed.\n');
     return;
   }
