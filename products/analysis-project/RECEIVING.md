@@ -40,6 +40,8 @@ On reentry, the program joins those saved Python requests. It uses the original 
 
 The program binds the installed release and exact original ZIP before using the original Applications model. It saves one useful customer query, `delivery_inventory_d9b53`, which reports actual row counts for each currently selected original view. Its saved decision contains the exact SQL, views and query operation ID. Existing queries, reports and workbook definitions remain attached to the same database.
 
+Application save and release connection have separate receipts. If the application was saved while connection was interrupted, the program reads its current original state and uses the existing **Connect** operation for that same application ID. Each actual connection request and result is retained. Once the original release is available, its source commit is checked and the same application continues, including after a historical save receipt recorded a connection error.
+
 Keep the same `--out` directory when continuing this operation. The original application save/start requests, archive ID, customer revision, command outputs and completed stages are retained there. Use the existing Applications recovery control for an interrupted managed process; a completed stage is reused by this program. The complete following ZIP and credential-free `complete.json` are the delivery outputs.
 
 ## Whole installed journey

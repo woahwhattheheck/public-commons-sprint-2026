@@ -141,7 +141,20 @@ async function ensureApp(name,kind,settings){
   }));
   const input=await once(name+'-save-request',async()=>({requestId:randomUUID(),reviewId:reviewed.id}));
   const saved=await once(name+'-saved',()=>model.applicationsSave(input));
-  need(saved.saved && !saved.connectionError,'The original application connection must complete.');
+  need(saved.saved,'Preserve the original saved application.');
+  const current=await app(saved.applicationId);
+  if(!current.release){
+    const attempt=name+'-connect-'+randomUUID();
+    await keep(attempt+'-request',{applicationId:saved.applicationId});
+    try{
+      const connected=await model.applicationsConnect({applicationId:saved.applicationId});
+      await keep(attempt+'-result',connected);
+    }catch(error){
+      await keep(attempt+'-error',{name:error.name,code:error.code??null,message:error.message});
+      const reconciled=await app(saved.applicationId);
+      if(!reconciled.release)throw error;
+    }
+  }
   const ready=await waitFor(name+'-connection',()=>app(saved.applicationId),value=>Boolean(value.release));
   need(ready.release.sourceCommit===values['source-commit'],'Keep the same installed release.');
   return {id:saved.applicationId,review:reviewed,saved};
