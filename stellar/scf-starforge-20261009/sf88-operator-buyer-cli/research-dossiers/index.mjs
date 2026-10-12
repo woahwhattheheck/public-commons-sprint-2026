@@ -6,6 +6,12 @@ export { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 export { openPortableFile, writePortableFile } from './portable.mjs';
 
 export {ResearchWorkspaceClient,readResearchConnectionFile} from './workspace-client.mjs';
+export {createRiskOfBiasClient,RISK_OF_BIAS_VIEW_SCHEMA} from './risk-of-bias/client.mjs';
+export {RISK_OF_BIAS_ACTIONS,RISK_OF_BIAS_SECTIONS,riskOfBiasInput,riskOfBiasDigest,
+  riskOfBiasModel,recordRiskOfBiasOperation,riskOfBiasPage,riskOfBiasReport,riskOfBiasExport,
+  validateRiskOfBiasState,validateRiskOfBiasTransition} from './risk-of-bias/index.mjs';
+export {createStudyExtractionClient} from './study-extraction-client.mjs';
+export {openZoteroResearchBridge} from './zotero-workspace.mjs';
 export {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,RESEARCH_SECTIONS} from './workspace-protocol.mjs';
 
 export {SOURCE_BUNDLE_SCHEMA,SOURCE_MANIFEST_SCHEMA,SOURCE_BUNDLE_LIMIT,
@@ -19,3 +25,9 @@ export {CITATION_REVIEW_SCHEMA,CITATION_DECISIONS,FINDING_DISPOSITIONS,
 
 export {CROSSREF_DOCUMENT_SCHEMA,CROSSREF_DOCUMENT_EDITION_SCHEMA,
   parseCrossrefDocument,buildCrossrefDocumentEdition,validateCrossrefDocumentEdition} from './crossref-documents.mjs';
+
+export {createCustomerUpdatesClient} from './customer-updates/client.mjs';
+export {CUSTOMER_UPDATES_SCHEMA,CUSTOMER_UPDATE_ACTIONS,CUSTOMER_UPDATE_SECTIONS} from './customer-updates/contracts.mjs';
+export {submitCustomerUpdate,createCustomerHandover,receiveCustomerHandover,retainCustomerExport,readCustomerOperation} from './customer-updates/operator.mjs';
+export {inspectCustomerHandover} from './customer-updates/files.mjs';
+export {runResearchCustomerDelivery} from './customer-updates/receiving.mjs';
