@@ -19,8 +19,9 @@ the service and the editable source workspace to another operator.
 | Commission two periods | Customer commissioning in the same application | Agreed source/measure definitions, source inspection, period plans, accepted outputs and handover |
 | Receive approved periods in PostgreSQL | Reporting warehouse in the same application; starforge odk-central-workspace warehouse | Issued dataset approval, SQL review, immutable warehouse editions and full period comparison ZIP |
 | Operate the Central service | starforge odk-central-host | Released service, original database/volumes/images, backup, restored service and host handover |
+| Receive the installed managed workspace | starforge odk-central-receive managed | Private SDK and merchant tools, three browser views, complete archive/download/restore and continued editing after reopen |
 | Receive a selected field source | starforge odk-central-receive source | Original rows, repeat relationships, versions/media, source review, exports, archive and comparison after reopen |
-| Receive the released forms on that service | starforge odk-central-receive released | Actual native project/form/submission IDs, complete field receiving and both commissioned periods |
+| Receive the released forms on that service | starforge odk-central-receive released | Actual native project/form/submission IDs, complete field receiving, both commissioned periods and the optional complete SQL/customer handover |
 | Continue those original periods | starforge odk-central-receive periods | Accepted full-source capture, exact native period boundaries, saved commissioning IDs and independent archive reopening |
 | Complete the approved SQL handover | starforge odk-central-receive warehouse | All approved datasets, immutable PostgreSQL editions, full period reports and restored source/warehouse reopen |
 | Attach an agent | starforge merchant-providers init odk-workspaces | Original merchant configuration, declared source/runtime profiles and complete retained-file access |
@@ -878,6 +879,54 @@ complete received files remain available for offline inspection.
 
 ## Run the complete native receiving programme
 
+### Receive the installed managed workspace
+
+Use the complete installed product and the existing host's Playwright module
+and Chromium executable:
+
+~~~sh
+starforge odk-central-receive managed \
+  --work-directory /srv/starforge/receiving/central-managed \
+  --playwright /absolute/existing/playwright/index.mjs \
+  --chromium /absolute/existing/chrome-headless-shell
+~~~
+
+The installed entry supplies its current package, Node executable and original
+receiving driver. Supply absolute paths for the existing browser, module and
+private receiving directory. For direct use of the source entry with a separate
+installation, add --package /absolute/installed/package.
+
+This programme opens the managed application, saves the original unfinished
+source agreement through the private SDK, edits and repeats it through the
+typed merchant tools, and reads both extension states. It opens Field,
+Customer commissioning and Reporting warehouse in the real browser, selects
+the full saved agreement, and receives the original archive through both the
+retained-file API and the Portable workspace view.
+
+The original owner then closes. A receiving workspace restores the complete
+archive and continues editing that agreement. Reopening from the same archive
+preserves that later edition. The final cold reopen closes the original Store,
+commissioner and warehouse owner before the programme returns its result.
+
+| Retained output | Contents |
+| --- | --- |
+| delivery/managed-receiving.json | Full installed source/runtime selection, original and received workspace identity, native action results, file hashes and closed owners |
+| delivery/agreements.json | Complete original agreement and subsequent authored editions |
+| Native workspace archive and browser download | The same complete original workspace received through both native file paths |
+| Three full-page screenshots | Field, Customer commissioning and Reporting warehouse from the original browser journey |
+
+Repeat the same command with the same paths after an interruption. The
+private selection binds the installed package, driver, runtime and browser
+identities; the original product retains its request, revision and archive
+history. A changed source edition uses its own receiving directory. The default
+time allowance is 900 seconds; --timeout-seconds accepts 60 through 3600.
+
+Keep the private startup logs, bearer links and browser profile in that
+receiving directory. The full source and recovery contract is in
+[MANAGED_RECEIVING.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/MANAGED_RECEIVING.md).
+
+### Receive the original field source
+
 For an existing selected Central source, prepare the exact input described in
 [native receiving](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RECEIVING.md).
 It binds operationId, connection, plan, capture, authored review, datasets,
@@ -943,6 +992,59 @@ Keep these same paths and input identities when continuing an interruption.
 The fixture controller reconciles native form/version/submission uniqueness.
 An ambiguous project creation is reconciled through its exact recorded unique
 name. A completed provider operation and field receiving result are reused.
+
+### Produce the complete customer handover
+
+Supply the existing private warehouse profile to the same released command
+to continue the whole source-to-report programme and receive its customer ZIP:
+
+~~~sh
+starforge odk-central-receive released \
+  --host-config /private/central-host.json \
+  --work-directory /srv/central-receiving/field-product \
+  --warehouse-profiles /srv/starforge/private/warehouse-profiles.json \
+  --warehouse-profile ORIGINAL_PROFILE \
+  --warehouse-reviewer "Original receiving operator" \
+  --warehouse-note "Receive all approved value/state columns with their original row keys."
+~~~
+
+The four warehouse options form one complete group. The selected profile uses
+the original installed PostgreSQL operator, warehouse UUID, schema and database
+environment alias. If the selected DSN is in a private JSON file, add
+--warehouse-environment-file /srv/starforge/private/warehouse-environment.json.
+That file contains only the selected profile's connectionEnv name and value;
+the launcher binds that value to its owned child.
+
+The command completes the released Central forms and full capture, both
+commissioned periods, and the original approved-period SQL receiver in order.
+Every phase uses its existing journal and original operation, source, review,
+dataset, delivery and SQL request IDs. It then builds:
+
+~~~text
+/srv/central-receiving/field-product/customer-handover/Central_Complete_Reporting_Handover.zip
+~~~
+
+| ZIP contents | Purpose for the receiving operator |
+| --- | --- |
+| Full provider, period and warehouse result JSON | Original source identities, accepted decisions and completed receiving outputs |
+| Source/report agreement and retained period boundaries | Complete interpretation used for the reporting work |
+| Native commissioning delivery and warehouse selections | Original datasets, accepted reviews and SQL action identities |
+| Approved CSVs and dictionaries | Complete approved field values and their original semantics |
+| Original and reopened comparison ZIPs | Full period reports from both source locations |
+| Final Central workspace archive | Editable source history, reviews, commissioned outputs and warehouse state |
+| READ_ME.md and handover.json | Complete receiving map, file sizes and SHA-256 values |
+
+The same work directory also retains warehouse-receiving and warehouse-reopened
+for the original SQL operation. customer-handover/result.json identifies the
+final ZIP after both native child processes have closed. A repeated command
+verifies every existing ZIP member and reuses the completed original handover;
+changed original inputs or files are surfaced before publication.
+
+Deliver this complete customer ZIP through the agreed channel. The selected
+host retains its private configuration and the separate full service recovery
+backup described under **Prepare, operate and hand over the Central service**.
+The complete command and member contract are in
+[RELEASED_RECEIVING.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RELEASED_RECEIVING.md).
 
 ### Continue the original two-period commissioning
 
