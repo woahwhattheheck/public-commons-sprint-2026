@@ -17,6 +17,10 @@ const HELP = `ArcGIS retained dataset publisher (Linux, Node 22.16+, util-linux 
   template --workspace DIR --query NAME --out NEW_PLAN.json
   receiving-plan --workspace DIR --run ID --out NEW_RECEIVING_PLAN.json
   receive --delivery SF100_DIR --plan RECEIVING_PLAN.json --out NEW_FEATURE_SET.json
+  deployment-export --workspace DIR --run ID --seller SELLER.json --out PACKAGE_DIR
+  deployment-status --package PACKAGE_DIR
+  deployment-stage --package PACKAGE_DIR --releases RELEASE_STORE --id ID [--label TEXT] [--runtime RUNTIME.json]
+  deployment-receiving --releases RELEASE_STORE --id ID --out RECEIVING_PLAN.json
 
 Then use the original publisher commands:
   serve --workspace DIR --create --source SOURCE.json --state DATASET_DIR [--port 8457]
@@ -35,9 +39,9 @@ exact representation and cover the supplied files. Use the local publisher UI fo
 typed field selection, candidate review, original publication and buyer preparation.
 Source configuration pins the complete capture digest; refreshes create a new source
 capture and reviewed source plan. See README.md for the complete receiving workflow.`;
-const CUSTOM = new Set(['capture', 'capture-import', 'capture-continue', 'capture-status', 'source-create', 'template', 'receiving-plan', 'receive']);
+const CUSTOM = new Set(['capture', 'capture-import', 'capture-continue', 'capture-status', 'source-create', 'template', 'receiving-plan', 'receive', 'deployment-export', 'deployment-status', 'deployment-stage', 'deployment-receiving']);
 function parse(args) {
-  const options = {}, allowed = new Set(['--capture', '--input', '--prepare-only', '--max-pages', '--out', '--query', '--columns', '--workspace', '--run', '--delivery', '--plan']);
+  const options = {}, allowed = new Set(['--capture', '--input', '--prepare-only', '--max-pages', '--out', '--query', '--columns', '--workspace', '--run', '--delivery', '--plan', '--seller', '--package', '--releases', '--id', '--label', '--runtime']);
   for (let i = 0; i < args.length; i++) {
     const key = args[i];
     if (!allowed.has(key) || Object.hasOwn(options, key)) throw fault('INVALID_OPTION', key);
@@ -74,6 +78,22 @@ export async function main(argv = process.argv.slice(2)) {
     const publisher = await openArcgisPublisher({ directory: resolve(required(options, '--workspace')) });
     try { result = await prepareArcgisReceiving({ publisher, run: required(options, '--run'), output: resolve(required(options, '--out')) }); }
     finally { await publisher.close(); }
+  }
+  else if (command.startsWith('deployment-')) {
+    const native = await import('./deployment.mjs');
+    if (command === 'deployment-export') {
+      const publisher = await openArcgisPublisher({ directory: resolve(required(options, '--workspace')) });
+      try { result = await native.exportArcgisDeployment({ publisher, run: required(options, '--run'),
+        sellerFile: resolve(required(options, '--seller')), directory: resolve(required(options, '--out')) }); }
+      finally { await publisher.close(); }
+    } else if (command === 'deployment-status')
+      result = await native.inspectArcgisDeployment(resolve(required(options, '--package')));
+    else if (command === 'deployment-stage')
+      result = await native.stageArcgisDeployment({ packageDirectory: resolve(required(options, '--package')),
+        releaseDirectory: resolve(required(options, '--releases')), id: required(options, '--id'),
+        label: options['--label'], runtime: options['--runtime'] ? await readJson(resolve(options['--runtime']), 65536) : { port: 0 } });
+    else result = await native.prepareArcgisReleaseReceiving({ releaseDirectory: resolve(required(options, '--releases')),
+      releaseId: required(options, '--id'), output: resolve(required(options, '--out')) });
   }
   else if (command === 'receive') result = await receiveArcgisDelivery({
     deliveryDirectory: resolve(required(options, '--delivery')), planFile: resolve(required(options, '--plan')),
