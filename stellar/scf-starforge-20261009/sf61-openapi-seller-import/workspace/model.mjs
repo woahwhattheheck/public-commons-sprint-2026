@@ -1,6 +1,6 @@
 // MIT. Merchant configuration around the original OpenAPI compiler and SF30 upstreams.
 import { createHash, randomUUID } from 'node:crypto';
-import { readFile, writeFile, lstat, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, lstat, mkdir, rename, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { importOpenApi, createOpenApiResolver } from '../importer.mjs';
@@ -18,6 +18,7 @@ import { openApiResponseStreams } from '../response-stream.mjs';
 import { merchantPaymentRequirements, merchantStreamPolicy } from './stream-plan.mjs';
 import { requirePostmanHeaderReferences } from '../postman/collection.mjs';
 import { queryParameterShape } from '../../sf30-seller-sdk/query-parameters.mjs';
+import { operationLease } from '../../distribution/runtime-workspace/storage.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -301,6 +302,14 @@ export async function readPackage(parent, name) {
     plan:JSON.parse(await regular(join(folder,'merchant-plan.json'))),...(sourceRevision?{sourceRevision}:{})};
 }
 
+async function requireAbsentPackage(folder) {
+  try { await lstat(folder); }
+  catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  throw Object.assign(new Error('Package name already exists. Save under a new name.'), {
+    code: 'EEXIST', path: folder, syscall: 'mkdir',
+  });
+}
+
 /** Create a portable private package and the actual original compiler output. */
 export async function savePackage({specText, plan, parent, name, sourceRevision}) {
   const prepared = prepareMerchant(specText, plan), base = await privateParent(parent);
@@ -323,12 +332,6 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
     transformations:prepared.transformations, preview:prepared.preview};
   const manifestBytes=json(manifest);
   if (Buffer.byteLength(manifestBytes)>MANIFEST_LIMIT) fail('Package manifest exceeds 1 MiB. Select fewer routes.');
-  await mkdir(folder, {mode:0o700});
-  for (const [file,content] of Object.entries(files)) await writeFile(join(folder,file), content, {flag:'wx',mode:0o600});
-  await compileSeller(['--spec',join(folder,'facade-openapi.json'),'--config',join(folder,'selections.json'),
-    '--service-bindings',join(folder,'route-bindings.json'),'--out',join(folder,'compiled')],{report:false});
-  await mkdir(join(folder,'support'), {mode:0o700});
-  await writeFile(join(folder,'merchant-package.json'), manifestBytes, {flag:'wx',mode:0o600});
   const args = ['node',join(sourceRoot,'sf96-seller-pilot-ops/pilot-ops.mjs'),'start','--ops-port','0','--support-parent',join(folder,'support'),'--',
     '--resume',join(folder,'compiled'),'--upstreams',join(folder,'upstreams.json'),'--port','0','--challenge-only'];
   if (plan.allowLoopbackUpstream) args.push('--allow-loopback-upstream');
@@ -387,7 +390,35 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
     'The original API description remains unchanged. No endpoint was probed during preparation.',
     '', '## Routes', '', ...prepared.preview.routes.map(r => '- ' + r.method + ' ' + r.publicUrl + ' -> ' + r.upstream + ' (' + r.amountAtomic + ' atomic units)'), ''
   ].join('\n');
-  await writeFile(join(folder,'RUN.md'), guide, {flag:'wx',mode:0o600});
-  return {name, folder, manifest, command, preview:prepared.preview};
+  // Keep this lock inode: unlinking it could split concurrent publishers.
+  // The original kernel lease releases automatically if the writer is killed.
+  const lockPath = join(base, '.sf61-package-' + name + '.lock');
+  const lease = await operationLease(lockPath);
+  const staging = join(base, '.sf61-package-' + name + '.pending-' + randomUUID());
+  let ownsStaging = false;
+  try {
+    await requireAbsentPackage(folder);
+    await mkdir(staging, {mode:0o700});
+    ownsStaging = true;
+    for (const [file,content] of Object.entries(files)) await writeFile(join(staging,file), content, {flag:'wx',mode:0o600});
+    await compileSeller(['--spec',join(staging,'facade-openapi.json'),'--config',join(staging,'selections.json'),
+      '--service-bindings',join(staging,'route-bindings.json'),'--out',join(staging,'compiled')],{report:false});
+    await mkdir(join(staging,'support'), {mode:0o700});
+    await writeFile(join(staging,'merchant-package.json'), manifestBytes, {flag:'wx',mode:0o600});
+    // Commands refer to the published name, never the private compiler staging.
+    await writeFile(join(staging,'RUN.md'), guide, {flag:'wx',mode:0o600});
+    const held = await lease.stat(), named = await lstat(lockPath);
+    if (!named.isFile() || held.dev !== named.dev || held.ino !== named.ino || held.nlink !== 1)
+      throw new Error('Package publication lease changed during compilation');
+    // rename() can replace an empty directory; absence is checked while every
+    // original savePackage caller holds the same destination lease.
+    await requireAbsentPackage(folder);
+    await rename(staging, folder);
+    ownsStaging = false;
+    return {name, folder, manifest, command, preview:prepared.preview};
+  } finally {
+    try { if (ownsStaging) await rm(staging, {recursive:true,force:true}); }
+    finally { await lease.close(); }
+  }
 }
 

@@ -78,7 +78,26 @@ async function main([runtimeDirectory, inputFile, resultFile, ...extra]) {
           }));
         } else {
           const intentId = intent(input.intentId);
-          if (input.command === 'show') native = await queue.show(intentId);
+          if (['inspect-lost-output','recover-lost-output','read-lost-output','export-lost-output'].includes(input.command)) {
+            const originalRecovery = await original('lost-output.mjs');
+            const options = {root, intentId, workspace:absolute(input.workspaceDirectory),
+              signal:controller.signal, environment:process.env};
+            for (const name of ['approvedRequestFile','approvedRequest','expectedRequestSha256',
+              'expectedAttemptId','expectedConfigSha256','transaction'])
+              if (input[name] !== undefined) options[name] = input[name];
+            if (input.command === 'inspect-lost-output') {
+              const snapshot = await originalRecovery.inspectLostOutputAttempt(options);
+              native = {...await queue.show(intentId), lostOutputAttempt:snapshot};
+            } else if (input.command === 'recover-lost-output')
+              native = await originalRecovery.recoverLostOutput(options);
+            else if (input.command === 'read-lost-output') {
+              const recovered = await originalRecovery.readLostOutputRecovery(options);
+              native = {...await queue.show(intentId), lostOutputFinalization:recovered};
+            } else {
+              const exported = await originalRecovery.exportLostOutputProof({...options,output:absolute(input.destination)});
+              native = {...await queue.show(intentId), lostOutputProof:exported};
+            }
+          } else if (input.command === 'show') native = await queue.show(intentId);
           else if (input.command === 'response') {
             native = await queue.show(intentId);
             const file = join(root, 'jobs', native.id, 'execution.json');

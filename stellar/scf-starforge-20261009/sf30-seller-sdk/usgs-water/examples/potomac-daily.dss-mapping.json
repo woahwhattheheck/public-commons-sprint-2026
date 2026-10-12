@@ -1,0 +1,35 @@
+{
+  "schema": "starforge.usgs-dss-mapping.v1",
+  "title": "Potomac daily mean discharge — original 2026-10-01 through 2026-10-07 edition",
+  "excludedSeries": [],
+  "series": [
+    {
+      "key": "b7a377716469a26c1feda5df272733e9be92e336c9bd7f41b26f688befe9e0e7",
+      "kind": "regular",
+      "path": {
+        "a": "POTOMAC",
+        "b": "USGS-01646500",
+        "c": "FLOW",
+        "f": "USGS-OCT2026"
+      },
+      "interval": "1Day",
+      "units": "CFS",
+      "unitMeaning": "CFS is the receiving spelling of the original ft^3/s; values are unchanged.",
+      "dataType": "PER-AVER",
+      "measurementMeaning": "USGS statistic 00003: arithmetic daily mean discharge for its original calendar date.",
+      "time": {
+        "mode": "calendar-day",
+        "zone": "America/New_York",
+        "label": "end-of-day",
+        "basis": "USGS daily time is the represented local date (https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/schema?f=html); daily service dates use the time zone in effect at the site (https://waterservices.usgs.gov/docs/dv-service/daily-values-service-details/). USGS-01646500 metadata reports EST and honors daylight saving time (https://waterdata.usgs.gov/monitoring-location/USGS-01646500/; expanded station RDB retrieved 2026-10-12T00:05:02Z, SHA256 509453de95bbc75b657a98ed3416b5545b0d2c8a39714a4e834288f51ea64341). Receiving selection: retain America/New_York local calendar time and label each represented date at next local midnight, without converting the date-only source into a UTC instant."
+      },
+      "selection": {
+        "quality": "all",
+        "window": null
+      },
+      "choices": {},
+      "nativeNotes": "approval",
+      "acceptBinary64": true
+    }
+  ]
+}

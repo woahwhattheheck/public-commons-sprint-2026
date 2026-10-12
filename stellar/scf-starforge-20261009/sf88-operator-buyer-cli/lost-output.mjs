@@ -146,7 +146,7 @@ function recoveryView(result,snapshot) {
   return {schema:VIEW,intentId:binding.intentId,attemptId:binding.attemptId,configSha256:binding.configSha256,
     requestSha256:binding.requestSha256,transaction:binding.transaction,sourceHashes:binding.sourceHashes,evidenceState:binding.evidenceState,
     sourcePath:binding.sourcePath,sourceSha256:binding.sourceSha256,workspace:binding.workspace,
-    attemptStartedAt:binding.attemptStartedAt,evidenceObservedAt:binding.evidenceObservedAt,
+    attemptStartedAt:binding.attemptStartedAt,evidenceObservedAt:binding.evidenceObservedAt??null,
     completedAt:recovery.completedAt,observedAt:recovery.observedAt,requestBinding:binding.requestBinding,
     association:'OPERATOR_SELECTED_TRANSACTION_AFTER_LOCAL_OUTPUT_LOSS',result:{...recovery.result,outcome:result.outcome},
     recordAuthority:recovery.recordAuthority};

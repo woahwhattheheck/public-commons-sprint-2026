@@ -120,3 +120,48 @@ start identity, selected local port, and original listener response.
 Use the existing `dataset` distribution command and whole SF30 component. The
 following installed edition must include this helper, the original CLI/server
 joins, and the serial Applications registrations together.
+
+
+## Run the installed receiving workflow
+
+`managed-receiving.mjs` operates the existing installed Applications model and
+the original OData operator API. It selects a prepared source workspace and
+complete original response sequence, attaches an existing READY runtime, opens
+its managed live service, receives the saved pages and prepares original buyer
+continuations, stops all three listeners, and reopens the same workspace and
+private continuation identity. It leaves the retained application, original
+responses and result in the chosen output directory.
+
+The input is a private JSON file:
+
+```json
+{
+  "schema": "stellar-forge.odata-managed-receiving-input.v1",
+  "runtimeDirectory": "/private/original-installed-runtime",
+  "workspaceDirectory": "/private/original-odata-workspace",
+  "liveServiceId": "orders",
+  "responseFiles": [
+    "/private/original-responses/page-1.json",
+    "/private/original-responses/page-2.json"
+  ],
+  "outputDirectory": "/private/new-odata-receiving-run"
+}
+```
+
+Optional `environmentFile` selects the original private Applications environment
+file. `responseFiles` contains the complete ordered native live response
+envelopes for the selected product and saved query, including its terminal page.
+The input points to existing source and response files; the runner retains exact
+copies before opening the application.
+
+```sh
+node managed-receiving.mjs --input /private/odata-managed-receiving.json
+```
+
+Use the existing Node 24 executable and the following installed edition that
+contains the original BD9D controller, E9B2 registrations and these helpers.
+The runner uses the original runtime attachment and managed adoption APIs.
+The completed output includes both application operation IDs, retained source
+and cursor-key hashes, native receiving records, original buyer handoffs, and
+the reopened response inventory. The actual private workspace and source
+package remain available for subsequent operator use.
