@@ -48,6 +48,12 @@ for registration, source/profile checks, route binding, renewal, disconnect, ret
 remote cleanup and the existing seller/release handoff. The original clientCredentials
 provider and separate Google Sheets workflow retain their current interfaces.
 
+## Continue an existing provider migration
+
+Choose **Migrations** from the workspace to open the complete [Blockworks migration application](../blockworks/README.md). It shares this private parent and the maintained source importer, merchant packages, release lifecycle and receiving workspace. Each migration retains its provider descriptions, customer request inventory, native acquisitions, explicit mapping decisions, full comparison results and source history.
+
+The migration guide includes source refresh into a new merchant package, release review and rollback, original receiving operations, and handover export/import. A received handover opens as a separate private workspace in this same complete application; it retains the original source and release identities.
+
 ## Configure a merchant
 
 1. Load the merchant's original OpenAPI 3.0 or 3.1 JSON or YAML description.
@@ -375,3 +381,8 @@ Challenge preview returns the original HTTP 402 challenge. A challenge,
 dashboard counter or backend response does not establish settlement or revenue.
 Native payment verification remains in the original seller and facilitator.
 
+
+
+## Cache operating history and live policy control
+
+Save or reopen an API package and use **Open cache operations** in its run section. The page retains operating snapshots and change history in that saved package, uses its managed seller for live inspection and changes, and remains available for review when the seller is stopped. It supports policy comparisons, explicit apply, restoring prior retention, recovery by operation ID, notes and complete receiving/export. [Cache operations guide](../../sf30-seller-sdk/response-cache/workspace/README.md) covers the same browser, command-line and agent workflow.

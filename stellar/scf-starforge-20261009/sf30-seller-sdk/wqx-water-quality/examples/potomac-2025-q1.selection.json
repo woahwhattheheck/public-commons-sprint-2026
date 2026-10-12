@@ -1,0 +1,18 @@
+{
+  "filters": {
+    "siteid": [
+      "USGS-01646580"
+    ],
+    "providers": [
+      "NWIS"
+    ],
+    "startDateLo": "01-01-2025",
+    "startDateHi": "03-31-2025"
+  },
+  "profiles": [
+    "Station",
+    "Activity",
+    "Result"
+  ],
+  "partition": "none"
+}

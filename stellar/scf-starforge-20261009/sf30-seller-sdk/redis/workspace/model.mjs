@@ -113,7 +113,7 @@ export async function createRedisAuthoringWorkspace({ directory, sourceFile, pla
   }
 }
 
-export async function openRedisAuthoringWorkspace(directory,{environment=process.env}={}) {
+export async function openRedisAuthoringWorkspace(directory,{environment=process.env,expectedWorkspaceId,expectedProfileSha256}={}) {
   await privateDirectory(resolve(directory)); const root=await realpath(resolve(directory));
   for (const name of ['materialized','packages','interrupted']) await privateDirectory(join(root,name));
   const path=join(root,'workspace.sqlite3'),st=await lstat(path);
@@ -125,9 +125,63 @@ export async function openRedisAuthoringWorkspace(directory,{environment=process
     db=database(path);
     const workspace=new RedisAuthoringWorkspace(root,db,lease,environment);
     if(workspace.metadata().schema!==REDIS_WORKSPACE_SCHEMA) throw problem('REDIS_WORKSPACE_SCHEMA_INVALID','This is not a supported Redis authoring workspace.');
+    if(expectedWorkspaceId!==undefined||expectedProfileSha256!==undefined){
+      const binding=redisWorkspaceBinding(workspace.metadata());
+      if(expectedWorkspaceId!==undefined&&expectedWorkspaceId!==binding.workspaceId)
+        throw problem('REDIS_WORKSPACE_ID_CHANGED','The selected Redis workspace identity changed. Reopen its original binding.',409);
+      if(expectedProfileSha256!==undefined&&expectedProfileSha256!==binding.profileSha256)
+        throw problem('REDIS_WORKSPACE_PROFILE_CHANGED','The selected Redis source profile changed. Review its original connection binding.',409);
+    }
     workspace.recover();
     return workspace;
   } catch(error) { try{db?.close();}finally{await lease.release();} throw error; }
+}
+
+// Read the immutable source binding without taking the workspace writer or recovering
+// operations. Hosts use this to review a retained workspace before its original open.
+export function redisWorkspaceBinding(meta) {
+  if (!plain(meta) || meta.schema !== REDIS_WORKSPACE_SCHEMA ||
+      typeof meta.id !== 'string' || !/^redis-workspace-[a-f0-9-]{36}$/.test(meta.id) ||
+      !plain(meta.profile) || meta.profile.schema !== 'stellar-forge.redis-source.v1' ||
+      !plain(meta.profile.connection) ||
+      meta.caSha256 !== undefined && !/^[a-f0-9]{64}$/.test(meta.caSha256))
+    throw problem('REDIS_WORKSPACE_BINDING_INVALID', 'Choose the original Redis workspace and its saved connection profile.');
+  revisionId(meta.head);
+  const environmentNames = [...new Set([
+    meta.profile.connection.passwordEnv, meta.profile.connection.tokenEnv,
+  ].filter(value => value !== undefined))].sort();
+  if (!environmentNames.every(value => typeof value === 'string' && /^[A-Z_][A-Z0-9_]{0,127}$/.test(value)))
+    throw problem('REDIS_WORKSPACE_BINDING_INVALID', 'The saved source must use its original environment reference names.');
+  return {
+    schema: 'stellar-forge.redis-workspace-binding.v1', workspaceId: meta.id,
+    profileSha256: hash(stable({ schema: meta.schema, profile: meta.profile, caSha256: meta.caSha256 ?? null })),
+    head: meta.head, label: text(meta.label, 200), environmentNames,
+  };
+}
+export async function inspectRedisWorkspaceBinding(directory) {
+  await privateDirectory(resolve(directory));
+  const root = await realpath(resolve(directory));
+  for (const name of ['materialized', 'packages', 'interrupted']) await privateDirectory(join(root, name));
+  const path = join(root, 'workspace.sqlite3'), before = await lstat(path);
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 ||
+      process.platform !== 'win32' && ((before.mode & 0o077) ||
+        typeof process.getuid === 'function' && before.uid !== process.getuid()))
+    throw problem('REDIS_WORKSPACE_DATABASE_INVALID', 'Choose the original private workspace database.');
+  let db;
+  try {
+    db = new DatabaseSync(path, { readOnly: true });
+    db.exec('PRAGMA trusted_schema=OFF; PRAGMA query_only=ON; PRAGMA busy_timeout=0; BEGIN;');
+    const row = db.prepare('SELECT value FROM metadata WHERE id=1').get();
+    if (!row || typeof row.value !== 'string')
+      throw problem('REDIS_WORKSPACE_BINDING_INVALID', 'The original workspace metadata is unavailable.');
+    const binding = redisWorkspaceBinding(JSON.parse(row.value));
+    const after = await lstat(path);
+    if (!after.isFile() || after.isSymbolicLink() || after.dev !== before.dev || after.ino !== before.ino ||
+        after.nlink !== 1 || process.platform !== 'win32' && ((after.mode & 0o077) ||
+          typeof process.getuid === 'function' && after.uid !== process.getuid()))
+      throw problem('REDIS_WORKSPACE_DATABASE_CHANGED', 'The selected workspace database changed during inspection.', 409);
+    return { ...binding, directory: root };
+  } finally { db?.close(); }
 }
 
 export class RedisAuthoringWorkspace {

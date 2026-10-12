@@ -3,13 +3,13 @@
 import { open } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRedisAuthoringWorkspace, openRedisAuthoringWorkspace } from './model.mjs';
+import { createRedisAuthoringWorkspace, openRedisAuthoringWorkspace, redisWorkspaceBinding } from './model.mjs';
 import { startRedisAuthoringServer } from './server.mjs';
 
 const HELP = [
   'Redis merchant workspace (Node 22.16+)',
   '  create     --directory NEW --source SOURCE_JSON --plan PLAN_JSON [--label NAME]',
-  '  open       --directory WORKSPACE [--port 8438]',
+  '  open       --directory WORKSPACE [--port 8438] [--expected-workspace-id ID] [--expected-profile-sha256 SHA256]',
   '  inspect    --directory WORKSPACE',
   '  revisions  --directory WORKSPACE [--after REVISION] [--limit 30]',
   '  operations --directory WORKSPACE [--after REQUEST_ID] [--limit 30]',
@@ -49,7 +49,7 @@ function integer(value,label,fallback){
 export async function main(args=process.argv.slice(2)){
   if(!args.length||args.length===1&&['--help','help'].includes(args[0])){process.stdout.write(HELP+'\n');return;}
   const [command,...tail]=args,options=new Map(),allowed={
-    create:['directory','source','plan','label'],open:['directory','port'],inspect:['directory'],
+    create:['directory','source','plan','label'],open:['directory','port','expected-workspace-id','expected-profile-sha256'],inspect:['directory'],
     revisions:['directory','after','limit'],operations:['directory','after','limit'],
     revision:['directory','id'],operation:['directory','id'],
     review:['directory','input'],save:['directory','input'],restore:['directory','input'],
@@ -67,11 +67,15 @@ export async function main(args=process.argv.slice(2)){
   const directory=required('directory');
   let workspace=command==='create'
     ?await createRedisAuthoringWorkspace({directory,sourceFile:required('source'),planFile:required('plan'),label:options.get('label')})
-    :await openRedisAuthoringWorkspace(directory),session;
+    :await openRedisAuthoringWorkspace(directory,{expectedWorkspaceId:options.get('expected-workspace-id'),
+      expectedProfileSha256:options.get('expected-profile-sha256')}),session;
   try{
     if(command==='open'){
+      const selected=redisWorkspaceBinding(workspace.metadata());
       session=await startRedisAuthoringServer({workspace,port:integer(options.get('port'),'port',8438)});
-      process.stdout.write(JSON.stringify({workspaceId:workspace.metadata().id,directory:workspace.root,operatorUrl:session.operatorUrl})+'\n');
+      process.stdout.write(JSON.stringify({schema:'stellar-forge.redis-workspace-startup.v1',status:'REDIS_WORKSPACE_READY',
+        workspaceId:selected.workspaceId,profileSha256:selected.profileSha256,head:selected.head,
+        directory:workspace.root,operatorUrl:session.operatorUrl})+'\n');
       for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>session.close().catch(error=>{process.stderr.write(error.message+'\n');process.exitCode=1;}));
       return session;
     }

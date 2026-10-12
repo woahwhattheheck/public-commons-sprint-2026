@@ -6,6 +6,7 @@ import {need, safeCode} from '../sf88-operator-buyer-cli/node/store.mjs';
 import {loadOperator} from './merchant-operator.mjs';
 import {inspectRefunds, prepareRefund, applyRefund, recoverRefund, inspectRefund,
   listRefunds, exportRefund} from './refund-operator.mjs';
+import {receiveRefund} from './refund-handoff.mjs';
 
 export const HELP = [
   'starforge woo-refund inspect --config /private/woo-operator.json --order 123',
@@ -14,6 +15,7 @@ export const HELP = [
   'starforge woo-refund recover --config /private/woo-operator.json --adjustment UUID',
   'starforge woo-refund read --config /private/woo-operator.json --adjustment UUID [--live]',
   'starforge woo-refund history --config /private/woo-operator.json',
+  'starforge woo-refund receive --config /private/receiving-operator.json --from /private/refund-handoff --manifest-sha256 SHA256 [--check]',
   'starforge woo-refund export --config /private/woo-operator.json --adjustment UUID --out /private/refund-handoff',
   '',
   'Prepare imports one VERIFIED refund from the original settlement adjustments export.',
@@ -28,6 +30,9 @@ export const HELP = [
   'adjustment and confirmed order reconciles that saved child into the bridge journal.',
   'After a timeout, use recover, then explicitly repeat the relevant command if needed.',
   'The same adjustment UUID, exact export bytes, and selected Woo amount are retained.',
+  'Receive verifies a complete original handoff into the configured operator workspace.',
+  'Use --check to inspect it first. Repeat the same receive after interruption;',
+  'its original manifest hash and records identify the same local transfer.',
   '',
   'The existing merchant operator config supplies site URL, auth environment names,',
   'original outbox path, and private workspace. Read/history/export work offline.',
@@ -42,17 +47,18 @@ function parse(args) {
     apply:['--config', '--adjustment', '--confirm-order'],
     recover:['--config', '--adjustment'], read:['--config', '--adjustment', '--live'],
     history:['--config'], export:['--config', '--adjustment', '--out'],
+    receive:['--config', '--from', '--manifest-sha256', '--check'],
   }[action];
   need(allowed, 'WOO_REFUND_ACTION_REQUIRED');
   const values = new Map();
   for (let i = 1; i < args.length; i++) {
     const key = args[i];
     need(allowed.includes(key) && !values.has(key), 'WOO_REFUND_ARGUMENT_INVALID');
-    if (key === '--live') { values.set(key, true); continue; }
+    if (['--live', '--check'].includes(key)) { values.set(key, true); continue; }
     need(typeof args[i + 1] === 'string' && !args[i + 1].startsWith('--'), 'WOO_REFUND_ARGUMENT_VALUE_REQUIRED');
     values.set(key, args[++i]);
   }
-  need(allowed.filter(key => key !== '--live').every(key => values.has(key)), 'WOO_REFUND_ARGUMENT_REQUIRED');
+  need(allowed.filter(key => !['--live', '--check'].includes(key)).every(key => values.has(key)), 'WOO_REFUND_ARGUMENT_REQUIRED');
   return {action, get:key => values.get(key)};
 }
 
@@ -70,6 +76,8 @@ export async function main(args = process.argv.slice(2)) {
   if (action === 'read') result = await inspectRefund(config, get('--adjustment'), {live:get('--live') === true});
   if (action === 'history') result = {refunds:await listRefunds(config)};
   if (action === 'export') result = await exportRefund(config, get('--adjustment'), resolve(get('--out')));
+  if (action === 'receive') result = await receiveRefund(config, resolve(get('--from')),
+    {expectedManifestSha256:get('--manifest-sha256'), check:get('--check') === true});
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   const incomplete = action === 'apply' ? result.status !== 'APPLIED' :
     action === 'prepare' ? !['PREPARED', 'APPLIED'].includes(result.status) :

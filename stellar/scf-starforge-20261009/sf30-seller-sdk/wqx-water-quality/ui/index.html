@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Water quality workspace · Stellar Forge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body>
+<header><div><div class="eyebrow">STELLAR FORGE / WATER QUALITY</div><h1>Sample review workspace</h1><p id="project-heading">Retain original WQX source, review comparable results, and deliver a complete edition.</p></div><button id="refresh" type="button">Refresh</button></header>
+<div id="notice" role="status" aria-live="polite" hidden></div>
+<main>
+<aside>
+<section class="panel"><div class="section-head"><h2>Source selection</h2><span class="tag">WQX 3.0</span></div>
+<form id="project-form">
+<label>Project title<input id="title" required maxlength="200" value="Water quality review"></label>
+<label>Monitoring locations<textarea id="locations" rows="2" placeholder="USGS-01646580"></textarea><small>Original location identifiers, separated by a comma or new line.</small></label>
+<div class="two"><label>Samples from<input id="start" type="date"></label><label>Through<input id="end" type="date"></label></div>
+<label>Source characteristics<textarea id="source-characteristics" rows="3" placeholder="Chloride&#10;Nitrate"></textarea><small>Use one exact characteristic name per line. A name may contain a comma.</small></label>
+<fieldset><legend>Original profiles</legend>
+<label class="check"><input id="profile-station" type="checkbox" checked>Station</label>
+<label class="check"><input id="profile-activity" type="checkbox" checked>Activity</label>
+<label class="check"><input id="profile-result" type="checkbox" checked>Result, including returned A/B limits</label>
+</fieldset>
+<details id="exact-selection"><summary>Additional native source controls</summary>
+<label>Native filters JSON<textarea id="source-filters" rows="7" spellcheck="false">{}</textarea><small>Additional original filters, such as providers, pCode, sampleMedia, project, huc, or bBox. Repeated filters use arrays.</small></label>
+<label>Source date partitions<select id="partition"><option value="none">One date range</option><option value="month">Calendar months</option><option value="year">Calendar years</option></select></label>
+<label class="check"><input id="profile-limits" type="checkbox">Request a separate detection-limit profile</label>
+<p class="caption">The deployed portal returns reported A/B limits with Result. An optional separate profile keeps its actual service response and every record it supplies.</p>
+</details>
+<div class="actions"><button type="submit">Save selection</button><button id="capture" type="button" disabled>Acquire source</button></div>
+<p id="revision" class="caption">Save the source selection before acquiring.</p>
+</form>
+<details><summary>Import an existing native capture</summary><form id="import-form"><label>Capture directory<input id="import-directory" placeholder="/private/captures/potomac-2025-q1" required></label><p class="caption">Copy the complete retained capture. An empty project adopts its original source selection; an existing project must use that same selection.</p><button type="submit">Import retained capture</button></form></details>
+<details><summary>Receive a complete private review</summary><form id="receive-form"><label>Review bundle<input id="receive-file" type="file" accept=".json,application/json" required></label><p class="caption">Open an empty project directory to receive the original files, saved review, and source selection together.</p><button id="receive" type="submit">Open review bundle</button></form></details>
+</section>
+<section class="panel"><div class="section-head"><h2>Retained captures</h2><span id="capture-count" class="count">0</span></div><div id="captures" class="record-list"></div></section>
+<section class="panel"><h2>Saved reviews</h2><div id="reviews" class="record-list"></div></section>
+</aside>
+<div class="content">
+<nav class="tabs" aria-label="Workspace sections"><button type="button" data-tab="analysis" aria-current="page">Results &amp; review</button><button type="button" data-tab="source" aria-current="false">Original source</button><button type="button" data-tab="merchant" aria-current="false">Merchant &amp; customer</button></nav>
+<section id="tab-analysis" class="tab-panel">
+<div class="panel">
+<div class="section-head"><h2>Comparable sample results</h2><span id="analysis-status" class="tag">Choose a capture</span></div>
+<form id="analysis-form">
+<div class="two"><label>Selected period from<input id="analysis-start" type="date"></label><label>Through<input id="analysis-end" type="date"></label></div>
+<div class="two"><label>Baseline from<input id="baseline-start" type="date"></label><label>Through<input id="baseline-end" type="date"></label></div>
+<details><summary>Review scope and numeric inclusion</summary>
+<div class="two"><label>Characteristics, one per line<textarea id="analysis-characteristics" rows="3"></textarea></label><label>Monitoring locations<textarea id="analysis-locations" rows="3"></textarea></label></div>
+<label class="check"><input id="include-estimated" type="checkbox">Include source-labelled numeric estimates</label>
+<label>Additional reviewed qualifier codes<input id="allowed-qualifiers" placeholder="Exact codes, separated by a comma"><small>Only enter codes whose meaning you have reviewed. The original qualifiers and censoring rules remain visible.</small></label>
+<label>Compare a prior capture<select id="compare-capture"><option value="">No prior capture comparison</option></select></label>
+</details>
+<p class="caption">Date windows use the original local sample dates. Units, fractions, speciation, analytical methods, and sample context define separate groups.</p>
+<button id="analyze" type="submit" disabled>Update analysis</button>
+</form>
+<div id="analysis-empty" class="empty large">Open a retained capture to inspect its source values and comparable measurement groups.</div>
+<div id="analysis-body" hidden>
+<div class="metrics" id="metrics"></div>
+<div id="capture-comparison" hidden></div>
+<label>Measurement group<select id="group"><option value="">All selected results</option></select></label>
+<div id="group-summary"></div>
+<div id="plot" class="plot" hidden></div>
+<p id="plot-note" class="caption" hidden>Included numeric results, plotted by their original sample date. Each point retains the reported value and original unit.</p>
+<details><summary>Interpretation and source notes</summary><ul id="source-notes"></ul><pre id="inventory-details"></pre></details>
+<div class="section-head results-head"><h3>Original result records</h3><label>Table filter<select id="row-filter"><option value="all">All selected records</option><option value="included">Included in numeric summary</option><option value="censored">Censored records</option><option value="qualified">Qualified records</option><option value="excluded">Excluded from numeric summary</option></select></label></div>
+<div class="table-wrap"><table><thead><tr><th>Sample date</th><th>Characteristic / location</th><th>Original value</th><th>Detection condition</th><th>Qualifier / status</th><th>Numeric use</th><th>Record</th></tr></thead><tbody id="observations"></tbody></table></div>
+<div class="pagination"><button id="previous-page" type="button">Previous</button><span id="page-label"></span><button id="next-page" type="button">Next</button></div>
+<section id="record-detail" class="record-detail" hidden><div class="section-head"><h3 id="record-heading">Result detail</h3><button id="close-record" type="button">Close detail</button></div><div id="record-content"></div></section>
+</div></div>
+<div class="panel"><h2>Save the review decision</h2>
+<form id="review-form"><label>Review name<input id="review-id" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" placeholder="potomac-q1-review"></label><label>Analyst note<textarea id="note" rows="5" maxlength="24000" placeholder="Describe the question, selected sample groups, and interpretation."></textarea></label><button id="save-review" type="submit" disabled>Save complete review</button></form>
+<div id="saved-review" hidden><h3 id="saved-review-id"></h3><p id="saved-review-note"></p><div id="review-downloads" class="actions"></div><p class="caption">The complete bundle carries the retained source and saved review into a fresh private workspace.</p></div>
+</div>
+</section>
+<section id="tab-source" class="tab-panel" hidden><div class="panel"><div class="section-head"><h2>Original source files</h2><span id="source-state" class="tag">Choose a capture</span></div><div id="source-details"></div><p class="caption">Station and Activity records join to each result through original provider, organization, location, and activity identifiers. Every returned detection-limit record keeps its origin and source row.</p><div id="source-profiles"></div><h3>Retained files and native responses</h3><div id="source-files"></div></div></section>
+<section id="tab-merchant" class="tab-panel" hidden>
+<div class="panel"><h2>Prepare a merchant edition</h2><form id="edition-form"><div class="two"><label>Saved review<select id="edition-review" required><option value="">Select a saved review</option></select></label><label>Workspace edition name<input id="edition-name" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" placeholder="potomac-q1"></label></div><button type="submit">Prepare edition</button></form><p class="caption">An edition includes the complete captured cohort. The saved review keeps its own selected dates, baseline, and numeric inclusion choices.</p><div id="editions" class="record-list"></div></div>
+<div class="panel"><div class="section-head"><h2>Original merchant</h2><span id="merchant-state" class="tag">Stopped</span></div><label>Edition<select id="merchant-edition"><option value="">Select an edition</option></select></label><form id="stage-form"><div class="two"><label>Public HTTPS origin<input id="merchant-origin" type="url" placeholder="https://water.example.com" required></label><label>Application path<input id="merchant-path" value="/water-quality" required></label></div><label>Original payment terms JSON<textarea id="payment" rows="6" required spellcheck="false">{}</textarea></label><button type="submit">Prepare merchant offers</button></form><div class="actions"><button id="start-merchant" type="button">Start merchant</button><button id="stop-merchant" type="button" disabled>Stop merchant</button></div><pre id="merchant-result" hidden></pre></div>
+<div class="panel"><h2>Customer delivery</h2><p id="buyer-state" class="caption"></p><form id="customer-form"><label>Purchase type<select id="customer-kind"><option value="observations">Queryable result records</option><option value="source">Exact retained file</option><option value="edition">Edition manifest</option></select></label><label>Original buyer intent<input id="intent" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" placeholder="wqx-page-001"></label><label id="customer-query-label">Dataset query JSON<textarea id="customer-query" rows="5" spellcheck="false">{"limit":"25"}</textarea><small>Every value is a string. Source values and record JSON remain exact in the native result projection.</small></label><label id="customer-file-label" hidden>Original retained member<select id="customer-file"><option value="">Select an original file</option></select></label><div class="actions"><button id="prepare-purchase" type="submit" disabled>Prepare purchase</button><button id="execute-purchase" type="button" disabled>Execute prepared purchase</button><button id="reopen-purchase" type="button" disabled>Reopen original intent</button><button id="prepare-next-page" type="button" disabled>Prepare next page</button></div></form><p id="customer-page-status" class="caption"></p><a id="customer-download" class="download" hidden>Download exact received bytes</a><pre id="customer-result" hidden></pre></div>
+</section>
+</div>
+</main>
+<footer>Private WQX 3.0 sample review · Original records, retained source files, and native Stellar commerce.</footer>
+</body></html>
