@@ -242,7 +242,7 @@ export async function inspectCentralListener(connection, options) {
 }
 /** Keep the original native mutation identity on every post-dispatch failure. */
 export function centralOperationId(input) {
-  return input?.requestId ?? input?.reportId ?? input?.exportId ?? input?.captureId ?? input?.id ?? null;
+  return input?.requestId ?? input?.releaseId ?? input?.reportId ?? input?.exportId ?? input?.captureId ?? input?.id ?? null;
 }
 export function centralActionRoute(namespace,method) {
   const actions=namespace==='actions'?CENTRAL_ACTIONS:
