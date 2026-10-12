@@ -42,6 +42,7 @@ Imagery receiving: [STAC, eoAPI and Prescient setup, agent connection, Stop and 
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
+| Census address operations | census-geocoder-agent serve | One original browser and MCP owner for official address capture, match review, typed editions, native publishing and approved customer receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | World Bank economic data | worldbank-agent serve | Original indicator captures, exact editions and comparisons, reviewed merchant publication, browser and agent operations, complete customer receiving |
 | S3 object merchant | s3 workspace | Object source and complete prices, retained HEAD reviews and packages, original release controls, customer files and saved-workspace reopening |
@@ -159,6 +160,12 @@ commercial exports, reviewed price changes and managed stop/reopen.
 ## Catalog Atlas
 
 The complete [managed Atlas workflow](../../sf61-bazaar-explorer/APPLICATIONS.md) covers new and retained directories, reviewed installed source, original private launch, stop/reopen, native buyer continuation and whole-workspace receiving.
+
+## Census address operations
+
+Select the original merchant configuration and its initialized Census geocoder workspace alias. Review pins the merchant and connection files, stable native workspace UUID and installed launcher. Start opens one original MCP owner and its borrowed browser; the saved operation records their actual private listeners. The standard terminal carries the original SF88 approval, and Stop drains publication/customer work and cancels source HTTP through the original workspace. A later start reopens the same capture, edition and buyer records.
+
+Follow [Census agent and browser operations](../../../../stellar-forge/mcp-merchant-operator/CENSUS_GEOCODER_WORKSPACE.md) for complete configuration, exact source review, merchant publication, customer file receiving and lifecycle commands.
 
 ## ArcGIS merchant workspace
 

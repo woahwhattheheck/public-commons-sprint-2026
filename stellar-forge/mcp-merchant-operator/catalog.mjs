@@ -19,6 +19,7 @@ import { odataWorkspaceTools } from './catalog/odata-workspace.mjs';
 import { worldbankWorkspaceTools } from './catalog/worldbank-workspace.mjs';
 import { fiscalDataWorkspaceTools } from './catalog/fiscaldata-workspace.mjs';
 import { geocodioWorkspaceTools } from './catalog/geocodio-workspace.mjs';
+import { censusGeocoderWorkspaceTools } from './catalog/census-geocoder-workspace.mjs';
 import { webDavWorkspaceTools } from './catalog/webdav-tools.mjs';
 import { edgarWorkspaceTools } from './catalog/sec-edgar-tools.mjs';
 import { sheetsWorkspaceTools } from './catalog/sheets-workspace.mjs';
@@ -87,6 +88,7 @@ const familyTools = {
   worldbankWorkspaces: worldbankWorkspaceTools(tool),
   fiscalDataWorkspaces: fiscalDataWorkspaceTools(tool),
   geocodioWorkspaces: geocodioWorkspaceTools(tool),
+  censusGeocoderWorkspaces: censusGeocoderWorkspaceTools(tool),
   webdavWorkspaces: webDavWorkspaceTools(tool),
   edgarWorkspaces: edgarWorkspaceTools(tool),
   sheetsWorkspaces: sheetsWorkspaceTools(tool),
@@ -184,6 +186,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.worldbankWorkspaces,
   ...familyTools.fiscalDataWorkspaces,
   ...familyTools.geocodioWorkspaces,
+  ...familyTools.censusGeocoderWorkspaces,
   ...familyTools.webdavWorkspaces,
   ...familyTools.edgarWorkspaces,
   ...familyTools.sheetsWorkspaces,
