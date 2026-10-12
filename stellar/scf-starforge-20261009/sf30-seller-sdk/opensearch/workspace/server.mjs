@@ -9,6 +9,7 @@ import { WorkspaceError } from './store.mjs';
 
 const ASSETS = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
+  ['/deployment.mjs', ['deployment.mjs', 'text/javascript; charset=utf-8']],
   ['/relevance.mjs', ['../relevance/public.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
 function send(res, status, value) {
   const body = JSON.stringify(value);
@@ -63,6 +64,22 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
       if (req.method === 'GET') {
         if (path === '/api/session') return send(res, 200, { token, workspaceId: workspace.store.id });
         if (path === '/api/state') return send(res, 200, workspace.state());
+        if (path.startsWith('/api/deployment/')) {
+          const action = path.slice('/api/deployment/'.length);
+          const allowed = { status: [], compare: ['from', 'to'], clients: ['after', 'limit'],
+            client: ['exportId'], handover: ['releaseId'],
+            'client-download': ['exportId', 'expectedManifestSha256', 'file', 'expectedSha256'] }[action];
+          if (!allowed || [...url.searchParams.keys()].some(key => !allowed.includes(key) || url.searchParams.getAll(key).length !== 1))
+            throw new WorkspaceError('WORKSPACE_DEPLOYMENT_ROUTE', 'Use the declared deployment route and query fields.', 400);
+          const input = Object.fromEntries(url.searchParams);
+          if (input.limit !== undefined) input.limit = Number(input.limit);
+          if (action === 'status') return send(res, 200, await workspace.deployment.status());
+          if (action === 'compare') return send(res, 200, await workspace.deployment.compare(input));
+          if (action === 'clients') return send(res, 200, await workspace.deployment.clients(input));
+          if (action === 'client') return send(res, 200, await workspace.deployment.client(input.exportId));
+          if (action === 'handover') return download(res, await workspace.deployment.handover(input.releaseId));
+          if (action === 'client-download') return workspace.deployment.downloadClient(req, res, input);
+        }
         const parts = path.split('/').filter(Boolean);
         if (parts[0] === 'api' && parts[1] === 'relevance') {
           if (parts[2] === 'sets' && parts.length === 4) {
@@ -110,7 +127,7 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
         }
       }
       if (req.method === 'POST' && ['/api/drafts', '/api/validate', '/api/inspect', '/api/capture', '/api/prepare',
-        '/api/relevance-save', '/api/relevance-run', '/api/relevance-promote', '/api/relevance/validate', '/api/relevance/normalize'].includes(path) && !url.search) {
+        '/api/relevance-save', '/api/relevance-run', '/api/relevance-promote', '/api/relevance/validate', '/api/relevance/normalize', '/api/deployment'].includes(path) && !url.search) {
         const supplied = req.headers['x-workspace-token'];
         if (req.headers.origin !== origin || typeof supplied !== 'string' || Buffer.byteLength(supplied) !== Buffer.byteLength(token) ||
           !timingSafeEqual(Buffer.from(supplied), Buffer.from(token)))
@@ -123,7 +140,8 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
         if (path === '/api/relevance-save') return send(res, 200, workspace.relevance.save(input));
         if (path === '/api/relevance-promote') return send(res, 200, workspace.relevance.promote(input));
         if (path === '/api/relevance/validate') return send(res, 200, workspace.relevance.validate(input.setId, input.expectedRevision));
-        const result = path === '/api/relevance-run' ? await workspace.relevance.run(input) : await workspace.run(path.slice('/api/'.length), input);
+        const result = path === '/api/deployment' ? await workspace.deployment.run(input)
+          : path === '/api/relevance-run' ? await workspace.relevance.run(input) : await workspace.run(path.slice('/api/'.length), input);
         return send(res, result.state === 'RUNNING' ? 202 : 200, result);
       }
       return send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
