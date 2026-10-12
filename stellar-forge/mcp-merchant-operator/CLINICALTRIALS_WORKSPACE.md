@@ -184,6 +184,8 @@ The complete study read includes the nested object, original lexical JSON and so
 
 For an original full or partial upload composition, call action with prs.preview and {baseDocumentId, incomingDocumentId, reviewer, rules?}. Both selected documents must already be retained in this workspace. The original PRS engine applies its protocol/results schema and reviewed composition rules, retains both inputs, and returns the composed candidate with its complete report. Use the same revision and UUID envelope as every other native action.
 
+Read the saved result with prs_preview {previewId}; page original preview history with inventory kind prsPreviews. Prs_catalog returns the original source-bound field definitions. Retained preview records include both document IDs, candidate ID, reviewer, original timestamp and the complete composition report. For protocol/results reconciliation, preserve the original field IDs, ordered repeated values and explicit recordLinks for correlated outcomes, arms, sites and results groups. The original leaf validates those relationships and records each original value.
+
 Use files to inspect the actual host-declared XML and its complete SHA256. Prs_upload requires the declared prs handle, expectedSha256, schema protocol/results, current expectedRevision and retained requestId.
 
 The attachment streams the complete XML with the native request headers. It checks the reviewed hash before sending and uses the same open file descriptor. The original controller binds the received body hash to its request and calls the maintained PRS leaf with the exact official schemas.

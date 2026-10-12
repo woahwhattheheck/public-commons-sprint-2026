@@ -181,7 +181,7 @@ export function clinicalTrialsWorkspaceTools(tool) {
     tool('merchant_clinicaltrials_workspaces', 'List the declared original ClinicalTrials consoles, file handles and active verified downloads.', {}, [], read),
     tool('merchant_clinicaltrials_status', 'Read the same original ClinicalTrials state, revision, cohort, captures, reviews, PRS and publishing history used by its browser.', selection, ['workspace'], read),
     tool('merchant_clinicaltrials_inventory', 'Page retained ClinicalTrials captures, reviews, PRS documents/plans/reconciliations or native source inventories at an exact snapshot.',
-      { ...selection, kind: { type: 'string', enum: ['captures', 'reviews', 'prs', 'prsPlans', 'prsReconciliations', 'exports', 'sources', 'plans', 'builds', 'comparisons'] }, ...pagination }, ['workspace', 'kind'], read),
+      { ...selection, kind: { type: 'string', enum: ['captures', 'reviews', 'prs', 'prsPlans', 'prsReconciliations', 'prsPreviews', 'exports', 'sources', 'plans', 'builds', 'comparisons'] }, ...pagination }, ['workspace', 'kind'], read),
     tool('merchant_clinicaltrials_capture', 'Inspect a retained provider capture and its original source pages, request, provider version and completeness.', { ...selection, captureId: id }, ['workspace', 'captureId'], read),
     tool('merchant_clinicaltrials_studies', 'Page the actual retained study cohort. Preserve the original capture and continue its returned offset; query searches the saved studies.',
       { ...selection, captureId: id, offset: pagination.offset, limit: pagination.limit, query: { type: 'string', maxLength: 200 } }, ['workspace', 'captureId'], read),
@@ -191,6 +191,8 @@ export function clinicalTrialsWorkspaceTools(tool) {
     tool('merchant_clinicaltrials_prs', 'Read a retained PRS document and original official-schema validation or candidate comparison.', { ...selection, documentId: id }, ['workspace', 'documentId'], read),
     tool('merchant_clinicaltrials_prs_plan', 'Read the complete frozen original PRS modernization plan.', { ...selection, planId: id }, ['workspace', 'planId'], read),
     tool('merchant_clinicaltrials_prs_reconciliation', 'Read the complete original typed PRS-to-study reconciliation and retained source decisions.', { ...selection, reportId: id }, ['workspace', 'reportId'], read),
+    tool('merchant_clinicaltrials_prs_preview', 'Read the complete retained original full or partial PRS upload composition, selected documents and candidate report.', { ...selection, previewId: id }, ['workspace', 'previewId'], read),
+    tool('merchant_clinicaltrials_prs_catalog', 'Read the maintained PRS engine catalog of source-bound protocol and results fields and original reconciliation rules.', selection, ['workspace'], read),
     tool('merchant_clinicaltrials_operation', 'Recover the exact original request after an interrupted reply. Preserves UNKNOWN/RUNNING/COMPLETE/FAILED/INTERRUPTED and native result or error.',
       { ...selection, requestId: mutation.requestId }, ['workspace', 'requestId'], read),
     tool('merchant_clinicaltrials_action', 'Execute an original ClinicalTrials action with the reviewed revision and a retained UUID. Supports cohort/capture/review/mapping/edition/query/merchant/package, original PRS, publisher and dossier actions. Inspect the same operation after uncertainty.',
@@ -624,6 +626,8 @@ export class MerchantClinicalTrialsWorkspaces {
       merchant_clinicaltrials_prs: ['prs',['documentId']],
       merchant_clinicaltrials_prs_plan: ['prs-plan',['planId']],
       merchant_clinicaltrials_prs_reconciliation: ['prs-reconciliation',['reportId']],
+      merchant_clinicaltrials_prs_preview: ['prs-preview',['previewId']],
+      merchant_clinicaltrials_prs_catalog: ['prs-catalog',[]],
       merchant_clinicaltrials_operation: ['operation',['requestId']]
     };
     const route = routes[name];
