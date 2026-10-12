@@ -1,0 +1,28 @@
+{
+  "schema": "commons.synthesis-native-source-transfer.v1",
+  "operation": "D7CA-SCF-EVIDENCE-SYNTHESIS-NATIVE-20261012",
+  "encoding": "base64+zlib",
+  "file": "source-envelope.json.zlib.base64",
+  "bytes": 8178430,
+  "sha256": "e87991baa88a2cbcb5728fe281d2e76bd1a4e0316fcdb97301910aa59081577e",
+  "compressedBytes": 2861026,
+  "compressedSha256": "57268205cbf88521097e82807ec138e826aecf2307c13391121e2aed9dbff9ba",
+  "compressedGitBlob": "40382640abe2c930971cee859d9de4271cafd73f",
+  "encodedBytes": 3814704,
+  "encodedSha256": "4d0870a59bf78ef43e5d128399480952914b185250c3deabb5c37830ca42633d",
+  "encodedGitBlob": "b46fffcde745aab89a4d5069790b0cfca573a0c3",
+  "files": 491,
+  "sourceBytes": 7664558,
+  "source_commit": "f89885a893dcfe66a05bdc51ca2b4a00f7848c8e",
+  "source_tree": "78eba0a5f7ff842c404fb2ef7af1a17d9b01ad36",
+  "sources": {
+    "original449": "4699d7bef9afae7e7b83246600e7add0904403fe829943c32553a3eb63c113ff",
+    "research_overlay": "9e3b886167eba430c05e6d0819917be658db6fe674095e5d8d803a23ea8cc4c5"
+  },
+  "receiver": {
+    "path": "stellar/scf-starforge-20261009/distribution/receiving/synthesis/receive_synthesis_reference.py",
+    "git_blob": "f26344cca37f3196ac59cf241d05f515415cac39",
+    "bytes": 40799,
+    "sha256": "b2b74acadc0fc157c92eb28982f3dcc444ce52f583ef48c262e97d4d85047603"
+  }
+}
