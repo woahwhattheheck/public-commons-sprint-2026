@@ -17,7 +17,8 @@ const state = {
   detailVersion: 0, viewVersion: 0, lineage: null, lineageLoading: false,
   lineageDirection: "both", lineageDepth: 6, comparison: null, compareFrom: "", compareTo: "",
   pending: null, pendingBusy: false, connected: false, identity: null,
-  reviewDraft: null, resultEntity: null, importBusy: false
+  reviewDraft: null, resultEntity: null, importBusy: false,
+  producer: null, producerError: "", producerLoading: false, producerDownloadBusy: false, producerVersion: 0
 };
 const JOURNAL_KEY = location.origin + location.pathname;
 const TOKEN_KEY = "openlineage-access:" + JOURNAL_KEY;
@@ -367,7 +368,8 @@ function renderCatalog() {
   } else if (state.section === "sources") {
     headers = ["Original source", "Size", "Events", "Imported"];
     for (const item of records) rows.push(selectedRow("source", item.id, [
-      nameCell(item.name, item.format + " · " + short(item.id), "source", item.id), bytes(item.bytes),
+      nameCell(item.name, item.format + (item.contentEncoding === "gzip" ? " · gzip" : "") + " · " + short(item.id), "source", item.id),
+      item.contentEncoding === "gzip" ? h("div", {}, bytes(item.bytes) + " original", h("span", { className: "secondary-line" }, bytes(item.decodedBytes) + " decoded")) : bytes(item.bytes),
       h("div", {}, count(item.eventIds.length), item.diagnosticCount ? h("span", { className: "secondary-line" }, count(item.diagnosticCount) + " need attention") : null),
       h("span", { className: "secondary-line" }, when(item.importedAt))
     ]));
@@ -603,27 +605,45 @@ function renderOtherInspector() {
   const host = $("inspector"), item = state.detail, kind = state.selection.kind;
   const children = [];
   if (kind === "source") {
+    const compressed = item.contentEncoding === "gzip";
     children.push(inspectorHeader("Original source", item.name, item.sourceUrl || item.id), recordFields([
-      ["Source ID", item.id], ["Format", item.format], ["Size", bytes(item.bytes)], ["Imported", when(item.importedAt)],
-      ["Events", count(item.eventIds?.length)], ["Attention", count(item.diagnosticCount)],
+      [compressed ? "Original gzip ID" : "Source ID", item.id], ["Format", item.format],
+      ["Compression", compressed ? "Gzip" : "Uncompressed"], [compressed ? "Original gzip bytes" : "Original bytes", bytes(item.bytes)],
+      ...(compressed ? [["Decoded event bytes", bytes(item.decodedBytes)], ["Decoded SHA-256", item.decodedSha256]] : []),
+      ["Imported", when(item.importedAt)], ["Events", count(item.eventIds?.length)], ["Attention", count(item.diagnosticCount)],
       ["Original reference", item.sourceUrl ? safeLink(item.sourceUrl) : "—"]
     ]));
+    if (compressed) children.push(h("p", { className: "source-decoded-note" }, "The original source is the complete gzip file. The event view below uses its verified decoded JSON or NDJSON."));
     const originalHost = h("div", { className: "original-content" });
-    const readOriginal = button("Read complete original", async () => {
-      readOriginal.disabled = true; originalHost.replaceChildren(h("p", { className: "muted", role: "status" }, "Opening original source…"));
+    const readOriginal = button(compressed ? "Read decoded event source" : "Read complete original", async () => {
+      readOriginal.disabled = true;
+      originalHost.replaceChildren(h("p", { className: "muted", role: "status" }, compressed ? "Opening verified decoded source…" : "Opening original source…"));
       const version = state.detailVersion;
       try {
-        const value = await action("source.read", { id: item.id });
+        const value = await action("source.read", { id: item.id, decode: true });
         if (version !== state.detailVersion) return;
-        const data = base64ToBytes(value.base64);
-        originalHost.replaceChildren(h("details", { className: "json-block", open: true },
-          h("summary", {}, item.name + " · " + bytes(data.byteLength)),
-          h("pre", { className: "source-text", tabIndex: "0" }, new TextDecoder().decode(data))));
-      } catch (error) { originalHost.replaceChildren(h("p", { role: "alert" }, error.message)); }
+        if (value.id !== item.id || typeof value.base64 !== "string") throw new Error("The complete original source response was unavailable.");
+        const gzip = value.contentEncoding === "gzip" || compressed;
+        if (gzip && (typeof value.decodedBase64 !== "string" || typeof value.decodedSha256 !== "string")) throw new Error("The verified decoded source was unavailable. The original gzip file remains available for download.");
+        if (gzip && item.decodedSha256 && value.decodedSha256 !== item.decodedSha256) throw new Error("The decoded source differs from the selected source record. Refresh Sources to inspect the current record.");
+        const data = base64ToBytes(gzip ? value.decodedBase64 : value.base64);
+        const title = gzip ? "Complete decoded event source" : "Complete original source";
+        const content = [
+          ...(gzip ? [recordFields([["Original gzip", item.name], ["Decoded bytes", bytes(data.byteLength)], ["Verified SHA-256", value.decodedSha256]])] : []),
+          h("details", { className: "json-block", open: true }, h("summary", {}, title + " · " + bytes(data.byteLength)),
+            h("pre", { className: "source-text", tabIndex: "0" }, new TextDecoder().decode(data)))
+        ];
+        if (gzip) {
+          const name = /\.gz$/i.test(item.name) ? item.name.replace(/\.gz$/i, "") : item.name + ".decoded." + (item.format === "ndjson" ? "ndjson" : "json");
+          content.push(h("div", { className: "event-tools" }, button("Download decoded event source", () => downloaded(
+            new Blob([data], { type: item.format === "ndjson" ? "application/x-ndjson" : "application/json" }), name || "decoded-events.json"), "small")));
+        }
+        originalHost.replaceChildren(...content);
+      } catch (error) { if (version === state.detailVersion) originalHost.replaceChildren(h("p", { role: "alert" }, error.message)); }
       finally { readOriginal.disabled = false; }
     }, "small");
     children.push(h("div", { className: "event-tools" }, readOriginal,
-      button("Download original file", () => downloadObject(item.id, item.name), "small")), originalHost,
+      button(compressed ? "Download original gzip file" : "Download original file", () => downloadObject(item.id, item.name), "small")), originalHost,
       jsonBlock("Complete source record", item), jsonBlock("Imported event identifiers", item.eventIds ?? []));
   } else if (kind === "edition") {
     children.push(inspectorHeader("Saved edition", item.title, "Revision " + item.sourceRevision), h("p", { className: "record-description" }, item.description || "No description recorded."),
@@ -712,10 +732,14 @@ async function importSource(event) {
   const file = $("source-file").files[0], pasted = $("source-text").value;
   if (file && pasted.trim()) { feedback("import-feedback", "Choose one source: clear the pasted text or remove the selected file."); return; }
   if (!file && !pasted.trim()) { feedback("import-feedback", "Choose a source file or paste JSON or NDJSON events."); return; }
-  state.importBusy = true; setBusyControls(); feedback("import-feedback", "Reading complete source…");
+  const choice = $("source-encoding").value;
+  const contentEncoding = choice === "auto" ? (file && /\.gz$/i.test(file.name) ? "gzip" : "identity") : choice;
+  if (!["identity", "gzip"].includes(contentEncoding)) { feedback("import-feedback", "Choose an available file compression setting."); return; }
+  if (!file && contentEncoding === "gzip") { feedback("import-feedback", "Choose the original gzip file, or select uncompressed for pasted JSON or NDJSON."); return; }
+  state.importBusy = true; setBusyControls(); feedback("import-feedback", contentEncoding === "gzip" ? "Reading complete original gzip source…" : "Reading complete source…");
   try {
     const original = file ? await file.arrayBuffer() : new TextEncoder().encode(pasted).buffer;
-    const args = { name: $("source-name").value.trim() || file?.name || "pasted-events.ndjson", base64: toBase64(original) };
+    const args = { name: $("source-name").value.trim() || file?.name || "pasted-events.ndjson", base64: toBase64(original), contentEncoding };
     const reference = $("source-url").value.trim(); if (reference) args.sourceUrl = reference;
     feedback("import-feedback", "Saving original source…");
     const saved = await mutate("source.import", args, "Source import");
@@ -785,11 +809,156 @@ async function exportReport() {
   } catch (error) { formFailure("export-feedback", error); }
   finally { control.disabled = false; }
 }
+
+function producerAddress(status) {
+  const address = new URL(status.url);
+  if (!["http:", "https:"].includes(address.protocol) || address.username || address.password || status.endpoint !== "/api/v1/lineage") throw new Error("The producer address is incomplete.");
+  return { origin: address.origin, endpoint: status.endpoint, full: address.origin + status.endpoint };
+}
+function producerConfiguration(status, identity, client, token) {
+  if (!identity || status.workspaceId !== identity.workspaceId || status.instanceId !== identity.instanceId) throw new Error("Reconnect to this workspace before downloading a producer configuration.");
+  if (!["python", "java"].includes(client)) throw new Error("Choose the Python or Java client.");
+  if (!["producer-token", "workspace-token", "local"].includes(status.authentication)) throw new Error("Read the current producer authentication setting before downloading.");
+  if (status.authentication !== "local" && !token.trim()) throw new Error("Enter the producer token required by this receiving connection.");
+  const address = producerAddress(status);
+  const transport = { type: "http", url: address.origin, endpoint: address.endpoint.replace(/^\/+/, "") };
+  if (client === "python") {
+    transport.timeout = 30;
+    transport.compression = "gzip";
+    transport.custom_headers = { "X-OpenLineage-Workspace": identity.workspaceId };
+  } else {
+    transport.timeoutInMillis = 30000;
+    transport.compression = "gzip";
+    transport.headers = { "X-OpenLineage-Workspace": identity.workspaceId };
+  }
+  if (token.trim()) transport.auth = { type: "api_key", apiKey: token };
+  return { transport };
+}
+function setProducerControls() {
+  const busy = state.producerLoading || state.producerDownloadBusy;
+  $("producer-refresh").disabled = busy;
+  $("producer-download").disabled = busy || !state.producer;
+  $("producer-client").disabled = state.producerDownloadBusy;
+  $("producer-token").disabled = state.producerDownloadBusy;
+  $("producer-token").required = Boolean(state.producer && state.producer.authentication !== "local");
+  const help = state.producer?.authentication === "local"
+    ? "This local receiving connection accepts events without a token. You can leave this field empty."
+    : state.producer?.authentication === "workspace-token"
+      ? "Enter the workspace token assigned to this producer. It is included only in the downloaded client configuration."
+      : state.producer?.authentication === "producer-token"
+        ? "Enter the dedicated producer token configured for this receiving connection."
+        : "Read the current receiving status to see the token requirement.";
+  $("producer-token-help").textContent = help;
+}
+function renderProducerStatus() {
+  const host = $("producer-status"), status = state.producer;
+  host.setAttribute("aria-busy", state.producerLoading ? "true" : "false");
+  if (!status) {
+    if (state.producerError) host.replaceChildren(h("p", { role: "alert" }, state.producerError),
+      button("Open connection settings", () => { closeDialog("producer-dialog"); openConnection(); }, "small"));
+    else host.replaceChildren(h("p", { className: "muted", role: "status" }, "Reading producer status…"));
+    setProducerControls(); return;
+  }
+  const address = producerAddress(status);
+  const metric = (label, value) => h("div", { className: "producer-metric" }, h("dt", {}, label), h("dd", {}, value));
+  const authLabel = { "producer-token": "Dedicated producer token", "workspace-token": "Workspace token", local: "Local connection" }[status.authentication];
+  const children = [
+    h("div", { className: "producer-status-line" }, badge(status.state, status.state === "draining"),
+      h("p", { className: "muted", role: "status" }, state.producerLoading ? "Refreshing…" : "Read " + when(status.observedAt))),
+    recordFields([
+      ["Event endpoint", h("code", { className: "producer-endpoint" }, address.full)],
+      ["Workspace", status.workspaceId], ["Authentication", authLabel],
+      ["Content encoding", (status.supportedContentEncodings ?? []).join(", ")],
+      ["Server started", when(status.startedAt)]
+    ]),
+    h("dl", { className: "producer-metrics", "aria-label": "Events received by this server instance" },
+      metric("Admitted requests", count(status.counters.admitted)), metric("Committed requests", count(status.counters.committed)),
+      metric("Replayed requests", count(status.counters.replayed)), metric("Rejected requests", count(status.counters.rejected)),
+      metric("Failed requests", count(status.counters.failed)), metric("Original bytes received", bytes(status.counters.wireBytes))),
+    h("p", { className: "producer-status-note" }, "These counters cover this server instance. Saved original sources and event history remain in the workspace across restarts."),
+    ...(status.state === "draining" ? [h("p", { className: "context-note" }, "The receiver is finishing its admitted requests before closing. Refresh the status after reconnecting to the restarted server.")] : []),
+    recordFields([
+      ["Pending requests", count(status.pending) + " / " + count(status.limits.maxRequests)],
+      ["Buffered original bytes", bytes(status.bufferedBytes) + " / " + bytes(status.limits.maxBufferedBytes)],
+      ["Request byte limit", bytes(status.limits.maxBodyBytes)], ["Decoded byte limit", bytes(status.limits.maxDecodedBytes)]
+    ])
+  ];
+  if (status.lastCommit) {
+    const commit = status.lastCommit;
+    children.push(h("section", { className: "producer-last-commit", "aria-label": "Latest saved source" }, h("h4", {}, "Latest saved source"),
+      recordFields([["Saved", when(commit.at)], ["Revision", count(commit.revision)], ["Request", commit.operationId],
+        ["Outcome", commit.replayed ? "Recovered saved request" : "Saved"], ["Original source", commit.sourceId]]),
+      commit.sourceId ? button("Inspect saved source", async () => {
+        closeDialog("producer-dialog"); state.edition = ""; state.section = "sources"; state.selection = { kind: "source", id: commit.sourceId };
+        try { await refresh(); } catch (error) { notice(error.message, true); }
+      }, "small") : null));
+  } else children.push(h("p", { className: "producer-status-note" }, "This server instance has not committed a producer source yet."));
+  children.push(jsonBlock("Acknowledgement and request recovery", { acknowledgement: status.acknowledgement, retryIdentity: status.retryIdentity }),
+    jsonBlock("Complete receiving status", status));
+  host.replaceChildren(...children);
+  setProducerControls();
+}
+async function loadProducerStatus() {
+  const version = ++state.producerVersion;
+  state.producerLoading = true; state.producerError = ""; renderProducerStatus();
+  try {
+    if (!state.identity) await refresh();
+    const status = await jsonRequest("/api/producer");
+    if (version !== state.producerVersion) return null;
+    if (status?.schema !== "commons.openlineage.producer-status.v1" || !["receiving", "draining"].includes(status.state) ||
+        !["producer-token", "workspace-token", "local"].includes(status.authentication) || !status.limits || !status.counters) throw new Error("The complete receiving status was unavailable.");
+    const counts = ["admitted", "committed", "replayed", "rejected", "failed", "wireBytes"];
+    const limits = ["maxRequests", "maxBufferedBytes", "maxBodyBytes", "maxDecodedBytes"];
+    if (counts.some(key => !Number.isSafeInteger(status.counters[key]) || status.counters[key] < 0) ||
+        limits.some(key => !Number.isSafeInteger(status.limits[key]) || status.limits[key] <= 0) ||
+        !Number.isSafeInteger(status.pending) || status.pending < 0 || !Number.isSafeInteger(status.bufferedBytes) || status.bufferedBytes < 0) throw new Error("The complete receiving counters and limits were unavailable.");
+    if (status.workspaceId !== state.identity?.workspaceId || status.instanceId !== state.identity?.instanceId) throw new Error("The receiving connection changed. Open Connection to reconnect to the workspace.");
+    producerAddress(status);
+    state.producer = { ...status, observedAt: new Date().toISOString() };
+    return state.producer;
+  } catch (error) {
+    if (version === state.producerVersion) { state.producer = null; state.producerError = error.message; }
+    throw error;
+  } finally {
+    if (version === state.producerVersion) { state.producerLoading = false; renderProducerStatus(); }
+  }
+}
+function openProducer() {
+  $("producer-token").value = ""; feedback("producer-feedback", "");
+  state.producer = null; state.producerError = ""; openDialog("producer-dialog");
+  loadProducerStatus().catch(error => { if ($("producer-dialog").open) feedback("producer-feedback", error.message); });
+}
+async function downloadProducerConfiguration(event) {
+  event.preventDefault();
+  if (state.producerDownloadBusy) return;
+  state.producerDownloadBusy = true; setProducerControls();
+  feedback("producer-feedback", "Reading the current receiving connection…");
+  try {
+    const status = await loadProducerStatus();
+    if (!status || !$("producer-dialog").open) return;
+    const client = $("producer-client").value;
+    const configuration = producerConfiguration(status, state.identity, client, $("producer-token").value);
+    downloadJSON(configuration, "openlineage-" + client + "-" + status.workspaceId + ".json");
+    $("producer-token").value = "";
+    feedback("producer-feedback", "Complete " + (client === "java" ? "Java" : "Python") + " client configuration prepared for " + producerAddress(status).full + ". Load this private file with the client's configuration settings.");
+  } catch (error) { if ($("producer-dialog").open) feedback("producer-feedback", error.message); }
+  finally { state.producerDownloadBusy = false; setProducerControls(); }
+}
+
 document.querySelectorAll("[data-close]").forEach(control => control.addEventListener("click", () => closeDialog(control.dataset.close)));
 $("import-button").addEventListener("click", openImport);
 $("save-edition-button").addEventListener("click", openEdition);
 $("export-button").addEventListener("click", showExport);
 $("connection-button").addEventListener("click", openConnection);
+$("producer-button").addEventListener("click", openProducer);
+$("producer-refresh").addEventListener("click", () => {
+  feedback("producer-feedback", "");
+  loadProducerStatus().catch(error => { if ($("producer-dialog").open) feedback("producer-feedback", error.message); });
+});
+$("producer-config-form").addEventListener("submit", downloadProducerConfiguration);
+$("producer-dialog").addEventListener("close", () => {
+  $("producer-token").value = ""; state.producerVersion++; state.producerLoading = false;
+});
 $("refresh-button").addEventListener("click", () => refresh().catch(error => notice(error.message, true)));
 $("import-form").addEventListener("submit", importSource);
 $("edition-form").addEventListener("submit", saveEdition);
