@@ -5,7 +5,8 @@ import { join, resolve } from 'node:path';
 import { acquireWorkspace, privateDirectory, readPrivate, readJson, createFile,
   atomicJson, bytes, digest, identity, fault, object, absolute } from '../postgres/publisher/files.mjs';
 import { normalizeQuery, DATASET_COLUMNS, ATTRIBUTION } from './source.mjs';
-import { captureGrants, readCapture, exportCapture, importCapture, readCaptureExport } from './capture.mjs';
+import { captureGrants, readCapture, exportCapture, importCapture, readCaptureExport, captureIsComplete } from './capture.mjs';
+import { readStoredCapture, retainCapturePacket, captureMerchantMember } from './capture-storage.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.grantsgov-workspace.v1';
 export const REVIEW_FIELDS = Object.freeze(['status','owner','fit','eligibilityAssessment',
@@ -153,7 +154,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
     return value;
   }
   async function editionSource(value) {
-    const source=await readJson(join(roots['edition-sources'],value.sourcePacketSha256+'.json'),256*MiB);
+    const {packet:source}=await readStoredCapture(roots['edition-sources'],value.sourcePacketSha256);
     if(source.sha256!==value.sourcePacketSha256)throw fault('EDITION_SOURCE_CHANGED');
     const capture=readCaptureExport(source);
     if(capture.captureId!==value.nativeCaptureId||capture.sourceSignature!==value.sourceSignature)
@@ -180,8 +181,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
     return source;
   }
   async function retainSource(packet) {
-    readCaptureExport(packet);
-    await immutable(join(roots['edition-sources'],packet.sha256+'.json'),bytes(packet));
+    await retainCapturePacket(roots['edition-sources'],packet);
     return packet;
   }
   async function capturePacket(id) {
@@ -260,7 +260,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
         });
         const saved=await createEdition({requestId:current.id+':complete-edition',captureId:current.id,name:current.name});
         await update(next=>{
-          const c=next.captures[current.id];Object.assign(c,{status:result.status==='completed'?'complete':'partial',editionId:saved.id,updatedAt:stamp()});
+          const c=next.captures[current.id];Object.assign(c,{status:captureIsComplete(result)?'complete':'partial',editionId:saved.id,updatedAt:stamp()});
           delete c.error;return c;
         });
       } catch(error) {
@@ -292,7 +292,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
       const prior=Object.values(next.captures).find(c=>c.sourceSignature===source.sourceSignature);
       if(prior)return prior;
       const id='GC-'+randomUUID();await importCapture(captureDirectory(id),input.packet);
-      const value={id,name:title(input.name??'Imported grant source'),status:source.status==='completed'?'complete':'partial',
+      const value={id,name:title(input.name??'Imported grant source'),status:captureIsComplete(source)?'complete':'partial',
         createdAt:stamp(),updatedAt:stamp(),operationId:source.operationId,nativeCaptureId:source.captureId,
         sourceSignature:source.sourceSignature,query:source.query,queryId:null,queryRevision:null,
         includeDetails:source.includeDetails,maxPages:10000,maxOpportunities:250000,native:captureView(source)};
@@ -300,17 +300,19 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
     });
   }
   function verifyReview(review,editions) {
-    if(!object(review)||!object(review.data)||!Number.isSafeInteger(review.revision)||review.revision<1||
-      !Array.isArray(review.history)||!REVIEW_STATUSES.includes(review.data.status)||
-      Object.keys(review.data).some(key=>!REVIEW_FIELDS.includes(key))||
-      REVIEW_FIELDS.some(key=>typeof review.data[key]!=='string'||review.data[key].length>32000))
+    if(!object(review)||!Number.isSafeInteger(review.revision)||review.revision<1||
+      !Array.isArray(review.history)||review.history.length!==review.revision-1)
       throw fault('RECEIVING_REVIEW_INVALID');
-    for(const value of [...review.history,review]){
+    for(const [index,value]of [...review.history,review].entries()){
+      if(!object(value)||value.revision!==index+1||!object(value.data)||
+        !REVIEW_STATUSES.includes(value.data.status)||
+        Object.keys(value.data).some(key=>!REVIEW_FIELDS.includes(key))||
+        REVIEW_FIELDS.some(key=>typeof value.data[key]!=='string'||value.data[key].length>32000))
+        throw fault('RECEIVING_REVIEW_INVALID',
+          'Every retained qualification revision must use the original field schema and ordered history.');
       const edition=editions.get(value.editionId);
       const row=edition?.rows.find(row=>row.opportunity_id===review.opportunityId);
-      if(!row||edition.sha256!==value.editionSha256||!Number.isSafeInteger(value.revision)||value.revision<1||
-        !object(value.data)||REVIEW_FIELDS.some(key=>typeof value.data[key]!=='string')||
-        !REVIEW_STATUSES.includes(value.data.status))
+      if(!row||edition.sha256!==value.editionSha256)
         throw fault('RECEIVING_REVIEW_BINDING');
       if(value.sourceDataSha256!==undefined&&row.source_data_sha256!==value.sourceDataSha256)
         throw fault('RECEIVING_REVIEW_SOURCE_CHANGED');
@@ -348,7 +350,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
         if(existing&&existing.nativeCaptureId!==source.captureId)throw fault('RECEIVING_CAPTURE_CONFLICT');
         if(!existing){
           await importCapture(captureDirectory(item.captureId),original);
-          next.captures[item.captureId]={id:item.captureId,name:item.name,status:source.status==='completed'?'complete':'partial',
+          next.captures[item.captureId]={id:item.captureId,name:item.name,status:captureIsComplete(source)?'complete':'partial',
             createdAt:stamp(),updatedAt:stamp(),operationId:source.operationId,nativeCaptureId:source.captureId,
             sourceSignature:source.sourceSignature,query:source.query,queryId:null,queryRevision:null,
             includeDetails:source.includeDetails,maxPages:10000,maxOpportunities:250000,native:captureView(source)};
@@ -500,6 +502,10 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
         captures.set(item.id,item);
         if(binding.nativeCaptureId!==observed.captureId||binding.sourceSignature!==observed.sourceSignature)
           throw fault('BACKUP_CAPTURE_CHANGED');
+        // Receiving has no active acquisition. Its data outcome comes from the
+        // verified original source; the acquisition lifecycle remains in native.
+        Object.assign(binding,{status:captureIsComplete(observed)?'complete':'partial',
+          native:captureView(observed)});
       }
       if(captures.size!==Object.keys(incoming.captures).length)throw fault('BACKUP_CAPTURE_MISSING');
       for(const item of packet.editions){
@@ -570,12 +576,13 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
         sorts:['title','closing_date','posting_date','agency_name'].filter(field=>fields.includes(field)),
         defaultLimit:input.defaultLimit??25,maxLimit:input.maxLimit??100,maxRows:1000000,maxBytes:256*MiB,maxCellChars:65536};
       await immutable(join(staged,'dataset.csv'),csv);await immutable(join(staged,'dataset.json'),bytes(config));
-      const captureBytes=bytes(await editionSource(selected)),editionBytes=bytes(selected);
-      await immutable(join(staged,'source','capture.json'),captureBytes);
+      const captureMember=await captureMerchantMember(roots['edition-sources'],selected.sourcePacketSha256),editionBytes=bytes(selected);
+      await immutable(join(staged,captureMember.path),captureMember.body);
       await immutable(join(staged,'source','edition.json'),editionBytes);
       const provenance={schema:WORKSPACE_SCHEMA+'.dataset-source',editionId:selected.id,editionSha256:selected.sha256,
         sourceSignature:selected.sourceSignature,coverage:selected.coverage,columns:fields,attribution:ATTRIBUTION,
-        sourceFiles:[{path:'source/capture.json',bytes:captureBytes.length,sha256:digest(captureBytes)},
+        captureStorage:captureMember.descriptor,
+        sourceFiles:[{path:captureMember.path,bytes:captureMember.body.length,sha256:digest(captureMember.body)},
           {path:'source/edition.json',bytes:editionBytes.length,sha256:digest(editionBytes)}]};
       await immutable(join(staged,'source.json'),bytes(provenance));
       const {loadDatasetConfig}=await import('../dataset-handler.mjs');
@@ -588,7 +595,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
         await immutable(join(staged,'seller.json'),bytes(seller));
       }
       const files=[];
-      for(const name of ['dataset.csv','dataset.json','source.json','source/capture.json','source/edition.json',
+      for(const name of ['dataset.csv','dataset.json','source.json',captureMember.path,'source/edition.json',
         ...(input.payment!==undefined?['seller.json']:[])]){
         const data=await readPrivate(join(staged,name),256*MiB);files.push({path:name,bytes:data.length,sha256:digest(data)});
       }

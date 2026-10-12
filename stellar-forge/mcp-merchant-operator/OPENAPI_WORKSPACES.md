@@ -272,3 +272,7 @@ continue the same release lifecycle.
 
 The executable native receiving journey and its source inputs are documented
 in [PACKAGE_TRANSFER.md](../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/PACKAGE_TRANSFER.md).
+
+## Price and select a complete API inventory
+
+Use the shared [route worksheet agent workflow](OPENAPI_ROUTE_WORKSHEETS.md) to search all original operations, stage exact bulk atomic prices, reconcile a retained worksheet, review and save the full merchant, and export the browser-compatible worksheet JSON. Its five tools join the existing source, package, cache and receiving operations on this same console.

@@ -12,7 +12,7 @@
   <header>
     <div class="brand">STARFORGE <span>MERCHANT OPERATIONS</span></div>
     <div class="heading"><div><h1>Paid jobs</h1><p id="service-name">Opening the original merchant workspace…</p></div>
-      <div class="toolbar"><span id="connection" class="status">Connecting</span><button id="refresh" type="button">Refresh</button><button id="export" type="button">Export ledger</button></div>
+      <div class="toolbar"><a id="input-receiving-nav" href="/inputs/" hidden>Input receiving</a><a id="resolution-nav" href="/resolutions/">Resolutions</a><span id="connection" class="status">Connecting</span><button id="refresh" type="button">Refresh</button><button id="export" type="button">Export ledger</button></div>
     </div>
   </header>
   <main>
@@ -44,6 +44,7 @@
           <label>Function<select id="function" required></select></label>
           <p id="function-description" class="muted"></p>
           <dl id="function-terms" class="terms"></dl>
+          <div id="input-file-route" class="notice" hidden><p id="input-file-description"></p><p id="input-file-slots" class="mono"></p><a id="input-receiving-link" href="/inputs/">Open Input receiving</a></div>
           <div class="two"><label>Label<input id="label" maxlength="160" placeholder="Monthly usage report"></label><label>Reference<input id="reference" maxlength="80" placeholder="Your order reference"></label></div>
           <div class="label-row"><label for="input">Input JSON</label><button id="example" class="text-button" type="button">Use example</button></div>
           <textarea id="input" rows="9" spellcheck="false" required>{}</textarea>
@@ -59,7 +60,7 @@
     <section id="detail-panel" class="panel" aria-labelledby="detail-title" hidden>
       <div class="panel-heading"><div><h2 id="detail-title">Job</h2><p id="detail-subtitle" class="muted mono"></p></div><span id="detail-state" class="status"></span></div>
       <dl id="detail-facts" class="facts"></dl>
-      <div class="detail-grid"><div><h3>Execution history</h3><ol id="history" class="history"></ol></div><div><h3>Saved input</h3><pre id="detail-input"></pre><details><summary>Complete original job</summary><pre id="detail-json"></pre></details></div></div>
+      <div class="detail-grid"><div><h3>Execution history</h3><ol id="history" class="history"></ol></div><div><h3>Saved input</h3><button id="job-input-files" type="button" hidden>Open original input files</button><pre id="detail-input"></pre><details><summary>Complete original job</summary><pre id="detail-json"></pre></details></div></div>
       <div id="result-panel" class="result-panel" hidden><div class="panel-heading"><div><h3>Completed result</h3><p id="result-summary" class="muted"></p></div><div class="toolbar"><button id="result-preview" type="button">Preview</button><button id="result-download" type="button">Download result</button></div></div><pre id="result-content" hidden></pre></div>
       <form id="action-form" class="recovery"><div><h3>Job recovery</h3><p class="muted">Changes use this job’s current revision. Renew a lost ticket while the job is prepared to keep its saved input and reference; the previous ticket stops working. Retry execution to reuse a retained paid job.</p></div><label>Reason<input id="reason" maxlength="500" required placeholder="What changed or why should this job stop?"></label><div class="toolbar"><button id="renew-claim-job" type="button">Renew purchase ticket</button><button id="cancel-job" type="button">Cancel job</button><button id="retry-job" type="button">Retry execution</button></div></form>
     </section>

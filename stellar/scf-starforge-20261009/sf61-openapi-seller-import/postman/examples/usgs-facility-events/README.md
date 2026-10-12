@@ -215,3 +215,8 @@ The importer and merchant interfaces used for this package were read at
 `b1f2930be38eeb69d2b4d1db783ba7f656e495e8` in the original public sprint repository.
 The example adds customer inputs and a downstream report while using those
 maintained source, merchant, release and buyer interfaces.
+
+
+## Complete facility operations desk
+
+The [customer workspace](workspace/README.md) carries the original reporter into saved facility rosters, source captures, report editions, assigned reviews and complete customer receiving. Open it with `starforge usgs-facility-events --workspace /private/facility-desk`, or the installed **Facility operations** application. It uses the original event engine, retained buyer responses and existing merchant distribution; Node.js 24 or later is required.

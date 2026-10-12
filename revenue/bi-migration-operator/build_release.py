@@ -11,7 +11,7 @@ DIRECTORIES = ("bi_operator", "web", "vendor", "schemas", "examples", "tools")
 TOP_LEVEL = (
     "BI_OPERATOR.py", "prepare_project.py", "OPEN_POWER_BI.ps1",
     "build_release.py", "requirements.txt", "README.md", "OPERATOR_GUIDE.md",
-    "THIRD_PARTY_LICENSES.txt", "VENDOR_SOURCE.json", "DEMONSTRATION.md",
+    "THIRD_PARTY_LICENSES.txt", "VENDOR_SOURCE.json", "DEMONSTRATION.md", "BILLING_GUIDE.md",
 )
 
 
@@ -24,7 +24,7 @@ def included_files():
                   and not path.name.endswith(".bi-backup")]
     # The six complete CSV files are already contained in examples/sandag/data.zip.
     return sorted({p for p in files if p.is_file()
-                   and not (p.suffix == ".csv" and "examples" in p.parts)})
+                   and not (p.suffix == ".csv" and (ROOT / "examples" / "sandag") in p.parents)})
 
 
 def main():
@@ -37,6 +37,7 @@ def main():
         raise SystemExit("Choose a new output filename; an existing delivery is not overwritten.")
     files = included_files()
     required = [ROOT / p for p in TOP_LEVEL] + [ROOT / "examples/sandag/data.zip"]
+    required += [ROOT / "examples/billing" / name for name in ("agencies.json", "policy.json", "costs.csv", "usage.csv")]
     missing = [str(p.relative_to(ROOT)) for p in required if not p.is_file()]
     if missing:
         raise SystemExit("Missing source files: " + ", ".join(missing))

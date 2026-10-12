@@ -240,3 +240,38 @@ export async function reconcile(input, context) {
 metadata(slot) returns the exact bound descriptor. read has a default limit of 8 MiB and an explicit maximum of 64 MiB; stream reads fixed bounded chunks. The worker owns these handles and closes them before accepting its result. The supplied application demonstrates a complete incremental parser and exact arithmetic.
 
 The existing typed customer entry, @tokenjunkielabs/starforge-merchant/buyer/job-workspace, exposes workspace.intake.inputFiles. Its local, library, begin, chunk, seal, summary, cleanup and cancellation methods operate on original request IDs. Most applications should open that existing workspace, whose parent lifecycle connects the library, file receiver, checkout and result receiving.
+
+## Run the original native file workflow
+
+The maintained checkout continuation has a separate file-input mode. It uses the same installed native SDK, original SF62/SF36 operator, browser approval routes, merchant settlement callback, worker, customer receiving and collection transfer. The earlier completed merchant and checkout records remain at their existing identities.
+
+Run this mode through the existing native capacity controller, after that controller's preceding operation has finished:
+
+~~~sh
+python sf88-operator-buyer-cli/job-workspace/checkout/native-continuation.py \
+  --retained /absolute/original/completed-merchant-fixture \
+  --node /absolute/installed/node \
+  --approval browser \
+  --input-files \
+  --out /absolute/existing/output/input-files-result.json
+~~~
+
+The source root is the installed stellar/scf-starforge-20261009 directory. The retained argument is the original completed fixture accepted by the existing launcher. All new state stays under its checkout-input-files-continuation child. The distinct operation is SCF-JOB-INPUT-FILES-0B8D-20261012, with the original job reference input-files:2026.10. Its existing driver lock, checkout attempt and native result determine whether the same operation can continue.
+
+The run expands the six supplied invoice lines into 1,000 distinct invoice batches, retaining the generated ledger and unchanged supplied price book before receiving either. The 6,000 actual NDJSON rows cross several 256 KiB boundaries. Its report keeps 20 detailed exceptions while every row contributes to the exact totals; 3,980 additional exceptions are counted explicitly.
+
+It performs this full customer workflow:
+
+1. Load the actual merchant catalog and save the request in the original customer workspace.
+2. Send the first local ledger chunk through the private browser route, close the owning workspace, reopen it and resume its missing chunks.
+3. Select the price book through the original declared-file-root path.
+4. Transfer both inputs through the original public HTTPS transport. After the merchant returns a real successful first-chunk response, retain that response hash and interrupt its delivery once. Reopen the merchant and customer, then continue from the already saved chunk.
+5. Import the original handoff, review and approve the exact disposable terms through the original browser broker, and execute the existing native SDK operation.
+6. Let the original worker reconcile the two sealed files; receive and preview the verified result, export its collection, independently receive the archive, and reopen the same checkout and customer.
+7. Release the now-transferred customer copies while retaining their canonical descriptors and ticket. Confirm that the retained job still protects its merchant originals.
+
+The fixture uses local protocol settlement and a local verified TLS/CONNECT route. Those boundaries are explicit in the output. Its native result also retains the input hashes, actual source path, catalog/request/ticket identity, chunk recovery records, one original reservation, one native settlement, final resource digest and collection receiving result.
+
+Request 1 GiB for the complete native process group plus the existing controller's 256 MiB reserve. This includes two Node heaps capped at 256 MiB, the configured 128 MiB worker, Python and native overhead; it is a requested capacity envelope, not a measured peak. The installed dependencies are reused. A 128 MiB operation disk allowance accommodates the two originals, both upload stores, native records and result/collection files.
+
+Rerun only through that same native operation and retained directory. The existing launcher reopens a recorded checkout and recovers an attempted operation; it never clears its attempt to create a new purchase. All failed phases retain their original state for the next correction.
