@@ -1,0 +1,15 @@
+/* Customer eoAPI operations use the original neutral industrial workspace. */
+.eoapi-panel{color:#222;min-width:0}.eoapi-panel h2{font-size:22px}.eoapi-panel h3{font-size:17px;margin:0 0 12px}
+.eoapi-panel h4{margin:22px 0 10px}.eoapi-panel .panel{margin:18px 0;padding:18px;border:1px solid #c9c9c9;background:#fff}
+.eoapi-panel .eoapi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px}
+.eoapi-panel .eoapi-field{display:flex;flex-direction:column;gap:6px;margin:12px 0;font-weight:600;min-width:0}
+.eoapi-panel .eoapi-field small{font-weight:400;color:#555}.eoapi-panel input,.eoapi-panel select,.eoapi-panel textarea{width:100%;max-width:100%;padding:9px;border:1px solid #aaa;border-radius:2px;background:#fff;color:#222;font:inherit}
+.eoapi-panel button{color:#222;background:#f4f4f4;border:1px solid #999;border-radius:2px;padding:8px 11px;cursor:pointer}
+.eoapi-panel button:focus-visible,.eoapi-panel input:focus-visible,.eoapi-panel select:focus-visible{outline:2px solid #444;outline-offset:2px}
+.eoapi-panel button:disabled{opacity:.55;cursor:wait}.eoapi-panel .actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.eoapi-panel details{margin:12px 0}.eoapi-panel summary{cursor:pointer;font-weight:600}.eoapi-panel pre{font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;background:#f7f7f7;padding:12px}
+.eoapi-panel .table-wrap{overflow:auto;max-width:100%}.eoapi-panel table{width:100%;border-collapse:collapse;font-size:13px}
+.eoapi-panel td,.eoapi-panel th{border-bottom:1px solid #ddd;padding:9px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.eoapi-panel th{background:#f5f5f5}.eoapi-panel td small{display:block;color:#555;margin-top:4px;font-size:11px}
+.eoapi-panel .eoapi-message{padding:10px 0;white-space:pre-wrap;overflow-wrap:anywhere}.eoapi-panel .summary-list dd{overflow-wrap:anywhere}
+@media(max-width:640px){.eoapi-panel .panel{padding:12px}.eoapi-panel .eoapi-grid{grid-template-columns:1fr}.eoapi-panel .actions button{flex:1 1 180px}}
