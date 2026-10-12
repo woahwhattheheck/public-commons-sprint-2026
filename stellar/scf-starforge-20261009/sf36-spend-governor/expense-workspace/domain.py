@@ -150,6 +150,8 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             previously_issued.setdefault(entry["transfer_identity"], []).append(entry)
         if entry.get("spending_reservation"):
             previously_reserved.setdefault(digest(entry["spending_reservation"]), []).append(entry)
+        for historical in entry.get("spending_reservation_history", []):
+            previously_reserved.setdefault(digest(historical["identity"]), []).append(entry)
 
     def issue(code, item, description, *, group=None, kinds=None):
         item_id = item["id"] if item else ""

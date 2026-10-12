@@ -59,7 +59,7 @@ Open a purchase from **Buyer expenses**. Its original native purchase section re
 
 A binding or finality disagreement is an original source issue. Repair or reconcile the original buyer through its existing controls, then capture and review that state. A finance allocation or period disposition does not rewrite payment history.
 
-The same original reservation can appear through a direct ledger source and a governed MCP source. The period joins matching original device/inode identity and request digest, counts that outstanding capacity once, and retains all contributing source/item/capture references. Separately owned ledgers keep separate exposure. When the ledger source and governed source expose the same settled original reservation, the period review lets the operator include one original charge and exclude its duplicate representations. Issued allocation lines retain the exact ledger device/inode and original request ID/digest. The existing cross-period review uses that identity as well as the original transfer identity, so choosing the plain ledger representation in one period does not permit the governed representation to be charged again in another. Earlier issued ledger lines are joined through their own retained accepted captures; their frozen documents remain unchanged.
+The same original reservation can appear through a direct ledger source and a governed MCP source. The period joins matching original device/inode identity and request digest, counts that outstanding capacity once, and retains all contributing source/item/capture references. Separately owned ledgers keep separate exposure. When the ledger source and governed source expose the same settled original reservation, the period review lets the operator include one original charge and exclude its duplicate representations. Issued allocation lines retain the exact ledger device/inode and original request ID/digest. The existing cross-period review uses that identity as well as the original transfer identity, so choosing the plain ledger representation in one period does not permit the governed representation to be charged again in another. Earlier issued ledger lines are joined through their own retained accepted captures; their frozen documents remain unchanged. After an original ledger restore, a named and accepted source reattachment retains its exact before/after capture IDs. The cross-period review follows that same registered source's accepted request ancestry to earlier physical ledger identities. This financial continuity review preserves the original source owner and keeps currently observed exposure attached to the actual physical ledger; native recovery owns journal authentication.
 
 ## Allocate, review and issue a period
 
@@ -145,3 +145,20 @@ To refresh after the buyer itself has moved or been restored, use its original n
 
 The expense project remains the record of expense decisions and source observations. The original buyer remains the owner of signing, reservation, reconciliation and complete result delivery.
 
+
+
+## Run the complete original finance receiving
+
+From this source checkout, run the maintained operation with Node 24 and an absolute Python 3 executable:
+
+```sh
+node stellar-forge/mcp-merchant-operator/buyer-expense-governed-receiving.mjs \
+  --work /private/new-governed-finance-case \
+  --python /absolute/path/to/python3
+```
+
+Choose a new private work directory. The operation creates its controlled development owner, uses the original quote store and durable spending helper, then carries the resulting sources through the original HTTP/SQLite expense application, accountant handoff and included project receiver. It reserves 60 base units for the selected purchase and 11 for the other application sharing the complete ledger. It retains and repairs a missing binding in a copied source, settles the selected request through the original finality verifier, and issues exact 40/20 cost-center allocations.
+
+The same operation follows the original ledger representation into one issued period, checks the governed alias in the following period, performs the original audited SQLite snapshot and canonical restore, and records both named source reattachments. The earlier issued lines stay frozen while the following period retains its already-issued-charge review. It then reopens the original period, issues the governed representation, processes the accountant's returned rows, exports both complete projects, receives the included application, and recovers the original request after restart.
+
+The work directory retains `operation.json`, `native-ledger-restore.json`, the original accountant files, complete exports under `exports/`, and the received application. Progress records include the actual operation and capture identities. The original development owner's control-key file stays private in that work directory for continuation of this same case.
