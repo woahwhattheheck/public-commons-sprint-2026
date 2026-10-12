@@ -165,8 +165,15 @@ def main():
                 "completedAt": value.get("completedAt"), "phases": value.get("phases", {}),
                 "sourceSelections": value.get("sourceSelections", []),
             })
-    if len({item["runId"] for item in existing if item["runId"] is not None}) > 1:
-        raise RuntimeError("The original checkpoints and results contain different workflow runs")
+    # The original merchant run and its recipe continuation have distinct identities.
+    # Compare checkpoint/completion pairs within each phase, preserving both originals.
+    for prefix in ("workflow", "workflow-recipes"):
+        phase_paths = {str(native / (prefix + "-receiving-checkpoint.json")),
+                       str(native / (prefix + "-native-run.json"))}
+        phase_runs = {item["runId"] for item in existing
+                      if item["path"] in phase_paths and item["runId"] is not None}
+        if len(phase_runs) > 1:
+            raise RuntimeError("The original " + prefix + " checkpoint and result contain different runs")
     owner = read_existing(native / "native-active.json")
     owner_summary = None if owner is None else {
         key: owner["value"].get(key) for key in

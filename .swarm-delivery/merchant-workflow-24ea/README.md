@@ -70,3 +70,82 @@ The recipe continuation performs actual reusable recipe commissioning and bindin
 Read `workflow-native-run.json` and `workflow-recipes-native-run.json` for the original produced results. Their corresponding receiving checkpoint files preserve completed phases and the exact requests needed to continue. The helper additionally retains `native-active.json`, immutable native attempt records, `runtime-custody.json` and the native output log.
 
 The packet does not contain access tokens or private customer state. The original receiving entry creates its local operation token in the chosen private directory. Keep that directory and its complete workspaces and artifacts with the receiving owner.
+
+
+## Recurring merchant continuation
+
+The original operation now has a complete continuation for two customer periods.
+It runs the merged recurring merchant product from
+`woahwhattheheck/tjlabs-stellar-merchant-workspace` at
+`264a1022ce890f2356a2e3e5501a95b6ce121bdd`, with the native receiving entry and
+operating chapter selected from candidate commit
+`7cfe93bd78c747c66d64f413824d534cf7567f8c` (PR 240).
+
+Keep `run-series-native.py` and `series-source-map.json` together. The packet
+contains the full bodies and Git blob identities of all 692 selected source
+files, including the existing merchant programmes, current provider and
+distribution declarations, browser assets and complete customer receivers.
+Each source file is checked against its original Git blob before execution.
+The original `source-map.json` and `source-assets.json` remain available for
+the first merchant and recipe source selection.
+
+Select the original persistent receiving directory when continuing a prepared
+or completed operation. The full merchant and recipe programmes reopen their
+completed output sets before the recurring continuation begins. Their merchant
+and recipe run identities remain distinct; each checkpoint is reconciled with
+its own completed programme.
+
+```sh
+python3 run-series-native.py \
+  --source-packet series-source-map.json \
+  --directory /absolute/persistent/merchant-workflow-receiver-24ea \
+  --work-dir /absolute/writable/workflow-series-receiver-work \
+  --node /absolute/installed/node \
+  --chromium /absolute/installed/chromium \
+  --playwright-module /absolute/installed/playwright/index.js \
+  --node-modules /absolute/installed/node_modules
+```
+
+The installed application dependencies must supply `@x402/core`,
+`@x402/stellar` and `@x402/extensions` 2.28.0, Stellar SDK 16.3.1,
+`yaml` and `re2js`. The runner composes a private dependency view from those
+complete installed packages. Runtime paths are explicit arguments, so the
+original receiving owner can use the equipped Linux worker.
+
+### Customer journey
+
+The merchant creates one recurring series bound to the original installed
+recipe edition. The first period is planned and started in the actual Console.
+After the server accepts that start, the browser loses its response and uses
+**Continue original action** to recover the same native run. The second period
+uses the typed client and a complete changed OpenAPI source edition. Both
+periods perform the recipe's eight original merchant calls and produce their
+own complete six-file customer delivery.
+
+The customer receives both native deliveries through the existing customer API.
+The full returned profile and twelve customer files then travel through the
+existing profile handover, which produces a complete thirteen-file receiving
+set. Both original workspaces are closed and reopened. The continuation
+reopens both customer archives and the retained offline handover, confirms the
+same original runs and source editions, and retains the complete native call
+records with the original baseline and recipe outputs.
+
+### Native output transfer
+
+The original operation retains `workflow-series-receiving-checkpoint.json`
+and, on completion, `workflow-series-native-run.json` in the selected receiving
+directory. The runner prints `ORIGINAL_NATIVE_DISPATCH` only after it creates
+the actual native child, including that child's PID and source selection.
+It streams the complete child output and retains the log in the same directory.
+
+After the native child exits, the runner packages the complete operation
+reports, customer files, profile exports and both Console states into
+`merchant-original-native-artifacts.tar.gz` under the work directory.
+`ORIGINAL_NATIVE_OUTPUT_READY` reports the exact bundle size, SHA-256 and
+native exit code. The foreground receiver stays available for complete output
+transfer. Each newline-delimited command
+`{"op":"read-bundle","offset":0,"length":8192}` returns a base64 chunk at the
+requested byte offset; advance by the returned byte count until the whole
+bundle is preserved and its reported digest matches. Send
+`{"op":"close"}` after transfer. Keep the complete receiving state with its
+original owner so further customer periods continue the same operation.
