@@ -68,9 +68,9 @@ function runtimeOptions(runtime = {}) {
   return result;
 }
 
-export async function openS3MerchantWorkspace({ directory, releaseStore, initial, sourceOptions } = {}) {
+export async function openS3MerchantWorkspace({ directory, releaseStore, initial, sourceOptions, expectedWorkspaceId } = {}) {
   if (typeof directory !== 'string' || !directory) throw new S3WorkspaceError('WORKSPACE_DIRECTORY_REQUIRED');
-  const store = await openS3WorkspaceStore(directory), root = store.directory;
+  const store = await openS3WorkspaceStore(directory, { expectedWorkspaceId }), root = store.directory;
   let releases, consoleSession, closing = null, stopped = false;
   const active = new Map();
   try {
@@ -242,3 +242,5 @@ export async function openS3MerchantWorkspace({ directory, releaseStore, initial
   };
   return controller;
 }
+
+export { inspectS3WorkspaceStore } from './store.mjs';

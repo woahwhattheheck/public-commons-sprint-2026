@@ -37,15 +37,78 @@ async function regularOrMissing(path) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
+export const S3_WORKSPACE_INSPECTION_SCHEMA = 'stellar-forge.s3-workspace-inspection.v1';
+const WORKSPACE_UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+const CONTENT_HASH = /^[a-f0-9]{64}$/;
+
+/** Read the original identity and current revision without taking its writer lease. */
+export async function inspectS3WorkspaceStore(directory, { allowMissing = false } = {}) {
+  if (typeof directory !== 'string' || !directory || directory.includes('\0') ||
+      typeof allowMissing !== 'boolean') throw new S3WorkspaceError('WORKSPACE_DIRECTORY_REQUIRED');
+  const root = resolve(directory), filename = join(root, 'workspace.sqlite');
+  const empty = { schema: S3_WORKSPACE_INSPECTION_SCHEMA, state: 'NEW', directory: root,
+    workspaceId: null, releaseStore: null, revision: 0, latest: null, database: null };
+  let folder, before;
+  try { folder = await lstat(root); }
+  catch (error) { if (allowMissing && error.code === 'ENOENT') return empty; throw error; }
+  if (!folder.isDirectory() || folder.isSymbolicLink() || await realpath(root) !== root)
+    throw new S3WorkspaceError('WORKSPACE_DIRECTORY_INVALID');
+  try { before = await lstat(filename); }
+  catch (error) { if (allowMissing && error.code === 'ENOENT') return empty; throw error; }
+  if (!before.isFile() || before.isSymbolicLink() || await realpath(filename) !== filename)
+    throw new S3WorkspaceError('WORKSPACE_FILE_INVALID');
+  let db, result;
+  try {
+    db = new DatabaseSync(filename, { readOnly: true });
+    db.exec('PRAGMA busy_timeout=1000; BEGIN');
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row => row.name);
+    if (!['metadata', 'revisions', 'reviews', 'operations'].every(name => tables.includes(name)))
+      throw new S3WorkspaceError('WORKSPACE_STORE_INVALID');
+    const value = key => db.prepare('SELECT value FROM metadata WHERE key=?').get(key)?.value ?? null;
+    const workspaceId = value('workspaceId'), releaseStore = value('releaseStore');
+    if (!WORKSPACE_UUID.test(workspaceId ?? '') ||
+        releaseStore !== null && (typeof releaseStore !== 'string' || !releaseStore ||
+          releaseStore.includes('\0') || resolve(releaseStore) !== releaseStore))
+      throw new S3WorkspaceError('WORKSPACE_STORE_INVALID');
+    const row = db.prepare('SELECT revision,source_sha256,payment_sha256,origin,saved_at FROM revisions ORDER BY revision DESC LIMIT 1').get();
+    if (row && (!Number.isSafeInteger(row.revision) || row.revision < 1 ||
+        !CONTENT_HASH.test(row.source_sha256) || !CONTENT_HASH.test(row.payment_sha256) ||
+        typeof row.origin !== 'string' || typeof row.saved_at !== 'string'))
+      throw new S3WorkspaceError('WORKSPACE_STORE_INVALID');
+    result = { schema: S3_WORKSPACE_INSPECTION_SCHEMA, state: 'READY', directory: root,
+      workspaceId, releaseStore, revision: row?.revision ?? 0,
+      latest: row ? { revision: row.revision, sourceSha256: row.source_sha256,
+        paymentSha256: row.payment_sha256, origin: row.origin, savedAt: row.saved_at } : null,
+      database: { path: filename, kind: 's3-workspace-store', exists: true, dev: before.dev, ino: before.ino } };
+    db.exec('COMMIT');
+  } catch (error) {
+    if (error instanceof S3WorkspaceError) throw error;
+    throw new S3WorkspaceError('WORKSPACE_STORE_INVALID', 409, 'Select an original S3 merchant workspace or a new private directory.');
+  } finally { db?.close(); }
+  const after = await lstat(filename);
+  if (!after.isFile() || after.isSymbolicLink() || after.dev !== before.dev || after.ino !== before.ino)
+    throw new S3WorkspaceError('WORKSPACE_IDENTITY_CHANGED', 409);
+  return result;
+}
+
 /** SQLite supplies the revision compare-and-swap and crash-released operation lock. */
-export async function openS3WorkspaceStore(directory) {
+export async function openS3WorkspaceStore(directory, { expectedWorkspaceId } = {}) {
+  if (expectedWorkspaceId !== undefined && expectedWorkspaceId !== 'new' &&
+      !WORKSPACE_UUID.test(expectedWorkspaceId ?? ''))
+    throw new S3WorkspaceError('EXPECTED_WORKSPACE_ID_INVALID');
+  if (expectedWorkspaceId && expectedWorkspaceId !== 'new') {
+    const original = await lstat(join(resolve(directory), 'workspace.sqlite'));
+    if (!original.isFile() || original.isSymbolicLink()) throw new S3WorkspaceError('WORKSPACE_FILE_INVALID');
+  }
   await mkdir(resolve(directory), { recursive: true, mode: 0o700 });
   const root = await realpath(resolve(directory)); await chmod(root, 0o700);
   const filename = join(root, 'workspace.sqlite'), lockfile = join(root, 'operations.sqlite');
   await regularOrMissing(filename); await regularOrMissing(lockfile);
   const db = new DatabaseSync(filename);
-  await chmod(filename, 0o600);
-  db.exec(`PRAGMA busy_timeout=1000; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;
+  try {
+    await chmod(filename, 0o600);
+    db.exec('PRAGMA busy_timeout=1000; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; BEGIN IMMEDIATE');
+    db.exec(`
     CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY,value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS revisions (
       revision INTEGER PRIMARY KEY,operation_id TEXT NOT NULL UNIQUE,input_sha256 TEXT NOT NULL,
@@ -58,7 +121,21 @@ export async function openS3WorkspaceStore(directory) {
     CREATE TABLE IF NOT EXISTS operations (
       id TEXT PRIMARY KEY,kind TEXT NOT NULL,input_sha256 TEXT NOT NULL,input TEXT NOT NULL,context TEXT,
       state TEXT NOT NULL,result TEXT,error TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);`);
-  db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('workspaceId', randomUUID());
+    const priorId = db.prepare('SELECT value FROM metadata WHERE key=?').get('workspaceId')?.value;
+    if (priorId !== undefined && !WORKSPACE_UUID.test(priorId))
+      throw new S3WorkspaceError('WORKSPACE_STORE_INVALID');
+    if (expectedWorkspaceId === 'new' && priorId !== undefined ||
+        expectedWorkspaceId && expectedWorkspaceId !== 'new' && priorId !== expectedWorkspaceId)
+      throw new S3WorkspaceError('WORKSPACE_IDENTITY_CHANGED', 409,
+        'The original S3 workspace changed after review. Reopen its current identity before starting.');
+    if (priorId === undefined)
+      db.prepare('INSERT INTO metadata(key,value) VALUES (?,?)').run('workspaceId', randomUUID());
+    db.exec('COMMIT');
+  } catch (error) {
+    try { if (db.isTransaction) db.exec('ROLLBACK'); }
+    finally { db.close(); }
+    throw error;
+  }
   let closed = false;
   const transaction = fn => {
     db.exec('BEGIN IMMEDIATE');

@@ -1,7 +1,8 @@
 // MIT. Local browser transport for the original S3 merchant authoring controller.
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { constants } from 'node:fs';
+import { readFile, open } from 'node:fs/promises';
+import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openS3MerchantWorkspace } from './controller.mjs';
@@ -24,8 +25,11 @@ const POST = {
   '/api/stage': ['stage', ['packageId', 'releaseId', 'operationId', 'runtime']],
   '/api/console': ['openReleaseConsole', []],
 };
-export async function startS3MerchantWorkspace({ port = 0, ...options } = {}) {
-  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new S3WorkspaceError('INVALID_PORT');
+export async function startS3MerchantWorkspace({ port = 0, releaseConsolePort, ...options } = {}) {
+  if (!Number.isInteger(port) || port < 0 || port > 65535 ||
+      releaseConsolePort !== undefined && (!Number.isInteger(releaseConsolePort) || releaseConsolePort < 0 || releaseConsolePort > 65535))
+    throw new S3WorkspaceError('INVALID_PORT');
+  if (port && port === releaseConsolePort) throw new S3WorkspaceError('WORKSPACE_PORT_CONFLICT');
   const controller = await openS3MerchantWorkspace(options);
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map();
@@ -85,26 +89,57 @@ export async function startS3MerchantWorkspace({ port = 0, ...options } = {}) {
   server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
   try { await new Promise((done, fail) => { server.once('error', fail); server.listen(port, '127.0.0.1', done); }); }
   catch (error) { await controller.close(); throw error; }
-  host = '127.0.0.1:' + server.address().port; origin = 'http://' + host;
+  origin = new URL('http://127.0.0.1:' + server.address().port).origin; host = new URL(origin).host;
   const close = () => closing ??= (async () => {
     shuttingDown = true;
     try { await controller.close(); }
     finally { await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); }); }
   })();
-  return { controller, server, origin, url: origin + '/#' + token, token, close };
+  let releaseConsole = null;
+  try {
+    if (releaseConsolePort !== undefined)
+      releaseConsole = await controller.openReleaseConsole({ port: releaseConsolePort });
+  } catch (error) { await close(); throw error; }
+  return { controller, server, origin, url: origin + '/#' + token, token, releaseConsole, close };
 }
 
 const HELP = `S3 merchant workspace
   node server.mjs --state PRIVATE_DIRECTORY [--port 0] [--release-store EXISTING_OR_NEW_STORE]
     [--source PRIVATE_SOURCE.json --payment PUBLIC_TERMS.json --origin HTTPS_ORIGIN]
+    [--release-console-port 0] [--expected-workspace-id new|ORIGINAL_UUID]
+    [--expected-source-sha256 SHA256 --expected-payment-sha256 SHA256]
 
 Source/payment/origin import the first revision only. Reopen the same --state
 without the original files. The original AWS provider stays in this process.
 The printed private local URL opens source, product, price and release authoring.
+--release-console-port also opens the original release console in this same
+managed session; stopping the workspace drains that console and its owned seller.
 `;
+async function importFile(path, expectedSha256) {
+  const filename = resolve(path);
+  const handle = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);
+  let bytes;
+  try {
+    const before = await handle.stat({ bigint: true });
+    if (!before.isFile() || before.size > 1048576n) throw new S3WorkspaceError('IMPORT_TOO_LARGE');
+    bytes = await handle.readFile();
+    const after = await handle.stat({ bigint: true });
+    if (BigInt(bytes.length) !== before.size || before.size !== after.size ||
+        before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs)
+      throw new S3WorkspaceError('IMPORT_CHANGED', 409);
+  } finally { await handle.close(); }
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  if (expectedSha256 !== undefined && expectedSha256 !== sha256)
+    throw new S3WorkspaceError('IMPORT_CHANGED', 409, 'The original import file changed after review.');
+  let value;
+  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+  catch { throw new S3WorkspaceError('IMPORT_JSON_REQUIRED'); }
+  return { path: filename, sha256, value };
+}
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', '-h'].includes(args[0])) { process.stdout.write(HELP); return; }
-  const flags = {}, known = ['--state', '--port', '--release-store', '--source', '--payment', '--origin'];
+  const flags = {}, known = ['--state', '--port', '--release-store', '--source', '--payment', '--origin',
+    '--release-console-port', '--expected-workspace-id', '--expected-source-sha256', '--expected-payment-sha256'];
   for (let index = 0; index < args.length; index += 2) {
     const [key, value] = args.slice(index, index + 2);
     if (!known.includes(key) || !value || value.startsWith('--') || Object.hasOwn(flags, key)) throw new S3WorkspaceError('INVALID_OPTIONS', 400, HELP);
@@ -113,18 +148,35 @@ export async function main(args = process.argv.slice(2)) {
   if (!flags['--state']) throw new S3WorkspaceError('STATE_REQUIRED', 400, HELP);
   const importCount = ['--source', '--payment', '--origin'].filter(key => flags[key]).length;
   if (importCount !== 0 && importCount !== 3) throw new S3WorkspaceError('COMPLETE_IMPORT_REQUIRED', 400, HELP);
-  const load = async path => {
-    const bytes = await readFile(resolve(path));
-    if (bytes.length > 1048576) throw new S3WorkspaceError('IMPORT_TOO_LARGE');
-    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  for (const key of ['--expected-source-sha256', '--expected-payment-sha256'])
+    if (flags[key] !== undefined && (importCount !== 3 || !/^[a-f0-9]{64}$/.test(flags[key])))
+      throw new S3WorkspaceError('EXPECTED_IMPORT_HASH_INVALID');
+  const port = key => {
+    if (flags[key] === undefined) return undefined;
+    if (!/^(0|[1-9][0-9]*)$/.test(flags[key])) throw new S3WorkspaceError('INVALID_PORT');
+    const value = Number(flags[key]);
+    if (!Number.isSafeInteger(value) || value > 65535) throw new S3WorkspaceError('INVALID_PORT');
+    return value;
   };
+  let source, payment;
+  if (importCount) [source, payment] = await Promise.all([
+    importFile(flags['--source'], flags['--expected-source-sha256']),
+    importFile(flags['--payment'], flags['--expected-payment-sha256']),
+  ]);
   const session = await startS3MerchantWorkspace({ directory: resolve(flags['--state']),
     ...(flags['--release-store'] ? { releaseStore: resolve(flags['--release-store']) } : {}),
-    port: flags['--port'] === undefined ? 0 : Number(flags['--port']),
-    ...(importCount ? { initial: { source: await load(flags['--source']), payment: await load(flags['--payment']), origin: flags['--origin'] } } : {}) });
-  process.stdout.write(JSON.stringify({ workspace: session.url, releaseStore: session.controller.releaseStore }) + '\n');
+    port: port('--port') ?? 0, releaseConsolePort: port('--release-console-port'),
+    expectedWorkspaceId: flags['--expected-workspace-id'],
+    ...(importCount ? { initial: { source: source.value, payment: payment.value, origin: flags['--origin'] } } : {}) });
   const stop = () => { void session.close().then(() => { process.exitCode = 0; }, error => { process.stderr.write(error.message + '\n'); process.exitCode = 1; }); };
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, stop);
+  process.stdout.write(JSON.stringify({
+    schema: 'stellar-forge.s3-workspace-startup.v1', status: 'S3_MERCHANT_WORKSPACE_READY',
+    workspace: session.url, directory: session.controller.directory, workspaceId: session.controller.workspaceId,
+    releaseStore: session.controller.releaseStore, releaseConsole: session.releaseConsole,
+    initial: importCount ? { sourceFile: source.path, sourceSha256: source.sha256,
+      paymentFile: payment.path, paymentSha256: payment.sha256, origin: flags['--origin'] } : null,
+  }) + '\n');
   return session;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
