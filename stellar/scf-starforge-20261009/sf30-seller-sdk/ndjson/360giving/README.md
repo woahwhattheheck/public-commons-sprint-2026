@@ -135,7 +135,7 @@ Every command prints one JSON result. Successful native-ready preparation and co
 
 Output directories preserve existing bytes. Original files and complete ZIPs are synced before their final paths are published; POSIX systems also sync the containing directory. Repeating an unchanged preparation or export resumes the same original source edition; a different source or changed operator program uses a new edition directory.
 
-Receiving retains the selected archive identity before publishing its files. Repeat the same `receive --file ... --out ...` command after an interruption: completed original members are reused and incomplete publication resumes. A completed receiver is verified and reused. A different archive or pre-existing unrelated directory returns an actionable selection error. The complete manifest is published only after every original member.
+Receiving retains the selected archive identity before publishing its files. Repeat the same `receive --file ... --out ...` command after an interruption: completed original members are reused and incomplete publication resumes. A completed receiver is verified and reused. A different archive or pre-existing unrelated directory returns an actionable selection error. The complete manifest is published only after every original member. Receiving compares the complete declared inventory in relative-path order, so archives and filesystem traversal can list the same members differently. Existing manifest bytes and every member's length and SHA-256 remain unchanged.
 
 ## Operate the complete retained publisher editions
 
