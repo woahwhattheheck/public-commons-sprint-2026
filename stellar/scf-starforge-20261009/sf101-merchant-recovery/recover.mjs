@@ -11,6 +11,8 @@ import { promisify } from 'node:util';
 const scrypt = promisify(scryptCb);
 const SCHEMA = 'stellar-forge.merchant-recovery.v1';
 const PLAN_SCHEMA = 'stellar-forge.merchant-recovery-plan.v1';
+const CAPTURE_SCHEMA = 'stellar-forge.merchant-recovery-capture.v1';
+export const CAPTURE_MARKER = '.sf101-capture.json';
 const MAX_FILES = 10000;
 const MAX_TOTAL = 4 * 1024 ** 3;
 const MAX_FILE = 2 * 1024 ** 3;
@@ -31,15 +33,18 @@ function argumentsOf(argv) {
   for (let i = 0; i < rest.length; i++) {
     let k = rest[i];
     if (k === '--quiesced') { if (opts[k]) fail('Duplicate --quiesced'); opts[k] = true; continue; }
-    if (!['--plan', '--bundle', '--out', '--pass-env'].includes(k) || !rest[i+1] || rest[i+1].startsWith('--') || own(opts,k)) fail('Invalid/duplicate option '+k);
+    if (!['--plan', '--bundle', '--out', '--pass-env', '--capture-id', '--expected-plan-sha256'].includes(k) || !rest[i+1] || rest[i+1].startsWith('--') || own(opts,k)) fail('Invalid/duplicate option '+k);
     opts[k] = rest[++i];
   }
-  const allowed = command === 'snapshot' ? ['--plan','--out','--pass-env','--quiesced'] :
+  const allowed = command === 'snapshot' ? ['--plan','--out','--pass-env','--quiesced','--capture-id','--expected-plan-sha256'] :
     command === 'restore' ? ['--bundle','--out','--pass-env'] : ['--bundle','--pass-env'];
   if (Object.keys(opts).some(k => !allowed.includes(k)) || !opts['--pass-env'] ||
      (command === 'snapshot' && (!opts['--plan'] || !opts['--out'] || !opts['--quiesced'])) ||
      (command === 'restore' && (!opts['--bundle'] || !opts['--out'])) ||
      (command === 'verify' && !opts['--bundle'])) fail('Missing or unsupported arguments for '+command);
+  if (Boolean(opts['--capture-id']) !== Boolean(opts['--expected-plan-sha256']) ||
+      (opts['--capture-id'] && (!/^[a-f0-9]{64}$/.test(opts['--capture-id']) ||
+       !/^[a-f0-9]{64}$/.test(opts['--expected-plan-sha256'])))) fail('Capture identity requires its exact original plan SHA-256');
   if (!/^[A-Z][A-Z0-9_]{4,63}$/.test(opts['--pass-env'])) fail('Passphrase env variable name must be uppercase');
   for (const key of ['--plan','--bundle','--out']) if (opts[key] && !isAbsolute(opts[key])) fail(key+' must be absolute');
   return { command, opts };
@@ -52,11 +57,20 @@ function password(name) {
 async function keyFor(pass, salt) {
   return await scrypt(pass, salt, 32, { N: 1 << 15, r: 8, p: 1, maxmem: 64 << 20 });
 }
-async function safeJSON(file, max) {
+async function safeBytes(file, max) {
   const st = await lstat(file);
   if (!st.isFile() || st.isSymbolicLink() || st.size > max || st.nlink !== 1) fail('Unsafe JSON input');
   const fd = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
-  try { return JSON.parse((await fd.readFile({encoding:'utf8'}))); } finally { await fd.close(); }
+  try {
+    const opened = await fd.stat();
+    if (!opened.isFile() || opened.nlink !== 1 || opened.size > max) fail('Unsafe JSON input');
+    const value = await fd.readFile();
+    if (value.length > max) fail('JSON input grew past its limit');
+    return value;
+  } finally { await fd.close(); }
+}
+async function safeJSON(file, max) {
+  return JSON.parse((await safeBytes(file, max)).toString('utf8'));
 }
 async function safeDir(path) {
   const st = await lstat(path);
@@ -64,8 +78,11 @@ async function safeDir(path) {
   return path;
 }
 function inside(a,b) { return a === b || b.startsWith(a+sep); }
-async function inventory(planPath, out) {
-  const plan = await safeJSON(planPath, 256 * 1024);
+async function inventory(planPath, out, expectedPlanSha256) {
+  const raw = await safeBytes(planPath, 256 * 1024);
+  const planSha256 = sha().update(raw).digest('hex');
+  if (expectedPlanSha256 !== undefined && expectedPlanSha256 !== planSha256) fail('Original recovery plan changed after review');
+  const plan = JSON.parse(raw.toString('utf8'));
   if (!isObject(plan) || plan.schema !== PLAN_SCHEMA || !Array.isArray(plan.roots) ||
       plan.roots.length < 1 || plan.roots.length > 20) fail('Invalid recovery plan');
   const roots = [], names = new Set();
@@ -102,7 +119,24 @@ async function inventory(planPath, out) {
     }
   }
   for (const r of roots) await walk(r.absolute,r.name,0);
-  return { roots:roots.map(({name,kind})=>({name,kind})), entries, total };
+  return { planSha256, roots:roots.map(({name,kind})=>({name,kind})), entries, total };
+}
+
+// Inspect through the same source inventory used by native snapshot creation.
+// This reads the declared sources; it does not create output or derive a key.
+export async function inspectSnapshotPlan({ plan, out, expectedPlanSha256 } = {}) {
+  for (const [name, value] of [['plan', plan], ['out', out]]) {
+    if (typeof value !== 'string' || !isAbsolute(value) || value.includes('\0') || resolve(value) !== value)
+      fail(name + ' must be an absolute normalized path');
+  }
+  if (expectedPlanSha256 !== undefined && !/^[a-f0-9]{64}$/.test(expectedPlanSha256)) fail('Invalid plan SHA-256');
+  const found = await inventory(plan, out, expectedPlanSha256);
+  return { status: 'SNAPSHOT_PLAN_READY', plan, output: out, planSha256: found.planSha256,
+    roots: found.roots.map(root => ({ ...root,
+      path: found.entries.find(entry => entry.path === root.name).source })),
+    files: found.entries.filter(entry => entry.kind === 'file').length,
+    directories: found.entries.filter(entry => entry.kind === 'directory').length,
+    bytes: found.total };
 }
 function hashStream(hash) {
   return new Transform({transform(chunk,enc,cb){hash.update(chunk);cb(null,chunk)}});
@@ -141,16 +175,21 @@ async function encryptSource(source,dest,key) {
 }
 async function makeSnapshot(opts) {
   const output = resolve(opts['--out']);
-  const {roots,entries,total} = await inventory(opts['--plan'],output);
+  const {roots,entries,total,planSha256} = await inventory(opts['--plan'],output,opts['--expected-plan-sha256']);
+  const capture = opts['--capture-id'] ? { schema:CAPTURE_SCHEMA, id:opts['--capture-id'], planSha256 } : null;
   const pass = password(opts['--pass-env']);
   const salt = randomBytes(32), key = await keyFor(pass,salt);
   let created = false;
   try {
     await mkdir(output,{mode:0o700}); created = true;
+    if (capture) {
+      await writeFile(join(output,CAPTURE_MARKER),JSON.stringify(capture)+'\n',{flag:'wx',mode:0o600});
+      await syncFile(join(output,CAPTURE_MARKER));
+    }
     await mkdir(join(output,'objects'),{mode:0o700});
     const manifest = {schema:SCHEMA,createdAt:new Date().toISOString(),
       kdf:{name:'scrypt',N:32768,r:8,p:1,salt:hex(salt)},cipher:'aes-256-gcm',
-      roots,entries:[],fileCount:0,totalPlainBytes:total};
+      roots,entries:[],fileCount:0,totalPlainBytes:total,...(capture ? {capture} : {})};
     for (const item of entries) {
       if (item.kind === 'directory') { manifest.entries.push({path:item.path,kind:'directory'}); continue; }
       const id = fileId(++manifest.fileCount);
@@ -160,7 +199,8 @@ async function makeSnapshot(opts) {
     manifest.manifestMac=manifestMac(manifest,key);
     await writeFile(join(output,'manifest.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx',mode:0o600});
     await syncFile(join(output,'manifest.json'));
-    return {status:'SNAPSHOT_CREATED',bundle:output,files:manifest.fileCount,bytes:total,roots:roots.map(r=>r.name)};
+    return {status:'SNAPSHOT_CREATED',bundle:output,files:manifest.fileCount,bytes:total,roots:roots.map(r=>r.name),
+      ...(capture ? {capture} : {})};
   } catch(e) {if(created) await rm(output,{recursive:true,force:true}); throw e;}
   finally {key.fill(0);}
 }
@@ -175,6 +215,9 @@ function validateManifest(m) {
       !Array.isArray(m.roots) || !Array.isArray(m.entries) || m.roots.length<1 || m.roots.length>20 ||
       m.entries.length>MAX_FILES || !/^[a-f0-9]{64}$/.test(m.manifestMac??'') || !Number.isSafeInteger(m.fileCount) ||
       !Number.isSafeInteger(m.totalPlainBytes) || m.totalPlainBytes<0 || m.totalPlainBytes>MAX_TOTAL) fail('Bad recovery manifest');
+  if (m.capture !== undefined && (!isObject(m.capture) || m.capture.schema !== CAPTURE_SCHEMA ||
+      !/^[a-f0-9]{64}$/.test(m.capture.id ?? '') || !/^[a-f0-9]{64}$/.test(m.capture.planSha256 ?? '') ||
+      Object.keys(m.capture).some(key => !['schema','id','planSha256'].includes(key)))) fail('Invalid native capture binding');
   const names = new Set();
   for(const r of m.roots){if(!isObject(r)||!NAME.test(r.name)||names.has(r.name)||!['file','directory'].includes(r.kind)) fail('Invalid manifest root');names.add(r.name);}
   let files=0, bytes=0; const known = new Set(), items = new Map();

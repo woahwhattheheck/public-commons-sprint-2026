@@ -8,7 +8,7 @@ import { deliveryError } from './wire.mjs';
 const help = [
   'Starforge completed result delivery', '',
   '  jobs delivery status|scan|drain|work --config MERCHANT_JSON --state MERCHANT_STATE',
-  '       --destinations DESTINATIONS_JSON',
+  '       --destinations DESTINATIONS_JSON [--delivery-state DELIVERY_DIRECTORY]',
   '  jobs delivery show --config MERCHANT_JSON --state MERCHANT_STATE',
   '       --destinations DESTINATIONS_JSON --id DELIVERY_SHA256',
   '  jobs delivery requeue --config MERCHANT_JSON --state MERCHANT_STATE',
@@ -28,7 +28,7 @@ const problem = message => Object.assign(deliveryError('JRD_COMMAND_INVALID'), {
 function options(argv) {
   const command = argv[0];
   if (!Object.hasOwn(allowed, command)) throw problem('Choose a delivery command from --help.');
-  const keys = new Set(['--config', '--state', '--destinations', ...allowed[command]]), values = new Map();
+  const keys = new Set(['--config', '--state', '--destinations', '--delivery-state', ...allowed[command]]), values = new Map();
   for (let index = 1; index < argv.length; index++) {
     const flag = argv[index];
     if (!keys.has(flag) || values.has(flag)) throw problem('Unknown or repeated option: ' + flag);
@@ -50,7 +50,8 @@ export async function runDeliveryCommand(argv = process.argv.slice(2), { print =
   let delivery;
   const emit = value => print(JSON.stringify(value, null, 2));
   try {
-    delivery = await openResultDelivery({ model, config });
+    delivery = await openResultDelivery({ model, config,
+      directory: values.has('--delivery-state') ? resolve(values.get('--delivery-state')) : undefined });
     if (command === 'status') return emit(delivery.snapshot());
     if (command === 'show') return emit(delivery.get(values.get('--id')));
     if (command === 'scan') return emit(await delivery.scan());
