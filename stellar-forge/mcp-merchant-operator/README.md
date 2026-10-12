@@ -32,6 +32,38 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
+## Operate native OpenSearch queries and relevance
+
+Use the same operator for the original OpenSearch workspace: save query revisions,
+inspect the native source, capture result editions, maintain judged query sets,
+evaluate and compare native rankings, and prepare the selected query as a merchant.
+Original request IDs, revisions, captures and customer files remain available after
+the MCP process restarts. The browser and MCP operate the same retained workspace.
+
+The host declares each workspace alias in a private connection file with its
+original directory, source file and optional merchant plan. Initialize its operator:
+
+```sh
+node stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp init-opensearch-workspaces \
+  --dir /private/search/mcp --connection /private/search/mcp-workspaces.json
+node stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp-stdio \
+  --config /private/search/mcp/merchant-mcp.json
+```
+
+An existing managed deployment can pass `--release-store ORIGINAL_SF82_STORE`
+to initialization. An existing merchant configuration can attach the same
+private connection file through `opensearchWorkspaceConnection`.
+Configured OpenSearch operators accept up to 2 MiB per HTTP request or stdio frame
+so complete original query definitions and judgment sets fit; each original
+workspace validator still enforces its own document and case limits.
+Saved results, reports and customer packages use the existing SHA-pinned,
+resumable file reads.
+
+See [OPENSEARCH_WORKSPACE.md](OPENSEARCH_WORKSPACE.md) for the connection schema,
+26 operations, original capture and relevance workflow, customer delivery and
+recovery. The existing original release controls own deployment selection,
+startup, drain, upgrade and rollback.
+
 ## Operate existing WooCommerce stores
 
 Connect the current SF104 merchant operator using
