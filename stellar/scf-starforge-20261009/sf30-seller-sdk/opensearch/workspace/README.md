@@ -2,7 +2,7 @@
 
 Author a named query, inspect its native OpenSearch contract, capture a durable result edition, and prepare the original Stellar Forge merchant and generated customer client. The workspace uses the same source adapter and merchant compiler as the command-line product.
 
-MCP agents can operate the same retained workspace through [the merchant MCP workflow](../../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md). Host-declared aliases expose saved query revisions, native evaluations, judgment history and complete customer file reads. The browser and MCP share the original operation IDs, results and prepared packages.
+MCP agents can operate the same retained workspace through [the merchant MCP workflow](../../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md). Its 43 tools cover saved query revisions, native evaluations, judgment history, prepared packages, managed releases and complete customer delivery. Stage a saved package into this workspace's original deployment store, compare and select its release, run the seller, and generate a retained client from its actual public contract. Browser and MCP share the original operation IDs, release generations, owned instances and customer exports through upgrade, rollback and reopening.
 
 ## Open an existing source
 
