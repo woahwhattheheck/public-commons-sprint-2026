@@ -1,13 +1,28 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
+import { grpcStartup } from './application-grpc.mjs';
 import { blockscoutStartup } from './application-blockscout.mjs';
 import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
+import { ndjsonStartup } from './application-ndjson.mjs';
+import { cheesecakeStartup } from './application-cheesecake.mjs';
+import { odataStartup } from '../../sf30-seller-sdk/odata/live/applications.mjs';
+import { secEdgarStartup } from './application-sec-edgar.mjs';
+import { jobResultReceiverStartup } from './application-job-result-receiver.mjs';
+import { sheetsStartup } from './application-sheets.mjs';
 import { atlasStartup } from './application-atlas.mjs';
+import { n8nStartup } from './application-n8n.mjs';
 import { redisStartup } from './application-redis.mjs';
+import { openApiStartup } from './application-openapi.mjs';
+import { arcgisAgentStartup } from './application-arcgis.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
+import { pricingStartup } from './application-pricing.mjs';
 import { collectionsStartup } from './application-collections.mjs';
+import { grantStartup } from './application-grant.mjs';
+import { fredStartup } from './application-fred.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
 import { browserWalletOutputReader, browserWalletStartup, verifyBrowserWalletLaunch } from './application-browser-wallet.mjs';
+import { rssAtomStartup } from './application-rss-atom.mjs';
+import { apiPassWorkspaceStartup, verifyApiPassWorkspaceLaunch } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedOutputReader, eventFeedStartup, verifyEventFeedLaunch } from './application-event-feed.mjs';
 import { constants } from 'node:fs';
 import { StringDecoder } from 'node:string_decoder';
@@ -42,13 +57,14 @@ export async function applicationEnvironment(path, expectedSha256) {
   try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
   catch { need(false, 'APPLICATION_ENVIRONMENT_JSON_REQUIRED'); }
   need(plain(value) && Object.keys(value).length <= 128 && Object.entries(value).every(([name, value]) =>
-    /^[A-Z_][A-Z0-9_]{0,127}$/.test(name) && typeof value === 'string' && !value.includes('\0') &&
+    /^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name) && typeof value === 'string' && !value.includes('\0') &&
     Buffer.byteLength(value) <= 8192), 'APPLICATION_ENVIRONMENT_VALUES_INVALID');
   need(!['HOME', 'CODEX_HOME'].some(name => Object.hasOwn(value, name)), 'APPLICATION_ENVIRONMENT_HOME_RESERVED');
   return { environment: { ...process.env, ...value }, sha256 };
 }
 export async function prepareApplicationCommand(request, directory, originalArgs) {
   await verifyEventFeedLaunch(request, directory);
+  await verifyApiPassWorkspaceLaunch(request, directory);
   await verifyBrowserWalletLaunch(request, directory);
   const { environment } = await applicationEnvironment(request.environmentFile, request.environmentSha256);
   if (request.pythonCommand) return preparePythonManagedChild(dirname(dirname(directory)), request, environment);
@@ -86,6 +102,135 @@ export function observeApplicationOutput(request, directory, context = {}) {
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (request.command === 'n8n-merchant') {
+      if (!text.startsWith('{"schema":"stellar-forge.n8n-merchant-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await n8nStartup(request, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'grpc-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.grpc-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await grpcStartup(request, text, directory);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'api-pass-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.sf101.api-pass-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await apiPassWorkspaceStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'stellar-application') {
+      if (!text.startsWith('{"schema":"stellar-forge.application-installed-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await cheesecakeStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'dataset' && request.args?.[0] === 'odata') {
+      if (!text.startsWith('{"schema":"stellar-forge.odata-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await odataStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'sec-edgar' && request.args?.[0] === 'workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.sec-edgar-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await secEdgarStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'jobs' && request.args?.[0] === 'receiver' && request.args?.[1] === 'serve') {
+      if (!text.startsWith('{"schema":"stellar-forge.job-result-receiver-ready.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await jobResultReceiverStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'sheets-source') {
+      if (!text.startsWith('{"schema":"stellar-forge.sheets-authoring-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await sheetsStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (walletOutput) {
       for (const value of walletOutput(text)) {
         saving = saving.then(async () => {
@@ -101,6 +246,71 @@ export function observeApplicationOutput(request, directory, context = {}) {
           });
         }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       }
+      return;
+    }
+    if (request.command === 'fred' && text.startsWith('{') &&
+        text.includes('"schema":"stellar-forge.fred-workspace-startup.v1"')) {
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await fredStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'dataset-ndjson') {
+      if (!text.startsWith('{"schema":"stellar-forge.ndjson-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await ndjsonStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'grant-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.sf47.workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await grantStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'dataset-feeds') {
+      if (!text.startsWith('{')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await rssAtomStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
     if (request.command === 'atlas') {
@@ -135,11 +345,11 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (request.command === 'job-workspace') {
-      if (!text.startsWith('{"schema":"stellar-forge.sf88.job-workspace-launch.v1",')) return;
+    if (request.command === 'openapi-workspace' && request.args.includes('--managed-launch-sha256')) {
+      if (!text.startsWith('{"schema":"stellar-forge.openapi-workspace-startup.v1",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await jobCheckoutStartup(request, text);
+        const startup = openApiStartup(request, directory, text, context);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
@@ -151,14 +361,48 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (request.command === 'blockscout' || request.command === 'tenderly-workspace' || request.command === 'redis') {
-      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis';
-      const startupSchema = redis ? 'stellar-forge.redis-workspace-startup.v1' :
+    if (request.command === 'revenue-workspace') {
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = pricingStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'job-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.sf88.job-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await jobCheckoutStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (['blockscout', 'tenderly-workspace', 'redis', 'arcgis-agent'].includes(request.command)) {
+      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis',
+        arcgis = request.command === 'arcgis-agent';
+      const startupSchema = arcgis ? 'stellar-forge.arcgis-agent-workspace-startup.v1' :
+        redis ? 'stellar-forge.redis-workspace-startup.v1' :
         tenderly ? 'stellar-forge.tenderly-workspace-startup.v1' : 'stellar-forge.blockscout-startup.v1';
       if (!text.startsWith('{"schema":"' + startupSchema + '",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await (redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
+        const startup = await (arcgis ? arcgisAgentStartup : redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;

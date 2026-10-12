@@ -66,7 +66,8 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
   if (!nativeVersion) throw new Error('Native seller has no explicit SDK version');
   const catalogBytes = sourceBytes.get(CATALOG);
   if (!catalogBytes || !sourceBytes.has(DOCTOR)) throw new Error('Original command catalog and doctor are required');
-  const { catalog, commands, commandCatalog } = compileCommandCatalog(catalogBytes, path => sourceBytes.has(path));
+  const { catalog, commands, commandCatalog } = compileCommandCatalog(catalogBytes,
+    path => sourceBytes.has(path), { sourcePaths: [...sourceBytes.keys()], readSource: path => sourceBytes.get(path) });
   const launcher = sourceBytes.get(BASE + 'sf46-release/product.mjs');
   const core = sourceBytes.get(BASE + 'sf46-release/release-core.mjs');
   if (!launcher || !core) throw new Error('Commit the product release source before packaging');
