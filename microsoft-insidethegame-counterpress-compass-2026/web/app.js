@@ -323,6 +323,56 @@ function currentInsight(lane = 'opus') {
       source.team === v.team && source.audience === v.audience && source.locale === v.locale;
   }) || null;
 }
+function savedExplanationUrl(archiveId, insightId) {
+  const url = new URL('/insight-review', location.origin);
+  url.hash = new URLSearchParams({archive: archiveId, insight: insightId}).toString();
+  return url.href;
+}
+function appendExplanationReview(record, result) {
+  if (!archiveUI) return;
+  const spanish = record.source.locale === 'es';
+  const saved = archiveUI.savedInsightArchive(record.id);
+  const copy = !saved && archiveUI.insightSaveIsCopy();
+  const label = saved ? (spanish ? 'Examinar la explicación guardada' : 'Inspect saved explanation')
+    : copy ? (spanish ? 'Guardar una copia y examinar' : 'Save a copy and inspect')
+    : (spanish ? 'Guardar partido y examinar' : 'Save match and inspect');
+  const container = document.createElement('p'); container.className = 'note';
+  const action = document.createElement(saved ? 'a' : 'button');
+  action.textContent = label; action.dataset.insightReview = record.id;
+  if (saved) action.href = savedExplanationUrl(saved, record.id);
+  else { action.type = 'button'; action.className = 'review-jump'; }
+  let opening = false;
+  action.addEventListener('click', async event => {
+    // Ordinary modified-link navigation opens the already saved read-only
+    // result separately and leaves the current player's draft in place.
+    if (saved && (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0)) return;
+    event.preventDefault();
+    if (opening) return;
+    opening = true;
+    stopStream();
+    const original = S.session;
+    action.setAttribute('aria-disabled', 'true');
+    if (action.tagName === 'BUTTON') action.disabled = true;
+    try {
+      const archiveId = await archiveUI.saveInsightReview(record.id);
+      if (S.session !== original || currentInsight('agent')?.id !== record.id) return;
+      if (!archiveId) throw new Error(spanish
+        ? 'Revisa el estado de guardado del partido antes de abrir esta explicación.'
+        : 'Review the match save status before opening this explanation.');
+      location.assign(savedExplanationUrl(archiveId, record.id));
+    } catch (error) {
+      if (S.session === original && currentInsight('agent')?.id === record.id) {
+        const message = document.createElement('span'); message.setAttribute('role', 'status');
+        message.textContent = ' ' + error.message; container.append(message);
+      }
+    } finally {
+      opening = false; action.removeAttribute('aria-disabled');
+      if (action.tagName === 'BUTTON') action.disabled = false;
+    }
+  });
+  container.append(action); result.append(container);
+}
+
 function drawSavedInsight(lane = 'opus') {
   const config = insightLane(lane), record = currentInsight(lane), button = el(config.button);
   button.textContent = record ? t().opusSaved : config.configured ? config.label : t().opusOff;
@@ -331,6 +381,7 @@ function drawSavedInsight(lane = 'opus') {
   S[config.displayed] = opusKey();
   el(config.result).textContent = t().opusRetained + ' · ' + t().opusAt(record.source.count) + ' · ' +
     fmt(record.source.frameSecond) + ' · ' + record.response.caption + ' ' + record.response.text;
+  if (lane === 'agent') appendExplanationReview(record, el(config.result));
   return true;
 }
 async function requestInsight(lane) {
@@ -670,7 +721,7 @@ async function boot() {
       insights: S.insights, recap: recapUI?.selection(), cursor: S.cursor, view: view(), event: S.frame?.event, eventLabel: S.frame?.event ? eventLine(S.frame.event) : '',
       selectedMomentId: S.events.some(event => event.id === S.selectedMomentId && event.type === 'loss') ? S.selectedMomentId : null,
       filters: {outcome: el('reviewFilter').value, period: el('reviewPeriod').value, feedTeam: el('feedTeam').value, feedType: el('feedType').value}}),
-    onSaved: id => { S.archiveId = id; syncMatchLink(true); },
+    onSaved: id => { S.archiveId = id; syncMatchLink(true); drawSavedInsight('agent'); },
     onDeleted: () => { S.archiveId = null; if (S.match) S.match.preserved = true; el('matchLink').hidden = true;
       history.replaceState(null, '', location.pathname + location.search); ui(); },
     onOpen: openSavedMatch, onJump: seek, onPause: stopStream,
