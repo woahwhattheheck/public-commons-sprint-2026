@@ -45,7 +45,7 @@ function plainRuntime(session, editionId) {
   return { running: Boolean(session), editionId: editionId ?? null, merchantUrl: session?.merchantUrl ?? session?.url ?? null,
     paths: session?.paths ?? null, mode: session?.mode ?? null, snapshot: typeof session?.snapshot === 'function' ? null : session?.snapshot ?? null };
 }
-export async function startWaterQualityWorkspace({ directory, port = 0, merchantPort = 0, nativeFactory, facilitator, transport, buyer, env = process.env } = {}) {
+export async function startWaterQualityWorkspace({ directory, port = 0, merchantPort = 0, nativeFactory, facilitator, allowLocalFacilitator = false, transport, buyer, env = process.env } = {}) {
   const project = await openWaterQualityProject(resolve(directory), { transport, env });
   const token = randomBytes(32).toString('hex'), jobs = new Map(), purchasePlans = new Map();
   let origin, activeMerchant, activeEditionId, closing, stopping = false;
@@ -153,7 +153,8 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
         }
         if (path === '/api/merchant/start') {
           if (activeMerchant) fail('Stop the current merchant before starting another edition.', 'WQX_MERCHANT_RUNNING', 409);
-          activeMerchant = await project.startEdition({ ...input, port: merchantPort, nativeFactory, facilitator });
+          activeMerchant = await project.startEdition({ ...input, port: merchantPort, nativeFactory, facilitator,
+            allowLocalFacilitator: input.allowLocalFacilitator ?? allowLocalFacilitator });
           activeEditionId = input.editionId;
           return plainRuntime(activeMerchant, activeEditionId);
         }
