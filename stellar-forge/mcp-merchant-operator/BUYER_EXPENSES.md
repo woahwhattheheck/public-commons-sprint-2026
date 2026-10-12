@@ -243,3 +243,32 @@ No merchant mutation, new payment, signer or on-chain observation is initiated b
 ### Completed original refund operation
 
 The original 7737/B41A order-18 redelivery completed through this customer interface in a separate development workspace at revision 19: two accepted original packets, one bound purchase, two exact return allocations and three issued editions. Native net progressed from 2500000 to 1500000 to 0 while the separate USD 2.50 purchase and USD 1.00 / USD 1.50 store credits stayed unchanged. Capture/final-close request recovery, host restart, original source/accountant exports and included-source receiving completed without a new payment or merchant call. The earlier operational 60000-unit buyer case was not changed. All 39 tools continue to use the same maintained contract; the added refund controls are part of the existing provider and SDK.
+
+## Native accounting export and paid-job receipt intake
+
+The same customer surface exposes `adjustment_capture` (SDK `adjustmentCapture`) alongside the existing `refund_capture`. Add an `adjustmentSources` object to the existing workspace declaration:
+
+```json
+{
+  "adjustmentSources": {
+    "job_resolution": {
+      "sourceFile": "/srv/starforge/original-merchant/adjustments-export.json",
+      "sourceSha256": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+      "eventId": "REPLACE_WITH_ORIGINAL_ACCOUNTING_EVENT_ID",
+      "name": "Original merchant adjustment decisions",
+      "provenance": "Record the actual source owner, job and original operation here.",
+      "dataContext": "operational"
+    }
+  }
+}
+```
+
+Replace both placeholders with the exact 64-character lowercase hexadecimal source identities before reading this connection. The host fixes the source path; a customer selects only the `adjustmentSource` alias. For a paid job, optionally declare `expectedJob:{job_id,settlement}` from the original retained job. The unchanged settlement must contain `id, receiptFingerprint, transactionFingerprint, network, assetDigest, recipientDigest, amountAtomic, routeId, method, orderReferenceDigest`. The native reader checks every field against the selected event and the original job's order-reference digest.
+
+`adjustment_capture` retains the unchanged original `stellar-forge.merchant-adjustment-export.v1` JSON and all decisions for the selected event. Its reviewed SHA and selected job/event are retained separately in a buyer-selection manifest. The source remains the original accounting export; this is not a new merchant receipt format.
+
+Use `refund_packet` to inspect nullable `purchase`, plural `credits`, original `adjustments`, `source_sha256`, `source_reference`, original payment status and matching existing payments. Then `refund_review` accepts or rejects the retained selection. A reference-only export needs only the named decision; do not set purchase registration when no independent original payment proof is carried. With a proved purchase, select its existing item or explicitly register it. Every eligible native return gets an individual `credit_id`; `credit_ids` retains the whole selected set.
+
+The existing `credit`, `credit_coding_save`, period review/close/reopen and export operations complete the workflow. The report, review and issued tools add the paged `merchant_adjustment_outcomes` view. Pending returns, cancellations, withdrawn requests and unavailable original-payment proofs remain visible as source decisions without entering returned-unit totals. Optional Woo/store fields are null when not supplied; no exchange rate, currency amount or Woo order is manufactured.
+
+Stable request IDs recover the exact completed intake or period mutation. Stable export IDs recover the same source receipt, accountant edition or complete included-source project. `refund-packet` export retains the original JSON and explicitly named `buyer-selection.json` for generic intake. All other financial, source-context, lifecycle and resumable transfer semantics are unchanged.

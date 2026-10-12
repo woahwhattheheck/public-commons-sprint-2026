@@ -16,7 +16,7 @@ def allocation_key(line):
 
 
 def purchase_matches(item, native):
-    if not item:
+    if not item or not native:
         return False
     detail = item["row"].get("native_detail") or {}
     return (not item["missing"] and item["row"]["state"] == "settled" and
@@ -93,7 +93,7 @@ def validate_credit_coding(credit, payload, purchase, centers, other_credits):
             "memo": text(payload.get("memo", ""), "Return memo", maximum=4000, optional=True)}
 
 
-def credit_period(view, credits, pending_packets, items, centers, dispositions, closed_credit_lines, data_kind):
+def credit_period(view, credits, pending_packets, items, centers, dispositions, closed_credit_lines, data_kind, adjustment_outcomes=None):
     period = view["period"]
     start, through = period["from_day"], period["through_day"]
     by_item = {item["id"]: item for item in items}
@@ -124,17 +124,20 @@ def credit_period(view, credits, pending_packets, items, centers, dispositions, 
         all_returns.setdefault(credit["native"]["transfer_identity"], []).append(credit)
     for credit in credits:
         n, coding, purchase = credit["native"], credit.get("coding"), by_item.get(credit["item_id"])
-        native_day = n["transfer_at"][:10]
+        native_day = (n.get("transfer_at") or n["observed_at"])[:10]
         if native_day > through and not (coding and start <= coding["recognition_date"] <= through):
             continue
         outcomes.append({"credit_id": credit["id"], "source_name": credit["source_name"],
                          "source_capture": credit["capture_id"], "packet_id": credit["packet_id"],
                          "manifest_sha256": credit["manifest_sha256"], "data_context": credit["data_context"],
-                         "item_id": credit["item_id"], "site_url": credit["purchase"]["site_url"],
-                         "order_reference": n["order_reference"], "adjustment_id": n["adjustment_id"],
+                         "item_id": credit["item_id"], "site_url": credit["purchase"].get("site_url"),
+                         "source_kind": n.get("source_kind", "woo_refund"),
+                         "source_reference": n.get("source_reference"),
+                         "present_in_latest_receipt": credit.get("present_in_latest_receipt", True),
+                         "order_reference": n.get("order_reference"), "adjustment_id": n["adjustment_id"],
                          "refund_id": n["refund_id"], "merchant_status": n["original_operation_status"],
-                         "store_amount": n["store_amount"], "currency": n["currency"],
-                         "store_credit_applied": n["original_operation_status"] == "APPLIED",
+                         "store_amount": n.get("store_amount"), "currency": n.get("currency"),
+                         "store_credit_applied": n["original_operation_status"] == "APPLIED" if n.get("store_amount") is not None else None,
                          "native_return": n["amount"], "network": n["network"], "asset": n["asset"],
                          "transfer_at": n["transfer_at"], "observed_at": n["observed_at"],
                          "transaction": n["transaction"], "original_transaction": n["original_transaction"],
@@ -176,7 +179,10 @@ def credit_period(view, credits, pending_packets, items, centers, dispositions, 
                           "source_name": credit["source_name"], "source_capture": credit["capture_id"],
                           "packet_id": credit["packet_id"], "manifest_sha256": credit["manifest_sha256"],
                           "adjustment_id": n["adjustment_id"], "refund_id": n["refund_id"],
-                          "order_reference": n["order_reference"], "network": n["network"], "asset": n["asset"],
+                          "order_reference": n.get("order_reference"), "source_reference": n.get("source_reference"),
+                          "source_kind": n.get("source_kind", "woo_refund"),
+                          "present_in_latest_receipt": credit.get("present_in_latest_receipt", True),
+                          "network": n["network"], "asset": n["asset"],
                           "original_transaction": n["original_transaction"], "transaction": n["transaction"],
                           "transfer_identity": n["transfer_identity"], "observation_sha256": n["observation_sha256"],
                           "native_return": n["amount"], "recognition_date": coding["recognition_date"],
@@ -217,10 +223,11 @@ def credit_period(view, credits, pending_packets, items, centers, dispositions, 
                 net_totals=group_amounts(gross + returns_as_negative),
                 credit_by_cost_center=group_amounts(lines, ("center_code", "center_name")),
                 net_by_cost_center=group_amounts(gross + returns_as_negative, ("center_code", "center_name")),
-                merchant_credit_outcomes=outcomes)
+                merchant_credit_outcomes=outcomes, merchant_adjustment_outcomes=adjustment_outcomes or [])
     view["context_sha256"] = digest({"expense": view["context_sha256"], "data_context": data_kind,
         "credits": [{"id": c["id"], "native_basis": c["native_basis"], "basis": c["basis"],
                      "packet_id": c["packet_id"], "native": c["native"], "coding": c.get("coding")} for c in credits],
         "pending": [{"id": p["id"], "manifest": p["manifest_sha256"]} for p in pending_packets],
-        "closed_returns": closed_credit_lines})
+        "closed_returns": closed_credit_lines, "adjustment_outcomes": adjustment_outcomes or [],
+        "source_presence": [{"id": c["id"], "present": c.get("present_in_latest_receipt", True)} for c in credits]})
     return view
