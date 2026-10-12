@@ -21,9 +21,11 @@ Existing deployment selection preserves its business fields and adds the source 
 
 Preview binds the original file, installed reader, complete native review and current operations version. Receiving compares that preview inside the existing idempotent case transaction. The file, rendered report, deployment update, case event and request receipt commit together.
 
-A network interruption retains the same save request in the open view. **Retry same save** sends that original request again. The original workspace returns its earlier accepted result when available. **Refresh original case** reopens the latest case and source.
+A network interruption retains the same save request with the original case for this browser session. Switching Operations tabs, selecting another case, and refreshing the case preserve the file, deployment draft and pending request. **Retry same save** sends that original request again. A late accepted response is retained even after the view closes; the original workspace returns its accepted receipt on a retry. **Refresh original case** reopens the latest case and source.
 
-Receiving the exact file/report already linked to the selected deployment returns that association without another source copy or case version. Exact source bytes already held in the same case are reused.
+A definite native validation or version rejection keeps the editable draft and original file, refreshes the case, and re-previews the current revision. Review the retained fields and submit the updated request. An interrupted response keeps the exact pending request for recovery.
+
+Receiving the exact file/report already linked to the selected deployment returns that association without another source copy or case version. Exact source bytes already held in the same case are reused, including a file originally entered through Sources with its own name or kind. Its original metadata retains a support-to-report association; that association and its before/after history save with the deployment in the same transaction.
 
 If another operator updates the case after preview, refresh the case and preview the intended file again. Existing source remains available through ordinary case history and attachment downloads.
 

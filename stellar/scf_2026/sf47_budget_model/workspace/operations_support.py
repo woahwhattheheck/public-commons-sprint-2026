@@ -104,7 +104,7 @@ def preview(context, body):
     name = filename(body.get("filename"))
     native = inspect(handoff_bytes(body.get("contentBase64")))
     source = {**native["source"], "filename": name}
-    duplicates = [row["id"] for row in context["sources"] if row["sha256"] == source["sha256"]]
+    duplicates = [row["id"] for row in context["sources"].values() if row["sha256"] == source["sha256"]]
     deployments = [{"id": row["id"], "name": row["name"], "operator": row["operator"],
                     "state": row["state"], "sourceIds": row.get("sourceIds", [])}
                    for row in context["records"]["deployments"]]
@@ -124,9 +124,9 @@ def preview(context, body):
     return result
 
 
-def _retained_source(operations, context, raw, name, observed_at):
+def _retained_source(operations, context, raw, name, observed_at, media_type):
     sha256 = hashlib.sha256(raw).hexdigest()
-    for row in context["sources"]:
+    for row in context["sources"].values():
         if row["sha256"] == sha256 and row["bytes"] == len(raw):
             saved = operations.db.execute(
                 "SELECT content FROM ops_sources WHERE program_id=? AND id=?",
@@ -134,10 +134,10 @@ def _retained_source(operations, context, raw, name, observed_at):
             if saved is not None and bytes(saved[0]) == raw:
                 return row
     value = operations._source_add(context["program"]["id"], {
-        "filename": name, "mediaType": "text/html" if name.endswith(".html") else "application/json",
+        "filename": name, "mediaType": media_type,
         "kind": "deployment", "sourceUrl": "", "observedAt": observed_at,
         "contentBase64": base64.b64encode(raw).decode("ascii")})
-    context["sources"].append(value)
+    context["sources"][value["id"]] = value
     return value
 
 
@@ -178,13 +178,37 @@ def receive(operations, context, data, actor, version):
         raise Problem("Select a shorter original support capture period.", 413, "SUPPORT_REVIEW_SIZE")
     prefix = "support-" + reviewed["source"]["sha256"][:20]
     original = _retained_source(operations, context, raw,
-        prefix + "--" + reviewed["source"]["filename"][:170], reviewed["source"]["generatedAt"])
+        prefix + "--" + reviewed["source"]["filename"][:170], reviewed["source"]["generatedAt"], "application/json")
     report = _retained_source(operations, context, html,
-        prefix + ".runtime.html", reviewed["source"]["generatedAt"])
+        prefix + ".runtime.html", reviewed["source"]["generatedAt"], "text/html")
+    # Keep a durable relationship even when exact bytes reuse an attachment
+    # originally entered through Sources with its own filename and kind.
+    before_source = deepcopy(original)
+    retained = original.get("supportHandoff")
+    retained = retained if isinstance(retained, dict) and retained.get("sourceSha256") == original["sha256"] else {}
+    reports = [item for item in retained.get("reports", []) if isinstance(item, dict)
+               and isinstance(item.get("sourceId"), str) and item["sourceId"] in context["sources"]
+               and context["sources"][item["sourceId"]]["sha256"] == item.get("sha256")] \
+        if isinstance(retained.get("reports"), list) else []
+    report_link = {"sourceId": report["id"], "sha256": report["sha256"]}
+    if report_link not in reports:
+        reports.append(report_link)
+    association = {"sourceSha256": original["sha256"],
+                   "originalFilename": retained["originalFilename"] if isinstance(retained.get("originalFilename"), str)
+                       and retained["originalFilename"] else reviewed["source"]["filename"],
+                   "reports": reports}
+    association_changed = original.get("supportHandoff") != association
+    if association_changed:
+        original = {**original, "supportHandoff": association}
+        operations.db.execute("UPDATE ops_sources SET metadata_json=? WHERE program_id=? AND id=?",
+            (canonical(original), context["program"]["id"], original["id"]))
+        context["sources"][original["id"]] = original
+    source_change = {"before": before_source, "after": original} if association_changed else None
     sources = list(dict.fromkeys([*candidate.get("sourceIds", []), original["id"], report["id"]]))
-    if previous is not None and sources == previous.get("sourceIds", []):
+    if previous is not None and sources == previous.get("sourceIds", []) and not association_changed:
         return {"unchanged": True, "before": previous, "after": previous,
-                "sourceIds": [original["id"], report["id"]], "sourceSha256": reviewed["source"]["sha256"]}
+                "sourceIds": [original["id"], report["id"]], "sourceSha256": reviewed["source"]["sha256"],
+                "sourceChange": source_change}
     candidate["sourceIds"] = sources
     value = domain.prepare("deployments", candidate, context, previous)
     current = now()
@@ -193,4 +217,5 @@ def receive(operations, context, data, actor, version):
            "updatedAt": current, "recordedBy": actor}
     operations._save(context["program"]["id"], "deployments", row)
     return {"unchanged": False, "before": previous, "after": row,
-            "sourceIds": [original["id"], report["id"]], "sourceSha256": reviewed["source"]["sha256"]}
+            "sourceIds": [original["id"], report["id"]], "sourceSha256": reviewed["source"]["sha256"],
+            "sourceChange": source_change}
