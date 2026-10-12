@@ -8,6 +8,8 @@ export const HELP = 'SF101 recovery workspace\n\n' +
   'starforge merchant-recovery-remote workspace show --config ABS_HOST_CONFIG --directory ABS_PRIVATE_STATE\n\n' +
   'serve  Open the retained operator workspace on 127.0.0.1. The printed browser\n' +
   '       URL grants this server session access to the host-selected recovery profiles.\n' +
+  '       The private native launch in the workspace lets the merchant recovery\n' +
+  '       provider attach to this same listener after a normal server restart.\n' +
   'show   Read the saved workspace and original operation status as JSON. This can\n' +
   '       run beside the server without acquiring its controller lease.\n\n' +
   'The private host configuration selects existing S3 config files, passphrase\n' +
@@ -67,7 +69,9 @@ export async function main(argv = process.argv.slice(2), { output = process.stdo
   output.write('Merchant recovery workspace\n' + service.url + '\n');
   output.write('Host configuration: ' + options.configFile + '\nWorkspace: ' + options.directory + '\n');
   output.write(JSON.stringify({ status: 'MERCHANT_RECOVERY_WORKSPACE_READY', configFile: options.configFile,
-    directory: options.directory, url: service.url }) + '\n');
+    directory: options.directory, url: service.url, connectionFile: service.connectionFile,
+    instanceId: service.connection.instanceId, workspaceId: service.connection.identity.workspaceId,
+    configurationSha256: service.connection.identity.configurationSha256 }) + '\n');
   let shutdown;
   const stop = () => {
     if (!shutdown) shutdown = service.close({ cancelActive: true }).catch(error => {
