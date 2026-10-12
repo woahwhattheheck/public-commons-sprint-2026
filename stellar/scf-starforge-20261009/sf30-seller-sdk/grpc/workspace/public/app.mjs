@@ -1,4 +1,5 @@
 // MIT. Browser controls for the original retained gRPC workspace.
+import { mountGrpcUpgrades } from './upgrade.mjs';
 const $ = id => document.getElementById(id);
 const storageKey = 'stellar-forge.grpc-workspace:' + location.origin;
 let token = location.hash.slice(1);
@@ -404,7 +405,7 @@ function savedCurrent() {
   return adopted.id;
 }
 async function refresh() {
-  inventory = await json('state'); renderInventory(); buttons();
+  inventory = await json('state'); renderInventory(); upgradePanel.update(inventory); buttons();
 }
 async function adopt(revision) {
   // The editor base belongs to this exact response, never to a later inventory refresh.
@@ -538,6 +539,9 @@ async function download(action, value) {
   const blob = await response.blob(); saveBlob(blob, filename);
   notice('Downloaded ' + filename + ' · SHA256 ' + response.headers.get('x-content-sha256'));
 }
+const upgradePanel = mountGrpcUpgrades({ root: $('view-upgrades'), json, work, notice, storageKey,
+  mayAdopt: () => confirmReplacement('Opening the reviewed upgrade', { whole: true }),
+  onAdopt: async revision => { await adopt(revision); view('methods'); } });
 for (const item of document.querySelectorAll('nav button')) item.addEventListener('click', () => view(item.dataset.view));
 $('source-file').addEventListener('change', showSourceFile);
 for (const id of ['title', 'target', 'transport', 'server-name', 'ca-env', 'certificate-env', 'private-key-env', 'metadata', 'limits',
@@ -731,7 +735,7 @@ $('release-close').addEventListener('click', () => work(async () => {
 $('refresh').addEventListener('click', () => work(async () => {
   await refresh(); notice('Inventory refreshed. The editor still uses its exact opened revision as the save base.');
 }));
-window.addEventListener('beforeunload', event => { if (dirty || routeDirty || planDirty || requestDirty || activeCallId) { event.preventDefault(); event.returnValue = ''; } });
+window.addEventListener('beforeunload', event => { if (dirty || routeDirty || planDirty || requestDirty || activeCallId || upgradePanel.hasDraft()) { event.preventDefault(); event.returnValue = ''; } });
 await work(async () => {
   if (!/^[a-f0-9]{64}$/.test(token)) throw new Error('Open the complete private workspace URL printed by its original server.');
   await refresh();
@@ -747,6 +751,7 @@ await work(async () => {
     if (retained) { reflectionPreview = retained; renderReflectionPreview(); }
   }
   notice('Private workspace ready. Source and credential values stay on this merchant host.');
+  await upgradePanel.resume();
 }, 'Opening saved merchant work…');
 setInterval(() => {
   if (busy || document.hidden || !token) return;
