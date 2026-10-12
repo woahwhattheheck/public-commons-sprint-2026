@@ -1,0 +1,6 @@
+{
+  "acs2023": "/workspace/scratch/4bf591c01947/census-acs-work/run/capture-2023/source.json",
+  "acs2024": "/workspace/scratch/4bf591c01947/census-acs-work/run/capture-2024/source.json",
+  "bls": "/dev/shm/bls-4bf5/native/source.json",
+  "hud_original_directory": "/workspace/scratch/dbc61db6310c/peoria-native-inputs-20261011/municipality-current/originals/hud-fy2026"
+}
