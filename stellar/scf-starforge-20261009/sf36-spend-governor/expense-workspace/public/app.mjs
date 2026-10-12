@@ -141,6 +141,7 @@ function localTable(headers,rows,size=50) {
   draw();return host;
 }
 function unit(value,row,labels=state.labels) {
+  if(value===null||value===undefined)return "Not established";
   const raw=String(value);const label=labels.find(l=>l.network===row.network&&l.asset===row.asset);
   if(!label)return raw+" base units";
   const n=raw.padStart(label.decimals+1,"0");
@@ -193,7 +194,7 @@ async function renderExpenses() {
   const bar=el("div",{class:"toolbar"});
   const search=field({name:"search",label:"Search request, service, receipt or memo",value:view.query});search.wrap.classList.add("search");
   const source=field({name:"source",label:"Source",value:view.filterSource,choices:[{value:"",label:"All sources"},...state.sources.map(s=>({value:s.id,label:s.name}))]});
-  const status=field({name:"status",label:"Coding status",value:view.filterStatus,choices:["","UNCODED","CODED","STALE","RESERVED","ABSENT"].map(x=>({value:x,label:x||"All states"}))});
+  const status=field({name:"status",label:"Coding status",value:view.filterStatus,choices:["","UNCODED","CODED","STALE","RESERVED","PAYMENT_UNRESOLVED","FAILED_TRANSACTION","NO_SIGNED_DISPATCH","OBSERVATION_REVIEW","ABSENT"].map(x=>({value:x,label:x||"All states"}))});
   const apply=()=>navigate(()=>{view.query=search.input.value;view.filterSource=source.input.value;view.filterStatus=status.input.value;view.expensesOffset=0;});
   bar.append(search.wrap,source.wrap,status.wrap,button("Apply filters",apply));
   search.input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();apply().catch(e=>notify(e.message,true));}});
@@ -202,7 +203,7 @@ async function renderExpenses() {
   content.append(table(["Original request / source","Service / native day","Network / asset","Settled actual","Reserved maximum","Coding",""],data.items.map(item=>{
     const r=item.row;return [el("div",{class:"long"},el("div",{class:"code"},r.request_id),el("div",{class:"quiet"},item.source_name)),
       el("div",{},r.service,el("div",{class:"quiet"},r.day)),el("div",{class:"code"},r.network,el("br"),r.asset),
-      el("span",{class:"code"},r.settled_base_units),el("span",{class:"code"},r.reserved_base_units),badge(item.status),
+      el("span",{class:"code"},r.settled_base_units??"Not established"),el("span",{class:"code"},r.source_kind==="mcp_quote"?"No reservation read":r.reserved_base_units),badge(item.status),
       button("Open expense",()=>navigate(()=>{view.item=item.id;}),"small")];
   })),pager(data,x=>navigate(()=>{view.expensesOffset=x;})));
   if(!state.sources.length)content.append(el("div",{class:"card"},el("p",{},"Start by registering the original buyer ledger and reviewing its first capture."),button("Register source",()=>navigate(()=>{view.tab="sources";view.source=null;}),"primary")));
@@ -212,19 +213,33 @@ async function renderExpense(){
   content.append(button("← Expense list",()=>navigate(()=>{view.item=null;}),"small"));
   heading("Expense allocation",item.source_name+" · "+r.request_id);
   const native=el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},"Original native row"),badge(item.status)),
-    facts([["Service",r.service],["Network / asset",r.network+" / "+r.asset],["Native reservation day",r.day],["Settled actual",unit(r.settled_base_units,r)],
-           ["Outstanding reservation",unit(r.reserved_base_units,r)],["Original authorized maximum",r.amount],["Receipt reference",r.receipt_ref||"No receipt reference"],
+    facts([["Service",r.service],["Network / asset",r.network+" / "+r.asset],[r.source_kind==="mcp_quote"?"MCP quote creation day":"Native reservation day",r.day],["Settled actual",unit(r.settled_base_units,r)],
+           ["Outstanding reservation",r.source_kind==="mcp_quote"?"Not a reservation source":unit(r.reserved_base_units,r)],[r.source_kind==="mcp_quote"?"Original quoted amount":"Original authorized maximum",r.amount||"Not established"],["Receipt reference",r.receipt_ref||"No receipt reference"],
            ["Request digest",r.request_digest],["Proof digest",r.proof_sha256||"—"],["Accepted source capture",item.capture_id]]));
   content.append(native);
+  if(r.native_detail){
+    const n=r.native_detail,file=n.result_file;
+    content.append(el("section",{class:"card"},el("h2",{},"Original MCP purchase"),
+      facts([["Buyer state",n.native_status],["Payment observation",n.classification],["Original signed dispatch",n.signed_request_dispatched?"Recorded":"None recorded"],
+        ["Payer",n.payer||"Not recorded"],["Merchant recipient",n.recipient||"Not recorded"],["Tool / method",n.tool_name||n.method],
+        ["Original endpoint",n.url],["Arguments digest",n.arguments_sha256||"—"],["Observation digest",n.observation_sha256||"None retained"],
+        ["Original quote digest",n.quote_sha256]]),
+      n.problems?.length?el("p",{class:"notice"},n.problems.join(" · ")):null,
+      el("h3",{},"Recorded result"),
+      facts([["File state",file?.status||"No complete-file record"],["Recorded bytes",file?.bytes??n.result_preview?.bodyBytes??"Unknown"],
+        ["Recorded digest",file?.sha256||n.result_preview?.bodySha256||"Unknown"]]),
+      el("p",{class:"quiet"},"The source capture retains the original quote, receipt, observation and recorded result metadata. Purchased bytes remain in the native buyer's result inbox."),
+      el("details",{},el("summary",{},"Inspect retained payment and result fields"),el("pre",{class:"pre"},JSON.stringify(n,null,2)))));
+  }
   if(item.missing||r.state!=="settled"){
-    content.append(el("section",{class:"card"},el("h2",{},"Review this row in its period"),el("p",{},"This row is retained as an original reservation or source exception. Select its period to record an accountable carry-forward or exclusion decision."),
+    content.append(el("section",{class:"card"},el("h2",{},"Review this row in its period"),el("p",{},"This original row is not available for expense allocation. Its period retains the native payment or reservation state and any required carry-forward or exclusion decision."),
       button("Open period review",()=>navigate(()=>{view.tab="periods";}),"primary")));return;
   }
   const centers=state.centers.filter(c=>c.active);
   if(!centers.length){content.append(el("section",{class:"card"},el("p",{},"Create an active cost center before coding this expense."),button("Create cost center",()=>navigate(()=>{view.tab="settings";view.setting="centers";}),"primary")));return;}
   const previous=item.coding;
   const f=formCard("Allocate settled actual",[
-    {name:"recognition_date",label:"Recognition date",type:"date",value:previous?.recognition_date||"",required:true,help:"Chosen by the operator; the native reservation day is retained separately."},
+    {name:"recognition_date",label:"Recognition date",type:"date",value:previous?.recognition_date||"",required:true,help:"Chosen by the operator; the original reservation or quote-creation day keeps its own source meaning."},
     {name:"operator",label:"Coding owner",value:previous?.operator||"",required:true},
     {name:"memo",label:"Expense memo",value:previous?.memo||"",multiline:true,wide:true}
   ],"Save allocation edition",async(values,form)=>{
@@ -260,34 +275,40 @@ async function renderExpense(){
 async function renderSources(){
   if(view.capture)return renderCapture();
   if(view.source&&!selectedSource())view.source=null;
-  heading("Source captures","Register the original SF36 ledger by its local path. Captures use the maintained read-only statement reader and become current only after an explicit source review.");
+  heading("Source captures","Register an original SF36 ledger or native MCP quote workspace. Each complete capture uses its original read-only reader and becomes current only after an explicit source review.");
   if(view.source){
     const source=selectedSource();
     content.append(button("← All sources",()=>navigate(()=>{view.source=null;}),"small"));
     content.append(el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},source.name),badge(source.pending.length+" pending")),
-      facts([["Original ledger",source.path],["Source provenance",source.provenance||"—"],["Accepted capture",source.current_capture||"None"],
-        ["Projection digest",source.projection_sha256||"—"],["Native rows / journal events",String(source.rows??0)+" / "+String(source.journal_events??0)],["Captured",source.capture_time||"—"]]),
-      el("div",{class:"actions"},button("Capture original ledger",async()=>{if(!discard())return;const result=await mutate("/api/sources/"+source.id+"/capture");view.capture=result.id;view.captureOffset=0;await redrawAfter("New native capture is awaiting review.");},"primary"))));
+      facts([[source.kind==="mcp_quote"?"Original MCP quote directory":"Original ledger",source.path],["Source provenance",source.provenance||"—"],["Accepted capture",source.current_capture||"None"],
+        ["Projection digest",source.projection_sha256||"—"],["Native rows / source transitions",String(source.rows??0)+" / "+String(source.journal_events??0)],["Captured",source.capture_time||"—"]]),
+      el("div",{class:"actions"},button(source.kind==="mcp_quote"?"Capture original MCP quotes":"Capture original ledger",async()=>{if(!discard())return;const result=await mutate("/api/sources/"+source.id+"/capture");view.capture=result.id;view.captureOffset=0;await redrawAfter("New native capture is awaiting review.");},"primary"))));
     const data=await api("/api/sources/"+source.id+"/captures?offset="+view.sourceOffset+"&limit=20");
     content.append(el("section",{class:"card"},el("h2",{},"Capture history"),
       table(["Captured","State","Native rows","Changes",""],data.items.map(c=>[c.created_at,badge(c.status),c.source.reservations,c.change_count,
         button("Review capture",()=>navigate(()=>{view.capture=c.id;view.captureOffset=0;}),"small")])),
       pager(data,x=>navigate(()=>{view.sourceOffset=x;}),20)));
-    content.append(formCard("Rebind moved original ledger",[
-      {name:"path",label:"New original ledger path",value:source.path,wide:true,required:true},
+    content.append(formCard(source.kind==="mcp_quote"?"Rebind moved original MCP source":"Rebind moved original ledger",[
+      {name:"path",label:source.kind==="mcp_quote"?"New original MCP quote directory":"New original ledger path",value:source.path,wide:true,required:true},
       {name:"operator",label:"Source owner",required:true},
       {name:"reason",label:"Rebinding reason",multiline:true,required:true,wide:true}
     ],"Check continuity and capture",async(values,form)=>{const r=await save(form,"/api/sources/"+source.id+"/rebind",values);view.capture=r.capture.id;view.captureOffset=0;await redrawAfter("Original request identities matched; review the new capture.");},
-      {intro:"Use the same original buyer ledger after moving it. The retained request identities are checked before the new locator is saved."}).card);
+      {intro:"Use the same original buyer source after moving it. Its retained request identities and terms are checked before the new locator is saved."}).card);
     return;
   }
-  content.append(table(["Source","Original ledger","Accepted rows","Pending captures",""],state.sources.map(s=>[s.name,el("span",{class:"code"},s.path),String(s.rows??0),String(s.pending.length),
+  content.append(table(["Source / kind","Original source","Accepted rows","Pending captures",""],state.sources.map(s=>[el("div",{},s.name,el("div",{class:"quiet"},s.kind==="mcp_quote"?"Native MCP quotes":"SF36 ledger")),el("span",{class:"code"},s.path),String(s.rows??0),String(s.pending.length),
     button("Open source",()=>navigate(()=>{view.source=s.id;view.sourceOffset=0;}),"small")])));
   content.append(formCard("Register original buyer ledger",[
     {name:"name",label:"Source name",required:true},
     {name:"path",label:"Original SF36 SQLite path",required:true,wide:true,help:"Select the existing reservations.sqlite file in its original buyer workspace."},
     {name:"provenance",label:"Source provenance",multiline:true,wide:true,help:"Retain the original operator, operation and source references that explain this ledger."}
   ],"Capture source for review",async(values,form)=>{const r=await save(form,"/api/sources",values);view.source=r.id;view.capture=r.capture.id;view.captureOffset=0;await redrawAfter("Original source captured. Review the retained rows before accepting them.");}).card);
+  content.append(formCard("Register original MCP buyer source",[
+    {name:"name",label:"Source name",required:true},
+    {name:"path",label:"Original MCP quote directory",required:true,wide:true,help:"Choose the existing private directory containing the original quotes.sqlite; no signer or operator module is loaded."},
+    {name:"provenance",label:"Source provenance",multiline:true,wide:true,help:"Retain the original buyer operation, source owner and payment-observation references."}
+  ],"Capture MCP source for review",async(values,form)=>{const r=await save(form,"/api/sources",{...values,kind:"mcp_quote"});view.source=r.id;view.capture=r.capture.id;view.captureOffset=0;await redrawAfter("Original MCP quotes captured. Review their payment and result classifications before accepting.");},
+  {intro:"A saved matched native transfer can enter expense. Seller status, an unresolved quote and an SF36 reservation remain distinct. New MCP captures use the host's existing Node runtime; retained editions reopen independently."}).card);
 }
 async function renderCapture(){
   const c=await api("/api/captures/"+view.capture+"?offset="+view.captureOffset+"&limit=20");
@@ -328,6 +349,23 @@ async function renderSettings(){
   ],"Save cost center",async(values,form)=>{await save(form,"/api/centers",{...values,...(current?{id:current.id}:{})});view.center=null;await redrawAfter("Cost center saved.");},
     current?{cancel:()=>navigate(()=>{view.center=null;})}:{}).card);
 }
+
+function nativeOutcomeSection(report, title="Original MCP payment outcomes"){
+  const rows=report.native_payment_outcomes||[];
+  if(!rows.length)return null;
+  return el("section",{class:"card"},el("h2",{},title),
+    el("p",{class:"quiet"},"Quoted amounts stay separate from matched expense and native budget reservations. These are the payment and result facts retained in this source edition."),
+    localTable(["Original quote / source","Quote day","Buyer / payment state","Quoted / matched base units","Original transaction / result"],rows.map(r=>[
+      el("div",{class:"long code"},r.request_id,el("div",{class:"quiet"},r.source_name)),r.quote_day,
+      el("div",{},r.native_status,el("div",{class:"quiet"},r.payment_classification),r.missing?el("div",{},"Absent from latest source"):null),
+      el("div",{class:"code"},r.quoted_amount??"Unknown",el("div",{},"Matched: "+(r.settled_actual??"Not established")),
+        el("div",{class:"quiet"},r.network+" / "+r.asset)),
+      el("div",{class:"long code"},r.receipt_ref||"No original transaction reference",
+        el("div",{class:"quiet"},"Result: "+(r.result_file?.status||"No complete-file record")),
+        el("div",{},r.result_file?.sha256||r.result_preview?.bodySha256||"No recorded result digest"))
+    ])));
+}
+
 async function renderPeriods(){
   if(view.close)return renderIssued();
   heading("Period review","Review the current source editions, exact allocations and outstanding reservations. A named review can issue a frozen accountant edition; reopening keeps every prior edition.");
@@ -361,7 +399,8 @@ async function renderPeriods(){
     ],"Reopen and retain prior edition",async(values,form)=>{await save(form,"/api/periods/"+period.id+"/reopen",values);view.review=null;await redrawAfter("Period reopened. Its issued editions remain unchanged.");},
       {intro:"The figures below describe current retained source and coding. The issued edition above keeps the exact source, classifications and reviewer state from its close."}).card);
   }
-  const issues=el("section",{class:"card"},el("h2",{},"Source and reservation review"));
+  const outcomes=nativeOutcomeSection(report);if(outcomes)content.append(outcomes);
+  const issues=el("section",{class:"card"},el("h2",{},"Source, payment and reservation review"));
   if(!report.issues.length)issues.append(el("p",{},"No source or coding exception remains in this period."));
   for(const issue of report.issues){
     const c=el("div",{class:"issue"},el("div",{class:"issue-head"},el("strong",{},issue.code.replaceAll("_"," ")),badge(issue.resolved?"REVIEWED":"OPEN")),
@@ -428,6 +467,7 @@ async function renderIssued(){
       button("Download accountant packet",()=>download("/api/closes/"+doc.id+"/packet","accountant-edition-"+doc.sequence+".zip")),
       button("Download edition JSON",()=>download("/api/closes/"+doc.id,"accountant-edition-"+doc.sequence+".json")))));
   content.append(totalCards(doc));
+  const outcomes=nativeOutcomeSection(doc,"Frozen original MCP payment outcomes");if(outcomes)content.append(outcomes);
   content.append(el("section",{class:"card"},el("h2",{},"Frozen allocation lines"),
     localTable(["Date","Cost center","Project / account","Network / asset","Exact base units","Original request"],doc.allocations.map(l=>[l.recognition_date,l.center_code+" · "+l.center_name,
       el("div",{},l.project||"—",el("div",{class:"code"},l.account_code||"—")),l.network+" / "+l.asset,l.amount,el("span",{class:"code"},l.request_id)]))));

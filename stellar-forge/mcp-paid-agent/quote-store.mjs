@@ -135,6 +135,29 @@ export class SqliteQuoteStore {
       .map(row => validate(JSON.parse(row.payload)));
   }
 
+  /** One bounded read transaction over the original validated quote projection. */
+  readSnapshot({ maxBytes = 32 * 1024 * 1024 } = {}) {
+    this.#open();
+    if (!this.#readOnly) throw error('QUOTE_STORAGE_READ_ONLY_REQUIRED', 'Open the original quote workspace read-only for a source capture.');
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1024 || maxBytes > 64 * 1024 * 1024)
+      throw error('QUOTE_CAPTURE_LIMIT', 'Quote capture capacity must be between 1 KiB and 64 MiB.');
+    this.#db.exec('BEGIN;');
+    try {
+      const size = this.#db.prepare('SELECT COUNT(*) AS count, COALESCE(SUM(length(CAST(payload AS BLOB))),0) AS bytes FROM quotes').get();
+      if (size.count > this.#maxQuotes || size.bytes > maxBytes)
+        throw error('QUOTE_CAPTURE_CAPACITY', 'The complete quote projection exceeds the declared capture capacity; no partial capture was made.');
+      const quotes = this.load();
+      const transitions = this.#db.prepare('SELECT COUNT(*) AS count, COALESCE(MAX(sequence),0) AS lastSequence FROM transitions').get();
+      const value = { quotes, quoteBytes: size.bytes, transitionCount: transitions.count,
+        lastSequence: transitions.lastSequence, capturedAt: new Date().toISOString() };
+      this.#db.exec('COMMIT;');
+      return value;
+    } catch (failure) {
+      try { this.#db.exec('ROLLBACK;'); } catch { /* preserve the source error */ }
+      throw failure;
+    }
+  }
+
   save(quote) {
     this.#open(true);
     const value = validate(quoteSnapshot(quote));
