@@ -62,6 +62,7 @@
     <form id="query-form" class="form-stack">
       <div class="fields two"><label>Query name<input id="query-name" required placeholder="Datastream, period and purpose"></label><label>Datastream resource<input id="query-datastream" required placeholder="Exact URL or provider-relative path"></label></div>
       <div class="fields two"><label>Observation schema resource<input id="query-schema" required></label><label>Observations resource<input id="query-observations" required></label></div>
+      <div class="fields two"><label>Schema URL policy<select id="query-schema-policy"><option value="format-parameter">Include JSON format parameter</option><option value="exact">Use exact schema URL</option></select></label><p id="query-schema-policy-help" class="help">Add obsFormat=application/json when it is missing. The saved schema URL is shown after normalization.</p></div>
       <div class="fields two"><label>Observation resource kind<select id="query-resource-kind"><option value="collection">Collection</option><option value="single">Single observation</option></select></label><label>System resource <span class="optional">optional</span><input id="query-system"></label></div>
       <p id="query-resource-help" class="help">Collection queries retain their page bounds and original next links.</p>
       <div class="field-heading"><label>Observation query parameters</label><button type="button" class="text-button" data-add-pair="query-params">Add parameter</button></div><div id="query-params" class="pair-editor"></div>

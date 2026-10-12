@@ -63,19 +63,47 @@ def main(argv=None):
                 "schemaUrl":BASE+FILES["scalar-schema"]["path"],
                 "observationsUrl":BASE+FILES["obs-simple"]["path"],
                 "systemUrl":BASE+FILES["thermometer"]["path"],"obsFormat":"application/json",
-                "observationResource":"single","params":[],
+                "observationResource":"single","schemaUrlPolicy":"exact","params":[],
                 "limits":{"maxPages":1,"maxRows":1,"maxBytes":1048576},
                 "rights":{"license":"https://github.com/"+REPOSITORY+"/blob/"+COMMIT+"/LICENSE",
                     "attribution":"Open Geospatial Consortium, original committed examples",
                     "usage":"Illustrative publisher example, not a field measurement. Preserve the original license and all metadata, including the publisher's differing indoor/outdoor labels and original resultTime interval.",
                     "sourceUrl":"https://github.com/"+REPOSITORY+"/tree/"+COMMIT}}
             saved=workspace.save_query(query_input)
+            original_query_path=output/"query.json"
+            acquisition_id=args.operation_id
+            correction=None
+            if original_query_path.exists():
+                original_saved=native["read_json"](original_query_path)
+                if original_saved["id"]!=saved["id"]:
+                    previous=workspace.operation(args.operation_id)
+                    previous_body=dict(original_saved["query"])
+                    previous_body.pop("schemaUrlPolicy",None)
+                    candidate=dict(saved["query"]);candidate.pop("schemaUrlPolicy",None)
+                    candidate["schemaUrl"]=source.query_url(candidate["schemaUrl"],[{"name":"obsFormat","value":"application/json"}])
+                    if previous_body!=candidate or previous.get("request")!={"queryId":original_saved["id"],"label":original_saved["query"]["name"]}:
+                        raise ValueError("The retained publisher query differs by more than its explicit static schema URL.")
+                    if previous.get("status")=="complete":
+                        saved=original_saved
+                    else:
+                        if previous.get("status")!="failed" or previous.get("result") is not None:
+                            raise ValueError("Reconcile the original acquisition before selecting the exact schema URL.")
+                        acquisition_id=args.operation_id[:74]+"-schema-"+saved["id"][:12]
+                        operation_id(acquisition_id)
+                        correction={"schema":"stellar-forge.connected-systems-publisher-query-correction.v1",
+                            "originalOperationId":args.operation_id,"originalQueryId":original_saved["id"],
+                            "selectedOperationId":acquisition_id,"selectedQueryId":saved["id"],
+                            "previousRequestSha256":previous["requestSha256"],"schemaUrlPolicy":"exact",
+                            "reason":"The publisher supplies an immutable static schema URL; preserve that selected URL without adding a live-service format parameter."}
+                        retained(output/"exact-schema-query-selection.json",json_bytes(correction))
+            else:
+                retained(original_query_path,json_bytes(saved))
             query_id=saved["id"]
             retained(output/"connection.json",json_bytes(connection))
-            retained(output/"query.json",json_bytes(saved))
+            retained(private_dir(output/"query-selections")/(query_id+".json"),json_bytes(saved))
             print(json.dumps({"event":"original_publisher_acquisition","operationId":args.operation_id,
-                              "queryId":query_id,"workspace":str(workspace_path)}),flush=True)
-            acquired=workspace.acquire(query_id,args.operation_id,label=saved["query"]["name"])
+                              "queryId":query_id,"acquisitionOperationId":acquisition_id,"workspace":str(workspace_path)}),flush=True)
+            acquired=workspace.acquire(query_id,acquisition_id,label=saved["query"]["name"])
             sid=acquired["source"]["id"]
             original=workspace.source(sid)
             capture_path=workspace.root/"sources"/(sid+".connected-systems")
@@ -103,12 +131,12 @@ def main(argv=None):
             retained(output/"original-acquisition.json",json_bytes(acquired))
             receipt={"schema":"stellar-forge.connected-systems-publisher-acquisition.v1",
                 "operationId":args.operation_id,"repository":REPOSITORY,"commit":COMMIT,
-                "queryId":query_id,"source":sid,"sourceBytes":original["bytes"],
+                "queryId":query_id,"acquisitionOperationId":acquisition_id,"queryCorrection":correction,"source":sid,"sourceBytes":original["bytes"],
                 "files":FILES,"coverage":acquired["coverage"],"rights":original["inventory"]["rights"]}
             retained(output/"publisher-acquisition.json",json_bytes(receipt))
         native_args=["--source-root",str(root),"--operation-root",str(operation),
             "--operation-id",args.operation_id,"--workspace",str(workspace_path),
-            "--query",query_id,"--coverage-policy","require-exhausted","--page-size","1"]
+            "--source",sid,"--coverage-policy","require-exhausted","--page-size","1"]
         if args.node:native_args.extend(["--node",args.node])
         result=native["main"](native_args)
         row=result["sources"][0]["traversal"]["first"]["rows"][0]
@@ -123,7 +151,7 @@ def main(argv=None):
             raise ValueError("The independent customer did not retain exactly the original example.")
         finished={"schema":"stellar-forge.connected-systems-publisher-reference.v1","status":COMPLETE,
             "operationId":args.operation_id,"intentSha256":hashlib.sha256(json_bytes(intent)).hexdigest(),
-            "repository":REPOSITORY,"commit":COMMIT,"queryId":query_id,"source":sid,
+            "repository":REPOSITORY,"commit":COMMIT,"queryId":query_id,"acquisitionOperationId":acquisition_id,"queryCorrection":correction,"source":sid,
             "nativeResult":native["identity"](operation/"native"/"native-result.json"),
             "originalObservation":FILES["obs-simple"],"rowCount":1,
             "snapshot":result["sources"][0]["build"]["native"]["snapshot"],

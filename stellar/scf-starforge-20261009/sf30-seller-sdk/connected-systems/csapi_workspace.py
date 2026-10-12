@@ -140,7 +140,7 @@ class Workspace(_original.Workspace):
         return source.url(resource,connection["baseUrl"],connection["allowedOrigins"])
 
     def save_query(self,raw):
-        allowed={"schema","connectionId","name","datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","limits","rights","obsFormat","observationResource"}
+        allowed={"schema","connectionId","name","datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","limits","rights","obsFormat","observationResource","schemaUrlPolicy"}
         source.exact(raw,allowed,"acquisition query",{"schema","connectionId","name","datastreamUrl","schemaUrl","observationsUrl"})
         if raw["schema"]!=source.QUERY_SCHEMA:raise InputError("Expected "+source.QUERY_SCHEMA)
         connection=self.connection(raw["connectionId"])
@@ -152,7 +152,10 @@ class Workspace(_original.Workspace):
         observation_resource=raw.get("observationResource","collection")
         if observation_resource not in ("collection","single"):raise InputError("Choose a collection or single observation resource")
         if observation_resource=="single":body["observationResource"]="single"
-        if not any(k=="obsFormat" for k,_ in parse_qsl(urlsplit(body["schemaUrl"]).query,keep_blank_values=True)):
+        schema_policy=raw.get("schemaUrlPolicy","format-parameter")
+        if schema_policy not in ("format-parameter","exact"):raise InputError("Choose format-parameter or exact schema URL policy")
+        if schema_policy=="exact":body["schemaUrlPolicy"]="exact"
+        if schema_policy=="format-parameter" and not any(k=="obsFormat" for k,_ in parse_qsl(urlsplit(body["schemaUrl"]).query,keep_blank_values=True)):
             body["schemaUrl"]=source.query_url(body["schemaUrl"],[{"name":"obsFormat","value":"application/json"}])
         elif any(k=="obsFormat" and v!="application/json" for k,v in parse_qsl(urlsplit(body["schemaUrl"]).query,keep_blank_values=True)):
             raise InputError("Schema URL selects another observation format")
@@ -418,6 +421,7 @@ class Workspace(_original.Workspace):
                     raise InputError("The original observation schema changed during acquisition; all returned pages are retained")
                 selection={key:query[key] for key in ("datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","obsFormat","limits")}
                 if query.get("observationResource")=="single":selection["observationResource"]="single"
+                if query.get("schemaUrlPolicy")=="exact":selection["schemaUrlPolicy"]="exact"
                 coverage={"status":"exhausted" if current is None else "page-limit","pages":len(pages),"observations":observations,
                     "nextUrl":current,"consistency":"sequential-pages-not-transactional-snapshot"}
                 if query.get("observationResource")=="single":coverage["scope"]="single-observation-resource"

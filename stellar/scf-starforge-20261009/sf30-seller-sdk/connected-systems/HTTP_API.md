@@ -35,6 +35,8 @@ All identifiers named source/plan/build/connection/query/document are full SHA25
 
 `save_query` and `POST /api/queries` accept optional `observationResource: "collection" | "single"`. Default/explicit collection is omitted from the normalized query so existing collection identities remain unchanged. A single-resource query retains `observationResource: "single"`, sets `limits.maxPages` to 1, and does not insert a collection `limit` parameter. Its actual response must be one valid observation object with no next-page link. Capture `selection.observationResource` and `coverage.scope: "single-observation-resource"` preserve the selected scope. Exhausted means that one resource was received, not that the provider collection was traversed.
 
+`schemaUrlPolicy` is optional: `"format-parameter"` (default, omitted from normalized query) or `"exact"` (retained explicitly). The default adds `obsFormat=application/json` to the schema URL when absent; exact preserves the supplied schema URL. An explicitly incompatible format parameter is rejected, and schema/result validation remains required under both policies. Exact policy is also retained in source `selection`. Policy changes produce a new query identity; they cannot mutate an existing acquisition request.
+
 The original `items` collection parser remains unchanged for ordinary queries. The single-resource parser reads the exact object without constructing a replacement collection body. Existing request ID, body hash, source identity and receiving rules apply to both modes.
 
 ### Retained source and mapping
