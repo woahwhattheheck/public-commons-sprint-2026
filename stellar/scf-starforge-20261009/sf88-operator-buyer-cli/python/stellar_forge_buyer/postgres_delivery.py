@@ -14,12 +14,13 @@ import hashlib
 import json
 import math
 import os
+from pathlib import Path
 import re
 import uuid
 
 from .datasets import DatasetDelivery
 from .errors import StateError
-from .storage import digest, parse, unique_object
+from .storage import digest, parse, private_directory, read, unique_object
 
 SCHEMA = "stellar-forge.postgres-dataset-warehouse.v1"
 MAPPING_SCHEMA = "stellar-forge.postgres-dataset-mapping.v1"
@@ -256,7 +257,8 @@ def _input(delivery, mapping):
     if not isinstance(native, dict) or not isinstance(native.get("nativeStatus"), dict) or not isinstance(native.get("outputs"), dict):
         raise WarehouseError("DATASET_PG_ORIGINAL_DELIVERY_REPORT_REQUIRED")
     status, binding = native["nativeStatus"], native.get("sourceBindingSha256")
-    if (native.get("schema") != "stellar-forge.sf88.dataset-delivery.v1"
+    if (native.get("schema") not in {"stellar-forge.sf88.dataset-delivery.v1", "stellar-forge.sf100.dataset-delivery.v1"}
+            or native.get("schema") == "stellar-forge.sf100.dataset-delivery.v1" and native.get("sourceFormat") != "SF100_SCAN"
             or not isinstance(binding, str) or not _HEX.fullmatch(binding)
             or status.get("complete") is not True or status.get("finalized") is not True):
         raise WarehouseError("DATASET_PG_COMPLETE_NATIVE_DELIVERY_REQUIRED")
@@ -330,6 +332,31 @@ def review_delivery(delivery: DatasetDelivery, mapping: DatasetMapping):
             "columns": [{**column.record(), "json_types": sorted(observed[index]), "nulls": nulls[index]}
                         for index, column in enumerate(mapping.columns)],
             "key_validation": "POSTGRESQL_TRANSACTION" if mapping.keys else "ROW_ORDINAL_ONLY"}
+
+
+
+def load_delivery_report(report_path):
+    """Open an unchanged SF88 report or the original finalized SF100 scan."""
+    path = Path(os.path.abspath(Path(report_path).expanduser()))
+    record = parse(read(path, 8 * 1024 * 1024))
+    if isinstance(record, dict) and isinstance(record.get("report"), dict):
+        record = record["report"]
+    if (isinstance(record, dict) and isinstance(record.get("session"), dict)
+            and record["session"].get("schema") == "stellar-forge.buyer-delivery.v1"):
+        return DatasetDelivery.from_finalized_scan(record)
+    if isinstance(record, dict) and record.get("schema") == "stellar-forge.sf100.dataset-delivery.v1":
+        delivery = DatasetDelivery.from_finalized_scan(record.get("originalNativeScan"))
+        if delivery.native != record:
+            raise WarehouseError("DATASET_PG_REVIEWED_INPUT_CHANGED")
+        return delivery
+    if (not isinstance(record, dict) or record.get("schema") != "stellar-forge.sf88.dataset-delivery.v1"
+            or not isinstance(record.get("directory"), str)):
+        raise WarehouseError("DATASET_PG_ORIGINAL_DELIVERY_REPORT_REQUIRED")
+    directory = Path(record["directory"])
+    if (not directory.is_absolute() or str(directory) != record["directory"]
+            or private_directory(directory, create=False) != directory):
+        raise WarehouseError("DATASET_PG_ORIGINAL_DELIVERY_DIRECTORY_INVALID")
+    return DatasetDelivery(native=record, directory=directory)
 
 
 class PostgresWarehouse:

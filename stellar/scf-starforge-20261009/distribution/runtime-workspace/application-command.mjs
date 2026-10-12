@@ -8,6 +8,8 @@ import { odataStartup } from '../../sf30-seller-sdk/odata/live/applications.mjs'
 import { secEdgarStartup } from './application-sec-edgar.mjs';
 import { jobResultReceiverStartup } from './application-job-result-receiver.mjs';
 import { sheetsStartup } from './application-sheets.mjs';
+import { nocodbStartup } from './application-nocodb.mjs';
+import { stellarExpertStartup, STELLAR_EXPERT_READY_SCHEMA } from './application-stellar-expert.mjs';
 import { atlasStartup } from './application-atlas.mjs';
 import { n8nStartup } from './application-n8n.mjs';
 import { redisStartup } from './application-redis.mjs';
@@ -107,6 +109,38 @@ export function observeApplicationOutput(request, directory, context = {}) {
       saving = saving.then(async () => {
         if (seen) return;
         const startup = await n8nStartup(request, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'nocodb-source') {
+      if (!text.startsWith('{"schema":"stellar-forge.nocodb-authoring-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await nocodbStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'dataset-workspace' && request.args?.includes('--stellar-expert')) {
+      if (!text.startsWith('{"schema":"' + STELLAR_EXPERT_READY_SCHEMA + '",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await stellarExpertStartup(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
@@ -476,8 +510,10 @@ export function observeApplicationOutput(request, directory, context = {}) {
       try {
         const ready = JSON.parse(text);
         const directoryIndex = request.args.indexOf('--dir');
+        const crossrefSelected = request.args.includes('--crossref-state');
         if (ready.mode === 'RESEARCH_DOSSIER_WORKSPACE' && directoryIndex >= 0 &&
-            ready.directory === request.args[directoryIndex + 1] && typeof ready.url === 'string')
+            ready.directory === request.args[directoryIndex + 1] &&
+            (!crossrefSelected || ready.crossrefConfigured === true) && typeof ready.url === 'string')
           candidate = ready.url;
       } catch {}
     }

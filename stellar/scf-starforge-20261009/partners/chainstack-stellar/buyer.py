@@ -83,6 +83,12 @@ def main():
         return
     result = (operation.execute(review=Review(**json.loads(read(Path(args.review_file).resolve()))))
               if args.command == "execute" else operation.recover())
+    if args.command == "recover" and result is None:
+        recovery = {"intentId": args.intent, "resultRecoverable": False, "recovery": "RESULT_UNAVAILABLE",
+                    "nextAction": {"command": "inspect", "intentId": args.intent,
+                                   "stateDirectory": str(Path(args.state).resolve())}}
+        print(json.dumps(recovery, indent=2))
+        sys.exit(2)
     summary = {"intentId": args.intent, "status": result.status, "delivery": result.delivery}
     if args.output:
         summary["exported"] = str(result.save_as(Path(args.output).resolve()))
