@@ -5,7 +5,7 @@ Starforge publisher. It discovers tables, executes typed SELECT reports, retains
 complete source editions, and exports approved CSV datasets into the existing
 publication, version, seller, scheduler and buyer workflow.
 
-Use Node 22.5 or newer. The HTTP source needs no external database driver. Use
+Use Node 22.16 or newer. The HTTP source needs no external database driver. Use
 the maintained Starforge runtime for the complete merchant application.
 
 ## Connection and discovery
