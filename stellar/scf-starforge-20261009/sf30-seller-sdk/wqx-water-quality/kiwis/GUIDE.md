@@ -162,7 +162,11 @@ water-quality-kiwis save --project /private/commissioning-project \
 
 The save command requires the complete unchanged preview and its decision document.
 
-For a new source edition, select the earlier saved review and choose **Compare source editions**. The comparison includes every original observation, every physical counterpart row, every mapped native identity, and a disposition for each earlier profile, time interpretation, quality decision and correspondence choice. It reports added, removed, changed, unchanged and ambiguous groups. Duplicate native keys and duplicate source timestamps remain explicit.
+Open the current saved review, select the earlier saved review and choose **Compare editions** to compare their actual decisions. The workspace shows both complete count sets, the count changes, status transitions, and added, removed or changed mappings, time choices, quality decisions and correspondences. Search and filter the complete record comparison; every row opens its earlier and current candidates, original time selections and explicit decision. The downloaded comparison retains both whole decision documents, every physical review record and the saved-review/source identities.
+
+When both reviews use the identical source edition, their original physical row identifiers pair exactly, including separate replicates. Across different source editions, the original source matcher supplies only its unique physical matches; ambiguous or unpaired rows remain individually available. The complete before/after coverage is reported. A source-carry proposal is separate from the actual saved decision difference.
+
+For a new source edition or an unsaved draft, select the earlier saved review and choose **Compare editions**. The comparison includes every original observation, every physical counterpart row, every mapped native identity, and a disposition for each earlier profile, time interpretation, quality decision and correspondence choice. It reports added, removed, changed, unchanged and ambiguous groups. Duplicate native keys and duplicate source timestamps remain explicit.
 
 The comparison preserves the whole earlier decision document. It proposes reuse only for unambiguous, unchanged source rows and provider metadata. Extending a requested date window is recorded separately from changes to the provider's actual series metadata. Changed original scalar types or Laboratory cell/date interpretations remain part of the comparison. Changed quality or release catalogues require renewed quality-dependent correspondence decisions. Proposed choices are applied by the operator and saved as a new review. A comparison is downloaded in full, including the original and proposed decisions.
 
@@ -171,6 +175,16 @@ water-quality-kiwis compare --project /private/commissioning-project \
   --source paired-edition-02 --previous-review commissioning-review-01 \
   --out complete-edition-comparison.json
 ~~~
+
+Compare the decisions of two saved reviews directly:
+
+~~~bash
+water-quality-kiwis compare --project /private/commissioning-project \
+  --review commissioning-review-02 --previous-review commissioning-review-01 \
+  --out complete-saved-review-comparison.json
+~~~
+
+An optional **--source** with **--review** must name that review's exact original source. Opening or editing a different source or draft clears a displayed comparison. Save the edited draft under its own review name to compare its completed decisions.
 
 ## Complete deliverables
 
@@ -206,7 +220,7 @@ The included **receiving.mjs** executes a selected source programme, saves each 
 
 Its example configuration is **receiving.example.json**. Replace its file paths, actual source selections, counterpart, native mapping and explicit reasons. It can use an already retained original KiWIS capture or perform the full selected acquisition. It can also import a complete retained response packet and the original WQM sample export.
 
-The browser configuration requires the actual installed Playwright module and Chromium executable. A review marked **browser: true** opens on desktop and mobile, exposes the full original record, optionally saves a new operator edition, and downloads all eight outputs through the original local workspace. The independent receiving project is then opened in the same interface.
+The browser configuration requires the actual installed Playwright module and Chromium executable. For a review with **previousReviewId**, the programme compares both saved reviews after saving all selected editions, then opens that same decision comparison in the author and independent receiving workspaces. Both review names therefore remain available even if the current edition appears first in the configuration. A review marked **browser: true** opens on desktop and mobile, exposes the full original record, optionally saves a new operator edition, and downloads all eight outputs through the original local workspace. The independent receiving project is then opened in the same interface.
 
 ~~~bash
 node stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/receiving.mjs \

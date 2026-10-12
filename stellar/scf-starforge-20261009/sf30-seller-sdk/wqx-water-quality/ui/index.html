@@ -71,7 +71,17 @@
 <details id="kiwis-record-detail" hidden><summary>Original record and explicit time interpretation</summary><pre id="kiwis-record-source"></pre><form id="kiwis-time-form"><label>Original time field<select id="kiwis-time-decision-path"></select></label><label>Selected instant with timezone offset<input id="kiwis-time-instant" placeholder="2026-10-12T09:30:00-05:00" required></label><label>Interpretation reason<input id="kiwis-time-reason" required></label><button type="submit">Apply exact time interpretation</button></form></details></div>
 <div class="panel"><h3>Save, compare and transfer</h3><form id="kiwis-save-form"><div class="two"><label>Review name<input id="kiwis-save-id" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}"></label><label>Title<input id="kiwis-save-title" required maxlength="240" value="KiWIS commissioning review"></label></div><button type="submit">Save complete review</button></form>
 <div class="actions"><button id="kiwis-download-decisions" type="button">Download editable decisions</button><label>Reopen decisions<input id="kiwis-decisions-file" type="file" accept=".json"></label></div>
-<form id="kiwis-compare-form"><label>Earlier saved review<select id="kiwis-previous-review"></select></label><button type="submit">Compare source editions</button></form><div id="kiwis-comparison" hidden><pre id="kiwis-comparison-summary"></pre><button id="kiwis-adopt-comparison" type="button">Apply proposed unchanged decisions</button></div>
+<p id="kiwis-compare-state" role="status"></p>
+<form id="kiwis-compare-form"><label>Earlier saved review<select id="kiwis-previous-review"></select></label><button type="submit">Compare editions</button></form>
+<div id="kiwis-comparison" hidden><pre id="kiwis-comparison-summary"></pre>
+<button id="kiwis-comparison-download" type="button">Download complete comparison</button>
+<div id="kiwis-review-difference" hidden><h4>Saved decision changes</h4>
+<div class="two"><label>Record change<select id="kiwis-comparison-filter"><option value="">All records</option><option value="CHANGED">Changed</option><option value="UNCHANGED">Unchanged</option><option value="UNPAIRED">Unpaired source identities</option></select></label><label>Find record, state or changed field<input id="kiwis-comparison-search" type="search"></label></div>
+<div class="table-wrap"><table><thead><tr><th>Original record</th><th>Earlier state</th><th>Current state</th><th>Changed fields or source match</th><th>Decision detail</th></tr></thead><tbody id="kiwis-comparison-records"></tbody></table></div>
+<div class="actions"><button id="kiwis-comparison-prev" type="button">Previous records</button><span id="kiwis-comparison-page"></span><button id="kiwis-comparison-next" type="button">Next records</button></div>
+<pre id="kiwis-comparison-record-detail" hidden></pre></div>
+<p>Source comparison also proposes carrying the earlier review's unchanged decisions to the current source. Applying that proposal creates an editable draft.</p>
+<button id="kiwis-adopt-comparison" type="button">Apply proposed unchanged source decisions</button></div>
 <div id="kiwis-downloads" class="actions"></div></div></div>
 </section>
 <section id="tab-analysis" class="tab-panel">

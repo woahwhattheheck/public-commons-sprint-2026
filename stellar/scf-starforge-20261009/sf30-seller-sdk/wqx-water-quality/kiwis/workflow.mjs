@@ -7,7 +7,7 @@ import {joinCapture} from '../samples.mjs';
 import {readStandardizedReview,receiveStandardizedReview} from '../standardized-analysis/workflow.mjs';
 import {readLabResult} from '../../lab-edd/result.mjs';
 import {canonical,digest,fail,same,captureKiWIS,projectCapture,captureSelection,importKiWISResponses} from './source.mjs';
-import {commissioningSource,previewCommissioning,compareCommissioningSources} from './model.mjs';
+import {commissioningSource,previewCommissioning,compareCommissioningSources,compareCommissioningReviews} from './model.mjs';
 import {commissioningFile} from './formats.mjs';
 import {wqmCounterpartIdentity,projectWqmCounterpart} from './wqm.mjs';
 const LIMIT=256*1024*1024;
@@ -136,12 +136,19 @@ export async function saveCommissioningReview({project,sourceId,reviewId,title,d
     return reviewed(await immutable(folder,reviewId+'.json',record));
   });
 }
-export async function readCommissioningReview({project,reviewId}){
+async function readSavedCommissioningReview({project,reviewId}){
   operationId(reviewId);const record=reviewed(await readPrivateJson(join(await directory(project),'reviews',reviewId+'.json'),LIMIT));
-  const {source}=await readCommissioningSource({project,sourceId:record.sourceId}),
-    actual=previewCommissioning(source,record.review.document);
+  if(record.reviewId!==reviewId)fail('KIWIS_REVIEW_CHANGED','The saved review name differs from its original edition.');
+  return record;
+}
+function reproduceCommissioningReview(record,source){
+  const actual=previewCommissioning(source,record.review.document);
   if(!same(actual,record.review))fail('KIWIS_REVIEW_CHANGED','The original sources and decisions do not reproduce this commissioning edition.');
   return record;
+}
+export async function readCommissioningReview({project,reviewId}){
+  const record=await readSavedCommissioningReview({project,reviewId}),{source}=await readCommissioningSource({project,sourceId:record.sourceId});
+  return reproduceCommissioningReview(record,source);
 }
 export async function listCommissioning({project}){
   const folder=await directory(project),sources=[],reviews=[];
@@ -161,10 +168,15 @@ export async function listCommissioning({project}){
   }
   return {sources,reviews};
 }
-export async function compareCommissioningEditions({project,sourceId,previousReviewId}){
-  const {source}=await readCommissioningSource({project,sourceId}),prior=await readCommissioningReview({project,reviewId:previousReviewId}),
-    previous=await readCommissioningSource({project,sourceId:prior.sourceId});
-  return compareCommissioningSources(source,previous.source,prior.review.document);
+export async function compareCommissioningEditions({project,sourceId,reviewId,previousReviewId}){
+  const prior=await readSavedCommissioningReview({project,reviewId:previousReviewId}),
+    current=reviewId?(reviewId===previousReviewId?prior:await readSavedCommissioningReview({project,reviewId})):null;
+  if(current&&sourceId&&sourceId!==current.sourceId)fail('KIWIS_SOURCE_CHANGED','Compare the current saved review against its exact source edition.');
+  const currentSourceId=current?.sourceId??sourceId,{source}=await readCommissioningSource({project,sourceId:currentSourceId}),
+    previous=currentSourceId===prior.sourceId?source:(await readCommissioningSource({project,sourceId:prior.sourceId})).source;
+  reproduceCommissioningReview(prior,previous);
+  if(current){if(current!==prior)reproduceCommissioningReview(current,source);return compareCommissioningReviews(source,previous,current,prior);}
+  return compareCommissioningSources(source,previous,prior.review.document);
 }
 export async function exportCommissioningReview({project,reviewId,format}){
   const saved=await readCommissioningReview({project,reviewId}),{source,input}=await readCommissioningSource({project,sourceId:saved.sourceId});

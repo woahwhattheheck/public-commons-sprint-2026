@@ -24,7 +24,7 @@ const HELP=[
   'save     --source ID --review ID --title TITLE --decisions FILE --preview FILE.',
   'list     List complete original source pairs and saved review editions.',
   'read     --review ID: reopen and reproduce an original saved review.',
-  'compare  --source ID --previous-review ID --out FILE: compare complete source editions.',
+  'compare  (--review ID | --source ID) --previous-review ID --out FILE: compare saved reviews or source editions.',
   'export   --review ID --format FORMAT --out FILE: download a selected complete deliverable.',
   'receive  --bundle FILE: reopen a complete project in another private Water Quality project.','',
   'KIND: wqx-review, wqx-scientific, lab-edd-result, kiwis-wqm.',
@@ -118,7 +118,7 @@ export async function main(argv=process.argv.slice(2)){
       result=await saveCommissioningReview({project,sourceId:need(values,'source'),reviewId:need(values,'review'),title:need(values,'title'),document,expectedReviewSha256:reviewSha256});
     }else if(command==='list')result=await listCommissioning({project});
     else if(command==='read')result=await readCommissioningReview({project,reviewId:need(values,'review')});
-    else if(command==='compare')result=await compareCommissioningEditions({project,sourceId:need(values,'source'),previousReviewId:need(values,'previous-review')});
+    else if(command==='compare')result=await compareCommissioningEditions({project,sourceId:values.source??(values.review?undefined:need(values,'source')),reviewId:values.review,previousReviewId:need(values,'previous-review')});
     else if(command==='export')result=(await exportCommissioningReview({project,reviewId:need(values,'review'),format:need(values,'format')})).bytes;
     else result=await receiveCommissioningReview({project,bundle:await readJson(need(values,'bundle'))});
     await publish(result,output);return result;
