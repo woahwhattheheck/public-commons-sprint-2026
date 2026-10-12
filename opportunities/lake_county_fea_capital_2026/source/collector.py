@@ -365,8 +365,19 @@ def capture(item, defer_pdf=False):
     return row
 
 def batch(items, defer_pdf=False):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-        return list(pool.map(lambda item: capture(item, defer_pdf=defer_pdf), items))
+    # A temporary executor can disappear before the full seed list finishes.
+    # Complete one original three-source batch, then preserve its raw receipts.
+    # A restored batch with no new reads does not create another checkpoint.
+    selected = list(items)
+    rows = []
+    for start in range(0, len(selected), 3):
+        group = selected[start:start + 3]
+        new_reads = any(key not in SOURCES for key, _url in group)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            rows.extend(pool.map(lambda item: capture(item, defer_pdf=defer_pdf), group))
+        if new_reads:
+            checkpoint("original_sources_batch_" + group[-1][0], force=True)
+    return rows
 
 def complete_pending_text():
     selected = [row for row in SOURCES.values() if row.get("source_kind") == "public_pdf"
