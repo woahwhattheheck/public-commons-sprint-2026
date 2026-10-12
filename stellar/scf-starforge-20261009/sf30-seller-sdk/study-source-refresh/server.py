@@ -53,6 +53,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def local(self):
         allowed = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+        if self.server.server_port == 80:
+            allowed.update({"127.0.0.1", "localhost"})
         if self.client_address[0] != "127.0.0.1" or self.headers.get("Host") not in allowed:
             fail("LOCAL_OPERATOR_ORIGIN_REQUIRED")
         origin = self.headers.get("Origin")
