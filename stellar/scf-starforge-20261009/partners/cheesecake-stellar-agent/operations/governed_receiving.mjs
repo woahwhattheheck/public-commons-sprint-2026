@@ -19,7 +19,7 @@ import {runNativeMcpSpendingRecoveryReceiving} from '../../../../../stellar-forg
 import {inspectHandoff} from '../application.mjs';
 import {loadApplication} from '../configuration.mjs';
 import {initializeInstalledApplication,inspectInstalledApplication,startInstalledApplication} from '../installed.mjs';
-import {receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject} from '../project-receive.mjs';
+import {receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject,verifyApplicationProject} from '../project-receive.mjs';
 import {createApplicationServer} from '../server.mjs';
 
 const progress=stage=>process.stderr.write(JSON.stringify({receivingStage:stage})+'\n');
@@ -253,7 +253,7 @@ export async function main(args=process.argv.slice(2)) {
 async function finishProjectReceiving({loaded,work,httpIds,context,environment,prepared,token,headers,
   paid,saved,bytes,originalReviews,original,passphraseEnv,expectedSigning=1,expectedSigned=1,
   receiverSource=null,continuation=null,
-  runtime={receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject,createApplicationServer}}) {
+  runtime={receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject,verifyApplicationProject,createApplicationServer}}) {
   let server;
   try{
     progress('project-inspection');
@@ -271,7 +271,18 @@ async function finishProjectReceiving({loaded,work,httpIds,context,environment,p
     await loaded.close();loaded=null;
     const receiverDirectory=join(work,'received-project');
     progress('receive-project');
-    const received=await runtime.receiveApplicationProject({bundle:snapshot.bundle,directory:receiverDirectory,sourceRoot,
+    let received;
+    let retainedReceiver;
+    try{retainedReceiver=JSON.parse(await readFile(join(receiverDirectory,'receiver.json'),'utf8'));}
+    catch(error){if(error.code!=='ENOENT')throw error;}
+    if(retainedReceiver){
+      assert.equal(retainedReceiver.recordSha256,snapshot.recordSha256);
+      assert.equal(retainedReceiver.manifestSha256,snapshot.manifestSha256);
+      assert.equal(retainedReceiver.operationId,projectId);
+      await runtime.verifyApplicationProject({bundle:join(receiverDirectory,'backup'),sourceRoot,passphraseEnv,
+        expectedRecordSha256:snapshot.recordSha256,expectedManifestSha256:snapshot.manifestSha256,environment});
+      received={...retainedReceiver,status:'APPLICATION_PROJECT_RECEIVED'};
+    }else received=await runtime.receiveApplicationProject({bundle:snapshot.bundle,directory:receiverDirectory,sourceRoot,
       passphraseEnv,expectedManifestSha256:snapshot.manifestSha256,environment});
     assert.equal(received.status,'APPLICATION_PROJECT_RECEIVED');
     assert.equal(received.recordSha256,snapshot.recordSha256);
@@ -285,7 +296,10 @@ async function finishProjectReceiving({loaded,work,httpIds,context,environment,p
       assert.equal(copy.partial,false);
       assert.equal(hash(Buffer.from(copy.data,'base64')),saved.result.file.sha256);
       const offlineExport=join(work,'received-complete-result.json');
-      await offline.call(context,'export','remote-paid',{destination:offlineExport});
+      let retainedExport;
+      try{retainedExport=await readFile(offlineExport);}catch(error){if(error.code!=='ENOENT')throw error;}
+      if(retainedExport)assert.equal(hash(retainedExport),saved.result.file.sha256);
+      else await offline.call(context,'export','remote-paid',{destination:offlineExport});
       assert.equal(hash(await readFile(offlineExport)),saved.result.file.sha256);
       assert.equal((await offline.call(context,'recover','remote-paid')).binding.quoteId,paid.binding.quoteId);
     }finally{await offline.close();}
@@ -426,6 +440,7 @@ export async function resumeReceiving({work,handoff,python,receiverSource}) {
       runtime:{receiveApplicationProject:projects.receiveApplicationProject,
         openReceivedApplicationProject:projects.openReceivedApplicationProject,
         withRestoredApplicationProject:projects.withRestoredApplicationProject,
+        verifyApplicationProject:projects.verifyApplicationProject,
         createApplicationServer:servers.createApplicationServer}});
   }finally{await loaded?.close();}
 }

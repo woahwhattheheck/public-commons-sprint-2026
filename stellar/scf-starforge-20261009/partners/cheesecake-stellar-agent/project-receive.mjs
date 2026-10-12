@@ -7,7 +7,7 @@ import { inspectHandoff } from './application.mjs';
 import { inspectRemoteMcp,verifyRemoteMcpQuoteBinding } from './remote-mcp.mjs';
 import { PROJECT,RECEIVED,need,object,absolute,member,inside,sha,json,checkSignal,exists,privateDirectory,
   readBytes,readJSON,digest,copyFile,publishBytes,ensureParents,syncDirectory,originalModule,
-  encrypted,validateCapturedFiles } from './project-files.mjs';
+  encrypted,validateCapturedFiles,quoteStoreTemporaryFile } from './project-files.mjs';
 
 const SF88='stellar/scf-starforge-20261009/sf88-operator-buyer-cli/';
 const NATIVE='stellar-forge/mcp-paid-agent/';
@@ -216,9 +216,16 @@ async function referenceState(record,{allowMissingNative=false}={}) {
   }
   return results;
 }
+function capturedTemporaryFile(record,file) {
+  return Boolean(record.config.remoteMcp&&file.role==='application'&&quoteStoreTemporaryFile(file.path,
+    join(record.config.stateDirectory,'remote-mcp/quotes/quotes.sqlite')));
+}
 async function pathsState(record,mode) {
   const paths=[];
   for(const file of record.files){
+    if(capturedTemporaryFile(record,file)){
+      paths.push({path:file.path,role:file.role,status:'NATIVE_TEMPORARY'});continue;
+    }
     if(!await exists(file.path)){paths.push({path:file.path,role:file.role,status:'MISSING'});continue;}
     if(mode==='reattach'&&file.role==='application'){
       paths.push({path:file.path,role:file.role,status:'CURRENT_NATIVE_STATE'});continue;
@@ -347,7 +354,8 @@ export async function restoreApplicationProject(options) {
       if(mode==='restore'){
         for(const path of record.directories)await ensureParents(path);
         // The configuration is published last; the original source selection then sees a complete project.
-        const files=[...record.files].sort((a,b)=>Number(a.path===record.configFile)-Number(b.path===record.configFile));
+        const files=record.files.filter(file=>!capturedTemporaryFile(record,file))
+          .sort((a,b)=>Number(a.path===record.configFile)-Number(b.path===record.configFile));
         for(const file of files){checkSignal(options.signal);
           if(await publishCaptured(file,verified.payload)==='CREATED')created.push(file.path);}
       }
