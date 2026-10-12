@@ -12,7 +12,7 @@ import zipfile
 FIELDS = ("source_name", "source_kind", "request_id", "recognition_date", "native_source_day", "native_date_basis", "native_reservation_day", "network", "asset",
           "center_code", "center_name", "project", "account_code", "amount", "settled_actual",
           "reserved_maximum", "quoted_amount", "receipt_ref", "proof_sha256", "request_digest", "coding_id",
-          "source_capture", "memo")
+          "source_capture", "memo", "original_spending_reservation")
 OUTSTANDING = ("source_name", "request_id", "native_reservation_day", "network", "asset", "amount", "missing", "source_capture", "request_digest", "reservation_ledger_identity", "contributing_sources", "attribution")
 NATIVE_OUTCOMES = ("source_name", "request_id", "quote_day", "native_status", "payment_classification", "network", "asset",
                    "quoted_amount", "settled_actual", "receipt_ref", "observation_sha256", "payer", "recipient",
