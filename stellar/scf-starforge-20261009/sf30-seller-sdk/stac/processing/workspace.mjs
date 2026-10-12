@@ -1,5 +1,6 @@
 // MIT. Additive processing history in the original STAC analyst/receiving product.
 import { randomUUID } from 'node:crypto';
+import { withPrivateLock } from '../../routescan/quota.mjs';
 import { hostname } from 'node:os';
 import { readFile, readlink, readdir, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -26,7 +27,7 @@ export const processingRunKey = run => {
   return sha256(canonicalJson([run.source_id, run.workflow_definition_id, run.run_id, run.payload_id]));
 };
 
-async function ownerIdentity() {
+async function legacyOwnerIdentity() {
   const base = { host: hostname(), pid: process.pid, platform: process.platform, token: identity('owner') };
   if (process.platform !== 'linux') return base;
   const pid = await readlink('/proc/self'), text = await readFile('/proc/self/stat', 'utf8');
@@ -50,11 +51,27 @@ async function ownerAlive(owner, current) {
   catch (error) { if (error.code === 'ESRCH') return false; throw error; }
 }
 
+async function ownerIdentity() {
+  return { host: hostname(), pid: process.pid, platform: process.platform,
+    token: identity('owner'), mechanism: 'native-file-lock' };
+}
+async function legacyOwnerActive(owner) {
+  return owner && owner.mechanism !== 'native-file-lock'
+    ? ownerAlive(owner, await legacyOwnerIdentity()) : false;
+}
+
 export async function openProcessingWorkspace({ directory, stacWorkspace, transport, create = true, environment = process.env } = {}) {
   directory = await privateDirectory(directory, { create });
   const versions = await privateDirectory(join(directory, 'versions'), { create });
-  for (const name of ['sources', 'captures', 'exports']) await privateDirectory(join(directory, name), { create });
+  for (const name of ['sources', 'captures', 'exports', 'locks']) await privateDirectory(join(directory, name), { create });
   let queue = Promise.resolve(), closing = false;
+  async function withEditionLease(id, work) {
+    try { return await withPrivateLock(join(directory, 'locks'), sha256(id) + '.lock', work); }
+    catch (error) {
+      if (error.code === 'ROUTESCAN_RECORD_BUSY') need(false, 'PROCESSING_OPERATION_ALREADY_RUNNING');
+      throw error;
+    }
+  }
   async function getState() {
     for (let attempt = 0; attempt < 8; attempt++) {
       const names = (await readdir(versions)).filter(v => /^\d{12}\.json$/.test(v)).sort();
@@ -111,6 +128,13 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       if (!s.configuredLocally.includes(entry.key)) s.configuredLocally.push(entry.key);
       const old = s.deployments.find(v => v.key === entry.key); if (old) return old; s.deployments.push(entry); return entry;
     }, expectedRevision);
+  }
+  async function configureRetained({ deploymentKey, deployment, expectedRevision } = {}) {
+    const source = await sourceFor(deploymentKey);
+    try {
+      const body = await readBytes(join(directory, relative(source.entry.source.path)), source.entry.source.bytes);
+      return configure({ deployment: deployment ?? source.entry.deployment, source: { body, metadata: source.entry.source }, expectedRevision });
+    } finally { source.provider.close(); }
   }
   const makeTask = ({ id, kind, request, rowsKey = null, immutableQuery = {}, scope = {} }) => ({ id, kind, request,
     initialRequest: request, requestHash: digest(request), rowsKey, immutableQuery, scope, state: 'PENDING', pages: [], attempts: [],
@@ -202,7 +226,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     const { edition } = await getEdition(id), owner = await ownerIdentity();
     if (edition.state === 'COMPLETE' || edition.state === 'COMPLETE_WITH_ERRORS' || edition.state === 'CANCELLED') return null;
     if (edition.retryAt) need(Date.parse(edition.retryAt) <= Date.now(), 'PROCESSING_RETRY_AFTER_PENDING');
-    need(!await ownerAlive(edition.lease, owner), 'PROCESSING_OPERATION_ALREADY_RUNNING');
+    need(!await legacyOwnerActive(edition.lease), 'PROCESSING_OPERATION_ALREADY_RUNNING');
     const prior = edition.lease?.token ?? null;
     return mutate(s => {
       const e = s.editions.find(v => v.id === id); need((e.lease?.token ?? null) === prior, 'PROCESSING_OPERATION_CLAIM_CHANGED');
@@ -297,9 +321,9 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
   async function runEdition(id) {
     need(!closing, 'PROCESSING_WORKSPACE_CLOSED'); const key = directory + ':' + id;
     if (active.has(key)) return active.get(key).promise;
-    const owner = await claim(id); if (!owner) return getEdition(id);
     const controller = new AbortController();
-    const promise = (async () => {
+    const promise = withEditionLease(id, async () => {
+      const owner = await claim(id); if (!owner) return getEdition(id);
       let provider;
       try {
         const { edition: original } = await getEdition(id), source = await sourceFor(original.deploymentKey);
@@ -335,21 +359,26 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
         await owned(id, owner.token, e => { e.state = e.cancelled || controller.signal.aborted ? 'CANCELLED' : 'PAUSED';
           e.error = errorCode(error); e.lease = null; e.history.push({ at: stamp(), kind: 'INTERRUPTED', code: e.error }); }).catch(() => {});
         throw error;
-      } finally { provider?.close(); active.delete(key); }
+      } finally { provider?.close(); }
       return getEdition(id);
-    })();
+    }).finally(() => active.delete(key));
     active.set(key, { controller, promise }); return promise;
   }
   async function resume({ editionId, retryFailed = false } = {}) {
-    const { edition } = await getEdition(editionId), current = await ownerIdentity();
-    need(!await ownerAlive(edition.lease, current), 'PROCESSING_OPERATION_ALREADY_RUNNING');
-    if (edition.state === 'CANCELLED') return getEdition(editionId);
-    if (edition.retryAt) need(Date.parse(edition.retryAt) <= Date.now(), 'PROCESSING_RETRY_AFTER_PENDING');
-    await mutate(s => {
-      const e = s.editions.find(v => v.id === editionId); need((e.lease?.token ?? null) === (edition.lease?.token ?? null), 'PROCESSING_OPERATION_CLAIM_CHANGED');
-      for (const t of e.tasks) if (t.state === 'PAUSED' || retryFailed && t.state === 'FAILED') t.state = 'PENDING';
-      if (e.tasks.some(t => ['PENDING', 'RUNNING'].includes(t.state))) { e.state = 'PREPARED'; e.retryAt = null; }
-    }); return runEdition(editionId);
+    const prepared = await withEditionLease(editionId, async () => {
+      const { edition } = await getEdition(editionId);
+      need(!await legacyOwnerActive(edition.lease), 'PROCESSING_OPERATION_ALREADY_RUNNING');
+      if (edition.state === 'CANCELLED') return false;
+      if (edition.retryAt) need(Date.parse(edition.retryAt) <= Date.now(), 'PROCESSING_RETRY_AFTER_PENDING');
+      await mutate(s => {
+        const e = s.editions.find(v => v.id === editionId);
+        need((e.lease?.token ?? null) === (edition.lease?.token ?? null), 'PROCESSING_OPERATION_CLAIM_CHANGED');
+        for (const t of e.tasks) if (t.state === 'PAUSED' || retryFailed && t.state === 'FAILED') t.state = 'PENDING';
+        if (e.tasks.some(t => ['PENDING', 'RUNNING'].includes(t.state))) { e.state = 'PREPARED'; e.retryAt = null; }
+      });
+      return true;
+    });
+    return prepared ? runEdition(editionId) : getEdition(editionId);
   }
   async function cancel({ editionId } = {}) {
     await mutate(s => { const e = s.editions.find(v => v.id === editionId); need(e, 'PROCESSING_EDITION_NOT_FOUND');
@@ -358,6 +387,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     if (running) await running.promise.catch(() => {}); return getEdition(editionId);
   }
   async function importPage({ editionId, taskId, body, metadata } = {}) {
+    return withEditionLease(editionId, async () => {
     const owner = await claim(editionId); need(owner, 'PROCESSING_EDITION_ALREADY_FINISHED');
     let provider;
     try {
@@ -376,6 +406,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     } catch (error) {
       await owned(editionId, owner.token, e => { e.state = 'PAUSED'; e.error = errorCode(error); e.lease = null; }).catch(() => {}); throw error;
     } finally { provider?.close(); }
+    });
   }
   async function runs(editionId) {
     const { edition } = await getEdition(editionId), byKey = new Map();
@@ -419,7 +450,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       return record;
     }, expectedRevision);
   }
-  const workspace = { directory, stacWorkspace, getState, configure, sourceFor, getEdition, runs, getRun, prepareInventory, prepareCapture,
+  const workspace = { directory, stacWorkspace, getState, configure, configureRetained, sourceFor, getEdition, runs, getRun, prepareInventory, prepareCapture,
     inventory: async editionId => {
       const { edition, deployment } = await getEdition(editionId);
       need(edition.selection.kind === 'INVENTORY', 'PROCESSING_INVENTORY_EDITION_REQUIRED');
@@ -504,6 +535,14 @@ export async function createProcessingController({ stacWorkspace, directory, con
   const selected = value => { need(typeof value === 'string' && value.length > 0 && value.length <= 2048,
     'PROCESSING_SAVED_IDENTIFIER_REQUIRED'); return value; };
   const reads = {
+    source: async ({ query = {} } = {}) => {
+      const source = await workspace.sourceFor(selected(query.deploymentKey));
+      try {
+        const bytes = await readBytes(join(workspace.directory, relative(source.entry.source.path)), source.entry.source.bytes);
+        return { deploymentKey: source.entry.key, source: source.entry.source, bytes: bytes.length,
+          sha256: source.entry.source.sha256, contentBase64: bytes.toString('base64') };
+      } finally { source.provider.close(); }
+    },
     inventory: async ({ query = {} } = {}) => workspace.inventory(selected(query.editionId)),
     edition: async ({ query = {} } = {}) => workspace.getEdition(selected(query.editionId)),
     runs: async ({ query = {} } = {}) => ({ editionId: selected(query.editionId), runs: await workspace.runs(query.editionId) }),
@@ -519,6 +558,8 @@ export async function createProcessingController({ stacWorkspace, directory, con
   const actions = {
     configure: async ({ input = {} } = {}) => workspace.configure({ deployment: input.deployment,
       source: { body: body(input.sourceBase64), metadata: input.sourceMetadata ?? {} }, expectedRevision: input.expectedRevision }),
+    'configure-retained': async ({ input = {} } = {}) => workspace.configureRetained({
+      deploymentKey: selected(input.deploymentKey), deployment: input.deployment, expectedRevision: input.expectedRevision }),
     discover: async ({ input = {}, operationId } = {}) => workspace.discover({ deploymentKey: selected(input.deploymentKey),
       operationId: intent(operationId), ...(input.kinds ? { kinds: input.kinds } : {}) }),
     'prepare-inventory': async ({ input = {}, operationId } = {}) => workspace.prepareInventory({
