@@ -404,4 +404,5 @@ require_once __DIR__ . '/merchant-console.php';
 require_once __DIR__ . '/merchant-operator.php';
 
 require_once __DIR__ . '/merchant-refunds.php';
+require_once __DIR__ . '/merchant-erp.php';
 

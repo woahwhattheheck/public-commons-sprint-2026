@@ -1,5 +1,11 @@
 # SF104 | WooCommerce merchant order bridge for native Stellar x402
 
+## ERP order delivery
+
+The installed plugin now includes **WooCommerce → Order ERP delivery** for original Woo sales orders. Prepare and review immutable mappings, deliver through the published Acumatica 25.200.001 contract, reconcile uncertain responses, correct the same document with its actual native line keys, and export/reopen the complete operating project. The industrial queue, mapping/CSV editor, recovery workflow, and CLI share the original WordPress permissions, order lock, and authenticated merchant client.
+
+See [ERP.md](ERP.md) for connection registration, exact decimal and tax behavior, the complete operator flow, correction semantics, and second-engineer handoff. Start from [erp-map.example.json](erp-map.example.json) and run `node merchant-erp-cli.mjs help`. The existing Woo payment, settlement and refund flows remain in their original records.
+
 A real merchant-integration product built on the **existing SF30 native seller** and **original SF98 post-settlement outbox/signed delivery**. WordPress/WooCommerce receives the existing, minimal `stellar-forge.sf98.webhook.v1` event and associates it with an *already-existing, explicitly prebound* Woo order. One accepted native settlement event can correspond to one order. It cannot initiate a payment, sign anything, fabricate a merchant transaction, or fulfill on webhook arrival. The merchant explicitly reviews the **independent original Stellar chain settlement** before WooCommerce releases a purchased digital/physical item.
 
 The plugin also includes an **optional native checkout gateway** for one merchant-mapped digital product or a complete [digital basket](BASKET.md) of approved products and integer quantities. It creates the actual Woo order, freezes its approved terms, and gives its buyer an original SF88 review handoff. The companion native seller checks the live order before verification and reserves that order before settlement. Classic checkout and Checkout Blocks share the same processing path. See [GATEWAY.md](GATEWAY.md) for product setup, the buyer workflow, seller deployment and explicit recovery.
