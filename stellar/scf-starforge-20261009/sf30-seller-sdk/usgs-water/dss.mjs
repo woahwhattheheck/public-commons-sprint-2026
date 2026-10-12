@@ -562,7 +562,7 @@ export async function exportDssHandover({ directory, exportId, editionDirectory,
     return { ...receipt, path: output, filename: exportId + '-HEC-DSS-handover.zip', mime: 'application/zip' };
   });
 }
-export async function receiveDssHandover({ directory, editionsDirectory, archive, env = process.env, signal }) {
+export async function receiveDssHandover({ directory, editionsDirectory, archive, expectedIdentity, env = process.env, signal }) {
   const root = await privateDirectory(resolve(directory)), editions = await privateDirectory(resolve(editionsDirectory));
   const temporary = await privateDirectory(join(root, '.receive-' + randomUUID())), unpacked = join(temporary, 'unpacked');
   try {
@@ -574,6 +574,18 @@ export async function receiveDssHandover({ directory, editionsDirectory, archive
     need(receipt.manifest.exportId === exportId && receipt.manifest.exportSha256 === exported.exportSha256 &&
       exported.source.editionId === edition.editionId && exported.source.captureSha256 === edition.captureSha256,
       'The portable handover does not join its original native export and USGS source edition.', 'WATER_DSS_SOURCE_CHANGED', 409);
+    if (expectedIdentity !== undefined) {
+      need(plain(expectedIdentity) &&
+        Object.keys(expectedIdentity).every(key => ['exportId','exportSha256','editionId','captureSha256','planSha256'].includes(key)) &&
+        typeof expectedIdentity.exportId === 'string' && typeof expectedIdentity.editionId === 'string' &&
+        ['exportSha256','captureSha256','planSha256'].every(key => /^[0-9a-f]{64}$/.test(expectedIdentity[key] ?? '')),
+        'Supply the complete selected customer export and source identity.', 'WATER_DSS_RECEIVE_SELECTION_INVALID', 400);
+      need(expectedIdentity.exportId === exportId && expectedIdentity.exportSha256 === exported.exportSha256 &&
+        expectedIdentity.editionId === exported.source.editionId && expectedIdentity.captureSha256 === exported.source.captureSha256 &&
+        expectedIdentity.planSha256 === exported.planSha256,
+        'The complete handover differs from the selected customer export or source. Nothing was installed.',
+        'WATER_DSS_RECEIVE_IDENTITY_CHANGED', 409);
+    }
     const editionTarget = join(editions, editionId), exportTarget = join(root, exportId);
     const existingEdition = await lstat(editionTarget).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
     const existingExport = await lstat(exportTarget).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
@@ -594,7 +606,7 @@ export async function receiveDssHandover({ directory, editionsDirectory, archive
   } finally { await rm(temporary, { recursive: true, force: true }); }
 }
 
-export async function receiveDssUpload({ directory, editionsDirectory, stream, env = process.env, signal }) {
+export async function receiveDssUpload({ directory, editionsDirectory, stream, expectedIdentity, env = process.env, signal }) {
   const root = await privateDirectory(resolve(directory)), temporary = await privateDirectory(join(root, '.upload-' + randomUUID()));
   const path = join(temporary, 'handover.zip'), file = await open(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
   const abort = () => stream.destroy(new Error('The workspace closed during the handover upload.'));
@@ -606,7 +618,7 @@ export async function receiveDssUpload({ directory, editionsDirectory, stream, e
       await file.writeFile(chunk);
     }
     await file.sync(); await file.close();
-    return await receiveDssHandover({ directory: root, editionsDirectory, archive: path, env, signal });
+    return await receiveDssHandover({ directory: root, editionsDirectory, archive: path, expectedIdentity, env, signal });
   } finally {
     signal?.removeEventListener('abort', abort); await file.close().catch(() => {});
     await rm(temporary, { recursive: true, force: true });
