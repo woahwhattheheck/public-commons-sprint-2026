@@ -16,20 +16,21 @@ Choose the full merged maintained commit containing the financial product. It su
 
 ## Compose the existing reader
 
-Use the same source composer, current distribution directory and existing economic/coastal selections. Add the explicit financial source commit:
+Use the same source composer, current distribution directory and existing economic, coastal and customer selections. The current source index retains the paired Datasette analysis/publisher commits and original customer source identities. Preserve those recorded selections and add the explicit financial source commit:
 
 ~~~sh
 node stellar-forge/developer-site/grant-compose.mjs \
+  --directory /absolute/current/developer-site/dist \
   --manuscript /absolute/current-scf-application.md \
-  --fred-commit be44be564e35b63af23246bad531a95374bbb4c0 \
-  --coops-commit 92eb1c73a3cab9781ef7dbabdc12067344fb6aa2 \
   --finance-commit FULL_MERGED_MERCHANT_COMMIT \
   --source-pins-output /absolute/current-grant-source-pins.json
 ~~~
 
-The original default directory is **stellar-forge/developer-site/dist**. An explicit **--directory** selects another complete copy of that same dist source.
+The example explicitly selects the complete working dist directory. The source command's default remains **stellar-forge/developer-site/dist**. Keep the accepted application, full companion, source index, page shell and declared assets together. A later composition keeps the recorded economic, coastal and Datasette editions unless their flags explicitly select new commits.
 
-Composition receives the current front answer, original recurring economic and selected coastal sections, and the complete financial subsection. It replaces those selected companion sections while preserving the rest of the companion. It renders the nine answers into the existing grant page, retaining its film, budget presentation, example, navigation, styles and existing-work links.
+Composition receives the current front answer, original recurring economic and selected coastal/Datasette sections, the full accepted customer sections, and the complete financial subsection. It replaces those selected companion sections while preserving the rest of the companion. The original customer projector converts internal coordination citations into complete public prose and source links. It renders the nine answers into the existing grant page, retaining its film, budget presentation, saved customer example, guided reviewer entry, navigation, styles and existing-work links.
+
+To select a later Datasette edition in the same composition, supply both **--datasette-commit** and **--datasette-publisher-commit**. Omitting those options preserves the pair saved in the current source index. The original customer receiver continues to keep the accepted Webhook, Gravity referral, RisingWave and OpenFn passages together with their current source selections.
 
 The result retains the same four published routes:
 
@@ -52,15 +53,15 @@ The financial receiver requires a single complete section. An absent or duplicat
 
 ### Preserve issuer preparation
 
-The composer calls the existing **attachGrantSubmission** after composing the current source index. That retains one **Prepare submission** navigation entry and binds the submission workspace to the exact new application SHA-256 and Git blob identity.
+The composer retains the original **composeGrantEntry**, **attachGrantSubmission** and **attachGrantReviewRounds** in the same pipeline. **Prepare submission** and **Review prepared draft** share the exact newly composed application SHA-256 and Git blob identity, with the original planning and handover descriptors.
 
 The existing issuer preparation operator continues to keep its full working answers, actual form mapping, editorial notes and saved source editions in the original browser draft store. When the publisher receives a later application edition, its operator uses **Read current source** and the existing explicit answer-by-answer source reconciliation.
 
-See [Prepare the existing SCF submission](GRANT_SUBMISSION.md) for the complete authoring, form mapping, copy/export and draft receiving workflow.
+See [Prepare the existing SCF submission](GRANT_SUBMISSION.md) for complete authoring, form mapping, copy/export and source receiving. The [review-round guide](GRANT_REVIEW_ROUNDS.md) covers named reviewer decisions, full returned drafts and author revisions; the [handover guide](GRANT_HANDOVER.md) retains those reviewed source and output identities with the original issuer observations.
 
 ## Keep the application coherent
 
-The front answer explains the merchant's useful paid task, native settlement and complete customer result. The financial paragraph shows how the same source reaches dated customer balances and accountant receiving. The full [operating guide](../../products/merchant-workspace/FINANCIAL_OPERATIONS.md) supplies installation, commands and continued operation.
+The front answer explains the merchant's useful paid task, native settlement and complete customer result. The financial paragraph shows how the same source reaches dated customer balances and accountant receiving. The full [operating guide](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/products/merchant-workspace/FINANCIAL_OPERATIONS.md) supplies installation, commands and continued operation.
 
 The current application request remains **USD 38,000, 400 prospective hours and 150 days**. The financial chapter assigns selected future customer adaptations to the same six priced packages and their original completion criteria. It preserves the two independent merchants/buyers, two-facilitator operation, testnet/mainnet cohorts, threat response and complete receiving targets.
 
@@ -70,7 +71,7 @@ A new native result updates the same manuscript's relevant operating paragraph. 
 
 ## Publish and receive through the existing installation
 
-Publish the complete changed dist source through the current Site project's established workflow and audience. Include the current browser-assets declaration and all existing submission-workspace assets. The same **grant-reviewer** installed selection opens the reader through:
+Publish the complete changed dist source through the current Site project's established workflow and audience. Include the current browser-assets declaration, existing guided-entry assets and all submission-workspace assets. The original distribution component carries the same composition modules, including **grant-financial-operations.mjs**, so the installed authoring command can refresh its own reader. The same **grant-reviewer** installed selection opens the reader through:
 
 ~~~sh
 starforge grant-application --port 8787
@@ -82,7 +83,9 @@ The existing equipped receiving owner can select the new four source pins, open 
 
 ## Source modules
 
-**grant-financial-operations.mjs** extracts and receives the single financial chapter and attaches five selected original product source entries. It is a pure composition helper. **grant-compose.mjs** remains the sole native four-file authoring entry. **grant-submission.mjs** remains the original issuer-workspace attachment.
+**grant-financial-operations.mjs** extracts and receives the single financial chapter and attaches five selected original product source entries. It is a pure composition helper. **grant-compose.mjs** remains the sole native four-file authoring entry. Its original **grant-customers.mjs**, **grant-datasette.mjs**, **grant-entry.mjs** and **grant-submission.mjs** continue the customer chapter projection, selected Datasette product, guided reviewer opening and issuer-workspace attachment.
+
+Both repository distributions use these same source modules and the same four reader routes. Keep later application composition changes additive to this shared pipeline so a customer chapter or editorial refresh retains the other accepted product sections and current preparation workflow.
 
 The current financial source entry identifies the selected installed recipe, original command, complete operator guide, source paths and exact product commit. It retains the same request, payment, receipt and account distinctions used by the native product.
 
