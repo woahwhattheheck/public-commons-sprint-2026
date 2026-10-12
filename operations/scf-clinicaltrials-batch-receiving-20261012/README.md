@@ -49,3 +49,7 @@ All source findings remain represented by their actual original results. A block
 If an operating step fails, retain that same work directory, report and original-workspace backup. Continue its current batch and saved actions through the original console or CLI. The runner reports a nonzero exit and the original error; its stored phase identifies the point to resume. It creates a new workspace only when explicitly invoked with a new working directory.
 
 Return the completed package, report and images to the existing ClaritiDox batch thread with their actual sizes and hashes. The sole company-form contact remains with Actions1FB3 after reviewing the customer result.
+
+## Continue an interrupted pre-intake browser step
+
+If the original CLI initialized the workspace but the browser stopped before retaining any XML, keep the same `--out` and `--work` paths and pass `--resume-empty`. The receiver reads the original status, requires empty PRS and batch inventories, and preserves the previous operation report by its exact SHA256 before resuming. It never initializes that directory again. A populated batch is continued through its existing retained actions instead of this pre-intake entrypoint. The browser opens the client-manifest section before filling it, and every completion or failure refreshes the closed original workspace backup.

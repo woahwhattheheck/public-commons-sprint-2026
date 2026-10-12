@@ -9,6 +9,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--source-root",required=True,help="Original repository-shaped installed source or pinned checkout")
 parser.add_argument("--out",required=True,help="Persistent private output directory")
 parser.add_argument("--work",help="New private working directory; defaults to OUT/work")
+parser.add_argument("--resume-empty",action="store_true",help="Continue the same initialized empty workspace after an interrupted pre-intake browser step")
 parser.add_argument("--node",default=shutil.which("node") or "node")
 parser.add_argument("--browser-executable",required=True,help="Existing Chromium executable")
 parser.add_argument("--playwright-package",required=True,help="Existing playwright/package.json")
@@ -16,10 +17,21 @@ args=parser.parse_args()
 source_root=Path(args.source_root).expanduser().resolve(strict=True)
 output=Path(args.out).expanduser().absolute();output.mkdir(mode=0o700,parents=True,exist_ok=True);output.chmod(0o700)
 work=Path(args.work).expanduser().absolute() if args.work else output/"work"
-work.mkdir(mode=0o700,parents=True,exist_ok=False)
+if args.resume_empty:
+    if not work.is_dir() or not (output/"Customer_Operation.json").is_file():raise RuntimeError("Resume requires the original working directory and operation report")
+else:
+    work.mkdir(mode=0o700,parents=True,exist_ok=False)
 clinical=source_root/"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials"
 manifest=json.loads((HERE/"batch-operator-source.json").read_text())
 report={"schema":"stellar-forge.disclosure-batch-customer-operation.v1","sourceCommit":manifest["sourceCommit"],"startedAt":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"phases":[],"passed":False}
+if args.resume_empty:
+    prior=(output/"Customer_Operation.json").read_bytes()
+    previous=json.loads(prior)
+    if previous.get("passed") or previous.get("batchId"):raise RuntimeError("This entrypoint resumes only a pre-intake operation; continue an existing batch through its retained actions")
+    previous_path=output/("Previous_Operation_"+hashlib.sha256(prior).hexdigest()[:16]+".json")
+    if previous_path.exists() and previous_path.read_bytes()!=prior:raise RuntimeError("Original prior operation changed")
+    previous_path.write_bytes(prior);previous_path.chmod(0o600)
+    report["resumedFrom"]={"file":previous_path.name,"sha256":hashlib.sha256(prior).hexdigest(),"startedAt":previous.get("startedAt")}
 workspace=server=worker=None
 def sha(data):return hashlib.sha256(data).hexdigest()
 def write(path,data):
@@ -72,14 +84,14 @@ try:
     jsonfile(output/"Source_Manifest.json",manifest)
     cli=[args.node,str(clinical/"cli.mjs"),"--python",sys.executable]
     original=work/"original-workspace"
-    initial=invoke(cli+["--workspace",str(original),"init"],env=env)
+    initial=invoke(cli+["--workspace",str(original),"status" if args.resume_empty else "init"],env=env)
     required(not initial["batches"] and not initial["prs"],"Original initialized workspace must be empty")
-    phase("original_cli_initialized",revision=initial["revision"],lxml=lxml.etree.LXML_VERSION)
+    phase("original_empty_workspace_resumed" if args.resume_empty else "original_cli_initialized",revision=initial["revision"],lxml=lxml.etree.LXML_VERSION)
     sys.path.insert(0,str(clinical))
     from clinical_workspace import Workspace
     from clinical_server import OperatorServer
     workspace=Workspace(original);server=OperatorServer(workspace,0);worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
-    browser_output=output/"browser";browser_output.mkdir(mode=0o700)
+    browser_output=output/"browser";browser_output.mkdir(mode=0o700,exist_ok=args.resume_empty)
     browser_entry=work/"browser-entry.mjs"
     write(browser_entry,"import {runBatchReceiving} from "+json.dumps((HERE/"run-browser-receiving.mjs").as_uri())+";\nconst result=await runBatchReceiving(JSON.parse(process.env.BATCH_BROWSER_INPUT));\nprocess.stdout.write(JSON.stringify({passed:result.passed,batchId:result.batchId,exportId:result.export?.id})+'\\n');\n")
     browser_env={**env,"BATCH_BROWSER_INPUT":json.dumps({"consoleUrl":server.url,"sourceRoot":str(source_root),"exampleDirectory":str(examples),"outputDirectory":str(browser_output)})}
@@ -135,7 +147,7 @@ finally:
     except BaseException as error:report["workspaceCloseError"]=str(error)
     try:
         original=work/"original-workspace"
-        if original.exists() and not (output/"Original_Workspace_Backup.zip").exists():archive_workspace(original,output/"Original_Workspace_Backup.zip")
+        if original.exists():archive_workspace(original,output/"Original_Workspace_Backup.zip")
         for p in sorted((clinical/"prs"/manifest["provenanceDirectory"]).rglob("*")):
             if p.is_file():write(output/"Original_Example_Provenance"/p.relative_to(clinical/"prs"/manifest["provenanceDirectory"]),p.read_bytes())
         for p in sorted((HERE/"partner").glob("*.md")):write(output/"Partner_Workshare"/p.name,p.read_bytes())

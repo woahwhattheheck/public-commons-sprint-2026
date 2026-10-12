@@ -46,6 +46,7 @@ export async function runBatchReceiving({consoleUrl,sourceRoot,exampleDirectory,
     await page.locator('#batch-name').fill('Published PRS examples — disclosure receiving');
     await page.locator('#batch-reviewer').fill('TokenJunkieLabs receiving operator');
     await page.locator('#batch-note').fill('Original eudract 1.1.1 published example files. Client references demonstrate duplicate intake and exception review; original source and GPL-2 license accompany the receiving packet.');
+    await page.getByText('Client manifest and original study links',{exact:true}).click();
     await page.locator('#batch-manifest').fill(JSON.stringify({entries}));
     await page.locator('#batch-files').setInputFiles(names.map(name=>path.join(exampleDirectory,name)));
     await page.waitForFunction(()=>document.querySelectorAll('#batch-intake-table tbody tr').length===4,undefined,{timeout:90000});
