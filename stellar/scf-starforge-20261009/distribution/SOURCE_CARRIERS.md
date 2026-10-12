@@ -201,7 +201,7 @@ The operation directory contains:
 | operation-lock.sqlite3 | Native process-lifetime writer exclusion |
 | FILENAME_PREFIX_TRANSFER.json | Complete receiving index once every source part is attached |
 
-The native CLI takes a real SQLite write transaction for a mutation's lifetime. The kernel releases it when the process exits; recovery does not interpret another process's PID. JSON publication uses a unique same-directory temporary, fsync, atomic replacement and directory sync. A reused PID cannot collide with an old temporary filename.
+The native CLI takes a real SQLite write transaction for a mutation's lifetime. The kernel releases it when the process exits; recovery does not interpret another process's PID. JSON publication uses a unique same-directory temporary, fsync and directory sync. Immutable files are published through an exclusive hard link; if the destination already exists, its complete bytes must match, so a concurrent operation's different index remains intact. Mutable state uses atomic replacement. A reused PID cannot collide with an old temporary filename.
 
 Preparation adopts the original retained authority/plan files and first operation descriptor after a partial write. Re-running the exact original prepare input completes that same preparation. Its input and source hashes must agree.
 
