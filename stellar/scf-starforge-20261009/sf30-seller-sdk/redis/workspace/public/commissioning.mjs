@@ -280,7 +280,7 @@ async function openRows(checkId,cursor='',back=false){
   else if(!back&&cursor!==rowCursor)rowBack.push(rowCursor);
   observedCheck=checkId;rowCursor=cursor;observed=value;
   $('commission-observed').hidden=false;
-  $('commission-observed-summary').textContent=checkId+' · '+value.rows.length+' displayed rows · '+(value.sourceIncomplete?'Native source limit: '+(value.sourceIncomplete.continuationUnavailable??'completion unavailable'):value.waiting?'Original page is awaiting completion':value.complete?'Final retained page':'More retained rows');
+  $('commission-observed-summary').textContent=checkId+' · '+value.rows.length+' displayed rows · '+(value.sourceIncomplete?'Native source limit: '+(value.sourceIncomplete.continuationUnavailable??'completion unavailable'):value.receivingLimit?'Receiving limit: '+(value.receivingLimit.reason??value.receivingLimit.message):value.waiting?'Original page is awaiting completion':value.complete?'Final retained page':'More retained rows');
   $('commission-observed-table').replaceChildren(table(value.columns??[],value.rows.map(row=>Array.isArray(row)?row:(value.columns??[]).map(column=>row[column]))));
   $('commission-observed-json').textContent=pretty({...value,rows:undefined});
   $('commission-rows-previous').disabled=!rowBack.length;$('commission-rows-next').disabled=!value.nextCursor||value.waiting;
