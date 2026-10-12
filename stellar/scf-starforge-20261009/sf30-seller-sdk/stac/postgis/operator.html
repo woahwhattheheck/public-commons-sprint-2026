@@ -42,6 +42,7 @@
 <label>Mapping profile<textarea id="profile-json" rows="24" spellcheck="false"></textarea></label>
 <button id="apply-profile" type="button">Use this mapping</button>
 </details>
+<details id="retained-profile-panel" hidden><summary>Saved mapping from another database</summary><p>This previous browser mapping remains retained. The operator uses the currently configured database; recover historical operations from Operations before deciding whether to reopen the original installation.</p><pre id="retained-profile-detail"></pre></details>
 <details><summary>Original source information</summary><pre id="source-detail">No source selected.</pre></details>
 </section>
 <section data-pane="review" hidden>
@@ -58,15 +59,27 @@
 <form id="rollback-form" class="inline"><label>Accepted edition<select id="rollback-edition" name="editionId" required></select></label><button>Use retained edition</button></form>
 </section>
 <section data-pane="history" hidden>
-<h2>Original operations</h2><p>Committed operations retain their original requests and results. An interrupted request is retried with the same identity and reviewed choices.</p>
-<div id="pending-panel" hidden><h3>Unfinished response</h3><p id="pending-label"></p><label>Original request<select id="pending-select"></select></label><button id="retry" type="button">Continue original request</button><details><summary>Original request</summary><pre id="pending-detail"></pre></details></div>
+<h2>Original operations</h2><p>Recover a committed result without executing its request. The original commit and the current database are shown separately, including any unavailable export files.</p>
+<form id="operation-recovery-form" class="inline"><label>Original operation ID<input id="operation-recovery-id" name="operationId" required spellcheck="false" autocomplete="off"></label><button type="submit">Recover committed operation</button></form>
+<div id="pending-panel" hidden><h3>Saved response awaiting review</h3><p id="pending-label"></p><label>Original request<select id="pending-select"></select></label><p id="pending-context"></p><div class="actions"><button id="recover-pending" type="button">Check committed result</button><button id="retry" type="button">Continue original request</button><button id="acknowledge-pending" type="button" disabled>Keep committed result</button></div><details><summary>Original saved request</summary><pre id="pending-detail"></pre></details></div>
 <details id="incomplete-journals" hidden><summary>Interrupted request publication</summary><p>These original journals were retained. Continue the original request from the selector or the browser that started it. Files with unknown or conflicting contents require inspection; the rest of Operations remains available.</p><pre id="incomplete-journal-detail"></pre></details>
 <div class="table-scroll"><table><thead><tr><th>Committed</th><th>Operation</th><th>Action</th><th>Result</th></tr></thead><tbody id="operations"></tbody></table></div>
 <div class="actions"><button id="history-previous" type="button">Previous operations</button><span id="history-page"></span><button id="history-next" type="button">Next operations</button></div>
 <details><summary>Selected original operation</summary><pre id="operation-detail"></pre></details>
+<div id="committed-recovery" hidden>
+<h3>Committed operation recovery</h3><p id="committed-recovery-status" role="status"></p>
+<dl class="facts" id="committed-recovery-facts"></dl>
+<p id="recovered-profile-changed" hidden>The current database mapping differs from the original request. The original request remains historical; recovery does not submit it to this destination.</p>
+<div class="comparison"><div><h4>Original committed result</h4><pre id="recovered-original-result"></pre></div><div><h4>Current project and database</h4><pre id="recovered-current"></pre></div></div>
+<details><summary>Unchanged original request</summary><pre id="recovered-original-request"></pre></details>
+<div id="recovered-artifact" hidden><h4 id="recovered-artifact-state"></h4><p id="recovered-artifact-directory"></p><p id="recovered-artifact-issue"></p><p id="recovered-artifact-next"></p><details><summary>Original and verified manifest identities</summary><pre id="recovered-artifact-manifest"></pre></details></div>
+<p id="recovered-no-artifact" hidden>This committed action has no receiving or backup file output.</p>
+<button id="save-operation-recovery" type="button" disabled>Save recovery report</button>
+</div>
 </section>
 <section data-pane="recovery" hidden>
 <h2>Delivery and recovery</h2>
+<p>Use Operations to recover a committed export and check its original files. The forms below perform explicit new export or restore operations.</p>
 <div class="recovery-grid">
 <div><h3>Receiving package</h3><p>Exports the original source, selected mapping and complete native observation for QGIS and GeoServer receiving.</p>
 <form id="receiving-form"><label>New receiving directory<input name="directory" required spellcheck="false" autocomplete="off"></label><button>Export receiving package</button></form></div>

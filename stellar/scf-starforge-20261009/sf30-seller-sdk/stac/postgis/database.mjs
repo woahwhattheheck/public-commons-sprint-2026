@@ -125,13 +125,29 @@ export async function createDatabase(connection, profile) {
       source: parseExactJSON(row.source_json), profile: parseExactJSON(row.profile_json),
       layers: parseExactJSON(row.layers_json), state: row.state, createdAt: row.created_at, acceptedAt: row.accepted_at};
   }
-  async function savedOperation(client, operationId, requestSha256) {
+  async function committedOperation(client, operationId) {
     if (!await initialized(client)) return null;
-    const row = (await client.query('SELECT * FROM ' + q(META.operations) + ' WHERE project_id=$1 AND operation_id=$2',
+    const row = (await client.query('SELECT operation_id,kind,request_sha256,request_json::text,result_json::text,' +
+      'committed_at::text FROM ' + q(META.operations) + ' WHERE project_id=$1 AND operation_id=$2',
       [profile.projectId, operationId])).rows[0];
     if (!row) return null;
-    need(row.request_sha256 === requestSha256, 'POSTGIS_ORIGINAL_OPERATION_REQUEST_CONFLICT', operationId);
-    return parseExactJSON(row.result_json);
+    const request = parseExactJSON(row.request_json), result = parseExactJSON(row.result_json);
+    need(request && typeof request === 'object' && !Array.isArray(request) &&
+      result && typeof result === 'object' && !Array.isArray(result) &&
+      request.projectId === profile.projectId && request.operationId === row.operation_id &&
+      digest(request) === row.request_sha256 && result.operationId === row.operation_id &&
+      result.requestSha256 === row.request_sha256 &&
+      (result.projectId === undefined || result.projectId === profile.projectId) &&
+      typeof row.kind === 'string' && row.kind.length > 0,
+      'POSTGIS_COMMITTED_OPERATION_RECORD_CHANGED', operationId);
+    return {operationId: row.operation_id, kind: row.kind, requestSha256: row.request_sha256,
+      request, result, committedAt: row.committed_at};
+  }
+  async function savedOperation(client, operationId, requestSha256) {
+    const original = await committedOperation(client, operationId);
+    if (!original) return null;
+    need(original.requestSha256 === requestSha256, 'POSTGIS_ORIGINAL_OPERATION_REQUEST_CONFLICT', operationId);
+    return original.result;
   }
   async function mutate(operationId, kind, request, fn) {
     const requestSha256 = digest(request);
@@ -440,7 +456,7 @@ export async function createDatabase(connection, profile) {
     }
     return result;
   }
-  return {pool, environment, owner, q, transaction, initialized, ensure, project, edition, savedOperation,
+  return {pool, environment, owner, q, transaction, initialized, ensure, project, edition, committedOperation, savedOperation,
     mutate, checkRoles, projectRoleAccess, primaryKeyMappings, sridDefinitions, createFeatureTable, lockTables, userColumns, allColumns,
     rowHashSQL, copyFeatureRows, installRoles, grantLayer, switchViews, observeRoles, cursorRows,
     tableDigest, assertView, describeLayers, operatorSequence, close};
