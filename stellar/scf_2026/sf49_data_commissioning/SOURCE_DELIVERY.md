@@ -140,3 +140,7 @@ This component extends the original SF49/SF77 source-edition workorder and insta
 ### Archive verification on continuation
 
 Extraction stages use a reserved namespace outside the incoming source inventory. When a received file or a completed stage already exists, the receiver still reads the corresponding ZIP member through its CRC and SHA-256 checks before adopting that output. A matching local file alone does not establish that the supplied archive is intact.
+
+## Attachment validation lifetime
+
+Each attachment attempt loads one validated original workorder input and compares its summary with the selected bundle and manifest. The case callback's `loadWorkorder()` returns that same input for the current attempt, avoiding a second complete read of the source files. A fresh attachment attempt validates the original files again; the validated input is not cached across requests or reopened stores.
