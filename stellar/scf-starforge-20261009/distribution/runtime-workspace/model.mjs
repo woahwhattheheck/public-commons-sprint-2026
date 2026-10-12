@@ -33,6 +33,7 @@ import { pythonOperationFields, initializePythonWorkspace, reviewPythonRuntime, 
   executePythonOperation, recoverPythonOperation, pythonWorkspaceState, receivePythonArchive,
   openPythonBundle } from '../python-runtime/workspace.mjs';
 import { bindPythonApplicationCommand } from '../python-runtime/command-binding.mjs';
+import { workbookApplicationResult, workbookApplicationDownload } from '../python-runtime/workbook-results.mjs';
 import { openApiConnectionSetupAction } from './openapi-connection-setup.mjs';
 import { sourceBuildOperationFields, initializeSourceBuildWorkspace, sourceBuildWorkspaceState,
   sourceBuildCatalog, sourceBuildProduct, reviewSourceBuild, readSourceBuildReview, normalizeSourceBuildOperation, initializeSourceBuildRequest,
@@ -532,6 +533,8 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       return model.recoverManagedOperation(input.operationId);
     },
     async applicationsOutput(input) { return applicationOutput(root, input); },
+    async applicationsWorkbookResult(input) { return workbookApplicationResult(root, input); },
+    async applicationsWorkbookDownload(input) { return workbookApplicationDownload(root, input); },
     async applicationsTerminal(input) { return readApplicationTerminal(root, input); },
     async applicationsInput(input) { return sendApplicationTerminal(root, input); },
     async managedState(options) { return managedState(root, options); },
