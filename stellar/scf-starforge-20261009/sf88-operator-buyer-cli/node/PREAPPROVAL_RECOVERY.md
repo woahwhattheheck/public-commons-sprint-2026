@@ -162,6 +162,9 @@ An interrupted native process can leave an unsigned request journal before the a
 4. The original journal directory moves intact to the plan's `original-wire/` directory. The actual source/phase bytes, temporary publication inodes and original writer lock are retained. `wire-selection.json` binds the plan, source attempt, exact inventory and audit; `wire-retirement.json` records the completed move. Both publication files use the existing held-file allocation provider when configured.
 5. The caller reserves its four attempt-record replacements and result record, then enters the original runtime and its normal approval flow. The new journal occupies the original evidence pathname.
 
+
+The same original journal lock protects cleanup of unused backing on its inventoried `.write-*` files. After the fresh process and original zero-reservation ledger audit, execution truncates each of those held descriptors to its existing logical length, syncs it, and rechecks its exact bytes, digest and inode. This releases abandoned `KEEP_SIZE` extents left by a killed writer while preserving the complete recorded inventory. It happens before transition metadata allocation; ordinary history reads remain read-only.
+
 `readPreapprovalRecovery()` exposes the safe `wireHistory` projection for each retained plan. The original journal remains readable through its selected history even after a newer journal exists. Private request and authorization bytes remain in the original private evidence/history files.
 
 An interruption before the directory move reopens the same selection and verifies the original journal. An interruption after the move verifies the exact archive and completes its existing retirement record. A competing or repeated execution cannot move the replacement journal: the per-plan lock, original attempt gate and immutable archive selection identify the old attempt independently of the canonical evidence pathname.

@@ -337,6 +337,33 @@ async function inventoryFile(directory,name) {
     return {name,bytes:raw.length,sha256:digest(raw),device:before.dev,inode:before.ino};
   } finally {await fd.close();}
 }
+async function releaseUnpublishedWireCapacity(directory,checkpoint) {
+  for(const expected of checkpoint.files) {
+    if(!/^\.write-[a-f0-9-]+$/.test(expected.name))continue;
+    // A killed original Store writer cannot close its preallocated future
+    // checkpoint slots. Retain each exact inode and all logical bytes while
+    // releasing only its abandoned KEEP_SIZE allocation beyond logical EOF.
+    need(same(await inventoryFile(directory,expected.name),expected),
+      'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+    const path=join(directory,expected.name);
+    const fd=await open(path,constants.O_RDWR|(constants.O_NOFOLLOW??0));
+    try {
+      const before=await fd.stat(),named=await lstat(path);
+      need(before.isFile() && !named.isSymbolicLink() && !(before.mode&0o077) &&
+        (!process.getuid || before.uid===process.getuid()) &&
+        before.dev===expected.device && before.ino===expected.inode &&
+        before.size===expected.bytes && named.dev===before.dev && named.ino===before.ino,
+        'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+      await fd.truncate(expected.bytes);
+      await fd.sync();
+      const raw=await fd.readFile(),after=await fd.stat(),finalName=await lstat(path);
+      need(raw.length===expected.bytes && digest(raw)===expected.sha256 &&
+        after.dev===before.dev && after.ino===before.ino && after.size===before.size &&
+        finalName.dev===after.dev && finalName.ino===after.ino && !finalName.isSymbolicLink(),
+        'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+    } finally {await fd.close();}
+  }
+}
 async function captureWire(cfg,body,directory,held) {
   const before=await lstat(directory);
   need(before.isDirectory() && !before.isSymbolicLink(),'WIRE_PRIVATE_DIRECTORY_REQUIRED');
@@ -444,7 +471,7 @@ async function readSelection(options) {
   const read=await originalFile(options.selectionPath,HISTORY_LIMIT);
   return {...read,value:validateSelection(read.value,options)};
 }
-async function archivedCheckpoint(options,selected) {
+async function archivedCheckpoint(options,selected,{releaseOrphans=false}={}) {
   if(!selected.value.checkpoint.exists) {
     need(!await exists(options.archiveDirectory),'PREAPPROVAL_WIRE_ARCHIVE_CHANGED');
     return selected.value.checkpoint;
@@ -455,6 +482,11 @@ async function archivedCheckpoint(options,selected) {
   try {
     const actual=await captureWire(options.cfg,options.body,options.archiveDirectory,held);
     need(same(actual,selected.value.checkpoint),'PREAPPROVAL_WIRE_ARCHIVE_CHANGED');
+    if(releaseOrphans) {
+      await releaseUnpublishedWireCapacity(options.archiveDirectory,actual);
+      need(same(await captureWire(options.cfg,options.body,options.archiveDirectory,held),actual),
+        'PREAPPROVAL_WIRE_ARCHIVE_CHANGED');
+    }
     return actual;
   } finally {await held.close();}
 }
@@ -531,6 +563,15 @@ export async function withPreapprovalWireHistory(options,work) {
     // A completed or partially published archive belongs to the selected old
     // attempt. Its replacement canonical wire is never a retirement candidate.
     if(alreadyArchived)need(!await exists(wirePath(cfg)),'PREAPPROVAL_NEW_WIRE_EXISTS');
+    // This capacity-only cleanup follows the fresh original process/ledger
+    // audit under both locks. It runs before reserving transition metadata, so
+    // dead future slots can supply the space needed to preserve their history.
+    if(alreadyArchived)await archivedCheckpoint(selectedOptions,selected,{releaseOrphans:true});
+    else if(selected.value.checkpoint.exists) {
+      await releaseUnpublishedWireCapacity(wirePath(cfg),selected.value.checkpoint);
+      need(same(await captureWire(cfg,body,wirePath(cfg),held),selected.value.checkpoint),
+        'PREAPPROVAL_WIRE_SOURCE_CHANGED');
+    }
     const receipt=retirementReceipt(selectedOptions,selected),receiptRaw=jsonBytes(receipt);
     const entries=[];
     if(!await exists(selectionPath))entries.push({path:selectionPath,bytes:selected.raw.length,exclusive:true});
