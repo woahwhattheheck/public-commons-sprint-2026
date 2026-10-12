@@ -270,8 +270,16 @@ export function createCentralCommissioning({workspace,store,connection,fetchImpl
       delivery=write('commissioning-delivery',requestId,{schema:COMMISSIONING_SCHEMA,id:requestId,selection:supplied,request,archiveId,
         status:'PREPARING',createdAt:now(),datasets:[],reports:[],documents:[],error:null},0);
     }
-    if(delivery.status==='READY_FOR_ARCHIVE'&&state().receivedArchive) {
-      return {...delivery,status:'RECEIVED_PORTABLE',archive:null,receivedArchive:state().receivedArchive};
+    const incoming=state().receivedArchive;
+    // restore preserves the verified snapshot revision, while every later original
+    // Store write advances it. Only a READY row already present in that snapshot
+    // can adopt this receiving; a new handover must create its own archive.
+    if(delivery.status==='READY_FOR_ARCHIVE'&&incoming&&
+        incoming.workspaceId===workspace.state().id&&
+        Number.isSafeInteger(delivery.preparedWorkspaceRevision)&&
+        Number.isSafeInteger(incoming.workspaceRevision)&&
+        delivery.preparedWorkspaceRevision<=incoming.workspaceRevision) {
+      return {...delivery,status:'RECEIVED_PORTABLE',archive:null,receivedArchive:incoming};
     }
     if(delivery.status==='COMPLETE') {
       const archive=store.get('archive',delivery.archiveId,false);
@@ -311,6 +319,7 @@ export function createCentralCommissioning({workspace,store,connection,fetchImpl
         let report=await nativeOutput('report',reportId,expected);
         if(!report) {
           stillSelected(selection);
+          if(baselineId)stillSelected(delivery.request.captures[0]);
           report=await workspace.report({id:capture.id,baselineId,reportId,
             title:(commission.definition.agreement.name||commission.definition.agreement.opportunity_id)+' / '+commission.definition.periods[selection.period].label,
             narrative:reportNarrative(commission),indicators});
@@ -332,9 +341,14 @@ export function createCentralCommissioning({workspace,store,connection,fetchImpl
         else if(receipt.sha256!==digest(body))throw fault('CENTRAL_COMMISSIONING_DOCUMENT_CHANGED','The retained complete handover document changed.',409);
         documents.push({name,type,...receipt});
       }
-      const current=store.get('commissioning-delivery',requestId);
+      const current=store.get('commissioning-delivery',requestId),
+        preparedWorkspaceRevision=Number(store.identity().revision)+1;
+      if(!Number.isSafeInteger(preparedWorkspaceRevision)||preparedWorkspaceRevision<1)
+        throw fault('CENTRAL_COMMISSIONING_ARCHIVE_REVISION','The original workspace revision cannot identify this handover snapshot.',409);
+      // No await intervenes between this original revision read and the original
+      // synchronous Store transaction that increments it for the READY row.
       delivery=write('commissioning-delivery',requestId,{...current,status:'READY_FOR_ARCHIVE',datasets,reports,documents,
-        preparedAt:current.preparedAt??now(),error:null},current.revision);
+        preparedAt:current.preparedAt??now(),preparedWorkspaceRevision,error:null},current.revision);
       const archive=await workspace.backup({id:delivery.archiveId});
       delivery=write('commissioning-delivery',requestId,{...store.get('commissioning-delivery',requestId),status:'COMPLETE',
         completedAt:now(),archiveReceipt:{id:archive.id,sha256:archive.sha256,bytes:archive.bytes,files:archive.files},error:null},

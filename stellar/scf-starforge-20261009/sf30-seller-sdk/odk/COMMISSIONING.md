@@ -161,9 +161,9 @@ The handover action uses original dataset/report/archive methods to produce:
 
 Each output keeps its original ID and file hashes. An interrupted handover validates completed `source.json`/`report.json` against its pinned selection and reuses them. It does not regenerate under a newer review.
 
-If a review changes before an unfinished output, the original handover identifies the superseded review. Earlier outputs remain. Create a new handover request for the newly accepted pair; it can reuse those complete captures.
+If a review changes before an unfinished output, the original handover identifies the superseded review. A new comparative report checks both the selected current-period review and its retained baseline review. Earlier completed outputs remain. Create a new handover request for the newly accepted pair; it can reuse those complete captures.
 
-Handover documents are committed before the original snapshot. A restored snapshot can therefore contain READY_FOR_ARCHIVE plus the actual original `receivedArchive` identity. The operator exposes this received portable state; it does not invent the producer's later archive-result row or automatically recapture on reopen.
+Handover documents and their exact original workspace revision are committed before the native snapshot. A restored snapshot can therefore contain READY_FOR_ARCHIVE plus the actual original `receivedArchive` identity. The operator exposes RECEIVED_PORTABLE only when that handover's saved preparation revision is present within the verified incoming workspace revision and workspace identity. A later handover created after restore must produce its own original archive. Receiving does not invent the producer's later archive-result row or automatically recapture on reopen.
 
 ## Exact recovery
 

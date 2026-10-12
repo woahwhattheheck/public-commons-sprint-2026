@@ -138,7 +138,7 @@ const delivered = await bridge.deliver({
 
 Completed delivery has pinned selection/request, datasets, reports, three documents and original archive. Dataset entries: `{period,id,captureId,tableId,name,files,receipts}`. Reports: `{period,id,captureId,baselineId,files,receipts}`. Documents: name/type/sha256/bytes. Use original `workspace.exportFile`/`sourceFile` to retrieve them. The CSV uses approved fields; the native dataset's rows.jsonl/source pages and full archive retain complete selected-capture source. `processing.portableSource=complete-selected-capture` explicitly preserves that original custody contract; warehouse consumers must choose the intended native projection.
 
-Restored READY_FOR_ARCHIVE returns RECEIVED_PORTABLE with actual `receivedArchive`, without provider replay or an invented producer archive row.
+Restored READY_FOR_ARCHIVE returns RECEIVED_PORTABLE only when `preparedWorkspaceRevision` is within the verified `receivedArchive.workspaceRevision` for this same workspace. That marker is committed in the original Store transaction before the snapshot. A later handover cannot adopt an older incoming archive; it continues its own retained archive ID. This receiving path performs no provider replay and invents no producer archive row. Before creating a new comparative report, both retained current and baseline reviews must still be selected; already-completed outputs keep their exact native identities.
 
 ## Join the original native receiving
 
