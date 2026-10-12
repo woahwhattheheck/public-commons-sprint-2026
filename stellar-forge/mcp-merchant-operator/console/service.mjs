@@ -1,5 +1,6 @@
 // MIT. An embedded interface over the existing merchant owner and authorization.
 import { readFile } from 'node:fs/promises';
+import { readBrowserAssets } from '../../../stellar/scf-starforge-20261009/distribution/browser-assets.mjs';
 import { basename, dirname, resolve, join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
@@ -12,20 +13,7 @@ import { createMerchantWorkflowReports, MAX_WORKFLOW_REPORT_REQUEST_BYTES } from
 import { createMerchantWorkflowRecipes, MAX_WORKFLOW_RECIPE_REQUEST_BYTES } from './workflow-recipes.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
 
-const ROOT = new URL('./public/', import.meta.url);
-const assets = new Map([
-  ['/operator/', ['index.html', 'text/html; charset=utf-8']],
-  ['/operator/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
-  ['/operator/workflows.mjs', ['workflows.mjs', 'text/javascript; charset=utf-8']],
-  ['/operator/workflow-reports.mjs', ['workflow-reports.mjs', 'text/javascript; charset=utf-8']],
-  ['/operator/workflow-report-format.mjs', ['workflow-report-format.mjs', 'text/javascript; charset=utf-8']],
-  ['/operator/workflow-recipes.mjs', ['workflow-recipes.mjs', 'text/javascript; charset=utf-8']],
-  ['/operator/customer-reviewer.mjs', ['customer-reviewer.mjs', 'text/javascript; charset=utf-8']],
-  ['/operator/customer-grpc.mjs', ['customer-grpc.mjs', 'text/javascript; charset=utf-8']],
-  ['/operator/operations.mjs', ['../../../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/public/operations.mjs', 'text/javascript; charset=utf-8']],
-  ['/operator/operations.css', ['../../../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/public/operations.css', 'text/css; charset=utf-8']],
-  ['/operator/style.css', ['style.css', 'text/css; charset=utf-8']]
-]);
+const assets = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
 const equal = (a,b) => typeof a === 'string' && typeof b === 'string' &&
   Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const json = value => Buffer.from(JSON.stringify(value));
@@ -184,7 +172,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     const hosts=new Set([explicit,new URL(origin).host]);
     if(!hosts.has(req.headers.host)){send(res,403,{error:{code:'CONSOLE_HOST',message:'Use this operator’s original loopback address.'}});return true;}
     if(assets.has(url.pathname) && req.method==='GET'){
-      const [file,type]=assets.get(url.pathname),bytes=await readFile(new URL(file,ROOT));
+      const {url:assetUrl,type}=assets.get(url.pathname),bytes=await readFile(assetUrl);
       res.writeHead(200,{...headers(type),'content-length':bytes.length});res.end(bytes);return true;
     }
     if(!url.pathname.startsWith('/operator/api/')){send(res,404,{error:{code:'CONSOLE_ROUTE',message:'Choose an operator page.'}});return true;}
