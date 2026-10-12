@@ -339,7 +339,7 @@ and its full file closure. It uses the manifest SHA as source ID and keeps the
 original selection, source layer ID and native output layer ID.
 
 ~~~python
-from qgis_package.vector_source import VectorReceivingSource
+from starforge_stac.vector_source import VectorReceivingSource
 
 source = VectorReceivingSource("/absolute/received-native-vector", expected_manifest_sha256)
 inventory = source.native_inventory()

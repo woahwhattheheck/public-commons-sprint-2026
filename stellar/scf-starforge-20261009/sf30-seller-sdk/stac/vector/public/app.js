@@ -74,6 +74,7 @@ function tab(name) {
 }
 function button(label, action) {
   const element = document.createElement("button"); element.type = "button"; element.textContent = label;
+  element.disabled = S.busy || S.reads > 0;
   element.addEventListener("click", () => guarded(action)); return element;
 }
 function cell(row, value, className = "") {
@@ -215,6 +216,7 @@ function renderMapping() {
     const stat = layer.fields[name], rule = profile.fields[name] || {}, row = document.createElement("tr");
     cell(row, name); cell(row, stat.kinds.join(", ") + "\n" + stat.present + " present / " + stat.absent + " absent / " + stat.nulls + " null");
     const mode = document.createElement("select"); mode.setAttribute("aria-label", "Representation for " + name);
+    mode.disabled = S.busy || S.reads > 0;
     for (const value of ["auto","native","json","reference"]) {
       const option = document.createElement("option"); option.value = value; option.textContent = value; mode.append(option);
     }
@@ -223,20 +225,22 @@ function renderMapping() {
     cell(row, "").append(mode);
     for (const format of ["GPKG","ESRI Shapefile"]) {
       const input = document.createElement("input"); input.value = rule.names?.[format] || rule.name || "";
+      input.disabled = S.busy || S.reads > 0;
       input.placeholder = "Automatic"; input.setAttribute("aria-label", format + " field name for " + name);
       input.onchange = () => editLayer(current => { const r = current.fields[name] ||= {}; r.names ||= {};
         if (input.value) r.names[format] = input.value; else delete r.names[format]; }, layer.id);
       cell(row, "").append(input);
     }
     const physical = document.createElement("input"); physical.value = rule.physicalType || ""; physical.placeholder = "e.g. int64";
+    physical.disabled = S.busy || S.reads > 0;
     physical.setAttribute("aria-label", "Explicit native type for " + name);
     physical.onchange = () => editLayer(current => { const r = current.fields[name] ||= {};
       if (physical.value) r.physicalType = physical.value; else delete r.physicalType; }, layer.id);
     cell(row, "").append(physical); tbody.append(row);
   }
   text("#field-page", names.length ? (S.fieldOffset + 1) + "–" + (S.fieldOffset + shown.length) + " of " + names.length : "0 fields");
-  $("#fields-previous").disabled = S.busy || S.fieldOffset === 0;
-  $("#fields-next").disabled = S.busy || S.fieldOffset + 50 >= names.length; updateProfileText();
+  $("#fields-previous").disabled = S.busy || S.reads > 0 || S.fieldOffset === 0;
+  $("#fields-next").disabled = S.busy || S.reads > 0 || S.fieldOffset + 50 >= names.length; updateProfileText();
 }
 function applyProfile(value) {
   ++S.filesGeneration.profile;
@@ -280,8 +284,8 @@ async function readChanges() {
     cell(row, change.geometryChanged ? "Changed" : "");
     cell(row, "").append(button("Read values", () => text("#change-details", encode(change, 2)))); tbody.append(row);
   }
-  $("#changes-previous").disabled = S.busy || S.changeOffset === 0;
-  $("#changes-next").disabled = S.busy || S.changeNext === null;
+  $("#changes-previous").disabled = S.busy || S.reads > 0 || S.changeOffset === 0;
+  $("#changes-next").disabled = S.busy || S.reads > 0 || S.changeNext === null;
 }
 function adoptComparison(result, requestId) {
   S.comparison = result; S.comparisonOperation = requestId; S.changeOffset = 0;

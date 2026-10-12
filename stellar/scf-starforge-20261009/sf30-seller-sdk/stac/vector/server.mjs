@@ -117,10 +117,8 @@ export async function createVectorOperator(options = {}) {
     const complete = await optional(idPath(id, ".result.json"));
     if (complete?.ok) {
       const reconciled = completedStatus(id, request.requestSha256, complete);
-      if (status?.state !== "SUCCEEDED" || status.requestSha256 !== request.requestSha256) {
-        try { await atomic(idPath(id, ".status.json"), reconciled); }
-        catch (exc) { reconciled.summarySaved = false; reconciled.summaryError = exc.code || exc.message; }
-      }
+      try { await atomic(idPath(id, ".status.json"), reconciled); }
+      catch (exc) { reconciled.summarySaved = false; reconciled.summaryError = exc.code || exc.message; }
       status = reconciled;
     }
     return { ...status, id, request: request.request, requestSha256: request.requestSha256,
