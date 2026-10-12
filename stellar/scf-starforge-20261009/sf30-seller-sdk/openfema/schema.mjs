@@ -22,8 +22,8 @@ export const SOURCE_NOTES={
   finances:'The source is FAC-Trax/Grants Manager operational data. FEMA describes it as unsuitable for official federal financial reporting.',
   migration:'Current funded-project metadata explains that a system migration restored previously omitted records. Edition comparisons retain that source context.'
 };
-export function workspaceSchema({workspaceId,inboxConfigured,releaseRuntime}={}){
-  return {schema:'stellar-forge.openfema-workspace-schema.v1',workspaceId,actions:ACTIONS,sourceNotes:SOURCE_NOTES,
+export function workspaceSchema({workspaceId,inboxConfigured,releaseRuntime,userAgent}={}){
+  return {schema:'stellar-forge.openfema-workspace-schema.v1',workspaceId,userAgent,actions:ACTIONS,sourceNotes:SOURCE_NOTES,
     tableColumns:TABLE_COLUMNS,fieldMap:FIELD_MAP,reviewStates:REVIEW_STATES,reviewPriorities:['low','normal','high'],
     sourceScope:{disasterNumbers:'Positive integer array',states:'Uppercase two-letter state codes',declarationDateFrom:'YYYY-MM-DD',declarationDateTo:'YYYY-MM-DD',pageSize:'1–10000, default 1000'},
     portfolioFields:['name','states','disasters','applicants','categories','counties','declarationFrom','declarationTo','minimumFederal','maximumFederal','includeUnjoined','note'],

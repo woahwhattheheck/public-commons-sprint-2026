@@ -20,6 +20,7 @@ function fault(code,message,status=400,details={}) {return Object.assign(new Err
 function plain(value) {return value!==null&&typeof value==='object'&&!Array.isArray(value);}
 function copy(value) {return structuredClone(value);}
 function integer(value,label,{min=0,max=Number.MAX_SAFE_INTEGER}={}) {
+  if(typeof value!=='string'&&typeof value!=='number')throw fault('OPENFEMA_NUMBER',label+' must be an exact integer.');
   if(typeof value==='string'&&!/^\d+$/.test(value)) throw fault('OPENFEMA_NUMBER',label+' must be an exact nonnegative integer.');
   const n=Number(value);
   if(!Number.isSafeInteger(n)||n<min||n>max) throw fault('OPENFEMA_NUMBER',label+' is outside the supported integer range.');
@@ -348,7 +349,7 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
       try {
       for(let batchIndex=0;batchIndex<dataset.filterBatches.length;batchIndex++) {
         let batch=status(id).datasets[kind].filterBatches[batchIndex];
-        const allowed=kind==='declarations'?null:new Set((batch.filter.match(/\d+/g)??[]).map(Number));
+        const allowed=kind==='declarations'?(c.scope.disasterNumbers.length?new Set(split(c.scope.disasterNumbers)[batchIndex]):null):new Set((batch.filter.match(/\d+/g)??[]).map(Number));
         while(!batch.complete) {
           signal?.throwIfAborted();
           const current=status(id),d=current.datasets[kind],url=pageUrl(kind,batch.filter,batch.skip,current.scope.pageSize);
@@ -361,7 +362,7 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
           let lastKey=batch.lastKey;const issues=[];
           for(let rowIndex=0;rowIndex<records.length;rowIndex++) {
             const row=records[rowIndex],number=integer(row.disasterNumber,'Source disaster number',{min:1,max:99999});
-            if(kind==='declarations'?!matchesDeclaration(row,current.scope):!allowed.has(number))
+            if(kind==='declarations'?(!matchesDeclaration(row,current.scope)||(allowed&&!allowed.has(number))):!allowed.has(number))
               throw fault('OPENFEMA_FILTER_IGNORED','A provider row is outside its requested disaster cohort.',502);
             const key=String(row[d.orderBy]??'');
             if(!key)throw fault('OPENFEMA_SOURCE_KEY','The original source row lacks its stable paging key '+d.orderBy+'.',502);
@@ -519,10 +520,10 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
         const metadata=metadataRecord(meta.body,kind);validateFields(fields.body,kind);
         const filters=kind==='declarations'?declarationFilters(b.scope):linkedFilters(cohort);
         if(!Array.isArray(incoming.pages))throw fault('OPENFEMA_IMPORT_PAGES','Each imported dataset must include its complete ordered original pages.');
-        const dataset=freshDataset(kind);dataset.metadataReceipt=meta.receipt;dataset.metadataSnapshot=metadata;dataset.fieldsReceipt=fields.receipt;
+        const dataset=freshDataset(kind),importIssues=[];dataset.metadataReceipt=meta.receipt;dataset.metadataSnapshot=metadata;dataset.fieldsReceipt=fields.receipt;
         let pageIndex=0;const numbers=new Set();
         for(let batchIndex=0;batchIndex<filters.length;batchIndex++) {
-          const filter=filters[batchIndex],allowed=kind==='declarations'?null:new Set((filter.match(/\d+/g)??[]).map(Number));
+          const filter=filters[batchIndex],allowed=kind==='declarations'?(b.scope.disasterNumbers.length?new Set(split(b.scope.disasterNumbers)[batchIndex]):null):new Set((filter.match(/\d+/g)??[]).map(Number));
           const batch={filter,sourceCount:null,rowCount:0,skip:0,lastKey:null,pages:[],complete:false};
           while(!batch.complete) {
             const item=incoming.pages[pageIndex++];if(!item)throw fault('OPENFEMA_IMPORT_INCOMPLETE','An imported source page is missing.');
@@ -531,14 +532,16 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
               count=boundPageMetadata(retained.body,{skip:batch.skip,pageSize:b.scope.pageSize,firstCount:batch.sourceCount});
             if(records.length>b.scope.pageSize||batch.skip+records.length>count||(!records.length&&batch.skip<count))
               throw fault('OPENFEMA_IMPORT_INCOMPLETE','An imported page does not cover its declared source count.');
-            for(const row of records) {
+            for(const [sourceRow,row] of records.entries()) {
               const number=integer(row.disasterNumber,'Source disaster number',{min:1,max:99999});
-              if(kind==='declarations'?!matchesDeclaration(row,b.scope):!allowed.has(number))
+              if(kind==='declarations'?(!matchesDeclaration(row,b.scope)||(allowed&&!allowed.has(number))):!allowed.has(number))
                 throw fault('OPENFEMA_IMPORT_SCOPE','An original row is outside the selected cohort.');
               if(kind==='declarations')numbers.add(number);
               const key=String(row[dataset.orderBy]??'');
-              if(!key||batch.lastKey!==null&&compareKey(batch.lastKey,key,kind)>=0)
-                throw fault('OPENFEMA_IMPORT_ORDER','The imported pages must follow their complete, unique original source-key order.');
+              if(!key||batch.lastKey!==null&&compareKey(batch.lastKey,key,kind)>0)
+                throw fault('OPENFEMA_IMPORT_ORDER','The imported pages must follow their complete original source-key order.');
+              if(batch.lastKey!==null&&compareKey(batch.lastKey,key,kind)===0)
+                importIssues.push({code:'DUPLICATE_SOURCE_KEY',kind,key,sourcePageSha256:retained.receipt.sha256,sourceRow});
               batch.lastKey=key;
             }
             const page={...retained.receipt,skip:batch.skip,count:records.length,sourceCount:count,batchIndex,filter,metadata:copy(retained.body.metadata)};
@@ -554,7 +557,7 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
           throw fault('OPENFEMA_IMPORT_REFRESH','The original dataset refreshed during this supplied page sequence.');
         dataset.metadataEndReceipt=end.receipt;dataset.state='COMPLETE';dataset.completedAt=stamp();
         if(kind==='declarations')cohort=[...numbers].sort((a,b)=>a-b);
-        await update(b.id,c=>{c.datasets[kind]=dataset;c.disasterNumbers=cohort;});
+        await update(b.id,c=>{c.datasets[kind]=dataset;c.disasterNumbers=cohort;c.issues.push(...importIssues);});
       }
       return await finish(b.id,{originalEdition:bundle.edition??null});
     }catch(error) {

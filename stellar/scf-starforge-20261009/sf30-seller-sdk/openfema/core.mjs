@@ -1,7 +1,7 @@
 // MIT. One retained Public Assistance workspace over the original source, publisher and buyer engines.
 import {join,resolve} from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
-import {openWorkspaceStore,jsonBytes,stable} from '../stellar-expert/store.mjs';
+import {openWorkspaceStore,jsonBytes,stable,readOwned} from '../stellar-expert/store.mjs';
 import {createOpenFemaCapture} from './capture.mjs';
 import {analyzePortfolio,validatePortfolio,validateAnnotation,comparePortfolios,tableView,datasetProjection,csv,fault,string} from './domain.mjs';
 import {WORKSPACE_SCHEMA,ACTIONS,workspaceSchema} from './schema.mjs';
@@ -15,12 +15,13 @@ function publicError(error){
   const code=typeof error.code==='string'?error.code:'OPENFEMA_OPERATION';
   return {code,message:error.message||'This operation could not finish.',status:error.status??(['ENOSPC','EDQUOT'].includes(code)?507:/CHANGED|REVISION|GENERATION|BUSY/.test(code)?409:400),retryAt:error.retryAt??null};
 }
-export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRuntime={port:0},fetchImpl=fetch,userAgent}={}){
+export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRuntime={port:0},fetchImpl=fetch,userAgent='Commons OpenFEMA portfolio/1.0'}={}){
   const store=await openWorkspaceStore(directory,{schema:WORKSPACE_SCHEMA,initialState:{portfolios:[],portfolioVersions:[],reviews:[],acceptances:[],comparisons:[],selectedPortfolioId:null,selectedVersionId:null}});
   const capture=createOpenFemaCapture({store,fetchImpl,userAgent}),publishers=nativePublishers(store),running=new Map(),controllers=new Map(),cache=new Map();
+  await store.mutate(s=>{for(const c of s.captures)if(['RUNNING','IMPORTING'].includes(c.state)){c.state='PAUSED';c.error={code:'OPENFEMA_SESSION_REOPENED',message:'Continue the retained capture in this reopened workspace.'};}});
   let closed=false,tail=Promise.resolve();
   const releaseCapability=()=>({mode:releaseRuntime.facilitator?'NATIVE_X402':'CHALLENGE_ONLY',port:releaseRuntime.port??0,facilitatorConfigured:Boolean(releaseRuntime.facilitator),allowLocalFacilitator:releaseRuntime.allowLocalFacilitator===true});
-  const schema=()=>workspaceSchema({workspaceId:store.read().workspaceId,inboxConfigured:Boolean(inboxDirectory),releaseRuntime:releaseCapability()});
+  const schema=()=>workspaceSchema({workspaceId:store.read().workspaceId,inboxConfigured:Boolean(inboxDirectory),releaseRuntime:releaseCapability(),userAgent});
   async function version(id){
     const selected=choose(store.read().portfolioVersions,id,'portfolio version');
     if(!cache.has(id)){const value=JSON.parse((await store.object(selected.sha256)).toString('utf8'));cache.set(id,value);if(cache.size>3)cache.delete(cache.keys().next().value);}
@@ -36,8 +37,8 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
   }
   async function view(){
     const s=store.read();
-    return {schema:'stellar-forge.openfema-workspace-view.v1',workspaceId:s.workspaceId,revision:s.revision,createdAt:s.createdAt,
-      captures:s.captures.map(c=>({id:c.id??c.captureId,label:c.label,scope:c.scope,state:c.state??c.status,createdAt:c.createdAt,updatedAt:c.updatedAt,editionId:c.editionId,error:c.error,retryAt:c.retryAt,datasets:c.datasets,progress:c.progress})),
+    return {schema:'stellar-forge.openfema-workspace-view.v1',workspaceId:s.workspaceId,revision:s.revision,createdAt:s.createdAt,restoredFrom:s.restoredFrom??null,
+      captures:s.captures.map(c=>({id:c.id??c.captureId,label:c.label,scope:c.scope,state:c.state??c.status,createdAt:c.createdAt,updatedAt:c.updatedAt,editionId:c.editionId,error:c.error,retryAt:c.retryAt,datasets:c.datasets?Object.fromEntries(Object.entries(c.datasets).map(([kind,d])=>[kind,{entity:d.entity,version:d.version,state:d.state,rowCount:d.rowCount,sourceCount:d.sourceCount,pages:d.pages?.length??0,filterBatches:d.filterBatches?.map(b=>({sourceCount:b.sourceCount,rowCount:b.rowCount,skip:b.skip,complete:b.complete}))}])):null,progress:c.progress})),
       editions:await editions(),portfolios:s.portfolios,versions:s.portfolioVersions,reviews:s.reviews,acceptances:s.acceptances,comparisons:s.comparisons,
       selectedPortfolioId:s.selectedPortfolioId,selectedVersionId:s.selectedVersionId,datasets:s.datasets,releases:s.releases,receipts:s.receipts,exports:s.exports,
       operations:Object.values(s.operations).slice(-100).reverse().map(({payload,context,...op})=>op),capabilities:{inboxConfigured:Boolean(inboxDirectory),releaseRuntime:releaseCapability()}};
@@ -164,7 +165,9 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
       }
       case 'release.inspect':result=await inspectNativeRelease(store,choose(s.releases,p.releaseId,'release'),publishers);break;
       case 'release.activate':case 'release.start':case 'release.stop':case 'release.rollback':
-        result=await controlNativeRelease(store,choose(s.releases,p.releaseId,'release'),op.action.split('.')[1],p,publishers);break;
+        {const selected=choose(s.releases,p.releaseId,'release');
+          if(op.action==='release.start'&&selected.dataset?.datasetDirectory&&selected.dataset.datasetDirectory!==join(store.root,selected.relativePublisherDirectory,'dataset'))throw fault('OPENFEMA_RELEASE_LOCATION','This release retains its original location. Prepare a release from its retained dataset in this restored workspace.',409);
+          result=await controlNativeRelease(store,selected,op.action.split('.')[1],p,publishers);break;}
       case 'buyer.inspect':result=await inspectBuyer(op.context.inboxDirectory,p.intentIds);break;
       case 'buyer.receive':{
         result=await receiveBuyer(store,op.context.inboxDirectory,p.intentIds,'buyer-'+op.id);
@@ -178,11 +181,7 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
         result=await saveExport(op,{bytes:body,name:'OpenFEMA_'+table+'_'+selected.record.id.slice(0,12)+'.'+format,type:format==='html'?'text/html; charset=utf-8':format==='csv'?'text/csv; charset=utf-8':'application/json',format,versionId:selected.record.id,table});break;
       }
       case 'source.export':result=await saveExport(op,{bytes:jsonBytes(await capture.exportBundle(p.editionId)),name:'OpenFEMA_Original_Source_'+p.editionId.slice(0,12)+'.json',type:'application/json',format:'source-package',kind:'source'});break;
-      case 'workspace.export':{
-        if(running.size)throw fault('OPENFEMA_CAPTURE_ACTIVE','Pause the running source capture before making a complete workspace handover.',409);
-        const artifact=await workspaceArchive(store);
-        result=await saveExport(op,{bytes:artifact.bytes,name:'OpenFEMA_Complete_Workspace.zip',type:'application/zip',format:'zip',kind:'workspace'});break;
-      }
+      case 'workspace.export':result={name:'OpenFEMA_Complete_Workspace.zip',downloadUrl:'/api/workspace.zip',type:'application/zip',kind:'current-workspace'};break;
     }
     const saved=await store.putObject(jsonBytes(result));
     await store.mutate(n=>{const current=n.operations[op.operationId];current.state='COMPLETE';current.completedAt=new Date().toISOString();current.resultSha256=saved.sha256;current.error=null;});
@@ -198,8 +197,10 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
   }
   const action=request=>{const pending=tail.then(()=>perform(request));tail=pending.catch(()=>{});return pending;};
   return {store,schema,view,action,editions,version,capture,
+    async archive(){const pending=tail.then(async()=>{if(running.size)throw fault('OPENFEMA_CAPTURE_ACTIVE','Pause source capture to export a complete workspace.',409);return workspaceArchive(store);});tail=pending.catch(()=>{});return pending;},
     async rows(versionId,options){return tableView((await version(versionId)).portfolio,options);},
-    async detail(versionId,table,id){const data=(await version(versionId)).portfolio;if(!Array.isArray(data[table]))throw fault('OPENFEMA_TABLE','Choose a portfolio table.');const row=data[table].find(r=>r.id===id||r.subject===id||r.key===id||r.disasterNumber===id);if(!row)throw fault('OPENFEMA_RECORD','Select an original portfolio record.',404);return copy(row);},
+    async detail(versionId,table,id){const data=(await version(versionId)).portfolio;if(!Array.isArray(data[table]))throw fault('OPENFEMA_TABLE','Choose a portfolio table.');const row=data[table].find(r=>r.id===id||r.subject===id||r.key===id||r.disasterNumber===id||r.sources?.some(source=>source.id===id));if(!row)throw fault('OPENFEMA_RECORD','Select an original portfolio record.',404);return copy(row);},
+    async releaseTerms(id){const release=choose(store.read().releases,id,'release'),bytes=await readOwned(join(store.root,release.relativeDirectory,'package','seller.json'),262144),seller=JSON.parse(bytes.toString('utf8')),route=seller.routes.find(r=>r.handler==='queryDataset');if(!route)throw fault('OPENFEMA_RELEASE_TERMS','The original dataset route is absent.');return {datasetId:release.datasetId,origin:seller.publicOrigin,path:route.path,payment:route.definition.payment,originalReleaseId:release.id};},
     async raw(sha256){return {bytes:await store.object(sha256),type:'application/json; charset=utf-8'};},
     async exported(id){const item=choose(store.read().exports,id,'export');return {item,bytes:await store.object(item.sha256)};},
     async received(id,name){return readBuyerOutput(store,choose(store.read().receipts,id,'customer delivery'),name);},
