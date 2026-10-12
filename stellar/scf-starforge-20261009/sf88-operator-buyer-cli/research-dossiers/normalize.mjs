@@ -84,7 +84,8 @@ export function normalizeResponse(raw, provider = 'research') {
     'RESEARCH_SOURCE_TERMS_REQUIRED');
   const name = string(response.provider) || provider;
   return {
-    provider: name, query: string(response.query), status: response.success === false ? 'PROVIDER_ERROR' : 'AVAILABLE',
+    provider: name, query: string(response.query), status: response.success === false ? 'PROVIDER_ERROR' :
+      response.status === 'PARTIAL' ? 'PARTIAL' : 'AVAILABLE',
     items: response.results.map((row, index) => item(row, index, name)),
     usage: object(response.usage) ? response.usage : {},
     sourceTerms: response.sourceTerms, warnings: Array.isArray(response.warnings) ? response.warnings : [],

@@ -3,7 +3,7 @@
 if (!defined('ABSPATH')) { exit; }
 
 final class Starforge_SF104_Merchant_Console {
-    const VERSION = '0.4.0';
+    const VERSION = '0.5.0';
     const API = '/merchant-console';
     const HANDOFF_SCHEMA = 'stellar-forge.sf104.merchant-handoff.v1';
 
@@ -267,9 +267,16 @@ final class Starforge_SF104_Merchant_Console {
         $closed = !in_array($order->get_status(), ['pending', 'on-hold'], true);
         $changed = $requires_snapshot && !$snapshot['valid'];
         if ($event && $event['state'] === 'RELEASED') {
-            $same = $order->is_paid() && strtolower((string) $order->get_transaction_id()) === (string) $event['tx_hash'];
-            $life = $same ? ['RELEASED', 'Woo release recorded', 'The original notice journal and Woo paid transaction agree.'] :
-                ['RELEASE_STATE_CHANGED', 'Released order needs review', 'The original journal says released, while the current Woo paid state or transaction differs.'];
+            $same_transaction = (string) $event['tx_hash'] !== '' &&
+                strtolower((string) $order->get_transaction_id()) === (string) $event['tx_hash'];
+            $fully_refunded = $same_transaction && $order->has_status('refunded') &&
+                count($order->get_refunds()) > 0 && $order->get_total_refunded() > 0 &&
+                $order->get_remaining_refund_amount() <= 0;
+            $same = $order->is_paid() && $same_transaction;
+            $life = $fully_refunded ?
+                ['REFUNDED', 'Woo order refunded', 'The original released payment transaction is retained, and native Woo refund credits cover this order in full.'] :
+                ($same ? ['RELEASED', 'Woo release recorded', 'The original notice journal and Woo paid transaction agree.'] :
+                ['RELEASE_STATE_CHANGED', 'Released order needs review', 'The original journal says released, while the current Woo paid state or transaction differs.']);
         } elseif ($changed) $life = ['ORDER_CHANGED', 'Saved order differs', $snapshot['error']];
         elseif ($event && $event['state'] === 'REVIEWING') $life = ['REVIEWING', 'Release in progress / recovery', 'Reconcile the recorded transaction before continuing the original release.'];
         elseif ($event) $life = ['NOTICE_RECEIVED', 'Settlement review required', 'An authenticated SF98 notice is retained. The merchant still verifies the original transfer before releasing this order.'];
@@ -446,9 +453,12 @@ final class Starforge_SF104_Merchant_Console {
         $page = isset($_GET['page']) && is_string($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         if (!in_array($page, ['sf98-woocommerce', 'sf104-checkout-attempts'], true) || !current_user_can('manage_woocommerce') || !function_exists('wc_get_order_statuses')) return;
         wp_enqueue_style('sf104-merchant-console', plugins_url('merchant-console.css', __FILE__), [], self::VERSION);
-        wp_enqueue_script('sf104-merchant-console', plugins_url('merchant-console.js', __FILE__), [], self::VERSION, true);
+        wp_enqueue_style('sf104-merchant-refunds', plugins_url('merchant-refunds.css', __FILE__), ['sf104-merchant-console'], self::VERSION);
+        wp_enqueue_script('sf104-merchant-refunds', plugins_url('merchant-refunds.js', __FILE__), [], self::VERSION, true);
+        wp_enqueue_script('sf104-merchant-console', plugins_url('merchant-console.js', __FILE__), ['sf104-merchant-refunds'], self::VERSION, true);
         wp_add_inline_script('sf104-merchant-console', 'window.SF104Console=' . wp_json_encode([
             'api' => rest_url('stellar-forge/v1/merchant-console'), 'nonce' => wp_create_nonce('wp_rest'),
+            'merchantApi' => rest_url('stellar-forge/v1/merchant/orders'),
             'adminPost' => admin_url('admin-post.php'), 'page' => $page,
             'nonces' => ['release' => wp_create_nonce('sf98_release_order'), 'reset' => wp_create_nonce('sf104_reset_attempt'), 'bind' => wp_create_nonce('sf98_bind_order')],
             'wooStatuses' => wc_get_order_statuses(),

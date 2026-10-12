@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GoldRush · Wallet workspace</title>
+<link rel="stylesheet" href="/goldrush/style.css">
+<script src="/goldrush/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#data-panel">Skip to wallet data</a>
+<header class="masthead">
+  <div><span class="eyebrow">GoldRush</span><h1>Wallet workspace</h1></div>
+  <div class="header-actions"><span id="workspace-label" class="muted">Opening workspace</span><button id="refresh" type="button">Refresh saved work</button><a id="library-link" href="/">Resource library</a></div>
+</header>
+<div id="notice" class="notice" role="status" aria-live="polite">Opening the saved workspace…</div>
+<main class="layout">
+<aside class="panel request-panel" aria-labelledby="request-heading">
+  <div class="section-head"><h2 id="request-heading">New request</h2><button type="button" id="clear-request" class="quiet">Clear</button></div>
+  <p class="muted">Choose one wallet operation and review its payment terms.</p>
+  <form id="request-form">
+    <label for="operation">Operation</label><select id="operation" name="operation"><option value="balances">Token balances</option><option value="transfers">Token transfers · one page</option></select>
+    <label for="chain">Chain</label><select id="chain" name="chain"></select>
+    <label for="wallet">Wallet address</label><input id="wallet" name="wallet" spellcheck="false" autocomplete="off" placeholder="0x…" pattern="0x[0-9a-fA-F]{40}" maxlength="42" required>
+    <div class="form-row"><div><label for="quote">Quote currency</label><select id="quote" name="quote"></select></div><div id="spam-field"><label for="no-spam">Token filter</label><select id="no-spam" name="no-spam"><option value="true">Exclude spam</option><option value="false">Include all</option></select></div></div>
+    <div id="transfer-fields" hidden>
+      <label for="contract">Token contract</label><input id="contract" name="contract" spellcheck="false" autocomplete="off" placeholder="0x…" pattern="0x[0-9a-fA-F]{40}" maxlength="42">
+      <div class="form-row"><div><label for="page">Page number</label><input id="page" name="page" type="number" min="0" step="1" value="0"></div><div><label for="page-size">Page size</label><input id="page-size" name="page-size" type="number" min="1" max="100" step="1" value="50"></div></div>
+    </div>
+    <label for="accept">Provider payment option</label><select id="accept" name="accept" required></select>
+    <p id="payment-terms" class="terms"></p>
+    <label for="max-atomic">Maximum amount · atomic units</label><input id="max-atomic" name="max-atomic" inputmode="numeric" pattern="[0-9]+" autocomplete="off" required>
+    <details class="compact"><summary>Request identity and payment flow</summary>
+      <label for="intent">Request ID</label><input id="intent" name="intent" spellcheck="false" autocomplete="off" pattern="[A-Za-z0-9._:-]{1,128}" required>
+      <p class="muted">Reusing this ID recovers the same saved request.</p>
+      <label for="payment-flow">Payment flow</label><select id="payment-flow" name="payment-flow"><option value="">Provider default</option><option value="authorization">Authorization</option><option value="upfront">Upfront</option></select>
+    </details>
+    <button type="submit" id="prepare" class="primary full">Prepare and review</button>
+    <p class="muted fine">Preparation is offline. Execute starts the selected request through your configured operator.</p>
+  </form>
+  <details class="compact"><summary>Provider release</summary><dl id="release-details" class="facts"></dl></details>
+</aside>
+<section class="center-column">
+  <section class="panel" aria-labelledby="history-heading">
+    <div class="section-head"><h2 id="history-heading">Saved requests</h2><span id="history-count" class="muted"></span></div>
+    <form id="history-form" class="search-row"><label class="sr-only" for="history-search">Search saved requests</label><input id="history-search" type="search" placeholder="Request ID, wallet or state"><button type="submit">Find</button></form>
+    <div id="request-list" class="request-list"></div>
+    <div class="pager"><button id="newer" type="button">Newer</button><span id="history-page" class="muted"></span><button id="older" type="button">Older</button></div>
+    <div id="request-detail" class="request-detail" hidden>
+      <div class="section-head"><h3 id="selected-intent"></h3><span id="selected-state" class="badge"></span></div>
+      <p id="request-url" class="mono break"></p>
+      <dl id="review-facts" class="facts"></dl>
+      <div class="actions"><button id="review" type="button">Review request</button><button id="execute" type="button" class="primary" disabled>Execute reviewed request</button><button id="recover" type="button">Recover saved result</button><button id="finalize" type="button" hidden>Finalize workspace</button></div>
+      <details class="compact"><summary>Original review</summary><pre id="review-json"></pre></details>
+    </div>
+  </section>
+  <section id="data-panel" class="panel" aria-labelledby="data-heading" tabindex="-1">
+    <div class="section-head"><h2 id="data-heading">Wallet data</h2><span id="source-kind" class="badge" hidden></span></div>
+    <div id="data-empty" class="empty"><h3>Select a saved response</h3><p>Open a completed request above, or choose a retained source observation. Balances, transfers and comparisons keep their exact source scope.</p></div>
+    <div id="data-view" hidden>
+      <p id="wallet-address" class="mono break"></p>
+      <dl id="snapshot-facts" class="metrics"></dl>
+      <p id="coverage" class="scope-note"></p>
+      <div class="toolbar"><label class="sr-only" for="row-search">Filter displayed rows</label><input id="row-search" type="search" placeholder="Filter token, address or transaction"><button id="next-page" type="button" hidden>Prepare next page</button></div>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Wallet response rows"><table id="data-table"><thead></thead><tbody></tbody></table></div>
+      <p id="row-count" class="muted fine"></p>
+      <details id="transaction-detail" class="compact" hidden><summary id="transaction-count">Containing transactions</summary><div id="transaction-table" class="table-wrap"></div></details>
+      <div class="actions"><button id="export-json" type="button">Export analysis JSON</button><button id="export-csv" type="button">Export exact CSV</button><button id="download-raw" type="button">Download original response</button><button id="compare-left" type="button">Use as comparison A</button><button id="compare-right" type="button">Use as comparison B</button></div>
+      <details class="compact"><summary>Source and request scope</summary><pre id="source-json"></pre></details>
+    </div>
+  </section>
+  <section id="comparison-panel" class="panel" aria-labelledby="comparison-heading">
+    <div class="section-head"><h2 id="comparison-heading">Compare responses</h2><button id="clear-comparison" type="button" class="quiet">Clear</button></div>
+    <p class="muted">Select two responses. Missing tokens remain missing; amounts are compared only within compatible scope.</p>
+    <div class="comparison-slots"><div><span class="eyebrow">A · earlier</span><p id="comparison-a">No response selected</p></div><div><span class="eyebrow">B · later</span><p id="comparison-b">No response selected</p></div></div>
+    <button id="compare" type="button" disabled>Compare selected responses</button>
+    <div id="comparison-result" hidden><p id="comparison-status" class="scope-note"></p><div id="comparison-table" class="table-wrap"></div><div class="actions"><button id="comparison-export" type="button">Export comparison</button><button id="comparison-note" type="button">Add summary to note</button></div><details class="compact"><summary>Complete comparison</summary><pre id="comparison-json"></pre></details></div>
+  </section>
+</section>
+<aside class="side-column">
+  <section class="panel" aria-labelledby="notes-heading">
+    <h2 id="notes-heading">Analyst notes</h2>
+    <p id="notes-context" class="muted">Notes belong to the selected saved response.</p>
+    <form id="note-form"><label for="note">Note</label><textarea id="note" rows="9" maxlength="32768" disabled></textarea>
+      <label for="tags">Tags · comma separated</label><input id="tags" maxlength="1300" disabled>
+      <label class="check"><input id="starred" type="checkbox" disabled> Star this response</label>
+      <button id="save-note" class="primary full" type="submit" disabled>Save note</button>
+    </form>
+    <p id="note-state" class="muted fine"></p>
+    <button id="use-latest-note" type="button" hidden>Use latest saved revision</button>
+    <details class="compact"><summary>Saved revisions</summary><div id="note-revisions"></div></details>
+  </section>
+  <section class="panel" aria-labelledby="observations-heading">
+    <h2 id="observations-heading">Source observations</h2>
+    <p class="muted">Retained responses supplied separately for analysis. Their operator and capture time are shown with the data.</p>
+    <div id="observations"></div>
+  </section>
+</aside>
+</main>
+<footer>GoldRush wallet workspace · saved requests and response analysis</footer>
+</body>
+</html>

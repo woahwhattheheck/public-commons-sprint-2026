@@ -1,0 +1,19 @@
+{
+  "captureId": "REPLACE_WITH_RETAINED_CAPTURE_ID",
+  "decision": {
+    "title": "Reviewed operating window",
+    "owner": "Weather operations desk",
+    "disposition": "monitor",
+    "notes": "Example operator-selected threshold; review against the actual work and source.",
+    "rule": {
+      "variable": "wind_gusts_10m",
+      "unit": "km/h",
+      "aggregation": "max",
+      "operator": "gte",
+      "threshold": 35,
+      "startUtc": "2026-10-12T04:00:00.000Z",
+      "endUtc": "2026-10-13T04:00:00.000Z",
+      "minimumCoverage": 1
+    }
+  }
+}

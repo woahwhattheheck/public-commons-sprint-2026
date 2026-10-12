@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenSearch merchant workspace</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div><p class="eyebrow">STELLAR FORGE · SOURCE WORKSPACE</p><h1>OpenSearch merchant</h1></div><div id="identity" class="muted"></div></header>
+<div id="notice" role="status" aria-live="polite">Opening saved workspace…</div>
+<div class="layout">
+<aside aria-label="Saved query drafts"><h2>Query drafts</h2><label for="source-query">Original source query</label><select id="source-query"></select>
+<button id="new-draft" type="button">New draft</button><label for="draft-filter">Find a saved draft</label><input id="draft-filter" type="search" placeholder="Title or query name"><div id="draft-list"></div></aside>
+<main>
+<nav aria-label="Workspace views"><button data-view="draft" aria-selected="true">Draft</button><button data-view="editions">Result editions</button><button data-view="relevance">Search relevance</button><button data-view="packages">Merchant packages</button><button data-view="operations">Requests</button></nav>
+<section id="view-draft">
+<div class="section-heading"><div><h2 id="editor-heading">New query draft</h2><p id="saved-state" class="muted">Save your current choices to retain a revision.</p></div><button id="open-history" type="button">Revision history</button></div>
+<div class="two-column"><label>Draft title<input id="draft-title" maxlength="120" autocomplete="off"></label><label>Named query<input id="query-name" maxlength="96" autocomplete="off"></label></div>
+<div class="summary" id="query-summary"></div>
+<label for="query-json">Fixed query declaration</label><p class="help">Indices, selected fields, ordered results and typed parameters use the original OpenSearch source contract.</p><textarea id="query-json" class="code" rows="15" spellcheck="false"></textarea>
+<div class="two-column"><div><label for="input-json">Search input</label><p class="help">These values bind to the query's named parameters.</p><textarea id="input-json" class="code" rows="13" spellcheck="false"></textarea></div>
+<div><label for="plan-json">Merchant plan</label><p class="help">Use the intended route, payment terms and public origin. Empty payment fields stay editable until supplied.</p><textarea id="plan-json" class="code" rows="13" spellcheck="false"></textarea></div></div>
+<div class="actions"><button id="save" class="primary" type="button">Save draft</button><button id="validate" type="button">Validate saved plan</button><button id="inspect" type="button">Inspect native source</button><button id="capture" type="button">Capture search edition</button><button id="prepare" type="button">Prepare merchant</button></div>
+<p class="help">Inspection and capture read the configured OpenSearch source. Preparing a merchant writes a private package through the original seller compiler.</p>
+<details id="action-result"><summary>Saved action result</summary><pre id="action-json"></pre></details>
+<details id="history"><summary>Draft revision history</summary><div id="history-list"></div></details>
+</section>
+<section id="view-editions" hidden>
+<div class="section-heading"><div><h2>Retained result editions</h2><p class="muted">Every edition keeps its original query, input, document identities and result checksum.</p></div><button id="refresh-editions">Refresh saved list</button></div>
+<div class="two-column"><label>Earlier edition<select id="compare-before"></select></label><label>Later edition<select id="compare-after"></select></label></div>
+<div class="actions"><button id="compare">Compare selected editions</button><a id="comparison-download" hidden>Download comparison JSON</a></div>
+<div id="comparison" hidden><h3>Comparison</h3><p id="comparison-summary"></p><pre id="comparison-json"></pre></div>
+<div id="edition-list" class="table-wrap"></div>
+<article id="edition-detail" hidden><h3 id="edition-title"></h3><p id="edition-summary"></p><p id="number-encoding" class="help"></p><div id="edition-downloads" class="actions"></div>
+<div class="actions"><button id="hits-previous">Previous hits</button><span id="hits-page"></span><button id="hits-next">Next hits</button></div><div id="hit-table" class="table-wrap"></div>
+<details id="document-detail"><summary>Complete original document</summary><pre id="document-json"></pre></details>
+<details><summary>Edition metadata and source identity</summary><pre id="edition-meta"></pre></details></article>
+</section>
+<section id="view-relevance" hidden></section>
+<section id="view-packages" hidden><div class="section-heading"><div><h2>Merchant packages</h2><p class="muted">Prepared source, seller configuration and generated client files reopen from the same workspace.</p></div><button id="refresh-packages">Refresh saved list</button></div>
+<div id="package-list"></div><article id="package-detail" hidden><h3 id="package-title"></h3><p id="package-location" class="code"></p><div id="package-files"></div><h3>Original launcher and customer handoff</h3><pre id="package-handoff"></pre></article></section>
+<section id="view-operations" hidden><div class="section-heading"><div><h2>Retained requests</h2><p class="muted">A lost reply keeps its original request ID and saved input.</p></div><button id="refresh-operations">Refresh saved list</button></div>
+<div id="pending" hidden><h3>Current browser request</h3><p id="pending-description" class="code"></p><div class="actions"><button id="recover">Read original result</button><button id="retry">Retry the same request</button></div></div>
+<div id="operation-list"></div><pre id="operation-json"></pre></section>
+</main></div>
+<footer>Original OpenSearch source · Original Stellar Forge seller · Private workspace with durable revisions</footer>
+<script type="module" src="/app.mjs"></script></body></html>

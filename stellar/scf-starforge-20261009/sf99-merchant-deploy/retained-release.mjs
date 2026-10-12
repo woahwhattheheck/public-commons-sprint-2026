@@ -48,6 +48,9 @@ export async function prepareRetainedRelease(raw, { stateRoot, sourceRoot }) {
   // silently move an immutable release while leaving it writing previous state.
   need(!release.routes.some(route => route.upstream?.idempotency),
     'Absolute upstream idempotency journals use the original kind:api host and its restored-path workflow');
+  const oauthRequirements = [...new Map(release.routes.filter(route => route.upstream?.oauthConnection)
+    .map(route => [route.upstream.binding, { binding: route.upstream.binding,
+      origin: route.upstream.origin, connection: route.upstream.oauthConnection }])).values()];
   const releaseDirectory = join(store, 'releases', release.id);
   const inputPaths = [join(store, 'state.json'), join(releaseDirectory, 'release.json'),
     join(releaseDirectory, 'manifest.json'), join(releaseDirectory, 'offers.json')];
@@ -83,6 +86,7 @@ export async function prepareRetainedRelease(raw, { stateRoot, sourceRoot }) {
     'The release selection changed while preparing this host; refresh original status');
   return { configPath: join(releaseDirectory, 'seller-service.json'), port: release.runtime.port,
     facilitator: release.runtime.facilitator ?? null, inputPaths, sourceFiles, discovery,
+    oauthRequirements, allowLoopbackUpstream: release.runtime.allowLoopbackUpstream === true,
     release: { store, id: release.id, digest: release.digest, expectedGeneration,
       source: release.source, publicOrigin: release.publicOrigin } };
 }
@@ -96,6 +100,10 @@ export async function checkRetainedRelease(p) {
     JSON.stringify(prepared.discovery) === JSON.stringify(p.discovery),
     'Retained release or discovery identity changed; regenerate the host bundle');
   need(prepared.port === p.sellerPort, 'Retained listener port changed');
+  const order = rows => [...rows].sort((a, b) => a.binding.localeCompare(b.binding));
+  need(JSON.stringify(order(prepared.oauthRequirements)) ===
+    JSON.stringify(order((p.oauthConnections ?? []).flatMap(entry => entry.bindings))),
+    'Retained OAuth grant selection changed; regenerate the original host bundle');
   return prepared;
 }
 

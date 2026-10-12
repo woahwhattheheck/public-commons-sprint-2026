@@ -172,3 +172,7 @@ node unpaid-demo.mjs --out /absolute/private/new-goldrush-walkthrough \
 ```
 
 The accepted run completed at **2026-10-11 19:29:58 UTC** against the original `cfbd57d` source closure and existing `re2js` 2.8.6. The original HTTP listener returned health 200, OpenAPI 200, and both route challenges 402. The original Node application retained `goldrush-unpaid-balances`; Python retained `goldrush-unpaid-transfers`. New processes reopened their reviews and correctly returned `ORIGINAL_RESULT_NOT_RECORDED` on recovery. Both original upstream counters had `started: 0`, `completed: 0` and `responseBytes: 0`. Provider data requests, facilitator requests, wallet approvals and payments were all zero. The walkthrough's own `result.json` retains the actual original observations and application identities; it creates no paid result or synthetic ledger.
+
+## Retained wallet workspace
+
+The complete local wallet application is available through `customer.mjs workbench`. It joins the original generated client, Node Buyer/Inbox and Resource library for request preparation, operator review, execution/recovery, exact balance and transfer views, compatible response comparisons, saved analyst notes and exports. Read [WALLET-WORKSPACE.md](WALLET-WORKSPACE.md) for setup and the operating workflow.

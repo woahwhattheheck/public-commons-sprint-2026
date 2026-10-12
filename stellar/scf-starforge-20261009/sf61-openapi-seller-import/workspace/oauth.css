@@ -1,0 +1,18 @@
+/* MIT. Grayscale connection controls within the original merchant layout. */
+#oauth-connections h2{margin-top:0}
+#oauth-connections .inline{align-items:flex-end;gap:.65rem;flex-wrap:wrap}
+#oauth-connections .inline label{flex:1 1 20rem}
+.oauth-summary,.oauth-flow,.oauth-route{margin-top:1rem}
+.oauth-flow{border-top:1px solid #ccc;padding-top:1rem}
+.oauth-summary button,.oauth-flow button,.oauth-route button{margin:.35rem .4rem .35rem 0}
+.oauth-warning{border:1px solid #888;border-left:4px solid #333;background:#f2f2f2;color:#222;padding:.8rem;margin:.75rem 0;overflow-wrap:anywhere}
+.oauth-definitions{display:grid;grid-template-columns:1fr;gap:0;margin-top:1rem}
+.oauth-definition{display:grid;grid-template-columns:minmax(10rem,1fr) minmax(0,2fr);gap:1rem;padding:.6rem 0;border-bottom:1px solid #ddd}
+.oauth-definition strong{font-weight:600}
+.oauth-route{border:1px solid #ccc;padding:1rem}
+.oauth-route label{display:block}
+.oauth-route select{width:100%}
+.oauth-route[hidden]{display:none}
+#oauth-authorize-link{display:inline-block;border:1px solid #333;background:#fff;color:#111;padding:.65rem .85rem;text-decoration:underline}
+#oauth-authorize-link:focus-visible{outline:3px solid #777;outline-offset:3px}
+@media(max-width:620px){.oauth-definition{grid-template-columns:1fr;gap:.3rem}.oauth-route{padding:.75rem}#oauth-connections .inline>*{width:100%}}
