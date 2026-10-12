@@ -95,8 +95,13 @@ the manifest and source files, and the archive writer checks each selected
 file again while transferring its bytes.
 
 A source registration made after the retained snapshot belongs to a later
-backup. Resuming an interrupted export keeps the original frozen selection.
-Unregistered source folders are outside that selected document set.
+backup. Resuming an interrupted export keeps the original frozen selection
+and checks its document set against that same saved database. An older retained
+plan that omitted a registered source returns
+`WORKSPACE_ARCHIVE_DOCUMENT_SOURCE_SELECTION_CHANGED` before writing an archive.
+Keep that original operation for its history and create a complete backup with
+the current runtime. Unregistered source folders are outside the selected
+document set.
 
 The existing receiver verifies the complete staged document set against the
 restored database before it publishes the workspace. It checks original

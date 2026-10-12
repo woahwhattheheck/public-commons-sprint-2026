@@ -400,7 +400,8 @@ class WorkspaceArchives:
             self._progress(identifier, phase="SNAPSHOT", files_done=0, bytes_done=0)
             self.database.backup(snapshot)
         plan_path = folder / "archive-inputs.json"
-        if plan_path.exists():
+        cached_plan = plan_path.exists()
+        if cached_plan:
             manifest = parse(read(plan_path, _MAX_MANIFEST))
         else:
             with sqlite3.connect(database_path.as_uri() + "?mode=ro&immutable=1", uri=True) as db:
@@ -419,6 +420,22 @@ class WorkspaceArchives:
         _need(manifest.get("schema") == ARCHIVE_SCHEMA and manifest.get("id") == identifier and
               manifest.get("workspace_id") == self.identity, "WORKSPACE_ARCHIVE_PLAN_CHANGED")
         files = manifest["files"]
+        if cached_plan:
+            # A retained plan predating document custody must not become a
+            # COMPLETE archive that omits sources referenced by its own DB.
+            # Recheck against that same snapshot, never the live workspace.
+            with sqlite3.connect(database_path.as_uri() + "?mode=ro&immutable=1", uri=True) as db:
+                db.execute("PRAGMA trusted_schema=OFF")
+                _need(db.execute("SELECT workspace_id FROM sf_analysis_format WHERE id=1").fetchone()[0] == self.identity,
+                      "WORKSPACE_ARCHIVE_SNAPSHOT_IDENTITY_CHANGED")
+                documents = snapshot_document_files(self.database.directory, db)
+            expected_documents = {item["path"]: item for item in documents}
+            planned_documents = {
+                item["path"]: _entry(item) for item in files
+                if allowed_document_payload(item.get("path"))
+            }
+            _need(planned_documents == expected_documents,
+                  "WORKSPACE_ARCHIVE_DOCUMENT_SOURCE_SELECTION_CHANGED")
         total = sum(item["bytes"] for item in files)
         self._progress(identifier, phase="ARCHIVING", files_done=0, files_total=len(files), bytes_done=0, bytes_total=total)
         temporary, target = folder / "workspace.zip.part", folder / "workspace.zip"
