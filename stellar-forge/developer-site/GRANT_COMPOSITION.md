@@ -43,7 +43,7 @@ The original receiving callback accepts the four Git blob overrides emitted by `
 
 Pass that object as `sourcePins` to the original `inspectGrantApplication` callback, along with its selected source commit and receiving directory. Its other declared original routes stay selected. Additional product assets have their own file selection; they do not change this four-reader override contract.
 
-The result also reports `reviewerEntry` and `submissionWorkspace`. These describe the selected opening anchors and submission route; the submission descriptor binds the same application SHA-256 and Git blob that the editor reads. They do not add routes to `sourcePins`.
+The result also reports `reviewerEntry`, `submissionWorkspace` and `submissionReviewRound`. These describe the selected opening anchors, original submission and review routes. Both submission descriptors bind the same complete application SHA-256 and Git blob that the editor reads. The submission descriptor also retains the original planning and handover contracts. These descriptors do not add routes to `sourcePins`.
 
 The declared browser manifest includes the original routes and these complete component assets:
 
@@ -58,6 +58,13 @@ The declared browser manifest includes the original routes and these complete co
 | `/grant-plan-core.mjs` | Retained native plan and complete editorial review |
 | `/grant-plan-source.mjs` | Original plan JSON and planning-ZIP receiving |
 | `/grant-plan-workspace.mjs` | Plan selection, preview and explicit draft application |
+| `/grant-handover-core.mjs` | Exact source, evidence, prepared output and original issuer observations |
+| `/grant-handover-source.mjs` | Full selected draft, source and handover files |
+| `/grant-handover-workspace.mjs` | Original submission handover controls |
+| `/grant-review-round.html` | Named reviewer and author workflow in the existing draft store |
+| `/grant-review-round.css` | Responsive review, comparison and handover layout |
+| `/grant-review-round-core.mjs` | Complete ordered review actions and full native draft retention |
+| `/grant-review-round-workspace.mjs` | Original draft-store saves, explicit revision review and complete exports |
 
 The workspace uses the existing `/drafts.mjs` and the same application/source-index files. Its complete source travels under the original developer-site component in the grant-reviewer product.
 
@@ -75,6 +82,16 @@ The installed product opens through `starforge grant-application --port 8787`. U
 
 Start with **Explore the working product**. The [reviewer-opening guide](GRANT_ENTRY.md) covers the original film/report, Applications, quoted host command and complete purchase handover. Then choose **Prepare submission** to edit the nine answers, map the actual issuer fields and limits, save complete versions and receive a later source edition. The [submission guide](GRANT_SUBMISSION.md) covers exact copy counts, complete draft export/reopen, source comparisons and preservation of manual edits. Its **Planning edition** panel receives the complete original SF47 plan JSON or planning ZIP, retains its native revisions and calculation, prepares the selected budget/roadmap text and applies that reviewed text to the same saved submission draft. The original SF47 model remains the calculation source.
 
+Choose **Review prepared draft** from the existing reader or submission editor. A named reviewer receives the complete exported draft, records field-specific decisions and quoted change requests, and returns the full review to the author. The author receives the next complete native draft, explicitly carries decisions only for unchanged content, replies to requests and retains resolutions. A changed source or answer reopens an affected resolved request. The review export retains every original draft, source edition, named action and full report. An independently saved copy can be reopened without replacing the original browser record. The [review-round guide](GRANT_REVIEW_ROUNDS.md) gives the complete reviewer and author procedure. The original editor's **Submission handover** view retains selected review evidence with the current planning, prepared output and operator-recorded issuer observations; its [handover guide](GRANT_HANDOVER.md) describes that existing workflow.
+
 The source publisher applies the complete selected files to the existing Site project and keeps its current audience. The manuscript owner supplies accepted content, the cumulative writer supplies the current public source projection, and the same-account publisher supplies the actual saved version and deployment result.
 
 The existing reviewer callback and any selected product continuation receive that actual source edition through the original page. Their outputs record what was actually opened, downloaded and retained. Source composition by itself does not replace the publisher's saved version or a completed operating result.
+
+## Receive the joined review workflow
+
+Keep the four-reader callback on its original Page and continue with the complete review-round callback on that same browser owner. `runGrantReviewBrowser` is exported by `GRANT_REVIEW_ROUNDS_BROWSER.mjs`; it borrows the supplied Page and uses the original caller's durable `retain` callback. Select the complete current served files, including all four review assets, the native submission core, `grant-plan-core.mjs`, `grant-handover-core.mjs` and `drafts.mjs`. Their hashes belong to the actual joined edition. The callback does not start another listener, browser or installer.
+
+The complete original model result, three native draft inputs, every review export and report are retained in [the operating source packet](../../operations/scf-submission-review-round-7108-20261012/README.md). The installed grant-reviewer contribution explicitly selects that entire packet and exposes the original model, composition helper and both receiving callbacks under `./grant/review-round`, `./grant/review-round/composition`, `./grant/review-round/model-receiving` and `./grant/review-round/browser-receiving`. Use the package's actual name when importing those exports. The native model result is complete; the existing Page owner records the actual browser result separately.
+
+A receiving continuation keeps the original operation ID, full checkpoint, selected inputs and artifact bytes. Completed downloads are verified and reused before another UI export. Independent Save copy steps reconcile their durably selected original destination through the existing draft store. Preserve that checkpoint on interruption and invoke the same callback with it; do not create another reviewer round to replace unfinished work.
