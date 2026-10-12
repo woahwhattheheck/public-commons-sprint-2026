@@ -10,6 +10,9 @@ Every successful write returns {revision,state,result,detail?}. state is the ref
 
 State: {revision,settings,captures,runs,profiles,packets,catalog}. catalog includes source_catalog (the exact requirements catalog), fields, required_fields, lanes, events, statuses, mapping_schema, review_states and receipt_states. Captures and profiles retain all earlier versions. Runs retain source-bound financial editions, decisions, signoffs, closings and exchange observations. Money and all identifiers are strings; counts and revisions are integers.
 
+GET /api/cashiering/requests/UUID — {found:boolean,response:original_success_envelope|null}; read committed outcome without resending a large original upload
+GET /api/cashiering/runs/ID/editions — paged immutable edition metadata {id,run_id,edit_revision,snapshot_hash,created_at,action}
+GET /api/cashiering/editions/ID — full historical detail from exact retained source/mapping bindings and history cutoff
 GET /api/cashiering/state
 GET /api/cashiering/captures/ID — source metadata, current mapping and mapping history
 GET /api/cashiering/captures/ID/rows?normalized=0|1&offset=0&limit=100 — {capture_id,total,offset,limit,rows,issues}; original and normalized row lists are complete before pagination
@@ -25,9 +28,9 @@ The existing GET /api/backup and --restore NEW_DB cover all financial tables aut
 ## Settings
 
 POST settings {revision,settings}. Full replacement:
-{scales:{USD:2},timezone:"UTC",scope_note:"",required_lanes:["permits","receivables"],balance_tolerance_minor:{USD:"0"},close_reviewers_required:2}.
+{scales:{USD:2},timezone:"UTC",scope_note:"",required_lanes:["permits","receivables"],balance_tolerance_minor:{USD:"0"},close_reviewers_required:2,balance_payment_types:{cashier:null,processor:null}}.
 
-scales values are integers0..12; amounts use signed decimal integer strings in those units. Exact zero is the default tolerance. required_lanes is the declared operating input set, not a statement that a missing report is empty. All four observed lanes are always shown. timezone is a declared IANA timezone. close_reviewers_required must be an integer2..10; the source requires two distinct deposit reviewers. Settings are copied into each run and later global changes never rewrite an old run.
+scales values are integers0..12; amounts use signed decimal integer strings in those units. Exact zero is the default tolerance. required_lanes is the declared operating input set, not a statement that a missing report is empty. All four observed lanes are always shown. timezone is a declared IANA timezone. close_reviewers_required must be an integer2..10; the source requires two distinct deposit reviewers. balance_payment_types declares per-lane tender applicability: null means all tenders, an explicit list limits that lane, and [] means none. Inapplicable differences remain null and their actual supplied rows remain visible. Explain the source-defined boundary in scope_note. Settings are copied into each run and later global changes never rewrite an old run.
 
 ## Source capture, interpretation and selection
 
@@ -36,7 +39,9 @@ kind is permits, receivables, processor, cashier, or document. CSV and JSON orig
 captured_at is an ISO instant with an explicit offset.
 coverage = {start_date,end_date,session_ids:[],payment_types:[],currencies:[],complete:false,note:"",data_mode:"event_stream",source_system:"",report_family:""}.
 Dates use YYYY-MM-DD. data_mode is event_stream or snapshot. A source-defined complete:true declaration plus its explicit date/session/tender/currency scope can establish a zero for a missing group; absent or incomplete source never does. Empty filter arrays mean all values within the supplied report scope, and this must be explained by note before complete:true is accepted.
-Exact same lane+originalSHA+capture time+coverage reupload returns its retained capture instead of another counted source. Original bytes never change. CSV record row_number starts at2 after its header (CSV records, not physical lines). JSON input duplicate keys and nonfinite values reject; numeric lexemes remain strings with source type metadata, preserving long integers/decimals. Blank CSV records are retained as source positions but do not become financial rows.
+Exact same lane+originalSHA+coverage reupload (including a later reacquisition time) returns its retained capture instead of another counted source and retains the new acquisition observation. A run rejects selecting the same original SHA twice within the same lane/system/report family. Original bytes never change. CSV record row_number starts at2 after its header (CSV records, not physical lines). JSON input duplicate keys and nonfinite values reject; numeric lexemes remain strings with source type metadata, preserving long integers/decimals. Blank CSV records are retained as source positions but do not become financial rows.
+
+GET captures/ID returns the bare capture projection plus mapping_history. catalog.fields is a descriptor array {key,label,type,required_for}; required_fields is a lane-to-key-array object. Normalized rows are flat canonical rows with original; raw rows are {line,values,types}.
 
 Capture projection: {id,kind,filename,sha256,bytes,rows,headers,preview,captured_at,coverage,mapping,mapping_version,confirmed,current,issues,created_at}. preview rows {line,values,types}. source capture rows API preserves complete originals.
 
