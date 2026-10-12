@@ -1,5 +1,7 @@
 # API merchant workspace
 
+Configure per-operation host connections in the [backend transport profile guide](TRANSPORTS.md). The workspace retains the original upstream configuration through source reviews and seller releases.
+
 Declared finite SSE and NDJSON routes use the same workspace, saved merchant package and native seller. The [streaming workflow](STREAMING.md) covers explicit payment flow, source limits, generated customer review, and opening the existing commerce console for approval and retained output.
 
 A local merchant setup application connecting an OpenAPI-described backend to
