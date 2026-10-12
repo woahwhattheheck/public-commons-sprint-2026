@@ -1,11 +1,14 @@
 // MIT. Original STAC delivery custody and durable GeoNetwork operator work.
-import { randomUUID } from 'node:crypto';
-import { readdir, lstat } from 'node:fs/promises';
-import { resolve, join, dirname, isAbsolute } from 'node:path';
-import { privateDirectory, readBytes, readJson, writeBytes, writeJson, exists }
+import { randomUUID, createHash } from 'node:crypto';
+import { constants } from 'node:fs';
+import { Readable } from 'node:stream';
+import { readdir, lstat, realpath, open, unlink } from 'node:fs/promises';
+import { resolve, join, dirname, basename, isAbsolute, relative as filesystemRelative, sep } from 'node:path';
+import { privateDirectory as originalPrivateDirectory, readBytes, readJson, writeBytes, writeJson, exists, matchingWriteTemporaries }
   from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { withPrivateLock } from '../../routescan/quota.mjs';
 import { StacDelivery } from '../customer.mjs';
+import { StacFile } from '../merchant.mjs';
 import { canonicalJson } from '../provider.mjs';
 import { CATALOGUE_SCHEMA, copy, hash, requireValue, identifier, isObject,
   buildCollectionSource, validateSource, normalizeConnection, normalizePlan, validatePlan } from './model.mjs';
@@ -26,8 +29,68 @@ function relative(value) {
     value.split('/').every(part => part && part !== '.' && part !== '..'), 'CATALOGUE_RELATIVE_PATH_INVALID');
   return value;
 }
+function contains(parent, child) {
+  const path = filesystemRelative(parent, child);
+  return path === '' || path !== '..' && !path.startsWith('..' + sep) && !isAbsolute(path);
+}
+async function canonicalLocation(path) {
+  path = resolve(path);
+  let ancestor = path;
+  while (!await exists(ancestor)) {
+    const parent = dirname(ancestor);
+    requireValue(parent !== ancestor, 'CATALOGUE_PARENT_NOT_FOUND');
+    ancestor = parent;
+  }
+  const info = await lstat(ancestor);
+  requireValue(info.isDirectory() && !info.isSymbolicLink() && await realpath(ancestor) === ancestor,
+    'CATALOGUE_CANONICAL_DIRECTORY_REQUIRED');
+  return path;
+}
+async function privateDirectory(path, options = {}) {
+  path = await canonicalLocation(path);
+  await originalPrivateDirectory(path, options);
+  requireValue(await realpath(path) === path, 'CATALOGUE_DIRECTORY_PARENT_CHANGED');
+  return path;
+}
+async function checkParent(path) {
+  const parent = dirname(resolve(path));
+  requireValue(await realpath(parent) === parent, 'CATALOGUE_FILE_PARENT_CHANGED');
+}
+/** Hash unknown retained files in fixed-size chunks; never allocate a raster-sized Buffer. */
+async function fingerprint(path, expected = null, { signal } = {}) {
+  path = resolve(path); await checkParent(path);
+  const named = await lstat(path);
+  requireValue(named.isFile() && !named.isSymbolicLink(), 'CATALOGUE_REGULAR_FILE_REQUIRED');
+  const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+  try {
+    const before = await handle.stat();
+    requireValue(before.isFile() && before.ino === named.ino && before.dev === named.dev &&
+      Number.isSafeInteger(before.size) && before.size <= 2147483648, 'CATALOGUE_FILE_SIZE_OR_IDENTITY_CHANGED');
+    if (expected) requireValue(before.size === expected.bytes, 'CATALOGUE_RETAINED_FILE_CHANGED');
+    const digest = createHash('sha256'), chunk = Buffer.allocUnsafe(1048576);
+    let size = 0;
+    while (true) {
+      requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+      const { bytesRead } = await handle.read(chunk, 0, chunk.length, size);
+      if (!bytesRead) break;
+      size += bytesRead;
+      requireValue(size <= before.size, 'CATALOGUE_FILE_CHANGED_DURING_READ');
+      digest.update(chunk.subarray(0, bytesRead));
+    }
+    const after = await handle.stat(), current = await lstat(path);
+    await checkParent(path);
+    requireValue(size === before.size && after.size === before.size &&
+      after.mtimeMs === before.mtimeMs && after.ctimeMs === before.ctimeMs &&
+      current.isFile() && current.dev === before.dev && current.ino === before.ino,
+      'CATALOGUE_FILE_CHANGED_DURING_READ');
+    const record = { bytes: size, sha256: digest.digest('hex') };
+    if (expected) requireValue(record.sha256 === expected.sha256, 'CATALOGUE_RETAINED_FILE_CHANGED');
+    return record;
+  } finally { await handle.close(); }
+}
 async function retained(path, bytes) {
-  await privateDirectory(dirname(path));
+  bytes = Buffer.from(bytes);
+  await privateDirectory(dirname(path)); await checkParent(path);
   if (await exists(path)) {
     const actual = await readBytes(path, bytes.length);
     requireValue(hash(actual) === hash(bytes) && actual.length === bytes.length, 'CATALOGUE_RETAINED_FILE_CHANGED');
@@ -41,7 +104,23 @@ async function retained(path, bytes) {
   }
   return { bytes: bytes.length, sha256: hash(bytes) };
 }
+async function retainedFile(source, destination, record, { signal } = {}) {
+  await checkParent(source);
+  await privateDirectory(dirname(destination)); await checkParent(destination);
+  const at = path => new StacFile(dirname(path), { path: basename(path), bytes: record.bytes,
+    sha256: record.sha256, mime: 'application/octet-stream' });
+  if (await exists(destination)) await at(destination).verify({ signal });
+  else {
+    try { await at(source).saveAs(destination, { signal }); }
+    catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      await at(destination).verify({ signal });
+    }
+  }
+  return { bytes: record.bytes, sha256: record.sha256 };
+}
 async function filesUnder(directory, prefix = '') {
+  await checkParent(join(directory, 'member'));
   const out = [];
   for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
     const name = prefix ? prefix + '/' + entry.name : entry.name;
@@ -51,6 +130,21 @@ async function filesUnder(directory, prefix = '') {
     else { requireValue(entry.isFile(), 'CATALOGUE_HANDOVER_FILE_REQUIRED'); out.push(name); }
   }
   return out;
+}
+const deliveryIdentity = manifest => Object.fromEntries(['schema', 'bundleSha256', 'selectionSha256',
+  'editionId', 'editionDigest', 'snapshot', 'nativeBindingSha256'].map(key => [key, manifest[key] ?? null]));
+async function matchingInventory(directory, files, extra = []) {
+  const expected = new Map(files.map(file => [relative(file.path), file]));
+  requireValue(expected.size === files.length, 'CATALOGUE_HANDOVER_PATH_REPEATED');
+  const actual = await filesUnder(directory);
+  requireValue(canonicalJson(actual.sort()) === canonicalJson([...expected.keys(), ...extra].sort()),
+    'CATALOGUE_HANDOVER_INCOMPLETE');
+  for (const file of files) await fingerprint(join(directory, file.path), file);
+}
+async function cleanOwnJsonTemporaries(directory, expectedBytes) {
+  // These are only complete private writeBytes leftovers matching this operation's exact JSON.
+  for (const name of await matchingWriteTemporaries(directory, expectedBytes))
+    await unlink(join(directory, name));
 }
 function validateState(state) {
   requireValue(state?.schema === CATALOGUE_SCHEMA && typeof state.id === 'string' &&
@@ -68,12 +162,15 @@ function validateState(state) {
 
 /** The original received edition remains the only source of collection metadata. */
 export async function openCatalogueWorkspace({ directory, stacWorkspace = null, create = true,
-  title = 'Catalogue receiving' } = {}) {
+  title = 'Catalogue receiving', signal } = {}) {
   directory = await privateDirectory(resolve(directory), { create });
   for (const name of ['locks', 'sources', 'operations', 'archives'])
     await privateDirectory(join(directory, name), { create });
   const statePath = join(directory, 'state.json');
   const stacIdentity = stacWorkspace ? (await stacWorkspace.getState()).id : null;
+  await withPrivateLock(join(directory, 'locks'), 'workspace.lock', async () => {
+    if (await exists(join(directory, 'receiving-prepared.json')))
+      requireValue(await exists(join(directory, 'receiving.json')), 'CATALOGUE_RECEIVING_NOT_PUBLISHED');
   if (!await exists(statePath)) {
     requireValue(create, 'CATALOGUE_WORKSPACE_NOT_FOUND');
     const initial = { schema: CATALOGUE_SCHEMA, id: 'catalogue-' + randomUUID().replaceAll('-', '').slice(0, 24),
@@ -84,6 +181,7 @@ export async function openCatalogueWorkspace({ directory, stacWorkspace = null, 
     try { await writeJson(statePath, initial, { exclusive: true }); }
     catch (error) { if (error.code !== 'EEXIST') throw error; }
   }
+  });
   let queue = Promise.resolve(), closed = false;
   const read = async () => validateState(await readJson(statePath, STATE_LIMIT));
   const opening = await read();
@@ -103,6 +201,7 @@ export async function openCatalogueWorkspace({ directory, stacWorkspace = null, 
   async function sourceFor(state, sha256) {
     const entry = state.sources.find(value => value.sourceSha256 === sha256);
     requireValue(entry, 'CATALOGUE_SOURCE_NOT_FOUND');
+    await checkParent(join(directory, relative(entry.path)));
     const source = validateSource(await readJson(join(directory, relative(entry.path)), STATE_LIMIT));
     requireValue(source.sha256 === sha256, 'CATALOGUE_SOURCE_CHANGED');
     return { entry, source };
@@ -194,13 +293,21 @@ export async function openCatalogueWorkspace({ directory, stacWorkspace = null, 
     return operation({ operationId, kind: 'CONFIGURE', input: { connection: normalized, expectedRevision: expectedRevision ?? null } },
       async context => {
         const state = context.state;
-        if (expectedRevision !== undefined) requireValue(state.revision === expectedRevision + 1 ||
-          context.op.steps.saved?.status === 'COMPLETE', 'CATALOGUE_REVISION_CHANGED');
-        const pending = Object.values(state.operations).filter(value =>
-          value.id !== operationId && ['RUNNING', 'RECONCILE'].includes(value.status));
-        requireValue(!pending.length, 'CATALOGUE_ORIGINAL_OPERATION_ACTIVE');
-        if (state.harvester) requireValue(hash(normalized) === hash(state.connection), 'CATALOGUE_INSTALLATION_ALREADY_BOUND',
-          'This workspace retains an existing native harvester. Use its saved installation for continued work.');
+        if (state.connection && hash(normalized) === hash(state.connection))
+          return { connection: copy(normalized), connectionRevision: state.connectionRevision };
+        if (expectedRevision !== undefined)
+          requireValue(Number.isSafeInteger(expectedRevision) && expectedRevision >= 0 &&
+            state.revision === expectedRevision + 1, 'CATALOGUE_REVISION_CHANGED');
+        const installation = value => value ? {
+          baseUrl: value.baseUrl, portal: value.portal, language: value.language
+        } : null;
+        const hasNativeHistory = state.harvester || Object.values(state.operations).some(value =>
+          ['HARVEST', 'RECORD_ACTION'].includes(value.kind) &&
+          Object.values(value.steps ?? {}).some(step => step.mutation));
+        if (hasNativeHistory)
+          requireValue(hash(installation(normalized)) === hash(installation(state.connection)),
+            'CATALOGUE_INSTALLATION_ALREADY_BOUND',
+            'This workspace continues its saved installation. Authentication references, version and limits can be reviewed and updated.');
         state.connection = normalized; state.connectionRevision++;
         state.capabilities = null;
         return { connection: copy(normalized), connectionRevision: state.connectionRevision };
@@ -208,9 +315,11 @@ export async function openCatalogueWorkspace({ directory, stacWorkspace = null, 
   }
   async function receive({ deliveryDirectory, collectionIds, sourceUrls = {}, sourceTitle, operationId } = {}) {
     deliveryDirectory = resolve(deliveryDirectory);
+    const delivery = await StacDelivery.open(await privateDirectory(deliveryDirectory, { create: false }), { signal });
+    const deliveryIdentity = Object.fromEntries(['schema', 'bundleSha256', 'selectionSha256', 'editionId',
+      'editionDigest', 'snapshot', 'nativeBindingSha256'].map(key => [key, delivery.manifest[key] ?? null]));
     return operation({ operationId, kind: 'RECEIVE_SOURCE',
-      input: { deliveryDirectory, collectionIds, sourceUrls, sourceTitle: sourceTitle ?? null } }, async context => {
-      const delivery = await StacDelivery.open(deliveryDirectory);
+      input: { deliveryDirectory, deliveryIdentity, collectionIds, sourceUrls, sourceTitle: sourceTitle ?? null } }, async context => {
       const source = buildCollectionSource({ delivery, collectionIds, sourceUrls,
         title: sourceTitle ?? context.state.title });
       const path = 'sources/' + source.sha256 + '.json';
@@ -245,6 +354,7 @@ export async function openCatalogueWorkspace({ directory, stacWorkspace = null, 
     const state = await read();
     requireValue(state.sources.some(value => value.documentSha256 === sha256), 'CATALOGUE_SOURCE_NOT_FOUND');
     const path = join(directory, 'sources', sha256 + '.collections.json');
+    await checkParent(path);
     const bytes = await readBytes(path, STATE_LIMIT);
     requireValue(hash(JSON.parse(bytes.toString('utf8'))) === sha256, 'CATALOGUE_SOURCE_CHANGED');
     return { bytes, filename: sha256 + '.collections.json', mime: 'application/json' };
@@ -253,18 +363,19 @@ export async function openCatalogueWorkspace({ directory, stacWorkspace = null, 
     path = relative(path);
     requireValue(['sources/', 'operations/', 'archives/'].some(prefix => path.startsWith(prefix)),
       'CATALOGUE_SAVED_FILE_INVALID');
-    const bytes = await readBytes(join(directory, path), 2147483647);
-    return { bytes, filename: path.split('/').at(-1), mime: path.endsWith('.zip') ?
-      'application/zip' : path.endsWith('.xml') ? 'application/xml' : 'application/json' };
+    const full = join(directory, path), metadata = await fingerprint(full, null, { signal });
+    const file = new StacFile(directory, { path, ...metadata, mime: 'application/octet-stream' });
+    return { stream: Readable.from(file.chunks({ signal })), bytes: metadata.bytes, filename: basename(path),
+      mime: path.endsWith('.zip') ? 'application/zip' : path.endsWith('.xml') ? 'application/xml' : 'application/json' };
   }
   async function exportHandover({ outputDirectory, operationId } = {}) {
-    outputDirectory = resolve(outputDirectory);
-    requireValue(outputDirectory !== directory && !outputDirectory.startsWith(directory + '/'),
+    outputDirectory = await canonicalLocation(resolve(outputDirectory));
+    requireValue(!contains(directory, outputDirectory) && !contains(outputDirectory, directory),
       'CATALOGUE_SEPARATE_HANDOVER_REQUIRED');
-    return operation({ operationId, kind: 'EXPORT_HANDOVER', input: { outputDirectory } }, async context => {
-      const manifestPath = join(outputDirectory, MANIFEST);
+    const result = await operation({ operationId, kind: 'EXPORT_HANDOVER', input: { outputDirectory } }, async context => {
+      const manifestPath = join(outputDirectory, MANIFEST), markerPath = join(outputDirectory, 'catalogue-export-prepared.json');
       if (await exists(manifestPath)) {
-        const opened = await openCatalogueHandover(outputDirectory);
+        const opened = await openCatalogueHandover(outputDirectory, { signal });
         requireValue(opened.manifest.operationId === operationId && opened.manifest.workspaceId === context.state.id,
           'CATALOGUE_HANDOVER_OPERATION_CHANGED');
         return { directory: outputDirectory, manifest: opened.manifest };
@@ -272,60 +383,94 @@ export async function openCatalogueWorkspace({ directory, stacWorkspace = null, 
       await privateDirectory(outputDirectory);
       let snapshot = context.op.steps.snapshot?.result;
       if (!snapshot) {
-        snapshot = copy(context.state);
-        // The current export's result will contain this manifest; omit only its in-flight self reference.
-        delete snapshot.operations[operationId];
+        requireValue((await readdir(outputDirectory)).length === 0, 'CATALOGUE_NEW_HANDOVER_DIRECTORY_REQUIRED');
+        const state = copy(context.state); delete state.operations[operationId];
+        const files = [], excludedTemporaryPaths = [];
+        for (const name of ['sources', 'operations', 'archives']) {
+          for (const path of await filesUnder(join(directory, name))) {
+            const originalPath = name + '/' + path;
+            if (originalPath.startsWith('operations/' + hash(operationId) + '/')) continue;
+            if (/^\.write-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(basename(path))) {
+              excludedTemporaryPaths.push(originalPath); continue;
+            }
+            files.push({ path: originalPath, ...await fingerprint(join(directory, originalPath), null, { signal }) });
+          }
+        }
+        const deliveries = new Map();
+        for (const entry of state.sources) {
+          const source = (await sourceFor(state, entry.sourceSha256)).source;
+          const identitySha256 = hash(source.sourceIdentity);
+          if (deliveries.has(identitySha256)) continue;
+          const actual = await StacDelivery.open(await privateDirectory(entry.deliveryDirectory, { create: false }), { signal });
+          requireValue(canonicalJson(deliveryIdentity(actual.manifest)) === canonicalJson(source.sourceIdentity),
+            'CATALOGUE_SOURCE_DELIVERY_CHANGED');
+          const manifestFile = await fingerprint(join(actual.directory, 'manifest.json'), null, { signal });
+          const members = Object.entries(actual.manifest.files).map(([path, file]) =>
+            ({ path, bytes: file.bytes, sha256: file.sha256 }));
+          deliveries.set(identitySha256, { identitySha256, sourceIdentity: copy(source.sourceIdentity),
+            originalDirectory: actual.directory, path: 'deliveries/' + identitySha256,
+            files: [...members, { path: 'manifest.json', ...manifestFile }] });
+        }
+        snapshot = { state, files, deliveries: [...deliveries.values()], excludedTemporaryPaths };
         context.op.steps.snapshot = { name: 'snapshot', mutation: false, status: 'COMPLETE',
           result: snapshot, completedAt: stamp() };
         await context.checkpoint();
       }
-      const packagedState = copy(snapshot), copied = new Map();
+      const marker = { schema: 'starforge.stac-geonetwork-export-prepared.v1', operationId,
+        workspaceId: snapshot.state.id, snapshotSha256: hash(snapshot) };
+      const markerBytes = Buffer.from(canonicalJson(marker) + '\n');
+      await cleanOwnJsonTemporaries(outputDirectory, [markerBytes]);
+      const existing = await readdir(outputDirectory);
+      requireValue(!existing.length || await exists(markerPath), 'CATALOGUE_NEW_HANDOVER_DIRECTORY_REQUIRED');
+      await retained(markerPath, markerBytes);
+      const packagedState = copy(snapshot.state);
       for (const entry of packagedState.sources) {
-        const source = (await sourceFor(snapshot, entry.sourceSha256)).source;
-        const key = hash(source.sourceIdentity);
-        const destination = 'deliveries/' + key;
-        if (!copied.has(key)) {
-          const actual = await StacDelivery.open(entry.deliveryDirectory);
-          requireValue(['bundleSha256', 'selectionSha256', 'editionDigest', 'nativeBindingSha256'].every(field =>
-            actual.manifest[field] === source.sourceIdentity[field]), 'CATALOGUE_SOURCE_DELIVERY_CHANGED');
-          await actual.copyTo(join(outputDirectory, destination));
-          copied.set(key, { path: destination, sourceIdentity: copy(source.sourceIdentity) });
+        const record = snapshot.deliveries.find(item => item.identitySha256 === hash(entry.sourceIdentity));
+        requireValue(record, 'CATALOGUE_SNAPSHOT_DELIVERY_MISSING'); entry.deliveryDirectory = record.path;
+      }
+      const files = [{ path: 'catalogue-export-prepared.json', bytes: markerBytes.length, sha256: hash(markerBytes) }];
+      for (const record of snapshot.deliveries) {
+        for (const file of record.files) {
+          const path = record.path + '/' + relative(file.path);
+          await retainedFile(join(record.originalDirectory, file.path), join(outputDirectory, path), file, { signal });
+          files.push({ path, bytes: file.bytes, sha256: file.sha256 });
         }
-        entry.deliveryDirectory = destination;
+        const received = await StacDelivery.open(join(outputDirectory, record.path), { signal });
+        requireValue(canonicalJson(deliveryIdentity(received.manifest)) === canonicalJson(record.sourceIdentity),
+          'CATALOGUE_HANDOVER_DELIVERY_CHANGED');
       }
-      for (const name of ['sources', 'operations', 'archives']) {
-        for (const path of await filesUnder(join(directory, name))) {
-          const originalPath = name + '/' + path;
-          // This export's own retained state is already represented by the stable snapshot.
-          if (originalPath.startsWith('operations/' + hash(operationId) + '/')) continue;
-          const bytes = await readBytes(join(directory, originalPath), 2147483647);
-          await retained(join(outputDirectory, originalPath), bytes);
-        }
+      for (const file of snapshot.files) {
+        await retainedFile(join(directory, file.path), join(outputDirectory, file.path), file, { signal });
+        files.push(copy(file));
       }
-      packagedState.imports = [...(packagedState.imports ?? [])];
-      await retained(join(outputDirectory, 'state.json'), Buffer.from(canonicalJson(packagedState) + '\n'));
-      const files = [];
-      for (const path of await filesUnder(outputDirectory)) {
-        requireValue(path !== MANIFEST, 'CATALOGUE_HANDOVER_MANIFEST_ALREADY_PRESENT');
-        const bytes = await readBytes(join(outputDirectory, path), 2147483647);
-        files.push({ path, bytes: bytes.length, sha256: hash(bytes) });
-      }
-      const manifest = { schema: HANDOVER_SCHEMA, operationId, workspaceId: snapshot.id,
-        workspaceRevision: snapshot.revision, createdAt: context.op.startedAt,
-        files, bytes: files.reduce((sum, file) => sum + file.bytes, 0),
-        sourceDeliveries: [...copied].map(([identitySha256, record]) => ({ identitySha256, ...record })) };
+      const stateBytes = Buffer.from(canonicalJson(packagedState) + '\n');
+      await cleanOwnJsonTemporaries(outputDirectory, [markerBytes, stateBytes]);
+      await retained(join(outputDirectory, 'state.json'), stateBytes);
+      files.push({ path: 'state.json', bytes: stateBytes.length, sha256: hash(stateBytes) });
+      files.sort((a, b) => a.path.localeCompare(b.path));
+      const manifest = { schema: HANDOVER_SCHEMA, operationId, workspaceId: snapshot.state.id,
+        workspaceRevision: snapshot.state.revision, createdAt: context.op.startedAt, files,
+        bytes: files.reduce((sum, file) => sum + file.bytes, 0),
+        sourceDeliveries: snapshot.deliveries.map(({ identitySha256, sourceIdentity, path }) =>
+          ({ identitySha256, sourceIdentity: copy(sourceIdentity), path })) };
       manifest.sha256 = hash(manifest);
-      await retained(manifestPath, Buffer.from(canonicalJson(manifest) + '\n'));
-      const opened = await openCatalogueHandover(outputDirectory);
+      const manifestBytes = Buffer.from(canonicalJson(manifest) + '\n');
+      await cleanOwnJsonTemporaries(outputDirectory, [markerBytes, stateBytes, manifestBytes]);
+      await matchingInventory(outputDirectory, files);
+      await retained(manifestPath, manifestBytes);
+      const opened = await openCatalogueHandover(outputDirectory, { signal });
       return { directory: outputDirectory, manifest: opened.manifest };
     });
+    const reopened = await openCatalogueHandover(result.directory, { signal });
+    requireValue(reopened.manifest.sha256 === result.manifest.sha256, 'CATALOGUE_HANDOVER_CHANGED');
+    return result;
   }
   return Object.freeze({ directory, operation, configure, receive, review,
     getState: async () => copy(await read()), getSource, sourceDocument, getSavedFile, exportHandover,
     async close() { closed = true; await queue; } });
 }
 
-export async function openCatalogueHandover(directory) {
+export async function openCatalogueHandover(directory, { signal } = {}) {
   directory = await privateDirectory(resolve(directory), { create: false });
   const manifest = await readJson(join(directory, MANIFEST), STATE_LIMIT);
   requireValue(manifest?.schema === HANDOVER_SCHEMA && Array.isArray(manifest.files) &&
@@ -335,11 +480,12 @@ export async function openCatalogueHandover(directory) {
   const names = new Set();
   for (const file of manifest.files) {
     const path = relative(file.path);
-    requireValue(path !== MANIFEST && !names.has(path) && Number.isSafeInteger(file.bytes) &&
+    requireValue((['state.json', 'catalogue-export-prepared.json'].includes(path) ||
+      ['sources/', 'operations/', 'archives/', 'deliveries/'].some(prefix => path.startsWith(prefix))) &&
+      path !== MANIFEST && !names.has(path) && Number.isSafeInteger(file.bytes) &&
       file.bytes >= 0 && /^[a-f0-9]{64}$/.test(file.sha256), 'CATALOGUE_HANDOVER_FILE_INVALID');
     names.add(path);
-    const bytes = await readBytes(join(directory, path), file.bytes);
-    requireValue(bytes.length === file.bytes && hash(bytes) === file.sha256, 'CATALOGUE_HANDOVER_FILE_CHANGED');
+    await fingerprint(join(directory, path), file, { signal });
   }
   requireValue(names.has('state.json') &&
     canonicalJson((await filesUnder(directory)).sort()) === canonicalJson([...names, MANIFEST].sort()),
@@ -355,62 +501,83 @@ export async function openCatalogueHandover(directory) {
       item.path === deliveryPath && item.identitySha256 === hash(source.sourceIdentity) &&
       canonicalJson(item.sourceIdentity) === canonicalJson(source.sourceIdentity)),
       'CATALOGUE_HANDOVER_DELIVERY_MISSING');
-    const delivery = await StacDelivery.open(join(directory, deliveryPath));
-    requireValue(['bundleSha256', 'selectionSha256', 'editionDigest', 'nativeBindingSha256'].every(field =>
-      delivery.manifest[field] === source.sourceIdentity[field]), 'CATALOGUE_HANDOVER_DELIVERY_CHANGED');
+    const delivery = await StacDelivery.open(join(directory, deliveryPath), { signal });
+    requireValue(canonicalJson(deliveryIdentity(delivery.manifest)) === canonicalJson(source.sourceIdentity),
+      'CATALOGUE_HANDOVER_DELIVERY_CHANGED');
   }
   return { directory, manifest, state };
 }
 
 /** Import into a new private directory. Existing catalogue mutations stay in their original operation ledger. */
-export async function receiveCatalogueHandover({ sourceDirectory, directory, operationId } = {}) {
+export async function receiveCatalogueHandover({ sourceDirectory, directory, operationId, signal } = {}) {
   identifier(operationId, 'receiving operation ID');
-  const opened = await openCatalogueHandover(sourceDirectory);
-  directory = resolve(directory);
-  requireValue(directory !== opened.directory && !directory.startsWith(opened.directory + '/'),
+  const opened = await openCatalogueHandover(sourceDirectory, { signal });
+  directory = await canonicalLocation(resolve(directory));
+  requireValue(!contains(opened.directory, directory) && !contains(directory, opened.directory),
     'CATALOGUE_SEPARATE_RECEIVING_REQUIRED');
   await privateDirectory(directory);
-  const receiptPath = join(directory, 'receiving.json');
-  if (await exists(receiptPath)) {
-    const receipt = await readJson(receiptPath, STATE_LIMIT);
-    requireValue(receipt.operationId === operationId && receipt.sourceSha256 === opened.manifest.sha256,
-      'CATALOGUE_RECEIVING_OPERATION_CHANGED');
-    const workspace = await openCatalogueWorkspace({ directory, create: false });
-    return { workspace, receipt };
-  }
-  const entries = await readdir(directory);
-  const markerPath = join(directory, 'receiving-prepared.json');
-  let marker = { schema: 'starforge.stac-geonetwork-receiving-prepared.v1',
-    operationId, sourceSha256: opened.manifest.sha256, receivedAt: stamp() };
-  if (entries.length) {
-    requireValue(await exists(markerPath), 'CATALOGUE_NEW_RECEIVING_DIRECTORY_REQUIRED');
-    const original = await readJson(markerPath);
-    requireValue(original.schema === marker.schema && original.operationId === operationId &&
-      original.sourceSha256 === marker.sourceSha256 && typeof original.receivedAt === 'string', 'CATALOGUE_RECEIVING_OPERATION_CHANGED');
-    marker = original;
-  } else await writeJson(markerPath, marker, { exclusive: true });
-  for (const file of opened.manifest.files) {
-    if (file.path === 'state.json') continue;
-    await retained(join(directory, relative(file.path)),
-      await readBytes(join(opened.directory, file.path), file.bytes));
-  }
-  const state = copy(opened.state);
-  for (const entry of state.sources) entry.deliveryDirectory = join(directory, relative(entry.deliveryDirectory));
-  const receipt = { schema: 'starforge.stac-geonetwork-receiving.v1', operationId,
-    sourceSha256: opened.manifest.sha256, workspaceId: state.id,
-    sourceRevision: state.revision, receivedAt: marker.receivedAt };
-  if (await exists(join(directory, 'state.json'))) {
-    const actual = await readJson(join(directory, 'state.json'), STATE_LIMIT);
-    requireValue(actual.id === state.id && (actual.imports ?? []).some(value =>
-      value.operationId === operationId && value.sourceSha256 === receipt.sourceSha256),
-      'CATALOGUE_RECEIVING_STATE_CHANGED');
-  } else {
+  await privateDirectory(join(directory, 'locks'));
+  const received = await withPrivateLock(join(directory, 'locks'), 'workspace.lock', async () => {
+    const receiptPath = join(directory, 'receiving.json');
+    if (await exists(receiptPath)) {
+      const receipt = await readJson(receiptPath, STATE_LIMIT);
+      requireValue(receipt.operationId === operationId && receipt.sourceSha256 === opened.manifest.sha256,
+        'CATALOGUE_RECEIVING_OPERATION_CHANGED');
+      const state = validateState(await readJson(join(directory, 'state.json'), STATE_LIMIT));
+      requireValue(state.id === receipt.workspaceId && (state.imports ?? []).some(value =>
+        value.operationId === operationId && value.sourceSha256 === receipt.sourceSha256),
+        'CATALOGUE_RECEIVING_STATE_CHANGED');
+      for (const file of opened.manifest.files)
+        if (file.path !== 'state.json') await fingerprint(join(directory, file.path), file, { signal });
+      return receipt;
+    }
+    const markerPath = join(directory, 'receiving-prepared.json');
+    let marker = { schema: 'starforge.stac-geonetwork-receiving-prepared.v1',
+      operationId, sourceSha256: opened.manifest.sha256, receivedAt: stamp() };
+    const entries = (await readdir(directory)).filter(name => name !== 'locks');
+    if (entries.length) {
+      requireValue(await exists(markerPath), 'CATALOGUE_NEW_RECEIVING_DIRECTORY_REQUIRED');
+      const original = await readJson(markerPath);
+      requireValue(original.schema === marker.schema && original.operationId === operationId &&
+        original.sourceSha256 === marker.sourceSha256 && typeof original.receivedAt === 'string',
+        'CATALOGUE_RECEIVING_OPERATION_CHANGED');
+      marker = original;
+    } else await writeJson(markerPath, marker, { exclusive: true });
+    const markerBytes = Buffer.from(canonicalJson(marker) + '\n');
+    for (const file of opened.manifest.files) {
+      if (file.path === 'state.json') continue;
+      await retainedFile(join(opened.directory, relative(file.path)), join(directory, file.path), file, { signal });
+    }
+    const state = copy(opened.state);
+    for (const entry of state.sources) entry.deliveryDirectory = join(directory, relative(entry.deliveryDirectory));
+    const receipt = { schema: 'starforge.stac-geonetwork-receiving.v1', operationId,
+      sourceSha256: opened.manifest.sha256, workspaceId: state.id,
+      sourceRevision: state.revision, receivedAt: marker.receivedAt };
     state.revision++; state.updatedAt = receipt.receivedAt; state.stacWorkspaceId = null;
-    state.imports.push(receipt);
-    await writeJson(join(directory, 'state.json'), state, { exclusive: true });
-  }
-  for (const name of ['locks', 'sources', 'operations', 'archives']) await privateDirectory(join(directory, name));
-  await retained(receiptPath, Buffer.from(canonicalJson(receipt) + '\n'));
-  const workspace = await openCatalogueWorkspace({ directory, create: false });
-  return { workspace, receipt };
+    state.imports = [...(state.imports ?? []), receipt];
+    const stateBytes = Buffer.from(canonicalJson(state) + '\n'), receiptBytes = Buffer.from(canonicalJson(receipt) + '\n');
+    await cleanOwnJsonTemporaries(directory, [markerBytes, stateBytes, receiptBytes]);
+    await retained(join(directory, 'state.json'), stateBytes);
+    const expected = [
+      ...opened.manifest.files.filter(file => file.path !== 'state.json'),
+      { path: 'state.json', bytes: stateBytes.length, sha256: hash(stateBytes) },
+      { path: 'receiving-prepared.json', ...await fingerprint(markerPath, null, { signal }) }
+    ];
+    for (const name of ['sources', 'operations', 'archives']) await privateDirectory(join(directory, name));
+    // The same flock prevents an ordinary workspace opener from using the partially copied state.
+    const actualFiles = (await filesUnder(directory)).filter(path => !path.startsWith('locks/'));
+    requireValue(canonicalJson(actualFiles.sort()) === canonicalJson(expected.map(file => file.path).sort()),
+      'CATALOGUE_RECEIVING_INCOMPLETE');
+    for (const file of expected) await fingerprint(join(directory, file.path), file, { signal });
+    for (const entry of state.sources) {
+      const original = validateSource(await readJson(join(directory, relative(entry.path)), STATE_LIMIT));
+      const delivery = await StacDelivery.open(entry.deliveryDirectory, { signal });
+      requireValue(canonicalJson(deliveryIdentity(delivery.manifest)) === canonicalJson(original.sourceIdentity),
+        'CATALOGUE_RECEIVING_DELIVERY_CHANGED');
+    }
+    await retained(receiptPath, receiptBytes);
+    return receipt;
+  });
+  const workspace = await openCatalogueWorkspace({ directory, create: false, signal });
+  return { workspace, receipt: received };
 }
