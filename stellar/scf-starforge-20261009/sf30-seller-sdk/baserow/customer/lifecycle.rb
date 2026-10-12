@@ -14,6 +14,7 @@ module Starforge
     NODE_ENTRY = SOURCE_ROOT+"/baserow/customer/cli.mjs"
     CLIENT_MANIFEST = "baserow-ruby-client.json"
     ORIGINAL_OPERATION = "BASEROW-PUBLIC-CATALOG-CAPTURE-0D0B-20261012"
+    EXPECTED_SOURCE_OPTION = "--expected-original-result-sha256"
     OPERATOR_FILES = ["examples/rails_dataset/operator/workspace.rb","examples/rails_dataset/operator/jobs.rb","examples/rails_dataset/operator/controller.rb","examples/rails_dataset/operator/commission.rb","examples/rails_dataset/operator/README.md","examples/rails_dataset/operator/install.rb","examples/rails_dataset/operator/operator.css","examples/rails_dataset/operator/views/layouts/starforge_dataset_operator.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/index.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/show.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/changes.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/history.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/attachments.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/error.html.erb"].freeze
     module_function
 
@@ -54,6 +55,9 @@ module Starforge
     def prepare_input(options, original: nil)
       native = Files.directory(options.fetch(:native_run))
       result_raw = Files.read(File.join(native,"native-result.json"),8_388_608)
+      expected = options[:expected_original_result_sha256]
+      Files.need(expected.nil? || HASH.match?(expected.to_s) && Files.hash(result_raw) == expected,
+        "BASEROW_CUSTOMER_ORIGINAL_NATIVE_RESULT_CHANGED")
       result = Files.parse(result_raw)
       Files.need(result.is_a?(Hash) && result["schema"] == "stellar-forge.baserow-native-customer-journey.v1" &&
         result["operation"] == ORIGINAL_OPERATION && result["state"] == "COMPLETED" &&
@@ -588,7 +592,9 @@ module Starforge
         NativeDatasetReceiving.matches_executable?(options.fetch(:python),input.dig("runtime","python"),legacy: legacy) &&
         NativeDatasetReceiving.matches_executable?(options.fetch(:node),input.dig("runtime","node"),legacy: legacy) &&
         options[:source_ref] == input["sourceRef"] && options[:customer_key] == input["customerKey"] &&
-        options[:dataset_id] == input["datasetId"] && options.fetch(:query,"") == input["query"],
+        options[:dataset_id] == input["datasetId"] && options.fetch(:query,"") == input["query"] &&
+        (options[:expected_original_result_sha256].nil? ||
+          options[:expected_original_result_sha256] == input["originalResultSha256"]),
         "BASEROW_CUSTOMER_LIFECYCLE_ORIGINAL_REQUEST_CHANGED")
     end
 
@@ -632,6 +638,8 @@ module Starforge
     end
 
     def run(options,cancel)
+      expected = options[:expected_original_result_sha256]
+      Files.need(expected.nil? || HASH.match?(expected.to_s),"BASEROW_CUSTOMER_ORIGINAL_NATIVE_RESULT_CHANGED")
       out,native,checkout = %i[out native_run checkout].map { |key| File.expand_path(options.fetch(key)) }
       Files.need(out != native && !native.start_with?(out+File::SEPARATOR) &&
         out != checkout && !out.start_with?(checkout+File::SEPARATOR) &&
@@ -716,8 +724,9 @@ module Starforge
           "  ruby lifecycle.rb run --native-run ORIGINAL_COMPLETED_BASEROW_RUN --out PRIVATE_PHASE\n"+
           "    --source-ref EXACT_CHECKOUT_SHA --checkout SOURCE --python ABS --node ABS\n"+
           "    --customer-key STABLE_KEY --dataset-id STABLE_ID [--query ORIGINAL_QUERY]\n"+
+          "    [--expected-original-result-sha256 ORIGINAL_RESULT_SHA256]\n"+
           "  ruby lifecycle.rb resume|reopen|status --directory ORIGINAL_PHASE\n"
-        %w[native-run out source-ref checkout python node customer-key dataset-id query directory].each do |name|
+        %w[native-run out source-ref checkout python node customer-key dataset-id query directory expected-original-result-sha256].each do |name|
           key = name.tr("-","_").to_sym
           o.on("--"+name+" VALUE") do |value|
             Files.need(!options.key?(key),"BASEROW_CUSTOMER_LIFECYCLE_DUPLICATE_OPTION")
@@ -735,7 +744,7 @@ module Starforge
       if command == "run"
         required = %i[native_run out source_ref checkout python node customer_key dataset_id]
         Files.need(required.all? { |key| options[key].is_a?(String) && !options[key].empty? } &&
-          (options.keys-(required+[:query])).empty?,"BASEROW_CUSTOMER_LIFECYCLE_SELECTION_REQUIRED")
+          (options.keys-(required+[:query,:expected_original_result_sha256])).empty?,"BASEROW_CUSTOMER_LIFECYCLE_SELECTION_REQUIRED")
         %i[native_run out checkout python node].each { |key| options[key] = File.expand_path(options[key]) }
       else
         Files.need(options.keys == [:directory] && !options[:directory].empty?,
