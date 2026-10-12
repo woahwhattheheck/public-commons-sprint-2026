@@ -56,8 +56,7 @@ function decode(value, code) {
   catch { throw new InputError(code); }
 }
 async function sourceFiles(sourceDirectory) {
-  need(absolute(sourceDirectory) === SOURCE_DIRECTORY &&
-    await realpath(sourceDirectory) === sourceDirectory, 'ATLAS_LAUNCH_SOURCE_CHANGED');
+  need(await realpath(absolute(sourceDirectory)) === sourceDirectory, 'ATLAS_LAUNCH_SOURCE_CHANGED');
   return Object.fromEntries(await Promise.all(SOURCE_FILES.map(async name => [
     name, digest(await bytes(join(sourceDirectory, name), 4 * 1024 * 1024, { privateOnly: false })),
   ])));
@@ -134,9 +133,12 @@ export async function publishAtlasLaunch({ directory, sourceDirectory, source, s
   need(MODES.includes(source), 'ATLAS_LAUNCH_SOURCE_INVALID');
   const selected = await inspectAtlasWorkspace(directory);
   need(selected.initialized, 'ATLAS_WORKSPACE_NOT_INITIALIZED');
+  const selectedFiles = await sourceFiles(sourceDirectory);
+  const launchedFiles = await sourceFiles(SOURCE_DIRECTORY);
+  need(SOURCE_FILES.every(name => selectedFiles[name] === launchedFiles[name]), 'ATLAS_LAUNCH_SOURCE_CHANGED');
   const value = { schema: ATLAS_LAUNCH_SCHEMA, state: 'LISTENING',
     directory, workspaceId: selected.workspaceId, workspaceFileSha256: selected.manifestSha256,
-    sourceDirectory, sourceFiles: await sourceFiles(sourceDirectory), source,
+    sourceDirectory, launchSourceDirectory: SOURCE_DIRECTORY, sourceFiles: launchedFiles, source,
     sourceOrigin: sourceOrigin ?? null, pid: process.pid, instanceId: randomUUID(),
     privateLaunch: join(directory, LAUNCH_FILE), url: privateUrl(url), startedAt: new Date().toISOString() };
   await saveRecord(directory, value);
@@ -156,21 +158,24 @@ export async function publishAtlasLaunch({ directory, sourceDirectory, source, s
 }
 
 /** Read the original private launch; callers bind its source and process identity. */
-export async function readAtlasLaunch({ directory, sourceDirectory, pid, instanceId }) {
+export async function readAtlasLaunch({ directory, sourceDirectory, launchSourceDirectory, pid, instanceId }) {
   const selected = await inspectAtlasWorkspace(directory);
   need(selected.initialized, 'ATLAS_WORKSPACE_NOT_INITIALIZED');
   const privateLaunch = join(directory, LAUNCH_FILE);
   const value = decode(await bytes(privateLaunch, 65536), 'ATLAS_LAUNCH_RECORD_INVALID');
   need(value?.schema === ATLAS_LAUNCH_SCHEMA && value.state === 'LISTENING' &&
     value.directory === directory && value.workspaceId === selected.workspaceId &&
-    value.sourceDirectory === sourceDirectory && value.privateLaunch === privateLaunch &&
+    value.sourceDirectory === sourceDirectory && sourceDirectory === SOURCE_DIRECTORY &&
+    value.launchSourceDirectory === absolute(launchSourceDirectory) && value.privateLaunch === privateLaunch &&
     value.pid === pid && Number.isSafeInteger(pid) && pid > 0 &&
     value.instanceId === instanceId && typeof instanceId === 'string' &&
     /^[a-f0-9-]{36}$/.test(instanceId) && MODES.includes(value.source),
   'ATLAS_LAUNCH_BINDING_CHANGED');
   const expected = await sourceFiles(sourceDirectory);
+  const launched = await sourceFiles(launchSourceDirectory);
   need(plain(value.sourceFiles) && Object.keys(value.sourceFiles).length === SOURCE_FILES.length &&
-    SOURCE_FILES.every(name => value.sourceFiles[name] === expected[name]), 'ATLAS_LAUNCH_SOURCE_CHANGED');
+    SOURCE_FILES.every(name => value.sourceFiles[name] === expected[name] && launched[name] === expected[name]),
+  'ATLAS_LAUNCH_SOURCE_CHANGED');
   privateUrl(value.url);
   return value;
 }

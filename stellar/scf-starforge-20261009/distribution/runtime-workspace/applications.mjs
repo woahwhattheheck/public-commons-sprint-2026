@@ -5,6 +5,7 @@ import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
+import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
@@ -39,6 +40,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   ...PYTHON_APPLICATION_CATALOG,
   ...eventFeedApplications(common),
   blockscoutApplication(common),
+  redisApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
   tenderlyApplication(common),
@@ -202,6 +204,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...selected.args); inputs.push(...selected.inputs); eventFeed = selected.identity;
   } else if (type.id === 'blockscout') {
     const original = await prepareBlockscoutApplication(settings, inputPath);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'redis') {
+    const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
