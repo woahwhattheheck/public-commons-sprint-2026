@@ -209,3 +209,7 @@ Python callers can import `Workspace` from `model.py` or use `create_server(work
 - **README.md** — startup, planning, receiving, recovery and native API instructions.
 
 Use the saved plan's source digest, revision number, change note and complete exported source when coordinating the next staffing, milestone or application decision.
+
+## Reforecast remaining cash and delivery work
+
+The original **Delivery operations → Operating forecast** workspace now saves dated forecasts from actual case records: unpaid invoice balances, uninvoiced package obligations, remaining hours, conditional grant dates and customer-specific implementation scenarios. It includes native UI, HTTP and CLI preview/save, exact source snapshots, complete exports and reopen/receiving. Use [FORECAST.md](FORECAST.md) for the complete operator guide. The original application budget and recorded financial observations remain their existing source of truth.

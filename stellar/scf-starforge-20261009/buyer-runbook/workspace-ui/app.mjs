@@ -4,6 +4,7 @@ import {createSellerClientUI} from './clients.mjs';
 import {createPaidFileUI} from './paid-files.mjs';
 import {createRunbookAccountingUI} from './accounting.mjs';
 import {createRunbookRecoveryUI} from './recovery.mjs';
+import {createBuyerOperatorUI} from './operator.mjs';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const formatTime = value => value ? new Date(value).toLocaleString() : '—';
@@ -14,6 +15,7 @@ const resourcePreviews = new Map();
 const previewToOpen = new Set();
 const accountingUI=createRunbookAccountingUI({current:()=>currentRun,action,notice});
 const recoveryUI=createRunbookRecoveryUI({request,notice,refreshState,openPanel(){navigation++;show('recovery');}});
+const operatorUI=createBuyerOperatorUI({request,notice,refreshState,openPanel(){navigation++;show('operator');}});
 const intakeUI = createHandoffIntakeUI({request,notice,refreshState,
   openPanel(){navigation++;show('requests');},
   onPrepared:(prepared,item)=>addReceivedToPlan(prepared,item,item.view.method)});
@@ -50,7 +52,7 @@ async function request(path, data) {
 const handle = action => async event => { if (event?.type === 'submit') event.preventDefault(); try { await action(event); } catch (error) { notice(error.message,true); } };
 function show(name) {
   view = name;
-  for (const target of ['welcome','draft-panel','run-panel','requests-panel','clients-panel','paid-files-panel','recovery-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
+  for (const target of ['welcome','draft-panel','run-panel','requests-panel','clients-panel','paid-files-panel','recovery-panel','operator-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
   renderNavigation();
 }
 async function refreshState() {
@@ -58,6 +60,7 @@ async function refreshState() {
   if (generation !== sourceRefresh) return;
   state = result; token = state.token; renderNavigation();
   intakeUI.update(state.intake);
+  operatorUI.update(state.intake.operatorSetup);
   clientUI.update(state.intake.clients);
   paidFileUI.update(state.paidFiles);
   recoveryUI.update(state.recovery);
@@ -252,7 +255,7 @@ async function poll() {
 
 $('#new-draft').addEventListener('click',handle(newDraft));
 $('#welcome-new').addEventListener('click',handle(newDraft));
-$('#refresh').addEventListener('click',handle(async () => { await refreshState(); if (view === 'run') await openRun(currentRun.id); if(view==='requests')await intakeUI.refresh(); if(view==='clients')await clientUI.refresh(); notice('Local sources refreshed.'); }));
+$('#refresh').addEventListener('click',handle(async () => { await refreshState(); if (view === 'run') await openRun(currentRun.id); if(view==='requests')await intakeUI.refresh(); if(view==='clients')await clientUI.refresh(); if(view==='operator')await operatorUI.refresh(); notice('Local sources refreshed.'); }));
 $('.sidebar').addEventListener('click',handle(async event => {
   const run = event.target.closest('[data-run]'), plan = event.target.closest('[data-draft]');
   if (run) { notice(''); await openRun(run.dataset.run); }

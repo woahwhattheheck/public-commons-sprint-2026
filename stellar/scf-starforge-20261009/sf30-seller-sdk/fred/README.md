@@ -265,3 +265,7 @@ Every project mutation supplies the revision the operator reviewed. A concurrent
 | `./seller/fred/workspace` | `startFredWorkspace` |
 
 All return values use the retained original source and application identities. `source.mjs` accepts an explicit transport for existing host integration; ordinary acquisition uses `fetch` against the fixed official FRED origin. The original source URLs are retained beside every response.
+
+## Managed Applications
+
+The existing Applications interface opens the original economic project with its configured buyer and routed merchant port. Use Review/Save/adopt/Start/Open/Stop/Reopen to continue source review, publication and the same customer requests. See [Economic data editions in Applications](../../distribution/runtime-workspace/FRED_APPLICATIONS.md) for operator selection, complete starter inputs and the native receiving continuation.
