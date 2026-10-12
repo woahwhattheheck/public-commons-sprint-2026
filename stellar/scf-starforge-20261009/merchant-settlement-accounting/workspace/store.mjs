@@ -12,6 +12,7 @@ import {PeriodWorkspace} from './period-workspace.mjs';
 import {AdjustmentWorkspace} from './adjustments-workspace.mjs';
 import {renderAdjustmentCsv,renderAdjustmentHtml} from '../adjustments.mjs';
 
+import {assertAccountingWorkspaceBinding} from './binding.mjs';
 const SCHEMA='stellar-forge.merchant-accounting-workspace.v1';
 const now=()=>new Date().toISOString();
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -80,7 +81,7 @@ function proofDescription(bytes){
 const exceptionId=row=>hash(row.eventId+'\n'+row.reason);
 const noteFor=(state,row)=>state.notes[exceptionId(row)]??{status:'open',note:'',assignee:'',actor:'',version:0,updatedAt:null};
 
-export async function openAccountingWorkspace({directory,outboxDir,proofDir,termsFile,recoveredDir}){
+export async function openAccountingWorkspace({directory,outboxDir,proofDir,termsFile,recoveredDir,expectedWorkspaceId,expectedSourcesSha256}){
   await privateDir(directory,{create:true});
   const lease=await acquireStateLease(directory);
   try{
@@ -93,8 +94,11 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
     if(existing){
       state=parse(existing,'workspace');
       check(state.schema===SCHEMA&&Number.isSafeInteger(state.revision)&&object(state.sources)&&Array.isArray(state.runs)&&Array.isArray(state.proofs)&&object(state.notes),'INVALID_WORKSPACE','This directory is not a supported accounting workspace.');
+      assertAccountingWorkspaceBinding(directory,state,{expectedWorkspaceId,expectedSourcesSha256});
+      if(expectedSourcesSha256!==undefined&&recoveredDir!==undefined)check(recoveredDir===state.sources.recoveredDir,'ACCOUNTING_WORKSPACE_CHANGED','Use the reviewed original recovered-source connection when reopening this managed application.');
       for(const [name,value] of Object.entries({outboxDir,proofDir,termsFile}))if(value!==undefined)check(value===state.sources[name],'SOURCE_CONFIGURATION_CHANGED','Reopen this workspace with its original source paths, or use a new directory.');
     }else{
+      check(expectedWorkspaceId===undefined&&expectedSourcesSha256===undefined,'ACCOUNTING_WORKSPACE_MISSING','Reopen the reviewed original workspace before starting this managed application.');
       for(const path of [outboxDir,proofDir,termsFile])absolute(path);
       for(const path of [outboxDir,proofDir])check(directory!==path&&!directory.startsWith(path+'/')&&!path.startsWith(directory+'/'),'OVERLAPPING_DIRECTORIES','Keep the workspace separate from its native input directories.');
       check(!termsFile.startsWith(directory+'/'),'OVERLAPPING_DIRECTORIES','Keep the original terms file outside the workspace.');

@@ -83,7 +83,7 @@ For OpenSearch, select the configured workspace alias. Its original per-alias de
 
 The adapter calls the original manifest reader, verifies each native file chunk against the reviewed export and preserves the existing Linux file lease, partial-file checkpoint and read-ID recovery. Pausing records the durable prefix. Resuming the same selection continues those original files. A restarted listener can use a new port because the local adapter binds the original host fingerprint and provider/workspace identity.
 
-A completed customer contains the original five SDK payloads and the original completion manifest. Individual downloads verify the exact file identity again. **Download original customer archive** streams the existing SF82 `.tar.gz` encoder over those retained files. The generated client, OpenAPI definition and original provenance remain intact.
+A completed customer contains the original five SDK payloads and the original completion manifest. Concurrent archive responses reuse that customer's original reader owner and its existing concurrency limit. Host close enters the original archive cancellation/drain, retains failed owner handles for a same-instance retry and waits for those responses before closing the operator database. Individual downloads verify the exact file identity again. **Download original customer archive** streams the existing SF82 `.tar.gz` encoder over those retained files. The generated client, OpenAPI definition and original provenance remain intact.
 
 The console's customer receiving action reads an existing generated export. Generate, adopt or recover that export through the original configured merchant or deployment tools. The same console can prepare those native tools as saved requests.
 

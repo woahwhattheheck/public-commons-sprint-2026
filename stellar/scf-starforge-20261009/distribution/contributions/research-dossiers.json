@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "research-dossiers",
+  "description": "research dossiers original Applications",
+  "applicationProviders": {
+    "research-dossiers": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/research-dossiers.mjs"
+  }
+}

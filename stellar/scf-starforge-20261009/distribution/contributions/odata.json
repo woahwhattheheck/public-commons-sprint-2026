@@ -39,5 +39,8 @@
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.mjs"
     }
+  },
+  "applicationProviders": {
+    "odata": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/odata.mjs"
   }
 }

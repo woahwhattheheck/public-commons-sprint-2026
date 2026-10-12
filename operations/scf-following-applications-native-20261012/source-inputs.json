@@ -1,0 +1,94 @@
+{
+  "schema": "starforge.following-source-inputs.v1",
+  "sourceCommit": "4c3e572ce53985585cc19903d9539d3cefc0d3a4",
+  "sourceTree": "0aec6219b3f17ca31abe231717e35ba87aac6dec",
+  "files": [
+    {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/selected-builder-4c3e572ce539/build.mjs",
+      "bytes": 17195,
+      "sha256": "091f30599cadd2392a7c594e60429ed6156c672d46faeb842090306e5fcb3b2c",
+      "name": "build.mjs",
+      "blob": "288b84086d4973cb24a289deaf8ec6a1269eb0aa"
+    },
+    {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/selected-builder-4c3e572ce539/specification.mjs",
+      "bytes": 17677,
+      "sha256": "6f1d5af4c377a1458c21b19300fc7b2d0240e50310df5cadfc0814f223170c48",
+      "name": "specification.mjs",
+      "blob": "df832122a098d08ea0287f871b58b3aa91338e93"
+    },
+    {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/selected-builder-4c3e572ce539/git-source.mjs",
+      "bytes": 9120,
+      "sha256": "5469496c8d33fb26a761cb162660b5bf5850904e10bb53433956f9a14c9fdfe5",
+      "name": "git-source.mjs",
+      "blob": "c211d5b344a6d403cf945e5089637746572fed91"
+    },
+    {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/selected-builder-4c3e572ce539/browser-assets.mjs",
+      "bytes": 4571,
+      "sha256": "1aaa548c7982d80aa1c73715bf0322822d063cdc3d570172a5ee15487be9a2e9",
+      "name": "browser-assets.mjs",
+      "blob": "63801fa838c0479e6ae156d9f155461f02df0cfb"
+    },
+    {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/selected-builder-4c3e572ce539/build-state.mjs",
+      "bytes": 19807,
+      "sha256": "fe57da86b78eb0201c0780600e33703d23bb55b55ba4ee1f51d36bec9b6ee3ae",
+      "name": "build-state.mjs",
+      "blob": "48a48a8fed8fb8d1106930afadf4474796541fe8"
+    },
+    {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/selected-builder-4c3e572ce539/runtime-unpack.py",
+      "bytes": 9201,
+      "sha256": "44396f1a6424ad65bf796b854250f097b7aaf75a9424cce91951343d7d734b02",
+      "name": "runtime-unpack.py",
+      "blob": "5159499d52f7c5eebbea19977c640d74833ccdae"
+    },
+    {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/selected-builder-4c3e572ce539/BUILDING.md",
+      "bytes": 8904,
+      "sha256": "c0658cf8d1c9facb524e16850ee329ccce2b065b03d65b658e25ee78c3aa7fa6",
+      "name": "BUILDING.md",
+      "blob": "13108f2f24ba3eff8e541bb8b6bdffab18bcd262"
+    },
+    {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/native-4c3e572ce539/ndjson-applications-receive.mjs",
+      "bytes": 14941,
+      "sha256": "fc00c2481ee96a670c796c2566a1a65a08b8a5104872c0c03574becf179559c9",
+      "name": "ndjson-applications-receive.mjs",
+      "blob": "8caa4414ff5f4fa8d4f40326aca7f6f0abdc8b12"
+    }
+  ],
+  "inputs": {
+    "sourceRunner": {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/run-release.mjs",
+      "bytes": 6319,
+      "sha256": "19302570ecbb36510f8bd29b28e894a9d647adeaa3646201ec2bd4e997853836"
+    },
+    "priorPlan": {
+      "path": "/workspace/scratch/d1ccf784531e/scf-dataset-applications-native/runtime-recovered-eea35/runtime-install.json",
+      "bytes": 1879,
+      "sha256": "0a44d832498f843223d96677a56027da902a8cb1d92a5f3a32fc64b2fec2a76c"
+    },
+    "priorProfile": {
+      "path": "/workspace/scratch/d1ccf784531e/scf-dataset-applications-native/runtime-recovered-eea35/runtime-profile.json",
+      "bytes": 3328,
+      "sha256": "ecf448830d0bcb1061316da5a7216c463249df09cace29147aff511af9692807"
+    },
+    "priorState": {
+      "path": "/workspace/scratch/d1ccf784531e/scf-dataset-applications-native/runtime-recovered-eea35/install-state.json",
+      "bytes": 1026,
+      "sha256": "21be7ed9afede85ee7fe0a8f671065bbb88fa3bab7321910d8c0c372da4c8154"
+    },
+    "datasetArchive": {
+      "path": "/workspace/scratch/3ad791503e87/artifacts/SCF_NDJSON_Complete_Receiving_Workspace_20261012.zip",
+      "bytes": 241687,
+      "sha256": "0ccca7b4b875c4e50d827872153bd754070456339a55323074ad94ddb869d73d"
+    },
+    "sourceDonor": {
+      "path": "/workspace/scratch/d1ccf784531e/scf-following-release/source.git",
+      "exists": true
+    }
+  }
+}

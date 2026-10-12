@@ -215,7 +215,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def change(self, path, parts, payload, expected):
         store = self.server.store
-        fixed = {"/api/sources": store.register_source, "/api/refund-packets": store.capture_refund, "/api/centers": store.save_center,
+        fixed = {"/api/sources": store.register_source, "/api/refund-packets": store.capture_refund, "/api/adjustment-packets": store.capture_adjustments, "/api/centers": store.save_center,
                  "/api/labels": store.save_labels, "/api/periods": store.save_period}
         if path in fixed:
             return (fixed[path](payload, expected))
@@ -245,7 +245,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state", required=True, help="Private expense workspace directory, separate from the original buyer ledger")
     parser.add_argument("--port", type=int, default=0)
-    parser.add_argument("--node", help="Host Node 22.13+ or 24 executable for original MCP quote captures")
+    parser.add_argument("--node", help="Host Node 22.13+ or 24 executable for original quote and merchant receipt captures")
     args = parser.parse_args()
     if not 0 <= args.port <= 65535:
         parser.error("--port must be from 0 to 65535")

@@ -114,6 +114,7 @@ async function refresh(pick = {}) {
   if ($("source-select").value) await inspectSource();
   if ($("build-select").value) await selectBuild();
   if ($("comparison-select").value) await showComparison(0);
+  document.dispatchEvent(new CustomEvent("sf30:ndjson-state", { detail: state }));
 }
 async function inspectSource() {
   const id = requireValue("source-select", "a source");
@@ -399,6 +400,10 @@ listen("merchant-form", "submit", "Preparing the original merchant and generated
   download(blob, "ndjson-merchant.zip"); notify("Complete merchant, original source and generated customer SDK downloaded.");
 });
 renderMapping(defaultPlan());
-if (!token) notify("Open the private console link printed by the running NDJSON workspace.", true);
-else work("Opening retained NDJSON workspace…", async () => { await refresh(); notify("Workspace ready. Start with a complete JSON Lines export or import an existing source project."); });
+export const consoleReady = !token
+  ? Promise.resolve(notify("Open the private console link printed by the running NDJSON workspace.", true))
+  : work("Opening retained NDJSON workspace…", async () => { await refresh(); notify("Workspace ready. Start with a complete JSON Lines export or import an existing source project."); });
+
+// Retained source applications compose this same mapping/query/merchant console.
+export { api, work, refresh, notify, download, renderMapping };
 

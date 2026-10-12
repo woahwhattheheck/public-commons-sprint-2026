@@ -3,6 +3,7 @@ const tokenKey = 'starforge-paid-jobs:' + location.origin;
 const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem(tokenKey, fragment); history.replaceState(null, '', location.pathname); }
 const token = sessionStorage.getItem(tokenKey) || '';
+$('resolution-nav').href = '/resolutions/#' + token;
 const state = { snapshot: null, selected: null, detail: null, ticket: null, page: 0, loading: false, mutating: false, lastStates: '' };
 const pageSize = 20;
 const statuses = ['PREPARED', 'AWAITING_SETTLEMENT', 'QUEUED', 'RUNNING', 'CANCELLING', 'COMPLETED', 'FAILED', 'INTERRUPTED', 'CANCELLED'];
@@ -86,9 +87,19 @@ function renderFunction() {
   terms($('function-terms'), [['Network', payment.network], ['Amount (atomic)', payment.amount], ['Asset', payment.asset],
     ['Recipient', payment.payTo], ['Execution limit', fn?.timeoutMs ? fn.timeoutMs / 1000 + ' seconds' : 'Configured by merchant']]);
   $('input-schema').textContent = json(fn?.inputSchema ?? {});
+  const slots = Object.entries(fn?.inputFiles?.slots ?? {}), requiredFiles = slots.some(([, slot]) => slot.required);
+  $('input-file-route').hidden = slots.length === 0;
+  $('input-file-description').textContent = requiredFiles ?
+    'This function requires original files. Prepare its input and purchase ticket in the customer Request workspace. Input receiving shows each transfer and its retained job.' :
+    'This function accepts optional files in the customer Request workspace. The form below prepares JSON input without file attachments.';
+  $('input-file-slots').textContent = slots.map(([name, slot]) => name + (slot.required ? ' (required)' : ' (optional)')).join(', ');
+  $('input-receiving-link').href = '/inputs/#' + token;
+  $('create-form').querySelector('button[type="submit"]').disabled = !fn || requiredFiles || state.mutating;
 }
 function render(snapshot) {
   state.snapshot = snapshot;
+  $('input-receiving-nav').href = '/inputs/#' + token;
+  $('input-receiving-nav').hidden = !snapshot.inputReceiving;
   let deliveryLink = $('result-delivery-link');
   if (snapshot.resultDelivery?.workspace === '/deliveries') {
     if (!deliveryLink) {
@@ -143,6 +154,8 @@ function renderDetail(job) {
     ['Settlement event', job.nativeSettlement?.id ?? job.settlement?.id],
     ['Worker outcome', job.error?.message ?? job.error?.code ?? job.error ?? job.lastError ?? '—']], true);
   $('detail-input').textContent = json(job.input ?? {}); $('detail-json').textContent = json(job);
+  const fileFunction = state.snapshot?.functions?.find(fn => fn.id === job.functionId)?.inputFiles;
+  $('job-input-files').hidden = !fileFunction || !Object.keys(job.input?.$files ?? {}).length;
   $('history').replaceChildren();
   for (const event of [...(job.history || [])].reverse()) {
     const item = element('li');
@@ -212,6 +225,12 @@ $('reconcile').addEventListener('click', () => change(() => post('/api/reconcile
 $('create-form').addEventListener('submit', event => {
   event.preventDefault(); let input;
   try { input = JSON.parse($('input').value); } catch { note('Enter valid JSON for this function’s input.', true); return; }
+  const fn = selectedFunction();
+  if (fn?.inputFiles && (Object.values(fn.inputFiles.slots).some(slot => slot.required) || Object.keys(input?.$files ?? {}).length)) {
+    note('Prepare this function’s original files and purchase ticket in the customer Request workspace. Input receiving shows the merchant transfer.', true); return;
+  }
+  if (fn?.inputFiles && input && typeof input === 'object' && !Array.isArray(input) && !Object.hasOwn(input, '$files'))
+    input = { ...input, $files: {} };
   const request = { functionId: $('function').value, input };
   if ($('label').value.trim()) request.label = $('label').value.trim();
   if ($('reference').value.trim()) request.reference = $('reference').value.trim();
@@ -254,6 +273,14 @@ $('renew-claim-job').addEventListener('click', () => {
   }, 'Purchase ticket renewed for the same prepared job. Save this replacement ticket for its buyer.');
 });
 $('action-form').addEventListener('submit', event => event.preventDefault());
+$('job-input-files').addEventListener('click', () => {
+  if (!state.detail) return;
+  sessionStorage.setItem('starforge-job-input-reference:' + location.origin, jobId(state.detail));
+  location.assign('/inputs/#' + token);
+});
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 await refresh();
+const retainedSelection = sessionStorage.getItem('starforge-paid-jobs-selection:' + location.origin);
+sessionStorage.removeItem('starforge-paid-jobs-selection:' + location.origin);
+if (retainedSelection && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/.test(retainedSelection)) await select(retainedSelection, true);
 setInterval(() => { if (!document.hidden && !state.mutating) refresh(); }, 5000);
