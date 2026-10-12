@@ -5049,3 +5049,32 @@ covers exact-value queries, named edition activation and rollback, complete
 customer export, backup and create-only restore. Acquisition and warehouse
 commands use Python from `DATABENTO_PYTHON_EXECUTABLE` or `python3`.
 
+
+## Receive and operate the original grant demonstration
+
+`starforge grant-demo` receives the completed MySQL purchase shown in the SCF
+presentation into the original durable MCP buyer. The package includes both
+original closed quotes, exact terms and invocation, retained payment observations,
+full native response files, source query and original source checkpoints.
+
+~~~sh
+starforge doctor --feature mcp
+starforge grant-demo inspect
+starforge grant-demo receive --dir /private/reviewer/original-purchase
+starforge grant-demo open --dir /private/reviewer/original-purchase
+~~~
+
+The original Buyer console provides history, terms, retained observations,
+structured records and complete result downloads. The selected source remains
+the original 100-row HPD query and its full 53,468-byte native result. Stop the
+console before `grant-demo export`; receive that complete exported packet with
+its printed SHA-256 to reopen the same original quote and response identities
+elsewhere. A repeated receive keeps the original receiving receipt and history.
+
+This receiving command loads no signing or observation adapter. It uses Node
+22.16.0 or later and the existing optional MCP SDK 1.32.1 feature. The supported
+`./grant/demo` import exports inspectGrantDemo, receiveGrantDemo,
+inspectGrantDemoWorkspace, startGrantDemo and exportGrantDemo with TypeScript
+declarations. The complete [reviewer receiving guide](../../scf_2026/presentation/reviewer/RECEIVING.md)
+covers installation, access codes, source interpretation, full result export,
+interruption recovery, source-owner capture and same-workflow receiving.
