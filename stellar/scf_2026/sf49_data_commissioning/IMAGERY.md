@@ -76,13 +76,32 @@ The receiving host selects its own binding. The customer handover carries the ap
 
 ## Approve the source and the files the buyer needs
 
-Import a complete approved policy package or author/review/approve it in Deployment configuration. Use the responsible operator's actual name. Associate an existing complete captured edition with that exact source review, or create the customer's new reviewed capture.
+Import a complete approved policy package or author/review/approve it in Deployment configuration. Use the responsible operator's actual name:
 
 ~~~sh
 node "$STAC_CLI" eoapi-policy-import \
   --workspace /srv/imagery/operator \
   --input /srv/imagery/approved-policy/package.json
+~~~
 
+**For a newly initialized source workspace**, first discover its actual catalog and collections. Review that saved source before its first scene capture:
+
+~~~sh
+node "$STAC_CLI" eoapi-source-discover \
+  --workspace /srv/imagery/operator \
+  --source-config /srv/imagery/private/source-runtime.json \
+  --target upstream \
+  --operation-id customer-catalog-discovery
+
+node "$STAC_CLI" eoapi-source-review \
+  --workspace /srv/imagery/operator \
+  --target upstream \
+  --reviewer "Receiving operator"
+~~~
+
+**For an already retained complete edition**, review that edition's original captured catalog, then associate it with the exact saved source review:
+
+~~~sh
 node "$STAC_CLI" eoapi-source-review \
   --workspace /srv/imagery/operator \
   --edition ORIGINAL_EDITION_ID \
@@ -96,7 +115,7 @@ node "$STAC_CLI" eoapi-bind \
   --operation-id customer-source-association
 ~~~
 
-The endpoint, catalog, collections, licenses and policy must agree. Select `--target deployment` when the actual captured endpoint is the approved customer deployment. Use the returned review/edition identities from this installation.
+The endpoint, catalog, collections, licenses and policy must agree. Select `--target deployment` on discovery and review when the actual selected endpoint is the approved customer deployment. Use the returned ready source-review and edition identities from this installation. A retained handover can supply the original complete editions through the existing analyst import.
 
 For a new selection, edit the actual-schema [query input](imagery-query.example.json), then run:
 
