@@ -1,14 +1,16 @@
 {
   "schema": "sf47.native-buyer-source-manifest.v1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
-  "head": "704df543668351f125f7beb0222789724a657127",
+  "head": "5771cd96dc13e80d3a630fecd2bf03b954482c60",
   "source_selection": {
     "mode": "explicit_git_blobs",
     "original_buyer_runtime_head": "3afca9599b602b67a8b722043061100e2efef294",
     "original_receiving_source_commit": "32d73b8fe38c6b3aeed2c39816202d2bad456126",
     "original_receiving_merge_commit": "78884931550d54401939b9befd59244c168e8144",
-    "cohort_application_head": "704df543668351f125f7beb0222789724a657127",
-    "identity_rule": "The exact path and git_blob_sha entries are authoritative. The head identifies the cohort application anchor; the selected original runtime and later receiving-source blobs are retained explicitly."
+    "cohort_application_head": "5771cd96dc13e80d3a630fecd2bf03b954482c60",
+    "identity_rule": "The exact path and git_blob_sha entries are authoritative. The head identifies the cohort application anchor; the selected original runtime and later receiving-source blobs are retained explicitly.",
+    "initial_cohort_application_head": "704df543668351f125f7beb0222789724a657127",
+    "maintained_grant_owner_source_commit": "98555147a15f0ab6fb947e243b199abe588fcc73"
   },
   "files": [
     {
@@ -21,7 +23,7 @@
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/grant-workspace.mjs",
-      "git_blob_sha": "1e1c90e2a9c2b51ef568f564e656aefa3e9d5573"
+      "git_blob_sha": "6eb6a763f8886894f6ed8a0f7d36958ef6acfc76"
     },
     {
       "path": "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
@@ -569,7 +571,7 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/AGENT.md",
-      "git_blob_sha": "802dfb127000f779f03b56caa648b6576bc0377b"
+      "git_blob_sha": "9e58a97a6537dda8a8f39239cf09bc1e11e491e5"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/BUYER_OPERATIONS.md",
@@ -577,7 +579,7 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/BUYER_RECEIVING_JOURNEY.md",
-      "git_blob_sha": "d25cb56d338325ab167559344ab7ad55baccab4e"
+      "git_blob_sha": "c9d014f9f05e2f1a13949b9dbf6eb6dfcbd8f832"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/CLI.md",
@@ -633,11 +635,11 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/buyer-agent-receiving.mjs",
-      "git_blob_sha": "603e0c05eeac9db8b3f2db8babbb8d29b9de2fa5"
+      "git_blob_sha": "0f1fdf851383f328538beddf353393c983228e03"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/buyer-operations-receiving.mjs",
-      "git_blob_sha": "ae8068b283c3907d378741539b510672c45ae4a4"
+      "git_blob_sha": "cf9a76bcf36b3051499ab4eed470bf5f7fedc4e1"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/buyer_handoff.mjs",
