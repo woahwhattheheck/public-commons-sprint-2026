@@ -86,9 +86,14 @@ async function proposeMapping(id){
   await readyButton('[data-action="review-mapping"]');
 }
 async function response(route,method,action){
-  const pending=page.waitForResponse(r=>new URL(r.url()).pathname===route&&r.request().method()===method,{timeout:180000});
-  await action();const r=await pending;const body=await r.json();
-  if(!r.ok())throw new Error(route+' returned '+r.status()+': '+String(body.error||JSON.stringify(body)).slice(0,1500));
+  // Drain the original response immediately; the click may outlive its page's response cache.
+  const pending=page.waitForResponse(r=>new URL(r.url()).pathname===route&&r.request().method()===method,{timeout:180000})
+    .then(async r=>{
+      const body=await r.json();
+      if(!r.ok())throw new Error(route+' returned '+r.status()+': '+String(body.error||JSON.stringify(body)).slice(0,1500));
+      return body;
+    });
+  const [body]=await Promise.all([pending,Promise.resolve().then(action)]);
   return body;
 }
 async function open(url){
