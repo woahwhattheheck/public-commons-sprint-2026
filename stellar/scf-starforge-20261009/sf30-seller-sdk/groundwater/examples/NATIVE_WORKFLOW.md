@@ -78,3 +78,9 @@ Legacy runtime records remain immutable. Their entire original fingerprint is va
 - Original logs, private input, phase requests, exact native attempt trees, independent report receipt and restored workspace.
 
 The result distinguishes actual model completion, technical review, file delivery and the named example-package acceptance. Tethys needs an existing configured portal and account; the separate [portal receiving continuation](../TETHYS.md) consumes this exact backup and never reruns a solver. Source publication or syntax validation does not establish portal or solver completion.
+
+## Original browser detail navigation
+
+The browser continuation selects the saved project through the operator control and waits for that choice to be retained. Project selection intentionally returns the UI to the page inventory. The caller then reopens and reloads the exact source, edition, run or report route, verifies the selected project and original workspace, and checks that the requested record is rendered before it interacts with that detail. Reloading avoids a late project-selection refresh replacing the requested detail. The same sequence is used in the restored-workspace pass.
+
+This is a read-only navigation correction. It preserves the original browser journal, phase requests, operation IDs, queued worker and completed native outputs. An existing journey adopts the complete reviewed source through the source-revision mechanism above; it does not replace the initial input or create another model run.

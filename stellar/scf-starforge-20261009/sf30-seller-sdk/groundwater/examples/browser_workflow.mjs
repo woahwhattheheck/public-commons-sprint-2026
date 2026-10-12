@@ -89,14 +89,34 @@ if(await exists(resultFile)){
   });
   async function go(route){
    check();
-   await page.goto(origin+'/#'+route);
+   const target=new URL('/#'+route,origin);
+   await page.goto(target.href);
    await page.locator('#project-select option[value="'+input.project_id+'"]').waitFor({state:'attached'});
    if(await page.locator('#project-select').inputValue()!==input.project_id){
     await page.locator('#project-select').selectOption(input.project_id);
    }
+   // Selecting a project intentionally returns the UI to this page's inventory.
+   // Persist that selection before reopening the requested original detail.
+   await page.waitForFunction(({key,id})=>{
+    try{return JSON.parse(localStorage.getItem(key))===id;}catch{return false;}
+   },{key:'groundwater:'+origin+'/api:project',id:input.project_id});
+   await page.goto(target.href);
+   // A hash-only navigation does not cancel the selection's asynchronous refresh.
+   // Reload the exact route so its first render uses the retained project.
+   await page.reload();
+   await page.waitForFunction(({hash,projectId,workspaceId})=>{
+    const selected=document.getElementById('project-select');
+    const identity=document.getElementById('workspace-identity');
+    const content=document.getElementById('content');
+    return location.hash===hash&&selected?.value===projectId&&
+     identity?.textContent.startsWith(workspaceId+' · ')&&content?.children.length>0;
+   },{hash:target.hash,projectId:input.project_id,workspaceId:input.workspace_id});
+   const detailId=decodeURIComponent(route.split('/')[1]||'');
+   if(detailId)require(await page.locator('#content code').evaluateAll((nodes,id)=>nodes.some(node=>node.textContent===id),detailId),
+    'The selected original detail did not render: '+route+'. '+await page.locator('#content').innerText());
    await page.locator('#actor').fill(input.actor);
    await page.locator('#actor').dispatchEvent('change');
-   require((await api('/state')).workspace.id===input.workspace_id,'The original operator workspace changed.');
+   require((await api('/state?project_id='+encodeURIComponent(input.project_id))).workspace.id===input.workspace_id,'The original operator workspace changed.');
   }
   async function settle(){
    await page.locator('#activity').waitFor({state:'attached'});
