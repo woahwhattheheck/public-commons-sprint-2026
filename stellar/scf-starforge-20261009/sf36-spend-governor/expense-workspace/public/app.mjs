@@ -4,7 +4,7 @@ const dirty = new Set();
 let serial = 0;
 const view = {tab:"expenses", item:null, credit:null, refundPacket:null, creditOffset:0, refundOffset:0, source:null, capture:null, period:null, review:null, close:null, issue:null,
               periodEdit:false, setting:"centers", center:null, expensesOffset:0, captureOffset:0, sourceOffset:0,
-              historyOffset:0, activityOffset:0, query:"", filterSource:"", filterStatus:""};
+              historyOffset:0, bookkeepingOffset:0, bookkeeping:null, activityOffset:0, query:"", filterSource:"", filterStatus:""};
 let state = null;
 let token = location.hash.slice(1) || sessionStorage.getItem("sf36-expense-capability") || "";
 if (location.hash) { sessionStorage.setItem("sf36-expense-capability", token); history.replaceState(null, "", location.pathname); }
@@ -486,7 +486,9 @@ async function renderIssued(){
       ["Review capacity",doc.review.role],["Conclusion",doc.review.notes],["Previous edition",doc.previous||"First issued edition"],["Context digest",doc.context_sha256]]),
     el("div",{class:"actions"},button("Open issued HTML",()=>viewReport(doc.id),"primary"),
       button("Download accountant packet",()=>download("/api/closes/"+doc.id+"/packet","accountant-edition-"+doc.sequence+".zip")),
-      button("Download edition JSON",()=>download("/api/closes/"+doc.id,"accountant-edition-"+doc.sequence+".json")))));
+      button("Download edition JSON",()=>download("/api/closes/"+doc.id,"accountant-edition-"+doc.sequence+".json")),
+      button("Export source to accountant",()=>download("/api/closes/"+doc.id+"/accountant-source","issued-buyer-accountant-source.json")))));
+  await appendAccountantReturn(doc);
   content.append(totalCards(doc));
   const creditSection=creditReportSection(doc,true);if(creditSection)content.append(creditSection);
   const outcomes=nativeOutcomeSection(doc,"Frozen original native purchase outcomes");if(outcomes)content.append(outcomes);
@@ -495,6 +497,89 @@ async function renderIssued(){
       el("div",{},l.project||"—",el("div",{class:"code"},l.account_code||"—")),l.network+" / "+l.asset,l.amount,el("span",{class:"code"},l.request_id)]))));
   content.append(el("section",{class:"card"},el("h2",{},"Retained source captures"),
     table(["Source","Capture","Projection digest"],doc.source_captures.map(c=>[c.name,c.current_capture,el("span",{class:"code"},c.projection_sha256)]))));
+}
+
+async function appendAccountantReturn(doc){
+  const path="/api/closes/"+doc.id,history=await api(path+"/accountant-returns?offset="+view.bookkeepingOffset+"&limit=20");
+  const host=el("section",{class:"card"},el("h2",{},"Returned accountant references"),
+    el("p",{class:"quiet"},"The accountant workspace can review this exact issued source, value selected allocations in its Xero organization, and return book references. Financial allocations and earlier issued editions stay frozen."));
+  host.append(table(["Saved / name","Accountant revision","State","Source match",""],history.items.map(row=>[
+    el("div",{},row.name,el("small",{},row.created_at+" · "+row.operator)),el("span",{class:"code"},row.selected_revision_id),
+    row.current?"Current references":"Prior references",row.summary.outcome,
+    button("Open return",()=>navigate(()=>{view.bookkeeping=row.id;}),"small")])),
+    pager(history,n=>navigate(()=>{view.bookkeepingOffset=n;}),20));
+  host.append(button("Export period and returned bookkeeping",()=>download(path+"/bookkeeping-packet","buyer-bookkeeping-complete-period.zip")));
+  content.append(host);
+  if(view.bookkeeping){
+    const saved=await api("/api/accountant-returns/"+view.bookkeeping);
+    if(saved.close_id===doc.id){
+      host.append(el("h3",{},saved.name),facts([["Accepted by",saved.operator],["Reference state",saved.current?"Current":"Historical"],
+        ["Returned handoff",saved.handoff_id],["Original packet digest",saved.packet_sha256],["Issued source digest",saved.source_sha256],["Review note",saved.reason||"—"]]),
+        button("Download original returned packet",()=>download("/api/accountant-returns/"+saved.id+"/original","original-buyer-accountant-return.json")),
+        localTable(["Kind / original line","Native allocation","Original coding","External status","Book / account","Returned note"],saved.native.rows.map(row=>[
+          el("div",{},row.kind,el("small",{class:"code"},row.sourceLineId)),unit(row.original.amount,row.original,doc.labels),
+          [row.original.center_code,row.original.project,row.original.account_code].filter(Boolean).join(" · "),row.externalStatus,
+          el("div",{},row.externalBookRef||"—",el("div",{},row.externalAccountCode||"—")),row.externalNote||"—"])));
+    }
+  }
+  let candidate=null,pending=null,token=0;
+  const f=formCard("Receive accountant references",[
+    {name:"file",label:"Original buyer-return JSON",type:"file",required:true,wide:true},
+    {name:"operator",label:"Bookkeeping review operator",required:true,maxlength:160},
+    {name:"name",label:"Return name",required:true,maxlength:160},
+    {name:"reason",label:"Review note",multiline:true,wide:true,maxlength:2000,help:"Describe a change of accountant handoff when replacing previously accepted references."}
+  ],"Preview original returned references",async(values,form)=>{
+    if(pending)throw new Error("Recover or retry the retained save request before changing this return.");
+    const file=f.fields.file.files[0];if(!file||!file.size||file.size>64*1024*1024)throw new Error("Choose original buyer-return JSON up to 64 MiB.");
+    const current=++token,bytes=new Uint8Array(await file.arrayBuffer()),hash=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
+    let raw="";for(let i=0;i<bytes.length;i+=32768)raw+=String.fromCharCode(...bytes.subarray(i,i+32768));
+    const payload={content_base64:btoa(raw),sha256:[...hash].map(x=>x.toString(16).padStart(2,"0")).join("")};
+    const preview=await api(path+"/accountant-preview",{payload});
+    if(current!==token||f.fields.file.files[0]!==file)return;
+    candidate={preview,payload};form.dataset.revision=String(preview.revision);
+    const native=preview.native;
+    result.replaceChildren(el("h3",{},"Exact returned-source review"),
+      facts([["Original buyer workspace",native.source.workspaceId],["Issued edition",native.source.closeId+" · "+native.source.sequence],
+        ["Original source digest",native.source.sha256],["Original handoff",native.handoffId],["Returned revision",native.selectedRevisionId],
+        ["Original return result",native.summary.outcome],["Retained source context",native.source.dataContext]]),
+      localTable(["Allocation","Exact native units","Returned status","Book reference","Account","Note"],native.rows.map(row=>[
+        row.kind+" · "+row.original.center_code,unit(row.original.amount,row.original,doc.labels),row.externalStatus,row.externalBookRef||"—",row.externalAccountCode||"—",row.externalNote||"—"])));
+    for(const overlap of preview.other_handoffs){
+      const check=el("input",{type:"checkbox","data-supersedes":overlap.return_id});
+      result.append(el("label",{class:"field checkbox"},check,el("span",{},"Replace the current references from handoff "+overlap.handoff_id+"; retain its full earlier history.")));
+    }
+    f.fields.reason.required=preview.other_handoffs.length>0;
+    if(native.issues.length)result.append(el("details",{},el("summary",{},"Retained accountant return findings"),el("pre",{},JSON.stringify(native.issues,null,2))));
+    result.append(button(preview.duplicate?"Recover this already accepted return":"Save reviewed book references",saveReferences,"primary"));
+  },{intro:"Export the original issued source above. In the accountant workspace choose Issued buyer expense period, then download Return to buyer workspace from a saved accountant return."});
+  const result=el("div",{class:"review-area"});f.card.append(result);content.append(f.card);f.fields.file.accept=".json,application/json";
+  function enable(value){for(const field of Object.values(f.fields))field.disabled=!value;}
+  async function accepted(response){
+    const value=response.result??response;pending=null;candidate=null;dirty.delete(f.form);enable(true);view.bookkeeping=value.id;
+    await refreshState();await redrawAfter("Original accountant references and the complete return chain are saved. Issued financial amounts are unchanged.");
+  }
+  async function sendPending(){
+    try{await accepted(await api(path+"/accountant-return",pending));}
+    catch(error){
+      if(error.status&&error.status<500){pending=null;enable(true);candidate=null;result.replaceChildren(el("p",{class:"error"},error.message),el("p",{},"Your selected file and review fields remain. Preview the current returned source again."));throw error;}
+      const requestId=pending.request_id;
+      result.append(el("p",{class:"error"},"The save did not return a completion. Original request "+requestId+" is retained here."),
+        button("Recover original request",async()=>{
+          try{const receipt=await api("/api/requests/"+requestId);await accepted(receipt.response);}
+          catch(e){if(e.status===404){notify("That original request has not committed. Retry the exact retained request.");return;}throw e;}
+        }),button("Retry exact retained request",sendPending));
+    }
+  }
+  async function saveReferences(){
+    if(pending)return sendPending();
+    if(!candidate)throw new Error("Preview the complete original return first.");
+    const supersedes=[...result.querySelectorAll("[data-supersedes]:checked")].map(x=>x.dataset.supersedes);
+    const reason=f.fields.reason.value.trim();if(candidate.preview.other_handoffs.length&&!reason)throw new Error("Record the reason for replacing the preceding accountant handoff.");
+    pending={request_id:crypto.randomUUID(),expected_revision:candidate.preview.revision,payload:{...candidate.payload,
+      preview_sha256:candidate.preview.preview_sha256,operator:f.fields.operator.value.trim(),name:f.fields.name.value.trim(),reason,supersedes}};
+    enable(false);await sendPending();
+  }
+  f.form.addEventListener("input",()=>{if(!pending){candidate=null;++token;result.replaceChildren();}});
 }
 
 function receiptReference(value){return value.order_reference||value.source_reference||value.event_id||value.adjustment_id||"Original source";}
