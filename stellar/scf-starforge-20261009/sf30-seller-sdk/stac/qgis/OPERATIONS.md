@@ -50,7 +50,7 @@ Set a label, opacity and visibility. A vector filter is an explicit native provi
 
 **Move up** and **Move down** retain the selected map order. **Remove selected** removes the layer choice and preserves its source editions and earlier saved maps.
 
-**Apply to QGIS map** prepares the complete selected set, then replaces only the existing layers and group marked for this workspace. Other open QGIS layers remain under the user's normal project control. Footprints use a neutral outline; QGIS supplies its native raster renderer. Use the normal map canvas and native layer controls to inspect the data.
+**Apply to QGIS map** prepares the complete selected set, then replaces only the existing layers and group marked for this workspace. Other open QGIS layers remain under the user's normal project control. Footprints use a neutral outline; QGIS supplies its native raster renderer. Use **Zoom to layers**, the normal map canvas and native layer controls to inspect the data. Explicit raster band changes use QGIS's normal default contrast enhancement; its retained native QML records the resulting display.
 
 ## Native properties and styles
 

@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from starforge_stac.model import (QgisWorkspace, ReceivingSource, receive_package, read_json, retain_bytes,
                                   file_digest, value_sha, require, json_bytes, utc_now)
 from starforge_stac.qgis_project import (native, native_version, inspect_asset, add_to_project,
-                                         capture_styles, save_project, reopen_project)
+                                         capture_styles, save_project, reopen_project, zoom_managed)
 
 
 def perform(config_file):
@@ -38,7 +38,19 @@ def perform(config_file):
         path = root / "steps" / (step + ".json")
         return read_json(path)[0]["value"] if path.exists() else None
     def action_args(request):
-        return {"revision": workspace.read()["revision"], "request_id": request, "actor": actor}
+        # Freeze the original revision before dispatch, including across a lost step receipt.
+        path = root / "actions" / (request + ".json")
+        if path.exists():
+            saved, _ = read_json(path)
+            require(saved.get("request_id") == request and saved.get("actor") == actor and
+                    type(saved.get("revision")) is int, "NATIVE_ACTION_CHANGED",
+                    "Continue the same retained native action and analyst.")
+            return saved
+        completed = workspace.operation(request)
+        revision = completed["event"]["revision"] - 1 if completed else workspace.read()["revision"]
+        saved = {"revision": revision, "request_id": request, "actor": actor}
+        retain_bytes(root, "actions/" + request + ".json", json_bytes(saved))
+        return saved
 
     imported = previous("source-import")
     if imported is None:
@@ -70,10 +82,9 @@ def perform(config_file):
     if previous("native-style") is None:
         keep("native-style", capture_styles(workspace, native_project, **action_args("native-style-selection")))
     if previous("native-map") is None:
-        state = workspace.read()
-        receipt = save_project(workspace, project_crs=config.get("projectCrs"), **action_args("native-map-save"))
-        replay = save_project(workspace, revision=state["revision"], request_id="native-map-save",
-                              actor=actor, project_crs=config.get("projectCrs"))
+        arguments = action_args("native-map-save")
+        receipt = save_project(workspace, project_crs=config.get("projectCrs"), **arguments)
+        replay = save_project(workspace, project_crs=config.get("projectCrs"), **arguments)
         require(receipt == replay and workspace.read()["revision"] == receipt["revision"],
                 "NATIVE_SAVE_REPLAY", "The original native map save did not preserve its completed operation.")
         keep("native-map", receipt)
@@ -141,6 +152,7 @@ def perform(config_file):
             dock.set_workspace(receiver)
             dock.show()
             add_to_project(receiver, core.QgsProject.instance())
+            zoom_managed(iface, receiver)
             QApplication.processEvents()
             image_path = root / "native-qgis-operator.png"
             require(iface.mainWindow().grab().save(str(image_path), "PNG"), "NATIVE_SCREENSHOT",

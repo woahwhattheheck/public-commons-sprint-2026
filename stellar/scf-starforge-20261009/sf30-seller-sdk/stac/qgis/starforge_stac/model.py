@@ -372,8 +372,8 @@ def compare_sources(left, right):
             "sameQuery": (left.edition or {}).get("query") == (right.edition or {}).get("query")}
 
 
-def historical_style_refs(value):
-    """Exact style descriptors retained anywhere in original state/event/request history."""
+def historical_style_refs(snapshot):
+    """Exact style descriptors from retained GIS definitions, never arbitrary source metadata."""
     result = {}
     def add(raw):
         record = descriptor(raw)
@@ -383,21 +383,35 @@ def historical_style_refs(value):
         require(previous is None or all(previous[k] == record[k] for k in ("bytes", "sha256")),
                 "HISTORY_STYLE_CONFLICT", "A historical style path has conflicting original bytes.", path=record["path"])
         result[record["path"]] = record
-    def walk(item):
-        if isinstance(item, dict):
-            for key, child in item.items():
-                if key == "styleFile" and child is not None:
-                    add(child)
-                elif key == "styleDependencies":
-                    require(isinstance(child, list), "HISTORY_STYLE_RESOURCES", "Retain the complete historical style resource list.")
-                    for record in child:
-                        add(record)
-                else:
-                    walk(child)
-        elif isinstance(item, list):
-            for child in item:
-                walk(child)
-    walk(value)
+    def layer(row):
+        require(isinstance(row, dict), "HISTORY_LAYER", "Retain the complete original GIS layer definition.")
+        if row.get("styleFile") is not None:
+            add(row["styleFile"])
+        dependencies = row.get("styleDependencies", [])
+        require(isinstance(dependencies, list), "HISTORY_STYLE_RESOURCES", "Retain the complete historical style resource list.")
+        for record in dependencies:
+            add(record)
+    def context(item):
+        if not isinstance(item, dict):
+            return
+        for row in item.get("layers", []):
+            layer(row)
+        for project in item.get("projects", []):
+            context(project)
+        if item.get("project"):
+            context(item["project"])
+        for review in item.get("reviews", []):
+            context(review)
+        if item.get("review"):
+            context(item["review"])
+        for change in item.get("changes", []):
+            if change.get("previousDefinition") is not None:
+                layer(change["previousDefinition"])
+    context(snapshot.get("state", {}))
+    for event in snapshot.get("events", []):
+        context(event.get("details", {}))
+    for request in snapshot.get("requests", []):
+        context(request.get("result", {}))
     return [result[name] for name in sorted(result)]
 
 
