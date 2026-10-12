@@ -396,6 +396,60 @@ export class MerchantBuyerExpenses {
       default:throw fail('TOOL','Choose an original buyer expense operation.');
     }
   }
+  /** Fixed Service handover work borrows this already open native workspace.
+   * Keep the original alias lane for the whole callback, including its byte
+   * reads and exact HTTP request receipts. No directory, token or startup is
+   * exposed to callers. Closing drains this accepted operation normally. */
+  async withServiceBuyerWorkspace(workspace, callback) {
+    if(this.#closing)throw fail('CLOSING','The buyer expense provider is closing.');
+    this.#selection(workspace);
+    if(typeof callback!=='function')throw fail('SERVICE_CALLBACK','Use the original Service buyer callback.');
+    const run=async()=>{
+      const s=this.#session(workspace),pending=new Set();let admitted=true;
+      const route=(path,write)=>{
+        if(typeof path!=='string'||path.length>2048||!path.startsWith('/api/')||path.includes('#')||path.includes('%'))
+          throw fail('SERVICE_ROUTE','Use an exact original buyer Service route.');
+        const ident='[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}';
+        const query='(?:\\?(?:offset=[0-9]+&limit=[0-9]+|expected_revision=[0-9]+))?';
+        const read=new RegExp('^/api/(?:state|refund-packets'+query+'|credits'+query+'|(?:refund-packets|items|credits|reviews|requests|accountant-returns)/'+ident+
+          '|refund-packets/'+ident+'/original|accountant-returns/'+ident+'/original|periods/'+ident+'/(?:report|history)'+query+
+          '|closes/'+ident+'(?:/(?:accountant-source|accountant-returns|bookkeeping-packet|html|packet))?'+query+'|complete-project'+query+')$');
+        const post=new RegExp('^/api/(?:adjustment-packets|centers|labels|periods|refund-packets/'+ident+'/decision|(?:items|credits)/'+ident+
+          '/coding|periods/'+ident+'/(?:disposition|review|close|reopen)|closes/'+ident+'/(?:accountant-preview|accountant-return))$');
+        if(!(write?post:read).test(path))throw fail('SERVICE_ROUTE','This route is outside the original Service buyer operation.');
+        return path;
+      };
+      const track=fn=>{
+        if(!admitted)throw fail('SERVICE_ADMISSION_CLOSED','The original buyer callback has completed.');
+        const p=Promise.resolve().then(fn);pending.add(p);
+        p.then(()=>pending.delete(p),()=>pending.delete(p));return p;
+      };
+      const capability=Object.freeze({workspaceId:s.workspaceId,
+        read:path=>track(()=>this.#get(s,route(path,false))),
+        bytes:path=>track(()=>this.#bytes(s,route(path,false))),
+        mutate:(path,envelope)=>{
+          const selected=structuredClone(envelope);
+          return track(()=>{
+          envelope=selected;route(path,true);
+          if(!envelope||typeof envelope!=='object'||Array.isArray(envelope)||
+             Object.keys(envelope).some(key=>!['request_id','expected_revision','payload'].includes(key))||
+             !envelope.payload||typeof envelope.payload!=='object'||Array.isArray(envelope.payload))
+            throw fail('SERVICE_REQUEST','Use the exact original buyer request envelope.');
+          if(!path.endsWith('/accountant-preview')&&(typeof envelope.request_id!=='string'||!new RegExp(request.pattern).test(envelope.request_id)||
+             !Number.isSafeInteger(envelope.expected_revision)||envelope.expected_revision<0))
+            throw fail('SERVICE_REQUEST','Retain the original buyer request ID and reviewed revision.');
+          return this.#bytes(s,path,envelope).then(parse);
+        });
+        }
+      });
+      try{return await callback(capability);}
+      finally{admitted=false;await Promise.allSettled([...pending]);}
+    };
+    const task=(this.#lanes.get(workspace)??Promise.resolve()).catch(()=>{}).then(run);
+    this.#lanes.set(workspace,task);this.#active.add(task);
+    try{return await task;}
+    finally{this.#active.delete(task);if(this.#lanes.get(workspace)===task)this.#lanes.delete(workspace);}
+  }
   async call(name,args={}) {
     if(this.#closing)throw fail('CLOSING','The buyer expense provider is closing.');
     const action=name.slice(PREFIX.length),definition=BUYER_EXPENSE_ACTIONS[action];
