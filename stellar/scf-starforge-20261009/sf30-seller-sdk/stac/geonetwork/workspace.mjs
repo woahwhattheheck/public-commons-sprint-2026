@@ -4,7 +4,7 @@ import { constants } from 'node:fs';
 import { Readable } from 'node:stream';
 import { readdir, lstat, realpath, open, unlink } from 'node:fs/promises';
 import { resolve, join, dirname, basename, isAbsolute, relative as filesystemRelative, sep } from 'node:path';
-import { privateDirectory as originalPrivateDirectory, readBytes, readJson, writeBytes, writeJson, exists, matchingWriteTemporaries }
+import { privateDirectory as originalPrivateDirectory, readBytes, readJson, writeBytes, writeJson, jsonBytes, exists, matchingWriteTemporaries, syncDirectory }
   from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { withPrivateLock } from '../../routescan/quota.mjs';
 import { StacDelivery } from '../customer.mjs';
@@ -146,6 +146,185 @@ async function cleanOwnJsonTemporaries(directory, expectedBytes) {
   for (const name of await matchingWriteTemporaries(directory, expectedBytes))
     await unlink(join(directory, name));
 }
+/**
+ * Recover only original saveAs leftovers in this prepared operation's output.
+ * A .download-UUID can be a partial file, so its bounded bytes must equal an
+ * exact prefix of a verified final target in the SAME directory. Unknown files
+ * stay in place and the caller's complete inventory check still rejects them.
+ * Both callers hold the workspace flock and have verified the preparation ID.
+ */
+async function cleanOwnDownloadTemporaries(directory, files, { signal } = {}) {
+  const sameFile = (left, right) => left.isFile() && right.isFile() &&
+    left.dev === right.dev && left.ino === right.ino && left.size === right.size &&
+    left.mode === right.mode && left.uid === right.uid && left.gid === right.gid &&
+    left.nlink === right.nlink && left.mtimeNs === right.mtimeNs && left.ctimeNs === right.ctimeNs;
+  const parents = new Map(), published = new Set();
+  for (const record of files) {
+    const path = join(directory, relative(record.path)), parent = dirname(path);
+    published.add(path);
+    const targets = parents.get(parent) ?? [];
+    targets.push({ path, record }); parents.set(parent, targets);
+  }
+  const options = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
+  const left = Buffer.allocUnsafe(65536), right = Buffer.allocUnsafe(65536);
+  async function readBlock(handle, buffer, length, position) {
+    let total = 0;
+    while (total < length) {
+      requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+      const { bytesRead } = await handle.read(buffer, total, length - total, position + total);
+      if (!bytesRead) break;
+      total += bytesRead;
+    }
+    return total;
+  }
+  for (const [parent, targets] of parents) {
+    await checkParent(join(parent, 'member'));
+    const parentStat = await lstat(parent, { bigint: true });
+    requireValue(parentStat.isDirectory() && !parentStat.isSymbolicLink(),
+      'CATALOGUE_FILE_PARENT_CHANGED');
+    const candidates = (await readdir(parent, { withFileTypes: true })).filter(entry =>
+      /^\.download-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(entry.name) &&
+      entry.isFile() && !published.has(join(parent, entry.name)));
+    if (!candidates.length) continue;
+    // Normal handovers do not hash their rasters again just to discover no
+    // leftovers. Verify and cache only targets in a parent needing recovery.
+    for (const target of targets) {
+      const named = await lstat(target.path, { bigint: true });
+      await fingerprint(target.path, target.record, { signal });
+      const verified = await lstat(target.path, { bigint: true });
+      requireValue(sameFile(named, verified), 'CATALOGUE_FILE_CHANGED_DURING_READ');
+      target.stat = verified;
+    }
+    let removed = false;
+    for (const entry of candidates) {
+      if (!/^\.download-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(entry.name))
+        continue;
+      const path = join(parent, entry.name);
+      if (published.has(path) || !entry.isFile()) continue;
+      let temporary;
+      try {
+        const named = await lstat(path, { bigint: true });
+        if (!named.isFile() || named.isSymbolicLink() || named.size > 2147483648n ||
+            process.platform !== 'win32' && ((named.mode & 0o777n) !== 0o600n ||
+              process.getuid && named.uid !== BigInt(process.getuid()))) continue;
+        temporary = await open(path, options);
+        const before = await temporary.stat({ bigint: true });
+        if (!sameFile(named, before)) continue;
+        for (const target of targets) {
+          if (before.size > target.stat.size) continue;
+          const final = await open(target.path, options);
+          try {
+            const finalBefore = await final.stat({ bigint: true });
+            requireValue(sameFile(finalBefore, target.stat), 'CATALOGUE_FILE_CHANGED_DURING_READ');
+            let position = 0, matches = true;
+            const size = Number(before.size);
+            while (position < size) {
+              const length = Math.min(left.length, size - position);
+              const a = await readBlock(temporary, left, length, position);
+              const b = await readBlock(final, right, length, position);
+              if (a !== length || b !== length || !left.subarray(0, length).equals(right.subarray(0, length))) {
+                matches = false; break;
+              }
+              position += length;
+            }
+            if (!matches) continue;
+            requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+            const tail = await temporary.read(left, 0, 1, size);
+            const after = await temporary.stat({ bigint: true });
+            const current = await lstat(path, { bigint: true });
+            const finalAfter = await final.stat({ bigint: true });
+            const finalCurrent = await lstat(target.path, { bigint: true });
+            const currentParent = await lstat(parent, { bigint: true });
+            await checkParent(path);
+            if (tail.bytesRead !== 0 || !sameFile(before, after) || !sameFile(before, current))
+              break;
+            requireValue(sameFile(finalBefore, finalAfter) && sameFile(finalBefore, finalCurrent) &&
+              currentParent.isDirectory() && currentParent.dev === parentStat.dev &&
+              currentParent.ino === parentStat.ino, 'CATALOGUE_FILE_CHANGED_DURING_READ');
+            await unlink(path); removed = true;
+            if (before.dev === finalBefore.dev && before.ino === finalBefore.ino) {
+              // saveAs may have published its no-replace link just before death.
+              // Removing that second name legitimately updates the target inode.
+              await fingerprint(target.path, target.record, { signal });
+              const updated = await final.stat({ bigint: true });
+              requireValue(updated.dev === finalBefore.dev && updated.ino === finalBefore.ino &&
+                updated.size === finalBefore.size && updated.mode === finalBefore.mode &&
+                updated.uid === finalBefore.uid && updated.gid === finalBefore.gid &&
+                updated.mtimeNs === finalBefore.mtimeNs && updated.nlink === finalBefore.nlink - 1n &&
+                sameFile(updated, await lstat(target.path, { bigint: true })),
+                'CATALOGUE_FILE_CHANGED_DURING_READ');
+              for (const row of targets)
+                if (row.stat.dev === updated.dev && row.stat.ino === updated.ino) row.stat = updated;
+            }
+            break;
+          } finally { await final.close(); }
+        }
+      } catch (error) {
+        if (!['ENOENT', 'ELOOP'].includes(error.code)) throw error;
+      } finally { if (temporary) await temporary.close(); }
+    }
+    if (removed) await syncDirectory(parent);
+  }
+}
+
+/** Recover the original complete marker write, before its no-replace publication. */
+async function recoverOwnReceivingMarker(directory, markerPath, selected, { signal } = {}) {
+  const candidates = [];
+  await checkParent(markerPath);
+  for (const name of (await readdir(directory)).sort()) {
+    if (!/^\.write-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(name)) continue;
+    let handle;
+    try {
+      requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+      const path = join(directory, name), named = await lstat(path, { bigint: true });
+      if (!named.isFile() || named.isSymbolicLink() || named.size === 0n || named.size > 4096n ||
+          process.platform !== 'win32' && ((named.mode & 0o777n) !== 0o600n ||
+            process.getuid && named.uid !== BigInt(process.getuid()))) continue;
+      handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+      const before = await handle.stat({ bigint: true });
+      const unchanged = (a, b) => a.isFile() && b.isFile() && a.dev === b.dev && a.ino === b.ino &&
+        a.size === b.size && a.mode === b.mode && a.uid === b.uid && a.gid === b.gid &&
+        a.nlink === b.nlink && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
+      if (!unchanged(named, before)) continue;
+      const buffer = Buffer.allocUnsafe(Number(before.size) + 1);
+      let length = 0;
+      while (length < buffer.length) {
+        requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+        const { bytesRead } = await handle.read(buffer, length, buffer.length - length, length);
+        if (!bytesRead) break;
+        length += bytesRead;
+      }
+      const after = await handle.stat({ bigint: true }), current = await lstat(path, { bigint: true });
+      await checkParent(path);
+      if (length !== Number(before.size) || !unchanged(before, after) || !unchanged(before, current)) continue;
+      const bytes = buffer.subarray(0, length);
+      let value;
+      try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+      catch { continue; }
+      if (!isObject(value) || value.schema !== selected.schema || value.operationId !== selected.operationId ||
+          value.sourceSha256 !== selected.sourceSha256 || typeof value.receivedAt !== 'string' ||
+          !Number.isFinite(Date.parse(value.receivedAt)) ||
+          new Date(value.receivedAt).toISOString() !== value.receivedAt) continue;
+      const marker = { schema: selected.schema, operationId: selected.operationId,
+        sourceSha256: selected.sourceSha256, receivedAt: value.receivedAt };
+      // Accept exact original writeJson bytes, or retained canonical bytes;
+      // reject extra fields, duplicate keys, truncation and non-original encodings.
+      if (!bytes.equals(jsonBytes(marker)) && !bytes.equals(Buffer.from(canonicalJson(marker) + '\n'))) continue;
+      candidates.push({ marker, bytes: Buffer.from(bytes) });
+    } catch (error) {
+      if (!['ENOENT', 'ELOOP'].includes(error.code)) throw error;
+    } finally { if (handle) await handle.close(); }
+  }
+  if (!candidates.length) return null;
+  requireValue(candidates.every(value => value.marker.receivedAt === candidates[0].marker.receivedAt),
+    'CATALOGUE_RECEIVING_MARKER_CONFLICT');
+  requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+  await retained(markerPath, candidates[0].bytes);
+  await cleanOwnJsonTemporaries(directory, candidates.map(value => value.bytes));
+  await syncDirectory(directory);
+  return candidates[0].marker;
+}
+
 function validateState(state) {
   requireValue(state?.schema === CATALOGUE_SCHEMA && typeof state.id === 'string' &&
     Number.isSafeInteger(state.revision) && state.revision >= 0 &&
@@ -456,6 +635,8 @@ export async function openCatalogueWorkspace({ directory, stacWorkspace = null, 
       manifest.sha256 = hash(manifest);
       const manifestBytes = Buffer.from(canonicalJson(manifest) + '\n');
       await cleanOwnJsonTemporaries(outputDirectory, [markerBytes, stateBytes, manifestBytes]);
+      await cleanOwnDownloadTemporaries(outputDirectory, files.filter(file =>
+        !['state.json', 'catalogue-export-prepared.json'].includes(file.path)), { signal });
       await matchingInventory(outputDirectory, files);
       await retained(manifestPath, manifestBytes);
       const opened = await openCatalogueHandover(outputDirectory, { signal });
@@ -536,6 +717,7 @@ export async function receiveCatalogueHandover({ sourceDirectory, directory, ope
       operationId, sourceSha256: opened.manifest.sha256, receivedAt: stamp() };
     const entries = (await readdir(directory)).filter(name => name !== 'locks');
     if (entries.length) {
+      if (!await exists(markerPath)) await recoverOwnReceivingMarker(directory, markerPath, marker, { signal });
       requireValue(await exists(markerPath), 'CATALOGUE_NEW_RECEIVING_DIRECTORY_REQUIRED');
       const original = await readJson(markerPath);
       requireValue(original.schema === marker.schema && original.operationId === operationId &&
@@ -543,7 +725,7 @@ export async function receiveCatalogueHandover({ sourceDirectory, directory, ope
         'CATALOGUE_RECEIVING_OPERATION_CHANGED');
       marker = original;
     } else await writeJson(markerPath, marker, { exclusive: true });
-    const markerBytes = Buffer.from(canonicalJson(marker) + '\n');
+    const markerBytes = await readBytes(markerPath, 4096);
     for (const file of opened.manifest.files) {
       if (file.path === 'state.json') continue;
       await retainedFile(join(opened.directory, relative(file.path)), join(directory, file.path), file, { signal });
@@ -565,6 +747,8 @@ export async function receiveCatalogueHandover({ sourceDirectory, directory, ope
     ];
     for (const name of ['sources', 'operations', 'archives']) await privateDirectory(join(directory, name));
     // The same flock prevents an ordinary workspace opener from using the partially copied state.
+    await cleanOwnDownloadTemporaries(directory,
+      opened.manifest.files.filter(file => file.path !== 'state.json'), { signal });
     const actualFiles = (await filesUnder(directory)).filter(path => !path.startsWith('locks/'));
     requireValue(canonicalJson(actualFiles.sort()) === canonicalJson(expected.map(file => file.path).sort()),
       'CATALOGUE_RECEIVING_INCOMPLETE');
