@@ -46,7 +46,7 @@ export async function startGrpcWorkspace({ model, port = 8453, ...options } = {}
       timingSafeEqual(Buffer.from(token), Buffer.from(capability));
   };
   const actions = { save: 'save', capture: 'capture', open: 'open', checkout: 'checkout',
-    method: 'method', review: 'review', call: 'call', attempt: 'readAttempt', prepare: 'prepare',
+    method: 'method', review: 'review', call: 'call', attempt: 'readAttempt', attempts: 'attemptsPage', prepare: 'prepare',
     run: 'run', stop: 'stop', download: 'download', archive: 'archive', stage: 'stage',
     'release-console': 'openReleaseConsole', 'release-close': 'closeReleaseConsole' };
   const server = createServer((req, res) => {
