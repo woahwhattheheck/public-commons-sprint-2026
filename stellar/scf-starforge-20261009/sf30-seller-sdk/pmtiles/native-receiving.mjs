@@ -41,6 +41,11 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
       need(completed.requestSha256===requestSha256,'PMTILES_ORIGINAL_RECEIVING_INPUT_CHANGED');
       const archive=await fileDescriptor(completed.package.archive.path,{limit:34359738368,signal});
       need(archive.bytes===completed.package.archive.bytes&&archive.sha256===completed.package.archive.sha256,'PMTILES_RECEIVING_PACKAGE_CHANGED');
+      need(completed.merchantMcp?.status==='COMPLETE'&&completed.merchantMcp.operationId===input.operationId&&
+        completed.merchantMcp.workspaceId===completed.workspaceId,'PMTILES_ORIGINAL_MCP_RECEIVING_INCOMPLETE');
+      const mcpArchive=await fileDescriptor(completed.merchantMcp.downloadedArchive.path,{limit:8*1024*1024*1024,signal});
+      need(mcpArchive.bytes===completed.merchantMcp.downloadedArchive.bytes&&
+        mcpArchive.sha256===completed.merchantMcp.downloadedArchive.sha256,'PMTILES_ORIGINAL_MCP_PACKAGE_CHANGED');
       return {...completed,reused:true};
     }
     async function step(name,work){
@@ -323,11 +328,21 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
         'PMTILES_COLD_CLI_STATE_CHANGED');
       need(browserErrors.length===0,'PMTILES_BROWSER_PAGE_ERROR',JSON.stringify(browserErrors));
       need(nativeTileResponses.some(row=>row.status===200),'PMTILES_BROWSER_NATIVE_TILE_NOT_OBSERVED');
+      // The full native journey uses the complete installed merchant source. The
+      // customer operations ZIP retains its separately declared SCF closure.
+      const merchantSourceRoot=resolve(HERE,'../../../..');
+      const merchantHook=join(merchantSourceRoot,'stellar-forge','mcp-merchant-operator','pmtiles-native-receiving.mjs');
+      const {exercisePMTilesMcp}=await import(pathToFileURL(merchantHook).href);
+      const merchantMcp=await exercisePMTilesMcp({sourceRoot:merchantSourceRoot,directory:join(root,'workspace'),
+        runtimeProfile:runtimeResult.profilePath,expectedWorkspaceId:workspaceId,root:join(root,'merchant-mcp'),
+        operationId:input.operationId,reviewer:input.reviewer,signal});
+      need(merchantMcp.status==='COMPLETE'&&merchantMcp.workspaceId===workspaceId&&
+        merchantMcp.restoredReleaseId===vectorRelease.id,'PMTILES_ORIGINAL_MCP_RECEIVING_INCOMPLETE');
       const result={schema:'starforge.pmtiles-native-receiving-result.v1',status:'PMTILES_RECEIVING_COMPLETE',operationId:input.operationId,
         requestSha256,workspaceId,sourceSelection,runtimeSha256:runtime.runtimeSha256,browserIdentity,
         firstReleaseId:firstRelease.id,secondReleaseId:secondRelease.id,vectorReleaseId:vectorRelease.id,
         vectorSource:{...vectorSource,sha256:vectorArchive.sha256,resourceId:vectorArchive.id,gitBlobSha1:observedBlob},restoredReleaseId:firstRelease.id,
-        package:packageResult.result,receiving:received.value,cliState:cliState.value,
+        package:packageResult.result,receiving:received.value,cliState:cliState.value,merchantMcp,
         browserErrors,nativeTileResponses,completedAt:timestamp()};
       await retainJson(join(root,'native-result.json'),result);return result;
     }finally{
