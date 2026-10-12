@@ -190,3 +190,8 @@ native verification/settlement calls. The whole workflow used six backend reads
 for eighteen separately completed native request lifecycles. Private loopback
 control-file status/invalidation was exercised; Unix socket listen returned the
 container's `EPERM`, so that transport is retained for supporting hosts.
+
+
+## Saved cache operations
+
+The original API merchant workspace now links to a complete [cache operations workspace](workspace/README.md). Capture operating snapshots, compare retention and source counters, review and apply live retention settings, restore a prior policy, reconcile interrupted changes, and export or receive the complete saved history. The same interface is available through `starforge cache-operations`; merchant MCP operations use the original owned runtime manager.
