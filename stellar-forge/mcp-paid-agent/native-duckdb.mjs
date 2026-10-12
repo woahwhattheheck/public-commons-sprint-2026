@@ -355,3 +355,4 @@ export async function inspectDuckDBRegistration(description){
  try{return await client.inspectRegistration(description);}
  finally{await client.close();}
 }
+
