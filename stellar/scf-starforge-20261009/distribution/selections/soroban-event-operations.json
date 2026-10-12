@@ -120,7 +120,8 @@
     "description": "Operate native Soroban contract events, retain complete RPC sources and deliver immutable editions through paid merchant feeds",
     "readme": "products/soroban-events/OPERATING.md",
     "bin": {
-      "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
+      "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs",
+      "starforge-merchant": "stellar/scf-starforge-20261009/distribution/cli.mjs"
     }
   }
 }
