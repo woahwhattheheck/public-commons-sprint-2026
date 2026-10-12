@@ -122,7 +122,7 @@ export function createAccountingRunbooksClient({workspace,call}={}){
   };
   return Object.freeze(client);
 }
-export async function connectAccountingRunbooksClient({workspace,...options}={}){
-  const connection=await openMerchantFileClient({...options,errorPrefix:'ACCOUNTING_RUNBOOK',clientName:'starforge-accounting-runbooks'});
+export async function connectAccountingRunbooksClient({workspace,maxResponseBytes=128*1024*1024,...options}={}){
+  const connection=await openMerchantFileClient({...options,maxResponseBytes,errorPrefix:'ACCOUNTING_RUNBOOK',clientName:'starforge-accounting-runbooks'});
   return Object.freeze({...createAccountingRunbooksClient({workspace,call:connection.call}),endpoint:connection.endpoint});
 }

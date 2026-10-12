@@ -15,7 +15,9 @@ const validSha = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(val
 const validReadId = value => typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value);
 
 /** Connect only to the operator-selected MCP endpoint; no payment or export calls. */
-export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN', environment = process.env, signal, errorPrefix = 'SUPPORT', clientName = 'starforge-support-download' } = {}) {
+export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN', environment = process.env, signal, errorPrefix = 'SUPPORT', clientName = 'starforge-support-download', maxResponseBytes = 2 * 1024 * 1024 } = {}) {
+  if (!Number.isSafeInteger(maxResponseBytes) || maxResponseBytes < 1 || maxResponseBytes > 128 * 1024 * 1024)
+    throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Set maxResponseBytes to an integer from 1 to 134217728.');
   let endpoint;
   try { endpoint = new URL(url); } catch { throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Supply an HTTPS MCP endpoint or its original loopback HTTP listener.'); }
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash ||
@@ -36,7 +38,7 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
     const chunks = []; let size = 0;
     for await (const chunk of response.body) {
       size += chunk.length;
-      if (size > 2 * 1024 * 1024) throw failure(errorPrefix + '_DOWNLOAD_REPLY_TOO_LARGE', 'The bounded MCP file response is oversized.');
+      if (size > maxResponseBytes) throw failure(errorPrefix + '_DOWNLOAD_REPLY_TOO_LARGE', 'The original MCP response exceeds the configured maxResponseBytes.');
       chunks.push(chunk);
     }
     let reply;
@@ -54,8 +56,12 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
     async call(name, args, options) {
       const result = await request('tools/call', { name, arguments: args }, options);
       const value = result?.structuredContent;
-      if (result?.isError) throw failure(/^[A-Z][A-Z0-9_]+$/.test(value?.code ?? '') ? value.code : errorPrefix + '_DOWNLOAD_TOOL_FAILED',
-        typeof value?.reason === 'string' ? value.reason : 'The original retained-file operation failed.');
+      if (result?.isError) {
+        const error = failure(/^[A-Z][A-Z0-9_]+$/.test(value?.code ?? '') ? value.code : errorPrefix + '_DOWNLOAD_TOOL_FAILED',
+          typeof value?.reason === 'string' ? value.reason : 'The original retained-file operation failed.');
+        if (value?.applied === false) error.applied = false;
+        throw error;
+      }
       if (!plain(value)) throw failure(errorPrefix + '_DOWNLOAD_REPLY_INVALID', 'The retained-file tool returned no structured result.');
       return value;
     } };

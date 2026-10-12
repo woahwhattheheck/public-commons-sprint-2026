@@ -14,8 +14,15 @@ function id(value,label){need(typeof value==='string'&&UUID.test(value),'RUNBOOK
 function page(items,args,view,project=value=>value){
   const offset=args.offset??0,limit=args.limit??50;
   need(Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=50,'RUNBOOK_INVALID_PAGE','Choose a nonnegative offset and 1–50 complete records.');
-  const selected=items.slice(offset,offset+limit).map(project);
-  return {view,items:copy(selected),offset,limit,total:items.length,nextOffset:offset+limit<items.length?offset+limit:null};
+  const selected=[];let bytes=2;
+  for(let index=offset;index<items.length&&selected.length<limit;index++){
+    const value=project(items[index]),size=Buffer.byteLength(JSON.stringify(value))+(selected.length?1:0);
+    // Keep each row complete, including a single row larger than this page target.
+    if(selected.length&&bytes+size>512*1024)break;
+    selected.push(value);bytes+=size;
+  }
+  const next=offset+selected.length;
+  return {view,items:copy(selected),offset,limit,total:items.length,nextOffset:next<items.length?next:null};
 }
 function editionHeader(edition){
   const {steps,resources,...header}=edition;
