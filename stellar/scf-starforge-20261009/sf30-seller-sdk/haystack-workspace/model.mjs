@@ -84,9 +84,8 @@ export function materialize(state, selection = null) {
 export function analyzed(state, selection = null) {
   const material = materialize(state, selection), analysis = analyzeGrids(material.grids);
   const sources = material.sourceIds.map(sourceId => sourceSummary(findSource(state, sourceId)));
-  const sourceDiagnostics = sources.flatMap(source => source.diagnostics.map(diagnostic => ({ ...diagnostic, sourceId: source.id, id: digest({ sourceId: source.id, diagnostic }) })));
-  const diagnostics = [...analysis.diagnostics, ...sourceDiagnostics];
-  return { workspaceId: state.workspaceId, revision: state.revision, title: state.title, ...material, ...analysis, sources, diagnostics };
+  const originalSourceDiagnostics = sources.flatMap(source => source.diagnostics.map(diagnostic => ({ ...diagnostic, sourceId: source.id, scope: "original-source", id: digest({ sourceId: source.id, diagnostic }) })));
+  return { workspaceId: state.workspaceId, revision: state.revision, title: state.title, ...material, ...analysis, sources, originalSourceDiagnostics };
 }
 export function summary(state) {
   const current = analyzed(state);
@@ -195,7 +194,7 @@ export function compareEditions(state, beforeId, afterId, { sourcePairs = [] } =
     for (const row of records) if (row.id) counts.set(groupedId(row), (counts.get(groupedId(row)) || 0) + 1);
     return new Map(records.map(row => {
       const group = groups.get(row.sourceId) || "source:" + row.sourceId;
-      const key = row.id && counts.get(groupedId(row)) === 1 ? group + ":id:" + row.id : "row:" + row.key;
+      const key = groups.has(row.sourceId) && row.id && counts.get(groupedId(row)) === 1 ? group + ":id:" + row.id : "row:" + row.key;
       return [key, row];
     }));
   }

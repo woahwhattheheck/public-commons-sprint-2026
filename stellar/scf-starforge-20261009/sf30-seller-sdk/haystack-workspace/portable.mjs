@@ -1,3 +1,4 @@
+import { stringifyJson } from "./json-codec.mjs";
 import { promises as fs } from "node:fs";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +11,7 @@ export const APPLICATION_FILES = [
   "RECEIVING.mjs", "app.js", "browser-assets-loader.mjs", "browser-assets.json", "catalog.mjs",
   "cli.mjs", "client.d.mts", "client.mjs", "files.mjs", "fixture-charlie.json", "fixtures.json",
   "haystack-index.d.mts", "haystack-index.mjs", "haystack-types.d.mts", "haystack-types.mjs",
-  "index.html", "mcp.mjs", "model.mjs", "package.json", "portable.mjs", "protocol.mjs",
+  "index.html", "json-codec.mjs", "mcp.mjs", "merchant-client.mjs", "merchant-tools.mjs", "merchant.mjs", "model.mjs", "package.json", "portable.mjs", "protocol.mjs",
   "reports.mjs", "server.mjs", "store.mjs", "style.css", "util.mjs"
 ].sort();
 export const PACKAGE_FORMAT = "commons.haystack.package.v1";
@@ -27,7 +28,7 @@ export async function buildBundle(state, { applicationRoot = ROOT } = {}) {
     application.push({ name, bytes: bytes.length, sha256: sha256(bytes), base64: bytes.toString("base64") });
   }
   const payload = { format: PACKAGE_FORMAT, createdAt: now(), workspace: clone(state), application };
-  const bytes = Buffer.from(JSON.stringify({ ...payload, payloadSha256: digest(payload) }) + "\n");
+  const bytes = Buffer.from(stringifyJson({ ...payload, payloadSha256: digest(payload) }) + "\n");
   need(bytes.length <= PACKAGE_MAX_BYTES, "The complete delivery exceeds 192 MiB.", "HAYSTACK_SIZE", 413);
   return { bytes, mediaType: "application/json", name: "haystack-" + state.workspaceId + "-r" + state.revision + ".json" };
 }
@@ -37,7 +38,7 @@ export function verifyBundle(bytes) {
   need(bundle.format === PACKAGE_FORMAT, "Choose a complete Haystack workspace package.", "HAYSTACK_PACKAGE", 409);
   const payload = clone(bundle); delete payload.payloadSha256;
   need(hash(bundle.payloadSha256) === digest(payload), "The complete package payload differs.", "HAYSTACK_PACKAGE", 409);
-  need(Buffer.byteLength(JSON.stringify(bundle.workspace)) <= STATE_MAX_BYTES, "The complete received workspace exceeds 128 MiB.", "HAYSTACK_SIZE", 413);
+  need(Buffer.byteLength(stringifyJson(bundle.workspace)) <= STATE_MAX_BYTES, "The complete received workspace exceeds 128 MiB.", "HAYSTACK_SIZE", 413);
   validateState(bundle.workspace);
   need(Array.isArray(bundle.application) && bundle.application.length === APPLICATION_FILES.length, "The delivery needs every complete portable application file.", "HAYSTACK_APPLICATION", 409);
   const application = new Map(); let total = 0;
@@ -64,7 +65,7 @@ export async function receiveBundle(bytes, destination) {
   if (created) {
     marker = { format: "commons.haystack.receiving.v1", installationId: newId(), packageSha256: verified.packageSha256,
       payloadSha256: verified.payloadSha256, workspaceId: verified.state.workspaceId, revision: verified.state.revision, startedAt: now() };
-    await createOnlyFile(markerPath, Buffer.from(JSON.stringify(marker) + "\n"));
+    await createOnlyFile(markerPath, Buffer.from(stringifyJson(marker) + "\n"));
   } else {
     need(await exists(markerPath), "The destination already contains other work. Choose a new receiving directory.", "HAYSTACK_RECEIVE_DESTINATION", 409);
     marker = json(await plainRead(markerPath, 16384), 16384);
@@ -81,9 +82,9 @@ export async function receiveBundle(bytes, destination) {
   need(!(await fs.lstat(applicationDirectory)).isSymbolicLink(), "Use the original owned application directory.");
   for (const [name, content] of verified.application) await createOnlyFile(join(applicationDirectory, name), content);
   await fs.mkdir(join(target, "deliveries"), { recursive: true, mode: 0o700 });
-  await createOnlyFile(join(target, "workspace.json"), Buffer.from(JSON.stringify(verified.state) + "\n"));
+  await createOnlyFile(join(target, "workspace.json"), Buffer.from(stringifyJson(verified.state) + "\n"));
   const receipt = { ...marker, completedAt: now(), applicationFiles: verified.application.size, bytes: verified.bytes };
-  await createOnlyFile(receiptPath, Buffer.from(JSON.stringify(receipt) + "\n"));
+  await createOnlyFile(receiptPath, Buffer.from(stringifyJson(receipt) + "\n"));
   await syncDirectory(target);
   return { ...receipt, directory: target, replayed: false };
 }

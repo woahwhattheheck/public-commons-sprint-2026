@@ -1,3 +1,4 @@
+import { stringifyJson } from "./json-codec.mjs";
 import { analyzed, editionView } from "./model.mjs";
 import { canonical, csv, digest, escapeHtml as h, need, clone } from "./util.mjs";
 import { displayValue, encodeGrid } from "./haystack-types.mjs";
@@ -64,7 +65,7 @@ export function reportHtml(data, { diagnostics = false } = {}) {
 export function makeReport(state, args) {
   const data = reportData(state, args), format = args.format || "json", diagnostics = args.kind === "diagnostics";
   need(["json", "csv", "html"].includes(format), "Choose JSON, CSV or HTML.");
-  const body = format === "json" ? JSON.stringify(diagnostics ? { ...data, records: undefined, relations: undefined } : data, null, 2) + "\n" :
+  const body = format === "json" ? stringifyJson(diagnostics ? { ...data, records: undefined, relations: undefined } : data, 2) + "\n" :
     format === "csv" ? csv(diagnostics ? DIAGNOSTIC_COLUMNS : REGISTER_COLUMNS, diagnostics ? diagnosticRows(data) : registerRows(data)) :
     reportHtml(data, { diagnostics });
   return { bytes: Buffer.from(body), mediaType: format === "json" ? "application/json" : format === "csv" ? "text/csv; charset=utf-8" : "text/html; charset=utf-8",

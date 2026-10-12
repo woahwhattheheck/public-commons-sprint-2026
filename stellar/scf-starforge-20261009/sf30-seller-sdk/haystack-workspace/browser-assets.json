@@ -36,6 +36,27 @@
         "OPERATING.md",
         "text/markdown; charset=utf-8"
       ]
+    ],
+    [
+      "/json-codec.mjs",
+      [
+        "json-codec.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/fixture-charlie.json",
+      [
+        "fixture-charlie.json",
+        "application/json"
+      ]
+    ],
+    [
+      "/fixtures.json",
+      [
+        "fixtures.json",
+        "application/json"
+      ]
     ]
   ]
 }

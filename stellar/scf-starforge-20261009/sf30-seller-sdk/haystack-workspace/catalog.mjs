@@ -28,7 +28,7 @@ const definitions = [
   ["edition.save", "Save an immutable edition of the selected native sources and accepted typed edits.", { ...mutation, title: s, note: s }, ["operationId", "expectedRevision", "title"], true],
   ["edition.compare", "Compare all source-linked rows and typed tag changes between two saved editions; cross-source pairing is explicit.", { ...revision, ...paging, beforeEditionId: s, afterEditionId: s, sourcePairs, state: choice(["added", "removed", "changed", "same"]) }, ["expectedRevision", "beforeEditionId", "afterEditionId"], false],
   ["operations.list", "Page the complete original mutation history and retained outcomes at the selected revision.", { ...revision, ...paging }, ["expectedRevision"], false],
-  ["operation.read", "Recover the original outcome of one exact saved mutation.", { operationId: s }, ["operationId"], false],
+  ["operation.read", "Recover the original outcome of one exact saved mutation or completed delivery.", { operationId: s }, ["operationId"], false],
   ["delivery.prepare", "Save a complete editable workspace package, source-linked register, diagnostic report or native grid; replay preserves the original completed file.", { ...mutation, kind: choice(["workspace", "register", "diagnostics", "native-grid"]), format: choice(["json", "csv", "html"]), editionId: s, sourceId: s, role: choice(["site", "equip", "point", "all"]) }, ["operationId", "expectedRevision", "kind"], true],
   ["delivery.read", "Read the exact bytes of one completed delivery in content-bound ranges.", { operationId: s, offset: n, length: { type: "integer", minimum: 1, maximum: 4194304 } }, ["operationId"], false]
 ];

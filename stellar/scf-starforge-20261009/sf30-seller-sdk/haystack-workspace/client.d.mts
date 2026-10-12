@@ -111,7 +111,7 @@ export class HaystackClientError extends Error {
 export class HaystackClient {
   constructor(options: ClientOptions);
   url: string; token: string; workspaceId: string | null; instanceId: string | null; identity: Identity | null; maxResponseBytes: number;
-  connect(): Promise<Identity>;
+  connect(options?: RequestOptions): Promise<Identity>;
   request(action: "workspace.status", args?: Record<string, never>, options?: RequestOptions): Promise<Status>;
   request<A extends keyof ActionMap>(action: A, args: ActionMap[A]["args"], options?: RequestOptions): Promise<ActionMap[A]["result"]>;
   pages<A extends PagedAction>(action: A, args: ActionMap[A]["args"], options?: RequestOptions): AsyncGenerator<ActionMap[A]["result"], void, unknown>;

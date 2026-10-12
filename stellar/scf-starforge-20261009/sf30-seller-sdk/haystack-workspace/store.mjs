@@ -1,3 +1,4 @@
+import { stringifyJson } from "./json-codec.mjs";
 import { promises as fs, constants as FS } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -44,7 +45,7 @@ export class HaystackWorkspace {
     await fs.mkdir(join(this.directory, "deliveries"), { recursive: true, mode: 0o700 });
     return this.withWriter(async () => {
       if (await exists(this.statePath)) return this.read();
-      const state = freshState(title); await createOnlyFile(this.statePath, Buffer.from(JSON.stringify(state) + "\n")); return state;
+      const state = freshState(title); await createOnlyFile(this.statePath, Buffer.from(stringifyJson(state) + "\n")); return state;
     });
   }
   async read() {
@@ -66,7 +67,7 @@ export class HaystackWorkspace {
     const owner = { format: "commons.haystack.writer.v1", id: newId(), pid: process.pid, host: hostname(), createdAt: now() };
     const originalStat = await file.stat({ bigint: true });
     try {
-      await file.writeFile(JSON.stringify(owner) + "\n"); await file.sync(); return await action();
+      await file.writeFile(stringifyJson(owner) + "\n"); await file.sync(); return await action();
     } finally {
       try {
         const retained = await fs.lstat(this.lockPath, { bigint: true });
@@ -87,7 +88,7 @@ export class HaystackWorkspace {
     const existingRecovery = await exists(recoveryPath);
     need(!existingRecovery, "This writer already has an original recovery record. Inspect that completed or interrupted local operation.", "HAYSTACK_WRITER_RECOVERY", 409);
     const recovery = await fs.open(recoveryPath, "wx", 0o600);
-    try { await recovery.writeFile(JSON.stringify({ writer: owner, recoveredAt: now(), recoveredBy: process.pid }) + "\n"); await recovery.sync(); }
+    try { await recovery.writeFile(stringifyJson({ writer: owner, recoveredAt: now(), recoveredBy: process.pid }) + "\n"); await recovery.sync(); }
     finally { await recovery.close(); }
     need((await this.writer())?.id === owner.id, "Writer ownership changed before recovery.", "HAYSTACK_WRITER_CHANGED", 409);
     await fs.unlink(this.lockPath); await syncDirectory(this.directory);
@@ -109,7 +110,7 @@ export class HaystackWorkspace {
       const operation = { id: operationId, action, argumentsSha256, revision: state.revision, at: now(),
         previousSha256: state.operations.at(-1)?.sha256 || null, result: outcome };
       operation.sha256 = digest(operation); state.operations.push(operation);
-      const saved = seal(state), bytes = Buffer.from(JSON.stringify(saved) + "\n");
+      const saved = seal(state), bytes = Buffer.from(stringifyJson(saved) + "\n");
       need(bytes.length <= STATE_MAX_BYTES, "This complete workspace exceeds 128 MiB. Export the retained history and continue the next project in a new workspace.", "HAYSTACK_SIZE", 413);
       validateState(saved);
       await atomicWrite(this.statePath, bytes);
@@ -201,7 +202,7 @@ export class HaystackWorkspace {
       await fs.mkdir(temporary, { mode: 0o700 });
       try {
         await createOnlyFile(join(temporary, "payload"), bytes);
-        await createOnlyFile(join(temporary, "manifest.json"), Buffer.from(JSON.stringify(manifest) + "\n"));
+        await createOnlyFile(join(temporary, "manifest.json"), Buffer.from(stringifyJson(manifest) + "\n"));
         await syncDirectory(temporary); await fs.rename(temporary, target); await syncDirectory(join(this.directory, "deliveries"));
       } finally { await fs.rm(temporary, { recursive: true, force: true }); }
       return this.deliverySummary(manifest);
@@ -219,9 +220,15 @@ export class HaystackWorkspace {
     const state = await this.read();
     if (action === "workspace.status") return summary(state);
     if (action === "operation.read") {
-      const operation = state.operations.find(item => item.id === id(args.operationId));
-      need(operation, "This original mutation has not completed.", "HAYSTACK_OPERATION_MISSING", 404);
-      return { ...clone(operation.result), replayed: true };
+      const operationId = id(args.operationId), operation = state.operations.find(item => item.id === operationId);
+      if (operation) return { ...clone(operation.result), replayed: true };
+      if (await exists(this.deliveryDirectory(operationId))) {
+        const delivery = await this.deliveryManifest(operationId);
+        need(delivery.workspaceId === state.workspaceId, "The completed delivery belongs to another workspace.", "HAYSTACK_DELIVERY", 409);
+        await this.readDelivery(operationId, { length: 1 });
+        return this.deliverySummary(delivery, true);
+      }
+      need(false, "This original mutation or delivery has not completed.", "HAYSTACK_OPERATION_MISSING", 404);
     }
     assertRevision(state, args.expectedRevision);
     const envelope = { workspaceId: state.workspaceId, revision: state.revision, ...(args.editionId ? { editionId: args.editionId } : {}) };

@@ -1,3 +1,4 @@
+import { stringifyJson } from "./json-codec.mjs";
 import { createInterface } from "node:readline";
 import { tools } from "./catalog.mjs";
 export { tools } from "./catalog.mjs";
@@ -16,10 +17,10 @@ export async function handleRpc(workspace, request) {
   if (!tool) return error(-32602, "Unknown Haystack tool");
   try {
     const result = await workspace.dispatch(tool.action, request.params?.arguments ?? {});
-    return reply({ content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result, isError: false });
+    return reply({ content: [{ type: "text", text: stringifyJson(result) }], structuredContent: result, isError: false });
   } catch (failure) {
     const result = { error: failure.message, code: failure.code || "HAYSTACK_INTERNAL", status: failure.status || 500, ...(failure.details ? { details: failure.details } : {}) };
-    return reply({ content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result, isError: true });
+    return reply({ content: [{ type: "text", text: stringifyJson(result) }], structuredContent: result, isError: true });
   }
 }
 export async function serveStdio(workspace, { input = process.stdin, output = process.stdout } = {}) {
@@ -29,6 +30,6 @@ export async function serveStdio(workspace, { input = process.stdin, output = pr
     let result;
     try { result = await handleRpc(workspace, JSON.parse(line)); }
     catch { result = { jsonrpc: "2.0", id: null, error: { code: -32700, message: "Invalid JSON" } }; }
-    if (result) await new Promise((resolve, reject) => output.write(JSON.stringify(result) + "\n", error => error ? reject(error) : resolve()));
+    if (result) await new Promise((resolve, reject) => output.write(stringifyJson(result) + "\n", error => error ? reject(error) : resolve()));
   }
 }

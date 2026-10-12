@@ -1,3 +1,4 @@
+import { stringifyJson } from "./json-codec.mjs";
 import { createServer } from "node:http";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
@@ -22,7 +23,7 @@ async function body(request, maximum) {
   return Buffer.concat(chunks);
 }
 function sendJson(response, status, value) {
-  const bytes = Buffer.from(JSON.stringify(value));
+  const bytes = Buffer.from(stringifyJson(value));
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": bytes.length, "Cache-Control": "no-store" }); response.end(bytes);
 }
 function attachment(response, bytes, metadata, rangeHeader) {
@@ -113,7 +114,7 @@ export async function startServer({ directory, title = "Building turnover", host
   const address = server.address();
   origin = "http://" + (host.includes(":") ? "[" + host + "]" : host) + ":" + address.port;
   const connectionPath = join(workspace.directory, "connection.json");
-  try { await atomicWrite(connectionPath, Buffer.from(JSON.stringify(identity()) + "\n")); }
+  try { await atomicWrite(connectionPath, Buffer.from(stringifyJson(identity()) + "\n")); }
   catch (error) { await new Promise(resolve => server.close(resolve)); throw error; }
   let closing;
   const close = () => closing ||= new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));

@@ -1,3 +1,4 @@
+import { stringifyJson } from "./json-codec.mjs";
 export class HaystackClientError extends Error {
   constructor(message, { status = 0, code = "HAYSTACK_CLIENT", details, outcomeUnknown = false } = {}) {
     super(message); this.name = "HaystackClientError"; this.status = status; this.code = code; this.details = details; this.outcomeUnknown = outcomeUnknown;
@@ -15,7 +16,7 @@ async function checksum(bytes) {
   check(globalThis.crypto?.subtle, "This client needs Web Crypto for complete-byte verification.");
   return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), value => value.toString(16).padStart(2, "0")).join("");
 }
-function clone(value) { return JSON.parse(JSON.stringify(value)); }
+function clone(value) { return JSON.parse(stringifyJson(value)); }
 export class HaystackClient {
   constructor({ url, token = "", workspaceId = null, instanceId = null, fetch: fetcher = globalThis.fetch, maxResponseBytes = 192 * 1024 * 1024 } = {}) {
     const endpoint = new URL(url);
@@ -66,8 +67,8 @@ export class HaystackClient {
       check(!expected || response.headers.get(header) === expected, "The responding workspace identity changed.", { status: 409, code: "HAYSTACK_IDENTITY", outcomeUnknown: method === "POST" });
     return value;
   }
-  async connect() {
-    const identity = await this.call("/api/identity");
+  async connect(options = {}) {
+    const identity = await this.call("/api/identity", { signal: options.signal });
     check(identity?.schema === "commons.haystack.startup.v1" && typeof identity.workspaceId === "string" && typeof identity.instanceId === "string",
       "The selected endpoint is not the complete Haystack workspace.");
     check(!this.workspaceId || identity.workspaceId === this.workspaceId, "The selected workspace identity changed.", { status: 409, code: "HAYSTACK_IDENTITY" });
@@ -75,9 +76,9 @@ export class HaystackClient {
     this.workspaceId = identity.workspaceId; this.instanceId = identity.instanceId; this.identity = clone(identity); return clone(identity);
   }
   async request(action, args = {}, options = {}) {
-    if (!this.identity) await this.connect();
+    if (!this.identity) await this.connect(options);
     check(typeof action === "string" && /^[a-z]+\.[a-z]+$/.test(action) && args !== null && typeof args === "object" && !Array.isArray(args), "Use a declared action and complete arguments object.");
-    return this.call("/api/action", { method: "POST", body: JSON.stringify({ action, args: clone(args) }), signal: options.signal });
+    return this.call("/api/action", { method: "POST", body: stringifyJson({ action, args: clone(args) }), signal: options.signal });
   }
   async *pages(action, args = {}, options = {}) {
     const original = clone(args); let offset = original.offset ?? 0, total = null;

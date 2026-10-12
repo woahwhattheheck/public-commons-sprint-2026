@@ -1,3 +1,4 @@
+import { canonicalJson } from "./json-codec.mjs";
 import { createHash, randomUUID } from "node:crypto";
 
 export class HaystackError extends Error {
@@ -17,14 +18,7 @@ export function plain(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value) &&
     (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
 }
-export function canonical(value) {
-  if (value === null) return "null";
-  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
-  if (plain(value)) return "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}";
-  need(typeof value !== "number" || Number.isFinite(value), "Use finite JSON numbers or native Haystack number encodings.");
-  need(["string", "number", "boolean"].includes(typeof value), "Use complete JSON values.");
-  return JSON.stringify(value);
-}
+export const canonical = canonicalJson;
 export const digest = value => sha256(Buffer.from(canonical(value)));
 export function hash(value, name = "SHA-256") {
   need(typeof value === "string" && /^[0-9a-f]{64}$/.test(value), "Supply the complete " + name + ".");
