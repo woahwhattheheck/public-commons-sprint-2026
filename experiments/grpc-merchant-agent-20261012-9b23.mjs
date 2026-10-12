@@ -46,13 +46,33 @@ try {
   const { openMerchantFileClient } = await imported(merchantPath + 'retained-download.mjs');
   const { downloadGrpcExport } = await imported(merchantPath + 'grpc-workspace-download.mjs');
   const { grpcCanonical } = await imported(merchantPath + 'grpc-workspace-export.mjs');
+  const { validateBazaarExtension } = await imported('stellar-forge/payment-auto-catalog/schema-validation.mjs');
   const environment = { ...process.env, GRPC_DEMO_AUTHORIZATION: randomBytes(24).toString('hex'),
     GRPC_AGENT_MCP_TOKEN: randomBytes(32).toString('hex') };
   report.sourceFiles = {};
-  for (const path of [nativePath + 'examples/server.mjs', nativePath + 'workspace/model.mjs', nativePath + 'workspace/server.mjs',
+  for (const path of [nativePath + 'examples/server.mjs', nativePath + 'workspace/model.mjs', nativePath + 'workspace/server.mjs', nativePath + 'prepare.mjs',
+    'stellar-forge/payment-auto-catalog/schema-validation.mjs',
     merchantPath + 'grpc-workspace.mjs', merchantPath + 'grpc-workspace-export.mjs', merchantPath + 'grpc-workspace-download.mjs',
     merchantPath + 'operator.mjs', merchantPath + 'config.mjs', merchantPath + 'serve.mjs'])
     report.sourceFiles[path] = sha(await readFile(join(sourceRoot, path)));
+  await phase('native-schema-assertions', async () => {
+    const validate = (info, assertions) => validateBazaarExtension({ info,
+      schema: { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object', ...assertions } });
+    const choice = { oneOf: [{ required: ['email'] }, { required: ['account'] },
+      { not: { anyOf: [{ required: ['email'] }, { required: ['account'] }] } }] };
+    requireValue(validate({}, choice).ok && validate({ account: 'native' }, choice).ok &&
+      !validate({ account: 'native', email: 'operator@example.test' }, choice).ok,
+      'Original oneof presence assertions did not preserve zero-or-one selection.');
+    const keys = { propertyNames: { pattern: '^(?:0|[1-9][0-9]*)$' }, additionalProperties: { type: 'string' } };
+    requireValue(validate({ '0': 'zero', '12': 'twelve' }, keys).ok && !validate({ '01': 'noncanonical' }, keys).ok &&
+      validate({}, { propertyNames: false }).ok && !validate({ field: 1 }, { propertyNames: false }).ok,
+      'Original propertyNames assertions did not preserve exact map keys.');
+    requireValue(!validate({}, { not: true }).ok && validate({}, { not: false }).ok &&
+      !validate({}, { not: { $ref: '#/missing' } }).ok &&
+      validate({}, { patternProperties: {} }).reason === 'SCHEMA_KEYWORD_UNSUPPORTED:patternProperties',
+      'Negation changed original malformed-reference or unsupported-keyword behavior.');
+    return { oneofPresence: 'preserved', canonicalMapKeys: 'enforced', originalUnsupportedKeywords: 'retained' };
+  });
   example = await startExample({ port: 0, authorization: environment.GRPC_DEMO_AUTHORIZATION });
   source = await startGrpcWorkspace({ port: 0, stateDirectory: join(out, 'source-workspace'), env: environment });
   receiving = await startGrpcWorkspace({ port: 0, stateDirectory: join(out, 'receiving-workspace'), env: environment });

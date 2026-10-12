@@ -361,3 +361,13 @@ The output directory is new and private. The driver records the actual source
 file hashes, original operation and release IDs, completed phases and received
 file hashes, then closes every process-owned server. Its customer/ directory
 contains the usable original seven-file customer package.
+
+## Native method schemas and merchant admission
+
+The original methods.json retains every protobuf descriptor annotation, including
+field numbers, scalar kinds, enum names, oneof groups and map key types. The
+merchant projection removes those metadata annotations and contentEncoding while
+preserving their executable assertions, including exact integer and base64 patterns.
+The original Bazaar validator evaluates not and propertyNames so native oneof
+presence and canonical map keys stay enforced. The complete source/typed method
+export remains available beside the generated customer package.

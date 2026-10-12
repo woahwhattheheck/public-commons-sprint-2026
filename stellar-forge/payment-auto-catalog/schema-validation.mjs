@@ -11,7 +11,7 @@ const clone = value => structuredClone(value);
 const DRAFT = 'https://json-schema.org/draft/2020-12/schema';
 const SCHEMA_KEYS = new Set([
   '$schema', '$id', '$ref', '$defs', 'definitions', 'type', 'properties', 'required',
-  'additionalProperties', 'items', 'const', 'enum', 'anyOf', 'allOf', 'oneOf',
+  'additionalProperties', 'items', 'const', 'enum', 'anyOf', 'allOf', 'oneOf', 'not', 'propertyNames',
   'minLength', 'maxLength', 'minimum', 'maximum', 'minItems', 'maxItems',
   'uniqueItems', 'title', 'description', 'default', 'examples',
   'exclusiveMinimum', 'exclusiveMaximum', 'pattern', 'format', 'readOnly', 'writeOnly', 'deprecated', '$comment',
@@ -74,7 +74,7 @@ function inspectSchema(schema, depth = 0, state = { nodes: 0 }) {
       for (const child of Object.values(value)) {
         const error = inspectSchema(child, depth + 1, state); if (error) return error;
       }
-    } else if (['items', 'additionalProperties'].includes(key)) {
+    } else if (['items', 'additionalProperties', 'not', 'propertyNames'].includes(key)) {
       if (!plain(value) && typeof value !== 'boolean')
         return 'SCHEMA_' + key.toUpperCase() + '_INVALID';
       const error = inspectSchema(value, depth + 1, state); if (error) return error;
@@ -130,6 +130,12 @@ function validateNode(value, schema, root, path = '$', refs = new Set()) {
   }
   if (schema.anyOf && !schema.anyOf.some(part => validateNode(value, part, root, path, refs).length === 0)) return [`${path}:anyOf`];
   if (schema.oneOf && schema.oneOf.filter(part => validateNode(value, part, root, path, refs).length === 0).length !== 1) return [`${path}:oneOf`];
+  if (Object.hasOwn(schema, 'not')) {
+    const errors = validateNode(value, schema.not, root, path, refs);
+    // A malformed local reference is a schema error, not a successful negation.
+    if (errors.some(error => /:(?:schema_reference_cycle|SCHEMA_LOCAL_REFERENCE_(?:INVALID|MISSING))$/.test(error))) return errors;
+    if (!errors.length) return [`${path}:not`];
+  }
   if (typeof value === 'string' && schema.pattern !== undefined && !compileSchemaPattern(schema.pattern).test(value))
     return [`${path}:pattern`];
   if (typeof value === 'string' &&
@@ -162,6 +168,10 @@ function validateNode(value, schema, root, path = '$', refs = new Set()) {
     for (const key of schema.required ?? []) if (!Object.hasOwn(value, key)) return [`${path}.${key}:required`];
     const properties = plain(schema.properties) ? schema.properties : {};
     for (const [key, item] of Object.entries(value)) {
+      if (Object.hasOwn(schema, 'propertyNames')) {
+        const errors = validateNode(key, schema.propertyNames, root, `${path}.${key}:propertyName`, refs);
+        if (errors.length) return errors;
+      }
       if (Object.hasOwn(properties, key)) {
         const errors = validateNode(item, properties[key], root, `${path}.${key}`, refs); if (errors.length) return errors;
       } else if (schema.additionalProperties === false) return [`${path}.${key}:additionalProperties`];
