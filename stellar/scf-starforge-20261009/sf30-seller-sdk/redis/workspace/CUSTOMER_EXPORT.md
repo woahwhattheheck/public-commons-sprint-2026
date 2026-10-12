@@ -6,7 +6,7 @@ This application connects the original generated seller client to the customer's
 
 - customer-export.mjs: runnable command and reusable runCustomerExport function.
 - customer-export.plan.example.json: six example operation IDs, initial inputs and explicit customer call/payment limits.
-- CUSTOMER_APPLICATION.md: this operating guide.
+- CUSTOMER_EXPORT.md: this operating guide.
 
 Use the original Starforge distribution containing sf30-seller-sdk/developer/client-export.mjs and sf31-buyer-client/response-file.mjs. The customer application was composed against the complete product edition 814bbfdb5651d50112c53e8f1cbc7b1f0f004d1f. It consumes the installed implementations.
 
