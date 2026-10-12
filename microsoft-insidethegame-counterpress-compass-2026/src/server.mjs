@@ -6,7 +6,8 @@ import {homedir} from 'node:os';
 import {makeSnapshot, TEAMS, validateFixture} from './engine.mjs';
 import {foundryConfigured, suggestedNarrative} from './foundry.mjs';
 import {createFoundryAdmission} from './foundry_quota.mjs';
-import {createOpusCommentary} from './opus_commentary.mjs';
+import {createOpusCommentary, PROMPT_VERSION} from './opus_commentary.mjs';
+import {createCommentaryContinuity, findRetainedInsight, presentRetainedInsight} from './retained_insight.mjs';
 import {createEvidenceExport, evidenceCsv} from './evidence_export.mjs';
 import {scenarioList, DEFAULT_SCENARIO} from './scenarios.mjs';
 import {createSessionStore, parseView, parseSpeed, parseCount, resumeCursor, delayMs} from './live_sessions.mjs';
@@ -25,7 +26,9 @@ const DEFAULT_PORT = 3167;
 // Existing local replay remains free; admitted paid attempts count even on failure.
 const foundryAdmission = createFoundryAdmission();
 // Separate optional AI insight; paid work only via the operator's budget runner.
-const opus = createOpusCommentary();
+const opusProvider = createOpusCommentary();
+const opus = createCommentaryContinuity({provider: opusProvider, edition: PROMPT_VERSION,
+  directory: join(process.env.COUNTERPRESS_ARCHIVE_DIR || join(homedir(), '.local', 'share', 'counterpress-compass', 'matches'), 'insights')});
 export const sessions = createSessionStore();
 const sweeper = setInterval(() => sessions.sweep(), 60 * 1000);
 sweeper.unref();
@@ -195,7 +198,11 @@ export const server = createServer(async (req, res) => {
         if (action === 'open' && req.method === 'POST') {
           objectBody(await getJSON(req));
           const {archive, match} = await store.open(id, libraryKey);
-          return send(res, 201, {archive, session: sessions.restore(match)});
+          const session = sessions.restore(match);
+          // Imported review text belongs to this reopened match session. It is
+          // never promoted into the shared provider's completed-result store.
+          sessions.get(session.id).retainedInsights = archive.review.insights;
+          return send(res, 201, {archive, session});
         }
         if (action === 'export' && req.method === 'GET') {
           const body = JSON.stringify(await store.exportPackage(id), null, 2) + '\n';
@@ -219,7 +226,6 @@ export const server = createServer(async (req, res) => {
       return send(res, 404, {error:'Not found'});
     }
     if (req.method === 'POST' && path === '/api/opus-commentary') {
-      if (!opus.configured()) return send(res, 503, {error:'Optional AI insight not configured'});
       const body = objectBody(await getJSON(req));
       if (typeof body.sessionId !== 'string') return send(res, 400, {error:'Match session required'});
       const s = sessions.get(body.sessionId);
@@ -227,7 +233,14 @@ export const server = createServer(async (req, res) => {
       const events = s.events.slice(0, count);
       const snapshot = makeSnapshot(events, parseView({team: body.team, audience: body.audience, locale: body.locale}));
       if (!snapshot.overlays.length) return send(res, 422, {error:'No counterpress moment yet in this match'});
-      const out = await opus.request({sessionId: body.sessionId, count, snapshot, events});
+      const input = {sessionId: body.sessionId, count, snapshot, events, match: s};
+      const saved = findRetainedInsight(s.retainedInsights, input);
+      if (!saved && !opus.configured()) {
+        const retained = await opus.lookup(input);
+        if (retained.state === 'ready') return send(res, 200, retained);
+        return send(res, 503, {error:'Optional AI insight not configured'});
+      }
+      const out = saved ? presentRetainedInsight(saved, body.sessionId) : await opus.request(input);
       if (out.state === 'busy') { res.setHeader('Retry-After', String(out.retryAfterSeconds)); return send(res, 429, {state:'busy', retryAfterSeconds: out.retryAfterSeconds}); }
       return send(res, out.state === 'pending' ? 202 : 200, out);
     }

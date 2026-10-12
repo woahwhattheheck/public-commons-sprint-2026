@@ -68,6 +68,9 @@ function projectMatch({archive, match}, selection, view, period) {
     eventCounts: Object.fromEntries(['loss', 'pressure', 'regain', 'pass', 'shot'].map(type =>
       [type, contextEvents.filter(event => event.type === type).length])),
     moments, archive,
+    insights: (archive.review.insights || []).filter(record => record.source.count <= count &&
+      record.source.team === view.team && record.source.audience === view.audience && record.source.locale === view.locale &&
+      moments.some(moment => moment.id === record.source.momentId)),
   };
 }
 

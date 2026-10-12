@@ -91,11 +91,13 @@ export function createArchiveUI({snapshot, onSaved, onDeleted, onOpen, onJump, o
     const state = snapshot();
     return {title: current ? el('archiveTitle').value : (state.label || state.match.scenario) + ' · ' + state.match.seed,
       notes: current ? el('archiveNotes').value : '', bookmarks: structuredClone(bookmarks),
+      insights: structuredClone(state.insights || []),
       cursor: state.cursor, view: state.view, selectedMomentId: state.selectedMomentId, filters: state.filters};
   }
   function stamp() {
     const state = snapshot();
-    return JSON.stringify({cursor: state.cursor, view: state.view, selectedMomentId: state.selectedMomentId, filters: state.filters});
+    return JSON.stringify({cursor: state.cursor, view: state.view, selectedMomentId: state.selectedMomentId,
+      filters: state.filters, insights: (state.insights || []).map(item => item.id)});
   }
   function schedule() {
     if (!current?.canEdit || conflict) return;
@@ -186,7 +188,8 @@ export function createArchiveUI({snapshot, onSaved, onDeleted, onOpen, onJump, o
     el('archiveTitle').value = record.review.title;
     el('archiveNotes').value = record.review.notes;
     viewStamp = JSON.stringify({cursor: record.review.cursor, view: record.review.view,
-      selectedMomentId: record.review.selectedMomentId, filters: record.review.filters});
+      selectedMomentId: record.review.selectedMomentId, filters: record.review.filters,
+      insights: (record.review.insights || []).map(item => item.id)});
     updateCollection(record); renderBookmarks(); render();
   }
   async function save({copy = false, keepalive = false} = {}) {
