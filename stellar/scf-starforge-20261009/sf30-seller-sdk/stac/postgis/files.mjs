@@ -1,5 +1,5 @@
 import {constants, createReadStream} from 'node:fs';
-import {mkdir, open, lstat, realpath, readdir, readFile, link, unlink, chmod} from 'node:fs/promises';
+import {mkdir, open, lstat, realpath, readdir, readFile, link, unlink, chmod, copyFile, rename} from 'node:fs/promises';
 import {resolve, relative, dirname, isAbsolute, sep, posix} from 'node:path';
 import {createHash, randomUUID} from 'node:crypto';
 import {createInterface} from 'node:readline';
@@ -78,16 +78,81 @@ export async function writeOnce(path, bytes) {
 export async function writeJSONOnce(path, value) { return writeOnce(path, canonical(value) + '\n'); }
 export async function claimDirectory(directory, request) {
   const root = await privateDirectory(directory);
-  await writeJSONOnce(member(root, 'request.json'), request);
+  try {
+    const existing = await readJSON(member(root, 'request.json'));
+    need(canonical(existing) === canonical(request), 'POSTGIS_ORIGINAL_DIRECTORY_REQUEST_CONFLICT', root);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    need((await readdir(root)).length === 0, 'POSTGIS_EMPTY_NEW_OPERATION_DIRECTORY_REQUIRED', root);
+    await writeJSONOnce(member(root, 'request.json'), request);
+  }
   return root;
 }
 export async function copyVerified(sourceRoot, destinationRoot, record) {
-  const path = member(sourceRoot, record.path);
+  const source = member(sourceRoot, record.path), target = member(destinationRoot, record.path);
   await verifyFile(sourceRoot, record);
-  const bytes = await readFile(path);
-  need(bytes.length === record.bytes && sha256(bytes) === record.sha256, 'POSTGIS_SOURCE_CHANGED_DURING_COPY', record.path);
-  await writeOnce(member(destinationRoot, record.path), bytes);
-  return verifyFile(destinationRoot, record);
+  await privateDirectory(dirname(target));
+  try { return await verifyFile(destinationRoot, record); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const temporary = target + '.copy-' + randomUUID();
+  try {
+    await copyFile(source, temporary, constants.COPYFILE_EXCL);
+    await chmod(temporary, 0o600);
+    const copied = await fileRecord(temporary, record.path);
+    need(copied.bytes === record.bytes && copied.sha256 === record.sha256,
+      'POSTGIS_SOURCE_CHANGED_DURING_COPY', record.path);
+    await verifyFile(sourceRoot, record);
+    const handle = await open(temporary, 'r');
+    try { await handle.sync(); } finally { await handle.close(); }
+    try { await link(temporary, target); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    await syncDirectory(dirname(target));
+    return verifyFile(destinationRoot, record);
+  } finally {
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  }
+}
+export async function syncDirectory(path) {
+  const handle = await open(path, 'r');
+  try { await handle.sync(); } finally { await handle.close(); }
+}
+// Only an unfinished, claimed original snapshot may replace its own pending rows.
+// The original database project lock serializes this writer across processes.
+export async function writeSnapshotRows(directory, path, rows) {
+  await regularFile(member(directory, 'request.json'));
+  try {
+    await regularFile(member(directory, 'postgis-backup.json'));
+    need(false, 'POSTGIS_COMPLETED_BACKUP_IMMUTABLE');
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const target = member(directory, path);
+  await privateDirectory(dirname(target));
+  try { await regularFile(target); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const temporary = target + '.snapshot-' + randomUUID();
+  let handle;
+  try {
+    handle = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    for await (const row of rows) await handle.writeFile(canonical(row) + '\n');
+    await handle.sync(); await handle.close(); handle = null;
+    await rename(temporary, target);
+    await syncDirectory(dirname(target));
+    return fileRecord(target, path);
+  } finally {
+    if (handle) await handle.close();
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  }
+}
+export async function* readSnapshotRows(directory, descriptor) {
+  await verifyFile(directory, descriptor);
+  const input = createReadStream(member(directory, descriptor.path));
+  const lines = createInterface({input, crlfDelay: Infinity});
+  try {
+    for await (const line of lines) {
+      need(line.length > 0, 'POSTGIS_BACKUP_EMPTY_ROW');
+      yield parseExactJSON(line);
+    }
+  } finally { lines.close(); input.destroy(); }
+  await verifyFile(directory, descriptor);
 }
 export async function listFiles(directory, excluded = new Set()) {
   const root = await privateDirectory(directory), results = [];
@@ -108,9 +173,9 @@ export async function listFiles(directory, excluded = new Set()) {
 }
 export async function retainVectorSource(sourceDirectory, destination, expectedManifestSha256, options = {}) {
   hash(expectedManifestSha256);
-  const original = await openVectorExport(sourceDirectory, {expectedManifestSha256, native: true, ...options});
+  const original = await openVectorExport(sourceDirectory, {...options, expectedManifestSha256, native: true});
   need(original.manifestFile?.sha256 === expectedManifestSha256, 'POSTGIS_ORIGINAL_VECTOR_MANIFEST_CHANGED');
-  const received = await receiveVectorExport(sourceDirectory, destination, {expectedManifestSha256, ...options});
+  const received = await receiveVectorExport(sourceDirectory, destination, {...options, expectedManifestSha256});
   need(received.manifestFile?.sha256 === expectedManifestSha256 && received.receiving?.allOriginalBindingsMatched === true,
     'POSTGIS_ORIGINAL_VECTOR_RECEIVING_REQUIRED');
   const capture = await readJSON(member(destination, 'source/capture.json'));
@@ -119,7 +184,7 @@ export async function retainVectorSource(sourceDirectory, destination, expectedM
     capture, inspection, receiving: received.receiving};
 }
 export async function openRetainedSource(directory, expectedManifestSha256, options = {}) {
-  const opened = await openVectorExport(directory, {expectedManifestSha256, native: false, ...options});
+  const opened = await openVectorExport(directory, {...options, expectedManifestSha256, native: false});
   need(opened.manifestFile?.sha256 === expectedManifestSha256, 'POSTGIS_ORIGINAL_VECTOR_MANIFEST_CHANGED');
   return {...opened, capture: await readJSON(member(directory, 'source/capture.json')),
     inspection: await readJSON(member(directory, 'source/inspection.json'))};
