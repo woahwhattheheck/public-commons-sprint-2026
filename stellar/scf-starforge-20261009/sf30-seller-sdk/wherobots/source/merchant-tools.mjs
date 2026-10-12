@@ -1,6 +1,8 @@
 // MIT. Source-owned Wherobots metadata; discovery opens no runtime or workspace.
 import { wherobotsToolDefinitions } from "./tools.mjs";
-import { MAX_RETAINED_CHUNK_BYTES } from "../../../../../stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs";
+// Public file-transport ceiling, matching the original shared retained-file ABI.
+// Kept in this pure product metadata so a complete received source ZIP imports independently.
+export const MAX_RETAINED_CHUNK_BYTES = 196608;
 
 export const WHEROBOTS_CONNECTION_SCHEMA = "stellar-forge.wherobots-workspace-connection.v1";
 export const WHEROBOTS_EXPORT_SCHEMA = "stellar-forge.wherobots-merchant-export.v1";

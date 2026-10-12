@@ -5,6 +5,13 @@ import { fileURLToPath } from "node:url";
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 import { operations, optional, wherobotsToolDefinitions } from "./tools.mjs";
 export { wherobotsToolDefinitions } from "./tools.mjs";
+export {
+  createWherobotsMerchantClient,
+  receiveWherobotsExport,
+  inspectReceivedWherobotsExport,
+  importReceivedWherobotsWorkflow,
+  runWherobotsMerchantClientCli,
+} from "./merchant-client.mjs";
 
 export function createWherobotsWorkspace({ directory, workspaceId, python = process.env.WHEROBOTS_PYTHON || "python3", env = process.env } = {}) {
   if (typeof directory !== "string" || !path.isAbsolute(directory)) throw new TypeError("Select the original absolute private workspace directory.");

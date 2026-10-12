@@ -130,3 +130,9 @@ The same source ships through the shared distribution with its own Wherobots pro
 - GeoParquet specification: https://geoparquet.org/releases/v1.1.0/
 
 The official SDK wheel is recorded in providerSDK/source.json with its complete published digest. The original customer intake contract is under contracts/. The application has no hosted database or separate job scheduler.
+
+## Typed customer receiving
+
+The public `index.mjs` / `index.d.mts` entry exposes the local workspace SDK and `createWherobotsMerchantClient`, `receiveWherobotsExport`, `inspectReceivedWherobotsExport`, `importReceivedWherobotsWorkflow` and `runWherobotsMerchantClientCli`. The installed `starforge wherobots-consumer` command operates the same consumer.
+
+[MERCHANT_CLIENT.md](MERCHANT_CLIENT.md) documents attaching the original merchant, exporting a saved workflow or dataset, receiving every original file with restart recovery, loading its complete SF30/SF82 companions, importing the complete handover and independently reopening the customer through its received editable SDK. [MERCHANT.md](MERCHANT.md) covers the original private host configuration and all 27 operations.

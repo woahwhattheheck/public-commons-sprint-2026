@@ -165,3 +165,7 @@ python3 operate.py --workspace /absolute/receiving-workspace import /absolute/ha
 Use `inspect-export dataset /absolute/dataset-directory` for a complete SF30 package. Original archive/member hashes, workflow identity and source binding are checked before recovery succeeds.
 
 See README.md for the browser, native workflow and original runtime. OUTPUTS.md documents typed values, geometry, full comparisons, original source parts and customer receiving. `interoperability/native_receiving.py` operates the original retained GeoParquet and CSV fixtures through all four datasets, first and corrected editions, complete comparison, SF30 delivery and independent workspace reopening.
+
+## Customer SDK and command line
+
+Use the paired public `index.mjs` / `index.d.mts` API or the installed `starforge wherobots-consumer` command to receive named exports into a private local directory. [MERCHANT_CLIENT.md](MERCHANT_CLIENT.md) gives the complete workflow: saved revision and export selection, every durable file chunk, restart with the same manifest, original SF30/SF82 data product, complete workflow import and independent reopening. The receiving programme is `interoperability/merchant_receiving.mjs`; it attaches to the original populated workspace and retains the source and customer identities across its host restart.

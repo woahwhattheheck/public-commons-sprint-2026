@@ -18,7 +18,7 @@ from .storage import identifier, sync_directory
 
 HANDOVER_SCHEMA = "stellar-forge.wherobots-handover.v1"
 RECEIVING_SCHEMA = "stellar-forge.wherobots-receiving.v1"
-SOURCE_SUFFIXES = {".py", ".md", ".html", ".js", ".mjs", ".css", ".txt", ".json",
+SOURCE_SUFFIXES = {".py", ".md", ".html", ".js", ".mjs", ".cjs", ".mts", ".ts", ".css", ".txt", ".json",
                    ".csv", ".ndjson", ".jsonl", ".geojson", ".parquet", ".geoparquet"}
 KINDS = ("workflow", "operation", "capture", "edition")
 MANIFEST_BYTES = 32 * 1024 * 1024
