@@ -379,6 +379,23 @@ The loopback n8n console uses its printed fragment token as Bearer authorization
 
 A stale revision returns a conflict and the operator refreshes the same original records. The UI preserves drafts, selections, and reasons while visible-page refresh updates state. Private export includes job input, attempts, histories, settlement records, and result metadata; download the original result separately for its complete bytes. Keep the exported records in the merchant's private operational storage.
 
+## Native receiving on an existing n8n engine
+
+Run the included receiving command from the same host as a current n8n engine. It uses the engine's native public API to import and publish the provided invoice child and generated wrapper, prepares this original merchant, runs its original SF30 application Worker, and verifies the real result and saved execution.
+
+```sh
+node "$SF_MERCHANT_SOURCE/n8n/examples/native-receiving.mjs" \
+  --api-base http://127.0.0.1:5678/api/v1 \
+  --api-key-file /srv/starforge/private/n8n-api-key \
+  --directory /srv/starforge/receiving/invoice-automation-001
+```
+
+Select a new absolute directory under an existing canonical parent. The key is read from the named private file and requires the existing n8n account's workflow read/create/publish/unpublish and execution read permissions. The command uses the canonical `/publish` and `/unpublish` public endpoints and requires a same-host loopback engine because its temporary receiving wrapper uses no webhook credential.
+
+The same operation creates the original private job through the authenticated operator API, verifies the invoice result against its declared integer-minor-unit calculation, retains both original native executions, closes and reopens the same merchant, and invokes another original Worker. Recovery must return identical retained bytes with unchanged dispatch and execution IDs. It also renews the original purchase handoff and exports the complete original job history. The original SF30 buyer and settlement operation remains the receiving path for paid customer delivery.
+
+`native-receiving.json` records the actual phase, source identities, workflow/execution IDs, result hashes and outcome. The private directory also retains the exact imports, configuration, execution data, results and operator export. At completion the two workflows remain in the selected n8n instance, unpublished, with their original executions available. If a response is interrupted, reconcile the recorded workflow IDs and phase in that same directory before continuing.
+
 ## Execution limits and retained source
 
 | Setting | Default | Supported range |

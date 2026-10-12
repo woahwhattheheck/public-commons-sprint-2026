@@ -5,6 +5,7 @@ import { readPrivate, readJson, createFile, fault } from '../../postgres/publish
 import { MAX_CAPTURE_BYTES } from '../declaration.mjs';
 import { openSheetsAuthoring } from './model.mjs';
 import { serveSheetsAuthoring } from './server.mjs';
+import { prepareSheetsManagedLaunch, sheetsManagedStartup } from './launch.mjs';
 
 const HELP = `Google Sheets source workspace (Linux, Node 22.16+, util-linux flock)
 
@@ -45,10 +46,17 @@ CellData stays private. Preview calls the original typed Sheets projector. Save
 retains a reviewed source version; publication remains in the original publisher.
 Use one UUID for an action and its recovery. Reopen never makes a Google request.
 Stop this browser before opening its workspace with a second CLI. WORKSPACE.md
-documents connections, complete source/customer handoff and exact recovery.`;
+documents connections, complete source/customer handoff and exact recovery.
+
+Applications manages this same serve command using --managed-source,
+--expected-source-sha256, --expected-workspace-identity, --startup-format json,
+and --expected-connections-sha256 when --connections is supplied. These values
+come from its saved review; they bind the selected and executed source plus the
+existing workspace. APPLICATIONS.md describes review, Start, Stop and reopen.`;
 const COMMON = ['--directory', '--connections', '--state', '--seller', '--resource'];
 const OPTIONS = {
-  serve: [...COMMON, '--create', '--port'], init: ['--directory', '--state'],
+  serve: [...COMMON, '--create', '--port', '--managed-source', '--expected-source-sha256',
+    '--expected-workspace-identity', '--expected-connections-sha256', '--startup-format'], init: ['--directory', '--state'],
   status: ['--directory', '--connections', '--limit', '--captures-offset', '--versions-offset'],
   import: ['--directory', '--resource', '--range', '--title', '--request'],
   capture: ['--directory', '--connections', '--connection', '--spreadsheet', '--sheet-id', '--sheet-title', '--range', '--title', '--request'],
@@ -85,20 +93,47 @@ export async function main(argv = process.argv.slice(2)) {
     if (!args[index + 1] || args[index + 1].startsWith('--')) throw fault('OPTION_VALUE_REQUIRED', key);
     options[key] = args[++index];
   }
+  const managed = ['--managed-source', '--expected-source-sha256', '--expected-workspace-identity',
+    '--expected-connections-sha256', '--startup-format'].some(key => options[key] !== undefined);
+  if (managed && (command !== 'serve' || options['--create'] || options['--startup-format'] !== 'json'))
+    throw fault('SHEETS_MANAGED_REVIEW_REQUIRED', 'Use the complete saved Applications launch review for an existing workspace.');
+  const launch = managed ? await prepareSheetsManagedLaunch({
+    directory: resolve(required(options, '--directory')),
+    sourceDirectory: resolve(required(options, '--managed-source')),
+    expectedSourceSha256: required(options, '--expected-source-sha256'),
+    expectedWorkspaceIdentity: required(options, '--expected-workspace-identity'),
+    connectionsFile: options['--connections'] ? resolve(options['--connections']) : undefined,
+    expectedConnectionsSha256: options['--expected-connections-sha256'],
+  }) : null;
   const workspace = await openSheetsAuthoring({ directory: resolve(required(options, '--directory')),
     create: command === 'init' || options['--create'] === true,
-    connections: options['--connections'] ? await readJson(resolve(options['--connections'])) : {},
+    connections: launch ? launch.connection.connections :
+      options['--connections'] ? await readJson(resolve(options['--connections'])) : {},
+    expectedIdentity: launch?.expectedWorkspaceIdentity,
     targetDirectory: options['--state'] ? resolve(options['--state']) : undefined,
     seller: ['serve'].includes(command) ? options['--seller'] ?? null : null,
     resource: ['serve'].includes(command) ? options['--resource'] ?? null : null });
   if (command === 'serve') {
+    let service, stopping = false;
+    const stop = () => {
+      stopping = true;
+      (service ? service.close() : workspace.close()).catch(() => { process.exitCode = 1; });
+    };
+    for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, stop);
     try {
-      const service = await serveSheetsAuthoring({ workspace, port: options['--port'] ? number(options['--port']) : 8453 });
-      print({ url: service.url, directory: workspace.directory, sourceFile: workspace.settings.sourceFile,
+      service = await serveSheetsAuthoring({ workspace, port: options['--port'] ? number(options['--port']) : 8453 });
+      if (stopping) { await service.close(); return service; }
+      const announcement = launch ? await sheetsManagedStartup({ launch, workspace, service }) : null;
+      if (stopping) { await service.close(); return service; }
+      if (announcement) process.stdout.write(JSON.stringify(announcement) + '\n');
+      else print({ url: service.url, directory: workspace.directory, sourceFile: workspace.settings.sourceFile,
         publisherDirectory: workspace.settings.publisherDirectory, targetDirectory: workspace.settings.targetDirectory });
-      for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => service.close().catch(() => { process.exitCode = 1; }));
       return service;
-    } catch (issue) { await workspace.close(); throw issue; }
+    } catch (issue) {
+      for (const signal of ['SIGINT', 'SIGTERM']) process.removeListener(signal, stop);
+      if (service) await service.close(); else await workspace.close();
+      throw issue;
+    }
   }
   if (command === 'deployment-console') {
     try {
@@ -164,3 +199,4 @@ export async function main(argv = process.argv.slice(2)) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
   main().catch(issue => { process.stderr.write(`${issue.code ?? 'SHEETS_AUTHORING'}: ${issue.code ? issue.message : 'Inspect the selected source and retained operation.'}\n`); process.exitCode = 1; });
+
