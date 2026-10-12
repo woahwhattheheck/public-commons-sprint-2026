@@ -140,6 +140,35 @@ the original accounting clients and admitted selection work, then closes the
 borrowed OAuth adapter and its original registry. An injected TLS Agent remains
 with its caller. Embedded hosts should keep the same ownership order.
 
+## Keep recovery with its original workspace
+
+The Connections page binds its browser draft, native source request and OAuth
+controls to the original private selection directory, registered native profiles
+and private grant-store identities. Restarting that same application and renewing
+a grant retain this scope. A different private directory or registered profile
+has a different scope, even if it uses the same loopback port.
+
+The original HTTP owner returns `scope` from
+`GET /api/accounting-connections`. API clients send that exact value as
+`X-Accounting-Connection-Scope` on every connection or OAuth POST. The page also
+sends it on subsequent reads. Original selection download links carry the same
+public digest in their `scope` query parameter. A mismatch returns
+`ACCOUNTING_CONNECTION_SCOPE_CHANGED` before dispatching a command or returning
+the scoped download. Native provider callbacks keep their original state checks.
+
+A page that observes a different owner preserves its request and stops dispatch.
+Open the original Applications entry to continue that work. Reloading opens the
+current workspace with its own saved browser state. Earlier browser requests
+that predate this binding remain preserved and are listed by their original IDs;
+use their original application's retained review history to continue them. They
+are never automatically assigned to another workspace.
+
+The installed connection owner exposes the same readonly `scope` and
+`assertScope(value)`. A host using `handleAccountingConnections` passes the
+HTTP header as `request.scope`; POST dispatch requires it. This binds the HTTP
+request to the existing owner without changing native review, selection or
+OAuth command payloads. Direct native owner methods keep their original inputs.
+
 ## Embed the existing managed launcher
 
 The installed source exports `./merchant/accounting-managed` and

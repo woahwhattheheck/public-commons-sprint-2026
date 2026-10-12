@@ -9,6 +9,7 @@ import type {XeroTenantSelection,XeroSelectionSummary,XeroConnectionChoice,XeroN
 
 export declare const ACCOUNTING_CONNECTION_REQUEST_BYTES:number;
 export declare const ACCOUNTING_SELECTION_REVIEW_SCHEMA:'stellar-forge.accounting-connection-review.v1';
+export declare const ACCOUNTING_CONNECTION_SCOPE_SCHEMA:'stellar-forge.accounting-connection-scope.v1';
 export type AccountingProvider='quickbooks'|'xero';
 export interface AccountingSavedSelections {
   quickbooks:QuickBooksCompanySelection|null;xero:XeroTenantSelection|null;
@@ -37,6 +38,7 @@ export interface AccountingCompanyReview {
   files:Array<'request.json'|'selection.json'>;savedAt:string|null;
 }
 export interface AccountingConnectionState {
+  scope:string;
   providers:{
     quickbooks:{selected:QuickBooksSelectionSummary|null;active:QuickBooksSelectionSummary|null;restartRequired:boolean};
     xero:{selected:XeroSelectionSummary|null;active:XeroSelectionSummary|null;restartRequired:boolean};
@@ -65,11 +67,16 @@ export interface AccountingNativeInformation {
   realmId?:string|null;environment?:QuickBooksEnvironment;minorVersion?:string|null;
 }
 export interface AccountingConnectionsOwner {
-  readonly qboClient:Omit<QuickBooksNativeClient,'info'>&{info():AccountingNativeInformation};
+  readonly qboClient:Omit<QuickBooksNativeClient,'info'|'target'>&{
+    info():AccountingNativeInformation;
+    target(value?:{realmId?:string;environment?:QuickBooksEnvironment}):AccountingNativeInformation;
+  };
   readonly xeroClient:Omit<XeroNativeClient,'info'>&{info():AccountingNativeInformation};
   readonly activeSelections:Readonly<AccountingSelectionSummaries>;
   readonly oauth:AccountingOAuthAdapter;
+  readonly scope:string;
   assertOpen():void;
+  assertScope(scope:string):void;
   state():Promise<AccountingConnectionState>;
   history(options?:{offset?:number;limit?:number}):Promise<{
     reviews:AccountingCompanyReview[];total:number;nextOffset:number|null;
@@ -94,5 +101,5 @@ export interface AccountingConnectionsOwner {
 export declare function readAccountingSelections(directory:string):Promise<AccountingSavedSelections>;
 export declare function openAccountingConnections(options:AccountingConnectionsOptions):Promise<AccountingConnectionsOwner>;
 export declare function handleAccountingConnections(owner:AccountingConnectionsOwner|null|undefined,request:{
-  method:string;path:string;value?:Record<string,unknown>;query?:Record<string,string>;
+  method:string;path:string;value?:Record<string,unknown>;query?:Record<string,string>;scope?:string;
 }):Promise<null|{value:unknown}|{file:{bytes:Uint8Array;name:string;type:string}}>;
