@@ -97,7 +97,8 @@ export class MerchantReleaseOperator {
       return this.#config.mpp ? 3 * 1024 * 1024 : (this.#config.opensearchWorkspaces || this.#config.grpcWorkspaces || this.#config.usgsWorkspaces) ? 2 * 1024 * 1024 : this.#config.grantsWorkspaces ? 512 * 1024 : 128 * 1024;
     })();
     return Math.max(configuredMaximum, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0,
-      this.#config.researchWorkspaces ? 2 * 1024 * 1024 : 0);
+      this.#config.researchWorkspaces ? 2 * 1024 * 1024 : 0,
+      this.#config.nocodbWorkspaces ? 1024 * 1024 : 0);
   }
   async #status() {
     const result = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).releaseStatus(this.#config.releaseStore);

@@ -48,8 +48,9 @@ def inspect(archive, expected):
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
         require(digest == expected, "Original archive SHA-256 does not match")
         stream.seek(0)
-        with tarfile.open(fileobj=stream, mode="r:gz") as tar:
+        with tarfile.open(fileobj=stream, mode="r|gz") as tar:
             members = {}
+            member_bytes = {}
             total = 0
             for member in tar:
                 require(len(members) < 10000, "Release contains too many entries")
@@ -62,16 +63,21 @@ def inspect(archive, expected):
                 total += member.size
                 require(total <= MAX_SOURCE, "Release exceeds the unpacked size limit")
                 members[name] = member
+                if member.isfile():
+                    # Read each member while its compressed stream is current.
+                    # These bytes are already needed by extraction below; keeping
+                    # them here avoids a gzip rewind for every manifest lookup.
+                    handle = tar.extractfile(member)
+                    require(handle is not None, "Cannot read original release member")
+                    with handle:
+                        data = handle.read(member.size + 1)
+                    require(len(data) == member.size, "Release member size changed")
+                    member_bytes[name] = data
 
             def content(name):
                 item = members.get(name)
                 require(item is not None and item.isfile(), "Required original release file is missing: " + name)
-                handle = tar.extractfile(item)
-                require(handle is not None, "Cannot read original release member")
-                with handle:
-                    data = handle.read(item.size + 1)
-                require(len(data) == item.size, "Release member size changed")
-                return data
+                return member_bytes[name]
 
             manifest_bytes = content("package/manifest.json")
             manifest = json.loads(manifest_bytes)
