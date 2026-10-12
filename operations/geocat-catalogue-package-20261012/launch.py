@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prepare, reopen and start the original joint native operation in one context."""
 from __future__ import annotations
-import argparse, fcntl, hashlib, json, os, stat, sys
+import argparse, fcntl, hashlib, json, os, signal, stat, sys
 from pathlib import Path
 
 def need(value, code):
@@ -34,6 +34,13 @@ def main():
     need(not (project/"result"/"state.json").exists(),"ORIGINAL_NATIVE_DISPATCH_ALREADY_RECORDED")
     lock=open(project/"launcher.lock","a+b")
     fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+    terminal = None
+    if cfg.get("source_feed"):
+        need(os.isatty(0), "ORIGINAL_SOURCE_FEED_REQUIRES_OWNED_PTY")
+        info = os.fstat(0); terminal = {"path": os.ttyname(0),
+            "device": [info.st_dev, info.st_ino, info.st_rdev], "session": os.getsid(0)}
+        need(stat.S_ISCHR(info.st_mode) and os.tcgetpgrp(0) == os.getpgrp(),
+             "ORIGINAL_LAUNCHER_MUST_OWN_FOREGROUND_PTY")
     dev.mkdir(mode=0o700)
     save(dev/"context.json",{"operationId":cfg["operation_id"],"configSha256":digest(raw),"launcherPid":os.getpid()})
     worker,temp=dev/"worker",dev/"native-tmp"
@@ -67,6 +74,20 @@ def main():
     try:
         with workspace.own(): acknowledgement=workspace.start(plan["id"],plan["sha256"],launcher=launch)
         save(project/"launch-acknowledgement.json",acknowledgement)
+        if terminal is not None:
+            need(launch.identity is not None and os.getsid(0) == terminal["session"],
+                 "SOURCE_TERMINAL_SESSION_CHANGED")
+            need([os.fstat(0).st_dev, os.fstat(0).st_ino, os.fstat(0).st_rdev] == terminal["device"],
+                 "SOURCE_TERMINAL_DEVICE_CHANGED")
+            previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
+            try:
+                os.tcsetpgrp(0, os.getpgrp())
+            finally:
+                signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+            need(os.tcgetpgrp(0) == os.getpgrp(), "SOURCE_TERMINAL_HANDOFF_FAILED")
+            save(dev/"source-terminal.json", {**terminal, "schema": "starforge.geocat-source-terminal.v1",
+                 "operationId": cfg["operation_id"], "configSha256": digest(raw),
+                 "processGroup": os.getpgrp(), "supervisor": launch.identity})
         print(json.dumps({"phase":"ORIGINAL_NATIVE_START_RETURNED","operationId":cfg["operation_id"],
               "acknowledgementFile":str(project/"launch-acknowledgement.json")}),flush=True)
     finally:

@@ -222,6 +222,90 @@ class Run:
         save_json(self.output / (label + ".json"), body)
         return body
 
+    def receive_remaining_sources(self, inputs):
+        """Feed only still-missing immutable source into this admitted context."""
+        cfg = self.config; selected = cfg.get("source_feed")
+        if not selected: return []
+        metadata = json.loads((inputs / "metadata.json").read_text())
+        required = set(metadata["requiredPaths"])
+        expected = {row["sha"]: row["size"] for row in metadata["tree"]["tree"]
+                    if row["path"] in required and row["type"] == "blob"}
+        available = {}
+        for directory in cfg["incoming"]:
+            root = Path(directory)
+            need(root.is_absolute() and root.resolve(strict=True) == root and root.is_dir(),
+                 "ORIGINAL_INCOMING_DIRECTORY_CHANGED")
+            for parent, directories, names in os.walk(root, followlinks=False):
+                need(all(not (Path(parent) / name).is_symlink() for name in directories),
+                     "INCOMING_DIRECTORY_SYMLINK")
+                for name in names:
+                    path = Path(parent) / name
+                    with os.fdopen(regular(path), "rb") as stream:
+                        before = os.fstat(stream.fileno())
+                        need(before.st_nlink == 1, "INCOMING_PRIVATE_FILE_REQUIRED")
+                        hashed = hashlib.sha1(b"blob " + str(before.st_size).encode() + b"\0")
+                        for block in iter(lambda: stream.read(1024 * 1024), b""): hashed.update(block)
+                        need(snapshot(before) == snapshot(os.fstat(stream.fileno())) == snapshot(path.lstat()),
+                             "INCOMING_SOURCE_CHANGED")
+                    oid = hashed.hexdigest()
+                    if oid in expected:
+                        need(before.st_size == expected[oid], "INCOMING_SOURCE_SIZE_CHANGED")
+                        available[oid] = str(path)
+        missing = {oid: size for oid, size in sorted(expected.items()) if oid not in available}
+        review = {"schema": "starforge.geocat-current-source-feed.v1",
+                  "operationId": cfg["operation_id"], "sourceCommit": cfg["commit"],
+                  "configSha256": self.config_sha, "expectedBlobs": len(expected),
+                  "persistentBlobs": len(available), "persistentBytes": sum(expected[x] for x in available),
+                  "missing": missing, "missingBytes": sum(missing.values())}
+        save_json(self.output / "source-feed-selection.json", review)
+        if not missing:
+            save_json(self.output / "source-feed-result.json", {**review, "status": "ALREADY_RECEIVED"})
+            return []
+        program = Path(selected["program"])
+        need(git_blob(program.read_bytes()) == selected["gitBlob"], "ORIGINAL_SOURCE_FEED_CHANGED")
+        incoming = self.work / "received-current-source" / "incoming"
+        feed = {"root": str(incoming), "old_root": str(incoming) + "-unused",
+                "repository": cfg["repository"], "commit": cfg["commit"], "merged": cfg["commit"],
+                "old_commit": None, "files": {oid + ".blob": [None, oid] for oid in missing}, "artifacts": []}
+        argument = json.dumps(feed, separators=(",", ":"))
+        need(len(argument.encode()) <= 96 * 1024, "SOURCE_FEED_ARGUMENT_BOUND_EXCEEDED")
+        save_json(self.work / "source-feed-config.json", feed)
+        with os.fdopen(regular(self.dev / "source-terminal.json"), "rb") as stream:
+            binding = json.load(stream)
+        need(binding["operationId"] == cfg["operation_id"] and binding["configSha256"] == self.config_sha,
+             "SOURCE_TERMINAL_OPERATION_CHANGED")
+        need(os.getppid() == binding["supervisor"]["pid"] and
+             os.getsid(0) == binding["session"] and os.getpgrp() == binding["processGroup"],
+             "SOURCE_TERMINAL_OWNER_CHANGED")
+        import swarm_cloud_job as native
+        observed_parent = native.identity_at(Path("/proc") / str(binding["supervisor"]["proc_pid"]))
+        need(observed_parent == binding["supervisor"], "SOURCE_SUPERVISOR_CHANGED")
+        terminal = os.open(binding["path"], os.O_RDWR | os.O_NOCTTY | os.O_NOFOLLOW)
+        try:
+            opened = os.fstat(terminal)
+            need(stat.S_ISCHR(opened.st_mode) and [opened.st_dev, opened.st_ino, opened.st_rdev] == binding["device"],
+                 "SOURCE_TERMINAL_DEVICE_CHANGED")
+            need(os.isatty(terminal) and os.tcgetpgrp(terminal) == binding["processGroup"],
+                 "SOURCE_TERMINAL_FOREGROUND_CHANGED")
+            os.write(terminal, (json.dumps({"phase": "ADMITTED_SOURCE_FEED", **review,
+                     "incoming": str(incoming)}, separators=(",", ":")) + "\r\n").encode())
+            completed = subprocess.run([cfg["python"], "-u", str(program), argument],
+                stdin=terminal, stdout=terminal, stderr=terminal, cwd=self.work, env=self.env,
+                timeout=1800, check=False)
+        finally:
+            os.close(terminal)
+        save_json(self.output / "source-feed-exit.json",
+                  {"operationId": cfg["operation_id"], "exitCode": completed.returncode, "at": now()})
+        need(completed.returncode == 0, "ORIGINAL_SOURCE_FEED_FAILED")
+        manifest_path = incoming / "git-source-inputs.json"
+        manifest = json.loads(manifest_path.read_text())
+        need(manifest["repository"] == cfg["repository"] and manifest["commit"] == cfg["commit"] and
+             {name: row["gitBlob"] for name, row in manifest["files"].items()} ==
+             {oid + ".blob": oid for oid in missing}, "SOURCE_FEED_MANIFEST_CHANGED")
+        save_json(self.output / "source-feed-result.json", {**review, "status": "RECEIVED",
+                  "incoming": str(incoming), "manifest": file_digest(manifest_path)})
+        return [str(incoming)]
+
     def run(self):
         cfg = self.config
         need(self.project.resolve(strict=True) == self.project, "PERSISTENT_PROJECT_CHANGED")
@@ -269,13 +353,14 @@ class Run:
             need(package_cache.run(args, report) == 0 and report["outcome"] == "verified", "EXACT_LEAF_CACHE_UNAVAILABLE")
             cached.append(report)
         save_json(self.output/"leaf-cache-inspection.json", cached)
+        source_incoming = [*cfg["incoming"], *self.receive_remaining_sources(inputs)]
         self.checkpoint("ORIGINAL_SOURCE_RECEIVING")
         git_cache, source = self.work/"git-cache", self.work/"source"
         args = [cfg["python"], "-B", str(inputs/"git-object-receiving.py"), "--metadata", str(inputs/"metadata.json"),
                 "--commit", cfg["commit"], "--directory", str(git_cache), "--git", cfg["git"]]
         for path in cfg["git_donors"]: args += ["--donor-repository", path]
         args += ["--donor-archive", cfg["archive_donor"]["sha256"], cfg["archive_donor"]["path"]]
-        for path in cfg["incoming"]: args += ["--incoming", path]
+        for path in source_incoming: args += ["--incoming", path]
         args += ["--materialize", str(source)]
         out = self.command("source-receiving", args)
         receiving = json.loads(out.read_text())

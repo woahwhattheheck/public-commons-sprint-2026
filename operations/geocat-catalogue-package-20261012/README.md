@@ -23,3 +23,12 @@ Existing launch or dispatch records require reconciliation through their origina
 ## Durable original upload exchanges
 
 The final ZIP is copied and verified under the persistent project before the original Library workflow receives it. A recording delegate around the unchanged `HostedAppsClient.call_tool` privately saves each exact prepare/finalize request before invocation and its full response before the workflow advances. Thrown outcomes are recorded as uncertain. These private `result/library-calls/` records retain the selected package and original operation binding; they are excluded from the customer archive. Transfer scratch remains in the admitted temporary context. The workflow is never automatically replayed. An incomplete call is reconciled from its retained original identity before any later action.
+
+
+## Remaining source in the admitted context
+
+Optional configuration `source_feed` selects the unchanged, published `source-feed.py` by its exact path and Git blob. This mode requires the one original launch to own its allocated PTY. After the native callback acquires that launch, the caller retains the terminal device, session, native process identity, and foreground process group, then performs the unchanged foreground handoff. The native command keeps its original `stdin=DEVNULL` contract.
+
+Only after admission does the driver inventory the already-persistent incoming bytes read-only and derive the missing Git blobs from the exact selected metadata. It opens and verifies the bound terminal once, then invokes the same source-feed implementation on that descriptor. Send only the requested missing source batches, wait for each actual acknowledgement, and finish that feed once. Its complete manifest is retained in the original result. The driver adds that temporary incoming directory to the original receiver's repeated `--incoming` arguments and continues build, installation, app receiving, and durable file saving within the same context.
+
+A changed parent, process start identity, session, terminal device, or foreground group fails into this operation's retained result. It does not select a replacement terminal or create a second native job. The terminal mode handling remains the original source-feed implementation's responsibility. An interrupted source feed preserves every original persistent input and the remote source bytes; no source refetch or customer acquisition is implied.
