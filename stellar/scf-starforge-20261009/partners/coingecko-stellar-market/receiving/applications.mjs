@@ -1,8 +1,9 @@
 // MIT. Operate one retained CoinGecko project through the original installed Applications lifecycle.
-import { readFile, writeFile, mkdir, rename, lstat, realpath } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, lstat, realpath, link, unlink } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const HASH = /^[a-f0-9]{64}$/;
@@ -25,6 +26,202 @@ const B = 'stellar/scf-starforge-20261009/';
 const R = B + 'distribution/runtime-workspace/';
 const C = B + 'partners/coingecko-stellar-market/';
 
+
+const same = (left, right) => isDeepStrictEqual(left, right);
+const SOURCE_CONTINUATION_SCHEMA = 'stellar-forge.coingecko-source-continuation.v1';
+function managedConfigurationSnapshot(value, configurationFile = null) {
+  const snapshot = plain(value?.configuration) ? value.configuration : value;
+  const path = configurationFile === null ? null : resolve(configurationFile);
+  need(plain(snapshot) && Array.isArray(snapshot.profiles) && snapshot.profiles.length <= 128 &&
+    (path === null ? snapshot.path === null && snapshot.sha256 === null && snapshot.profiles.length === 0 :
+      snapshot.path === path && HASH.test(snapshot.sha256 ?? '')),
+  'SOURCE_CONTINUATION_CONFIGURATION_EVIDENCE_REQUIRED');
+  const ids = new Set();
+  for (const profile of snapshot.profiles) {
+    need(plain(profile) && typeof profile.id === 'string' &&
+      /^[A-Za-z0-9._:-]{1,160}$/.test(profile.id) && !ids.has(profile.id) &&
+      typeof profile.name === 'string' && profile.name.trim().length > 0 && profile.name.length <= 240 &&
+      typeof profile.network === 'string' && profile.network.length > 0 && profile.network.length <= 128 &&
+      typeof profile.configPath === 'string' && profile.configPath === resolve(profile.configPath) &&
+      typeof profile.workspacePath === 'string' && profile.workspacePath === resolve(profile.workspacePath) &&
+      HASH.test(profile.configSha256 ?? '') && plain(profile.workspaceIdentity) &&
+      ['device', 'inode'].every(key => typeof profile.workspaceIdentity[key] === 'string' &&
+        /^\d+$/.test(profile.workspaceIdentity[key])),
+    'SOURCE_CONTINUATION_CONFIGURATION_EVIDENCE_REQUIRED');
+    ids.add(profile.id);
+  }
+  return snapshot;
+}
+async function receivingDriverIdentity() {
+  const path = fileURLToPath(import.meta.url), before = await lstat(path);
+  need(before.isFile() && !before.isSymbolicLink() && before.size <= 1024 * 1024 &&
+    await realpath(path) === path, 'SOURCE_CONTINUATION_RECEIVER_PATH_CHANGED');
+  const bytes = await readFile(path), after = await lstat(path);
+  need(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
+    before.mtimeMs === after.mtimeMs && before.ctimeMs === after.ctimeMs && bytes.length === before.size,
+  'SOURCE_CONTINUATION_RECEIVER_CHANGED');
+  return { path, bytes: bytes.length, sha256: sha(bytes) };
+}
+function noApplicationEffects(state) {
+  return plain(state) && state.schema === 'stellar-forge.coingecko-applications-checkpoint.v1' &&
+    ['requests', 'completed', 'runs'].every(key => plain(state[key]) && Object.keys(state[key]).length === 0) &&
+    ['reviewId', 'applicationId', 'connection', 'connectionErrors', 'originalCounts', 'receivedProjectId']
+      .every(key => !Object.hasOwn(state, key));
+}
+async function originalJSONFile(descriptor, limit = 4 * 1024 * 1024) {
+  need(plain(descriptor) && typeof descriptor.path === 'string' && descriptor.path === resolve(descriptor.path) &&
+    HASH.test(descriptor.sha256 ?? ''), 'SOURCE_CONTINUATION_ORIGINAL_REQUIRED');
+  const path = descriptor.path, before = await lstat(path);
+  need(before.isFile() && !before.isSymbolicLink() && before.size <= limit &&
+    await realpath(path) === path, 'SOURCE_CONTINUATION_ORIGINAL_PATH_CHANGED');
+  const bytes = await readFile(path), after = await lstat(path);
+  need(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
+    before.mtimeMs === after.mtimeMs && before.ctimeMs === after.ctimeMs &&
+    bytes.length === before.size && sha(bytes) === descriptor.sha256,
+  'SOURCE_CONTINUATION_ORIGINAL_CHANGED');
+  return { path, bytes, sha256: descriptor.sha256, value: JSON.parse(bytes) };
+}
+/** Read the ended pre-application attempt before selecting a corrected original source. */
+export async function readCoinGeckoSourceContinuation(path, selection) {
+  path = resolve(path);
+  const info = await lstat(path);
+  need(info.isFile() && !info.isSymbolicLink() && info.size <= 65536 &&
+    await realpath(path) === path, 'SOURCE_CONTINUATION_DESCRIPTOR_REQUIRED');
+  const bytes = await readFile(path), descriptor = JSON.parse(bytes);
+  need(plain(descriptor) && descriptor.schema === SOURCE_CONTINUATION_SCHEMA &&
+    typeof descriptor.reason === 'string' && descriptor.reason.trim().length > 0 &&
+    descriptor.reason.length <= 6000 && plain(descriptor.predecessor),
+  'SOURCE_CONTINUATION_DESCRIPTOR_REQUIRED');
+  const files = {};
+  for (const name of ['manifest', 'checkpoint', 'terminal', 'runtime'])
+    files[name] = await originalJSONFile(descriptor.predecessor[name]);
+  if (descriptor.predecessor.configuration !== undefined)
+    files.configuration = await originalJSONFile(descriptor.predecessor.configuration);
+  need(new Set(Object.values(files).map(file => file.path)).size === Object.keys(files).length,
+    'SOURCE_CONTINUATION_ORIGINALS_AMBIGUOUS');
+  const previous = files.manifest.value, checkpoint = files.checkpoint.value;
+  const terminal = files.terminal.value, runtime = files.runtime.value;
+  need(previous.schema === 'stellar-forge.coingecko-applications-receiving.v1' &&
+    checkpoint.manifestSha256 === files.manifest.sha256 && noApplicationEffects(checkpoint) &&
+    plain(checkpoint.originalBinding) && plain(checkpoint.originalBinding.identity) &&
+    plain(checkpoint.originalBinding.database) && plain(checkpoint.originalBinding.project),
+  'SOURCE_CONTINUATION_APPLICATION_ALREADY_REACHED');
+  need(terminal.state === 'failed' && Number.isInteger(terminal.exit_code) && terminal.exit_code !== 0 &&
+    Number.isFinite(Date.parse(terminal.started_at)) && Number.isFinite(Date.parse(terminal.ended_at)) &&
+    Date.parse(terminal.ended_at) >= Date.parse(terminal.started_at) &&
+    Number.isFinite(Date.parse(checkpoint.createdAt)) &&
+    Date.parse(checkpoint.createdAt) <= Date.parse(terminal.ended_at),
+  'SOURCE_CONTINUATION_TERMINAL_FAILURE_REQUIRED');
+  need((runtime.state === 'READY' || runtime.status === 'READY') &&
+    runtime.directory === previous.runtimeDirectory && runtime.sourceRoot === previous.sourceRoot &&
+    /^[a-f0-9]{40}$/.test(runtime.sourceCommit ?? '') &&
+    ['installationId', 'profileId', 'profileSha256', 'lockSha256', 'sourceManifestSha256']
+      .every(key => HASH.test(runtime[key] ?? '')) &&
+    (!previous.sourceManifestSha256 || previous.sourceManifestSha256 === runtime.sourceManifestSha256),
+  'SOURCE_CONTINUATION_ORIGINAL_RUNTIME_CHANGED');
+  need(plain(selection) && previous.operationPrefix === selection.operationPrefix &&
+    previous.projectId === selection.projectId &&
+    previous.workspaceDirectory === selection.workspaceDirectory &&
+    previous.actor === selection.actor &&
+    same(previous.originalSources, selection.originalSources) &&
+    (previous.configurationFile ?? null) === (selection.configurationFile ?? null) &&
+    [previous.allowLocalMerchant, selection.allowLocalMerchant]
+      .every(value => value === undefined || typeof value === 'boolean') &&
+    (previous.allowLocalMerchant === true) === (selection.allowLocalMerchant === true) &&
+    checkpoint.originalBinding.directory === previous.workspaceDirectory &&
+    checkpoint.originalBinding.project.id === previous.projectId,
+  'SOURCE_CONTINUATION_BUSINESS_SELECTION_CHANGED');
+  const configurationFile = previous.configurationFile ?? null;
+  need(configurationFile === null || typeof configurationFile === 'string' && configurationFile.length > 0,
+    'SOURCE_CONTINUATION_CONFIGURATION_EVIDENCE_REQUIRED');
+  let originalConfiguration = null;
+  if (checkpoint.originalConfiguration !== undefined)
+    originalConfiguration = managedConfigurationSnapshot(checkpoint.originalConfiguration, configurationFile);
+  if (files.configuration) {
+    const recorded = managedConfigurationSnapshot(files.configuration.value, configurationFile);
+    need(originalConfiguration === null || same(originalConfiguration, recorded),
+      'SOURCE_CONTINUATION_CONFIGURATION_EVIDENCE_CHANGED');
+    originalConfiguration = recorded;
+  }
+  if (configurationFile === null) {
+    const empty = { path: null, sha256: null, profiles: [] };
+    need(originalConfiguration === null || same(originalConfiguration, empty),
+      'SOURCE_CONTINUATION_CONFIGURATION_EVIDENCE_CHANGED');
+    originalConfiguration = empty;
+  }
+  need(originalConfiguration !== null, 'SOURCE_CONTINUATION_CONFIGURATION_EVIDENCE_REQUIRED');
+  need(!await exists(join(dirname(files.checkpoint.path), 'NATIVE_APPLICATIONS_RECEIVING_RESULT.json')),
+    'SOURCE_CONTINUATION_COMPLETED_RECEIVING_EXISTS');
+  // Keep the reviewed descriptor itself bound while reading its original sources.
+  const after = await lstat(path);
+  need(after.dev === info.dev && after.ino === info.ino && after.size === info.size &&
+    after.mtimeMs === info.mtimeMs && after.ctimeMs === info.ctimeMs &&
+    sha(await readFile(path)) === sha(bytes), 'SOURCE_CONTINUATION_DESCRIPTOR_CHANGED');
+  return { path, bytes, sha256: sha(bytes), descriptor, files, previous, checkpoint, terminal, runtime,
+    originalConfiguration };
+}
+async function publishOriginal(path, bytes) {
+  const current = await exists(path);
+  if (current) {
+    need(current.isFile() && !current.isSymbolicLink() && (await readFile(path)).equals(bytes),
+      'SOURCE_CONTINUATION_HISTORY_CHANGED');
+    return;
+  }
+  const temporary = path + '.' + randomUUID() + '.next';
+  await writeFile(temporary, bytes, { flag: 'wx', mode: 0o600 });
+  try {
+    try { await link(temporary, path); }
+    catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      const existing = await lstat(path);
+      need(existing.isFile() && !existing.isSymbolicLink() && (await readFile(path)).equals(bytes),
+        'SOURCE_CONTINUATION_HISTORY_CHANGED');
+    }
+  } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+}
+async function retainSourceContinuation(continuation, input, inputBytes, output, selected, receiver) {
+  need(resolve(output) !== dirname(continuation.files.checkpoint.path) &&
+    input.consoleDirectory !== continuation.previous.consoleDirectory &&
+    input.runtimeHome !== continuation.previous.runtimeHome &&
+    input.receivingDirectory !== continuation.previous.receivingDirectory,
+  'SOURCE_CONTINUATION_SEPARATE_PREFIX_REQUIRED');
+  need(selected.sourceCommit !== continuation.runtime.sourceCommit ||
+    selected.sourceManifestSha256 !== continuation.runtime.sourceManifestSha256,
+  'SOURCE_CONTINUATION_SOURCE_UNCHANGED');
+  const root = join(output, 'source-history', continuation.sha256);
+  await mkdir(root, { recursive: true, mode: 0o700 });
+  need(await realpath(root) === root, 'SOURCE_CONTINUATION_HISTORY_PATH_CHANGED');
+  await publishOriginal(join(root, 'continuation.json'), continuation.bytes);
+  const originals = {};
+  for (const [name, file] of Object.entries(continuation.files)) {
+    await publishOriginal(join(root, name + '.json'), file.bytes);
+    originals[name] = { path: join(root, name + '.json'), originalPath: file.path,
+      bytes: file.bytes.length, sha256: file.sha256 };
+  }
+  const receipt = {
+    schema: 'stellar-forge.coingecko-source-continuation-receipt.v1',
+    businessOperation: input.operationPrefix, reason: continuation.descriptor.reason,
+    descriptor: { path: continuation.path, bytes: continuation.bytes.length, sha256: continuation.sha256 },
+    predecessor: originals, originalBinding: continuation.checkpoint.originalBinding,
+    originalRuntime: continuation.runtime, originalTerminal: continuation.terminal,
+    originalConfiguration: continuation.originalConfiguration,
+    receiver, originalConfiguredDriver: input.sourceContinuationReceiver?.originalDriver ?? null,
+    successorManifestSha256: sha(inputBytes),
+    selectedRuntime: Object.fromEntries(['schema', 'state', 'directory', 'installationId', 'profileId',
+      'profileSha256', 'lockSha256', 'sourceCommit', 'sourceManifestSha256', 'sourceRoot', 'dependencyRoot']
+      .map(key => [key, selected[key] ?? null])),
+  };
+  const receiptPath = join(root, 'SOURCE_CONTINUATION_RECEIPT.json');
+  const receiptBytes = Buffer.from(JSON.stringify(receipt, null, 2) + '\n');
+  await publishOriginal(receiptPath, receiptBytes);
+  return { path: receiptPath, bytes: receiptBytes.length, sha256: sha(receiptBytes),
+    descriptorSha256: continuation.sha256,
+    predecessorManifestSha256: continuation.files.manifest.sha256,
+    predecessorCheckpointSha256: continuation.files.checkpoint.sha256,
+    predecessorSourceCommit: continuation.runtime.sourceCommit,
+    selectedSourceCommit: selected.sourceCommit };
+}
+
 export async function receiveCoinGeckoApplication({ manifest, output }) {
   manifest = resolve(manifest); output = resolve(output);
   const inputBytes = await readFile(manifest), input = JSON.parse(inputBytes);
@@ -39,7 +236,25 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
     input.browserArgs.length <= 32 &&
     input.browserArgs.every(value => typeof value === 'string' && value.length <= 4096),
   'BROWSER_ARGUMENTS_INVALID');
+  need(input.allowLocalMerchant === undefined || typeof input.allowLocalMerchant === 'boolean',
+    'LOCAL_MERCHANT_SELECTION_INVALID');
+  let continuation = null, receiver = null;
+  if (input.sourceContinuation !== undefined) {
+    need(plain(input.sourceContinuation) && typeof input.sourceContinuation.path === 'string' &&
+      HASH.test(input.sourceContinuation.sha256 ?? ''), 'SOURCE_CONTINUATION_SELECTION_REQUIRED');
+    continuation = await readCoinGeckoSourceContinuation(input.sourceContinuation.path, input);
+    need(continuation.sha256 === input.sourceContinuation.sha256, 'SOURCE_CONTINUATION_SELECTION_CHANGED');
+    need(output !== dirname(continuation.files.checkpoint.path), 'SOURCE_CONTINUATION_SEPARATE_PREFIX_REQUIRED');
+    receiver = await receivingDriverIdentity();
+    if (input.sourceContinuationReceiver !== undefined) {
+      const pinned = input.sourceContinuationReceiver;
+      need(plain(pinned) && pinned.path === receiver.path && pinned.sha256 === receiver.sha256 &&
+        typeof pinned.originalDriver === 'string' && pinned.originalDriver.length > 0,
+      'SOURCE_CONTINUATION_RECEIVER_CHANGED');
+    }
+  } else need(input.sourceContinuationReceiver === undefined, 'SOURCE_CONTINUATION_SELECTION_REQUIRED');
   await mkdir(output, { recursive: true, mode: 0o700 });
+  if (continuation) need(await realpath(output) === output, 'SOURCE_CONTINUATION_OUTPUT_PATH_CHANGED');
   const checkpointPath = join(output, 'application-checkpoint.json');
   let state = await exists(checkpointPath) ? await json(checkpointPath) : {
     schema: 'stellar-forge.coingecko-applications-checkpoint.v1',
@@ -47,6 +262,20 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
     requests: {}, completed: {}, runs: {},
   };
   need(state.manifestSha256 === sha(inputBytes), 'ORIGINAL_RECEIVING_MANIFEST_CHANGED');
+  if (continuation) {
+    if (state.sourceContinuation) {
+      need(state.sourceContinuation.descriptorSha256 === continuation.sha256 &&
+        state.sourceContinuation.predecessorManifestSha256 === continuation.files.manifest.sha256,
+      'SOURCE_CONTINUATION_CHECKPOINT_CHANGED');
+    } else {
+      need(noApplicationEffects(state) && !state.runtimeId && !state.originalBinding,
+        'SOURCE_CONTINUATION_PREFIX_ALREADY_USED');
+      state.sourceContinuation = { descriptorSha256: continuation.sha256,
+        predecessorManifestSha256: continuation.files.manifest.sha256 };
+      state.originalBinding = continuation.checkpoint.originalBinding;
+      state.originalStartedAt = continuation.checkpoint.originalStartedAt ?? continuation.checkpoint.createdAt;
+    }
+  } else need(!state.sourceContinuation, 'SOURCE_CONTINUATION_SELECTION_REQUIRED');
   const persist = () => save(checkpointPath, state);
   await persist();
   const report = (name, value) => process.stdout.write(JSON.stringify({
@@ -65,8 +294,19 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
   const { inspectMerchantRuntime } = await originalModule(source, B + 'sf46-release/runtime-package.mjs');
   const selected = await inspectMerchantRuntime(runtime, { load: false,
     ...(input.sourceManifestSha256 ? { expectedManifest: input.sourceManifestSha256 } : {}) });
-  need(selected.sourceRoot === source, 'SELECTED_INSTALLED_SOURCE_REQUIRED');
+  need(selected.sourceRoot === source && selected.state === 'READY', 'SELECTED_INSTALLED_SOURCE_REQUIRED');
   const native = await originalModule(source, C + 'workspace/managed.mjs');
+  const observedConfiguration = managedConfigurationSnapshot(
+    await native.readMarketManagedConfiguration(input.configurationFile ? resolve(input.configurationFile) : null),
+    input.configurationFile ?? null);
+  if (continuation) need(same(observedConfiguration, continuation.originalConfiguration),
+    'SOURCE_CONTINUATION_CONFIGURATION_CHANGED');
+  if (state.originalConfiguration !== undefined)
+    need(same(state.originalConfiguration, observedConfiguration), 'ORIGINAL_MANAGED_CONFIGURATION_CHANGED');
+  else {
+    state.originalConfiguration = observedConfiguration;
+    await persist();
+  }
   const observedBinding = await native.inspectMarketBinding(market, { projectId });
   if (!state.originalBinding) {
     state.originalBinding = observedBinding;
@@ -78,6 +318,12 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
     observedBinding.database.device === initialBinding.database.device &&
     observedBinding.database.inode === initialBinding.database.inode,
   'ORIGINAL_DATABASE_REPLACED');
+  if (continuation) {
+    const receipt = await retainSourceContinuation(continuation, input, inputBytes, output, selected, receiver);
+    state.sourceContinuation = receipt;
+    await persist();
+    report('corrected-source-continuation', { ...receipt, originalDatabaseRetained: true });
+  }
   const { createRuntimeWorkspace, openRuntimeWorkspace } = await originalModule(source, R + 'model.mjs');
   const consoleDirectory = resolve(input.consoleDirectory);
   if (!await exists(join(consoleDirectory, 'workspace.json'))) {
@@ -284,7 +530,7 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
           runtimeId: state.runtimeId, kind: 'coingecko', label: input.applicationLabel ?? 'CoinGecko retained research',
           settings: { workspaceDirectory: market, projectId, port: input.port ?? 0,
             ...(input.configurationFile ? { configurationFile: resolve(input.configurationFile) } : {}),
-            ...(input.allowLocalMerchant ? { allowLocalMerchant: true } : {}) },
+            ...(input.allowLocalMerchant === true ? { allowLocalMerchant: true } : {}) },
         });
         state.reviewId = review.id; await persist();
       }
@@ -450,7 +696,8 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
       completedAt: new Date().toISOString(), applicationId: state.applicationId,
       projectId, receivedProjectId: state.receivedProjectId, runtimeDirectory: runtime,
       sourceCommit: selected.sourceCommit, sourceManifestSha256: selected.sourceManifestSha256,
-      stages: state.completed, runs: state.runs, newPurchases: 0 };
+      stages: state.completed, runs: state.runs,
+      ...(state.sourceContinuation ? { sourceContinuation: state.sourceContinuation } : {}), newPurchases: 0 };
     await save(join(output, 'NATIVE_APPLICATIONS_RECEIVING_RESULT.json'), result);
     return result;
   } finally {
