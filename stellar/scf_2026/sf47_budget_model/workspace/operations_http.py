@@ -9,7 +9,9 @@ from operations import Operations, decoded
 
 
 def register_static(static):
-    static.update({"/operations_completion.mjs": ("operations_completion.mjs", "text/javascript; charset=utf-8"),
+    static.update({"/operations_buyer.mjs": ("operations_buyer.mjs", "text/javascript; charset=utf-8"),
+                   "/operations_buyer.css": ("operations_buyer.css", "text/css; charset=utf-8"),
+                   "/operations_completion.mjs": ("operations_completion.mjs", "text/javascript; charset=utf-8"),
                    "/operations_completion.css": ("operations_completion.css", "text/css; charset=utf-8"),
                    "/operations_support.mjs": ("operations_support.mjs", "text/javascript; charset=utf-8"),
                    "/operations.mjs": ("operations.mjs", "text/javascript; charset=utf-8"),
@@ -94,12 +96,12 @@ def write(handler, parsed):
     elif path == "/api/operations":
         result = ops.create(handler.json_body())
     else:
-        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|completion-seed|completion-preview|support-preview|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
+        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|completion-seed|completion-preview|support-preview|buyer-preview|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
         if not match:
             raise Problem("Operations command not found.", 404, "NOT_FOUND")
         body = handler.json_body()
         methods = {"command": ops.command, "completion-seed": ops.seed_completion, "completion-preview": ops.preview_completion,
-                   "support-preview": ops.preview_support,
+                   "support-preview": ops.preview_support, "buyer-preview": ops.preview_buyer,
                    "forecast-preview": ops.preview_forecast,
                    "portfolio-preview": ops.preview_portfolio, "portfolio-seed": ops.seed_portfolio,
                    "portfolio-selection": ops.select_portfolio}
