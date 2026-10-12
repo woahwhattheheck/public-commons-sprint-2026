@@ -5,7 +5,7 @@ const state={contractId:null,view:'records',offset:0,q:'',status:'',beforeId:'',
 let generation=0;
 const input=(value,type='text')=>{const n=node('input');n.type=type;if(type==='checkbox')n.checked=Boolean(value);else n.value=value??'';return n;};
 function select(values,value){const n=node('select');for(const [id,label]of values.map(v=>Array.isArray(v)?v:[v,v])){const opt=node('option',label);opt.value=id;n.append(opt);}n.value=value??'';return n;}
-function field(label,control){const n=node('label',label);n.append(control);return n;}
+function field(label,control){const n=node('label',label);control.setAttribute('aria-label',label);n.append(control);return n;}
 function details(label,value){const d=node('details'),summary=node('summary',label);d.append(summary,node('pre',pretty(value)));return d;}
 function table(heads,rows){const wrap=node('div',undefined,'table-wrap'),t=node('table'),head=node('thead'),tr=node('tr');for(const h of heads)tr.append(node('th',h));head.append(tr);const body=node('tbody');for(const values of rows){const row=node('tr');for(const value of values){const cell=node('td');cell.append(value instanceof Node?value:node('span',value??'—'));row.append(cell);}body.append(row);}t.append(head,body);wrap.append(t);return wrap;}
 export async function renderFeed({api,download,container,editionId,catalog,current,notice}){

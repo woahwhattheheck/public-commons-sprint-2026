@@ -102,7 +102,8 @@ export async function openFeedWorkspace(research){
       check(p.sourceFingerprint===expectedSource&&p.reviewRevision===expectedReviewRevision,'FEED_RELEASE_INPUT_CHANGED','Reopen the feed preview before freezing a delivery.',409);
       check(p.summary.ready,'FEED_REVIEW_REQUIRED','Resolve the open exceptions and select the contract coverage rule before freezing.');
       const comparison=beforeId?await compare({contractId,contractRevision:c.revision,beforeId,editionId}):null;
-      const identity={contractSha256:c.sha256,editionId,sourceFingerprint:p.sourceFingerprint,reviewRevision:p.reviewRevision,before:comparison?{id:beforeId,source:comparison.before.sourceFingerprint,reviewRevision:(await preview({contractId,contractRevision:c.revision,editionId:beforeId})).reviewRevision}:null};
+      const savedReview=await reviews(c.sha256,p.sourceFingerprint),beforeReview=comparison?await reviews(c.sha256,comparison.before.sourceFingerprint):null;
+      const identity={contractSha256:c.sha256,editionId,sourceFingerprint:p.sourceFingerprint,reviewRevision:p.reviewRevision,reviewSha256:digest(canonical(savedReview)),before:comparison?{id:beforeId,source:comparison.before.sourceFingerprint,reviewRevision:beforeReview.revision,reviewSha256:digest(canonical(beforeReview))}:null};
       const id='feed-'+digest(canonical(identity)).slice(0,32),directory=await privateDirectory(join(root,'releases',id));
       if(await exists(join(directory,'manifest.json'))){const found=await release(id);await verifyRelease(found);return found.manifest;}
       const review=await reviews(c.sha256,p.sourceFingerprint),files={};
