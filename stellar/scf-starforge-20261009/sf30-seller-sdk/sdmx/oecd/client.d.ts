@@ -13,7 +13,7 @@ export interface Capture {
 }
 export interface Selection {
   operation_id: string; capture_id: Identity; countries?: string[]; start_period?: string; end_period?: string|null;
-  title?: string; notes?: string; project_id?: Identity|null; expected_revision?: number|null;
+  title?: string; notes?: string; project_id?: Identity|null; expected_revision?: number|null; report_version?: 1|2;
 }
 export interface Observation {
   country: string; time_period: string; value: string|null; value_present: boolean;
@@ -32,13 +32,23 @@ export interface SeriesReport {
   native_observation_count: number; missing_periods: string[]; missing_value_periods: string[];
   first_period: string; last_period: string; latest: SummaryPoint|null; common: SummaryPoint|null;
 }
+export interface SourceCitation {
+  publisher: 'OECD'; year: number; dataset: string; data_source: string; dataset_url: string;
+  source_url: string; accessed_at: string; accessed_date: string; accessed_time_field: string;
+  source_sha256: Identity; acquisition_sha256: Identity; text: string;
+  terms: {title: string; url: string}; downstream_acknowledgment: string; analysis_credit: string;
+}
 export interface BriefingDocument {
-  schema: 'stellar-forge.oecd-briefing-document.v1'; id: Identity; title: string; notes: string;
+  schema: 'stellar-forge.oecd-briefing-document.v1'|'stellar-forge.oecd-briefing-document.v2'; id: Identity; title: string; notes: string;
   request: Selection; catalog_edition_id: Identity; source_capture_id: Identity;
   native_snapshot: string; source_project_id: Identity; source_project_revision: number;
   observation_count: number; native_observation_count: number; common_period: string|null;
   report_window: {start: string; end: string|null}; series: SeriesReport[];
-  sources: Array<{sha256: Identity; bytes: number; name: string; origin: string; kind: string; coverage: Record<string,unknown>}>;
+  citation?: SourceCitation;
+  sources: Array<{sha256: Identity; bytes: number; name: string; origin: string; kind: string;
+    coverage: Record<string,unknown>; acquisition_sha256?: Identity; accessed_at?: string;
+    accessed_date?: string; accessed_time_field?: string;
+    attribution?: {publisher: string; title: string; source_url: string; accessed_date: string}}>;
   methodology: {title: string; interpretation: string; comparison: string; sources: Array<{title: string; url: string}>};
   scope: string;
 }
@@ -76,11 +86,11 @@ export interface Client {
   sourceRows(id: Identity): Promise<{briefing_id: Identity; catalog_edition_id: Identity; snapshot: string; rows: Array<{flow: string; series_key: string; time_period: string; value: string|null; value_present: boolean; value_kind: string; attributes: Record<string,string>; dimensions: Record<string,string>; action: string; date: string}>; row_count: number}>;
   compare(before: Identity, after: Identity): Promise<{before: Identity; after: Identity; report_changes: Array<{country: string; time_period: string; kind: 'added'|'removed'|'revised'; before: Observation|null; after: Observation|null}>; native_catalog_comparison: unknown; comparison_scope: string}>;
   activate(body: {briefing_id: Identity; expected_revision: number; expected_current: Identity|null}): Promise<CatalogState>;
-  exportDataset(briefingId: Identity): Promise<{briefing_id: Identity; directory: string; native: unknown; project_id: Identity; revision: number}>;
+  exportDataset(briefingId: Identity): Promise<{briefing_id: Identity; directory: string; native: unknown; project_id: Identity; revision: number; attribution?: {directory: string; files: Record<string,{path: string;sha256: Identity;bytes: number}>;citation: SourceCitation}}>;
   exportCustomer(briefingId: Identity): Promise<Download>;
   exportProject(briefingId: Identity): Promise<Download>;
   importProject(body: Uint8Array): Promise<Briefing>;
-  reportFile(briefingId: Identity, name: 'briefing.html'|'briefing.json'|'observations.csv'): Promise<Download>;
+  reportFile(briefingId: Identity, name: 'briefing.html'|'briefing.json'|'observations.csv'|'SOURCE_RIGHTS.json'|'SOURCE_RIGHTS.md'): Promise<Download>;
   provider(command: 'getcapabilities'|'loadseries'|'loadmeta'|'searchseries'|'loadtree'|'listseries', parameters?: Record<string,string|number|string[]>): Promise<unknown>;
 }
 export const OECD_CONNECTION_SCHEMA: 'stellar-forge.oecd-connection.v1';
