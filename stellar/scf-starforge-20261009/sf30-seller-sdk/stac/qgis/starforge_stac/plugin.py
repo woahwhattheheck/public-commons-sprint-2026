@@ -216,6 +216,9 @@ class ReceivingDock(QDockWidget):
         self._layers_tab()
         self._review_tab()
         self._project_tab()
+        from .field_ui import FieldPanel
+        self.field_panel = FieldPanel(self)
+        self.tabs.addTab(self.field_panel, "Field")
         self._history_tab()
         self.status = QLabel("Native QGIS " + native_version()["qgis"])
         self.status.setWordWrap(True)
@@ -515,6 +518,7 @@ class ReceivingDock(QDockWidget):
                 widget.setCurrentIndex(index)
         fill(self.history, [([x["revision"], x["at"], x["actor"], x["action"], x["requestId"]], x)
                             for x in reversed(self.workspace.history())])
+        self.field_panel.refresh(self.state)
         self.show_pending()
 
     def refresh_assets(self):
@@ -573,6 +577,8 @@ class ReceivingDock(QDockWidget):
             result = capture_styles(workspace, QgsProject.instance(), **common)
         elif action == "save":
             result = save_project(workspace, project_crs=data.get("projectCrs"), progress=self.progress, **common)
+        elif action.startswith("field."):
+            result = self.field_panel.execute(workspace, action, data, **common)
         else:
             raise QgisReceivingError("PENDING_ACTION_INVALID", "This saved local action is unknown.")
         self.clear_pending(task)
