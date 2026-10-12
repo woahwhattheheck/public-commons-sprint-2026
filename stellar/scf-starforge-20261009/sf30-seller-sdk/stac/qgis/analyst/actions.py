@@ -71,6 +71,7 @@ def normalize_payload(action, raw, workspace):
         "project.export": {"directory"},
         "project.receive": {"file", "destination", "expectedSha256"},
         "field.command": {"action", "payload"},
+        "parcel.command": {"action", "payload"},
         "postgis.select": {"sourceId", "layerId", "connection", "label"},
         "postgis.check": {"sourceId", "layerIds", "connection"},
         "postgis.layers": {"layers"},
@@ -151,6 +152,11 @@ def normalize_payload(action, raw, workspace):
         require(not Path(value["destination"]).is_relative_to(workspace.root) and
                 not workspace.root.is_relative_to(Path(value["destination"])),
                 "ANALYST_RECEIVING_DIRECTORY", "Receive in a separate project directory.")
+    if action == "parcel.command":
+        from starforge_stac.parcels.operator import normalize
+        require(set(value) == {"action", "payload"}, "PARCEL_ACTION_INPUT",
+                "Use the complete original parcel action and payload.")
+        value["payload"] = normalize(value["action"], value["payload"])
     if action == "field.command":
         require(value.get("action") in FIELD_ACTIONS and isinstance(value.get("payload", {}), dict),
                 "FIELD_ACTION", "Select an existing native field operation.")
@@ -395,6 +401,9 @@ def execute(workspace, record, progress):
     action, payload = original["action"], original["payload"]
     common = {"revision": original["revision"], "request_id": record["requestId"],
               "actor": original["actor"]}
+    if action == "parcel.command":
+        from starforge_stac.parcels.operator import execute as parcel_execute
+        return parcel_execute(workspace, payload["action"], payload["payload"], common, progress=progress), []
     if action == "postgis.select":
         return workspace.source(payload["sourceId"]).layer_definition(payload["layerId"],
             payload["connection"], label=payload.get("label")), []
