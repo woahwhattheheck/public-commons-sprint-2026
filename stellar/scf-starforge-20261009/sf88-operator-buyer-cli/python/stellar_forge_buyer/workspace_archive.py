@@ -20,6 +20,7 @@ import zipfile
 
 from .analysis_workbooks import _open_private, _file_record
 from .errors import StateError
+from .response_documents import allowed_document_payload, snapshot_document_files
 from .storage import digest, dump, parse, private_directory, read, sync_directory, write
 
 ARCHIVE_SCHEMA = "stellar-forge.analysis-workspace-archive.v1"
@@ -63,7 +64,7 @@ def _relative(value):
 def _allowed_payload(value):
     """The portable format carries data files, never a launcher or executable."""
     _relative(value)
-    if value == "datasets.sqlite3":
+    if value == "datasets.sqlite3" or allowed_document_payload(value):
         return True
     if re.fullmatch(r"analysis-query-exports/(?:[a-f0-9]{32}/(?:manifest\.json|rows\.(?:csv|jsonl|sqlite3))|control/[a-f0-9]{32}\.json)", value):
         return True
@@ -325,6 +326,20 @@ class WorkspaceArchives:
                 add("analysis-exports/" + result["filename"], result, identifier)
             elif kind == "backup":
                 add("analysis-backups/" + identifier + "/datasets.sqlite3", result, identifier)
+        # Resolve every registered source revision from this same database view.
+        # During export this is the retained immutable SQLite snapshot; a newer
+        # live registration cannot add files to an already selected backup.
+        try:
+            documents = snapshot_document_files(self.database.directory, db)
+        except (StateError, OSError) as error:
+            if review_missing is None:
+                raise
+            review_missing.append({"path": "analysis-response-documents",
+                                   "reason": "source_document_required_or_changed",
+                                   "code": error.code if isinstance(error, StateError) else "IO_ERROR"})
+        else:
+            for item in documents:
+                add(item["path"], item, item["path"].split("/")[1])
         return sorted(selected.values(), key=lambda item: item["path"]), outputs, exclusions
 
     def review(self, *, include_previous_backups=False):
