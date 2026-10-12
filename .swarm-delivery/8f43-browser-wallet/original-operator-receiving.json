@@ -1,0 +1,50 @@
+{
+  "schema": "stellar-forge.browser-wallet-operator-receiving.v1",
+  "completedAt": "2026-10-12T02:35:57.123Z",
+  "sourceRoot": "/dev/shm/commons-8f43-wallet-customer/source/stellar/scf-starforge-20261009",
+  "operatorWorkspace": "/workspace/scratch/39daa82f3fbd/routescan_native_39da/operator-workspace",
+  "walletDirectory": "/dev/shm/commons-8f43-wallet-customer/operator-wallet",
+  "phase": "PREPARED_AND_REOPENED",
+  "walletId": "e686d395-0366-499e-a63a-4d4758e815df",
+  "bindings": {
+    "actor": "lda-engineering-39da",
+    "service": "routescan-native-gas",
+    "payer": "GAWJMT7STPZJII2DYEUMKQTHXR6UQIOSPBZLFSQ6YU3UWTT4AO4Q7ZGA",
+    "network": "stellar:testnet",
+    "intentId": "routescan-gas-paid-customer-39da-20261011",
+    "method": "GET",
+    "url": "https://merchant.routescan39da.scf.test/gas/average?dateFrom=2026-10-10T00%3A00%3A00.000Z&dateTo=2026-10-10T23%3A59%3A59.999Z&unit=day",
+    "policy": "/workspace/scratch/39daa82f3fbd/routescan_native_39da/operator-workspace/policy.json",
+    "ledger": "/workspace/scratch/39daa82f3fbd/routescan_native_39da/operator-workspace/reservations.sqlite",
+    "buyerTransport": {
+      "mode": "explicit-connect",
+      "origin": "https://merchant.routescan39da.scf.test",
+      "proxyEnv": "SCF_ROUTESCAN_BUYER_PROXY"
+    }
+  },
+  "originalSourceFilesPreserved": true,
+  "operatorKeyNames": [
+    "SF36_AUDIT_KEY_B64",
+    "SF36_CONSENT_KEY_B64",
+    "SF36_OPERATOR_KEY_B64"
+  ],
+  "connection": {
+    "state": "NOT_STARTED",
+    "code": "WALLET_NOT_RUNNING"
+  },
+  "requests": {},
+  "nextOriginalCommand": [
+    "browser-wallet",
+    "serve",
+    "--workspace",
+    "/dev/shm/commons-8f43-wallet-customer/operator-wallet"
+  ],
+  "originalExecute": [
+    "browser-wallet",
+    "execute",
+    "--workspace",
+    "/dev/shm/commons-8f43-wallet-customer/operator-wallet",
+    "--operator-workspace",
+    "/workspace/scratch/39daa82f3fbd/routescan_native_39da/operator-workspace"
+  ]
+}
