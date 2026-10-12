@@ -31,7 +31,8 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace managed-recover --workspace DIRECTORY --operation-id UUID
   runtime-workspace managed-stop --workspace DIRECTORY --operation-id UUID
   runtime-workspace managed-config --workspace DIRECTORY --home-id ID [--path RELATIVE_FILE]
-  runtime-workspace applications --workspace DIRECTORY
+  runtime-workspace applications --workspace DIRECTORY [--history-limit 1]
+  runtime-workspace application-history --workspace DIRECTORY --application-id ID [--limit 30] [--cursor CURSOR]
   runtime-workspace application-review --workspace DIRECTORY --request PRIVATE_JSON
   runtime-workspace application-save --workspace DIRECTORY --request PRIVATE_JSON
   runtime-workspace application-start-review --workspace DIRECTORY --application-id ID
@@ -49,7 +50,8 @@ Install workers retain progress and continue across browser/server restarts.
 Linux, Node22.16+, Python3.11+, npm and flock are the original installer requirements.
 `;
 const allowed = {
-  applications: ['--workspace'],
+  applications: ['--workspace', '--history-limit'],
+  'application-history': ['--workspace', '--application-id', '--limit', '--cursor'],
   'application-review': ['--workspace', '--request'], 'application-save': ['--workspace', '--request'],
   'application-start': ['--workspace', '--request'],
   'application-start-review': ['--workspace', '--application-id'], 'application-connect': ['--workspace', '--application-id'],
@@ -103,7 +105,13 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const model = await openRuntimeWorkspace({ directory });
   let result;
-  if (command === 'applications') result = await model.applicationsState();
+  if (command === 'applications') result = await model.applicationsState({ historyLimit: options['--history-limit'] === undefined ? 1 : Number(options['--history-limit']) });
+  else if (command === 'application-history') {
+    if (!options['--application-id']) fail('APPLICATION_ID_REQUIRED');
+    result = await model.applicationsHistory({ applicationId: options['--application-id'],
+      ...(options['--limit'] !== undefined ? { limit: Number(options['--limit']) } : {}),
+      ...(options['--cursor'] ? { cursor: options['--cursor'] } : {}) });
+  }
   else if (['application-review', 'application-save', 'application-start'].includes(command)) {
     if (!options['--request']) fail('APPLICATION_REQUEST_FILE_REQUIRED');
     const method = { 'application-review': 'applicationsReview', 'application-save': 'applicationsSave', 'application-start': 'applicationsStart' }[command];

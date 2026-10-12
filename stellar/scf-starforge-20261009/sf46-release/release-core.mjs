@@ -1,7 +1,7 @@
 // MIT. Portable source releases and local installation primitives.
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { open, readFile, lstat, realpath, readdir, mkdir, rename, unlink, link } from 'node:fs/promises';
+import { open, readFile, lstat, realpath, readdir, mkdir, rename, unlink, link, copyFile } from 'node:fs/promises';
 import { resolve, join, dirname, sep } from 'node:path';
 import { hostname } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -55,6 +55,50 @@ export async function putFile(path, bytes, mode = 0o644) {
   const handle = await open(path, 'wx', mode);
   try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
 }
+
+// Copy into a caller-owned, create-only staging directory. Reflinks have a
+// separate inode; Node uses an ordinary copy when this filesystem cannot clone.
+export async function copyVerifiedFile(root, relative, destination, expected) {
+  relativePath(relative);
+  if (!Number.isSafeInteger(expected?.bytes) || expected.bytes < 0 || expected.bytes > MAX_BYTES ||
+      !/^[0-9a-f]{64}$/.test(expected.sha256 ?? '') || ![0o644, 0o755].includes(expected.mode))
+    throw new Error('Invalid source copy identity');
+  const sourcePath = join(root, relative), actual = await realpath(sourcePath);
+  if (!actual.startsWith(root + sep)) throw new Error('Release file leaves its directory: ' + relative);
+  const source = await open(sourcePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const before = await source.stat({ bigint: true });
+    if (!before.isFile() || before.size !== BigInt(expected.bytes))
+      throw new Error('Source copy differs from its manifest: ' + relative);
+    await mkdir(dirname(destination), { recursive: true, mode: 0o755 });
+    await copyFile(sourcePath, destination, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE);
+    const target = await open(destination, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    try {
+      const copied = await target.stat({ bigint: true });
+      if (!copied.isFile() || copied.size !== before.size ||
+          copied.dev === before.dev && copied.ino === before.ino)
+        throw new Error('Source copy is not an independent complete file: ' + relative);
+      const hash = createHash('sha256'), block = Buffer.allocUnsafe(Math.min(128 * 1024, expected.bytes + 1));
+      let total = 0;
+      for (;;) {
+        const { bytesRead } = await target.read(block, 0, Math.min(block.length, expected.bytes - total + 1), null);
+        if (!bytesRead) break;
+        total += bytesRead;
+        if (total > expected.bytes) throw new Error('Source copy grew while reading: ' + relative);
+        hash.update(block.subarray(0, bytesRead));
+      }
+      if (total !== expected.bytes || hash.digest('hex') !== expected.sha256)
+        throw new Error('Source copy content differs: ' + relative);
+      const after = await source.stat({ bigint: true }), current = await lstat(sourcePath, { bigint: true });
+      if (!current.isFile() || ['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs'].some(key =>
+          after[key] !== before[key] || current[key] !== before[key]))
+        throw new Error('Original source changed during copying: ' + relative);
+      await target.chmod(expected.mode);
+      await target.sync();
+    } finally { await target.close(); }
+  } finally { await source.close(); }
+}
+
 export async function atomicFile(path, bytes, mode = 0o644, { exclusive = false } = {}) {
   const temp = path + '.new-' + randomUUID();
   try {

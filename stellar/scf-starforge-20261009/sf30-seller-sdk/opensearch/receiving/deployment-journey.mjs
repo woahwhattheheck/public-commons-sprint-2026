@@ -340,7 +340,8 @@ try {
   } else edition = await api('/api/editions/' + edition.id);
   assert.equal(edition.result.hitCount, 6);
   assert.equal(edition.result.hits.length, 6);
-  assert.equal(edition.result.pages, 3);
+  // Three two-hit pages plus the native one-hit truncation lookahead.
+  assert.equal(edition.result.pages, 4);
   assert.equal(edition.result.snapshotReleased, true);
   const upgradedRaw = await bytes('/api/editions/' + edition.id + '/result.json');
   await artifact('customer/upgrade-original-result.json', upgradedRaw);
