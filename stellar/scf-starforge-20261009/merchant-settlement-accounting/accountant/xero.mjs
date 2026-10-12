@@ -80,7 +80,7 @@ function buyerComponents(handoff){
     const economicId=xeroHash(xeroCanonical({workspaceId:handoff.source.buyer.workspaceId,kind,network:source.network,asset:source.asset,identity:source.transfer_identity??native?.transfer_identity??source.item_id}));
     const dimension=xeroCanonical([economicId,source.center_id,source.project,source.account_code]),occurrence=(occurrences.get(dimension)??0)+1;occurrences.set(dimension,occurrence);
     return {id:xeroHash('stellar-forge.xero-buyer-component.v1\n'+dimension+'\n'+occurrence),kind,rowId:row.rowId,sourceLineId:row.sourceLineId,sourceRowSha256:row.sourceRowSha256,
-      economicId,network:source.network,sourceAt:source.recognition_date,sourceTimeBasis:'BUYER_REVIEWED_RECOGNITION_DATE',amountAtomic:source.amount,originalEconomicAmount:source.settled_actual??source.native_return,
+      economicId,network:source.network,sourceAt:source.recognition_date,sourceTimeBasis:'BUYER_REVIEWED_RECOGNITION_DATE',amountAtomic:source.amount,originalEconomicAmount:row.kind==='CREDIT'?source.native_return:source.settled_actual,
       asset:source.asset,assetLabel:row.label.assetLabel,unitLabel:row.label.unitLabel,transfer:row.kind==='CREDIT'?'TRANSFER_MATCHED':native?.classification??'SF36_FINALIZED_RECEIPT',
       transactionFingerprint:source.transaction??native?.observation?.transactionHash??source.receipt_ref??null,observationSha256:source.observation_sha256??native?.observation_sha256??null,
       dataContext:source.data_context??native?.data_context??handoff.source.buyer.dataContext,costCenter:source.center_code,project:source.project,sourceAccountCode:source.account_code,

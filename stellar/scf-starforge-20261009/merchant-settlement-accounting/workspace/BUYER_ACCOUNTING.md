@@ -39,6 +39,14 @@ The existing accountant server delegates these routes to `AccountantWorkspace`:
 
 The Xero routes and HTTP contract stay in [XERO.md](XERO.md). The company/tenant/consent controls remain in the original connection workspace. QuickBooks and other merchant-only adapters continue to validate their supported source type; this extension does not reinterpret a buyer source as merchant income.
 
+## Existing accounting MCP host
+
+Declare `buyerSources: {issued_period: "/absolute/private/issued-buyer-accountant-source.json"}` in the original accounting workspace connection. It uses the same private source-map contract as its other original inputs.
+
+`merchant_accounting_accountant_buyer_prepare` takes the workspace alias, source alias and exact source SHA-256. `merchant_accounting_accountant_buyer_create` adds the existing revision, actor, name and stable handoff UUID. They call the same source preview and handoff factory used by the browser. The original accountant row/return and Xero tools then operate on that handoff. `merchant_accounting_file` can download its `original-buyer-source.json` and saved `buyer-return.json` with the original bounded retained-file contract.
+
+The buyer-side return tools and this accounting-side source map belong to their existing separate workspace owners. No connection consent or platform credential is transferred by the handoff.
+
 ## Retained return
 
 `buyer-return.json` contains the immutable buyer handoff and full original accountant revision chain. The receiving reader rebuilds the handoff from the buyer's own issued source, checks the original seals and row matching, and verifies each parent before accepting any external reference.
