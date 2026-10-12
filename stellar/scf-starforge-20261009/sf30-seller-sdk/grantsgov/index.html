@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grant Opportunities · Stellar Forge</title><link rel="stylesheet" href="/app.css"><script type="module" src="/app.mjs"></script></head>
+<body>
+<header class="topbar"><div><strong>STELLAR FORGE</strong><span class="product">Grant Opportunities</span></div>
+<div class="toolbar"><span id="workspace-label">Opening workspace</span><button id="refresh">Refresh</button><button id="backup">Export workspace</button></div></header>
+<div class="shell">
+<nav aria-label="Workspace"><button data-view="opportunities" aria-current="page">Opportunities</button><button data-view="search">Search and capture</button><button data-view="compare">Compare editions</button><button data-view="publishing">Publishing</button><button data-view="delivery">Exports and receiving</button>
+<p class="nav-note">Original notices, qualification and delivery in one retained workspace.</p></nav>
+<main>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<div id="pending" class="notice" hidden><span>An action is awaiting a response.</span> <button id="retry-action">Retry the same action</button></div>
+
+<section id="view-opportunities" data-panel>
+<div class="heading"><div><p class="eyebrow">RESEARCH WORKSPACE</p><h1>Opportunities</h1><p>Review original notices, qualify the fit, and prepare a complete workshare.</p></div><button data-open-view="search">New capture</button></div>
+<div class="filters"><label class="grow">Saved edition<select id="edition"></select></label>
+<label class="grow">Search within edition<input id="row-search" type="search" placeholder="Title, agency, number or description"></label>
+<label>Status<select id="row-status"><option value="">All statuses</option><option>posted</option><option>forecasted</option><option>closed</option><option>archived</option></select></label>
+<label>Sort<select id="row-sort"><option value="closing_date">Closing date</option><option value="posting_date">Posting date</option><option value="title">Title</option><option value="agency_name">Agency</option></select></label><button id="filter-rows">Apply</button></div>
+<div class="filters secondary"><label>Agency code<input id="row-agency" placeholder="All agencies"></label><label>Closing from<input id="row-from" type="date"></label><label>Closing through<input id="row-to" type="date"></label>
+<label class="grow">Selection name<input id="selection-name" placeholder="Priority grant opportunities"></label><button id="save-selection">Save selected edition</button><span id="selected-count">0 selected</span></div>
+<p id="edition-summary" class="muted"></p>
+<div class="research-grid">
+<div class="panel table-panel"><div class="table-scroll"><table id="opportunities"><thead><tr><th scope="col"><input id="select-page" type="checkbox" aria-label="Select this page"></th><th scope="col">Opportunity</th><th scope="col">Agency</th><th scope="col">Closing date</th><th scope="col">Review</th></tr></thead><tbody id="opportunity-rows"></tbody></table></div>
+<div class="pagination"><button id="previous-page">Previous</button><span id="page-summary"></span><button id="next-page">Next</button></div></div>
+<aside id="opportunity-detail" class="panel detail"><div class="empty"><h2>Choose an opportunity</h2><p>Open a notice to read its requirements and prepare the qualification and delivery scope.</p></div></aside>
+</div>
+</section>
+
+<section id="view-search" data-panel hidden>
+<div class="heading"><div><p class="eyebrow">ORIGINAL PUBLIC SOURCE</p><h1>Search and capture</h1><p>Save the search, retain every returned page, and collect the complete notice details.</p></div></div>
+<div class="two-column">
+<form id="query-form" class="panel form-stack"><h2>Saved search</h2>
+<label>Edit a saved search<select id="query-existing"><option value="">New search</option></select></label>
+<label>Search name<input name="name" id="query-name" required maxlength="240" value="Artificial intelligence opportunities"></label>
+<label>Keyword<input name="keyword" id="query-keyword" maxlength="1000" value="artificial intelligence"></label>
+<label>Opportunity number<input name="opportunityNumber" id="query-number" maxlength="250" placeholder="Optional exact opportunity number"></label>
+<fieldset><legend>Published status</legend><div class="checks"><label><input type="checkbox" name="statuses" value="posted" checked> Posted</label><label><input type="checkbox" name="statuses" value="forecasted" checked> Forecasted</label><label><input type="checkbox" name="statuses" value="closed"> Closed</label><label><input type="checkbox" name="statuses" value="archived"> Archived</label></div></fieldset>
+<details><summary>Agency, eligibility and funding filters</summary><div class="form-stack">
+<label>Agency codes<input id="query-agencies" placeholder="Separate codes with |"></label>
+<label>Eligibility codes<input id="query-eligibilities" placeholder="Separate codes with |"></label>
+<label>Funding category codes<input id="query-fundingCategories" placeholder="Separate codes with |"></label>
+<label>Funding instrument codes<input id="query-fundingInstruments" placeholder="Separate codes with |"></label>
+<label>Assistance listing number<input id="query-aln"></label>
+<label>Rows per provider page<input id="query-pageSize" type="number" min="1" max="100" value="25"></label>
+</div></details>
+<div class="toolbar"><button type="submit">Save search</button><button type="submit" name="capture" value="yes" class="primary">Save and capture all results</button></div>
+</form>
+<div class="panel"><h2>Captures</h2><p class="muted">Pause and resume keeps the original search, source records and acquisition.</p><div id="captures"></div></div></div>
+</section>
+
+<section id="view-compare" data-panel hidden>
+<div class="heading"><div><p class="eyebrow">NOTICE CHANGES</p><h1>Compare editions</h1><p>Review deadline, eligibility, funding, package and revision changes in the retained notices.</p></div></div>
+<div class="panel"><form id="compare-form" class="filters"><label class="grow">Earlier edition<select id="compare-before"></select></label><label class="grow">Later edition<select id="compare-after"></select></label><button class="primary">Compare</button><button type="button" id="export-comparison">Export full comparison</button></form><div id="comparison"></div></div>
+</section>
+
+<section id="view-publishing" data-panel hidden>
+<div class="heading"><div><p class="eyebrow">DATASET DELIVERY</p><h1>Publishing</h1><p>Turn an edition into a queryable merchant dataset with its complete original source.</p></div></div>
+<div class="two-column">
+<form id="merchant-form" class="panel form-stack"><h2>Prepare a merchant</h2>
+<label>Source edition<select id="merchant-edition"></select></label>
+<label>Default page size<input id="merchant-default" type="number" value="25" min="1" max="1000"></label>
+<label>Maximum page size<input id="merchant-max" type="number" value="100" min="1" max="1000"></label>
+<details><summary>Public merchant terms</summary><p class="muted">Supply the seller’s payment requirement and public origin to use the native publisher and release workflow.</p><div class="form-stack">
+<label>Public origin<input id="merchant-origin" type="url" placeholder="https://grants.example.com"></label>
+<label>Endpoint path<input id="merchant-path" value="/grant-opportunities"></label>
+<label>Payment requirement JSON<textarea id="merchant-payment" rows="9" spellcheck="false" placeholder="Paste the public payment requirement"></textarea></label>
+</div></details><button class="primary">Prepare merchant</button></form>
+<div class="panel"><h2>Saved merchants</h2><div id="merchants"></div>
+<details><summary>Query a prepared dataset</summary><form id="preview-form" class="form-stack"><label>Merchant<select id="preview-merchant"></select></label><label>Dataset query JSON<textarea id="preview-query" rows="5" spellcheck="false">{ "limit": 5 }</textarea></label><button>Run local preview</button></form><pre id="preview-result"></pre></details></div>
+</div>
+<div class="panel native-publisher"><h2>Native publisher and customer receiving</h2><p>Prepare the original dataset, review its draft, publish and activate its snapshot, stage a release, and continue the native buyer session.</p>
+<form id="publisher-form" class="form-stack"><div class="filters"><label class="grow">Action<select id="publisher-action">
+<option>publisher.status</option><option>publisher.prepare</option><option>publisher.preview</option><option>publisher.reviewDraft</option><option>publisher.publish</option><option>publisher.activateSnapshot</option><option>publisher.collect</option><option>publisher.release.stage</option><option>publisher.release.inspect</option><option>publisher.release.activate</option><option>publisher.release.rollback</option><option>publisher.release.start</option><option>publisher.release.stop</option><option>publisher.buyer.review</option><option>publisher.buyer.prepare</option><option>publisher.buyer.session</option><option>publisher.buyer.run</option><option>publisher.buyer.recover</option><option>publisher.buyer.account</option><option>publisher.buyer.export</option><option>publisher.export</option>
+</select></label><button type="button" id="publisher-template">Load action input</button><button class="primary">Run action</button></div>
+<label>Action input JSON<textarea id="publisher-input" rows="9" spellcheck="false">{}</textarea></label></form><pre id="publisher-result"></pre></div>
+</section>
+
+<section id="view-delivery" data-panel hidden>
+<div class="heading"><div><p class="eyebrow">PORTABLE WORK</p><h1>Exports and receiving</h1><p>Download complete source, editions and workshares. Reopen the saved work on another machine.</p></div></div>
+<div class="two-column"><div class="panel"><h2>Export</h2><form id="export-form" class="form-stack">
+<label>Content<select id="export-kind"><option value="workspace">Complete research workspace</option><option value="edition">Selected edition and source</option><option value="capture">Original capture</option><option value="merchant">Prepared merchant package</option><option value="workshare-md">Selected opportunity workshare · Markdown</option><option value="workshare-html">Selected opportunity workshare · HTML</option></select></label>
+<label>Edition<select id="export-edition"></select></label><label>Capture<select id="export-capture"></select></label><label>Merchant<select id="export-merchant"></select></label><p class="muted" id="workshare-selection">Choose an opportunity on the research page for a workshare export.</p><button class="primary">Create complete export</button></form></div>
+<div class="panel"><h2>Receive saved work</h2><form id="receive-form" class="form-stack"><label>Complete portable JSON file<input id="receive-file" type="file" accept=".json,application/json" required></label><label>Receive as<select id="receive-kind"><option value="edition">Original edition and its qualification</option><option value="capture">Original source capture</option><option value="workspace">Complete research workspace</option></select></label><label>Source name<input id="receive-name" value="Received grant research"></label><p class="muted">A full research workspace restores into an empty receiving directory. Its original source, edition identities, queries and review history continue together.</p><button class="primary">Receive complete file</button></form></div></div>
+<div class="panel"><h2>Retained downloads</h2><div id="exports"></div></div>
+</section>
+<footer id="attribution"></footer>
+</main></div>
+</body></html>

@@ -2,6 +2,10 @@
 
 **Status:** Node.js 22+ seller metadata compiler and runnable resource service. MIT. The compiler and challenge-only service need no npm dependencies. The optional payment runtime delegates verification and settlement to the official x402 SDK and an explicitly configured facilitator.
 
+## Grants.gov source and grant research workspace
+
+The [Grants.gov workspace](./grantsgov/README.md) retains complete opportunity searches and notice details, editable qualifications and workshares, immutable source editions and substantive notice comparisons. Its local operator UI and CLI prepare the original SF30 merchant dataset and native publisher/customer workflow, and export the complete research for receiving and reopen. Start it with `node dataset-cli.mjs grants serve --workspace /private/grant-research`.
+
 ## OData source and merchant workspace
 
 The [OData workspace](./odata/README.md) connects an OData v4 service, reads its original CSDL, compiles typed queries, and retains resumable source editions. Its industrial operator UI and CLI support keyed comparison, receiving reviews, precise Decimal/Int64 data, native dataset exports and the original SF82 merchant release lifecycle. Open it with `node dataset-cli.mjs odata --workspace DIRECTORY serve` using Node.js 24+.
