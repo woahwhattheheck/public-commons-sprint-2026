@@ -14,7 +14,7 @@ sys.dont_write_bytecode=True
 from common import digest, git_sha, info, inventory, publish, publish_bytes, read, require, verify
 
 HERE=Path(__file__).resolve().parent
-CAPSULE_SHA="c0570f6172a46c09b8577fb0bef4d33f06f942f7"
+CAPSULE_SHA="f8472570d58e87741a180c81388f15fbde3ead2d"
 
 def installed(context, *, include_application=True):
     import tethys_portal

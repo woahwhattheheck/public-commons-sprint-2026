@@ -457,3 +457,15 @@ Open **Open311 service performance** in the maintained Applications launcher, se
 Helsinki's READY and PROCESSING values retain their published processing meanings. The profile keeps the original expected_datetime field separate from operator-defined target dates. A saved reporting period and observation cutoff select the actual retained source editions; the calculation retains unresolved coverage and source-version review issues with the result.
 
 The collection workspace and reporting workspace each retain their own exact mutation history and complete portable exports. Keep the original complete collection beside the reporting handoff so another operator can continue municipal review as well as reopen its service-performance reports.
+
+## Collect updated records through native source pages
+
+The same merchant tools operate created-time or updated-time collections. Set `policy.timeBasis` to `updated` for a query containing the provider's declared `updated_after` and `updated_before`; an optional `start_date` / `end_date` pair remains a fixed creation filter. Set `policy.strategy` to `pages` only for a connection with declared pagination. Omitted choices preserve the original created-time/window behavior of earlier workspaces.
+
+The supplied Boston profile uses `per_page`, a maximum of 300, Bearer credential transport and 6000-millisecond source request spacing. Its saved date-range declarations constrain creation/update filters to the documented intervals. Configure its profile through the same host-owned `connectionProfiles` object and `client.configure()` operation. The host profile reader retains `apiKeyTransport`, `minimumRequestIntervalMs` and `queryDateRanges` together with the existing endpoint, source fields and environment-variable name.
+
+`client.createCollection()` accepts the complete query and optional policy choices. The collector owns page numbering from 1. A full page is retained as `PAGED` with one next-page child; a short page completes the sequence. `client.collectionInfo()` exposes each original `page`, query/capture, attempt and continuation using the existing limit-100 merchant pagination. A repeated complete source page is retained as `LIMITED` with `REPEATED_SOURCE_PAGE`.
+
+The CLI exposes `capture --updated-after ... --updated-before ... --per-page 40 --page 1` for a single original Boston response, and `collection-plan --file ...` / `collection-create --file ...` for the complete saved traversal. Use the actual profile and operating selections in [BOSTON.md](./BOSTON.md). The browser's **Date basis**, **Source traversal**, additional date filter and native response-size controls prepare that same complete collection intent.
+
+All original pages and distinct request editions remain in collection exports and full workspace receiving. The request view presents original status notes and public notes beside the separately saved internal review. Its complete collection JSON continues into the installed service-performance desk through the existing original-file download and reporting import workflow.

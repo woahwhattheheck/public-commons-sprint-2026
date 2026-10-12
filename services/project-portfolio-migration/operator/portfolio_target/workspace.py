@@ -38,12 +38,14 @@ ACTIONS = {
     "intake", "source_review", "source_apply", "mspdi_export", "probe",
     "prepare", "prepare_adjustment", "review", "continue", "adopt_detail", "capture_target",
     "receive_target_file", "accept", "handover", "archive", "abandon_set",
+    "archive_save", "archive_review", "archive_publish", "archive_query_export", "archive_inspect", "archive_receive",
 }
 
 
 def error_value(exc):
     return {"code": getattr(exc, "code", type(exc).__name__), "message": str(exc),
-            "dispatched": bool(getattr(exc, "dispatched", False))}
+            "dispatched": bool(getattr(exc, "dispatched", False)),
+            **({"details": exc.details} if getattr(exc, "details", None) is not None else {})}
 
 
 class TargetWorkspace:
@@ -53,6 +55,8 @@ class TargetWorkspace:
         self.store = Store(self.root)
         self.profiles = read_profiles(profile_config, self.root)
         self.closing = threading.Event()
+        from archive import ArchiveWorkspace
+        self.archives = ArchiveWorkspace(self.portfolio, self.store, stopped=self.closing.is_set)
 
     def profile(self, identity):
         try:
@@ -73,7 +77,8 @@ class TargetWorkspace:
                 "profiles": [public_profile(p) for p in self.profiles.values()],
                 "deployments": {**deployments, "items": summaries},
                 "requests": self.store.list("requests", limit=25),
-                "editions": self.portfolio.list_editions(limit=25)}
+                "editions": self.portfolio.list_editions(limit=25),
+                "cohorts": self.archives.list(limit=25)}
 
     def deployment(self, identity):
         value = self.store.index("deployments", checked_id(identity))
@@ -126,9 +131,32 @@ class TargetWorkspace:
                 if request.get("result_sha256") else None}
 
     def _run(self, kind, args, request_id):
+        if kind.startswith("archive_"):
+            return self.archives._run_locked(request_id, kind, args)
         if kind == "intake":
             source = self.store.selected_upload(args["source"])
-            companions = [str(self.store.selected_upload(x)) for x in args.get("companions", [])]
+            companions = []
+            selected_companions = args.get("companions", [])
+            if not isinstance(selected_companions, list):
+                raise TargetError("COMPANION_UPLOADS", "Choose the original uploaded companion list.")
+            profile_fields = {"format", "role", "encoding", "delimiter", "json_pointer"}
+            for selected in selected_companions:
+                if not isinstance(selected, dict):
+                    raise TargetError("COMPANION_UPLOAD", "Keep each selected companion and its reader profile.")
+                if "source" in selected:
+                    if set(selected) - {"source", "label", "profile"}:
+                        raise TargetError("COMPANION_OPTIONS", "Use source, label and the original companion profile.")
+                    uploaded = selected["source"]
+                    profile = selected.get("profile", {})
+                    if not isinstance(profile, dict) or set(profile) - profile_fields:
+                        raise TargetError("COMPANION_PROFILE", "Choose format, role, encoding, delimiter and json_pointer.")
+                    label = selected.get("label")
+                else:
+                    # Original saved browser requests contain the upload object itself.
+                    uploaded, profile, label = selected, {}, None
+                path = self.store.selected_upload(uploaded)
+                companions.append({"path": str(path), "label": label if label is not None else path.name,
+                                   **profile})
             return self.portfolio.intake(request_id, source, label=args.get("label") or source.name,
                                          profile=args.get("profile"), companions=companions or None)
         if kind == "source_review":

@@ -84,7 +84,7 @@ function rawBytes(raw) {
 function connectionInput(input, requestId) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('CONNECTION_REQUIRED', 'Supply a connection.');
   if (Object.hasOwn(input, 'apiKey')) fail('USE_ENVIRONMENT_REFERENCE', 'Configure the API key in the server environment and supply its variable name in apiKeyEnv.');
-  const accepted = ['id', 'name', 'baseUrl', 'jurisdictionId', 'discoveryUrl', 'apiKeyEnv', 'apiKeyParameter', 'allowHttp', 'pagination', 'extendedAttributes', 'responseLimit', 'responseLimitParameter', 'statusValues', 'queryExtensions', 'timeoutMs', 'maxResponseBytes', 'attribution'];
+  const accepted = ['id', 'name', 'baseUrl', 'jurisdictionId', 'discoveryUrl', 'apiKeyEnv', 'apiKeyParameter', 'apiKeyTransport', 'minimumRequestIntervalMs', 'queryDateRanges', 'allowHttp', 'pagination', 'extendedAttributes', 'responseLimit', 'responseLimitParameter', 'statusValues', 'queryExtensions', 'timeoutMs', 'maxResponseBytes', 'attribution'];
   const c = Object.fromEntries(accepted.filter(key => Object.hasOwn(input, key)).map(key => [key, input[key]]));
   c.id = c.id ? id(c.id, 'connection.id') : 'connection-' + sha256(requestId).slice(0, 20);
   c.name = text(c.name || c.id, 'connection.name', 200);
@@ -106,6 +106,17 @@ function connectionInput(input, requestId) {
   }
   if (c.responseLimitParameter !== undefined && (typeof c.responseLimitParameter !== 'string' || !c.queryExtensions?.includes(c.responseLimitParameter)))
     fail('INVALID_RESPONSE_LIMIT_PARAMETER', 'responseLimitParameter must name a declared provider-specific query parameter.');
+  if (c.apiKeyTransport !== undefined && !['query', 'bearer'].includes(c.apiKeyTransport))
+    fail('INVALID_KEY_TRANSPORT', 'apiKeyTransport must be query or bearer.');
+  if (c.minimumRequestIntervalMs !== undefined && (!Number.isSafeInteger(c.minimumRequestIntervalMs) || c.minimumRequestIntervalMs < 0))
+    fail('INVALID_SOURCE_PACING', 'minimumRequestIntervalMs must be a nonnegative integer.');
+  if (c.queryDateRanges !== undefined) {
+    if (!Array.isArray(c.queryDateRanges) || c.queryDateRanges.some(range => !range || typeof range !== 'object' ||
+        Array.isArray(range) || range.start === range.end || !c.queryExtensions?.includes(range.start) ||
+        !c.queryExtensions?.includes(range.end) || !Number.isFinite(range.maxDays) || range.maxDays <= 0))
+      fail('INVALID_QUERY_DATE_RANGES', 'Each date range needs two declared query extension names and positive maxDays.');
+    c.queryDateRanges = c.queryDateRanges.map(({ start, end, maxDays }) => ({ start, end, maxDays }));
+  }
   if (c.attribution !== undefined) {
     if (!c.attribution || typeof c.attribution !== 'object' || Array.isArray(c.attribution)) fail('INVALID_ATTRIBUTION', 'attribution must be an object.');
     c.attribution = Object.fromEntries(['publisher','title','license','licenseUrl','sourceUrl'].filter(key => c.attribution[key] !== undefined).map(key => [key, text(c.attribution[key], key, 2048, true)]));
@@ -256,7 +267,7 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
         unique.add(row.serviceRequestId);
       }
       const actualQuery = copy(result.receipt.query ?? selected.query);
-      const limit = result.receipt.coverage?.documentedLimit ?? Math.min(Number(actualQuery.page_size || selected.connection.responseLimit || 1000), Number(selected.connection.responseLimit || 1000));
+      const limit = result.receipt.coverage?.documentedLimit ?? Math.min(Number(actualQuery.page_size || selected.connection.responseLimit || 1000), Number(selected.connection.responseLimitParameter ? actualQuery[selected.connection.responseLimitParameter] || selected.connection.responseLimit || 1000 : selected.connection.responseLimit || 1000), Number(selected.connection.responseLimit || 1000));
       if (!Number.isSafeInteger(limit) || limit < 1) fail('INVALID_SOURCE_LIMIT', 'The retained source limit must be a positive integer.');
       const saturated = (selected.kind === 'requests') && rows.length >= Number(limit);
       const capture = { id: captureId, connectionId: selected.connection.id, kind: selected.kind,

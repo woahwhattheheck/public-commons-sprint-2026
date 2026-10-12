@@ -484,7 +484,20 @@ def build_analysis(rows, columns, source):
                         "Equal composite key occurs at source row numbers " +
                         ", ".join(str(item) for item in group["row_numbers"]),
                         number - 1, group["value"], "warning")
-    power_plants = {"name", "country", "capacity_mw", "primary_fuel"}.issubset(columns)
+    # The retained plants collection keeps reviewed customer aliases. Domain
+    # recipes read their explicit source meanings, so renaming a reviewed field
+    # does not remove its capacity, country, historical-year or attribution work.
+    # An explicitly empty mapping means that no semantic alias was reviewed.
+    semantic_mapping = ({original: alias for original, alias in mapping.items()
+                         if alias in columns} if "column_mapping" in source
+                        else {field: field for field in columns})
+    semantic_columns = list(semantic_mapping)
+    semantic_rows = [{original: row[alias] for original, alias in semantic_mapping.items()
+                      if alias in row} for row in rows]
+    semantic_hints = [{original: row_hints[alias]
+                       for original, alias in semantic_mapping.items() if alias in row_hints}
+                      for row_hints in hints]
+    power_plants = {"name", "country", "capacity_mw", "primary_fuel"}.issubset(semantic_columns)
     collections = {
         "plants": {"columns": columns,
                    "rows": [{field: _cell(value) for field, value in row.items()} for row in rows]},
@@ -496,28 +509,28 @@ def build_analysis(rows, columns, source):
     coordinate_review = None
     generation_review = []
     if power_plants:
-        capacities = [_number(row.get("capacity_mw"), nonnegative=True) for row in rows]
-        capacity_review = _capacity_summary(list(range(len(rows))), rows, capacities)
+        capacities = [_number(row.get("capacity_mw"), nonnegative=True) for row in semantic_rows]
+        capacity_review = _capacity_summary(list(range(len(semantic_rows))), semantic_rows, capacities)
         for index, (status, value, reason) in enumerate(capacities):
             if status != "known":
-                observe("capacity", "capacity_mw", _state(rows[index], "capacity_mw")
+                observe("capacity", "capacity_mw", _state(semantic_rows[index], "capacity_mw")
                         if status == "missing" else reason,
                         "Excluded from disclosed capacity totals; original observation is retained.",
-                        index, rows[index].get("capacity_mw"),
+                        index, semantic_rows[index].get("capacity_mw"),
                         "warning" if status == "invalid" else "info")
-        country_fields = [field for field in ("country", "country_long") if field in columns]
-        collections["countries"] = _group_capacity(rows, country_fields, hints, capacities)
-        collections["fuels"] = _group_capacity(rows, ["primary_fuel"], hints, capacities)
-        if "owner" in columns:
-            collections["owners"] = _group_capacity(rows, ["owner"], hints, capacities)
+        country_fields = [field for field in ("country", "country_long") if field in semantic_columns]
+        collections["countries"] = _group_capacity(semantic_rows, country_fields, semantic_hints, capacities)
+        collections["fuels"] = _group_capacity(semantic_rows, ["primary_fuel"], semantic_hints, capacities)
+        if "owner" in semantic_columns:
+            collections["owners"] = _group_capacity(semantic_rows, ["owner"], semantic_hints, capacities)
         for field in ("year_of_capacity_data", "commissioning_year"):
-            if field not in columns:
+            if field not in semantic_columns:
                 continue
             buckets = {}
-            for index, row in enumerate(rows):
+            for index, row in enumerate(semantic_rows):
                 state = _state(row, field)
                 value = row.get(field)
-                token = (state, _identity_token(value, hints[index].get(field)))
+                token = (state, _identity_token(value, semantic_hints[index].get(field)))
                 if token not in buckets:
                     buckets[token] = [state, _cell(value), 0]
                 buckets[token][2] += 1
@@ -530,12 +543,12 @@ def build_analysis(rows, columns, source):
                     blank_count=count if state == "blank" else 0,
                     note="Source disclosure retained exactly; fractional years are not rounded.",
                 ))
-        for field in columns:
+        for field in semantic_columns:
             match = _GENERATION.fullmatch(field)
             if not match:
                 continue
-            numbers = [_number(row.get(field)) for row in rows]
-            states = Counter(_state(row, field) for row in rows)
+            numbers = [_number(row.get(field)) for row in semantic_rows]
+            states = Counter(_state(row, field) for row in semantic_rows)
             known = [number for status, number, _ in numbers if status == "known"]
             entry = {
                 "field": field, "year": match.group(1), "known_count": len(known),
@@ -546,7 +559,7 @@ def build_analysis(rows, columns, source):
             generation_review.append(entry)
             coverage.append(_coverage(
                 "generation_year", field, "source_column_year", match.group(1),
-                row_count=len(rows), present_count=states["present"],
+                row_count=len(semantic_rows), present_count=states["present"],
                 absent_count=states["absent"], null_count=states["null"],
                 blank_count=states["blank"], known_count=len(known),
                 invalid_count=entry["invalid_count"],
@@ -557,15 +570,15 @@ def build_analysis(rows, columns, source):
                 if status == "invalid":
                     observe("generation", field, reason,
                             "Excluded from this year's disclosed generation total.",
-                            index, rows[index].get(field), "warning")
+                            index, semantic_rows[index].get(field), "warning")
         for field in ("source", "generation_data_source", "geolocation_source",
                       "other_fuel1", "other_fuel2", "other_fuel3"):
-            if field not in columns:
+            if field not in semantic_columns:
                 continue
             buckets = {}
-            for index, row in enumerate(rows):
+            for index, row in enumerate(semantic_rows):
                 state = _state(row, field)
-                token = (state, _identity_token(row.get(field), hints[index].get(field)))
+                token = (state, _identity_token(row.get(field), semantic_hints[index].get(field)))
                 if token not in buckets:
                     buckets[token] = [state, _cell(row.get(field)), 0]
                 buckets[token][2] += 1
@@ -576,11 +589,11 @@ def build_analysis(rows, columns, source):
                     note="Observed row count; capacity totals use primary_fuel only."
                          if field.startswith("other_fuel") else "Original source attribution.",
                 ))
-        if "latitude" in columns and "longitude" in columns:
+        if "latitude" in semantic_columns and "longitude" in semantic_columns:
             coordinate_states = Counter()
             good_latitudes = []
             good_longitudes = []
-            for index, row in enumerate(rows):
+            for index, row in enumerate(semantic_rows):
                 parsed = {}
                 for field, bound in (("latitude", Decimal(90)), ("longitude", Decimal(180))):
                     status, value, reason = _number(row.get(field))
@@ -632,7 +645,7 @@ def build_analysis(rows, columns, source):
         for name, title in (("countries", "Disclosed capacity by country"),
                             ("owners", "Disclosed capacity by owner"),
                             ("fuels", "Disclosed capacity by primary fuel")):
-            if name == "owners" and "owner" not in columns:
+            if name == "owners" and "owner" not in semantic_columns:
                 continue
             recipes.append({
                 "key": name, "title": title, "sheet": name.title(), "collection": name,
@@ -654,28 +667,29 @@ def build_analysis(rows, columns, source):
         "collections": collections, "recipes": recipes,
         "summary": {
             "rows": len(rows), "columns": len(normal_columns),
-            "countries": len({_identity_token(row["country"], hints[index].get("country"))
-                              for index, row in enumerate(rows)
+            "countries": len({_identity_token(row["country"], semantic_hints[index].get("country"))
+                              for index, row in enumerate(semantic_rows)
                               if _state(row, "country") == "present"}) if power_plants else None,
-            "owners": len({_identity_token(row["owner"], hints[index].get("owner"))
-                           for index, row in enumerate(rows)
+            "owners": len({_identity_token(row["owner"], semantic_hints[index].get("owner"))
+                           for index, row in enumerate(semantic_rows)
                            if _state(row, "owner") == "present"})
-                      if power_plants and "owner" in columns else None,
-            "primary_fuels": len({_identity_token(row["primary_fuel"], hints[index].get("primary_fuel"))
-                                  for index, row in enumerate(rows)
+                      if power_plants and "owner" in semantic_columns else None,
+            "primary_fuels": len({_identity_token(row["primary_fuel"], semantic_hints[index].get("primary_fuel"))
+                                  for index, row in enumerate(semantic_rows)
                                   if _state(row, "primary_fuel") == "present"}) if power_plants else None,
             "disclosed_capacity_mw": capacity_review["disclosed_capacity_mw"] if capacity_review else None,
             "capacity_known_count": capacity_review["capacity_known_count"] if capacity_review else None,
             "capacity_missing_count": capacity_review["capacity_missing_count"] if capacity_review else None,
             "capacity_invalid_count": capacity_review["capacity_invalid_count"] if capacity_review else None,
             "capacity_year_missing_count": sum(
-                _state(row, "year_of_capacity_data") != "present" for row in rows)
-                if power_plants and "year_of_capacity_data" in columns else None,
+                _state(row, "year_of_capacity_data") != "present" for row in semantic_rows)
+                if power_plants and "year_of_capacity_data" in semantic_columns else None,
             "coordinate_complete_count": coordinate_review["complete_count"] if coordinate_review else None,
             "recommended_key": ", ".join(preferred) or None,
         },
         "review": {
             "mode": "power_plants" if power_plants else "generic",
+            "semantic_field_mapping": semantic_mapping,
             "edition_id": edition_id,
             "counts": {"rows": len(rows), "columns": len(columns),
                        "profiled_columns": len(normal_columns),

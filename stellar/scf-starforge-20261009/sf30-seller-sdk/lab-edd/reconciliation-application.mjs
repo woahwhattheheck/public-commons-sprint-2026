@@ -25,7 +25,9 @@ export async function appendReconciliationResult({
   let prepared=[],nativeZip=null,nativePreparation;
   try{
     prepared=await renderPreparedFiles(baseline,baselineReview,{signal,processes:context.processes});
-    nativeZip=writeLabZip(prepared,{signal});nativePreparation={status:'PREPARED',files:prepared.length};
+    nativeZip=writeLabZip(prepared,{signal});nativePreparation={status:'PREPARED',files:prepared.length,
+        ...(prepared.some(file=>file.formatConversion)?{conversions:prepared.filter(file=>file.formatConversion)
+          .map(file=>({filename:file.filename,sourceFile:file.sourceFile,...file.formatConversion}))}:{})};
   }catch(error){
     signal.throwIfAborted();nativePreparation={status:'REVIEW_REQUIRED',error:{code:String(error.code??'NATIVE_PREPARATION'),
       message:String(error.message??error),...((error.details??error.detail)===undefined?{}:{detail:error.details??error.detail})}};
@@ -85,6 +87,7 @@ export async function appendReconciliationResult({
       report:{summary:baselineReview.report.summary,counts:baselineReview.report.counts,disposition:baselineReview.report.disposition},
       changes:baselineReview.changes,nativePreparation,editableTables:baselineTables,
       prepared:nativeZip?{archive:'prepared/baseline-receiving-files.zip',bytes:nativeZip.byteLength,sha256:sha256(nativeZip),
-        files:prepared.map(file=>({filename:file.filename,bytes:file.size,sha256:file.sha256,mediaType:file.mediaType??null}))}:null},
+        files:prepared.map(file=>({filename:file.filename,bytes:file.size,sha256:file.sha256,mediaType:file.mediaType??null,
+          ...(file.formatConversion?{sourceFile:file.sourceFile,formatConversion:file.formatConversion}:{})}))}:null},
     editableTables:correspondenceTables,fieldTable:{rows:fieldTable.rows,bytes:Buffer.byteLength(fieldTable.text),sha256:sha256(fieldTable.text)}};
 }

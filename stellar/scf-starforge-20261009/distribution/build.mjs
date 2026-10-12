@@ -17,7 +17,7 @@ export { inspectDistributionBuild };
 
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|rb|rbs|erb|php|go|rs|java|json|jsonl|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|dtd|yaml|yml|svg|png|woff2|service|proto)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|pyi|rb|rbs|erb|php|go|rs|java|json|jsonl|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|dtd|yaml|yml|svg|png|woff2|service|proto)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
@@ -31,7 +31,7 @@ function isRuntimeFile(path, explicitRuntime = false) {
   return !parts.some(part => part.startsWith('.') ||
     (excludedDirs.has(part) && !(part === 'fixtures' && declaredData))) &&
     (explicitRuntime || !excludedName.test(parts.at(-1))) &&
-    (supported.test(path) || (explicitRuntime && /\.(?:zip|parquet|pdf|r|rd)$/i.test(path)) ||
+    (supported.test(path) || (explicitRuntime && /\.(?:zip|parquet|gz|pdf|r|rd)$/i.test(path)) ||
       ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)) ||
       (explicitRuntime && (['COPYING', 'DESCRIPTION', 'metadat-DESCRIPTION'].includes(parts.at(-1)) ||
         /^(?:LICENSE|NOTICE)[.-][A-Za-z0-9][A-Za-z0-9._-]*$/i.test(parts.at(-1)))));

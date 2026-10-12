@@ -55,10 +55,17 @@ export async function main(args=process.argv.slice(2)){
       port:Number(opts.port??0),connectionFile:opts['connection-file']?absolute(opts['connection-file']):null});
     process.stdout.write(JSON.stringify({schema:SCHEMA.connection,mode:'ZOTERO_LIBRARY_WORKSPACE',workspaceId:app.workspace.identity.workspaceId,
       instanceId:app.instanceId,origin:app.origin,connectionFile:app.connectionFile,active:true})+'\n');
-    let stopping;
-    const close=()=>stopping??=(async()=>{await app.close();process.exitCode=0;})();
-    process.once('SIGINT',()=>close().catch(e=>{process.stderr.write(JSON.stringify({error:safeCode(e)})+'\n');process.exitCode=1;}));
-    process.once('SIGTERM',()=>close().catch(e=>{process.stderr.write(JSON.stringify({error:safeCode(e)})+'\n');process.exitCode=1;}));
+    let stopping;const originalClose=app.close;
+    const close=()=>{
+      if(stopping)return stopping;
+      stopping=(async()=>{
+        await originalClose();
+        process.off('SIGINT',halt);process.off('SIGTERM',halt);process.exitCode=0;
+      })();
+      stopping.catch(()=>{stopping=null;});return stopping;
+    };
+    const halt=()=>close().catch(e=>{process.stderr.write(JSON.stringify({error:safeCode(e)})+'\n');process.exitCode=1;});
+    process.on('SIGINT',halt);process.on('SIGTERM',halt);app.close=close;
     return app;
   }
   if(command==='documents'){

@@ -12,6 +12,19 @@ export const LABORATORY_SOURCE_FILES = Object.freeze([
   'reconciliation-profile.mjs','reconciliation.mjs','reconciliation-table.mjs',
   'reconciliation-editor.mjs','reconciliation-report.mjs','reconciliation-application.mjs',
   'workbook.mjs','workbook_bridge.py','merchant.example.json','merchant-configuration.mjs','application-provider.mjs',
+  "workbook_legacy.py",
+  "vendor/xlrd/__init__.py",
+  "vendor/xlrd/biffh.py",
+  "vendor/xlrd/book.py",
+  "vendor/xlrd/compdoc.py",
+  "vendor/xlrd/formatting.py",
+  "vendor/xlrd/formula.py",
+  "vendor/xlrd/info.py",
+  "vendor/xlrd/sheet.py",
+  "vendor/xlrd/timemachine.py",
+  "vendor/xlrd/xldate.py",
+  "vendor/xlrd/LICENSE",
+  "vendor/xlrd/SOURCE.json",
 ]);
 
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);

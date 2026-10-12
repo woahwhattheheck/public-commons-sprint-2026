@@ -4,7 +4,9 @@ const token = location.hash.slice(1);
 const nativeSchema = 'stellar-forge.datasette-operator.v1';
 const state = {snapshot: null, selected: null, offset: 0, next: null,
   page: null, busy: false, refresh: null, poll: null, currentView: 'editions',
-  shownRequests: new Set(), comparison: null, comparisonPage: null};
+  shownRequests: new Set(), comparison: null, comparisonPage: null,
+  rowGeneration: 0, comparisonGeneration: 0, submitGeneration: 0,
+  preparing: false, submitting: false, prepareRevision: 0, receipts: new Map()};
 const storageKey = 'stellar-forge:datasette-pending:' + location.origin;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function el(tag, text, className) {
@@ -81,6 +83,30 @@ async function api(path, {method = 'GET', body, headers = {}, raw = false} = {})
   }
   return value;
 }
+function workspaceScope(snapshot = state.snapshot) {
+  return snapshot ? snapshot.workspace_id + ':' + snapshot.operation_id : null;
+}
+function requireScope(scope) {
+  if (!scope || scope !== workspaceScope())
+    throw new Error('Reopen the original workspace and operation before continuing this request.');
+}
+function mutationControls() {
+  for (const button of document.querySelectorAll('[data-mutation]'))
+    button.disabled = state.busy || state.preparing || state.submitting;
+}
+function clearPending(requestId) {
+  if (pending()?.request_id === requestId) pending(null);
+}
+function rememberReceipt(request) {
+  if (!object(request) || !/^[a-f0-9]{32}$/.test(request.id || '')
+      || request.operation_id !== state.snapshot?.operation_id)
+    throw new Error('The returned request belongs to a different original operation.');
+  const prior = state.receipts.get(request.id);
+  if (prior?.status === 'COMPLETE' && request.status !== 'COMPLETE') return prior;
+  if (prior && prior.status !== 'COMPLETE' && request.status !== 'COMPLETE'
+      && String(prior.updated_at) > String(request.updated_at)) return prior;
+  state.receipts.set(request.id, request); return request;
+}
 function pending(value) {
   if (!state.snapshot?.workspace_id || !state.snapshot?.operation_id) return null;
   const key = storageKey + ':' + state.snapshot.workspace_id + ':' + state.snapshot.operation_id;
@@ -88,7 +114,10 @@ function pending(value) {
     if (value === undefined) return JSON.parse(sessionStorage.getItem(key) || 'null');
     if (value === null) sessionStorage.removeItem(key);
     else sessionStorage.setItem(key, JSON.stringify(value));
-  } catch {}
+  } catch (error) {
+    if (value !== undefined && value !== null)
+      throw new Error('The original request could not be retained in this browser. Keep its inputs and reopen this operator.');
+  }
   return null;
 }
 const editionId = edition => edition?.edition_id || edition?.id || null;
@@ -98,6 +127,13 @@ const editions = () => {
   return Array.isArray(saved) ? saved : Object.values(saved);
 };
 const selectedEdition = () => editions().find(item => editionId(item) === state.selected);
+function selectEdition(id) {
+  if (state.selected === id) return;
+  state.selected = id; state.offset = 0; state.next = null; state.page = null;
+  state.rowGeneration++;
+  $('data-table').replaceChildren(); $('data-table').removeAttribute('aria-busy');
+  $('page-label').textContent = ''; $('previous-page').disabled = true; $('next-page').disabled = true;
+}
 function editionTitle(edition) {
   return edition.title || edition.name || edition.prefix || String(editionId(edition) || 'Retained edition').slice(0, 16);
 }
@@ -162,7 +198,7 @@ function renderSelectors() {
 function renderEditions() {
   const all = editions(), current = nativeState().current_edition;
   if (!all.some(item => editionId(item) === state.selected))
-    state.selected = (object(current) ? editionId(current) : current) || editionId(all.at(-1));
+    selectEdition((object(current) ? editionId(current) : current) || editionId(all.at(-1)));
   $('editions').replaceChildren(...all.map(item => {
     const button = el('button', undefined, 'edition');
     button.type = 'button'; button.setAttribute('aria-pressed', String(editionId(item) === state.selected));
@@ -171,7 +207,7 @@ function renderEditions() {
       el('small', stamp(item.created_at || item.captured_at || item.createdAt)),
       el('span', editionId(item), 'id'));
     button.addEventListener('click', () => {
-      state.selected = editionId(item); state.offset = 0; state.page = null;
+      selectEdition(editionId(item));
       renderEditions(); renderSelectors(); renderSummary(); renderFiles();
       if (state.currentView === 'data') loadRows(state.selected, 0).catch(error => notice(error.message, true));
     });
@@ -294,28 +330,42 @@ function renderComparison(result) {
   if (object(result.summary)) root.append(definition(result.summary));
   const job = result.page?.report?.id || result.native?.id
     || nativeState().comparisons?.find(item => item.id === result.comparison_id)?.job_id;
-  if (!state.comparisonPage || state.comparisonPage.id !== result.comparison_id)
-    state.comparisonPage = {id: result.comparison_id, page: result.page || {rows: result.rows || []},
-      history: [], kind: 'all'};
+  if (!state.comparisonPage || state.comparisonPage.id !== result.comparison_id
+      || state.comparisonPage.job !== job) {
+    state.comparisonGeneration++;
+    state.comparisonPage = {id: result.comparison_id, job,
+      page: result.page || {rows: result.rows || []}, history: [], kind: 'all', pending: null};
+  }
   const selected = state.comparisonPage, page = selected.page;
   const controls = el('div', undefined, 'pagination'), filter = el('select');
   filter.setAttribute('aria-label', 'Change kind');
   for (const kind of ['all', 'added', 'removed', 'changed', 'moved']) {
     const option = el('option', formatKey(kind)); option.value = kind; filter.append(option);
   }
-  filter.value = selected.kind;
+  filter.value = selected.pending?.kind || selected.kind;
   async function readPage(after, kind, previous) {
     if (!/^[a-f0-9]{32}$/.test(job || '')) throw new Error('Open the retained comparison in the Analysis workspace.');
-    const query = new URLSearchParams({after: String(after), kind});
-    const next = await api('/api/changes/' + job + '?' + query);
-    if (state.comparisonPage !== selected) return;
-    selected.page = next; selected.kind = kind; selected.history = previous;
-    renderComparison(result);
+    const generation = ++state.comparisonGeneration, scope = workspaceScope();
+    const selection = {after, kind, previous: [...previous]};
+    selected.pending = selection; renderComparison(result);
+    try {
+      const query = new URLSearchParams({after: String(after), kind});
+      const next = await api('/api/changes/' + job + '?' + query);
+      if (generation !== state.comparisonGeneration || state.comparisonPage !== selected
+          || selected.pending !== selection || scope !== workspaceScope()) return;
+      selected.page = next; selected.kind = kind; selected.history = [...previous];
+      selected.pending = null; renderComparison(result);
+    } catch (error) {
+      if (generation !== state.comparisonGeneration || state.comparisonPage !== selected
+          || selected.pending !== selection || scope !== workspaceScope()) return;
+      selected.pending = null; renderComparison(result); throw error;
+    }
   }
   filter.addEventListener('change', () => readPage(0, filter.value, []).catch(error => notice(error.message, true)));
   const before = el('button', 'Previous'), after = el('button', 'Next');
-  before.type = after.type = 'button'; before.disabled = selected.history.length === 0;
-  after.disabled = page.next_after === null || page.next_after === undefined;
+  before.type = after.type = 'button'; before.disabled = Boolean(selected.pending) || selected.history.length === 0;
+  after.disabled = Boolean(selected.pending) || page.next_after === null || page.next_after === undefined;
+  root.setAttribute('aria-busy', String(Boolean(selected.pending)));
   before.addEventListener('click', () => {
     const previous = selected.history.slice(), cursor = previous.pop();
     readPage(cursor, selected.kind, previous).catch(error => notice(error.message, true));
@@ -344,7 +394,7 @@ function renderRequests() {
   const requests = state.snapshot?.requests || [];
   const active = requests.find(request => request.status === 'RUNNING');
   state.busy = Boolean(active);
-  for (const button of document.querySelectorAll('[data-mutation]')) button.disabled = state.busy;
+  mutationControls();
   const activeNode = $('active-work'); activeNode.replaceChildren();
   if (active) {
     activeNode.append(el('strong', formatKey(active.action)), el('small', active.id));
@@ -376,7 +426,7 @@ function renderRequests() {
     if (request.status === 'COMPLETE' && !state.shownRequests.has(request.id)) {
       state.shownRequests.add(request.id);
       if (pending()?.request_id === request.id) {
-        pending(null); notice(formatKey(request.action) + ' completed.');
+        clearPending(request.id); notice(formatKey(request.action) + ' completed.');
       }
     }
   }
@@ -397,9 +447,12 @@ async function refresh() {
   state.refresh = (async () => {
     const value = await api('/api/datasette/status');
     if (value.schema !== nativeSchema) throw new Error('This URL belongs to a different operator.');
-    if (state.snapshot && value.operation_id !== state.snapshot.operation_id)
-      throw new Error('This operator now selects a different original operation. Reopen its launch URL.');
+    if (state.snapshot && workspaceScope(value) !== workspaceScope())
+      throw new Error('This operator now selects a different original workspace or operation. Reopen its launch URL.');
     state.snapshot = value;
+    for (const request of value.requests || []) rememberReceipt(request);
+    value.requests = [...state.receipts.values()].sort((a, b) =>
+      String(b.updated_at).localeCompare(String(a.updated_at)) || a.id.localeCompare(b.id));
     $('analysis-link').href = (value.analysis_path || '/') + '#' + token;
     renderRequests(); renderEditions(); renderSummary(); renderFiles();
     clearTimeout(state.poll);
@@ -409,12 +462,15 @@ async function refresh() {
   try {return await state.refresh;} finally {state.refresh = null;}
 }
 async function loadRows(edition, offset = 0) {
+  const generation = ++state.rowGeneration, scope = workspaceScope();
   const requested = edition, params = new URLSearchParams({edition_id: edition, offset: String(offset), limit: '50'});
   $('data-table').setAttribute('aria-busy', 'true');
   try {
     const page = await api('/api/datasette/rows?' + params);
-    if (requested !== state.selected) return;
-    state.page = page; state.offset = page.offset ?? offset;
+    if (generation !== state.rowGeneration || requested !== state.selected || scope !== workspaceScope()) return;
+    if (page.edition_id !== requested || page.offset !== offset)
+      throw new Error('The returned data page differs from the selected original edition and offset.');
+    state.page = page; state.offset = page.offset;
     state.next = page.next_offset ?? (page.total > state.offset + (page.rows?.length || 0)
       ? state.offset + page.rows.length : null);
     $('data-table').replaceChildren(table(page.columns, page.rows, {className: 'source-table'}));
@@ -422,46 +478,108 @@ async function loadRows(edition, offset = 0) {
     $('page-label').textContent = (page.rows?.length ? state.offset + 1 : 0) + '–' + end + ' of ' + display(page.total ?? page.row_count);
     $('previous-page').disabled = state.offset === 0;
     $('next-page').disabled = state.next === null || state.next === undefined;
-  } finally {$('data-table').removeAttribute('aria-busy');}
-}
-async function submitEnvelope(envelope) {
-  pending(envelope);
-  try {
-    const result = await api('/api/datasette/requests', {method: 'POST', body: envelope});
-    if (result.request.action === 'compare') state.comparison = null;
-    notice(result.request.status === 'COMPLETE' ? 'The original request is complete.' : 'The original request is running.');
-    await refresh();
-    return result;
   } catch (error) {
-    if (error.status && error.status < 500 && error.code !== 'DATASETTE_OPERATOR_BUSY') pending(null);
-    notice(error.message + (!error.status ? ' Refresh to reconnect the same request.' : ''), true);
-    throw error;
+    if (generation === state.rowGeneration && requested === state.selected && scope === workspaceScope()) throw error;
+  } finally {
+    if (generation === state.rowGeneration && requested === state.selected && scope === workspaceScope())
+      $('data-table').removeAttribute('aria-busy');
   }
 }
-async function startAction(action, body) {
+async function submitEnvelope(envelope, expectedScope = workspaceScope()) {
+  requireScope(expectedScope);
+  const generation = ++state.submitGeneration;
+  pending(envelope); state.submitting = true; mutationControls();
+  let result;
+  try {
+    result = await api('/api/datasette/requests', {method: 'POST', body: envelope});
+    requireScope(expectedScope);
+    if (result.request?.id !== envelope.request_id || result.request?.action !== envelope.action)
+      throw new Error('The returned receipt differs from the original request.');
+    result.request = rememberReceipt(result.request);
+    clearPending(envelope.request_id);
+    if (result.request.action === 'compare') state.comparison = null;
+  } catch (error) {
+    const accepted = state.receipts.get(envelope.request_id);
+    if (workspaceScope() === expectedScope && accepted?.action === envelope.action) {
+      result = {request: accepted, reused: true}; clearPending(envelope.request_id);
+    } else {
+      if (generation === state.submitGeneration && workspaceScope() === expectedScope)
+        notice(error.message + ' Continue this original request to reconnect its saved result.', true);
+      throw error;
+    }
+  } finally {
+    if (generation === state.submitGeneration) {state.submitting = false; mutationControls();}
+  }
+  if (generation === state.submitGeneration)
+    notice(result.request.status === 'COMPLETE' ? 'The original request is complete.' : 'The original request is running.');
+  try {await refresh();}
+  catch (error) {
+    if (generation === state.submitGeneration && workspaceScope() === expectedScope)
+      notice('The original request was accepted. Its latest workspace status could not be read: ' + error.message, true);
+  }
+  return result;
+}
+async function startAction(action, body, expectedScope = workspaceScope()) {
   if (!state.snapshot) await refresh();
-  if (state.busy) throw new Error('Wait for the current Datasette action to finish.');
-  return submitEnvelope({request_id: crypto.randomUUID().replaceAll('-', ''), action, body});
+  if (expectedScope === null) expectedScope = workspaceScope();
+  requireScope(expectedScope);
+  if (state.busy || state.submitting || state.preparing && action !== 'prepare')
+    throw new Error('Wait for the current Datasette action to finish.');
+  return submitEnvelope({request_id: crypto.randomUUID().replaceAll('-', ''), action, body}, expectedScope);
 }
 async function resumeRequest(requestId) {
   await api('/api/datasette/requests/' + requestId + '/resume', {method: 'POST', body: {}});
   notice('Continuing the original request.'); await refresh();
 }
+function prepareSelection() {
+  return {revision: state.prepareRevision, path: $('handover-path').value,
+    text: $('handover-json').value, file: $('handover-file').files[0] || null,
+    prefix: $('prefix').value, resume: $('prepare-resume').checked};
+}
+function samePrepareSelection(original) {
+  const current = prepareSelection();
+  return current.revision === original.revision
+    && ['path', 'text', 'file', 'prefix', 'resume'].every(key => current[key] === original[key]);
+}
+for (const id of ['handover-path', 'handover-json', 'handover-file', 'prefix', 'prepare-resume']) {
+  $(id).addEventListener('input', () => {state.prepareRevision++;});
+  $(id).addEventListener('change', () => {state.prepareRevision++;});
+}
 $('prepare-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if (state.preparing || state.submitting || state.busy) {
+    notice('The original Datasette source operation is still being submitted.', true); return;
+  }
+  const original = prepareSelection(), initialScope = workspaceScope(), initialView = state.currentView;
+  state.preparing = true; mutationControls();
   try {
-    const path = $('handover-path').value.trim(), text = $('handover-json').value.trim(), file = $('handover-file').files[0];
+    const path = original.path.trim(), text = original.text.trim(), file = original.file;
     if ([Boolean(path), Boolean(text), Boolean(file)].filter(Boolean).length !== 1)
       throw new Error('Choose one handover file, existing path, or JSON descriptor.');
     let handover = path || (text ? parseExact(text) : null);
+    if (!state.snapshot) await refresh();
+    const selectedScope = initialScope || workspaceScope(); requireScope(selectedScope);
     if (file) {
-      const result = await api('/api/datasette/intake', {method: 'POST', body: file,
+      if (file.size > 32 * 1024 * 1024) throw new Error('Use the existing host path for a handover larger than 32 MiB.');
+      const content = await file.arrayBuffer(); requireScope(selectedScope);
+      const expectedHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', content)),
+        byte => byte.toString(16).padStart(2, '0')).join('');
+      requireScope(selectedScope);
+      const result = await api('/api/datasette/intake', {method: 'POST', body: content,
         headers: {'X-Datasette-Filename': encodeURIComponent(file.name), 'Content-Type': 'application/json'}});
-      handover = result.handover; $('handover-path').value = handover; $('handover-file').value = '';
+      requireScope(selectedScope);
+      if (result.bytes !== content.byteLength || result.sha256 !== expectedHash
+          || result.filename !== file.name || typeof result.handover !== 'string')
+        throw new Error('The retained handover differs from the complete selected file.');
+      handover = result.handover;
     }
-    await startAction('prepare', {handover, prefix: $('prefix').value, resume: $('prepare-resume').checked});
-    setView('editions');
+    await startAction('prepare', {handover, prefix: original.prefix, resume: original.resume}, selectedScope);
+    if (file && samePrepareSelection(original)) {
+      $('handover-path').value = handover; $('handover-file').value = ''; state.prepareRevision++;
+    }
+    if (state.currentView === initialView) setView('editions');
   } catch (error) {notice(error.message, true);}
+  finally {state.preparing = false; mutationControls();}
 });
 $('compare-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -482,7 +600,7 @@ $('export-form').addEventListener('submit', async event => {
 });
 $('refresh').addEventListener('click', () => refresh().catch(error => notice(error.message, true)));
 $('data-edition').addEventListener('change', () => {
-  state.selected = $('data-edition').value; state.offset = 0;
+  selectEdition($('data-edition').value);
   renderEditions(); renderSummary(); loadRows(state.selected, 0).catch(error => notice(error.message, true));
 });
 $('previous-page').addEventListener('click', () => loadRows(state.selected, Math.max(0, state.offset - 50)).catch(error => notice(error.message, true)));

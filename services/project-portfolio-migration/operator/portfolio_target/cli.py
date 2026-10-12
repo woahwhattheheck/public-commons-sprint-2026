@@ -67,6 +67,7 @@ def parser():
     commands.add_parser("state", help="Read retained editions, migrations, profiles and actions.")
     upload = commands.add_parser("upload", help="Retain an original project or companion file.")
     upload.add_argument("file")
+    upload.add_argument("--archive", action="store_true", help="Retain a complete reporting archive up to 8 GiB using the original streaming upload.")
     action = commands.add_parser("action", help="Save and run one original operator action.")
     action.add_argument("kind", choices=sorted(ACTIONS))
     action.add_argument("--request-id", help="Retained full SHA-256-format request ID; generated if omitted.")
@@ -83,6 +84,26 @@ def parser():
     artifact = commands.add_parser("artifact", help="Copy an exact original SHA object to a named file.")
     artifact.add_argument("sha256")
     artifact.add_argument("--output", required=True)
+    cohort = commands.add_parser("cohort", help="Read saved reporting cohorts or one exact cohort with its review and publications.")
+    cohort.add_argument("cohort_id", nargs="?")
+    cohort.add_argument("--cursor", default="")
+    cohort.add_argument("--limit", type=int, default=25)
+    fields = commands.add_parser("archive-fields", help="Read actual native definitions for selected original editions.")
+    fields.add_argument("edition_ids", nargs="+")
+    table = commands.add_parser("archive-table", help="Read an exact page of a saved reporting table.")
+    table.add_argument("cohort_id")
+    table.add_argument("publication_id")
+    table.add_argument("table")
+    table.add_argument("--offset", type=int, default=0)
+    table.add_argument("--limit", type=int, default=50)
+    table.add_argument("--filter-column")
+    table.add_argument("--filter-text", default="")
+    query = commands.add_parser("archive-query", help="Preview read-only SQL over an original reporting publication.")
+    query.add_argument("cohort_id")
+    query.add_argument("publication_id")
+    query.add_argument("--sql-file", required=True)
+    query.add_argument("--parameters-file")
+    query.add_argument("--limit", type=int, default=100)
     receive = commands.add_parser("receive", help="Receive the original complete portable workspace.")
     receive.add_argument("archive")
     receive.add_argument("--destination", required=True)
@@ -107,8 +128,9 @@ def main(argv=None):
             elif args.command == "upload":
                 source = Path(args.file).expanduser().resolve(strict=True)
                 before = source.stat()
-                if before.st_size > 256 * 1024 * 1024:
-                    raise TargetError("SOURCE_SIZE", "Select a complete source file up to 256 MiB.")
+                limit = 8 * 1024 ** 3 if args.archive else 256 * 1024 * 1024
+                if before.st_size > limit:
+                    raise TargetError("SOURCE_SIZE", "Select a complete file within the original source or archive limit.")
                 with open(source, "rb") as stream:
                     result = workspace.store.upload_stream(stream, before.st_size, source.name)
                 after = source.stat()
@@ -127,6 +149,17 @@ def main(argv=None):
                     workspace.request(saved["id"], saved["kind"], saved["arguments"], retry_failed=True)
                     workspace.run(args.request_id)
                 result = workspace.request_result(args.request_id)
+            elif args.command == "cohort":
+                result = workspace.archives.read(args.cohort_id) if args.cohort_id else workspace.archives.list(cursor=args.cursor, limit=args.limit)
+            elif args.command == "archive-fields":
+                result = workspace.archives.fields(args.edition_ids)
+            elif args.command == "archive-table":
+                result = workspace.archives.table(args.cohort_id, args.publication_id, args.table,
+                    offset=args.offset, limit=args.limit, filter_column=args.filter_column, filter_text=args.filter_text)
+            elif args.command == "archive-query":
+                sql = Path(args.sql_file).read_text(encoding="utf-8")
+                parameters = json.loads(Path(args.parameters_file).read_text(encoding="utf-8")) if args.parameters_file else []
+                result = workspace.archives.query(args.cohort_id, args.publication_id, sql, parameters, limit=args.limit)
             elif args.command == "deployment":
                 result = workspace.deployment(args.deployment_id)
             elif args.command == "pause":

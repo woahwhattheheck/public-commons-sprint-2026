@@ -57,3 +57,7 @@ Private browser entry files are temporary and owner-readable. Browser storage an
 ## Meaning of the native file result
 
 The file-target journey establishes the actual MPXJ reader/writer round trip through the product. The saved comparison carries every observed conversion difference and the receiving operator's acceptance decision. For an actual Project Operations environment, use the normal configured native target, original licensed user, scheduling OperationSets and MsPlannerReader capture described in the operator guide. That customer's existing target operation remains its own retained native state.
+
+## Following archive phase
+
+The complete portfolio reporting and source-preserving receiving phase is in ../../archive/native/README.md. Pass this operation's actual retained editions, original workspace and operation ID. It uses the same original browser/action helpers and adds no target acquisition or native submission. Keep the original results and append its complete archive receiving result to this handover.

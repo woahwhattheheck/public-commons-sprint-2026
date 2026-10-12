@@ -832,12 +832,27 @@ def workbench_snapshot(w, p, c, app, output, selection):
 
 
 
+def process_observation(pid=None):
+    # /proc may expose host PIDs while this interpreter sees a nested namespace.
+    # Only /proc/self supplies the observer's actual PID in that procfs view.
+    selected_path = "/proc/self/stat" if pid is None else f"/proc/{int(pid)}/stat"
+    raw = Path(selected_path).read_text()
+    opening, closing = raw.index("("), raw.rfind(")")
+    fields = raw[closing + 2:].split()
+    need(closing > opening and len(fields) > 19, "Original process stat is incomplete")
+    actual_pid = int(raw[:opening].strip())
+    if pid is not None:
+        need(actual_pid == int(pid), "Original procfs identity changed its selected PID")
+    return {"process": {
+                "pid": actual_pid,
+                "bootId": Path("/proc/sys/kernel/random/boot_id").read_text().strip(),
+                "startTicks": fields[19],
+            },
+            "parentHostPid": int(fields[1])}
+
+
 def process_identity(pid=None):
-    pid = os.getpid() if pid is None else int(pid)
-    raw = Path(f"/proc/{pid}/stat").read_text()
-    fields = raw[raw.rfind(")") + 2:].split()
-    return {"pid": pid, "bootId": Path("/proc/sys/kernel/random/boot_id").read_text().strip(),
-            "startTicks": fields[19]}
+    return process_observation(pid)["process"]
 
 
 def original_process_inactive(value):
@@ -848,22 +863,84 @@ def original_process_inactive(value):
     return current != value
 
 
+def publish_child_identity():
+    descriptor = os.environ.pop("ARCHIVEMATICA_RECEIVING_IDENTITY_FD", None)
+    request_sha = os.environ.pop("ARCHIVEMATICA_RECEIVING_IDENTITY_REQUEST", None)
+    if descriptor is None:
+        need(request_sha is None, "Original child identity request has no inherited channel")
+        return
+    need(isinstance(descriptor, str) and descriptor.isdecimal()
+         and len(descriptor) <= 20 and int(descriptor) >= 3
+         and isinstance(request_sha, str) and re.fullmatch(r"[a-f0-9]{64}", request_sha),
+         "Original inherited child identity channel is invalid")
+    descriptor = int(descriptor)
+    with os.fdopen(descriptor, "wb", buffering=0) as output:
+        need(stat.S_ISFIFO(os.fstat(output.fileno()).st_mode),
+             "Original child identity channel is not a pipe")
+        observed = process_observation()
+        value = {"schema": SCHEMA + ".child-process-identity",
+                 "operationId": OPERATION, "requestSha256": request_sha,
+                 "process": observed["process"],
+                 "parentHostPid": observed["parentHostPid"],
+                 "namespacePid": os.getpid(),
+                 "commandSha256": sha(Path("/proc/self/cmdline").read_bytes())}
+        write_all(output, canonical(value))
+        output.flush()
+
+
+def receive_child_identity(descriptor, process, parent, request_sha, arguments):
+    deadline, raw = time.monotonic() + 30, bytearray()
+    while True:
+        remaining = deadline - time.monotonic()
+        need(remaining > 0, "Original child did not report its process identity")
+        readable, _, _ = select.select([descriptor], [], [], remaining)
+        need(bool(readable), "Original child process identity timed out")
+        block = os.read(descriptor, 4096)
+        if not block:
+            break
+        raw.extend(block)
+        need(len(raw) <= 4096, "Original child process identity exceeded its bound")
+    value = json.loads(raw)
+    expected_command = sha(b"\0".join(os.fsencode(part) for part in arguments) + b"\0")
+    need(isinstance(value, dict)
+         and value.get("schema") == SCHEMA + ".child-process-identity"
+         and value.get("operationId") == OPERATION
+         and value.get("requestSha256") == request_sha
+         and value.get("namespacePid") == process.pid
+         and value.get("parentHostPid") == parent["pid"]
+         and value.get("commandSha256") == expected_command,
+         "Original child identity changed its inherited request or parent")
+    selected = value.get("process")
+    need(isinstance(selected, dict)
+         and set(selected) == {"pid", "bootId", "startTicks"}
+         and isinstance(selected.get("pid"), int) and selected["pid"] > 0
+         and selected.get("bootId") == parent["bootId"]
+         and isinstance(selected.get("startTicks"), str) and selected["startTicks"].isdecimal(),
+         "Original child reported an invalid actual process identity")
+    observed = process_observation(selected["pid"])
+    need(observed["process"] == selected and observed["parentHostPid"] == parent["pid"]
+         and process.poll() is None,
+         "Original START-gated child no longer matches its actual procfs identity")
+    return selected, value
+
+
 def subprocess_phase(out, label, arguments, final_receipt):
     request_path = out / (label + ".process-request.json")
     process_path = out / (label + ".process.json")
     expected = {"schema": SCHEMA + ".process-request", "operationId": OPERATION,
                 "label": label, "argv": arguments, "receipt": str(final_receipt)}
     publish_json(request_path, expected)
+    request_sha = sha(canonical(expected))
     if process_path.exists():
         prior = read_json(process_path)
-        need(prior["requestSha256"] == sha(canonical(expected)), "Original child request changed")
+        need(prior["requestSha256"] == request_sha, "Original child request changed")
         if prior.get("exitCode") == 0:
             need(identity(final_receipt) == prior["receipt"], "Saved cold receiving result differs")
             return prior
         need(original_process_inactive(prior["process"]), "The original cold receiving child remains active")
     for attempt_path in sorted(out.glob(label + ".attempt-*.json")):
         retained_attempt = read_json(attempt_path)
-        need(retained_attempt["requestSha256"] == sha(canonical(expected)), "Original child attempt differs")
+        need(retained_attempt["requestSha256"] == request_sha, "Original child attempt differs")
         need(original_process_inactive(retained_attempt["process"]), "The original cold child is still active")
     # A completed receiving receipt also resolves loss between the child exit and
     # publication of the parent's process result. Its own bound artifact checks
@@ -875,36 +952,56 @@ def subprocess_phase(out, label, arguments, final_receipt):
     with open(stdout, "ab", buffering=0) as output, open(stderr, "ab", buffering=0) as errors:
         os.chmod(stdout, 0o600)
         os.chmod(stderr, 0o600)
-        process = subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=output, stderr=errors, close_fds=True)
+        process, identity_read, identity_write = None, None, None
         try:
-            selected = process_identity(process.pid)
+            parent = process_identity()
+            identity_read, identity_write = os.pipe()
+            environment = dict(os.environ)
+            environment["ARCHIVEMATICA_RECEIVING_IDENTITY_FD"] = str(identity_write)
+            environment["ARCHIVEMATICA_RECEIVING_IDENTITY_REQUEST"] = request_sha
+            process = subprocess.Popen(arguments, stdin=subprocess.PIPE, stdout=output,
+                         stderr=errors, close_fds=True, pass_fds=(identity_write,),
+                         env=environment)
+            os.close(identity_write)
+            identity_write = None
+            selected, observation = receive_child_identity(
+                identity_read, process, parent, request_sha, arguments)
+            os.close(identity_read)
+            identity_read = None
             attempt_path = out / f"{label}.attempt-{attempt:04d}.json"
             publish_json(attempt_path, {"schema": SCHEMA + ".process-attempt",
-                         "requestSha256": sha(canonical(expected)), "process": selected,
-                         "startedAt": started})
+                         "requestSha256": request_sha, "process": selected,
+                         "startedAt": started, "parentProcess": parent,
+                         "identityObservation": observation})
             process.stdin.write(b"START\n")
             process.stdin.flush()
             process.stdin.close()
             code = process.wait(timeout=900)
         except BaseException:
-            # Closing the gate also releases a child that never received START.
-            # Preserve the original failure if it has already exited meanwhile.
-            with contextlib.suppress(OSError):
-                process.stdin.close()
-            with contextlib.suppress(ProcessLookupError):
-                process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
+            # Every acquired child remains owned through identity publication,
+            # the START gate, execution, and an actual terminal wait.
+            if process is not None:
+                with contextlib.suppress(OSError):
+                    process.stdin.close()
                 with contextlib.suppress(ProcessLookupError):
-                    process.kill()
-                process.wait()
+                    process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    with contextlib.suppress(ProcessLookupError):
+                        process.kill()
+                    process.wait()
             raise
+        finally:
+            for descriptor in (identity_read, identity_write):
+                if descriptor is not None:
+                    with contextlib.suppress(OSError):
+                        os.close(descriptor)
         output.flush()
         errors.flush()
         os.fsync(output.fileno())
         os.fsync(errors.fileno())
-    result = {"schema": SCHEMA + ".process-result", "requestSha256": sha(canonical(expected)),
+    result = {"schema": SCHEMA + ".process-result", "requestSha256": request_sha,
               "process": selected, "exitCode": code, "startedAt": started,
               "finishedAt": now(), "stdout": identity(stdout), "stderr": identity(stderr),
               "receipt": identity(final_receipt) if Path(final_receipt).exists() else None}
@@ -2458,6 +2555,7 @@ def main():
     parser.add_argument("--start-gate", action="store_true")
     args = parser.parse_args()
     if args.start_gate:
+        publish_child_identity()
         need(sys.stdin.buffer.readline(16) == b"START\n", "Original child start gate was not released")
     if args.cold_provider or args.cold_workbench:
         need(args.workspace, "Select the received original workspace")

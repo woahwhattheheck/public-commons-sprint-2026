@@ -1,5 +1,6 @@
 // MIT. Selected workflow reports over the original Console archive and receiving merge.
-import { canonical, digest, fail, validateConsoleArchive } from './store.mjs';
+import { canonical, digest, fail } from './records.mjs';
+import { validateConsoleArchive } from './archive-contract.mjs';
 import { WorkflowRecords, WORKFLOW_SCHEMA, workflowPointer } from './workflow-records.mjs';
 
 export const WORKFLOW_REPORT_SCHEMA='stellar-forge.merchant-workflow-report.v1';
