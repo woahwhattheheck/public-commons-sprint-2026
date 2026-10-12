@@ -29,7 +29,7 @@ consume and reopen the original saved response through the native parser.
 | Multipart upload or finite stream | `MultipartRequest`, `BuyerResult.events` / `ndjson` | Original encoded body pins and stream capture; reusable typed exports, complete-prefix inspection and record-index continuation |
 | An approved private file | `Buyer.from_paid_file` | The original order handoff, native purchase and separate merchant entitlement; `retrieve_file` and local `recover_file` |
 | A paginated dataset | `DatasetAcquisition.create` | The original dataset session, selected snapshot, per-page attempts and SF100 data room; `recover`, explicit continuation, verified typed rows and original accounting |
-| An acquired dataset in PostgreSQL | `PostgresWarehouse` and `DatasetMapping` | Complete transactional COPY, exact types and keys, retained source editions, stable application views, edition comparison and database reopening; [receiving guide](POSTGRESQL.md) |
+| An acquired dataset in PostgreSQL | `PostgresWarehouse`, `DatasetMapping` and `stellar-forge-postgres` | Saved browser mapping reviews, complete transactional COPY, exact types and keys, retained editions, recoverable application view selection, full comparison and managed Applications launch; [receiving guide](POSTGRESQL.md) |
 | A local analytical workspace for delivered datasets | `DuckDBWorkspace` and `stellar-forge-duckdb` | Retained source editions, reviewed mappings, versioned views, saved SQL, Parquet/CSV exports and portable receiving; [DuckDB guide](DUCKDB.md) |
 | A large object | `ObjectBuyer.prepare` | The original object descriptor, chunk queue and assembly receipts; reopen, recover, continue, consume verified streamed files and finalize original reservations |
 
@@ -53,6 +53,16 @@ bounded process execution, cancellation and structured output handling. A
 missing matching Node bridge fails before starting a process. Upgrading only a
 wheel while retaining an older Node checkout cannot enable the new native
 workflow.
+
+The PostgreSQL receiving workspace is available through the installed Python
+`postgres` extra and **Applications → PostgreSQL receiving workspace**. It
+uses the existing host's database connection, reviews every delivered field,
+imports complete immutable editions and retains the exact source manifest.
+The browser reopens saved import and view-selection requests after a lost
+response, compares all keyed records and restores a historical edition against
+the current view revision. The [PostgreSQL receiving guide](POSTGRESQL.md)
+covers installation, the private environment file, full customer operation and
+restoring the original operator directory with its database schema.
 
 ## Acquire a dataset for a Python data application
 

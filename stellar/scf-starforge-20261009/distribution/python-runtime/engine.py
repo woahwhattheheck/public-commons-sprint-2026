@@ -457,6 +457,8 @@ def application_modules(source):
                "workbookDelivery": "stellar_forge_buyer.workbook_client"}
     if source.get("scripts", {}).get("stellar-forge-duckdb") == "stellar_forge_buyer.duckdb_cli:main":
         modules["duckdb"] = "stellar_forge_buyer.duckdb_cli"
+    if source.get("scripts", {}).get("stellar-forge-postgres") == "stellar_forge_buyer.postgres_cli:main":
+        modules["postgres"] = "stellar_forge_buyer.postgres_cli"
     return modules
 
 
