@@ -4,6 +4,7 @@ export const CAPTURE = 'stellar-forge.fred-capture.v1';
 export const FRED_NOTICE = "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.";
 export const FRED_TERMS = 'https://fred.stlouisfed.org/docs/api/terms_of_use.html';
 export const PUBLIC_CAPTURE = 'stellar-forge.fred-public-table-capture.v1';
+export const PUBLIC_SET_CAPTURE = 'stellar-forge.fred-public-table-set-capture.v1';
 export const FRED_ORIGIN = 'https://api.stlouisfed.org';
 export const MAX_CAPTURE_BYTES = 64 * 1024 * 1024;
 export const MAX_PAGE_BYTES = 8 * 1024 * 1024;
@@ -138,7 +139,7 @@ export function readObservationPage(receipt, selectionInput, id, offset = 0, exp
     complete: offset + observations.length === body.count, observations };
 }
 export function inspectCapture(capture) {
-  if (capture?.schema === PUBLIC_CAPTURE) return inspectPublicTableCapture(capture);
+  if ([PUBLIC_CAPTURE, PUBLIC_SET_CAPTURE].includes(capture?.schema)) return inspectPublicTableCapture(capture);
   need(plain(capture) && capture.schema === CAPTURE, 'Select an original FRED capture bundle.');
   const selection = normalizeSelection(capture.selection);
   need(canonical(selection) === canonical(capture.selection), 'Capture selection is not normalized.');
@@ -324,8 +325,34 @@ export function readPublicTable(source) {
       units: metadata.units, frequency: metadata.frequency, seasonal_adjustment: metadata.seasonalAdjustment })) };
 }
 export function inspectPublicTableCapture(capture) {
-  need(capture?.schema === PUBLIC_CAPTURE, 'Select a retained public-table capture.');
-  const model = readPublicTable(capture.source);
+  need([PUBLIC_CAPTURE, PUBLIC_SET_CAPTURE].includes(capture?.schema), 'Select a retained public-table capture.');
+  const model = capture.schema === PUBLIC_SET_CAPTURE ? readPublicTableSet(capture.source) : readPublicTable(capture.source);
   need(canonical(capture.selection) === canonical(model.selection), 'Public table selection differs from its original coverage.');
   return model;
+}
+
+/** A long-form edition carries original series observations without resampling. */
+export function readPublicTableSet(source) {
+  need(plain(source) && source.version === 'commons.retained-public-table-set.v1' &&
+    Array.isArray(source.tables) && source.tables.length >= 1 && source.tables.length <= 50,
+    'Choose between one and fifty complete retained public tables.');
+  need(utf8Length(JSON.stringify(source)) <= MAX_CAPTURE_BYTES, 'Complete table set exceeds 64 MiB.');
+  const models = source.tables.map(table => {
+    const original = readPublicTable(table);
+    return { ...original, series: original.series.map(item => ({ ...item,
+      notesCoverage: /^Notes\s*\|/m.test(table.table_text) ? 'PUBLISHED_TABLE_FIELD' : 'OMITTED_FROM_TRANSPORT' })) };
+  }).sort((a, b) => a.series[0].id < b.series[0].id ? -1 : 1);
+  const series = models.flatMap(item => item.series), ids = series.map(item => item.id);
+  need(new Set(ids).size === ids.length, 'Choose one retained edition for each original series.');
+  const rows = models.flatMap(item => item.rows);
+  need(rows.length <= 1000000, 'Combined public tables exceed one million observations.');
+  const instants = series.map(item => Date.parse(item.retrievedAt));
+  const retrievalWindow = { from: new Date(Math.min(...instants)).toISOString(),
+    through: new Date(Math.max(...instants)).toISOString() };
+  const selection = normalizeSelection({ series: ids, asOf: retrievalWindow.through.slice(0, 10),
+    start: series.map(item => item.observationStart).sort()[0],
+    end: series.map(item => item.observationEnd).sort().at(-1) });
+  return { selection, sourceMode: 'PUBLIC_TABLE', timeBasis: 'PUBLIC_TABLE_RETRIEVAL_DATE', retrievalWindow,
+    series, rows, rowCount: rows.length, missing: models.reduce((sum, item) => sum + item.missing, 0),
+    sourceResponses: source.tables.length };
 }
