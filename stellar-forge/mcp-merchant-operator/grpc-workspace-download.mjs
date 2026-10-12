@@ -1,9 +1,9 @@
 // MIT. Resume exact original gRPC exports and restore the usable native customer layout.
 import { constants } from 'node:fs';
-import { open, lstat, mkdir, link } from 'node:fs/promises';
+import { open, lstat, mkdir, readdir, link } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { createRetainedDownload } from './retained-download.mjs';
-import { GRPC_EXPORT_MANIFEST, GRPC_EXPORT_MAX_BYTES, parseGrpcExportManifest } from './grpc-workspace-export.mjs';
+import { GRPC_EXPORT_MANIFEST, GRPC_EXPORT_MAX_BYTES, grpcHash, parseGrpcExportManifest } from './grpc-workspace-export.mjs';
 
 const transport = createRetainedDownload({
   manifestName: GRPC_EXPORT_MANIFEST, parseManifest: parseGrpcExportManifest, maximumBytes: GRPC_EXPORT_MAX_BYTES,
@@ -11,34 +11,52 @@ const transport = createRetainedDownload({
   toolPrefix: 'merchant_grpc_export', errorPrefix: 'GRPC_EXPORT', clientName: 'starforge-grpc-workspace-receiver',
   describe: manifest => ({ workspace: manifest.workspace, kind: manifest.kind, original: manifest.original }),
 });
+const failure = (code, message) => Object.assign(new Error(message), { code: 'GRPC_EXPORT_DOWNLOAD_' + code });
+async function privateDirectory(path) {
+  await mkdir(path, { mode: 0o700 }).catch(error => { if (error.code !== 'EEXIST') throw error; });
+  const info = await lstat(path);
+  if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && info.mode & 0o077)
+    throw failure('PRIVATE_FILE_REQUIRED', 'The original receiving directory must be a private real directory.');
+  return path;
+}
 async function syncDirectory(path) {
   const handle = await open(path, constants.O_RDONLY);
   try { await handle.sync(); } finally { await handle.close(); }
 }
-async function materialize(directory, exportId) {
-  const root = resolve(directory), bytes = await transport.bytesAt(join(root, GRPC_EXPORT_MANIFEST), 65000);
+async function requireEntries(path, allowed) {
+  if ((await readdir(path)).some(name => !allowed.has(name)))
+    throw failure('DIRECTORY_IN_USE', 'Use this export’s existing receiving directory or a new empty private directory.');
+}
+async function materialize(root, transfer, exportId) {
+  const bytes = await transport.bytesAt(join(transfer, GRPC_EXPORT_MANIFEST), 65000);
   const manifest = parseGrpcExportManifest(bytes, exportId);
-  if (manifest.kind !== 'customer') return { nativeFiles: manifest.files.map(file => file.path) };
-  const client = join(root, 'client');
-  await mkdir(client, { mode: 0o700 }).catch(error => { if (error.code !== 'EEXIST') throw error; });
-  const info = await lstat(client);
-  if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && info.mode & 0o077)
-    throw Object.assign(new Error('The native client directory must be a private directory owned by this receiving operation.'), { code: 'GRPC_EXPORT_DOWNLOAD_PRIVATE_FILE_REQUIRED' });
-  for (const file of manifest.files) {
-    await transport.verifiedFile(join(root, file.name), file);
-    if (file.name === file.path) continue;
-    const destination = join(root, file.path);
-    await link(join(root, file.name), destination).catch(async error => {
+  await requireEntries(root, new Set(['transfer', GRPC_EXPORT_MANIFEST, ...manifest.files.map(file => file.path.split('/')[0])]));
+  let client;
+  if (manifest.kind === 'customer') {
+    client = await privateDirectory(join(root, 'client'));
+    await requireEntries(client, new Set(manifest.files.filter(file => file.path.startsWith('client/')).map(file => file.path.slice(7))));
+  }
+  const files = [...manifest.files, { name: GRPC_EXPORT_MANIFEST, path: GRPC_EXPORT_MANIFEST, bytes: bytes.length, sha256: grpcHash(bytes) }];
+  for (const file of files) {
+    const source = join(transfer, file.name), destination = join(root, file.path);
+    await transport.verifiedFile(source, file);
+    await link(source, destination).catch(async error => {
       if (error.code !== 'EEXIST') throw error;
       await transport.verifiedFile(destination, file);
     });
   }
-  await syncDirectory(client); await syncDirectory(root);
-  return { nativeFiles: manifest.files.map(file => file.path), customerDirectory: client };
+  if (client) await syncDirectory(client);
+  await syncDirectory(root);
+  return { nativeFiles: manifest.files.map(file => file.path), ...(client ? { customerDirectory: client } : {}) };
 }
-/** Rerunning the same directory reuses the original checkpoint and verifies completed files. */
+/** The original transport owns only transfer/; native customer paths never enter its checkpoint root. */
 export async function downloadGrpcExport(options) {
-  const result = await transport.download(options);
-  return { ...result, ...await materialize(result.directory, result.exportId) };
+  if (typeof options?.directory !== 'string' || !options.directory || options.directory.includes('\0'))
+    throw failure('CONFIGURATION', 'Choose a private receiving directory.');
+  const root = await privateDirectory(resolve(options.directory));
+  await requireEntries(root, new Set(['transfer', GRPC_EXPORT_MANIFEST, 'methods.json', 'openapi.json', 'client',
+    'grpc-revision.json', 'grpc-attempt.json', 'grpc-result.json']));
+  const result = await transport.download({ ...options, directory: join(root, 'transfer') });
+  return { ...result, directory: root, transferDirectory: result.directory, ...await materialize(root, result.directory, result.exportId) };
 }
 export const inspectGrpcExport = options => transport.inspect(options);
