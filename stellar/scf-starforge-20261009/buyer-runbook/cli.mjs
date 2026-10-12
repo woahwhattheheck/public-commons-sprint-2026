@@ -47,9 +47,11 @@ accounting-workspace binds one operation to its existing original operator; late
 finalize calls reuse that selection. Optional outbox arguments require --only.
 status rewrites only derived status.json/report.html, not plans or attempts.
 unlock releases an exact dead local process lease; it preserves every attempt.
-workspace opens the private browser planner and original run controls. Start it
-in the same controlling terminal used for SF81 approval. Existing workspaces can
-omit --configs to reuse their saved source directory. New workspaces can omit it
+workspace opens the private browser planner and original run controls. Terminal
+mode uses the same controlling terminal as original SF81 approval. Browser mode
+presents each original live-term decision at the printed workspace URL.
+Existing workspaces can omit --configs to reuse their saved source directory.
+New workspaces can omit it
 to create a private configs directory inside their state directory.
 backup-review resolves every original operator and retained acquisition under one
 private state root. backup requires the exact reviewed selection and stopped
