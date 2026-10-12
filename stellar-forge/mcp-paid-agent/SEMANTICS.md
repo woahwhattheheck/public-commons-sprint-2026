@@ -30,7 +30,7 @@ The existing dataset-status, dataset-rows and dataset-read actions work with the
 
 A semantic delivery has the original fifth file, semantics.json, alongside dataset.jsonl, dataset.csv, review.html and manifest.json. The manifest owns this file list. Existing four-file deliveries remain valid. An older saved delivery record whose pinned original manifest already contains semantics can expose that exact fifth file without rewriting the record.
 
-The dictionary describes the published dataset; its column list can be broader than the selected query projection. Selected fields must occur in that dictionary. Units, timezone interpretation, codes, primary keys, virtual columns and issues come from the original dictionary. No dictionary is reported as unavailable; the receiver does not invent one.
+The dictionary describes the published dataset; its column list can be broader than the selected query projection. Selected fields must occur in that dictionary. Units, timezone interpretation, codes, primary keys, virtual columns and issues come from the original dictionary. A delivery without a dictionary returns available: false; the receiver does not invent one.
 
 For an original new SF88 dataset preparation, the existing selected query can also carry the original semantics SHA. That pins the query to the published dictionary through the original acquisition engine. This receiving workflow does not itself acquire another page.
 
