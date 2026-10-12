@@ -2,10 +2,6 @@
 
 This operation runs the complete municipal collection and reporting journey on an existing Linux machine. One foreground receiver keeps the original source feed, both product stages, and delivery retrieval in the same process lifetime. It writes a new private output directory containing the complete archive, the execution result, and the operation log.
 
-Operation ID: `OPEN311-COLLECTION-REPORTING-8E5F-20261012-01`.
-
-Coordinate execution in the original [Open311 source thread](https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791812298043459). The accepting operator records its machine, operation ID, and actual start there. Source preparation and review can proceed alongside the accepted execution.
-
 ## Complete inputs
 
 | File | Purpose | Original Git blob |
@@ -16,8 +12,6 @@ Coordinate execution in the original [Open311 source thread](https://tokenjunkie
 | An explicit reporting operation JSON | Complete reporting source files and the retained reporting journey for this same collection | Supplied with the reporting edition |
 
 The collection source packet binds the product edition `e77d54da79135a2fe6870ba657ca3a2a9cb429fb`, published in collection PR2330 and merged at `e2a6d9711b732c84565b3b2811d815435c342a7c`. Its executable core edition is `fdfd46eba5c4d20b08dee7d3540725aab3542b2321fcca23753b5ace92aa110a`. Every materialized source file carries its original Git blob identity. The eleven additional SHA256 fields were independently checked against the actual UTF-8 source bytes.
-
-The current source packet includes the exact restored original bytes for the Helsinki commissioning profile, host file reader, retained file reader, and Open311 domain module. Those restorations match the declared original Git blobs. Use the current complete packet when creating a new intake file.
 
 The portable bootstrap's complete UTF-8 SHA256 is `2502a8d4ad31caf449ff4323a536f3f011ce759a3824f3e8488ce3e9bae7c08a`.
 
@@ -45,7 +39,7 @@ Use the full reporting operation delivered with the selected source edition. Its
 
 Select existing Python 3, Node 24 or later, the installed Playwright module directory, and its working Chromium executable. The operation creates no package installation or cloud machine. The chosen filesystem must have room for the source tree, SQLite workspaces, original municipal responses, screenshots, exported customer files, and the complete archive.
 
-Supply actual absolute paths. The module directory must contain `playwright/index.js`; the browser path points to the executable itself. On an equipped ChatGPT runtime, the runtime-owned Node and module locations may already be exposed by `CODEX_PRIMARY_RUNTIME_NODE` and `CODEX_PRIMARY_RUNTIME_NODE_MODULES`. An ordinary Linux host uses its existing installation.
+Supply actual absolute paths from the selected existing installation. The module directory must contain `playwright/index.js`; the browser path points to the executable itself.
 
 Choose a new private output directory under a durable writable parent. The receiver creates this directory with mode 0700. An existing destination causes an error before it starts the bootstrap.
 
@@ -64,7 +58,7 @@ python3 /absolute/checkout/operations/open311-collection-8e5f-20261012/receive_n
   --chromium /absolute/existing/chrome-headless-shell
 ```
 
-The receiver verifies the complete source and bootstrap files against the pinned Git blobs before execution. Pass `--reporting-git-blob FULL_SHA` when the reporting packet is also supplied as an exact Git blob. Explicit `--source-git-blob` and `--bootstrap-git-blob` arguments select a later reviewed edition; preserve the selected packet alongside the output.
+The receiver verifies the complete source and bootstrap files against the pinned Git blobs before execution. Pass `--reporting-git-blob FULL_SHA` when the reporting packet is also supplied as an exact Git blob. Explicit `--source-git-blob` and `--bootstrap-git-blob` arguments select a later source edition; preserve the selected packet alongside the output.
 
 The bootstrap receives all original source in one stdin message. It verifies and materializes files in a fresh tree, checks the module syntax with the selected Node executable, and runs the complete collection journey. It then accepts the supplied reporting operation without ending the process. The receiver reads the complete resulting archive in ordered chunks, verifies its total bytes and SHA256, saves it, and closes the bootstrap.
 
@@ -116,13 +110,11 @@ The receiver creates these top-level files inside the selected output directory:
 
 The working tree created below that output directory preserves the materialized product source and private workspaces. An interrupted archive transfer preserves `helsinki-collection-reporting.zip.partial`. The completed archive is created only after every chunk, total length, and SHA256 matches the bootstrap's manifest.
 
-Deliver the complete ZIP and receiver result to the original source/SCF thread or its established private artifact surface, with the exact operation ID and source edition. Include the generated collection and reporting exports so the receiving operator can open the useful work directly. Keep the editable workspace bundles with their reports for continued use.
+Share the complete ZIP and receiver result through the project's selected delivery destination, identifying the exact source edition. Include the generated collection and reporting exports so the receiving operator can open the useful work directly. Keep the editable workspace bundles with their reports for continued use.
 
-## A held tool runtime
+## Direct stdin protocol
 
-The same `run_native.py` also supports the original held-process protocol. When a tool runtime keeps process handles scoped to an orchestration lifetime, execute the start, source feed, reporting feed, result reads, and complete archive retrieval inside one live orchestration. Yield progress while that orchestration remains alive.
-
-The portable foreground receiver above performs those steps inside one ordinary Python process. A cloud runtime may instead retain its process handle inside one live tool isolate and drive the same protocol directly. In both cases the existing bootstrap remains alive until its complete archive has been preserved.
+An existing foreground process can also drive `run_native.py` directly. Keep its stdin and stdout streams open through source intake, both product stages, and complete archive retrieval. The supplied `receive_native.py` implements this whole exchange and saves the final ZIP.
 
 The direct protocol uses newline-delimited JSON on stdin. After `OPEN311_NATIVE_READY`, send the complete source packet. After `OPEN311_NATIVE_RESULT`, send the retained reporting operation. After `OPEN311_REPORTING_RESULT`, request archive chunks:
 
@@ -136,4 +128,4 @@ Use each returned `nextOffset` exactly. The final value is null. Verify all chun
 {"op":"finish"}
 ```
 
-A native operation that has already accepted its source remains the execution owner through artifact retrieval. If that process ends, preserve its recorded result and source/output identity before another operator accepts the next concrete run.
+Keep the current bootstrap alive until its complete archive has been preserved. If the process ends, retain the original output directory and saved results. A later execution uses a new output directory and the exact selected input files.
