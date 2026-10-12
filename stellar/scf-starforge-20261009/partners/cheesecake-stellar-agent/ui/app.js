@@ -179,6 +179,9 @@
     const outcome=state.outcomes.get(request.intentId),operation=outcome?.operation??request.state??{},
       result=outcome?.result,busy=state.running.has(request.intentId),
       spending=state.spending.get(request.intentId)??outcome?.spending??result?.reconciliation?.spending;
+    const transaction=node('input',{type:'text',maxlength:64,autocomplete:'off',spellcheck:false,
+      'aria-label':'Original transaction hash',placeholder:'Original 64-character transaction hash',
+      value:result?.paymentResponse?.transaction??'',disabled:Boolean(result?.paymentResponse?.transaction)});
     return node('div',{class:'tab-content',role:'tabpanel','aria-label':'Original operation'},
       section('Current original operation',kv([
         ['State',requestState(request)],['Phase',outcome?.phase],['Source',outcome?.source],
@@ -195,9 +198,18 @@
           ['Signed dispatch',operation.signedRequestDispatched===undefined?'—':String(operation.signedRequestDispatched)],
           ['Ledger outcome',spending?.outcome],['Original transaction',result?.paymentResponse?.transaction,true],
           ['Transfer observation',result?.reconciliation?.outcome]]),
+        node('label',{},'Original transaction for reconciliation',transaction),
+        node('p',{class:'muted'},result?.paymentResponse?.transaction?
+          'The retained payment receipt selects this transaction.':
+          'If the retained receipt omitted its hash, enter the original transaction reference from the operator record.'),
         node('div',{class:'actions'},button('Read aggregate spending',()=>perform('spending'),
           {disabled:!operation.quoteId&&!state.reviews.has(request.intentId)}),
-          button('Reconcile original payment',()=>perform('reconcile'),
+          button('Reconcile original payment',()=>{
+            const value=transaction.value.trim();
+            if(value&&!/^[0-9a-fA-F]{64}$/.test(value))throw Object.assign(
+              new Error('Enter the original 64-character transaction hash.'),{code:'APPLICATION_TRANSACTION_INVALID'});
+            return perform('reconcile',value?{transaction:value}:{});
+          },
             {disabled:busy||operation.signedRequestDispatched!==true})),
         spending?rawDetails('Complete original spending record',spending):null,
         result?.reconciliation?rawDetails('Original transaction observation',result.reconciliation):null,
