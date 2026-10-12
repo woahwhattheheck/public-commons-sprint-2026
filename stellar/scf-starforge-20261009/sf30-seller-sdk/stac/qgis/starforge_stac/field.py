@@ -142,6 +142,9 @@ def configuration(raw):
         require(isinstance(r, dict), "FIELD_RELATION", "Use a native relation definition.")
         relation = {name: _text(r.get(name), name, 200) for name in
                     ("id", "name", "parentLayerId", "childLayerId")}
+        relation["strength"] = r.get("strength", "association")
+        require(relation["strength"] in ("association", "composition"), "FIELD_RELATION_STRENGTH",
+                "Choose native Association or Composition behavior for this relation.")
         pairs = r.get("fieldPairs", [{"parentField": r.get("parentField"), "childField": r.get("childField")}])
         require(isinstance(pairs, list) and 1 <= len(pairs) <= 20, "FIELD_RELATION",
                 "Keep the complete native parent and child field pairs.")

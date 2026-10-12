@@ -71,7 +71,7 @@ Add the actual named device profiles. Each has a label, operating system/device 
 
 ### Relations
 
-Check the existing native parent/child relations needed by the field forms, or configure the actual relation keys. Both layers must be included. Composite native keys are preserved as their complete field-pair list. Related inspection tables use their selected source records and identifiers.
+Check the existing native parent/child relations needed by the field forms, or configure the actual relation keys. Both layers must be included. Composite native keys are preserved as their complete field-pair list. The original native Association or Composition strength is also preserved. Composition carries native child duplication/deletion behavior; configure the parent and child edit permissions consistently. New relations explicitly select that behavior. Related inspection tables use their selected source records and identifiers.
 
 Confirm **Commission selected project**. The operation creates a complete first office edition with its own native project, working data, forms, attachments, source lineage and feature snapshot. The original imported sources and saved map remain in the same workspace.
 
@@ -232,7 +232,7 @@ The UI writes schema \`starforge.qfield.commissioning.v1\`. It contains the sele
 
 Each editable layer retains its original \`layerId\`, \`identityField\`, \`editableFields\`, addition/deletion/geometry booleans, \`formTitle\` and ordered \`fields\`. Each form field specifies name, label, group, widget and required flag; new fields also specify \`addType\`. Choice widgets carry label/value pairs; ranges carry minimum, maximum and step.
 
-Each relation retains its ID/name, original parent and child layer IDs and the complete \`fieldPairs\` array of \`parentField\`/\`childField\`. This preserves native composite keys without flattening them into unrelated one-key relations.
+Each relation retains its ID/name, explicit association/composition strength, original parent and child layer IDs and the complete \`fieldPairs\` array of \`parentField\`/\`childField\`. This preserves native composite keys without flattening them into unrelated one-key relations.
 
 The canonical configuration is frozen for the commissioned campaign. A changed collection schema is a new explicit commissioning decision from the actual selected saved map. Existing collected rounds keep their original reviewed configuration.
 
