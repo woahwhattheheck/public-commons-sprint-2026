@@ -244,8 +244,9 @@ function basketGuide(input,value) {
     '## Install and prepare',
     '',
     'Use the complete source/package edition containing the original native',
-    'basket implementation. The prepared WordPress folder contains 16 original',
-    'files, including checkout-basket.php and the full BASKET.md operating guide.',
+    'basket and ERP implementation. The prepared WordPress folder contains 25 original',
+    'files, including checkout-basket.php, the complete merchant-erp modules,',
+    'BASKET.md, ERP.md and the replaceable erp-map.example.json.',
     'Keep its WordPress and Node source on that same release.',
     'When ready for customer checkout, set WooCommerce Site visibility to Live.',
     'Check the order page and private handoff in the customer’s own session.',
@@ -353,7 +354,8 @@ configuration and outbox. Keep this packet for normal startup and recovery.
 The prepared directory contains wordpress-plugin/starforge-sf98-woo/ with
 the original receiver, checkout/admission, merchant-console PHP/JS/CSS,
 merchant-operator.php, merchant-refunds PHP/JS/CSS, refund-networks.json,
-checkout-basket.php, OPERATIONS.md, NATIVE_REVIEW.md, REFUNDS.md and BASKET.md. Copy all 16 files in that folder
+checkout-basket.php, the merchant-erp PHP/JS/CSS modules, erp-map.example.json,
+OPERATIONS.md, NATIVE_REVIEW.md, REFUNDS.md, BASKET.md and ERP.md. Copy all 25 files in that folder
 to the shop's wp-content/plugins using its ordinary deployment
 process. Alternatively zip that single folder and use WordPress Upload Plugin.
 Activate Starforge SF98 WooCommerce Merchant Bridge. PHP 8.0+, WooCommerce and
@@ -749,13 +751,15 @@ node merchant.mjs plugin --toolkit "$TOOLKIT" --out /private/new-plugin-files
 
 The command copies the exact original receiver, checkout/admission files,
 merchant-console PHP/JS/CSS, merchant-operator.php, merchant-refunds PHP/JS/CSS,
-checkout-basket.php, refund-networks.json and all four operating guides into the new output directory's
+checkout-basket.php, the merchant-erp PHP/JS/CSS modules, erp-map.example.json,
+refund-networks.json and all five operating guides into the new output directory's
 starforge-sf98-woo folder. It makes no network request or store change.
 Copy that folder to WordPress wp-content/plugins using the shop's normal
 deployment process, or zip the folder and use WordPress Upload Plugin.
 Activate Starforge SF98 WooCommerce Merchant Bridge. Open WooCommerce → Stellar
 merchant operations for native orders, payment review and verified order credits.
-Retain all 16 delivered files when upgrading an existing plugin. REFUNDS.md covers
+Retain all 25 delivered files when upgrading an existing plugin. ERP.md covers original
+mapping, order approval/delivery, native receiving, correction and complete project handover. REFUNDS.md covers
 partial/full monetary credits from the original verified accounting adjustments,
 explicit store amounts and recovery of the same saved native refund.
 
