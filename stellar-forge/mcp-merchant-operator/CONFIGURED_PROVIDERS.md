@@ -48,6 +48,8 @@ families follow the host connections below.
 | Normalized configuration | Operations |
 | --- | --- |
 | `grantsWorkspaces` | Grants.gov source and opportunity workspaces |
+| `grantWorkspaces` | SF47 grant planning, delivery cases and operating cash forecasts |
+| `dspaceOperators` | DSpace repository sources, immutable editions, reviews and complete project transfers |
 | `catalog` | Discovery review and publication |
 | `facilitators` | Retained facilitator review and release changes |
 | `fleet` | Fleet planning, preparation and runtime management |
@@ -153,8 +155,9 @@ The configured operator retains its original request size:
 
 | Host connections | Maximum complete request body/frame |
 | --- | ---: |
-| Feeds configured | 16 MiB + 64 KiB |
-| GraphQL configured, without feeds | 8 MiB |
+| SF47 grant workspace configured | 32 MiB |
+| Feeds configured, without SF47 | 16 MiB + 64 KiB |
+| GraphQL or DSpace configured, without feeds or SF47 | 8 MiB |
 | MPP configured, without feeds or GraphQL | 3 MiB |
 | OpenSearch, gRPC or USGS configured, without feeds, GraphQL or MPP | 2 MiB |
 | Grants.gov configured, without the larger connections above | 512 KiB |
