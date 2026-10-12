@@ -206,7 +206,7 @@ The received workspace keeps its stable UUID and original creation identity. App
 
 **Offer the complete source through the original buyer** creates another dataset product over a selected complete packet. It uses the original source-file field layout with 49,152-byte chunks and one additional `workspace_id` field.
 
-The source-file capture ID is the SHA-256 of the complete manifest bytes. Every row binds its path, whole-file length/hash, chunk index/count and chunk hash. The original native dataset limits still apply: at most 256 MiB of CSV, one million rows and the selected existing page-byte ceiling. Ordinary source packet export supports its own larger total-source budget.
+The source-file capture ID is the SHA-256 of the complete manifest bytes. Every row binds its path, whole-file length/hash, chunk index/count and chunk hash. The complete manifest travels as the `wordpress-source.json` dataset member; `source.json` contains its exact hash/byte count and compact workspace/file totals, within the original publisher's 1 MiB metadata limit. The original native dataset limits still apply: at most 256 MiB of CSV, one million rows and the selected existing page-byte ceiling. Ordinary source packet export supports its own larger total-source budget.
 
 Prepare, publish and acquire this product through the same publisher and buyer panel. Then receive the original completed `DatasetDelivery` with:
 
