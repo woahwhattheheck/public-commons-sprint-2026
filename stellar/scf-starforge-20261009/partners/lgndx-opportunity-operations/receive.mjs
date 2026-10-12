@@ -16,6 +16,16 @@ const copy=value=>structuredClone(value);
 const OPERATION='LGNDX-OPPORTUNITY-OPERATIONS-0C7A-20261012';
 const fail=(message,code='RECEIVING_ERROR')=>{throw Object.assign(new Error(message),{code});};
 function requireThat(ok,message,code){if(!ok)fail(message,code);}
+function safeReceivingMessage(value){
+  return String(value??'Receiving operation failed')
+    .replace(/(https?:\/\/[^\s"'<>#]*)#[^\s"'<>]*/gi,'$1#[redacted]')
+    .replace(/([?&](?:api_key|apikey|access_token|token)=)[^&#\s"'<>]+/gi,'$1[redacted]')
+    .replace(/\bBearer\s+[A-Za-z0-9._~+\/=-]+/gi,'Bearer [redacted]');
+}
+function safeReceivingError(error){
+  return {code:safeReceivingMessage(error?.code||'RECEIVING_ERROR'),
+    message:safeReceivingMessage(error?.message??String(error))};
+}
 function parse(args){
   const result={};
   for(let i=0;i<args.length;i++){
@@ -73,7 +83,13 @@ export async function receiveOpportunityOperation(options={}){
   else journal={schema:'stellar-forge.opportunity-receiving.v1',operation:OPERATION,operator,
     directory,originalDirectory,receivingDirectory,createdAt:new Date().toISOString(),
     status:'running',sourceEditions:[],stages:{},actions:{},observations:[],context:{},artifacts:[]};
-  const save=async()=>{journal.updatedAt=new Date().toISOString();await write(journalPath,json(journal));};
+  const save=async()=>{
+    for(const entry of Object.values(journal.stages)){
+      if(entry.error)entry.error=safeReceivingError(entry.error);
+      if(entry.status==='complete'){delete entry.error;delete entry.failedAt;}
+    }
+    journal.updatedAt=new Date().toISOString();await write(journalPath,json(journal));
+  };
   const edition=await sourceEdition(options['source-ref']);
   if(!journal.sourceEditions.some(item=>item.sha256===edition.sha256&&item.sourceRef===edition.sourceRef)){
     journal.sourceEditions.push(edition);await save();
@@ -91,7 +107,8 @@ export async function receiveOpportunityOperation(options={}){
   }
   async function stage(key,work){
     if(journal.stages[key]?.status==='complete')return journal.stages[key].result;
-    const entry=journal.stages[key]||{startedAt:new Date().toISOString()};
+    const entry={...(journal.stages[key]||{startedAt:new Date().toISOString()})};
+    delete entry.error;delete entry.failedAt;delete entry.completedAt;delete entry.result;
     journal.stages[key]={...entry,status:'running'};await save();
     try{
       const result=await work();
@@ -99,8 +116,8 @@ export async function receiveOpportunityOperation(options={}){
       await save();await checkpoint();process.stdout.write(json({operation:OPERATION,stage:key,status:'complete',result}));
       return result;
     }catch(error){
-      journal.stages[key]={...entry,status:'error',failedAt:new Date().toISOString(),error:{code:error.code||'RECEIVING_ERROR',message:error.message}};
-      journal.status='interrupted';await save();await checkpoint().catch(checkpointError=>process.stderr.write(json({checkpointError:checkpointError.message})));throw error;
+      journal.stages[key]={...entry,status:'error',failedAt:new Date().toISOString(),error:safeReceivingError(error)};
+      journal.status='interrupted';await save();await checkpoint().catch(checkpointError=>process.stderr.write(json({checkpointError:safeReceivingMessage(checkpointError.message)})));throw error;
     }
   }
   async function cli(args){
@@ -174,7 +191,7 @@ export async function receiveOpportunityOperation(options={}){
       args:['--no-sandbox','--disable-dev-shm-usage']});
     const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
     const page=await context.newPage();
-    const errors=[];page.on('pageerror',error=>errors.push(error.message));
+    const errors=[];page.on('pageerror',error=>errors.push(safeReceivingMessage(error.message)));
     await page.goto(host.url,{waitUntil:'networkidle'});
     await page.waitForSelector('#project-header h1');
     const views=[];
@@ -434,6 +451,6 @@ export async function receiveOpportunityOperation(options={}){
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   receiveOpportunityOperation(parse(process.argv.slice(2))).then(result=>process.stdout.write(json(result))).catch(error=>{
-    process.stderr.write(JSON.stringify({error:error.code||'RECEIVING_ERROR',message:error.message})+'\n');process.exitCode=1;
+    const safe=safeReceivingError(error);process.stderr.write(JSON.stringify({error:safe.code,message:safe.message})+'\n');process.exitCode=1;
   });
 }
