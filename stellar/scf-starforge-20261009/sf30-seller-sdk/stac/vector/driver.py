@@ -9,7 +9,8 @@ import os
 import sys
 import zipfile
 from pathlib import Path
-from .common import VectorError, need, canonical, strict_object, member, encoded_value
+from decimal import Decimal
+from .common import VectorError, need, canonical, strict_object, member, encoded_value, number_decimal
 
 DRIVERS = {
     ".geojson": "GeoJSON", ".json": "GeoJSON",
@@ -107,7 +108,7 @@ class JsonStream:
     """Incremental JSON values; FeatureCollection features need no whole-file buffer."""
     def __init__(self, stream, sequence=False):
         self.stream, self.sequence, self.buffer, self.position, self.eof = stream, sequence, "", 0, False
-        self.decoder = json.JSONDecoder(object_pairs_hook=strict_object,
+        self.decoder = json.JSONDecoder(object_pairs_hook=strict_object, parse_float=Decimal,
             parse_constant=lambda value: (_ for _ in ()).throw(
                 VectorError("VECTOR_NONFINITE_JSON", value)))
 
@@ -264,7 +265,33 @@ def same_crs(left, right):
         return not left and not right
     return crs(left) == crs(right)
 
+def native_geometry(geometry):
+    """Convert only exact, finite JSON ordinates to the native double boundary."""
+    if geometry is None:
+        return None
+    need(isinstance(geometry, dict), "VECTOR_GEOMETRY_REQUIRED")
+    kind = geometry.get("type")
+    if kind == "GeometryCollection":
+        children = geometry.get("geometries")
+        need(isinstance(children, list), "VECTOR_GEOMETRY_COLLECTION_REQUIRED")
+        return {"type": kind, "geometries": [native_geometry(child) for child in children]}
+    need(kind in ("Point", "MultiPoint", "LineString", "MultiLineString",
+                  "Polygon", "MultiPolygon"), "VECTOR_GEOMETRY_TYPE_UNSUPPORTED", kind)
+    def ordinates(value):
+        if isinstance(value, (list, tuple)):
+            return [ordinates(child) for child in value]
+        exact = number_decimal(value)
+        try:
+            native = float(value)
+        except (ValueError, OverflowError) as exc:
+            raise VectorError("VECTOR_COORDINATE_NATIVE_RANGE", canonical(value)) from exc
+        need(math.isfinite(native) and number_decimal(native) == exact,
+             "VECTOR_COORDINATE_PRECISION_REQUIRES_REVIEW", canonical(value))
+        return native
+    return {"type": kind, "coordinates": ordinates(geometry.get("coordinates"))}
+
 def transform_geometry(geometry, source_crs, target_crs):
+    geometry = native_geometry(geometry)
     if geometry is None or not target_crs or same_crs(source_crs, target_crs):
         return geometry
     need(source_crs, "VECTOR_SOURCE_CRS_REQUIRED_FOR_TRANSFORM")
@@ -273,7 +300,7 @@ def transform_geometry(geometry, source_crs, target_crs):
     result = transform_geom(crs(source_crs), crs(target_crs), geometry,
                             antimeridian_cutting=False, precision=-1)
     need(result is not None, "VECTOR_NATIVE_TRANSFORM_FAILED")
-    return to_dict(result)
+    return native_geometry(to_dict(result))
 
 def writer(path, driver, layer, geometry, fields, crs_wkt, label):
     fiona = fiona_module()

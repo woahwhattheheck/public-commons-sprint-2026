@@ -178,9 +178,69 @@ published export is reconciled against its saved identity before later mutable
 history is read. A prepared managed start retains its request ID; reopen the
 same Runtime workspace and recover that original operation.
 
+## Operate the same reviewer through merchant MCP
+
+The package includes the original merchant host, purchase-reviewer provider and
+typed client. They use the same workbench, complete packet, quote stores, result
+files and accepted actions as Applications.
+
+Save the original connection JSON on the merchant host. Each alias selects its
+canonical private reviewer directory. Use `allowStart: false` for a workbench
+running under Applications; use `allowStart: true` when this merchant should
+explicitly open and own that workbench. The complete connection schema, optional
+workbench UUID and reviewed input-file bindings are in
+`source/stellar/scf_2026/presentation/reviewer/merchant/README.md`.
+
+~~~sh
+starforge merchant-grant-reviewer init --directory /private/reviewer-merchant --connection /private/reviewer-connections.json
+starforge merchant-mcp serve --config /private/reviewer-merchant/merchant-mcp.json --port 3211 --token-env MCP_ACCESS_TOKEN
+~~~
+
+Supply the merchant access token through the named environment variable. Keep
+the setup directory, connection and reviewed file bytes when resuming. Setup
+selects its original SF82 release store; repeating the exact setup reuses that
+store and configuration.
+
+The `grant-reviewer-workbenches` provider exposes twenty original operations.
+`starforge merchant-grant-reviewer tools` prints their current schemas. The
+typed `@tokenjunkielabs/starforge-merchant/grant/reviewer-merchant` export
+provides the same workflow: connect; review and receive the packet; open its
+Buyer; read both complete outcomes and documents; close and export; download
+the retained file; then receive it into the declared second workbench.
+
+Save each action's original UUID, input and reviewed revision before sending
+it. After a lost response, inspect or retry that same action. Historical
+lifecycle receipts include current Buyer state separately; opening a closed
+Buyer is an explicit new lifecycle action.
+
+~~~sh
+starforge merchant-grant-reviewer review-file --url http://127.0.0.1:3211/mcp --workspace receiver --file /private/original-export.json --title "Received original purchase" --request-id ORIGINAL_REQUEST_UUID
+starforge merchant-grant-reviewer download --url http://127.0.0.1:3211/mcp --workspace original --export-id ORIGINAL_EXPORT_SHA --manifest-sha256 ORIGINAL_MANIFEST_SHA --directory /private/complete-reviewer-download
+starforge merchant-grant-reviewer reopen --workspace original --export-id ORIGINAL_EXPORT_SHA --manifest-sha256 ORIGINAL_MANIFEST_SHA --directory /private/complete-reviewer-download
+~~~
+
+Use the native action's complete retention receipt for export and manifest
+identities. A storage failure reports the accepted action and retention state
+separately; recover that original action before consuming an export ID.
+Large responses are retained as complete files. The typed client's `readValue`
+verifies their full byte count and SHA before parsing.
+
+An interrupted download resumes in the same directory with its original
+manifest, export and retained byte prefix. After a merchant restart, use its
+current authenticated endpoint and preserve the workbench UUID and alias.
+Local `reopen` verifies the complete files after the source has stopped.
+Merchant shutdown closes only controllers it started. Applications retains
+ownership of its borrowed workbench; explicit Buyer close and export still
+drain that workbench's original Buyer before reading closed native history.
+
+`merchant/RECEIVING.mjs` continues the original reviewer operation through this
+merchant/client path. It takes the same controller lock as the managed
+Applications continuation and preserves the accepted direct result. Its actual
+completion is recorded separately from those completed direct phases.
+
 ## Preserve the installed source and receiving identity
 
-The selection retains four original component roots in their relative layout.
+The selection retains six original component roots in their relative layout.
 The maintained builder also follows their real static imports and required
 runtime declarations.
 
@@ -190,10 +250,14 @@ runtime declarations.
 | `stellar/scf-starforge-20261009/sf46-release` | Original installed-runtime inspection, managed release and operator lifecycle |
 | `stellar/scf_2026/presentation/reviewer` | Workbench, bundled public packet, original source/results, browser assets, operating guides and both receiving modules |
 | `stellar-forge/mcp-paid-agent` | Native Buyer, quote/result stores, computed console assets, browser client and declared MCP runtime inputs |
+| `stellar-forge/mcp-merchant-operator` | Original merchant host, provider registry, retained file readers/downloads and computed operator assets |
+| `stellar/scf-starforge-20261009/sf82-seller-pilot` | Original release-store setup, selection and native release lifecycle |
 
 The selected command catalog contains `installation`, `runtime-profile`,
-`runtime-install`, `runtime-workspace`, `runtime-transfer` and `grant-demo`.
-Its Applications provider is `grant-reviewer`; its public workbench import is
+`runtime-install`, `runtime-workspace`, `runtime-transfer`, `grant-demo`,
+`merchant-mcp` and `merchant-grant-reviewer`.
+Its Applications provider is `grant-reviewer` and its merchant provider is
+`grant-reviewer-workbenches`; its public workbench import is
 `@tokenjunkielabs/starforge-merchant/grant/reviewer-workbench`. Use
 `starforge --help` and `starforge registrations` for the actual installed
 declarations.
@@ -203,6 +267,7 @@ installed package at:
 
 - `source/stellar/scf_2026/presentation/reviewer/WORKBENCH.md`
 - `source/stellar/scf_2026/presentation/reviewer/RECEIVING.md`
+- `source/stellar/scf_2026/presentation/reviewer/merchant/README.md`
 - `source/stellar/scf-starforge-20261009/distribution/RUNTIME_INSTALL.md`
 
 For the original source receiving workflow, the existing

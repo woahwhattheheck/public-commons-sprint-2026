@@ -29,6 +29,13 @@
         "vector.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/vector-json.mjs",
+      [
+        "../../stac/vector/json.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

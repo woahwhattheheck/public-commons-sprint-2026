@@ -178,6 +178,7 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
     op.payload=structuredClone(payload);delete op.payload.mappingSource;
     op.context={mappingSource:structuredClone(mappingSource),mappingTarget:{id:targetId,revision:prior?.revision??null,recordSha256:prior?hashBytes(Buffer.from(stable(prior))):null}};
    }
+   if(action==='dataset.prepare')op.context={mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};
    if(action==='export.create')op.context={annotations:structuredClone(s.annotations.filter(a=>a.editionId===payload.editionId)),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};
    if(action==='backfill.export'){const b=selected(s.backfills,payload.backfillId,'backfill');op.context={backfill:structuredClone(b),annotations:structuredClone(s.annotations.filter(a=>b.parts.some(p=>p.editionId===a.editionId))),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};}
    if(action==='release.prepare')op.context={releaseRuntime:structuredClone(releaseRuntime)};
@@ -223,7 +224,11 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
     result={...comparison,export:item};break;
    }
    case'annotation.save':{await store.edition(p.editionId);const subject=text(p.subject,'a review subject',300),note=text(p.note,'a review note',12000,true);if(!['open','reviewed','follow_up'].includes(p.status))throw fault('COOPS_REVIEW','Choose open, reviewed or follow_up.');result=await local(op,s=>{const prior=s.annotations.find(a=>a.editionId===p.editionId&&a.subject===subject),a={id:prior?.id??id,editionId:p.editionId,subject,note,status:p.status,updatedAt:op.createdAt,history:prior?[...(prior.history??[]),{note:prior.note,status:prior.status,updatedAt:prior.updatedAt}]:[]};s.annotations=s.annotations.filter(x=>x.id!==a.id);s.annotations.push(a);return a;});break;}
-   case'dataset.prepare':result=await prepareCoastalDataset(store,{edition:await store.edition(p.editionId),table:p.table,name:p.name,beginDate:p.beginDate,endDate:p.endDate,products:p.products,id:'dataset-'+id});await local(op,s=>{if(!s.datasets.some(d=>d.id===result.id))s.datasets.push(result);return result;});break;
+   case'dataset.prepare':{
+    if(p.mappingId&&!op.context?.mapping)throw fault('COOPS_DATASET_MAPPING_PIN','The original selected mapping revision is not retained with this unfinished request. Review the saved mapping before issuing a new preparation.',409);
+    result=await prepareCoastalDataset(store,{edition:await store.edition(p.editionId),table:p.table,name:p.name,beginDate:p.beginDate,endDate:p.endDate,products:p.products,id:'dataset-'+id,mapping:op.context?.mapping??null});
+    await local(op,s=>{if(!s.datasets.some(d=>d.id===result.id))s.datasets.push(result);return result;});break;
+   }
    case'dataset.query':result=await queryNativeDataset(store,selected(store.read().datasets,p.datasetId,'dataset'),p.query);break;
    case'release.prepare':result=await prepareNativeRelease(store,{dataset:selected(store.read().datasets,p.datasetId,'dataset'),origin:p.origin,path:p.path??'/coastal',payment:p.payment,id:'coops-'+id,runtime:op.context?.releaseRuntime??releaseRuntime,publishers});await local(op,s=>{if(!s.releases.some(r=>r.id===result.id))s.releases.push(result);return result;});break;
    case'release.inspect':result=await inspectNativeRelease(store,selected(store.read().releases,p.releaseId,'release'),publishers);break;

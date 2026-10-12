@@ -1,9 +1,11 @@
 // MIT. Native WFS vector controls over the original application and retained request IDs.
+import { parseExactJSON,stringifyExactJSON,ExactNumber } from './vector-json.mjs';
 export function initializeVectorPanel(ctx){
   const $=id=>document.getElementById(id);
   let projectId=null,ready=false,loading=false,fileLoading=0,active=null,pending=[],rows=[],
     historyOffset=0,historyNext=null,selected=null,comparison=null,changeOffset=0,changeNext=null,
-    generation=0,selectionGeneration=0,profileGeneration=0,archiveGeneration=0,orderGeneration=0,draftTimer=null;
+    generation=0,selectionGeneration=0,profileGeneration=0,archiveGeneration=0,orderGeneration=0,draftTimer=null,
+    mappingCapture=null,mappingTimer=null;
   const draftFields=['vector-order','vector-source-crs','vector-coordinate-order','vector-identity',
     'vector-capture','vector-profile','vector-before','vector-after','vector-manifest-sha'];
   const defaults=Object.fromEntries(draftFields.map(name=>[name,$(name).value]));
@@ -85,7 +87,7 @@ export function initializeVectorPanel(ctx){
   async function loadProject(id){
     const token=++generation;
     ready=false;loading=true;projectId=id;active=null;pending=[];selected=null;comparison=null;
-    historyOffset=0;historyNext=null;changeOffset=0;changeNext=null;
+    historyOffset=0;historyNext=null;changeOffset=0;changeNext=null;mappingCapture=null;
     $('vector-inspection').hidden=true;$('vector-changes-panel').hidden=true;
     profileGeneration++;archiveGeneration++;selectionGeneration++;orderGeneration++;
     controls();
@@ -100,6 +102,7 @@ export function initializeVectorPanel(ctx){
       drawPending();await refreshHistory();
       if(token===generation&&draft?.fields){
         for(const name of ['vector-capture','vector-before','vector-after'])if(typeof draft.fields[name]==='string')$(name).value=draft.fields[name];
+        if($('vector-capture').value)await loadMappingCapture($('vector-capture').value);
       }
     }catch(error){if(token===generation)localStatus(error.message);}
     finally{if(token===generation){loading=false;controls();}}
@@ -199,14 +202,105 @@ export function initializeVectorPanel(ctx){
     if(comparison)await changes();
     controls();return result;
   }
-  async function loadProfile(id=$('vector-capture').value){
-    if(!id)throw Error('Choose a retained source capture.');
+  const plain=value=>value&&typeof value==='object'&&!Array.isArray(value)&&!(value instanceof ExactNumber);
+  function currentProfile(){
+    const value=parseExactJSON($('vector-profile').value);
+    if(!plain(value)||value.schema!=='starforge.vector-export-profile.v1'||value.layers!==undefined&&!plain(value.layers))
+      throw Error('Load a complete original native export profile.');
+    if(value.formats!==undefined&&(!Array.isArray(value.formats)||value.formats.some(name=>!['GPKG','ESRI Shapefile'].includes(name))))
+      throw Error('Choose GeoPackage or Shapefile in the original profile formats.');
+    if(value.shapefile!==undefined&&!plain(value.shapefile))
+      throw Error('Keep the complete Shapefile settings as a JSON object.');
+    return value;
+  }
+  function mappingInput(value,label,{maximum=128,select=null}={}){
+    const node=document.createElement(select?'select':'input');node.setAttribute('aria-label',label);
+    if(select)for(const [id,text]of select)node.append(new Option(text,id));
+    else{node.type='text';node.maxLength=maximum;}
+    node.value=value??'';return node;
+  }
+  function updateProfile(work){
+    assertProject();
+    if(!ready||loading||fileLoading||ctx.isWorking()||active)throw Error('Finish the current native operation before changing its profile.');
+    const value=currentProfile();work(value);profileGeneration++;
+    $('vector-profile').value=stringifyExactJSON(value,2);scheduleDraft();
+    $('vector-mapping-status').textContent='The complete reviewed profile is saved with this project.';
+  }
+  function fieldChange(layerId,name,work){
+    updateProfile(value=>{
+      if(mappingCapture?.id!==$('vector-capture').value||$('vector-mapping-layer').value!==layerId)
+        throw Error('Open this original source layer before changing its mapping.');
+      value.layers??=Object.create(null);const layer=value.layers[layerId]??=Object.create(null);
+      layer.fields??=Object.create(null);const rule=layer.fields[name]??=Object.create(null);
+      if(!plain(rule)||rule.names!==undefined&&!plain(rule.names))throw Error('Keep this original field mapping as a JSON object.');
+      work(rule);
+    });
+  }
+  function localEdit(work){
+    try{work();}catch(error){$('vector-mapping-status').textContent=error.message;}
+  }
+  function renderMapping(){
+    if(!mappingCapture||mappingCapture.id!==$('vector-capture').value){
+      ctx.table('vector-mapping-fields',[],6,'Choose and load a retained source capture.');controls();return;
+    }
+    let value;
+    try{value=currentProfile();}
+    catch(error){$('vector-mapping-status').textContent=error.message;controls();return;}
+    const layers=mappingCapture.inspection.layers??[];
+    choices('vector-mapping-layer',layers.map(layer=>({id:layer.id,label:layer.name??layer.id})),'Choose the original source layer');
+    if(!$('vector-mapping-layer').value&&layers.length)$('vector-mapping-layer').value=layers[0].id;
+    const layer=layers.find(item=>item.id===$('vector-mapping-layer').value);
+    const formats=value.formats??['GPKG','ESRI Shapefile'];
+    $('vector-format-gpkg').checked=formats.includes('GPKG');$('vector-format-shape').checked=formats.includes('ESRI Shapefile');
+    $('vector-long-values').value=value.shapefile?.longValues??'reference';
+    $('vector-collections').value=value.shapefile?.collections??'split';
+    if(!layer){controls();return;}
+    const rule=value.layers?.[layer.id]??{};
+    if(!plain(rule)||rule.fields!==undefined&&!plain(rule.fields)){
+      $('vector-mapping-status').textContent='Keep this original layer and its fields as JSON objects.';controls();return;
+    }
+    $('vector-layer-name').value=rule.name??'';
+    $('vector-target-crs').value=rule.targetCrs??'';
+    $('vector-target-crs').placeholder=value.targetCrs?'Inherit '+value.targetCrs:'Preserve the captured source CRS';
+    const fields=(layer.fieldOrder??Object.keys(layer.fields??{})).map(name=>{
+      const stat=layer.fields[name],selected=rule.fields?.[name]??{};
+      if(!plain(selected)||selected.names!==undefined&&!plain(selected.names))throw Error('Keep the original mapping for '+name+' as a JSON object.');
+      const gpkg=mappingInput(selected.names?.GPKG??selected.name,name+' GeoPackage name');
+      const shape=mappingInput(selected.names?.['ESRI Shapefile']??selected.name,name+' Shapefile name',{maximum:10});
+      gpkg.placeholder=selected.name??name;shape.placeholder=selected.name??'Native alias';
+      for(const [input,format]of [[gpkg,'GPKG'],[shape,'ESRI Shapefile']])input.addEventListener('input',()=>localEdit(()=>fieldChange(layer.id,name,current=>{
+        current.names??=Object.create(null);if(input.value)current.names[format]=input.value;else delete current.names[format];
+      })));
+      const mode=mappingInput(selected.mode??'auto',name+' representation',{select:[
+        ['auto','Automatic native mapping'],['native','Explicit native type'],['json','Exact typed JSON'],['reference','Complete source reference']]});
+      mode.addEventListener('change',()=>localEdit(()=>fieldChange(layer.id,name,current=>{current.mode=mode.value;})));
+      const physical=mappingInput(selected.physicalType,name+' native type',{maximum:64});
+      physical.placeholder='For explicit native mapping';
+      physical.addEventListener('input',()=>localEdit(()=>fieldChange(layer.id,name,current=>{
+        if(physical.value)current.physicalType=physical.value;else delete current.physicalType;
+      })));
+      return [name,Object.keys(stat.kinds??{}).join(', ')+(stat.requiresExactNumber?' · exact numeric storage':''),gpkg,shape,mode,physical];
+    });
+    ctx.table('vector-mapping-fields',fields,6,'The original source layer has no property fields.');
+    $('vector-mapping-status').textContent=layer.id+' · '+fields.length+' original fields · '+mappingCapture.manifestSha256;
+    controls();
+  }
+  async function loadMappingCapture(id,useOriginalProfile=false){
+    if(!id){mappingCapture=null;renderMapping();return;}
     const token=++profileGeneration,selectedProject=projectId;
     const result=await ctx.query('vector',{id});assertProject(selectedProject);
     if(token!==profileGeneration)return result;
-    if(result.kind!=='capture'||!result.receipt?.profileJson)throw Error('Choose a completed original native source capture.');
-    $('vector-capture').value=id;$('vector-profile').value=result.receipt.profileJson;
-    await saveDraft();await inspect(id);return result;
+    if(result.kind!=='capture'||!result.receipt?.profileJson||!result.inspectionJson)
+      throw Error('Choose a completed original native source capture.');
+    if(useOriginalProfile){$('vector-capture').value=id;$('vector-profile').value=result.receipt.profileJson;}
+    else if($('vector-capture').value!==id)return result;
+    mappingCapture={id,manifestSha256:result.receipt.manifest.sha256,inspection:parseExactJSON(result.inspectionJson)};
+    renderMapping();if(useOriginalProfile)await saveDraft();return result;
+  }
+  async function loadProfile(id=$('vector-capture').value){
+    if(!id)throw Error('Choose a retained source capture.');
+    const result=await loadMappingCapture(id,true);
+    if(result&&mappingCapture?.id===id)await inspect(id);return result;
   }
   async function changes(){
     if(!comparison)return;
@@ -227,7 +321,7 @@ export function initializeVectorPanel(ctx){
   }
   function chosen(name,label){const value=$(name).value;if(!value)throw Error('Choose '+label+'.');return value;}
   function jsonSyntax(value,label){
-    try{JSON.parse(value);}catch{throw Error('Choose complete valid '+label+' JSON.');}
+    try{parseExactJSON(value);}catch{throw Error('Choose complete valid '+label+' JSON.');}
     return value;
   }
   async function digest(bytes){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');}
@@ -236,7 +330,7 @@ export function initializeVectorPanel(ctx){
     return btoa(parts.join(''));
   }
   for(const name of draftFields)$(name).addEventListener('input',()=>{
-    if(name==='vector-profile')profileGeneration++;
+    if(name==='vector-profile'){profileGeneration++;clearTimeout(mappingTimer);mappingTimer=setTimeout(()=>localEdit(renderMapping),250);}
     scheduleDraft();
   });
   $('vector-order').addEventListener('change',()=>void perform(async()=>{
@@ -270,11 +364,28 @@ export function initializeVectorPanel(ctx){
         if(file.size>4*1024*1024)throw Error('The native profile exceeds four MiB.');
         const value=await file.text();assertProject(selectedProject);
         if(token!==profileGeneration||$('vector-profile-file').files[0]!==file)return;
-        jsonSyntax(value,'native export profile');$('vector-profile').value=value;await saveDraft();
+        jsonSyntax(value,'native export profile');$('vector-profile').value=value;renderMapping();await saveDraft();
       }catch(error){localStatus(error.message);}
       finally{fileLoading--;controls();}
     })();
   });
+  $('vector-capture').addEventListener('change',()=>{
+    mappingCapture=null;profileGeneration++;renderMapping();
+    void perform(()=>loadMappingCapture($('vector-capture').value),'Original source fields opened.');
+  });
+  $('vector-mapping-layer').addEventListener('change',()=>localEdit(renderMapping));
+  for(const name of ['vector-format-gpkg','vector-format-shape'])$(name).addEventListener('change',()=>localEdit(()=>updateProfile(value=>{
+    value.formats=[$('vector-format-gpkg').checked?'GPKG':null,$('vector-format-shape').checked?'ESRI Shapefile':null].filter(Boolean);
+  })));
+  for(const [name,key]of [['vector-layer-name','name'],['vector-target-crs','targetCrs']])$(name).addEventListener('input',()=>localEdit(()=>updateProfile(value=>{
+    const id=$('vector-mapping-layer').value;
+    if(!id||mappingCapture?.id!==$('vector-capture').value)throw Error('Load the selected original source layer.');
+    value.layers??=Object.create(null);const layer=value.layers[id]??=Object.create(null);
+    if($(name).value)layer[key]=$(name).value;else delete layer[key];
+  })));
+  for(const [name,key]of [['vector-long-values','longValues'],['vector-collections','collections']])$(name).addEventListener('change',()=>localEdit(()=>updateProfile(value=>{
+    value.shapefile??=Object.create(null);value.shapefile[key]=$(name).value;
+  })));
   $('vector-archive').addEventListener('change',()=>{archiveGeneration++;});
   $('vector-receive-form').addEventListener('submit',event=>{
     event.preventDefault();void perform(async()=>{

@@ -493,7 +493,7 @@ async function verifyOriginal(directory,closure,options={}) {
   for (const path of closure.documents) await readWfsDocument(join(directory,path));
   for (const path of closure.captures) await readCapture(join(directory,path));
   for (const path of closure.publications) await reopenExport(join(directory,path));
-  await verifyWfsVectors(directory,closure.vectors,options);
+  await verifyWfsVectors(directory,closure.vectors,{...options,leaseHeld:true});
 }
 /** Snapshot under the original project lease, without changing any source or index. */
 export async function exportWfsProject({directory,maxBytes = WFS_PROJECT_BUNDLE_DEFAULT_BYTES,python,signal}) {

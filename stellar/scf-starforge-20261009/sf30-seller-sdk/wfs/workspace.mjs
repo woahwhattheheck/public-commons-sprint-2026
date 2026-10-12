@@ -43,6 +43,7 @@ export async function startWfsWorkspace(options={}){
   const token=randomBytes(32).toString('hex'),assets=new Map();
   for(const [route,name,type] of [['/','index.html','text/html; charset=utf-8'],
     ['/app.js','app.js','text/javascript; charset=utf-8'],['/vector.mjs','vector.mjs','text/javascript; charset=utf-8'],
+    ['/vector-json.mjs','../../stac/vector/json.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8']]){
     assets.set(route,{bytes:await readFile(new URL('./ui/'+name,import.meta.url)),type});
   }
