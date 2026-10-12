@@ -111,10 +111,14 @@ export async function wooStartup(request,operationDirectory,text,context={}) {
     value.configFile===configFile&&value.configSha256===configSha256&&
     value.sourceSha256===sourceSha256&&value.selectionSha256===selectionSha256,
     'APPLICATION_WOO_STARTUP_CHANGED');
-  const bytes=await readBytes(configFile,{max:2097152});
+  // Load the selected original seller contract only when its managed child reports startup.
+  // Catalog observation remains independent of optional native seller dependencies.
+  const {MERCHANT_SCHEMA,BASKET_MERCHANT_SCHEMA,VERSIONED_MERCHANT_SCHEMA,
+    WOO_MERCHANT_MAX_BYTES}=await import('../../sf104-woocommerce-merchant-bridge/seller.mjs');
+  const bytes=await readBytes(configFile,{max:WOO_MERCHANT_MAX_BYTES});
   need(sha256(bytes)===configSha256,'APPLICATION_WOO_CONFIG_CHANGED');
   const raw=parse(bytes,'original Woo merchant config');
-  need(['stellar-forge.sf104.merchant.v1','stellar-forge.sf104.merchant.v2'].includes(raw.schema),
+  need([MERCHANT_SCHEMA,BASKET_MERCHANT_SCHEMA,VERSIONED_MERCHANT_SCHEMA].includes(raw.schema),
     'APPLICATION_WOO_CONFIG_CHANGED');
   const outbox=absolute(raw.outbox);
   need(value.outbox===outbox,'APPLICATION_WOO_OUTBOX_CHANGED');

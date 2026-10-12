@@ -14,6 +14,38 @@ Choose a saved match and select **Open match**. The workspace uses the same brow
 
 The handover initially uses the saved replay cutoff, club, audience and language. **Through event** selects the original event prefix available to the editor. **Use full match** explicitly includes the complete saved match. Update the source choices after changing a cutoff. If existing captions refer to later events, retain the original cutoff or remove those captions before shortening it.
 
+## Build a personalized rundown
+
+**Build a personalized rundown** prepares a complete draft using the existing player recap. It follows the handover's team, language, audience and event cutoff. Choose a player, the whole observed match or a half, a story focus and the number of plays. The saved player's recap selection supplies the initial player and period.
+
+- **Match story** includes completed pressing sequences. When space permits, the draft covers both observed halves and contrasting observed outcomes: a recovery, an expired window and an interrupted sequence.
+- **Recovery highlights** uses only completed team recoveries involving the selected player. The player may have lost possession, pressed or regained the ball; the caption identifies the recorded role.
+- Within each half or outcome choice, the draft favors the selected player's own recorded regain, then completed recoveries, more pressure actions and shorter recovery time. Additional plays spread across the available match. Ties follow original event order.
+
+The suggested plays appear in match order. Each card contains the caption, a reason for its selection, the original evidence and links to the start and outcome in the saved player. Open sequences and outcomes beyond the current event limit remain outside the draft. Team rates describe the chosen source period; selecting a short set of highlights does not change their denominator.
+
+Uncheck any play you want to omit, then select **Add selected plays**. The workspace inserts all checked captions together. Existing authored captions, their order, production notes and recording times stay intact. A sequence already represented by a press caption is excluded from subsequent draft generation. A deliberately repeated sequence can still be added manually from **Source plays**.
+
+**Use story title and summary** applies the suggested title and appends the complete source-derived story context to the production notes. The summary includes observed action coverage, team rates, the player's own actions and recorded sequence involvement, plus the existing half comparison. The same summary is appended once; shorten the notes first if the combined text would exceed 4,000 characters.
+
+The new captions begin with empty recording times. Place them against the actual local recording, then use the existing save, copy and export controls. A draft's suggested plays are refreshed when the team, language, audience or event cutoff changes. Edited captions already inserted into the rundown keep their authored text.
+
+### Existing H10 example
+
+Import the included **demo/player-recap-high-press-2026.json**, choose **Use full match**, then build five **Recovery highlights** for **H10** over the **Whole observed match**. The retained source contains 941 events and 18 successful team sequences involving H10; six regain actions belong to H10 himself.
+
+The automatic draft contains these five original plays:
+
+| Original loss | Outcome event | Replay count | Match interval |
+| --- | --- | ---: | --- |
+| e107 | e109 | 109 | 08:10.9–08:14.6 |
+| e386 | e390 | 390 | 33:23.9–33:29.1 |
+| e632 | e636 | 636 | 52:44.6–52:49.6 |
+| e791 | e793 | 793 | 64:54.9–64:58.3 |
+| e931 | e935 | 935 | 76:40.7–76:47.9 |
+
+This output assumes an empty caption rundown. Previously included sequences are skipped when preparing a later draft. The e632 result becomes available at its original e636 closure; a source cutoff of 635 does not expose it. The last recorded football action is at 77:25.3, while the terminal clock marker is at 90:00.0.
+
 ## Write the caption rundown
 
 Give the handover a title and add production notes. Choose the source view for new caption suggestions: team, fan or analyst, and English or Spanish.
@@ -79,6 +111,7 @@ WebVTT includes the captions with both video positions supplied, sorted by those
 | {id, broadcast, format: "match"} | Download the complete editable match package |
 | {id, broadcast, format: "html"} | Download the standalone readable handover |
 | {id, broadcast, format: "vtt"} | Download captions with explicit recording positions |
+| POST /api/broadcast-rundown with {id, broadcast, selection} | Preview a personalized story from the same saved match | 
 | Existing PUT /api/archives/:id | Save the whole review at its expected revision, including broadcast |
 | Existing archive import/export | Carry the same field through the original portable workflow |
 
@@ -86,8 +119,31 @@ Read and export use the original shared archive capability. Saving uses the exis
 
 review.broadcast has format counterpress.broadcast.v1. It contains title, notes, count, view, recording and cues. Each cue contains a stable id, exact eventId and count, optional momentId, authored caption, and nullable videoStart / videoEnd. The whole review retains the original 96 KiB request limit; the match package retains 512 KiB. Up to 64 captions are supported, with 500 characters of text each.
 
+
+### Rundown request
+
+POST /api/broadcast-rundown accepts the saved archive id, the current broadcast draft and an optional selection object:
+
+    {
+      "id": "<saved archive id>",
+      "selection": {
+        "player": "H10",
+        "period": "all",
+        "focus": "recoveries",
+        "limit": 5
+      }
+    }
+
+Omit broadcast to use the saved handover, or the saved replay cutoff and view when it has none. selection.player is an observed player label or null; period is all, first or second; focus is balanced or recoveries; limit is an integer from 1 to 12. The response uses counterpress.broadcast-rundown.v1 and includes the normalized selection, source coverage, source-period team/player statistics, full story brief, availability counts and source-bound proposed cues.
+
+Each proposed cue retains its original momentId, exact closing eventId/count, startCount, status, half, evidence and any later closure watermark. The proposed cue's key is its source identity. The browser assigns a fresh editable cue id when inserting it. The final saved review continues to use counterpress.broadcast.v1 and the existing archive revision update.
+
+Draft generation reads the original saved source and changes no archive state. The current observed prefix goes directly to buildPlayerRecap; the existing engine, player role accounting, half boundary and outcome availability remain shared with the player recap. The short editorial subset is separate from the full-period statistics. Repeating generation excludes already-included moment IDs and respects the remaining 64-caption capacity.
+
 | Source | Responsibility |
 | --- | --- |
+| src/broadcast_rundown.mjs | Original recap selection, story context and source-bound draft captions |
+| web/rundown-builder.js | Story choices, preview, original replay links and bulk insertion |
 | src/broadcast_handover.mjs | Original-source projection, caption normalization, HTML and WebVTT |
 | src/match_archive.mjs | Saved-field normalization and older-client preservation |
 | src/server.mjs | Existing-server route and asset integration |

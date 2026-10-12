@@ -19,7 +19,6 @@ function need(value, message) { if (!value) throw new Error(message); }
 /** Keep public source links and the substantive labels of private correspondence. */
 export function projectGrantMarkdown(markdown, { application = false } = {}) {
   let value = clean(markdown)
-    .replace(/(^|\n\n)AI agents generated and assisted[^\n]*(?:\n(?!\n|#{1,6}\s)[^\n]*)*(?=\n\n|$)/g, '$1')
     .replace(/\s*·?\s*\[(Original commercial delivery|Original offer and contact operation|Complete commercial and engineering brief|Completed operation)\]\(https:\/\/tokenjunkielabs\.slack\.com\/[^)\s]+\)\.?/g, '')
     .replace(/\[([^\]]+)\]\(https:\/\/(?:tokenjunkielabs\.slack\.com\/|mail\.google\.com\/mail\/)[^)\s]+\)/g, '$1')
     .replace(/ \. /g, '. ').replace(/\.\s*·\s*\[/g, '. [')
