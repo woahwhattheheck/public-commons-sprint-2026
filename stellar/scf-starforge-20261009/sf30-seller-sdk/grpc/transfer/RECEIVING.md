@@ -200,3 +200,18 @@ try {
 ```
 
 The client tracks complete upload/download tasks and their file handles, including work outside an individual HTTP request. Its close operation cancels and awaits those tasks. All financial values, protobuf bytes, operation IDs and review decisions remain in the original native representation.
+
+## Original customer continuation
+
+The installed source includes `grpc/native-transfer/journey.mjs`. Run it after the same package\'s completed original operations receiving, with that original workspace and journal:
+
+```sh
+node /opt/starforge/source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/native-transfer/journey.mjs \\
+  --source-root /opt/starforge/source --source-commit SELECTED_GIT_COMMIT \\
+  --work /srv/grpc/migration-receiving --workspace /srv/grpc/original \\
+  --operations-run /srv/grpc/operations-receiving/journey.json \\
+  --chromium /opt/native-browser/chrome-headless-shell \\
+  --playwright-modules /opt/native-browser/node_modules
+```
+
+The continuation freezes the actual preceding completed operation and its original call-file identities. Eleven retained phases carry complete capture and file pages, installed CLI forwarding, interrupted file-prefix continuation, original upload replay, native receiving and later source editing, following archive receiving, merchant host/customer delivery, desktop/mobile browser receiving, and cold reopening of all selected histories. It records each request before its native effect and reuses original capture/export/receiving identities on continuation. The final result includes the exact source edition, archive/manifest hashes, original operation IDs, received current revision and owned-resource closure.

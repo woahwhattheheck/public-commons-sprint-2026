@@ -13,7 +13,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/transfer/RECEIVING.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/transfer/archive.py",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/transfer/client.d.mts",
-    "stellar-forge/mcp-merchant-operator/GRPC_TRANSFER.md"
+    "stellar-forge/mcp-merchant-operator/GRPC_TRANSFER.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/native-transfer/journey.mjs"
   ],
   "exports": {
     "./seller/grpc/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/transfer/manifest.mjs",
