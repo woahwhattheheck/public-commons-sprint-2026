@@ -59,42 +59,63 @@ export async function initializeCustomer({contract,configuration}={}) {
   const workspace=await openWorkspace(config.workspace,{create:true});
   try {return {workspace:workspace.root,...await workspace.metadata()};} finally {await workspace.close();}
 }
+const customerQueues=new WeakMap();
+export async function readOriginalCustomerPurchase(workspace,purchaseId,{origin}={}) {
+  const binding=await workspace.read('reports',purchaseKey(purchaseId));
+  requireValue(binding?.schema==='stellar-forge.mpp-customer-purchase.v1','MPP_CUSTOMER_PURCHASE_NOT_FOUND',404);
+  const saved=await workspace.read('reports',contractKey(binding.contractSha256));
+  requireValue(saved,'MPP_ORIGINAL_CUSTOMER_CONTRACT_REQUIRED',409);
+  const original=parseContract(saved.contract,{expectedSha256:binding.contractSha256});
+  requireValue((!origin || original.origin===origin) && original.offers.some(o=>o.id===binding.offerId),
+    'MPP_CUSTOMER_MERCHANT_MISMATCH',409);
+  const row=await workspace.read('purchases',purchaseId);
+  requireValue(row,'MPP_CUSTOMER_PURCHASE_NOT_PREPARED',409);
+  requireValue(row.profileId===binding.profileId && hash(stable(buyerConfig(row.profile)))===binding.profileId &&
+    stable(row.intent.request)===stable(binding.request),'MPP_CUSTOMER_PURCHASE_IDENTITY_CHANGED',409);
+  const expectedScope=hash(stable({schema:'stellar-forge.mpp-scope.v1',profileId:original.profileId,
+    route:binding.offerId,...binding.request}));
+  let meta;
+  try {meta=row.challenge.opaque?JSON.parse(Buffer.from(row.challenge.opaque,'base64url').toString('utf8')):
+    row.challenge.meta;} catch {requireValue(false,'MPP_CUSTOMER_NATIVE_SCOPE_INVALID',409);}
+  requireValue(meta?._mppx_scope===expectedScope,'MPP_CUSTOMER_NATIVE_CONTRACT_CHANGED',409);
+  return {binding,original,row};
+}
+export const customerResponseReady=row=>Boolean(row.response?.status>=200 && row.response.status<300 &&
+  row.response.status!==202 && row.receipt?.method==='stellar' && row.receipt.status==='success' &&
+  row.receipt.reference?.toLowerCase()===row.transaction);
+export function customerPurchaseView({binding,original,row},activeContract) {
+  return {...purchaseView(row),resourceReady:customerResponseReady(row),customer:{
+    contractSha256:original.sha256,offerId:binding.offerId,merchant:original.title,origin:original.origin,
+    activeContractChanged:Boolean(activeContract && original.sha256!==activeContract.sha256)}};
+}
+export async function attachCustomer({workspace,contract:inputContract,configuration:inputConfiguration,environment=process.env}={}) {
+  const contract=parseContract(inputContract),configuration=customerConfiguration(inputConfiguration,contract);
+  requireValue(workspace?.root===configuration.workspace && typeof workspace.read==='function' &&
+    typeof workspace.put==='function','MPP_CUSTOMER_WORKSPACE_MISMATCH');
+  return customerSession({workspace,contract,configuration,environment,closeWorkspace:false});
+}
 export async function connectCustomer({contract:inputContract,configuration:inputConfiguration,environment=process.env}={}) {
   const contract=parseContract(inputContract),configuration=customerConfiguration(inputConfiguration,contract);
   const workspace=await openWorkspace(configuration.workspace);
+  return customerSession({workspace,contract,configuration,environment,closeWorkspace:true});
+}
+async function customerSession({workspace,contract,configuration,environment,closeWorkspace}) {
+  if(!customerQueues.has(workspace))customerQueues.set(workspace,{tail:Promise.resolve()});
+  const shared=customerQueues.get(workspace);
   let tail=Promise.resolve(),closing=false,closePromise;
   const serial=fn=>{
     requireValue(!closing,'MPP_CUSTOMER_CLOSED');
-    const pending=tail.then(fn);tail=pending.catch(()=>{});return pending;
+    const pending=shared.tail.then(fn);shared.tail=pending.catch(()=>{});tail=pending.catch(()=>{});return pending;
   };
   try {
-    const old=await workspace.read('reports',contractKey(contract.sha256));
-    if(old) requireValue(parseContract(old.contract).sha256===contract.sha256,'MPP_RETAINED_CUSTOMER_CONTRACT_CHANGED');
-    else await workspace.put('reports',contractKey(contract.sha256),{
-      schema:'stellar-forge.mpp-retained-customer-contract.v1',contract,createdAt:now(),updatedAt:now()});
-    async function loadPurchase(purchaseId) {
-      const binding=await workspace.read('reports',purchaseKey(purchaseId));
-      requireValue(binding?.schema==='stellar-forge.mpp-customer-purchase.v1','MPP_CUSTOMER_PURCHASE_NOT_FOUND',404);
-      const saved=await workspace.read('reports',contractKey(binding.contractSha256));
-      requireValue(saved,'MPP_ORIGINAL_CUSTOMER_CONTRACT_REQUIRED',409);
-      const original=parseContract(saved.contract,{expectedSha256:binding.contractSha256});
-      requireValue(original.origin===contract.origin && original.offers.some(o=>o.id===binding.offerId),
-        'MPP_CUSTOMER_MERCHANT_MISMATCH',409);
-      const row=await workspace.read('purchases',purchaseId);
-      requireValue(row,'MPP_CUSTOMER_PURCHASE_NOT_PREPARED',409);
-      requireValue(row.profileId===binding.profileId && hash(stable(buyerConfig(row.profile)))===binding.profileId &&
-        stable(row.intent.request)===stable(binding.request),'MPP_CUSTOMER_PURCHASE_IDENTITY_CHANGED',409);
-      const expectedScope=hash(stable({schema:'stellar-forge.mpp-scope.v1',profileId:original.profileId,
-        route:binding.offerId,...binding.request}));
-      let meta;
-      try {meta=row.challenge.opaque?JSON.parse(Buffer.from(row.challenge.opaque,'base64url').toString('utf8')):
-        row.challenge.meta;} catch {requireValue(false,'MPP_CUSTOMER_NATIVE_SCOPE_INVALID',409);}
-      requireValue(meta?._mppx_scope===expectedScope,'MPP_CUSTOMER_NATIVE_CONTRACT_CHANGED',409);
-      return {binding,original,row};
-    }
-    const view=({binding,original,row})=>({...purchaseView(row),customer:{
-      contractSha256:original.sha256,offerId:binding.offerId,merchant:original.title,origin:original.origin,
-      activeContractChanged:original.sha256!==contract.sha256}});
+    await serial(async()=>{
+      const old=await workspace.read('reports',contractKey(contract.sha256));
+      if(old) requireValue(parseContract(old.contract).sha256===contract.sha256,'MPP_RETAINED_CUSTOMER_CONTRACT_CHANGED');
+      else await workspace.put('reports',contractKey(contract.sha256),{
+        schema:'stellar-forge.mpp-retained-customer-contract.v1',contract,createdAt:now(),updatedAt:now()});
+    });
+    const loadPurchase=purchaseId=>readOriginalCustomerPurchase(workspace,purchaseId,{origin:contract.origin});
+    const view=loaded=>customerPurchaseView(loaded,contract);
     function purchase(purchaseId) {
       id(purchaseId);
       return Object.freeze({id:purchaseId,
@@ -174,9 +195,9 @@ export async function connectCustomer({contract:inputContract,configuration:inpu
         return {contract:current,difference:compareContracts(contract,current)};
       }),
       close:()=>{
-        if(!closePromise){closing=true;closePromise=tail.then(()=>workspace.close());}
+        if(!closePromise){closing=true;closePromise=tail.then(()=>closeWorkspace?workspace.close():undefined);}
         return closePromise;
       }
     });
-  } catch(error){await workspace.close();throw error;}
+  } catch(error){if(closeWorkspace)await workspace.close();throw error;}
 }

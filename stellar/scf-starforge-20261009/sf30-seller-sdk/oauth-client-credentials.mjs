@@ -49,9 +49,9 @@ function credentials(config, env) {
 }
 
 /** Validate operator declaration without a connection or secret capture. */
-export function compileOAuthClientCredentials(raw, { allowLoopback = false, env = process.env } = {}) {
+export function compileOAuthClientCredentials(raw, { allowLoopback = false, env = process.env, validateCredentials = true } = {}) {
   if (!plain(raw) || Object.keys(raw).some(key => !keys.has(key)) ||
-      typeof allowLoopback !== 'boolean' || env === null || typeof env !== 'object' || Array.isArray(env)) throw new TypeError('Invalid OAuth declaration');
+      typeof allowLoopback !== 'boolean' || typeof validateCredentials !== 'boolean' || env === null || typeof env !== 'object' || Array.isArray(env)) throw new TypeError('Invalid OAuth declaration');
   const url = endpoint(raw.tokenEndpoint, allowLoopback);
   for (const key of ['clientIdEnv', 'clientSecretEnv']) {
     if (typeof raw[key] !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(raw[key]))
@@ -74,8 +74,10 @@ export function compileOAuthClientCredentials(raw, { allowLoopback = false, env 
     maxWaiters: integer(raw.maxWaiters, 256, 1, 4096, 'maxWaiters'),
     ...(raw.defaultExpiresInSeconds === undefined ? {} : {
       defaultExpiresInSeconds: integer(raw.defaultExpiresInSeconds, undefined, 1, 2147483647, 'defaultExpiresInSeconds') }) });
-  try { credentials(config, env); }
-  catch { throw new TypeError('OAuth clientIdEnv/clientSecretEnv must name available, nonempty credential variables'); }
+  if (validateCredentials) {
+    try { credentials(config, env); }
+    catch { throw new TypeError('OAuth clientIdEnv/clientSecretEnv must name available, nonempty credential variables'); }
+  }
   return config;
 }
 
@@ -178,10 +180,10 @@ function tokenRequest(config, identity, { lookup, signal, now, agent }) {
 
 /** One private, lazy token cache. Caller cancellation does not cancel other waiters. */
 export function createOAuthClientCredentials(raw, {
-  allowLoopback = false, env = process.env, lookup = systemLookup, now = () => performance.now(), agent,
+  allowLoopback = false, env = process.env, lookup = systemLookup, now = () => performance.now(), validateCredentials = true, agent,
 } = {}) {
   if (typeof lookup !== 'function' || typeof now !== 'function') throw new TypeError('Invalid OAuth runtime');
-  const config = compileOAuthClientCredentials(raw, { allowLoopback, env });
+  const config = compileOAuthClientCredentials(raw, { allowLoopback, env, validateCredentials });
   if (agent !== undefined && (!(agent instanceof HttpAgent) || agent.protocol !== new URL(config.tokenEndpoint).protocol))
     throw new TypeError('OAuth agent must be a Node Agent for the configured protocol');
   let closed = false, cached = null, pending = null, currentKey = null, blockedUntil = 0, generation = 0, lastError = null;

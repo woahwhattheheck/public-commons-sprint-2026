@@ -12,6 +12,7 @@ export interface CustomerConfiguration {schema?:'stellar-forge.mpp-customer.v1';
 export interface PurchaseInputs {purchaseId:string;query?:Record<string,string|string[]>;json?:unknown;challengeId?:string}
 export interface NativeReceipt {method:'stellar';status:'success';reference:string;timestamp:string;externalId?:string}
 export interface PurchaseView {id:string;phase:string;transaction?:string;receipt?:NativeReceipt;
+  resourceReady?:boolean;retryPreparation?:boolean;
   finality?:Record<string,unknown>;response?:{status:number;headers:Record<string,string>;bytes:number;sha256:string};
   customer:{contractSha256:string;offerId:string;merchant?:string;origin:string;activeContractChanged?:boolean};
   [key:string]:unknown}
@@ -55,3 +56,54 @@ export function receiveCustomerBundle(options:{bundle:CustomerBundle|string|Uint
 export function inspectCustomerExport(directory:string):Promise<CustomerExport>;
 export function resumeCustomerExport(directory:string):Promise<CustomerExport>;
 export function readCustomerBundleFile(path:string):Promise<CustomerBundle>;
+
+/** Existing open workspace. The host retains its process lease and owns close(). */
+export interface NativeWorkspace {
+  readonly root:string;
+  metadata():Promise<{revision:number;merchant?:string|null;buyer?:string|null;customer?:string|null;[key:string]:unknown}>;
+  read(group:string,key:string):Promise<any>;
+  put(group:string,key:string,value:unknown):Promise<unknown>;
+  update(group:string,key:string,change:(current:any)=>{op:'set'|'delete'|'noop';value?:unknown;result?:unknown}):Promise<unknown>;
+  profile(kind:'merchant'|'buyer'|'customer'):Promise<any>;
+  configure(kind:'merchant'|'buyer'|'customer',profile:unknown,expectedRevision:number):Promise<{kind:string;profileId:string;revision:number}>;
+  list(group:string):Promise<Array<any>>;
+  close():Promise<void>;
+}
+export function attachCustomer<OfferId extends string=string>(options:{workspace:NativeWorkspace;
+  contract:MppContract;configuration:CustomerConfiguration;environment?:Record<string,string|undefined>}):Promise<MppCustomer<OfferId>>;
+export const WORKBENCH_SCHEMA:'stellar-forge.mpp-customer-workbench.v1';
+export interface CustomerWorkbenchProfile {schema:'stellar-forge.mpp-customer-workbench.v1';
+  contract:MppContract;configuration:CustomerConfiguration}
+export interface CustomerDraft {draft:CustomerWorkbenchProfile;difference:ContractDifference|null;revision:number}
+export interface CustomerPage {items:PurchaseView[];total:number;nextOffset:number|null}
+export interface WorkbenchSnapshot {schema:typeof WORKBENCH_SCHEMA;workspace:string;revision:number;
+  profileId:string|null;profile:CustomerWorkbenchProfile|null;purchases:CustomerPage}
+export interface CustomerRequestPreview {profileId:string;contractSha256:string;offer:MerchantOffer;
+  request:{url:string;method:'GET'|'POST';json?:unknown};
+  binding:{url:string;method:string;bodyPresent:boolean;bodyBytes:number;bodySha256:string};
+  price:string;limit:CustomerConfiguration['assetLimits'][number]}
+export interface CustomerResourcePreview {status:number;headers:Record<string,string>;
+  receipt:NativeReceipt;transaction:string;accounting:Record<string,unknown>;bytes:number;sha256:string;
+  contractSha256:string;offerId:string;
+  preview:{kind:'text';text:string;truncated:boolean}|{kind:'binary';text:null;truncated:boolean}}
+export interface CustomerWorkbench {
+  intake(document:MppContract|CustomerBundle|string):Promise<CustomerDraft>;
+  fetch(options:{origin:string;transport?:Record<string,unknown>}):Promise<CustomerDraft>;
+  configure(options:{profile:CustomerWorkbenchProfile;revision:number}):Promise<{kind:string;profileId:string;revision:number}>;
+  preview(options:{profileId:string;offerId:string;inputs?:{query?:Record<string,string|string[]>;json?:unknown}}):Promise<CustomerRequestPreview>;
+  prepare(options:{profileId:string;offerId:string;options:PurchaseInputs}):Promise<PurchaseView>;
+  retryPreparation(purchaseId:string):Promise<PurchaseView>;
+  action(purchaseId:string,action:'inspect'|'execute'|'resume'|'finalize'):Promise<PurchaseView>;
+  resource(purchaseId:string):Promise<CustomerResult>;
+  resourcePreview(purchaseId:string):Promise<CustomerResourcePreview>;
+  refresh(options:{profileId:string}):Promise<CustomerDraft>;
+  snapshot(options?:{offset?:number;limit?:number}):Promise<WorkbenchSnapshot>;
+  isCustomerPurchase(purchaseId:string):Promise<boolean>;
+}
+export function customerWorkbenchProfile(input:CustomerWorkbenchProfile,directory:string):CustomerWorkbenchProfile;
+export function readCustomerDocument(input:MppContract|CustomerBundle|string):Promise<MppContract>;
+export function createCustomerWorkbench(options:{workspace:NativeWorkspace;environment?:Record<string,string|undefined>}):CustomerWorkbench;
+export function customerPurchaseAction(options:{workspace:NativeWorkspace;purchaseId:string;
+  action:'inspect'|'execute'|'resume'|'finalize';environment?:Record<string,string|undefined>}):Promise<PurchaseView>;
+export function customerResource(options:{workspace:NativeWorkspace;purchaseId:string}):Promise<CustomerResult>;
+export function customerResourcePreview(options:{workspace:NativeWorkspace;purchaseId:string}):Promise<CustomerResourcePreview>;

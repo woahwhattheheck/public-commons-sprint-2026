@@ -337,3 +337,13 @@ The same analysis interface supports authors, institutions, sources, topics, fun
 OpenAlex metadata is offered under CC0. Linked articles and PDFs retain their own licenses, which should be checked before reusing their content. [OpenAlex access and licensing](https://help.openalex.org/access/pricing/) · [Full-text terms](https://help.openalex.org/access/fulltext/)
 
 The provider documentation referenced here was reviewed on 2026-10-11. The workspace retains the query, source URL, retrieval time, and received bytes so a report remains tied to its own edition as the live catalogue changes.
+
+## Export memory and direct downloads
+
+The local application sends ZIP members incrementally with HTTP backpressure. It renders one generated file or reads one retained page at a time, then appends the complete manifest and ZIP directory. A download no longer holds the complete export and archive member list in memory together. Every original response, review, bibliography, table, report, and manifest member remains in the bundle.
+
+Single-file download renders the requested file directly. The export index calculates each member's size and SHA without retaining every body. A source-page download validates that selected page and its original native binding without building the entire cohort analysis.
+
+Programmatic callers can use `store.exportEntries(editionId, options)` as an async iterator of `[name, Buffer]`, `store.exportFile(editionId, name, options)` for one member, and `store.exportManifest(editionId, options)` for the full manifest. The existing `exportFiles` and `researchExports` APIs still return complete in-memory bundles. `researchExportPlan` provides deferred per-file serializers for applications that control their own output.
+
+Saved filesystem exports retain their existing content-addressed directory and recoverable plan. They calculate the manifest, then write files in a second pass over the same frozen edition and review snapshot; this uses no extra temporary export directory. The collector's retained cohort and the largest individual generated file still contribute to memory use.

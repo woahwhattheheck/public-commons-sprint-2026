@@ -6,8 +6,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import { merchantRoutes, merchantTerms, analyze, createReport, readJson, liveSnapshot } from '../analyze.mjs';
 import { normalizeTrafficHistoryReport } from '../../sf30-seller-sdk/operations/history.mjs';
 import { resolveSellerConfigPaths, validateSellerServiceConfig } from '../../sf30-seller-sdk/serve.mjs';
-import { createRepricingReview } from './repricing.mjs';
-import { prepareRepricingSource, writeRepricingSource, stageRepricingSource } from './repricing-source.mjs';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const REVISION = /^[a-f0-9]{64}$/;
@@ -400,6 +398,24 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     return {entry,sellerBytes,termsBytes,sellerValue:JSON.parse(sellerBytes.toString('utf8')),
       termsValue:JSON.parse(termsBytes.toString('utf8'))};
   }
+  async function planningSource(version) {
+    const [original,current] = await Promise.all([originalPricing(version),seller()]);
+    const sourceFile = original.entry.value.sourceFile ?? 'snapshot.json';
+    const observationBytes = await savedFile(original.entry,sourceFile);
+    const observation = JSON.parse(observationBytes.toString('utf8'));
+    const savedReport = JSON.parse((await savedFile(original.entry,'report/report.json')).toString('utf8'));
+    const selectedRoutes = new Set(savedReport.routes.map(route => route.routeId));
+    const routes = merchantRoutes(validateSellerServiceConfig(original.sellerValue)).filter(route => selectedRoutes.has(route.routeId));
+    return {version,label:original.entry.value.label,savedAt:original.entry.value.savedAt,
+      seller:original.sellerValue,terms:original.termsValue,observation,routes,
+      commercial:commercialInputs(original.termsValue,routes),
+      sellerChanged:current.hash !== digest(original.sellerBytes),
+      observationSummary:original.entry.value.observation ?? {
+        kind:original.entry.value.observationKind ?? SESSION,sessionId:observation.sessionId ?? null,
+        range:observation.range ?? null},
+      provenance:{seller:digest(original.sellerBytes),terms:digest(original.termsBytes),
+        snapshot:digest(observationBytes),...(sourceFile === 'history.json' ? {history:digest(observationBytes)} : {})}};
+  }
   async function repricingSource(version) {
     const [original,current,decisions] = await Promise.all([originalPricing(version),seller(),decisionHistory()]);
     const routes = merchantRoutes(validateSellerServiceConfig(original.sellerValue));
@@ -416,6 +432,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     const sellerSha256 = digest(original.sellerBytes);
     if (input.sellerSha256 !== sellerSha256 || current.hash !== sellerSha256)
       throw fault('SELLER_CHANGED','The configured seller differs from this saved pricing review. Save a review of its current configuration before preparing new prices.',409);
+    const {createRepricingReview} = await import('./repricing.mjs');
     const core = createRepricingReview({seller:original.sellerValue,edits:input.edits});
     const proposedBytes = encode(core.proposedSeller);
     const launchBytes = encode(resolveSellerConfigPaths(structuredClone(core.proposedSeller),configPath));
@@ -423,7 +440,8 @@ export async function openWorkspace({config, directory, snapshot, history:histor
       throw fault('SELLER_CONFIG_TOO_LARGE','The repriced seller exceeds its original 1 MiB configuration limit.');
     const termsBytes = encode(merchantTerms(core.proposedSeller,
       commercialInputs(original.termsValue,merchantRoutes(core.proposedSeller))));
-    const source = sourcePackage ? await prepareRepricingSource(resolve(sourcePackage),core) : null;
+    const source = sourcePackage
+      ? await (await import('./repricing-source.mjs')).prepareRepricingSource(resolve(sourcePackage),core) : null;
     const review = {schema:'stellar-forge.merchant-repricing-preview.v1',sourceVersion:input.version,
       sourceRevision:original.entry.revision,sourceLabel:original.entry.value.label,
       sellerSha256,proposedSellerSha256:digest(proposedBytes),launchSellerSha256:digest(launchBytes),
@@ -460,7 +478,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
         ['source-seller.json',original.sellerBytes],['terms.json',prepared.termsBytes],
         ['source-terms.json',original.termsBytes],['pricing-report.json',reportBytes],
         ['decision.json',encode({...review,coreReview:core})]]) await writeOnce(join(pending,name),bytes);
-      if (source) await writeRepricingSource(source,pending,final);
+      if (source) await (await import('./repricing-source.mjs')).writeRepricingSource(source,pending,final);
       const files = await filesIn(pending);
       const value = {schema:'stellar-forge.merchant-repricing-decision.v1',decision,
         previousRevision:input.expectedRevision,requestId:input.requestId,requestSha256,
@@ -508,6 +526,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     // Verify the committed package and its complete files before original SF82
     // reads it. Staging always uses this retained decision, never authoring paths.
     for (const name of Object.keys(entry.value.files)) await decisionFile(entry,name);
+    const {stageRepricingSource} = await import('./repricing-source.mjs');
     const result = await stageRepricingSource({directory:join(directory,'decisions',decision),
       releaseStore:resolve(releaseStore),runtime:stageRuntime,id:'pricing-'+decision,label:entry.value.label});
     const value = {schema:'stellar-forge.merchant-repricing-stage.v1',decision,reviewSha256,
@@ -530,6 +549,6 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     } finally { await rm(pending,{force:true}).catch(()=>{}); }
     return result;
   }
-  return {state,preview,save,download,loadVersion,compare,repricingSource,previewRepricing,
+  return {state,preview,save,download,loadVersion,compare,planningSource,repricingSource,previewRepricing,
     saveRepricing,downloadRepricing,stageRepricing};
 }
