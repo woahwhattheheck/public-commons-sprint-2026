@@ -214,3 +214,14 @@ python sf30-seller-sdk/oai-pmh/islandora_cli.py --workspace /absolute/repository
 Use the CLI's `configure` command to set the receiving installation before target writes. The original native process result, all input files, returned metadata, file selections and receiving state stay in the saved job. A job package delivers that operation; the original full workspace backup restores the complete operating environment and its source history. Re-enter host-local Workbench and Python paths after moving to a different machine.
 
 The source adds `islandora.py`, `islandora_io.py`, `islandora_cli.py`, `islandora.mjs`, `islandora.css` and the guide, with existing server and browser integration. The operation lock keeps native execution, inspection, editing and full workspace backup from racing. On POSIX, the child Workbench retains the original workspace lease until it exits.
+
+### Installed migration command
+
+The maintained `oai` contribution packages the complete original OAI and XML source, including the Islandora console, native commands and operator guide. Its additional `islandora` command uses the same Python selection, Node dataset engine, signal handling and native exit status as the original repository launcher:
+
+```sh
+starforge islandora --python /absolute/path/to/python --workspace /absolute/private/workspace state
+starforge islandora --python /absolute/path/to/python --workspace /absolute/private/workspace inventory --build BUILD_ID
+```
+
+The same entry point can be called directly with `node islandora_cli.mjs`. Managed Applications opens **Repository metadata and migration** under the original `oai-repository` identity. Its source review binds all 22 original runtime and migration files before launch, then verifies the original workspace and live session through the existing startup exchange. The native Workbench executable and environment are selected inside the retained migration.
