@@ -13,7 +13,7 @@ const definitions=[
   ['state','Read saved plans, captures, editions and original source exports.',workspace,['workspace'],true],
   ['plan_save','Save a complete native getEvents plan with the original request ID and revision.',
     {...workspace,...mutation,planId:id,name:{type:'string',minLength:1,maxLength:240},
-      startLedger:{type:'integer',minimum:1},endLedger:{type:'integer',minimum:1},
+      startLedger:{type:['integer','null'],minimum:1},endLedger:{type:['integer','null'],minimum:1},
       filters:{type:'array',items:{type:'object',additionalProperties:true}},
       pageSize:{type:'integer',minimum:1}},['workspace','requestId','expectedRevision','name'],false],
   ['capture_start','Start the saved native RPC capture; retain its original capture ID and source pages.',
@@ -52,6 +52,8 @@ const definitions=[
 export const sorobanEventsDefinitions=Object.freeze(definitions.map(([name,description,properties,required,readOnly,openWorld=false])=>
   Object.freeze({name:TOOL_PREFIX+name,action:name,description,properties,required,readOnly,openWorld})));
 function check(schema,value){
+  if(Array.isArray(schema.type))return schema.type.some(type=>check({...schema,type},value));
+  if(schema.type==='null')return value===null;
   if(schema.type==='string')return typeof value==='string'&&(schema.minLength===undefined||value.length>=schema.minLength)&&
     (schema.maxLength===undefined||value.length<=schema.maxLength)&&(!schema.pattern||new RegExp(schema.pattern).test(value));
   if(schema.type==='integer')return Number.isSafeInteger(value)&&(schema.minimum===undefined||value>=schema.minimum)&&

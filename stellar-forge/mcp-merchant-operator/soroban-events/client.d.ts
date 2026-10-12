@@ -24,7 +24,7 @@ export interface Plan{id:UUID;name:string;currentVersion:number;versions:PlanVer
 export type CaptureStatus='PENDING'|'CAPTURING'|'INTERRUPTED'|'WAITING_FOR_LEDGER'|'COMPLETE';
 export interface Capture{
   id:UUID;planId:UUID;planVersion:number;plan:PlanVersion;connection:RpcConnection;
-  status:CaptureStatus;createdAt:string;startLedger:number;endLedger:number;cursor:string|null;
+  status:CaptureStatus;createdAt:string;startLedger:number|null;endLedger:number|null;cursor:string|null;
   frontierLedger:number|null;latestLedger:number|null;eventCount:number;duplicateCount:number;
   pages:JsonValue;exchanges:JsonValue;attempts:JsonValue;lastError:JsonValue;
   completion?:JsonObject;
@@ -34,7 +34,8 @@ export interface DownloadFileIdentity extends SourceFileIdentity{name:string}
 export interface Edition{
   id:UUID;name:string;captureId:UUID;planId:UUID;planVersion:number;createdAt:string;
   network:StellarNetwork;startLedger:number;endLedger:number;eventCount:number;
-  source:SourceFileIdentity;format:'json-array';completion:JsonObject;sha256:SHA256;receivedFrom?:JsonObject;
+  source:SourceFileIdentity;format:'json-array';completion:JsonObject;sha256:SHA256;
+  receivedFrom?:{workspaceId:UUID;fromWorkspaceId?:UUID;exportId:SHA256;manifestSha256:SHA256};
 }
 export interface NativeSourceManifest{
   schema:'stellar-forge.soroban-events.source-export.v1';exportId:SHA256;editionId:UUID;
@@ -80,7 +81,7 @@ export interface SorobanEventsToolArguments{
   close:WorkspaceSelection;
   state:WorkspaceSelection;
   plan_save:WorkspaceSelection&Mutation&{
-    planId?:UUID;name:string;startLedger?:number;endLedger?:number;filters?:EventFilter[];pageSize?:number;
+    planId?:UUID;name:string;startLedger?:number|null;endLedger?:number|null;filters?:EventFilter[];pageSize?:number;
   };
   capture_start:WorkspaceSelection&Mutation&{planId:UUID};
   capture_resume:WorkspaceSelection&Mutation&{captureId:UUID};
