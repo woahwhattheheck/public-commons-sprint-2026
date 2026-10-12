@@ -19,7 +19,7 @@ The API is served on the same localhost origin as the application. Dates are ISO
 
 `POST /api/projects` accepts `{title,actor,id?,mode?}`. Ordinary projects use mode `working`.
 
-`POST /api/demo` accepts `{kind:"public"}` or `{kind:"authored"}`. Seeds are stable, separate and idempotent; the authored example is never silently adopted into a working project.
+`POST /api/demo` accepts `{kind:"public"}`, `{kind:"authored"}` or `{kind:"review"}`. The review example prepares its separate stable public-source project, frozen edition, consultation exercise and ready bilingual packet; it creates no returned comments or decisions. Seeds are stable, separate and idempotent; the authored example is never silently adopted into a working project.
 
 Every project mutation uses:
 
@@ -178,3 +178,146 @@ The operation captures scope definitions and all current non-void invoice identi
 Analysis exposes `communication_reviews`, `review_link_dispatches`, `reporting_schedule`, `completion`, and `phases[].cash_release_conditions`. These are calculations over recorded inputs. Communication timing does not confer SCC authority. The three-month reporting calculation uses submission dates; a pre-first-report planning date is separate.
 
 New `phase.freeze` snapshots include `report_context` containing the scope, selected procedure, consultation/decision metadata, OLA records, phase communications and exact delivery-register basis. The report narrative should describe progress and risks. The publisher distinguishes that retained context from later current records. `invoice.prepare` requires the accepted report's frozen received-deliverable basis; an older incomplete report can be retained while an explicit successor is prepared and accepted.
+
+
+## Frozen bilingual consultation exchange
+
+Version 0.2 adds four immutable collections: `review_packets`, `review_responses`, `review_amendments` and `review_resolutions`. They are optional for previously saved projects and enter the existing event history on first mutation. Original `comments` remain the review/disposition records used by the selected procedure.
+
+Read routes:
+
+- `GET /api/projects/PROJECT_ID/review/status`: packet/return counts, unresolved predecessor comments and current disposition bindings.
+- `GET /api/projects/PROJECT_ID/review/responses/RESPONSE_ID`: original entry, retained comment, frozen/current clause and amendment/disposition histories.
+- `GET /api/projects/PROJECT_ID/review/clauses/CLAUSE_ID`: current project revision, complete clause and SHA-256.
+- `POST /api/projects/PROJECT_ID/review/preview`: `{packet_id,filename,content_base64}`; returns original byte/content identities, normalized declared response, duplicate/predecessor/difference details and current working-clause status. It does not mutate the project.
+
+Use the ordinary operation envelope for these payloads:
+
+~~~json
+{
+  "operation": "review.packet",
+  "payload": {
+    "consultation_id": "consultation-id",
+    "title": "Bilingual clause review",
+    "instructions_en": "Review the selected clauses and source-linked cases.",
+    "instructions_fr": "Examiner les clauses sélectionnées et les cas liés aux sources.",
+    "reply_route_en": "Return the exported JSON through the agreed project channel.",
+    "reply_route_fr": "Renvoyer le fichier JSON par le canal convenu du projet."
+  },
+  "expected_revision": 12,
+  "request_id": "packet-request-001",
+  "actor": "Operator"
+}
+~~~
+
+Success adds `packet_id` and `packet_sha256` to the ordinary result. The packet freezes the selected consultation metadata and public projection of its exact edition.
+
+~~~json
+{
+  "operation": "review.receive",
+  "payload": {
+    "packet_id": "packet-id",
+    "filename": "review-response.json",
+    "content_base64": "BASE64_OF_ACTUAL_RETURN",
+    "supersedes_id": "",
+    "receipt_note": ""
+  },
+  "expected_revision": 13,
+  "request_id": "return-request-001",
+  "actor": "Operator"
+}
+~~~
+
+Success adds `response_id`, `duplicate_of`, `source_id`, `source_sha256` and `comment_ids`. Exact normalized duplicates preserve existing comments and dispositions; original bytes are retained. A changed return with the same declared response ID requires its actual latest `supersedes_id` and receipt note. Prior comments remain explicit.
+
+Returned file schema:
+
+~~~json
+{
+  "schema": "standards-consultation-response/v1",
+  "packet_id": "packet-id",
+  "packet_sha256": "EXACT_PACKET_SHA256",
+  "edition_id": "edition-id",
+  "source_edition_sha256": "EXACT_ORIGINAL_EDITION_SHA256",
+  "projection_sha256": "EXACT_PROJECTED_EDITION_SHA256",
+  "response_id": "reviewer-response-id",
+  "prepared_at": "2026-10-12T08:00:00Z",
+  "exported_at": "2026-10-12T08:15:00Z",
+  "reviewer": {
+    "name": "",
+    "organization": "",
+    "email": "",
+    "language": "bilingual"
+  },
+  "authored_example": true,
+  "comments": [{
+    "id": "entry-id",
+    "clause_id": "clause-id",
+    "kind": "technical",
+    "language": "bilingual",
+    "body": "The observation recorded by the reviewer.",
+    "proposed_text_en": "Proposed English wording.",
+    "proposed_text_fr": "Formulation française proposée."
+  }]
+}
+~~~
+
+The timestamps above illustrate the format. Actual values remain reviewer declarations. `exported_at` and `authored_example` are optional; contact fields default to empty. Original files are UTF-8 JSON, 1 byte through 8 MiB, with 1–500 distinct comment entries. Duplicate keys, unsupported fields, non-finite values, unknown clauses and wrong packet/edition identities are rejected. Comment kinds are `technical|editorial|public`, languages `en|fr|bilingual`; an empty clause ID is a general comment. Normalized content identity excludes the export timestamp.
+
+~~~json
+{
+  "operation": "review.amend",
+  "payload": {
+    "comment_id": "retained-comment-id",
+    "clause_id": "working-clause-id",
+    "expected_clause_sha256": "EXACT_CURRENT_CLAUSE_SHA256",
+    "changes": {
+      "body_en": "Operator-selected revised English wording.",
+      "body_fr": "Texte français révisé sélectionné par l'opérateur."
+    },
+    "rationale": "Explain the actual change."
+  },
+  "expected_revision": 14,
+  "request_id": "amendment-request-001",
+  "actor": "Operator"
+}
+~~~
+
+Allowed change keys are `title_en,body_en,table_en,title_fr,body_fr,table_fr`. Tables use the existing clause schema. The operation requires a material change and retains the adjacent before/after clause versions plus original comment snapshot. It returns `amendment_id,clause_id,clause_sha256`; it does not set the disposition.
+
+~~~json
+{
+  "operation": "review.resolve",
+  "payload": {
+    "comment_id": "retained-comment-id",
+    "disposition": "accepted",
+    "rationale": "Explain how the reviewed point was resolved.",
+    "resolution_edition_id": "frozen-successor-edition-id",
+    "resolution_clause_id": "clause-id",
+    "amendment_ids": ["applied-amendment-id"],
+    "response_visibility": "recipient_only",
+    "publication_basis": ""
+  },
+  "expected_revision": 16,
+  "request_id": "disposition-request-001",
+  "actor": "Operator"
+}
+~~~
+
+Disposition is `open|accepted|rejected|deferred`. Edition/clause/amendment links are optional and must agree when selected. A selected amendment's paired text must appear in the exact frozen resolution clause. Public inclusion requires `response_visibility:"public"` and a nonempty basis; recipient-only is the default. The operation retains an immutable disposition, updates the original comment, and returns `resolution_id,comment_id`.
+
+Additional selected exports:
+
+- `GET .../export?audience=consultation&packet_id=PACKET_ID`: offline reviewer HTML, exact packet JSON and bilingual instructions.
+- `GET .../export?audience=review_response&response_id=RESPONSE_ID`: one respondent's comments/dispositions in JSON and readable HTML, without reviewer contact fields or raw returns.
+- Edition exports append only explicitly public, current dispositions for that exact resolution edition.
+- Management exports add the current private consultation operations summary.
+- Complete private restore archives retain all new records and original returns, validated together with the existing event/request chain.
+
+The in-process export signature adds optional final `packet_id` and `response_id` arguments after the existing source selection. The original positional arguments keep their meaning. See [CONSULTATION.md](CONSULTATION.md) for the full operator and recipient workflow.
+
+### Adopt unchanged decisions from a corrected return
+
+`review.carry` accepts `{response_id,predecessor_id,entry_ids:["ENTRY_ID"],rationale}` in the ordinary operation envelope. It selects the current return's actual predecessor and 1–500 distinct entries. Each selected complete entry must be unchanged and have a recorded predecessor decision/rationale; the current comment must still be open with no new decision work. The operation writes all selected comment updates and immutable resolution snapshots in one transaction. Each snapshot retains the exact original response/comment/decision basis and the adoption rationale. Changed entries remain independent. Public inclusion defaults to recipient-only and is not inherited. An explicit operation `id` cannot replace a previously recorded adoption; existing generated resolution identities reject the entire batch before any comment changes. An exact request replay still returns its retained result.
+
+`review/status` exposes `responses[].unchanged_decisions_available`. The response detail exposes `decision_carry` with the predecessor identity, exact entry comparisons, eligibility reasons and predecessor decision revisions. Success returns `response_id`, `predecessor_id`, `adopted_comment_ids` and `resolution_ids`. Ambiguous 5xx responses preserve the original request identity for replay.

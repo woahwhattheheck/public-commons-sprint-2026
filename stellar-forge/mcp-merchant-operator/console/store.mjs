@@ -9,6 +9,7 @@ export const ARCHIVE_SCHEMA = 'stellar-forge.merchant-operator-profile.v1';
 import { canonical, digest, fail } from './records.mjs';
 export { canonical, digest, fail } from './records.mjs';
 import { installWorkflowTables, archiveWorkflowRows, validateWorkflowRows, importWorkflowRows, reserveWorkflowNative, settleWorkflowNative } from './workflow-records.mjs';
+import { installWorkflowRecipeTables, archiveWorkflowRecipeRows, validateWorkflowRecipeRows, importWorkflowRecipeRows } from './workflow-recipes.mjs';
 const json = value => JSON.stringify(value);
 const parse = value => JSON.parse(value);
 const now = () => new Date().toISOString();
@@ -70,6 +71,7 @@ export class MerchantConsoleStore {
       'CREATE TABLE IF NOT EXISTS imports (sha TEXT PRIMARY KEY, profile_id TEXT NOT NULL, imported_at TEXT NOT NULL)'
     ].join(';'));
     installWorkflowTables(this.db);
+    installWorkflowRecipeTables(this.db);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('schema', CONSOLE_SCHEMA);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('id', randomUUID());
     if (this.db.prepare('SELECT value FROM metadata WHERE key=?').get('schema').value !== CONSOLE_SCHEMA)
@@ -233,8 +235,9 @@ export class MerchantConsoleStore {
     const calls = this.calls(profileId);
     const deliveries=this.deliveries(profileId);
     const workflowData=archiveWorkflowRows(this.db,profileId);
+    const workflowRecipeData=archiveWorkflowRecipeRows(this.db,profileId);
     const packet = { schema: ARCHIVE_SCHEMA, sourceWorkspaceId: this.id, profile, drafts, calls, deliveries,
-      ...(workflowData===undefined?{}:{workflowData}) };
+      ...(workflowData===undefined?{}:{workflowData}),...(workflowRecipeData===undefined?{}:{workflowRecipeData}) };
     const contentSha256 = digest(canonical(packet));
     return { ...packet, contentSha256 };
     });
@@ -302,6 +305,7 @@ export class MerchantConsoleStore {
       }
     }
     const workflowData=validateWorkflowRows(packet.workflowData,{profile,drafts:packet.drafts,calls:packet.calls});
+    const workflowRecipeData=validateWorkflowRecipeRows(packet.workflowRecipeData,{profile,drafts:packet.drafts,workflowData});
     return this.transaction(() => {
       const imported = this.db.prepare('SELECT profile_id FROM imports WHERE sha=?').get(contentSha256);
       if (imported) return { profile: this.profile(imported.profile_id), reused: true, contentSha256 };
@@ -342,8 +346,10 @@ export class MerchantConsoleStore {
             this.db.prepare('UPDATE deliveries SET value=? WHERE id=?').run(json(incoming),incoming.id);
         }
         importWorkflowRows(this.db,workflowData);
+        importWorkflowRecipeRows(this.db,workflowRecipeData);
         const merged=this.archive(profile.id);
         validateWorkflowRows(merged.workflowData,{profile:merged.profile,drafts:merged.drafts,calls:merged.calls});
+        validateWorkflowRecipeRows(merged.workflowRecipeData,{profile:merged.profile,drafts:merged.drafts,workflowData:merged.workflowData});
         this.db.prepare('INSERT INTO imports VALUES (?,?,?)').run(contentSha256,profile.id,now());
         return{profile:localProfile,receivedProfile:profile,reused:false,merged:true,contentSha256};
       }
@@ -356,6 +362,7 @@ export class MerchantConsoleStore {
       for (const call of packet.calls) this.db.prepare('INSERT INTO calls VALUES (?,?,?)').run(call.id, profile.id, json(call));
       for(const value of packet.deliveries)this.db.prepare('INSERT INTO deliveries VALUES (?,?,?)').run(value.id,profile.id,json(value));
       importWorkflowRows(this.db,workflowData);
+      importWorkflowRecipeRows(this.db,workflowRecipeData);
       this.db.prepare('INSERT INTO imports VALUES (?,?,?)').run(contentSha256, profile.id, now());
       return { profile, reused: false, contentSha256 };
     });

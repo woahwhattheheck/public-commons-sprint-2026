@@ -5,6 +5,7 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {ResearchWorkspaceClient,researchSummary} from './workspace-client.mjs';
 import {readResearchHostFile} from './workspace-files.mjs';
+import {DOCUMENT_COMMANDS,main as documentMain} from './document-workspace-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
 
 const usage=String.raw`Research workspace client
@@ -49,7 +50,17 @@ Receive a completed original Object Buyer file:
 
 Review captures the exact saved delivery; it does not acquire, assemble or pay.
 Preparation binds that review to an original managed processing operation.
-Submit, monitor and receive that same operation in the existing Pipelines pane.
+Submit, monitor and receive that same operation in the existing Pipelines pane
+or with the documents-* and pipelines-* commands below.
+
+Operate original Documents and the complete managed Pipeline lifecycle:
+  documents-help
+  documents-list|documents-review|documents-elements|documents-receive|documents-download
+  pipelines-list|pipelines-operation|pipelines-prepare|pipelines-submit|pipelines-refresh
+  pipelines-cancel|pipelines-provider-jobs|pipelines-reconcile|pipelines-retain
+  pipelines-review|pipelines-elements|pipelines-receive|pipelines-input|pipelines-output|pipelines-download
+
+Run documents-help for exact JSON fields, original revisions and complete file downloads.
 
 Operate the saved original Crossref acquisition:
   crossref-prepare --id DOSSIER --input PLAN_REQUEST.json
@@ -59,8 +70,16 @@ Operate the saved original Crossref acquisition:
   crossref-stop --id DOSSIER --operation ID
   crossref-receive --id DOSSIER --operation ID --input REVIEWED_RECEIVE.json
 
+Review a retained correction or retraction notice:
+  citation-updates --id DOSSIER [--revision N --notice ID --status all|pending|reviewed --offset N --limit N]
+  citation-review --id DOSSIER --input REVIEW_REQUEST.json
+
+The review request keeps requestId, expectedRevision and expectedFingerprint.
+It saves the explicit evidence edits, finding edits and finding dispositions
+in one dossier revision. Repeat the same request after a lost reply.
+
 Retain and reopen complete original files:
-  export --id DOSSIER --format json|json.gz|md|html --out NEW_FILE
+  export --id DOSSIER --format json|json.gz|md|html --out NEW_FILE [--revision N]
   export-crossref --id DOSSIER --operation ID --out NEW_FILE
   export-edition --id DOSSIER --edition ID --out NEW_FILE [--revision N --sha256 SHA256]
   export-source --id DOSSIER --edition ID --key ORIGINAL_KEY --part content|record --out NEW_FILE [--revision N --sha256 SHA256]
@@ -101,7 +120,9 @@ const commandOptions=Object.freeze({
   'crossref-review':['id','operation','section','offset','limit'],
   'crossref-start':['id','operation','plan-sha256'],'crossref-stop':['id','operation'],
   'crossref-receive':['id','operation','input'],
-  export:['id','format','out','sha256'],'export-crossref':['id','operation','out','sha256'],
+  'citation-updates':['id','revision','notice','status','offset','limit'],
+  'citation-review':['id','input'],
+  export:['id','format','out','sha256','revision'],'export-crossref':['id','operation','out','sha256'],
   'export-edition':['id','edition','out','revision','sha256'],'export-compare':['id','before','after','out','sha256'],
   'export-source':['id','edition','key','part','out','revision','sha256'],
   'export-source-file':['id','edition','key','name','out','revision','sha256'],
@@ -110,6 +131,7 @@ const commandOptions=Object.freeze({
 const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.dossier)}:value;
 const selected=value=>Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined));
 export async function main(argv=process.argv.slice(2),{output=process.stdout}={}){
+  if(DOCUMENT_COMMANDS.includes(argv[0]))return documentMain(argv,{output});
   const [command,...args]=argv;
   if(!command||['help','--help','-h'].includes(command)){output.write(usage);return;}
   need(Object.hasOwn(commandOptions,command),'COMMAND_UNKNOWN');
@@ -124,7 +146,7 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
   };
   const required=name=>{need(typeof values[name]==='string'&&values[name].length>0,'ARGUMENT_REQUIRED');return values[name];};
   const digest=name=>{const value=required(name);need(/^[a-f0-9]{64}$/.test(value),'RESEARCH_SHA256_REQUIRED');return value;};
-  const input=async()=>parseJson(await readResearchHostFile(resolve(required('input')),2*1024*1024));
+  const input=async()=>parseJson(await readResearchHostFile(resolve(required('input')),command==='citation-review'?16*1024*1024:2*1024*1024));
   const client=new ResearchWorkspaceClient({connectionFile:resolve(values['connection-file']),directory:resolve(values.directory)},
     values['timeout-ms']===undefined?{}:{timeoutMs:number('timeout-ms')});
   try{
@@ -190,7 +212,11 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
       case 'crossref-start':result=await client.startCrossref(required('id'),required('operation'),{expectedPlanSha256:digest('plan-sha256')});break;
       case 'crossref-stop':result=await client.stopCrossref(required('id'),required('operation'));break;
       case 'crossref-receive':result=await client.receiveCrossref(required('id'),required('operation'),await input());break;
-      case 'export':result=await client.exportDossier(required('id'),{format:values.format??'json.gz',...exportOptions()});break;
+      case 'citation-updates':result=await client.citationUpdates(required('id'),{...page,...selected({
+        revision:number('revision'),noticeId:values.notice,status:values.status})});break;
+      case 'citation-review':result=await client.reviewCitationUpdate(required('id'),await input());break;
+      case 'export':result=await client.exportDossier(required('id'),{format:values.format??'json.gz',
+        ...selected({revision:number('revision')}),...exportOptions()});break;
       case 'export-crossref':result=await client.exportCrossrefEdition(required('id'),required('operation'),exportOptions());break;
       case 'export-edition':result=await client.exportRetainedEdition(required('id'),required('edition'),{
         ...exportOptions(),...selected({revision:number('revision')})});break;
@@ -208,7 +234,10 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   main().catch(error=>{
     process.stderr.write(JSON.stringify({error:safeCode(error.code,'RESEARCH_COMMAND_FAILED'),
       ...(Number.isInteger(error.status)?{status:error.status}:{}),
-      ...(error.outcomeUnknown?{outcomeUnknown:true,recovery:'Read the original dossier revision or the same saved Crossref operation before another write.'}:{})})+'\n');
+      ...(error.destinationPublished?{destinationPublished:true,file:error.file}:{}),
+      ...(error.sourceCleanupFailed?{sourceCleanupFailed:true}:{}),
+      ...(error.outcomeUnknown?{outcomeUnknown:true,requestId:error.requestId,operationId:error.operationId,
+        recovery:error.recovery??'Read the original dossier revision or the same saved source operation before another write.'}:{})})+'\n');
     process.exitCode=1;
   });
 }

@@ -77,6 +77,16 @@ function supportTools(tool) {
     tool('merchant_case_restore', 'Restore a retained case revision as a new current version through the original writer. Preserves later versions in history and requires the current expected revision.',
       { ...selected, revision: digest }, ['id', 'expectedRevision', 'revision']),
     tool('merchant_case_workorder', 'Prepare the original SF77 workorder from an exact saved case revision, its selected original sources and recorded owner terms. Returns the original packet without seller, payment or contact calls.', selected, ['id', 'expectedRevision'], read),
+    tool('merchant_case_implementation', 'Read the saved merchant implementation, assigned work, original workorders, deliverables, technical/customer receiving and comparable measurements. Use the returned nextOffset to read a full selected section.',
+      { id: uuid, revision: digest, section: {enum:['overview','tasks','materials','receiving','measurements','events','editions','files','comparisons']},
+        offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:200} }, ['id'], read),
+    tool('merchant_case_implementation_prepare', 'Use the original saved case and SF77 builder to create or update its implementation work. Retain one requestId for lost-response recovery; exact replay reopens the original edition. New source fields preserve operator edits for selective adoption.',
+      { ...selected,expectedImplementationRevision:{type:'integer',minimum:0},requestId:text(160),actor:text(200),recordedAt:text(40) },
+      ['id','expectedRevision','expectedImplementationRevision','requestId','actor']),
+    tool('merchant_case_implementation_apply', 'Apply assigned work, original deliverables, source-field choices, receiving/corrections or effort measurements through the original case writer. Supply the exact case and implementation revisions and retain the original requestId and payload for replay.',
+      { ...selected,command:{...object({type:{enum:['record_workorder','select_workorder','update_plan','save_tasks','accept_source_changes','add_material','record_receiving','record_measurement']},
+        requestId:text(160),expectedRevision:{type:'integer',minimum:0},actor:text(200),recordedAt:text(40),payload:{type:'object'}}),
+        required:['type','requestId','expectedRevision','actor','payload']} }, ['id','expectedRevision','command']),
     tool('merchant_case_export', 'Publish a private named export of the exact saved case, complete original support handoff and readable support report. includeWorkorder adds the same original SF77 packet, HTML and checklist. Export IDs never replace an existing delivery.',
       { ...selected, exportId: alias, includeWorkorder: { type: 'boolean' } }, ['id', 'expectedRevision', 'exportId']),
     tool('merchant_support_export_status', 'Inspect a named support export and verify the retained original files against its completion manifest. Reconcile an interrupted export before choosing a new ID.',
@@ -96,6 +106,7 @@ function supportTools(tool) {
 }
 
 const exportNames = ['case.json', 'merchant-workspace.json', 'merchant-support.json', 'support.html',
-  'owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md'];
+  'owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md',
+  'merchant-commissioning.json','merchant-implementation.html','merchant-implementation-tasks.csv'];
 
 export { supportTools, alias, digest, uuid, notificationStatuses, page, text, selected, metadataSchema, termsSchema, exportNames, object };

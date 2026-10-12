@@ -31,15 +31,16 @@ export const ACTIONS={
  'backfill.preview':['profileId','label','products','beginDate','endDate','units','timeZone','datum','predictionInterval'],
  'backfill.start':['profileId','label','products','beginDate','endDate','units','timeZone','datum','predictionInterval'],
  'backfill.resume':['backfillId'],'backfill.pause':['backfillId'],'backfill.export':['backfillId','table','format','mappingId'],
- 'mapping.save':['mappingId','name','table','columns','note'],
+ 'mapping.save':['mappingId','name','table','columns','note','mappingSource'],
  'capture.resume':['captureId'],'capture.pause':['captureId'],'capture.import':['profileId','label','bundle'],
  'edition.select':['editionId'],'edition.compare':['leftId','rightId','table'],
  'annotation.save':['editionId','subject','note','status'],
- 'dataset.prepare':['editionId','table','name','beginDate','endDate','products'],'dataset.query':['datasetId','query'],
+ 'dataset.prepare':['editionId','table','name','beginDate','endDate','products','mappingId'],'dataset.query':['datasetId','query'],
  'release.prepare':['datasetId','origin','path','payment'],'release.inspect':['releaseId'],
  'release.activate':['releaseId','expectedGeneration'],'release.start':['releaseId','expectedGeneration'],'release.stop':['releaseId'],'release.rollback':['releaseId','expectedGeneration'],
  'buyer.inspect':['intentIds'],'buyer.receive':['intentIds'],
- 'export.create':['editionId','table','format','mappingId']
+ 'export.create':['editionId','table','format','mappingId'],
+ 'analysis.export':['observationsEditionId','predictionsEditionId','options','analyst']
 };
 export function workspaceSchema({workspaceId,inboxConfigured=false,userAgent}={}){
  return{schema:'stellar-forge.coops-workspace-schema.v1',workspaceId,title:'Coastal Source Operations',source:SOURCE_CONTRACT,
@@ -47,8 +48,12 @@ export function workspaceSchema({workspaceId,inboxConfigured=false,userAgent}={}
  units:['metric','english'],timeZones:['gmt','lst','lst_ldt'],datums:['MLLW','MHHW','MHW','MTL','MSL','MLW','NAVD','STND','IGLD','LWD','CRD'],
  predictionIntervals:['6','h','hilo'],annotationStatuses:['open','reviewed','follow_up'],
  exportFormats:['json','jsonl','csv','report','source-package'],inboxConfigured,userAgent,
- limits:{windowDays:366,backfillYears:5,rowPage:500,responseBytes:32*1024*1024,captureBytes:256*1024*1024,sourceImportBytes:64*1024*1024,sourceTasks:128,backfillParts:5,streamExportBytes:1024*1024*1024,datasetRows:250000,metadataRows:50000},
+ analysis:{action:'analysis.export',schema:'stellar-forge.coops-retained-analysis.v1',products:['water_level','predictions'],timeZone:'gmt',predictionInterval:'6',
+  quality:['all','verified','preliminary'],outputs:['workbook.html','workbook.json','analysis.json','paired.csv','episodes.csv','unplaced.csv','source/*','manifest.json','README.txt']},
+ limits:{windowDays:366,backfillYears:5,rowPage:500,responseBytes:32*1024*1024,captureBytes:256*1024*1024,sourceImportBytes:64*1024*1024,sourceTasks:128,backfillParts:5,mappingFileBytes:64*1024,streamExportBytes:1024*1024*1024,datasetRows:250000,metadataRows:50000},
  defaults:{products:['water_level'],units:'metric',timeZone:'gmt',datum:'MLLW',predictionInterval:'6'},
+ datasetMapping:{columnPattern:'^[A-Za-z][A-Za-z0-9_]{0,47}$',reservedColumns:['constructor','prototype','__proto__'],maximumFilterColumns:8,description:'A selected saved mapping revision is pinned to the native CSV/query and release package. Keep valueType whenever value is exposed; original source files and aliases remain in package provenance.'},
+ mappingImport:{schema:'stellar-forge.coops-model-input-mapping-file.v1',description:'An explicitly selected original JSON convention, retained byte-for-byte with each saved mapping revision.'},
  sourceImport:{schema:'stellar-forge.coops-capture-package.v1',description:'An exact exported source edition with every original response and capture/query identity.'},
  paymentFields:['scheme','network','asset','amount','payTo','maxTimeoutSeconds'],
  bootstrap:{fragment:'private bearer token',header:'Authorization: Bearer TOKEN',storage:'sessionStorage'},

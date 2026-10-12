@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "ruby-client",
-  "description": "Complete Ruby and Rails customer packages with original dataset acquisition, offline receiving and transactional editions",
+  "description": "Complete Ruby and Rails customer packages with original acquisition, direct finalized SF100 receiving, and portable transactional application editions",
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/seller_client.rb",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/rails_receiving.rb",
@@ -22,7 +22,12 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/import_dataset_job.rb",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/commission.rb",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/mapping.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/README.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/rails_dataset/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/native_dataset.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/native_dataset_receiving.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/native_dataset_customer.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/NATIVE_DATASETS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/native_dataset_lifecycle.rb"
   ],
   "exports": {
     "./seller/client-ruby": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/export.mjs"

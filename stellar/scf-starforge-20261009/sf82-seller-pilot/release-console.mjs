@@ -12,6 +12,8 @@ import { reviewPostgresSelection, stageReviewedPostgresRelease } from './release
 import { createReleaseFacilitatorControl } from './release-facilitator.mjs';
 import { createReleaseClientConsole } from './release-client.mjs';
 import { createReleaseReceivingConsole } from './release-receiving.mjs';
+import { createReleaseDeliveryConsole } from './release-delivery-console.mjs';
+import { readBrowserAssets } from '../distribution/browser-assets.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 function failure(message, status = 400) { return Object.assign(new Error(message), { status }); }
@@ -37,27 +39,21 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
   const facilitator = createReleaseFacilitatorControl(root, facilitators);
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const environment = { ...env };
-  const assets = new Map(await Promise.all([
-    ['/', 'index.html', 'text/html; charset=utf-8'],
-    ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
-    ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
-    ['/postgres.mjs', 'postgres.mjs', 'text/javascript; charset=utf-8'],
-    ['/facilitator.mjs', 'facilitator.mjs', 'text/javascript; charset=utf-8'],
-    ['/client.mjs', 'client.mjs', 'text/javascript; charset=utf-8'],
-    ['/receiving.mjs', 'receiving.mjs', 'text/javascript; charset=utf-8'],
-    ['/style.css', 'style.css', 'text/css; charset=utf-8'],
-  ].map(async ([path, file, type]) => [path, { bytes: await readFile(new URL('./release-ui/' + file, import.meta.url)), type }])));
+  const declaredAssets = await readBrowserAssets(new URL('./release-ui/browser-assets.json', import.meta.url));
+  const assets = new Map(await Promise.all([...declaredAssets].map(async ([path, asset]) =>
+    [path, { bytes: await readFile(asset.url), type: asset.type }])));
   let hosts = new Set(), origins = new Set(), url, managed = null, busy = false, stopping = false;
   let lastError = null, resolveClosed, rejectClosed, actionDone = Promise.resolve();
   let catalogReview = null;
   const clients = await createReleaseClientConsole(root, { directory: clientExportsDirectory, getManaged: () => managed });
+  const delivery = createReleaseDeliveryConsole(root, { environment, getManaged: () => managed });
   const closed = new Promise((done, fail) => { resolveClosed = done; rejectClosed = fail; });
   // Library callers may observe closed later; errors remain available there.
   closed.catch(() => {});
   const status = async () => ({ ...await releaseStatus(root),
     console: { managesRunningSeller: Boolean(managed), instanceId: managed?.observation.instanceId ?? null,
       operations: managed?.operations ?? null,
-      catalogConfigured: Boolean(catalogConnection()), clientExports: clients.summary, receiving: await receiving.status(), busy, lastError } });
+      catalogConfigured: Boolean(catalogConnection()), clientExports: clients.summary, receiving: await receiving.status(), delivery: delivery.summary, busy, lastError } });
   const server = createServer(async (req, res) => {
     const reply = (code, type, data) => {
       if (res.destroyed) return;
@@ -86,6 +82,11 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
         if (await receiving.handle(req, res, { origins: [...origins], basePath: '/receiving', token })) return;
         throw failure('Unknown receiving workspace route.', 404);
       }
+      if (target.pathname === '/delivery' || target.pathname.startsWith('/delivery/')) {
+        if (stopping) throw failure('The release console is closing.', 503);
+        if (await delivery.mount(req, res, { origins: [...origins] })) return;
+        throw failure('Unknown original delivery workspace route.', 404);
+      }
       const supplied = Buffer.from(req.headers['x-release-token'] ?? '');
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes)) throw failure('Reopen the operator URL printed by the console command.', 401);
       if (req.method === 'GET' && target.pathname === '/api/status' && !target.search) { send(200, await status()); return; }
@@ -105,6 +106,27 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
           res.setHeader('content-disposition', 'attachment; filename="release-receiving-' + input.reviewId + '.json"');
           reply(200, 'application/json; charset=utf-8', output);
         } else send(200, await receiving[action](input));
+        return;
+      }
+      if (req.method === 'GET' && target.pathname.startsWith('/api/delivery/')) {
+        if (stopping) throw failure('The release console is closing.', 503);
+        const action = target.pathname.slice('/api/delivery/'.length);
+        const allowed = {
+          status: [], events: ['id', 'state', 'offset', 'limit'], handoff: [],
+          transfers: ['after', 'limit'], manifest: ['id', 'expectedFingerprint'],
+          file: ['id', 'expectedFingerprint', 'name', 'expectedSha256', 'readId', 'offset', 'limit'],
+          download: ['id', 'expectedFingerprint'],
+        }[action];
+        if (!allowed || [...target.searchParams.keys()].some(key => !allowed.includes(key) || target.searchParams.getAll(key).length !== 1))
+          throw failure('Unknown or duplicate delivery parameter.');
+        const input = Object.fromEntries(target.searchParams);
+        for (const key of ['offset', 'limit']) if (input[key] !== undefined) {
+          if (!/^(0|[1-9]\d*)$/.test(input[key]) || !Number.isSafeInteger(Number(input[key])))
+            throw failure('Use an original delivery page or byte offset.');
+          input[key] = Number(input[key]);
+        }
+        if (action === 'download') await delivery.sendTransfer(req, res, input);
+        else send(200, await delivery[action === 'manifest' ? 'transferManifest' : action](input));
         return;
       }
       if (req.method === 'GET' && target.pathname === '/api/clients') {
@@ -146,7 +168,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
         '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop',
         '/api/postgres/review', '/api/postgres/stage', '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt',
         '/api/receiving/open', '/api/receiving/close', '/api/receiving/prepare', '/api/receiving/attach',
-        '/api/receiving/start', '/api/receiving/cancel'].includes(target.pathname) || target.search)
+        '/api/receiving/start', '/api/receiving/cancel', '/api/delivery/control', '/api/delivery/transfer', '/api/delivery/file-release'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
       if (!req.headers.origin || !origins.has(req.headers.origin)) throw failure('Same-origin operator action required.', 403);
       if (busy || stopping) throw failure('An operator action is already running. Refresh when it completes.', 409);
@@ -169,7 +191,10 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
           receivingReview = await receiving.selectionContext({ releaseId, expectedGeneration: input.expectedGeneration,
             bindingId: input.receiving.bindingId, reviewId: input.receiving.reviewId });
         }
-        if (target.pathname.startsWith('/api/receiving/')) {
+        if (target.pathname.startsWith('/api/delivery/')) {
+          const action = target.pathname.slice('/api/delivery/'.length);
+          send(200, await delivery[action === 'file-release' ? 'releaseFile' : action](input)); return;
+        } else if (target.pathname.startsWith('/api/receiving/')) {
           const action = target.pathname.slice('/api/receiving/'.length);
           if (['open', 'close'].includes(action) && Object.keys(input).length)
             throw failure('The receiving workspace path is configured by the console command.');
@@ -253,29 +278,39 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
   server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
   await new Promise((done, fail) => { server.once('error', fail); server.listen(port, '127.0.0.1', done); });
   const assigned = server.address().port;
-  hosts = new Set(['127.0.0.1:' + assigned, 'localhost:' + assigned]);
-  origins = new Set([...hosts].map(host => 'http://' + host)); url = 'http://127.0.0.1:' + assigned;
+  origins = new Set(['127.0.0.1', 'localhost'].map(host => new URL('http://' + host + ':' + assigned).origin));
+  hosts = new Set([...origins].map(origin => new URL(origin).host)); url = new URL('http://127.0.0.1:' + assigned).origin;
   let closing;
   const close = () => {
     if (closing) return closing; stopping = true;
-    closing = (async () => {
-      try {
-        await actionDone;
-        await facilitator.close();
-        try { if (managed) await managed.close(); }
-        finally {
-          try { try { await clients.close(); } finally { await discovery?.close(); } }
-          finally {
-            try { await receiving.close(); }
-            finally {
-              await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
-            }
-          }
-        }
-        resolveClosed();
-      } catch (error) { rejectClosed(error); throw error; }
+    // Abort native delivery and mounted request readers before waiting for
+    // the action that may itself be awaiting a signed send or streamed file.
+    const deliveryClosed = delivery.close(); deliveryClosed.catch(() => {});
+    const attempt = (async () => {
+      const errors = [];
+      const finish = async work => { try { await work(); } catch (error) { errors.push(error); } };
+      await actionDone;
+      await finish(() => facilitator.close());
+      await finish(async () => {
+        const session = managed;
+        if (session) { await session.close(); if (managed === session) managed = null; }
+      });
+      await finish(() => clients.close());
+      await finish(() => discovery?.close());
+      await finish(() => receiving.close());
+      await finish(() => deliveryClosed);
+      await finish(() => server.listening ? new Promise((done, fail) => {
+        server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.();
+      }) : undefined);
+      if (errors.length) throw new AggregateError(errors, 'Original release console shutdown is incomplete; retry close.');
+      resolveClosed();
     })();
-    return closing;
+    closing = attempt;
+    attempt.catch(error => {
+      if (closing === attempt) closing = undefined;
+      rejectClosed(error);
+    });
+    return attempt;
   };
   return { server, url, token, operatorUrl: url + '/#' + token, close, closed };
 }

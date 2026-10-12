@@ -63,5 +63,6 @@
   "sourcesFile": "sources.json",
   "glossaryFile": "glossary.json",
   "mediaFile": "media/scripts.json",
-  "diagramsFile": "images/diagrams.json"
+  "diagramsFile": "images/diagrams.json",
+  "workbooksFile": "workbooks.json"
 }

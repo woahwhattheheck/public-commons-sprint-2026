@@ -20,10 +20,11 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 if __package__:
-    from . import engine, source_intake
+    from . import engine, source_intake, consultation
 else:
     import engine
     import source_intake
+    import consultation
 
 SCHEMA="standards-workspace/v1"
 MAX_SOURCE_BYTES=32*1024*1024
@@ -226,14 +227,14 @@ class Workspace:
                  "clauses":len(s["clauses"]),"editions":len(s["editions"]),"originals":len(s["files"])} for s in sorted(states,key=lambda s:s["updated_at"],reverse=True)]
 
     def _preview(self,state):
-        result=deepcopy(state);result["analysis"]=engine.analyze(state)
+        result=deepcopy(state);result["analysis"]=engine.analyze(state);result["review"]=consultation.analyze(state)
         result["collection_counts"]={name:len(state.get(name,[])) for name in engine.COLLECTIONS}
         result["preview_limit"]=200
         for name in engine.COLLECTIONS:
             result[name]=result.get(name,[])[:200]
-            if name in ("editions","ballots","ballot_closures","technical_decisions","phase_reports","invoices","procedural_reviews"):
+            if name in ("editions","ballots","ballot_closures","technical_decisions","phase_reports","invoices","procedural_reviews","review_packets","review_responses","review_amendments","review_resolutions"):
                 for r in result[name]:
-                    for field in ("snapshot","input_snapshot","independence_snapshot","roster"):
+                    for field in ("snapshot","input_snapshot","independence_snapshot","roster","response","comment_bindings"):
                         if field in r:
                             r[field+"_available"]=True
                             del r[field]
@@ -367,7 +368,7 @@ class Workspace:
                     result=json_read(prior["result"]);result["replayed"]=True;db.rollback();return result
                 if state["revision"]!=expected_revision:
                     raise Conflict("This project changed while you were editing. Your input is retained; inspect the current record and reapply the intended fields.",state["revision"])
-                changes=[]
+                changes=[];operation_result={}
                 for collection in sorted(engine.OPTIONAL_COLLECTIONS):
                     if collection not in state:
                         state[collection]=[]
@@ -409,6 +410,56 @@ class Workspace:
                     if existing and (existing["source_file_id"]!=meta["id"] or existing["sha256"]!=meta["sha256"]):
                         raise ValueError("An existing source identity cannot be replaced with different original bytes; add a new version/source record.")
                     changes.append(self._put(state,"sources",metadata))
+                elif operation=="review.receive":
+                    consultation._object(payload,{"packet_id","filename","content_base64","supersedes_id","receipt_note"},"Returned review intake")
+                    name=filename(payload.get("filename"))
+                    encoded=payload.get("content_base64")
+                    if not isinstance(encoded,str) or len(encoded)>consultation.MAX_RESPONSE_BYTES*4//3+16:
+                        raise ValueError("Returned review exceeds 8 MiB.")
+                    raw=base64.b64decode(encoded,validate=True)
+                    preview=consultation.response_preview(state,raw,payload.get("packet_id"),name)
+                    meta=file_identity(name,raw)
+                    source_id="review-source-"+digest({"filename":name,"sha256":meta["sha256"]})[:32]
+                    response_id="review-response-"+preview["response_sha256"][:32]
+                    value,comments,preview=consultation.receive_response(
+                        state,raw,payload["packet_id"],source_id,response_id,
+                        supersedes_id=payload.get("supersedes_id",""),receipt_note=payload.get("receipt_note",""))
+                    if not any(r["id"]==meta["id"] for r in state["files"]):state["files"].append(meta)
+                    db.execute("INSERT OR IGNORE INTO originals VALUES(?,?)",(meta["sha256"],raw))
+                    if not any(r["id"]==source_id for r in state["sources"]):
+                        source={"id":source_id,"title":"Returned consultation "+preview["response"]["response_id"],
+                                "source_file_id":meta["id"],"sha256":meta["sha256"],"representation":"original_bytes",
+                                "citation_visibility":"internal","public_redistribution":False,
+                                "notes":"Retained original review JSON; identity and preparation dates are reviewer declarations."}
+                        changes.append(self._put(state,"sources",source))
+                    if value is None:
+                        changes.append({"field":"received_duplicate","response_id":preview["duplicate_of"],
+                                        "source_id":source_id,"source_sha256":meta["sha256"],
+                                        "reason":"Original bytes retained; existing comments and dispositions preserved."})
+                        response_id=preview["duplicate_of"]
+                    else:
+                        changes.append(self._put(state,"review_responses",value))
+                        for comment in comments:
+                            if any(r["id"]==comment["id"] for r in state["comments"]):
+                                raise ValueError("A returned comment identity already belongs to other recorded work.")
+                            changes.append(self._put(state,"comments",comment))
+                    operation_result={"response_id":response_id,"duplicate_of":preview["duplicate_of"],
+                                      "source_id":source_id,"source_sha256":meta["sha256"],
+                                      "comment_ids":[r["id"] for r in comments]}
+                elif operation=="review.carry":
+                    record_id=payload.get("id") or "review-carry-"+uuid.uuid4().hex
+                    engine.identity(record_id)
+                    prepared,preview=consultation.prepare_decision_carries(state,payload,record_id)
+                    prepared_ids=[resolution["id"] for resolution,_ in prepared]
+                    existing_ids={row["id"] for row in state.get("review_resolutions",[])}
+                    if len(set(prepared_ids))!=len(prepared_ids) or existing_ids.intersection(prepared_ids):
+                        raise ValueError("An adopted decision identity already exists. Preserve the original decision and use a new operation ID for new work.")
+                    for resolution,comment in prepared:
+                        changes.append(self._put(state,"comments",comment))
+                        changes.append(self._put(state,"review_resolutions",resolution))
+                    operation_result={"response_id":preview["response_id"],"predecessor_id":preview["predecessor_id"],
+                                      "adopted_comment_ids":[comment["id"] for _,comment in prepared],
+                                      "resolution_ids":[resolution["id"] for resolution,_ in prepared]}
                 elif operation=="records.import":
                     spec=deepcopy(payload.get("specification",{}));collection=spec.get("collection")
                     raw,meta=self._source_bytes(db,state,spec.get("source_id"))
@@ -430,7 +481,18 @@ class Workspace:
                 else:
                     record_id=payload.get("id") or operation.split(".")[0]+"-"+uuid.uuid4().hex
                     engine.identity(record_id)
-                    if operation=="edition.freeze":
+                    if operation=="review.packet":
+                        collection="review_packets";value=consultation.freeze_packet(state,payload,record_id)
+                        operation_result={"packet_id":record_id,"packet_sha256":value["packet_sha256"]}
+                    elif operation=="review.amend":
+                        collection="review_amendments";value,updated=consultation.prepare_amendment(state,payload,record_id)
+                        changes.append(self._put(state,"clauses",updated))
+                        operation_result={"amendment_id":record_id,"clause_id":updated["id"],"clause_sha256":value["after_sha256"]}
+                    elif operation=="review.resolve":
+                        collection="review_resolutions";value,updated=consultation.prepare_resolution(state,payload,record_id)
+                        changes.append(self._put(state,"comments",updated))
+                        operation_result={"resolution_id":record_id,"comment_id":updated["id"]}
+                    elif operation=="edition.freeze":
                         collection="editions";value=engine.freeze_edition(state,payload,record_id)
                     elif operation=="language.record":
                         collection="language_reviews";clause=engine.record(state,"clauses",payload.get("clause_id"))
@@ -483,7 +545,7 @@ class Workspace:
                 previous=json_read(db.execute("SELECT record FROM events WHERE project_id=? ORDER BY revision DESC LIMIT 1",(project_id,)).fetchone()[0])
                 event=self._event(state,actor,operation,changes,previous["sha256"],request_id,request_digest)
                 result={"id":project_id,"revision":state["revision"],"operation":operation,
-                        "record_ids":[c["record_id"] for c in changes if "record_id" in c],"state_sha256":digest(state),"replayed":False}
+                        "record_ids":[c["record_id"] for c in changes if "record_id" in c],"state_sha256":digest(state),"replayed":False,**operation_result}
                 db.execute("UPDATE projects SET revision=?,state=? WHERE id=?",(state["revision"],canonical(state),project_id))
                 db.execute("INSERT INTO events VALUES(?,?,?)",(project_id,state["revision"],canonical(event)))
                 db.execute("INSERT INTO requests VALUES(?,?,?,?)",(project_id,request_id,request_digest,canonical(result)));db.commit()
@@ -531,6 +593,7 @@ class Workspace:
         for meta in state["files"]:
             raw=originals[meta["id"]]
             if file_identity(meta["filename"],raw)!=meta:raise ValueError("Original file differs from its source identity.")
+        consultation.validate_originals(state,originals)
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             try:
