@@ -27,7 +27,7 @@ import { cocartApplication, prepareCocartApplication } from './application-cocar
 import { stellarExpertApplication, prepareStellarExpertApplication } from './application-stellar-expert.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
-import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
+import { redisApplication, prepareRedisApplication, redisApplicationRunArguments } from './application-redis.mjs';
 import { cryptoworthApplication, prepareCryptoworthApplication } from './application-cryptoworth.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
@@ -275,7 +275,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi, buyerRunbook;
+  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi, buyerRunbook, redisReview;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
@@ -367,7 +367,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs); selectedResourceKey = original.resourceKey;
   } else if (type.id === 'redis') {
     const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs);
+    args.push(...original.args); inputs.push(...original.inputs); redisReview = original.review;
   } else if (type.id === 's3-merchant') {
     const original = await prepareS3MerchantApplication(settings, { ...context, inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
@@ -587,6 +587,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...(eventFeed ? { eventFeed } : {}),
     ...(apiPassWorkspace ? { apiPassWorkspace } : {}),
     ...(mppBinding ? { mppBinding } : {}),
+    ...(redisReview ? { redis: redisReview } : {}),
     ...(openapi ? { openapi } : {}),
     ...(stellarApplication ? { stellarApplication } : {}),
     ...(jobResultReceiver ? { jobResultReceiver } : {}),
@@ -839,7 +840,8 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
     need(home?.revision === reviewed.homeRevision && release?.id === reviewed.releaseId &&
       release?.digest === reviewed.releaseDigest, 'APPLICATION_RELEASE_CHANGED');
     const request = { requestId, operation: 'managed-run', homeId: home.id, releaseId: release.id,
-      expectedRevision: home.revision, applicationId: id, command: current.command, args: current.args,
+      expectedRevision: home.revision, applicationId: id, command: current.command,
+      args: redisApplicationRunArguments(current.command, current.args, requestId),
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
       ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),
