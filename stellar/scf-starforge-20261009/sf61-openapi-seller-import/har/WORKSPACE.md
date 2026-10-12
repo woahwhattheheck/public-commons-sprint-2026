@@ -1,6 +1,6 @@
 # Retained captures in the API merchant workspace
 
-Open **Captured API sources** in the original API merchant workspace to retain a HAR capture, review its operations, continue with later capture editions and configure the approved source as a paid merchant API. The panel uses the original HAR store, offline reviewer, retained refresh packets and merchant package writer.
+Open **Captured API sources** in the original API merchant workspace to retain a HAR capture, review its operations, continue with later capture editions and configure the approved source as a paid merchant API. The panel uses the original HAR store, shared operation reviewer, retained refresh packets and merchant package writer.
 
 ## Open the original workspace
 
@@ -23,26 +23,32 @@ The selected source displays its original byte count, captured entries, accepted
 
 ## Review and retain decisions
 
-Select **Download review page** and open the downloaded HTML file locally. It is the original self-contained offline reviewer, with the original source inventory and selected draft or saved revision. It contains request names and observed schemas. Recorded credential values and captured body values are excluded by the original renderer.
-
-In the review page:
+Retaining a capture opens **Review operations here** inside the merchant console. For a source already in the library, select its draft or immutable saved revision, then choose that same button. The workbench contains the full original review, including source observations, rejected entries and the complete capture-edition comparison.
 
 1. Enter the actual source origin, API title and version.
 2. Select the operations to include and author their route paths and examples.
 3. Resolve query fields, captured credential locations and custom header names.
 4. Choose the request and response contract, including explicit authored examples where needed.
 5. Acknowledge each selected route and use **Validate and preview**.
-6. Download the completed reviewed decisions JSON.
+6. Choose **Save reviewed revision** to retain decisions, or **Save and use in merchant** to continue immediately into the existing merchant route and pricing editor.
 
-Return to the console, choose that JSON file and select **Retain reviewed decisions**. Decisions are limited to 4 MiB. The original writer validates the entire selected contract and publishes the immutable review by its complete SHA-256. Saving equal reviewed decisions reuses that revision.
+The editor shares the original HAR model and controls with the self-contained offline reviewer. Both consume the original authenticated reviewer output for the selected source and saved revision. Recorded credential and captured body values stay excluded by the original inventory and renderer.
 
-Select a saved review from **Saved decisions** to reopen it in the original reviewer, use its source, export its approved OpenAPI or compare a later capture. **More saved reviews** continues the list without discarding the current selection.
+Decisions are limited to 4 MiB. The original writer validates the entire selected contract and publishes the immutable review by its complete SHA-256. Saving equal reviewed decisions reuses that revision. The browser keeps the native saved selection through the source handoff; merchant source, exact approved routes and package compilation follow the original native binding.
 
-The HAR review allows up to 100 selected operations. The original merchant package accepts up to 64. For merchant adoption, save a review containing the exact set of at most 64 routes you intend to configure.
+The current browser retains an editing draft for this private library, capture or refresh packet, and selected base revision. Choose **Restore browser draft** to continue that draft. Refresh drafts also bind the complete original previous-source, previous-review and candidate-source lineage. A draft from another comparison cannot replace this one. **Download draft** provides a portable copy for the original **Import decisions** control. Browser drafts belong to this browser origin; changing the console's host or port requires importing the downloaded draft or reopening a native saved revision.
+
+Each in-console save first retains its exact source selection and complete reviewed decisions as a separate browser request. If the original response or subsequent merchant handoff is interrupted, reopen the same source and choose **Resume saved request**. The native immutable writer reuses the same review before continuing its requested handoff. Multiple pending requests keep distinct records. The original decisions can also be downloaded from each request. If browser storage is unavailable, the editor downloads those decisions before starting the native save.
+
+For offline operation, choose **Download review page** and open the downloaded HTML file locally. It remains self-contained with its source inventory, selected review and exact CSP hashes. Complete the same controls, download reviewed decisions, then open **Import reviewed decisions file** in the merchant console and choose **Retain reviewed decisions**. Offline decisions can also be imported directly inside the integrated review.
+
+Select a saved review from **Saved decisions** to reopen it, use its source, export its approved OpenAPI or compare a later capture. **More saved reviews** continues the list without discarding the current selection.
+
+The HAR review allows up to 100 selected operations. The original merchant package accepts up to 64. **Save and use in merchant** checks that limit before recording its save request. A full review of up to 100 routes can still be retained separately; merchant adoption uses the exact selected set of at most 64 routes.
 
 ## Configure the merchant
 
-Choose the saved review and select **Use approved source**. Its exact generated OpenAPI becomes the original merchant source. The console seeds reviewed public path/query/body examples and declared backend header references into the existing route editor. Large combined examples remain in the approved source when they exceed the original merchant example field's 8 KiB limit.
+After **Save and use in merchant**, the approved source is already loaded. For an existing saved review, choose it and select **Use approved source**. Its exact generated OpenAPI becomes the original merchant source. The console seeds reviewed public path/query/body examples and declared backend header references into the existing route editor. Large combined examples remain in the approved source when they exceed the original merchant example field's 8 KiB limit.
 
 Set the merchant's public seller URL, payment destination, asset, network and timeout. Enter each selected route's exact atomic-unit price as text. The original engine validates the native payment and route configuration.
 
@@ -62,7 +68,7 @@ Select the retained capture or refresh packet and the immutable review that defi
 
 The original refresh engine retains the previous and candidate source workspaces together, plus the original comparison, migrated decisions and offline review page. The refresh identity binds the full previous source hash, previous review hash and candidate source hash.
 
-The panel shows unchanged, changed, temporarily unobserved, returned and unselected observations. Open **Download review page** to work through the complete comparison and migrated route decisions. Changed observations require renewed acknowledgment. New fields retain their unresolved decisions until the operator handles them.
+The panel shows unchanged, changed, temporarily unobserved, returned and unselected observations. The integrated review opens automatically after capture preparation. Use **Review operations here** to reopen its complete comparison and migrated route decisions; the offline review contains the same comparison. Changed observations require renewed acknowledgment. New fields retain their unresolved decisions until the operator handles them.
 
 Temporarily absent routes retain their authored identity and last observed source across subsequent saved editions. Returning observations reattach to that identity and require explicit selection and acknowledgment. The original matching engine gives active exact and unique-template matches priority and leaves ambiguous matches unselected.
 
@@ -126,6 +132,10 @@ All operations inherit the original merchant server's exact Host, Origin and wor
 A source selector is an object containing kind (capture or refresh), its full 64-character id and, for approved source operations, the full revision hash. The capturedSource binding additionally carries sourceSha256 and openApiSha256 returned by the source operation. Pass that unchanged with the exact specText into original preview/save.
 
 Raw uploads accept the selected original JSON or octet-stream bytes without content encoding. JSON request bodies retain the original console's 10 MiB limit; only the specific capture file route accepts up to 128 MiB. Review pages are limited to 32 MiB, decisions and approved OpenAPI to 4 MiB. Capture and saved-review lists use explicit pages of 1–100 entries.
+
+## Native receiving continuation
+
+Continue the original [console receiving operation](receiving/console-adoption.mjs) and its retained capture-refresh output. The [operation-review receiving guide](receiving/REVIEW_WORKBENCH.md) continues from that same private source through integrated review, source adoption, merchant save and receiving reopen. It uses the actual original browser and source writers.
 
 ## Maintained source
 
