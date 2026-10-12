@@ -121,7 +121,7 @@ module StarforgeRubyRuntime
       need(HASH.match?(read(key_path,1024).strip),"RUBY_APPLICATION_ACCESS_KEY_INVALID")
       root
     end
-    def verify_working(root,http: true)
+    def verify_working(root,http: true,working_capture: nil)
       private_directory(root)
       marker = parse(File.join(root,MARKER))
       context = Editions.context(root)
@@ -129,7 +129,14 @@ module StarforgeRubyRuntime
       package,source_key,mapping = Editions.current_package(root,context)
       native = package.dataset
       importer = Starforge::NativeDatasetLifecycle.importer(native,source_key,mapping)
-      current = Editions.verify_current_targets(importer,native,context)
+      selected_capture = StarforgeRubyRuntime.working_capture(working_capture)
+      current = if selected_capture
+        need(workspace.respond_to?(:verify_data_capture),"RUBY_WORKING_CAPTURE_RUNTIME_REQUIRED")
+        workspace.verify_data_capture(selected_capture.fetch("reviewId"),selected_capture.fetch("captureId"),
+          expected_capture_sha256: selected_capture.fetch("expectedCaptureSha256"))
+      else
+        Editions.verify_current_targets(importer,native,context)
+      end
       connection = ActiveRecord::Base.connection
       need(connection.select_value("PRAGMA quick_check") == "ok","RUBY_APPLICATION_DATABASE_CHANGED")
       stream = Starforge::DatasetExample::DatasetStream.where(
@@ -162,9 +169,11 @@ module StarforgeRubyRuntime
           break unless before
         end
       end
-      {"schema"=>"stellar-forge.managed-ruby-application-observation.v1","format"=>marker.fetch("format"),
+      result = {"schema"=>"stellar-forge.managed-ruby-application-observation.v1","format"=>marker.fetch("format"),
         "sourceKey"=>source_key,"datasetManifestSha256"=>native.manifest_sha256,
         "rows"=>native.row_count,"currentTargets"=>current,"editions"=>editions,"historySha256"=>h.hexdigest}
+      result.merge!("profile"=>"captured-working-state","workingCapture"=>selected_capture) if selected_capture
+      result
     ensure
       Starforge::NativeDatasetLifecycle.disconnect
     end
@@ -188,19 +197,30 @@ module StarforgeRubyRuntime
     ensure
       Starforge::NativeDatasetLifecycle.disconnect
     end
-    def verify(record)
+    def verify(record,working_capture: nil)
       root = private_directory(record.fetch("directory"))
-      Starforge::Files.lock(root) { verify_working(root) }
+      selected = StarforgeRubyRuntime.working_capture(working_capture || record["workingCapture"])
+      Starforge::Files.lock(root) { verify_working(root,working_capture: selected) }
     end
-    def snapshot(record,out)
+    def snapshot(record,out,working_capture: nil)
       root = private_directory(record.fetch("directory"))
       need(root != out && !out.start_with?(root + "/") && !root.start_with?(out + "/"),"RUBY_APPLICATION_COPY_TARGET")
+      selected = StarforgeRubyRuntime.working_capture(working_capture || record["workingCapture"])
       Starforge::Files.lock(root) do
-        observed = verify_working(root)
+        observed = verify_working(root,working_capture: selected)
         files = inventory(root,exclude: [".ruby.lock"])
         copy_tree(root,out,files: files,exclude: [".ruby.lock"])
-        {"schema"=>"stellar-forge.managed-ruby-application-snapshot.v1","observation"=>observed,
+        if selected
+          # Reopen the closed copied database before an archive can be published.
+          # This also catches a source writer between comparison and copying.
+          received = verify_working(out,working_capture: selected)
+          need(received == observed,"RUBY_RECEIVED_WORKING_STATE_CHANGED")
+          need(inventory(out) == files,"RUBY_RECEIVED_APPLICATION_CHANGED")
+        end
+        result = {"schema"=>"stellar-forge.managed-ruby-application-snapshot.v1","observation"=>observed,
           "files"=>files.length,"bytes"=>files.sum { |entry| entry.fetch("bytes") },"filesSha256"=>identity(files)}
+        result.merge!("profile"=>"captured-working-state","workingCapture"=>selected) if selected
+        result
       end
     end
 
@@ -312,8 +332,8 @@ module StarforgeRubyRuntime
       need(identity(record.reject { |key,_| key == "sha256" }) == record.fetch("sha256"),"RUBY_APPLICATION_CHANGED")
       case input.fetch("action")
       when "register" then register(record)
-      when "verify" then verify(record)
-      when "snapshot" then snapshot(record,File.expand_path(input.fetch("out")))
+      when "verify" then verify(record,working_capture: input["workingCapture"])
+      when "snapshot" then snapshot(record,File.expand_path(input.fetch("out")),working_capture: input["workingCapture"])
       when "serve" then serve(record,input)
       when "edition" then Editions.run(record,input.fetch("edition"))
       else raise Error.new("RUBY_APPLICATION_COMMAND_INVALID")
