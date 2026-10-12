@@ -15,6 +15,13 @@ const environment=field('environmentFile','Private environment JSON','path');
 const original='stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/';
 const key=value=>digest(json(canonical(value)));
 export const PYTHON_APPLICATION_CATALOG=Object.freeze([
+  {id:'python-duckdb',python:true,command:'duckdb',terminal:false,
+    requiredSource:original+'duckdb_cli.py',title:'DuckDB dataset workspace',
+    description:'Review acquired datasets, retain source editions, run SQL, compare changes and prepare Parquet exports or a portable workspace.',
+    fields:[installation,field('workspaceDirectory','DuckDB workspace directory','path',true),
+      field('port','Local port','port',false,'Use 0 to select an available loopback port.'),
+      field('exportRoot','Query export directory','path',false,'Optional private sibling parent for new query exports.'),
+      field('handoffRoot','Workspace handoff directory','path',false,'Optional private sibling parent for portable handoffs.'),environment]},
   {id:'python-analysis',python:true,command:'analysis',terminal:false,
     requiredSource:original+'analysis_workspace.py',title:'Analysis and workbook workspace',
     description:'Open the original analysis database, workbook sources, refresh review, reports and deliveries with its installed Python environment.',
@@ -48,6 +55,7 @@ function option(args,name) {
   return values[0];
 }
 export function pythonApplicationResource(type,settings) {
+  if(type.command==='duckdb')return key({family:'python-duckdb',directory:settings.workspaceDirectory});
   if(type.command==='analysis')return key({family:'python-analysis',directory:settings.databaseDirectory});
   const args=argumentsFrom(settings);
   return key({family:'python-workbook',directory:option(args,'--operation')??option(args,'--destination')??
@@ -60,7 +68,16 @@ export async function pythonApplicationCommand(root,type,settings,{
     'PYTHON_APPLICATION_KIND_INVALID');
   const binding=await pythonRuntimeBinding(runtimeDirectory,runtimeId),inputs=[];
   let args;
-  if(type.command==='analysis'){
+  if(type.command==='duckdb'){
+    inputs.push(await inputPath(settings.workspaceDirectory,'directory',true,true));
+    args=['--workspace',settings.workspaceDirectory,'serve','--port',String(settings.port??0)];
+    for(const [name,flag] of [['exportRoot','--export-root'],['handoffRoot','--handoff-root']]){
+      if(settings[name]){
+        inputs.push(await inputPath(settings[name],'directory',true,true));
+        args.push(flag,settings[name]);
+      }
+    }
+  }else if(type.command==='analysis'){
     inputs.push(await inputPath(settings.databaseDirectory,'directory',true,true));
     const node=await selectedExecutable(settings.nodeExecutable??process.execPath);
     inputs.push(...node.inputs);
@@ -114,7 +131,7 @@ export function assertPythonManagedLaunch(request,launch) {
   need(typeof createdAt==='string' && key(body)===key(launchBody(request)),
     'PYTHON_MANAGED_LAUNCH_CHANGED');
 }
-export const pythonManagedStopSignal=request=>request.pythonCommand?.command==='analysis'?'SIGINT':'SIGTERM';
+export const pythonManagedStopSignal=request=>['analysis','duckdb'].includes(request.pythonCommand?.command)?'SIGINT':'SIGTERM';
 export async function preparePythonManagedChild(root,request,environment,{leaseFd=3}={}) {
   const command=await preparePythonApplicationCommand(root,request.pythonCommand,{leaseFd});
   return {executable:command.executable,args:command.args,
@@ -164,7 +181,7 @@ export function observePythonApplicationOutput(request,directory,{pid}={}) {
   let buffer='',seen=false,closed=false,saving=Promise.resolve(),savedError=null;
   const decoder=new StringDecoder('utf8');
   async function line(text) {
-    if(seen || !ready || ready.kind!=='analysis-private-launch')return;
+    if(seen || !ready || !['analysis-private-launch','duckdb-private-launch'].includes(ready.kind))return;
     let announcement;
     try{announcement=JSON.parse(text);}catch{return;}
     if(announcement.status!=='LISTENING')return;
@@ -173,14 +190,24 @@ export function observePythonApplicationOutput(request,directory,{pid}={}) {
     const control=await privateControl(ready.file),url=privateURL(control.url);
     need(control.schema===ready.schema && control.pid===pid && url &&
       url.href.split('#')[0]===new URL(announcement.address).href,'PYTHON_APPLICATION_PRIVATE_LAUNCH_CHANGED');
-    const identity=await originalAnalysisIdentity(descriptor);
-    need(identity.schema===ready.schema && identity.workspace_id===control.workspace_id,
-      'PYTHON_APPLICATION_DATABASE_CHANGED');
+    let source,identityFields;
+    if(ready.kind==='duckdb-private-launch'){
+      need(control.directory===ready.directory && url.hostname==='127.0.0.1',
+        'PYTHON_APPLICATION_WORKSPACE_CHANGED');
+      source='original-duckdb-private-launch';
+      identityFields={workspaceDirectory:control.directory};
+    }else{
+      const identity=await originalAnalysisIdentity(descriptor);
+      need(identity.schema===ready.schema && identity.workspace_id===control.workspace_id,
+        'PYTHON_APPLICATION_DATABASE_CHANGED');
+      source='original-analysis-private-launch';
+      identityFields={workspaceId:control.workspace_id};
+    }
     await saveJSON(join(directory,'application-url.json'),{
       schema:'stellar-forge.application-url.v1',applicationId:request.applicationId,
       operationId:directory.split('/').at(-1),command:request.command,
-      source:'original-analysis-private-launch',observedAt:now(),url:url.href,
-      workspaceId:control.workspace_id,privateLaunch:ready.file,originalPid:pid,
+      source,observedAt:now(),url:url.href,...identityFields,
+      privateLaunch:ready.file,originalPid:pid,
       pythonInstallation:descriptor.installationId,bindingFingerprint:descriptor.fingerprint,
     });
     seen=true;

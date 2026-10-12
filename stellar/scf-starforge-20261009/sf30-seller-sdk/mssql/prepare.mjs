@@ -77,7 +77,11 @@ export async function prepareMssqlSeller({ sourceFile, planFile, directory } = {
       sourceSemantics: 'live-named-read-queries', client: 'original-sf30' };
     const handle = await open(resolve(target, 'manifest.json'), 'wx', 0o600);
     try { await handle.writeFile(encode(manifest)); await handle.sync(); } finally { await handle.close(); }
-    const dir = await open(target, 'r'); try { await dir.sync(); } finally { await dir.close(); }
+    // Windows cannot flush a directory opened read-only; use the same platform
+    // rule as the retained release and customer exporter. Files are synced above.
+    if (process.platform !== 'win32') {
+      const dir = await open(target, 'r'); try { await dir.sync(); } finally { await dir.close(); }
+    }
     return { directory: target, ...manifest, manifestSha256: sha(encode(manifest)) };
   } catch (issue) { await rm(target, { recursive: true, force: true }); throw issue; }
 }

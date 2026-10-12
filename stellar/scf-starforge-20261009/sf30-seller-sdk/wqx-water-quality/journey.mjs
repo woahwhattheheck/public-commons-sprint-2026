@@ -24,6 +24,7 @@ import { Buyer } from '../../sf88-operator-buyer-cli/node/client.mjs';
 const execFile = promisify(execFileCallback);
 const ORIGIN = 'https://wqx-journey.example';
 const FIXTURE_TRANSACTION = 'LOCAL_CONTROLLED_NOT_A_TRANSACTION';
+const NATIVE_BUYER_TIMEOUT_MS = 90000;
 const EXPECTED_ROWS = 1035, EXPECTED_CAPTURE = 'cbb29504ab01598cddb21bde33c918ca92075aad7f53fdac4fb07581371d29d7';
 const SELECTION = Object.freeze({ filters: { providers: ['NWIS'], siteid: ['USGS-01646580'], startDateLo: '01-01-2025', startDateHi: '03-31-2025' },
   profiles: ['Station', 'Activity', 'Result'], partition: 'none' });
@@ -36,10 +37,10 @@ const json = value => JSON.stringify(value, null, 2) + '\n';
 const equal = (a, b, label) => assert.equal(canonicalJson(a), canonicalJson(b), label);
 const publicError = error => ({ code: error?.code ?? error?.name ?? 'WQX_JOURNEY_FAILED', message: String(error?.message ?? error).slice(0, 1400) });
 
-async function listen(server) {
+async function listen(server, port = 0) {
   await new Promise((done, reject) => {
     server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => { server.off('error', reject); done(); });
+    server.listen(port, '127.0.0.1', () => { server.off('error', reject); done(); });
   });
   return 'http://127.0.0.1:' + server.address().port;
 }
@@ -50,7 +51,7 @@ async function closeServer(server) {
 }
 
 /** HTTP exposure of the original local protocol facilitator fixture. */
-async function localFacilitator() {
+export async function localFacilitator() {
   const counts = { supported: 0, verified: 0, settled: 0 };
   const original = {
     async getSupported() {
@@ -83,9 +84,9 @@ async function localFacilitator() {
 
 /** Keep original SF31/SF85 HTTPS validation through an explicit owned CONNECT endpoint.
  * The generated certificate is trusted only by the native SF88 child processes. */
-async function localMerchantTransport(directory, merchantUrl) {
+export async function localMerchantTransport(directory, merchantUrl, { reuse = false, proxyUrl: retainedProxyUrl } = {}) {
   const keyFile = join(directory, 'merchant-key.pem'), certFile = join(directory, 'merchant-cert.pem');
-  await execFile('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
+  if (!reuse) await execFile('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
     '-subj', '/CN=wqx-journey.example', '-addext', 'subjectAltName=DNS:wqx-journey.example',
     '-keyout', keyFile, '-out', certFile], { timeout: 30000, maxBuffer: 32768 });
   await Promise.all([chmod(keyFile, 0o600), chmod(certFile, 0o600)]);
@@ -126,7 +127,16 @@ async function localMerchantTransport(directory, merchantUrl) {
   });
   try {
     await listen(gateway);
-    const proxyUrl = await listen(proxy);
+    let port = 0;
+    if (reuse) {
+      const selected = new URL(retainedProxyUrl);
+      assert(selected.protocol === 'http:' && selected.hostname === '127.0.0.1' && selected.port &&
+        selected.pathname === '/' && !selected.search && !selected.hash && !selected.username && !selected.password,
+        'Resume the original owned CONNECT endpoint.');
+      port = Number(selected.port);
+    }
+    const proxyUrl = await listen(proxy, port);
+    if (reuse) assert.equal(proxyUrl, new URL(retainedProxyUrl).origin);
     return { certFile, counts, buyerTransport: { mode: 'explicit-connect', origin: ORIGIN, proxyUrl },
       async close() { for (const socket of sockets) socket.destroy(); await closeServer(proxy); await closeServer(gateway); } };
   } catch (error) {
@@ -174,12 +184,13 @@ export async function receiveQualityCaptureBundle(file, directory) {
 }
 
 /** One full cohort delivery, private review receiving, and original native recovery. */
-export async function runWaterQualityJourney({ directory, sourceBundle, captureDirectory, python, pageSize = 25, browser = false, playwrightModule, browserExecutable } = {}) {
+export async function runWaterQualityJourney({ directory, sourceBundle, captureDirectory, python, pageSize = 25, browser = false, deferBrowser = false, playwrightModule, browserExecutable } = {}) {
   const root = await privateDirectory(resolve(directory));
   assert(Number.isSafeInteger(pageSize) && pageSize >= 1 && pageSize <= 100);
   const pythonPath = python ?? (await execFile('python3', ['-I', '-c', 'import sys; print(sys.executable)'])).stdout.trim();
   await atomicJson(root, 'journey-operation.json', { schema: 'starforge.wqx-water-quality-journey.v1', startedAt: new Date().toISOString(),
-    selection: SELECTION, reviewOptions: OPTIONS, commerce: 'ORIGINAL_LOCAL_PROTOCOL_FIXTURE' }, { exclusive: true });
+    selection: SELECTION, reviewOptions: OPTIONS, pageSize, browserRequested: browser || deferBrowser,
+    commerce: 'ORIGINAL_LOCAL_PROTOCOL_FIXTURE' }, { exclusive: true });
   const exportsDirectory = await privateDirectory(join(root, 'exports')), fixtureDirectory = await privateDirectory(join(root, 'local-fixture'));
   let project, receiver, facilitator, merchant, transport, stage = 'retained-source', sourceRequests = 0;
   const originalOnly = { async request() { sourceRequests++; throw new Error('The retained complete capture attempted another source request.'); } };
@@ -256,7 +267,7 @@ export async function runWaterQualityJourney({ directory, sourceBundle, captureD
       runtimeDirectory: fileURLToPath(new URL('../../sf88-operator-buyer-cli/', import.meta.url)), stateDirectory: join(root, 'buyer'),
       operatorProfile: { operator: { python: pythonPath, actor: 'wqx-journey', service: 'wqx-water-quality', policy: policyPath, ledger: join(fixtureDirectory, 'ledger.sqlite') },
         signerModule: signerPath, buyerTransport: transport.buyerTransport },
-      environment: { ...process.env, ...keys, NODE_EXTRA_CA_CERTS: transport.certFile }, timeoutMs: 90000
+      environment: { ...process.env, ...keys, NODE_EXTRA_CA_CERTS: transport.certFile }, timeoutMs: NATIVE_BUYER_TIMEOUT_MS
     };
     const buyer = await new Buyer(buyerConfig).ready();
     // Retain only the fixture-specific additions; ordinary runtime variables stay with their host.
@@ -323,14 +334,6 @@ export async function runWaterQualityJourney({ directory, sourceBundle, captureD
     assert.equal(sha(originalDownload.bytes), originalFile.sha256);
     assert.equal(transport.counts.requests, before.requests); assert.equal(facilitator.counts.settled, before.settlements); assert.equal(sourceRequests, 0);
     await rename(relocatedCapture, capture.directory);
-    let browserResult = null;
-    if (browser) {
-      stage = 'browser';
-      const { inspectWaterQualityWorkspace } = await import('./browser-journey.mjs');
-      browserResult = await inspectWaterQualityWorkspace({ directory: join(root, 'project'), outputDirectory: join(exportsDirectory, 'browser'),
-        buyer, reviewId: review.reviewId, editionId: 'potomac-q1-water-quality', originalIntent: purchases[0].intentId,
-        playwrightModule, browserExecutable });
-    }
     const result = {
       schema: 'starforge.wqx-water-quality-journey.v1', status: 'PASS', completedAt: new Date().toISOString(), directory: root,
       sourceMode: 'RETAINED_ORIGINAL_WQX_CAPTURE', sourceBundleSha256: receivedSource.sourceBundleSha256 ?? null,
@@ -349,8 +352,19 @@ export async function runWaterQualityJourney({ directory, sourceBundle, captureD
         directDownloadBytes: edition.downloads.reduce((total, file) => total + file.bytes, 0) },
       commerce: { mode: 'ORIGINAL_LOCAL_PROTOCOL_FIXTURE', nativeMerchantStatus, purchases: purchases.length, pages, deliveredResults: delivered.size,
         facilitator: { ...facilitator.counts }, transport: { ...transport.counts }, sourceFile: { path: originalFile.path, sha256: originalFile.sha256, bytes: originalFile.bytes },
-        retainedBuyerReopenRequests: 0, retainedBuyerReopenSettlements: 0 }, reports, browser: browserResult
+        retainedBuyerReopenRequests: 0, retainedBuyerReopenSettlements: 0 }, reports, browser: null
     };
+    stage = 'native-completion';
+    const { writeWaterQualityNativeCheckpoint, resumeWaterQualityBrowser } = await import('./browser-resume.mjs');
+    await writeWaterQualityNativeCheckpoint({ directory: root, result, projectSnapshot: saved });
+    // The native PTY can exit before Chromium is launched. All browser calls reopen
+    // this original Buyer journal; the local merchant/facilitator may be closed.
+    if (deferBrowser) return result;
+    if (browser) {
+      stage = 'browser';
+      await resumeWaterQualityBrowser({ directory: root, playwrightModule, browserExecutable });
+      return JSON.parse(await readFile(join(root, 'result.json')));
+    }
     await atomicJson(root, 'result.json', result); return result;
   } catch (error) {
     await atomicJson(root, 'failure.json', { status: 'FAILED', stage, at: new Date().toISOString(), ...publicError(error) }).catch(() => {}); throw error;
@@ -365,7 +379,8 @@ const PTY_DRIVER = [
   "command = [node, script, '--fixture-tty-child', '--directory', directory, '--python', sys.executable, '--page-size', str(options['pageSize'])]",
   "for key, flag in [('sourceBundle','--source-bundle'),('captureDirectory','--capture'),('playwrightModule','--playwright-module'),('browserExecutable','--browser-executable')]:",
   "    if options.get(key): command += [flag, options[key]]",
-  "if options.get('browser'): command += ['--browser']",
+  "if options.get('resumeNative'): command += ['--resume-native']",
+  "if options.get('browser'): command += ['--defer-browser']",
   "approval_limit = (1035 + options['pageSize'] - 1) // options['pageSize'] + 2",
   "pid, fd = pty.fork()",
   "if pid == 0: os.execve(node, command, os.environ.copy())",
@@ -374,7 +389,7 @@ const PTY_DRIVER = [
   "def terminate(_signal, _frame): raise InterruptedError('Local journey interrupted')",
   "signal.signal(signal.SIGTERM, terminate)",
   "try:",
-  "    deadline = time.monotonic() + max(600, approval_limit * 25)",
+  "    deadline = time.monotonic() + max(600, approval_limit * options['nativeOperationTimeoutMs'] / 1000 + 300)",
   "    while time.monotonic() < deadline:",
   "        ready, _, _ = select.select([fd], [], [], 0.1)",
   "        if ready:",
@@ -395,7 +410,8 @@ const PTY_DRIVER = [
   "        else:",
   "            os.killpg(pid, signal.SIGTERM); ended, value = os.waitpid(pid, 0); status = value",
   "    os.close(fd)",
-  "    output = os.open(os.path.join(directory, 'local-fixture-transcript.log'), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)",
+  "    transcript_path = options.get('transcriptPath') or os.path.join(directory, 'local-fixture-transcript.log')",
+  "    output = os.open(transcript_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)",
   "    with os.fdopen(output, 'wb') as file: file.write(transcript)",
   "sys.exit(os.waitstatus_to_exitcode(status))"
 ].join('\n');
@@ -406,6 +422,9 @@ function argumentsOf(args) {
     if (flag === '--help' || flag === '-h') { result.help = true; continue; }
     if (flag === '--fixture-tty-child') { result.child = true; continue; }
     if (flag === '--browser') { result.browser = true; continue; }
+    if (flag === '--resume-browser') { result.resumeBrowser = true; continue; }
+    if (flag === '--resume-native') { result.resumeNative = true; continue; }
+    if (flag === '--defer-browser') { result.deferBrowser = true; continue; }
     const key = { '--directory': 'directory', '--source-bundle': 'sourceBundle', '--capture': 'captureDirectory', '--python': 'python',
       '--page-size': 'pageSize', '--playwright-module': 'playwrightModule', '--browser-executable': 'browserExecutable' }[flag];
     if (!key || (key !== 'pageSize' && result[key] !== undefined) || !args[i + 1] || args[i + 1].startsWith('--'))
@@ -413,17 +432,50 @@ function argumentsOf(args) {
     result[key] = key === 'pageSize' ? Number(args[++i]) : args[++i];
   }
   assert(!(result.sourceBundle && result.captureDirectory), 'Choose one original retained source carrier.');
+  assert(!result.deferBrowser || result.child, '--defer-browser is the original native child continuation.');
+  assert(!result.resumeNative || !(result.resumeBrowser || result.sourceBundle || result.captureDirectory),
+    '--resume-native keeps the original source, operation and buyer journal.');
+  assert(!result.resumeBrowser || !(result.child || result.sourceBundle || result.captureDirectory),
+    '--resume-browser uses the existing directory and original buyer configuration.');
   assert(Number.isSafeInteger(result.pageSize) && result.pageSize >= 1 && result.pageSize <= 100);
   return result;
 }
 export async function main(args = process.argv.slice(2)) {
   const options = argumentsOf(args);
-  if (options.help) { process.stdout.write('Usage: node journey.mjs --directory /absolute/new-wqx-journey [--source-bundle FILE | --capture DIRECTORY] [--page-size 25] [--browser --playwright-module PATH --browser-executable PATH]\n'); return; }
+  if (options.help) { process.stdout.write('Usage: node journey.mjs --directory /absolute/new-wqx-journey [--source-bundle FILE | --capture DIRECTORY] [--page-size 25] [--browser --playwright-module PATH --browser-executable PATH]\nContinue delivery: node journey.mjs --resume-native --directory /absolute/existing-wqx-journey --page-size 25 [--browser --playwright-module PATH --browser-executable PATH]\nResume browser: node journey.mjs --resume-browser --directory /absolute/existing-wqx-journey [--playwright-module PATH --browser-executable PATH]\n'); return; }
   assert(options.directory, 'Choose a new retained journey directory.'); options.directory = resolve(options.directory);
   for (const key of ['sourceBundle', 'captureDirectory']) if (options[key]) options[key] = resolve(options[key]);
-  if (options.child) { await runWaterQualityJourney(options); return; }
-  await mkdir(options.directory, { mode: 0o700 });
-  const python = options.python ?? (await execFile('python3', ['-I', '-c', 'import sys; print(sys.executable)'])).stdout.trim();
+  if (options.child) {
+    if (options.resumeNative) { const { resumeWaterQualityNative } = await import('./native-resume.mjs'); await resumeWaterQualityNative(options); }
+    else await runWaterQualityJourney(options);
+    return;
+  }
+  if (options.resumeBrowser) {
+    const { resumeWaterQualityBrowser } = await import('./browser-resume.mjs');
+    const resumed = await resumeWaterQualityBrowser(options);
+    process.stdout.write(json({ status: resumed.status, directory: options.directory,
+      browserResult: resumed.browserResult, result: resumed.nativeResult, reused: resumed.reused,
+      captureSha256: resumed.originalCaptureSha256, nativePurchases: resumed.nativePurchases }));
+    return;
+  }
+  options.nativeOperationTimeoutMs = NATIVE_BUYER_TIMEOUT_MS;
+  let python;
+  if (options.resumeNative) {
+    assert(await realpath(options.directory) === options.directory, 'Select the original retained journey directory.');
+    const { readPrivateJson } = await import('../routescan/quota.mjs');
+    const retained = await readPrivateJson(join(options.directory, 'local-fixture', 'buyer-config.json'));
+    assert(retained.stateDirectory === join(options.directory, 'buyer'), 'Keep the original buyer state.');
+    python = retained.operatorProfile?.operator?.python;
+    assert(typeof python === 'string' && (!options.python || options.python === python), 'Use the original native Python runtime.');
+    const { mkdtemp } = await import('node:fs/promises');
+    const attempts = await privateDirectory(join(options.directory, 'native-resume-attempts'));
+    const attemptDirectory = await mkdtemp(join(attempts, 'attempt-'));
+    await chmod(attemptDirectory, 0o700);
+    options.transcriptPath = join(attemptDirectory, 'local-fixture-transcript.log');
+  } else {
+    await mkdir(options.directory, { mode: 0o700 });
+    python = options.python ?? (await execFile('python3', ['-I', '-c', 'import sys; print(sys.executable)'])).stdout.trim();
+  }
   const child = spawn(python, ['-I', '-B', '-c', PTY_DRIVER, process.execPath, fileURLToPath(import.meta.url), options.directory, JSON.stringify(options)],
     { shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env } });
   let diagnostic = '';
@@ -433,9 +485,13 @@ export async function main(args = process.argv.slice(2)) {
   try { exit = await new Promise((done, reject) => { child.once('error', reject); child.once('close', (code, signal) => done({ code, signal })); }); }
   finally { process.off('SIGTERM', stop); process.off('SIGINT', stop); }
   if (exit.code !== 0) {
-    let failure = null; try { failure = JSON.parse(await readFile(join(options.directory, 'failure.json'))); } catch {}
+    let failure = null; try { failure = JSON.parse(await readFile(join(options.directory, options.resumeNative ? 'native-resume-failure.json' : 'failure.json'))); } catch {}
     process.stdout.write(json({ status: 'FAILED', directory: options.directory, exitCode: exit.code, signal: exit.signal, failure, ...(failure ? {} : { diagnostic }) }));
     process.exitCode = 1; return;
+  }
+  if (options.browser) {
+    const { resumeWaterQualityBrowser } = await import('./browser-resume.mjs');
+    await resumeWaterQualityBrowser(options);
   }
   const result = JSON.parse(await readFile(join(options.directory, 'result.json'))); assert.equal(result.status, 'PASS');
   process.stdout.write(json({ status: result.status, result: join(options.directory, 'result.json'), sourceMode: result.sourceMode,

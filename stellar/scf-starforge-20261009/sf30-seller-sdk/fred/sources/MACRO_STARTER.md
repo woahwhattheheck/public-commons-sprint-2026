@@ -1,6 +1,6 @@
 # Macroeconomic source starter
 
-This source package adds complete CPI and GDP histories to the existing unemployment edition. The maintained FRED application can import each original table, inspect the observations, save a review, publish the edition through the original merchant, and receive its data with the original customer.
+This source package adds complete CPI and GDP histories to the existing unemployment edition. The maintained FRED application imports the original tables, combines selected retained captures into one economic edition, saves its review, publishes the edition through the original merchant, and receives its data with the original customer.
 
 ## Source inventory
 
@@ -49,7 +49,17 @@ node cli.mjs serve --project /absolute/private/macro-project --port 0
 
 A new project finishes these imports at revision 4 with three retained capture IDs. Each import reports its original capture ID and current revision. When using an existing project, read its current revision with `node cli.mjs show --project /absolute/private/macro-project` and use the actual revision for the next operation.
 
-Open **Editions & review**, select each retained capture, inspect its original table and save the review. **Merchant** publishes a reviewed edition with the host's existing payment terms and facilitator. **Customer** prepares the exact published request and receives the original paid response. The [application guide](../README.md#publish-and-operate-the-merchant) covers merchant lifetime, native purchase, recovery, pagination and complete project receiving.
+Open **Editions & review → Combine retained public tables**. Select the CPIAUCSL, GDP and UNRATE captures and choose **Create combined edition**. The resulting capture contains all 2,219 original observations under one retained source identity. Inspect it and save its review.
+
+The same operation is available through the CLI. Use the three capture IDs returned by the original imports:
+
+```sh
+node cli.mjs combine --project /absolute/private/macro-project \
+  --id macro-combined-20261012 --expected-revision 4 \
+  --captures CPI_CAPTURE_SHA,GDP_CAPTURE_SHA,UNRATE_CAPTURE_SHA
+```
+
+The command returns the combined capture ID and revision 5. Subsequent reviews and publications use that current revision. When continuing an existing project, use its actual revision and saved operation IDs. You can also review and publish any of the original single-series captures independently. **Merchant** publishes a reviewed edition with the host's existing payment terms and facilitator. **Customer** prepares the exact published request and receives the original paid response. The [application guide](../README.md#publish-and-operate-the-merchant) covers merchant lifetime, native purchase, recovery, pagination and complete project receiving.
 
 ## Meaning of this starter
 
@@ -62,5 +72,7 @@ To refresh, retain a new complete public-table wrapper or acquire the selected A
 ## Execution against the retained source
 
 The unchanged application model from product commit `57f9bd5090a3025454b923df3a002b75dae7b5bd` parsed both new wrappers with `readPublicTable` and generated the customer CSV with `observationCsv`. All 956 CPI rows and 318 GDP rows were retained, including CPI's original missing observation. The resulting CPI CSV is 117,249 UTF-8 bytes, SHA-256 `e5183a52926fcb1dbec4b3c8b03d6ad345fbdc8893914566635a508fb108811a`; GDP is 42,418 UTF-8 bytes, SHA-256 `57c80f8f154e756ac0f205a438e0a4373020f7750ed9710aec8d3df8a9d4e994`.
+
+The composed public-table model preserves all 2,219 original rows and the two original missing values in a 258,797-byte customer CSV. Monthly and quarterly observations retain their original dates and meanings. Its collection window is 2026-10-12T01:08:43.499Z through 2026-10-12T01:38:52.463Z; each series keeps its own complete source timestamp and table bytes. The manifest also identifies the original Notes-field coverage supplied by each transport.
 
 The [application guide](../README.md) provides the complete source review, native merchant, customer delivery and project receiving workflow.

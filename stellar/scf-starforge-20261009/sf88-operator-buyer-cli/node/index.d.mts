@@ -197,7 +197,7 @@ export class Buyer {
   list(): AsyncIterable<Operation>;
   dataset(id: string): Dataset;
   createDataset(options: DatasetOptions): Promise<Dataset>;
-  attachDataset(options: { id: string; directory: string; accountingOnly?: boolean }): Promise<Dataset>;
+  attachDataset(options: { id: string; directory: string; accountingOnly?: boolean; recoveryOnly?: boolean }): Promise<Dataset>;
   listDatasets(): AsyncIterable<Dataset>;
   object(id: string): ObjectAcquisition;
   createObject(options: ObjectOptions): Promise<ObjectAcquisition>;
@@ -215,6 +215,16 @@ export class Operation {
   /** Reads saved output only. This method never launches a native buyer. */
   recover(): Promise<BuyerResult | null>;
   inspect(): Promise<OperationStatus>;
+  /** Inspect original source and recover a selected transfer through the original SF36 worker. */
+  inspectLostOutput(options: NodeLostOutputInspectOptions): Promise<NodeLostOutputAttempt>;
+  recoverLostOutput(options: NodeLostOutputRecoveryOptions): Promise<NodeLostOutputFinalization>;
+  readLostOutputRecovery(options?: NodeLostOutputReadOptions): Promise<NodeLostOutputFinalization | null>;
+  exportLostOutputProof(options: NodeLostOutputReadOptions & { output: string }): Promise<NodeLostOutputProofExport>;
+  /** Inspect a selected expired-attempt continuation and its retained evidence; read-only. */
+  inspectExpiredContinuation(): Promise<ExpiredContinuationStatus>;
+  prepareExpiredContinuation(options: ExpiredContinuationOptions): Promise<Operation>;
+  /** Follow already-selected unpaid or expired lineages without preparing or executing. */
+  followContinuation(): Promise<Operation>;
   /** Inspect the original definitive unpaid result and any explicit successor; read-only. */
   inspectUnpaidContinuation(): Promise<UnpaidContinuationStatus>;
   /** Prepare one selected successor. Does not execute or authorize a payment. */
@@ -320,9 +330,28 @@ export class InboxError extends BuyerError {
   readonly intentId?: string;
   constructor(code: string, result: InboxResult<JsonObject | null>, details?: Record<string, unknown>);
 }
+
+export interface InboxLostOutputSelection {
+  workspaceDirectory: string;
+  approvedRequestFile?: string;
+  approvedRequest?: Readonly<Record<string, unknown>>;
+  expectedRequestSha256?: string;
+  expectedAttemptId?: string;
+  expectedConfigSha256?: string;
+  signal?: AbortSignal;
+}
+export interface InboxLostOutputRecoveryOptions extends InboxLostOutputSelection {
+  transaction: string;
+  expectedRequestSha256: string;
+}
+
 export class Inbox {
   readonly directory: string;
   constructor(buyer: Buyer, directory: string);
+  inspectLostOutput(intentId: string, options: InboxLostOutputSelection): Promise<InboxResult>;
+  recoverLostOutput(intentId: string, options: InboxLostOutputRecoveryOptions): Promise<InboxResult>;
+  readLostOutputRecovery(intentId: string, options: {workspaceDirectory: string; signal?: AbortSignal}): Promise<InboxResult>;
+  exportLostOutputProof(intentId: string, destination: string, options: {workspaceDirectory: string; signal?: AbortSignal}): Promise<InboxResult>;
   list(options?: {signal?: AbortSignal}): Promise<InboxResult<{
     schema: 'stellar-forge.sf88.buyer-inbox.v1'; root: string; jobs: InboxJob[];
   }>>;
@@ -412,13 +441,189 @@ export interface DatasetDeliveryReport extends JsonObject {
   outputs: Record<DatasetOutputName, DatasetOutput>;
   paymentStatus: string;
 }
+
+export interface DatasetLostOutputOptions {
+  /** Original one-based page index. */
+  pageIndex: number;
+  /** Stable application command identity; generated when omitted. */
+  operationId?: string;
+  workspaceDirectory?: string;
+  signal?: AbortSignal;
+}
+export type DatasetLostOutputSelection = DatasetLostOutputOptions & {
+  expectedRequestSha256?: string;
+  expectedAttemptSha256?: string;
+  expectedConfigSha256?: string;
+} & ({approvedRequestFile: string; approvedRequest?: never}
+  | {approvedRequest: Readonly<Record<string, unknown>>; approvedRequestFile?: never});
+export type DatasetLostOutputRecoveryOptions = DatasetLostOutputSelection & {
+  transaction: string;
+  expectedRequestSha256: string;
+  rpcEndpoint?: string;
+  rpcProxyEnv?: string;
+};
+export interface DatasetLostOutputEvidenceState {
+  condition: 'ABSENT' | 'EMPTY' | 'INVALID_JSON';
+  bytes: number;
+  sha256: string | null;
+}
+export interface DatasetLostOutputResponseState {
+  condition: 'ABSENT' | 'EMPTY' | 'SAVED';
+  bytes: number;
+  sha256: string | null;
+}
+export interface DatasetLostOutputAttempt extends JsonObject {
+  schema: 'stellar-forge.sf88.dataset-lost-output-attempt.v1';
+  sourceKind: 'dataset';
+  sessionDirectory: string;
+  pageIndex: number;
+  workspace: string;
+  intentId: string;
+  /** SHA-256 of the unchanged original attempt.json bytes. */
+  attemptId: string;
+  configSha256: string;
+  sessionConfigurationSha256: string;
+  expectedRequestSha256: string;
+  attemptStartedAt: string;
+  sourceHashes: Record<string, string | null>;
+  evidencePath: string;
+  evidenceState: DatasetLostOutputEvidenceState;
+  responsePath: string;
+  responseState: DatasetLostOutputResponseState;
+}
+export interface DatasetLostOutputProof extends JsonObject {
+  schema: 'stellar-forge.sf88.lost-output-verified-transfer.v1';
+  sourceKind: 'dataset';
+  origin: 'ORIGINAL_SF43_VERIFIED_TRANSFER_RECOVERY';
+  proof: 'RPC_TX_AND_SEP41_TRANSFER_EVENT_MATCH';
+  reservation: 'ORIGINAL_SF36_FINALIZED';
+  sessionDirectory: string;
+  pageIndex: number;
+  intentId: string;
+  attemptId: string;
+  configSha256: string;
+  sessionConfigurationSha256: string;
+  requestSha256: string;
+  transaction: string;
+  network: string;
+  asset: string;
+  payer: string;
+  recipient: string;
+  atomicAmount: string;
+  transactionCreatedAt: string;
+  attemptStartedAt: string;
+  observedAt: string;
+  completedAt: string;
+  matchingEventId: string;
+  sealedRecoverySha256: string;
+  sourceHashes: Record<string, string | null>;
+  evidenceState: DatasetLostOutputEvidenceState;
+  responseState: DatasetLostOutputResponseState;
+  recordAuthority: string;
+}
+export interface DatasetLostOutputProofMetadata {
+  path: string;
+  bytes: number;
+  sha256: string;
+  proof: DatasetLostOutputProof;
+}
+export interface DatasetLostOutputFinalization extends JsonObject {
+  schema: 'stellar-forge.sf88.dataset-lost-output-finalization.v1';
+  sourceKind: 'dataset';
+  sessionDirectory: string;
+  pageIndex: number;
+  workspace: string;
+  intentId: string;
+  attemptId: string;
+  configSha256: string;
+  sessionConfigurationSha256: string;
+  requestSha256: string;
+  transaction: string;
+  sourceHashes: Record<string, string | null>;
+  evidenceState: DatasetLostOutputEvidenceState;
+  responseState: DatasetLostOutputResponseState;
+  sourcePath: string;
+  sourceSha256: string;
+  attemptStartedAt: string;
+  observedAt: string;
+  completedAt: string;
+  result: JsonObject & {outcome: 'FINALIZED' | 'IDEMPOTENT_FINALIZED'; verifiedFacts: JsonObject};
+  recordAuthority: string;
+  transfer?: DatasetLostOutputProofMetadata;
+}
+export type DatasetRecoveryCommandName =
+  'inspect-lost-output' | 'recover-lost-output' | 'read-lost-output' | 'export-lost-output';
+export type DatasetRecoveryNative = DatasetLostOutputAttempt | DatasetLostOutputFinalization |
+  DatasetLostOutputProofMetadata | null;
+export interface DatasetRecoveryCommand<T = DatasetRecoveryNative> extends DatasetCommand<T> {
+  commandId: string;
+  operationId: string;
+  command: DatasetRecoveryCommandName;
+  commandDirectory: string;
+  commandContextSha256: string;
+  /** Application worker attempt, separate from the original paid page attempt. */
+  attemptId: string;
+  startedAt: string;
+  reused: boolean;
+  viewStatus: 'SAVED' | 'SAVE_FAILED' | 'RETAINED_NATIVE_OUTPUT';
+}
+export type DatasetRecoveryCommandSelection =
+  {commandId: string; operationId?: never} | {operationId: string; commandId?: never};
+export interface DatasetRecoverySavedCommand {
+  commandId: string;
+  operationId: string;
+  command: DatasetRecoveryCommandName;
+  commandDirectory: string;
+  startedAt: string;
+  pageIndex: number;
+  attempts: number;
+  status: 'OUTPUT_RECOVERED' | 'NO_COMPLETE_OUTPUT';
+  latestAttempt: {
+    attemptId: string;
+    startedAt: string;
+    status: 'NO_COMPLETE_OUTPUT' | 'RECORDED' | 'OUTPUT_RECOVERED';
+    process: DatasetCommand['process'];
+  } | null;
+  lastComplete: DatasetRecoveryCommand | null;
+}
+export interface DatasetRecoveryCommandIndex {
+  commands: Array<{
+    commandId: string;
+    operationId: string;
+    command: DatasetRecoveryCommandName;
+    pageIndex: number;
+    startedAt: string;
+  }>;
+  nextAfter: string | null;
+}
+export interface DatasetRecoveryProofFile extends VerifiedFile {
+  readonly metadata: DatasetLostOutputProofMetadata;
+}
+export interface DatasetRecoveryReportFile extends VerifiedFile {
+  readonly metadata: {
+    path: string; bytes: number; sha256: string; commandId: string; format: 'json';
+    scope: 'COMPLETE_ORIGINAL_RECOVERY_COMMAND';
+  };
+}
+
 export class Dataset {
   readonly id: string;
   /** Private application entry; the native session path is in its original report. */
   readonly directory: string;
   readonly lastAccounting?: DatasetAccountingCommand;
+  readonly lastLostOutput?: DatasetRecoveryCommand;
   constructor(buyer: Buyer, id: string);
   initialize(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
+  initializeRecovery(options?: { signal?: AbortSignal }): Promise<DatasetCommand<JsonObject>>;
+  inspectLostOutput(options: DatasetLostOutputSelection): Promise<DatasetRecoveryCommand<DatasetLostOutputAttempt>>;
+  recoverLostOutput(options: DatasetLostOutputRecoveryOptions): Promise<DatasetRecoveryCommand<DatasetLostOutputFinalization & {transfer: DatasetLostOutputProofMetadata}>>;
+  readLostOutputRecovery(options: DatasetLostOutputOptions): Promise<DatasetRecoveryCommand<DatasetLostOutputFinalization | null>>;
+  exportLostOutputProof(destination: string | undefined, options: DatasetLostOutputOptions): Promise<DatasetRecoveryCommand<DatasetLostOutputProofMetadata> & {file: DatasetRecoveryProofFile}>;
+  lostOutputProofFile(result: DatasetRecoveryCommand<DatasetLostOutputFinalization | DatasetLostOutputProofMetadata>): DatasetRecoveryProofFile;
+  recoverLostOutputCommand(options: DatasetRecoveryCommandSelection): Promise<DatasetRecoverySavedCommand>;
+  resumeLostOutputCommand(options: DatasetRecoveryCommandSelection & {signal?: AbortSignal}): Promise<DatasetRecoveryCommand>;
+  listLostOutputCommands(options?: {after?: string; limit?: number}): Promise<DatasetRecoveryCommandIndex>;
+  exportLostOutputReport(destination: string, options: DatasetRecoveryCommandSelection): Promise<DatasetRecoveryReportFile>;
   inspect(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
   recover(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
   run(options?: { signal?: AbortSignal }): Promise<DatasetCommand>;
@@ -1024,4 +1229,164 @@ export class AcquisitionWorkspace {
   }): Promise<AcquisitionSuccess<AcquisitionArchive>>;
   verify(options: AcquisitionArchiveOptions): Promise<AcquisitionSuccess<AcquisitionArchive>>;
   restore(options: AcquisitionArchiveOptions): Promise<AcquisitionSuccess<AcquisitionArchive>>;
+}
+
+/** Exact original SF36 request preimage; approved request and selected transaction stay bound. */
+export interface NodeLostOutputApprovedRequest {
+  request_id: string; actor: string; service: string; network: string; asset: string;
+  scheme: 'exact'; max_amount: string; resource: string; pay_to: string;
+  max_timeout_seconds: number; method: string; body_present: boolean; body_bytes: number;
+  body_sha256: string; accepted_terms_sha256: string;
+}
+export interface NodeLostOutputFileState {
+  condition: 'ABSENT' | 'EMPTY' | 'SAVED' | 'JSON' | 'INVALID_JSON';
+  bytes: number; sha256: string | null;
+}
+export interface NodeLostOutputInspectOptions {
+  /** Original private operator workspace. Optional only when the operation recorded nativeWorkspace. */
+  workspace?: string;
+  approvedRequest?: NodeLostOutputApprovedRequest;
+  approvedRequestFile?: string;
+  expectedRequestSha256?: string;
+  expectedAttemptId?: string;
+  expectedConfigSha256?: string;
+  signal?: AbortSignal;
+}
+export interface NodeLostOutputReadOptions {
+  workspace?: string;
+  expectedRequestSha256?: string;
+  expectedAttemptId?: string;
+  expectedConfigSha256?: string;
+  node?: string;
+  environment?: Record<string, string | undefined>;
+  signal?: AbortSignal;
+}
+export interface NodeLostOutputRecoveryOptions extends NodeLostOutputInspectOptions {
+  transaction: string;
+  expectedRequestSha256: string;
+  node?: string;
+  environment?: Record<string, string | undefined>;
+}
+export interface NodeLostOutputAttempt {
+  schema: 'stellar-forge.sf88.node-lost-output-attempt.v1';
+  sourceKind: 'node-operation';
+  stateDirectory: string; operationDirectory: string; runtimeDirectory: string; workspace: string;
+  intentId: string; attemptId: string; attemptState: string; attemptStartedAt: string;
+  configSha256: string; expectedRequestSha256: string;
+  bodyPresent: boolean; bodyBytes: number; bodySha256: string; ticketSha256: string | null;
+  nativeWorkspace: string | null; evidencePath: string; evidenceState: NodeLostOutputFileState;
+  localOutcome: Record<string, NodeLostOutputFileState>;
+  transportCheckpointSha256: string | null;
+  sourceHashes: Record<string, string | null>;
+  expected: { network: string; asset: string; amount: string; payTo: string; payer: string };
+}
+export interface NodeLostOutputVerifiedFacts {
+  schema: 'stellar-forge.sf36.verified-facts.v1';
+  intentId: string; transaction: string; network: string; asset: string;
+  payer: string; recipient: string; atomicAmount: string; request_sha256: string;
+  ledger: number; eventId: string; transactionCreatedAt: string;
+}
+export interface NodeLostOutputFinalization {
+  schema: 'stellar-forge.sf88.node-lost-output-finalization.v1';
+  sourceKind: 'node-operation';
+  intentId: string; attemptId: string; configSha256: string; requestSha256: string;
+  transaction: string; workspace: string; stateDirectory: string; operationDirectory: string;
+  sourceHashes: Record<string, string | null>; sourcePath: string; sourceSha256: string;
+  evidenceState: NodeLostOutputFileState; localOutcome: Record<string, NodeLostOutputFileState>;
+  attemptStartedAt: string; completedAt: string; observedAt: string;
+  requestBinding: string; recordAuthority: string;
+  association: 'OPERATOR_SELECTED_TRANSACTION_AFTER_LOCAL_OUTPUT_LOSS';
+  result: Record<string, unknown> & {
+    outcome: 'FINALIZED' | 'IDEMPOTENT_FINALIZED';
+    actual: string; receipt_ref: string; request_sha256: string; proof_sha256: string;
+    verifiedFacts: NodeLostOutputVerifiedFacts;
+  };
+}
+export interface NodeLostOutputProofExport {
+  path: string; bytes: number; sha256: string;
+  proof: Record<string, unknown> & {
+    schema: 'stellar-forge.sf88.lost-output-verified-transfer.v1';
+    sourceKind: 'node-operation';
+    intentId: string; transaction: string; requestSha256: string;
+    network: string; asset: string; payer: string; recipient: string; atomicAmount: string;
+    ledger: number; sealedRecoverySha256: string;
+  };
+}
+
+
+/** Explicit operator-selected successor; the existing reservation remains in its original ledger. */
+export interface ExpiredContinuationOptions {
+  intentId: string;
+  expectedRequestSha256: string;
+  expectedAttemptId: string;
+  expectedConfigSha256?: string;
+  reason: string;
+  workspace?: string;
+  approvedRequest?: NodeLostOutputApprovedRequest;
+  approvedRequestFile?: string;
+  expiryEvidence: {
+    boundFile: string;
+    observationFile: string;
+    expectedFeeAccount: string;
+    providerSourceFile?: string;
+    sdkSourceIndexFile?: string;
+  };
+  signal?: AbortSignal;
+  node?: string;
+  environment?: Record<string, string | undefined>;
+}
+export interface AuthorizationExpiryLedgerPoint {
+  sequence: number; closed_at: string; hash: string;
+}
+export interface AuthorizationExpiryEvidence {
+  schema: 'stellar-forge.sf88.authorization-expiry-evidence.v1';
+  kind: 'SOURCE_BOUND_LEDGER_UPPER_BOUND';
+  binding: {
+    intentId: string; requestSha256: string; feeAccount: string;
+    acceptedMaxTimeoutSeconds: number; attemptStartedAt: string;
+  };
+  bound: {
+    providerCompletedAt: string; signingLedgerUpperBound: number;
+    maximumAdditionalLedgers: number; authorizationExpiryLedgerUpperBound: number;
+    lastClosedBeforeCompletion: AuthorizationExpiryLedgerPoint;
+    firstClosedAfterCompletion: AuthorizationExpiryLedgerPoint;
+  };
+  observation: {
+    networkPassphrase: string; historyLedger: number; coreLedger: number; ingestLedger: number;
+    historyLedgerClosedAt: string; feeAccountSequence: string; lastModifiedLedger: number;
+    lastModifiedAt: string; historyCount: number; historyLimit: number; completeReturnedPage: true;
+    transactionsAfterAttemptStart: Array<{ hash: string; ledger: number; createdAt: string; successful: boolean }>;
+    knownPriorPayments: string[]; observedAt: string;
+    sourceWindows: Array<{ role: string; requestStartedAt: string; retrievedAt: string; responseDate: string }>;
+  };
+  sdk: {
+    package: '@x402/stellar'; version: '2.28.0';
+    formula: {
+      authorizationExpiry: string; estimatedLedgerSeconds: string;
+      fallbackSeconds: 5; minimumFinitePositiveIntegerSeconds: 1;
+    };
+    sourceHashes: { package: string; client: string; estimator: string };
+  };
+  provider: {
+    account: string; selectedPage: number; completedNativePages: number;
+    originalCallsForUtcDay: number; originalSettledCreditsForUtcDay: number;
+    remainingAtResponse: number; completedAtPointer: '/lastResponseAt';
+  };
+  scope: {
+    exactSignedAuthorizationRetained: false; clockBasis: string;
+    historyScope: 'original_fee_account'; providerAssociation: 'ORIGINAL_SERIAL_NATIVE_COHORT';
+    providerAssociationScope: string; observationConsistency: string; inferenceCondition: string;
+  };
+  files: Array<{ role: string; path: string; bytes: number; sha256: string }>;
+  sha256: string;
+}
+export interface ExpiredContinuationStatus {
+  intentId: string;
+  continuation: null | {
+    intentId: string; reason: string; state: 'PREPARING' | 'PREPARED'; createdAt: string;
+    choiceSha256: string; source: NodeLostOutputAttempt & { requestIdentity: string };
+    expiry: AuthorizationExpiryEvidence;
+    reservation: Record<string, unknown> & { request_id: string; request_digest: string; state: 'reserved'; actual: '0'; amount: string; sourceSha256: string; recordAuthority: string };
+    accounting: 'ORIGINAL_RESERVATION_RETAINED; SUCCESSOR_REQUIRES_ORIGINAL_APPROVAL';
+  };
 }

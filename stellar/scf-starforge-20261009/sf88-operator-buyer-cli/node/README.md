@@ -598,3 +598,27 @@ The original failed result, attempt, evidence and configuration remain available
 under their original ID. Errors with a missing final process outcome, possible
 signature, reservation, response or uncertain transfer must use their existing
 native recovery/accounting path.
+
+## Recover a direct operation whose final output was lost
+
+Use the original Operation methods `inspectLostOutput`, `recoverLostOutput`,
+`readLostOutputRecovery`, and `exportLostOutputProof` to bind an existing native
+attempt to its exact approved request and a selected transaction. The original
+SF36 worker verifies the transaction, records its sealed observation, and
+reconciles the existing HMAC reservation. The same operation, request body,
+ticket, private operator workspace, and retained output stay authoritative.
+
+See [Direct Node lost-output recovery](LOST_OUTPUT_RECOVERY.md) for the complete
+inspector, receiving, restart, and proof-export workflow.
+
+## Continue after an original authorization-expiry review
+
+`Operation.prepareExpiredContinuation` selects one successor from an existing
+interrupted direct operation, its exact approved request, a retained expiry
+review and the original HMAC-authenticated reserved row. The original request
+and reservation remain preserved. `inspectExpiredContinuation` and
+`followContinuation` reopen the recorded choice; the original review and
+execute methods handle its fresh approval and result.
+
+See [Authorization-expiry continuation](EXPIRED_CONTINUATION.md) for the complete
+source receiving, preparation, approval and restart flow.

@@ -756,6 +756,11 @@ def serve(workspace, *, port=0):
                     if body:
                         raise StateError("ANALYSIS_EXPORT_CANCEL_FIELDS_INVALID")
                     return self._reply(200, workspace.exports.cancel(parts[2]))
+                if url.path == "/api/native-response-source":
+                    return self._reply(200, workspace.responses.register(body.get("name"), "native",
+                        native_workspace=body.get("native_workspace"), native_kind=body.get("native_kind"),
+                        native_id=body.get("native_id"), native_inbox=body.get("native_inbox"), expected_native=body.get("expected_native"),
+                        format=body.get("format"), expected_revision=body.get("expected_revision")))
                 if url.path == "/api/object-source":
                     return self._reply(200, workspace.responses.register(body.get("name"), "object",
                         session=body.get("session"), destination=body.get("destination"),
@@ -882,3 +887,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

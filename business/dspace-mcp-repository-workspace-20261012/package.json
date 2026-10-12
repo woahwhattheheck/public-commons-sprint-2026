@@ -1,0 +1,16 @@
+{
+  "name": "@tokenjunkielabs/dspace-repository-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "bootstrap": "npm ci --prefix vendor/dspace-mcp --omit=dev --ignore-scripts --no-audit --no-fund && node scripts/build-upstream.mjs",
+    "start": "node server.mjs",
+    "cli": "node scripts/cli.mjs"
+  }
+}
+
