@@ -1,18 +1,22 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "wqx-water-quality",
-  "description": "WQX original and reporting-unit scientific editions, full source comparisons, native receiving and 39-tool merchant MCP operation",
+  "description": "WQX scientific editions and complete KiWIS monitoring/laboratory commissioning, source comparison and operator receiving",
   "commands": {
     "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs",
     "water-quality-managed": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/managed.mjs",
     "water-quality-decisions": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/cli.mjs",
-    "merchant-wqx": "stellar-forge/mcp-merchant-operator/wqx-workspace-cli.mjs"
+    "merchant-wqx": "stellar-forge/mcp-merchant-operator/wqx-workspace-cli.mjs",
+    "water-quality-kiwis": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/cli.mjs",
+    "water-quality-commissioning-job": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/commissioning-cli.mjs"
   },
   "commandDescriptions": {
     "water-quality": "Review WQX samples, reporting units, scientific editions, detection limits and complete paid data editions",
     "water-quality-managed": "Open, receive and manage the original private water-quality project",
     "water-quality-decisions": "Review source-bound receiving choices, standardize complete concentrations and limits, and receive full projects",
-    "merchant-wqx": "Operate original water-quality projects, complete scientific editions, concentration cohorts and resumable receiving files"
+    "merchant-wqx": "Operate original water-quality projects, complete scientific editions, concentration cohorts and resumable receiving files",
+    "water-quality-kiwis": "Acquire or import complete KiWIS programmes, correspond original WQM/WQX/laboratory records, compare saved editions and transfer complete commissioning projects",
+    "water-quality-commissioning-job": "Select a saved KiWIS paid job, receive its complete result and reopen all native customer exports"
   },
   "exports": {
     "./seller/water-quality": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/merchant.mjs",
@@ -35,7 +39,14 @@
     "./seller/water-quality/decisions/concentrations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/concentrations.mjs",
     "./seller/water-quality/scientific": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/standardized-analysis/workflow.mjs",
     "./seller/water-quality/scientific/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/standardized-analysis/model.mjs",
-    "./seller/water-quality/scientific/formats": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/standardized-analysis/formats.mjs"
+    "./seller/water-quality/scientific/formats": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/standardized-analysis/formats.mjs",
+    "./seller/water-quality/kiwis/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/source.mjs",
+    "./seller/water-quality/kiwis/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/model.mjs",
+    "./seller/water-quality/kiwis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/workflow.mjs",
+    "./seller/water-quality/kiwis/formats": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/formats.mjs",
+    "./seller/water-quality/kiwis/wqm": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/wqm.mjs",
+    "./seller/water-quality/commissioning-job": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/commissioning-client.mjs",
+    "./seller/water-quality/commissioning-job/selection": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/commissioning.mjs"
   },
   "browserAssets": [
     {
@@ -77,7 +88,13 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/scientific-input.example.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/receive.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/receive-scientific.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/verify-result.py"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/verify-result.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/GUIDE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/receiving.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/commissioning-client.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/COMMISSIONING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/receive-commissioning.mjs"
   ],
   "merchantProviders": {
     "wqx-water-quality": "stellar-forge/mcp-merchant-operator/providers/wqx-water-quality.mjs"
