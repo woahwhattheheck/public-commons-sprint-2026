@@ -82,7 +82,7 @@ export function kafkaWorkspaceTools(tool) {
       selection:{type:'object',description:'Exact native selection: project {build,projection?}; native/dataset {build}; changes/message/projection {id}; state {}; record {kind,id}; query {build,query}; merchant {build,payment,origin,path}.'}
     },undefined,write),
     t('exports','Page retained export selections, including an interrupted selection that can resume with its original operation.',{...w,...page},['workspace']),
-    t('manifest','Read the original complete export manifest without reopening Kafka or regenerating the file.',{...w,artifact:id}),
+    t('manifest','Read the original complete export manifest and optionally its exact retained file bytes.',{...w,artifact:id,includeFile:{type:'boolean'}},['workspace','artifact']),
     t('file_read','Read exact retained file bytes as base64. Continue or reopen with the same artifact, expectedSha256 and byte offset.',{
       ...w,artifact:id,expectedSha256:id,
       readId:str('Original retained read UUID.',{pattern:'^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'}),

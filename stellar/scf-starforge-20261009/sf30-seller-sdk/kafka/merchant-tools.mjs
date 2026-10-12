@@ -264,9 +264,11 @@ export class MerchantKafkaWorkspaces {
   async #retained(workspace,artifact) {
     const directory=await this.#artifactDirectory(workspace,artifact);
     const selection=this.#selection(await jsonFile(join(directory,'selection.json')),workspace,artifact);
-    const value=await optionalJson(join(directory,'manifest.json'));
-    if(!value)throw failure('KAFKA_EXPORT_INCOMPLETE','Resume the original export operation to finish its retained file and manifest.');
-    return {directory,selection,manifest:this.#manifest(value,selection)};
+    let bytes;
+    try{bytes=await ownedBytes(join(directory,'manifest.json'),2*1048576);}
+    catch(error){if(error.code!=='ENOENT')throw error;throw failure('KAFKA_EXPORT_INCOMPLETE','Resume the original export operation to finish its retained file and manifest.');}
+    const value=parseKafkaJson(decode(bytes));
+    return {directory,selection,manifest:this.#manifest(value,selection),manifestBytes:bytes};
   }
   async #retain(workspace,operation,kind,input,produce) {
     operationName(operation);
@@ -409,7 +411,15 @@ export class MerchantKafkaWorkspaces {
     if(name==='merchant_kafka_workspaces')return this.summary;
     const {workspace,...input}=args;this.#definition(workspace);
     if(name==='merchant_kafka_exports')return this.#exports(workspace,input);
-    if(name==='merchant_kafka_manifest')return (await this.#retained(workspace,input.artifact)).manifest;
+    if(name==='merchant_kafka_manifest') {
+      if(input.includeFile!==undefined&&typeof input.includeFile!=='boolean')
+        throw failure('KAFKA_INVALID_PARAMS','includeFile must be boolean.');
+      const retained=await this.#retained(workspace,input.artifact);
+      if(!input.includeFile)return retained.manifest;
+      const bytes=retained.manifestBytes;
+      return {...retained.manifest,manifestFile:{name:'manifest.json',bytes:bytes.length,
+        sha256:digest(bytes),encoding:'base64',data:bytes.toString('base64')}};
+    }
     if(name==='merchant_kafka_file_read')return this.#readFile(workspace,input);
     if(name==='merchant_kafka_file_release') {
       if(typeof input.readId!=='string'||!UUID.test(input.readId))
