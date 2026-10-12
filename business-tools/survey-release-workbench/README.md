@@ -34,7 +34,7 @@ This command processes the complete bundled collection and writes one compressed
 - `review-history.json`: the ordered review decisions.
 - `application/`: all runnable source files and pinned data needed to regenerate the result.
 
-The exporter uses the same engine as the operator UI. It deflates ZIP entries in memory and writes the final archive atomically. It does not stage uncompressed publication files. Repeating the same export reuses an identical completed archive; different content receives a different edition identifier. A concurrent output cannot silently replace an existing result.
+The exporter uses the same engine as the operator UI. It reuses the validated source model, builds one publication table, and serializes large text outputs in bounded chunks. Canonical key order, edition identifiers and public file bytes stay deterministic. It generates and deflates each ZIP entry when needed, releases consumed publication text, and writes the final archive atomically. It does not stage uncompressed publication files. Repeating the same export reuses an identical completed archive; different content receives a different edition identifier. A concurrent output cannot silently replace an existing result.
 
 To deliver a reviewed case:
 
