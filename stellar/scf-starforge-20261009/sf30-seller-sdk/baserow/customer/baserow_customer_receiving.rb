@@ -16,7 +16,7 @@ module Starforge
         INTENT.match?(value["datasetId"].to_s) && INTENT.match?(value["sourceKey"].to_s) &&
         HASH.match?(value["customerManifestSha256"].to_s) && HASH.match?(value["nativeManifestSha256"].to_s) &&
         value["customerDirectory"].is_a?(String) && File.absolute_path(value["customerDirectory"]) == value["customerDirectory"] &&
-        value["runtime"].is_a?(Hash) && %w[checkout python node].all? { |key|
+        value["runtime"].is_a?(Hash) && [nil,"selected-absolute"].include?(value["runtimePathMode"]) && %w[checkout python node].all? { |key|
           value["runtime"][key].is_a?(String) && File.absolute_path(value["runtime"][key]) == value["runtime"][key]
         },"BASEROW_CUSTOMER_ORIGINAL_REQUEST_INVALID")
       [root,value,raw]
@@ -85,7 +85,7 @@ module Starforge
         "sourceKey"=>selected.manifest.fetch("sourceKey"),"customerDirectory"=>selected.directory,
         "customerManifestSha256"=>selected.manifest_sha256,
         "nativeManifestSha256"=>selected.manifest.fetch("dataset").fetch("manifestSha256"),
-        "runtime"=>runtime}
+        "runtime"=>runtime,"runtimePathMode"=>"selected-absolute"}
       root = Files.directory(directory,create: true)
       BaserowCustomerFiles.separate(selected.directory,root)
       raw = Files.json(request)
