@@ -27,6 +27,7 @@ import { collectionsApplication, prepareCollectionsApplication } from './applica
 import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
+import { worldbankAgentApplication, prepareWorldBankAgentApplication } from './application-worldbank.mjs';
 import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
@@ -83,6 +84,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   baserowApplication(common),
   grantApplication(common),
   fredApplication(common),
+  worldbankAgentApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
   rssAtomApplication(common),
@@ -250,6 +252,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'worldbank-agent') {
+    const original = await prepareWorldBankAgentApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'fred') {
     const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
@@ -490,7 +495,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
 }
 function resourceKey(type, settings) {
   if (type.python) return pythonApplicationResource(type, settings);
-  if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
+  if (['arcgis-agent', 'worldbank-agent'].includes(type.id)) return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
   // Feeds and XML retain the same original SQLite workspace and writer.
