@@ -4,7 +4,7 @@ import { constants } from 'node:fs';
 import { Readable } from 'node:stream';
 import { readdir, lstat, realpath, open, unlink } from 'node:fs/promises';
 import { resolve, join, dirname, basename, isAbsolute, relative as filesystemRelative, sep } from 'node:path';
-import { privateDirectory as originalPrivateDirectory, readBytes, readJson, writeBytes, writeJson, exists, matchingWriteTemporaries, syncDirectory }
+import { privateDirectory as originalPrivateDirectory, readBytes, readJson, writeBytes, writeJson, jsonBytes, exists, matchingWriteTemporaries, syncDirectory }
   from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { withPrivateLock } from '../../routescan/quota.mjs';
 import { StacDelivery } from '../customer.mjs';
@@ -265,6 +265,64 @@ async function cleanOwnDownloadTemporaries(directory, files, { signal } = {}) {
     }
     if (removed) await syncDirectory(parent);
   }
+}
+
+/** Recover the original complete marker write, before its no-replace publication. */
+async function recoverOwnReceivingMarker(directory, markerPath, selected, { signal } = {}) {
+  const candidates = [];
+  await checkParent(markerPath);
+  for (const name of (await readdir(directory)).sort()) {
+    if (!/^\.write-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(name)) continue;
+    let handle;
+    try {
+      requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+      const path = join(directory, name), named = await lstat(path, { bigint: true });
+      if (!named.isFile() || named.isSymbolicLink() || named.size === 0n || named.size > 4096n ||
+          process.platform !== 'win32' && ((named.mode & 0o777n) !== 0o600n ||
+            process.getuid && named.uid !== BigInt(process.getuid()))) continue;
+      handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+      const before = await handle.stat({ bigint: true });
+      const unchanged = (a, b) => a.isFile() && b.isFile() && a.dev === b.dev && a.ino === b.ino &&
+        a.size === b.size && a.mode === b.mode && a.uid === b.uid && a.gid === b.gid &&
+        a.nlink === b.nlink && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
+      if (!unchanged(named, before)) continue;
+      const buffer = Buffer.allocUnsafe(Number(before.size) + 1);
+      let length = 0;
+      while (length < buffer.length) {
+        requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+        const { bytesRead } = await handle.read(buffer, length, buffer.length - length, length);
+        if (!bytesRead) break;
+        length += bytesRead;
+      }
+      const after = await handle.stat({ bigint: true }), current = await lstat(path, { bigint: true });
+      await checkParent(path);
+      if (length !== Number(before.size) || !unchanged(before, after) || !unchanged(before, current)) continue;
+      const bytes = buffer.subarray(0, length);
+      let value;
+      try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+      catch { continue; }
+      if (!isObject(value) || value.schema !== selected.schema || value.operationId !== selected.operationId ||
+          value.sourceSha256 !== selected.sourceSha256 || typeof value.receivedAt !== 'string' ||
+          !Number.isFinite(Date.parse(value.receivedAt)) ||
+          new Date(value.receivedAt).toISOString() !== value.receivedAt) continue;
+      const marker = { schema: selected.schema, operationId: selected.operationId,
+        sourceSha256: selected.sourceSha256, receivedAt: value.receivedAt };
+      // Accept exact original writeJson bytes, or retained canonical bytes;
+      // reject extra fields, duplicate keys, truncation and non-original encodings.
+      if (!bytes.equals(jsonBytes(marker)) && !bytes.equals(Buffer.from(canonicalJson(marker) + '\n'))) continue;
+      candidates.push({ marker, bytes: Buffer.from(bytes) });
+    } catch (error) {
+      if (!['ENOENT', 'ELOOP'].includes(error.code)) throw error;
+    } finally { if (handle) await handle.close(); }
+  }
+  if (!candidates.length) return null;
+  requireValue(candidates.every(value => value.marker.receivedAt === candidates[0].marker.receivedAt),
+    'CATALOGUE_RECEIVING_MARKER_CONFLICT');
+  requireValue(!signal?.aborted, 'CATALOGUE_FILE_READ_ABORTED');
+  await retained(markerPath, candidates[0].bytes);
+  await cleanOwnJsonTemporaries(directory, candidates.map(value => value.bytes));
+  await syncDirectory(directory);
+  return candidates[0].marker;
 }
 
 function validateState(state) {
@@ -659,6 +717,7 @@ export async function receiveCatalogueHandover({ sourceDirectory, directory, ope
       operationId, sourceSha256: opened.manifest.sha256, receivedAt: stamp() };
     const entries = (await readdir(directory)).filter(name => name !== 'locks');
     if (entries.length) {
+      if (!await exists(markerPath)) await recoverOwnReceivingMarker(directory, markerPath, marker, { signal });
       requireValue(await exists(markerPath), 'CATALOGUE_NEW_RECEIVING_DIRECTORY_REQUIRED');
       const original = await readJson(markerPath);
       requireValue(original.schema === marker.schema && original.operationId === operationId &&
@@ -666,7 +725,7 @@ export async function receiveCatalogueHandover({ sourceDirectory, directory, ope
         'CATALOGUE_RECEIVING_OPERATION_CHANGED');
       marker = original;
     } else await writeJson(markerPath, marker, { exclusive: true });
-    const markerBytes = Buffer.from(canonicalJson(marker) + '\n');
+    const markerBytes = await readBytes(markerPath, 4096);
     for (const file of opened.manifest.files) {
       if (file.path === 'state.json') continue;
       await retainedFile(join(opened.directory, relative(file.path)), join(directory, file.path), file, { signal });
