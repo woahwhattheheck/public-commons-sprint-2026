@@ -150,17 +150,47 @@ export function validateSupersetBuyerSessions(workspace,value,{allowAdditionalBu
     'SUPERSET_SESSION_CUSTODY_INCOMPLETE','The complete project must account for every original buyer.');
   return value;
 }
+async function archiveStat(file){
+  try{return await lstat(file,{bigint:true});}catch(error){if(error.code==='ENOENT')return null;throw error;}
+}
+function privateArchiveStat(info){
+  return info?.isFile()&&info.uid===BigInt(process.getuid())&&(info.mode&0o077n)===0n;
+}
+async function unlinkOwnedPartial(root,temporary,selected){
+  const current=await archiveStat(temporary);
+  if(!current)return;
+  need(privateArchiveStat(current)&&current.dev===selected.dev&&current.ino===selected.ino,
+    'SUPERSET_SESSION_ARCHIVE_PARTIAL_CHANGED','The owned original archive partial changed.');
+  await unlink(temporary);await syncDirectory(root);
+}
+async function reconcileArchivePartial(root,file,temporary){
+  const partial=await archiveStat(temporary);
+  if(!partial)return;
+  need(privateArchiveStat(partial),'SUPERSET_SESSION_ARCHIVE_PARTIAL_CHANGED','The original archive partial is not a private owned file.');
+  const published=await archiveStat(file);
+  if(published&&partial.dev===published.dev&&partial.ino===published.ino){
+    need(privateArchiveStat(published)&&partial.nlink===2n&&published.nlink===2n,
+      'SUPERSET_SESSION_ARCHIVE_PARTIAL_LINKS','The interrupted archive has unrecognized links.');
+  }else need(partial.nlink===1n,
+    'SUPERSET_SESSION_ARCHIVE_PARTIAL_LINKS','The original archive partial has an unrecognized link.');
+  // The workspace's original writer lease owns this SHA-bound partial. A
+  // published hardlink keeps every byte; an orphan is rebuilt from SQLite.
+  await unlinkOwnedPartial(root,temporary,partial);
+}
 async function materializeArchive(workspace,root,archive){
-  await privateDirectory(root,true);const file=join(root,archive.sha256+'.zip');
+  await privateDirectory(root,true);
+  const file=join(root,archive.sha256+'.zip'),temporary=join(root,'.archive-'+archive.sha256+'.partial');
+  await reconcileArchivePartial(root,file,temporary);
   try{
     const prior=await hashPrivate(file,MAX_ARCHIVE);
     need(prior.bytes===archive.bytes&&prior.hash===archive.sha256,
       'SUPERSET_SESSION_ARCHIVE_CHANGED','An existing received archive differs.');
     return file;
   }catch(error){if(error.code!=='ENOENT')throw error;}
-  const temporary=join(root,'.archive-'+randomUUID());let handle;
+  let handle,created;
   try{
     handle=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
+    created=await handle.stat({bigint:true});
     for(const chunk of archive.chunks){
       const raw=workspace.bytes(chunk.sha256);let offset=0;
       while(offset<raw.length){
@@ -179,11 +209,13 @@ async function materializeArchive(workspace,root,archive){
       need(existing.bytes===archive.bytes&&existing.hash===archive.sha256,
         'SUPERSET_SESSION_ARCHIVE_CHANGED','Another archive occupies the selected receiving path.');
     }
-    await syncDirectory(root);return file;
   }finally{
-    await handle?.close();
-    await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});
+    try{await handle?.close();}
+    finally{if(created)await unlinkOwnedPartial(root,temporary,created);}
   }
+  // The original private-file reader sees one durable name, including when
+  // this call resumes a prior process that ended between link and unlink.
+  await syncDirectory(root);return file;
 }
 
 /** The incoming project identity selects the same original receiving operation.
