@@ -162,7 +162,11 @@ export function createSupplierController({container,api,perform,host,notice,elem
     const global=$('delivery-findings');global.replaceChildren();global.hidden=!review?.globalFindings?.length;
     if(!global.hidden){global.append(element('h4','Delivery requirements'));
       for(const finding of review.globalFindings){const item=element('p');item.append(element('strong',finding.severity+' · '+finding.code+': '),document.createTextNode(finding.message+' '));
-        if(/^https?:\/\//i.test(finding.rule?.url??''))item.append(element('a',finding.rule.section??'Source rule',{href:finding.rule.url,target:'_blank',rel:'noreferrer'}));global.append(item);}}
+        if(/^https?:\/\//i.test(finding.rule?.url??''))item.append(element('a',finding.rule.section??'Source rule',{href:finding.rule.url,target:'_blank',rel:'noreferrer'}));
+        if(/^\/(?:profile|submission)(?:\/|$)/.test(finding.path??'')){
+          const edit=element('button','Edit submission settings',{type:'button'});edit.addEventListener('click',()=>choosePath(finding.path));item.append(document.createTextNode(' '),edit);
+        }
+        global.append(item);}}
 
     $('review-summary').textContent=review?review.createdAt+' · submission revision '+review.planRevision+' · '+review.counts.total+' products':
       'Save a submission to review its complete product edition.';
