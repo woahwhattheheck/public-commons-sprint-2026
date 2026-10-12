@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { JOB_ID } from '../../jobs/config.mjs';
 import { fault } from '../config.mjs';
+import { N8nAgentOperations } from '../agent-operations.mjs';
 
 const assetFiles = [['/', 'index.html', 'text/html; charset=utf-8'],
   ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'], ['/style.css', 'style.css', 'text/css; charset=utf-8']];
@@ -13,6 +14,19 @@ const policy = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff
 function fields(value, allowed) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(k => !allowed.includes(k)))
     throw fault('REQUEST_FIELDS', 'Use only the fields declared by this operation.');
+}
+function query(url, allowed, numbers = []) {
+  const entries = [...url.searchParams], values = {};
+  for (const [key, value] of entries) {
+    if (!allowed.includes(key) || Object.hasOwn(values, key))
+      throw fault('REQUEST_FIELDS', 'Use each declared query field once.');
+    if (numbers.includes(key)) {
+      if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value)))
+        throw fault('REQUEST_FIELDS', 'Supply an integer byte offset or page size.');
+      values[key] = Number(value);
+    } else values[key] = value;
+  }
+  return values;
 }
 async function body(request) {
   if (request.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json')
@@ -33,6 +47,7 @@ export async function startN8nWorkspace({ merchant, port = 0 } = {}) {
   const token = randomBytes(32).toString('hex'), expected = Buffer.from('Bearer ' + token);
   const assets = new Map(await Promise.all(assetFiles.map(async ([path, file, type]) =>
     [path, { type, bytes: await readFile(new URL('./public/' + file, import.meta.url)) }])));
+  const agent = new N8nAgentOperations(merchant);
   const pending = new Set(), readers = new Set();
   let origin, host, closing = false, closePromise, drain;
   const server = createServer((request, response) => {
@@ -49,7 +64,8 @@ export async function startN8nWorkspace({ merchant, port = 0 } = {}) {
             ['cross-site', 'same-site'].includes(request.headers['sec-fetch-site']))
           throw fault('ORIGIN', 'Use the private launch URL on the operator host.', 403);
         const url = new URL(request.url, origin);
-        if (url.search) throw fault('QUERY', 'This endpoint uses the original path and JSON request.');
+        if (url.search && !(request.method === 'GET' && url.pathname.startsWith('/api/agent/')))
+          throw fault('QUERY', 'This endpoint uses the original path and JSON request.');
         if (['GET', 'HEAD'].includes(request.method) && assets.has(url.pathname)) {
           const asset = assets.get(url.pathname); return send(200, asset.bytes, asset.type);
         }
@@ -61,6 +77,21 @@ export async function startN8nWorkspace({ merchant, port = 0 } = {}) {
           let id; try { id = decodeURIComponent(match[1]); } catch {}
           if (!id || !JOB_ID.test(id) || encodeURIComponent(id) !== match[1]) throw fault('NOT_FOUND', 'Select an original job.', 404);
           match[1] = id;
+        }
+        if (request.method === 'GET' && url.pathname.startsWith('/api/agent/')) {
+          if (url.pathname === '/api/agent/status') {
+            query(url, []); return send(200, await agent.status());
+          }
+          if (url.pathname === '/api/agent/jobs')
+            return send(200, await agent.jobs(query(url, ['limit','cursor','q','status'], ['limit'])));
+          if (url.pathname === '/api/agent/exports')
+            return send(200, await agent.exports(query(url, ['limit','cursor','jobId'], ['limit'])));
+          if (url.pathname === '/api/agent/manifest')
+            return send(200, await agent.manifest(query(url, ['exportId'])));
+          if (url.pathname === '/api/agent/file')
+            return send(200, await agent.file(query(url,
+              ['exportId','file','expectedManifestSha256','expectedSha256','offset','limit','readId'], ['offset','limit'])));
+          throw fault('NOT_FOUND', 'This agent operation was not found.', 404);
         }
         if (['GET', 'HEAD'].includes(request.method)) {
           if (url.pathname === '/api/launch') {
@@ -81,6 +112,10 @@ export async function startN8nWorkspace({ merchant, port = 0 } = {}) {
         if (request.method !== 'POST') throw fault('METHOD', 'Use GET or POST.', 405);
         readers.add(request); let input;
         try { input = await body(request); } finally { readers.delete(request); }
+        if (url.pathname === '/api/agent/prepare') return send(200, await agent.prepare(input));
+        if (url.pathname === '/api/agent/renew') return send(200, await agent.renew(input));
+        if (url.pathname === '/api/agent/export') return send(200, await agent.export(input));
+        if (url.pathname === '/api/agent/file-release') return send(200, await agent.release(input));
         if (url.pathname === '/api/jobs') {
           fields(input, ['functionId', 'input', 'label', 'reference']);
           return send(201, await merchant.model.createJob(input));
@@ -112,7 +147,8 @@ export async function startN8nWorkspace({ merchant, port = 0 } = {}) {
       } catch (error) {
         if (response.headersSent) return response.destroy();
         const status = Number.isInteger(error.status) && error.status >= 400 && error.status <= 599 ? error.status :
-          error.code === 'ENOENT' ? 404 : 500;
+          error.code === 'ENOENT' ? 404 : error.code === 'N8N_INVALID_CHUNK' ? 400 :
+          error.code === 'N8N_READ_CAPACITY' ? 429 : /^N8N_(READ_|FILE_CHANGED|SNAPSHOT_)/.test(error.code ?? '') ? 409 : 500;
         send(status, { code: error.code ?? 'JOB_AUTOMATION_OPERATION_FAILED',
           message: status === 500 ? 'The original merchant retained this operation. Review its source and state before resuming.' : error.message });
       }
@@ -129,7 +165,7 @@ export async function startN8nWorkspace({ merchant, port = 0 } = {}) {
     return closePromise ??= (async () => {
       closing = true; for (const request of readers) request.destroy();
       const stopped = new Promise(done => server.close(done)); server.closeIdleConnections?.();
-      await Promise.allSettled([...pending]); server.closeAllConnections?.(); await stopped;
+      await Promise.allSettled([...pending]); server.closeAllConnections?.(); await stopped; await agent.close();
     })();
   } };
 }

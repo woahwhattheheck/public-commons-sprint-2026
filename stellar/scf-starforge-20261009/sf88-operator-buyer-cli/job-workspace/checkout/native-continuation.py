@@ -32,7 +32,8 @@ SOURCE_ROOT = HERE.parents[2]
 OPERATION = "SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012"
 JOB = "checkout:2026.10"
 ORIGIN = "https://jobs-merchant.example"
-ASSET = "C" + "A" * 55
+ASSET = "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
+PAY_TO = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
 KEYS = ("SF36_CONSENT_KEY_B64", "SF36_AUDIT_KEY_B64", "SF36_OPERATOR_KEY_B64")
 
 
@@ -127,7 +128,7 @@ def answer_fixture(transcript: bytes, command: bytes, fixture: Path, expected_in
         "scheme": "exact",
         "network": "stellar:testnet",
         "asset": ASSET,
-        "pay_to": "UNVERIFIED_DEMO_RECIPIENT",
+        "pay_to": PAY_TO,
         "max_atomic_units_to_reserve": "10000",
         "max_timeout_seconds": 60,
         "body_present": True,
@@ -291,7 +292,7 @@ def main() -> int:
         os.execve(str(node), [str(node), str(HERE / "native-continuation.mjs")], env)
     prompt = re.compile(rb"To authorize ONE fresh reservation, type exactly: (APPROVE [0-9a-f]{16})")
     try:
-        deadline = time.monotonic() + (300 if args.input_files else 210)
+        deadline = time.monotonic() + (420 if args.input_files else 210)
         while time.monotonic() < deadline:
             require(not cancelled, "CHECKOUT_NATIVE_JOURNEY_INTERRUPTED")
             ready, _, _ = select.select([descriptor], [], [], 0.1)
@@ -335,6 +336,14 @@ def main() -> int:
                 intake.get("reopened") is True and intake.get("checkoutId") == summary["checkout"]["id"],
                 "ORIGINAL_INTAKE_CHECKOUT_RESULT_REQUIRED")
     if args.input_files:
+        resolution = summary.get("resolution", {})
+        require(resolution.get("schema") == "stellar-forge.job-resolution-native-result.v1" and
+                resolution.get("result") == "PASS" and resolution.get("jobId") == job and
+                resolution.get("entryId") == summary["checkout"]["jobEntryId"] and
+                resolution.get("caseState") == "CLOSED" and
+                resolution.get("adjustment", {}).get("kind") == "CANCELLATION" and
+                resolution.get("adjustment", {}).get("status") == "RECORDED",
+                "ORIGINAL_PAID_JOB_RESOLUTION_REQUIRED")
         receiving = summary.get("inputFiles", {})
         require(receiving.get("operation") == operation and receiving.get("records") == 6000 and
                 receiving.get("merchantFiles") == 2 and receiving.get("lostChunkAck", {}).get("status") == 200 and

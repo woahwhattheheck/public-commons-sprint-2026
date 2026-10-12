@@ -17,5 +17,8 @@
   },
   "runtimePackageManifests": {
     "redis": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/package.json"
+  },
+  "applicationProviders": {
+    "redis": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/redis.mjs"
   }
 }

@@ -12,27 +12,27 @@ HTML = r"""<!doctype html>
 <section id="screen-sources" class="screen">
 <div class="page-title"><div><h2>Review a source delivery</h2><p>Open an acquired dataset, check its fields, then import a named edition for analysis.</p></div></div>
 <section class="panel"><form id="review-form"><label for="delivery-path">Original delivery report</label><div class="inline"><input id="delivery-path" autocomplete="off" spellcheck="false" required placeholder="/absolute/path/to/dataset-delivery.json"><button class="primary" type="submit">Review delivery</button></div><p class="hint">Use the native delivery report retained on this computer.</p></form></section>
-<section id="source-review" class="panel" hidden><div class="section-head"><h3>Source review</h3><button id="source-details-toggle" type="button">Source details</button></div><dl id="source-facts" class="facts"></dl><div id="source-details" hidden><pre id="source-record"></pre></div><h3>Column mapping</h3><p class="muted">Choose the SQL column name and storage type. Empty type uses the source type.</p><div class="table-scroll"><table><thead><tr><th>Source field</th><th>SQL column</th><th>DuckDB type</th><th>Allow null</th><th>Sample</th></tr></thead><tbody id="mapping-rows"></tbody></table></div><div id="source-sample" class="table-scroll"></div><form id="import-form" class="stack"><label>Record key columns<input id="source-keys" placeholder="id" autocomplete="off" spellcheck="false"></label><p class="hint">Comma-separated SQL column names that identify a row, if available.</p><div class="inline"><button class="primary" type="submit">Prepare import review</button><span class="muted">The review retains this source and mapping.</span></div><div id="ready-review" hidden><dl id="review-facts" class="facts"></dl><button id="import-reviewed" class="primary" type="button">Import reviewed edition</button></div></form></section>
+<section id="source-review" class="panel" hidden><div class="section-head"><h3>Source review</h3><button id="source-details-toggle" type="button">Source details</button></div><dl id="source-facts" class="facts"></dl><div id="source-details" hidden><pre id="source-record"></pre></div><section id="source-meanings" hidden></section><h3>Column mapping</h3><p class="muted">Choose the SQL column name and storage type. Empty type uses the source type.</p><div class="table-scroll"><table><thead><tr><th>Source field</th><th>SQL column</th><th>DuckDB type</th><th>Allow null</th><th>Sample</th></tr></thead><tbody id="mapping-rows"></tbody></table></div><div id="source-sample" class="table-scroll"></div><form id="import-form" class="stack"><label>Record key columns<input id="source-keys" placeholder="id" autocomplete="off" spellcheck="false"></label><p class="hint">Comma-separated SQL column names that identify a row, if available.</p><div class="inline"><button class="primary" type="submit">Prepare import review</button><span class="muted">The review retains this source and mapping.</span></div><div id="ready-review" hidden><dl id="review-facts" class="facts"></dl><button id="import-reviewed" class="primary" type="button">Import reviewed edition</button></div></form></section>
 <div class="empty" id="source-empty"><h3>Start with a delivery you already have</h3><p>The review shows the source fields and a sample before importing. Imported editions appear in the dataset list and can be reopened at any time.</p></div>
 <section class="panel"><h3>Saved import reviews</h3><div id="saved-reviews" class="item-list"></div><p id="reviews-empty" class="muted">Prepared reviews remain available here.</p></section>
 </section>
 <section id="screen-editions" class="screen" hidden>
 <div class="page-title"><div><h2>Dataset editions</h2><p>Reopen an edition, select the active view, or compare two deliveries.</p></div><button id="new-delivery">Review another delivery</button></div>
 <div class="two-column"><section class="panel"><div class="section-head"><h3>Imported editions</h3><span id="editions-summary" class="muted"></span></div><div id="edition-list" class="item-list"></div><p id="editions-empty" class="muted">Import a source delivery to begin.</p></section>
-<section id="edition-detail" class="panel" hidden><div class="section-head"><h3 id="edition-title">Edition</h3><div class="toolbar"><button id="edition-query">Use in SQL</button><button id="edition-source">Export source files</button></div></div><dl id="edition-facts" class="facts"></dl><div class="table-scroll"><table><thead><tr><th>SQL column</th><th>Type</th><th>Source field</th></tr></thead><tbody id="edition-columns"></tbody></table></div><form id="activate-form" class="stack"><label>Active view name<input id="view-name" required maxlength="64" autocomplete="off" spellcheck="false" placeholder="current_activity"></label><div class="inline"><button class="primary" type="submit">Activate this edition</button><span id="activation-info" class="muted"></span></div></form><details><summary>Source and import details</summary><pre id="edition-record"></pre></details></section></div>
-<section class="panel"><div class="section-head"><h3>Compare editions</h3><span class="muted">Review schema and row changes</span></div><form id="compare-form"><div class="form-grid"><label>Baseline edition<select id="compare-base" required></select></label><label>Candidate edition<select id="compare-candidate" required></select></label></div><label>Key columns<input id="compare-keys" placeholder="id" spellcheck="false" autocomplete="off"></label><p class="hint">Comma-separated SQL columns used to match records.</p><button type="submit">Compare</button></form><div id="comparison" hidden><div id="comparison-summary" class="metric-grid"></div><div id="comparison-schema"></div><div id="comparison-table" class="table-scroll"></div><details><summary>Comparison details</summary><pre id="comparison-record"></pre></details></div></section>
+<section id="edition-detail" class="panel" hidden><div class="section-head"><h3 id="edition-title">Edition</h3><div class="toolbar"><button id="edition-query">Use in SQL</button><button id="edition-source">Export source files</button></div></div><dl id="edition-facts" class="facts"></dl><section id="edition-meanings" hidden></section><div class="table-scroll"><table><thead><tr><th>SQL column</th><th>Type</th><th>Source field</th></tr></thead><tbody id="edition-columns"></tbody></table></div><form id="activate-form" class="stack"><label>Active view name<input id="view-name" required maxlength="64" autocomplete="off" spellcheck="false" placeholder="current_activity"></label><div class="inline"><button class="primary" type="submit">Activate this edition</button><span id="activation-info" class="muted"></span></div></form><details><summary>Source and import details</summary><pre id="edition-record"></pre></details></section></div>
+<section class="panel"><div class="section-head"><h3>Compare editions</h3><span class="muted">Review schema and row changes</span></div><form id="compare-form"><div class="form-grid"><label>Baseline edition<select id="compare-base" required></select></label><label>Candidate edition<select id="compare-candidate" required></select></label></div><label>Key columns<input id="compare-keys" placeholder="id" spellcheck="false" autocomplete="off"></label><p class="hint">Comma-separated SQL columns used to match records.</p><div class="toolbar"><button type="submit">Compare rows</button><button id="compare-meanings" type="button">Compare definitions</button></div></form><div id="comparison" hidden><section id="comparison-meanings" hidden></section><div id="comparison-summary" class="metric-grid"></div><div id="comparison-schema"></div><div id="comparison-table" class="table-scroll"></div><details><summary>Comparison details</summary><pre id="comparison-record"></pre></details></div></section>
 </section>
 <section id="screen-query" class="screen" hidden>
 <div class="page-title"><div><h2>SQL workspace</h2><p>Query the imported editions and active views. Save a query to reopen it later.</p></div></div>
 <div class="query-layout"><aside class="panel query-catalog"><h3>Available tables</h3><div id="query-tables" class="item-list compact"></div><h3>Saved queries</h3><div id="query-saved" class="item-list compact"></div></aside><div>
 <section class="panel"><form id="query-form"><label for="sql">SQL query</label><textarea id="sql" rows="10" spellcheck="false" placeholder="SELECT * FROM current_activity LIMIT 100"></textarea><div class="form-grid"><label>Parameters (JSON array)<input id="query-parameters" value="[]" spellcheck="false" autocomplete="off"></label><label>Preview rows<input id="query-limit" type="number" min="1" max="10000" value="100"></label></div><div class="toolbar"><button class="primary" type="submit">Run preview</button><button id="export-query" type="button">Export Parquet + CSV</button><button id="export-source" type="button">Prepare workspace handoff</button></div></form><hr><form id="save-query-form"><label>Query name<input id="query-name" required maxlength="64" placeholder="monthly_totals" autocomplete="off" spellcheck="false"></label><div class="inline"><button type="submit">Save query</button><span id="query-revision" class="muted"></span></div></form></section>
-<section id="query-result" class="panel" hidden><div class="section-head"><h3>Preview result</h3><span id="result-summary" class="muted"></span></div><div id="result-table" class="table-scroll"></div><p id="result-limit" class="hint"></p><details><summary>Result details</summary><pre id="query-result-record"></pre></details></section>
+<section id="query-result" class="panel" hidden><div class="section-head"><h3>Preview result</h3><span id="result-summary" class="muted"></span></div><div id="result-table" class="table-scroll"></div><p id="result-limit" class="hint"></p><section id="query-meanings" hidden></section><details><summary>Result details</summary><pre id="query-result-record"></pre></details></section>
 </div></div>
 </section>
 <section id="screen-exports" class="screen" hidden>
 <div class="page-title"><div><h2>Saved exports</h2><p>Reopen an export and download its data with the original source and query details.</p></div><button id="exports-to-query">Open SQL workspace</button></div>
 <section id="pending-operations-panel" class="panel" hidden><h3>Continue a saved operation</h3><p class="muted">An interrupted request reopens its original export or handoff.</p><div id="pending-operations" class="item-list"></div></section><div class="two-column"><section class="panel"><h3>Export history</h3><div id="export-list" class="item-list"></div><p id="exports-empty" class="muted">Run a query export to create the first saved result.</p></section><section id="export-detail" class="panel" hidden><div class="section-head"><h3 id="export-title">Export</h3><button id="export-reopen-query">Reopen query</button></div><dl id="export-facts" class="facts"></dl>
-<section id="export-schema" hidden><h3>Parquet column types</h3><p class="hint">SQL types describe the saved query. File types describe the downloaded Parquet data.</p><div id="export-columns" class="table-scroll export-types"></div><details id="export-read-types" hidden><summary>Read the original SQL types</summary><p class="hint">Run this query with the downloaded result.parquet to restore the saved query's column types.</p><pre id="export-read-sql"></pre></details></section><h3>Files</h3><div id="export-files" class="item-list"></div><details><summary>Query and source details</summary><pre id="export-record"></pre></details></section></div>
+<section id="export-schema" hidden><h3>Parquet column types</h3><p class="hint">SQL types describe the saved query. File types describe the downloaded Parquet data.</p><div id="export-columns" class="table-scroll export-types"></div><details id="export-read-types" hidden><summary>Read the original SQL types</summary><p class="hint">Run this query with the downloaded result.parquet to restore the saved query's column types.</p><pre id="export-read-sql"></pre></details></section><section id="export-meanings" hidden></section><h3>Files</h3><div id="export-files" class="item-list"></div><details><summary>Query and source details</summary><pre id="export-record"></pre></details></section></div>
 </section>
 <footer>Stellar Forge dataset operator</footer>
 </main></div>
@@ -184,6 +184,64 @@ function sourceColumns(source) {
   if(Array.isArray(source.default_columns)) return source.default_columns;
   return (source.fields||[]).map(function(field){const value=typeof field==='string'?{source:field,name:field,type:'VARCHAR',nullable:true}:field;return {source:value.source||value.name,name:value.name||value.source,type:value.type||'VARCHAR',nullable:value.nullable!==false};});
 }
+
+function sourceMeaningTable(container,descriptor,document,columns,editionId) {
+  container.replaceChildren();container.hidden=false;container.append(element('h3','Source definitions'));
+  if(!descriptor||!document) {container.append(element('p','This edition has no source dictionary. Its reviewed SQL columns remain available below.','hint'));return;}
+  const facts=element('dl',undefined,'facts'),bySource=new Map((columns||[]).map(function(c){return [c.source,c.name];}));
+  const primary=document.primaryKey||{},key=primary.projected||[],mappedKey=key.filter(function(name){return bySource.has(name);}).map(function(name){return bySource.get(name);});
+  fact(facts,'Definitions',descriptor.definition_sha256);fact(facts,'Capture',descriptor.capture_manifest_sha256);
+  fact(facts,'Dictionary file',descriptor.file&&descriptor.file.sha256);fact(facts,'Source key',key.join(', ')||'None declared');
+  fact(facts,'SQL key mapping',mappedKey.join(', ')||'No selected key columns');
+  fact(facts,'Key coverage',primary.complete&&mappedKey.length===key.length&&key.length?'Complete source key mapped':'Source key is incomplete in this mapping');
+  fact(facts,'Observation URI (source fields)',document.aboutUrl&&document.aboutUrl.projected);
+  container.append(facts,element('p','Definitions describe the delivered source fields. SQL aliases and types follow the reviewed mapping. Import key checks use the separately selected record keys.','hint'));
+  const records=new Map((document.columns||[]).map(function(c){return [c.name,c];})),grid=element('table'),head=element('thead'),hr=element('tr'),body=element('tbody');
+  ['Source field','SQL column','Meaning','Definition'].forEach(function(title){hr.append(element('th',title));});head.append(hr);grid.append(head,body);
+  (columns||[]).forEach(function(mapping){
+    const column=records.get(mapping.source);if(!column)return;
+    const definition=column.projectedDefinition||{},row=element('tr'),meaning=element('td'),detail=element('td');
+    const label=definition.titles||definition.title||definition.description||(column.dictionary&&column.dictionary.label)||'';
+    if(label)meaning.append(element('div',text(label)));
+    if(definition.description&&definition.description!==label)meaning.append(element('div',text(definition.description),'hint'));
+    meaning.append(element('div',[column.role,column.encoding,definition.datatype||column.type,column.nullable===false?'Required':'Nullable'].filter(Boolean).map(text).join(' · '),'hint'));
+    const description=element('details');description.append(element('summary','Open definition'),element('pre',pretty(column)));detail.append(description);
+    row.append(element('td',mapping.source),element('td',mapping.name),meaning,detail);body.append(row);
+  });
+  const scroll=element('div',undefined,'table-scroll');scroll.append(grid);container.append(scroll);
+  if((document.virtualColumns||[]).length){const virtual=element('details');virtual.append(element('summary','Virtual source definitions'),element('pre',pretty(document.virtualColumns)));container.append(virtual);}
+  if((document.issues||[]).length){const issues=element('details');issues.append(element('summary','Source interpretation notes'),element('pre',pretty(document.issues)));container.append(issues);}
+  if(editionId){const button=element('button','Download original dictionary');button.type='button';button.addEventListener('click',function(){run('Downloading source dictionary',async function(){
+    const response=await fetch('/api/editions/'+encodeURIComponent(editionId)+'/semantics-file',{headers:{'X-DuckDB-Capability':capability},cache:'no-store'});
+    if(!response.ok){let result;try{result=await response.json();}catch{}throw new Error(result&&(result.detail||result.error)||'The source dictionary could not be downloaded.');}
+    const blob=await response.blob(),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='semantics.json';document.body.append(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},10000);notice('Original source dictionary downloaded.');
+  });});container.append(button);}
+}
+function queryMeanings(container,context) {
+  container.replaceChildren();container.hidden=!context;if(!context)return;
+  container.append(element('h3','Imported source definitions'),element('p','These definitions belong to the imported source editions used by this query. The saved SQL describes calculations and result columns.','hint'));
+  if(!context.resolved)container.append(element('p','This query uses a relation whose imported edition could not be resolved automatically.','hint'));
+  if(!(context.editions||[]).length){container.append(element('p','No imported source edition was associated with this query.','hint'));return;}
+  context.editions.forEach(function(item){
+    const row=element('div',undefined,'list-item'),content=element('div'),button=element('button','Open source');
+    content.append(element('strong',short(item.edition_id)),element('div',item.semantics?'Definition '+short(item.semantics.definition_sha256):'No source dictionary','hint'));
+    if(item.dictionary_file)content.append(element('div','Export file: '+item.dictionary_file,'hint'));
+    button.type='button';button.addEventListener('click',function(){run('Opening source edition',async function(){await selectEdition(item.edition_id);});});row.append(content,button);container.append(row);
+  });
+}
+function meaningComparison(result) {
+  const container=$('comparison-meanings');container.replaceChildren();container.hidden=!result;if(!result)return;
+  container.append(element('h3','Source definition changes'));
+  const facts=element('dl',undefined,'facts');
+  [['Definition',result.definition_changed],['Source capture',result.capture_changed],['SQL mapping',result.mapping_changed],['Source key',result.primary_key_changed],['Observation URI',result.observation_uri_changed],['Virtual fields',result.virtual_columns_changed]].forEach(function(pair){fact(facts,pair[0],pair[1]?'Changed':'Unchanged');});container.append(facts);
+  const columns=result.columns||{},rows=[];
+  (columns.added||[]).forEach(function(value){rows.push({Change:'Added source definition',Field:value.source,Before:'',After:pretty(value)});});
+  (columns.removed||[]).forEach(function(value){rows.push({Change:'Removed source definition',Field:value.source,Before:pretty(value),After:''});});
+  (columns.changed||[]).forEach(function(value){rows.push({Change:'Definition or mapping changed',Field:value.source,Before:pretty(value.before),After:pretty(value.after)});});
+  if(rows.length){const target=element('div',undefined,'table-scroll');table(target,['Change','Field','Before','After'],rows);container.append(target);}
+  else container.append(element('p','Selected field definitions and SQL mappings are unchanged.','hint'));
+}
+
 function renderSource(source,columns) {
   state.source=source;state.review=null;
   $('delivery-path').value=source.report_path||$('delivery-path').value;
@@ -200,13 +258,14 @@ function renderSource(source,columns) {
     for(const control of [name,type,nullable]) {const td=element('td');td.append(control);tr.append(td);control.addEventListener('input',invalidateReview);}
     const first=sample[0];tr.append(element('td',first?text(Array.isArray(first)?first[index]:first[column.source]):''));$('mapping-rows').append(tr);
   });
+  sourceMeaningTable($('source-meanings'),source.semantics,source.semantic_dictionary,columns||sourceColumns(source));
   const displayColumns=(columns||sourceColumns(source)).map(function(column){return column.source;});
   if(sample.length) table($('source-sample'),displayColumns,sample.slice(0,20));else $('source-sample').replaceChildren();
 }
 function mapping() {
   return Array.from($('mapping-rows').children).map(function(row){return {source:row.dataset.source,name:row.querySelector('[data-mapping=name]').value.trim(),type:row.querySelector('[data-mapping=type]').value.trim()||row.dataset.defaultType,nullable:row.querySelector('[data-mapping=nullable]').checked};});
 }
-function invalidateReview() { state.review=null;$('ready-review').hidden=true; }
+function invalidateReview() { state.review=null;$('ready-review').hidden=true;if(state.source)sourceMeaningTable($('source-meanings'),state.source.semantics,state.source.semantic_dictionary,mapping()); }
 function showReview(review) {
   state.review=review;$('ready-review').hidden=false;$('review-facts').replaceChildren();
   fact($('review-facts'),'Import review',review.review_id);fact($('review-facts'),'Rows',count(review.row_count));fact($('review-facts'),'Record keys',(review.keys||[]).join(', ')||'None selected');
@@ -222,6 +281,7 @@ async function selectEdition(id) {
   $('edition-columns').replaceChildren();
   (edition.columns||[]).forEach(function(column){const row=element('tr');row.append(element('td',column.name),element('td',column.type),element('td',column.source));$('edition-columns').append(row);});
   $('edition-record').textContent=pretty(edition);
+  sourceMeaningTable($('edition-meanings'),edition.semantics,edition.semantic_dictionary,edition.columns,edition.edition_id);
   const view=(state.data.views||[]).find(function(v){return v.edition_id===id;});
   $('view-name').value=view?view.name:'current_dataset';
   updateActivation();render();show('editions');
@@ -295,9 +355,10 @@ async function selectExport(id) {
   renderExportSchema(record);
   $('export-files').replaceChildren();
   exportFiles(record).forEach(function(file){const name=fileName(file);item($('export-files'),name,count(file.bytes===undefined?file.size:file.bytes)+' bytes',function(){run('Opening saved file',async function(){await download(record,file);notice('Download prepared: '+name);});});});
-  $('export-record').textContent=pretty(record);$('export-reopen-query').hidden=!(record.query&&record.query.sql);show('exports');render();
+  queryMeanings($('export-meanings'),record.source_meanings);$('export-record').textContent=pretty(record);$('export-reopen-query').hidden=!(record.query&&record.query.sql);show('exports');render();
 }
 function renderComparison(result) {
+  meaningComparison(result.source_meanings);
   $('comparison').hidden=false;$('comparison-summary').replaceChildren();
   const summary=result.summary||{};
   Object.entries(summary).filter(function(pair){return typeof pair[1]==='number'||typeof pair[1]==='string';}).forEach(function(pair){const metric=element('div',undefined,'metric');metric.append(element('strong',count(pair[1])),element('span',pair[0].replaceAll('_',' ')));$('comparison-summary').append(metric);});
@@ -355,11 +416,15 @@ submit('compare-form','Comparing editions',async function(){
   const keys=keyList($('compare-keys').value),body={before_id:before,after_id:after,max_rows:200};if(keys.length) body.keys=keys;
   renderComparison(await api('/api/compare',body));notice('Edition comparison opened.');
 });
+bind('compare-meanings','Comparing source definitions',async function(){
+  const before=$('compare-base').value,after=$('compare-candidate').value;if(!before||!after)throw new Error('Select both editions.');
+  const result=await api('/api/compare-meanings',{before_id:before,after_id:after});$('comparison').hidden=false;for(const id of ['comparison-summary','comparison-schema','comparison-table'])$(id).replaceChildren();meaningComparison(result);$('comparison-record').textContent=pretty(result);notice('Source definition comparison opened.');
+});
 submit('query-form','Running query preview',async function(){
   const request=queryRequest(),result=await api('/api/query',request);state.lastPreview={request:request,views:result.views};
   table($('result-table'),result.columns||[],result.rows||[]);$('query-result').hidden=false;$('result-summary').textContent=count((result.rows||[]).length)+' preview rows';
   $('result-limit').textContent=result.truncated?'More rows are available. Export the saved query for the complete result.':'The preview contains the complete result.';
-  $('query-result-record').textContent=pretty({columns:result.columns,views:result.views,truncated:result.truncated});notice('Query preview complete.');
+  queryMeanings($('query-meanings'),result.source_meanings);$('query-result-record').textContent=pretty({columns:result.columns,views:result.views,truncated:result.truncated,source_meanings:result.source_meanings});notice('Query preview complete.');
 });
 submit('save-query-form','Saving query',async function(){const query=await saveQuery();notice('Saved '+query.name+' at revision '+query.revision+'.');});
 bind('export-query','Exporting query to Parquet and CSV',async function(){

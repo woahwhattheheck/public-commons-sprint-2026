@@ -19,7 +19,7 @@ export async function startServer(options) {
       requireThat(!req.headers['sec-fetch-site'] || ['same-origin', 'none'].includes(req.headers['sec-fetch-site']), 'ORIGIN', 'Cross-site workspace access is refused', 403);
       const url = new URL(req.url, origin), path = url.pathname, query = Object.fromEntries(url.searchParams); let match;
       if (req.method === 'GET' || req.method === 'HEAD') {
-        if (['/', '/app.mjs', '/style.css'].includes(path)) {
+        if (['/', '/app.mjs', '/automation.mjs', '/style.css'].includes(path)) {
           const file = path === '/' ? 'index.html' : path.slice(1), bytes = await readFile(join(publicDirectory, file));
           res.writeHead(200, { 'Content-Type': file.endsWith('.html') ? 'text/html; charset=utf-8' : file.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8', 'Content-Length': bytes.length }); res.end(req.method === 'HEAD' ? undefined : bytes); return;
         }
@@ -27,6 +27,15 @@ export async function startServer(options) {
         if (path === '/api/state') return send(model.state());
         if ((match = path.match(/^\/api\/projects\/([^/]+)$/))) return send(model.project(match[1]));
         if ((match = path.match(/^\/api\/projects\/([^/]+)\/schema$/))) return send(model.schema(match[1]));
+        if ((match = path.match(/^\/api\/projects\/([^/]+)\/monitor$/))) return send(model.automationState(match[1]));
+        if ((match = path.match(/^\/api\/projects\/([^/]+)\/monitor\/items$/))) return send(model.automationItems(match[1], query.kind, query));
+        if ((match = path.match(/^\/api\/monitor-cycles\/([^/]+)$/))) return send(model.automationCycle(match[1]));
+        if ((match = path.match(/^\/api\/manager-digests\/([^/]+)$/))) return send(model.managerDigest(match[1]));
+        if ((match = path.match(/^\/api\/manager-digests\/([^/]+)\/download$/))) {
+          const { digest } = model.managerDigest(match[1]);
+          requireThat(['json', 'markdown'].includes(query.format ?? 'json'), 'FORMAT', 'Choose json or markdown');
+          return download(model.store.readFile(query.format === 'markdown' ? digest.markdownFileId : digest.fileId), query.format === 'markdown' ? 'text/markdown; charset=utf-8' : 'application/json');
+        }
         if ((match = path.match(/^\/api\/projects\/([^/]+)\/items$/))) {
           model.store.project(match[1]); requireThat(['snapshot', 'run', 'job', 'action', 'export', 'schema'].includes(query.kind), 'ITEM_KIND', 'Choose a retained item kind');
           const offset = Number(query.offset ?? 0), limit = Number(query.limit ?? 50); requireThat(Number.isSafeInteger(offset) && offset >= 0 && Number.isSafeInteger(limit) && limit >= 1 && limit <= 100, 'PAGE', 'Invalid retained item page');
@@ -57,6 +66,12 @@ export async function startServer(options) {
       const input = parse(Buffer.concat(chunks), 'request');
       if (path === '/api/projects') return send(model.createProject(input), 201);
       if (path === '/api/restore') return send(model.restoreProject(input), 201);
+      if ((match = path.match(/^\/api\/projects\/([^/]+)\/monitor\/(configure|pause|resume|trigger|digests)$/))) {
+        const methods = { configure: 'configureAutomation', pause: 'pauseAutomation', resume: 'resumeAutomation', trigger: 'triggerAutomation', digests: 'createManagerDigest' };
+        return send(await model[methods[match[2]]](match[1], input));
+      }
+      if ((match = path.match(/^\/api\/monitor-cycles\/([^/]+)\/(retry|abandon)$/))) return send(await model[match[2] === 'retry' ? 'retryAutomationCycle' : 'abandonAutomationCycle'](match[1], input));
+      if ((match = path.match(/^\/api\/manager-digests\/([^/]+)\/review$/))) return send(model.reviewManagerDigest(match[1], input));
       if ((match = path.match(/^\/api\/projects\/([^/]+)\/(config|import|schema|sync|runs|exports)$/))) {
         const methods = { config: 'saveConfig', import: 'importSource', schema: 'importSchema', sync: 'startSync', runs: 'startRun', exports: 'exportProject' }; return send(await model[methods[match[2]]](match[1], input));
       }
@@ -74,5 +89,6 @@ export async function startServer(options) {
   try { await new Promise((resolve, reject) => { server.once('error', reject); server.listen(options.port ?? 0, '127.0.0.1', resolve); }); }
   catch (e) { await model.close(); throw e; }
   origin = `http://127.0.0.1:${server.address().port}`;
+  model.startAutomation();
   return { model, server, url: origin, async close() { const stopped = new Promise(resolve => server.close(resolve)); server.closeIdleConnections(); await model.close(); server.closeAllConnections(); await stopped; } };
 }
