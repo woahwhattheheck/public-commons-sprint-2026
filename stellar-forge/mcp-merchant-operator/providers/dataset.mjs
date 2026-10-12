@@ -4,7 +4,7 @@ import { datasetLifecycleTools } from "../catalog/dataset-lifecycle.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "dataset", family: "dataset",
-  title: "dataset merchant", order: 500, catalogOrder: 380,
+  title: "dataset merchant", order: 540, catalogOrder: 410,
   configKey: null, summary: false, dependencies: [],
   maxRequestBytes: 131072,
   tools: datasetLifecycleTools,

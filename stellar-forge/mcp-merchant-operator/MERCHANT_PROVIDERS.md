@@ -103,7 +103,11 @@ reader as ./merchant-providers.
 
 The factory receives the loaded native module, the original normalized merchant
 configuration, caller-selected runtime options, and already-created dependency
-owners. It returns the original runtime object. Ordinary provider tools use its
+owners. The common options.environment contains the environment selected by
+startMerchantMcp; providers pass it to their original native client or process
+owner. Existing per-provider options remain available. A source can combine its
+common environment and optional own options inside its factory without adding
+a family branch to the host server. It returns the original runtime object. Ordinary provider tools use its
 existing call(name, args), summary and close() interfaces.
 
 ## Configuration and ordering

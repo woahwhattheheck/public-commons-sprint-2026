@@ -4,7 +4,7 @@ import { stacWorkspaceTools } from '../catalog/stac-workspace.mjs';
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: 'stac-workspaces', family: 'stacWorkspaces',
-  title: 'STAC imagery merchant', order: 0, catalogOrder: 0,
+  title: 'STAC imagery merchant', order: 20, catalogOrder: 0,
   configKey: 'stacWorkspaces', summary: true, dependencies: [],
   configuration: { input: 'stacWorkspaceConnection', privateExports: true,
     read: async (value, { hostPath }) => (await import('../stac-workspace-client.mjs')).readStacWorkspaceConfiguration(hostPath(value)) },

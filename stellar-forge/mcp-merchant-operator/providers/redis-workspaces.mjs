@@ -4,7 +4,7 @@ import { redisWorkspaceTools } from "../catalog/redis-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "redis-workspaces", family: "redisWorkspaces",
-  title: "redis workspaces merchant", order: 300, catalogOrder: 260,
+  title: "redis workspaces merchant", order: 340, catalogOrder: 290,
   configKey: "redisWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "redisWorkspaceConnection", privateExports: true,

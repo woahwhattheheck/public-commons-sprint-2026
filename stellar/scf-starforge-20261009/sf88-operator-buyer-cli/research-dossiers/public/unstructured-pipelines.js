@@ -1,3 +1,4 @@
+import {createObjectInputsPanel} from './object-inputs.js';
 // MIT. Managed document processing in the original research dossier workspace.
 export function createUnstructuredPipelinesPanel({root,tab,api,task,notify,getDossier,onReceived,isBusy}){
   const array=value=>Array.isArray(value)?value:[];
@@ -29,6 +30,7 @@ export function createUnstructuredPipelinesPanel({root,tab,api,task,notify,getDo
     <div class="view-heading"><div><h2>Document pipelines</h2><p class="muted">Prepare original files, run a configured processing profile, and receive located output into a research question.</p></div><button type="button" id="pipelines-refresh">Reload saved workspace</button></div>
     <p id="pipelines-source" class="muted small"></p>
     <section id="pipelines-recovery" class="pipelines-recovery" aria-label="Saved requests" hidden></section>
+    <section id="pipelines-object-intake" aria-label="Original Object Buyer files"></section>
     <details class="pipelines-intake" open>
       <summary>Prepare a processing job</summary>
       <form id="pipelines-prepare-form">
@@ -119,6 +121,7 @@ export function createUnstructuredPipelinesPanel({root,tab,api,task,notify,getDo
     shown:false,busy:0,configured:false,workspaceId:null,source:null,uploadLimitBytes:33554432,
     operations:[],editions:[],next:null,operationId:null,operation:null,selection:null,review:null,records:null,
     jobs:null,journal:null,offset:0,filters:{page:'',type:'',query:''}};
+  let objectPanel=null;
   const endpoint=(ctx,suffix='')=>'/api/dossiers/'+encodeURIComponent(ctx.id)+'/pipelines'+suffix;
   const context=()=>({id:state.id,epoch:state.epoch,workspaceId:state.workspaceId,journal:state.journal});
   const live=ctx=>ctx.id===state.id&&ctx.epoch===state.epoch&&ctx.workspaceId===state.workspaceId;
@@ -369,7 +372,10 @@ export function createUnstructuredPipelinesPanel({root,tab,api,task,notify,getDo
     state.operations=more?[...state.operations,...value.operations.filter(row=>!state.operations.some(old=>old.plan.id===row.plan.id))]:value.operations;
     state.editions=value.editions;state.next=value.nextAfter;state.configured=value.configured;state.source=value.source;
     state.uploadLimitBytes=value.uploadLimitBytes??33554432;
-    renderConfiguration();renderList();renderOperation();renderReview();updateBusy();
+    objectPanel=createObjectInputsPanel({root:$('object-intake'),api,task,notify,getDossier,isBusy:()=>!!isBusy()||state.busy>0,
+    onPrepared:async(value,dossierId)=>{if(state.id!==dossierId)return;await loadList();
+      if(state.id===dossierId){await openOperation(value.plan.id);$('operation').scrollIntoView({block:'nearest'});}}});
+  renderConfiguration();renderList();renderOperation();renderReview();updateBusy();
   }
   async function loadList(more=false){
     if(!state.id)return;const ctx=context(),token=++state.listEpoch,cursor=more?state.next:null;
@@ -552,6 +558,7 @@ export function createUnstructuredPipelinesPanel({root,tab,api,task,notify,getDo
   function updateBusy(){
     const busy=!!isBusy()||state.busy>0||!state.id;
     root.querySelectorAll('button,input,select,textarea').forEach(control=>{control.disabled=busy;});
+    objectPanel?.updateBusy(busy);
     if(busy)return;
     const value=state.operation,op=value?.operation,configured=state.configured;
     for(const id of ['profile','question','label'])$(id).disabled=!configured||!!preparation();
@@ -633,14 +640,17 @@ export function createUnstructuredPipelinesPanel({root,tab,api,task,notify,getDo
       const workspaceId=value?.workspaceId??null,changed=workspaceId!==state.workspaceId;
       state.configured=value?.configured===true;state.workspaceId=workspaceId;state.source=value?.source??null;
       state.uploadLimitBytes=value?.uploadLimitBytes??33554432;
+      objectPanel.configure(value);
       if(changed&&state.id)resetScope(state.id);else{renderConfiguration();updateBusy();}
       tab.hidden=false;
     },
     setDossier(view){
+      objectPanel.setDossier(view);
       if((view?.id??null)!==state.id)resetScope(view?.id??null);
       renderQuestions();renderReview();updateBusy();
     },
     show(visible){
+      void objectPanel.show(visible);
       const changed=visible!==state.shown;state.shown=visible;
       if(visible&&changed&&state.id){
         const ctx=context();state.busy++;updateBusy();

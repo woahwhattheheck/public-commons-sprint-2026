@@ -4,7 +4,7 @@ import { arcgisWorkspaceTools } from "../catalog/arcgis-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "arcgis-workspaces", family: "arcgisWorkspaces",
-  title: "arcgis workspaces merchant", order: 420, catalogOrder: 430,
+  title: "arcgis workspaces merchant", order: 460, catalogOrder: 470,
   configKey: "arcgisWorkspaces", summary: true, dependencies: ["publishers"],
   maxRequestBytes: 131072,
   configuration: { input: "arcgisWorkspaceConnection", privateExports: true,
@@ -16,7 +16,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_arcgis_",
       "text": "For ArcGIS source merchants, inspect merchant_arcgis_status and open the host-declared workspace. It borrows the existing MerchantPublisher and its one refresh scheduler; the browser uses the same original workbench. Inspect declared file bytes and SHA256 before uploading an alias. Prepare a source from selected host connection/profile and exact original inputs; retain workbenchId and request UUID for every change, then inspect the same saved request after a lost response. Complete capture before mapping an immutable source edition, and select it against the current source revision. Use merchant_publisher_* for the original plan, extraction, candidate review, publication, buyer preparation and refresh schedule. Export only a published run, stage with the host runtime, then use original merchant release digest/generation controls to inspect, select and start. Read all seven saved deployment files through exact hashes and offsets. Closing a borrowed browser leaves the publisher and scheduler open; closing its owner drains the workbench and retained reads before releasing the publisher. No source or deployment step purchases data.",
-      "order": 140
+      "order": 180
     }
   ],
   load: () => import("../arcgis-workspace.mjs"),

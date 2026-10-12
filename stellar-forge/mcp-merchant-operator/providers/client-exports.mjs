@@ -3,7 +3,7 @@ import { defineMerchantProvider, MERCHANT_PROVIDER_SCHEMA } from '../provider-co
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "client-exports", family: "clientExports",
-  title: "client exports merchant", order: 60, catalogOrder: 500,
+  title: "client exports merchant", order: 90, catalogOrder: 100000,
   configKey: null, summary: true, dependencies: [],
   maxRequestBytes: 131072,
   tools: () => [],
@@ -11,7 +11,7 @@ export default defineMerchantProvider({
     {
       "prefix": null,
       "text": "Customer client export reads original metadata and retains its completion receipt. After a lost response, inspect merchant_client_export_status; legacy exports require explicit adoption of the inspected complete files digest. File delivery reads the original five payloads and receipt without running the seller or generated code.",
-      "order": 330
+      "order": 370
     }
   ],
   load: () => import("../client-exports.mjs"),

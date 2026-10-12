@@ -4,7 +4,7 @@ import { receivingTools } from "../catalog/receiving.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "receiving", family: "receiving",
-  title: "receiving merchant", order: 110, catalogOrder: 70,
+  title: "receiving merchant", order: 140, catalogOrder: 80,
   configKey: "receiving", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "receivingConnection", privateExports: true,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_receiving_",
       "text": "For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser.",
-      "order": 320
+      "order": 360
     }
   ],
   load: () => import("../receiving.mjs"),

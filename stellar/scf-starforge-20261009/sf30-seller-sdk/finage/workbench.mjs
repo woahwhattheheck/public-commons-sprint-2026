@@ -127,7 +127,7 @@ function declaration(plan) {
     }};
 }
 async function capturedSource(base, name, expected) {
-  if (typeof name !== 'string' || !/^captures\/[a-f0-9]{64}\.(json|ndjson|jsonl|capture\.json)$/.test(name)) throw new Error('Capture paths must be content-addressed original JSON/JSONL or capture metadata.');
+  if (typeof name !== 'string' || !/^captures\/[a-f0-9]{64}\.(json|ndjson|jsonl|events\.jsonl|capture\.json|stream\.capture\.json|recovery\.capture\.json)$/.test(name)) throw new Error('Capture paths must be content-addressed original JSON/JSONL or capture metadata.');
   const path = join(base, name), canonical = await realpath(path), inside = relative(base, canonical);
   if (inside === '..' || inside.startsWith('../') || isAbsolute(inside)) throw new Error('Capture is outside the prepared dataset directory.');
   const bytes = await regular(path), digest = sha(bytes);

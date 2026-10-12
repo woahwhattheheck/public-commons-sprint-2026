@@ -4,7 +4,7 @@ import { publisherTools } from "../catalog/publisher.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "publishers", family: "publishers",
-  title: "publishers merchant", order: 410, catalogOrder: 420,
+  title: "publishers merchant", order: 450, catalogOrder: 460,
   configKey: "publishers", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "publisherConnection", privateExports: false,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_publish",
       "text": "For a publisher connection, list merchant_publishers and explicitly open its declared workspace; saved enabled refreshes resume. Inspect native source, plan, candidate and target before review/publication. Use original run UUIDs, review IDs and schedule revisions; reopen buyer files by the recorded handoff UUID. Close only the exact owned publisher instance.",
-      "order": 350
+      "order": 390
     }
   ],
   load: () => import("../publisher.mjs"),

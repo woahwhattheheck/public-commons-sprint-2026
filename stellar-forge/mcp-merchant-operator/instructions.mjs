@@ -5,17 +5,17 @@ const coreSections = [
   {
     "prefix": null,
     "text": "Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly.",
-    "order": 190
-  },
-  {
-    "prefix": null,
-    "text": "Only this MCP process can stop its owned runtimes.",
     "order": 230
   },
   {
     "prefix": null,
+    "text": "Only this MCP process can stop its owned runtimes.",
+    "order": 270
+  },
+  {
+    "prefix": null,
     "text": "Payment verification and settlement remain in the original seller and configured facilitator.",
-    "order": 400
+    "order": 440
   }
 ];
 

@@ -4,7 +4,7 @@ import { grantsWorkspaceTools } from "../catalog/grantsgov-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "grants-workspaces", family: "grantsWorkspaces",
-  title: "grants workspaces merchant", order: 320, catalogOrder: 290,
+  title: "grants workspaces merchant", order: 360, catalogOrder: 320,
   configKey: "grantsWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 524288,
   configuration: { input: "grantsWorkspaceConnection", privateExports: true,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_grants_",
       "text": "For Grants.gov opportunity research, list merchant_grants_workspaces and open the original host alias. The returned browser shares its native writer. Save original query revisions, capture the complete provider page/detail chain or import a declared original packet, and inspect capture status after lost replies. Create immutable complete or selected editions, page every original notice with the returned snapshot, retain full qualification/workshare revisions and compare source editions. Prepare the original SF30 dataset and follow its complete native cursor. Existing publisher tools operate the original draft, reviewed snapshot/revision, SF82 release and SF88 buyer intent/session; continue their own saved operations after interruption. Save the original export SHA, inspect its receiving manifest and use grants-download or grantsgov-receive to retain every byte across MCP restart, then restore the original complete source workspace or selected edition. Close the exact owned instance returned by status.",
-      "order": 110
+      "order": 150
     }
   ],
   load: () => import("../grantsgov-workspace.mjs"),

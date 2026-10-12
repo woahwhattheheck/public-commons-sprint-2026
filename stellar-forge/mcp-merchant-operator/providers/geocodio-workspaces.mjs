@@ -4,7 +4,7 @@ import { geocodioWorkspaceTools } from "../catalog/geocodio-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "geocodio-workspaces", family: "geocodioWorkspaces",
-  title: "geocodio workspaces merchant", order: 190, catalogOrder: 160,
+  title: "geocodio workspaces merchant", order: 220, catalogOrder: 180,
   configKey: "geocodioWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "geocodioWorkspaceConnection", privateExports: true,

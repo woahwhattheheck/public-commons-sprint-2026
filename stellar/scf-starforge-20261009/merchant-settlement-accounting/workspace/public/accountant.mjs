@@ -23,6 +23,8 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   let rows={items:[],total:0,offset:0,limit:PAGE},rowToken=0,selectedRow='';
   let fileData=null,fileToken=0,fileLoading=false,preview=null,previewOffset=0,previewToken=0;
   const labelDrafts=new Map();
+  let buyerData=null,buyerToken=0;
+  const buyerMode=()=>$('accountant-source-type').value==='buyer';
   const revisionQuery=()=>revisionChoice?{revisionId:revisionChoice}:{};
   const base=()=>'/api/accountant/handoffs/'+encode(selected);
   function controls(){
@@ -34,23 +36,30 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   }
   function invalidatePreview(){preview=null;++previewToken;previewOffset=0;$('accountant-preview-panel').hidden=true;controls();}
   function labelsFromForm(){
+    if(buyerMode())return [];
     return [...$('accountant-labels').querySelectorAll('tr[data-option]')].map(row=>{
       const label={optionId:row.dataset.option};for(const input of row.querySelectorAll('input[data-field]'))label[input.dataset.field]=input.value.trim();return label;
     });
   }
   function retainLabels(){if(sourceKey&&source)labelDrafts.set(sourceKey,labelsFromForm());}
   function sourceArgs(){
+    if(buyerMode()){if(!buyerData)throw new Error('Choose the original issued buyer source JSON.');return {buyerSource:{name:buyerData.file.name,sha256:buyerData.sha256,contentBase64:buyerData.base64}};}
     const [kind,value]=$('accountant-source').value.split(':');
     if(!value)throw new Error('Choose a completed reconciliation or retained period close.');
     return kind==='close'?{closeId:value}:{runId:value};
   }
   async function selectSource(){
-    const key=$('accountant-source').value;if(key===sourceKey&&source&&source.workspaceRevision===state.revision)return;
+    const key=buyerMode()?(buyerData?'buyer:'+buyerData.sha256:''):$('accountant-source').value;if(key===sourceKey&&source&&source.workspaceRevision===state.revision)return;
     retainLabels();source=null;sourceKey=key;createId=crypto.randomUUID();const token=++sourceToken;controls();
     $('accountant-labels').innerHTML='';$('accountant-source-summary').textContent=key?'Loading the original source…':'Capture a reconciliation to prepare an accountant handoff.';
     if(!key)return;
-    const result=await api('/api/accountant/source?'+new URLSearchParams(sourceArgs()));
+    const result=buyerMode()?await api('/api/accountant/buyer-source/preview',sourceArgs()):await api('/api/accountant/source?'+new URLSearchParams(sourceArgs()));
     if(token!==sourceToken||key!==sourceKey)return;source=result;
+    if(result.sourceKind==='buyer-expense-period'){
+      const b=result.source.buyer;
+      $('accountant-source-summary').innerHTML='<p><strong>Issued buyer period</strong> · '+esc(result.rowCount)+' allocation lines · '+esc(b.dataContext)+'</p><dl class="record-values">'+definitions({workspace:b.workspaceId,period:b.periodId,close:b.closeId,edition:b.sequence,sourceSha256:result.buyerSourceSha256,expenseTotals:result.totals,creditTotals:result.creditTotals,netTotals:result.netTotals,originalReview:b.review})+'</dl><p class="hint">Original recognition dates, cost centers, projects and native units remain attached. Journal valuations and returned book references are reviewed separately.</p>';
+      controls();return;
+    }
     const draft=new Map((labelDrafts.get(key)??[]).map(item=>[item.optionId,item]));
     $('accountant-labels').innerHTML=result.options.map(option=>{
       const saved=draft.get(option.optionId)??{};
@@ -62,6 +71,8 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     controls();
   }
   function renderSources(){
+    const buyer=buyerMode();$('accountant-merchant-source').hidden=buyer;$('accountant-buyer-source-fields').hidden=!buyer;$('accountant-label-table').hidden=buyer;
+    $('accountant-source').required=!buyer;$('accountant-source').disabled=buyer;$('accountant-buyer-source').required=buyer;$('accountant-buyer-source').disabled=!buyer;
     const completed=state.runs.filter(run=>run.status==='complete');
     const choices=[...metadata.closes.map(close=>['close:'+close.id,'Close · '+close.name+' · revision '+close.revision]),...completed.map(run=>['run:'+run.id,'Run · '+run.name+' · '+date(run.createdAt)])];
     options($('accountant-source'),choices.length?choices:[['','No completed sources yet']]);
@@ -69,7 +80,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   }
   function renderHistory(){
     const search=$('accountant-search').value.trim().toLowerCase();
-    const found=metadata.handoffs.filter(row=>!search||[row.id,row.name,row.actor,row.source.runId,row.source.periodClose?.id].some(value=>String(value??'').toLowerCase().includes(search)));
+    const found=metadata.handoffs.filter(row=>!search||[row.id,row.name,row.actor,row.source.runId,row.source.periodClose?.id,row.source.buyer?.workspaceId].some(value=>String(value??'').toLowerCase().includes(search)));
     $('accountant-list').innerHTML=found.slice(0,historyLimit).map(row=>'<button type="button" data-accountant-id="'+esc(row.id)+'"'+(row.id===selected?' class="selected" aria-current="true"':'')+'><strong>'+esc(row.name)+'</strong><span>'+esc(date(row.createdAt))+' · '+esc(row.rowCount)+' events</span><span>'+esc(row.revisions.length)+' returned versions</span></button>').join('')||'<p class="hint">No saved handoffs match this search.</p>';
     $('accountant-more').hidden=found.length<=historyLimit;
   }
@@ -84,6 +95,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     options($('accountant-revision'),revisions,revisionChoice);
     const download=(name,title)=>'<a class="button" download href="'+base()+'/download/'+encode(name)+(revisionChoice?'?'+new URLSearchParams(revisionQuery()):'')+'">'+esc(title)+'</a>';
     $('accountant-downloads').innerHTML=[download('accountant.csv','Accountant CSV'),download('review.html','Offline review'),download('accountant-handoff.tar','Complete handoff archive'),download(current?'return.json':'handoff.json',current?'Returned result JSON':'Handoff JSON')].join('');
+    if(detail.source.kind==='buyer-expense-period')$('accountant-downloads').innerHTML+=download('original-buyer-source.json','Original buyer source')+(current?download('buyer-return.json','Return to buyer workspace'):'');
     if(detail.source.adjustments)$('accountant-downloads').innerHTML+=[download('adjustments.json','Original adjustments JSON'),download('adjustments.csv','Adjustment history CSV'),download('adjustments.html','Adjustment review')].join('');
     $('accountant-lineage').innerHTML=definitions({...detail.source,preparedBy:record.actor,preparedAt:record.createdAt,...(current?{returnId:current.id,returnedBy:current.actor,returnedAt:current.createdAt}:{} )});
     $('accountant-issues-panel').hidden=!(detail.issues?.length);
@@ -100,10 +112,10 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   function renderRowDetail(){
     const row=rows.items.find(item=>item.rowId===selectedRow);
     if(!row){$('accountant-row-detail').innerHTML='<p class="hint">Select an event to inspect its exact source and returned fields.</p>';return;}
-    $('accountant-row-detail').innerHTML='<h3>Accountant’s returned fields</h3><dl class="record-values">'+definitions({status:row.externalStatus,bookReference:row.externalBookRef,accountCode:row.externalAccountCode,note:row.externalNote,updatedBy:row.updatedBy,updatedAt:row.updatedAt})+'</dl><h3>Merchant’s retained account labels</h3><dl class="record-values">'+definitions(row.label??{})+'</dl>'+(row.adjustments?'<h3>Frozen payment adjustments</h3><dl class="record-values">'+definitions(row.adjustments)+'</dl>':'')+'<h3>Complete original event</h3><dl class="record-values">'+definitions(row.original)+'</dl><details class="history-detail"><summary>Retained row identity</summary><pre>'+esc(JSON.stringify({rowId:row.rowId,eventId:row.eventId,sourceRowSha256:row.sourceRowSha256},null,2))+'</pre></details>';
+    $('accountant-row-detail').innerHTML='<h3>Accountant’s returned fields</h3><dl class="record-values">'+definitions({status:row.externalStatus,bookReference:row.externalBookRef,accountCode:row.externalAccountCode,note:row.externalNote,updatedBy:row.updatedBy,updatedAt:row.updatedAt})+'</dl><h3>Retained account labels</h3><dl class="record-values">'+definitions(row.label??{})+'</dl>'+(row.adjustments?'<h3>Frozen payment adjustments</h3><dl class="record-values">'+definitions(row.adjustments)+'</dl>':'')+'<h3>Complete original source</h3><dl class="record-values">'+definitions(row.original)+'</dl><details class="history-detail"><summary>Retained row identity</summary><pre>'+esc(JSON.stringify({rowId:row.rowId,...(row.sourceLineId?{sourceLineId:row.sourceLineId}:{eventId:row.eventId}),sourceRowSha256:row.sourceRowSha256},null,2))+'</pre></details>';
   }
   function renderRows(){
-    $('accountant-rows').innerHTML=rows.items.map(row=>'<tr'+(row.rowId===selectedRow?' class="selected"':'')+'><td><button class="inspect" type="button" data-accountant-row="'+esc(row.rowId)+'">'+esc(row.original.method+' '+row.original.routeId)+'</button><span class="subtle">'+esc(row.original.network)+'</span><span class="subtle mono">'+esc(short(row.eventId))+'</span><span class="subtle">'+esc(row.original.verificationScope)+'</span></td><td class="exact">'+esc(row.original.amountAtomic)+'<span class="subtle">'+esc(row.label?.unitLabel||'atomic units')+'</span>'+(row.adjustments?'<span class="subtle">Returned '+esc(row.adjustments.refundedAmountAtomic)+' · remaining '+esc(row.adjustments.remainingAmountAtomic)+'</span><span class="subtle">Cancelled '+esc(row.adjustments.cancelledAmountAtomic)+' · '+esc(row.adjustments.refundStatus)+'</span>':'')+'</td><td>'+esc(row.externalStatus)+'</td><td>'+esc(row.externalBookRef||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">No events match these filters.</td></tr>';
+    $('accountant-rows').innerHTML=rows.items.map(row=>'<tr'+(row.rowId===selectedRow?' class="selected"':'')+'><td><button class="inspect" type="button" data-accountant-row="'+esc(row.rowId)+'">'+esc(row.sourceLineId?row.kind+' · '+row.original.center_code+' · '+row.original.recognition_date:row.original.method+' '+row.original.routeId)+'</button><span class="subtle">'+esc(row.original.network)+'</span><span class="subtle mono">'+esc(short(row.sourceLineId??row.eventId))+'</span><span class="subtle">'+esc(row.sourceLineId?row.original.project:row.original.verificationScope)+'</span></td><td class="exact">'+esc(row.sourceLineId?row.original.amount:row.original.amountAtomic)+'<span class="subtle">'+esc(row.label?.unitLabel||'atomic units')+'</span>'+(row.adjustments?'<span class="subtle">Returned '+esc(row.adjustments.refundedAmountAtomic)+' · remaining '+esc(row.adjustments.remainingAmountAtomic)+'</span><span class="subtle">Cancelled '+esc(row.adjustments.cancelledAmountAtomic)+' · '+esc(row.adjustments.refundStatus)+'</span>':'')+'</td><td>'+esc(row.externalStatus)+'</td><td>'+esc(row.externalBookRef||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">No events match these filters.</td></tr>';
     $('accountant-row-page').textContent=rows.total?(rows.offset+1)+'–'+Math.min(rows.offset+rows.items.length,rows.total)+' of '+rows.total+' events':'0 events';
     $('accountant-row-previous').disabled=rows.offset===0;$('accountant-row-next').disabled=rows.offset+rows.items.length>=rows.total;renderRowDetail();
   }
@@ -120,7 +132,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     $('accountant-preview-metrics').innerHTML=metrics([['Matched changes',summary.appliedRows],['Unchanged',summary.unchangedRows],['Conflicts',summary.conflictRows],['Unknown rows',summary.unknownRows],['Missing from return',summary.missingRows]]);
     $('accountant-preview-message').textContent='Saving retains this full file and its matching results. Matched changes update the bookkeeping view; conflicting and missing events keep their previous returned values.';
     const results=returned.results??[];previewOffset=Math.min(previewOffset,Math.max(0,Math.floor((results.length-1)/PAGE)*PAGE));
-    $('accountant-preview-results').innerHTML=results.slice(previewOffset,previewOffset+PAGE).map(row=>'<tr><td>'+esc(row.rowNumber)+'</td><td class="mono">'+esc(short(row.eventId))+'</td><td>'+esc(row.status)+'</td><td>'+esc(row.issues?.length?JSON.stringify(row.issues):'Exact original source fields match')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">The file contains no data rows.</td></tr>';
+    $('accountant-preview-results').innerHTML=results.slice(previewOffset,previewOffset+PAGE).map(row=>'<tr><td>'+esc(row.rowNumber)+'</td><td class="mono">'+esc(short(row.sourceLineId??row.eventId))+'</td><td>'+esc(row.status)+'</td><td>'+esc(row.issues?.length?JSON.stringify(row.issues):'Exact original source fields match')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">The file contains no data rows.</td></tr>';
     $('accountant-preview-page').textContent=results.length?(previewOffset+1)+'–'+Math.min(previewOffset+PAGE,results.length)+' of '+results.length+' returned rows':'0 returned rows';
     $('accountant-preview-previous').disabled=previewOffset===0;$('accountant-preview-next').disabled=previewOffset+PAGE>=results.length;controls();
   }
@@ -131,6 +143,19 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     const wanted=metadata.handoffs.some(row=>row.id===selected)?selected:metadata.handoffs[0]?.id??'';
     renderHistory();await selectHandoff(wanted,{reset:false});controls();
   }
+  $('accountant-source-type').addEventListener('change',()=>{sourceKey='';source=null;renderSources();});
+  $('accountant-buyer-source').addEventListener('change',()=>attempt(async()=>{
+    const file=$('accountant-buyer-source').files[0],token=++buyerToken;buyerData=null;source=null;sourceKey='';createId=crypto.randomUUID();controls();
+    if(!file){$('accountant-buyer-source-status').textContent='Choose an issued source exported by the buyer workspace.';return;}
+    if(!file.size||file.size>64*1024*1024)throw new Error('Choose original buyer source JSON up to 64 MiB.');
+    $('accountant-buyer-source-status').textContent='Reading original source…';
+    const bytes=new Uint8Array(await file.arrayBuffer()),digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+    let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
+    if(token!==buyerToken||$('accountant-buyer-source').files[0]!==file)return;
+    buyerData={file,base64:btoa(binary),sha256:[...digest].map(x=>x.toString(16).padStart(2,'0')).join('')};
+    $('accountant-buyer-source-status').textContent=file.name+' · '+file.size+' bytes · SHA256 '+buyerData.sha256;
+    await selectSource();
+  }));
   $('accountant-source').addEventListener('change',()=>attempt(selectSource));
   $('accountant-create-form').addEventListener('input',()=>{createId=crypto.randomUUID();retainLabels();});
   $('accountant-create-form').addEventListener('submit',event=>{event.preventDefault();attempt(async()=>{

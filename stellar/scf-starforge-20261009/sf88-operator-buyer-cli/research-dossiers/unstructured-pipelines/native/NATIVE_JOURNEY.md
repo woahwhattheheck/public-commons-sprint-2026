@@ -68,7 +68,7 @@ node /absolute/manual/managed-pipelines-native.mjs \
   --temporary-root /absolute/admitted/temporary-root
 ```
 
-Include the selected temporary volume and the complete browser/TLS peak in the original native resource request. An equipped macOS or other supported host can run the same source and retained journey with its installed Chromium, Playwright, Node, and OpenSSL; use the original operation's destination and custody when selecting that host.
+Include the selected temporary volume and the complete browser/TLS peak in the original native resource request. The selected original product also requires the maintained `util-linux flock` command for its account and workspace locks. Use an equipped Linux host with the existing Chromium, Playwright, Node, OpenSSL and `flock` runtime. The host entry's temporary-directory selection is portable; the selected product's platform requirements still apply. Use the original operation's destination and custody when selecting another equipped host.
 
 The outer command creates the one local TLS context and launches its child with `NODE_EXTRA_CA_CERTS`. The child uses original `openPipelineOperations` and `startDossierWorkspace`, native `fetch`, and the maintained browser assets. The API key exists only in the child process and is supplied through the configured environment variable. The selected provider API URL and profile digest remain stable across a resumed operation.
 

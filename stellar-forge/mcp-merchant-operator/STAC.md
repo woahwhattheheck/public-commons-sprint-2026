@@ -11,6 +11,14 @@ and portable receiving. The client attaches to that host through its original
 session bootstrap, cookie and CSRF contract. It does not create another imagery
 store, processing engine, buyer session or host process.
 
+## Prescient customer access
+
+The same client also exposes the complete original Prescient profile, review,
+approval, explicit SDK session and portable customer receiving lifecycle.
+[Prescient client operations](./PRESCIENT.md) documents host delivery aliases,
+the independent configuration revision, retained commands, Node/CLI/MCP access,
+and original operation reconciliation after a lost response.
+
 ## Attach the running original host
 
 Use Node 22 or newer. Keep the original host's startup output in a private file.

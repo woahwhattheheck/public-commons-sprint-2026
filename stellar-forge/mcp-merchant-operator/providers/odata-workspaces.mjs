@@ -4,7 +4,7 @@ import { odataWorkspaceTools } from "../catalog/odata-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "odata-workspaces", family: "odataWorkspaces",
-  title: "odata workspaces merchant", order: 170, catalogOrder: 130,
+  title: "odata workspaces merchant", order: 200, catalogOrder: 150,
   configKey: "odataWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "odataWorkspaceConnection", privateExports: true,

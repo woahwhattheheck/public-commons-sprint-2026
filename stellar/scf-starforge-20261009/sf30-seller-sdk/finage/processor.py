@@ -147,7 +147,7 @@ def iso_seconds(value):
         return None
 
 def normalized_time(raw, unit):
-    out = {"raw": cell(raw), "unit": unit, "unixNs": None, "utc": None}
+    out = {"value": raw, "raw": cell(raw), "unit": unit, "unixNs": None, "utc": None}
     if raw is None or unit not in UNITS:
         return out
     value = decimal(raw)
@@ -177,8 +177,8 @@ DEFAULT_COLUMNS = [
     {"name": name, "path": path} for name, path in [
         ("record_id", "/id"), ("source_id", "/sourceId"), ("source_sha256", "/sourceSha256"),
         ("source_kind", "/sourceKind"), ("record_kind", "/kind"), ("symbol", "/symbol"),
-        ("customer_symbol", "/customerSymbol"), ("event_time", "/raw/t"),
-        ("event_time_kind", "/fields/t/kind"), ("event_time_unit", "/time/unit"),
+        ("customer_symbol", "/customerSymbol"), ("event_time", "/time/value"),
+        ("event_time_kind", "/time/raw/kind"), ("event_time_unit", "/time/unit"),
         ("event_time_unix_ns", "/time/unixNs"), ("event_time_utc", "/time/utc"),
         ("price", "/values/price"), ("bid", "/values/bid"), ("ask", "/values/ask"),
         ("size", "/values/size"), ("bid_size", "/values/bidSize"), ("ask_size", "/values/askSize"),

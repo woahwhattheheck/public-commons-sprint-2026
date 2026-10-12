@@ -4,7 +4,7 @@ import { usaSpendingWorkspaceTools } from "../catalog/usaspending-workspace.mjs"
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "usa-spending-workspaces", family: "usaSpendingWorkspaces",
-  title: "usa spending workspaces merchant", order: 310, catalogOrder: 270,
+  title: "usa spending workspaces merchant", order: 350, catalogOrder: 300,
   configKey: "usaSpendingWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "usaSpendingWorkspaceConnection", privateExports: true,

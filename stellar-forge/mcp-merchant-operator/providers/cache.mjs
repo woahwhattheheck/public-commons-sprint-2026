@@ -4,7 +4,7 @@ import { cacheControlTools } from "../catalog/controls.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "cache", family: "cache",
-  title: "cache merchant", order: 490, catalogOrder: 30,
+  title: "cache merchant", order: 530, catalogOrder: 40,
   configKey: null, summary: false, dependencies: [],
   maxRequestBytes: 131072,
   tools: cacheControlTools,
@@ -12,7 +12,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_cache_",
       "text": "Cache invalidation requires the current owned instance and an explicit route or all:true.",
-      "order": 210
+      "order": 250
     }
   ],
   load: () => import("../controls.mjs"),

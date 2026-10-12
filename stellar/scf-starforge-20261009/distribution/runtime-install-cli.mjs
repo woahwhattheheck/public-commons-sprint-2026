@@ -10,8 +10,8 @@ const HELP = `Starforge customer runtime installation (Linux, Node 22.16+, Pytho
 
 runtime-install prepare --dir NEW_DIRECTORY --archive ORIGINAL.tgz --sha256 HASH
   [--native] [--feature NAME ...] [--operator] [--pins EXACT_PINS.json]
-runtime-install install --dir DIRECTORY [--offline] [--cache CACHE_DIRECTORY] [--node-headers NODE_HEADER_PREFIX]
-runtime-install resume --dir DIRECTORY [--offline] [--cache CACHE_DIRECTORY] [--node-headers NODE_HEADER_PREFIX]
+runtime-install install --dir DIRECTORY [--adopt-existing] [--offline] [--cache CACHE_DIRECTORY] [--node-headers NODE_HEADER_PREFIX]
+runtime-install resume --dir DIRECTORY [--adopt-existing] [--offline] [--cache CACHE_DIRECTORY] [--node-headers NODE_HEADER_PREFIX]
 runtime-install inspect --dir DIRECTORY [--load] [--source]
 runtime-install run --dir DIRECTORY -- ORIGINAL_STARFORGE_COMMAND [ARGUMENTS...]
 runtime-install upgrade --from PREVIOUS_DIRECTORY --dir NEW_DIRECTORY
@@ -24,6 +24,9 @@ runtime-install compare --before DIRECTORY --after DIRECTORY
 Preparation unpacks and matches one original source archive, selects exact native
 dependencies from that release, and writes an inspectable private installation.
 Install uses the normal npm registry/cache. Only declared native install hooks run.
+--adopt-existing receives a complete retained node_modules and its original lock.
+It checks the source-selected profile, exact imports and native operations under
+this installation's lease, including a PREPARED runtime. It never starts npm.
 --offline uses the existing cache; native source preparation also requires matching
 local Node headers (--node-headers prefix containing include/node) and a compiler.
 Each SQLite readiness check executes an isolated in-memory database transaction.
@@ -34,15 +37,15 @@ Use the resulting sourceRoot and dependencyRoot in the original host/container p
 const COMMON_SELECTION = ['--native', '--feature', '--operator', '--pins'];
 const OPTIONS = {
   prepare: ['--dir', '--archive', '--sha256', ...COMMON_SELECTION],
-  install: ['--dir', '--offline', '--cache', '--node-headers'],
-  resume: ['--dir', '--offline', '--cache', '--node-headers'],
+  install: ['--dir', '--offline', '--cache', '--node-headers', '--adopt-existing'],
+  resume: ['--dir', '--offline', '--cache', '--node-headers', '--adopt-existing'],
   inspect: ['--dir', '--load', '--source'],
   run: ['--dir'],
   upgrade: ['--from', '--dir', '--archive', '--sha256', ...COMMON_SELECTION, '--offline', '--cache', '--node-headers'],
   recover: ['--from', '--dir', '--offline', '--cache', '--node-headers'],
   compare: ['--before', '--after'],
 };
-const FLAGS = new Set(['--native', '--operator', '--offline', '--load', '--source']);
+const FLAGS = new Set(['--native', '--operator', '--offline', '--load', '--source', '--adopt-existing']);
 
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && args[0] === '--help') { console.log(HELP); return 0; }
@@ -75,7 +78,8 @@ export async function main(args = process.argv.slice(2)) {
   } else {
     const directory = requireValue('--dir');
     if (command === 'install' || command === 'resume') {
-      result = await installRuntime({ directory, offline: !!values['--offline'], cache: values['--cache'], nodeHeaders: values['--node-headers'] });
+      result = await installRuntime({ directory, offline: !!values['--offline'], cache: values['--cache'],
+        nodeHeaders: values['--node-headers'], adoptExisting: !!values['--adopt-existing'] });
     } else if (command === 'inspect') {
       result = await inspectRuntimeInstall({ directory, load: !!values['--load'], source: !!values['--source'] });
     } else {
@@ -100,6 +104,7 @@ export async function main(args = process.argv.slice(2)) {
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
   main().then(code => { process.exitCode = code; }).catch(error => {
-    console.error(JSON.stringify({ error: error.code ?? 'RUNTIME_INSTALL_ERROR', message: error.message }));
+    console.error(JSON.stringify({ error: error.code ?? 'RUNTIME_INSTALL_ERROR', message: error.message,
+      ...(error.inspection ? { inspection: error.inspection } : {}) }));
     process.exitCode = error.code === 'RUNTIME_INSTALL_ALREADY_RUNNING' ? 75 : 1;
   });

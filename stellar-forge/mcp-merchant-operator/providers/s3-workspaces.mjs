@@ -4,7 +4,7 @@ import { s3WorkspaceTools } from "../catalog/s3-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "s3-workspaces", family: "s3Workspaces",
-  title: "s3 workspaces merchant", order: 140, catalogOrder: 100,
+  title: "s3 workspaces merchant", order: 170, catalogOrder: 110,
   configKey: "s3Workspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "s3WorkspaceConnection", privateExports: true,

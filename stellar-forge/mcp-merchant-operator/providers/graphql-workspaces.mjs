@@ -4,7 +4,7 @@ import { graphqlWorkspaceTools } from "../catalog/graphql-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "graphql-workspaces", family: "graphqlWorkspaces",
-  title: "graphql workspaces merchant", order: 130, catalogOrder: 90,
+  title: "graphql workspaces merchant", order: 160, catalogOrder: 100,
   configKey: "graphqlWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 8388608,
   configuration: { input: "graphqlWorkspaceConnection", privateExports: true,
