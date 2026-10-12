@@ -1,0 +1,28 @@
+{
+  "archive": "/dev/shm/l2d-corpus-initializer-dba55/corpus-seeded096.zip",
+  "bytes": 2175528,
+  "sha256": "2ccf5d2baa331ef3cbc74a7e85426ff227da504b679cca5304b873befbd7adb6",
+  "source_dataset_sha256": "149f6aac17aff2e33750b4e1b6cebd3cef1c39d47ae49a3a7ed77315cb7838a7",
+  "members": {
+    "submission.py": {
+      "bytes": 7274,
+      "sha256": "fc9a38bc29af71b585fe3dc0ad2e2bc0009f638b5963223565ca63f64f95d048"
+    },
+    "warmstart.py": {
+      "bytes": 11647,
+      "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+    },
+    "warmstart_bank.npz": {
+      "bytes": 2170687,
+      "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+    },
+    "requirements.txt": {
+      "bytes": 124,
+      "sha256": "0f5a5b5644c3c2edb8e034cacefeb27958f0b23f7b10e678b434766cfc23cfa5"
+    },
+    "THIRD_PARTY_LICENSE.txt": {
+      "bytes": 1081,
+      "sha256": "f336777bdd81be6b6fc92d405775d63673aa4010cadfd95457a5fbf42a51c7b7"
+    }
+  }
+}
