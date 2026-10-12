@@ -354,9 +354,11 @@ descriptor without another manuscript or data file.
 
 The complete [submission operating guide](GRANT_SUBMISSION.md) covers the
 issuer-form mapping, exact copy-format counts, receiving and source adoption.
-The maintained implementation is grant-submission.mjs plus the four
-dist/grant-submission assets, registered in the existing browser-assets
-declaration. Continue the original Site and issuer-submission operation with
+The maintained implementation is grant-submission.mjs, the four original
+dist/grant-submission assets and the three dist/grant-plan modules, registered
+in the existing browser-assets declaration. The same editor receives a complete
+native SF47 planning JSON or ZIP, lets staff review its exact source and selected
+revision, and applies the accepted planning material to the existing working draft. Continue the original Site and issuer-submission operation with
 this same complete source.
 
 ## Review the operating product before the application
@@ -375,3 +377,7 @@ The complete composer and installed source contract is in
 [GRANT_COMPOSITION.md](GRANT_COMPOSITION.md). Its public customer projection,
 reviewer opening and submission workspace are composed into the same current
 application edition before the four reader identities are emitted.
+
+### Maintain the financial application source
+
+The [merchant financial application chapter](GRANT_FINANCIAL_OPERATIONS.md) connects the current manuscript to settlement accounting, invoices, payment plans and Xero handover. The same composer accepts **--finance-commit** to select the actual merged product and preserves it through later manuscript refreshes. The concise nine answers and complete companion remain the original reader's source, and its current application identity also flows into **Prepare submission**.
