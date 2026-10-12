@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import signal
 from pathlib import Path
 import tempfile
 import threading
@@ -57,7 +58,12 @@ class Console:
                                  metadata.get("headers",[]),metadata.get("finalURL"),metadata.get("observedAt"))
         raise InputError("Unknown operator action")
 
-def serve(root,port=0):
+def serve(root,port=0,*,expected_binding=None,startup_format=None):
+    if startup_format not in (None,"json"): raise InputError("Choose JSON managed startup")
+    binding=None;launch=None
+    if expected_binding is not None or startup_format=="json":
+        from managed import require_binding
+        binding=require_binding(root,expected_binding)
     ws=Workspace(root);console=Console(ws)
     class Handler(BaseHTTPRequestHandler):
         server_version="StarforgeOAI/1.0"
@@ -100,6 +106,10 @@ def serve(root,port=0):
                 if url.path in {"/browser.mjs","/style.css"}:
                     return self.send(200,(HERE/url.path[1:]).read_bytes(),
                         "text/javascript; charset=utf-8" if url.path.endswith("mjs") else "text/css; charset=utf-8")
+                if url.path=="/api/launch":
+                    self.valid(True)
+                    if launch is None:return self.send(404,{"error":"This console has no managed launch"})
+                    return self.send(200,launch)
                 if url.path=="/api/state":
                     return self.send(200,{**ws.state(),"workerError":console.error,
                         "running":bool(console.worker and console.worker.is_alive())})
@@ -155,10 +165,20 @@ def serve(root,port=0):
                 return self.send(200,console.action(body["action"],body.get("payload",{})))
             except (InputError,ValueError,KeyError,OSError) as e:return self.send(400,{"error":str(e)})
     server=ThreadingHTTPServer(("127.0.0.1",port),Handler)
-    print(json.dumps({"url":"http://127.0.0.1:"+str(server.server_port),"workspace":str(ws.root),"pid":os.getpid()}),flush=True)
+    if binding is not None:
+        from managed import startup
+        launch=startup(server,binding,console.token)
+    print(json.dumps(launch if startup_format=="json" else
+        {"url":"http://127.0.0.1:"+str(server.server_port),"workspace":str(ws.root),"pid":os.getpid()}),flush=True)
+    previous_term=None
+    if binding is not None and threading.current_thread() is threading.main_thread():
+        previous_term=signal.getsignal(signal.SIGTERM)
+        def terminate(signum,frame):raise KeyboardInterrupt
+        signal.signal(signal.SIGTERM,terminate)
     try:server.serve_forever(poll_interval=0.2)
     except KeyboardInterrupt:pass
     finally:
+        if previous_term is not None:signal.signal(signal.SIGTERM,previous_term)
         ws.cancel.set()
         if console.worker:console.worker.join()
         server.server_close();ws.close()
