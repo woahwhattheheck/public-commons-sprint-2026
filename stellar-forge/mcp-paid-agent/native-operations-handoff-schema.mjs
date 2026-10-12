@@ -14,7 +14,7 @@ export const nativeOperationsHandoffOperations=Object.freeze({
   export:spec(['id','intent_ids'],{id,inbox_alias:alias,
     intent_ids:{type:'array',minItems:1,maxItems:100,uniqueItems:true,items:id},
     max_verify_bytes:{type:'integer',minimum:0,maximum:1073741824}},
-    'Retain this exact selection before calling the original SF88 exporter once. A repeated ID must keep the same ordered intent IDs, alias and verification limit. A saved handoff is reopened unchanged after a lost reply; an incomplete capture can continue only under its retained source binding. Default retained-output verification bound is 256 MiB per original output.'),
+    'Retain this exact selection before calling the original SF88 exporter once. A repeated ID must keep the same ordered intent IDs, alias and verification limit. A saved handoff is reopened unchanged after a lost reply; a not-started capture can continue only under its retained source binding, while an ambiguous started capture never recaptures under the same ID. Default retained-output verification bound is 256 MiB per original output.'),
   list:spec([],{...page},'Page this workspace’s retained handoff requests. Listed file/receipt presence is not current content verification; inspect verifies the selected original.'),
   inspect:spec(['id'],{id,sha256:hash},
     'Verify the exact saved original handoff and return its identity, outcome counts and receipt status without opening or recapturing its source Inbox. An optional SHA pins the expected saved source.'),
