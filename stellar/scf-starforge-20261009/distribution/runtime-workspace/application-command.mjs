@@ -15,6 +15,7 @@ import { n8nStartup } from './application-n8n.mjs';
 import { redisStartup } from './application-redis.mjs';
 import { openApiStartup } from './application-openapi.mjs';
 import { arcgisAgentStartup } from './application-arcgis.mjs';
+import { s3MerchantStartup } from './application-s3-merchant.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { pricingStartup } from './application-pricing.mjs';
@@ -424,6 +425,23 @@ export function observeApplicationOutput(request, directory, context = {}) {
           schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
           operationId: directory.split('/').at(-1), command: request.command,
           source: 'original-command-stdout', observedAt: now(), url, links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 's3' && request.args?.[0] === 'workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.s3-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await s3MerchantStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
         });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;

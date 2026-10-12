@@ -1,4 +1,8 @@
 import type { IncomingMessage } from 'node:http';
+import type { Library } from '../../resource-library/library.mjs';
+import type { InputFilePolicy, InputStorageLimits, InputFileProgress, InputFileSource,
+  JobInputFiles, CustomerInputSummary } from '../inputs/index.mjs';
+export * from '../inputs/index.mjs';
 import type { CheckoutEntry, JobCheckout, WorkspaceOptions } from '../index.mjs';
 
 export type IntakePhase = 'DRAFT' | 'READY' | 'IMPORTED' | 'RECOVERABLE' | 'WITHDRAWN';
@@ -11,7 +15,7 @@ export interface IntakeFunction {
   id: string; description: string; inputSchema: Record<string, unknown>;
   example: Record<string, unknown>; maxInputBytes: number; maxOutputBytes: number; timeoutMs: number;
   output: {format: 'json' | 'bytes'; contentType: string; filename: string};
-  payment: IntakePayment; purchaseUrl: string; functionSha256: string;
+  payment: IntakePayment; purchaseUrl: string; functionSha256: string; inputFiles?: InputFilePolicy;
 }
 export interface IntakeCatalog {
   schema: 'stellar-forge.job-intake-catalog.v1'; publicOrigin: string; serviceName: string;
@@ -21,7 +25,7 @@ export interface IntakeCatalog {
 export interface IntakeTask {
   id: string; kind: 'prepare' | 'import' | 'withdraw';
   state: 'RUNNING' | 'CANCELLING' | 'COMPLETE' | 'FAILED' | 'CANCELLED' | 'INTERRUPTED';
-  startedAt: string; completedAt: string | null; error: string | null;
+  startedAt: string; completedAt: string | null; error: string | null; progress?: InputFileProgress | null;
 }
 export interface IntakeEntry {
   id: string; reference: string; label: string; revision: number; phase: IntakePhase;
@@ -34,11 +38,11 @@ export interface IntakeEntry {
   requestAttempts: number; withdrawalAttempts: number;
   hasAccessToken: boolean; hasTicket: boolean; handoffSha256: string | null; responseSha256: string | null;
   checkoutId: string | null; checkout: CheckoutEntry | {id: string; error: string} | null;
-  lastError: string | null; task: IntakeTask | null;
+  lastError: string | null; task: IntakeTask | null; inputFiles: CustomerInputSummary | null;
   actions: {prepare: boolean; import: boolean; withdraw: boolean; stop: boolean};
 }
 export interface IntakeDetail extends IntakeEntry {
-  input: Record<string, unknown>; function: IntakeFunction;
+  input: Record<string, unknown>; function: IntakeFunction; inputSources: Record<string, InputFileSource>;
   history: Array<{at: string; action: string; revision: number; previousRevision?: number; [key: string]: unknown}>;
 }
 export interface IntakeStatus {
@@ -49,7 +53,7 @@ export interface IntakeList {
   q?: string; phase?: '' | IntakePhase; offset?: number; limit?: number;
 }
 export interface JobIntake {
-  readonly directory: string;
+  readonly directory: string; readonly inputFiles: JobInputFiles;
   discover(options: {origin: string; signal?: AbortSignal}): Promise<IntakeCatalog>;
   draft(options: {
     catalog: IntakeCatalog; functionId: string; input: Record<string, unknown>; label?: string;
@@ -70,13 +74,14 @@ export interface JobIntake {
 export interface IntakeOptions {
   directory: string; lease: {assertHeld(): void}; checkout: JobCheckout;
   transport?: WorkspaceOptions['transport']; fetchImpl?: typeof fetch;
-  requestTimeoutMs?: number; maxConcurrent?: number;
+  requestTimeoutMs?: number; maxConcurrent?: number; transferTimeoutMs?: number;
+  fileRoots?: string[]; library?: Library; inputFileStorage?: InputStorageLimits;
 }
 export function openJobIntake(options: IntakeOptions): Promise<JobIntake>;
 export function jobIntakeExtension(intake: JobIntake): Promise<{
   additionalAssets: Array<{route: string; type: string; bytes: Buffer}>;
   authenticatedRoute(options: {
-    request: IncomingMessage; url: URL; send(value: unknown, status?: number): void;
+    request: IncomingMessage; url: URL; signal?: AbortSignal; send(value: unknown, status?: number): void;
     body(maximum?: number): Promise<any>;
   }): Promise<boolean>;
 }>;

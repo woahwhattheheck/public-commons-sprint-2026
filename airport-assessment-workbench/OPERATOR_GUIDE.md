@@ -4,25 +4,61 @@ This local application connects an airport's source records, readiness workpaper
 
 The interface implements the interactive-tool direction in [ACRP 03-88, *Guide to Establishing Artificial Intelligence Adoption at Airports*](https://rip.trb.org/View/2772553). Its generic assessment and planning functions support both strategy/governance and organizational readiness/implementation. It does not promote a commercial AI vendor. Practical airport expertise, research participation, assessment judgments and procurement authority belong to the participating research and airport teams.
 
-## Start the application
+## Install and start
 
-Use Python 3.10 or later. The runtime uses Python's standard library and the included original source parser; no database server, cloud account or hosted model credential is required.
+Use Python 3.10 or later, with its standard `venv` and `pip` components. The application uses Python's standard library and the included source parser. Once Python is installed, this wheel needs no additional package download, database server, cloud account or model credential.
 
-From the project directory:
+Save the wheel and its accompanying guide, notices and optional scripts in one folder you control. If you received a complete release ZIP, extract it to that folder. The commands below run from this release folder; they do not require a source checkout or environment activation.
 
-```sh
-python operator/server.py --workspace ./airport-workspace --demo --port 8771
+### Windows - Command Prompt
+
+Open Command Prompt in the release folder. The Python Launcher `py -3` must select Python 3.10 or later.
+
+```bat
+py -3 --version
+py -3 -m venv airport-env
+airport-env\Scripts\python.exe -m pip install --no-index --no-deps ^
+  airport_assessment_workbench-0.1.0-py3-none-any.whl
+airport-env\Scripts\python.exe -m airport_operator ^
+  --workspace .\airport-workspace --demo --port 8771
 ```
 
-Open `http://127.0.0.1:8771`. The application creates `airport-workspace/projects.sqlite3` and its SQLite journal beside it. Keep that directory on storage with room for the original source files and project backups. Start the same command again to reopen saved work; loading an existing example leaves its saved edits intact.
+The supplied `install-windows.cmd` performs the same local installation and verifies the exact wheel hash first. Then `start-windows.cmd` opens the same local application. These scripts are for Command Prompt; no PowerShell execution-policy change is needed.
 
-The separately named authored planning example exercises comparison, capacity, measurement and retained-decision workflows:
+### macOS / Linux / other POSIX systems
 
 ```sh
-python operator/server.py --workspace ./airport-workspace --authored-demo --port 8771
+python3 --version
+python3 -m venv airport-env
+./airport-env/bin/python -m pip install --no-index --no-deps \
+  ./airport_assessment_workbench-0.1.0-py3-none-any.whl
+./airport-env/bin/python -m airport_operator \
+  --workspace ./airport-workspace --demo --port 8771
 ```
 
-The server binds to loopback and checks the local request origin. It is intended for a trusted local operator. A production multi-user deployment needs its own authenticated access, authorization, retention and backup arrangement; the local actor field records the supplied operator label.
+Alternatively, run `sh install-posix.sh`, followed by `sh start-posix.sh`. The scripts locate their own release directory, so spaces in that directory's path are supported. If the operating system does not supply Python's `venv` or `pip`, equip those standard components before running the offline wheel install.
+
+### Open, stop and reopen
+
+Open **http://127.0.0.1:8771** in a current browser. Keep the terminal running while you use the application. Press **Ctrl+C** in that terminal to stop it. Reopen with the same start command and the same workspace directory. Loading an existing example leaves its saved edits intact.
+
+The workspace is `airport-workspace/projects.sqlite3`, with SQLite's accompanying journal files. Store the whole workspace on writable storage with room for original source files and backups. The environment contains the software; the workspace contains your saved work. Reinstalling the wheel does not select or restore a different workspace.
+
+For the separate authored calculator, capacity, measurement and decision example, stop the server and start with `--authored-demo`:
+
+```bat
+airport-env\Scripts\python.exe -m airport_operator ^
+  --workspace .\airport-workspace --authored-demo --port 8771
+```
+
+```sh
+./airport-env/bin/python -m airport_operator \
+  --workspace ./airport-workspace --authored-demo --port 8771
+```
+
+Use **New project** for your own research work. The public and authored examples remain separate saved projects.
+
+The server binds to loopback and checks the local request origin. It is intended for a trusted local operator. A production multi-user deployment needs its own authenticated access, authorization, retention and backup arrangement. The local author field records the operator-supplied label.
 
 ## Follow one complete assessment
 
@@ -45,7 +81,7 @@ Traffic values are revenue passenger enplanements for the stated calendar year. 
 
 The separate authored example contains declared preference weights, dollar-denominated calculator inputs, a shared staff pool, example observations and successive planning decisions. Its costs, rates, time savings and capacity are teaching inputs authored for the demonstrator. The example's name, workpaper basis fields and source notes retain that distinction.
 
-`demo/sources/source_manifest.json` identifies sixteen public original or derived reference files with hashes and acquisition/source relationships. The application also retains the manifest itself, making seventeen attached reference originals. It loads only this explicit public manifest. Sales research and private coordination files are outside the demonstration package.
+`demo/sources/source_manifest.json` identifies sixteen public original or derived reference files with hashes and acquisition/source relationships. The application also retains the manifest itself, making seventeen attached reference originals. Only this explicit public manifest is loaded by the examples.
 
 ## Import semantics
 
@@ -79,24 +115,90 @@ Choose `project`, `airport` or `use_case` as the recipient scope. Airport and us
 
 Original attachments require explicit source IDs for recipient exports. A source file may contain rows for more than one airport; selecting a scoped report does not filter the bytes inside a chosen original workbook. The default recipient bundle includes no original attachments. Complete historical decision snapshots, imported source cell payloads and the private event/request history remain in the private continuation archive.
 
-```sh
-python operator/server.py --workspace ./airport-workspace \
-  --export acrp-public-example --audience airport --airport-id faa-DEN \
-  --output ./den-assessment.zip
+### Export a recipient handover
 
-python operator/server.py --workspace ./airport-workspace \
+The **Export & history** section provides the same scope choices as the command line. For your own project, use its actual ID from the saved project or `http://127.0.0.1:8771/api/projects` while the server is running. The IDs below select the included examples.
+
+Windows:
+
+```bat
+airport-env\Scripts\python.exe -m airport_operator ^
+  --workspace .\airport-workspace ^
+  --export acrp-public-example --audience airport ^
+  --airport-id faa-DEN --output .\den-assessment.zip
+```
+
+POSIX:
+
+```sh
+./airport-env/bin/python -m airport_operator \
+  --workspace ./airport-workspace \
+  --export acrp-public-example --audience airport \
+  --airport-id faa-DEN --output ./den-assessment.zip
+```
+
+### Save the complete working project
+
+A recipient report ZIP is a handover. A `private_restore` ZIP is the complete editable recovery package, including retained originals and history. Export each project that you need to preserve.
+
+Windows:
+
+```bat
+airport-env\Scripts\python.exe -m airport_operator ^
+  --workspace .\airport-workspace ^
+  --export acrp-authored-planning-example --audience private_restore ^
+  --output .\airport-continuation.zip
+```
+
+POSIX:
+
+```sh
+./airport-env/bin/python -m airport_operator \
+  --workspace ./airport-workspace \
   --export acrp-authored-planning-example --audience private_restore \
   --output ./airport-continuation.zip
+```
 
-python operator/server.py --workspace ./recovered-airport-workspace \
+Keep a separate copy of that archive on your normal backup storage. To preserve a workspace by copying its database files instead, first stop the server and any export/edit process, then copy the complete workspace directory together. The application's private continuation archive is the portable route for an individual project.
+
+### Restore on this or another equipped computer
+
+Install the same wheel, place your private continuation ZIP beside the release, and choose a **new workspace directory**. Stop any server already using port 8771.
+
+Windows:
+
+```bat
+airport-env\Scripts\python.exe -m airport_operator ^
+  --workspace .\recovered-airport-workspace ^
+  --restore .\airport-continuation.zip --port 8771
+```
+
+POSIX:
+
+```sh
+./airport-env/bin/python -m airport_operator \
+  --workspace ./recovered-airport-workspace \
   --restore ./airport-continuation.zip --port 8771
 ```
+
+The restore command imports the project and then starts the server. Open **http://127.0.0.1:8771**, select the restored project and continue editing. For later reopening, use the same recovered workspace path and omit `--restore`:
+
+```bat
+airport-env\Scripts\python.exe -m airport_operator ^
+  --workspace .\recovered-airport-workspace --port 8771
+```
+
+```sh
+./airport-env/bin/python -m airport_operator \
+  --workspace ./recovered-airport-workspace --port 8771
+```
+
 
 A private archive includes all retained original bytes, complete state, import receipts, reviewed snapshots, the event hash chain and saved request results. Restore validates the exact file inventory and hashes, complete revision chain, final state binding and request-event correspondence before one atomic database write. An identical restore is idempotent. A project ID containing different current work is retained; restore the archive into a separate workspace directory to preserve both branches.
 
 The local limits are 32 MiB per original file, 128 MiB of unique project originals, 48 MiB of saved project state, 100,000 records per collection, and 192 MiB/4,096 files per expanded archive. Large operational histories should use an explicitly documented cohort or extract. No input is silently truncated to fit these limits; normal UI record previews and page sizes are labelled separately.
 
-## Developer interface
+## Technical appendix: existing API
 
 `GET /api/catalog` returns the engine's complete collection/field schema, input choices, source contract and application limits. A project retains the original flat eighteen domain collections plus its workspace revision, original-file inventory and import history.
 
@@ -154,3 +256,31 @@ The same request ID and unchanged action envelope return the original saved resu
 The domain engine's retained original-source journey covers the actual FAA workbook and explicitly authored cost, readiness, capacity and measurement cases. The native application journey on October 11, 2026 additionally exercised both example loaders, original XLSX preview and selected-row adoption, explicit collision replacement, CSV mapping into observations, request replay, stale revision handling, a new reviewed decision, an airport-scoped recipient export, complete private export, fresh-database restore and continued editing. Original source bytes and calculated workpapers survived that continuation.
 
 The application does not imply completed airport interviews, an awarded research agreement or deployed airport AI. The [ACRP implementation memorandum template](https://onlinepubs.trb.org/onlinepubs/acrp/ACRP_Implementation_TechMemo_Template_2019.pdf) and original project statement remain available as source references for the research team's subsequent guide and handover work.
+
+## Troubleshooting and support
+
+| Situation | Action |
+|---|---|
+| Python command is missing or older than 3.10 | Install or select Python 3.10 or later. On Windows, `py -3 --version` shows the selected interpreter. |
+| `venv` or `pip` is unavailable | Equip the operating system's standard Python environment components, then rerun the offline installation. The wheel itself has no package dependencies. |
+| The browser cannot connect | Keep the start terminal open and use the exact printed loopback URL. If the port is in use, stop the earlier server or start with `--port 8772` and open that printed address. |
+| The installed module cannot be found | Use the environment's Python path shown above. Installing under one Python and starting a different Python selects a different package environment. |
+| An edit or import reports HTTP 409 | Refresh the current project, compare the changed record and reconcile the intended edit. Keep a retry's original request identity when the action is unchanged; do not overwrite another operator's revision. |
+| An import reports an existing record ID | Use the preview and make an explicit replacement decision with the current record revision. Unselected and conflicting rows remain in the receipt. |
+| A restored project conflicts with current work | Retain both branches by restoring into a new workspace directory. A matching project ID is not permission to overwrite different work. |
+| Disk space or archive limits are reached | Free or select adequate writable storage and retain complete originals. Review the limits above before choosing a documented source cohort or extract. |
+| A private restore rejects the ZIP | Confirm it is a complete `private_restore` export, not a recipient handover, and preserve the original file and error. Hash/inventory/revision failures need the intact original archive. |
+
+For installation or software support, contact **Bryce, Token Junkie Labs: brycembusiness2@gmail.com**. Include the application version, platform, exact command and error text. Keep private airport records and continuation archives within your agreed support exchange.
+
+## Software identity and retained notices
+
+This release uses the unchanged **airport-assessment-workbench 0.1.0** wheel, **772,648 bytes**:
+
+```text
+38c9fbdbaf76b51dc0e91c1625ff8624f98241017466d99160b70ea4d633ce30
+```
+
+The installed entry point is `airport-workbench = airport_operator.server:main`; `python -m airport_operator` calls that same application's main function. The wheel contains the complete Python application, browser assets, public source manifest and the two labelled examples. The pictured overview is the original published application capture.
+
+The unchanged accompanying **LICENSE** and **SOURCE-NOTICES.md** apply to the application and retained reference materials. This guide updates installation and handover instructions for a wheel recipient. It uses the already completed application's original validation; no fresh airport study, model execution or operational deployment is asserted by this packaging edition.

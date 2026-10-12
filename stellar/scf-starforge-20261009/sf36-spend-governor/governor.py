@@ -34,6 +34,7 @@ REQUEST_FIELDS=("request_id", "actor", "service", "network", "asset", "scheme", 
 HTTP_METHODS={"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"}
 EMPTY_BODY_SHA256=hashlib.sha256(b'').hexdigest()
 CONSENT_KIND='owner-consent/complete-intent-v2'
+RESUME_CONSENT_KIND='owner-consent/resume-expired-v1'
 
 class Denied(ValueError):
     """Decision is DENIED: safely do not create or submit a payment."""
@@ -179,13 +180,17 @@ def token_claims(key:bytes,value:str)->dict[str,Any]:
         raise Denied('authorization signature or encoding invalid') from e
 
 
-def issue_consent(consent_key:bytes,request:dict,expiry_utc:str)->str:
+def issue_consent(consent_key:bytes,request:dict,expiry_utc:str,*,resume_release_journal_mac:str|None=None)->str:
     """OPERATORS ONLY. One specific request, max amount, resource and short expiry."""
     r=validate_request(request)
     expiry=as_time(expiry_utc)
     if expiry<=now_utc():raise Denied('consent expiry must be in the future')
     if (expiry-now_utc()).total_seconds()>900:raise Denied('consent expires later than 15 minute safety window')
-    return token_for(secret(consent_key,'consent key'),{'kind':CONSENT_KIND,'request':r,'expires_at':expiry_utc})
+    claims={'kind':CONSENT_KIND,'request':r,'expires_at':expiry_utc}
+    if resume_release_journal_mac is not None:
+        _hash(resume_release_journal_mac,'resume release journal MAC')
+        claims.update(kind=RESUME_CONSENT_KIND,release_journal_mac=resume_release_journal_mac)
+    return token_for(secret(consent_key,'consent key'),claims)
 
 
 def issue_finality_attestation(operator_key:bytes,reservation_id:str,actual_amount:str,receipt_ref:str,proof_sha256:str)->str:
@@ -195,6 +200,57 @@ def issue_finality_attestation(operator_key:bytes,reservation_id:str,actual_amou
     if not isinstance(receipt_ref,str) or not receipt_ref.strip() or len(receipt_ref)>512:raise Denied('empty/oversize receipt ref')
     if not isinstance(proof_sha256,str) or not re.fullmatch('[0-9a-f]{64}',proof_sha256):raise Denied('invalid original provider receipt sha256')
     return token_for(secret(operator_key,'operator key'),{'kind':'finality-attestation','request_id':reservation_id,'actual_amount':actual_amount,'receipt_ref':receipt_ref,'proof_sha256':proof_sha256})
+
+
+EXPIRY_ATTESTATION_KIND = 'expired-untransferred-authorization/v1'
+EXPIRY_RESUME_KIND = 'resume-expired-authorization/v1'
+EXPIRY_ATTESTATION_FIELDS = frozenset({
+    'kind', 'request_id', 'request_digest', 'reservation_generation',
+    'network', 'expiry_ledger', 'observed_ledger', 'proof_sha256',
+})
+EXPIRY_RESUME_FIELDS = frozenset({
+    'kind', 'request_id', 'request_digest', 'release_journal_mac',
+    'release_proof_sha256', 'expires_at',
+})
+
+
+def _hash(value, label):
+    if not isinstance(value, str) or not re.fullmatch(r'[0-9a-f]{64}', value):
+        raise Denied('invalid ' + label)
+    return value
+
+
+def _expiry_claim(claim):
+    if type(claim) is not dict or set(claim) != EXPIRY_ATTESTATION_FIELDS or \
+            claim.get('kind') != EXPIRY_ATTESTATION_KIND:
+        raise Denied('wrong expired-authorization attestation')
+    if not isinstance(claim['request_id'], str) or not ID_PATTERN.fullmatch(claim['request_id']):
+        raise Denied('invalid expired-authorization reservation')
+    for key in ('request_digest', 'reservation_generation', 'proof_sha256'):
+        _hash(claim[key], key)
+    if claim['network'] not in NETWORKS:
+        raise Denied('invalid expired-authorization network')
+    if type(claim['expiry_ledger']) is not int or not (1 <= claim['expiry_ledger'] < 2**32) or \
+            type(claim['observed_ledger']) is not int or \
+            not (claim['expiry_ledger'] < claim['observed_ledger'] < 2**32):
+        raise Denied('later synchronized ledger must exceed authorization expiry')
+    return claim
+
+
+def issue_expired_authorization_attestation(operator_key: bytes, *, request_id: str,
+        request_digest: str, reservation_generation: str, network: str,
+        expiry_ledger: int, observed_ledger: int, proof_sha256: str) -> str:
+    """Trusted observer only: bind proven expiry AND no transfer to one generation.
+
+    The ledger does not infer nonpayment from time or an absent local receipt.
+    The original source/chain observer must establish those facts before issuing.
+    This is a release attestation, never a zero-value settlement receipt.
+    """
+    claim = _expiry_claim({'kind': EXPIRY_ATTESTATION_KIND, 'request_id': request_id,
+        'request_digest': request_digest, 'reservation_generation': reservation_generation,
+        'network': network, 'expiry_ledger': expiry_ledger,
+        'observed_ledger': observed_ledger, 'proof_sha256': proof_sha256})
+    return token_for(secret(operator_key, 'operator key'), claim)
 
 
 class Governor:
@@ -242,7 +298,7 @@ class Governor:
 
     def _audit(self)->dict[str,dict]:
         """Verify HMAC chain AND persisted reservation projection before each mutation."""
-        prior='0'*64; ledger={}; seq_expect=1
+        prior='0'*64; ledger={}; generations={}; releases={}; seq_expect=1
         for seq,serialized,parent,mac in self.db.execute('SELECT sequence,event,prior_mac,mac FROM journal ORDER BY sequence'):
             if seq!=seq_expect or parent!=prior:raise Denied('journal sequence/parent integrity failure')
             calc=hmac.new(self.ak,(parent+'\n'+serialized).encode('ascii'),hashlib.sha256).hexdigest()
@@ -253,6 +309,33 @@ class Governor:
                 rr=evt['reservation'];rid=rr['request_id']
                 if rid in ledger:raise Denied('duplicate reservation event')
                 ledger[rid]=rr.copy()
+                generations[rid]=mac
+            elif evt['type']=='expire_untransferred':
+                claim=_expiry_claim(evt['attestation'])
+                rid=claim['request_id'];rr=ledger.get(rid)
+                if rr is None or rr['state']!='reserved' or \
+                        rr['request_digest']!=claim['request_digest'] or \
+                        rr['network']!=claim['network'] or \
+                        generations.get(rid)!=claim['reservation_generation']:
+                    raise Denied('invalid expired-authorization release transition')
+                rr.update(state='expired',actual='0',
+                    receipt_ref='expired-authorization/'+claim['reservation_generation'],
+                    proof_sha256=claim['proof_sha256'])
+                releases[rid]=mac
+            elif evt['type']=='resume_expired':
+                rid=evt['request_id'];rr=ledger.get(rid)
+                if rr is None or rr['state']!='expired' or \
+                        rr['request_digest']!=evt['request_digest'] or \
+                        releases.get(rid)!=evt['release_journal_mac'] or \
+                        rr['proof_sha256']!=evt['release_proof_sha256']:
+                    raise Denied('invalid expired-authorization resume transition')
+                day=evt['day']
+                if not isinstance(day,str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}',day):
+                    raise Denied('invalid resumed reservation day')
+                as_time(day+'T00:00:00+00:00')
+                rr.update(day=day,state='reserved',actual='0',receipt_ref='',proof_sha256='')
+                generations[rid]=mac
+                releases.pop(rid,None)
             elif evt['type']=='finalize':
                 rid=evt['request_id'];rr=ledger.get(rid)
                 if rr is None or rr['state']!='reserved':raise Denied('invalid finalize transition')
@@ -301,6 +384,103 @@ class Governor:
         except BaseException:
             self.db.execute('ROLLBACK');raise
 
+
+    def _authorization_events(self, request_id):
+        """Read generation identities inside the caller's already audited transaction."""
+        generation=release=None
+        for serialized,mac in self.db.execute('SELECT event,mac FROM journal ORDER BY sequence'):
+            event=json.loads(serialized);kind=event['type']
+            if kind=='reserve' and event['reservation']['request_id']==request_id:
+                generation=mac
+            elif event.get('request_id')==request_id and kind=='resume_expired':
+                generation=mac;release=None
+            elif kind=='expire_untransferred' and event['attestation']['request_id']==request_id:
+                release=mac
+        return generation,release
+
+    def authorization(self, request:dict)->dict:
+        """Read the original audited row and its immutable authorization generation."""
+        r=validate_request(request);digest=hashlib.sha256(canonical(r)).hexdigest()
+        self.db.execute('BEGIN')
+        try:
+            row=self._audit().get(r['request_id'])
+            if row is None or not hmac.compare_digest(row['request_digest'],digest):
+                raise Denied('original reservation and approved request required')
+            generation,release=self._authorization_events(r['request_id'])
+            result={'reservation':row.copy(),'generation':generation,'release_journal_mac':release}
+            self.db.execute('COMMIT')
+            return result
+        except BaseException:
+            self.db.execute('ROLLBACK');raise
+
+    def release_expired_authorization(self, attestation_token:str)->dict:
+        """Release one expired, independently observed untransferred generation.
+
+        Original source and chain verification belong to the trusted worker.
+        A stopped process or elapsed wall clock alone cannot issue this transition.
+        """
+        claim=_expiry_claim(token_claims(self.ok,attestation_token))
+        self.db.execute('BEGIN IMMEDIATE')
+        try:
+            row=self._audit().get(claim['request_id'])
+            if row is None or row['request_digest']!=claim['request_digest'] or \
+                    row['network']!=claim['network']:
+                raise Denied('expired authorization does not bind original reservation')
+            generation,release=self._authorization_events(claim['request_id'])
+            if generation!=claim['reservation_generation']:
+                raise Denied('expired authorization belongs to a different reservation generation')
+            receipt='expired-authorization/'+generation
+            if row['state']=='expired':
+                if row['actual']!='0' or row['proof_sha256']!=claim['proof_sha256'] or \
+                        row['receipt_ref']!=receipt:
+                    raise Denied('expired-authorization release conflicts with original proof')
+                self.db.execute('COMMIT')
+                return {'outcome':'IDEMPOTENT_EXPIRED_RELEASE','request_id':claim['request_id'],
+                    'request_sha256':claim['request_digest'],'generation':generation,
+                    'proof_sha256':row['proof_sha256'],'release_journal_mac':release,
+                    'released_atomic_units':row['amount'],'actual':'0','state':'expired'}
+            if row['state']!='reserved':
+                raise Denied('only the original reserved generation can expire')
+            self.db.execute("UPDATE reservations SET state='expired',actual='0',receipt_ref=?,proof_sha256=? WHERE request_id=?",
+                (receipt,claim['proof_sha256'],claim['request_id']))
+            self._append({'type':'expire_untransferred','attestation':claim})
+            _,release=self._authorization_events(claim['request_id'])
+            self.db.execute('COMMIT')
+            return {'outcome':'EXPIRED_AUTHORIZATION_RELEASED','request_id':claim['request_id'],
+                'request_sha256':claim['request_digest'],'generation':generation,
+                'proof_sha256':claim['proof_sha256'],'release_journal_mac':release,
+                'released_atomic_units':row['amount'],'actual':'0','state':'expired'}
+        except BaseException:
+            self.db.execute('ROLLBACK');raise
+
+    def issue_expired_resume_permit(self, request:dict, *, proof_sha256:str,
+                                   expiry_utc:str)->str:
+        """Privileged host only; fresh human consent is additionally required at reserve."""
+        r=validate_request(request);proof=_hash(proof_sha256,'release proof')
+        expiry=as_time(expiry_utc);now=now_utc()
+        if not (0<(expiry-now).total_seconds()<=900):
+            raise Denied('resume permit must expire within 15 minutes')
+        current=self.authorization(r);row=current['reservation']
+        if row['state']!='expired' or row['proof_sha256']!=proof or not current['release_journal_mac']:
+            raise Denied('original authenticated expiry release required')
+        return token_for(self.ok,{'kind':EXPIRY_RESUME_KIND,'request_id':r['request_id'],
+            'request_digest':row['request_digest'],'release_journal_mac':current['release_journal_mac'],
+            'release_proof_sha256':proof,'expires_at':expiry_utc})
+
+    def _validate_expired_resume(self, token, request, digest, prior):
+        claim=token_claims(self.ok,token)
+        if set(claim)!=EXPIRY_RESUME_FIELDS or claim.get('kind')!=EXPIRY_RESUME_KIND or \
+                claim.get('request_id')!=request['request_id'] or claim.get('request_digest')!=digest or \
+                claim.get('release_proof_sha256')!=prior['proof_sha256']:
+            raise Denied('resume permit does not bind the original expiry release')
+        now=now_utc();expiry=as_time(claim.get('expires_at'))
+        if not (0<(expiry-now).total_seconds()<=900):
+            raise Denied('resume permit expired or exceeds its authorization window')
+        _,release=self._authorization_events(request['request_id'])
+        if not release or claim.get('release_journal_mac')!=release:
+            raise Denied('resume permit belongs to another release generation')
+        return claim
+
     def _budget(self,r:dict,day:str,ledger:dict)->dict:
         limits=self.limits.get((r['network'],r['asset']))
         if limits is None:raise Denied('asset/network not allowlisted by operator')
@@ -321,10 +501,10 @@ class Governor:
         ledger=self._audit()
         return {**self._budget(r,now_utc().date().isoformat(),ledger),'note':'Read-only estimate is not a reservation; race requires atomic reserve.'}
 
-    def reserve(self,request:dict,consent_token:str)->dict:
+    def reserve(self,request:dict,consent_token:str,*,resume_authorization_token:str|None=None)->dict:
         r=validate_request(request);day=now_utc().date().isoformat()
         claims=token_claims(self.ck,consent_token)
-        if claims.get('kind')!=CONSENT_KIND or claims.get('request')!=r:
+        if claims.get('kind') not in (CONSENT_KIND,RESUME_CONSENT_KIND) or claims.get('request')!=r:
             raise Denied('explicit owner consent does not bind exactly to this payment request')
         if as_time(claims.get('expires_at'))<=now_utc():raise Denied('explicit owner consent expired')
         digest=hashlib.sha256(canonical(r)).hexdigest()
@@ -334,9 +514,27 @@ class Governor:
             prior=ledger.get(r['request_id'])
             if prior is not None:
                 if prior['request_digest']!=digest:raise Denied('request_id reused with different terms')
+                if prior['state']=='expired' and resume_authorization_token is not None:
+                    resume=self._validate_expired_resume(resume_authorization_token,r,digest,prior)
+                    if claims.get('kind')!=RESUME_CONSENT_KIND or \
+                            claims.get('release_journal_mac')!=resume['release_journal_mac']:
+                        raise Denied('fresh consent must bind this exact expired-authorization release')
+                    budget=self._budget(r,day,ledger)
+                    if not budget['approved']:raise Denied('budget exceeded: '+','.join(budget['denied_by']))
+                    self.db.execute("UPDATE reservations SET day=?,state='reserved',actual='0',receipt_ref='',proof_sha256='' WHERE request_id=?",
+                        (day,r['request_id']))
+                    self._append({'type':'resume_expired','request_id':r['request_id'],
+                        'request_digest':digest,'release_journal_mac':resume['release_journal_mac'],
+                        'release_proof_sha256':resume['release_proof_sha256'],'day':day})
+                    self.db.execute('COMMIT')
+                    return {'outcome':'RESERVED','request_id':r['request_id'],'max_amount':r['max_amount'],
+                        'scheme':r['scheme'],'network':r['network'],'asset':r['asset'],
+                        'audit_required':'RECONCILE_FINALITY','resumed_from':resume['release_journal_mac']}
                 self.db.execute('COMMIT')
                 return {'outcome':'IDEMPOTENT_EXISTING','state':prior['state'],'request_id':r['request_id'],
                         'max_amount':prior['amount'],'actual':prior['actual'],'receipt_ref':prior['receipt_ref']}
+            if claims.get('kind')!=CONSENT_KIND:
+                raise Denied('resumed consent requires its original expired reservation')
             budget=self._budget(r,day,ledger)
             if not budget['approved']:raise Denied('budget exceeded: '+','.join(budget['denied_by']))
             row={'request_id':r['request_id'],'request_digest':digest,'actor':r['actor'],'service':r['service'],
@@ -370,6 +568,7 @@ class Governor:
                 if row['actual']==actual and row['receipt_ref']==receipt and row['proof_sha256']==proof:
                     self.db.execute('COMMIT');return {'outcome':'IDEMPOTENT_FINALIZED','request_id':rid,'actual':actual}
                 raise Denied('finality conflict for already finalized reservation')
+            if row['state']!='reserved':raise Denied('finality requires an active original reservation')
             if amount>parse_amount(row['amount']):raise Denied('actual settlement exceeds signed/reserved maximum')
             if row['scheme']=='exact' and amount!=parse_amount(row['amount']):raise Denied('exact scheme must settle the exact reserved amount')
             if any(x['state']=='settled' and x['network']==row['network'] and x['receipt_ref']==receipt and x['request_id']!=rid for x in ledger.values()):

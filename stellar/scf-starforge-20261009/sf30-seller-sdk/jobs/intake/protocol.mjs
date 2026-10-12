@@ -56,7 +56,7 @@ export function catalogDigest(value) {
 }
 export function validateFunction(value, origin) {
   keys(value, ['id', 'description', 'inputSchema', 'example', 'maxInputBytes', 'maxOutputBytes',
-    'timeoutMs', 'output', 'payment', 'purchaseUrl', 'functionSha256'], 'JOB_INTAKE_FUNCTION_INVALID');
+    'timeoutMs', 'output', 'payment', 'purchaseUrl', 'functionSha256', 'inputFiles'], 'JOB_INTAKE_FUNCTION_INVALID');
   need(FUNCTION_ID.test(value.id ?? '') && !['__proto__', 'constructor', 'prototype'].includes(value.id) &&
     text(value.description, 4096) && object(value.inputSchema) && value.inputSchema.type === 'object' &&
     object(value.inputSchema.properties) && Object.keys(value.inputSchema.properties).length <= 64 &&
@@ -66,6 +66,10 @@ export function validateFunction(value, origin) {
     integer(value.timeoutMs, 100, 3600000), 'JOB_INTAKE_FUNCTION_INVALID');
   need(object(value.output) && ['json', 'bytes'].includes(value.output.format) &&
     text(value.output.contentType, 160) && text(value.output.filename, 100), 'JOB_INTAKE_OUTPUT_INVALID');
+  if (value.inputFiles !== undefined) need(object(value.inputFiles) &&
+    value.inputFiles.schema === 'stellar-forge.job-input-policy.v1' &&
+    HASH.test(value.inputFiles.policySha256 ?? '') && object(value.inputFiles.slots),
+    'JOB_INPUT_POLICY_INVALID');
   const payment = value.payment;
   need(object(payment) && text(payment.scheme, 128) && text(payment.network, 256) &&
     text(payment.asset, 4096) && text(payment.payTo, 4096) &&

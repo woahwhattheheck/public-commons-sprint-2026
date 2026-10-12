@@ -106,6 +106,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   routescan-workspace Operate its saved project through the original local workspace
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  stac                                      Discover imagery, compare scenes and deliver selected assets to customers
   tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
   coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
@@ -152,6 +153,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   opensearch                                 Preflight and run a native OpenSearch merchant
   opensearch-prepare                         Prepare named search routes and the original customer client
   opensearch-workspace                       Save drafts, capture and compare search editions, and prepare merchants
+  opensearch-catalog                         Retain material catalogs, review customer matches and reopen complete handovers
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
   oauth-connection                           Authorize, renew and select QuickBooks companies, Xero tenants or API grants
@@ -215,6 +217,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
   grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
+  grant-demo                                Receive, inspect, open and export the original completed grant purchase
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
   woo-refund                                Record verified order credits and receive original refund handoffs
 
