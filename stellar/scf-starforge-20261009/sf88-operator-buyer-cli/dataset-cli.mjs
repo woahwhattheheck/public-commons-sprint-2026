@@ -5,6 +5,7 @@ import { createDatasetSession, inspectDatasetSession, runDatasetSession,
 import { InputError, need } from './config.mjs';
 import { pathToFileURL } from 'node:url';
 
+const LOST=['inspect-lost-output','recover-lost-output','read-lost-output','export-lost-output'];
 const help = [
   'SF88 dataset acquisition',
   '',
@@ -17,6 +18,12 @@ const help = [
   'recover --session /private/session',
   'export --session /private/session --out /private/dataset-manifest.json',
   'deliver --session /private/session --out /private/dataset-data-room',
+  'inspect-lost-output --session /private/session --page 1 --workspace /private/operator --approved-request /private/approved.json',
+  'recover-lost-output --session /private/session --page 1 --workspace /private/operator --approved-request /private/approved.json',
+  '    --transaction ORIGINAL_TX --request-sha ORIGINAL_APPROVAL_SHA [--expect-attempt ATTEMPT_SHA] [--expect-config CONFIG_SHA]',
+  '    [--rpc-endpoint ALLOWED_ORIGINAL_RPC] [--rpc-proxy-env EXISTING_PROXY_ENV]',
+  'read-lost-output --session /private/session --page 1 [--workspace /private/operator]',
+  'export-lost-output --session /private/session --page 1 [--workspace /private/operator] [--out /private/transfer.json]',
   'accounting --session /private/session [--offset 0] [--limit 100]',
   'finalize --session /private/session [--workspace /private/operator] [--offset 0] [--limit 100]',
   '         [--outbox /private/outbox --merchant-route /private/route.json]',
@@ -27,12 +34,20 @@ const help = [
   'An explicitly reviewed unsigned page can continue after its original ledger proves the intent absent.',
   'Its failed attempt and evidence remain in the same page unpaid-history directory.',
   'accounting reads original saved receipts; finalize reconciles those original reservations without buying again.',
+  'Paid lost-output recovery authenticates the original approved request and independently observes its selected transfer.',
+  'It finalizes the existing reservation and retains a distinct recovery proof; it never invokes a buyer or signer.',
+  'A complete saved page then resumes through the original Dataset status/run/delivery workflow.',
   'Accounting ranges are zero-based; continue from range.nextOffset and review unresolved entries.',
 ].join('\n') + '\n';
 function parse(args) {
   const command = args.shift();
-  need(['init','status','run','recover','export','deliver','accounting','finalize'].includes(command), 'DATASET_COMMAND_REQUIRED');
-  const allowed = command === 'init'
+  need(['init','status','run','recover','export','deliver','accounting','finalize',...LOST].includes(command), 'DATASET_COMMAND_REQUIRED');
+  const allowed = LOST.includes(command)
+    ? new Set(['session','page','workspace',...(['inspect-lost-output','recover-lost-output'].includes(command)
+      ? ['approved-request','expect-attempt','expect-config'] : []),
+      ...(command==='recover-lost-output'?['transaction','request-sha','rpc-endpoint','rpc-proxy-env']:[]),
+      ...(command==='export-lost-output'?['out']:[])])
+    : command === 'init'
     ? new Set(['session','config','workspace','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot'])
     : new Set(['accounting','finalize'].includes(command)
       ? ['session','workspace','offset','limit',...(command==='finalize'?['outbox','merchant-route']:[])]
@@ -46,6 +61,14 @@ function parse(args) {
     flags[name] = args[i+1];
   }
   need(flags.session, 'DATASET_SESSION_REQUIRED');
+  if(LOST.includes(command)) {
+    need(flags.page,'DATASET_LOST_OUTPUT_PAGE_REQUIRED');
+    if(['inspect-lost-output','recover-lost-output'].includes(command))
+      need(flags.workspace&&flags['approved-request'],'DATASET_LOST_OUTPUT_ORIGINAL_INPUTS_REQUIRED');
+    if(command==='recover-lost-output')
+      need(/^[a-f0-9]{64}$/.test(flags.transaction??'')&&/^[a-f0-9]{64}$/.test(flags['request-sha']??''),
+        'LOST_OUTPUT_TRANSACTION_AND_DIGEST_REQUIRED');
+  }
   if(command==='run')need(flags['retry-unpaid']===undefined&&flags['expect-attempt']===undefined||
     flags['retry-unpaid']==='true'&&/^[a-f0-9]{64}$/.test(flags['expect-attempt']??''),
     'DATASET_UNPAID_ATTEMPT_REVIEW_REQUIRED');
@@ -67,6 +90,17 @@ export async function main(args = process.argv.slice(2)) {
   }
   const {command, flags:f} = parse([...args]);
   let report;
+  if(LOST.includes(command)) {
+    const recovery=await import('./dataset-lost-output.mjs');
+    const options={directory:f.session,index:number(f.page,true),workspace:f.workspace,
+      approvedRequestFile:f['approved-request'],expectedAttemptSha256:f['expect-attempt'],
+      expectedConfigSha256:f['expect-config'],transaction:f.transaction,
+      expectedRequestSha256:f['request-sha'],rpcEndpoint:f['rpc-endpoint'],rpcProxyEnv:f['rpc-proxy-env']};
+    if(command==='inspect-lost-output')report=await recovery.inspectDatasetLostOutput(options);
+    if(command==='recover-lost-output')report=await recovery.recoverDatasetLostOutput(options);
+    if(command==='read-lost-output')report=await recovery.readDatasetLostOutputRecovery(options);
+    if(command==='export-lost-output')report=await recovery.exportDatasetLostOutputProof({...options,output:f.out});
+  }
   if (command === 'init') report = await createDatasetSession({
     directory:f.session, configPath:f.config, workspaceDirectory:f.workspace,
     maxPages:number(f['max-pages'],true),
@@ -101,7 +135,7 @@ export async function main(args = process.argv.slice(2)) {
     }
   }
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');
-  if (!process.exitCode && ['RECONCILIATION_REQUIRED','PAGE_LIMIT_REACHED','TOTAL_CAP_REACHED'].includes(report.status))
+  if (!process.exitCode && ['RECONCILIATION_REQUIRED','PAGE_LIMIT_REACHED','TOTAL_CAP_REACHED'].includes(report?.status))
     process.exitCode = 2;
   if (!process.exitCode && command==='finalize' && report.entries.some(entry=>
     !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome)))

@@ -42,6 +42,32 @@ A worker that already has the complete original capture may replace `--source-bu
 
 The source-bundle flag defaults to the included example when neither source flag is provided. The two source flags are mutually exclusive. The retained capture must match the exact identity below.
 
+## Resume the browser from the existing native run
+
+The native terminal phase and the browser phase have separate lifetimes. The original native buyer uses its 90-second operation timeout; the terminal allows that same budget per expected purchase plus a five-minute setup margin. The expected reservation count remains the original number of result pages plus the CSV and edition purchases. The browser begins after the native terminal exits, using the retained buyer journal and original project.
+
+Before launching Chromium, the journey saves `native-result.json`. This contains the complete native result, its canonical SHA-256, the original project revision, and a canonical hash of the private buyer configuration. `result.json` is written after the requested browser arm finishes. A native-only run writes both files when its native workflow completes.
+
+If the process stops during the browser, resume the same output directory on the original receiving host:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/journey.mjs \
+  --resume-browser \
+  --directory /absolute/existing-wqx-product-run \
+  --playwright-module /absolute/installed/playwright \
+  --browser-executable /absolute/installed/chromium
+```
+
+This command reads the original `local-fixture/buyer-config.json`, keeps its existing buyer state and ledger, and restores the fixture-specific environment in the process. The saved configuration stays private. The original capture, saved review, merchant edition, project revision, and buyer configuration are checked before opening the workspace. Browser form edits resume from the original project snapshot, including when a prior interruption occurred between the richer-filter save and the restoration of the original selection.
+
+A completed `exports/browser/browser-result.json` is reused after its four downloads, three screenshots, original capture, and restored project selection are checked. Otherwise the command runs the maintained browser operation with the original buyer. It writes `browser-resume.json` with the actual output paths, and joins the browser outcome to the saved native result. `native-result.json` remains the original native completion. The exclusive existing-directory lock prevents simultaneous browser continuations on one run. Both browser workspaces and Chromium close in the browser operation’s `finally` block.
+
+Runs created before this checkpoint was introduced also use `--resume-browser`. The continuation opens their original project revision and first result, source CSV, and edition delivery intents through the maintained native buyer. Their completed browser files are saved under the same `exports/browser/` directory. If that older run has a complete original `result.json`, the browser is joined to it. Otherwise `browser-resume.json` points directly to the completed browser result. An absent delivery is reported with its original native error and retained intent; continue that exact original native operation before resuming the browser.
+
+Failures in this continuation are saved in `browser-failure.json` with the actual stage. Keep the original native result, buyer records, source files, and any earlier browser output together when moving the completed private handoff. Resume on the original host before moving a run whose native configuration still contains host-specific paths.
+
+The JavaScript entrypoint is also available as `resumeWaterQualityBrowser({ directory, playwrightModule, browserExecutable })` from `browser-resume.mjs`. It uses the same original-source checks, lock, saved configuration, output reuse, and browser implementation as the CLI.
+
 ## Original cohort and source identity
 
 The original acquisition used the deployed Water Quality Portal WQX 3 interface. Its complete capture manifest and every retained member are included in [the source carrier](./examples/potomac-2025-q1.source.json).
@@ -98,6 +124,31 @@ See [PROVIDER.md](./PROVIDER.md) for the original deployed profile semantics and
 12. **Retain the outcome.** The command writes `result.json` only after the full requested operation succeeds. On failure it writes `failure.json` with the actual stage and concise error, preserving the operation's existing files.
 
 The original model and scientific run on this retained cohort produced 1,112 reported A/B limits across 685 results, 452 non-detects, 146 qualified results, 10 reported estimates, 279 strict groups, and 413 rows in default arithmetic. The native join had zero issues, duplicate rows, or conflicting duplicates. These values describe the full cohort. The saved March review has its own selected inventory. Exact scientific result values and comparison reasons remain in the report.
+
+
+## Continue an interrupted native delivery
+
+Keep the existing journey directory, original source edition, local fixture files and SF88 buyer journal. Continue its original page sequence with:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/journey.mjs \
+  --resume-native \
+  --directory /absolute/existing-wqx-journey \
+  --page-size 25 \
+  --browser
+```
+
+Add the same installed Playwright module and Chromium executable options when the host requires them. The original native Python path is read from the saved buyer configuration. The native continuation completes in its terminal child before the existing retained-browser entrypoint starts.
+
+The continuation reopens the original saved project revision, review, complete capture and edition. It validates every recovered result page against its original normalized values, complete Result fields, Station/Activity joins and detection limits; it then follows the saved cursor under the original numbered intent IDs. At page size 25, the complete 1,035-result edition requires 42 result pages, followed by `wqx-journey-original-csv` and `wqx-journey-edition`. A March analysis window changes the review; the prepared edition still contains the whole captured quarter.
+
+`resumeQualityPurchase` uses the original SF88 operation API. Existing complete native output is recovered and its exported body is verified or restored. An existing prepared request with no attempt marker may execute after its original review; a future page uses the next ID in the original sequence. A recorded native attempt is recovered through its retained original output. If that output is still unavailable, `WQX_NATIVE_ATTEMPT_RECOVERY_REQUIRED` identifies the exact intent and its original inspection state so the same worker can finish native wire/output recovery before this command continues.
+
+The original certificate, CONNECT proxy address, signer, policy, SF36 keys and ledger remain bound to the saved buyer profile. Local fixture services start only when an unattempted request needs delivery. The continuation retains its own terminal transcript under `native-resume-attempts/`, preserving the first run's transcript.
+
+After all 44 original purchases at the default page size are available, the command completes the independently copied edition, reopens all original customer deliveries with the authoring capture temporarily relocated, restores that capture and writes the existing `native-result.json` checkpoint. B41A's `--resume-browser` path then opens the same completed native work. The final result records recovered and newly executed requests separately; facilitator and transport counters are scoped to that actual continuation.
+
+`native-resume-progress.json` records the current original page, delivered-row count and cursor. `native-resume-failure.json` retains an interrupted stage and exact native intent when applicable. Repeating the same continuation command after the original worker has ended resumes those retained files and purchases.
 
 ## Original commerce fixture
 

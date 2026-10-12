@@ -167,6 +167,21 @@ const imported = await receiveOpenAlexEdition(dossiers, current.id, {
 existing object. Its caller retains the original workspace lifetime; the
 launch command closes the object it opens when the server stops.
 
+## Review Crossref metadata in the existing question
+
+Add `--crossref-state /absolute/private/crossref-source` to the same workspace
+launch to enable the **DOI metadata** tab. It prepares the exact DOI-bearing
+evidence in an existing question, acquires original metadata and registered
+updates, retains stop/resume progress, and lets the operator receive a reviewed
+edition into this dossier.
+
+The flag alone uses the public API. Optional
+`--crossref-config /absolute/existing-crossref-merchant.json` reuses the
+original merchant account and source settings. The local launcher owns these
+paths and configuration; the browser selects questions and reviewed operations.
+See [Crossref operation, recovery and receiving](CROSSREF.md) for the complete
+operator workflow and preservation contract.
+
 ## Attach the original Valyu research edition
 
 The maintained [Valyu merchant and customer workspace](../../sf30-seller-sdk/valyu/)
@@ -261,6 +276,67 @@ for the complete portable document. The operator's individual source-upload
 control accepts 16 MiB; use the CLI or Node API for a larger allowed original
 response. Typed source content is not shortened by report or portable export.
 
+### Stream a complete dossier archive
+
+Choose **Export → Portable archive** to download a gzip-compressed file with
+the same complete v1 portable JSON, original source bytes and revision chain.
+**Open dossier file** accepts either that archive or an existing uncompressed
+portable JSON file. The browser uploads the selected file directly, without
+parsing and serializing another complete copy.
+
+The CLI streams both JSON and gzip exports. The output is published atomically
+as a new file after the complete stream is written and synchronized:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs export \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --format json.gz --out /private/dossier.research.json.gz
+
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs reopen \
+  --store /private/receiving-workspace --file /private/dossier.research.json.gz \
+  --projection metadata
+```
+
+Omit the projection option for the existing complete source view. Metadata
+returns the saved questions, editions, selections, findings and revision without
+loading every rendered source. Gzip detection uses the input bytes, so renamed
+original archives remain readable.
+
+The receiver stages one original revision or source blob at a time. It validates
+the complete archive, revision chain, source hashes and references before
+extending the saved project. Repeated source editions reuse their normalized
+occurrence index during history validation. Existing matching revisions are
+preserved; a matching continuation appends through the original exclusive
+revision writer. Interrupted reading removes only its temporary staging
+directory, and the complete input can be reopened again.
+
+The original `exportDossier` and object-based `reopen` APIs remain available.
+SDK consumers can use the streaming file helpers through the same index:
+
+```js
+import {
+  openDossierStore, openPortableFile, writePortableFile,
+} from './research-dossiers/index.mjs';
+
+const original = await openDossierStore('/private/research-workspace');
+const download = await original.exportStream(existingDossierId, {compression: 'gzip'});
+const saved = await writePortableFile('/private/dossier.research.json.gz', download);
+
+const receiving = await openDossierStore('/private/receiving-workspace');
+const reopened = await receiving.reopenStream(await openPortableFile(saved.file), {
+  projection: 'metadata',
+});
+```
+
+`exportStream` also supplies an asynchronous readable body for an existing
+HTTP or object-store writer. The local operator streams JSON/gzip downloads on
+its original export route and accepts raw JSON/gzip bytes at
+`POST /api/reopen-stream`, using the same operator session. The original
+`POST /api/reopen` object envelope remains supported. The 256 MiB portable
+limit applies to the complete uncompressed document, with the existing 8 MiB
+revision and 64 MiB source limits. The archive contains every original permitted
+retained source and provider reference under the existing source terms.
+
 ## Native operation
 
 The application was operated through its real Node HTTP server on
@@ -290,8 +366,17 @@ question-specific finding references.
 
 ## Runtime Applications launch contract
 
-The `research-workspace` command serves the same private dossier store used by this SDK and CLI. The runtime Applications entry supplies `--dir`, optional `--edition-adapter`, optional `--openalex-workspace` and `--openalex-module`, and the selected local port. An existing directory reopens the retained questions, source editions, selections, findings and history.
+The `research-workspace` command serves the same private dossier store used by this SDK and CLI. The runtime Applications entry supplies `--dir`, optional `--edition-adapter`, optional `--openalex-workspace` and `--openalex-module`, optional `--crossref-state` and `--crossref-config`, and the selected local port. An existing directory reopens the retained questions, source editions, selections, findings and history.
 
-Startup writes one JSON line containing `mode: "RESEARCH_DOSSIER_WORKSPACE"`, the exact selected `directory`, the actual private `url`, configured `providers`, and `openalexConfigured`. Managed consumers should accept this URL only from this command and the matching `--dir` input. Use the returned URL; its fragment supplies the original capability. SIGINT or SIGTERM closes the HTTP server and the original configured OpenAlex workspace.
+Startup writes one JSON line containing `mode: "RESEARCH_DOSSIER_WORKSPACE"`, the exact selected `directory`, the actual private `url`, configured `providers`, `openalexConfigured`, and `crossrefConfigured`. Managed consumers should accept this URL only from this command and the matching `--dir` input. Use the returned URL; its fragment supplies the original capability. SIGINT or SIGTERM stops and retains Crossref acquisition progress, closes the HTTP server, and closes the original source workspaces opened by the launcher.
 
 An OpenAlex workspace must already contain its original queries and editions. Without an explicit module override, it is opened by the original `research/workspace.mjs` in the same selected source. The Applications configuration retains the chosen directory and module paths; the research application controls source intake, review and exports.
+
+
+### Large saved-cohort receiving
+
+`receiveOpenAlexEdition` requests the original provider's `includeAnalysis: false` source export and still validates the complete manifest, query, cursor chain, raw responses and native bindings before writing its first dossier revision. Older providers may ignore this optional export setting; their complete exports remain accepted.
+
+During receiving, the importer keeps saved dossier metadata and commits each original edition using `projection: 'metadata'`. It builds the full deduplicated source view once when the last page has been committed. The page callback, expected-revision checks, original source fingerprint, retained first metadata snapshot and interrupted-import replay all keep their existing behavior. Generated report contents do not enter retry identity.
+
+For other SDK consumers, `store.getMetadata(id, {revision})` returns the saved revision summary, questions, edition records, selections and findings without reading response bodies. `store.receive(id, {...input, projection: 'metadata'})` validates and retains the original response normally and returns that metadata shape. The default `projection: 'full'` returns the existing complete dossier view. Metadata selections/findings carry their saved occurrence references; use `store.get(id)` for resolved source groups and rendered reports. A completed import returns a full dossier projected at its recorded completion revision.

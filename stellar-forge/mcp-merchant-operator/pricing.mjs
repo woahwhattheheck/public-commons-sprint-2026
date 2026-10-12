@@ -32,10 +32,25 @@ const priceInput = { ...base, sellerSha256: digest, snapshotSha256: digest, comm
 const repriceInput = { ...base, version: uuid, sellerSha256: digest, edits };
 const saveInput = { requestId: uuid, expectedRevision: revision, label: { type: 'string', minLength: 1, maxLength: 100 } };
 const page = { offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 200 } };
-const fileSelection = { ...base, kind: { type: 'string', enum: ['review', 'decision'] }, id: uuid };
+const fileSelection = { ...base, kind: { type: 'string', enum: ['review', 'decision', 'scenario'] }, id: uuid };
 const read = { readOnly: true, idempotent: true };
 const sourceViews = ['routes', 'reviews', 'decisions', 'days', 'sessions', 'observations'];
 const reportViews = ['routes', 'issues', 'historyDays', 'historySessions', 'historyRoutes', 'periodDays', 'periodVariants'];
+const scenarioId = { type: 'string', pattern: '^(?!baseline$)[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' };
+const scenarioChoice = { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' };
+const scenarioGoal = object({ monthlyContributionUsd: usd,
+  marginPct: { type: 'string', pattern: '^(0|[1-9][0-9]?)(\\.[0-9]{1,4})?$' } }, []);
+const scenario = object({ id: scenarioId, label: { type: 'string', minLength: 1, maxLength: 120 },
+  sharedMonthlyFixedUsd: optionalUsd,
+  routes: { type: 'object', properties: {}, additionalProperties: object({
+    unitPriceUsd: usd, priceBasis: { type: 'string', minLength: 4, maxLength: 300 },
+    perFulfilledUsd: optionalUsd, perChallengeUsd: optionalUsd,
+    monthlyPaidTarget: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER } }, []) },
+  goal: scenarioGoal }, ['id','label']);
+const scenarioInput = { ...base, version: uuid, scenarios: { type: 'array', maxItems: 12, items: scenario } };
+const scenarioViews = ['scenarios','routes','goals','suggestionRoutes'];
+const suggestionKind = { type: 'string', enum: ['BREAK_EVEN_PRICE','BREAK_EVEN_VOLUME','TARGET_PRICE','TARGET_VOLUME'] };
+const scenarioPage = { view: { type: 'string', enum: scenarioViews }, scenarioId: scenarioChoice, suggestionKind, ...page };
 const definitions = [
   ['merchant_pricing_status', 'List host-declared pricing workspaces and their process-local capture/file-read state. Does not capture operations or open a workspace.', { ...base }, [], read],
   ['merchant_pricing_open', 'Open the original SF97 workspace model and capture its configured native operations source. Reopening the same alias reuses its original captures. Original per-save compare-and-swap remains shared with the browser.', base, ['workspace'], { idempotent: true }],
@@ -50,6 +65,23 @@ const definitions = [
     { ...base, version: uuid }, ['workspace', 'version'], read],
   ['merchant_pricing_compare', 'Compare two exact retained pricing reports with original seller, commercial, observation-kind and period compatibility. Page the same report view on each side.',
     { ...base, leftVersion: uuid, rightVersion: uuid, view: { type: 'string', enum: reportViews }, ...page }, ['workspace', 'leftVersion', 'rightVersion'], read],
+  ['merchant_pricing_planning_source', 'Read one immutable saved review as a commercial planning source. Page its selected routes, complete ordered payment choices and original commercial assumptions. Original source hashes and unknown costs stay attached.',
+    { ...base, version: uuid, ...page }, ['workspace','version'], read],
+  ['merchant_pricing_planning_preview', 'Compare up to twelve explicit volume, USD quote and cost scenarios using the original saved review and analyzer. Page scenarios, route economics, goals, or a selected suggestion\'s complete route inputs. Suggested plans are applied only by an explicit subsequent operation.',
+    { ...scenarioInput, ...scenarioPage }, Object.keys(scenarioInput), read],
+  ['merchant_pricing_planning_save', 'Save the exact reviewed comparison in the original private scenario store. Preserve requestId, reviewSha256 and the complete inputs across retries. selectedScenarioId is optional and names one explicit scenario.',
+    { ...scenarioInput, requestId: uuid, label: { type: 'string', minLength: 1, maxLength: 100 },
+      reviewSha256: digest, selectedScenarioId: { anyOf: [scenarioId,{ type: 'null' }] } },
+    [...Object.keys(scenarioInput),'requestId','label','reviewSha256'], { idempotent: true }],
+  ['merchant_pricing_planning_list', 'List retained comparison summaries from the original workspace. The native listing retains its newest one hundred entries; every older plan remains loadable by its exact planId.',
+    { ...base, ...page }, ['workspace'], read],
+  ['merchant_pricing_planning_load', 'Reopen one exact saved comparison after restart. Page its scenarios, route inputs and goal suggestions; use kind:scenario with the original manifest/file tools for its complete JSON, CSV and terms.',
+    { ...base, planId: uuid, ...scenarioPage }, ['workspace','planId'], read],
+  ['merchant_pricing_planning_selection', 'Load one explicitly selected saved scenario as commercial draft inputs against the current seller. Capture current observations before saving that draft or using planning_apply.',
+    { ...base, planId: uuid, scenarioId, ...page }, ['workspace','planId','scenarioId'], read],
+  ['merchant_pricing_planning_apply', 'Apply an explicitly selected saved scenario by saving a new original pricing review. Supply the inspected plan review hash, current seller/snapshot hashes, pricing expectedRevision and stable requestId. Equal retries recover through the original pricing save.',
+    { ...base, planId: uuid, scenarioId, reviewSha256: digest, sellerSha256: digest, snapshotSha256: digest, ...saveInput },
+    ['workspace','planId','scenarioId','reviewSha256','sellerSha256','snapshotSha256',...Object.keys(saveInput)], { idempotent: true }],
   ['merchant_pricing_repricing_source', 'Read every complete ordered payment option from the selected original saved pricing review, its seller hash, current price-decision revision and source-release availability.',
     { ...base, version: uuid }, ['workspace', 'version'], read],
   ['merchant_pricing_repricing_preview', 'Review explicit atomic amount changes against the selected saved seller. Each edit names its route, ordered option, expected current amount and new decimal integer amount. The original compiler verifies both configurations and returns the exact review hash.',
@@ -58,7 +90,7 @@ const definitions = [
     { ...repriceInput, ...saveInput, reviewSha256: digest }, [...Object.keys(repriceInput), ...Object.keys(saveInput), 'reviewSha256'], { idempotent: true }],
   ['merchant_pricing_repricing_stage', 'Stage this retained original API price decision through its configured SF82 release store. Use the saved decision and exact reviewSha256. The same stable release ID recovers an interrupted reply; inspect and activate it with the original merchant release controls.',
     { ...base, decision: uuid, reviewSha256: digest }, ['workspace', 'decision', 'reviewSha256'], { idempotent: true }],
-  ['merchant_pricing_manifest', 'Read an original saved pricing-review or price-decision manifest and its exact file hashes. kind:review uses a saved version ID; kind:decision uses a saved decision ID.',
+  ['merchant_pricing_manifest', 'Read an original saved pricing-review, price-decision or scenario-plan manifest and its exact file hashes. kind:review uses a saved version ID; kind:decision uses a saved decision ID; kind:scenario uses a saved planId.',
     fileSelection, ['workspace', 'kind', 'id'], read],
   ['merchant_pricing_file', 'Read SHA-pinned chunks from a file named in the inspected original pricing manifest, including source-package files. Repeat all selectors with readId, expectedSha256 and nextOffset. Reopening a digest after expiry reads the same retained bytes.',
     { ...fileSelection, file: { type: 'string', minLength: 1, maxLength: 4096 }, expectedManifestSha256: digest,
@@ -76,7 +108,7 @@ function check(schema, value) {
   if (schema.enum && !schema.enum.includes(value)) return false;
   if (schema.type === 'null') return value === null;
   if (schema.type === 'integer') return Number.isSafeInteger(value) && value >= (schema.minimum ?? 0) && value <= (schema.maximum ?? Number.MAX_SAFE_INTEGER);
-  if (schema.type === 'array') return Array.isArray(value) && value.length >= (schema.minItems ?? 0) && value.every(item => check(schema.items, item));
+  if (schema.type === 'array') return Array.isArray(value) && value.length >= (schema.minItems ?? 0) && value.length <= (schema.maxItems ?? Infinity) && value.every(item => check(schema.items, item));
   if (schema.type === 'object') return plain(value) && (schema.required ?? []).every(key => Object.hasOwn(value, key)) &&
     Object.entries(value).every(([key, item]) => Object.hasOwn(schema.properties ?? {}, key) ? check(schema.properties[key], item)
       : plain(schema.additionalProperties) ? check(schema.additionalProperties, item) : schema.additionalProperties !== false);
@@ -184,6 +216,57 @@ function reportView(report, args = {}) {
     page: pageOf(lists[kind], args, kind) };
 }
 
+function scenarioMetrics(value) {
+  const { routes, ...summary } = value;
+  return { ...summary, routeCount: routes.length };
+}
+function scenarioSuggestion(value) {
+  const { commercial, terms, volumes, metrics, ...summary } = value;
+  return { ...summary, ...(metrics ? { metrics:scenarioMetrics(metrics) } : {}),
+    ...(volumes ? { volumeRouteCount:volumes.length } : {}) };
+}
+function scenarioSummary(row) {
+  return { id:row.id,label:row.label,overview:row.overview,metrics:scenarioMetrics(row.metrics),delta:row.delta ? {
+    ...Object.fromEntries(Object.entries(row.delta).filter(([key]) => key !== 'routeChanges')),
+    changedRouteCount:row.delta.routeChanges.length } : null,
+    goals:{ requested:row.goals.requested,current:row.goals.current,
+      suggestions:row.goals.suggestions.map(scenarioSuggestion) } };
+}
+function planningReviewView(review, args = {}) {
+  const kind = args.view ?? 'scenarios';
+  const selected = [review.baseline,...review.scenarios].find(row => row.id === (args.scenarioId ?? 'baseline'));
+  if (!selected) throw failure('PRICING_SCENARIO_NOT_FOUND', 'Choose an original scenario ID from this comparison.');
+  let items;
+  if (kind === 'scenarios') items = review.scenarios.map(scenarioSummary);
+  if (kind === 'routes') items = selected.metrics.routes.map(route => ({ ...route,
+    commercial:selected.commercial.routes[route.routeId],terms:selected.terms.routes[route.routeId] }));
+  if (kind === 'goals') items = selected.goals.suggestions.map(scenarioSuggestion);
+  if (kind === 'suggestionRoutes') {
+    const suggestion = selected.goals.suggestions.find(item => item.kind === args.suggestionKind);
+    if (!suggestion) throw failure('PRICING_SUGGESTION_REQUIRED', 'Choose an exact suggestionKind returned for this scenario.');
+    items = (suggestion.metrics?.routes ?? []).map(route => ({ ...route,
+      commercial:suggestion.commercial.routes[route.routeId],terms:suggestion.terms.routes[route.routeId] }));
+  }
+  return { schema:review.schema,reviewSha256:review.reviewSha256,source:review.source,generatedAt:review.generatedAt,
+    baseline:scenarioSummary(review.baseline),scenarioCount:review.scenarios.length,
+    selectedScenarioId:selected.id,selectedScenario:scenarioSummary(selected),
+    page:pageOf(items,args,kind) };
+}
+function planningRecordView(record, args = {}) {
+  const { review,inputs,...metadata } = record;
+  return { ...metadata,review:planningReviewView(review,args) };
+}
+function planningSourceView(source, args = {}) {
+  const { routes,commercial:inputs,...metadata } = source;
+  return { ...metadata,commercial:{merchantName:inputs.merchantName,sharedMonthlyFixedUsd:inputs.sharedMonthlyFixedUsd},
+    routeCount:routes.length,page:pageOf(routes.map(route => ({...route,commercial:inputs.routes[route.routeId]})),args,'routes') };
+}
+function planningSelectionView(value,args = {}) {
+  const {commercial:inputs,...metadata}=value;
+  return {...metadata,commercial:{merchantName:inputs.merchantName,sharedMonthlyFixedUsd:inputs.sharedMonthlyFixedUsd},
+    page:pageOf(Object.entries(inputs.routes).map(([routeId,commercial])=>({routeId,commercial})),args,'routes')};
+}
+
 export class MerchantPricing {
   #config; #entries = new Map(); #files = new RetainedFileReads({ errorPrefix: 'PRICING' }); #closing = false; #close;
   constructor(config) { this.#config = config; }
@@ -218,7 +301,7 @@ export class MerchantPricing {
     if (!entry) {
       // Only capture-handle ownership is shared here. Native writes continue to
       // use the original SF97 per-save CAS alongside browser/process handles.
-      entry = { model: null, source: null, pending: new Set(), closing: null, opening: null };
+      entry = { model: null, planning: null, source: null, pending: new Set(), closing: null, opening: null };
       this.#entries.set(name, entry);
       entry.opening = (async () => {
         const { openWorkspace } = await import('../../stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/model.mjs');
@@ -242,14 +325,31 @@ export class MerchantPricing {
       await Promise.allSettled([...entry.pending]);
       await this.#files.closeScope(name);
       if (this.#entries.get(name) === entry) this.#entries.delete(name);
-      entry.source = null; entry.model = null;
+      entry.source = null; entry.model = null; entry.planning = null;
       return { workspace: name, state: 'CLOSED' };
     })();
     return entry.closing;
   }
-  async #manifest(model, { kind, id }) {
-    const bytes = await (kind === 'review' ? model.download(id, 'manifest.json') : model.downloadRepricing(id, 'manifest.json'));
-    return { bytes, manifest: JSON.parse(bytes.toString('utf8')), manifestFile: { name: 'manifest.json', bytes: bytes.length, sha256: sha(bytes) } };
+  async #planning(entry, workspace) {
+    entry.planning ??= (async () => {
+      const { openPlanningWorkspace } = await import('../../stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/planning/workspace.mjs');
+      return openPlanningWorkspace({model:entry.model,directory:this.#declared(workspace).directory});
+    })();
+    try { return await entry.planning; } catch (error) { entry.planning=null;throw error; }
+  }
+  async #manifest(entry, { workspace,kind,id }) {
+    let bytes;
+    if (kind === 'scenario') {
+      const planning=await this.#planning(entry,workspace), record=await planning.load(id), files={};
+      const names=['plan.json','comparison.csv',...record.review.scenarios.map(row=>'terms-'+row.id+'.json')];
+      for (const name of names) {
+        const data=await planning.download(id,name);
+        files[name]={bytes:data.length,sha256:sha(data)};
+      }
+      bytes=Buffer.from(JSON.stringify({schema:'stellar-forge.merchant-scenario-files.v1',planId:id,
+        version:record.version,reviewSha256:record.review.reviewSha256,files},null,2)+'\n');
+    } else bytes=await (kind === 'review' ? entry.model.download(id,'manifest.json') : entry.model.downloadRepricing(id,'manifest.json'));
+    return {bytes,manifest:JSON.parse(bytes.toString('utf8')),manifestFile:{name:'manifest.json',bytes:bytes.length,sha256:sha(bytes)}};
   }
   async #execute(name, args, entry) {
     const { workspace, view, offset, limit, ...input } = args, model = entry.model;
@@ -270,6 +370,39 @@ export class MerchantPricing {
         return { ...result, left: { ...result.left, observation: observation(result.left.observation), report: reportView(result.left.report, args) },
           right: { ...result.right, observation: observation(result.right.observation), report: reportView(result.right.report, args) } };
       }
+      case 'merchant_pricing_planning_source':
+        return planningSourceView(await (await this.#planning(entry,workspace)).source(args.version),args);
+      case 'merchant_pricing_planning_preview': {
+        const result=await (await this.#planning(entry,workspace)).preview({version:args.version,scenarios:args.scenarios});
+        return {...result,review:planningReviewView(result.review,args)};
+      }
+      case 'merchant_pricing_planning_save': {
+        const result=await (await this.#planning(entry,workspace)).save(input);
+        return {...result,record:planningRecordView(result.record,args)};
+      }
+      case 'merchant_pricing_planning_list': {
+        const result=await (await this.#planning(entry,workspace)).list();
+        return {total:result.total,retainedInListing:result.plans.length,scope:'NEWEST_100',page:pageOf(result.plans,args,'plans')};
+      }
+      case 'merchant_pricing_planning_load':
+        return planningRecordView(await (await this.#planning(entry,workspace)).load(args.planId),args);
+      case 'merchant_pricing_planning_selection':
+        return planningSelectionView(await (await this.#planning(entry,workspace)).selection({planId:args.planId,scenarioId:args.scenarioId}),args);
+      case 'merchant_pricing_planning_apply': {
+        const record=await (await this.#planning(entry,workspace)).load(args.planId);
+        if (record.review.reviewSha256 !== args.reviewSha256)
+          throw failure('PRICING_SCENARIO_REVIEW_CHANGED','Use the inspected saved comparison reviewSha256.');
+        if (record.source.seller !== args.sellerSha256)
+          throw failure('PRICING_SCENARIO_SELLER_CHANGED','The selected plan belongs to a different seller configuration.');
+        const selected=record.review.scenarios.find(row=>row.id===args.scenarioId);
+        if (!selected) throw failure('PRICING_SCENARIO_NOT_FOUND','Choose an original scenario ID from this comparison.');
+        // Original save owns current seller/capture/CAS validation and same-ID
+        // recovery, including recovery after the current seller later changes.
+        const saved=await model.save({sellerSha256:args.sellerSha256,snapshotSha256:args.snapshotSha256,
+          commercial:structuredClone(selected.commercial),requestId:args.requestId,
+          expectedRevision:args.expectedRevision,label:args.label});
+        return {...saved,planId:args.planId,scenarioId:args.scenarioId,reviewSha256:args.reviewSha256};
+      }
       case 'merchant_pricing_repricing_source': return model.repricingSource(args.version);
       case 'merchant_pricing_repricing_preview': return model.previewRepricing(input);
       case 'merchant_pricing_repricing_save': return model.saveRepricing(input);
@@ -279,7 +412,7 @@ export class MerchantPricing {
           operatorReleaseStore: resolve(this.#declared(workspace).releaseStore) === resolve(this.#config.releaseStore) };
       }
       case 'merchant_pricing_manifest': {
-        const { manifest, manifestFile } = await this.#manifest(model, args);
+        const { manifest, manifestFile } = await this.#manifest(entry, args);
         return { kind: args.kind, id: args.id, manifest, manifestFile, fileReads: this.#files.status(workspace) };
       }
       case 'merchant_pricing_file': {
@@ -289,13 +422,13 @@ export class MerchantPricing {
           key: JSON.stringify([args.kind, args.id, args.file, args.expectedManifestSha256]),
           directory: this.#declared(workspace).directory, readId: args.readId, offset, limit, expectedSha256: args.expectedSha256,
           load: async () => {
-            const original = await this.#manifest(model, args);
+            const original = await this.#manifest(entry, args);
             if (original.manifestFile.sha256 !== args.expectedManifestSha256)
               throw failure('PRICING_MANIFEST_CHANGED', 'The saved pricing manifest differs from the inspected digest.');
             if (args.file === 'manifest.json') return { name: args.file, bytes: original.bytes };
             if (!Object.hasOwn(original.manifest.files, args.file))
               throw failure('PRICING_FILE_NOT_FOUND', 'Select a file named in the saved pricing manifest.');
-            return { name: args.file, bytes: await (args.kind === 'review' ? model.download(args.id, args.file) : model.downloadRepricing(args.id, args.file)) };
+            return { name: args.file, bytes: await (args.kind === 'scenario' ? (await this.#planning(entry,workspace)).download(args.id,args.file) : args.kind === 'review' ? model.download(args.id,args.file) : model.downloadRepricing(args.id,args.file)) };
           } });
         return { kind: args.kind, id: args.id, manifestSha256: args.expectedManifestSha256, ...result };
       }

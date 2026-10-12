@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>World Bank · Starforge</title><link rel="stylesheet" href="/style.css"><script src="/app.js" type="module"></script></head>
+<body>
+<aside class="rail">
+  <div class="brand">STARFORGE<span>World Bank workspace</span></div>
+  <nav aria-label="Workspace">
+    <button data-tab="selections" aria-current="page"><b>01</b> Selections</button>
+    <button data-tab="captures"><b>02</b> Captures</button>
+    <button data-tab="review"><b>03</b> Edition review</button>
+    <button data-tab="exports"><b>04</b> Exports</button>
+    <button data-tab="merchant"><b>05</b> Merchant</button>
+    <button data-tab="activity"><b>06</b> Activity</button>
+  </nav>
+  <div class="rail-foot">World Bank Indicators API V2<br><a href="https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures" target="_blank" rel="noreferrer">Source documentation ↗</a></div>
+</aside>
+<main>
+<header><div><p class="eyebrow">DATA OPERATIONS</p><h1 id="page-title">Selections</h1></div><div class="header-actions"><span id="connection" role="status">Connecting…</span><button id="refresh">Refresh</button></div></header>
+<div id="notice" role="alert" hidden></div>
+<div id="stats" class="stats"></div>
+<section id="tab-selections" class="tab">
+  <div class="split">
+    <article class="panel"><div class="panel-heading"><h2>Source selection</h2><button id="new-selection" class="subtle">New</button></div>
+      <p class="muted">Save the original source database, geography, indicators and period. Every capture retains this revision.</p>
+      <form id="selection-form">
+        <div class="form-grid"><label>Selection ID<input id="selection-id" required maxlength="96" value="wdi-north-america"></label><label>Title<input id="selection-title" required maxlength="128" value="North America · GDP and population"></label>
+        <label>Source ID<input id="selection-source" required value="2" inputmode="numeric"></label><label>Period<input id="selection-date" required value="2018:2024" placeholder="2018:2024"></label></div>
+        <label>Country or aggregate codes<input id="selection-countries" required value="CAN, MEX, USA" placeholder="CAN, MEX, USA or all"></label>
+        <label>Indicator codes<textarea id="selection-indicators" required rows="3">NY.GDP.MKTP.CD
+SP.POP.TOTL</textarea></label>
+        <div class="form-grid"><label>Source rows per page<input id="selection-per-page" type="number" required min="1" max="10000" value="1000"></label><label>Saved revision<input id="selection-revision" readonly value="0"></label></div>
+        <p class="help">Periods support years, months and quarters: 2024, 2024M01:2024M12, or 2023Q1:2024Q4. Aggregate codes remain identified in the dataset.</p>
+        <button class="primary" type="submit">Save selection</button>
+      </form>
+    </article>
+    <article class="panel"><h2>Source catalogues</h2><p class="muted">Load the complete original catalogue, then search the retained copy. Indicator choices follow the source ID in the form.</p>
+      <form id="catalog-form"><div class="form-grid"><label>Catalogue<select id="catalog-kind"><option value="countries">Countries and aggregates</option><option value="indicators">Indicators</option><option value="sources">Source databases</option></select></label><label>Search<input id="catalog-search" placeholder="Name or code"></label></div><div class="actions"><button type="submit">Search catalogue</button><button id="catalog-refresh" type="button" class="subtle">Refresh from source</button></div></form>
+      <p id="catalog-summary" class="help">Choose a catalogue to begin.</p><div id="catalog-results" class="table-wrap"></div><div id="catalog-pager" class="pager"></div>
+    </article>
+  </div>
+  <article class="panel"><h2>Saved selections</h2><div id="selection-list" class="table-wrap"></div></article>
+</section>
+
+<section id="tab-captures" class="tab" hidden>
+  <article class="panel"><h2>Capture an edition</h2><form id="capture-form" class="inline-form"><label>Saved selection<select id="capture-selection" required></select></label><label>Capture ID<input id="capture-id" required maxlength="96"></label><button type="submit" class="primary">Start capture</button></form><p class="help">Source, country and indicator metadata are retained with every data page. Reusing a capture ID resumes its original page chain.</p></article>
+  <article class="panel"><h2>Retained captures</h2><div id="capture-list" class="table-wrap"></div></article>
+  <article class="panel"><div class="panel-heading"><h2 id="observation-heading">Observations</h2><button id="capture-to-review" disabled>Review this edition</button></div>
+    <form id="observation-form" class="inline-form"><label class="grow">Search retained observations<input id="observation-search" placeholder="Country, indicator, period, status or footnote"></label><button type="submit">Search</button></form>
+    <p id="observation-summary" class="help">Open a capture to inspect its observations.</p><div id="observation-table" class="table-wrap"></div><div id="observation-pager" class="pager"></div>
+    <details><summary>Original request and source metadata</summary><pre id="capture-detail">Choose a capture.</pre></details>
+  </article>
+  <article class="panel"><h2>Receive original source pages</h2><p class="muted">Import a collaborator's retained responses. Each page supplies its original Base64 body, request URL, response status, headers, acquisition time, size and SHA-256.</p>
+    <form id="pages-form"><div class="form-grid"><label>Saved selection<select id="pages-selection" required></select></label><label>Receiving capture ID<input id="pages-id" required maxlength="96"></label><label class="wide">Page payload JSON<input id="pages-file" type="file" accept=".json,application/json" required></label></div><button type="submit">Import original pages</button></form>
+  </article>
+</section>
+
+<section id="tab-review" class="tab" hidden>
+  <article class="panel"><div class="panel-heading"><h2>Edition review</h2><div class="actions"><select id="review-existing" aria-label="Open a saved review"></select><button id="open-review">Open review</button></div></div>
+    <form id="review-form"><div class="form-grid three">
+      <label>Complete capture<select id="review-capture" required></select></label><label>Comparison baseline<select id="review-baseline"><option value="">No comparison</option></select></label><label>Review ID<input id="review-id" required maxlength="96"></label>
+      <label class="wide">Edition title<input id="review-title" required maxlength="128"></label><label>Saved revision<input id="review-revision" readonly value="0"></label>
+      <label class="all">Editorial note<textarea id="review-note" rows="3" placeholder="Describe the intended dataset and any exclusions or source revisions."></textarea></label>
+    </div>
+    <details><summary>Dataset columns</summary><div id="review-columns" class="check-grid"></div></details>
+    <div class="actions"><button type="submit" class="primary">Save edition review</button><button id="compare" type="button">Compare editions</button><span id="review-count" class="help"></span></div></form>
+  </article>
+  <article id="comparison-panel" class="panel" hidden><h2>Changes between source editions</h2><p id="comparison-summary" class="help"></p><div id="comparison-table" class="table-wrap"></div><div id="comparison-pager" class="pager"></div></article>
+  <article class="panel"><h2>Observation choices</h2><p class="muted">Keep or exclude complete observation identities. Repeated identities require choosing an original source row. Missing values remain missing.</p>
+    <form id="review-search-form" class="inline-form"><label class="grow">Search this capture<input id="review-search" placeholder="Country, indicator or period"></label><button type="submit">Search</button></form>
+    <div id="duplicate-choices"></div><p id="review-observation-summary" class="help">Choose a complete capture.</p><div id="review-table" class="table-wrap"></div><div id="review-pager" class="pager"></div>
+  </article>
+</section>
+
+<section id="tab-exports" class="tab" hidden>
+  <div class="split">
+    <article class="panel"><h2>Prepare a handover</h2><p class="muted">Package the reviewed CSV, native dataset configuration, editorial choices, source metadata and every original response.</p><form id="export-form"><label>Saved review<select id="export-review" required></select></label><label>Export ID<input id="export-id" required maxlength="96"></label><button type="submit" class="primary">Prepare export</button></form></article>
+    <article class="panel"><h2>Open a portable handover</h2><p class="muted">Reconstruct a received edition and review in this workspace from its original handover ZIP.</p><form id="package-form"><label>Receiving capture ID<input id="package-id" required maxlength="80"></label><label>Handover ZIP<input id="package-file" type="file" accept=".zip,application/zip" required></label><button type="submit">Import handover</button></form></article>
+  </div>
+  <article class="panel"><h2>Retained exports</h2><div id="export-list" class="table-wrap"></div></article>
+  <article id="export-detail-panel" class="panel" hidden><div class="panel-heading"><h2 id="export-detail-title">Export files</h2><button id="export-to-merchant">Use in merchant</button></div><p id="export-detail-summary" class="help"></p><div id="export-files" class="table-wrap"></div></article>
+</section>
+
+<section id="tab-merchant" class="tab" hidden>
+  <article class="panel"><h2>Dataset merchant</h2><p class="muted">Prepare this reviewed export in the existing Starforge dataset publisher. Enter the public route and payment terms for your seller.</p>
+    <form id="merchant-form"><div class="form-grid three"><label>Reviewed export<select id="merchant-export" required></select></label><label>Public origin<input id="merchant-origin" type="url" required placeholder="https://data.example.org"></label><label>Route path<input id="merchant-path" required value="/worldbank"></label>
+      <label>Payment network<input id="merchant-network" required placeholder="Stellar network identifier"></label><label>Asset<input id="merchant-asset" required placeholder="Asset identifier"></label><label>Amount in atomic units<input id="merchant-amount" required inputmode="numeric" pattern="[0-9]+" placeholder="Exact amount"></label>
+      <label class="wide">Seller address<input id="merchant-pay-to" required placeholder="Payment destination"></label><label>Payment timeout, seconds<input id="merchant-timeout" type="number" required min="1" value="60"></label></div><button type="submit" class="primary">Prepare merchant draft</button></form>
+  </article>
+  <article class="panel"><div class="panel-heading"><h2>Publisher and release</h2><button id="publisher-refresh">Read publisher status</button></div><div id="publisher-summary" class="stats compact"></div>
+    <div class="form-grid three"><label>Native draft<select id="publisher-draft"></select></label><label>Release ID<input id="release-id" maxlength="64" pattern="[a-z0-9][a-z0-9_-]*" placeholder="worldbank-release-v1"></label><label>Local port<input id="release-port" type="number" min="0" max="65535" value="0"></label></div>
+    <details><summary>Facilitator settings</summary><label>Facilitator URL<input id="release-facilitator" type="url" placeholder="Use the seller's configured facilitator"></label><label class="check"><input id="release-local-facilitator" type="checkbox">Use a local development facilitator</label></details>
+    <div class="actions"><button id="release-stage">Stage draft</button><button id="release-inspect">Inspect release</button><button id="release-activate">Activate release</button><button id="release-start" class="primary">Start seller</button><button id="release-stop">Stop seller</button><button id="release-rollback" class="subtle">Roll back release</button></div>
+    <p id="release-generation" class="help">Prepare a merchant to open the publisher.</p>
+    <div class="actions"><button id="draft-review">Review current publication</button><button id="draft-publish">Publish selected draft</button></div>
+    <details><summary>Original publisher state</summary><pre id="publisher-state">No publisher opened.</pre></details>
+  </article>
+  <article class="panel"><h2>Query and customer handover</h2><form id="preview-form"><div class="form-grid"><label>Preview target<select id="preview-target"></select></label><label>First-page query<input id="preview-query" value="limit=10" placeholder="where_country_iso3=CAN&amp;limit=10"></label></div><p class="help">Filter with where_country_iso3=CAN or where_indicator_id=SP.POP.TOTL. Restrict periods with gte_period=2020 and lte_period=2024; use sort=-period for the most recent first.</p><div class="actions"><button type="submit">Preview dataset query</button><button id="buyer-review" type="button">Read seller offer</button></div></form><pre id="query-result" class="result">Preview a retained draft or published snapshot.</pre>
+    <div class="form-grid"><label>Buyer intent ID<input id="buyer-intent" placeholder="Stable customer request ID"></label><label>Accepted offer index<input id="buyer-accept" type="number" min="0" value="0"></label></div><div class="actions"><button id="buyer-prepare" disabled>Prepare customer request</button><button id="buyer-download" disabled>Download customer request</button></div>
+  </article>
+  <article class="panel"><h2>Customer acquisition</h2><p class="muted">Use the existing buyer workspace and the reviewed payment offer. The original acquisition engine applies the spending and page limits below.</p>
+    <form id="buyer-session-form"><div class="form-grid three"><label>Prepared buyer<select id="buyer-id" required></select></label><label class="wide">Buyer workspace directory<input id="buyer-workspace" required placeholder="/absolute/buyer-workspace"></label>
+      <label>Maximum pages<input id="buyer-max-pages" type="number" required min="1" value="10"></label><label>Maximum total atomic amount<input id="buyer-max-total" required pattern="[0-9]+" inputmode="numeric" placeholder="Explicit spending limit"></label><label>Maximum rows<input id="buyer-max-rows" type="number" required min="1" value="10000"></label></div><button type="submit">Prepare acquisition</button></form>
+    <div class="inline-form"><label class="grow">Retained session<select id="buyer-session"></select></label><button id="buyer-run" class="primary">Run acquisition</button><button id="buyer-recover">Recover</button><button id="buyer-account">Account</button><button id="buyer-export">Export delivery</button></div><div id="buyer-delivery" class="actions"></div><pre id="buyer-result" class="result">Prepare a buyer request to begin.</pre>
+  </article>
+</section>
+<section id="tab-activity" class="tab" hidden><article class="panel"><div class="panel-heading"><h2>Workspace activity</h2><button id="clear-activity" class="subtle">Clear display</button></div><p class="muted">Recent actions from this browser session. Selections, captures, reviews and exports are retained in the workspace.</p><div id="activity-list" class="table-wrap"></div><details open><summary>Most recent action result</summary><pre id="action-result">No actions yet.</pre></details></article></section>
+<footer><span id="workspace-directory">Opening workspace…</span><span>Original values · Retained editions · Native delivery</span></footer>
+</main>
+</body></html>

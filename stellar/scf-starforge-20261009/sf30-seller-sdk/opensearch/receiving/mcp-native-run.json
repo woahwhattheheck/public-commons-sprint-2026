@@ -1,0 +1,105 @@
+{
+  "schema": "stellar-forge.opensearch-mcp-native-receiving.v1",
+  "state": "PASS",
+  "operation": "ASTRA-EE290-OPENSEARCH-MCP-20261012",
+  "sourceCommit": "9c64f4ecfa698eb5d6a20190483a188a0feda316",
+  "runtime": "v24.19.0",
+  "retainedWorkspace": {
+    "schema": "stellar-forge.opensearch-mcp-retained-journey.v1",
+    "sourceCommit": "5709c2338a871ea93fcd54294d14d7bcd97f5d32",
+    "startedAt": "2026-10-12T01:02:59.452Z",
+    "runtime": "v24.19.0",
+    "operationId": "mcp-bec4f151-3465-4ab5-bebd-a576c061939f",
+    "stages": [
+      {
+        "name": "original-workspaces-open",
+        "toolCount": 26,
+        "workspaceId": "0d89063f-9e9f-441b-bf94-eb611c7789e4",
+        "credentialEnvironmentEntries": 0
+      },
+      {
+        "name": "native-evaluation-recovered",
+        "editionId": "ac35c6b6cbca5f0c98af3fe4edac1de6",
+        "resultSha256": "a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db",
+        "nativeScores": [
+          {
+            "id": "lowest-price",
+            "score": 1
+          },
+          {
+            "id": "highest-price",
+            "score": 0
+          }
+        ],
+        "journalRecords": 5
+      },
+      {
+        "name": "original-judgment-revisions",
+        "setId": "54903a5d-53da-4e05-bcf4-f88cd767b579",
+        "revision": 4,
+        "history": [
+          4,
+          3,
+          2,
+          1
+        ],
+        "replayedRevision": 2,
+        "originalJudgmentsRetained": 7
+      },
+      {
+        "name": "original-query-capture-recovered",
+        "editionId": "49042fc669d38005ea9363a73c5fc9c9",
+        "hitCount": 7,
+        "totalRelation": "gte",
+        "seededUnjudged": 7
+      },
+      {
+        "name": "original-package-and-byte-handoff",
+        "packageId": "368b20e1b3410bef2fee494da8831787",
+        "fileCount": 11,
+        "nativeBytes": 16345,
+        "nativeSha256": "a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db",
+        "reportSha256": "8d49d64105415e56b53773a3342aa55e1cb389c0d6e405b07093d990f05aca61",
+        "reopened": true
+      }
+    ],
+    "state": "PASS",
+    "completedAt": "2026-10-12T01:02:59.620Z"
+  },
+  "transport": {
+    "http": {
+      "defaultLimitBytes": 131072,
+      "defaultRequestBytes": 163840,
+      "defaultStatus": 413,
+      "configuredLimitBytes": 2097152,
+      "configuredRequestBytes": 819200,
+      "configuredStatus": 200,
+      "oversizedRequestBytes": 2097153,
+      "oversizedStatus": 413
+    },
+    "stdio": {
+      "profilesBytes": [
+        131072,
+        2097152
+      ],
+      "initialized": true,
+      "recoveredPingAfterOversizedFrame": true
+    }
+  },
+  "maintainedHost": {
+    "path": [
+      "initializeOpenSearchWorkspaceMerchant",
+      "merchant subprocess host",
+      "HTTP",
+      "stdio"
+    ],
+    "acceptedRequestBytes": 819200,
+    "propagatedRequestLimitBytes": 2097152,
+    "advertisedTools": 389,
+    "advertisedOpenSearchTools": 26,
+    "originalAliasState": "CLOSED",
+    "ownedHostDrained": true
+  },
+  "nativeResultSha256": "a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db",
+  "customerReportSha256": "8d49d64105415e56b53773a3342aa55e1cb389c0d6e405b07093d990f05aca61"
+}

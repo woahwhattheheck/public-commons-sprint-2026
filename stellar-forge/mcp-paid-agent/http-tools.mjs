@@ -14,11 +14,13 @@ const safeCompare=(a,b)=>{
  * The transport is meant for an operator-controlled 127.0.0.1 listener.
  * It offers JSON-only responses, no SSE stream, tasks, roots or server push.
  */
-export function createMcpToolHandler(provider,{bearerToken,allowedClientOrigins=[],
-  serverName='stellar-bazaar-paid-bridge',serverVersion='0.1.0',
+export function createMcpToolHandler(provider,{bearerToken,authorization,allowedClientOrigins=[],
+  serverName='stellar-bazaar-paid-bridge',serverVersion='0.1.0',maxRequestBytes=128*1024,
   instructions='Search, describe and preview are read-only. Describe a search handle to inspect declared inputs before preview. Calls need out-of-band operator approval and an external x402 signer.'}={}){
   if(!provider || typeof provider.call!=='function' || !Array.isArray(provider.tools) || !provider.tools.length)
     throw new TypeError('A fixed tool catalog and call function are required');
+  if(!Number.isSafeInteger(maxRequestBytes)||maxRequestBytes<1||maxRequestBytes>8*1024*1024)
+    throw new RangeError('maxRequestBytes must be an integer from 1 to 8388608');
   const tools=structuredClone(provider.tools),names=new Set();
   for(const tool of tools){
     if(!plain(tool)||!/^[-A-Za-z0-9_.]{1,128}$/.test(tool.name)||names.has(tool.name)||!plain(tool.inputSchema))
@@ -27,25 +29,34 @@ export function createMcpToolHandler(provider,{bearerToken,allowedClientOrigins=
   }
   if(typeof serverName!=='string'||!serverName||typeof serverVersion!=='string'||!serverVersion||typeof instructions!=='string')
     throw new TypeError('Server identity and instructions must be strings');
-  if(typeof bearerToken!=='string'||bearerToken.length<24)throw new TypeError('Strong operator access token required');
+  const oauth=authorization!==undefined;
+  if(oauth){
+    if(bearerToken!==undefined || !authorization ||
+        ['authenticate','authorizeTool','respondError'].some(name=>typeof authorization[name]!=='function'))
+      throw new TypeError('Select one OAuth resource authorizer or fixed operator bearer token');
+  }else if(typeof bearerToken!=='string'||bearerToken.length<24)throw new TypeError('Strong operator access token required');
   const allowedOrigins=new Set(allowedClientOrigins);
   return async(req,res)=>{
     const send=(status,body)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(body));};
     const origin=req.headers.origin;
     if(origin&&!allowedOrigins.has(origin))return send(403,jsonErr(-32000,'Origin not allowed'));
-    if(!safeCompare(req.headers.authorization,`Bearer ${bearerToken}`))return send(401,jsonErr(-32001,'Unauthorized'));
+    let context;
+    if(oauth){
+      try{context=await authorization.authenticate(req);}
+      catch(error){return authorization.respondError(error,res);}
+    }else if(!safeCompare(req.headers.authorization,`Bearer ${bearerToken}`))return send(401,jsonErr(-32001,'Unauthorized'));
     if(req.method==='GET')return send(405,jsonErr(-32601,'SSE stream not supported'));
     if(req.method!=='POST')return send(405,jsonErr(-32601,'POST required'));
     if(!String(req.headers['content-type']??'').toLowerCase().startsWith('application/json'))return send(415,jsonErr(-32600,'Content type must be application/json'));
     const accept=String(req.headers.accept??'');
     if(!accept.includes('application/json')||!accept.includes('text/event-stream'))return send(406,jsonErr(-32600,'Accept must include application/json and text/event-stream'));
     // HTTP stream chunks are byte boundaries, not UTF-8 character boundaries.
-    // Enforce the 128 KiB limit on raw bytes before decoding the whole body.
+    // Enforce the host-selected limit on raw bytes before decoding the whole body.
     const chunks=[];let byteCount=0;
     try {
       for await(const c of req){
         byteCount+=c.byteLength;
-        if(byteCount>128*1024)throw new Error('Too large');
+        if(byteCount>maxRequestBytes)throw new Error('Too large');
         chunks.push(c);
       }
     }catch{return send(413,jsonErr(-32700,'Invalid or oversized body'));}
@@ -55,6 +66,14 @@ export function createMcpToolHandler(provider,{bearerToken,allowedClientOrigins=
     let rpc;try{rpc=JSON.parse(raw);}catch{return send(400,jsonErr(-32700,'Parse error'));}
     const id=rpc?.id??null;
     if(!plain(rpc)||rpc.jsonrpc!=='2.0'||typeof rpc.method!=='string'||Array.isArray(rpc))return send(400,jsonErr(-32600,'Invalid JSON-RPC request',id));
+    // Determine the complete current scope set once, before the original dispatch.
+    // Only the verified immutable context reaches an embedding provider; never its token.
+    if(oauth){
+      const tool=rpc.method==='tools/call'&&names.has(rpc.params?.name)?rpc.params.name:null;
+      const args=rpc.method==='tools/call'&&plain(rpc.params?.arguments??{})?(rpc.params?.arguments??{}):{};
+      try{await authorization.authorizeTool(context,tool,args);}
+      catch(error){return authorization.respondError(error,res,{id});}
+    }
     if(rpc.method==='notifications/initialized'){
       res.writeHead(202);res.end();return;
     }
@@ -69,7 +88,7 @@ export function createMcpToolHandler(provider,{bearerToken,allowedClientOrigins=
     if(typeof name!=='string'||!plain(args))return send(200,jsonErr(-32602,'Invalid tool arguments',id));
     try{
       if(!names.has(name))throw Object.assign(new Error('Unknown tool '+name),{code:'TOOL_NOT_FOUND'});
-      const data=await provider.call(name,args);
+      const data=await provider.call(name,args,oauth?{authorization:context}:undefined);
       return send(200,rpcReply(id,{content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data,isError:false}));
     }catch(e){
       // SF-33 hints are additive; preserve existing MCP wire fields and never

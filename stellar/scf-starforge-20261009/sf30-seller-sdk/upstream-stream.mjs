@@ -2,6 +2,7 @@
 // Request preparation, credential resolution, admission and payment stay upstream.
 import { request as httpRequest, Agent as HttpAgent } from 'node:http';
 import { request as httpsRequest } from 'node:https';
+import { upstreamTlsRequestOptions } from './upstream-tls/profile.mjs';
 import { Transform } from 'node:stream';
 import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 
@@ -43,9 +44,11 @@ function contentType(value,format) {
  * its source capacity stays owned until the original response is consumed or
  * closed. The public result carries only permitted response headers and bytes.
  */
-export function openUpstreamStream({target,outgoing,body,method,lookup,expose,
+export function openUpstreamStream({target,outgoing,body,method,lookup,expose,tls,
   format,policy,headerSignal,signal,agent} = {}) {
   policy = compileUpstreamStreamPolicy(policy,format);
+  if (tls !== undefined && target?.protocol !== 'https:') throw new TypeError('TLS profile requires an HTTPS upstream');
+  const tlsOptions = upstreamTlsRequestOptions(tls);
   if (agent !== undefined && (!(agent instanceof HttpAgent) || agent.protocol !== target.protocol))
     throw new TypeError('Streaming upstream agent must match the configured protocol');
   return new Promise(resolve => {
@@ -151,6 +154,7 @@ export function openUpstreamStream({target,outgoing,body,method,lookup,expose,
       headerSignal?.addEventListener('abort',headerAbort,{once:true});
       request=(target.protocol === 'https:' ? httpsRequest : httpRequest)(target,{
         method,headers:outgoing,maxHeaderSize:16384,agent:agent ?? false,
+        ...tlsOptions,
         ...(lookup === undefined ? {} : {lookup}),
       },res => {
         response=res;

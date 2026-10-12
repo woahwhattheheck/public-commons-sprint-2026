@@ -1,6 +1,7 @@
 // MIT. Plain, retained-state operator UI; all domain behavior stays in the application.
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state,selectedEdition=null,loadedRows=[],rowPage=0,merchant=null,pageIdentity=null;
+let liveProducts=[],selectedLive=null,liveDetail=null,livePlanIdentity=null;
 function notify(message,error=false){$('notice').textContent=message;$('notice').classList.toggle('error',error);}
 async function api(path,body){const response=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const result=await response.json();if(!response.ok)throw new Error(result.message||result.error||'Operation failed.');return result;}
@@ -58,8 +59,10 @@ async function refresh(){
   $('exports').innerHTML=table(['Dataset','Rows','Merchant','Files'],state.exports.map(value=>[esc(value.dataset.name),String(value.dataset.rowCount),value.merchant?'Configured':'Dataset',
     value.files.map(file=>`<a href="/api/export?id=${esc(value.id)}&file=${esc(file)}">${esc(file)}</a>`).join(' · ')]));
   options('query-export',state.exports,value=>value.dataset.name+' · '+value.id.slice(0,8));options('merchant-export',state.exports.filter(value=>value.merchant),value=>value.dataset.name+' · '+value.id.slice(0,8));
+  options('live-plan',state.plans.filter(value=>value.reviewedAt));drawLiveScope();
+  if(state.liveProducts?.length||!$('live').hidden)await refreshLive();
 }
-document.querySelectorAll('nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.section').forEach(section=>section.hidden=section.id!==button.dataset.section);document.querySelectorAll('nav button').forEach(item=>item.classList.toggle('selected',item===button));}));
+document.querySelectorAll('nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.section').forEach(section=>section.hidden=section.id!==button.dataset.section);document.querySelectorAll('nav button').forEach(item=>item.classList.toggle('selected',item===button));if(button.dataset.section==='live')refreshLive().catch(error=>notify(error.message,true));}));
 $('refresh').onclick=()=>action('Refresh',refresh);$('connection').onchange=drawConnection;$('entity-set').onchange=drawSchema;
 $('connect-form').onsubmit=event=>{event.preventDefault();const data=Object.fromEntries(new FormData(event.target));if(!data.authEnv)delete data.authEnv;action('Service discovery',()=>api('/api/connect',data),event.submitter);};
 $('refresh-schema').onclick=()=>action('Schema refresh',async()=>{await api('/api/refresh',{id:$('connection').value});await refresh();drawConnection();});
@@ -103,5 +106,41 @@ $('merchant-prepare').onsubmit=event=>{event.preventDefault();action('Stage merc
   const result=await api('/api/merchant/prepare',{exportId:data.exportId,releaseId:data.releaseId,runtime});await refreshMerchant();return result;},event.submitter);};
 $('merchant-select').onsubmit=event=>{event.preventDefault();action('Activate release',async()=>{const data=Object.fromEntries(new FormData(event.target));data.expectedGeneration=Number(data.expectedGeneration);await api('/api/merchant/activate',data);await refreshMerchant();},event.submitter);};
 $('merchant-rollback').onclick=()=>action('Roll back release',async()=>{const data=Object.fromEntries(new FormData($('merchant-select')));await api('/api/merchant/rollback',{expectedGeneration:Number(data.expectedGeneration),reason:data.reason});await refreshMerchant();});
+function drawLiveScope(){const saved=state.plans.find(value=>value.id===$('live-plan').value),query=saved?.query.plan;
+  if(!query){$('live-scope').textContent='Review a source query in Sources & queries to prepare a service.';return;}
+  if(livePlanIdentity!==saved.id){livePlanIdentity=saved.id;$('live-total').value=query.top??100000;$('live-total').max=query.top??1000000000;}
+  $('live-scope').textContent=query.entitySet+' · '+query.select.join(', ')+' · '+(query.filters.length?query.filters.map(filter=>filter.field+' '+filter.op+' '+JSON.stringify(filter.value)).join(' '+query.filterMode+' '):'All matching records')+' · '+(query.top?'Reviewed limit '+query.top:'Complete source query');}
+function liveLink(id,kind,recordId,name){return '<a href="/api/live/file?'+esc(new URLSearchParams({id,kind,...(recordId?{recordId}:{}),name}).toString())+'">'+esc(name)+'</a>';}
+function drawLiveDetail(){const detail=liveDetail;if(!detail)return;const runtime=detail.runtime,operation=detail.plan.operations.find(value=>value.id===detail.operation);
+  const metric=runtime?.snapshot||{},counts=Object.entries(metric).filter(([,value])=>typeof value==='number');
+  $('live-detail').innerHTML='<div class="subheading"><h3>'+esc(detail.name)+'</h3>'+badge(runtime?runtime.state:'PREPARED')+'</div><div class="metadata"><span>'+esc(detail.plan.serviceRoot)+'</span><span>'+esc(operation.entitySet)+'</span></div>'+
+    '<p><code>'+esc(detail.plan.publicOrigin+operation.path)+'</code> · '+esc(operation.amountAtomic)+' asset units per page</p>'+
+    '<p>Fields: '+esc(operation.fields.join(', '))+'. Source conditions: '+esc((operation.sourceFilters||[]).map(filter=>filter.field+' '+filter.op+' '+JSON.stringify(filter.value)).join(' '+(operation.sourceFilterMode||'and')+' ')||'All matching records')+'.</p>'+
+    (runtime?'<p>'+esc(runtime.mode)+' · <a target="_blank" rel="noopener" href="'+esc(runtime.operationsUrl)+'">Open seller operations</a></p><div class="metric-row">'+counts.map(([label,value])=>'<div class="metric"><b>'+esc(value)+'</b><span>'+esc(label)+'</span></div>').join('')+'</div>':'<p>Start the service to open its local seller and operations view.</p>')+
+    '<div class="toolbar"><button data-live-start="'+esc(detail.id)+'" '+(runtime?'disabled':'')+'>Start service</button><button data-live-stop="'+esc(detail.id)+'" '+(runtime?'':'disabled')+'>Stop service</button></div><h4 class="subheading">Prepared service files</h4><div class="toolbar">'+detail.files.filter(name=>name.startsWith('package/')).map(name=>liveLink(detail.id,'package',null,name.slice(8))).join(' · ')+'</div>';
+  $('live-buyer-product').value=detail.id;$('live-receive-product').value=detail.id;
+  const prior=$('live-next-page').value;$('live-next-page').innerHTML='<option value="">First page of the reviewed query</option>'+detail.received.filter(row=>row.nextRequest).map(row=>'<option value="'+esc(row.id)+'">Continue after '+esc(row.seenRows)+' rows · '+esc(row.id.slice(0,8))+'</option>').join('');
+  if([...$('live-next-page').options].some(option=>option.value===prior))$('live-next-page').value=prior;
+  $('live-customer-files').innerHTML='<h3>Customer handoffs</h3>'+table(['Intent','Prepared request','Original buyer files'],detail.buyers.map(row=>[esc(row.intentId),'<code>'+esc(row.requestSha256.slice(0,16))+'</code>',
+    ['request.json','offers.json','buyer.json','handoff.json'].map(name=>liveLink(detail.id,'buyer',row.id,name)).join(' · ')]))+
+    (detail.buyers.length?'<p class="muted">The handoff.json file retains each original buyer operation directory and request identity. Continue an existing purchase through its original SF88 buyer state.</p>':'')+
+    '<h3 class="subheading">Received pages</h3>'+table(['Rows','Cumulative rows','Completion','Original and typed files'],detail.received.map(row=>[esc(row.rows),esc(row.seenRows),esc(typeof row.completion==='string'?row.completion:JSON.stringify(row.completion)),
+      ['original-response.json','rows.jsonl','receiving.json',...(row.nextRequest?['next-request.json']:[])].map(name=>liveLink(detail.id,'receiving',row.id,name)).join(' · ')]));}
+async function refreshLive(){const result=await api('/api/live');liveProducts=result.products;options('live-buyer-product',liveProducts);options('live-receive-product',liveProducts);
+  $('live-products').innerHTML=table(['Service','Source query','State','Created','Actions'],liveProducts.map(row=>[esc(row.name),esc(state.plans.find(plan=>plan.id===row.planId)?.name||row.planId),badge(row.runtime?'RUNNING':'PREPARED'),esc(time(row.createdAt)),
+    '<button class="small" data-live-open="'+esc(row.id)+'">Open</button>']));
+  if(!liveProducts.some(row=>row.id===selectedLive))selectedLive=liveProducts.at(-1)?.id||null;
+  if(selectedLive){liveDetail=await api('/api/live/detail?id='+encodeURIComponent(selectedLive));drawLiveDetail();}}
+$('live-plan').onchange=drawLiveScope;$('live-refresh').onclick=()=>action('Live service status',refreshLive);
+$('live-prepare').onsubmit=event=>{event.preventDefault();action('Prepare live service',async()=>{const data=Object.fromEntries(new FormData(event.target)),input={id:data.id,name:data.name,planId:data.planId,origin:data.origin,amount:data.amount,
+    payment:{network:data.network,asset:data.asset,payTo:data.payTo,maxTimeoutSeconds:Number(data.maxTimeoutSeconds)},maxPageRows:Number(data.maxPageRows),maxTotalRows:Number(data.maxTotalRows),port:Number(data.port),operationsPort:Number(data.operationsPort)};
+    if(data.path)input.path=data.path;if(data.facilitator)input.facilitator=data.facilitator;const result=await api('/api/live/prepare',input);selectedLive=result.id;return result;},event.submitter);};
+$('live-products').onclick=event=>{if(event.target.dataset.liveOpen)action('Open live service',async()=>{selectedLive=event.target.dataset.liveOpen;await refreshLive();},event.target);};
+$('live-detail').onclick=event=>{const node=event.target;if(node.dataset.liveStart)action('Start live service',()=>api('/api/live/start',{id:node.dataset.liveStart}),node);if(node.dataset.liveStop)action('Stop live service',()=>api('/api/live/stop',{id:node.dataset.liveStop}),node);};
+for(const id of ['live-buyer-product','live-receive-product'])$(id).onchange=()=>action('Open service customer work',async()=>{selectedLive=$(id).value;await refreshLive();});
+$('live-buyer').onsubmit=event=>{event.preventDefault();action('Prepare customer handoff',async()=>{const data=Object.fromEntries(new FormData(event.target));if(!data.receivedId)delete data.receivedId;selectedLive=data.id;return api('/api/live/buyer',data);},event.submitter);};
+$('live-receive').onsubmit=event=>{event.preventDefault();action('Receive original response',async()=>{const data=new FormData(event.target),file=data.get('response');if(file.size>16*1024*1024)throw new Error('Select an original response up to 16 MiB.');const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let start=0;start<bytes.length;start+=32768)binary+=String.fromCharCode(...bytes.subarray(start,start+32768));
+    selectedLive=data.get('id');return api('/api/live/receive',{id:selectedLive,bodyBase64:btoa(binary)});},event.submitter);};
+
 await refresh().then(()=>notify('Workspace ready.')).catch(error=>notify(error.message,true));
-setInterval(()=>{if(state?.running.length)refresh().catch(error=>notify(error.message,true));},2000);
+setInterval(()=>{if(state?.running.length)refresh().catch(error=>notify(error.message,true));else if(!$('live').hidden&&liveProducts.some(row=>row.runtime))refreshLive().catch(error=>notify(error.message,true));},2000);

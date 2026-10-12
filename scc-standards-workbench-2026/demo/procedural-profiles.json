@@ -1,0 +1,327 @@
+{
+  "schema": "tjl.scc.source-bound-procedural-profiles.v1",
+  "as_of": "2026-10-11",
+  "purpose": "Authored source-bound procedural profiles for deliberate selection. These records do not establish an actual committee, vote, SCC acceptance or DGC transition election.",
+  "sources": [
+    {
+      "id": "scc-ts",
+      "url": "https://scc-ccn.ca/standards/flexible-standards-based-solutions/national-technical-specification",
+      "research_file": "originals/scc-technical-specification.html",
+      "sha256": "79d7326f2e0116fde641f299513941c5281c2812355445aa0082179e1a842138"
+    },
+    {
+      "id": "scc-pas-2021",
+      "url": "https://scc-ccn.ca/system/files/2024-05/sirb_rg_national-pas-guidelines_v1_2021-07-20.pdf",
+      "research_file": "originals/scc-pas-guidelines-v1-2021.pdf",
+      "sha256": "e9f51434cd54cde0e81b920e96f6af2b84b90ab895b493f292f8a189599f2f45",
+      "public_copy": false
+    },
+    {
+      "id": "scc-wa",
+      "url": "https://scc-ccn.ca/standards/flexible-standards-based-solutions/workshop-agreement",
+      "research_file": "originals/scc-workshop-agreement.html",
+      "sha256": "418794d358e1cf88a44e3e37a39cad9d8566b105118332ca3096fdbadfa526e7"
+    },
+    {
+      "id": "scc-csg",
+      "url": "https://scc-ccn.ca/standards/flexible-standards-based-solutions/community-sourced-guidance",
+      "research_file": "originals/scc-community-guidance.html",
+      "sha256": "2afa1fc6c69bb561e76596d08f7a364b1f166d7909afa805dcaf8ee1b59d8f48"
+    },
+    {
+      "id": "dgsi-ed7",
+      "url": "https://dgc-cgn.org/download/24585/?tmstv=1717529426",
+      "research_file": "dgc-standards-setting-directives-en.web.txt",
+      "representation": "Complete web text extraction of Edition 7; original PDF byte identity not asserted.",
+      "public_copy": false
+    },
+    {
+      "id": "scc-sdo-2019-v4",
+      "url": "https://scc-ccn.ca/system/files/2024-03/sirb_rg_sdo-accreditation_v4_2021-03-04.pdf",
+      "research_file": "originals/scc-sdo-accreditation-v4-2021.pdf",
+      "sha256": "9e75de7a12d690717defa19b14d6278840f086c6489b9ec8d75983bb26be7ea5",
+      "public_copy": false
+    },
+    {
+      "id": "scc-sdo-2025-v6",
+      "url": "https://scc-ccn.ca/system/files/2025-04/scc_rg_sdo-accreditation_v6_2025-03-06.pdf",
+      "research_file": "originals/scc-sdo-accreditation-v6-2025.pdf",
+      "sha256": "d1d50987b7691c3bd2282c5f1fe4fb5a48cebf1d93bacd146ad7ff208ac1af50",
+      "public_copy": false
+    },
+    {
+      "id": "scc-transition-2025-08",
+      "url": "https://scc-ccn.ca/accreditation/bulletins/update-standards-development-organizations-accreditation-program",
+      "research_file": "originals/scc-sdo-transition-2025.html",
+      "sha256": "60c4cb7ddd7a91bbfa79bca613092cc8b2fefd0f15dc33f268c23d31c10a0b55"
+    },
+    {
+      "id": "scc-rfp",
+      "url": "https://canadabuys.canada.ca/en/tender-opportunities/tender-notice/cb-797-56171832",
+      "research_file": "scc_cfp-2026-01-advancing-data-governance-through-standardization-solutions_en.pdf",
+      "sha256": "35ed019f958246615201a8b661e66a4f47ae3f36faab2eb0c224388d8ea88980",
+      "public_copy": false
+    }
+  ],
+  "profiles": [
+    {
+      "id": "scc-ts-flexible",
+      "deliverable_type": "TS",
+      "title": "SCC national technical specification — flexible route",
+      "source_ids": [
+        "scc-ts"
+      ],
+      "participant_majority": "none",
+      "affirmative_fraction": null,
+      "negative_fraction_max": null,
+      "affirmative_denominator": "unresolved",
+      "negative_denominator": "unresolved",
+      "exclude_unjustified_negative": false,
+      "exclude_unjustified_abstention": false,
+      "interest_balance": null,
+      "public_review_days": null,
+      "urgent_review_days": null,
+      "sponsor_required": false,
+      "independent_review_required": false,
+      "notes": [
+        "At least limited peer review; full public commenting is optional in the acquired public guidance.",
+        "Record need, public/stakeholder notice, technical expertise, draft, technical consensus evidence, publication and maintenance.",
+        "No universal numerical approval fraction or fixed public-review duration is established by this source. Any selected additional rule requires its own authority.",
+        "A type-specific non-accredited route does not establish a bidder's separate RFP eligibility."
+      ],
+      "lifecycle": {
+        "review_interval_months": null,
+        "source_fixed_interval": false
+      }
+    },
+    {
+      "id": "scc-pas-2021-flexible",
+      "deliverable_type": "PAS",
+      "title": "SCC national PAS guidance — 2021 flexible route",
+      "source_ids": [
+        "scc-pas-2021"
+      ],
+      "participant_majority": "strict_majority_of_eligible",
+      "affirmative_fraction": null,
+      "negative_fraction_max": null,
+      "affirmative_denominator": "unresolved",
+      "negative_denominator": "unresolved",
+      "exclude_unjustified_negative": false,
+      "exclude_unjustified_abstention": false,
+      "interest_balance": null,
+      "public_review_days": 28,
+      "public_review_modality": "normally; flexible guidance, not a universal mandatory minimum",
+      "urgent_review_days": null,
+      "sponsor_required": true,
+      "independent_review_required": false,
+      "notes": [
+        "Sections 3.2.3 and 4.6.5 describe normally four weeks of public consultation.",
+        "Section 4.6.6 describes simple-majority steering-group approval, sponsor endorsement and developer responsibility for the final publication decision. Record these as separate actions.",
+        "Steering-group balance need not follow the ordinary National Standard model. The chair addresses conflicts and comments are disposed before publication.",
+        "Typical steering-group 8–12 and review-panel 20–150 sizes are descriptive rather than hard admission thresholds.",
+        "This source presents flexible guidelines. Retain an explicit approved project procedure for any justified variation."
+      ],
+      "lifecycle": {
+        "initial_validity_months_max": 36,
+        "extension_count_max": 1,
+        "extension_months_max": 36,
+        "then": "Transform into a national/international standard or withdraw.",
+        "source_sections": [
+          "4.6.7"
+        ]
+      }
+    },
+    {
+      "id": "scc-wa-flexible",
+      "deliverable_type": "WA",
+      "title": "SCC workshop agreement — flexible route",
+      "source_ids": [
+        "scc-wa"
+      ],
+      "participant_majority": "none",
+      "affirmative_fraction": null,
+      "negative_fraction_max": null,
+      "affirmative_denominator": "unresolved",
+      "negative_denominator": "unresolved",
+      "exclude_unjustified_negative": false,
+      "exclude_unjustified_abstention": false,
+      "interest_balance": null,
+      "public_review_days": null,
+      "urgent_review_days": null,
+      "sponsor_required": false,
+      "independent_review_required": false,
+      "notes": [
+        "Use an open workshop process outside a technical committee, with an identified need, stakeholder invitation, retained discussion/outcomes and circulated draft for comment and general agreement.",
+        "The current SCC page describes publication within two calendar months of the workshop.",
+        "No universal numerical ballot or fixed public-comment period is established in this source."
+      ],
+      "lifecycle": {
+        "publish_within_calendar_months_of_workshop": 2,
+        "review_within_months": 36
+      }
+    },
+    {
+      "id": "scc-csg-flexible",
+      "deliverable_type": "CSG",
+      "title": "SCC community-sourced guidance — flexible route",
+      "source_ids": [
+        "scc-csg"
+      ],
+      "participant_majority": "none",
+      "affirmative_fraction": null,
+      "negative_fraction_max": null,
+      "affirmative_denominator": "unresolved",
+      "negative_denominator": "unresolved",
+      "exclude_unjustified_negative": false,
+      "exclude_unjustified_abstention": false,
+      "interest_balance": null,
+      "public_review_days": null,
+      "urgent_review_days": null,
+      "sponsor_required": false,
+      "independent_review_required": false,
+      "notes": [
+        "Use a structured non-accredited community process with a moderated, accessible online platform; identify objectives, suitable contributions, transparent/fair decisions and maintenance.",
+        "The acquired public source establishes no universal numerical ballot or fixed review duration.",
+        "A project-specific moderation, review and maintenance policy must be selected explicitly."
+      ],
+      "lifecycle": {
+        "review_interval_months": null,
+        "source_fixed_interval": false
+      }
+    },
+    {
+      "id": "dgsi-ed7-selected-2019",
+      "deliverable_type": "ordinary_DGSI_standard",
+      "title": "DGSI Edition 7 with explicitly selected 2019 SCC basis",
+      "source_ids": [
+        "dgsi-ed7",
+        "scc-sdo-2019-v4",
+        "scc-transition-2025-08"
+      ],
+      "participant_majority": "strict_majority_of_eligible",
+      "affirmative_fraction": {
+        "numerator": 2,
+        "denominator": 3
+      },
+      "negative_fraction_max": {
+        "numerator": 1,
+        "denominator": 4
+      },
+      "affirmative_denominator": "unresolved",
+      "negative_denominator": "unresolved",
+      "exclude_unjustified_negative": true,
+      "exclude_unjustified_abstention": true,
+      "interest_balance": {
+        "categories": 4,
+        "rule": "No single interest group equals or exceeds the combined other groups."
+      },
+      "public_review_days": 60,
+      "urgent_review_days": 45,
+      "urgent_review_basis": "Documented urgent health, safety or environmental need.",
+      "sponsor_required": false,
+      "independent_review_required": true,
+      "notes": [
+        "DGSI 4.9 requires affirmative votes from more than half the participants, at least two-thirds of votes cast affirmative, and no more than one-quarter of votes cast negative.",
+        "2019 SCC 6.7 excludes unjustified negatives/abstentions and unreturned/blank ballots from votes cast; its affirmative fraction does not explicitly exclude justified abstentions.",
+        "Keep raw eligible/yes/no/abstain/nonresponse and reasons. Show both denominator interpretations until the selected authority records its source-bound rule.",
+        "DGSI's additional negative fraction also needs an explicit denominator policy.",
+        "Dispose comments and negative votes and notify the affected voter; the independent procedural reviewer was not involved in development.",
+        "Do not apply this ordinary-standard profile automatically to TS/PAS/WA/CSG."
+      ]
+    },
+    {
+      "id": "dgsi-ed7-selected-2025",
+      "deliverable_type": "ordinary_DGSI_standard",
+      "title": "DGSI Edition 7 with explicitly selected 2025 SCC basis",
+      "source_ids": [
+        "dgsi-ed7",
+        "scc-sdo-2025-v6",
+        "scc-transition-2025-08"
+      ],
+      "participant_majority": "strict_majority_of_eligible",
+      "affirmative_fraction": {
+        "numerator": 2,
+        "denominator": 3
+      },
+      "negative_fraction_max": {
+        "numerator": 1,
+        "denominator": 4
+      },
+      "affirmative_denominator": "yes_no",
+      "negative_denominator": "unresolved",
+      "exclude_unjustified_negative": true,
+      "exclude_unjustified_abstention": true,
+      "interest_balance": {
+        "categories": 4,
+        "rule": "No single interest group equals or exceeds the combined other groups."
+      },
+      "public_review_days": 60,
+      "urgent_review_days": 45,
+      "urgent_review_basis": "Documented urgent health, safety or environmental need.",
+      "sponsor_required": false,
+      "independent_review_required": true,
+      "notes": [
+        "2025 SCC 6.7.1(b) explicitly excludes abstentions from the two-thirds affirmative denominator.",
+        "Ordinary 6.7.1(a1) still requires affirmative votes from more than half the eligible members.",
+        "The alternative a2 participation threshold including abstentions applies specifically to joint Canada–US development, not every project.",
+        "The additional DGSI one-quarter negative fraction is retained with its own unresolved denominator; do not silently borrow the affirmative definition.",
+        "All original comments/negative dispositions, notifications and independent procedural-review obligations remain."
+      ]
+    }
+  ],
+  "transition": {
+    "source_id": "scc-transition-2025-08",
+    "bulletin_date": "2025-05-01",
+    "existing_sdo_transition_begin": "2025-04-30",
+    "existing_sdo_choice_through": "2027-10-30",
+    "all_assessments_v6_from": "2027-10-31",
+    "new_applicants_v6_from": "2025-05-01",
+    "observed_dgc_election": null,
+    "notes": "An existing SDO may use the earlier accreditation/adoption basis during transition or elect version 6. No acquired source establishes DGC's actual election."
+  },
+  "rfp_overlay": {
+    "source_ids": [
+      "scc-rfp"
+    ],
+    "currency": "CAD",
+    "tax_basis": "HST excluded",
+    "types": {
+      "TS": {
+        "base_budget_cap": 150000,
+        "proposed_duration_months": [
+          9,
+          12
+        ]
+      },
+      "PAS": {
+        "base_budget_cap": 140000,
+        "proposed_duration_months": [
+          6,
+          9
+        ]
+      },
+      "WA": {
+        "base_budget_cap": 85000,
+        "proposed_duration_months": [
+          2,
+          6
+        ]
+      },
+      "CSG": {
+        "base_budget_cap": null,
+        "proposed_duration_months": null
+      }
+    },
+    "ola_cost_cap": 20000,
+    "ola_additional_to_base": true,
+    "ola_additional_funding_excludes": [
+      "CSG"
+    ],
+    "notes": [
+      "Keep awarded budget, actual eligible costs, phase invoices, accepted deliverables and collected payments separate.",
+      "The original four-phase deliverables and financial table apply independently of the selected standards-process profile."
+    ]
+  },
+  "public_packaging": "Publish these authored summaries and source URLs. Retain restricted procedural PDFs in the separate research source store; do not embed them in the public product archive."
+}
+

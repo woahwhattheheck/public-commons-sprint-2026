@@ -4,6 +4,21 @@ A practical buyer/operator interface for the **original x402 v2 Bazaar GET disco
 
 This is an additive original product interface, **not** a second index, facilitator, signer, seller-registration service, settlement engine, proof packet, funding application or simulation harness. It requires Node 22+ and the existing public Commons checkout. MIT.
 
+## Retain catalogs and buyer requests
+
+Atlas can keep captured catalogs and buyer work in a private directory across restarts. Start with an absolute path whose parent already exists:
+
+```sh
+node stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs \
+  --workspace /private/atlas
+```
+
+Open the complete address printed by the terminal. Import an original SF88 capture folder (session, manifest and all saved pages), a saved native provider page, or an Atlas page export. Search retained offers, select one exact payment option, and save a named buyer request. Each prepared revision retains its original catalog row, selected terms, stable operation ID, request headers, body and ticket inputs. The existing SF88 builder creates the buyer configuration and operation handoff.
+
+The saved workspace supports interrupted capture uploads, restart, side-by-side request comparison, and complete export/receive with the original identifiers and bytes. The installed distribution exposes `starforge atlas` and `starforge atlas-workspace`; the latter exports, inspects and receives complete workspaces. Linux uses the same util-linux `flock` runtime as the maintained buyer workspaces. See [the workspace operating guide](WORKSPACE.md) for intake, receiving, file-product destinations, request editing and the original buyer commands.
+
+To browse a live source while retaining selections, combine `--workspace` with one of the source options below.
+
 ## Run against original local source
 
 From the public repository root:
@@ -75,9 +90,9 @@ Complete the existing trusted operator, evidence and public payer settings using
 
 Editing any buyer request field invalidates a prepared configuration and disables its download until prepared again. Replacing or clearing a selection cancels its pending preparation; a delayed response cannot overwrite the new request. Browsing a different source page keeps the selected observation and its prepared configuration intact.
 
-The unchanged CLI `--prepare` entrypoint now also accepts original `scf61-observed-native-page-v1` exports (including older exports without a source URL). It uses the same builder as Atlas, then performs its existing private, exclusive, fsynced write. The browser endpoint writes no files; source JSON supplied to it remains unverified local review input. It accepts only loopback Host/socket, an exact same-origin Origin, JSON content type and limited request bytes, and imports no signer or execution module. All remote discovery remains GET-only.
+The unchanged CLI `--prepare` entrypoint now also accepts original `scf61-observed-native-page-v1` exports (including older exports without a source URL). It uses the same builder as Atlas, then performs its existing private, exclusive, fsynced write. The original `/api/prepare-review` endpoint performs pure preparation; the optional saved-workspace routes retain requests in the host-selected private directory. It accepts only loopback Host/socket, an exact same-origin Origin, JSON content type and limited request bytes, and imports no signer or execution module. All remote discovery remains GET-only.
 
-CLI switches: --fixture (default), --local-upstream with an existing SF60 read-only local source, --upstream with an explicit public HTTPS facilitator, and --port for a local listener (0 means ephemeral).
+CLI switches: --fixture (default), --local-upstream with an existing SF60 read-only local source, --upstream with an explicit public HTTPS facilitator, optional --workspace for retained catalogs and requests, and --port for a local listener (0 means ephemeral).
 
 ### What a reviewer can use
 

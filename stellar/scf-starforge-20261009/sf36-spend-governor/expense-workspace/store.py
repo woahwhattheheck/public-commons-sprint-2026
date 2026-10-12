@@ -6,12 +6,13 @@ from pathlib import Path
 import fcntl
 import json
 import os
+import re
 import sqlite3
 import stat
 import threading
 
 from domain import Problem, SCHEMA, now, canonical, identifier, text, day, digest, row_key, basis, native_changes, validate_coding, period_view
-from native import capture_ledger, parse_labels
+from native import capture_source, parse_labels
 
 DDL = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS disposition_heads(period_id TEXT NOT NULL,item_id TEX
 CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY, period_id TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS closes(id TEXT PRIMARY KEY, period_id TEXT NOT NULL, sequence INTEGER NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL,UNIQUE(period_id,sequence));
 CREATE TABLE IF NOT EXISTS events(sequence INTEGER PRIMARY KEY, created_at TEXT NOT NULL, action TEXT NOT NULL, body TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS api_requests(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, operation TEXT NOT NULL, created_at TEXT NOT NULL, body TEXT NOT NULL);
 """
 
 
@@ -51,13 +53,15 @@ def page(values, offset=0, limit=50):
 
 
 class Store:
-    def __init__(self, directory):
+    def __init__(self, directory, node_executable=None):
         self.root = Path(directory).expanduser().resolve()
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
         private_directory(self.root)
         self.lock = threading.RLock()
         self.closed = False
+        self.node_executable = node_executable
         self.connection = None
+        self.request_context = None
         self.lease = os.open(self.root / "operator.lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
         try:
             private_file(self.root / "operator.lock")
@@ -131,6 +135,50 @@ class Store:
         self.connection.execute("INSERT INTO " + table + "(id,body) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
                                 (body["id"], canonical(body)))
 
+    @staticmethod
+    def request_id(value):
+        if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}", value):
+            raise Problem("REQUEST_ID", "Retain one request ID of 1 to 128 letters, numbers, dot, underscore, colon or hyphen")
+        return value
+
+    def inspect_request(self, ident):
+        ident = self.request_id(ident)
+        with self.lock:
+            row = self.connection.execute("SELECT * FROM api_requests WHERE id=?", (ident,)).fetchone()
+            if row is None:
+                raise Problem("REQUEST_NOT_COMMITTED", "No successful mutation with this request ID is retained. Retry only the same original request.", 404)
+            return {"id": ident, "state": "COMMITTED", "fingerprint": row["fingerprint"],
+                    "operation": row["operation"], "created_at": row["created_at"], "response": json.loads(row["body"])}
+
+    def requests(self, offset=0, limit=50):
+        with self.lock:
+            if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 200:
+                raise Problem("INVALID_PAGE", "Use a nonnegative offset and a page size from 1 to 200")
+            total = self.connection.execute("SELECT COUNT(*) FROM api_requests").fetchone()[0]
+            rows = [dict(row) for row in self.connection.execute(
+                "SELECT id,fingerprint,operation,created_at FROM api_requests ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?", (limit, offset))]
+            return {"items": rows, "total": total, "offset": offset, "next": offset + limit if offset + limit < total else None}
+
+    def perform_request(self, ident, path, payload, expected, operation):
+        """The optional HTTP request identity commits in the native mutation transaction."""
+        ident = self.request_id(ident)
+        fingerprint = digest({"method": "POST", "path": path, "payload": payload, "expected_revision": expected})
+        with self.lock:
+            if self.closed:
+                raise Problem("WORKSPACE_CLOSED", "The workspace is closing", 503)
+            previous = self.connection.execute("SELECT fingerprint,body FROM api_requests WHERE id=?", (ident,)).fetchone()
+            if previous:
+                if previous["fingerprint"] != fingerprint:
+                    raise Problem("REQUEST_CONFLICT", "This request ID already names different original content or revision; inspect its retained response", 409)
+                return json.loads(previous["body"])
+            if self.request_context is not None:
+                raise Problem("REQUEST_NESTED", "Complete the current native request before opening another", 409)
+            self.request_context = {"id": ident, "fingerprint": fingerprint, "operation": path}
+            try:
+                return operation()
+            finally:
+                self.request_context = None
+
     def _change(self, expected, action, operation):
         with self.lock:
             if self.closed:
@@ -145,8 +193,14 @@ class Store:
                 self.connection.execute("UPDATE meta SET value=? WHERE key='revision'", (str(revision),))
                 self.connection.execute("INSERT INTO events(created_at,action,body) VALUES(?,?,?)",
                                         (now(), action, canonical({"revision": revision, "record": result.get("id") if isinstance(result, dict) else None})))
+                response = {"revision": revision, "result": result}
+                if self.request_context is not None:
+                    request = self.request_context
+                    response["request_id"] = request["id"]
+                    self.connection.execute("INSERT INTO api_requests VALUES(?,?,?,?,?)",
+                        (request["id"], request["fingerprint"], request["operation"], now(), canonical(response)))
                 self.connection.execute("COMMIT")
-                return {"revision": revision, "result": result}
+                return response
             except BaseException:
                 with suppress(sqlite3.Error):
                     if self.connection.in_transaction:
@@ -157,13 +211,16 @@ class Store:
         result = []
         for source in self._bodies("sources"):
             view = dict(source)
+            view["kind"] = source.get("kind", "sf36_ledger")
             view["pending"] = [r[0] for r in self.connection.execute("SELECT id FROM captures WHERE source_id=? AND status='PENDING' ORDER BY created_at,id", (source["id"],))]
             if source.get("current_capture"):
                 captured = self._get("captures", source["current_capture"])
                 report = captured["report"]
                 view.update(capture_time=report["captured_at"], projection_sha256=report["source"]["projection_sha256"],
                             journal_events=report["source"]["journal_events"], last_sequence=report["source"]["last_sequence"],
-                            rows=report["source"]["reservations"], portfolio=report["portfolio"])
+                            rows=report["source"].get("records", report["source"].get("reservations", 0)), portfolio=report["portfolio"],
+                            record_kind=report["source"].get("record_kind", "reservations"),
+                            source_basis=report.get("basis"), date_basis=report.get("date_basis"))
             result.append(view)
         return result
 
@@ -178,7 +235,10 @@ class Store:
                     "capture_id": value["capture_id"], "missing": bool(value["missing"]), "row": row}
             item["basis"] = basis(row, item["missing"])
             item["coding"] = heads.get(item["id"])
-            item["status"] = ("ABSENT" if item["missing"] else "RESERVED" if row["state"] == "reserved" else
+            nonexpense = {"reserved":"RESERVED", "unresolved":"PAYMENT_UNRESOLVED",
+                          "failed":"FAILED_TRANSACTION", "not_dispatched":"NO_SIGNED_DISPATCH",
+                          "observation_review":"OBSERVATION_REVIEW"}
+            item["status"] = ("ABSENT" if item["missing"] else nonexpense[row["state"]] if row["state"] in nonexpense else
                               "UNCODED" if not item["coding"] else "STALE" if item["coding"]["basis"] != item["basis"] else "CODED")
             items.append(item)
         return items
@@ -218,13 +278,16 @@ class Store:
 
     def register_source(self, payload, expected):
         name = text(payload.get("name"), "Source name", maximum=160)
-        path = text(payload.get("path"), "Original ledger path", maximum=4096)
+        path = text(payload.get("path"), "Original source location", maximum=4096)
+        kind = payload.get("kind", "sf36_ledger")
+        if kind not in ("sf36_ledger", "mcp_quote"):
+            raise Problem("SOURCE_KIND", "Choose an original SF36 ledger or native MCP quote workspace")
         provenance = text(payload.get("provenance", ""), "Source provenance", maximum=6000, optional=True)
-        native = capture_ledger(path)
+        native = capture_source(path, kind, self.node_executable)
         def operation():
             if any(s["path"] == native["path"] or s["identity"] == native["identity"] for s in self._bodies("sources")):
-                raise Problem("SOURCE_ALREADY_REGISTERED", "This original ledger is already registered; refresh or rebind that source", 409)
-            source = {"id": identifier("source"), "name": name, "path": native["path"], "identity": native["identity"],
+                raise Problem("SOURCE_ALREADY_REGISTERED", "This original source is already registered; refresh or rebind that source", 409)
+            source = {"id": identifier("source"), "name": name, "kind": kind, "path": native["path"], "identity": native["identity"],
                       "provenance": provenance, "created_at": now(), "current_capture": None}
             self._put("sources", source)
             return {"id": source["id"], "source": source, "capture": self._new_capture(source, native)}
@@ -233,14 +296,16 @@ class Store:
     def capture(self, ident, expected):
         with self.lock:
             source = self._get("sources", ident)
-        native = capture_ledger(source["path"])
+        native = capture_source(source["path"], source.get("kind", "sf36_ledger"), self.node_executable)
         return self._change(expected, "source.capture", lambda: self._new_capture(self._get("sources", ident), native))
 
     def rebind(self, ident, payload, expected):
-        path = text(payload.get("path"), "Original ledger path", maximum=4096)
+        path = text(payload.get("path"), "Original source location", maximum=4096)
         reason = text(payload.get("reason"), "Rebinding reason", maximum=3000)
         operator = text(payload.get("operator"), "Source owner", maximum=240)
-        native = capture_ledger(path)
+        with self.lock:
+            kind = self._get("sources", ident).get("kind", "sf36_ledger")
+        native = capture_source(path, kind, self.node_executable)
         def operation():
             source = self._get("sources", ident)
             if any(s["id"] != ident and (s["path"] == native["path"] or s["identity"] == native["identity"]) for s in self._bodies("sources")):
@@ -249,7 +314,7 @@ class Store:
                 before = self._get("captures", source["current_capture"])["report"]["rows"]
                 after = {r["request_id"]: r for r in native["report"]["rows"]}
                 if any(r["request_id"] not in after or after[r["request_id"]]["request_digest"] != r["request_digest"] for r in before):
-                    raise Problem("LEDGER_CONTINUITY", "This ledger does not retain the registered source's original request identities; register a distinct source instead", 409)
+                    raise Problem("LEDGER_CONTINUITY", "This source does not retain the registered original request identities; register a distinct source instead", 409)
             source["rebindings"] = source.get("rebindings", []) + [{"from": source["path"], "to": native["path"], "reason": reason, "operator": operator, "at": now()}]
             source.update(path=native["path"], identity=native["identity"])
             self._put("sources", source)
@@ -369,7 +434,21 @@ class Store:
     def report(self, ident):
         with self.lock:
             period = self._get("periods", ident)
-            view = period_view(period, self._items(), self._source_views(), {c["id"]: c for c in self._bodies("centers")}, self._dispositions(ident))
+            closed_transfers = []
+            for other in self._bodies("periods"):
+                if other["id"] == ident or other["state"] != "CLOSED" or not other.get("latest_close"):
+                    continue
+                issued = self._get("closes", other["latest_close"])
+                seen = set()
+                for line in issued.get("allocations", []):
+                    transfer = (line.get("native_payment") or {}).get("transfer_identity")
+                    if transfer and (transfer, line["item_id"]) not in seen:
+                        seen.add((transfer, line["item_id"]))
+                        closed_transfers.append({"transfer_identity":transfer, "period_id":other["id"],
+                            "period_name":other["name"], "close_id":issued["id"], "item_id":line["item_id"],
+                            "source_capture":line["source_capture"], "recognition_date":line["recognition_date"]})
+            view = period_view(period, self._items(), self._source_views(), {c["id"]: c for c in self._bodies("centers")},
+                               self._dispositions(ident), closed_transfers)
             labels = json.loads(self.connection.execute("SELECT value FROM meta WHERE key='labels'").fetchone()[0])
             view["labels"] = labels
             view["context_sha256"] = digest([view["context_sha256"], labels])

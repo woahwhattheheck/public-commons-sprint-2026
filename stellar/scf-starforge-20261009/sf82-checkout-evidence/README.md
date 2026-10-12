@@ -62,6 +62,60 @@ original accepted asset/amount/payee and trusted payer, then the native SF43
 RPC transaction+SEP-41 event check. SF52 computes the outcome, so a successful
 seller response cannot be silently converted to confirmed on-chain payment.
 
+## Recover a returned checkout after interruption
+
+The adapter saves the actual returned buyer observation and original SF81
+reconciliation record before loading the event decoder or querying RPC. The
+`SHA256(intentId).checkpoint.json` file contains that private, sanitized
+record. It remains an immutable source for the terminal
+`SHA256(intentId).json` evidence file. A complete optional body-hash
+observation is saved separately in `SHA256(intentId).body-checkpoint.json`
+before chain verification.
+
+All three records are written to a private temporary file, synced, and published
+with create-only linking. An interrupted write does not publish an empty
+terminal evidence file. An existing checkpoint rejects another buyer invocation
+for that intent before the buyer can run. The original SF36 ledger continues to
+own cross-process authorization and payment uniqueness.
+
+A host can complete the saved observation through the same original verifier:
+
+```js
+import {recoverCheckoutEvidence} from './evidence.mjs';
+
+const completed = await recoverCheckoutEvidence({
+  outputDir: existingPrivateEvidenceDirectory,
+  intentId: originalIntentId,
+  trustedPayer: originalOperatorPayer,
+  rpcEndpoint: originalSupportedObserverEndpoint,
+  rpcFetch: existingRestrictedRpcFetch,
+});
+console.log(completed.evidencePath, completed.report);
+```
+
+The original operator supplies the same trusted payer recorded at checkout.
+The function validates the saved intent and checkpoint/body bindings, uses
+original SF43 for transaction and transfer verification, and uses original
+SF52 for the resulting report. It never accepts a buyer or signer callback.
+Repeated recovery reads the already complete evidence. The `recovered` flag
+identifies whether this invocation wrote the terminal record.
+
+When a crash interrupts the optional live body-hash capture itself, recovery
+records `CAPTURE_INTERRUPTED`; a body observation is included only when its
+complete original body checkpoint was saved. SF88's separately retained
+response file remains the original delivered payload. Its Dataset and original
+SF36 accounting APIs can continue from the recovered terminal evidence.
+
+Older operations without a checkpoint retain their original ledger, approval,
+source response and chain-history recovery route. The checkpoint API consumes
+actual saved returned records and preserves those older files.
+
+The official event decoder prefers the maintained
+`@stellar/stellar-sdk/base` public entry, which supplies the same XDR and
+ScVal implementations without importing the HTTP, Horizon, RPC and contract
+client graph. Older SDKs and the existing package-local SF88 dependency layout
+keep their original fallback. The same actual SF43 transfer match is required.
+
 ## Durable private operation record
 
 The operator selects an existing private absolute output directory. For each
@@ -86,7 +140,7 @@ releases reserved capacity.
 New evidence files also contain `reconciliation`. When the actual returned buyer
 result satisfies the existing `sf81ReconciliationRecord()` helper, its status is
 `AVAILABLE` and `record` retains that helper's original approved reservation,
-accepted terms and seller receipt. This snapshot is taken before the independent
+accepted terms and seller receipt. This snapshot is written to the immutable source checkpoint before the independent
 RPC lookup. It adds no HTTP body, signed payment header, wallet key or operator
 transcript. `AVAILABLE` means the original record was saved; it does not mean
 that SF86 has verified the payer, transaction or transfer.

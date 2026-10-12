@@ -123,3 +123,9 @@ The completed run retained four original response pages and seven observations, 
 | `cli.mjs` | Command-line access to the same project and customer flow |
 
 The runtime source is additive under the existing SF30 seller SDK and composes the maintained project primitives. Source-specific details are isolated from the original payment, seller, and buyer implementations.
+
+## Native HEC-DSS analyst handover
+
+The original Water operations workspace now includes **HEC-DSS handover**: inspect an immutable USGS edition, choose receiving pathnames, units and time conventions, review the complete plan, create a native DSS7 file, reopen interrupted work, and receive a portable handover with its original source edition. The native binding closes and reopens each new file and compares its catalog, clocks, values, missing positions, units, measurement types, notes and any explicit quality words.
+
+See [DSS.md](DSS.md) for the complete runtime, analyst and receiving workflow, including the retained Potomac example, original daily calendar semantics and corrected-source comparisons. The same workflow is available through the `dss-runtime`, `dss-source`, `dss-preview`, `dss-export`, `dss-exports`, `dss-verify`, `dss-handover` and `dss-receive` CLI commands. The native Python runtime is selected with `USGS_HECDSS_PYTHON`.

@@ -66,6 +66,20 @@ To add the workspace to an existing merchant MCP, set
 connection file. The existing source, fleet, pricing, accounting, publisher and
 other workspace bindings remain usable.
 
+## Reopen a saved workspace at another directory
+
+Close the owned workspace before moving it, then copy its complete directory,
+including profiles, prepared packages and their operation state. Point the
+connection file at the received directory and open its existing alias. Reopening
+verifies the prepared package's original file bindings and derives its current
+package, operation, plan, service, upstream, OpenAPI and client locations there.
+
+The workspace ID, profile ID, prepared creation time, request tickets, native
+operation generations, provider observations and complete response hashes stay
+with the saved workspace. Use the same environment references and stable
+operation signing key. Inspect those original IDs after opening, then continue
+saved file reads by their SHA256 and byte offset as described below.
+
 ## Prepare the merchant and customer request
 
 1. Call `merchant_tenderly_workspaces` and choose an alias.

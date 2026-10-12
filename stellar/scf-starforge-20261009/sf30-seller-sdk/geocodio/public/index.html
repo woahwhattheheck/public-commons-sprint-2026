@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Address Quality · Starforge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body><header><div><strong>STARFORGE</strong><span>Address Quality</span></div><button id="refresh">Refresh</button></header>
+<main><div class="workspace-line"><h1>Address review workspace</h1><span id="revision" class="badge">Opening</span></div><p id="workspace-path" class="muted"></p><div id="notice" role="status" aria-live="polite"></div>
+<nav aria-label="Workspace"><button data-tab="source" aria-current="page">Source</button><button data-tab="batch">Provider batches</button><button data-tab="review">Match review</button><button data-tab="dataset">Dataset</button><button data-tab="delivery">Delivery</button><button data-tab="publisher">Publisher</button></nav>
+<div id="summary" class="metrics"></div>
+<section id="section-source" data-section="source"><h2>Original source and address mapping</h2><p class="help">Keep each source record. Exact mapped addresses share a lookup; repeated project or listing records retain their original identity.</p>
+<form id="source-form" class="panel"><div class="grid"><label>Source format<select id="source-format"><option value="intake">Retained address intake</option><option value="csv">CSV records</option><option value="simplyrets">SimplyRETS JSON records</option><option value="json">JSON record array</option></select></label><label>Original source path<input id="source-path" required placeholder="/private/source.json"></label><label>Original bytes for a retained intake<input id="source-original" placeholder="/private/original.csv"></label><label>Source URL<input id="source-url" type="url" placeholder="https://provider.example/source"></label><label>Provenance<input id="source-provenance" placeholder="Original provider capture"></label></div>
+<label>Address field mapping<textarea id="source-mapping" rows="8"></textarea></label><div class="actions"><button type="button" id="mapping-hpd">Use HPD fields</button><button type="button" id="mapping-simplyrets">Use SimplyRETS fields</button><button type="submit" data-write>Import original source</button></div></form>
+<details><summary>Retained source identity and mapping</summary><pre id="source-details"></pre></details>
+<article class="panel"><h3>Restore a complete delivery</h3><form id="restore-form"><label>Portable package path<input id="restore-path" required placeholder="/private/starforge-geocodio.json.gz"></label><button type="submit" data-write>Restore into this empty workspace</button></form></article></section>
+<section id="section-batch" data-section="batch" hidden><h2>Provider batches</h2><p id="provider-status" class="help"></p>
+<form id="batch-prepare" class="panel"><h3>Prepare missing address lookups</h3><p>Review the exact lookup count and saved request body before running it with the operator's configured account.</p><label>Maximum lookups<input id="batch-limit" type="number" min="1" max="10000" value="1000" required></label><button type="submit" data-write>Prepare original batch</button></form>
+<div id="requests" class="cards"></div><article id="request-detail" class="panel" hidden><h3>Original prepared request</h3><pre id="request-body"></pre></article><article class="panel"><h3>Import an original provider response</h3><form id="response-form"><div class="grid"><label>Response JSON path<input id="response-path" required></label><label>Original request JSON path<input id="response-request"></label><label>Response shape<select id="response-mode"><option value="object">Keyed batch response</option><option value="single">Single-address response</option></select></label><label>Original query for single response<select id="response-query"></select></label><label>HTTP status<input id="response-status" type="number" min="100" max="599" value="200"></label><label>Received at<input id="response-date" placeholder="2026-10-11T23:00:00Z"></label></div><button type="submit" data-write>Import retained response</button></form></article>
+<details><summary>Original provider response receipts</summary><pre id="responses"></pre></details></section>
+<section id="section-review" data-section="review" hidden><h2>Candidate and coordinate review</h2>
+<form id="policy-form" class="panel"><h3>Qualification policy</h3><div class="grid"><label>Minimum accuracy<input id="policy-score" type="number" min="0" max="1" step="0.01" value="0.9" required></label><label>Accuracy types<input id="policy-types" value="rooftop,point" required></label><label>Maximum coordinate disagreement, metres<input id="policy-distance" type="number" min="0" step="1" value="100" required></label><label>Competing score gap<input id="policy-gap" type="number" min="0" max="1" step="0.01" value="0.02" required></label></div><label class="check"><input id="policy-key" type="checkbox" checked> Require an original stable address key</label><label class="check"><input id="policy-country" type="checkbox" checked> Require the selected country</label><button type="submit" data-write>Save review policy</button></form>
+<div class="toolbar"><label>Find an address<input id="review-search" type="search"></label><label>Review status<select id="review-status"><option value="">All addresses</option><option>UNQUERIED</option><option>QUALIFIED</option><option>REVIEW</option><option>ACCEPTED</option><option>SOURCE_RETAINED</option><option>NO_MATCH</option><option>PROVIDER_ATTENTION</option></select></label><span id="review-count"></span></div>
+<div class="table-wrap"><table><thead><tr><th>Address</th><th>Source rows</th><th>State</th><th>Accuracy</th><th>Type</th><th>Maximum distance</th><th></th></tr></thead><tbody id="address-rows"></tbody></table></div><div class="actions"><button id="review-prev">Previous</button><span id="review-page"></span><button id="review-next">Next</button></div>
+<article id="address-detail" class="panel" hidden><h3 id="detail-heading"></h3><div id="detail-summary"></div><div id="candidates" class="cards"></div><form id="decision-form"><label>Coordinate choice<select id="coordinate-choice"><option value="preserve-source">Preserve original coordinates</option><option value="fill-missing">Use provider only where original coordinates are missing</option><option value="use-provider">Use reviewed provider coordinates</option></select></label><label>Review reason<textarea id="decision-note" rows="3" required></textarea></label><div class="actions"><button type="submit" data-write>Accept selected candidate</button><button type="button" id="keep-source" data-write>Keep original source</button></div></form><details><summary>Original records and all candidate details</summary><pre id="detail-raw"></pre></details></article>
+<article class="panel"><h3>Apply the qualified selection</h3><p id="qualified-count"></p><form id="qualified-form"><label>Coordinate choice<select id="qualified-coordinate"><option value="preserve-source">Preserve original coordinates</option><option value="fill-missing">Fill missing original coordinates</option><option value="use-provider">Use qualified provider coordinates</option></select></label><label>Review reason<textarea id="qualified-note" rows="2" required></textarea></label><button id="qualified-apply" type="submit" data-write>Accept these qualified addresses</button></form></article>
+<details><summary>Shared provider keys across different address queries</summary><div id="duplicate-groups"></div></details></section>
+<section id="section-dataset" data-section="dataset" hidden><h2>Native dataset editions</h2><form id="edition-form" class="panel"><div class="grid"><label>Dataset name<input id="dataset-name" value="Reviewed address source" required maxlength="128"></label><label>Record scope<select id="dataset-scope"><option value="all-source">All original source records and their review state</option><option value="reviewed-only">Reviewed original source records</option></select></label><label>Default page size<input id="dataset-page-size" type="number" min="1" max="1000" value="50"></label><label>Maximum page size<input id="dataset-max-page" type="number" min="1" max="1000" value="250"></label></div><label>Original fields to retain<textarea id="dataset-columns" rows="7"></textarea></label><p class="help">Address review, source and provider coordinates, stable keys and explicit coordinate choice are included alongside these source fields.</p><button type="submit" data-write>Build native edition</button></form>
+<div id="editions" class="cards"></div><article class="panel"><h3>Query the selected native edition</h3><form id="query-form"><label>Native query parameters<input id="query" value="limit=50" placeholder="where_review_state=ACCEPTED&amp;gte_accuracy=0.9&amp;sort=-displacement_m&amp;limit=50"></label><div class="actions"><button type="submit" data-write>Run query</button><button id="load-query" type="button">Load saved query</button><button id="query-next" type="button" data-write>Next page</button></div></form><p id="query-summary"></p><div id="query-table" class="table-wrap"></div><details><summary>Original native query result</summary><pre id="query-result"></pre></details></article></section>
+<section id="section-delivery" data-section="delivery" hidden><h2>Delivery and recovery</h2><article class="panel"><h3>Original merchant terms</h3><p class="help">The existing SF30 compiler creates the dataset offer from these public terms. The selected source and coordinate-review decisions remain in the delivery.</p><form id="merchant-form"><div class="grid"><label>Public merchant origin<input id="merchant-origin" type="url" placeholder="https://merchant.example" required></label><label>Dataset route<input id="merchant-path" value="/addresses" required></label></div><label>Public payment terms<textarea id="merchant-payment" rows="7" required></textarea></label><button type="submit" data-write>Prepare original merchant configuration</button></form></article>
+<article class="panel"><h3>Complete portable delivery</h3><p>Export the original intake, complete provider responses, review decisions and history, native datasets, retained query and operator recovery package.</p><button id="export" data-write>Export current delivery</button></article><div id="exports" class="cards"></div><details><summary>Workspace operation state</summary><pre id="state-details"></pre></details></section>
+<section id="section-publisher" class="publisher-section" data-section="publisher" aria-labelledby="publisher-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">06 / PUBLISHER &amp; BUYER</div><h2 id="publisher-title">Publish and deliver the dataset</h2><p>Use the retained export with the original dataset publisher, seller release and customer acquisition.</p></div><button id="pub-open" type="button" data-write>Open publisher</button></div>
+        <div id="pub-state-summary" class="panel muted">Open the publisher to inspect its retained versions, releases and customer sessions.</div>
+        <nav class="publisher-nav" aria-label="Publication workflow">
+          <button type="button" data-publisher-view="prepare" aria-current="page">1. Prepare dataset</button>
+          <button type="button" data-publisher-view="versions">2. Review versions</button>
+          <button type="button" data-publisher-view="release">3. Run seller</button>
+          <button type="button" data-publisher-view="buyer">4. Deliver to customer</button>
+        </nav>
+        <div data-publisher-panel="prepare">
+          <form id="pub-prepare-form" class="panel">
+            <h3>Prepare an exported edition</h3>
+            <p>The publisher retains the exact CSV, dataset configuration, source provenance and original merchant offer. Its first preparation initializes the original dataset version store.</p>
+            <label>Retained operator export<select id="pub-export"><option value="">Export an edition with merchant terms first</option></select></label>
+            <div id="pub-export-summary" class="help"></div>
+            <div class="actions"><button type="submit" id="pub-prepare" class="primary" data-write>Prepare publisher dataset</button><button type="button" id="pub-go-exports">Open export &amp; recovery</button></div>
+          </form>
+          <div class="panel"><div class="panel-heading"><h3>Retained drafts</h3><span id="pub-draft-count" class="badge">0 drafts</span></div><div id="pub-drafts"></div></div>
+        </div>
+        <div data-publisher-panel="versions" hidden>
+          <form id="pub-preview-form" class="panel">
+            <h3>Preview an exact draft or version</h3>
+            <div class="form-grid">
+              <label class="span-2">Preview target<select id="pub-preview-target" required><option value="">Prepare a dataset first</option></select></label>
+              <label class="span-2">Native query string<textarea id="pub-preview-query" rows="3" spellcheck="false" maxlength="8192" placeholder="limit=100"></textarea></label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-preview" class="primary" data-write>Preview selected dataset</button><button type="button" id="pub-preview-next" data-write>Next preview page</button><button type="button" id="pub-load-query">Load operator query</button></div>
+            <p class="help">Draft previews use the original typed dataset. Published versions use the running seller’s original private control channel.</p>
+            <div id="pub-preview-summary" class="help"></div><div id="pub-preview-table" class="table-scroll query-table"></div>
+            <details><summary>Exact native preview</summary><pre id="pub-preview-result">No publisher preview yet.</pre></details>
+          </form>
+          <div class="panel">
+            <h3>Review and publish a retained draft</h3>
+            <label>Draft<select id="pub-review-draft"><option value="">Prepare a dataset first</option></select></label>
+            <div id="pub-review-summary" class="help"></div><div id="pub-publication-pins" class="facts mono"></div>
+            <div class="actions"><button type="button" id="pub-review" data-write>Review against current version</button><button type="button" id="pub-publish" class="primary" data-write>Publish reviewed draft</button></div>
+            <p class="help">Start the seller before reviewing or publishing. A changed target revision requires a fresh review of this same draft.</p>
+            <details><summary>Retained draft and publication history</summary><pre id="pub-review-result">Select a draft.</pre></details>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><h3>Published versions</h3><button type="button" id="pub-collect" data-write>Collect expired versions</button></div>
+            <p class="help">Select an existing version using the displayed current snapshot and revision. Retention and active cursor handling remain with the original dataset engine.</p>
+            <div id="pub-versions"></div>
+          </div>
+        </div>
+        <div data-publisher-panel="release" hidden>
+          <form id="pub-release-form" class="panel">
+            <h3>Stage the original seller release</h3>
+            <div class="form-grid">
+              <label class="span-2">Source draft<select id="pub-release-draft" required><option value="">Prepare a dataset first</option></select></label>
+              <label>Release ID<input id="pub-release-id" required maxlength="64" pattern="[a-z0-9][a-z0-9._-]*" autocomplete="off" spellcheck="false" placeholder="hpd-queens-01"></label>
+              <label>Release label<input id="pub-release-label" required autocomplete="off" placeholder="Queens housing dataset"></label>
+              <label>Local listening port<input id="pub-release-port" type="number" min="0" max="65535" value="0" required><span class="help">0 lets the operating system select an available port.</span></label>
+              <label>Facilitator URL<input id="pub-facilitator" type="url" autocomplete="off" spellcheck="false" placeholder="Configured facilitator URL"><span class="help">Configure a facilitator for native payments. Leave empty to inspect payment challenges.</span></label>
+              <label class="checkbox-label span-2"><input id="pub-local-facilitator" type="checkbox">Allow a local facilitator for this configured runtime</label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-stage" class="primary" data-write>Stage seller release</button></div>
+          </form>
+          <div class="panel">
+            <div class="panel-heading"><h3>Release selection and runtime</h3><span id="pub-generation" class="badge">Generation —</span></div>
+            <div id="pub-runtime-summary"></div>
+            <div class="actions"><button type="button" id="pub-release-start" class="primary" data-write>Start selected seller</button><button type="button" id="pub-release-stop" data-write>Stop this operator’s seller</button><button type="button" id="pub-release-rollback" data-write>Roll back release selection</button></div>
+            <p class="help">Activation selects a retained release. Stop and start the owned seller to run a changed selection; its current process remains visible until then.</p>
+            <div id="pub-releases"></div>
+            <details><summary>Original release status</summary><pre id="pub-release-details">Open the publisher.</pre></details>
+          </div>
+        </div>
+        <div data-publisher-panel="buyer" hidden>
+          <form id="pub-buyer-review-form" class="panel">
+            <h3>Review the customer’s actual offer</h3>
+            <div class="form-grid">
+              <label class="span-2">Published snapshot<select id="pub-buyer-snapshot" required><option value="">Prepare and run the seller first</option></select></label>
+              <label class="span-2">First-page native query<textarea id="pub-buyer-query" rows="3" maxlength="8192" spellcheck="false" placeholder="limit=100"></textarea><span class="help">Choose the snapshot above; continuation cursors are generated by the original acquisition.</span></label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-buyer-review" class="primary" data-write>Read actual customer offer</button><button type="button" id="pub-load-buyer-query">Load operator query</button></div>
+            <div id="pub-buyer-review-summary" class="help"></div><div id="pub-buyer-preview" class="table-scroll query-table"></div>
+            <details><summary>Original offer, accepted payment terms and query</summary><pre id="pub-buyer-offer">Read the running seller’s offer.</pre></details>
+          </form>
+          <form id="pub-buyer-prepare-form" class="panel">
+            <h3>Prepare the reviewed customer request</h3>
+            <div class="form-grid">
+              <label>Request intent ID<input id="pub-intent-id" required autocomplete="off" spellcheck="false" placeholder="A retained customer request ID"></label>
+              <label>Accepted payment option<select id="pub-accept" required><option value="">Review the actual offer first</option></select></label>
+            </div>
+            <p id="pub-accept-summary" class="help"></p>
+            <div class="actions"><button type="submit" id="pub-buyer-prepare" class="primary" data-write>Prepare customer request</button></div>
+          </form>
+          <form id="pub-session-form" class="panel">
+            <h3>Continue through the original buyer workspace</h3>
+            <div class="form-grid">
+              <label class="span-2">Prepared customer request<select id="pub-buyer-id" required><option value="">Prepare a customer request first</option></select></label>
+              <label class="span-2">Existing buyer workspace path<input id="pub-buyer-workspace" required autocomplete="off" spellcheck="false" placeholder="/absolute/path/to/original-buyer-workspace"><span class="help">Use the original workspace with its configured account and signer. Credentials stay in that workspace.</span></label>
+              <label>Maximum pages<input id="pub-max-pages" type="number" min="1" required placeholder="Number of reviewed pages"></label>
+              <label>Total payment limit, atomic units<input id="pub-max-total" required inputmode="numeric" pattern="[0-9]+" placeholder="Exact integer limit"></label>
+              <label>Maximum rows<input id="pub-max-rows" type="number" min="1" value="1000000" required></label>
+              <label>Maximum bytes per page<input id="pub-max-page-bytes" type="number" min="1" value="1048576" required></label>
+            </div>
+            <p id="pub-session-summary" class="help">The session retains its original request, selected snapshot, workspace and limits for run and recovery.</p>
+            <div class="actions"><button type="submit" id="pub-session" class="primary" data-write>Open retained buyer session</button><button type="button" id="pub-download-buyer">Download customer request</button></div>
+          </form>
+          <div class="panel"><h3>Customer acquisitions and delivery files</h3><div id="pub-sessions"></div></div>
+        </div>
+        <details class="panel"><summary>Retained publisher state</summary><pre id="pub-state-details">Open the publisher.</pre></details>
+      </section>
+</main><footer>Starforge · Address source and delivery operations</footer></body></html>

@@ -35,6 +35,7 @@ from . import _analysis_profiles_ui
 from .analysis_reports import AnalysisReports
 from .analysis_exports import AnalysisExports
 from .analysis_workbooks import AnalysisWorkbooks
+from .workspace_archive import WorkspaceArchives
 from ._analysis_export_http import send_export
 from .response_tables import AnalysisResponses
 from .errors import BuyerError, StateError
@@ -165,6 +166,8 @@ class AnalysisWorkspace:
             self.exports.recover_completed()
             self.workbooks = AnalysisWorkbooks(self.database, identity=self.identity, reports=self.reports)
             self.workbooks.recover_completed()
+            self.archives = WorkspaceArchives(self.database, identity=self.identity, read_job=self._job)
+            self.archives.recover_completed()
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -177,6 +180,7 @@ class AnalysisWorkspace:
             self._closed = True
         self.exports.close()
         self.workbooks.close()
+        self.archives.close()
         self.profiles.cancel_all()
         self._executor.shutdown(wait=True)
         os.close(self._owner)
@@ -286,13 +290,15 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "query-export", "workbook", "backup", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
             raise StateError("ANALYSIS_REQUEST_ID_REQUIRED")
         spec = {"id": job_id}
-        if kind == "profile":
+        if kind == "workspace-export":
+            spec.update(self.archives.prepare(request))
+        elif kind == "profile":
             spec.update(self.profiles.prepare(request))
         elif kind in {"response-preview", "response-import"}:
             spec.update(self.responses.prepare(kind, request))
@@ -334,11 +340,19 @@ class AnalysisWorkspace:
                 raise StateError("ANALYSIS_WORKSPACE_CLOSED")
             with self.database._connection() as db:
                 db.execute("BEGIN IMMEDIATE")
-                old = db.execute("SELECT kind,request FROM sf_analysis_jobs WHERE id=?", (job_id,)).fetchone()
+                old = db.execute("SELECT kind,request,status FROM sf_analysis_jobs WHERE id=?", (job_id,)).fetchone()
                 if old:
                     if old["kind"] != kind or old["request"] != raw:
                         raise StateError("ANALYSIS_REQUEST_ID_REUSED")
-                    db.commit()
+                    if kind == "workspace-export" and old["status"] in {"INTERRUPTED", "FAILED", "CANCELLED"}:
+                        if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
+                            raise StateError("ANALYSIS_JOB_RUNNING")
+                        self.archives.resume(job_id)
+                        db.execute("UPDATE sf_analysis_jobs SET status='RUNNING',error=NULL,finished_at=NULL WHERE id=?", (job_id,))
+                        db.commit()
+                        self._executor.submit(self._execute, job_id, kind, spec)
+                    else:
+                        db.commit()
                     return self.job(job_id)
                 if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                     raise StateError("ANALYSIS_JOB_RUNNING")
@@ -354,6 +368,8 @@ class AnalysisWorkspace:
                     self.reports._input(db, spec)
                 elif kind == "report-export":
                     self.reports._export_input(db, spec)
+                elif kind == "workspace-export":
+                    self.archives.prepare_intent(job_id, spec)
                 db.execute("INSERT INTO sf_analysis_jobs(id,kind,status,created_at,request) VALUES(?,?,'RUNNING',?,?)", (job_id, kind, _now(), raw))
                 db.commit()
             self._executor.submit(self._execute, job_id, kind, spec)
@@ -370,6 +386,8 @@ class AnalysisWorkspace:
             if kind == "profile":
                 self.profiles.run(job_id, spec)
                 return
+            elif kind == "workspace-export":
+                result = self.archives.run(job_id, spec)
             elif kind in {"response-preview", "response-import"}:
                 result = self.responses.execute(kind, spec)
             elif kind == "import":
@@ -426,7 +444,8 @@ class AnalysisWorkspace:
             if isinstance(exc.__cause__, sqlite3.Error):
                 code += ": " + str(exc.__cause__)
             with self.database._connection() as db:
-                db.execute("UPDATE sf_analysis_jobs SET status='FAILED',error=?,finished_at=? WHERE id=? AND status='RUNNING'", (str(code)[:256], _now(), job_id))
+                status = "CANCELLED" if kind == "workspace-export" and code == "WORKSPACE_ARCHIVE_CANCELLED" else "FAILED"
+                db.execute("UPDATE sf_analysis_jobs SET status=?,error=?,finished_at=? WHERE id=? AND status='RUNNING'", (status, str(code)[:256], _now(), job_id))
 
     def _job(self, job_id):
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
@@ -455,6 +474,9 @@ class AnalysisWorkspace:
             job["progress"] = self.exports.progress(job_id)
         elif job["kind"] == "workbook":
             job["progress"] = self.workbooks.progress(job_id)
+        elif job["kind"] == "workspace-export":
+            job["progress"] = self.archives.progress(job_id)
+            job["archive_availability"] = self.archives.availability(job_id, job["status"])
         return job
 
     def job(self, job_id, *, offset=0, limit=100):
@@ -493,10 +515,7 @@ class AnalysisWorkspace:
         job = self._job(job_id)
         if job["kind"] != "backup" or job["status"] != "COMPLETE":
             raise StateError("ANALYSIS_COMPLETE_BACKUP_REQUIRED")
-        path = self.database.directory / "analysis-backups" / job_id / "datasets.sqlite3"
-        if str(path) != job["result"]["path"]:
-            raise StateError("ANALYSIS_BACKUP_LOCATION_CHANGED")
-        return path
+        return self.archives.local_output("analysis-backups/" + job_id + "/datasets.sqlite3")
 
     def change_export_file(self, job_id):
         job = self._job(job_id)
@@ -505,9 +524,7 @@ class AnalysisWorkspace:
         result = job["result"]
         if not re.fullmatch(r"changes-[a-f0-9]{64}\.(json|csv)", result["filename"]):
             raise StateError("ANALYSIS_CHANGE_EXPORT_LOCATION_CHANGED")
-        path = self.database.directory / "analysis-exports" / result["filename"]
-        if str(path) != result["path"]:
-            raise StateError("ANALYSIS_CHANGE_EXPORT_REGENERATE_AFTER_RECOVERY")
+        path = self.archives.local_output("analysis-exports/" + result["filename"])
         return path, result
 
     def report_export_file(self, job_id):
@@ -517,9 +534,7 @@ class AnalysisWorkspace:
         result = job["result"]
         if not re.fullmatch(r"report-[a-f0-9]{64}\.(html|json|zip)", result["filename"]):
             raise StateError("ANALYSIS_REPORT_EXPORT_LOCATION_CHANGED")
-        path = self.database.directory / "analysis-exports" / result["filename"]
-        if str(path) != result["path"]:
-            raise StateError("ANALYSIS_REPORT_EXPORT_REGENERATE_AFTER_RECOVERY")
+        path = self.archives.local_output("analysis-exports/" + result["filename"])
         return path, result
 
 
@@ -611,6 +626,12 @@ def serve(workspace, *, port=0):
                 with workspace.exports.download(parts[2], get("name")) as (stream, record):
                     send_export(self, stream, record)
                 return
+            if (self.command in {"GET", "HEAD"} and len(parts) == 5
+                    and parts[:2] == ["api", "workspace-archives"] and parts[3] == "files"):
+                if query:
+                    raise StateError("WORKSPACE_ARCHIVE_DOWNLOAD_PARAMETERS_INVALID")
+                with workspace.archives.download(parts[2], parts[4]) as (stream, record):
+                    return send_export(self, stream, record)
             if self.command == "GET":
                 if url.path == "/api/workbook-sources":
                     if set(query) - {"kind", "before", "limit"}:
@@ -668,6 +689,13 @@ def serve(workspace, *, port=0):
                 if len(parts) == 3 and parts[:2] == ["api", "response-source"]:
                     return self._reply(200, workspace.responses.describe(parts[2], int(get("revision", "0")),
                         collection=get("collection"), sse_data=get("sse_data", "text")))
+                if url.path == "/api/workspace-archives":
+                    return self._reply(200, workspace.archives.history(before=int(get("before")) if get("before") else None, limit=int(get("limit", "25"))))
+                if url.path == "/api/workspace-archive-review":
+                    include = get("include_previous_backups", "false")
+                    if include not in {"true", "false"}:
+                        raise StateError("WORKSPACE_ARCHIVE_BACKUP_SELECTION_INVALID")
+                    return self._reply(200, workspace.archives.review(include_previous_backups=include == "true"))
                 if url.path == "/api/versions":
                     return self._reply(200, workspace.database.versions(before=int(get("before")) if get("before") else None, limit=25))
                 if len(parts) == 3 and parts[:2] == ["api", "reports"]:
@@ -720,10 +748,19 @@ def serve(workspace, *, port=0):
                 if url.path == "/api/native-dataset-source":
                     from .analysis_native import attach_dataset
                     return self._reply(200, attach_dataset(workspace, body))
+                if len(parts) == 4 and parts[:2] == ["api", "workspace-archives"] and parts[3] == "cancel":
+                    if body:
+                        raise StateError("WORKSPACE_ARCHIVE_CANCEL_FIELDS_INVALID")
+                    return self._reply(200, workspace.archives.cancel(parts[2]))
                 if len(parts) == 4 and parts[:2] == ["api", "query-exports"] and parts[3] == "cancel":
                     if body:
                         raise StateError("ANALYSIS_EXPORT_CANCEL_FIELDS_INVALID")
                     return self._reply(200, workspace.exports.cancel(parts[2]))
+                if url.path == "/api/native-response-source":
+                    return self._reply(200, workspace.responses.register(body.get("name"), "native",
+                        native_workspace=body.get("native_workspace"), native_kind=body.get("native_kind"),
+                        native_id=body.get("native_id"), native_inbox=body.get("native_inbox"), expected_native=body.get("expected_native"),
+                        format=body.get("format"), expected_revision=body.get("expected_revision")))
                 if url.path == "/api/object-source":
                     return self._reply(200, workspace.responses.register(body.get("name"), "object",
                         session=body.get("session"), destination=body.get("destination"),
@@ -805,6 +842,10 @@ def main():
     response.add_argument("--object-destination", help="Selected recorded object assembly; defaults to the latest recorded assembly")
     response.add_argument("--format", choices=["json", "csv"], default="json")
     response.add_argument("--expected-revision", type=int, default=0)
+    export = commands.add_parser("workspace-export", help="Export a complete closed customer workspace through the original job")
+    export.add_argument("--id", required=True, help="Stable 32-character lowercase hexadecimal operation ID; reuse it to resume")
+    export.add_argument("--include-previous-backups", action="store_true")
+    commands.add_parser("archive-review", help="Review complete portable workspace outputs and missing retained files")
     commands.add_parser("status", help="Read saved sources, queries, views and work")
     args = parser.parse_args()
     if args.command == "status":
@@ -812,7 +853,18 @@ def main():
         return
     workspace = AnalysisWorkspace(args.database, checkout=args.checkout, node=args.node)
     try:
-        if args.command == "source":
+        if args.command == "archive-review":
+            print(_json(workspace.archives.review()))
+        elif args.command == "workspace-export":
+            import time
+            job = workspace.start("workspace-export", {"id": args.id, "include_previous_backups": args.include_previous_backups})
+            while job["status"] == "RUNNING":
+                time.sleep(0.1)
+                job = workspace.job(args.id)
+            print(_json(job))
+            if job["status"] != "COMPLETE":
+                raise SystemExit(1)
+        elif args.command == "source":
             print(_json(workspace.register_source(args.name, args.session, room=args.room, expected_revision=args.expected_revision)))
         elif args.command == "response":
             print(_json(workspace.responses.register(args.name, args.input_kind, config=args.config, result=args.result,
@@ -835,3 +887,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

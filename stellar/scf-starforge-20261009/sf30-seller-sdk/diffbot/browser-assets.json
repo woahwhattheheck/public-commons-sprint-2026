@@ -1,0 +1,48 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/diffbot-dataset/",
+      [
+        "web/index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/diffbot-dataset/browser.mjs",
+      [
+        "web/browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/diffbot-dataset/style.css",
+      [
+        "web/style.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/diffbot-dataset/recurring/recurring.mjs",
+      [
+        "recurring/recurring.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/diffbot-dataset/recurring/recurring.css",
+      [
+        "recurring/recurring.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/local-draft-store.mjs",
+      [
+        "../python/workspace/local-draft-store.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ]
+  ]
+}

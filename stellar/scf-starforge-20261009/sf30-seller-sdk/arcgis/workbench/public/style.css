@@ -1,0 +1,46 @@
+/* MIT. Plain industrial controls, shared with the original publisher. */
+.arcgis-panel h3{font-size:14px;line-height:1.4;margin:20px 0 12px;font-weight:650}
+.arcgis-panel details>form{margin-top:18px}
+.arcgis-panel input[type=file]{font-size:12px;padding:7px;min-width:0}
+.arcgis-panel a{color:#202b32;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.arcgis-panel a:hover{color:#56616a}
+.arcgis-panel a:focus-visible{outline:2px solid #555e66;outline-offset:3px}
+.arcgis-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.arcgis-split>div{min-width:0}
+.arcgis-detail{border-top:1px solid #d7dcdf;padding-top:15px;margin-top:22px;min-width:0}
+.arcgis-detail>.section-heading h3{margin-top:0}
+.arcgis-inline-label{max-width:185px;flex:1 1 160px;margin:0}
+.arcgis-inline-label input{margin-bottom:0}
+.arcgis-detail>.actions{align-items:end}
+.arcgis-panel .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+.arcgis-panel .metric{min-width:0}
+.arcgis-panel .metric strong{font-size:17px;overflow-wrap:anywhere}
+.arcgis-mapping{max-height:490px}
+.arcgis-mapping td:nth-child(2){min-width:180px}
+.arcgis-mapping td:nth-child(3){min-width:145px;white-space:normal}
+.arcgis-mapping td input[type=text]{font-size:12px;margin:0;min-height:32px;padding:6px 8px}
+.arcgis-mapping th:first-child{width:65px}
+.arcgis-column-order{min-width:92px}
+.arcgis-column-order button{display:block;width:100%;font-size:10px;padding:4px 7px;margin-bottom:4px}
+.arcgis-original-value{white-space:pre-wrap;min-width:130px;max-width:350px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;overflow-wrap:anywhere}
+.arcgis-operation{display:grid;gap:6px;padding:14px 0;border-top:1px solid #d7dcdf;min-width:0}
+.arcgis-operation:first-child{border-top:0}
+.arcgis-operation>strong{font-size:12px;overflow-wrap:anywhere}
+.arcgis-operation>button{justify-self:start}
+.arcgis-operation>details{margin:3px 0;padding:8px}
+.arcgis-operation .actions{margin:0}
+.arcgis-operation .error{margin:3px 0}
+.arcgis-downloads{display:grid;gap:0;margin:14px 0 22px}
+.arcgis-downloads>div{padding:10px 0;border-top:1px solid #e0e4e6;min-width:0}
+.arcgis-downloads a{display:inline-block;font-size:12px;font-weight:600;margin-bottom:4px}
+.arcgis-downloads span{display:block;font-size:10px}
+.arcgis-file-list{padding:0;list-style-position:inside;margin:0 0 18px}
+.arcgis-file-list li{display:flex;gap:6px;align-items:center;border-bottom:1px solid #e0e4e6;padding:7px 0;min-width:0}
+.arcgis-file-list li>span{flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px}
+.arcgis-file-list button{padding:5px 7px;font-size:10px;flex:0 0 auto}
+#arcgis-published-run{overflow-wrap:anywhere}
+#arcgis-deployment-form{margin:18px 0 24px}
+#arcgis-current-source{overflow-wrap:anywhere}
+#arcgis-requests pre{max-height:260px}
+@media(max-width:1050px){.arcgis-split{grid-template-columns:1fr;gap:0}.arcgis-panel .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.arcgis-panel h3{font-size:13px}.arcgis-detail{padding-top:12px;margin-top:18px}.arcgis-panel .metric{padding:9px}.arcgis-panel .metric strong{font-size:16px}.arcgis-file-list{margin-bottom:12px}.arcgis-file-list li{flex-wrap:wrap}.arcgis-file-list li>span{flex-basis:100%}.arcgis-downloads span{font-size:10px}.arcgis-detail>.actions{align-items:stretch}.arcgis-inline-label{max-width:none;flex-basis:100%}}

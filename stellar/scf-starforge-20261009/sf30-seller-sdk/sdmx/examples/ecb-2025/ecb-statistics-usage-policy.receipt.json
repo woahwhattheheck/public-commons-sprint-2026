@@ -1,0 +1,27 @@
+{
+  "url": "https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html",
+  "final_url": "https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html",
+  "request_headers": {
+    "Accept": "text/html",
+    "Accept-Encoding": "identity",
+    "User-Agent": "Commons-SDMX-source-capture/1.0"
+  },
+  "status": 200,
+  "response_headers": {
+    "Server": "myracloud",
+    "Date": "Mon, 12 Oct 2026 00:08:27 GMT",
+    "Content-Type": "text/html; charset=UTF-8",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+    "X-XSS-Protection": "1; mode=block",
+    "Expires": "Mon, 12 Oct 2026 00:09:27 GMT",
+    "cache-control": "max-age=60",
+    "ETag": "\"myra-3c53312f\""
+  },
+  "retrieved_at": "2026-10-12T00:08:28.202882+00:00",
+  "path": "ecb-statistics-usage-policy.html",
+  "bytes": 101903,
+  "sha256": "4c55daafb3b2df49b6975a6a78abcfb9f8a3a9a7b66cef779525370a885ee38f"
+}

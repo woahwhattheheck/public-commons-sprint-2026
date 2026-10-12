@@ -7,15 +7,18 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { constants } from 'node:os';
 import { createRequire } from 'node:module';
 import { createWorkspace, workspaceCommand } from './workspace.mjs';
+import { readDistributionSpecification, inspectDistributionRegistrations, contributedCommandHelp } from './specification.mjs';
 
-const specification = JSON.parse(await readFile(new URL('./distribution.json', import.meta.url), 'utf8'));
 const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
-const help = `Starforge merchant toolkit
+const distribution = await readDistributionSpecification({ sourceRoot });
+const specification = distribution.spec;
+const maintainedHelp = `Starforge merchant toolkit
 
   starforge init --dir DIRECTORY [--template dataset|application|upstream]
   starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
   starforge doctor [--native] [--feature NAME]
   starforge source
+  starforge registrations [--source ID | --command NAME]
   starforge installation                     Inspect, install, stage and select a maintained package
   starforge runtime-profile --help
   starforge runtime-install --help
@@ -23,12 +26,20 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  odata                                     Operate OData source editions, merchants and customer receiving
+  odata-live                                Prepare, run and receive the original live OData paid-page merchant
+  frictionless                              Capture table packages, review fields and publish original merchant editions
+  sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
+  buyer-collections                         Review, retain and operate original paid request collections
+  buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
+  bls-publisher                            Publish official BLS labor observations and original customer deliveries
   census-publisher                         Publish Census ACS observations and complete original source deliveries
   usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
   usaspending-dossier                       Receive award editions, write research findings and recover source packets
   weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   water-quality                             Review WQX samples, detection limits and complete paid data editions
+  fred                                      Acquire, review and operate retained economic data editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
   mercury-feed                              Operate original Mercury events, paid feeds and joined recovery
@@ -39,6 +50,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   huwise                                    Alias for the same Opendatasoft data workspace
   arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
   arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
+  arcgis-agent                              Open the original ArcGIS browser and MCP service over one saved publisher
   sftp                                      Inspect, capture and resume pinned private report files
   sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
   sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
@@ -51,12 +63,17 @@ Native commands (arguments pass unchanged to the maintained implementation):
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
+  stellar-application Review selected HTTP/MCP requests, approve payments and reopen complete results
   chainstack-stellar  Install, observe and operate the original Chainstack merchant and buyer handoff
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
   jobs                                      Prepare and operate durable paid application jobs
+  n8n-merchant                              Sell selected automation runs and recover original n8n executions
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
+  jobs delivery                             Send completed original job files and operate retained delivery recovery
+  jobs receiver                             Receive signed completed files, open the private desk and export original results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
+  upstream-tls                               Review supplier certificate references and inspect local TLS credentials
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   cache-operations                          Review cache activity, change retention and recover saved operations
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
@@ -68,12 +85,16 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
+  mcp-collections-download                  Receive and reopen complete original request-collection exports
+  mcp-analysis-archive                      Download and reopen original portable Analysis archives
+  mcp-oauth                                 Configure, discover and receive the original OAuth MCP resource
   mcp-buyer                                 Run the existing private HTTP buyer and operator console
   mcp-results                               Read, export and recover original saved MCP results
   mcp-data                                  Serve prepared SQLite/PostgreSQL/DuckDB/ClickHouse queries over MCP
   mcp-stdio / mcp-client-config              Run and register that buyer with a local MCP host
   merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
+  browser-wallet                            Connect Freighter, review native transfers and execute the original buyer
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   merchant-host                             Install, observe and recover the original Linux merchant group
   merchant-recovery                         Create, verify and cold-restore original encrypted merchant snapshots
@@ -104,6 +125,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
+  api-pass-workspace                        Open the API customer workspace, saved requests, recovery and statements
   api-purchase                              Buy an API allowance, call approved routes and recover saved responses
   api-application                           Run source-pinned application functions over purchased API allowances
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
@@ -149,6 +171,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-serve / catalog                     Host and operate live seller discovery
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   catalog-workspace                          Review signed declarations and retained catalog operations
+  atlas                                     Browse retained catalog offers and prepare buyer requests
+  atlas-workspace                           Export, inspect and receive retained Atlas workspaces
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
   buyer-runbook                              Plan, run and recover multi-resource acquisitions
@@ -169,6 +193,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
+  merchant-accounting-statements             Retain, recover and deliver original customer statements through MCP
   merchant-accounting-platforms              Review, retain and reconcile original QuickBooks and Xero operations
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
@@ -194,15 +219,10 @@ Optional feature groups: ${[...new Set([
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
 and operator configuration when you want the native payment runtime.`;
+const help = maintainedHelp + contributedCommandHelp(distribution) + '\n';
 
-async function release() {
-  try {
-    const data = JSON.parse(await readFile(new URL('../../../../manifest.json', import.meta.url), 'utf8'));
-    return data?.schema === 'stellar-forge.merchant-distribution-manifest.v1' &&
-      data.packageName === specification.name ? data : null;
-  }
-  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
-}
+async function release() { return distribution.manifest; }
+
 function pairs(args, allowed) {
   const result = {};
   for (let i = 0; i < args.length; i += 2) {
@@ -223,19 +243,23 @@ export async function doctor({ requireNative = false, requiredFeatures = [] } = 
       [name, { version, probe: specification.featurePeers?.[group]?.[name]?.probe ?? name }]));
     // Match the original adapter's location, including a checkout that installed
     // drivers in its postgres directory rather than at the distribution root.
-    featureResolvers[group] = createRequire(filename).resolve;
+    const resolver = createRequire(filename).resolve;
+    featureResolvers[group] = probe => resolver(probe);
   }
   if (!Array.isArray(requiredFeatures) || requiredFeatures.some(name => !Object.hasOwn(featurePeers, name)))
     throw new TypeError('Unknown optional feature. Available: ' + Object.keys(featurePeers).join(', '));
   const original = await release();
   const inspectPeers = (definitions, resolveModule = value => import.meta.resolve(value)) => Object.entries(definitions).map(([name, value]) => {
     let available = false;
-    try { resolveModule(value.probe); available = true; } catch {}
+    try { resolveModule(value.probe, name); available = true; } catch {}
     return { name, requestedVersion: value.version, available };
   });
-  const peers = inspectPeers(specification.nativePeers);
+  const resolvePeer = (source, probe) => createRequire(resolve(sourceRoot, source)).resolve(probe);
+  const peers = inspectPeers(specification.nativePeers, (probe, name) =>
+    resolvePeer(distribution.origins.nativePeers[name]?.[0] ?? distribution.sources[0].path, probe));
   const features = Object.entries(featurePeers).map(([name, definitions]) => {
-    const dependencies = inspectPeers(definitions, featureResolvers[name]);
+    const dependencies = inspectPeers(definitions, featureResolvers[name] ?? ((probe, dependency) =>
+      resolvePeer(distribution.origins.featurePeers[name]?.[dependency]?.[0] ?? distribution.sources[0].path, probe)));
     return { name, available: dependencies.every(peer => peer.available), dependencies };
   });
   const python = spawnSync('python3', ['--version'], { encoding: 'utf8', timeout: 2000, windowsHide: true });
@@ -281,6 +305,10 @@ export async function main(args = process.argv.slice(2)) {
   if (command === 'source') {
     if (rest.length) throw new TypeError('source takes no options');
     return print(await release() ?? { package: specification.name, mode: 'SOURCE_CHECKOUT', components: specification.components });
+  }
+  if (command === 'registrations') {
+    const options = pairs(rest, ['--source', '--command']);
+    return print(inspectDistributionRegistrations(distribution, { source: options['--source'], command: options['--command'] }));
   }
   if (command === 'doctor') {
     let requireNative = false;

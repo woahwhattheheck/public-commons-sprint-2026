@@ -19,7 +19,7 @@
   <a class="nav-source" href="https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/GATEWAY.md" target="_blank" rel="noopener noreferrer">Integration guide ↗</a>
 </header>
 <main id="main" class="shell woo-main">
-  <div class="woo-heading"><p class="eyebrow">WOOCOMMERCE / ORIGINAL NATIVE CHECKOUT</p><h1>Prepare your merchant connection.</h1><p>Import the routes exported from your saved Woo products. Review their exact payment terms, then download the setup files for the original seller, buyer and delivery service.</p></div>
+  <div class="woo-heading"><p class="eyebrow">WOOCOMMERCE / ORIGINAL NATIVE CHECKOUT</p><h1>Prepare your merchant connection.</h1><p>Import the routes exported from your saved Woo products. Review their exact payment terms, then download the setup files for the original seller, buyer, delivery service and merchant agent.</p></div>
   <div class="setup-shell">
     <div class="setup-top"><div class="setup-title"><strong id="woo-title">woo-merchant</strong><span id="woo-count" class="mono">0 PRODUCTS</span></div><div class="setup-actions"><button id="woo-import-draft" class="button small" type="button">Open setup draft</button><button id="woo-download-draft" class="button small" type="button">Download draft</button></div></div>
     <p id="woo-status" class="setup-status" role="status" hidden></p>
@@ -27,7 +27,7 @@
     <nav class="setup-tabs" aria-label="Woo setup steps"><button type="button" data-woo-step="0" aria-current="step"><span>01</span>Saved products</button><button type="button" data-woo-step="1"><span>02</span>Store connection</button><button type="button" data-woo-step="2"><span>03</span>Review packet</button><button type="button" data-woo-step="3"><span>04</span>Run and release</button></nav>
     <section id="woo-products" class="setup-pane" aria-labelledby="woo-products-heading">
       <h2 id="woo-products-heading" tabindex="-1">Import your saved product routes.</h2><p class="pane-intro">In a saved WooCommerce product, use <strong>Download saved merchant route</strong> in its Stellar Forge settings. Select up to 64 exports from the same shop and seller. Each checkout contains one mapped simple virtual product at quantity one.</p>
-      <details class="woo-first-install"><summary>First installation? Prepare the original Woo plugin.</summary><p>Download the local preparation tool, select your complete Stellar Forge checkout or installed source package, and copy its original three PHP files into WordPress. Activate the plugin, save the product mapping, then import its route here. The included INSTALL.md covers those steps.</p><button id="woo-plugin-download" class="button small" type="button">Download plugin preparation</button></details>
+      <details class="woo-first-install"><summary>First installation? Prepare the original Woo plugin.</summary><p>Download the local preparation tool, select your complete Stellar Forge checkout or installed source package, and copy its complete original 14-file plugin folder into WordPress. Activate the plugin, save the product mapping, then import its route here. The included INSTALL.md covers those steps.</p><button id="woo-plugin-download" class="button small" type="button">Download plugin preparation</button></details>
       <div class="setup-actions"><button id="woo-choose-routes" class="button primary" type="button">Choose route JSON files</button><button id="woo-paste-toggle" class="text-button" type="button" aria-expanded="false" aria-controls="woo-paste-panel">Paste a route</button></div>
       <div id="woo-paste-panel" class="field woo-paste" hidden><label for="woo-paste">Saved product route JSON</label><textarea id="woo-paste" class="code-input" spellcheck="false" maxlength="262144" placeholder="Paste the saved route export from WooCommerce."></textarea><button id="woo-add-paste" class="button small" type="button">Add this route</button></div>
       <div id="woo-route-list" class="woo-route-list"></div>
@@ -51,7 +51,7 @@
       <div id="woo-review-content"></div>
     </section>
     <section id="woo-run" class="setup-pane" aria-labelledby="woo-run-heading" hidden>
-      <h2 id="woo-run-heading" tabindex="-1">Run the original tools and release the order.</h2><p class="pane-intro">The ZIP includes complete merchant and buyer instructions. Use the same private configuration, outbox and buyer ledger when restarting or recovering an order.</p>
+      <h2 id="woo-run-heading" tabindex="-1">Run the original tools and release the order.</h2><p class="pane-intro">The ZIP includes complete merchant, buyer and agent instructions. Use the same private configuration, outbox and buyer ledger when restarting or recovering an order.</p>
       <div id="woo-run-content"></div>
     </section>
     <div class="setup-footer"><span class="small-label">LOCAL PREPARATION · NO STORE REQUEST OR PAYMENT FROM THIS PAGE</span><div class="setup-actions"><button id="woo-back" class="button small" type="button" hidden>Back</button><button id="woo-next" class="button primary" type="button">Store connection →</button></div></div>

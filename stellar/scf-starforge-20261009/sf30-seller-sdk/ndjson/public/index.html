@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NDJSON source workspace · Stellar Forge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+<header>
+  <div><span class="eyebrow">STELLAR FORGE / SOURCE WORKSPACE</span><h1>JSON Lines to merchant dataset</h1></div>
+  <button id="refresh" type="button">Refresh workspace</button>
+</header>
+<nav aria-label="Workspace sections"><a href="#sources">Sources</a><a href="#mapping">Mapping</a><a href="#editions">Editions &amp; query</a><a href="#comparison">Compare</a><a href="#merchant">Merchant &amp; recovery</a></nav>
+<main>
+  <p class="lede">Retain an export, select the fields customers may query, and prepare an original Stellar Forge merchant. Source bytes and edition history stay in this local workspace.</p>
+  <p id="notice" role="status" aria-live="polite">Opening workspace…</p>
+
+  <section id="sources">
+    <div class="section-heading"><div><span class="eyebrow">01 / SOURCE INTAKE</span><h2>Retain the complete export</h2></div><span id="source-count" class="count"></span></div>
+    <div class="split">
+      <form id="source-form" class="panel">
+        <h3>Add an edition</h3>
+        <label>JSON Lines file<input id="source-file" type="file" accept=".ndjson,.jsonl,application/x-ndjson" required></label>
+        <label>Edition label<input id="source-label" maxlength="160" placeholder="Inventory · October 2026"></label>
+        <p class="hint">One JSON object per nonblank line. UTF-8, LF or CRLF, up to 256 MiB. Field inventory reads every record. Large numbers retain their original digits.</p>
+        <button class="primary" type="submit">Retain and inspect source</button>
+      </form>
+      <div class="panel">
+        <h3>Retained sources</h3>
+        <label>Source edition<select id="source-select"></select></label>
+        <div id="source-detail" class="details empty">Add a source to inspect its full field inventory.</div>
+        <form id="import-form" class="import-form">
+          <label>Restore a source project ZIP<input id="import-file" type="file" accept=".zip,application/zip" required></label>
+          <button type="submit">Import and reconstruct</button>
+        </form>
+      </div>
+    </div>
+    <div class="panel inventory-panel">
+      <div class="inline"><h3>Field inventory</h3><label class="inline-label">Find a field<input id="inventory-filter" type="search" placeholder="Name, path or type"></label></div>
+      <p class="hint">Paths are arrays of exact keys. A <code>null</code> inventory segment describes array members; use a concrete index such as <code>0</code> when mapping one. Counts cover the entire retained file; samples show up to three values.</p>
+      <div class="table-scroll"><table><thead><tr><th>Exact path</th><th>Types</th><th>Records</th><th>Samples</th><th>Add mapping</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
+      <p id="inventory-page" class="hint"></p><button id="inventory-more" type="button" hidden>Show more fields</button>
+    </div>
+  </section>
+
+  <section id="mapping">
+    <div class="section-heading"><div><span class="eyebrow">02 / EXPOSURE POLICY</span><h2>Choose what customers receive</h2></div><span id="mapping-count" class="count"></span></div>
+    <form id="mapping-form" class="panel">
+      <div class="form-grid">
+        <label>Dataset name<input id="mapping-name" maxlength="128" value="Merchant inventory" required></label>
+        <label>Object within each line<input id="record-path" value="[]" spellcheck="false" class="mono"></label>
+        <label>Load an existing mapping<select id="plan-select"></select></label>
+        <div class="field-actions"><button id="load-plan" type="button">Load mapping</button><button id="new-plan" type="button">New mapping</button></div>
+      </div>
+      <p class="hint">Column paths are relative to the selected object. Use string type for identifiers and decimal values requiring every original digit. JSON mode keeps nested objects, arrays and their exact numeric tokens. State mode exposes <code>missing</code>, <code>null</code> or <code>value</code>.</p>
+      <div class="table-scroll"><table class="mapping-table"><thead><tr><th>Column</th><th>Exact path</th><th>Mode / type</th><th>Null &amp; missing</th><th>Native capabilities</th><th></th></tr></thead><tbody id="columns-body"></tbody></table></div>
+      <div class="actions"><button id="add-column" type="button">Add a column</button><button id="map-scalars" type="button">Add scalar fields from inventory</button></div>
+      <details class="advanced"><summary>Projection and page limits</summary><div class="form-grid">
+        <label>Maximum records<input id="max-rows" type="number" min="1" max="1000000" value="250000" required></label>
+        <label>Maximum projected bytes<input id="max-bytes" type="number" min="1" max="268435456" value="268435456" required></label>
+        <label>Maximum cell characters<input id="max-cell" type="number" min="1" max="1048576" value="65536" required></label>
+        <label>Default page size<input id="default-limit" type="number" min="1" max="1000" value="50" required></label>
+        <label>Maximum page size<input id="max-limit" type="number" min="1" max="1000" value="250" required></label>
+        <label class="check"><input id="allow-empty" type="checkbox">Allow an empty edition</label>
+      </div></details>
+      <p class="hint">Choose unique keys to compare editions. Equality filters, ranges and sorts become capabilities of the original dataset endpoint. Missing values mapped to null require a state column for the same path; this keeps missing, null and empty string distinguishable.</p>
+      <div class="actions"><button class="primary" type="submit">Save immutable mapping</button><button id="download-plan" type="button">Download mapping JSON</button><label class="file-button">Load mapping JSON<input id="mapping-file" type="file" accept=".json,application/json"></label></div>
+      <p id="mapping-status" class="hint">Saving creates a content-addressed mapping. Existing editions keep their original mapping.</p>
+    </form>
+  </section>
+
+  <section id="editions">
+    <div class="section-heading"><div><span class="eyebrow">03 / ORIGINAL DATASET ENGINE</span><h2>Build and query an edition</h2></div><span id="build-count" class="count"></span></div>
+    <div class="split">
+      <form id="build-form" class="panel">
+        <h3>Build from retained inputs</h3>
+        <label>Source<select id="build-source"></select></label>
+        <label>Mapping<select id="build-plan"></select></label>
+        <button class="primary" type="submit">Build complete edition</button>
+        <p class="hint">Every selected record is projected. The original CSV loader accepts the complete result before the edition is retained.</p>
+      </form>
+      <div class="panel">
+        <h3>Review edition</h3>
+        <label>Completed edition<select id="build-select"></select></label>
+        <div id="build-detail" class="details empty">Build an edition to inspect its native dataset snapshot.</div>
+      </div>
+    </div>
+    <form id="query-form" class="panel">
+      <h3>Query the selected edition</h3>
+      <div class="form-grid">
+        <label>Page size<input id="query-limit" type="number" value="50" min="1" max="1000"></label>
+        <label>Selected fields<input id="query-fields" placeholder="All exposed columns" spellcheck="false"></label>
+        <label>Order<select id="query-sort"><option value="">Original record order</option></select></label>
+      </div>
+      <div id="query-filters" class="form-grid"></div>
+      <details class="advanced"><summary>Additional native parameters</summary><label>JSON object of scalar strings<textarea id="query-extra" rows="3" spellcheck="false" class="mono">{}</textarea></label></details>
+      <div class="actions"><button class="primary" type="submit">Run query</button><button id="query-next" type="button" disabled>Next page</button></div>
+      <p id="query-detail" class="hint"></p>
+      <div id="query-output" class="table-scroll"></div>
+    </form>
+  </section>
+
+  <section id="comparison">
+    <div class="section-heading"><div><span class="eyebrow">04 / EDITION CHANGES</span><h2>Review changes by unique key</h2></div></div>
+    <form id="compare-form" class="panel">
+      <div class="form-grid"><label>Before<select id="compare-before"></select></label><label>After<select id="compare-after"></select></label></div>
+      <button class="primary" type="submit">Compare complete editions</button>
+      <p class="hint">Both editions must use the same mapping with explicit unique keys. Reordering records does not create a field change.</p>
+      <label>Retained comparison<select id="comparison-select"></select></label>
+      <div id="comparison-summary" class="details"></div>
+      <div id="changes-output" class="table-scroll"></div>
+      <div class="actions"><button id="changes-next" type="button" disabled>Next changes</button><button id="changes-download" type="button" disabled>Download all changes</button></div>
+    </form>
+  </section>
+
+  <section id="merchant">
+    <div class="section-heading"><div><span class="eyebrow">05 / MERCHANT &amp; RECOVERY</span><h2>Prepare a complete handoff</h2></div></div>
+    <div class="split">
+      <form id="merchant-form" class="panel">
+        <h3>Original native merchant</h3>
+        <label>Reviewed edition<select id="merchant-build"></select></label>
+        <div class="form-grid"><label>Public HTTPS origin<input id="merchant-origin" type="url" placeholder="https://data.example.com" required></label><label>Dataset route<input id="merchant-path" value="/data" required></label></div>
+        <label>Original x402 payment terms<textarea id="merchant-payment" rows="9" spellcheck="false" class="mono" required>{
+  "scheme": "exact",
+  "network": "",
+  "asset": "",
+  "amount": "",
+  "payTo": "",
+  "maxTimeoutSeconds": 60
+}</textarea></label>
+        <p class="hint">Enter the actual network, asset, exact atomic-unit amount and recipient. The original merchant compiler validates these terms. The package includes native seller configuration, OpenAPI, generated customer SDK, original source, mapping and an operating guide.</p>
+        <button class="primary" type="submit">Download complete merchant package</button>
+      </form>
+      <div class="panel">
+        <h3>Retain, move and recover</h3>
+        <label>Edition to export<select id="export-build"></select></label>
+        <div class="stack"><button id="export-project" type="button">Download complete source project</button><button id="export-dataset" type="button">Download native dataset and lineage</button></div>
+        <p class="hint">The source project contains the original NDJSON bytes, immutable mapping, projected CSV, native configuration, build review and a file manifest. Import reconstructs the dataset through the same original engine and verifies its snapshot.</p>
+        <h3>Operate the prepared merchant</h3>
+        <p>Extract the merchant ZIP into a private directory and use the installed toolkit:</p>
+        <pre><code>starforge dataset-ndjson-merchant status \
+  --prepared /absolute/merchant
+
+starforge dataset-ndjson-merchant serve \
+  --prepared /absolute/merchant --port 8423</code></pre>
+        <p class="hint">Add the original seller's facilitator configuration for native settlement. The generated customer guide and <code>OPERATING.md</code> describe deployment and the exact selected source. Keep the source workspace and full merchant package private.</p>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>Stellar Forge · Retained local source workspace · Original SF30 query, seller and customer SDK</footer>
+</body>
+</html>
+

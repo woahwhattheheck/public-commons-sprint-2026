@@ -1,0 +1,47 @@
+{
+  "schema": "stellar-forge.mssql-source.v1",
+  "connection": {
+    "host": "127.0.0.1",
+    "port": 1433,
+    "database": "starforge_catalog",
+    "user": "starforge_reader",
+    "passwordEnv": "STARFORGE_MSSQL_PASSWORD",
+    "tls": "local-plaintext"
+  },
+  "queries": {
+    "catalog": {
+      "sql": "SELECT [product_id], [region], [name], [price], [updated_at] FROM [dbo].[catalog] WHERE [region]=@region AND [product_id]>@after_id",
+      "parameters": {
+        "region": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "after_id": {
+          "type": "integer",
+          "minimum": "0",
+          "default": "0"
+        }
+      },
+      "parameterOrder": [
+        "region",
+        "after_id"
+      ],
+      "columns": [
+        "product_id",
+        "region",
+        "name",
+        "price",
+        "updated_at"
+      ],
+      "orderBy": [
+        {
+          "column": "product_id",
+          "direction": "ASC"
+        }
+      ],
+      "maxRows": 100,
+      "maxBytes": 65536,
+      "timeoutMs": 5000
+    }
+  }
+}

@@ -1,5 +1,16 @@
 # Starforge merchant operations through MCP
 
+Native Stellar MPP customer operations use the existing private console and original payment records. The [MPP guide](./MPP.md) covers host connections, retained customer reviews, native jobs, recovery, and complete resumable response or customer-package downloads through this same operator.
+
+Create and revise OpenAPI merchants through this same operator. Attach the host's
+existing API consoles, review original source and payment terms, save or reopen
+retained drafts, apply cache changes, and save those policies into a revised
+package. Complete package exports resume after either service restarts, preserve
+original source and compiled files, and receive into another console for SF82
+release staging. The browser and MCP client share the original package and
+runtime state. See [OpenAPI merchant authoring and receiving](OPENAPI_WORKSPACES.md)
+for setup, all 31 tools and the complete receiving workflow.
+
 Federal award research is available through the same merchant interface. Open
 host-declared USAspending workspaces, operate the original provider capture jobs,
 review award and recipient data, prepare the native merchant dataset, receive
@@ -39,6 +50,71 @@ the same compiled source through the original release controls. The complete
 review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
+
+## ArcGIS merchant workspace
+
+The same interface now operates the original ArcGIS source workbench: source-file intake and live capture, reviewed field mappings, immutable editions, deployment exports and staging, release controls and complete customer file delivery. The existing publisher tools share that workbench’s original publisher, saved plans, publication history and scheduler.
+
+Use `starforge arcgis-agent serve` to open the browser and MCP service together, or select **ArcGIS merchant workspace** in the installed runtime’s Applications screen. Both surfaces use one merchant owner and the original release store. Full host configuration, native request recovery and source-to-delivery commands are in [ARCGIS_WORKSPACE.md](ARCGIS_WORKSPACE.md).
+
+
+## Operate native OpenSearch merchants and relevance
+
+Use the same operator to save query revisions, inspect the native source,
+capture result editions, maintain judgments, compare native rankings and prepare
+the selected search as a merchant. Its 44 OpenSearch tools continue through
+retained deployment, customer generation and complete file delivery. Browser and
+MCP share the original request IDs, revisions, results and prepared packages.
+
+The host declares each alias with its original directory, source file, optional
+merchant plan and managed runtime settings. Initialize and connect the operator:
+
+```sh
+node stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp init-opensearch-workspaces \
+  --dir /private/search/mcp --connection /private/search/mcp-workspaces.json
+node stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp-stdio \
+  --config /private/search/mcp/merchant-mcp.json
+```
+
+An existing merchant configuration attaches that private connection file through
+`opensearchWorkspaceConnection`. Configured OpenSearch operators accept up to
+2 MiB per HTTP request or stdio frame; original query and judgment validators
+retain their own document limits.
+
+After preparation, use `merchant_opensearch_deployment_stage` for the saved
+package, compare retained releases, and activate the reviewed release at its
+current generation. Start the selected seller, retain its instance ID, and
+generate the original customer export from its live health, offers and OpenAPI.
+The same tools drain upgrades, restart selected releases and roll back to a
+retained version. An interrupted call recovers from the same original operation.
+
+Each alias's deployment tools use its own `WORKSPACE/deployment` store and
+`WORKSPACE/deployment.clients` customer directory. The optional
+`--release-store ORIGINAL_SF82_STORE` selects the host's general merchant
+release tools separately. A host with several aliases keeps their deployment
+stores distinct.
+
+See [OPENSEARCH_WORKSPACE.md](OPENSEARCH_WORKSPACE.md) for the complete connection
+schema, 44 operations, query and relevance workflow, release lifecycle and
+recovery. Original client files, complete customer archives, result JSON, CSV and
+reports use the shared SHA-pinned resumable readers. Retained customer files can
+be delivered after the original seller stops. Use
+`merchant_opensearch_deployment_adopt_client` with the original inspected
+`filesSha256` to recover an intact customer export's completion manifest.
+
+## Operate a saved Redis merchant
+
+Connect an existing Redis workspace with `init-redis-workspaces --dir NEW_HOST
+--connection REDIS_CONNECTION_JSON`. The browser and 17 agent tools share its
+original model, saved source revisions, query results and package operations.
+The same merchant release controls use that workspace's existing release store.
+Large original records and public customer files have complete resumable downloads.
+See [REDIS.md](REDIS.md) for the host connection, authoring-to-release workflow,
+source continuation and retained operation recovery.
+
+## Customer statements through accounting
+
+Manage original customer profiles and order assignments, import native service/API usage, review and retain statements or corrections, reconcile interrupted replies and deliver all five original statement files through the existing accounting MCP connection. The customer SDK, durable CLI and original file reader share the native statement IDs, revisions and lifecycle. See [ACCOUNTING_STATEMENTS.md](ACCOUNTING_STATEMENTS.md) for configuration, operation recovery and delivery.
 
 ## Operate existing WooCommerce stores
 
@@ -540,3 +616,104 @@ or add `socrataWorkspaceConnection` to the existing merchant configuration.
 The `merchant_socrata_*` tools use the original source and publisher objects.
 Their industrial browser borrows that same operator, and complete customer files
 use the existing verified retained-file reader.
+
+
+## XML and NDJSON source workspaces
+
+Operate complete source-file datasets through the original private source console.
+The browser and the `merchant_source_*` tools share saved source bytes, explicit
+mappings, native SF30 builds and queries, and keyed edition comparisons. Prepare
+complete project, dataset, changes or NDJSON merchant exports, read their exact
+bytes across interrupted downloads, and import a project into another original
+receiving workspace.
+
+Use `init-source-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or attach `--source-workspaces` during ordinary merchant initialization. The
+[complete source workspace guide](SOURCE_WORKSPACES.md) covers original console
+startup, source-file handles, mapping, merchant preparation, resumable delivery
+and reconstruction. `starforge dataset ndjson` opens the source application;
+its browser remains the same workspace used by the agent.
+
+## Geocodio address review and customer workspaces
+
+[GEOCODIO_WORKSPACES.md](./GEOCODIO_WORKSPACES.md) connects this merchant host to
+the original Geocodio address application. Exact source intake, prepared provider
+requests, retained responses, candidate and coordinate review, native datasets,
+portable source closure, managed publication and customer delivery share the
+same original operator object.
+
+Use `init-geocodio-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `geocodioWorkspaceConnection` to the existing merchant configuration.
+The 16 `merchant_geocodio_*` tools retain the original address revision, provider
+request body and customer session. Browser listeners borrow that same instance;
+source, prepared-request and customer files use the maintained chunk reader.
+
+
+
+## Captured API workspaces
+
+Attach the original SF61 HAR console with
+`init-har-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`
+or ordinary `init --har-workspaces CONNECTION_JSON`. The existing merchant
+host supplies 24 `merchant_har_*` tools for complete retained capture
+intake, observations and immutable review, later capture editions, native
+merchant plan carry/preview/save, whole receiving copy/adoption and resumable
+original files. Browser and agent share the original source library and merchant
+compiler. `inspect-har` and `download-har` use the maintained checkpointed
+file transport. See the [complete HAR operating guide](HAR_WORKSPACE.md).
+
+
+## Saved GraphQL authoring, native releases and customer handover
+
+The same merchant MCP now connects the original SF105 GraphQL workspaces with
+`init-graphql-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`, or
+`graphqlWorkspaceConnection` in an existing merchant configuration. Host aliases
+select the original private workspace, source endpoint and launch settings.
+
+`merchant_graphql_*` tools capture and save the actual schema, author bounded
+field/argument/variable operations, preserve raw drafts and revision conflicts,
+run and recover stable-ID native previews, prepare merchant/schema-evolution
+packets, and operate the original deployment/SF82 release console. The person
+using the returned native browser and the agent share the same store and IDs.
+
+`merchant_graphql_export_prepare` retains a selected original file set.
+`inspect-graphql` and `download-graphql` deliver its exact source, preview,
+merchant/buyer, revision, deployment or host files through the shared resumable
+downloader, including nested paths and process-reopen continuation. It does not
+create another workspace or transfer engine.
+
+See [GRAPHQL_WORKSPACES.md](GRAPHQL_WORKSPACES.md) for host configuration, the
+complete authoring-to-release flow, exact tool arguments and customer receiving.
+
+## CoinGecko market research and native purchase workspaces
+
+[COINGECKO-WORKSPACE.md](COINGECKO-WORKSPACE.md) connects the original CoinGecko browser and research model to this same merchant MCP. Its 32 tools cover complete request collections, exact source imports, paged market rows and linked entities, snapshots and comparisons, versioned research notes, original provider compilation, native SF88 purchase preparation/action recovery, and full retained handover downloads/restoration. The host declares private directory, input and buyer-profile aliases; browser and agents share the original project revision and operation IDs. Start with `starforge merchant-mcp init-coingecko-workspaces --dir NEW_PRIVATE_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json`. Opening the CoinGecko native SQLite workspace requires Node.js 24 or later.
+
+
+## Managed dataset editions and customer restoration
+
+Initialize the original managed dataset lifecycle with `--dataset-package`.
+The same merchant operator stages the complete source package, initializes its
+original version store, starts the seller, publishes later editions and restores
+retained snapshots. Original cursors continue across publication and the current
+data selection survives seller and MCP restart. The [dataset lifecycle guide](DATASET_LIFECYCLE.md)
+connects all five tools to the existing release controls and original NDJSON
+customer receiving, source reconstruction and project handoff.
+
+
+## World Bank indicator workspaces
+
+The original World Bank model is available through this same authenticated HTTP
+and stdio host. Agents and the industrial browser share source selections,
+retained capture jobs, exact observation values, reviewed native editions,
+publisher drafts, SF82 releases and SF88 customer sessions.
+
+Use `init-worldbank-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `worldbankWorkspaceConnection` to an existing merchant configuration.
+The `merchant_worldbank_*` tools use host-declared imports, merchant terms and
+buyer workspace aliases. `download-worldbank` resumes complete original handovers
+and dataset files through the host's existing durable file receiver.
+
+[World Bank setup, source operation, release and customer receiving](WORLDBANK-WORKSPACES.md)
+documents the complete workflow and its original IDs, revisions and file hashes.
+

@@ -10,6 +10,15 @@ The source supports Redis 7 or later and Valkey 7.2 or later with `EVAL_RO`.
 It uses the maintained `@redis/client` 6.2.1 connection implementation and the
 existing SF30 developer portal, operations interface and request lifecycle.
 
+## Connect an Upstash source
+
+The same merchant supports Upstash's native HTTPS/RESP2 transport. Start with
+`starforge redis init --directory NEW_DIRECTORY --transport upstash-rest`.
+The [Upstash customer guide](UPSTASH.md) covers credentials, original-source
+preflight, customer preparation, retained releases and the complete native
+provider operation. The existing read-only query engine and exact value handling
+are shared by both connection types.
+
 ## Install the native feature
 
 Select a distribution archive that includes the Redis command and its runtime
@@ -254,3 +263,7 @@ ranking result after rollback. It also exercised authenticated database
 selection, binary values, exact decimal text, missing projected fields, stream
 duplicate fields, pagination boundaries, and both native and encoded result
 size limits.
+
+## Saved authoring workspace
+
+The [Redis merchant workspace](workspace/README.md) combines named-product editing, complete saved revisions, live source previews, original customer packages and retained release controls. Use `starforge-merchant redis workspace create --directory NEW --source SOURCE --plan PLAN`, then `starforge-merchant redis workspace open --directory WORKSPACE`. The browser and CLI share the same private workspace; the host-selected connection and environment credential references carry through to the original merchant.

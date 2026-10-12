@@ -2,19 +2,20 @@
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { prepareDraft,prepareFromWorkspace,writePackage,readPackage,prepareBuyerHandoff,receivePage,readJson } from './client.mjs';
+import { prepareDraft,prepareFromWorkspace,templateFromWorkspace,writePackage,readPackage,prepareBuyerHandoff,receivePage,readJson } from './client.mjs';
 import { templatePlan,json } from './config.mjs';
 import { startODataMerchant } from './merchant.mjs';
 const HELP=`Live OData merchant and customer
 
 node odata/live/cli.mjs COMMAND [options]
 
-  template --catalog catalog.json --out plan.json
+  template --catalog catalog.json [--entity-set NAME] --out plan.json
+  template --workspace DIRECTORY --saved-plan ID --out plan.json
   package --catalog catalog.json --plan plan.json --query selection.json --out NEW_DIRECTORY
   package --workspace DIRECTORY --saved-plan ID --plan plan.json --operation ID --out NEW_DIRECTORY
   inspect --package DIRECTORY
   serve --package DIRECTORY --state PRIVATE_DIRECTORY [--port 8423 --operations-port 8424] [--facilitator HTTPS_URL]
-  buyer --package DIRECTORY --operation ID --request request.json --intent STABLE_INTENT --out NEW_DIRECTORY
+  buyer --package DIRECTORY --operation ID --request request.json --intent STABLE_INTENT --out NEW_DIRECTORY [--request-directory FINAL_DIRECTORY]
   receive --package DIRECTORY --operation ID --response saved-response.json --out NEW_DIRECTORY
 
 Use original odata/cli.mjs to connect, inspect metadata, and save/review queries.
@@ -33,7 +34,9 @@ export async function main(args=process.argv.slice(2)){
   const {command,options:o}=parse(args),options={allowLoopback:o['allow-loopback']==='true'};
   let result;
   if(command==='template'){
-    result=templatePlan(await readJson(required(o.catalog,'catalog')),{...(o.origin?{publicOrigin:o.origin}:{})});
+    if(o.workspace){const {openODataWorkspace}=await import('../workspace.mjs'),workspace=await openODataWorkspace({directory:resolve(o.workspace)});
+      try{result=await templateFromWorkspace(workspace,{planId:required(o['saved-plan'],'saved-plan'),publicOrigin:o.origin});}finally{await workspace.close();}}
+    else result=templatePlan(await readJson(required(o.catalog,'catalog')),{...(o.origin?{publicOrigin:o.origin}:{}),...(o['entity-set']?{entitySet:o['entity-set']}:{})});
     await writeFile(resolve(required(o.out,'out')),json(result),{flag:'wx',mode:0o600});result={path:resolve(o.out)};
   }else if(command==='package'){
     const plan=await readJson(required(o.plan,'plan'));let prepared;
@@ -45,7 +48,7 @@ export async function main(args=process.argv.slice(2)){
     const prepared=await readPackage(required(o.package,'package'),options);
     if(command==='inspect')result={manifest:prepared.manifest,plan:prepared.plan,selection:prepared.selection};
     else if(command==='buyer')result=await prepareBuyerHandoff(prepared,{operation:required(o.operation,'operation'),request:await readJson(required(o.request,'request')),
-      intentId:required(o.intent,'intent'),directory:required(o.out,'out')});
+      intentId:required(o.intent,'intent'),directory:required(o.out,'out'),requestDirectory:o['request-directory']??o.out});
     else if(command==='receive')result=await receivePage(prepared,{operation:required(o.operation,'operation'),responsePath:required(o.response,'response'),directory:required(o.out,'out')});
     else if(command==='serve'){
       let nativeFactory=null;

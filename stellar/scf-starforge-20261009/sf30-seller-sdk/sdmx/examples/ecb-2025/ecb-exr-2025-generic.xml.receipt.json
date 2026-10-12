@@ -1,0 +1,30 @@
+{
+  "url": "https://data-api.ecb.europa.eu/service/data/ECB,EXR,1.0/A+D+M+Q.GBP+USD.EUR.SP00.A?startPeriod=2025-01-01&endPeriod=2025-12-31&detail=full",
+  "final_url": "https://data-api.ecb.europa.eu/service/data/ECB,EXR,1.0/A+D+M+Q.GBP+USD.EUR.SP00.A?startPeriod=2025-01-01&endPeriod=2025-12-31&detail=full",
+  "request_headers": {
+    "Accept": "application/vnd.sdmx.genericdata+xml;version=2.1",
+    "Accept-Encoding": "identity",
+    "User-Agent": "Commons-SDMX-source-capture/1.0"
+  },
+  "status": 200,
+  "response_headers": {
+    "Server": "myracloud",
+    "Date": "Mon, 12 Oct 2026 00:06:33 GMT",
+    "Content-Type": "application/vnd.sdmx.genericdata+xml;version=2.1",
+    "Transfer-Encoding": "chunked",
+    "Connection": "close",
+    "Cache-Control": "max-age=30",
+    "Content-Disposition": "attachment;filename=data.xml",
+    "Last-Modified": "Fri, 09 Oct 2026 13:57:17 GMT",
+    "Strict-Transport-Security": "max-age=31536000 ; includeSubDomains",
+    "Vary": "accept",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-Xss-Protection": "0",
+    "Expires": "Mon, 12 Oct 2026 00:07:03 GMT"
+  },
+  "retrieved_at": "2026-10-12T00:06:34.064938+00:00",
+  "path": "ecb-exr-2025-generic.xml",
+  "bytes": 135483,
+  "sha256": "9e4b9de7eb12d0936ac9f8a1a314473c1e0052ee9225f0a0729c23872c2f925f"
+}

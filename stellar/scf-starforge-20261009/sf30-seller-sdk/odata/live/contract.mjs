@@ -62,7 +62,7 @@ export function validatePlan(input, catalog, { allowLoopback = false } = {}) {
   if (!Array.isArray(input.operations) || !input.operations.length || input.operations.length > 32) fail('Choose 1–32 merchant products');
   const ids = new Set(), paths = new Set();
   const operations = input.operations.map(row => {
-    fields(row,['id','path','entitySet','fields','filterFields','orderFields','maxPageRows','maxTotalRows','amountAtomic'],'merchant product');
+    fields(row,['id','path','entitySet','fields','filterFields','orderFields','maxPageRows','maxTotalRows','amountAtomic','sourceFilters','sourceFilterMode'],'merchant product');
     if (typeof row.id !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(row.id) || ids.has(row.id) ||
         typeof row.path !== 'string' || !/^\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(row.path) ||
         row.path.startsWith('/_seller/') || paths.has(row.path)) fail('Choose a unique product ID and merchant route');
@@ -72,17 +72,23 @@ export function validatePlan(input, catalog, { allowLoopback = false } = {}) {
     const scalar = new Set(entity.fields.filter(field => !field.collection &&
       (['Edm.String','Edm.Boolean','Edm.Byte','Edm.SByte','Edm.Int16','Edm.Int32','Edm.Int64','Edm.Decimal','Edm.Single','Edm.Double','Edm.Guid','Edm.Date','Edm.DateTimeOffset','Edm.TimeOfDay','Edm.Duration','Edm.Binary'].includes(underlyingType(catalog,field.type)) || catalog.enumTypes[field.type])).map(field => field.path));
     const selected = unique(row.fields,scalar,'scalar output fields',true);
-    const filters = unique(row.filterFields ?? [],new Set(selected),'filter fields');
-    const ordering = unique(row.orderFields ?? [],new Set(selected),'order fields');
+    const filters = unique(row.filterFields ?? [],scalar,'filter fields');
+    const ordering = unique(row.orderFields ?? [],scalar,'order fields');
     if (entity.keyFields.some(key => !selected.includes(key) || !ordering.includes(key))) fail('Retain every entity key in output and ordering');
     integer(row.maxPageRows,1,100000,'hard supplier page row limit');
     integer(row.maxTotalRows,1,1000000000,'total rows per query');
     if (typeof row.amountAtomic !== 'string' || !/^[1-9][0-9]{0,38}$/.test(row.amountAtomic) || BigInt(row.amountAtomic) > (1n<<127n)-1n)
       fail('Set a positive canonical atomic price for each paid page');
-    const operation = { ...row,entitySet:entity.container+'/'+entity.name,fields:selected,filterFields:filters,orderFields:ordering };
+    if (row.sourceFilters !== undefined && (!Array.isArray(row.sourceFilters) || row.sourceFilters.length > 16 ||
+        row.sourceFilters.some(filter=>!plain(filter)||!filters.includes(filter.field)))) fail('Fixed source filters must use enabled declared fields');
+    if (row.sourceFilterMode !== undefined && (row.sourceFilters === undefined || !['and','or'].includes(row.sourceFilterMode)))
+      fail('A fixed source filter mode requires its retained filters');
+    const operation = { ...row,entitySet:entity.container+'/'+entity.name,fields:selected,filterFields:filters,orderFields:ordering,
+      ...(row.sourceFilters!==undefined?{sourceFilters:structuredClone(row.sourceFilters),sourceFilterMode:row.sourceFilterMode??'and'}:{}) };
     sourceTarget(catalog,operation);
     // Original type/query compiler supplies the key ordering and full expression rules.
-    compileQuery(catalog,{entitySet:operation.entitySet,select:selected,top:row.maxTotalRows,pageSize:Math.min(100,row.maxPageRows)});
+    compileQuery(catalog,{entitySet:operation.entitySet,select:selected,filters:row.sourceFilters??[],filterMode:row.sourceFilterMode??'and',
+      top:row.maxTotalRows,pageSize:Math.min(100,row.maxPageRows)});
     return operation;
   });
   if (input.headerEnv !== undefined) {
@@ -95,6 +101,12 @@ export function validatePlan(input, catalog, { allowLoopback = false } = {}) {
 export function buildQuery(plan,catalog,id,input = {}) {
   fields(input,['select','filters','filterMode','orderBy','top','count','pageSize'],'customer query');
   const {operation} = operationFor(plan,catalog,id);
+  if (operation.sourceFilters !== undefined) {
+    if (input.filters !== undefined && canonical(input.filters)!==canonical(operation.sourceFilters) ||
+        input.filterMode !== undefined && input.filterMode!==(operation.sourceFilterMode??'and'))
+      fail('The merchant retains the selected source query scope');
+    input={...input,filters:operation.sourceFilters,filterMode:operation.sourceFilterMode??'and'};
+  }
   const selected = unique(input.select ?? operation.fields,new Set(operation.fields),'output fields',true);
   if (!Array.isArray(input.filters ?? []) || (input.filters ?? []).length > 16 ||
       (input.filters ?? []).some(filter => !plain(filter) || !operation.filterFields.includes(filter.field)))
@@ -107,10 +119,12 @@ export function buildQuery(plan,catalog,id,input = {}) {
   const compiled = compileQuery(catalog,{...input,entitySet:operation.entitySet,select:selected,top,pageSize});
   const {entitySet,...query} = compiled.plan;
   if (compiled.plan.select.some(field => !operation.fields.includes(field))) fail('Original query selected an unlisted field');
+  wireFromUrl(catalog,operation,compiled.url);
   return {compiled,query,url:compiled.url,seenRows:0};
 }
 export function wireFromUrl(catalog,operation,input) {
   const selected = sourceTarget(catalog,operation), url = new URL(input), inverse = Object.fromEntries(Object.entries(selected.mapping).map(([a,b])=>[b,a]));
+  if (url.href.length > 8192) fail('The reviewed supplier query exceeds the original transport URL limit');
   if (url.origin !== selected.url.origin || url.pathname !== selected.url.pathname || url.username || url.password || url.hash)
     fail('Supplier continuation changed the selected resource');
   const wire = {};

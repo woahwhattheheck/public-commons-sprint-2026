@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
-import { readFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
-import { resolve, dirname, join, basename } from 'node:path';
+import { readFileSync, existsSync, mkdirSync, unlinkSync, realpathSync } from 'node:fs';
+import { resolve, dirname, join, basename, isAbsolute, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { Workspace, Problem, requireRole, digest, now, pack, unpack } from './store.mjs';
@@ -28,6 +28,31 @@ export function startServer({database=resolve('workspace/cskt.sqlite'),host='127
     if(release.sha!==intent.releaseSha256||row.release_id!==intent.releaseId||row.action!==intent.action||row.target!==intent.config.baseUrl)throw new Problem(409,'The retained native delivery identity does not match its original release and journal.','deployment_identity_changed');
     return {row,intent,release};
   };
+  const retainedReleaseAssets=release=>{
+    const identity=release.manifest.sourceCapture;
+    const capture=identity&&workspace.db.prepare('SELECT id,sha,metadata FROM captures WHERE id=?').get(identity.id);
+    if(!capture||capture.sha!==identity.sha256)throw new Problem(409,'The release must retain its exact original source capture before using captured files.','asset_capture_identity');
+    const metadata=unpack(capture.metadata),assets=Array.isArray(metadata.assets)?metadata.assets:[],files=[],sources=[];
+    let base;
+    try{base=realpathSync(sourceRoot);}catch(error){if(!['ENOENT','ENOTDIR'].includes(error.code))throw new Problem(409,'The configured original source directory could not be read.','asset_capture_unavailable');}
+    if(!base)return {captureId:capture.id,captureSha256:capture.sha,files,sources};
+    for(const item of release.manifest.items){
+      const document=item.document;
+      if(!document||['remove','consolidate'].includes(item.disposition)||item.source?.kind!=='media')continue;
+      const captured=assets.find(asset=>asset?.mediaId===item.source.wpId&&asset.status===200&&!asset.error&&!asset.providerError&&
+        (asset.finalUrl||asset.url)===document.sourceUrl&&asset.sha256===document.sha256&&asset.bytes===document.bytes&&
+        typeof asset.contentType==='string'&&asset.contentType.split(';')[0].trim().toLowerCase()===document.mimeType.toLowerCase());
+      if(!captured?.file)continue;
+      if(typeof captured.file!=='string'||captured.file.length>4096||isAbsolute(captured.file)||/[\\\0\r\n]/.test(captured.file)||captured.file.split('/').some(part=>!part||part==='.'||part==='..'))throw new Problem(409,'The captured file must use its retained relative source path.','asset_capture_path',{itemId:item.id});
+      let file;
+      try{file=realpathSync(resolve(base,captured.file));}catch(error){if(['ENOENT','ENOTDIR'].includes(error.code))continue;throw new Problem(409,'The selected original captured file could not be read.','asset_capture_unavailable',{itemId:item.id});}
+      const local=relative(base,file);
+      if(!local||local==='..'||local.startsWith('../')||isAbsolute(local))throw new Problem(409,'The selected original file must stay inside the configured source directory.','asset_capture_path',{itemId:item.id});
+      const source={itemId:item.id,file:captured.file,sourceUrl:document.sourceUrl,finalUrl:captured.finalUrl||captured.url,responseContentType:captured.contentType,sha256:captured.sha256,bytes:captured.bytes};
+      sources.push(source);files.push({...source,file});
+    }
+    return {captureId:capture.id,captureSha256:capture.sha,files,sources};
+  };
   const runDeployment=async({actor,input,method,path,release,action,config,module,parentOperationId=null})=>{
     const retained=workspace.meta('deploymentIntent:'+input.requestId);
     if(retained&&(retained.releaseId!==release.id||retained.releaseSha256!==release.sha||retained.action!==action||retained.actorId!==actor.id||(retained.parentOperationId||null)!==parentOperationId))throw new Problem(409,'This request ID identifies a different original native delivery operation.','request_conflict');
@@ -53,11 +78,23 @@ export function startServer({database=resolve('workspace/cskt.sqlite'),host='127
         try{workspace.db.prepare('UPDATE deployments SET status=?,finished_at=NULL WHERE id=?').run('RUNNING',previous.id);workspace.setMeta('revision',workspace.revision()+1);workspace.event(actor,'destination.'+intent.action+'.resumed',previous.id,{releaseId:intent.releaseId,target:intent.config.baseUrl});workspace.db.exec('COMMIT');}
         catch(error){try{workspace.db.exec('ROLLBACK');}catch{}throw error;}
       }
-      let outcome,status;
+      let outcome,status,capturedAssets=workspace.meta('deploymentAssetStage:'+previous.id,null);
       try{
+        if(intent.action==='apply'){
+          const selected=retainedReleaseAssets(original.release);
+          if(selected.files.length){
+            if(typeof module.stageReleaseAssets!=='function')throw new Problem(503,'Install the maintained destination adapter with retained source-file staging.','asset_stage_module_missing');
+            const result=await module.stageReleaseAssets(intent.config,{manifestBytes:original.release.bytes,sha256:intent.releaseSha256,operationId:previous.id,files:selected.files});
+            capturedAssets={captureId:selected.captureId,captureSha256:selected.captureSha256,sources:selected.sources,result,finishedAt:now()};
+            workspace.db.exec('BEGIN IMMEDIATE');
+            try{workspace.setMeta('deploymentAssetStage:'+previous.id,capturedAssets);workspace.setMeta('revision',workspace.revision()+1);workspace.event(actor,'destination.assets.staged',previous.id,capturedAssets);workspace.db.exec('COMMIT');}
+            catch(error){try{workspace.db.exec('ROLLBACK');}catch{}throw error;}
+          }
+        }
         outcome=await(intent.action==='apply'?module.applyRelease(intent.config,{manifestBytes:original.release.bytes,sha256:intent.releaseSha256,operationId:previous.id,...(intent.planSha256?{planSha256:intent.planSha256}:{})}):module.rollbackRelease(intent.config,{releaseId:intent.releaseId,operationId:previous.id}));
         status='RETURNED';
       }catch(error){outcome={error:{message:error.message,code:error.code||'destination_response_interrupted',detail:error.detail||null},releaseId:intent.releaseId,operationId:previous.id};status='READBACK_REQUIRED';}
+      if(capturedAssets)outcome={...outcome,capturedAssets};
       workspace.db.exec('BEGIN IMMEDIATE');
       try{workspace.db.prepare('UPDATE deployments SET status=?,result=?,finished_at=? WHERE id=?').run(status,pack(outcome),now(),previous.id);workspace.setMeta('revision',workspace.revision()+1);workspace.event(actor,'destination.'+intent.action+'.returned',previous.id,{status,result:outcome,target:intent.config.baseUrl});workspace.db.exec('COMMIT');}
       catch(error){try{workspace.db.exec('ROLLBACK');}catch{}throw error;}

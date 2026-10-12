@@ -49,6 +49,22 @@
 <p class="quiet">To restore a prior policy, choose its snapshot below. Save a fresh snapshot first; restoration uses that fresh runtime review.</p>
 <div class="toolbar"><label>Prior policy snapshot<select id="restore-target"></select></label><button id="restore-policy">Prepare selected route’s prior policy</button></div>
 </section>
+<section id="retained-policy" aria-labelledby="retained-policy-heading" hidden>
+<h2 id="retained-policy-heading">Save policy for restart</h2>
+<p>Choose the observed policy to carry into a new saved merchant package.</p>
+<p id="policy-snapshot" class="quiet">Save and select a current operating snapshot first.</p>
+<form id="retained-policy-form">
+<label>New package name<input id="policy-package-name" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" maxlength="64" autocomplete="off"></label>
+<fieldset><legend>Routes to retain</legend><div id="policy-package-routes" class="fields"></div></fieldset>
+<label>Reason for retaining this policy<textarea id="policy-package-note" rows="3" maxlength="2000"></textarea></label>
+<button id="policy-review" type="submit">Review saved package settings</button>
+</form>
+<div id="retained-policy-review" aria-live="polite"></div>
+<button id="policy-save" class="primary">Save or recover this package</button>
+<div id="retained-policy-result"></div>
+<h3>Retained package reviews</h3>
+<div class="toolbar"><label>Review<select id="policy-review-list"></select></label><button id="policy-open">Reopen selected review</button><span id="policy-review-count" class="quiet"></span><button id="policy-review-previous">Previous</button><button id="policy-review-next">Next</button></div>
+</section>
 <section aria-labelledby="changes-heading">
 <div class="section-head"><h2 id="changes-heading">Operating history</h2><span id="change-count" class="quiet"></span></div>
 <div id="changes" class="record-list"></div>

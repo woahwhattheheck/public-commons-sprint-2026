@@ -7,6 +7,8 @@ import { normalizeSelection, captureSelection, readCapture, captureRows } from '
 import { analyzeCapture, compareCaptures, observationsCsv, observationsGeoJson, renderReport } from './analysis.mjs';
 import { prepareWaterEdition, stageWaterMerchant, startWaterMerchant, readWaterEdition } from './merchant.mjs';
 
+import { inspectDssEdition, readDssOperation, previewDssExport, createDssExport, readDssExport, listDssExports, probeDssRuntime, dssDownload, verifyDssExport, exportDssHandover, receiveDssHandover, receiveDssUpload, dssHandoverDownload } from './dss.mjs';
+
 const SCHEMA = 'starforge.usgs-water-project.v1';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const sha = value => createHash('sha256').update(typeof value === 'string' ? value : json(value)).digest('hex');
@@ -41,9 +43,9 @@ async function names(folder, extension = '.json') {
 export async function openWaterProject(directory, { transport, env = process.env } = {}) {
   const root = await privateDirectory(resolve(directory));
   const folders = {};
-  for (const name of ['revisions', 'requests', 'captures', 'capture-summaries', 'reviews', 'editions']) folders[name] = await privateDirectory(join(root, name));
+  for (const name of ['revisions', 'requests', 'captures', 'capture-summaries', 'reviews', 'editions', 'dss-exports']) folders[name] = await privateDirectory(join(root, name));
   let pending = Promise.resolve(), closing = false, closed = false, closePromise;
-  const operations = new Set(), acquisitions = new Map();
+  const operations = new Set(), acquisitions = new Map(), dssControllers = new Set();
   function active() { if (closed || closing) fail('The project is closing.', 'WATER_PROJECT_CLOSED', 503); }
   function tracked(work) {
     active(); const promise = Promise.resolve().then(work); operations.add(promise);
@@ -223,18 +225,55 @@ export async function openWaterProject(directory, { transport, env = process.env
     }
     return result;
   }
+  async function dssContext({ editionId, mapping, previousExportId }) {
+    operationId(editionId);
+    let previousExport = null, previousEditionDirectory = null;
+    if (previousExportId) {
+      previousExport = await readDssExport({ directory: folders['dss-exports'], exportId: operationId(previousExportId) });
+      previousEditionDirectory = join(folders.editions, operationId(previousExport.source.workspaceEditionId ?? previousExport.source.editionId));
+    }
+    return { editionDirectory: join(folders.editions, editionId), workspaceEditionId: editionId,
+      mapping, previousExport, previousEditionDirectory };
+  }
+  async function nativeDss(work) {
+    const controller = new AbortController(); dssControllers.add(controller);
+    try { return await work(controller.signal); } finally { dssControllers.delete(controller); }
+  }
   return { root, read, save: args => tracked(() => save(args)), history: async () => Promise.all((await names(folders.revisions)).map(name => readPrivateJson(join(folders.revisions, name)))),
     acquire: args => tracked(() => acquire(args)), listCaptures, capture, analyze, saveReview: args => tracked(() => saveReview(args)),
     readReview, listReviews, exportReview,
     prepareEdition: args => tracked(() => serial(() => edition(args))),
     readEdition: id => readWaterEdition(join(folders.editions, operationId(id))),
     listEditions,
+    inspectDssEdition: editionId => tracked(() => inspectDssEdition({ editionDirectory: join(folders.editions, operationId(editionId)), workspaceEditionId: editionId })),
+    previewDssExport: args => tracked(async () => previewDssExport(await dssContext(args))),
+    createDssExport: args => tracked(() => serial(async () => nativeDss(signal => dssContext(args).then(context => createDssExport({
+      ...context, directory: folders['dss-exports'], exportId: operationId(args.exportId),
+      expectedPlanSha256: args.expectedPlanSha256, onProgress: args.onProgress, env, signal }))))),
+    listDssExports: () => listDssExports({ directory: folders['dss-exports'] }),
+    readDssOperation: exportId => readDssOperation({ directory: folders['dss-exports'], exportId: operationId(exportId) }),
+    readDssExport: exportId => readDssExport({ directory: folders['dss-exports'], exportId: operationId(exportId) }),
+    probeDssRuntime: () => tracked(() => nativeDss(signal => probeDssRuntime({ directory: folders['dss-exports'], env, signal }))),
+    verifyDssExport: exportId => tracked(() => nativeDss(signal => verifyDssExport({ directory: folders['dss-exports'], exportId: operationId(exportId), env, signal }))),
+    dssDownload: (exportId, kind) => kind === 'handover'
+      ? dssHandoverDownload({ directory: folders['dss-exports'], exportId: operationId(exportId) })
+      : dssDownload({ directory: folders['dss-exports'], exportId: operationId(exportId), kind }),
+    exportDssHandover: exportId => tracked(() => serial(async () => {
+      const saved = await readDssExport({ directory: folders['dss-exports'], exportId: operationId(exportId) });
+      return nativeDss(signal => exportDssHandover({ directory: folders['dss-exports'], exportId,
+        editionDirectory: join(folders.editions, operationId(saved.source.workspaceEditionId ?? saved.source.editionId)), env, signal }));
+    })),
+    receiveDssHandover: archive => tracked(() => serial(() => nativeDss(signal => receiveDssHandover({ directory: folders['dss-exports'],
+      editionsDirectory: folders.editions, archive, env, signal })))),
+    receiveDssUpload: stream => tracked(() => serial(() => nativeDss(signal => receiveDssUpload({ directory: folders['dss-exports'],
+      editionsDirectory: folders.editions, stream, env, signal })))),
     stageEdition: ({ editionId, ...args }) => tracked(() => serial(() => stageWaterMerchant({ ...args, editionDirectory: join(folders.editions, operationId(editionId)) }))),
     startEdition: ({ editionId, ...args }) => tracked(() => startWaterMerchant({ ...args, editionDirectory: join(folders.editions, operationId(editionId)) })),
     cancelCapture(id) { operationId(id); const run = acquisitions.get(id); if (run) run.controller.abort(new Error('Capture cancelled by the operator.')); return { operationId: id, cancellationRequested: Boolean(run) }; },
     close() {
       return closePromise ??= (async () => {
         closing = true;
+        for (const controller of dssControllers) controller.abort(new Error('The workspace is closing; reopen the retained DSS operation.'));
         for (const run of acquisitions.values()) run.controller.abort(new Error('The workspace is closing; retain this capture for reopening.'));
         await Promise.allSettled([...operations]); await pending; closed = true; return { closed: true };
       })();

@@ -1,5 +1,6 @@
 // MIT. Typed ArcGIS capture projection into the original retained publisher.
 import { dirname, join, resolve } from 'node:path';
+import { openArcgisCatalog } from './workbench/catalog.mjs';
 import { readArcgisCapture, captureStatus } from './capture.mjs';
 import { openSourceDatasetPublisher } from '../postgres/publisher/model.mjs';
 import { loadCsvDataset } from '../dataset-handler.mjs';
@@ -204,5 +205,14 @@ export const arcgisPublisherDriver = Object.freeze({
     HASH.test(value.observation.captureSha256 ?? '') && Number.isSafeInteger(value.rowCount) &&
     value.rowCount === value.observation.selectedRecords,
 });
-export function openArcgisPublisher(options = {}) { return openSourceDatasetPublisher(options, arcgisPublisherDriver); }
+export async function openArcgisPublisher(options = {}) {
+  let catalog;
+  const driver = { ...arcgisPublisherDriver,
+    inspectSource: path => catalog ? catalog.describe() : inspectArcgisPublicationSource(path),
+    capturePlan: async (path, directory, input) =>
+      captureArcgisPublicationPlan(catalog ? await catalog.sourcePath(path) : path, directory, input) };
+  const core = await openSourceDatasetPublisher(options, driver);
+  try { catalog = await openArcgisCatalog(core, inspectArcgisPublicationSource); return catalog.wrap(); }
+  catch (issue) { await core.close(); throw issue; }
+}
 

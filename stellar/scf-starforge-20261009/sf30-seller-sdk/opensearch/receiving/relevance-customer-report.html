@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Native flight budget relevance · Search relevance</title><style>html{color-scheme:light}body{font:15px/1.5 system-ui,sans-serif;color:#202124;background:#fff;margin:0;padding:32px;max-width:1120px;margin-inline:auto}h1,h2,h3,h4,h5{line-height:1.2}h1{font-size:30px}h2{font-size:22px;border-top:1px solid #bbb;padding-top:24px;margin-top:32px}h3{font-size:19px}h4{font-size:16px}small,.muted{color:#62666b;font-weight:400}section,article{margin-block:24px}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;border:1px solid #ccc;padding:8px;overflow-wrap:anywhere}th{background:#f1f2f3}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;border:1px solid #ddd;padding:12px;font-size:12px}summary{cursor:pointer;padding:8px 0;font-weight:600}.table-wrap{overflow:auto}header{border-bottom:2px solid #333;padding-bottom:20px}@media print{body{padding:0;font-size:11px}details{display:block}details>*{display:block}summary{display:none}article,table{break-inside:avoid}}</style></head><body><header><p class="muted">STELLAR FORGE · SEARCH RELEVANCE</p><h1>Native flight budget relevance</h1><p>Two native price-order variants evaluated against a frozen cohort of real OpenSearch public sample flights. Judgments follow the retained budget criterion and original record values.</p><p>Captured 2026-10-11T23:55:54.228Z · OpenSearch 3.9.0 · Every retained case completed</p></header><h2>Evaluation results</h2><p>Native scores describe the saved metric, labeled document set and successful cases. Unrated results and failed cases remain visible beside every score.</p><div class="table-wrap"><table><thead><tr><th scope="col">Query variant</th><th scope="col">Native score</th><th scope="col">Confirmed cases</th><th scope="col">Native failures</th><th scope="col">Judged returned</th><th scope="col">Unrated returned</th></tr></thead><tbody><tr><td>Lowest price first</td><td>1</td><td>1 / 1</td><td>0</td><td>3</td><td>0</td></tr><tr><td>Highest price first</td><td>0</td><td>1 / 1</td><td>0</td><td>3</td><td>0</td></tr></tbody></table></div><h2>Metric and evaluation scope</h2><pre>{
+  &quot;metric&quot;: {
+    &quot;precision&quot;: {
+      &quot;k&quot;: 3,
+      &quot;relevant_rating_threshold&quot;: 1,
+      &quot;ignore_unlabeled&quot;: false
+    }
+  },
+  &quot;counts&quot;: {
+    &quot;variants&quot;: 2,
+    &quot;cases&quot;: 1,
+    &quot;judgments&quot;: 7,
+    &quot;unrated&quot;: 0
+  },
+  &quot;evaluationId&quot;: &quot;ac35c6b6cbca5f0c98af3fe4edac1de6&quot;,
+  &quot;evaluationSet&quot;: {
+    &quot;id&quot;: &quot;16c77c35-8487-4b69-80d8-bc30591a4c41&quot;,
+    &quot;revision&quot;: 1
+  },
+  &quot;source&quot;: {
+    &quot;clusterFingerprint&quot;: &quot;b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab&quot;,
+    &quot;serverVersion&quot;: &quot;3.9.0&quot;
+  },
+  &quot;sourceProfileSha256&quot;: &quot;3e99308f5f60146f1381883b4e9c46e31670a05c5bff3c8c959d2b195e46a33e&quot;,
+  &quot;resultSha256&quot;: &quot;a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db&quot;
+}
+</pre><h2>Query variant review</h2><section><h3>Lowest price first</h3><p>flights · All cases complete</p><details><summary>Frozen query definition and native execution scope</summary><pre>{
+  &quot;id&quot;: &quot;lowest-price&quot;,
+  &quot;queryName&quot;: &quot;flights&quot;,
+  &quot;query&quot;: {
+    &quot;indices&quot;: [
+      &quot;opensearch_dashboards_sample_data_flights&quot;
+    ],
+    &quot;query&quot;: {
+      &quot;bool&quot;: {
+        &quot;filter&quot;: [
+          {
+            &quot;bool&quot;: {
+              &quot;filter&quot;: [
+                {
+                  &quot;term&quot;: {
+                    &quot;OriginCountry&quot;: {
+                      &quot;$param&quot;: &quot;country&quot;
+                    }
+                  }
+                },
+                {
+                  &quot;range&quot;: {
+                    &quot;AvgTicketPrice&quot;: {
+                      &quot;gte&quot;: {
+                        &quot;$param&quot;: &quot;minimum_price&quot;
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            &quot;ids&quot;: {
+              &quot;values&quot;: [
+                &quot;FH8-76AB8EVjkSdEB73a&quot;,
+                &quot;YH8-76AB8EVjkSdEB73a&quot;,
+                &quot;Fn8-76AB8EVjkSdEB73a&quot;,
+                &quot;FX8-76AB8EVjkSdEB73a&quot;,
+                &quot;En8-76AB8EVjkSdEB73a&quot;,
+                &quot;KH8-76AB8EVjkSdEB73a&quot;,
+                &quot;TX8-76AB8EVjkSdEB77b&quot;
+              ]
+            }
+          }
+        ]
+      }
+    },
+    &quot;parameters&quot;: {
+      &quot;country&quot;: {
+        &quot;type&quot;: &quot;string&quot;,
+        &quot;minLength&quot;: 2,
+        &quot;maxLength&quot;: 2
+      },
+      &quot;minimum_price&quot;: {
+        &quot;type&quot;: &quot;number&quot;,
+        &quot;minimum&quot;: 0
+      }
+    },
+    &quot;fields&quot;: [
+      &quot;FlightNum&quot;,
+      &quot;Origin&quot;,
+      &quot;Dest&quot;,
+      &quot;OriginCountry&quot;,
+      &quot;DestCountry&quot;,
+      &quot;AvgTicketPrice&quot;,
+      &quot;timestamp&quot;,
+      &quot;FlightDelay&quot;,
+      &quot;Cancelled&quot;
+    ],
+    &quot;sort&quot;: [
+      {
+        &quot;AvgTicketPrice&quot;: &quot;asc&quot;
+      },
+      {
+        &quot;FlightNum&quot;: &quot;asc&quot;
+      }
+    ],
+    &quot;pageSize&quot;: 3,
+    &quot;maxHits&quot;: 7,
+    &quot;maxBytes&quot;: 917504,
+    &quot;timeoutMs&quot;: 30000,
+    &quot;probe&quot;: {
+      &quot;country&quot;: &quot;US&quot;,
+      &quot;minimum_price&quot;: 0
+    }
+  },
+  &quot;nativeExecution&quot;: {
+    &quot;id&quot;: &quot;lowest-price&quot;,
+    &quot;label&quot;: &quot;Lowest price first&quot;,
+    &quot;queryName&quot;: &quot;flights&quot;,
+    &quot;source&quot;: {
+      &quot;clusterFingerprint&quot;: &quot;b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab&quot;,
+      &quot;serverVersion&quot;: &quot;3.9.0&quot;
+    },
+    &quot;indices&quot;: [
+      &quot;opensearch_dashboards_sample_data_flights&quot;
+    ],
+    &quot;concreteIndices&quot;: [
+      &quot;opensearch_dashboards_sample_data_flights&quot;
+    ],
+    &quot;effectiveSort&quot;: [
+      {
+        &quot;AvgTicketPrice&quot;: &quot;asc&quot;
+      },
+      {
+        &quot;FlightNum&quot;: &quot;asc&quot;
+      },
+      {
+        &quot;_index&quot;: &quot;asc&quot;
+      },
+      {
+        &quot;_shard_doc&quot;: &quot;asc&quot;
+      }
+    ],
+    &quot;fields&quot;: [
+      &quot;FlightNum&quot;,
+      &quot;Origin&quot;,
+      &quot;Dest&quot;,
+      &quot;OriginCountry&quot;,
+      &quot;DestCountry&quot;,
+      &quot;AvgTicketPrice&quot;,
+      &quot;timestamp&quot;,
+      &quot;FlightDelay&quot;,
+      &quot;Cancelled&quot;
+    ],
+    &quot;k&quot;: 3,
+    &quot;snapshot&quot;: {
+      &quot;scopeId&quot;: &quot;67b9d0ba-66a8-48ab-bf72-0bbe95c06fa5&quot;,
+      &quot;createdAt&quot;: &quot;2026-10-11T23:55:52.951Z&quot;,
+      &quot;released&quot;: true
+    },
+    &quot;metricScore&quot;: 1,
+    &quot;complete&quot;: true,
+    &quot;strictWindows&quot;: {
+      &quot;budget-cohort&quot;: {
+        &quot;state&quot;: &quot;COMPLETE&quot;,
+        &quot;capturedAt&quot;: &quot;2026-10-11T23:55:53.206Z&quot;,
+        &quot;total&quot;: {
+          &quot;value&quot;: 3,
+          &quot;relation&quot;: &quot;gte&quot;
+        },
+        &quot;shards&quot;: {
+          &quot;total&quot;: 1,
+          &quot;successful&quot;: 1,
+          &quot;skipped&quot;: 0,
+          &quot;failed&quot;: 0
+        },
+        &quot;timedOut&quot;: false,
+        &quot;hitCount&quot;: 3,
+        &quot;hits&quot;: [
+          {
+            &quot;_index&quot;: &quot;opensearch_dashboards_sample_data_flights&quot;,
+            &quot;_id&quot;: &quot;YH8-76AB8EVjkSdEB73a&quot;,
+            &quot;_source&quot;: {
+              &quot;FlightNum&quot;: &quot;9E0P1AU&quot;,
+              &quot;Origin&quot;: &quot;Erie International Tom Ridge Field&quot;,
+              &quot;Dest&quot;: &quot;San Francisco International Airport&quot;,
+              &quot;FlightDelay&quot;: false,
+              &quot;OriginCountry&quot;: &quot;US&quot;,
+              &quot;AvgTicketPrice&quot;: 159.9909618375961,
+              &quot;Cancelled&quot;: false,
+              &quot;DestCountry&quot;: &quot;US&quot;,
+              &quot;timestamp&quot;: &quot;2026-09-21T00:06:27&quot;
+            },
+            &quot;_score&quot;: null,
+            &quot;sort&quot;: [
+              159.99097,
+              &quot;9E0P1AU&quot;,
+              &quot;opensearch_dashboards_sample_data_flights&quot;,
+              95
+            ]
+          },
+          {
+            &quot;_index&quot;: &quot;opensearch_dashboards_sample_data_flights&quot;,
+            &quot;_id&quot;: &quot;FX8-76AB8EVjkSdEB73a&quot;,
+            &quot;_source&quot;: {
+              &quot;FlightNum&quot;: &quot;R43CELD&quot;,
+              &quot;Origin&quot;: &quot;Erie International Tom Ridge Field&quot;,
+              &quot;Dest&quot;: &quot;Wichita Mid Continent Airport&quot;,
+              &quot;FlightDelay&quot;: true,
+              &quot;OriginCountry&quot;: &quot;US&quot;,
+              &quot;AvgTicketPrice&quot;: 167.59992219374266,
+              &quot;Cancelled&quot;: false,
+              &quot;DestCountry&quot;: &quot;US&quot;,
+              &quot;timestamp&quot;: &quot;2026-09-21T01:08:20&quot;
+            },
+            &quot;_score&quot;: null,
+            &quot;sort&quot;: [
+              167.59993,
+              &quot;R43CELD&quot;,
+              &quot;opensearch_dashboards_sample_data_flights&quot;,
+              20
+            ]
+          },
+          {
+            &quot;_index&quot;: &quot;opensearch_dashboards_sample_data_flights&quot;,
+            &quot;_id&quot;: &quot;KH8-76AB8EVjkSdEB73a&quot;,
+            &quot;_source&quot;: {
+              &quot;FlightNum&quot;: &quot;HF9AP10&quot;,
+              &quot;Origin&quot;: &quot;John F Kennedy International Airport&quot;,
+              &quot;Dest&quot;: &quot;San Diego International Airport&quot;,
+              &quot;FlightDelay&quot;: false,
+              &quot;OriginCountry&quot;: &quot;US&quot;,
+              &quot;AvgTicketPrice&quot;: 231.96273728774017,
+              &quot;Cancelled&quot;: false,
+              &quot;DestCountry&quot;: &quot;US&quot;,
+              &quot;timestamp&quot;: &quot;2026-09-21T01:50:27&quot;
+            },
+            &quot;_score&quot;: null,
+            &quot;sort&quot;: [
+              231.96274,
+              &quot;HF9AP10&quot;,
+              &quot;opensearch_dashboards_sample_data_flights&quot;,
+              39
+            ]
+          }
+        ],
+        &quot;exactIntegerPaths&quot;: []
+      }
+    }
+  }
+}
+</pre></details><article><h4>Budget flights in the retained cohort <small>budget-cohort</small></h4><p>COMPLETE · Native score 1</p><div class="table-wrap"><table><thead><tr><th scope="col">Rank</th><th scope="col">Index</th><th scope="col">Document ID</th><th scope="col">Judgment</th></tr></thead><tbody><tr><td>1</td><td>opensearch_dashboards_sample_data_flights</td><td>YH8-76AB8EVjkSdEB73a</td><td>1</td></tr><tr><td>2</td><td>opensearch_dashboards_sample_data_flights</td><td>FX8-76AB8EVjkSdEB73a</td><td>1</td></tr><tr><td>3</td><td>opensearch_dashboards_sample_data_flights</td><td>KH8-76AB8EVjkSdEB73a</td><td>1</td></tr></tbody></table></div><details><summary>Native metric details and capture correspondence</summary><pre>{
+  &quot;metricDetails&quot;: {
+    &quot;precision&quot;: {
+      &quot;relevant_docs_retrieved&quot;: 3,
+      &quot;docs_retrieved&quot;: 3
+    }
+  },
+  &quot;case&quot;: {
+    &quot;id&quot;: &quot;budget-cohort&quot;,
+    &quot;status&quot;: &quot;COMPLETE&quot;,
+    &quot;score&quot;: 1,
+    &quot;hitCount&quot;: 3,
+    &quot;judgedHitCount&quot;: 3,
+    &quot;unjudgedHitCount&quot;: 0,
+    &quot;judgmentCount&quot;: 7,
+    &quot;strictWindowState&quot;: &quot;COMPLETE&quot;,
+    &quot;total&quot;: {
+      &quot;value&quot;: 3,
+      &quot;relation&quot;: &quot;gte&quot;
+    },
+    &quot;orderedWindowMatches&quot;: true
+  },
+  &quot;unratedDocuments&quot;: []
+}
+</pre></details></article></section><section><h3>Highest price first</h3><p>flights · All cases complete</p><details><summary>Frozen query definition and native execution scope</summary><pre>{
+  &quot;id&quot;: &quot;highest-price&quot;,
+  &quot;queryName&quot;: &quot;flights&quot;,
+  &quot;query&quot;: {
+    &quot;indices&quot;: [
+      &quot;opensearch_dashboards_sample_data_flights&quot;
+    ],
+    &quot;query&quot;: {
+      &quot;bool&quot;: {
+        &quot;filter&quot;: [
+          {
+            &quot;bool&quot;: {
+              &quot;filter&quot;: [
+                {
+                  &quot;term&quot;: {
+                    &quot;OriginCountry&quot;: {
+                      &quot;$param&quot;: &quot;country&quot;
+                    }
+                  }
+                },
+                {
+                  &quot;range&quot;: {
+                    &quot;AvgTicketPrice&quot;: {
+                      &quot;gte&quot;: {
+                        &quot;$param&quot;: &quot;minimum_price&quot;
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            &quot;ids&quot;: {
+              &quot;values&quot;: [
+                &quot;FH8-76AB8EVjkSdEB73a&quot;,
+                &quot;YH8-76AB8EVjkSdEB73a&quot;,
+                &quot;Fn8-76AB8EVjkSdEB73a&quot;,
+                &quot;FX8-76AB8EVjkSdEB73a&quot;,
+                &quot;En8-76AB8EVjkSdEB73a&quot;,
+                &quot;KH8-76AB8EVjkSdEB73a&quot;,
+                &quot;TX8-76AB8EVjkSdEB77b&quot;
+              ]
+            }
+          }
+        ]
+      }
+    },
+    &quot;parameters&quot;: {
+      &quot;country&quot;: {
+        &quot;type&quot;: &quot;string&quot;,
+        &quot;minLength&quot;: 2,
+        &quot;maxLength&quot;: 2
+      },
+      &quot;minimum_price&quot;: {
+        &quot;type&quot;: &quot;number&quot;,
+        &quot;minimum&quot;: 0
+      }
+    },
+    &quot;fields&quot;: [
+      &quot;FlightNum&quot;,
+      &quot;Origin&quot;,
+      &quot;Dest&quot;,
+      &quot;OriginCountry&quot;,
+      &quot;DestCountry&quot;,
+      &quot;AvgTicketPrice&quot;,
+      &quot;timestamp&quot;,
+      &quot;FlightDelay&quot;,
+      &quot;Cancelled&quot;
+    ],
+    &quot;sort&quot;: [
+      {
+        &quot;AvgTicketPrice&quot;: &quot;desc&quot;
+      },
+      {
+        &quot;FlightNum&quot;: &quot;asc&quot;
+      }
+    ],
+    &quot;pageSize&quot;: 3,
+    &quot;maxHits&quot;: 7,
+    &quot;maxBytes&quot;: 917504,
+    &quot;timeoutMs&quot;: 30000,
+    &quot;probe&quot;: {
+      &quot;country&quot;: &quot;US&quot;,
+      &quot;minimum_price&quot;: 0
+    }
+  },
+  &quot;nativeExecution&quot;: {
+    &quot;id&quot;: &quot;highest-price&quot;,
+    &quot;label&quot;: &quot;Highest price first&quot;,
+    &quot;queryName&quot;: &quot;flights&quot;,
+    &quot;source&quot;: {
+      &quot;clusterFingerprint&quot;: &quot;b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab&quot;,
+      &quot;serverVersion&quot;: &quot;3.9.0&quot;
+    },
+    &quot;indices&quot;: [
+      &quot;opensearch_dashboards_sample_data_flights&quot;
+    ],
+    &quot;concreteIndices&quot;: [
+      &quot;opensearch_dashboards_sample_data_flights&quot;
+    ],
+    &quot;effectiveSort&quot;: [
+      {
+        &quot;AvgTicketPrice&quot;: &quot;desc&quot;
+      },
+      {
+        &quot;FlightNum&quot;: &quot;asc&quot;
+      },
+      {
+        &quot;_index&quot;: &quot;asc&quot;
+      },
+      {
+        &quot;_shard_doc&quot;: &quot;asc&quot;
+      }
+    ],
+    &quot;fields&quot;: [
+      &quot;FlightNum&quot;,
+      &quot;Origin&quot;,
+      &quot;Dest&quot;,
+      &quot;OriginCountry&quot;,
+      &quot;DestCountry&quot;,
+      &quot;AvgTicketPrice&quot;,
+      &quot;timestamp&quot;,
+      &quot;FlightDelay&quot;,
+      &quot;Cancelled&quot;
+    ],
+    &quot;k&quot;: 3,
+    &quot;snapshot&quot;: {
+      &quot;scopeId&quot;: &quot;67b9d0ba-66a8-48ab-bf72-0bbe95c06fa5&quot;,
+      &quot;createdAt&quot;: &quot;2026-10-11T23:55:52.951Z&quot;,
+      &quot;released&quot;: true
+    },
+    &quot;metricScore&quot;: 0,
+    &quot;complete&quot;: true,
+    &quot;strictWindows&quot;: {
+      &quot;budget-cohort&quot;: {
+        &quot;state&quot;: &quot;COMPLETE&quot;,
+        &quot;capturedAt&quot;: &quot;2026-10-11T23:55:53.607Z&quot;,
+        &quot;total&quot;: {
+          &quot;value&quot;: 3,
+          &quot;relation&quot;: &quot;gte&quot;
+        },
+        &quot;shards&quot;: {
+          &quot;total&quot;: 1,
+          &quot;successful&quot;: 1,
+          &quot;skipped&quot;: 0,
+          &quot;failed&quot;: 0
+        },
+        &quot;timedOut&quot;: false,
+        &quot;hitCount&quot;: 3,
+        &quot;hits&quot;: [
+          {
+            &quot;_index&quot;: &quot;opensearch_dashboards_sample_data_flights&quot;,
+            &quot;_id&quot;: &quot;FH8-76AB8EVjkSdEB73a&quot;,
+            &quot;_source&quot;: {
+              &quot;FlightNum&quot;: &quot;RBFKZBX&quot;,
+              &quot;Origin&quot;: &quot;Casper-Natrona County International Airport&quot;,
+              &quot;Dest&quot;: &quot;Indira Gandhi International Airport&quot;,
+              &quot;FlightDelay&quot;: true,
+              &quot;OriginCountry&quot;: &quot;US&quot;,
+              &quot;AvgTicketPrice&quot;: 772.1008456460212,
+              &quot;Cancelled&quot;: false,
+              &quot;DestCountry&quot;: &quot;IN&quot;,
+              &quot;timestamp&quot;: &quot;2026-09-21T00:02:06&quot;
+            },
+            &quot;_score&quot;: null,
+            &quot;sort&quot;: [
+              772.1008,
+              &quot;RBFKZBX&quot;,
+              &quot;opensearch_dashboards_sample_data_flights&quot;,
+              19
+            ]
+          },
+          {
+            &quot;_index&quot;: &quot;opensearch_dashboards_sample_data_flights&quot;,
+            &quot;_id&quot;: &quot;En8-76AB8EVjkSdEB73a&quot;,
+            &quot;_source&quot;: {
+              &quot;FlightNum&quot;: &quot;7TTZM4I&quot;,
+              &quot;Origin&quot;: &quot;Cleveland Hopkins International Airport&quot;,
+              &quot;Dest&quot;: &quot;Ministro Pistarini International Airport&quot;,
+              &quot;FlightDelay&quot;: true,
+              &quot;OriginCountry&quot;: &quot;US&quot;,
+              &quot;AvgTicketPrice&quot;: 569.6132552035547,
+              &quot;Cancelled&quot;: false,
+              &quot;DestCountry&quot;: &quot;AR&quot;,
+              &quot;timestamp&quot;: &quot;2026-09-21T01:30:47&quot;
+            },
+            &quot;_score&quot;: null,
+            &quot;sort&quot;: [
+              569.6133,
+              &quot;7TTZM4I&quot;,
+              &quot;opensearch_dashboards_sample_data_flights&quot;,
+              17
+            ]
+          },
+          {
+            &quot;_index&quot;: &quot;opensearch_dashboards_sample_data_flights&quot;,
+            &quot;_id&quot;: &quot;TX8-76AB8EVjkSdEB77b&quot;,
+            &quot;_source&quot;: {
+              &quot;FlightNum&quot;: &quot;0VWO82H&quot;,
+              &quot;Origin&quot;: &quot;Savannah Hilton Head International Airport&quot;,
+              &quot;Dest&quot;: &quot;Zurich Airport&quot;,
+              &quot;FlightDelay&quot;: false,
+              &quot;OriginCountry&quot;: &quot;US&quot;,
+              &quot;AvgTicketPrice&quot;: 337.660374662825,
+              &quot;Cancelled&quot;: false,
+              &quot;DestCountry&quot;: &quot;CH&quot;,
+              &quot;timestamp&quot;: &quot;2026-09-21T03:01:52&quot;
+            },
+            &quot;_score&quot;: null,
+            &quot;sort&quot;: [
+              337.66037,
+              &quot;0VWO82H&quot;,
+              &quot;opensearch_dashboards_sample_data_flights&quot;,
+              332
+            ]
+          }
+        ],
+        &quot;exactIntegerPaths&quot;: []
+      }
+    }
+  }
+}
+</pre></details><article><h4>Budget flights in the retained cohort <small>budget-cohort</small></h4><p>COMPLETE · Native score 0</p><div class="table-wrap"><table><thead><tr><th scope="col">Rank</th><th scope="col">Index</th><th scope="col">Document ID</th><th scope="col">Judgment</th></tr></thead><tbody><tr><td>1</td><td>opensearch_dashboards_sample_data_flights</td><td>FH8-76AB8EVjkSdEB73a</td><td>0</td></tr><tr><td>2</td><td>opensearch_dashboards_sample_data_flights</td><td>En8-76AB8EVjkSdEB73a</td><td>0</td></tr><tr><td>3</td><td>opensearch_dashboards_sample_data_flights</td><td>TX8-76AB8EVjkSdEB77b</td><td>0</td></tr></tbody></table></div><details><summary>Native metric details and capture correspondence</summary><pre>{
+  &quot;metricDetails&quot;: {
+    &quot;precision&quot;: {
+      &quot;relevant_docs_retrieved&quot;: 0,
+      &quot;docs_retrieved&quot;: 3
+    }
+  },
+  &quot;case&quot;: {
+    &quot;id&quot;: &quot;budget-cohort&quot;,
+    &quot;status&quot;: &quot;COMPLETE&quot;,
+    &quot;score&quot;: 0,
+    &quot;hitCount&quot;: 3,
+    &quot;judgedHitCount&quot;: 3,
+    &quot;unjudgedHitCount&quot;: 0,
+    &quot;judgmentCount&quot;: 7,
+    &quot;strictWindowState&quot;: &quot;COMPLETE&quot;,
+    &quot;total&quot;: {
+      &quot;value&quot;: 3,
+      &quot;relation&quot;: &quot;gte&quot;
+    },
+    &quot;orderedWindowMatches&quot;: true
+  },
+  &quot;unratedDocuments&quot;: []
+}
+</pre></details></article></section><h2>Input cases and supplied judgments</h2><article><h3>Budget flights in the retained cohort</h3><p>Case budget-cohort · 7 supplied judgments</p><details><summary>Input, document judgments and original capture</summary><pre>{
+  &quot;input&quot;: {
+    &quot;country&quot;: &quot;US&quot;,
+    &quot;minimum_price&quot;: 0
+  },
+  &quot;provenance&quot;: {
+    &quot;kind&quot;: &quot;engineering-sample-judgments&quot;,
+    &quot;criterion&quot;: {
+      &quot;schema&quot;: &quot;stellar-forge.opensearch-engineering-judgment-rule.v1&quot;,
+      &quot;label&quot;: &quot;Budget suitability within the retained public flight cohort&quot;,
+      &quot;judgmentOrigin&quot;: &quot;Deterministic engineering sample judgments derived from the original native records&quot;,
+      &quot;field&quot;: &quot;AvgTicketPrice&quot;,
+      &quot;relevantWhen&quot;: &quot;value &lt;= lower median of retained cohort prices&quot;,
+      &quot;threshold&quot;: 253.21006490337038,
+      &quot;relevantGrade&quot;: 1,
+      &quot;otherGrade&quot;: 0,
+      &quot;cohortDocuments&quot;: 7,
+      &quot;sortedNativePrices&quot;: [
+        159.9909618375961,
+        167.59992219374266,
+        231.96273728774017,
+        253.21006490337038,
+        337.660374662825,
+        569.6132552035547,
+        772.1008456460212
+      ],
+      &quot;originalResultSha256&quot;: &quot;5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825&quot;,
+      &quot;originalCaptureRequestId&quot;: &quot;ee290-native-flights-capture-20261011T234116Z-bd81fdd1&quot;,
+      &quot;originalCaptureTime&quot;: &quot;2026-10-11T23:41:37.599Z&quot;,
+      &quot;source&quot;: {
+        &quot;clusterFingerprint&quot;: &quot;b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab&quot;,
+        &quot;serverVersion&quot;: &quot;3.9.0&quot;
+      },
+      &quot;interpretation&quot;: &quot;Precision describes the retained flight cohort and this declared budget criterion.&quot;
+    },
+    &quot;publicSource&quot;: &quot;https://playground.opensearch.org&quot;,
+    &quot;originalEditionId&quot;: &quot;49042fc669d38005ea9363a73c5fc9c9&quot;,
+    &quot;originalResultSha256&quot;: &quot;5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825&quot;,
+    &quot;originalTotal&quot;: {
+      &quot;value&quot;: 8,
+      &quot;relation&quot;: &quot;gte&quot;
+    },
+    &quot;originalTruncated&quot;: true,
+    &quot;selectedDocuments&quot;: 7
+  }
+}
+</pre><div class="table-wrap"><table><thead><tr><th scope="col">Index</th><th scope="col">Document ID</th><th scope="col">Rating</th><th scope="col">Judgment note</th></tr></thead><tbody><tr><td>opensearch_dashboards_sample_data_flights</td><td>FH8-76AB8EVjkSdEB73a</td><td>0</td><td>Engineering budget criterion: AvgTicketPrice 772.1008456460212 &gt; 253.21006490337038.</td></tr><tr><td>opensearch_dashboards_sample_data_flights</td><td>YH8-76AB8EVjkSdEB73a</td><td>1</td><td>Engineering budget criterion: AvgTicketPrice 159.9909618375961 &lt;= 253.21006490337038.</td></tr><tr><td>opensearch_dashboards_sample_data_flights</td><td>Fn8-76AB8EVjkSdEB73a</td><td>1</td><td>Engineering budget criterion: AvgTicketPrice 253.21006490337038 &lt;= 253.21006490337038.</td></tr><tr><td>opensearch_dashboards_sample_data_flights</td><td>FX8-76AB8EVjkSdEB73a</td><td>1</td><td>Engineering budget criterion: AvgTicketPrice 167.59992219374266 &lt;= 253.21006490337038.</td></tr><tr><td>opensearch_dashboards_sample_data_flights</td><td>En8-76AB8EVjkSdEB73a</td><td>0</td><td>Engineering budget criterion: AvgTicketPrice 569.6132552035547 &gt; 253.21006490337038.</td></tr><tr><td>opensearch_dashboards_sample_data_flights</td><td>KH8-76AB8EVjkSdEB73a</td><td>1</td><td>Engineering budget criterion: AvgTicketPrice 231.96273728774017 &lt;= 253.21006490337038.</td></tr><tr><td>opensearch_dashboards_sample_data_flights</td><td>TX8-76AB8EVjkSdEB77b</td><td>0</td><td>Engineering budget criterion: AvgTicketPrice 337.660374662825 &gt; 253.21006490337038.</td></tr></tbody></table></div></details></article><footer><p class="muted">Generated from the immutable retained evaluation. The original native result and full evaluation JSON are available from the same workspace edition.</p></footer></body></html>
