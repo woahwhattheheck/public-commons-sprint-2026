@@ -192,8 +192,12 @@ stellar-forge-workbook copy \
   --destination /private/customer/archive/workbook-edition-1
 ```
 
-Receiving checks the exact member list and hashes while streaming to a new
-private directory. Its default decompressed byte limit is 1 GiB; set
+Receiving checks the exact member list and hashes while streaming into private
+staging tied to the selected destination and archive. After complete inspection,
+it atomically publishes the final directory without replacing an existing target.
+A process interruption during extraction leaves the final destination absent;
+receiving the same archive at the same destination reclaims its own unfinished
+staging and completes the original operation. Its default decompressed byte limit is 1 GiB; set
 `--max-bytes` to the reviewed size when receiving a larger handoff. Existing
 destinations are preserved. Offline inspect and copy use the manifest and
 original result files without needing the workbook-writing extra.
@@ -224,3 +228,168 @@ ID for another attempt.
 
 Writer API reference: [openpyxl optimized modes](https://openpyxl.readthedocs.io/en/stable/optimized.html)
 and [date and time handling](https://openpyxl.readthedocs.io/en/stable/datetime.html).
+
+
+## Recurring workbook editions
+
+A recurring workbook keeps the existing workbook name and ordered worksheets
+while replacing selected complete source results. Open a saved definition in
+**Workbooks**, choose **Review newer sources**, then select the worksheet whose
+source you want to update.
+
+The source picker starts from that worksheet's recorded lineage:
+
+- A query-export successor must be a newer complete export with exactly the
+  same SQL and typed parameter values. Its title alone does not identify it.
+  Saved-query edits need a separate query run and export before they can be
+  chosen through the ordinary workbook editor.
+- A report successor must be a newer publication of the same saved report and
+  saved query. A uniquely occurring query may move to another section. If that
+  query occurs more than once, the section position must also match.
+
+**Find newer complete results** reads the retained results. **Older results**
+continues the cursor through every eligible completed-result page. The comparison
+shows old and new row counts, ordered column labels, added and removed labels,
+SQL, typed parameters, bound views and immutable source versions. A newer result
+may contain the same rows; the explicit selection records which completed
+edition the customer intends to deliver.
+
+### Review the source and column changes
+
+Choose **Use this complete result** for each changed worksheet. The original
+headers, formatting, null policy and precision policy remain in the editor.
+Columns with a unique old and new label can be mapped by that label. A missing
+or duplicate old label requires an explicit choice in **Source column**. Report
+columns show their ordinal as well as their label.
+
+For example, an old report might contain:
+
+| Old source column | Workbook header | New source column |
+| --- | --- | --- |
+| `label [0]` | Domain | `domain [1]` |
+| `label [1]` | Title | `label [0]` |
+
+Choose each new source column explicitly. The editor cannot determine the
+meaning of the two old `label` columns from their names. Added source columns
+are available in the same picker; add a worksheet column when you want one in
+the delivered workbook. Review its type, null treatment and precision policy
+as part of that change.
+
+Use **Keep original source and columns** to restore the selected worksheet.
+Other worksheets can keep their prior complete results. Worksheet positions
+stay fixed during an edition review so each before/after record has an
+unambiguous counterpart. A normal workbook edit can change the worksheet
+structure separately.
+
+Add an edition note explaining the reporting period or source change, then
+choose **Review selected sources and cells**. The review shows up to 20 actual rows per
+worksheet, the projected cells, observed source types and conversion errors.
+Correct any displayed mapping or conversion error and review again. This is a
+preview: the complete workbook build reads and projects every retained row.
+A conversion problem later in the result fails the build with its original
+error in delivery history.
+
+Choose **Save workbook definition** after the review is ready. The existing definition
+compare-and-swap checks the expected head revision. If another operator has
+saved meanwhile, reopen the current definition and review the intended change
+against it. The new edition uses the original workbook build, progress,
+cancellation, authenticated download and offline receiving controls.
+
+The browser retains the draft review and pending save identity in its existing
+workspace-specific local storage. Reconnecting after a lost save reply reuses
+the same request. A successful save is a new immutable revision; an existing
+revision and its completed delivery remain available through history.
+
+### Headless edition delivery
+
+The same operation is available through the existing client. Obtain the base
+definition and its digest, discover the intended successors, and create this
+private recipe shape using the actual IDs and mappings from those responses:
+
+```json
+{
+  "base_revision": 1,
+  "definition_sha256": "EXACT_BASE_DEFINITION_SHA256",
+  "expected_revision": 1,
+  "reason": "October reporting edition; reconcile renamed report columns.",
+  "definition": {
+    "name": "customer_operations",
+    "title": "Customer operations",
+    "notes": "Reviewed reporting edition.",
+    "sheets": [{
+      "name": "Sales summary",
+      "source": {
+        "kind": "query-export",
+        "id": "EXISTING_NEW_COMPLETE_EXPORT_ID",
+        "sha256": "EXACT_NEW_SOURCE_MANIFEST_SHA256"
+      },
+      "columns": [
+        {"source": "region", "header": "Region", "type": "text"},
+        {"source": "total", "header": "Total", "type": "decimal-text"}
+      ]
+    }]
+  }
+}
+```
+
+The proposed definition must contain all existing worksheets in their current
+order. Include the original source and mapping for every worksheet being kept.
+For a report column, include its actual `source` label and numeric
+`source_index`; both are checked against the chosen section.
+
+```sh
+stellar-forge-workbook-deliver \
+  --database /private/customer/database \
+  --refresh-recipe /private/customer/october-edition.json \
+  --operation /private/customer/october-edition-delivery
+```
+
+Or use the Python client:
+
+```python
+client = WorkspaceWorkbookClient("/private/customer/database")
+delivery = client.refresh(recipe, "/private/customer/october-edition-delivery")
+```
+
+The client retains `review.json`, the exact reviewed save request, its stable
+request ID and one build ID before sending the save. Run the same command with
+the same recipe and operation directory after interruption. It resumes the
+same saved edition and build, streams the complete files, verifies the retained
+downloads, receives the handoff and writes `delivery.json`. A different recipe
+requires a different operation directory.
+
+### Refresh API and replay
+
+| Route | Request or result |
+| --- | --- |
+| `GET /api/workbooks/NAME/refresh?revision=N&sheet=0&limit=25&before=SEQUENCE` | Source lineage, candidate comparisons, suggested mappings, unresolved columns and the next cursor. Omit `before` for the first page. |
+| `POST /api/workbooks/NAME/refresh-review` | Recipe above; returns the normalized definition, per-sheet changes, actual cell previews, readiness and `review_sha256`. |
+| `POST /api/workbooks/NAME/refresh` | The identical recipe plus a stable 32-character `id` and the returned `review_sha256`; saves through the original definition store. |
+
+The server recomputes the source and mapping review before accepting its
+digest. The digest covers the base definition, proposed definition, expected
+revision, reason and complete before/after source bindings. Mutable current-head
+display information is outside that digest so a reply lost after a committed
+save can be recovered with its original request identity. Reusing that identity
+for a different change is rejected.
+
+### Complete handoff and historical reopening
+
+A refreshed handoff contains the new Excel workbook, current definition,
+complete current sources and the exact predecessor definitions identified by
+its refresh history. The prior definitions live at
+`history/definition-N.json`. Their complete original sources are retained under
+the same `sources/` layout, with a shared source stored once.
+
+Each refresh origin records the base revision and definition digest, the
+reviewed change and its reason. The delivery manifest lists the retained
+definition history and hashes every included file. Offline inspect follows
+the descending history chain and checks each exact definition. A sequence of
+refreshes carries that chain back to its original saved definition. An ordinary
+manual save starts its own subsequent refresh chain; other saved revisions
+remain available in workspace history.
+
+Use a receiver containing this edition feature for these extended handoffs.
+Excel itself opens the generated `.xlsx` normally. The original earlier
+workbook and archive retain their prior bytes and can still be received or
+reopened independently.

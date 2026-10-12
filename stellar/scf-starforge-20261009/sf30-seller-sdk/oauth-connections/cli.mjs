@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 import { initializeOAuthConnection, oauthConnectionStatus, openOAuthConnection } from './connection.mjs';
+import { oauthRedirectOrigin } from './profile.mjs';
 
 const fail=message=>{throw new TypeError(message);};
 const help=String.raw`Usage:
@@ -14,11 +15,13 @@ const help=String.raw`Usage:
   node cli.mjs refresh --directory PATH --revision N --grant ID --request-id ID [--allow-loopback]
   node cli.mjs disconnect --directory PATH --revision N --grant ID --request-id ID [--revoke] [--allow-loopback]
   node cli.mjs revoke --directory PATH --revision N --request-id ID [--revocation-grant ID] [--allow-loopback]
+  node cli.mjs quickbooks --help
 
 Profile files contain public registration data. Client secrets are read only from
 the profile's named environment variable. The private directory stores grants.
-connect requires an interactive terminal and an explicitly registered loopback
-port. It displays a browser URL, receives the exact callback, then asks you to
+connect requires an interactive terminal and an explicitly registered listener
+port. QuickBooks uses its profile's registered localhost or HTTPS callback
+origin; HTTPS ingress forwards the callback to this same local listener. It displays a browser URL, receives the exact callback, then asks you to
 review and approve the returned grant. No token is printed.
 --allow-loopback permits a local HTTP OAuth provider only for development.
 `;
@@ -58,7 +61,8 @@ async function connect(directory,args,options){
   if(!/^[1-9]\d{0,4}$/.test(args.port??'')||Number(args.port)>65535)fail('--port must be the registered loopback port.');
   if(!args.actor?.trim()||!args.reference?.trim())fail('--actor and --reference are required for an attributed grant review.');
   const connection=await openOAuthConnection(directory,options), initial=await connection.status();
-  const origin='http://127.0.0.1:'+Number(args.port), redirectUri=origin+initial.callbackPath;
+  const origin='http://127.0.0.1:'+Number(args.port), callbackOrigin=oauthRedirectOrigin(initial.profile,origin), redirectUri=callbackOrigin+initial.callbackPath;
+  const callbackHosts=new Set([new URL(origin).host,new URL(callbackOrigin).host]);
   let flowId=null, callbackState=null, callbackBusy=false, settled=false, timer=null, resolveReturn;
   const returned=new Promise(resolve=>{resolveReturn=resolve;});
   let resolveCallback,rejectCallback;
@@ -69,7 +73,7 @@ async function connect(directory,args,options){
     res.setHeader('Content-Security-Policy',"default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
     res.setHeader('X-Content-Type-Options','nosniff');
     const reject=()=>{res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'});res.end('Not found.');};
-    if(req.method!=='GET'||req.headers.host!=='127.0.0.1:'+Number(args.port)||typeof req.url!=='string'||req.url.length>16384)return reject();
+    if(req.method!=='GET'||!callbackHosts.has(req.headers.host)||typeof req.url!=='string'||req.url.length>16384)return reject();
     let url;try{url=new URL(req.url,origin);}catch{return reject();}
     if(url.origin!==origin)return reject();
     if(url.pathname==='/oauth-return'&&!url.search){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(page);resolveReturn();return;}
@@ -118,6 +122,7 @@ async function connect(directory,args,options){
   }
 }
 export async function main(argv=process.argv.slice(2)){
+  if(argv[0]==='quickbooks'){const {quickbooksMain}=await import('./quickbooks-cli.mjs');return quickbooksMain(argv.slice(1));}
   const args=argumentsFor(argv);if(args.command==='help'){process.stdout.write(help);return;}
   const options={allowLoopback:args['allow-loopback']===true,env:process.env};
   if(args.command==='init'){

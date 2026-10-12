@@ -6,7 +6,7 @@ import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
 import { isPublicAddress } from '../../sf31-buyer-client/public-transport.mjs';
 import { fault } from '../postgres/publisher/files.mjs';
-import { plain, endpoint } from './profile.mjs';
+import { plain, endpoint, intuitQboProfile } from './profile.mjs';
 
 export function oauthFailure(code, message, outcome = 'unknown', status = 502) {
   return Object.assign(fault(code, message, status), { outcome });
@@ -42,19 +42,22 @@ export async function oauthRequest(profile, mode, fields, {
   const target = mode === 'token' ? profile.tokenEndpoint : profile.revocationEndpoint;
   if (!target) throw oauthFailure('OAUTH_CONNECTION_REVOCATION_UNAVAILABLE', 'This profile has no declared revocation endpoint.', 'not_sent', 400);
   endpoint(target, { allowLoopback });
-  const selected = credential(profile, env), form = new URLSearchParams();
+  const selected = credential(profile, env), form = new URLSearchParams(), intuit = intuitQboProfile(profile);
   for (const [key, value] of Object.entries(fields)) {
     if (Array.isArray(value)) for (const item of value) form.append(key, item);
     else if (value !== undefined) form.set(key, value);
   }
   const headers = { accept: 'application/json', 'accept-encoding': 'identity', 'content-type': 'application/x-www-form-urlencoded' };
   if (profile.authMethod === 'client_secret_basic')
-    headers.authorization = 'Basic ' + Buffer.from(formPart(profile.clientId) + ':' + formPart(selected.secret)).toString('base64');
+    headers.authorization = 'Basic ' + Buffer.from(intuit ? profile.clientId + ':' + selected.secret :
+      formPart(profile.clientId) + ':' + formPart(selected.secret)).toString('base64');
   else {
     form.set('client_id', profile.clientId);
     if (profile.authMethod === 'client_secret_post') form.set('client_secret', selected.secret);
   }
-  const body = Buffer.from(form.toString());
+  if (intuit && mode === 'token') headers['x-include-refresh-token-hard-expires-in'] = 'true';
+  if (intuit && mode === 'revoke') headers['content-type'] = 'application/json';
+  const body = Buffer.from(intuit && mode === 'revoke' ? JSON.stringify({ token: fields.token }) : form.toString());
   if (body.length > 65536) throw oauthFailure('OAUTH_CONNECTION_REQUEST_TOO_LARGE', 'The private authorization request exceeds its size limit.', 'not_sent', 400);
   headers['content-length'] = String(body.length);
   const controller = new AbortController();
