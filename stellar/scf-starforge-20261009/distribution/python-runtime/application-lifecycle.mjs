@@ -7,6 +7,7 @@ import { StringDecoder } from 'node:string_decoder';
 import { absolute, canonical, digest, json, need, plain, saveJSON, now } from '../runtime-workspace/storage.mjs';
 import { bindPythonApplicationCommand, preparePythonApplicationCommand } from './command-binding.mjs';
 import { pythonRuntimeBinding } from './workspace.mjs';
+import { WORKBOOK_APPLICATION_CATALOG, isNamedWorkbook, namedWorkbookResource, prepareNamedWorkbook } from './workbook-application.mjs';
 
 const field=(name,label,type='path',required=false,description='')=>({name,label,type,required,description});
 const installation=field('installationId','Installed Python environment','text',true,
@@ -64,6 +65,7 @@ export const PYTHON_APPLICATION_CATALOG=Object.freeze([
       field('lineageConnectionsFile','Lineage collector connections','path',false,'Private named collector configuration; selects original startup files and producer-token references.'),
       field('nodeExecutable','Original Node executable','path',false,'Defaults to this managed runtime worker’s Node executable.'),
       field('port','Local port','port',false,'Use 0 to select an available loopback port.'),environment]},
+  ...WORKBOOK_APPLICATION_CATALOG,
   {id:'python-workbooks',python:true,command:'workbooks',terminal:false,
     requiredSource:original+'analysis_workbooks.py',title:'Workbook build and receiving',
     description:'Run the original workbook build, receive, inspect or copy command and retain its exact output and operating result.',
@@ -121,6 +123,7 @@ async function dbnomicsRetainedReturn(args,directory,inputPath) {
   return {args:selected,inputs};
 }
 export function pythonApplicationResource(type,settings) {
+  if(isNamedWorkbook(type))return namedWorkbookResource(type,settings);
   if(type.command==='duckdb')return key({family:'python-duckdb',directory:settings.workspaceDirectory});
   if(type.command==='postgres')return key({family:'python-postgres',directory:settings.workspaceDirectory});
   if(['analysis','stellar-forge-analysis-project'].includes(type.command))return key({family:'python-analysis',directory:settings.databaseDirectory});
@@ -158,8 +161,11 @@ export async function pythonApplicationCommand(root,type,settings,{
   need(type.python===true && PYTHON_APPLICATION_CATALOG.some(item=>item.id===type.id && item.command===type.command),
     'PYTHON_APPLICATION_KIND_INVALID');
   const binding=await pythonRuntimeBinding(runtimeDirectory,runtimeId),inputs=[];
-  let args;
-  if(type.command==='postgres'){
+  let args,workbook=null;
+  if(isNamedWorkbook(type)){
+    const prepared=await prepareNamedWorkbook(root,type,settings,{runtimeId,runtimeDirectory,inputPath});
+    args=prepared.args;inputs.push(...prepared.inputs);workbook=prepared.workbook;
+  }else if(type.command==='postgres'){
     inputs.push(await inputPath(settings.workspaceDirectory,'directory',true,true));
     const connectionEnvironment=settings.connectionEnvironment||'SF_BUYER_POSTGRES_DSN';
     const databaseSchema=settings.databaseSchema||'sf_received';
@@ -276,6 +282,7 @@ export async function pythonApplicationCommand(root,type,settings,{
   if(settings.environmentFile)inputs.push(await inputPath(settings.environmentFile,'file'));
   const env=await applicationEnvironment(settings.environmentFile);
   return {command:type.command,args,inputs,createDirectories:[],terminal:false,pythonCommand,
+    ...(workbook?{workbook}:{}),
     ...(settings.environmentFile?{environmentFile:settings.environmentFile,environmentSha256:env.sha256}:{})};
 }
 export async function validatePythonManagedCommand(root,request,selected) {
