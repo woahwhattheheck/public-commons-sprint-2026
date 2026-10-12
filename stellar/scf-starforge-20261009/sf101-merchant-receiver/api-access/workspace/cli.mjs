@@ -6,6 +6,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {openApiPassWorkspace} from './model.mjs';
 import {startApiPassWorkspace} from './server.mjs';
+import {inspectApiPassAgentSetup,configureApiPassAgentSetup} from './agent-setup.mjs';
 import {CONFIG_SCHEMA,LAUNCH_SCHEMA,HASH,absolute,compileConfig,digest,check,fail,now} from './configuration.mjs';
 import {readBytes,parseJson,privateDirectory,writeJson,exists} from '../../../sf88-operator-buyer-cli/node/store.mjs';
 
@@ -17,6 +18,7 @@ const HELP=[
  '  [--approval-mode auto|browser|terminal --approval-module ABS]',
  '  [--expected-config-sha256 SHA --expected-workspace-sha256 SHA|new]',
  '  [--expected-approval-sha256 SHA]',
+ '  [--agent-directory ABS --expected-agent-setup-sha256 SHA|new]',
  '',
  'The private startup link opens saved passes, exact requests, original purchase',
  'review, same-ID result recovery and verified response downloads.',
@@ -93,10 +95,16 @@ async function originalApprovals(config,{mode='auto',moduleFile,expectedSha256}=
 
 /** The original broker is created before Buyer/NativeRuntime captures its environment. */
 export async function serveConfiguredWorkspace({configFile,port=0,environment=process.env,
- expectedConfigSha256,expectedWorkspaceSha256,approvalMode='auto',approvalModule,expectedApprovalSha256}={}){
+ expectedConfigSha256,expectedWorkspaceSha256,approvalMode='auto',approvalModule,expectedApprovalSha256,
+ agentDirectory,expectedAgentSetupSha256}={}){
  configFile=absolute(configFile);const raw=await readBytes(configFile,65536),configSha256=digest(raw),config=compileConfig(parseJson(raw));
  check(expectedConfigSha256===undefined||HASH.test(expectedConfigSha256)&&expectedConfigSha256===configSha256,'REVIEWED_CONFIGURATION_CHANGED',409);
  check(expectedWorkspaceSha256===undefined||expectedWorkspaceSha256==='new'||HASH.test(expectedWorkspaceSha256),'INVALID_EXPECTED_WORKSPACE_SHA256');
+ if(agentDirectory){
+  agentDirectory=absolute(agentDirectory);
+  const selected=await inspectApiPassAgentSetup(agentDirectory,{workspaceDirectory:config.directory});
+  check(expectedAgentSetupSha256===undefined||selected.sha256===expectedAgentSetupSha256,'API_AGENT_REVIEWED_SETUP_CHANGED',409);
+ }else check(expectedAgentSetupSha256===undefined,'API_AGENT_DIRECTORY_REQUIRED');
  await privateDirectory(config.directory);
  let model,app,approval,launch,closingPromise;
  const recordFile=join(config.directory,'api-pass-workspace-launch.json');
@@ -106,12 +114,17 @@ export async function serveConfiguredWorkspace({configFile,port=0,environment=pr
   check(digest(await readBytes(configFile,65536))===configSha256,'REVIEWED_CONFIGURATION_CHANGED',409);
   app=await startApiPassWorkspace({model,port});
   const source=await codeFile(ENTRY);
-  launch={schema:LAUNCH_SCHEMA,status:'LISTENING',instanceId:randomUUID(),workspaceId:model.state.id,
+  launch={schema:LAUNCH_SCHEMA,status:agentDirectory?'STARTING':'LISTENING',instanceId:randomUUID(),workspaceId:model.state.id,
    directory:config.directory,configFile,configSha256,expectedWorkspaceSha256:expectedWorkspaceSha256??null,
    processId:process.pid,startedAt:now(),url:app.url,
    source:{entry:source.path,sha256:source.sha256,runtimeDirectory:config.runtimeDirectory},
    approval:{mode:approval.mode,module:approval.source?.path??null,sha256:approval.source?.sha256??null,capability:approval.capability??null}};
   await writeJson(recordFile,launch);
+  if(agentDirectory){
+   launch.agent=await configureApiPassAgentSetup({directory:agentDirectory,workspaceDirectory:config.directory,
+    workspaceId:model.state.id,expectedSetupSha256:expectedAgentSetupSha256,label:config.title});
+   launch.status='LISTENING';await writeJson(recordFile,launch);
+  }
   const close=()=>{
    if(closingPromise)return closingPromise;
    closingPromise=(async()=>{
@@ -123,6 +136,7 @@ export async function serveConfiguredWorkspace({configFile,port=0,environment=pr
   };
   return {...app,close,launch,launchFile:recordFile};
  }catch(error){
+  if(launch&&app)await writeJson(recordFile,{...launch,status:'STARTUP_FAILED',failedAt:now()}).catch(()=>{});
   if(app)await app.close().catch(()=>{});else if(model)await model.close().catch(()=>{});
   else if(approval?.broker)await Promise.resolve(approval.broker.close()).catch(()=>{});
   throw error;
@@ -144,14 +158,16 @@ export async function main(argv=process.argv.slice(2)){
   const raw=await readBytes(out,65536);process.stdout.write(JSON.stringify({schema:CONFIG_SCHEMA,file:out,sha256:digest(raw),directory:config.directory})+'\n');return;
  }
  check(command==='serve','WORKSPACE_COMMAND_REQUIRED');
- only(values,['config','port','approval-mode','approval-module','expected-config-sha256','expected-workspace-sha256','expected-approval-sha256']);
+ only(values,['config','port','approval-mode','approval-module','expected-config-sha256','expected-workspace-sha256','expected-approval-sha256','agent-directory','expected-agent-setup-sha256']);
  const port=Number(selected(values,'port','0'));check(Number.isInteger(port)&&port>=0&&port<=65535,'INVALID_PORT');
  const app=await serveConfiguredWorkspace({configFile:selected(values,'config'),port,
   expectedConfigSha256:selected(values,'expected-config-sha256'),expectedWorkspaceSha256:selected(values,'expected-workspace-sha256'),
   approvalMode:selected(values,'approval-mode','auto'),approvalModule:selected(values,'approval-module'),
-  expectedApprovalSha256:selected(values,'expected-approval-sha256')});
+  expectedApprovalSha256:selected(values,'expected-approval-sha256'),agentDirectory:selected(values,'agent-directory'),
+  expectedAgentSetupSha256:selected(values,'expected-agent-setup-sha256')});
  process.stdout.write(JSON.stringify({schema:LAUNCH_SCHEMA,status:'LISTENING',workspaceId:app.workspaceId,
-  launchFile:app.launchFile,url:app.url,processId:process.pid,instanceId:app.launch.instanceId})+'\n');
+  launchFile:app.launchFile,url:app.url,processId:process.pid,instanceId:app.launch.instanceId,
+  ...(app.launch.agent?{agent:app.launch.agent}:{})})+'\n');
  let stopped=false;
  const stop=()=>{if(stopped)return;stopped=true;app.close().catch(error=>{
   process.stderr.write(JSON.stringify({error:error.code??'WORKSPACE_SHUTDOWN_FAILED'})+'\n');process.exitCode=1;

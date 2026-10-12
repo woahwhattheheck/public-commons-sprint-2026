@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_api_pass_",
+    "text": "For API customers, list the configured workspace aliases and reopen the original saved customer session. Use host-declared file and purchase handles, inspect their complete source hashes, and retain each exact operationId and expectedRevision before dispatch. After an interrupted reply, read merchant_api_pass_operation and recover the same original request and payload. Original purchase, request, approval and recovery semantics remain in the customer service. Page passes and complete customer history at the returned revision. Capture complete original response, review, proof, report or history files under a stable exportId; use the typed client or merchant-api-pass to resume SHA-pinned downloads after either process restarts. Retained exports remain available after the customer service closes. The optional private agent directory reopens the original connection, merchant settings and local MCP client together."
+  },
+  {
     "prefix": "merchant_research_",
     "text": "For Research, list host-declared aliases and attach to the original authenticated Research application. The host-selected startup file follows the same managed listener after restart. Read its original dossier revision, selected question and complete paged source/finding records before writing. Keep saved Crossref request and operation IDs through prepare, review, start/resume, stop and reviewed receive; after an uncertain reply read the same original dossier and operation. Complete portable, report, raw-edition and comparison exports retain their source identities and hashes. Page the durable export inventory after reattachment; resume file reads with the same kind/exportId/hash and byte offset, then verify all decoded bytes. Reopen a host-declared portable source or that exact retained export through the original streaming importer. Detach with this attachment ID to drain its calls/readers; Applications keeps ownership of the original listener and saved acquisitions."
   },

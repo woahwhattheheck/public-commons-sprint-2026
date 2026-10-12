@@ -16,8 +16,8 @@ import { datasetReleaseView } from './catalog/dataset-lifecycle.mjs';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 
-// Research delegates mutations to the original authenticated workspace and its
-// revision/operation guards, keeping source cancellation reachable during acquisition.
+// Research and API customers delegate mutations to their original workspaces and
+// revision/operation guards, keeping cancellation and request recovery reachable.
 
 
 // The original release return values contain local handler/store paths. The MCP
@@ -88,7 +88,8 @@ export class MerchantReleaseOperator {
     this.#options = { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage };
     this.#tools = structuredClone(merchantToolCatalog(config));
     this.#definitions = new Map(this.#tools.map(value => [value.name, value]));
-    this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint && merchantToolFamily(value.name) !== 'researchWorkspaces').map(value => value.name));
+    this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint &&
+      !['researchWorkspaces', 'apiPassWorkspaces'].includes(merchantToolFamily(value.name))).map(value => value.name));
   }
   get tools() { return structuredClone(this.#tools); }
   get maxRequestBytes() {
