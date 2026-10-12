@@ -72,3 +72,22 @@ An already-dispatched mutation keeps its original request identity and native re
 The existing original case supports pure preview and immutable saved forecasts. `POST /api/operations/{case}/forecast-preview` takes `{expectedVersion, inputs}` and returns `source`, normalized `inputs`, the complete `report`, and `previewSha256`. The original command route accepts `action:"forecast.save"` with `data:{inputs,expectedPreviewSha256}` plus its existing expectedVersion/operator/note/requestId fields. Save is atomic with the original case event and stable request receipt.
 
 `GET /api/operations/{case}/forecasts` lists summaries. `GET /api/operations/{case}/forecasts/{forecast}` reopens the complete original record and adds its current-source comparison. Appending `/export.zip` downloads complete saved JSON, dated cash/work and other native CSV reports with their file manifest. Full case archives now include the optional `forecasts` collection; old archives remain valid. The receiver checks each complete snapshot, recalculation, digest and original save-event link. See [FORECAST.md](FORECAST.md) for the input fields and all date/payment semantics.
+
+## Source-bound cohort acceptance
+
+The complete operator and receiving contract is [OPERATIONS-COHORT.md](OPERATIONS-COHORT.md). The evaluator reads the original `deployment_acceptance_plan` from this case's pinned scenario and stores its frozen result in the existing `ops_reviews`/case event transaction.
+
+| Operation | Native interface |
+| --- | --- |
+| Seed original tranche 2/3 input | `POST /api/operations/{case}/cohort-seed` with `{expectedVersion,tranche}` |
+| Evaluate explicit input | `POST /api/operations/{case}/cohort-preview` with `{expectedVersion,inputs}` |
+| Freeze exact preview | Original `command` envelope, `action:"cohort.prepare"`, `data:{inputs,expectedPreviewSha256}` |
+| Reopen frozen source | Original `GET /api/operations/{case}/reviews/{review}` |
+| Export complete evidence | `GET /api/operations/{case}/cohort-reviews/{review}/export.zip` |
+| Prepare with selected evidence | Optional `cohortReviewIds` in existing completion preview/prepare data |
+
+The complete reviewed input fields are `name,tranche,windowStart,windowEnd,asOfAt,buyerDeploymentIds,merchantDeploymentIds,operations,facilitators,bindings,products,outcomes,refundCashIds,coverage,awardAcceptance,requiredWork,note`; the seed provides their native structure. Times retain their original ISO strings and explicit timezone, atomic amounts retain exact integers, and effort remains decimal text. Original deployment/intent/source identities remain authoritative. The full input, selected and excluded observations, as-of purchase history, current/gross results, denominator scopes, proposed targets, coverage and source digests are returned by preview.
+
+A frozen review has `purpose:"COHORT_EVALUATION"`, `cohort`, `cohortHistory` and the existing reviewer/snapshot/report/business digest fields. Case review summaries add `cohortTranche,cohortName,cohortWindow,cohortReady,cohortMeasurementSha256,cohortPreviewSha256,cohortSourceCurrent`. No new database or payment action is introduced.
+
+When `cohortReviewIds` is supplied to Completion, the preview embeds `cohortEvidence` and the original measurement history. A wrong tranche, later cutoff, changed measurement source or unmet target is a native preparation finding. Missing optional selection preserves earlier completion payloads and digests. Export/import validates each original cohort against its source snapshot and original preparation event, and preserves all embedded reviews in the complete case.

@@ -23,6 +23,7 @@
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qwc/README.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qwc/PUBLICATION_CONTRACT.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qwc/NATIVE_RECEIVING.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qwc/NATIVE_RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qwc-acceptance/qwc_acceptance.py"
   ]
 }

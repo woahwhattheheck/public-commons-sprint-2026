@@ -27,7 +27,7 @@ function handoffRequest(args) {
     labels: [], buyerStartup: { sha256: args.sourceSha256 } };
 }
 function checkedBinding(value) {
-  need(plain(value) && value.sourceMode === 'buyer' && UUID.test(value.workspaceId ?? '') &&
+  need(plain(value) && value.sourceMode === 'buyer' && SHA.test(value.workspaceId ?? '') &&
     SHA.test(value.sourcesSha256 ?? '') && SHA.test(value.sourceSha256 ?? '') &&
     Number.isSafeInteger(value.sourceBytes) && value.sourceBytes > 0 && value.sourceBytes <= LIMIT,
     'The native reply does not retain its original buyer workspace and source binding.', 'REPLY');
@@ -77,6 +77,7 @@ function compactStartup(value) {
 /** Validate the exact small native mutation and reviewed identity. */
 export function buyerAccountingClientOperation(value, wireArguments) {
   const action = value.command.tool.slice(PREFIX.length).replaceAll('_', '-');
+  need(value.command.tool === PREFIX + action, 'Keep the exact original buyer command name.', 'PREVIEW');
   need(['initialize', 'handoff'].includes(action), 'Choose initialization or the original first handoff.', 'PREVIEW');
   const args = wireArguments('buyer', action, value.command.arguments), binding = copy(value.binding);
   const fields = action === 'initialize' ? ['sourceSha256', 'sourceBytes', 'name', 'actor'] :
@@ -90,7 +91,7 @@ export function buyerAccountingClientOperation(value, wireArguments) {
   if (action === 'initialize') {
     need(!/[\u0000-\u001f\u007f]/.test(args.name + args.actor), 'Use the original supported initialization name and operator.', 'ARGUMENTS');
   } else {
-    need(UUID.test(binding.workspaceId ?? '') && SHA.test(binding.sourcesSha256 ?? '') &&
+    need(SHA.test(binding.workspaceId ?? '') && SHA.test(binding.sourcesSha256 ?? '') &&
       UUID.test(binding.handoffId ?? '') && binding.handoffId === args.handoffId &&
       binding.requestSha256 === nativeHash(handoffRequest(args)),
       'Keep the original workspace, first-handoff UUID and exact native create request.', 'BINDING');
@@ -121,7 +122,8 @@ export async function previewBuyerAccountingClient(action, value, { workspace, r
   const startup = checkedStartup(await read('startup', {}, options));
   const review = checkedSource(await read('prepare', { sourceSha256: startup.source.sha256 }, options), startup.source.sha256);
   sameWorkspace(review.binding, startup.binding);
-  need(review.handoffId === startup.source.handoffId && Number.isSafeInteger(review.workspaceRevision) &&
+  need(review.handoffId === startup.source.handoffId && review.source.reportBytes === startup.source.bytes &&
+    Number.isSafeInteger(review.workspaceRevision) &&
     review.workspaceRevision >= 1, 'The retained first-handoff review is inconsistent.', 'REPLY');
   const args = { workspace, handoffId: startup.source.handoffId, sourceSha256: review.sourceSha256,
     name: value.name, actor: value.actor, revision: review.workspaceRevision };

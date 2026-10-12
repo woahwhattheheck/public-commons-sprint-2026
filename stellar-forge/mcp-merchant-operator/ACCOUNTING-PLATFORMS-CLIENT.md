@@ -44,6 +44,8 @@ Choose `--platform buyer` for a host-declared accounting alias configured with `
 | `merchant_accounting_buyer_prepare` | `retained-source`; `client.prepareSource()` | Exact retained source pages and current revision for a named handoff |
 | `merchant_accounting_buyer_handoff` | `preview --action handoff` → existing `prepare` / `execute` | Original startup handoff and exact same-request recovery |
 
+Buyer startup and retained-source reads reopen the configured native workspace when its host has not opened it yet. Opening retains the original Store lease and does not initialize a missing buyer directory. Only the native `ACCOUNTING_BUYER_INITIALIZATION_REQUIRED` response identifies an uninitialized source during initialize recovery; `ACCOUNTING_NOT_OPEN` is never treated as missing financial work. Source-file preview remains usable before initialization, and other native open errors remain actionable.
+
 Set the endpoint and workspace variables to the original configured host. Replace `issued_period` with an actual `buyerSources` alias returned by `sources`.
 
 ~~~sh
