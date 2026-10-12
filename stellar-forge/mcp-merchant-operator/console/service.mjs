@@ -215,7 +215,9 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       if(req.method!=='POST')throw fail('CONSOLE_METHOD','Use the displayed operator action.',405);
       if(!String(req.headers['content-type']??'').toLowerCase().startsWith('application/json'))
         throw fail('CONSOLE_CONTENT_TYPE','Use application/json.',415);
-      const input=await body(req,route==='import'?128*1024*1024:operator.maxRequestBytes);
+      // The console's draft metadata must fit around a full original native packet.
+      // Dispatch still checks the exact original MCP envelope against maxRequestBytes.
+      const input=await body(req,route==='import'?128*1024*1024:operator.maxRequestBytes+8192);
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
       if(route==='customers'){send(res,202,{delivery:await customers.start(input,req)});return true;}
       if(route==='customer-pause'){
