@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_BGS_PRESSURE_1B40_20261012",
+  "role": "bgs-observed-property",
+  "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/ObservedProperty",
+  "receivedAt": "2026-10-12T12:01:29Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "bgs-datastream-1-observed-property.json",
+    "bytes": 483,
+    "sha256": "080f2c4613706fb01ffefcb35572337233907bf1b38f741081a8efc21cafeed5"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/ObservedProperty",
+    "filename": "bgs-datastream-1-observed-property.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-8109-abec-00b2f8bf2ab9\",\"filename\":\"bgs-datastream-1-observed-property.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":483,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-8109-abec-00b2f8bf2ab9\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-8109-abec-00b2f8bf2ab9\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-8109-abec-00b2f8bf2ab9\",\"filename\":\"bgs-datastream-1-observed-property.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":483,\"content\":\"{\\\"@iot.selfLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/ObservedProperties(5)\\\",\\\"@iot.id\\\":5,\\\"name\\\":\\\"Barometric Pressure\\\",\\\"definition\\\":\\\"\\\",\\\"description\\\":\\\"Barometric Pressure\\\",\\\"properties\\\":{\\\"data_type\\\":\\\"Measured\\\",\\\"publish_yn\\\":\\\"Y\\\",\\\"sen_id\\\":\\\"36\\\"},\\\"Datastreams@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/ObservedProperties(5)/Datastreams\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/ObservedProperties(5)/MultiDatastreams\\\"}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

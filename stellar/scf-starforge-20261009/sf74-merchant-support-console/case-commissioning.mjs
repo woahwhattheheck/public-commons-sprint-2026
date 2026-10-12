@@ -46,15 +46,18 @@ export function savedCaseWorkorderInputs(record,workspace) {
   }
   return inputs;
 }
-function originalEditionPayload(state,editionId) {
+export function originalEditionPayload(state,editionId) {
   const {edition,packet}=commissioningWorkorder(state,editionId),inputs={};
   for(const [key,digest] of Object.entries(edition.inputs)) {
+    if(key==='supportText'&&edition.sourceBundle)continue;
     const bytes=commissioningFileBytes(state,digest);
     inputs[key]=key==='supportText'?new TextDecoder('utf-8',{fatal:true}).decode(bytes):encodeCommissioningBytes(bytes);
   }
   if(edition.runtimeMapping)inputs.inputs=copy(edition.runtimeMapping);
   const decode=ref=>new TextDecoder('utf-8',{fatal:true}).decode(commissioningFileBytes(state,ref));
-  return {result:{packet,html:decode(edition.html),checklist:decode(edition.checklist)},inputs,sourceCase:edition.sourceCase};
+  return {result:{packet,html:decode(edition.html),checklist:decode(edition.checklist)},inputs,sourceCase:edition.sourceCase,
+    ...(edition.sourceBundle?{sourceBundle:{manifestText:decode(edition.sourceBundle.manifest),
+      runtimeBytes:edition.sourceBundle.runtimeBytes}}:{})};
 }
 async function saveResult(store,record,workspace,next) {
   if(next.replayed)return {case:caseRef(record),revision:next.revision,result:next.result,replayed:true,
