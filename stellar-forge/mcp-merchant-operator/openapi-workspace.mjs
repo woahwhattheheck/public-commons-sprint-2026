@@ -1,6 +1,7 @@
 // MIT. Merchant authoring through the original SF61 console and SF82 releases.
 import { Sf61WorkspaceClient, SF61_ALIAS, SF61_SHA, SF61_MAX_SOURCE_BYTES, sf61Hash,
   sf61Failure as fail, sf61Plain as plain, sf61Exact as exact, sf61Checked as checked } from './sf61-connection.mjs';
+import { routeWorksheetTools, isRouteWorksheetTool, executeRouteWorksheet } from './openapi-route-worksheet.mjs';
 export { readSf61WorkspaceConfiguration as readOpenApiWorkspaceConfiguration } from './sf61-connection.mjs';
 const PACKAGE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -28,6 +29,7 @@ const policy = { type: 'object', properties: Object.fromEntries(['ttlMs', 'maxEn
   .map(key => [key, { type: 'integer', minimum: 1 }])), additionalProperties: false };
 export function openapiWorkspaceTools(tool) {
   return [
+    ...routeWorksheetTools(tool),
     tool('merchant_openapi_workspaces', 'List original SF61 consoles, declared API/plan file handles and complete receiving directories.', {}, [], read),
     tool('merchant_openapi_status', 'Read the original console-owned merchant runtime and cache state. The console stays shared with its browser and HAR operator.', selection, ['workspace'], read),
     tool('merchant_openapi_packages', 'Page every complete original saved API package. Continue nextCursor until complete; incomplete directories do not consume the page.', { ...selection, ...page }, ['workspace'], read),
@@ -171,10 +173,11 @@ export class MerchantOpenApiWorkspaces {
     if (!await matches(original)) throw fail('OPENAPI_PACKAGE_CONFLICT', 'This name already identifies different original source, settings or revision. Reopen it or choose a new name.');
     return { recovered: true, package: inspected, saved: loaded(original, false) };
   }
-  async #save(client, input, changed) {
-    const selected = await this.#source(client, input);
+  async #save(client, input, changed, prepared) {
+    const selected = prepared?.source ?? await this.#source(client, input);
     const body = changed ? { ...input, specText: selected.text } : {
-      name: input.name, specText: selected.text, plan: await this.#plan(client, input) };
+      name: input.name, specText: selected.text, plan: prepared?.plan ?? await this.#plan(client, input),
+      ...(prepared?.capturedSource === undefined ? {} : { capturedSource: prepared.capturedSource }) };
     for (const key of ['specFile', 'expectedSourceSha256']) delete body[key];
     const matches = async original => {
       if (original.specText !== selected.text) return false;
@@ -218,6 +221,9 @@ export class MerchantOpenApiWorkspaces {
     if (input.expectedRevision !== undefined) integer(input.expectedRevision, 0);
     if (input.offset !== undefined) integer(input.offset, 0);
     if (input.limit !== undefined) integer(input.limit, 1, name === 'merchant_openapi_file' ? 196608 : 200);
+    if (isRouteWorksheetTool(name)) return executeRouteWorksheet({ name, input, workspace, client,
+      readSource: value => this.#source(client, value), readPlan: value => this.#plan(client, value),
+      save: (value, prepared) => this.#save(client, value, false, prepared) });
     const result = native => ({ workspace, native: compact(native) });
     const cache = (operation, body, more = {}) => client.json(query('/api/cache-operations/' + operation, { name: input.name, ...more }), body);
     switch (name) {
