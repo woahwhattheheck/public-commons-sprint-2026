@@ -206,7 +206,7 @@ export class FhirConnection {
           ['content-type','content-length','retry-after','date'].filter(name=>response.headers.has(name)).map(name=>[name,response.headers.get(name)]))};
     try{
       let result;
-      if(outputDirectory && response.ok && !json)result={...meta,file:await responseFile(response,outputDirectory,MAX_PACKET_BYTES)};
+      if(outputDirectory && response.ok)result={...meta,file:await responseFile(response,outputDirectory,MAX_PACKET_BYTES)};
       else{
         const bytes=await responseBytes(response,MAX_RESPONSE_BYTES);result={...meta,bytes};
         if(json)result.value=decode(bytes);

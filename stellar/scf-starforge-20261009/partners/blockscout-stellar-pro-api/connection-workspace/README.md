@@ -36,6 +36,14 @@ A different provider identity requires another account alias. The retained revie
 
 Payment amounts remain the original atomic decimal strings. The workspace does not convert them through floating-point display or choose new prices, recipients or assets.
 
+### Challenge-only deployment and paid activation
+
+The merchant form has an explicit deployment mode. Paid remains the default. Challenge-only opens the original unpaid routes, offers and private provider desk while provider credentials and facilitator configuration are being completed.
+
+After the original run stops, **Review deployment** edits the same saved application. Its review pins the current revision and changes only mode, facilitator, environment-file reference and the local-facilitator option. Save the review, then use the existing launch review/start controls. The package, runtime, managed home, account state and earlier runs remain attached to that same application ID.
+
+[Complete deployment, activation and recovery guide](../DEPLOYMENT.md) includes both installed CLI and browser paths. History can reopen a saved deployment review or finish its original save after a lost return. The selected installed runtime must include the explicit deployment capability; old default-paid source requests remain supported.
+
 ### Applications authority
 
 The setup workspace stores a binding to the exact existing runtime workspace identity. It calls that workspace's original review, save, runtime adoption, launch, output, recovery and stop methods. Each saved merchant belongs to this desk's selected package and original application revision. A later external application edit must be reconciled in Applications before this desk can launch it.

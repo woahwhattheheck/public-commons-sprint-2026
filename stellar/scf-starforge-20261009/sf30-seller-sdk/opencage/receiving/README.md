@@ -276,3 +276,23 @@ The workspace's ordinary `package()` destination includes the saved workspace, t
 | `host-receiving.json` | Completed package/lineage, source, host, original stage and recovery identities |
 
 Select this complete output directory in the linked native operation's ordinary terminal artifact manifest. The receiver uses the original exclusive/atomic file APIs and content-addressed bundle publisher, so a retry rejoins identical retained files and package editions. Each workspace writer is closed before the next receiving stage; its original close failure remains attached to the primary error when both occur.
+
+
+## Native admission of the same generator continuation
+
+The original `launch-host-deployment.py` accepts an optional `previousNative` object in its retained receiving input:
+
+```json
+{
+  "previousNative": {
+    "record": "/absolute/original/native/record",
+    "requestSha256": "<original request.json SHA-256>",
+    "resultSha256": "<original result.json SHA-256>",
+    "artifactsSha256": "<original artifacts.json SHA-256>"
+  }
+}
+```
+
+Supply all four fields for the completed package-contract failure described above. The launcher checks the canonical original record and the exact bytes of its three retained files before original native admission. It passes the four corresponding `--previous-*` flags directly in the saved command and declares the original record as an active runtime input for the duration of that command. The receiving driver then verifies the terminal outcome, artifact selection, original package and selected generator before producing its linked package and host bundle.
+
+Keep the original package directory and package identity in this new input. Select the reviewed current source manifest, a distinct output directory, and the explicit continuation operation ID. The original failed record, source manifest and package remain available alongside the completed successor. An input without `previousNative` keeps the original package-to-host command unchanged.

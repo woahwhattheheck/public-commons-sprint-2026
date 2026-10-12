@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import type {EditionInput,PeriodInput,PeriodSourceInput,WorkInput,AssignmentInput,ReviewInput,MutationResult as RunbookMutationResult,CallOptions,CycleHeader,BookHeader,RetainedFile,FileMetadata,FileChunk} from './accounting-runbooks-client.mjs';
+import type {EditionInput,PeriodInput,PeriodSourceInput,WorkInput,AssignmentInput,Assignment,ReviewInput,MutationResult as RunbookMutationResult,CallOptions,CycleHeader,BookHeader,RetainedFile,FileMetadata,FileChunk} from './accounting-runbooks-client.mjs';
 export type {CallOptions} from './accounting-runbooks-client.mjs';
 export type PortfolioAction='configure'|'commission'|'schedule'|'command'|'capture'|'receive'|'adopt';
 export type ChildAction='save'|'create'|'assign'|'work'|'submit'|'review';
@@ -35,10 +35,25 @@ export interface Commission {
 }
 export interface ClientRecord {id:string;createdAt:string;latestCommissionId:string;commissions:Commission[]}
 export type ClientHeader=Omit<ClientRecord,'commissions'>&{commissionCount:number;commission:Commission};
+/** Optional immutable procedure selection; omitted on legacy all-procedure rows. */
+export interface ProcedureSelection {profileId?:string;profileName?:string;selectedStepCount?:number}
 export interface PlanRowInput {
   id:string;clientId:string;commissionId:string;label:string;preparerId?:string;backupId?:string;reviewerId?:string;
   closeDate:string;reviewDate?:string;preparationMinutes:number;reviewMinutes:number;backupMinutes?:number;
   cycleId?:string|null;previousCycleId?:string|null;source?:PeriodSourceInput;
+  /** Omit for all procedures on new work; existing periods derive their frozen selection. */
+  profileId?:string|null;
+}
+export interface PlanRow extends ProcedureSelection {
+  id:string;clientId:string;commissionId:string;alias:string;name:string;label:string;
+  preparerId:string;backupId:string;reviewerId:string;closeDate:string;reviewDate:string;
+  preparationMinutes:number;reviewMinutes:number;backupMinutes:number;
+  runbookId:string;editionId:string;editionSha256:string;clientWorkspaceId:string;clientRevision:number;
+  cycleId:string|null;previousCycleId:string|null;source:PeriodSourceInput|null;assignment?:Assignment;
+}
+export interface CalendarRow extends ProcedureSelection {
+  id:string;clientId:string;preparerId:string;backupId:string;reviewerId:string;closeDate:string;reviewDate:string;
+  preparationMinutes:number;reviewMinutes:number;backupMinutes:number;
 }
 export interface CalendarInput {label:string;startDate:string;endDate:string;previousPlanId?:string|null;rows:PlanRowInput[]}
 export interface ScheduleInput extends CalendarInput {actor:string;expectedPreviewSha256:string;capacityExceptions?:{id:string;note:string}[]}
@@ -53,11 +68,11 @@ export type CapacityConflict=
 export interface CalendarTotals {requestedMinutes:number;allocatedMinutes:number;unallocatedMinutes:number;existingOverloadMinutes:number}
 export interface Calendar {
   schema:'stellar-forge.accounting-portfolio-calendar.v1';method:'deadline-first-backward-allocation';startDate:string;endDate:string;
-  rows:Record<string,unknown>[];staff:Required<Person>[];allocations:Allocation[];days:CapacityDay[];conflicts:CapacityConflict[];totals:CalendarTotals;
+  rows:CalendarRow[];staff:Required<Person>[];allocations:Allocation[];days:CapacityDay[];conflicts:CapacityConflict[];totals:CalendarTotals;
 }
 export interface CalendarPreview {
   label:string;firmEditionId:string;firm:FirmEdition;startDate:string;endDate:string;previousPlanId:string|null;
-  seriesId:string|null;bookedPlanIds:string[];rows:Record<string,unknown>[];calendar:Calendar;previewSha256:string;
+  seriesId:string|null;bookedPlanIds:string[];rows:PlanRow[];calendar:Calendar;previewSha256:string;
 }
 export interface Plan extends CalendarPreview {id:string;seriesId:string;createdAt:string;actor:string;capacityExceptions:{id:string;note:string}[]}
 export type PlanHeader=Omit<Plan,'firm'|'rows'|'calendar'|'capacityExceptions'>&{
@@ -84,7 +99,7 @@ export interface ChildCommand<A extends ChildAction=ChildAction> {
   nativeRequest:Record<string,unknown>&{workspaceId:string;revision:number;requestId:string;actor:string};
   nativeRequestSha256:string;planId:string|null;planSeriesId:string|null;rowId:string|null;replacesCommandId:string|null;commandSha256:string;
 }
-export type CommandHeader=Omit<ChildCommand,'nativeRequest'>&{nativeRequestId:string;clientRevision:number;replacedByCommandId:string|null;current:boolean};
+export type CommandHeader=Omit<ChildCommand,'nativeRequest'>&{nativeRequestId:string;clientRevision:number;profileId?:string;replacedByCommandId:string|null;current:boolean};
 export interface CaptureInput {
   actor:string;label:string;clients:{clientId:string;clientWorkspaceId:string;clientRevision:number;cycleIds:string[]}[];
 }

@@ -814,7 +814,13 @@ class QgisWorkspace:
             events = [json.loads(row[0]) for row in db.execute("SELECT body FROM events ORDER BY revision")]
             requests = [{"requestId": row[0], "inputSha256": row[1], "result": json.loads(row[2])}
                         for row in db.execute("SELECT request_id,input_sha256,result FROM requests ORDER BY request_id")]
-        return {"schema": SNAPSHOT_SCHEMA, "state": state, "events": events, "requests": requests}
+            from .analyst_state import analyst_snapshot
+            analyst_requests = analyst_snapshot(db)
+        snapshot = {"schema": SNAPSHOT_SCHEMA, "state": state, "events": events, "requests": requests}
+        # Existing snapshots keep their exact shape until an analyst request is retained.
+        if analyst_requests:
+            snapshot["analystRequests"] = analyst_requests
+        return snapshot
 
 
     def project_files(self, snapshot=None):
@@ -848,6 +854,9 @@ class QgisWorkspace:
         from .field import field_file_refs
         for record in field_file_refs(snapshot):
             add(record)
+        from .analyst_state import analyst_file_refs
+        for record in analyst_file_refs(snapshot):
+            add(record)
         return [records[name] for name in sorted(records)]
 
     def export_package(self, destination, *, expected_revision=None, progress=None):
@@ -880,6 +889,8 @@ class QgisWorkspace:
         from .postgis import software_files
         for name, body in software_files().items():
             software["software/starforge_stac/postgis/" + name] = body
+        from .analyst_state import analyst_software_files
+        software.update({"software/" + name: body for name, body in analyst_software_files(plugin_root).items()})
         for name, body in software.items():
             records.append({"path": name, "bytes": len(body), "sha256": sha_bytes(body)})
         records.sort(key=lambda x: x["path"])
@@ -938,6 +949,41 @@ class QgisWorkspace:
                 "revision": manifest["revision"], "fileCount": len(records) + 1, "totalDecodedBytes": manifest["totalBytes"]}
 
 
+
+def read_package_manifest(archive):
+    """Read the original package manifest and validate its complete member headers."""
+    names = archive.namelist()
+    require(len(names) == len(set(names)) and len(names) <= 1000000, "PACKAGE_MEMBERS",
+            "The complete archive contains duplicate members or exceeds the supported member count.")
+    require("qgis-package.json" in names, "PACKAGE_MANIFEST", "The original project package manifest is missing.")
+    info = archive.getinfo("qgis-package.json")
+    require(info.file_size <= MAX_JSON, "PACKAGE_MANIFEST_LIMIT", "The complete package manifest exceeds the supported size.")
+    manifest_body = archive.read(info)
+    manifest = json.loads(manifest_body.decode("utf-8"))
+    require(manifest.get("schema") == PACKAGE_SCHEMA and isinstance(manifest.get("files"), list),
+            "PACKAGE_SCHEMA", "Select a complete Starforge QGIS project package.")
+    records = {}
+    for raw in manifest["files"]:
+        record = descriptor(raw)
+        require(record["path"] not in records, "PACKAGE_MEMBERS", "The package declares a duplicate file.")
+        records[record["path"]] = record
+    require(set(names) == set(records) | {"qgis-package.json"} and "workspace-snapshot.json" in records,
+            "PACKAGE_CLOSURE", "Every package member must have its original exact descriptor.")
+    # All member/type/length decisions precede extraction.
+    for name in names:
+        relative_name(name)
+        info = archive.getinfo(name)
+        mode = (info.external_attr >> 16) & 0xFFFF
+        require(not info.is_dir() and not stat.S_ISLNK(mode) and
+                (not stat.S_IFMT(mode) or stat.S_ISREG(mode)),
+                "PACKAGE_MEMBER_TYPE", "The complete project package accepts ordinary files only.", path=name)
+        if name in records:
+            require(info.file_size == records[name]["bytes"], "PACKAGE_MEMBER_SIZE",
+                    "A package member differs from the retained size.", path=name)
+    require(type(manifest.get("totalBytes")) is int and
+            manifest["totalBytes"] == sum(record["bytes"] for record in records.values()),
+            "PACKAGE_TOTAL_BYTES", "The package total differs from its exact member descriptors.")
+    return manifest, manifest_body, records
 
 @contextmanager
 def opened_package_archive(archive_path, *, expected_sha256=None, progress=None):
@@ -1016,34 +1062,7 @@ def _receive_opened_package(archive, destination, measured, assert_archive, *, p
                 "WORKSPACE_EXISTS", "Choose a new receiving directory for the complete project.")
     target.mkdir(mode=0o700, parents=True, exist_ok=True)
     directory(target)
-    names = archive.namelist()
-    require(len(names) == len(set(names)) and len(names) <= 1000000, "PACKAGE_MEMBERS",
-            "The complete archive contains duplicate members or exceeds the supported member count.")
-    require("qgis-package.json" in names, "PACKAGE_MANIFEST", "The original project package manifest is missing.")
-    info = archive.getinfo("qgis-package.json")
-    require(info.file_size <= MAX_JSON, "PACKAGE_MANIFEST_LIMIT", "The complete package manifest exceeds the supported size.")
-    manifest_body = archive.read(info)
-    manifest = json.loads(manifest_body.decode("utf-8"))
-    require(manifest.get("schema") == PACKAGE_SCHEMA and isinstance(manifest.get("files"), list),
-            "PACKAGE_SCHEMA", "Select a complete Starforge QGIS project package.")
-    records = {}
-    for raw in manifest["files"]:
-        record = descriptor(raw)
-        require(record["path"] not in records, "PACKAGE_MEMBERS", "The package declares a duplicate file.")
-        records[record["path"]] = record
-    require(set(names) == set(records) | {"qgis-package.json"} and "workspace-snapshot.json" in records,
-            "PACKAGE_CLOSURE", "Every package member must have its original exact descriptor.")
-    # All member/type/length decisions precede extraction.
-    for name in names:
-        relative_name(name)
-        info = archive.getinfo(name)
-        mode = (info.external_attr >> 16) & 0xFFFF
-        require(not info.is_dir() and not stat.S_ISLNK(mode) and
-                (not stat.S_IFMT(mode) or stat.S_ISREG(mode)),
-                "PACKAGE_MEMBER_TYPE", "The complete project package accepts ordinary files only.", path=name)
-        if name in records:
-            require(info.file_size == records[name]["bytes"], "PACKAGE_MEMBER_SIZE",
-                    "A package member differs from the retained size.", path=name)
+    manifest, manifest_body, records = read_package_manifest(archive)
     marker = {"sha256": measured["sha256"], "manifestSha256": sha_bytes(manifest_body)}
     marker_path = target / "receiving-operation.json"
     if marker_path.exists():
@@ -1108,6 +1127,11 @@ def _receive_opened_package(archive, destination, measured, assert_archive, *, p
             referenced.append(row["styleFile"])
         referenced.extend(row.get("styleDependencies", []))
     referenced.extend(historical_style_refs(snapshot))
+    from .field import field_file_refs
+    referenced.extend(field_file_refs(snapshot))
+    from .analyst_state import validate_analyst_snapshot, analyst_file_refs, restore_analyst_snapshot
+    validate_analyst_snapshot(snapshot, records=records)
+    referenced.extend(analyst_file_refs(snapshot))
     for raw in referenced:
         record = descriptor(raw)
         require(record["path"] in records and all(records[record["path"]][k] == record[k] for k in ("bytes", "sha256")),
@@ -1135,6 +1159,7 @@ def _receive_opened_package(archive, destination, measured, assert_archive, *, p
                     db.executemany("INSERT INTO requests VALUES(?,?,?)",
                                    [(r["requestId"], r["inputSha256"], json.dumps(r["result"], ensure_ascii=False))
                                     for r in snapshot["requests"]])
+                    restore_analyst_snapshot(db, snapshot)
             finally:
                 db.close()
             assert_archive()

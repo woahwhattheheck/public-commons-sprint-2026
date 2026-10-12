@@ -13,6 +13,7 @@ const LIMITS = [
 ];
 let state = null, selectedSource = null, selectedReview = null, selectedPackage = null;
 let selectedApplicationReview = null, selectedLaunchReview = null, applications = null;
+let selectedDeploymentApplication = null;
 let busy = false, historyRows = [], historyAfter = null, pending = null;
 const tokenKey = 'blockscout-connection-token:' + location.origin;
 const pendingKey = 'blockscout-connection-pending:' + location.origin;
@@ -189,6 +190,7 @@ function showReview(row, result = {}) {
   $('prepare-package').textContent = row.receiveOriginalBundle ? 'Receive original bundle' : 'Prepare private package';
 }
 function selectPackage(row, navigate = false) {
+  clearDeployment();
   selectedPackage = row; $('package-detail').hidden = false;
   detail($('package-summary'),[['Private package',row.directory],['Account alias',row.plan.accountAlias],
     ['Provider origin',row.connection.origin],['Plan SHA-256',row.planSha256],
@@ -229,10 +231,71 @@ async function reload({ apps = true } = {}) {
   if (apps && $('applications-binding').value) await loadApplications();
   await loadHistory(false); controls();
 }
+const activeApplication = app => Boolean(app.current?.active) ||
+  ['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED'].includes(app.current?.phase);
+const deploymentLabel = mode => mode === 'challenge-only' ? 'Challenge-only' : 'Paid service';
+function invalidateApplicationReview() {
+  selectedApplicationReview = null; selectedLaunchReview = null;
+  $('application-review').hidden = true; $('launch-review').hidden = true;
+}
+function clearDeployment() {
+  selectedDeploymentApplication = null;
+  $('deployment-form').hidden = true;
+}
+function deploymentControls(modeId, facilitatorId) {
+  $(facilitatorId).required = $(modeId).value === 'paid';
+}
+function showApplicationReview(saved) {
+  selectedApplicationReview = saved; selectedLaunchReview = null;
+  $('application-review').hidden = false; $('launch-review').hidden = true;
+  const r = saved.original;
+  detail($('application-review-summary'), [
+    ['Merchant', r.label], ['Application', saved.applicationId ?? 'First saved application'],
+    ['Previous revision', saved.previousRevision ?? 'First saved revision'],
+    ['Deployment', deploymentLabel(r.settings.deploymentMode ?? 'paid')],
+    ['Runtime', r.runtime.directory], ['Runtime source', r.runtime.sourceCommit],
+    ['Package', r.settings.packageDirectory], ['Merchant state', r.settings.stateDirectory],
+    ['Facilitator', r.settings.facilitator ?? 'Configured during paid activation'],
+    ['Private environment file', r.settings.environmentFile ?? 'Process environment'],
+    ['Merchant / operations / desk ports', [r.settings.port, r.settings.operationsPort, r.settings.deskPort].join(' / ')],
+    ['Review', r.id],
+  ]);
+  if (saved.deployment) {
+    const changes = node('div', undefined, 'table-wrap');
+    table(changes, ['Deployment setting', 'Current value', 'Reviewed value'],
+      Object.keys(saved.deployment.after).map(key => [key,
+        brief(saved.deployment.before[key]), brief(saved.deployment.after[key])]));
+    $('application-review-summary').append(changes);
+  }
+}
+function editDeployment(app) {
+  if (activeApplication(app)) throw new Error('Stop or reconcile this original run before changing deployment.');
+  invalidateApplicationReview();
+  selectedDeploymentApplication = { id: app.id, revision: app.revision,
+    bindingId: applications.binding.id };
+  $('deployment-form').hidden = false;
+  detail($('deployment-original'), [['Application', app.id], ['Current revision', app.revision],
+    ['Package', app.settings.packageDirectory], ['Private merchant state', app.settings.stateDirectory],
+    ['Runtime', app.runtime.directory]]);
+  $('deployment-mode').value = app.settings.deploymentMode ?? 'paid';
+  $('deployment-facilitator').value = app.settings.facilitator ?? '';
+  $('deployment-environment-file').value = app.settings.environmentFile ?? '';
+  $('deployment-allow-local').checked = app.settings.allowLocalFacilitator ?? false;
+  deploymentControls('deployment-mode', 'deployment-facilitator');
+  show('applications');
+  notice('Review deployment for this same merchant. Its existing package, runtime and provider state are retained.');
+}
 async function loadApplications() {
   const id = $('applications-binding').value;
-  if (!id) { applications=null; $('applications-list').replaceChildren(node('p','Connect the existing Applications workspace.','empty')); return; }
+  if (!id) { applications=null; clearDeployment(); $('applications-list').replaceChildren(node('p','Connect the existing Applications workspace.','empty')); return; }
   applications = await request('/api/applications/'+id);
+  if (selectedDeploymentApplication) {
+    const current = applications.applications.find(row => row.id === selectedDeploymentApplication.id);
+    if (selectedDeploymentApplication.bindingId !== id || !current ||
+        current.revision !== selectedDeploymentApplication.revision || activeApplication(current)) {
+      clearDeployment(); invalidateApplicationReview();
+    }
+  }
   $('applications-directory').value = applications.binding.directory;
   const old = $('application-runtime').value;
   chooseOptions($('application-runtime'),applications.runtimes.map(row=>[row.id,
@@ -242,7 +305,9 @@ async function loadApplications() {
   for (const app of applications.applications) {
     const card=node('article',undefined,'card'); card.append(node('h4',app.label),node('span',app.phase,'status'));
     const summary=node('div');
-    detail(summary,[['Application',app.id],['Private merchant state',app.settings?.stateDirectory],
+    detail(summary,[['Application',app.id],['Revision',app.revision],
+      ['Deployment',deploymentLabel(app.settings?.deploymentMode ?? 'paid')],
+      ['Private merchant state',app.settings?.stateDirectory],
       ['Package',app.settings?.packageDirectory],['Runtime',app.runtime?.directory],['Current operation',app.current?.id ?? app.current?.operationId],
       ['Retained runs',app.totalRuns]]);
     card.append(summary);
@@ -250,15 +315,17 @@ async function loadApplications() {
     actions.append(button('Reopen runtime connection',async()=>{
       await act('reconnect',{applicationId:app.id});await reload();notice('Reopened the original Applications runtime connection.');
     }));
+    actions.append(button('Review deployment',async()=>editDeployment(app),activeApplication(app)));
     actions.append(button('Review launch',async()=>{
       const result=await act('launch-review',{applicationId:app.id});selectedLaunchReview=result.review;
       $('launch-review').hidden=false;
       const r=result.review.original;
       detail($('launch-review-summary'),[['Application',app.label],['Application revision',r.applicationRevision],
         ['Runtime',r.runtime.directory],['Runtime source',r.runtime.sourceCommit],['Managed release',r.releaseId],
-        ['Package',app.settings.packageDirectory],['Merchant state',app.settings.stateDirectory],['Facilitator',app.settings.facilitator]]);
+        ['Package',app.settings.packageDirectory],['Merchant state',app.settings.stateDirectory],
+        ['Deployment',deploymentLabel(app.settings.deploymentMode ?? 'paid')],['Facilitator',app.settings.facilitator]]);
       show('applications');notice('The original launch inputs are retained for this application review.');
-    },Boolean(current?.active)));
+    },activeApplication(app)));
     if (current) {
       const runId=current.id ?? current.operationId;
       if (runId) {
@@ -274,7 +341,7 @@ async function loadApplications() {
           await act('stop',{applicationId:app.id,operationId:runId});await reload();notice('Requested the original merchant’s graceful stop.');
         },!current.active&&!['PENDING','QUEUED','RUNNING','INTERRUPTED'].includes(current.phase)));
       }
-      if (current.privateUrl) {
+      if (current.active && current.privateUrl) {
         try {
           const url=new URL(current.privateUrl);
           if (url.protocol==='http:' && ['127.0.0.1','localhost','[::1]'].includes(url.hostname)) {
@@ -319,12 +386,8 @@ async function loadHistory(more) {
         if(row.action==='review'){
           const original=state.sources.find(item=>item.id===saved.sourceId);if(original)selectSource(original);
           showReview(await request('/api/records/reviews/'+saved.id));show('connection');
-        }else if(row.action==='application-review'){
-          selectedApplicationReview=saved;$('application-review').hidden=false;
-          const r=saved.original;
-          detail($('application-review-summary'),[['Merchant',r.label],['Runtime',r.runtime.directory],
-            ['Package',r.settings.packageDirectory],['Merchant state',r.settings.stateDirectory],
-            ['Facilitator',r.settings.facilitator],['Review',r.id]]);show('applications');
+        }else if(['application-review','deployment-review'].includes(row.action)){
+          clearDeployment();showApplicationReview(saved);show('applications');
         }else if(row.action==='launch-review'){
           selectedLaunchReview=saved;$('launch-review').hidden=false;
           const r=saved.original;
@@ -387,27 +450,42 @@ $('applications-connect-form').addEventListener('submit',event=>{event.preventDe
   const result=await act('connect',{directory:$('applications-directory').value.trim()});
   await reload({apps:false});$('applications-binding').value=result.binding.id;await loadApplications();notice('Connected the original Applications workspace.');
 });});
-$('applications-binding').addEventListener('change',()=>work(async()=>{await loadApplications();notice('Opened the selected Applications binding.');}));
+$('applications-binding').addEventListener('change',()=>work(async()=>{
+  clearDeployment();invalidateApplicationReview();await loadApplications();notice('Opened the selected Applications binding.');
+}));
 $('application-form').addEventListener('submit',event=>{event.preventDefault();work(async()=>{
   if(!selectedPackage)throw new Error('Select the prepared package.');
-  const settings={stateDirectory:$('merchant-state').value.trim(),facilitator:$('facilitator').value.trim(),
+  const settings={stateDirectory:$('merchant-state').value.trim(),deploymentMode:$('application-mode').value,
     drainGraceMs:$('drain-grace').value.trim(),allowLocalFacilitator:$('allow-local').checked};
+  if($('facilitator').value.trim())settings.facilitator=$('facilitator').value.trim();
   if($('environment-file').value.trim())settings.environmentFile=$('environment-file').value.trim();
   for(const [key,id] of [['port','merchant-port'],['operationsPort','operations-port'],['deskPort','desk-port']])settings[key]=Number($(id).value);
   const result=await act('application-review',{bindingId:$('applications-binding').value,runtimeId:$('application-runtime').value,
     packageId:selectedPackage.id,label:$('application-label').value.trim(),settings});
-  selectedApplicationReview=result.review;$('application-review').hidden=false;
-  const r=result.review.original;
-  detail($('application-review-summary'),[['Merchant',r.label],['Runtime',r.runtime.directory],
-    ['Runtime source',r.runtime.sourceCommit],['Package',r.settings.packageDirectory],['Merchant state',r.settings.stateDirectory],
-    ['Facilitator',r.settings.facilitator],['Private environment file',r.settings.environmentFile??'Process environment'],
-    ['Merchant / operations / desk ports',[r.settings.port,r.settings.operationsPort,r.settings.deskPort].join(' / ')],
-    ['Review',r.id]]);
+  clearDeployment();showApplicationReview(result.review);
   notice('The original Applications review is ready to save.');
 });});
+$('application-mode').addEventListener('change',()=>deploymentControls('application-mode','facilitator'));
+$('deployment-mode').addEventListener('change',()=>deploymentControls('deployment-mode','deployment-facilitator'));
+for(const id of ['application-form','deployment-form']){
+  $(id).addEventListener('input',()=>{if(!busy)invalidateApplicationReview();});
+  $(id).addEventListener('change',()=>{if(!busy)invalidateApplicationReview();});
+}
+$('deployment-form').addEventListener('submit',event=>{event.preventDefault();work(async()=>{
+  const selected=selectedDeploymentApplication;
+  if(!selected)throw new Error('Open the current saved merchant deployment first.');
+  const settings={deploymentMode:$('deployment-mode').value,
+    facilitator:$('deployment-facilitator').value.trim()||null,
+    environmentFile:$('deployment-environment-file').value.trim()||null,
+    allowLocalFacilitator:$('deployment-allow-local').checked};
+  const result=await act('deployment-review',{applicationId:selected.id,expectedRevision:selected.revision,settings});
+  showApplicationReview(result.review);notice('Reviewed the deployment change against this exact original application revision.');
+});});
+$('cancel-deployment').addEventListener('click',()=>{clearDeployment();invalidateApplicationReview();});
 $('save-application').addEventListener('click',()=>work(async()=>{
   if(!selectedApplicationReview)throw new Error('Review the application first.');
   const result=await act('application-save',{reviewId:selectedApplicationReview.id});
+  clearDeployment();invalidateApplicationReview();
   await reload();notice(result.connectionError?'Application saved. Reopen its runtime connection below: '+result.connectionError.message:'Saved the merchant in the original Applications workspace.');
 }));
 $('start-application').addEventListener('click',()=>work(async()=>{
@@ -416,5 +494,7 @@ $('start-application').addEventListener('click',()=>work(async()=>{
   $('launch-review').hidden=true;await reload();notice('Original Applications run: '+result.operationId+'. Refresh to observe startup.');
 }));
 $('history-more').addEventListener('click',()=>work(async()=>{await loadHistory(true);notice('Opened the next saved operation page.');}));
+deploymentControls('application-mode','facilitator');
+deploymentControls('deployment-mode','deployment-facilitator');
 if(!/^[a-f0-9]{64}$/.test(token)){$('access').hidden=false;$('desk').hidden=true;notice('Open the private startup URL to continue.');}
 else await work(async()=>{await reload();notice('Opened the original saved connection workspace.');});

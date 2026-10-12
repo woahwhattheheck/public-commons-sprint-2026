@@ -24,7 +24,8 @@ export const HELP = [
   '  connection-inspect --bundle CONNECTION_PACKAGE.json',
   '  connection-receive --bundle CONNECTION_PACKAGE.json --review-sha256 SHA256 --out NEW_PRIVATE_PACKAGE',
   '  prepare --plan PLAN.json --out NEW_PRIVATE_PACKAGE',
-  '  serve --package PACKAGE --state PRIVATE_MERCHANT_ROOT --facilitator HTTPS_URL',
+  '  serve --package PACKAGE --state PRIVATE_MERCHANT_ROOT [--mode paid|challenge-only]',
+  '        [--facilitator HTTPS_URL] (required for paid, the default)',
   '        [--port 8423] [--operations-port 8424] [--desk-port 8425]',
   '        [--drain-grace-ms 60000] [--allow-local-facilitator]',
   '        [--expected-plan-sha256 SHA256] [--expected-package-sha256 SHA256]',
@@ -46,6 +47,11 @@ export const HELP = [
   'uses the original SF61/SF88 compilers; probe performs one provider read. Backup',
   'retains the provider database. The original merchant/buyer tools retain payment',
   'and settlement state. Reopening a saved buyer result does not call the provider.',
+  '', 'Challenge-only opens the actual offers, unpaid 402 routes and private operator',
+  'desk before provider credentials or a facilitator are configured. Stop and',
+  'restart this same package and merchant state with --mode paid to activate the',
+  'native payment runtime. Explicit operator probes retain their normal provider cost.',
+  'See partners/blockscout-stellar-pro-api/DEPLOYMENT.md for reviewed Applications activation.',
   '', 'Reconciliation uses the reviewed attempt revision (0 before any decision), a',
   'saved later quota observation, and the exact completion time in its provider',
   'account record, for example 2026-10-11T22:00:00.000Z. Reopen appends a decision',
@@ -59,7 +65,7 @@ const commands = {
   'connection-inspect': { required: ['bundle'] },
   'connection-receive': { required: ['bundle', 'review-sha256', 'out'] },
   inspect: { required: ['plan'] }, prepare: { required: ['plan', 'out'] },
-  serve: { required: ['package', 'state', 'facilitator'], optional: ['port', 'operations-port', 'desk-port', 'drain-grace-ms', 'expected-plan-sha256', 'expected-package-sha256'], switches: ['allow-local-facilitator'] },
+  serve: { required: ['package', 'state'], optional: ['mode', 'facilitator', 'port', 'operations-port', 'desk-port', 'drain-grace-ms', 'expected-plan-sha256', 'expected-package-sha256'], switches: ['allow-local-facilitator'] },
   buyer: { required: ['package', 'chain', 'address', 'intent', 'out', 'response-out'] },
   status: { required: ['url'], optional: ['token-env'] },
   attempts: { required: ['url'], optional: ['token-env', 'after', 'chain', 'address'] },
@@ -311,14 +317,28 @@ export async function main(args = process.argv.slice(2)) {
       if (!own(o, name)) return fallback;
       if (!/^(?:0|[1-9]\d*)$/.test(o[name])) throw error('BLOCKSCOUT_COMMAND_NUMBER_INVALID'); return Number(o[name]);
     };
-    const runtime = await startBlockscoutMerchant({ plan: prepared.plan, directory: o.state, facilitator: o.facilitator,
-      port: value('port', 8423), operationsPort: value('operations-port', 8424), deskPort: value('desk-port', 8425),
-      drainGraceMs: value('drain-grace-ms', 60000), allowLocalFacilitator: o['allow-local-facilitator'] ?? false });
-    for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => runtime.close().catch(() => { process.exitCode = 1; }));
-    process.stdout.write(JSON.stringify({ schema: 'stellar-forge.blockscout-startup.v1',
-      status: 'BLOCKSCOUT_MERCHANT_RUNNING', packageDirectory: resolve(o.package), stateDirectory: resolve(o.state),
-      planSha256: prepared.planSha256, packageManifestSha256: prepared.packageManifestSha256,
-      ...runtime.endpoints }) + '\n'); return runtime;
+    const controller = new AbortController();
+    const stop = () => controller.abort();
+    const signals = ['SIGINT', 'SIGTERM'];
+    for (const signal of signals) process.once(signal, stop);
+    const detach = () => { for (const signal of signals) process.removeListener(signal, stop); };
+    let runtime;
+    try {
+      runtime = await startBlockscoutMerchant({ plan: prepared.plan, directory: o.state,
+        mode: o.mode ?? 'paid', facilitator: o.facilitator, signal: controller.signal,
+        port: value('port', 8423), operationsPort: value('operations-port', 8424), deskPort: value('desk-port', 8425),
+        drainGraceMs: value('drain-grace-ms', 60000), allowLocalFacilitator: o['allow-local-facilitator'] ?? false });
+      if (controller.signal.aborted) throw error('BLOCKSCOUT_START_INTERRUPTED');
+      const originalClose = runtime.close;
+      runtime = Object.freeze({ ...runtime, close: () => originalClose().finally(detach) });
+      controller.signal.addEventListener('abort', () => runtime.close().catch(() => { process.exitCode = 1; }), { once: true });
+      process.stdout.write(JSON.stringify({ schema: 'stellar-forge.blockscout-startup.v1',
+        status: 'BLOCKSCOUT_MERCHANT_RUNNING', packageDirectory: resolve(o.package), stateDirectory: resolve(o.state),
+        planSha256: prepared.planSha256, packageManifestSha256: prepared.packageManifestSha256,
+        deploymentMode: runtime.deployment.mode, merchantMode: runtime.seller.mode,
+        ...runtime.endpoints }) + '\n');
+      return runtime;
+    } catch (e) { await runtime?.close().catch(() => {}); detach(); throw e; }
   } else {
     const target = operatorTarget(o.url, o['token-env']);
     if (command === 'status') result = await control(target, '/api/status');

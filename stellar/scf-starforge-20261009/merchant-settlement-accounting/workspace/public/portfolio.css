@@ -5,3 +5,14 @@
 @media print{.app-header .header-controls,.tabs,.notice,.pending,button,footer{display:none!important}main{padding:0;max-width:none}.panel{break-inside:avoid}.table-scroll{overflow:visible}a{text-decoration:none}.desk{display:block}.desk>aside{display:none}.view.hidden{display:none!important}.app-header{padding:0 0 1rem}.connection{background:#fff}}
 
 .command-history{display:flex;flex-direction:column;gap:.45rem}.task-editor{border:1px solid var(--line);border-radius:3px;padding:.75rem}.choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem}.source-lock{border:1px solid #9a9fa5;padding:.6rem;background:#f7f8f9}.row-tools{display:flex;gap:.4rem;flex-wrap:wrap}
+
+/* Procedure selections keep the original desk width and grayscale hierarchy. */
+.procedure-selection{border:1px solid #c8c8c8;background:#f7f7f7;padding:16px;min-width:0}
+.procedure-selection select{width:100%;min-width:0;max-width:100%}
+.procedure-selection-list{margin:8px 0;padding-left:24px;overflow-wrap:anywhere}
+.procedure-selection-list li+li{margin-top:4px}
+.procedure-set-editor{min-width:0}
+.procedure-set-choices{display:grid;gap:8px;min-width:0;border:1px solid #d5d5d5;padding:12px}
+.procedure-set-choices .check{align-items:start;min-width:0}
+.procedure-set-choices .check span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:520px){.procedure-selection{padding:12px}.procedure-set-choices{padding:10px}}

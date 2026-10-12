@@ -116,6 +116,8 @@ class Handler(BaseHTTPRequestHandler):
     def allowed(self, authenticate=True):
         port = self.server.server_address[1]
         allowed = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if port == 80:
+            allowed.update(("127.0.0.1", "localhost"))
         if self.headers.get("Host") not in allowed:
             self.send(403, {"error": "Open the local operator address."})
             return False
@@ -138,7 +140,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlsplit(self.path)
-        public = parsed.path in {"/", "/index.html", "/app.js", "/report-server.js", "/sql-server.js", "/billing.js", "/billing.css", "/azure-exports.js", "/azure-exports.css", "/tourism.js", "/tourism.css", "/style.css", "/favicon.ico"}
+        public = parsed.path in {"/", "/index.html", "/app.js", "/report-server.js", "/sql-server.js", "/billing.js", "/billing.css", "/azure-exports.js", "/azure-exports.css", "/tourism.js", "/tourism.css", "/load_forecast.js", "/load_forecast.css", "/style.css", "/favicon.ico"}
         if not self.allowed(authenticate=not public):
             return
         try:
@@ -160,6 +162,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, service.store.history(params["kind"], params["id"]))
             elif parsed.path == "/api/events":
                 self.send(200, service.store.events())
+            elif parsed.path == "/api/load/preview":
+                self.send(200, service.load.preview(params))
             elif parsed.path == "/api/tourism/example":
                 from .tourism_example import example_configuration
                 self.send(200, example_configuration())
@@ -229,7 +233,8 @@ def serve(workspace, port=0):
         for sig in (signal.SIGINT, signal.SIGTERM):
             with contextlib.suppress(ValueError):
                 previous[sig] = signal.signal(sig, stop)
-        url = f"http://127.0.0.1:{server.server_address[1]}/#token={service.store.setting('access_token')}"
+        port_part = "" if server.server_address[1] == 80 else f":{server.server_address[1]}"
+        url = f"http://127.0.0.1{port_part}/#token={service.store.setting('access_token')}"
         print(encoded({"service": "Commons BI Operator", "workspace_id": service.store.setting("workspace_id"), "url": url}), flush=True)
         try:
             server.serve_forever(poll_interval=0.2)

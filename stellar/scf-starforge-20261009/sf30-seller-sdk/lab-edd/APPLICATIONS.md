@@ -237,3 +237,9 @@ complete 37-member result ZIP: 8,829,090 bytes, SHA-256
 The installed generator and original inputs reproduce that full artifact.
 The source-result report records its actual execution environment and retained
 original data identities.
+
+## Operate this saved application through MCP
+
+Use the original paid-job workspace connection emitted for this saved merchant with the [complete Laboratory EDD operator](../../../../stellar-forge/mcp-merchant-operator/LAB_EDD_WORKSPACE.md). Its `laboratory-workspaces` provider borrows that same merchant, opens the original private customer workspace, and carries complete source selection, immutable field/correspondence decisions, native checkout and result receiving through 42 operations. `starforge lab-edd-agent` supplies full-file CLI and SDK clients plus the same-operation receiving driver.
+
+Applications retains Start/Stop ownership of the merchant. The Lab tools preserve the original request, checkout, native task and result identities; a task-specific Stop drains that original operation before its customer workspace closes. The saved application's source selection includes the operator declaration and all runtime leaves.

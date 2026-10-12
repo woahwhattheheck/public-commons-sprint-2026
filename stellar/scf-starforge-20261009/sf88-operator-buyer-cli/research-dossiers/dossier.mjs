@@ -20,6 +20,8 @@ import {extractionMarkdown,extractionHtml} from './study-extraction-report.mjs';
 import {riskOfBiasDigest,riskOfBiasInput,riskOfBiasModel,riskOfBiasPage,riskOfBiasReport,riskOfBiasExport,
   recordRiskOfBiasOperation,validateRiskOfBiasState,validateRiskOfBiasTransition} from './risk-of-bias/index.mjs';
 import {riskOfBiasRegistry} from './risk-of-bias/registry.mjs';
+import {createCustomerUpdateStore,validateCustomerUpdateTransition} from './customer-updates/store.mjs';
+import {validateCustomerUpdateState,customerUpdateBlobMetadata} from './customer-updates/model.mjs';
 import {publicationDigest,publicationInput,extractionPublicationModel,extractionPublicationPage,extractionPublicationReport,
   extractionPublicationExport,recordExtractionPublication,validateExtractionPublicationState,validateExtractionPublicationTransition} from './extraction-publication.mjs';
 
@@ -45,6 +47,8 @@ const summary = state => ({
   findingCount: state.findings.length, citationReviewCount:(state.citationReviews??[]).length,
   eligibilityReviewCount:(state.eligibilityEvents??[]).filter(value=>value.action==='create-review').length,
   riskOfBiasReviewCount:(state.riskOfBiasEvents??[]).filter(value=>value.action==='create-review').length,
+  customerProjectCount:(state.customerUpdateEvents??[]).filter(value=>value.action==='create-project').length,
+  customerDeliveryCount:(state.customerUpdateEvents??[]).filter(value=>value.action==='publish-delivery').length,
   extractionFormCount:(state.extractionEvents??[]).filter(value=>value.action==='create-form').length,
   extractionPublicationCount:(state.extractionPublicationEvents??[]).filter(value=>value.action==='publish-table').length,
 });
@@ -239,7 +243,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     const id = newId('d'), now = timestamp();
     const state = { schema: DOCUMENT, id, title, description, revision: 1,
       previous: null, createdAt: now, updatedAt: now, change: 'Created dossier',
-      questions: [], editions: [], selections: [], findings: [], citationReviews: [], eligibilityEvents: [], extractionEvents: [], extractionPublicationEvents: [], riskOfBiasEvents: [] };
+      questions: [], editions: [], selections: [], findings: [], citationReviews: [], eligibilityEvents: [], extractionEvents: [], extractionPublicationEvents: [], riskOfBiasEvents: [], customerUpdateEvents: [] };
     await writeJson(join(await revisionsDirectory(id, true), filename(1)),
       { sha256: digest(jsonBytes(state)), state }, { exclusive: true });
     return projection === 'metadata' ? getMetadata(id) : get(id);
@@ -624,13 +628,22 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     return extractionPublicationExport(state,extractionPublicationModel(state,context),options);
   }
 
+  function collectBlobMetadata(state, contents) {
+    for (const metadata of [...state.editions.filter(edition => edition.mode === 'retained').map(edition => edition.raw),
+      ...customerUpdateBlobMetadata(state)]) {
+      const existing = contents.get(metadata.sha256);
+      need(!existing || existing.bytes === metadata.bytes, 'RESEARCH_BLOB_CHANGED');
+      contents.set(metadata.sha256, metadata);
+    }
+  }
+
   async function exportDossier(id, { format = 'json', revision } = {}) {
     need(['json', 'md', 'html'].includes(format), 'EXPORT_FORMAT_INVALID');
     const selected=(await head(id,revision)).state.revision;
     const versions = (await history(id)).filter(item=>item.state.revision<=selected), current = versions.at(-1).state;
     if (format === 'json') {
-      const metadata = new Map(versions.flatMap(envelope => envelope.state.editions
-        .filter(edition => edition.mode === 'retained').map(edition => [edition.raw.sha256, edition.raw])));
+      const metadata = new Map();
+      for (const envelope of versions) collectBlobMetadata(envelope.state, metadata);
       const contents = [];
       let total = 0;
       for (const meta of metadata.values()) {
@@ -727,6 +740,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
       validateStudyExtractionState(state);
       validateExtractionPublicationState(state);
       validateRiskOfBiasState(state,editions,knownOccurrences);
+      validateCustomerUpdateState(state,editions);
       const findings = new Set();
       for (const finding of state.findings) {
         need(object(finding) && typeof finding.id === 'string' && /^f_[a-f0-9-]{36}$/.test(finding.id) &&
@@ -751,7 +765,8 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     const hasExtraction=(state.extractionEvents?.length??0)>(previous?.extractionEvents?.length??0);
     const hasPublication=(state.extractionPublicationEvents?.length??0)>(previous?.extractionPublicationEvents?.length??0);
     const hasRiskOfBias=(state.riskOfBiasEvents?.length??0)>(previous?.riskOfBiasEvents?.length??0);
-    const projected=(hasCitation||hasEligibility||hasExtraction||hasPublication||hasRiskOfBias)&&previous?
+    const hasCustomerUpdate=(state.customerUpdateEvents?.length??0)>(previous?.customerUpdateEvents?.length??0);
+    const projected=(hasCitation||hasEligibility||hasExtraction||hasPublication||hasRiskOfBias||hasCustomerUpdate)&&previous?
       await projections(previous,{references:false,readContent}):undefined;
     validateCitationReviewTransition(previous,state,projected);
     validateEligibilityTransition(previous,state,projected);
@@ -760,6 +775,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     await validateExtractionPublicationTransition(previous,state,context);
     const riskRegistry=hasRiskOfBias&&previous?riskOfBiasRegistry(previous,projected):undefined;
     await validateRiskOfBiasTransition(previous,state,projected,riskRegistry,extractionOptions);
+    await validateCustomerUpdateTransition(previous,state,projected,readContent);
   }
 
   async function reopen(portable) {
@@ -826,12 +842,7 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
         const envelope = await readRevision(id, revision);
         need(envelope.state.previous === previous, 'DOSSIER_HISTORY_CHANGED');
         previous = envelope.sha256;
-        for (const edition of envelope.state.editions) {
-          if (edition.mode !== 'retained') continue;
-          const existing = contents.get(edition.raw.sha256);
-          need(!existing || existing.bytes === edition.raw.bytes, 'RESEARCH_BLOB_CHANGED');
-          contents.set(edition.raw.sha256, edition.raw);
-        }
+        collectBlobMetadata(envelope.state, contents);
         if (revision > 1) yield Buffer.from(',\n');
         yield jsonBytes(envelope);
       }
@@ -928,7 +939,9 @@ export async function openDossierStore(directory, { providers = {}, extractionOp
     } finally { await rm(staging, {recursive: true, force: true}); }
   }
 
+  const customerUpdateStore=createCustomerUpdateStore({head,commit,metadata,get,projections,blob,putBlob,exportStream});
   return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, listRevisions, update, addQuestion, updateQuestion,
+    ...customerUpdateStore,
     receive, previewSourceBundle, receiveSourceBundle, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding,
     citationUpdates,reviewCitationUpdate,eligibility,reviewEligibility,exportEligibility,
     riskOfBias,reviewRiskOfBias,exportRiskOfBias,

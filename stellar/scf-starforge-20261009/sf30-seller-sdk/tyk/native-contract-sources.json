@@ -1,0 +1,203 @@
+{
+  "schema": "stellar-forge.tyk-native-contract-sources.v1",
+  "gateway": {
+    "version": "v5.15.1",
+    "commit": "51a1e2e96b08eb0bd734b7d162333d4dc0555096",
+    "release": "https://github.com/TykTechnologies/tyk/releases/tag/v5.15.1",
+    "swagger": {
+      "path": "swagger.yml",
+      "gitBlobSha": "ae0ac941caf5af25aa93adab738b125798fb4342",
+      "url": "https://github.com/TykTechnologies/tyk/blob/51a1e2e96b08eb0bd734b7d162333d4dc0555096/swagger.yml"
+    },
+    "implementation": [
+      {
+        "path": "gateway/api.go",
+        "gitBlobSha": "6a0010f45ea56f4d60f6cb558a4428e2edf1f4ec",
+        "functions": [
+          "handleGetAPIList",
+          "handleGetAPI",
+          "handleGetAPIOAS",
+          "handleAddApi",
+          "handleUpdateApi",
+          "apiOASGetHandler",
+          "makeImportedOASTykAPI"
+        ]
+      },
+      {
+        "path": "gateway/api_helpers.go",
+        "gitBlobSha": "8a27b5a75109ff25a3e308bddc8dec6680213599",
+        "functions": [
+          "buildSuccessResponse",
+          "validateAPIIDMatch"
+        ]
+      },
+      {
+        "path": "gateway/api_definition.go",
+        "gitBlobSha": "eb292dab0f862808dfcc6ca2e615e7ea3bcf35e7",
+        "notes": "Original API-definition loading and native Gateway source lifecycle."
+      },
+      {
+        "path": "gateway/api_oas_servers.go",
+        "gitBlobSha": "c55a78c09dc4f1200f93cc5ea600de6cf28a9910",
+        "notes": "Original user/native OAS server handling; preserved by native execution rather than reimplemented."
+      }
+    ],
+    "license": {
+      "path": "LICENSE.md",
+      "gitBlobSha": "810075a41b721053be8b8575faf701317b8e192a",
+      "openSource": "MPL-2.0",
+      "enterpriseSubtree": "ee/ uses its original commercial license"
+    }
+  },
+  "dashboard": {
+    "docsCommit": "d2ab6762fa58560e313cdb407da6372a4f5aa942",
+    "version": "5.15",
+    "swagger": {
+      "path": "swagger/5.15/dashboard-swagger.yml",
+      "gitBlobSha": "db101625c8d7a335fb5197d013e6ba2358cd589b",
+      "url": "https://github.com/TykTechnologies/tyk-docs/blob/d2ab6762fa58560e313cdb407da6372a4f5aa942/swagger/5.15/dashboard-swagger.yml"
+    },
+    "migration": {
+      "path": "api-management/migrate-from-tyk-classic.mdx",
+      "gitBlobSha": "0172c52cd823796778bfcd2b00eb7385c46158ff",
+      "url": "https://tyk.io/docs/api-management/migrate-from-tyk-classic"
+    }
+  },
+  "documentation": [
+    {
+      "topic": "gateway authority",
+      "url": "https://tyk.io/docs/tyk-gateway-api"
+    },
+    {
+      "topic": "dashboard pagination and authority",
+      "url": "https://tyk.io/docs/tyk-dashboard-api"
+    },
+    {
+      "topic": "OpenAPI native lifecycle",
+      "url": "https://tyk.io/docs/api-management/gateway-config-managing-oas"
+    },
+    {
+      "topic": "licensed source synchronization",
+      "url": "https://tyk.io/docs/api-management/automations/sync"
+    },
+    {
+      "topic": "partner implementation",
+      "url": "https://tyk.io/customer-engineering/implementation/"
+    },
+    {
+      "topic": "partner program",
+      "url": "https://tyk.io/tyk-partners/"
+    }
+  ],
+  "nativeContracts": {
+    "gatewayInventory": {
+      "method": "GET",
+      "path": "/tyk/apis",
+      "query": {
+        "include_types": "mcp"
+      },
+      "returns": "APIDefinition[]; original active memory"
+    },
+    "dashboardInventory": {
+      "method": "GET",
+      "path": "/api/apis",
+      "query": {
+        "p": "all positive pages",
+        "sort": "name"
+      },
+      "returns": "{apis:ApiDefinitionWrapper[],pages:number}"
+    },
+    "classicGateway": {
+      "document": "APIDefinition",
+      "create": "POST /tyk/apis",
+      "update": "PUT /tyk/apis/{apiId}",
+      "read": "GET /tyk/apis/{apiId}"
+    },
+    "classicDashboard": {
+      "document": "ApiDefinitionWrapper",
+      "create": "POST /api/apis",
+      "update": "PUT /api/apis/{apiId}",
+      "read": "GET /api/apis/{apiId}"
+    },
+    "oasGateway": {
+      "create": "POST /tyk/apis/oas",
+      "import": "POST /tyk/apis/oas/import",
+      "update": "PUT /tyk/apis/oas/{apiId}",
+      "read": "GET /tyk/apis/oas/{apiId}",
+      "contentTypes": [
+        "application/json"
+      ]
+    },
+    "oasDashboard": {
+      "create": "POST /api/apis/oas",
+      "import": "POST /api/apis/oas/import",
+      "update": "PUT /api/apis/oas/{apiId}",
+      "read": "GET /api/apis/oas/{apiId}",
+      "contentTypes": [
+        "application/json",
+        "application/x-yaml"
+      ]
+    },
+    "migration": {
+      "method": "POST",
+      "path": "/api/apis/migrate",
+      "requestFields": [
+        "mode",
+        "apiIDs",
+        "abortOnFailure",
+        "overrideStaged"
+      ],
+      "modes": [
+        "dryRun",
+        "stage",
+        "promote",
+        "direct"
+      ],
+      "responseFields": [
+        "success.count",
+        "success.apiIDs",
+        "success.stagedAPIs",
+        "success.definitions",
+        "failure.count",
+        "failure.errors",
+        "skipped.count",
+        "skipped.apis",
+        "abortedOnFailure"
+      ]
+    },
+    "reload": {
+      "node": "GET /tyk/reload",
+      "nodeQuery": [
+        "block"
+      ],
+      "group": "GET /tyk/reload/group"
+    },
+    "responseIdentity": {
+      "gateway": "key; status=ok; action=added|modified",
+      "dashboard": "ID is public API ID; Meta may be database identity"
+    },
+    "versionQuery": [
+      "base_api_id",
+      "base_api_version_name",
+      "new_version_name",
+      "set_default"
+    ],
+    "oasImportQuery": [
+      "upstreamURL",
+      "listenPath",
+      "customDomain",
+      "allowList",
+      "validateRequest",
+      "mockResponse",
+      "authentication"
+    ],
+    "dashboardTemplateQuery": "templateID"
+  },
+  "retrievedOn": "2026-10-12",
+  "runtimeAuthority": {
+    "gateway": "Original deployed Gateway and Redis; selected native API endpoints and explicit reload",
+    "dashboard": "Original licensed Dashboard and its managed Gateway; native migration endpoint",
+    "credentialStorage": "Existing named environment references; no credential bytes in source capture, plans or exported connection declarations",
+    "readbackConfirmation": "Complete submitted native-definition correspondence; original acknowledgement and observed current configuration are retained separately."
+  }
+}

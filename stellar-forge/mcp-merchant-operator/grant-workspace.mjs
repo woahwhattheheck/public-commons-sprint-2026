@@ -426,6 +426,13 @@ export class MerchantGrantWorkspaces {
       const {caseId,input,inputPointer,expectedInputSha256,...body}=rest;
       original=await client.cohortPrepare(caseId,{...body,inputs:await this.#modelInputs(alias,args,'Cohort',GRANT_MAX_BUNDLE_BYTES)});
     }
+    else if (verb === 'implementation_source') original=await client.implementationSource(args.caseId,args.expectedVersion,args.sourceId,args.asOfAt);
+    else if (verb === 'implementation_preview') original=await client.implementationPreview(args.caseId,args.expectedVersion,
+      await this.#modelInputs(alias,args,'Implementation',GRANT_MAX_BUNDLE_BYTES));
+    else if (verb === 'implementation_prepare') {
+      const {caseId,input,inputPointer,expectedInputSha256,...body}=rest;
+      original=await client.implementationPrepare(caseId,{...body,inputs:await this.#modelInputs(alias,args,'Implementation',GRANT_MAX_BUNDLE_BYTES)});
+    }
     else if (verb === 'completion_seed') original=await client.completionSeed(args.caseId,args.expectedVersion,args.tranche);
     else if (verb === 'completion_preview') {
       const {caseId,expectedVersion,...inputs}=rest;
@@ -480,7 +487,7 @@ export class MerchantGrantWorkspaces {
     return this.#snapshot(alias, original, {tool:name, ...Object.fromEntries(Object.entries(rest).filter(([key]) =>
       ['planId','caseId','forecastId','portfolioId','alternativeId','sourceId','reviewId','installationId','revision','after','before','limit','kind',
         'requestId','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256',
-        'filename','expectedPreviewSha256','deploymentId','tranche','asOfDate','receiptId','cohortReviewIds',
+        'filename','expectedPreviewSha256','deploymentId','tranche','asOfDate','asOfAt','receiptId','cohortReviewIds','implementationReviewIds','sha256',
         'expectedReviewSha256','confirmedOn','deadlineOn','submittedOn','formReference','outcomeId','state','date'].includes(key)))});
   }
   async call(name, args = {}) {

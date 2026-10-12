@@ -265,3 +265,9 @@ original source, selected format and full operator choices.
 ## Installed Laboratory application
 
 Use [Laboratory EDD in Applications](APPLICATIONS.md) for complete configuration, original paid-job service, sealed inputs, customer results and Stop/reopen. The `laboratory-edd` source selection packages this product through the original Merchant Workspace installer. `starforge lab-edd merchant-config` prepares the actual selected merchant configuration; the `laboratory-edd` Applications catalog uses the existing paid-job process and source ownership.
+
+## Complete merchant MCP operation
+
+The installed `starforge lab-edd-agent` command and `laboratory-workspaces` provider connect this same application to the original paid-job merchant and SF88 customer workspace. The complete workflow selects all five native file slots, pages every source row and correspondence group, exchanges full editable tables, saves and applies source-bound decisions, executes the original checkout, stops the exact native task and receives every result member with cold reopening.
+
+See [Laboratory EDD operator](../../../../stellar-forge/mcp-merchant-operator/LAB_EDD_WORKSPACE.md) for private connection setup, all 42 tools, the typed client and the complete original receiving command. The installed Applications selection and its existing `paid-job-merchant` owner run the same merchant and worker.

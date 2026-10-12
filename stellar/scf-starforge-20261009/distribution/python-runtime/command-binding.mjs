@@ -15,6 +15,7 @@ const MODULES=Object.freeze({
   workbookDelivery:'stellar_forge_buyer.workbook_client',
 });
 export const PYTHON_APPLICATION_COMMANDS=Object.freeze([
+  {id:'stellar-forge-dbnomics-analysis',kind:'script',title:'DBnomics economic analysis and workbook receiving'},
   {id:'postgres',kind:'module',title:'PostgreSQL receiving workspace',module:MODULES.postgres,
     description:'Review complete source mappings, import retained editions, compare changes and select the application SQL view.'},
   {id:'duckdb',kind:'module',title:'DuckDB dataset workspace',module:MODULES.duckdb,
@@ -39,6 +40,7 @@ function argumentsList(args) {
   return [...args];
 }
 function requiredExtras(command,args) {
+  if(command==='stellar-forge-dbnomics-analysis')return ['workbooks'];
   if(['duckdb','stellar-forge-duckdb'].includes(command))return ['duckdb'];
   if(['postgres','stellar-forge-postgres'].includes(command))return ['postgres'];
   if(command==='stellar-forge-agent')return ['agents'];
@@ -71,6 +73,7 @@ export async function bindPythonApplicationCommand(root,{
   const extras=requiredExtras(command,originalArgs);
   need(extras.every(extra=>installation.extras.includes(extra)),'PYTHON_APPLICATION_EXTRA_REQUIRED',
     'Install the declared '+extras.join(', ')+' extra for this original command.');
+  if(command==='stellar-forge-dbnomics-analysis')exactOption(originalArgs,'--checkout',binding.sourceRoot);
   let argv,entrypoint=null,module=null;
   if(selected.kind==='module'){
     module=MODULES[command];

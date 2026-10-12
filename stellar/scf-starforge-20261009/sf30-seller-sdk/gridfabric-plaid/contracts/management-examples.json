@@ -1,0 +1,370 @@
+{
+  "schema": "stellar-forge.gridfabric-plaid-public-examples.v1",
+  "source": {
+    "url": "https://plaid-docs.gridfabric.io/files/boomerang_config.json",
+    "export_version": "6.0.0",
+    "export_timestamp": 1614017504457,
+    "representation": "All1007 public numbered lines reconstructed without gaps or differing overlaps; strict JSON parsed. Request body JSON strings parsed without repair.",
+    "capture_kind": "Published historical examples; not execution by this application."
+  },
+  "management_requests": [
+    {
+      "name": "Start Ven",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.start",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Cancel Party Registration",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.cancelPartyRegistration",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Set VenID",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.setVenId",
+        "parameters": {
+          "venId": "01234567890123456789012345678901234567890123456789"
+        }
+      }
+    },
+    {
+      "name": "Create Party Registration",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.createPartyRegistration",
+        "parameters": {
+          "includeIds": false
+        }
+      }
+    },
+    {
+      "name": "Clear Registration",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.clearRegistration",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Clear Events",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.clearEvents",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Request Event",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.requestEvent",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Stop Ven",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.stop",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Query Registration",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.queryRegistration",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Clear Reports",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.clearReports",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Create Opt Schedule",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.createOptSchedule",
+        "parameters": {
+          "optId": "optIndentification9",
+          "optType": "optOut",
+          "optReason": "economic",
+          "marketContext": "http://MarketContext1",
+          "resourceId": "charger1",
+          "endDeviceAsset": "Thermostat",
+          "availability": [
+            {
+              "dtstart": 1603644600,
+              "duration": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cancel Opt Schedule",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.cancelOptSchedule",
+        "parameters": {
+          "optId": "optIndentification6"
+        }
+      }
+    },
+    {
+      "name": "VEN Status",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.status",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Register Reports",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.registerReports",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Registered Namespace",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "my.custom.namespace",
+        "parameters": {}
+      }
+    },
+    {
+      "name": "Created Event",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.createdEvent",
+        "parameters": {
+          "eventId": "5cabbf1371f930c46af5",
+          "optType": "optOut",
+          "scheduleEvent": true
+        }
+      }
+    },
+    {
+      "name": "Opt Event",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.eventOpt",
+        "parameters": {
+          "optId": "optId",
+          "eventId": "465159917efa511ede0f",
+          "optType": "optOut",
+          "optReason": "economic",
+          "resourceId": "resourceId",
+          "requestId": "requestId"
+        }
+      }
+    },
+    {
+      "name": "Adhoc Report",
+      "method": "POST",
+      "url": "http://localhost:8000",
+      "body": {
+        "namespace": "ven.adhocReport",
+        "parameters": {
+          "reportRequestId": "RR_352db754981d8a3051a4",
+          "start": 0,
+          "end": 0
+        }
+      }
+    }
+  ],
+  "response_examples": [
+    {
+      "request_namespace": "ven.requestEvent",
+      "http_status": 200,
+      "body": {
+        "response": {
+          "code": 200,
+          "message": "OK"
+        },
+        "status": "OK"
+      }
+    },
+    {
+      "request_namespace": "ven.createOptSchedule",
+      "http_status": 200,
+      "body": {
+        "response": {
+          "code": 200,
+          "message": "OK"
+        },
+        "status": "OK"
+      }
+    },
+    {
+      "request_namespace": "ven.cancelOptSchedule",
+      "http_status": 200,
+      "body": {
+        "response": {
+          "code": 452,
+          "message": "Invalid ID - invalid or inactive"
+        },
+        "status": "OK"
+      }
+    },
+    {
+      "request_namespace": "ven.adhocReport",
+      "http_status": 200,
+      "body": {
+        "response": {
+          "code": 200,
+          "message": "OK"
+        },
+        "status": "OK"
+      }
+    }
+  ],
+  "status_shape_example": {
+    "projection": "Original2.2.0 published response with log array excluded; all remaining fields unchanged.",
+    "body": {
+      "events": {
+        "cb04737e72a8616dfb65": {
+          "dtstart": "2021-02-18 15:00:00",
+          "duration": "PT60M",
+          "eventId": "cb04737e72a8616dfb65",
+          "optType": "optIn",
+          "randomized": false,
+          "randomizedSeconds": 0,
+          "status": "completed"
+        }
+      },
+      "polling": {
+        "enabled": true
+      },
+      "registration": {
+        "defaultRegistrationId": "",
+        "defaultVenId": "",
+        "isRegistered": true,
+        "pollFrequency": "PT10S",
+        "registrationId": "c4255905d4afecd173e5",
+        "venId": "0336539ada02fb712719",
+        "vtnId": "NEBLAND_VTN"
+      },
+      "status": "OK",
+      "time": 1614017226,
+      "venCommunicationStatus": {
+        "exception": {
+          "message": "Error executing VENManager function: invalid reportRequestID: reportRequestId",
+          "time": 1614017216
+        },
+        "httpResponse": {
+          "code": "200",
+          "message": "OK",
+          "time": 1614017223
+        },
+        "oadrResponse": {
+          "code": 200,
+          "message": "OK",
+          "time": 1614017223
+        }
+      },
+      "version": "2.2.0"
+    }
+  },
+  "query_example": {
+    "origin": "Application-authored concrete values using observed public wire paths; not a captured vendor request.",
+    "request": {
+      "header": {
+        "messageType": "OnQueryIntervals"
+      },
+      "onQueryIntervalsMessage": {
+        "startTimet": 1614017220,
+        "endTimet": 1614017340,
+        "granularityInSeconds": 60,
+        "rIds": [
+          "POWER",
+          "ENERGY"
+        ]
+      }
+    },
+    "response": {
+      "onQueryIntervalsResponseMessage": {
+        "reports": [
+          {
+            "reportIntervals": [
+              {
+                "dataQuality": "Quality Good - Non Specific",
+                "dtStartTimet": 1614017220,
+                "rId": "POWER",
+                "value": 1200
+              },
+              {
+                "dataQuality": "Quality Good - Non Specific",
+                "dtStartTimet": 1614017220,
+                "rId": "ENERGY",
+                "value": 20
+              },
+              {
+                "dataQuality": "Quality Good - Non Specific",
+                "dtStartTimet": 1614017280,
+                "rId": "POWER",
+                "value": 1500
+              },
+              {
+                "dataQuality": "Quality Good - Non Specific",
+                "dtStartTimet": 1614017280,
+                "rId": "ENERGY",
+                "value": 25
+              },
+              {
+                "dataQuality": "Quality Good - Non Specific",
+                "dtStartTimet": 1614017340,
+                "rId": "POWER",
+                "value": 900
+              },
+              {
+                "dataQuality": "Quality Good - Non Specific",
+                "dtStartTimet": 1614017340,
+                "rId": "ENERGY",
+                "value": 15
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "response_validation_limit": "The public source demonstrates these fields, not complete required/optional vendor schema constraints.",
+  "unavailable_full_examples": [
+    "Full OnEvent and OnDistributeEventStart nested payloads",
+    "Opt callback response envelopes",
+    "Full telemetry status object and dataQuality enumeration"
+  ]
+}

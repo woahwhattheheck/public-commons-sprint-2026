@@ -207,6 +207,7 @@ class OpenSearchWorkspace {
     this.closeTask = (async () => {
       await Promise.allSettled([...this.active.values()]);
       await this.deployment.close();
+      await this.catalog.close();
       this.store.close();
     })().catch(error => { this.closeTask = null; throw error; });
     return this.closeTask;

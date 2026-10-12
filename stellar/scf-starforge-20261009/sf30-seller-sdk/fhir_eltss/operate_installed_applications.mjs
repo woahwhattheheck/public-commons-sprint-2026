@@ -17,7 +17,7 @@ const args = {};
 for (let i = 2; i < process.argv.length; i += 2) {
   const name = process.argv[i], value = process.argv[i + 1];
   need(['--runtime-directory', '--runtime-workspace', '--receiving', '--out',
-    '--credentials-file', '--environment-file', '--chromium', '--playwright', '--label'].includes(name) &&
+    '--workspace', '--credentials-file', '--environment-file', '--chromium', '--playwright', '--label'].includes(name) &&
     typeof value === 'string' && value && !value.startsWith('--') && !Object.hasOwn(args, name),
   'ELTSS_APPLICATIONS_ARGUMENTS', 'Use --runtime-directory READY_RUNTIME --runtime-workspace PRIVATE_RUNTIME_WORKSPACE --receiving OPERATED_ELTSS.json --out PRIVATE_OUTPUT.');
   args[name] = name === '--label' ? value : absolute(value);
@@ -37,10 +37,12 @@ const errors = [], pendingCaptures = new Set();
 let captureError = null;
 const nativeBytes = await readFile(args['--receiving']);
 const native = originalEltssReceiving(JSON.parse(nativeBytes.toString('utf8')));
+const selectedWorkspace = args['--workspace'] ?? native.workspace;
 
 const binding = {
   runtimeDirectory, runtimeWorkspace, receivingPath: args['--receiving'], receivingSha256: digest(nativeBytes),
-  workspace: absolute(native.workspace), workspaceId: native.workspaceId,
+  workspace: absolute(selectedWorkspace), workspaceId: native.workspaceId,
+  ...(selectedWorkspace !== native.workspace ? { originalWorkspace: native.workspace } : {}),
   credentialsFile: args['--credentials-file'] ?? null, environmentFile: args['--environment-file'] ?? null,
 };
 let writes = Promise.resolve();
@@ -88,12 +90,12 @@ async function readHost(path) {
   need(response.ok, 'ELTSS_APPLICATIONS_HOST_READ_FAILED', 'The original runtime host returned HTTP ' + response.status);
   return response.json();
 }
-async function originalState(url) { return originalEltssState(url, native); }
+async function originalState(url) { return originalEltssState(url, native, { workspace: selectedWorkspace }); }
 async function appState() {
   const state = await model.applicationsState({ historyLimit: 30 });
   const selected = state.applications.find(item => item.id === journal.applicationId);
   need(selected && selected.kind === 'eltss-careplans' &&
-    selected.settings.workspaceDirectory === native.workspace &&
+    selected.settings.workspaceDirectory === selectedWorkspace &&
     selected.runtime.directory === runtimeDirectory, 'ELTSS_APPLICATIONS_RECORD_CHANGED');
   return selected;
 }
@@ -173,7 +175,7 @@ async function ensureApplication() {
   need(applications.catalog.some(item => item.id === 'eltss-careplans'),
     'ELTSS_APPLICATIONS_PROVIDER_MISSING', 'Receive the cumulative distribution containing the eLTSS Applications provider.');
   const matching = applications.applications.filter(item => item.kind === 'eltss-careplans' &&
-    item.settings?.workspaceDirectory === native.workspace && item.runtime?.directory === runtimeDirectory);
+    item.settings?.workspaceDirectory === selectedWorkspace && item.runtime?.directory === runtimeDirectory);
   need(matching.length <= 1, 'ELTSS_APPLICATIONS_MULTIPLE_ORIGINALS', 'Select the already retained original application before continuing.');
   if (journal.applicationId) {
     need(matching.length === 1 && matching[0].id === journal.applicationId, 'ELTSS_APPLICATIONS_RECORD_CHANGED');
@@ -184,12 +186,12 @@ async function ensureApplication() {
     await page.locator('#application-label').fill(args['--label'] ?? 'eLTSS Care Plans · original receiving');
     await page.locator('#application-runtime').selectOption(runtime.id);
     await page.locator('#application-kind').selectOption('eltss-careplans');
-    await page.locator('#application-setting-workspaceDirectory').fill(native.workspace);
+    await page.locator('#application-setting-workspaceDirectory').fill(selectedWorkspace);
     await page.locator('#application-setting-port').fill('0');
     if (args['--credentials-file']) await page.locator('#application-setting-credentialsFile').fill(args['--credentials-file']);
     if (args['--environment-file']) await page.locator('#application-setting-environmentFile').fill(args['--environment-file']);
     const review = await clickResponse(page, 'Review application', '/api/applications/review');
-    need(review.kind === 'eltss-careplans' && review.settings.workspaceDirectory === native.workspace &&
+    need(review.kind === 'eltss-careplans' && review.settings.workspaceDirectory === selectedWorkspace &&
       review.command.args.includes(native.workspaceId), 'ELTSS_APPLICATIONS_REVIEW_CHANGED');
     journal.configurationReview = review;
     await checkpoint();
@@ -246,7 +248,7 @@ async function runEdition(index) {
   part.originalBefore = await privateJSON(key + '-original-before.json', before);
   if (index === 0) {
     const browserResult = await operateEltssBrowser({ page: target,
-      url: current.current.privateUrl, native, output: join(output, 'careplan-browser') });
+      url: current.current.privateUrl, native, output: join(output, 'careplan-browser'), workspace: selectedWorkspace });
     part.browserReceiving = await privateJSON('COMPLETE_CAREPLAN_BROWSER.json', browserResult);
     journal.workspacePacket = browserResult.downloads.workspace;
     need(journal.workspacePacket, 'ELTSS_APPLICATIONS_COMPLETE_WORKSPACE_MISSING');
@@ -293,7 +295,7 @@ try {
   const modelModule = await import(pathToFileURL(join(runtime.sourceRoot, PREFIX, 'distribution/runtime-workspace/model.mjs')).href);
   const serverModule = await import(pathToFileURL(join(runtime.sourceRoot, PREFIX, 'distribution/runtime-workspace/server.mjs')).href);
   const provider = await import(pathToFileURL(join(runtime.sourceRoot, PREFIX, 'sf30-seller-sdk/fhir_eltss/application-provider.mjs')).href);
-  await provider.inspectEltssApplicationWorkspace(native.workspace, native.workspaceId);
+  await provider.inspectEltssApplicationWorkspace(selectedWorkspace, native.workspaceId);
   if (journal.runtimeSource) need(journal.runtimeSource.sourceCommit === runtime.sourceCommit &&
     journal.runtimeSource.sourceManifestSha256 === runtime.sourceManifestSha256, 'ELTSS_APPLICATIONS_RUNTIME_CHANGED');
   else journal.runtimeSource = { sourceCommit: runtime.sourceCommit, sourceRoot: runtime.sourceRoot,
@@ -338,7 +340,7 @@ try {
       'ELTSS_APPLICATIONS_HISTORY_CHANGED');
     const result = { schema: SCHEMA, operation: OPERATION, completedAt: now(), runtimeDirectory,
       runtimeWorkspace, source: journal.runtimeSource, nativeReceiving: binding,
-      applicationId: journal.applicationId, workspace: native.workspace, workspaceId: native.workspaceId,
+      applicationId: journal.applicationId, workspace: selectedWorkspace, workspaceId: native.workspaceId,
       sourceIds: native.sourceIds, buildIds: native.buildIds, editionIds: native.editionIds, reviewSetIds: native.reviewSetIds,
       assessmentIds: native.assessmentIds, handoffIds: native.handoffIds,
       applicationOperationIds: operatedIds, state, history, runs: journal.runs,

@@ -205,3 +205,7 @@ python3 workspace/cli.py operations --workspace /absolute/private/workspace \
 ~~~
 
 The complete handover is received by the original `operations import` command, which returns the selected installation alongside the new case identity. Continue with that exact saved edition, its original acceptance input and source closure. Reopen original request IDs after uncertain saves or imports. The complete commissioning input, preview/save options and receiving example are in [INSTALLATIONS.md](INSTALLATIONS.md).
+
+## Original implementation evidence
+
+The original `operations` command includes `implementation-source`, `implementation-preview`, `implementation-prepare`, `implementation-export` and `implementation-original`. [The complete guide](IMPLEMENTATION_EVIDENCE.md#native-cli-and-http-interfaces) gives exact arguments, source/record selection, preview/hash binding and the same-request recovery path. These commands read the maintained SF74 producer and use the original operating-case journal, source store and complete bundle importer.

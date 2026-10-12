@@ -14,6 +14,7 @@ import { absolute, privateDirectory, acquireWorkspace, bytes, digest, identity, 
   readJson, hashPrivate, createFile, atomicJson, syncDirectory, fault, stamp } from './files.mjs';
 
 const HASH = /^[a-f0-9]{64}$/;
+const REQUEST_UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const note = (value, name, maximum = 2000) => {
   if (typeof value !== 'string' || !value.trim() || value.length > maximum)
     throw fault('REVIEW_TEXT_REQUIRED', 'Enter ' + name + '.');
@@ -69,7 +70,11 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
       CREATE TABLE IF NOT EXISTS plans(id INTEGER PRIMARY KEY, created TEXT NOT NULL, folder TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY, plan INTEGER NOT NULL REFERENCES plans(id), state TEXT NOT NULL,
         created TEXT NOT NULL, updated TEXT NOT NULL, data TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, run TEXT, created TEXT NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, run TEXT, created TEXT NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS source_selections(sequence INTEGER PRIMARY KEY, request TEXT NOT NULL UNIQUE,
+        created TEXT NOT NULL, data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS source_plan_requests(request TEXT PRIMARY KEY, input_hash TEXT NOT NULL,
+        plan INTEGER NOT NULL REFERENCES plans(id));`);
     if (create) {
       await createFile(join(directory, 'workspace.json'), bytes({ schema: driver.workspaceSchema,
         sourceFile, targetDirectory, createdAt: stamp() }));
@@ -77,7 +82,8 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
       await syncDirectory(directory);
     }
     const settings = await readJson(join(directory, 'workspace.json'), 4096);
-    if (settings.schema !== driver.workspaceSchema ||
+    const selectedWorkspaceSchema = driver.workspaceSchema.replace(/\.v1$/, '.v2');
+    if (!(settings.schema === driver.workspaceSchema || driver.allowSourceSelection === true && settings.schema === selectedWorkspaceSchema) ||
         sourceFile && sourceFile !== settings.sourceFile || targetDirectory && targetDirectory !== settings.targetDirectory)
       throw fault('WORKSPACE_BINDING_CHANGED', 'Reopen with its original source and dataset target.');
     absolute(settings.sourceFile, 'source file'); absolute(settings.targetDirectory, 'target state directory');
@@ -126,16 +132,74 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
     for (const row of db.prepare("SELECT id,state FROM runs WHERE state IN ('EXTRACTING','PUBLISHING')").all())
       change(row.id, row.state === 'EXTRACTING' ? 'INTERRUPTED' : 'PUBLICATION_UNKNOWN',
         { error: row.state === 'EXTRACTING' ? 'EXTRACTION_INTERRUPTED' : 'PUBLICATION_OUTCOME_NOT_RECORDED' }, 'PROCESS_RECOVERY');
-    const source = () => driver.inspectSource(sourceFile);
-    async function savePlan(input) {
+    // The original configured input stays immutable. A selected source is an owned edition,
+    // committed under this same SQLite writer and used by the same plan/extraction engine.
+    function sourceSelection() {
+      const row = db.prepare('SELECT * FROM source_selections ORDER BY sequence DESC LIMIT 1').get();
+      return row ? { sequence: Number(row.sequence), ...JSON.parse(row.data) } : null;
+    }
+    function selectedSourceFile() { return sourceSelection()?.input.sourceFile ?? sourceFile; }
+    function selectionView(value) {
+      if (!value) return null;
+      return { sequence: value.sequence, requestId: value.requestId, createdAt: value.createdAt,
+        sourceHash: value.input.sourceHash, previousSourceHash: value.input.expectedSourceHash,
+        label: value.input.label };
+    }
+    const source = () => driver.inspectSource(selectedSourceFile());
+    async function selectSource(input) {
+      if (driver.allowSourceSelection !== true) throw fault('SOURCE_SELECTION_UNAVAILABLE');
+      if (!input || Object.keys(input).some(key => !['requestId','sourceFile','sourceHash','expectedSourceHash','label'].includes(key)) ||
+          !REQUEST_UUID.test(input.requestId ?? '') || !HASH.test(input.sourceHash ?? '') || !HASH.test(input.expectedSourceHash ?? ''))
+        throw fault('SOURCE_SELECTION_INVALID');
+      absolute(input.sourceFile, 'reviewed source file');
+      const selected = { ...input, label: note(input.label, 'an edition label', 160) };
+      return mutate('selecting source', input.requestId, async () => {
+        const previous = db.prepare('SELECT * FROM source_selections WHERE request=?').get(input.requestId);
+        if (previous) {
+          const saved = { sequence: Number(previous.sequence), ...JSON.parse(previous.data) };
+          if (identity(saved.input) !== identity(selected)) throw fault('SOURCE_SELECTION_REQUEST_CHANGED', 'Retry the exact original selection.', 409);
+          return selectionView(saved);
+        }
+        const before = await driver.inspectSource(selectedSourceFile());
+        if (before.hash !== selected.expectedSourceHash) throw fault('SOURCE_REVIEW_CHANGED', 'Inspect the publisher selected source before selecting another edition.', 409);
+        const next = await driver.inspectSource(selected.sourceFile);
+        if (next.hash !== selected.sourceHash) throw fault('SOURCE_REVIEW_CHANGED', 'The reviewed source edition changed.', 409);
+        // Fence older source runtimes before the first selection. They fail their original
+        // schema check instead of silently opening the initial source after a later selection.
+        if (settings.schema !== selectedWorkspaceSchema) {
+          const promoted = { ...settings, schema: selectedWorkspaceSchema };
+          await atomicJson(directory, 'workspace.json', promoted); Object.assign(settings, promoted);
+        }
+        return transaction(() => {
+          const value = { requestId: selected.requestId, createdAt: stamp(), input: selected };
+          const result = db.prepare('INSERT INTO source_selections(request,created,data) VALUES(?,?,?)')
+            .run(selected.requestId, value.createdAt, JSON.stringify(value));
+          const view = selectionView({ sequence: Number(result.lastInsertRowid), ...value });
+          event('SOURCE_SELECTED', null, view); return view;
+        });
+      });
+    }
+    async function savePlan(input, options = {}) {
+      if (!options || Object.keys(options).some(key => key !== 'requestId') ||
+          options.requestId !== undefined && !REQUEST_UUID.test(options.requestId)) throw fault('PLAN_REQUEST_INVALID');
+      const inputHash = options.requestId ? digest(bytes(input)) : null;
       return mutate('saving plan', null, async () => {
+      if (options.requestId) {
+        const previous = db.prepare('SELECT * FROM source_plan_requests WHERE request=?').get(options.requestId);
+        if (previous) {
+          if (previous.input_hash !== inputHash) throw fault('PLAN_REQUEST_CHANGED', 'Retry the exact original plan input.', 409);
+          const saved = plan(Number(previous.plan)); await validatePlan(saved); return saved;
+        }
+      }
       const folder = randomUUID(), path = join(directory, 'plans', folder);
       await privateDirectory(path, true);
-      const data = await driver.capturePlan(sourceFile, path, input);
+      const data = await driver.capturePlan(selectedSourceFile(), path, input);
       await syncDirectory(path); await syncDirectory(join(directory, 'plans'));
       return transaction(() => {
         const result = db.prepare('INSERT INTO plans(created,folder,data) VALUES(?,?,?)').run(stamp(), folder, JSON.stringify(data));
-        const id = Number(result.lastInsertRowid); event('PLAN_SAVED', null, { plan: id, digest: data.digest }); return plan(id);
+        const id = Number(result.lastInsertRowid);
+        if (options.requestId) db.prepare('INSERT INTO source_plan_requests(request,input_hash,plan) VALUES(?,?,?)').run(options.requestId, inputHash, id);
+        event('PLAN_SAVED', null, { plan: id, digest: data.digest, ...(options.requestId ? { requestId: options.requestId } : {}) }); return plan(id);
       });
       });
     }
@@ -160,7 +224,7 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
           previous: offset > 0 ? Math.max(0, offset - limit) : null };
         return rows;
       };
-      return { schema: driver.statusSchema, directory, sourceFile, targetDirectory, buyer,
+      return { schema: driver.statusSchema, directory, sourceFile: selectedSourceFile(), sourceSelection: selectionView(sourceSelection()), targetDirectory, buyer,
         plans: page('plans', 'plans', 'id DESC'), runs: page('runs', 'runs', 'created DESC, id DESC'),
         active: active ? { kind: active.kind, id: active.id, progress: active.progress } : null,
         history: page('history', 'events', 'id DESC'), pages };
@@ -373,7 +437,7 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
       closing = (async () => { try { await active?.promise; } finally { db.close(); await release(); } })();
       return closing;
     }
-    return Object.freeze({ directory, settings, sourceName, source, savePlan, plan, run, target, status, startExtraction,
+    return Object.freeze({ directory, settings, sourceName, source, selectSource, savePlan, plan, run, target, status, startExtraction,
       cancel, inspect, review, publish, recover, candidate, buyerOffer, prepareBuyer, close });
   } catch (issue) { db?.close(); await release(); throw issue; }
 }

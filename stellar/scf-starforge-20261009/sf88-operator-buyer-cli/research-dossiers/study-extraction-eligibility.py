@@ -22,6 +22,10 @@ SCHEMA = "sf88-study-extraction-eligibility-receiving/v1"
 LIMIT = 512 * 1024 * 1024
 
 
+class StudyEligibilityCancelled(BaseException):
+    """Unwind the whole caller even when the SDK preserves a completed reply."""
+
+
 def require(value, code):
     if not value:
         raise StateError(code)
@@ -121,15 +125,15 @@ if __name__ == "__main__":
         # Unwind the active original Runtime call before its workspace joins it.
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        raise KeyboardInterrupt("STUDY_ELIGIBILITY_CANCELLED")
+        raise StudyEligibilityCancelled("STUDY_ELIGIBILITY_CANCELLED")
 
     signal.signal(signal.SIGTERM, cancel)
     signal.signal(signal.SIGINT, cancel)
     try:
         main()
-    except KeyboardInterrupt:
+    except StudyEligibilityCancelled:
         print(json.dumps({"error": "STUDY_ELIGIBILITY_CANCELLED",
-                          "type": "KeyboardInterrupt"}), file=sys.stderr)
+                          "type": "StudyEligibilityCancelled"}), file=sys.stderr)
         sys.exit(130)
     except Exception as error:
         print(json.dumps({"error": getattr(error, "code", "STUDY_ELIGIBILITY_RECEIVING_FAILED"),
