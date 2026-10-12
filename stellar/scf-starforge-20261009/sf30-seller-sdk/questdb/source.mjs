@@ -127,12 +127,15 @@ export async function createQuestDbQuerySource(raw,{env=process.env,captureDirec
     let json,ndjson,csv,nativeCsv;
     try{
       json=await fileWriter(directory,'response.partial');ndjson=await fileWriter(directory,'rows.partial');csv=await fileWriter(directory,'data.partial');
-      let canonicalBytes=0;
+      let canonicalBytes=0,ndjsonBytes=0;
       const reader=createQuestDbResponseReader({columns:query.columns,maxRows:extraction.maxRows,maxRowBytes:extraction.maxRowBytes,
         onColumns:async types=>{await checkTypes(name,types);const line=canonicalCsvLine(query.columns);canonicalBytes+=Buffer.byteLength(line);await csv.write(line);},
         onRow:async row=>{
           signal.throwIfAborted();
           const line=JSON.stringify(row)+'\n',csvLine=canonicalCsvLine(query.columns.map(column=>row[column]));
+          const rowBytes=Buffer.byteLength(line);ndjsonBytes+=rowBytes;
+          if(rowBytes>extraction.maxRowBytes)throw fail('QUESTDB_CAPTURE_ROW_TOO_LARGE');
+          if(ndjsonBytes>extraction.maxBytes)throw fail('QUESTDB_CAPTURE_NDJSON_TOO_LARGE');
           canonicalBytes+=Buffer.byteLength(csvLine);
           if(canonicalBytes>extraction.maxBytes)throw fail('QUESTDB_CAPTURE_CSV_TOO_LARGE');
           await ndjson.write(line);await csv.write(csvLine);

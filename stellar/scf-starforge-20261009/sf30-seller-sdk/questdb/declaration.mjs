@@ -243,16 +243,18 @@ export function compileQuestDbReport(supplied) {
       columns.push(column.name);return(side==='right'?'r':'l')+'.'+identifier(column.column)+' AS '+identifier(column.name);
     });
     if(report.kind==='asof') {
-      exact(report.asof,['table','timestamp','timestampType','keys','tolerance'],'QUESTDB_ASOF_REQUIRED');
+      exact(report.asof,['table','timestamp','timestampType','keys','tolerance','filters'],'QUESTDB_ASOF_REQUIRED');
       const asof=report.asof;identifier(asof.table);identifier(asof.timestamp);
+      if(asof.timestampType!==undefined&&!['timestamp','timestamp_ns'].includes(asof.timestampType))throw fail('QUESTDB_TIMESTAMP_TYPE_INVALID');
       if(!Array.isArray(asof.keys)||!asof.keys.length||asof.keys.length>16)throw fail('QUESTDB_ASOF_KEYS_REQUIRED');
       const on=asof.keys.map(key=>{exact(key,['left','right'],'QUESTDB_ASOF_KEY_INVALID');return'l.'+identifier(key.left)+' = r.'+identifier(key.right);});
       // Explicit sorting selects the timestamp of each side; no unsorted timestamp() hint.
       // The right side retains history before the left window for a valid prevailing match.
-      const left='(SELECT * FROM '+identifier(report.table)+' ORDER BY '+identifier(report.timestamp)+' ASC) l';
-      const right='(SELECT * FROM '+identifier(asof.table)+' WHERE '+identifier(asof.timestamp)+' < $'+report.window.end+' ORDER BY '+identifier(asof.timestamp)+' ASC) r';
+      const left='(SELECT * FROM '+identifier(report.table)+' l WHERE '+where.join(' AND ')+' ORDER BY l.'+identifier(report.timestamp)+' ASC) l';
+      const rightWhere=['r.'+identifier(asof.timestamp)+' < $'+report.window.end,...filterSql(asof.filters??[],parameters,'r')];
+      const right='(SELECT * FROM '+identifier(asof.table)+' r WHERE '+rightWhere.join(' AND ')+' ORDER BY r.'+identifier(asof.timestamp)+' ASC) r';
       sql='SELECT '+projection.join(', ')+'\nFROM '+left+'\nASOF JOIN '+right+'\nON ('+on.join(' AND ')+')'+
-        (asof.tolerance===undefined?'':' TOLERANCE '+interval(asof.tolerance))+'\nWHERE '+where.join(' AND ');
+        (asof.tolerance===undefined?'':' TOLERANCE '+interval(asof.tolerance));
     } else sql='SELECT '+projection.join(', ')+'\nFROM '+identifier(report.table)+' l\nWHERE '+where.join(' AND ')+'\nORDER BY l.'+identifier(report.timestamp)+' ASC';
   }
   if(new Set(columns).size!==columns.length)throw fail('QUESTDB_DUPLICATE_COLUMN');
