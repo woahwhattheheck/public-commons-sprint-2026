@@ -133,3 +133,71 @@ The existing Merchant contribution advertises `merchant_coops_study_preview`, `m
 The study code and assets are part of the original CO-OPS contribution and normal source package. There is no extra database, server, browser profile, dependency installation or formula engine.
 
 This guide describes delivered source behavior. An actual station capture, independent source review, browser journey, third-party model use or buyer acceptance is reported only when that original operation has completed. The public-reference mapping is an authored exchange convention over NOAA source fields. A buyer supplies their actual project, model headings and review decisions.
+
+
+## Joined original operator receiving
+
+The existing `receiving-host.mjs` and `runCoopsOperatorJourney` can carry this study through the same console, source corpus, browser journal and final reopen. No second application, calculation engine or source-acquisition process is introduced.
+
+Select `examples/coastal-receiving-selection.json` through the host's existing `--selection` option to include the study leg. It explicitly requests the original La Jolla reference window and two-year hourly backfill, then selects their retained editions for an internal receiving handoff. The file describes requested work. It is not a captured dataset or a completed result. Additional stations are selected only by supplying their already-retained edition IDs in `study.additionalEditionIds`; the source review receives every actual station and original request basis. The supplied reference selection contains one station.
+
+```sh
+node receiving-host.mjs \
+  --workspace /absolute/original-coops-workspace \
+  --output /absolute/original-receiving-output \
+  --browser-profile /absolute/original-browser-profile \
+  --playwright-module /absolute/selected-playwright-module \
+  --chrome /absolute/selected-chrome \
+  --operation-id ORIGINAL_RECEIVING_ID \
+  --selection /absolute/coops/examples/coastal-receiving-selection.json \
+  --review-response /absolute/original-receiving-output/independent-source-review.json \
+  --study-review-response /absolute/original-receiving-output/independent-study-review.json
+```
+
+Use the selected native admission and the original explicit Node, Playwright and Chrome paths. Keep the workspace, outputs and browser profile outside the application source and separate from one another. The host owns one original workspace listener and one persistent browser. Its source verification includes the selected study core, exchange and browser modules. The initial positive port is retained for same-origin reopen.
+
+The source and study decisions are separate. The first is the original NOAA source-review packet. After the study is saved, the host writes `independent-study-review-request.json`. That request binds the exact study ID, revision, selection SHA-256 and packet SHA-256. Its files identify the complete mapping and the original package for each selected source edition. The reviewer inspects actual data and documented limitations, then writes their own response to the selected study-review path. There is no default decision.
+
+The study response has these fields:
+
+| Field | Required content |
+|---|---|
+| packetSha256 | Exact study packet file SHA-256 |
+| studyId, studyRevision, studySha256 | Exact selected original study identity |
+| status | The reviewer's actual `reviewed` or `follow_up` decision |
+| reviewer, performedAt | Actual reviewer and ISO timestamp |
+| note | The substantive source, time/datum/unit, quality, scope and receiving review |
+| acknowledgedWarnings | The exact warning IDs the reviewer explicitly considered |
+
+The operator saves that decision through the native review form. A follow-up decision remains saved and stops release creation. A reviewed decision allows the native immutable delivery. Its CSV, JSONL, HTML, manifest and complete original-source TAR are downloaded and hashed. The receiving path streams every TAR member, checks its exact manifest descriptor and preserves original source files without extracting executable content.
+
+The same original flow then selects the downloaded JSONL as an **unchanged internal return**, using the native returned-file form and 1 MiB chunk intake. The browser's original action journal retains every uncertain request; reselecting a file verifies its exact retained prefix. The controller stores its source identity before intake and recovers that same selected upload after interruption. It never blindly starts a second return.
+
+The native comparison processes the complete released and returned file. The journey retains its raw returned bytes, complete comparison JSONL and summary, checks the exact all-row counts, and records an internal receiving decision through the native form. Ambiguous original identities remain follow-up. Accepting a byte-preserving internal file transfer establishes no client model run, client acceptance, project approval or rewritten provider evidence.
+
+A later working study revision records the next preparation step. The earlier review remains attached to its original revision; the new working revision is unreviewed. The final original same-origin restart checks both revisions, the earlier delivery, returned file, receiving decision and exact earlier selected row page alongside the existing saved source, mapping and native dataset query.
+
+### Callable contract and interruption
+
+```js
+await runCoopsOperatorJourney(existingPage, {
+  workspaceUrl, outputDirectory, reviewEdition, restart,
+  capture, historical,
+  study: {
+    name, project, question, owner, note,
+    basisPolicy: "uniform_requests",
+    additionalEditionIds: [],
+    // Optional exact original file; defaults to the bundled public reference.
+    mappingFile
+  },
+  reviewStudy: async packet => actualIndependentStudyDecision
+});
+```
+
+Omitting `study` preserves the earlier callable's selected intent and flow. When selected, the study configuration and mapping-file bytes are pinned in the existing checkpoint. The `reviewStudy` callback receives `operationId, workspaceId, studyId, studyRevision, studySha256, packet, packetPath, packetSha256, files`. `files` contains the exact packet, mapping and each original edition/package descriptor. Return only the actual decision described above.
+
+The original checkpoint remains `coops-operator-checkpoint.json` and the result remains `coops-operator-result.json`. Completed phases return their retained original results. Issued writes reuse their original operation IDs. Completed upload metadata is frozen before the finishing comparison advances its native state, so a resumed phase does not replace earlier evidence with later upload metadata. No completed source acquisition or source review is repeated.
+
+If the source changes during an incomplete receiving operation, use the existing explicit `--continuation-note` with the concrete correction. Keep the same original paths, selections, private browser profile and operation. A completed result is returned after its stored file hash is verified. New work belongs to an explicit later selected operation.
+
+This guide and callable are executable source instructions. Native acceptance is recorded only by the actual original result and closure receipts; source parsing alone is not a completed receiving run.
