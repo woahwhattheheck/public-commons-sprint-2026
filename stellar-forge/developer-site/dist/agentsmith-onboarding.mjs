@@ -5,9 +5,9 @@ export const AGENTSMITH_SCHEMA = 'stellar-forge.frontdoor-agentsmith.v1';
 export const AGENTSMITH_ASSET = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
 export const AGENTSMITH_SOURCE = Object.freeze({
   capturePath: 'stellar/scf-starforge-20261009/partners/agentsmith/capture.py',
-  captureSha256: '60dd7f472ec518846f50c222160c53751554648f492d150f384b70fa05fb4381',
+  captureSha256: '93214bc738c9ad92c70aadddb07655d86ea7e304ea7ed1afda0e5c6b4a940098',
   capturedBundleSha256: '18d45f986bc0f53292086f715f8dbafc5cbf92a59f5fb599c0034285d97103a8',
-  sourceCommit: '41f15c0e57d2ba9655885399c1b37134e1a81d41',
+  sourceCommit: 'aea13f36c6bddf09fcc16cc3825094d1d30cfbb9',
   walletSourceCommit: 'c3f1f9a930e1a4b08a6d60f5643b98ba2f4a0e1d'
 });
 const encoder = new TextEncoder();
@@ -133,7 +133,7 @@ export async function createAgentSmithPacket(input, {runnerSource, captureSource
     'Authorization lifetime: ' + source.selected.maxTimeoutSeconds + ' seconds', '',
     'The complete original offer, all alternatives, response headers, and request bytes remain in source-http.json. Preparation restores them and asks the original buyer to prepare and review. Native execution obtains current merchant terms before approval. A changed request or payment selection requires review in that same original flow.', '',
     '## Run the original operation', '',
-    '1. Prepare the original capture and native request; the same command resumes completed preparation without replacing its files.', '',
+    '1. Prepare the original capture and native request; the same command resumes interrupted source restoration and native preparation in the original directory.', '',
     '```sh', commands[0].command, commands[1].command, '```', '',
     '2. Initialize the original operator. ' + (saved.payer ? 'The selected public payer is ' + saved.payer + '.' : 'Append --payer followed by the actual Freighter public account to operator-init. No private key is needed in this packet.'), '',
     '```sh', commands[2].command, commands[3].command, '```', '',
@@ -144,9 +144,9 @@ export async function createAgentSmithPacket(input, {runnerSource, captureSource
     'The original buyer saves the useful response at ' + saved.privateDirectory + '/request/metar-result.json. The original operator and wallet remain at operator/ and wallet/ inside that same directory.', '',
     '5. Inspect or reopen the same operation after an interruption.', '',
     '```sh', commands[6].command, '```', '',
-    'The runner never chooses a new intent or starts another payment to repair a saved result. Its status shows the existing source, request, operator, wallet and response. Use the original buyer and wallet recovery instructions for an unfinished execution. Keep the original private operator keys and ledger together on their authorized host.', '',
+    'Repeat prepare after an interrupted source or request write; it verifies completed bytes, preserves the original intent and response destination, and finishes the same native preparation. Repeat operator-init after interrupted initialization to continue the maintained initializer with its original keys and journal. The runner binds the selected operator, payer, request and output before wallet actions, forwards cancellation to its native child, and preserves the child exit status. Inspect shows the saved source, request, operator, wallet and response. Use the original buyer and wallet recovery instructions for unfinished execution, keeping their private keys and ledger together.', '',
     '## Receive current terms for a new operation', '',
-    'capture.py also provides capture --directory NEW_SOURCE --url ORIGINAL_RESOURCE --facilitator ORIGINAL_FACILITATOR --body-file ORIGINAL_REQUEST. It sends the real unpaid POST and facilitator request. Give a genuinely new purchase its own stable intent and new reviewed packet; retain the previous operation and its result.', '',
+    'capture.py also provides capture --directory NEW_SOURCE --url ORIGINAL_RESOURCE --facilitator ORIGINAL_FACILITATOR --body-file ORIGINAL_REQUEST. It sends the real unpaid POST and facilitator request. Give a new purchase its own stable intent and new reviewed packet; retain the previous operation and its result.', '',
     '## Reopen or transfer this preparation', '',
     'Import setup-input.json into the same receiving page to edit the packet. It preserves the exact source text. Transfer the whole downloaded packet to the receiving engineer; it contains public request/offer source and preparation settings. Keep actual operator state on the authorized private host. INSTALL.json carries command arrays for tools that avoid shell parsing.', '',
     'TokenJunkieLabs', 'MIT license applies to the original integration and these receiving files.', ''];
