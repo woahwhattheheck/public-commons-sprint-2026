@@ -219,3 +219,8 @@ Outputs include `host-review-native-run.json`, a durable phase checkpoint, the o
 The complete saved-workflow receiver is `receiving/workflow-journey.mjs`. Its [native receiving instructions](WORKFLOWS.md#run-the-complete-native-receiving-workflow) cover the original seven-step merchant operation, browser action recovery, named workspace transfer and return, complete profile receiving and customer files. Use its selected source and existing native runtime for that original operation.
 
 The same following receiver also returns the complete newer archive to a console that already received the original profile. It checks exact historical binding bodies, retained local host/name/favorites, the advanced receiving revision, duplicate reuse and another cold reopen. `host-review-returned-profile.json` and its browser view retain that complete round trip.
+
+
+## Original reviewer customer delivery
+
+The configured grant reviewer family now has a complete Customers operating page: original packet intake, retained Buyer history and complete result/source files, explicit closed export, independent receiving, and fourteen-step delivery/six-step receiving recipes in the existing Workflow engine. See [Reviewer Customer Delivery](CUSTOMER_REVIEWER.md) for the original lifecycle, full-file handoff and restartable Console receiving command. The original Host review and immutable binding history apply to this family as well.
