@@ -231,6 +231,8 @@ export function mountRecurring(element,{report,config,onChange,readOnly=false}) 
       ["Original request",el("pre",{},show(source.request))],
       ["Provider request",el("pre",{},show(source.providerRequest))],
       ["Acquisition provenance",el("pre",{},show(source.provenance))],
+      ["Original capture relationship",el("pre",{},show(source.original))],
+      ["Explicit credential redactions",el("pre",{},show(source.redactions))],
       ["Bulk job",el("pre",{},source.job ? show(source.job) : "Not a recorded Bulk source")]
     ]));
   }

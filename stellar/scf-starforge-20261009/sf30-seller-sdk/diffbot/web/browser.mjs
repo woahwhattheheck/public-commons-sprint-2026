@@ -694,7 +694,7 @@ function mapping(){
           const columns=Object.create(null);
           for(const r of rows){
             const name=r.name.trim();if(!name||Object.hasOwn(columns,name))throw new Error('Customer column names must be nonempty and unique.');
-            if(!/^\/(?:id|identityKind|providerId|kind|sourceId|sourceUrl|resolvedUrl|capturedAt|fields|numberTokens|review)(?:\/|$)/.test(r.pointer)||/~(?![01])/.test(r.pointer))
+            if(!/^\/(?:id|identityKind|providerId|kind|sourceId|sourceUrl|resolvedUrl|capturedAt|fields|numberTokens)(?:\/|$)/.test(r.pointer)&&r.pointer!=='/review/decision'||/~(?![01])/.test(r.pointer))
               throw new Error('Use an original supported JSON pointer; escape ~ as ~0 and / inside a field name as ~1.');
             columns[name]=r.pointer;
           }
