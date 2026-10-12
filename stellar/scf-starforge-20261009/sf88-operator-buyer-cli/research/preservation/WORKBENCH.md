@@ -1,7 +1,7 @@
 # Research preservation workbench
 
 The workbench is the local operator application for reviewing a retained research
-edition, preparing an Archivematica, RODA or Preservica transfer, and continuing
+edition, preparing an Archivematica, RODA, Preservica or LIBNOVA transfer, and continuing
 the same destination after a restart or complete workspace handoff.
 
 It combines the existing preservation application with a browser interface.
@@ -47,6 +47,14 @@ Preservica adds its producer, client, `PRESERVICA.md` and
 `PRESERVICA_PROVIDER_CONTRACT.md`. The complete export requires all four
 Preservica members when any of them is installed. The destination selector
 shows whether that provider's source is available.
+
+LIBNOVA adds `libnova.py`, `libnova_client.py`, `LIBNOVA.md`,
+`LIBNOVA_PROVIDER_CONTRACT.md` and `libnova-requirements.txt`. Its S3 client
+uses the dependencies declared in that retained requirements file. They are
+loaded only when the LIBNOVA client runs; installing its source does not
+require those dependencies to open the workbench or use the existing RODA
+and Preservica operators. The complete export and managed source binding
+retain all five LIBNOVA files together.
 
 ### Credentials
 
@@ -202,11 +210,14 @@ field values, reasons and other metadata rules.
 **Destinations** has two distinct views: an editable new-destination draft,
 and the saved original operations. Selecting an existing destination leaves
 the new-destination draft available when returning to it. Different providers
-have separate drafts.
+have separate drafts. A response from an earlier preparation cannot select
+that operation over a destination or provider chosen later, or discard
+fields typed after the original request. The completed operation remains
+in Saved destinations with its original ID.
 
 For a new destination:
 
-1. Select RODA or Preservica.
+1. Select RODA, Preservica or LIBNOVA.
 2. Choose the current saved review or a specific earlier published revision.
 3. Enter a useful operator label and the original operation ID.
 4. Complete the provider settings, repository configuration and, for RODA,
@@ -298,11 +309,110 @@ observations alongside those records. See [PRESERVICA.md](PRESERVICA.md) and
 [PRESERVICA_PROVIDER_CONTRACT.md](PRESERVICA_PROVIDER_CONTRACT.md) for the
 supported deployment contract and complete command-line operations.
 
+### LIBNOVA
+
+The LIBNOVA destination begins with the exact selected source manifest and
+published review. Preparation freezes that source, builds its original
+BagIt package through the existing preservation producer, and calls the
+LIBNOVA producer with the entered descriptor mapping. It then saves the
+client plan under the same original operation ID. These preparation steps
+do not contact a tenant.
+
+**LIBNOVA Dublin Core descriptor mapping** contains the provider's actual
+mapping template:
+
+- Each row names a reviewed Dublin Core field, an existing descriptor
+  `iecode`, and one of `STRING`, `LONGSTRING`, `NUMBER`, `DATE` or `BOOL`.
+- Replace the example descriptor codes and types with those from the
+  agreed existing target schema.
+- The mapping is normalized and validated before the saved destination
+  is published. Type conversion and repeated-field rules are enforced by
+  the original producer.
+- Unmapped Dublin Core values remain in the unchanged BagIt package.
+
+The receiving configuration selects the existing LIBNOVA deployment,
+container, schema, storage and Function required by the actual client.
+Load the provider's current configuration template, enter the agreed
+identifiers and environment-variable references, and retain the same
+configuration for every continuation. The workbench does not create a
+tenant, container, schema, storage selection or Function.
+
+The initial bibliographic profile permits at most 1,000 included metadata
+records and 1 GiB of source/export material. These limits describe the
+implemented research profile. A customer's deployment and accepted sample
+still determine the scoped receiving agreement. The original 169-record
+CC0 source example is available to the complete receiving workflow.
+
+After preparation, select the saved LIBNOVA destination. Its original
+source selection, mapping, configuration and package identity are shown
+alongside the saved client state.
+
+| Control | Action on the saved LIBNOVA operation |
+| --- | --- |
+| Continue original transfer | Execute the original client plan and continue its retained file, metadata and Function workflow |
+| Check repository progress | Read the original remote objects and job, retaining the resulting observation without dispatching another Function |
+| Continue original preparation | Reopen the exact frozen review, original BagIt and existing offline client plan |
+| Reconcile original operation | Bind an originally returned Function response or job ID to the already-started Function and read that original job |
+
+The browser reads the client's atomically published local state while an
+action is running. That status call validates the immutable saved operation
+and package binding, acquires no provider-operation lock and performs no
+network request. A browser refresh therefore displays retained progress
+without starting another provider observation.
+
+For lost Function responses, open **Reconcile an original request**, choose
+an evidence type and select **Load original evidence template**. The
+template comes directly from the installed client.
+
+| Evidence kind | Entered original evidence |
+| --- | --- |
+| `original-function-response` | The retained response containing `container_id`, `file_id`, `job_id`, `file_path` and `event_key`, plus its explanatory note |
+| `original-job-id` | The original `jobId` and a note identifying that retained evidence |
+
+The client checks the evidence against the already-started Function and
+the selected container/folder, then reads the same job. Reconciliation
+does not launch a replacement job. For unresolved file upload or metadata
+readback, use **Check repository progress**; these observations do not
+require Function evidence.
+
+The original BagIt ZIP and prepared source review appear in **Delivery**.
+Once the client publishes `VERIFIED`, the same list adds the original
+receiving JSON and HTML report. The Workbench checks the JSON's saved
+size, SHA-256, operation, package, job and summary before registering it.
+The complete progress panel retains the provider's original state object;
+the summary shows original container/schema/storage/Function IDs, current
+object and record counts, original job result, verified source bytes and
+mapped metadata, and the final evidence digest.
+
+If the client finished before a local artifact-list write was interrupted,
+**Continue original preparation** reopens the same offline plan and
+registers its already-published receiving files. It performs no provider
+request. **Check repository progress** performs a fresh read-only observation
+of the original operation when that is desired.
+
+The complete Workbench export includes the prepared LIBNOVA workspace,
+saved mapping, configuration, original operation and complete retained
+request/readback history, together with the actual producer, client,
+dependency declaration and guides. The provider CLI also exposes its own
+complete workspace export and receive commands in
+[LIBNOVA.md](LIBNOVA.md). Use
+[LIBNOVA_PROVIDER_CONTRACT.md](LIBNOVA_PROVIDER_CONTRACT.md) for the precise
+existing-deployment API, job association and content-verification rules.
+
+LIBNOVA `plan`, `run`, `refresh` and `reconcile` hold the prepared workspace's
+original `.libnova.lock` for their full mutation or observation. The
+Workbench complete exporter holds that same lock while copying the saved
+prefix. Only the known runtime lock in the prepared workspace and the
+provider's output-publication lock beside it are omitted from the portable
+snapshot; original BagIt and journal files remain included.
+
 ## Deliver and receive the complete application
 
 **Delivery** can build an Archivematica transfer from a chosen saved review.
 The prepared RODA and Preservica transfer ZIPs appear in the same delivery
-table when their original destination preparation finishes.
+table when their original destination preparation finishes. LIBNOVA adds
+its original BagIt ZIP and prepared source-review HTML to that table, then
+the verified receiving report and original JSON evidence.
 
 Every delivery row includes its package kind, original review/operation,
 size and SHA-256. Downloads stream the retained original file after checking
