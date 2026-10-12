@@ -111,11 +111,47 @@ const inputValue={
   originalProviderOperationId:arg['operation-id'],python:PYTHON,playwrightModule:PW,browserExecutable:CHROME,
   runner:await fileRecord(SELF),support:await fileRecord(SUPPORT),applicationSource:sourcePin
 };
+async function verifyReceivingSourceAdoption(original,current,identityFile){
+  const previous=original.input.runner,selected=current.runner;
+  expect(previous.path===SELF&&previous.bytes===68597&&previous.sha256==='1f130fabdcaf50f0f701f3d74545e80f2ca885ceec330216c5fd11ac12db722e',
+    'The retained browser source is not the original reviewed receiving runner');
+  expect(isDeepStrictEqual({...current,runner:previous},original.input),
+    'A receiving source repair changed an original application, workspace, runtime or request');
+  const receiptPath=path.join(ROOT,'source-adoption.json'),receipt=await readJson(receiptPath);
+  expect(receipt.schema==='commons.aviary.browser-source-adoption.v1'&&receipt.operationId===OPERATION&&
+    receipt.originalInputSha256===original.inputSha256&&receipt.reason==='original-preview-response-and-process-namespace-repair',
+    'The explicit original browser source-adoption receipt is absent or differs');
+  expect(isDeepStrictEqual(receipt.originalIdentity,await fileRecord(identityFile))&&
+    isDeepStrictEqual(receipt.selectedRunner,selected),
+    'The browser source adoption changed its original identity or selected source');
+  const previousPath=path.join(ROOT,'source-history',previous.sha256,'run-aviary-browser-receiving.mjs');
+  expect(receipt.previousRunner.path===previousPath&&receipt.previousRunner.bytes===previous.bytes&&
+    receipt.previousRunner.sha256===previous.sha256,'The original receiving source history differs');
+  await verifyFile(receipt.previousRunner);
+  expect(Array.isArray(receipt.originalSteps),'The original source adoption lacks its retained step inventory');
+  const names=new Set();
+  for(const item of receipt.originalSteps){
+    const name=within(path.join(ROOT,'steps'),item.path);
+    expect(!names.has(name),'An original receiving step was duplicated in its source adoption');
+    names.add(name);await verifyFile(item);
+  }
+  return {receipt:await fileRecord(receiptPath),previousRunner:receipt.previousRunner,
+    selectedRunner:selected,originalInputSha256:original.inputSha256,originalStepFiles:receipt.originalSteps.length};
+}
+
 const identityPath=path.join(ROOT,'identity.json'),oldIdentity=await optionalJson(identityPath);
-let identity;
-if(oldIdentity){expect(isDeepStrictEqual(oldIdentity.input,inputValue),'Receiving input or original source changed');identity=oldIdentity;}
-else{identity={schema:SCHEMA,operationId:OPERATION,created:startedAt,input:inputValue,inputSha256:hash(encoded(inputValue))};await publish(identityPath,identity);}
+let identity,receivingSourceAdoption=null;
+if(oldIdentity){
+  expect(oldIdentity.schema===SCHEMA&&oldIdentity.operationId===OPERATION&&
+    oldIdentity.inputSha256===hash(encoded(oldIdentity.input)),'Original receiving identity differs');
+  if(!isDeepStrictEqual(oldIdentity.input,inputValue))
+    receivingSourceAdoption=await verifyReceivingSourceAdoption(oldIdentity,inputValue,identityPath);
+  identity=oldIdentity;
+}else{identity={schema:SCHEMA,operationId:OPERATION,created:startedAt,input:inputValue,inputSha256:hash(encoded(inputValue))};await publish(identityPath,identity);}
 expect(identity.inputSha256===hash(encoded(identity.input)),'Receiving input hash differs');
+await publish(path.join(RUN,'execution-source.json'),{schema:SCHEMA+'.execution-source',
+  runId,inputSha256:identity.inputSha256,runner:inputValue.runner,support:inputValue.support,
+  applicationSource:sourcePin,receivingSourceAdoption});
 const ownerPrefix=identity.inputSha256+':',ownerMarker=ownerPrefix+runId;
 const resultPath=path.join(ROOT,'browser-receiving-result.json');
 let browser=null,context=null,page=null,currentServer=null,lockChild=null;
@@ -140,20 +176,49 @@ async function readStep(name){
   const value=await stepRecord(name);if(value)expect(value.schema===SCHEMA&&value.inputSha256===identity.inputSha256&&value.step===name,'Saved phase binding differs: '+name);return value;
 }
 
+let processObserverPromise=null;
+async function processObserver(){
+  if(!processObserverPromise)processObserverPromise=(async()=>{
+    const raw=await readFile('/proc/self/stat','utf8'),close=raw.lastIndexOf(')'),fields=raw.slice(close+2).trim().split(/\s+/);
+    const hostPid=Number(raw.slice(0,raw.indexOf('(')).trim()),status=await readFile('/proc/self/status','utf8');
+    const line=status.split('\n').find(value=>value.startsWith('NSpid:'));
+    const namespacePids=line?line.slice(6).trim().split(/\s+/).map(Number):[];
+    const namespace=await readlink('/proc/self/ns/pid');
+    expect(Number.isSafeInteger(hostPid)&&hostPid>0&&fields[19],'The receiving process has no complete original procfs identity');
+    return {hostPid,namespacePid:process.pid,startTicks:fields[19],namespace,namespacePids,
+      translationVerified:namespacePids.length>0&&namespacePids[0]===hostPid&&namespacePids.at(-1)===process.pid};
+  })();
+  return processObserverPromise;
+}
 async function processRecord(pid){
   try{
+    const observer=await processObserver();
     const raw=await readFile('/proc/'+pid+'/stat','utf8'),close=raw.lastIndexOf(')');
     const fields=raw.slice(close+2).trim().split(/\s+/);
+    const hostPid=Number(raw.slice(0,raw.indexOf('(')).trim());
+    expect(hostPid===Number(pid),'A procfs directory returned another original PID');
     const command=await readFile('/proc/'+pid+'/cmdline');
-    return {pid:Number(pid),state:fields[0],parentPid:Number(fields[1]),processGroup:Number(fields[2]),startTicks:fields[19],
+    const status=await readFile('/proc/'+pid+'/status','utf8');
+    const namespace=await readlink('/proc/'+pid+'/ns/pid');
+    const line=status.split('\n').find(value=>value.startsWith('NSpid:'));
+    const namespacePids=line?line.slice(6).trim().split(/\s+/).map(Number):[];
+    const translated=observer.translationVerified&&namespace===observer.namespace&&
+      namespacePids.length===observer.namespacePids.length&&namespacePids[0]===hostPid&&
+      namespacePids.every(value=>Number.isSafeInteger(value)&&value>0);
+    const signalPid=translated?namespacePids.at(-1):null;
+    const again=await readFile('/proc/'+pid+'/stat','utf8'),againFields=again.slice(again.lastIndexOf(')')+2).trim().split(/\s+/);
+    if(againFields[19]!==fields[19])return null;
+    return {pid:hostPid,state:againFields[0],parentPid:Number(againFields[1]),processGroup:Number(againFields[2]),startTicks:fields[19],
+      namespace,namespacePids,signalPid,signalNamespace:translated?observer.namespace:null,
+      observer:{hostPid:observer.hostPid,namespacePid:observer.namespacePid,namespace:observer.namespace},
       commandSha256:hash(command),command:command.toString('utf8').split('\0').filter(Boolean),
       executable:await readlink('/proc/'+pid+'/exe').catch(()=>null)};
   }catch(error){if(['ENOENT','ESRCH'].includes(error.code))return null;throw error;}
 }
 async function ownedProcesses(prefix){
-  const found=[];
+  const found=[],observer=await processObserver();
   for(const entry of await readdir('/proc')){
-    if(!/^[0-9]+$/.test(entry)||Number(entry)===process.pid)continue;
+    if(!/^[0-9]+$/.test(entry)||Number(entry)===observer.hostPid)continue;
     let bytes;
     try{bytes=await readFile('/proc/'+entry+'/environ');}catch(error){if(['ENOENT','ESRCH','EACCES','EPERM'].includes(error.code))continue;throw error;}
     const match=bytes.toString('utf8').split('\0').find(value=>value.startsWith('AVIARY_BROWSER_RECEIVING_OWNER='+prefix));
@@ -162,11 +227,24 @@ async function ownedProcesses(prefix){
   }
   return found;
 }
+function matchesLiveOwnedChild(record,entry){
+  return Boolean(entry&&!entry.closed&&entry.child.pid&&record.owner===ownerMarker&&
+    record.signalPid===entry.child.pid&&record.signalNamespace===record.observer?.namespace&&
+    record.parentPid===record.observer?.hostPid&&
+    isDeepStrictEqual(record.command,entry.child.spawnargs));
+}
 async function signalExact(record,signal){
   const current=await processRecord(record.pid);
   if(!current||current.state==='Z')return false;
-  expect(current.startTicks===record.startTicks&&current.commandSha256===record.commandSha256,'Owned process identity changed before cleanup');
-  try{process.kill(current.processGroup===current.pid?-current.pid:current.pid,signal);}catch(error){if(error.code!=='ESRCH')throw error;}
+  expect(current.startTicks===record.startTicks&&current.commandSha256===record.commandSha256&&
+    current.namespace===record.namespace&&isDeepStrictEqual(current.namespacePids,record.namespacePids),
+    'Owned process identity changed before cleanup');
+  expect(Number.isSafeInteger(current.signalPid)&&current.signalPid>0&&current.signalPid===record.signalPid&&
+    current.signalNamespace===record.signalNamespace,
+    'The original host process has no verified PID in this receiving namespace; retain its unresolved state');
+  // /proc PIDs may name the host namespace. Signals use only the verified current-namespace PID.
+  // Original live ChildProcess handles retain their detached-group close path in finishChild.
+  try{process.kill(current.signalPid,signal);}catch(error){if(error.code!=='ESRCH')throw error;}
   return true;
 }
 async function drainOrphans(records,label){
@@ -205,8 +283,10 @@ async function spawnChild(command,argv,label,{stdin=false,cwd=APP,timeoutMs=9000
     });
     children.add(entry);
     if(child.stdin)child.stdin.on('error',()=>{});
-    entry.record=child.pid?await processRecord(child.pid):null;
-    await publish(prefix+'.process.json',{pid:child.pid||null,record:entry.record,owner:ownerMarker,launch:launch});
+    const observer=await processObserver();
+    // ChildProcess.pid is relative to this process namespace; it is not a /proc host directory.
+    entry.record=child.pid&&observer.hostPid===process.pid?await processRecord(child.pid):null;
+    await publish(prefix+'.process.json',{pid:child.pid||null,record:entry.record,observer,identityMethod:'OWNED_CHILDPROCESS',owner:ownerMarker,launch:launch});
     return entry;
   }catch(error){
     if(child?.pid){try{process.kill(-child.pid,'SIGKILL');}catch{}}
@@ -526,15 +606,11 @@ async function inspectTables(mapping){
   }
   await ensureCurrent(mapping.revision,mapping.document);
   await page.locator('[data-tab=preview]').click();const inspected={};
+  const selection={revision:mapping.revision,document:mapping.document,
+    workspaceId:historical.workspace.id,mappingSha256:historical.mappingSha256,
+    sourceManifestSha256:historical.sourceManifestSha256};
   for(const [kind,count] of Object.entries(EXPECTED_COUNTS)){
-    const observed=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/preview'&&response.request().method()==='POST',{timeout:30000});
-    observed.catch(()=>{});
-    if(await page.locator('#previewKind').inputValue()===kind)await page.locator('#refreshPreview').click();
-    else await page.locator('#previewKind').selectOption(kind);
-    const response=await observed,document=await response.json();
-    expect(response.ok(),'Original source table preview failed '+kind);
-    expect(document.counts[kind]===count&&document.tables[kind].length===count,'Original displayed source table differs '+kind);
-    expect(document.ready,'Original source preview is not ready '+kind);
+    const document=await selectPreview(kind,selection);
     inspected[kind]={count,displayed:document.tables[kind].length};
     await publish(path.join(stepDirectory('08-five-tables-reviewed'),kind+'.preview.json'),document);
   }
@@ -742,12 +818,29 @@ async function screenshotPhase(name,shots){
   return completeStep(name,{screenshots,independentImageInspection:'PENDING',pixelFiles:'LOCAL_QA'});
 }
 
-async function selectPreview(kind){
-  const pending=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/preview'&&response.request().method()==='POST',{timeout:30000});pending.catch(()=>{});
+async function selectPreview(kind,selection=null){
+  const pending=page.waitForResponse(response=>{
+    const request=response.request(),url=new URL(response.url());
+    if(url.origin!==currentServer.origin||url.pathname!=='/api/preview'||request.method()!=='POST')return false;
+    let requested;try{requested=request.postDataJSON();}catch{return false;}
+    return requested?.table===kind&&Number(requested.offset??0)===0&&
+      (!selection||(requested.revision===selection.revision&&isDeepStrictEqual(requested.document,selection.document)));
+  },{timeout:30000});pending.catch(()=>{});
   if(await page.locator('#previewKind').inputValue()===kind)await page.locator('#refreshPreview').click();
   else await page.locator('#previewKind').selectOption(kind);
   const response=await pending,value=await response.json();
-  expect(response.ok()&&value.tables?.[kind]&&value.counts[kind]===EXPECTED_COUNTS[kind],'Original visible preview differs: '+kind);
+  expect(response.ok()&&value.page?.table===kind&&value.page.offset===0&&Array.isArray(value.tables?.[kind]),'Original visible preview selection differs: '+kind);
+  const rows=value.tables[kind],count=EXPECTED_COUNTS[kind];
+  expect(value.counts[kind]===count&&value.page.total===count&&rows.length===count&&value.page.nextOffset===null,'Original visible preview row counts differ: '+kind);
+  expect(value.ready,'Original source preview is not ready: '+kind);
+  if(selection)expect(value.revision===selection.revision&&value.workspace?.id===selection.workspaceId&&
+    value.mappingSha256===selection.mappingSha256&&value.sourceManifestSha256===selection.sourceManifestSha256,
+    'Original preview mapping or source selection differs: '+kind);
+  await page.waitForFunction(({kind,keys})=>{
+    if(document.querySelector('#previewKind')?.value!==kind)return false;
+    const rows=[...document.querySelectorAll('#previewRows > tr')];
+    return rows.length===keys.length&&rows.every((row,index)=>row.children[1]?.textContent===keys[index]);
+  },{kind,keys:rows.map(row=>String(row.key))},{timeout:30000});
   return value;
 }
 async function allPhaseRecords(){
@@ -877,7 +970,8 @@ async function runJourney(){
     schema:SCHEMA,operationId:OPERATION,inputSha256:identity.inputSha256,startedAt:identity.created,
     publicWorkspaceId:originalPublic.workspace.id,providerWorkspaceId:originalProvider.workspace.id,
     originalProviderOperationId:originalRun.id,source:originalPublic.source,initialMappingRevision:originalPublic.mapping.revision,
-    finalMapping:current,applicationSource:sourcePin,
+    finalMapping:current,applicationSource:sourcePin,receivingSourceAdoption,
+    executionSource:{runner:inputValue.runner,support:inputValue.support},
     nativePackage:{...nativeDownload.file,selectionRevision:native.archive.revision,jobId:native.job.id},
     publicWorkspaceExport:{...exportDownload.file,jobId:handoff.job.id},
     receivedPublic:{application:received.application,workspace:received.workspace},
@@ -921,7 +1015,7 @@ finally{
     if(entry===lockChild)continue;
     await finishChild(entry,{stop:true}).catch(error=>cleanupErrors.push(briefError(error)));
   }
-  const nonLock=(await ownedProcesses(ownerMarker).catch(error=>{cleanupErrors.push(briefError(error));return [];})).filter(value=>value.pid!==lockChild?.child.pid);
+  const nonLock=(await ownedProcesses(ownerMarker).catch(error=>{cleanupErrors.push(briefError(error));return [];})).filter(value=>!matchesLiveOwnedChild(value,lockChild));
   if(nonLock.length){
     cleanupErrors.push({name:'CleanupError',message:'Application descendants required forced cleanup after the original close paths'});
     await drainOrphans(nonLock,'forced-current-owned-processes').catch(error=>cleanupErrors.push(briefError(error)));
