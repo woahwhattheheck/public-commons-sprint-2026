@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MIT. One retained native request-stream, merchant-agent, editor and customer operation.
 import assert from 'node:assert/strict';
-import {readFile, writeFile, mkdir, readdir, lstat, realpath, rename, symlink, access} from 'node:fs/promises';
+import {readFile, writeFile, open, link, unlink, mkdir, readdir, lstat, realpath, rename, symlink, access} from 'node:fs/promises';
 import {join, resolve, dirname, relative, sep} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash, randomUUID, randomBytes} from 'node:crypto';
@@ -30,11 +30,25 @@ const pretty=value=>JSON.stringify(value,null,2)+'\n',now=()=>new Date().toISOSt
 const load=path=>import(pathToFileURL(join(sourceRoot,path)).href);
 const exists=async path=>access(path).then(()=>true,error=>{if(error.code==='ENOENT')return false;throw error;});
 const json=async path=>JSON.parse(await readFile(path,'utf8'));
+async function syncDirectory(path){
+  const handle=await open(path,'r');try{await handle.sync();}finally{await handle.close();}
+}
 async function save(path,value){
   await mkdir(dirname(path),{recursive:true,mode:0o700});
-  const temp=path+'.'+randomUUID()+'.part';
-  await writeFile(temp,Buffer.isBuffer(value)?value:pretty(value),{mode:0o600,flag:'wx'});
-  await rename(temp,path);return path;
+  const temp=path+'.'+randomUUID()+'.part',handle=await open(temp,'wx',0o600);
+  try{await handle.writeFile(Buffer.isBuffer(value)?value:pretty(value));await handle.sync();}
+  finally{await handle.close();}
+  await rename(temp,path);await syncDirectory(dirname(path));return path;
+}
+async function retainOriginal(path,bytes){
+  await mkdir(dirname(path),{recursive:true,mode:0o700});
+  if(await exists(path)){assert.deepEqual(await readFile(path),bytes,'Retain the first original bytes: '+path);return;}
+  const temp=path+'.'+randomUUID()+'.part',handle=await open(temp,'wx',0o600);
+  try{await handle.writeFile(bytes);await handle.sync();}finally{await handle.close();}
+  try{await link(temp,path);}
+  catch(issue){if(issue.code!=='EEXIST')throw issue;assert.deepEqual(await readFile(path),bytes);}
+  finally{await unlink(temp);}
+  await syncDirectory(dirname(path));
 }
 await mkdir(workRoot,{recursive:true,mode:0o700});
 const resultPath=join(workRoot,'result.json');
@@ -85,7 +99,38 @@ let upstream,workspace,merchant,client,browser,context,error;
 let cliMain,downloadGrpcExport,source,base,records,normalized,contract;
 const environment={...process.env,GRPC_REQUEST_STREAM_DEMO_AUTHORIZATION:randomBytes(24).toString('hex'),
   GRPC_REQUEST_STREAM_MCP_TOKEN:randomBytes(32).toString('hex')};
-const callsNow=()=>result.sessions.reduce((sum,item)=>sum+(item===session?upstream?.counts().calls??item.counts?.calls??0:item.counts?.calls??0),0);
+let observedCalls=null,currentNativeCall=null,observationWrite=Promise.resolve();
+const callJournalPath=join(workRoot,'operator','native-calls.json');
+const callsNow=()=>observedCalls?.length??result.applicationCalls??0;
+async function loadCallObservations(){
+  if(!await exists(callJournalPath)){observedCalls=[];return;}
+  const journal=await json(callJournalPath);
+  assert.equal(journal.schema,'stellar-forge.grpc-native-call-observations.v1');
+  assert.equal(journal.operation,OPERATION);assert.equal(journal.runId,result.runId);
+  assert(Array.isArray(journal.calls));const ids=new Set();
+  for(const entry of journal.calls){
+    assert(typeof entry.id==='string'&&!ids.has(entry.id));ids.add(entry.id);
+    assert([UPLOAD,EXCHANGE].includes(entry.method));assert(typeof entry.sessionId==='string');
+    assert.equal(result.refs['call-'+entry.name],entry.operationId,'Keep the observed original call UUID.');
+  }
+  observedCalls=journal.calls;
+}
+function observeNativeCall(entry){
+  const binding=currentNativeCall;
+  const writing=observationWrite.then(async()=>{
+  const observation={id:randomUUID(),sessionId:session.id,observedAt:now(),
+    name:binding?.name??null,operationId:binding?.operationId??null,
+    method:entry.method,sessionCall:entry.number};
+  // The endpoint awaits this durable record before processing any application input.
+  const next=[...observedCalls,observation];
+  await save(callJournalPath,{schema:'stellar-forge.grpc-native-call-observations.v1',
+    operation:OPERATION,runId:result.runId,calls:next});
+  observedCalls=next;
+  assert(binding,'The actual application call must belong to its original dispatch.');
+  assert.equal(entry.method,binding.method);
+  });
+  observationWrite=writing.catch(()=>{});return writing;
+}
 const privateFile=async(name,bytes)=>save(join(workRoot,name),bytes);
 const model=()=>workspace.model;
 const mcp=(name,args={})=>client.call('merchant_grpc_'+name,{workspace:'request',...args},{timeoutMs:60000});
@@ -100,17 +145,32 @@ async function full(value,name){
 async function nativeCall(name,method,input,{cancelAfterProgress=false}={}){
   const operationId=id('call-'+name);await checkpoint();
   const earlier=await model().readAttempt({id:operationId});
-  if(earlier){result.calls[name]={operationId,phase:earlier.phase,recovered:true};await checkpoint();return earlier;}
+  if(earlier){
+    result.calls[name]={...result.calls[name],operationId,phase:earlier.phase,
+      responseSha256:earlier.responseSha256,inputSha256:earlier.inputSha256,
+      requestStream:earlier.requestStream,recovered:true};
+    await checkpoint();return earlier;
+  }
+  assert(!observedCalls.some(entry=>entry.operationId===operationId),
+    'An observed native call must retain its original attempt before any receiving continuation.');
   result.calls[name]={operationId,phase:'DISPATCHING',startedAt:now()};await checkpoint();
   const before=upstream.counts().receivedMessages;
+  assert.equal(currentNativeCall,null);currentNativeCall={name,operationId,method};
   const pending=mcp('call',{revision:result.refs.base,operationId,method,input});
-  if(cancelAfterProgress){
-    const until=Date.now()+10000;
-    while(upstream.counts().receivedMessages<before+2&&Date.now()<until)await pause(5);
-    assert(upstream.counts().receivedMessages>=before+2,'Observe original native progress before cancellation.');
-    const cancelled=await mcp('cancel_call',{operationId});assert(cancelled.cancellationRequested);
-  }
-  const observed=await full(await pending,'call-'+name);
+  pending.catch(()=>{});
+  let observed;
+  try{
+    if(cancelAfterProgress){
+      const until=Date.now()+10000;
+      while(upstream.counts().receivedMessages<before+2&&Date.now()<until)await pause(5);
+      assert(upstream.counts().receivedMessages>=before+2,'Observe original native progress before cancellation.');
+      const cancelled=await mcp('cancel_call',{operationId});assert(cancelled.cancellationRequested);
+    }
+    observed=await full(await pending,'call-'+name);
+  }catch(issue){
+    await mcp('cancel_call',{operationId}).catch(()=>{});
+    await pending.catch(()=>{});throw issue;
+  }finally{currentNativeCall=null;}
   assert.equal(observed.id,operationId);
   result.calls[name]={operationId,phase:observed.phase,responseSha256:observed.responseSha256,
     inputSha256:observed.inputSha256,requestStream:observed.requestStream,
@@ -139,6 +199,7 @@ async function retainedStream(name,attempt){
   return {values,exportId:received.exportId,bytes:bytes.length,sha256:hash(bytes),directory:received.directory};
 }
 try{
+  await loadCallObservations();
   const selection=await json(selectionPath);assert.equal(selection.operation,OPERATION);
   if(process.env.SWARM_NATIVE_RECORD){
     const nativeRequest=await json(join(process.env.SWARM_NATIVE_RECORD,'request.json'));
@@ -171,7 +232,7 @@ try{
   for(const name of ['inputs','downloads','captures','operator'])await mkdir(join(workRoot,name),{recursive:true,mode:0o700});
   if(mode!=='browser'){
     upstream=await startRequestStreamExample({port:result.refs.servicePort??0,
-      authorization:environment.GRPC_REQUEST_STREAM_DEMO_AUTHORIZATION});
+      authorization:environment.GRPC_REQUEST_STREAM_DEMO_AUTHORIZATION,observeCall:observeNativeCall});
     result.refs.servicePort=Number(upstream.target.split(':').at(-1));await checkpoint();
   }
   source=await json(join(sourceRoot,GRPC+'examples/request-stream-source.json'));
@@ -268,24 +329,58 @@ try{
     await step('original-terminal-recovery',async()=>{
       const operationId=id('call-upload'),attemptPath=join(workRoot,'workspace','attempts',operationId+'.json');
       const outputPath=join(workRoot,'workspace','attempts',operationId+'.output');
-      const originalAttempt=await readFile(attemptPath),originalOutput=await readFile(outputPath);
-      const before=upstream.counts().calls;
-      try{
-        const interrupted=JSON.parse(originalAttempt);interrupted.phase='OUTCOME_UNCONFIRMED';
-        interrupted.error='LOCAL_FINALIZATION_INTERRUPTED';interrupted.grpcCode=13;
-        interrupted.nextAction='Earlier failure guidance';delete interrupted.requestStream;
-        await save(attemptPath,interrupted);
-        const recovered=await full(await mcp('attempt',{operationId}),'recovered-upload');
-        inputDone(recovered,128);
-        for(const key of ['error','grpcCode','nextAction'])assert.equal(Object.hasOwn(recovered,key),false);
-        const changed=JSON.parse(originalOutput);changed.output.messages='129';changed.sha256=hash(canonical(changed.output));
-        await save(outputPath,changed);
-        await assert.rejects(()=>model().readAttempt({id:operationId}),issue=>issue.code==='GRPC_CALL_OUTPUT_CHANGED');
-        assert.equal((await json(attemptPath)).responseSha256,JSON.parse(originalAttempt).responseSha256);
-      }finally{await save(outputPath,originalOutput);await save(attemptPath,originalAttempt);}
+      const recovery=join(workRoot,'operator','terminal-recovery'),journalPath=join(recovery,'journal.json');
+      const attemptBackup=join(recovery,'original-attempt.json'),outputBackup=join(recovery,'original-output.json');
+      let journal;
+      if(await exists(journalPath))journal=await json(journalPath);
+      else{
+        const attemptBytes=await readFile(attemptPath),outputBytes=await readFile(outputPath);
+        const attempt=JSON.parse(attemptBytes),output=JSON.parse(outputBytes);
+        assert.equal(attempt.id,operationId);assert.equal(output.id,operationId);
+        assert.equal(attempt.fingerprint,output.fingerprint);
+        assert.equal(attempt.responseSha256,output.sha256);assert.equal(hash(canonical(output.output)),output.sha256);
+        await retainOriginal(attemptBackup,attemptBytes);await retainOriginal(outputBackup,outputBytes);
+        journal={schema:'stellar-forge.grpc-terminal-recovery.v1',operation:OPERATION,runId:result.runId,
+          operationId,fingerprint:attempt.fingerprint,attemptSha256:hash(attemptBytes),
+          outputSha256:hash(outputBytes),state:'ORIGINALS_RETAINED',createdAt:now()};
+        await save(journalPath,journal);
+      }
+      assert.equal(journal.schema,'stellar-forge.grpc-terminal-recovery.v1');
+      assert.equal(journal.operation,OPERATION);assert.equal(journal.runId,result.runId);assert.equal(journal.operationId,operationId);
+      const originalAttempt=await readFile(attemptBackup),originalOutput=await readFile(outputBackup);
+      assert.equal(hash(originalAttempt),journal.attemptSha256);assert.equal(hash(originalOutput),journal.outputSha256);
+      assert.equal(JSON.parse(originalAttempt).fingerprint,journal.fingerprint);
+      assert.equal(JSON.parse(originalOutput).fingerprint,journal.fingerprint);
+      // A resumed phase first restores the durable originals, even if the process died during an injection.
+      await save(outputPath,originalOutput);await save(attemptPath,originalAttempt);
+      const before=callsNow();
+      if(journal.state!=='COMPLETE'){
+        try{
+          journal.state='INJECTING_METADATA';await save(journalPath,journal);
+          const interrupted=JSON.parse(originalAttempt);interrupted.phase='OUTCOME_UNCONFIRMED';
+          interrupted.error='LOCAL_FINALIZATION_INTERRUPTED';interrupted.grpcCode=13;
+          interrupted.nextAction='Earlier failure guidance';delete interrupted.requestStream;
+          await save(attemptPath,interrupted);
+          const recovered=await full(await mcp('attempt',{operationId}),'recovered-upload');
+          inputDone(recovered,128);
+          for(const key of ['error','grpcCode','nextAction'])assert.equal(Object.hasOwn(recovered,key),false);
+          journal.state='INJECTING_CHANGED_TERMINAL';await save(journalPath,journal);
+          const changed=JSON.parse(originalOutput);changed.output.messages='129';changed.sha256=hash(canonical(changed.output));
+          await save(outputPath,changed);
+          await assert.rejects(()=>model().readAttempt({id:operationId}),issue=>issue.code==='GRPC_CALL_OUTPUT_CHANGED');
+          assert.equal((await json(attemptPath)).responseSha256,JSON.parse(originalAttempt).responseSha256);
+        }finally{
+          await save(outputPath,originalOutput);await save(attemptPath,originalAttempt);
+          journal.state='ORIGINALS_RESTORED';await save(journalPath,journal);
+        }
+      }
       const final=await model().readAttempt({id:operationId});inputDone(final,128);
-      assert.equal(upstream.counts().calls,before);
-      return {operationId,responseSha256:final.responseSha256,firstResultPreserved:true,staleFailureCleared:true,additionalCalls:0};
+      assert.equal(callsNow(),before);
+      const value={operationId,responseSha256:final.responseSha256,firstResultPreserved:true,
+        staleFailureCleared:true,additionalCalls:0,originalAttemptSha256:journal.attemptSha256,
+        originalOutputSha256:journal.outputSha256};
+      journal.state='COMPLETE';journal.value=value;journal.finishedAt=now();await save(journalPath,journal);
+      return value;
     });
   }
   if(mode!=='core')await step('industrial-sequence-editor',async()=>{
@@ -380,6 +475,9 @@ try{
       assert.equal(reviewed.planValidation.valid,true);
       const adopted=await full(await mcp('upgrade_adopt',{operationId:validId,expectedReviewSha256:reviewed.reviewSha256}),'upgrade-adopted');
       const revision=adopted.revision.id;result.refs.adopted=revision;await checkpoint();
+      current=await model().state();
+      if((current.currentRevision??current.current?.revision)!==revision)
+        await model().checkout({revision,baseRevision:current.currentRevision??current.current?.revision});
       const preparation=id('preparation-candidate');await checkpoint();
       await mcp('prepare',{revision,operationId:preparation});
       const exported=await mcp('export',{kind:'customer',preparation});
@@ -421,6 +519,11 @@ try{
   if(upstream){session.counts=upstream.counts();await upstream.close();session.closed.upstream=true;assert.equal(upstream.counts().active,0);}
   result.applicationCalls=callsNow();
   assert.equal(Object.keys(result.calls).length,6);assert.equal(result.applicationCalls,6);
+  const expectedCalls=new Map(Object.entries(result.calls).map(([name,value])=>[value.operationId,name]));
+  assert.equal(expectedCalls.size,6);assert.equal(new Set(observedCalls.map(entry=>entry.operationId)).size,6);
+  for(const observation of observedCalls)assert.equal(expectedCalls.get(observation.operationId),observation.name);
+  result.nativeCallObservations={path:'operator/native-calls.json',calls:observedCalls.length,
+    sha256:hash(await readFile(callJournalPath))};
   result.state=result.phases['industrial-sequence-editor']?.state==='COMPLETE'?'COMPLETE':'CORE_COMPLETE_BROWSER_PENDING';
   result.finishedAt=now();
 }catch(issue){
