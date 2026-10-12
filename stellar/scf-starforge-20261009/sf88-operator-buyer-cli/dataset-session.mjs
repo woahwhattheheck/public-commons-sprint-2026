@@ -8,7 +8,7 @@ import { config, operation, execution, InputError, need } from './config.mjs';
 import { execute } from './execute.mjs';
 import { createOperatorApproval, checkOperatorChannel } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { analyzeOne } from '../sf52-buyer-outcomes/outcomes.mjs';
-import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery } from './dataset-page.mjs';
+import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery, bindDatasetResponseMetadata } from './dataset-page.mjs';
 import { MAX_DATASET_PAGE_BYTES, MAX_DATASET_PAGES } from '../sf100-buyer-dataset-delivery/deliver.mjs';
 import {pendingUnpaidContinuation,inspectUnpaidContinuation,continueUnpaidPage} from './dataset-unpaid.mjs';
 
@@ -281,8 +281,9 @@ async function nativePage(definition, cfg, result, previous, index) {
       f.bytes === body.length && f.path === cfg.responseFile.destination &&
       !f.cleanupWarnings?.length && s.evidencePath === evidencePath, 'DATASET_RESULT_NOT_COMPLETE');
   }
-  const page = inspectDatasetPage(body, {url:cfg.operation.url, previous,
-    expectedSnapshot:definition.expectedSnapshot, maxRows:definition.limits.maxRows});
+  const page = await bindDatasetResponseMetadata(inspectDatasetPage(body, {url:cfg.operation.url, previous,
+    expectedSnapshot:definition.expectedSnapshot, maxRows:definition.limits.maxRows}), cfg,
+    {status:b.httpStatus, nativeBuyerStatus:b.status});
   return {...page, intentId, requestUrl:cfg.operation.url, responsePath:cfg.responseFile.destination,
     evidencePath, evidenceSha256:digest(evidenceBytes), nativeBuyerStatus:b.status,
     originalOutcome:outcome, operatorReservation:e.operatorReservation,
@@ -354,6 +355,7 @@ async function inspectUnlocked(directory) {
     report.acquiredRows = page.nextOffset;
     report.totalRows = page.total;
     report.snapshot = page.snapshot;
+    if (page.semantics) report.semantics = page.semantics;
     previous = page;
   }
   if (previous?.nextCursor === null) report.status = 'COMPLETE';
