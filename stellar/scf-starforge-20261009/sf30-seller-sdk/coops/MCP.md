@@ -88,3 +88,21 @@ The console owns capture/backfill/export limits. Retained data exports are bound
 After authentication rejection, reopen the original session reference. After an interrupted action, retain its exact request. If file size/hash changes, reconcile the selected source before continuing; do not overwrite a receiving manifest with another one.
 
 The catalogue imports only the pure tool contract. The existing lazy registry loads runtime code when the host selects its configured CO-OPS attachment. Other providers and signer/payment authorization remain unchanged.
+
+## Complete coastal analysis
+
+`merchant_coops_analysis_export` joins two original retained edition identities
+to the complete analytical workbook. Supply `workspace`, the stable
+`operationId`, current `expectedRevision`, `observationsEditionId` and
+`predictionsEditionId`. Optional `options` retain the GMT window, quality,
+inference/tolerance exclusions, sigma and residual thresholds. Optional
+`analyst` retains name, project, question, interpretation and follow-up.
+
+The native result includes `workbookExportId`, `portableExportId` and every
+`files[]` descriptor. Use the existing export selectors with
+`merchant_coops_files` and `merchant_coops_file_read` to receive the actual
+complete HTML, editable workbook, all numerical/source files and manifest.
+The original journal reconciles an interrupted request before revision checks.
+Accepted source no-data outcomes remain explicit missing coverage in the workbook.
+
+See [the complete analyst and native operating guide](analysis/README.md).

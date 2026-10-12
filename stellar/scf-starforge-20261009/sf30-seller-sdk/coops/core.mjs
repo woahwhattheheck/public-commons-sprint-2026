@@ -1,5 +1,6 @@
 // MIT. Coastal source operations over the original workspace, publisher and receiver.
 import {makeBackfillPlan} from './history.mjs';
+import {writeRetainedAnalysisBundle} from './analysis/retained.mjs';
 import {mappingValue,materializeExport,retainedExport,writeTableExport,writeSourcePackage,writeComparisonExport} from './exports.mjs';
 import {openWorkspaceStore,jsonBytes,stable} from '../stellar-expert/store.mjs';
 import {WORKSPACE_SCHEMA,workspaceSchema,ACTIONS,SOURCE_CONTRACT} from './schema.mjs';
@@ -219,6 +220,13 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
     else if(p.format==='report'){const output=await exportEdition(store,edition,annotations,table,p.format);result=await materializeExport(store,{id:'export-'+id,kind:'edition',editionId:edition.id,table,format:p.format,name:'coops-'+edition.id.slice(0,12)+'.html',type:output.type,createdAt:op.createdAt},async function*(){yield output.bytes;});}
     else result=await writeTableExport(store,{id:'export-'+id,editions:[edition],annotations,table,format:p.format,mapping:op.context?.mapping??null,createdAt:op.createdAt});
     await local(op,s=>{if(!s.exports.some(e=>e.id===result.id))s.exports.push(result);return result;});break;
+   }
+   case'analysis.export':{
+    result=op.materializedResult??await writeRetainedAnalysisBundle(store,{
+     id:'analysis-'+id,observationsEditionId:p.observationsEditionId,predictionsEditionId:p.predictionsEditionId,
+     options:p.options,analyst:p.analyst,createdAt:op.createdAt});
+    result=await local(op,s=>{for(const file of result.files)if(!s.exports.some(e=>e.id===file.id))s.exports.push(file);return result;});
+    break;
    }
    case'backfill.export':{
     const b=op.context.backfill,editions=[];for(const part of b.parts)if(part.editionId)editions.push(await store.edition(part.editionId));
