@@ -678,6 +678,61 @@ customer/operator handoff directories and portable reopen. Provider credentials
 stay in the existing private transport store. The installed acquisition command
 forwards to the original included Python client.
 
+## Operate a retained Databento historical migration
+
+The [Databento workspace](../sf30-seller-sdk/databento/WORKSPACE.md) joins
+original historical acquisition, retained source editions, instrument mappings,
+session and flag analysis, named migration reviews and customer warehouse
+delivery on the existing Python workspace.
+
+```sh
+npx --no-install starforge databento-acquire --help
+npx --no-install starforge databento-workspace create \
+  --dir /private/databento-migration --dataset /private/prepared/workspace.json
+npx --no-install starforge databento-workspace serve \
+  --dir /private/databento-migration --port 8431
+```
+
+Open the printed private operator URL to inspect each complete saved source
+edition, review records and findings, select customer columns and retain the
+resulting source revision. The interface uses the original authenticated server.
+A preview returns a complete assessment and a bounded page of original records;
+the source remains complete. The streaming handoff writes every selected row
+from the reviewed revision, including sources larger than a native preview
+response.
+
+```sh
+npx --no-install starforge databento-workspace handoff \
+  --dir /private/databento-migration --preview BUILD_PREVIEW_ID \
+  --out /private/databento-customer --audience customer
+npx --no-install starforge databento-workspace handoff \
+  --dir /private/databento-migration --preview BUILD_PREVIEW_ID \
+  --out /private/databento-operator --audience operator
+```
+
+Choose the saved build result in the UI for these commands. Customer delivery
+contains mapped records and customer-facing metadata; the operator handoff also
+retains the native workspace and its source, review and operation history.
+Reopen uses the original portable workspace format in a new directory.
+
+The [core contract](../sf30-seller-sdk/databento/CORE_CONTRACT.md) defines exact
+nanosecond timestamps and fixed-point prices, same-scope baseline/preview
+comparison, scoped instrument identities, source closure and complete compressed
+capture validation. The acquisition command forwards to the included original
+Databento SDK adapter. Its provider operations require the customer's configured
+account and dataset rights; reading and processing retained captures works
+offline. The acquisition guide covers original cost estimates, batch job detail
+responses, complete downloads, exact DBN projection and portable source handoff.
+
+Receive the complete customer delivery into the original SQLite warehouse with
+`databento-warehouse init --warehouse /private/customer-warehouse`, then
+`databento-warehouse receive --warehouse /private/customer-warehouse
+--delivery-directory /private/databento-customer`. Prefix both commands with
+`npx --no-install starforge`. The [customer receiving guide](../sf30-seller-sdk/databento/receiving/README.md)
+covers exact-value queries, named edition activation and rollback, complete
+customer export, backup and create-only restore. Acquisition and warehouse
+commands use Python from `DATABENTO_PYTHON_EXECUTABLE` or `python3`.
+
 ## Operate a retained Allium data product
 
 The Allium commands package the original Explorer acquisition and the same
