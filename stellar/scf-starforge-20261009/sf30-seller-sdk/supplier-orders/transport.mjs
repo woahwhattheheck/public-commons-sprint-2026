@@ -4,8 +4,9 @@ import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { clone, identifier, now } from '../opensearch/workspace/store.mjs';
-import { data, digest, fail, object, reviewDocument, projectOrder, text } from './core.mjs';
+import { data, digest, fail, object, reviewDocument, projectOrder, text, orderId as validateOrderId } from './core.mjs';
 import { parseOpenTransDocument } from './opentrans.mjs';
+import { DEFAULT_SUPPLIER_ORDER_PROFILE_ID, defaultSupplierOrderProfile, supplierOrderProfileSha256 } from './profiles.mjs';
 import { authorization, transportTlsFiles, SUPPLIER_HTTPS_CONFIG_SCHEMA } from './transport-config.mjs';
 
 export const TRANSMISSION_SCHEMA='stellar-forge.supplier-order-transmission.v1';
@@ -22,9 +23,14 @@ function sourceFileIds(record){
   const ids=[record.source,record.http?.response,record.resolution?.evidence,...(record.events??[]).flatMap(e=>[e.source,e.http?.response,e.evidence])].filter(Boolean);
   return ids;
 }
-export function validateSupplierOrderTransmission(record,{fileExists,documentExists}={}){
+export function validateSupplierOrderTransmission(record,{fileExists,documentExists,profileSha256}={}){
   if(record.schema!==TRANSMISSION_SCHEMA)return;
   data(record);const {sha256,...body}=record;
+  if(record.profileId!==undefined||record.profileSha256!==undefined){
+    if(typeof record.profileId!=='string'||!/^[a-z0-9][a-z0-9._-]{0,95}$/.test(record.profileId)||!/^[a-f0-9]{64}$/.test(record.profileSha256??'')||record.channel?.profileSha256!==record.profileSha256)fail('ORDER_TRANSMISSION_PROFILE_DIFFERS','The retained delivery profile differs from its declared channel.',409);
+  }
+  const selectedProfileSha=record.profileSha256??supplierOrderProfileSha256(defaultSupplierOrderProfile());
+  if(profileSha256!==undefined&&selectedProfileSha!==profileSha256)fail('ORDER_TRANSMISSION_PROFILE_DIFFERS','The retained transmission belongs to a different customer profile.',409);
   if(sha256!==digest(body)||!Number.isSafeInteger(record.revision)||record.revision<1||!Array.isArray(record.events)||record.events.length!==record.revision)
     fail('ORDER_TRANSMISSION_RECORD_CHANGED','The complete transmission history differs from its original seal.',409);
   if(!['incoming','outgoing'].includes(record.direction)||!Array.isArray(record.orderIds)||!record.channel?.sha256||!record.workspaceId)
@@ -104,13 +110,15 @@ export class SupplierOrderTransport {
   channel(id){
     const channel=this.configuration.channels.find(c=>c.id===id);
     if(!channel)fail('ORDER_TRANSPORT_CHANNEL_NOT_CONFIGURED','Select a channel declared by this native workspace host.',409);
+    const selected=this.workspace.profile();
+    if(channel.profileSha256!==undefined&&channel.profileSha256!==selected.profileSha256||selected.profile.id!==DEFAULT_SUPPLIER_ORDER_PROFILE_ID&&channel.profileSha256!==selected.profileSha256)fail('ORDER_TRANSPORT_PROFILE_DIFFERS','The native host must declare this selected customer profile SHA on the negotiated channel before intake or delivery.',409,{profileId:selected.profile.id,profileSha256:selected.profileSha256,channelId:channel.id});
     return channel;
   }
-  channels(){this.workspace.assertOpen();return{schema:SUPPLIER_HTTPS_CONFIG_SCHEMA,configured:this.configuration.channels.length>0,channels:this.configuration.channels.map(c=>clone(c.public))};}
+  channels(){this.workspace.assertOpen();return{schema:SUPPLIER_HTTPS_CONFIG_SCHEMA,configured:this.configuration.channels.length>0,profileId:this.workspace.profile().profile.id,profileSha256:this.workspace.profile().profileSha256,channels:this.configuration.channels.map(c=>clone(c.public))};}
   raw(id){
     const record=parsed(this.workspace.db.prepare('SELECT record_json FROM supplier_order_transmissions WHERE id=?').get(identifier(id,'Transmission ID')));
     if(!record)fail('ORDER_TRANSMISSION_NOT_FOUND','Original transmission not found.',404);
-    validateSupplierOrderTransmission(record);return record;
+    validateSupplierOrderTransmission(record,{profileSha256:this.workspace.profile().profileSha256});return record;
   }
   visible(record){
     const {events,...body}=record;return{...clone(body),historyCount:events?.length??0,foreign:record.workspaceId!==this.workspace.store.id||!this.localPreparation(record)};
@@ -163,7 +171,7 @@ export class SupplierOrderTransport {
     this.recover();const p=page(offset,limit),where=[],args=[];
     if(direction!==undefined){if(!['incoming','outgoing'].includes(direction))fail('ORDER_TRANSPORT_DIRECTION_INVALID','Choose incoming or outgoing.');where.push("json_extract(record_json,'$.direction')=?");args.push(direction);}
     if(state!==undefined){text(state,'Transmission state',64);where.push('state=?');args.push(state);}
-    if(orderId!==undefined){text(orderId,'Order number',21);where.push("EXISTS(SELECT 1 FROM json_each(record_json,'$.orderIds') j WHERE j.value=?)");args.push(orderId);}
+    if(orderId!==undefined){validateOrderId(orderId,this.workspace.profile().profile);where.push("EXISTS(SELECT 1 FROM json_each(record_json,'$.orderIds') j WHERE j.value=?)");args.push(orderId);}
     const clause=where.length?' WHERE '+where.join(' AND '):'',total=Number(this.workspace.db.prepare('SELECT count(*) n FROM supplier_order_transmissions'+clause).get(...args).n);
     const rows=this.workspace.db.prepare("SELECT json_remove(record_json,'$.events') record_json,json_array_length(record_json,'$.events') history_count FROM supplier_order_transmissions"+clause+" ORDER BY json_extract(record_json,'$.updatedAt') DESC,id LIMIT ? OFFSET ?").all(...args,p.limit,p.offset);
     const items=[];let size=256;
@@ -188,7 +196,8 @@ export class SupplierOrderTransport {
       const reason=text(request.reason,'Reason for this delivery',4000),id='edi-'+digest(['outgoing',this.workspace.store.id,channel.id,channel.sha256,current.id,file.sha256]);
       const existing=parsed(this.workspace.db.prepare('SELECT record_json FROM supplier_order_transmissions WHERE id=?').get(id));
       if(existing){this.requireLocal(existing);return{transmissionId:id,transmission:this.visible(existing)};}
-      const at=now(),record=this.save({schema:TRANSMISSION_SCHEMA,id,workspaceId:this.workspace.store.id,direction:'outgoing',
+      const profile=this.workspace.profile();
+      const at=now(),record=this.save({schema:TRANSMISSION_SCHEMA,id,workspaceId:this.workspace.store.id,direction:'outgoing',...(profile.profile.id!==DEFAULT_SUPPLIER_ORDER_PROFILE_ID?{profileId:profile.profile.id,profileSha256:profile.profileSha256}:{}),
         channel:clone(channel.public),kind:current.kind,documentId:current.id,documentSha256:current.sha256,orderIds:clone(current.orderIds),source:publicFile(file),
         endpoint:channel.outgoing.endpoints[current.kind],state:'READY',recipientProcessing:'NOT_REPORTED',requestId:request.requestId,createdAt:at,attemptCount:0},
         {action:'prepare',requestId:request.requestId,reason});
@@ -196,7 +205,7 @@ export class SupplierOrderTransport {
     });
   });}
   verifyPreparedDocument(record){
-    const current=this.workspace.document({id:record.documentId});
+    const current=this.workspace.document({id:record.documentId});this.workspace.documentProfile(current.document);
     if(current.sha256!==record.documentSha256||current.source.sha256!==record.source.sha256||current.direction!=='outgoing')fail('ORDER_TRANSPORT_SELECTION_CHANGED','The retained delivery no longer matches its original prepared document.',409);
     const draft=this.workspace.draft({draftId:current.draftId});
     if(draft.revision!==current.draftRevision)fail('ORDER_TRANSPORT_DRAFT_CHANGED','The draft advanced after delivery was prepared. Cancel this intent and prepare the intended current XML.',409);
@@ -306,7 +315,7 @@ export class SupplierOrderTransport {
     });
   }
   receive({channelId,file,externalMessageId=null}){file=clone(file);return this.workspace.owned(async()=>{
-    const channel=this.channel(channelId);if(!channel.incoming)fail('ORDER_TRANSPORT_INTAKE_NOT_CONFIGURED','This channel has no incoming ORDER interface.',404);
+    const channel=this.channel(channelId),profile=this.workspace.profile();if(!channel.incoming)fail('ORDER_TRANSPORT_INTAKE_NOT_CONFIGURED','This channel has no incoming ORDER interface.',404);
     if(externalMessageId!==null)text(externalMessageId,'Original provider message identity',1000);
     const identity=externalMessageId??'sha256:'+file.sha256,id='edi-'+digest(['incoming',this.workspace.store.id,channel.id,identity]),requestId='edi-in-'+digest([this.workspace.store.id,channel.id,identity]);
     const request={requestId,channelId:channel.id,channelSha256:channel.sha256,externalMessageId,source:{sha256:file.sha256,bytes:file.bytes}};
@@ -321,7 +330,7 @@ export class SupplierOrderTransport {
         if(current.state!=='RECEIVING')fail('ORDER_TRANSPORT_RECEIVE_STATE_INVALID','The retained intake operation and receipt no longer agree.',409);
         record=this.save({...current,error:null},{action:'receive-resumed',requestId});reserved.operation={...reserved.operation,state:'RUNNING',owner:this.workspace.store.owner,updatedAt:now(),error:null};this.workspace.store.writeOperation(reserved.operation);
       }else{
-        record=this.save({schema:TRANSMISSION_SCHEMA,id,workspaceId:this.workspace.store.id,direction:'incoming',channel:clone(channel.public),kind:'ORDER',documentId:null,orderIds:[],source:publicFile(file),state:'RECEIVING',recipientProcessing:'NOT_REPORTED',requestId,externalMessageId,createdAt:now(),attemptCount:0},
+        record=this.save({schema:TRANSMISSION_SCHEMA,id,workspaceId:this.workspace.store.id,direction:'incoming',...(profile.profile.id!==DEFAULT_SUPPLIER_ORDER_PROFILE_ID?{profileId:profile.profile.id,profileSha256:profile.profileSha256}:{}),channel:clone(channel.public),kind:'ORDER',documentId:null,orderIds:[],source:publicFile(file),state:'RECEIVING',recipientProcessing:'NOT_REPORTED',requestId,externalMessageId,createdAt:now(),attemptCount:0},
           {action:'receive-complete-source',requestId,externalMessageId,source:publicFile(file)});
       }
       operation=reserved.operation;return{existing:false};
@@ -330,7 +339,7 @@ export class SupplierOrderTransport {
     this.running.add(id);
     try{
       const name='ORDER-'+file.sha256+'.xml',origin={kind:'configured-https',channelId:channel.id,channelSha256:channel.sha256,externalMessageId,transmissionId:id,receivedAt:record.createdAt};
-      const selected=await verifiedBody(this.workspace,file.id??file.fileId,record.source),document=await parseOpenTransDocument(selected.body,{name,provenance:origin});
+      const selected=await verifiedBody(this.workspace,file.id??file.fileId,record.source),document=await parseOpenTransDocument(selected.body,{name,provenance:origin,profile:profile.profile});
       if(document.kind!=='ORDER')fail('ORDER_TRANSPORT_INTAKE_KIND_INVALID','This negotiated endpoint receives original ORDER documents only.');
       if(document.header.supplierId!==channel.supplierId)fail('ORDER_TRANSPORT_SUPPLIER_DIFFERS','The original ORDER identifies another supplier. Its complete source is retained for review.',422);
       const source={id:digest([name,file.sha256,origin]),name,bytes:file.bytes,sha256:file.sha256,fileId:file.id??file.fileId,provenance:origin,capturedAt:record.createdAt};
