@@ -11,6 +11,10 @@ import { initializeStellarExpertWorkspaceMerchant, initializeApiPassWorkspaceMer
 
 const HELP = `Starforge merchant MCP
 
+  providers list|inspect PROVIDER_ID
+  init-provider PROVIDER_ID --options HOST_SETUP_JSON
+       (see providers --help)
+
   init-api-pass-workspaces --dir PRIVATE_DIRECTORY --connection API_PASS_CONNECTION_JSON
        [--release-store EXISTING_STORE] [--name NAME]
   api-pass tools|read|prepare|run|recover|inspect-export|download|reopen-download ...
@@ -269,6 +273,8 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args;
+  if (command === 'providers') return (await import('./provider-cli.mjs')).main(rest);
+  if (command === 'init-provider') return (await import('./provider-cli.mjs')).main(['init', ...rest]);
   if (command === 'api-pass') return (await import('./api-pass-cli.mjs')).main(rest);
   if (command === 'init-api-pass-workspaces') {
     const options = pairs(rest, ['--dir', '--connection', '--name', '--release-store']);

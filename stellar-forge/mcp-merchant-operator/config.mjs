@@ -1,3 +1,5 @@
+import { CORE_MERCHANT_CONFIG_KEYS } from './provider-contract.mjs';
+import { MERCHANT_PROVIDER_REGISTRY, configureMerchantProviders, merchantPrivateExports } from './providers.mjs';
 
 
 // MIT. Host configuration; MCP arguments never select files or executable modules.
@@ -24,7 +26,7 @@ function hostPath(value, base) {
   if (typeof value !== 'string' || !value || value.includes('\0')) throw failure('CONFIGURATION_ERROR', 'Host paths must be nonempty strings.');
   return isAbsolute(value) ? resolve(value) : resolve(base, value);
 }
-async function fleetDefinition(raw, base, releaseStore) {
+export async function readFleetConfiguration(raw, base, releaseStore) {
   if (raw === undefined) return null;
   exact(raw, ['planFile', 'directory', 'gatewayStateDirectory'], ['planFile', 'directory']);
   const fleet = { planFile: hostPath(raw.planFile, base), directory: hostPath(raw.directory, base),
@@ -400,7 +402,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'graphqlWorkspaceConnection', 'publisherConnection', 'arcgisWorkspaceConnection', 's3WorkspaceConnection', 'worldbankWorkspaceConnection', 'opensearchWorkspaceConnection', 'socrataWorkspaceConnection', 'odataWorkspaceConnection', 'fiscalDataWorkspaceConnection', 'geocodioWorkspaceConnection', 'webdavWorkspaceConnection', 'edgarWorkspaceConnection', 'sheetsWorkspaceConnection', 'nocodbWorkspaceConnection', 'ckanWorkspaceConnection', 'tenderlyWorkspaceConnection', 'opencageWorkspaceConnection', 'coingeckoWorkspaceConnection', 'redisWorkspaceConnection', 'usaSpendingWorkspaceConnection', 'researchWorkspaceConnection', 'grantsWorkspaceConnection', 'stellarExpertWorkspaceConnection', 'sourceWorkspaceConnection', 'clinicalTrialsWorkspaceConnection', 'baserowWorkspaceConnection', 'usgsWorkspaceConnection', 'feedsWorkspaceConnection', 'dspaceOperatorConnection', 'grpcWorkspaceConnection', 'openapiWorkspaceConnection', 'harWorkspaceConnection', 'n8nWorkspaceConnection', 'pricingConnection', 'woocommerceConnection', 'cocartWorkspaceConnection', 'mppConnection', 'grantWorkspaceConnection', 'buyerExpenseConnection', 'apiPassWorkspaceConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, [...CORE_MERCHANT_CONFIG_KEYS, ...MERCHANT_PROVIDER_REGISTRY.configurationInputs], CORE_MERCHANT_CONFIG_KEYS);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -409,102 +411,11 @@ export async function readMerchantConfig(path) {
     sources[alias] = await sourceDefinition(source, base, alias);
   }
   const config = { schema: CONFIG_SCHEMA, name: line(raw.name, 'Merchant name'),
-    releaseStore: hostPath(raw.releaseStore, base), exportsDirectory: hostPath(raw.exportsDirectory, base), sources,
-    catalog: raw.catalogConnection === undefined ? null
-      : await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-catalog.mjs')).readReleaseCatalogConfig(hostPath(raw.catalogConnection, base)),
-    facilitators: raw.facilitatorConnection === undefined ? null
-      : await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs')).readFacilitatorProfiles(hostPath(raw.facilitatorConnection, base)),
-    support: raw.supportConnection === undefined ? null
-      : await readSupportConfiguration(hostPath(raw.supportConnection, base)),
-    receiving: raw.receivingConnection === undefined ? null
-      : await (await import('./receiving.mjs')).readReceivingConfiguration(hostPath(raw.receivingConnection, base)),
-    pythonWorkspaces: raw.pythonWorkspaceConnection === undefined ? null
-      : await (await import('./python-workspace.mjs')).readPythonWorkspaceConfiguration(hostPath(raw.pythonWorkspaceConnection, base)),
-    worldbankWorkspaces: raw.worldbankWorkspaceConnection === undefined ? null
-      : await (await import('./worldbank-workspace.mjs')).readWorldBankWorkspaceConfiguration(hostPath(raw.worldbankWorkspaceConnection, base)),
-    fiscalDataWorkspaces: raw.fiscalDataWorkspaceConnection === undefined ? null
-      : await (await import('./fiscaldata-workspace.mjs')).readFiscalDataWorkspaceConfiguration(hostPath(raw.fiscalDataWorkspaceConnection, base)),
-    graphqlWorkspaces: raw.graphqlWorkspaceConnection === undefined ? null
-      : await (await import('./graphql-workspace.mjs')).readGraphqlWorkspaceConfiguration(hostPath(raw.graphqlWorkspaceConnection, base)),
-    odataWorkspaces: raw.odataWorkspaceConnection === undefined ? null
-      : await (await import('./odata-workspace.mjs')).readODataWorkspaceConfiguration(hostPath(raw.odataWorkspaceConnection, base)),
-    socrataWorkspaces: raw.socrataWorkspaceConnection === undefined ? null
-      : await (await import('./socrata-workspace.mjs')).readSocrataWorkspaceConfiguration(hostPath(raw.socrataWorkspaceConnection, base)),
-    webdavWorkspaces: raw.webdavWorkspaceConnection === undefined ? null
-      : await (await import('./webdav-tools.mjs')).readWebDavWorkspaceConfiguration(hostPath(raw.webdavWorkspaceConnection, base)),
-    edgarWorkspaces: raw.edgarWorkspaceConnection === undefined ? null
-      : await (await import('./sec-edgar-tools.mjs')).readEdgarWorkspaceConfiguration(hostPath(raw.edgarWorkspaceConnection, base)),
-    geocodioWorkspaces: raw.geocodioWorkspaceConnection === undefined ? null
-      : await (await import('./geocodio-workspace.mjs')).readGeocodioWorkspaceConfiguration(hostPath(raw.geocodioWorkspaceConnection, base)),
-    publishers: raw.publisherConnection === undefined ? null
-      : await readPublisherConfiguration(hostPath(raw.publisherConnection, base)),
-    pricing: raw.pricingConnection === undefined ? null
-      : await (await import('./pricing.mjs')).readPricingConfiguration(hostPath(raw.pricingConnection, base)),
-    cocartWorkspaces: raw.cocartWorkspaceConnection === undefined ? null
-      : await (await import('./cocart-workspace.mjs')).readCocartWorkspaceConfiguration(hostPath(raw.cocartWorkspaceConnection, base)),
-    woocommerce: raw.woocommerceConnection === undefined ? null
-      : await (await import('./woocommerce.mjs')).readWooCommerceConfiguration(hostPath(raw.woocommerceConnection, base)),
-    mpp: raw.mppConnection === undefined ? null : await (await import('./mpp-config.mjs')).readMppConfiguration(hostPath(raw.mppConnection, base)),
-    grantWorkspaces: raw.grantWorkspaceConnection === undefined ? null
-      : await (await import('./grant-workspace.mjs')).readGrantWorkspaceConfiguration(hostPath(raw.grantWorkspaceConnection, base)),
-    buyerExpenses: raw.buyerExpenseConnection === undefined ? null
-      : await (await import('./buyer-expenses.mjs')).readBuyerExpenseConfiguration(hostPath(raw.buyerExpenseConnection, base)) };
+    releaseStore: hostPath(raw.releaseStore, base), exportsDirectory: hostPath(raw.exportsDirectory, base), sources };
   await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).readReleaseState(config.releaseStore);
-  config.s3Workspaces = raw.s3WorkspaceConnection === undefined ? null
-    : await (await import('./s3-workspace.mjs')).readS3WorkspaceConfiguration(hostPath(raw.s3WorkspaceConnection, base), { releaseStore: config.releaseStore });
-  config.opensearchWorkspaces = raw.opensearchWorkspaceConnection === undefined ? null
-    : await (await import('./opensearch-workspace.mjs')).readOpenSearchWorkspaceConfiguration(hostPath(raw.opensearchWorkspaceConnection, base));
-  config.sheetsWorkspaces = raw.sheetsWorkspaceConnection === undefined ? null
-    : await (await import('./sheets-workspace.mjs')).readSheetsWorkspaceConfiguration(hostPath(raw.sheetsWorkspaceConnection, base));
-  config.nocodbWorkspaces = raw.nocodbWorkspaceConnection === undefined ? null
-    : await (await import('./nocodb-workspace.mjs')).readNocoDBWorkspaceConfiguration(hostPath(raw.nocodbWorkspaceConnection, base));
-  config.ckanWorkspaces = raw.ckanWorkspaceConnection === undefined ? null
-    : await (await import('./ckan-workspace.mjs')).readCkanWorkspaceConfiguration(hostPath(raw.ckanWorkspaceConnection, base));
-  config.tenderlyWorkspaces = raw.tenderlyWorkspaceConnection === undefined ? null
-    : await (await import('./tenderly-workspace.mjs')).readTenderlyWorkspaceConfiguration(hostPath(raw.tenderlyWorkspaceConnection, base));
-  config.redisWorkspaces = raw.redisWorkspaceConnection === undefined ? null
-    : await (await import('./redis-workspace.mjs')).readRedisWorkspaceConfiguration(hostPath(raw.redisWorkspaceConnection, base), { releaseStore: config.releaseStore });
-  config.stellarExpertWorkspaces = raw.stellarExpertWorkspaceConnection === undefined ? null
-    : await (await import('./stellar-expert-workspace.mjs')).readStellarExpertWorkspaceConfiguration(hostPath(raw.stellarExpertWorkspaceConnection, base));
-  config.coingeckoWorkspaces = raw.coingeckoWorkspaceConnection === undefined ? null
-    : await (await import('./coingecko-workspace.mjs')).readCoinGeckoWorkspaceConfiguration(hostPath(raw.coingeckoWorkspaceConnection, base));
-  config.grantsWorkspaces = raw.grantsWorkspaceConnection === undefined ? null
-    : await (await import('./grantsgov-workspace.mjs')).readGrantsWorkspaceConfiguration(hostPath(raw.grantsWorkspaceConnection, base));
-  config.usaSpendingWorkspaces = raw.usaSpendingWorkspaceConnection === undefined ? null
-    : await (await import('./usaspending-workspace.mjs')).readUSASpendingWorkspaceConfiguration(hostPath(raw.usaSpendingWorkspaceConnection, base));
-  config.researchWorkspaces = raw.researchWorkspaceConnection === undefined ? null
-    : await (await import('./research-workspace.mjs')).readResearchWorkspaceConfiguration(hostPath(raw.researchWorkspaceConnection, base));
-  config.arcgisWorkspaces = raw.arcgisWorkspaceConnection === undefined ? null
-    : await readArcgisWorkspaceConfiguration(hostPath(raw.arcgisWorkspaceConnection, base),
-      { publishers: config.publishers, releaseStore: config.releaseStore });
-  config.sourceWorkspaces = raw.sourceWorkspaceConnection === undefined ? null
-    : await (await import('./source-workspace.mjs')).readSourceWorkspaceConfiguration(hostPath(raw.sourceWorkspaceConnection, base));
-  config.clinicalTrialsWorkspaces = raw.clinicalTrialsWorkspaceConnection === undefined ? null
-    : await (await import('./clinicaltrials-workspace.mjs')).readClinicalTrialsWorkspaceConfiguration(hostPath(raw.clinicalTrialsWorkspaceConnection, base));
-  config.usgsWorkspaces = raw.usgsWorkspaceConnection === undefined ? null
-    : await (await import('./usgs-workspace.mjs')).readUSGSWorkspaceConfiguration(hostPath(raw.usgsWorkspaceConnection, base));
-  config.baserowWorkspaces = raw.baserowWorkspaceConnection === undefined ? null
-    : await (await import('./baserow-workspace.mjs')).readBaserowWorkspaceConfiguration(hostPath(raw.baserowWorkspaceConnection, base));
-  config.grpcWorkspaces = raw.grpcWorkspaceConnection === undefined ? null
-    : await (await import('./grpc-workspace.mjs')).readGrpcWorkspaceConfiguration(hostPath(raw.grpcWorkspaceConnection, base));
-  config.openapiWorkspaces = raw.openapiWorkspaceConnection === undefined ? null
-    : await (await import('./openapi-workspace.mjs')).readOpenApiWorkspaceConfiguration(hostPath(raw.openapiWorkspaceConnection, base));
-  config.harWorkspaces = raw.harWorkspaceConnection === undefined ? null
-    : await (await import('./har-workspace.mjs')).readHarWorkspaceConfiguration(hostPath(raw.harWorkspaceConnection, base));
-  config.n8nWorkspaces = raw.n8nWorkspaceConnection === undefined ? null
-    : await (await import('./n8n-workspace.mjs')).readN8nWorkspaceConfiguration(hostPath(raw.n8nWorkspaceConnection, base));
-  config.feedsWorkspaces = raw.feedsWorkspaceConnection === undefined ? null
-    : await (await import('./feeds-workspace.mjs')).readFeedsWorkspaceConfiguration(hostPath(raw.feedsWorkspaceConnection, base));
-  config.dspaceOperators = raw.dspaceOperatorConnection === undefined ? null
-    : await (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/merchant-provider.mjs')).readDspaceOperatorConfiguration(hostPath(raw.dspaceOperatorConnection, base));
-  config.opencageWorkspaces = raw.opencageWorkspaceConnection === undefined ? null
-    : await (await import('./opencage-workspace.mjs')).readOpenCageWorkspaceConfiguration(hostPath(raw.opencageWorkspaceConnection, base));
-  config.apiPassWorkspaces = raw.apiPassWorkspaceConnection === undefined ? null
-    : await (await import('./api-pass-connection.mjs')).readApiPassWorkspaceConfiguration(hostPath(raw.apiPassWorkspaceConnection, base));
-  config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
-  config.accounting = (raw.accounting == null ? null : (await import('./accounting.mjs')).normalizeAccountingConfig(raw.accounting, base));
+  await configureMerchantProviders(raw, config, { base, hostPath: value => hostPath(value, base) });
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
-  if (config.stellarExpertWorkspaces || config.arcgisWorkspaces || config.support || config.receiving || config.pythonWorkspaces || config.graphqlWorkspaces || config.s3Workspaces || config.worldbankWorkspaces || config.opensearchWorkspaces || config.socrataWorkspaces || config.odataWorkspaces || config.fiscalDataWorkspaces || config.geocodioWorkspaces || config.webdavWorkspaces || config.edgarWorkspaces || config.sheetsWorkspaces || config.nocodbWorkspaces || config.ckanWorkspaces || config.tenderlyWorkspaces || config.opencageWorkspaces || config.coingeckoWorkspaces || config.redisWorkspaces || config.usaSpendingWorkspaces || config.researchWorkspaces || config.grantsWorkspaces || config.sourceWorkspaces || config.clinicalTrialsWorkspaces || config.baserowWorkspaces || config.usgsWorkspaces || config.feedsWorkspaces || config.dspaceOperators || config.grantWorkspaces || config.grpcWorkspaces || config.openapiWorkspaces || config.harWorkspaces || config.n8nWorkspaces || config.woocommerce || config.cocartWorkspaces || config.mpp || config.buyerExpenses || config.apiPassWorkspaces) await privateSupportDirectory(config.exportsDirectory);
+  if (merchantPrivateExports(config)) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
 export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, datasetPackage, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, graphqlWorkspaces, stellarExpertWorkspaces, sourceWorkspaces, clinicalTrialsWorkspaces, baserowWorkspaces, usgsWorkspaces, feedsWorkspaces, dspaceOperators, grpcWorkspaces, openapiWorkspaces, harWorkspaces, n8nWorkspaces, ckanWorkspaces, pricing, woocommerce, cocartWorkspaces, mpp, buyerExpenses, apiPassWorkspaces, releaseStore }) {

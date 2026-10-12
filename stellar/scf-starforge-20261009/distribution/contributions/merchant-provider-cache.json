@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-cache",
+  "description": "Original cache MCP provider",
+  "merchantProviders": {
+    "cache": "stellar-forge/mcp-merchant-operator/providers/cache.mjs"
+  }
+}
