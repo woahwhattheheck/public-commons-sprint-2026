@@ -105,10 +105,12 @@ export async function receiveDesk(entry) {
       if(request.kind==='source_review')return (await page.locator('#source-review').innerText()).includes(request.result.id);
       if(request.kind==='handover')return await page.locator('#handover-artifacts button[title="'+request.result.html.sha256+'"]').count()>0;
       if(request.kind==='archive')return await page.locator('#handover-artifacts button[title="'+request.result.archive.sha256+'"]').count()>0;
+      if(request.kind==='archive_inspect')return (await page.locator('#archive-receive-summary').innerText()).includes(request.result.manifest_sha256);
+      if(request.kind.startsWith('archive_'))return await page.locator('#archive-cohort').inputValue()===request.result.cohort_id;
       if(request.result?.id)return await page.locator('#deployment-select').inputValue()===request.result.id;
       return true;
     },'The original browser has not opened this exact saved result.');
-    const tab=['intake','source_review','source_apply','mspdi_export'].includes(request.kind)?'source':
+    const tab=request.kind.startsWith('archive_')?'archive':['intake','source_review','source_apply','mspdi_export'].includes(request.kind)?'source':
       ['receive_target_file','capture_target','accept','handover','archive'].includes(request.kind)?'receiving':'migration';
     await page.locator('[data-tab="'+tab+'"]').click();
   };
@@ -180,8 +182,17 @@ export async function receiveDesk(entry) {
     return {path,filename,sha256:item.sha256,bytes:item.bytes};
   };
   try{
+    const identity=await api('/api/hello');
+    if(progress.workspace_id)requireValue(progress.workspace_id===identity.workspace_id,'Reopen the exact original workspace before restoring its local browser state.');
+    let retainedStorage=await savedJSON(storagePath,null);
+    if(retainedStorage&&progress.origin&&progress.origin!==origin){
+      const ownPrefix='portfolio-desk:'+identity.workspace_id+':';
+      retainedStorage={cookies:[],origins:retainedStorage.origins.filter(x=>x.origin===progress.origin).map(x=>({
+        origin,localStorage:x.localStorage.filter(item=>item.name.startsWith(ownPrefix))}))};
+    }
+    progress.origin=origin;progress.workspace_id=identity.workspace_id;await persist();
     context=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:1000},
-      ...(await exists(storagePath)?{storageState:JSON.parse(await readFile(storagePath,'utf8'))}:{})});
+      ...(retainedStorage?{storageState:retainedStorage}:{})});
     page=await context.newPage();
     page.on('pageerror',error=>errors.push(String(error)));
     await page.route('**/api/actions',async route=>{
@@ -210,6 +221,13 @@ export async function receiveDesk(entry) {
     const hello=await api('/api/hello');
     if(progress.workspace_id)requireValue(progress.workspace_id===hello.workspace_id,'The receiving browser opened another workspace.');
     progress.workspace_id=hello.workspace_id;await persist();
+    if(['archive','archive-restored','archive-reopened'].includes(entry.phase)){
+      const {receiveArchiveDesk}=await import(new URL('../../archive/native/browser.mjs',import.meta.url));
+      const result=await receiveArchiveDesk({entry,out,progress,api,page,action,downloadArtifact,screenshot,
+        waitFor,requireValue,remember,persist,errors,hello,save});
+      requireValue(errors.length===0,'Unexpected browser error: '+errors.join('\n'));
+      await remember();await save(resultPath,result);return result;
+    }
     if(entry.phase==='restored'){
       const accepted=entry.original;
       requireValue(hello.workspace_id===accepted.workspace_id,'The portable workspace changed its original identity.');

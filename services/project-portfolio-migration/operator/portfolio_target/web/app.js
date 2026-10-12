@@ -1,3 +1,5 @@
+import {createArchivePanel} from "/assets/archive.js";
+import {createCompanionPanel} from "/assets/companions.js";
 const $ = id => document.getElementById(id);
 const terminal = new Set(["COMPLETE", "FAILED"]);
 const S = {token: "", workspace: "", state: null, sourceId: "", source: null, rows: [], selectedRow: null,
@@ -40,7 +42,8 @@ function formDraft() {
   document.querySelectorAll("[data-draft]").forEach(n => values[n.id] = n.type === "checkbox" ? n.checked : n.value);
   return {values, sourceId:S.sourceId, deployId:S.deployId, profile:S.profile,
     mappings:readMappings(false), corrections:S.corrections, sourceReview:S.sourceReview ? {id:S.sourceReview.id,ready:S.sourceReview.ready,edition_id:S.sourceReview.edition_id} : null,
-    sourceArtifacts:S.sourceArtifacts, handoverArtifacts:S.handoverArtifacts, probes:S.probes};
+    sourceArtifacts:S.sourceArtifacts, handoverArtifacts:S.handoverArtifacts, probes:S.probes,
+    archive:archivePanel.snapshot(),companions:companionPanel.snapshot()};
 }
 function saveDraft() { if (!S.workspace) return; S.draftVersion++; store("draft", formDraft()); }
 function showTab(name) {
@@ -106,15 +109,16 @@ async function refreshState() {
   renderSelectors(); renderHistory(); renderTarget(); lock();
 }
 function renderSelectors() {
+  archivePanel.updateState(S.state||{},S.editions);
   options($("source-edition"), S.editions, S.sourceId, row => short(row.id) + " · " + row.kind + " · " + String(row.created_at || ""));
   options($("deployment-select"), S.deployments, S.deployId, row => (row.project_name || short(row.id)) + " · " + row.state);
   $("more-editions").hidden = !S.editionCursor; $("more-deployments").hidden = !S.deploymentCursor;
 }
 async function loadSource(selected=S.sourceId) {
-  if (!selected) { S.source=null; S.rows=[]; renderSource(); return; }
+  if (!selected) { S.source=null; S.rows=[]; renderSource(); await companionPanel.load(""); return; }
   const value = await api("/api/editions/" + selected);
   if (S.sourceId !== selected) return;
-  S.source = value; renderSource(); await loadRows();
+  S.source = value; renderSource(); await loadRows();await companionPanel.load(selected);
 }
 function renderSource() {
   if (!S.source) { $("source-summary").replaceChildren(el("p", "Retain or select an original source edition.", "empty")); return; }
@@ -336,10 +340,10 @@ function savePending(value) {
   // Persist exact input before admission. A storage failure leaves it unsent.
   store("pending",value); S.pending=value; lock();
 }
-async function action(kind,args) {
+async function action(kind,args,extraContext={}) {
   if (S.pending || S.posting) throw new Error("Finish or reopen the saved request first.");
   saveDraft();
-  const value={request_id:id(),kind,arguments:args,context:{sourceId:S.sourceId,deployId:S.deployId,draftVersion:S.draftVersion},observed_state:"PREPARED"};
+  const value={request_id:id(),kind,arguments:args,context:{sourceId:S.sourceId,deployId:S.deployId,draftVersion:S.draftVersion,...extraContext},observed_state:"PREPARED"};
   savePending(value); await sendPending(false);
 }
 async function sendPending(resume) {
@@ -382,6 +386,7 @@ async function applyResult(request,context={}) {
   const result=request.result || await api("/api/objects/"+request.result_sha256);
   $("history-result").replaceChildren(el("pre",pretty({request_id:request.id,kind:request.kind,state:request.state,result})));
   if (request.state!=="COMPLETE") {await refreshState();return;}
+  if(await archivePanel.acceptResult(request,result,context)){await refreshState();saveDraft();lock();return;}
   const sourceCurrent=context.sourceId===undefined || context.sourceId===S.sourceId;
   const deploymentCurrent=context.deployId===undefined || context.deployId===S.deployId || result.id===S.deployId;
   if (request.kind==="intake" && sourceCurrent) {S.sourceId=result.id;S.offset=0;S.sourceReview=null;S.corrections=[];$("source-decisions").value="{}";}
@@ -402,6 +407,10 @@ async function applyResult(request,context={}) {
   if (request.kind==="archive") {S.handoverArtifacts.push({...result.archive,filename:result.filename});artifacts($("handover-artifacts"),S.handoverArtifacts);}
   await refreshState();if (S.sourceId && sourceCurrent) await loadSource();saveDraft();lock();
 }
+async function uploadArchive(file) {
+  if(!file||file.size>8*1024**3)throw new Error("Select the complete original reporting archive up to 8 GiB.");
+  return api("/api/archive-upload",{method:"POST",raw:file,headers:{"Content-Type":"application/octet-stream","X-Source-Name":encodeURIComponent(file.name)}});
+}
 async function upload(file) {
   if (!file || file.size>256*1024*1024) throw new Error("Select a complete source file up to 256 MiB.");
   return api("/api/upload",{method:"POST",raw:file,headers:{"Content-Type":"application/octet-stream","X-Source-Name":encodeURIComponent(file.name)}});
@@ -410,6 +419,13 @@ async function safe(fn) {try {await fn();} catch(error) {notice(error.message ||
 function requireSource() {if (!S.sourceId) throw new Error("Select the original source edition.");return S.sourceId;}
 function requireDeployment() {if (!S.deployment) throw new Error("Select the original saved migration.");return S.deployment;}
 function selectedReviewArgs() {const d=requireDeployment();if(!d.review_sha256)throw new Error("Save the exact target review first.");return{deployment_id:d.id,review_sha256:d.review_sha256};}
+
+const sharedPanelContext={$,el,pretty,short,api,safe,artifacts,notice,lock,saveDraft,action,upload,uploadArchive,showTab,
+  busy:()=>S.posting||!!S.pending,sourceId:()=>S.sourceId,
+  setPosting:value=>{S.posting=value;lock();}};
+const archivePanel=createArchivePanel(sharedPanelContext);
+const companionPanel=createCompanionPanel({...sharedPanelContext,
+  invalidateReview:()=>{S.sourceReview=null;renderCorrections();}});
 
 document.querySelectorAll("[data-tab]").forEach(n=>n.onclick=()=>showTab(n.dataset.tab));
 document.querySelectorAll("[data-draft]").forEach(n=>n.addEventListener("input",()=>safe(()=>saveDraft())));
@@ -422,15 +438,16 @@ $("add-correction").onclick=()=>safe(()=>{requireSource();const row=S.selectedRo
  const after=JSON.parse($("correction-after").value);if(!after || typeof after!=="object" || !("type"in after) || !("value"in after))throw new Error("Use the full original typed-value shape.");
  const change={family:S.family,key:row.key,field,before:row.fields[field],after};const i=S.corrections.findIndex(x=>x.family===change.family&&x.key===change.key&&x.field===field);if(i>=0)S.corrections[i]=change;else S.corrections.push(change);S.sourceReview=null;renderCorrections();saveDraft();});
 $("clear-corrections").onclick=()=>safe(()=>{S.corrections=[];S.sourceReview=null;renderCorrections();saveDraft();});
-$("review-source").onclick=()=>safe(()=>action("source_review",{edition_id:requireSource(),target_profile:{kind:"mspdi",...object("export-profile")},decisions:object("source-decisions"),corrections:S.corrections}));
+$("review-source").onclick=()=>safe(()=>action("source_review",{edition_id:requireSource(),target_profile:{kind:"mspdi",...object("export-profile")},decisions:object("source-decisions"),corrections:S.corrections,mappings:companionPanel.mappings()}));
 $("apply-source").onclick=()=>safe(()=>{if(!S.sourceReview?.ready)throw new Error("Finish the saved source review.");return action("source_apply",{review_id:S.sourceReview.id});});
 $("export-source").onclick=()=>safe(()=>action("mspdi_export",{edition_id:requireSource(),profile:object("export-profile")}));
 $("intake-form").onsubmit=event=>{event.preventDefault();safe(async()=>{
  if(S.pending||S.posting)throw new Error("Finish the saved request first.");
+ const selectedFile=$("source-file").files[0],selectedCompanions=companionPanel.descriptors(),selectedLabel=$("source-label").value.trim(),selectedProfile=object("read-profile");
  S.posting=true;lock();let source,companions;
- try {source=await upload($("source-file").files[0]);companions=[];for(const file of $("companion-files").files)companions.push(await upload(file));}
+ try {source=await upload(selectedFile);companions=[];for(const selected of selectedCompanions)companions.push({source:await upload(selected.file),label:selected.label,profile:selected.profile});}
  finally {S.posting=false;lock();}
- await action("intake",{source,companions,label:$("source-label").value.trim()||source.filename,profile:object("read-profile")});
+ await action("intake",{source,companions,label:selectedLabel||source.filename,profile:selectedProfile});
 });};
 $("target-profile").onchange=()=>safe(()=>{S.profile=$("target-profile").value;renderTarget();saveDraft();});
 $("probe-target").onclick=()=>safe(()=>action("probe",{profile_id:S.profile}));
@@ -455,7 +472,7 @@ $("export-workspace").onclick=()=>safe(()=>action("archive",{}));
 $("pause-request").onclick=()=>safe(async()=>{const deployment_id=S.pending?.arguments.deployment_id;if(!deployment_id)return;await api("/api/deployments/"+deployment_id+"/pause",{method:"POST",body:{request_id:id()}});notice("Pause saved. The current native reply is retained before the next call.");});
 $("recover-request").onclick=()=>safe(async()=>{if(!S.pending)return;let current;try{current=await api("/api/requests/"+S.pending.request_id);}catch(error){if(error.status!==404)throw error;}if(current){if(current.state==="COMPLETE")return poll();return sendPending(true);}return sendPending(false);});
 $("discard-request").onclick=()=>safe(async()=>{if(!S.pending)return;try{await api("/api/requests/"+S.pending.request_id);throw new Error("The original request now exists; reopen it.");}catch(error){if(error.status!==404)throw error;}store("pending",null);S.pending=null;lock();notice("The absent local request was discarded. Its draft fields remain.");});
-$("refresh").onclick=()=>safe(async()=>{await refreshState();if(S.deployId)await loadDeployment();if(S.sourceId)await loadSource();if(S.pending)await poll();});
+$("refresh").onclick=()=>safe(async()=>{await refreshState();if(S.deployId)await loadDeployment();if(S.sourceId)await loadSource();await archivePanel.refresh();if(S.pending)await poll();});
 $("more-editions").onclick=()=>safe(async()=>{const v=await api("/api/editions?cursor="+S.editionCursor);S.editions=mergeRows(S.editions,v.items);S.editionCursor=v.next_cursor||"";renderSelectors();});
 $("more-deployments").onclick=()=>safe(async()=>{const v=await api("/api/state?cursor="+S.deploymentCursor);S.deployments=mergeRows(S.deployments,v.deployments.items);S.deploymentCursor=v.deployments.next_cursor||"";renderSelectors();});
 $("signin-form").onsubmit=event=>{event.preventDefault();safe(async()=>{S.token=$("access-token").value.trim();await boot();$("access-token").value="";});};
@@ -465,6 +482,7 @@ async function boot() {
   S.workspace=hello.workspace_id;sessionStorage.setItem("portfolio-token:"+location.origin,S.token);
   $("signin").hidden=true;$("workspace").hidden=false;$("connection").textContent="Local workspace · "+short(S.workspace);
   const draft=stored("draft",{});for(const [identity,value]of Object.entries(draft.values||{})){const n=$(identity);if(n?.hasAttribute("data-draft")){if(n.type==="checkbox")n.checked=!!value;else n.value=value;}}
+  archivePanel.restore(draft.archive||{});companionPanel.restore(draft.companions||{});
   S.sourceId=draft.sourceId||"";S.deployId=draft.deployId||"";S.profile=draft.profile||"mspdi";
   S.corrections=draft.corrections||[];S.sourceReview=draft.sourceReview||null;S.probes=draft.probes||{};
   S.sourceArtifacts=draft.sourceArtifacts||[];S.handoverArtifacts=draft.handoverArtifacts||[];
@@ -472,7 +490,7 @@ async function boot() {
   renderMappingRows(draft.mappings||defaults);renderCorrections();
   artifacts($("source-artifacts"),S.sourceArtifacts);artifacts($("handover-artifacts"),S.handoverArtifacts);
   S.pending=stored("pending",null);lock();
-  await refreshState();if(S.sourceId)await loadSource();if(S.deployId)await loadDeployment();
+  await refreshState();if(S.sourceId)await loadSource();if(S.deployId)await loadDeployment();await archivePanel.reopen();
   if(S.pending)schedulePoll(0);notice("Original source, target operations and saved delivery are ready.");
 }
 const fragment=new URLSearchParams(location.hash.slice(1));S.token=fragment.get("token")||sessionStorage.getItem("portfolio-token:"+location.origin)||"";

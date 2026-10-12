@@ -311,6 +311,27 @@
       ]
     ],
     [
+      "/grant-plan-core.mjs",
+      [
+        "grant-plan-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-plan-source.mjs",
+      [
+        "grant-plan-source.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-plan-workspace.mjs",
+      [
+        "grant-plan-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/grant-submission-core.mjs",
       [
         "grant-submission-core.mjs",

@@ -106,7 +106,7 @@ class Store:
     def __init__(self, root):
         self.root = Path(root).resolve() / "operator"
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        for name in ("objects", "requests", "deployments", "uploads", "exports", "controls"):
+        for name in ("objects", "requests", "deployments", "uploads", "exports", "controls", "cohorts"):
             (self.root / name).mkdir(exist_ok=True, mode=0o700)
 
     def locked(self):
@@ -131,7 +131,7 @@ class Store:
         return json.loads(self.read_bytes(identity).decode("utf-8"))
 
     def _index(self, collection, identity):
-        if collection not in ("requests", "deployments"):
+        if collection not in ("requests", "deployments", "cohorts"):
             raise TargetError("OPERATOR_COLLECTION", "Unknown operator collection.")
         return self.root / collection / (checked_id(identity) + ".json")
 
@@ -160,7 +160,7 @@ class Store:
         return successor
 
     def list(self, collection, *, cursor="", limit=25):
-        if collection not in ("requests", "deployments") or not 1 <= limit <= 100:
+        if collection not in ("requests", "deployments", "cohorts") or not 1 <= limit <= 100:
             raise TargetError("OPERATOR_PAGE", "Choose a page size from 1 to 100.")
         rows = []
         for path in (self.root / collection).glob("*.json"):
@@ -213,11 +213,18 @@ class Store:
         if not isinstance(name, str) or Path(name).name != name or "/" in name or "\\" in name:
             raise TargetError("SOURCE_FILENAME", "Invalid retained source filename.")
         path = self.root / "uploads" / identity / name
-        raw = path.read_bytes()
-        if hashlib.sha256(raw).hexdigest() != identity:
+        before = path.stat()
+        digestor, count = hashlib.sha256(), 0
+        with open(path, "rb") as original:
+            for chunk in iter(lambda: original.read(1024 * 1024), b""):
+                digestor.update(chunk)
+                count += len(chunk)
+        after = path.stat()
+        if digestor.hexdigest() != identity or ("bytes" in value and count != value["bytes"]) or (
+                before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
             raise TargetError("SOURCE_UPLOAD_HASH", "The selected uploaded source changed.")
         return path
-
 
     def upload_stream(self, stream, length, filename):
         with self.locked():
@@ -259,8 +266,11 @@ class Store:
                 os.link(object_path, path)
             except FileExistsError:
                 if path.stat().st_ino != object_path.stat().st_ino or path.stat().st_dev != object_path.stat().st_dev:
-                    actual = hashlib.sha256(path.read_bytes()).hexdigest()
-                    if actual != identity:
+                    actual = hashlib.sha256()
+                    with open(path, "rb") as original:
+                        for chunk in iter(lambda: original.read(1024 * 1024), b""):
+                            actual.update(chunk)
+                    if actual.hexdigest() != identity:
                         raise TargetError("SOURCE_UPLOAD_CHANGED", "The selected source filename has different bytes.")
             sync_directory(directory)
             return {"schema": "portfolio.operator-upload.v1", "sha256": identity,
@@ -303,7 +313,12 @@ class Store:
         try:
             os.link(source, target)
         except FileExistsError:
-            if self.read_bytes(expected_sha256) != source.read_bytes():
+            digestor, retained_bytes = hashlib.sha256(), 0
+            with open(target, "rb") as original:
+                for chunk in iter(lambda: original.read(1024 * 1024), b""):
+                    digestor.update(chunk)
+                    retained_bytes += len(chunk)
+            if digestor.hexdigest() != expected_sha256 or retained_bytes != expected_bytes:
                 raise TargetError("NATIVE_EXPORT_CONFLICT", "The retained original export differs.")
         sync_directory(target.parent)
         return {"sha256": expected_sha256, "bytes": expected_bytes}

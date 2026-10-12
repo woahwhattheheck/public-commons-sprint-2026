@@ -169,18 +169,56 @@ def typed(value, spec):
     return result
 
 
+def capture_selections(companions):
+    """Describe exact captures without changing an original retained model."""
+    require(isinstance(companions, list), "companion_captures", "Retain the original companion capture list.")
+    result = []
+    for ordinal, source in enumerate(companions):
+        require(isinstance(source, dict) and isinstance(source.get("source_id"), str)
+                and isinstance(source.get("profile"), dict),
+                "companion_capture", "Retain the original companion source and complete profile.", ordinal)
+        profile = source["profile"]
+        identity = {"schema": "project-portfolio-companion-selection.v1",
+                    "source_id": source["source_id"], "ordinal": ordinal, "profile": profile}
+        result.append({"capture_id": digest(identity), "ordinal": ordinal, "source_id": source["source_id"],
+                       "label": source.get("label"), "role": source.get("role"), "format": source.get("format"),
+                       "profile": dict(profile), "profile_sha256": digest(profile),
+                       "columns": [dict(column) for column in source.get("columns", [])],
+                       "row_count": len(source.get("rows", []))})
+    return result
+
+
 def compile_mappings(model, companions, mappings):
     """Resolve every mapped source cell against one original native entity."""
     require(isinstance(mappings, list), "companion_mappings", "Supply the explicit companion mapping list.")
-    known = {row["source_id"]: row for row in companions}
+    selections = capture_selections(companions)
+    by_capture = {item["capture_id"]: item for item in selections}
+    by_source = {}
+    for item in selections:
+        by_source.setdefault(item["source_id"], []).append(item)
     corrections, links, findings = [], [], []
     seen = set()
     for mapping in mappings:
-        require(isinstance(mapping, dict) and set(mapping) <= {"source_id", "family", "identity", "columns"},
-                "companion_mapping", "Use source_id, family, identity and column mappings.")
-        source_id, family = mapping["source_id"], mapping["family"]
-        require(source_id in known and family in FAMILY_TYPES, "companion_mapping", "Choose an original companion and native family.")
-        source, identity = known[source_id], mapping.get("identity", {})
+        require(isinstance(mapping, dict) and set(mapping) <= {"source_id", "capture_id", "family", "identity", "columns"},
+                "companion_mapping", "Use the original source, optional capture selector, native family and column mappings.")
+        source_id, family = mapping.get("source_id"), mapping.get("family")
+        require(isinstance(source_id, str) and isinstance(family, str)
+                and source_id in by_source and family in FAMILY_TYPES,
+                "companion_mapping", "Choose an original companion and native family.")
+        selected_id = mapping.get("capture_id")
+        if selected_id is None:
+            candidates = by_source[source_id]
+            require(len(candidates) == 1, "companion_capture_ambiguous",
+                    "This original file has several captures; select its exact label, role and profile.",
+                    {"source_id": source_id, "captures": candidates})
+            selection = candidates[0]
+        else:
+            require(isinstance(selected_id, str) and selected_id in by_capture
+                    and by_capture[selected_id]["source_id"] == source_id,
+                    "companion_capture", "Choose a capture from this original edition and source.", selected_id)
+            selection = by_capture[selected_id]
+        source = companions[selection["ordinal"]]
+        identity = mapping.get("identity", {})
         require(isinstance(identity, dict) and identity.get("kind") in KINDS
                 and isinstance(identity.get("column"), str), "companion_identity", "Choose an original identity column and key, UID or GUID.")
         rows = [model["project"]] if family == "project" else model[family]
@@ -201,9 +239,11 @@ def compile_mappings(model, companions, mappings):
             matches = index.get(str(source_identity), []) if source_identity is not None else []
             if len(matches) != 1:
                 item = {"code": "companion_entity_unmatched" if not matches else "companion_entity_ambiguous",
-                        "severity": "review", "path": source_id + "/" + row["key"],
+                        "severity": "review", "path": selection["capture_id"] + "/" + row["key"],
                         "message": "Select one original native entity for this companion record.",
-                        "details": {"identity": source_identity, "kind": identity["kind"], "matches": [v["key"] for v in matches]}}
+                        "details": {"identity": source_identity, "kind": identity["kind"], "matches": [v["key"] for v in matches],
+                                    "source_id": source_id, "capture_id": selection["capture_id"],
+                                    "capture_ordinal": selection["ordinal"], "profile_sha256": selection["profile_sha256"]}}
                 findings.append({"id": digest(item), **item})
                 continue
             target = matches[0]
@@ -223,6 +263,8 @@ def compile_mappings(model, companions, mappings):
                 if before != after:
                     corrections.append({"family": family, "key": target["key"], "field": spec["field"],
                                         "before": before, "after": after})
-                links.append({"source_id": source_id, "source_row": row["key"], "source_column": spec["column"],
+                links.append({"source_id": source_id, "capture_id": selection["capture_id"],
+                              "capture_ordinal": selection["ordinal"], "profile_sha256": selection["profile_sha256"],
+                              "source_row": row["key"], "source_column": spec["column"],
                               "family": family, "key": target["key"], "field": spec["field"], "before": before, "after": after})
     return {"corrections": corrections, "links": links, "findings": findings}
