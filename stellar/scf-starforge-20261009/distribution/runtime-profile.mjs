@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { execFile, spawnSync } from 'node:child_process';
 import { promisify } from 'node:util';
+import { readDistributionSpecification } from './specification.mjs';
 
 const exec = promisify(execFile);
 const ownRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -83,7 +84,8 @@ function dependencies(definitions, group, sourcePath) {
       throw new TypeError('Invalid original import probe: ' + name);
     requirement(value.version);
     const native = nativeKind(name, value.probe, value.native);
-    return { name, requested: value.version, probe: value.probe, group, sourcePath,
+    return { name, requested: value.version, probe: value.probe, group,
+      sourcePath: typeof sourcePath === 'function' ? sourcePath(name) : sourcePath,
       ...(native ? { native } : {}) };
   });
 }
@@ -91,17 +93,17 @@ function dependencies(definitions, group, sourcePath) {
 /** Read feature declarations from the selected archive's source directory. */
 export async function runtimeCatalog({ sourceRoot = ownRoot } = {}) {
   const root = await realpath(sourceRoot);
-  const original = await sourceFile(root, specPath), spec = original.data;
+  const distribution = await readDistributionSpecification({ sourceRoot: root }), spec = distribution.spec;
   if (spec.schema !== 'stellar-forge.merchant-distribution.v1' || !packageName.test(spec.name))
     throw new TypeError('Unsupported merchant distribution');
-  const inputFiles = [original.descriptor];
-  const groups = { native: dependencies(spec.nativePeers, 'native', specPath) };
+  const inputFiles = [...distribution.inputFiles];
+  const groups = { native: dependencies(spec.nativePeers, 'native', name => distribution.origins.nativePeers[name]?.[0] ?? specPath) };
   const featurePeers = { ...spec.featurePeers };
   const engines = {};
   for (const [group, path] of Object.entries(spec.runtimePackageManifests ?? {})) {
     if (!featureName.test(group) || group === 'native') throw new TypeError('Invalid runtime feature: ' + group);
     const file = await sourceFile(root, path);
-    inputFiles.push(file.descriptor);
+    if (!inputFiles.some(input => input.path === path)) inputFiles.push(file.descriptor);
     if (!plain(file.data.dependencies)) throw new TypeError('Runtime dependencies missing: ' + path);
     featurePeers[group] = Object.fromEntries(Object.entries(file.data.dependencies).map(([name, requested]) =>
       [name, { version: requested, probe: spec.featurePeers?.[group]?.[name]?.probe ?? name,
@@ -111,14 +113,10 @@ export async function runtimeCatalog({ sourceRoot = ownRoot } = {}) {
   }
   for (const [group, definitions] of Object.entries(featurePeers)) {
     if (!featureName.test(group) || group === 'native') throw new TypeError('Invalid runtime feature: ' + group);
-    groups[group] = dependencies(definitions, group, spec.runtimePackageManifests?.[group] ?? specPath);
+    groups[group] = dependencies(definitions, group, name => spec.runtimePackageManifests?.[group] ??
+      distribution.origins.featurePeers[group]?.[name]?.[0] ?? specPath);
   }
-  let manifest = null;
-  try {
-    const candidate = JSON.parse(await readFile(resolve(root, '../manifest.json'), 'utf8'));
-    if (candidate.schema === 'stellar-forge.merchant-distribution-manifest.v1' && candidate.packageName === spec.name)
-      manifest = candidate;
-  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const manifest = distribution.manifest;
   if (manifest) {
     if (!/^[0-9a-f]{40}$/.test(manifest.sourceCommit ?? '') || !Array.isArray(manifest.files))
       throw new TypeError('Installed distribution manifest is invalid');

@@ -142,7 +142,9 @@ export interface ODataLiveProfile {
 }
 export interface ODataStoredState {
   schema: 'stellar-forge.odata-workspace.v1'; revision: number; createdAt: string;
-  updatedAt?: string; restoredAt?: string; connections: ODataConnection[]; plans: ODataSavedPlan[];
+  updatedAt?: string; restoredAt?: string;
+  restoredFrom?: { sha256: string; connections: number; editions: number; exports: number; liveProducts: number };
+  connections: ODataConnection[]; plans: ODataSavedPlan[];
   editions: ODataEdition[]; reviews: ODataReview[]; exports: ODataExport[];
   activeEdition: string | null; liveProducts?: ODataLiveProfile[];
 }

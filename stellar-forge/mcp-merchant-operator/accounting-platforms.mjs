@@ -1,5 +1,7 @@
 // MIT. Customer operations over the original QuickBooks and Xero accountant controllers.
 import { createHash } from 'node:crypto';
+import { resolve } from 'node:path';
+import { openMerchantQuickBooksConnection } from './accounting-quickbooks-oauth.mjs';
 import { XeroWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/xero-workspace.mjs';
 import { XeroHttpClient, XERO_ACCESS_TOKEN_ENV } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/xero-http.mjs';
 import { createXeroContext, compareXeroJournals, xeroCanonical, xeroId, xeroText } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/xero.mjs';
@@ -129,12 +131,27 @@ function exactObject(value, allowed, label) {
   if (!plain(value) || Object.keys(value).some(key => !allowed.includes(key)))
     throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Use the declared ' + label + ' fields.');
 }
-export function normalizePlatformConfig(raw) {
+export function normalizePlatformConfig(raw, base = process.cwd()) {
   if (raw === undefined || raw === null) return { qbo: null, xero: null };
   exactObject(raw, ['qbo', 'xero'], 'bookkeeping platform');
   let qbo = null, xero = null;
   if (raw.qbo !== undefined && raw.qbo !== null) {
-    exactObject(raw.qbo, ['tokenEnv', 'realmId', 'environment', 'minorVersion'], 'native QuickBooks configuration');
+    exactObject(raw.qbo, ['tokenEnv', 'realmId', 'environment', 'minorVersion', 'oauth'], 'native QuickBooks configuration');
+    if (raw.qbo.oauth !== undefined) {
+      exactObject(raw.qbo, ['oauth'], 'reviewed QuickBooks OAuth configuration');
+      exactObject(raw.qbo.oauth, ['connectionsFile', 'selectionDirectory', 'expectedSelectionSha256'], 'reviewed QuickBooks OAuth selection');
+      const paths = {};
+      for (const field of ['connectionsFile', 'selectionDirectory']) {
+        const value = raw.qbo.oauth[field];
+        if (typeof value !== 'string' || !value || /[\x00-\x1f\x7f]/.test(value) || resolve(base, value) === '/')
+          throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare the original private QuickBooks connections file and reviewed selection directory.');
+        paths[field] = resolve(base, value);
+      }
+      const expectedSelectionSha256 = raw.qbo.oauth.expectedSelectionSha256 ?? null;
+      if (expectedSelectionSha256 !== null && (typeof expectedSelectionSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(expectedSelectionSha256)))
+        throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Pin the exact saved QuickBooks selection SHA256 or omit that optional pin.');
+      qbo = { oauth: { ...paths, expectedSelectionSha256 } };
+    } else {
     const tokenEnv = raw.qbo.tokenEnv ?? QBO_ACCESS_TOKEN_ENV, realmId = raw.qbo.realmId,
       environment = raw.qbo.environment ?? 'sandbox', minorVersion = raw.qbo.minorVersion ?? null;
     if (typeof tokenEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(tokenEnv) ||
@@ -143,6 +160,7 @@ export function normalizePlatformConfig(raw) {
         (minorVersion !== null && !/^[1-9][0-9]{0,3}$/.test(String(minorVersion))))
       throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare the exact native QuickBooks company, environment and token variable, with its optional minor version.');
     qbo = { tokenEnv, realmId, environment, minorVersion: minorVersion === null ? null : String(minorVersion) };
+    }
   }
   if (raw.xero !== undefined && raw.xero !== null) {
     exactObject(raw.xero, ['tokenEnv', 'tenants'], 'native Xero configuration');
@@ -165,9 +183,15 @@ export function normalizePlatformConfig(raw) {
 export function platformSourceView(definition) {
   return { quickbooks: 'ORIGINAL_WORKSPACE',
     qbo: { nativeConfigured: Boolean(definition?.qbo), realmId: definition?.qbo?.realmId ?? null,
-      environment: definition?.qbo?.environment ?? null, minorVersion: definition?.qbo?.minorVersion ?? null },
+      environment: definition?.qbo?.environment ?? null, minorVersion: definition?.qbo?.minorVersion ?? null,
+      authorization: definition?.qbo?.oauth ? 'oauth-connection' : definition?.qbo ? 'token-environment' : null,
+      expectedSelectionSha256: definition?.qbo?.oauth?.expectedSelectionSha256 ?? null },
     xero: { nativeConfigured: Boolean(definition?.xero),
       tenants: Object.entries(definition?.xero?.tenants ?? {}).map(([alias, tenantId]) => ({ alias, tenantId })) } };
+}
+export function platformPathReferences(definition, workspace) {
+  return definition?.qbo?.oauth ? ['connectionsFile', 'selectionDirectory'].map(field =>
+    [definition.qbo.oauth[field], 'accounting://' + workspace + '/platforms/qbo/oauth/' + field]) : [];
 }
 function xeroState(value) {
   return { revision: value.revision, connection: value.connection, docs: value.docs,
@@ -260,22 +284,51 @@ function xeroReturnView(value, args = {}) {
 
 /** The caller supplies only the existing host-alias reader and owning accountant lifetime. */
 export class MerchantPlatforms {
-  constructor(workspace, accountant, { readSource, definition = { qbo: null, xero: null } }) {
+  constructor(workspace, accountant, { readSource, definition = { qbo: null, xero: null },
+    environment = process.env, quickbooksOAuth = {} }) {
     this.workspace = workspace;
     this.accountant = accountant;
     this.readSource = readSource;
-    this.qbo = new QboWorkspace(workspace, accountant, { client: new QboHttpClient(definition.qbo ?? { realmId: '', environment: 'sandbox', minorVersion: null }) });
+    this.qbo = definition.qbo?.oauth ? null : new QboWorkspace(workspace, accountant, {
+      client: new QboHttpClient(definition.qbo ?? { realmId: '', environment: 'sandbox', minorVersion: null }) });
     this.definition = definition;
+    this.oauthRuntime = { ...quickbooksOAuth, environment };
+    this.qboOAuth = null; this.opening = null; this.closing = null; this.disposal = null; this.closed = false;
     this.xero = new XeroWorkspace(workspace, accountant, { client: new XeroHttpClient({ tokenEnv: definition.xero?.tokenEnv ?? XERO_ACCESS_TOKEN_ENV }) });
   }
-  async init() { await this.qbo.recover(); await this.xero.init(); }
-  async close() {
-    const outcomes = await Promise.allSettled([this.qbo.close(), this.xero.close()]);
-    const failed = outcomes.find(value => value.status === 'rejected');
-    if (failed) throw failed.reason;
+  init() {
+    if (this.closed) return Promise.reject(fail('ACCOUNTING_PLATFORMS_CLOSED', 'The owned accounting platform runtime is closed.'));
+    if (!this.opening) this.opening = (async () => {
+      try {
+        if (this.definition.qbo?.oauth) {
+          this.qboOAuth = await openMerchantQuickBooksConnection(this.definition.qbo.oauth, this.oauthRuntime);
+          this.qbo = new QboWorkspace(this.workspace, this.accountant, { client: this.qboOAuth.client });
+        }
+        await this.qbo.recover(); await this.xero.init();
+      } catch (error) { await this.dispose().catch(() => {}); throw error; }
+    })();
+    return this.opening;
   }
-  qboConnection() {
+  dispose() {
+    if (!this.disposal) this.disposal = (async () => {
+      const outcomes = await Promise.allSettled([this.qbo, this.xero].filter(Boolean).map(owner => owner.close()));
+      const errors = outcomes.filter(value => value.status === 'rejected').map(value => value.reason);
+      try { await this.qboOAuth?.close(); } catch (error) { errors.push(error); }
+      if (errors.length) throw Object.assign(new AggregateError(errors, 'The owned accounting platform runtimes did not close cleanly.'),
+        { code: 'ACCOUNTING_PLATFORMS_CLOSE_FAILED' });
+    })();
+    return this.disposal;
+  }
+  close() {
+    if (!this.closing) {
+      this.closed = true;
+      this.closing = (async () => { await this.opening?.catch(() => {}); await this.dispose(); })();
+    }
+    return this.closing;
+  }
+  async qboConnection() {
     if (!this.definition.qbo) throw fail('ACCOUNTING_QBO_CONNECTION_REQUIRED', 'Declare this original native QuickBooks company in the host workspace configuration.');
+    if (this.qboOAuth) await this.qboOAuth.connection();
     return this.qbo.connection();
   }
   async input(args, key = 'source', shaKey = 'sourceSha256', { maximum = 33_554_432, json = true } = {}) {
@@ -480,9 +533,10 @@ export class MerchantPlatforms {
     if (operation.startsWith('merchant_accounting_xero_')) return this.xeroCall(operation, args);
     switch (operation) {
       case 'merchant_accounting_qbo_connection':
+        if (this.qboOAuth) await this.qboOAuth.connection();
         return { ...this.qbo.connection(), configured: Boolean(this.definition.qbo) };
       case 'merchant_accounting_qbo_company_fetch': {
-        this.qboConnection();
+        await this.qboConnection();
         const result = await this.qbo.fetchCompany({ realmId: args.realmId, environment: args.environment });
         if (args.expectedCompanySha256 !== undefined && args.expectedCompanySha256 !== result.company.integrity.sha256)
           throw fail('ACCOUNTING_QBO_COMPANY_CHANGED', 'The native company/chart differs from the selected exact snapshot.');
@@ -490,7 +544,7 @@ export class MerchantPlatforms {
           companySha256: result.company.integrity.sha256, observation: 'FRESH_NATIVE_COMPANY_READ' };
       }
       case 'merchant_accounting_qbo_post_preview': {
-        this.qboConnection();
+        await this.qboConnection();
         const result = await this.qbo.previewPost(args.planId, args), preview = result.preview;
         return { ...result, binding: { planId: args.planId, postId: preview.id, planSha256: preview.planSha256,
           requestSha256: preview.requestSha256, previewSha256: result.previewSha256 },
@@ -499,9 +553,9 @@ export class MerchantPlatforms {
             revision: result.revision, previewSha256: result.previewSha256 }) };
       }
       case 'merchant_accounting_qbo_post':
-        this.qboConnection(); return qboResult(await this.qbo.post(args.planId, args));
+        await this.qboConnection(); return qboResult(await this.qbo.post(args.planId, args));
       case 'merchant_accounting_qbo_post_resume': {
-        this.qboConnection();
+        await this.qboConnection();
         const prior = this.qbo.row(args.planId).nativePost;
         if (!prior || prior.id !== args.id || prior.previewSha256 !== args.previewSha256)
           throw fail('QBO_NATIVE_REQUEST_CHANGED', 'Choose the exact retained original native posting and preview.');
