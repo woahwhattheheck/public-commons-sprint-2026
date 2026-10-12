@@ -177,6 +177,12 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
           protocolSha256: entry.operation.protocolSha256, reason, ...(latest ? { latest } : {}),
           updates: summary.updates, connections: summary.connections, ...(terminal ? { terminal } : {}),
           eventCount: summary.nativeEvents, recoveredFromOriginalJournal: true }, cancellation);
+      } else if (control) {
+        const cancellation = control.data.action === 'workspace_close' ? 'workspace_closed' : 'operator_cancelled';
+        await finish(entry, { schema: 'stellar-forge.grpc-health-observation.v1',
+          protocolSha256: entry.operation.protocolSha256, reason: 'CANCELLED', ...(latest ? { latest } : {}),
+          updates: summary.updates, connections: summary.connections, ...(terminal ? { terminal } : {}),
+          eventCount: summary.nativeEvents, recoveredFromOriginalJournal: true }, cancellation);
       } else await append(entry, 'lifecycle', { phase: 'INTERRUPTED', reason: 'previous_workspace_owner_ended' });
     }
   }
