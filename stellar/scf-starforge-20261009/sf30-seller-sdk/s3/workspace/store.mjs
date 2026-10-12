@@ -40,6 +40,9 @@ async function regularOrMissing(path) {
 export const S3_WORKSPACE_INSPECTION_SCHEMA = 'stellar-forge.s3-workspace-inspection.v1';
 const WORKSPACE_UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const CONTENT_HASH = /^[a-f0-9]{64}$/;
+const browserPort = value => value === null || value === undefined ? null :
+  typeof value === 'string' && /^(?:[1-9][0-9]*)$/.test(value) && Number(value) <= 65535 ? Number(value) :
+    (() => { throw new S3WorkspaceError('WORKSPACE_BROWSER_PORT_INVALID'); })();
 
 /** Read the original identity and current revision without taking its writer lease. */
 export async function inspectS3WorkspaceStore(directory, { allowMissing = false } = {}) {
@@ -47,7 +50,7 @@ export async function inspectS3WorkspaceStore(directory, { allowMissing = false 
       typeof allowMissing !== 'boolean') throw new S3WorkspaceError('WORKSPACE_DIRECTORY_REQUIRED');
   const root = resolve(directory), filename = join(root, 'workspace.sqlite');
   const empty = { schema: S3_WORKSPACE_INSPECTION_SCHEMA, state: 'NEW', directory: root,
-    workspaceId: null, releaseStore: null, revision: 0, latest: null, database: null };
+    workspaceId: null, releaseStore: null, authoringPort: null, revision: 0, latest: null, database: null };
   let folder, before;
   try { folder = await lstat(root); }
   catch (error) { if (allowMissing && error.code === 'ENOENT') return empty; throw error; }
@@ -65,7 +68,8 @@ export async function inspectS3WorkspaceStore(directory, { allowMissing = false 
     if (!['metadata', 'revisions', 'reviews', 'operations'].every(name => tables.includes(name)))
       throw new S3WorkspaceError('WORKSPACE_STORE_INVALID');
     const value = key => db.prepare('SELECT value FROM metadata WHERE key=?').get(key)?.value ?? null;
-    const workspaceId = value('workspaceId'), releaseStore = value('releaseStore');
+    const workspaceId = value('workspaceId'), releaseStore = value('releaseStore'),
+      authoringPort = browserPort(value('authoringPort'));
     if (!WORKSPACE_UUID.test(workspaceId ?? '') ||
         releaseStore !== null && (typeof releaseStore !== 'string' || !releaseStore ||
           releaseStore.includes('\0') || resolve(releaseStore) !== releaseStore))
@@ -76,7 +80,7 @@ export async function inspectS3WorkspaceStore(directory, { allowMissing = false 
         typeof row.origin !== 'string' || typeof row.saved_at !== 'string'))
       throw new S3WorkspaceError('WORKSPACE_STORE_INVALID');
     result = { schema: S3_WORKSPACE_INSPECTION_SCHEMA, state: 'READY', directory: root,
-      workspaceId, releaseStore, revision: row?.revision ?? 0,
+      workspaceId, releaseStore, authoringPort, revision: row?.revision ?? 0,
       latest: row ? { revision: row.revision, sourceSha256: row.source_sha256,
         paymentSha256: row.payment_sha256, origin: row.origin, savedAt: row.saved_at } : null,
       database: { path: filename, kind: 's3-workspace-store', exists: true, dev: before.dev, ino: before.ino } };
@@ -155,6 +159,23 @@ export async function openS3WorkspaceStore(directory, { expectedWorkspaceId } = 
   const store = {
     directory: root, workspaceId: db.prepare('SELECT value FROM metadata WHERE key=?').get('workspaceId').value,
     latest, getOperation, review,
+    authoringPort() {
+      return browserPort(db.prepare('SELECT value FROM metadata WHERE key=?').get('authoringPort')?.value);
+    },
+    retainAuthoringPort({ port, expectedPort }) {
+      if (!Number.isInteger(port) || port < 1 || port > 65535 ||
+          expectedPort !== null && (!Number.isInteger(expectedPort) || expectedPort < 1 || expectedPort > 65535))
+        throw new S3WorkspaceError('WORKSPACE_BROWSER_PORT_INVALID');
+      return transaction(() => {
+        const current = store.authoringPort();
+        if (current !== expectedPort) throw new S3WorkspaceError('WORKSPACE_BROWSER_PORT_CHANGED', 409,
+          'The workspace browser listener changed. Reopen its current launch review.');
+        if (current !== port)
+          db.prepare('INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')
+            .run('authoringPort', String(port));
+        return port;
+      });
+    },
     metadata(key, value) {
       return transaction(() => {
         const prior = db.prepare('SELECT value FROM metadata WHERE key=?').get(key)?.value;

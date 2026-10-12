@@ -41,7 +41,7 @@ give the application a useful name.
 | Initial S3 source JSON | Optional first-revision source from the original S3 configuration workflow |
 | Initial Stellar payment JSON | Select with the initial source and origin; the original compiler validates its terms |
 | Initial public HTTPS origin | The public merchant origin for the first revision |
-| Local port | Authoring browser port; `0` chooses an available port |
+| Local port | Authoring browser port; `0` chooses an available port once and then reuses that workspace's saved port |
 | Local release console port | Original SF82 console port; `0` chooses an available port |
 | Private environment JSON | Original AWS/profile environment and other required runtime environment, kept on the operator host |
 
@@ -124,7 +124,12 @@ finish. The source revisions, reviews, packages, released files and release
 history stay in their original private directories.
 
 Start the saved application again with a new start request. It reopens those
-same identities and prints new private capability URLs. The application does
+same identities and prints new private capability URLs. Port `0` reuses the
+workspace's saved authoring port, so the same browser tab retains its unsaved
+source/payment draft and pending operation IDs. If that port is occupied, release
+the conflicting listener or explicitly choose another port; the original draft
+remains in the old browser origin. An explicit port change selects a different
+origin. The application does
 not need the first-revision input files after a draft has been saved. The S3
 browser's existing token recovery also handles opening the new private URL in
 a tab that previously held the same origin.
@@ -175,7 +180,9 @@ Keep the complete printed private URLs on the operator host.
 
 Native scripts may select `--expected-workspace-id new` when opening a new
 workspace or the original UUID when reopening one. Optional
-`--expected-source-sha256` and `--expected-payment-sha256` bind first-revision
+`--expected-authoring-port` binds the workspace's previously selected authoring
+port (`0` before its first listener). Optional `--expected-source-sha256` and
+`--expected-payment-sha256` bind first-revision
 input bytes. The managed Applications caller always supplies those identity
 guards for its reviewed selection.
 

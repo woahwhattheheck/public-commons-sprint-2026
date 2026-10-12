@@ -140,6 +140,8 @@ export async function openS3MerchantWorkspace({ directory, releaseStore, initial
   }
   const controller = {
     directory: root, releaseStore: releases, workspaceId: store.workspaceId,
+    authoringPort: store.authoringPort(),
+    retainAuthoringPort(value) { openGuard(); return store.retainAuthoringPort(value); },
     async status() {
       openGuard(); const operations = store.operations();
       return { workspaceId: store.workspaceId, draft: store.latest(), history: store.history(), reviews: store.reviews(),
