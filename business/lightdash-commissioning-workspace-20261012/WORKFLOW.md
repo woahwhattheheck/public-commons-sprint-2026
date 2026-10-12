@@ -40,7 +40,7 @@ A file edit uses the actual current source identity:
       "expectedDraftId": "ACTUAL_SELECTED_DRAFT_UUID"
     }
 
-Use expectedFileSha256 = null for a genuinely new file. Removal is explicit: remove = true with the original file identity. New candidates are complete source editions; the original edition and draft remain available.
+Use expectedFileSha256 = null for a new file. Removal is explicit: remove = true with the original file identity. New candidates are complete source editions; the original edition and draft remain available.
 
 Review both complete editions. The review captures the actual reviewer and note, and may include one decision per source path:
 
@@ -103,6 +103,21 @@ The native integration retains the original validation job UUID, status and resu
 
 Review actual native compilation/validation results and the complete source changes. Update a draft and seal another complete candidate when a real source change is needed.
 
+### Query the reviewed chart with the original engine
+
+Use run-chart against the actual preview or selected project. The path is relative to the complete immutable source edition:
+
+    {
+      "projectUuid": "ACTUAL_OWNED_PREVIEW_UUID",
+      "chartPath": "dbt/charts/regional-sales-total-row-total-demo.yml",
+      "limit": 500,
+      "pageSize": 500
+    }
+
+The original query command returns its query UUID, actual rows and complete CSV. Inspection reads the retained query and result pages after a lost response; it does not submit another metric query.
+
+The complete Jaffle receiving programme adds weighted Revenue per Unit to the original regional_sales model and its consuming chart. The metric divides total revenue by total units using NULLIF for a zero denominator. The unchanged original CSV contains 72 transactions and 18 month-and-region groups from January through June 2025. The receiving comparison identifies all 18 returned groups, checks each group's actual units and revenue, and compares its raw weighted USD-per-unit result. Its source-derived expectations are comparison inputs; the native run supplies the actual results.
+
 ## 7. Back up content and promote source/content
 
 Use download on the intended original target before a content change. The result contains the complete original content export and manifest:
@@ -143,6 +158,7 @@ The application records PLANNED, RUNNING, SUCCEEDED, FAILED, INTERRUPTED, NEEDS_
 | --- | --- |
 | Successful original child exit retained | Adopt the original result |
 | Existing validation job UUID | Inspect that original native job |
+| Existing chart query UUID | Read that original query and its complete result pages |
 | Original preview identity and creation operation | Inspect or remove that exact owned preview |
 | Successful deployment finalize response retained | Adopt its actual returned status/counts/warnings |
 | Deployment finalize response lost | Retain its session/request identities; use the explicit native reconciliation path |
@@ -151,7 +167,7 @@ The application records PLANNED, RUNNING, SUCCEEDED, FAILED, INTERRUPTED, NEEDS_
 
 The original deployment controller has no GET endpoint for its batched session. Successful finalization deletes the session. A missing session does not prove failure, and the adapter does not replay finalization automatically.
 
-Root operation inspection is always attached to its original ID. The result remains in the same SQLite operation and native directory. Reading source/state or an existing operation never creates another native run.
+Root operation inspection is always attached to its original ID. The result remains in the same SQLite operation and native directory. Reading source/state or an existing operation never creates another native run. A restored workspace retains completed historical outcomes even when its original private execution journal was omitted; inspection reports that missing journal separately without replacing the retained terminal result.
 
 ## 9. Restore and finish the preview lifecycle
 
@@ -176,5 +192,7 @@ Export the whole workspace and selected native content. Use an explicit handover
 Private diagnostic files are opt-in:
 
     node cli.mjs package --workspace /srv/lightdash-commissioning/customer-a --id ACTUAL_HANDOVER_UUID --include-operator-private
+
+The application durably selects the complete original SQLite snapshot before acknowledging a handover request. Inspect or resume an interrupted package with inspect-handover or resume-handover and its original UUID. The same accepted ID retains the original SQLite revision and complete file basis. An interrupted prepublication selection remains explicitly pending and can adopt its retained complete snapshot. Use a new UUID when deliberately selecting a new complete workspace export.
 
 Reopen every source edition, draft and native result from the complete archive. Configure the receiving host explicitly before additional native work. The original operation records remain historical records; a newly selected target receives a new reviewed native plan.

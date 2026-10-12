@@ -14,6 +14,8 @@ Open START_HERE.html for the original source/native work summary. Open the local
 
 The receiving SQLite copy starts with connectionDetached = true and an empty active connection. The original complete operation inputs remain in their historical records. Configure the receiving host and target before a new native operation.
 
+Completed historical native outcomes remain available immediately after reopening. A portable archive can intentionally omit the original private execution journal. Inspecting such an operation preserves its complete retained terminal result and separately reports that provider reconciliation needs the original journal. It does not replace an original success with a newly planned operation.
+
 ## What is preserved
 
 | Archive entry | Complete contents |
@@ -38,17 +40,29 @@ Original native content is included by default. Private logs, command journals, 
 
 An explicitly included public or environment-only profile is an ordinary retained source file. For the complete original Jaffle example, its profile and Apache license stay unchanged in their original paths.
 
-## Resume an interrupted handover result save
+## Resume the original handover
 
-An archive can finish before the process returns or its final result record is saved. Keep the original handover ID.
+Keep the original handover ID after a lost response, process interruption or failed archive write. Its request fixes the workspace ID, workspace revision, full application source identity and diagnostic selection.
 
-In the application, select **Inspect original archive** beside that retained handover. From the CLI:
+In the application, select **Inspect original handover** beside that retained handover. From the CLI:
 
     node app/cli.mjs inspect-handover --workspace workspace --id ORIGINAL_HANDOVER_UUID
 
-The inspector opens the existing complete original archive, verifies every listed member and adopts the original archive identity. It does not rebuild source, start another native operation or overwrite a different completed archive.
+The inspector checks the same handover's permanent writer lock. If the original writer is active, it reports that state. When a complete final or partial ZIP exists, the inspector opens it, verifies every listed member and adopts that original archive identity.
 
-If the original complete ZIP has not yet been created, inspect the original handover logs in its retained handover directory. Another native product execution is not needed to inspect an archive. A fresh export uses a new explicit handover ID after the operator chooses the current complete workspace.
+To finish an incomplete handover:
+
+    node app/cli.mjs resume-handover --workspace workspace --id ORIGINAL_HANDOVER_UUID
+
+The application provides **Resume original handover** for the same action. The exporter retains the original SQLite snapshot and every selected complete source/artifact under that handover's basis directory. Continuation verifies and uses that original basis, even if the working workspace has advanced. A dead writer's incomplete ZIP can be rebuilt from that basis; native dbt, Lightdash or warehouse work is not repeated.
+
+The application retains a pending intent before selecting the database. It uses SQLite VACUUM INTO on its opened workspace connection, verifies the complete snapshot, and publishes the original database with an atomic no-overwrite link. Only then does it publish the revision-bearing request and acknowledge HTTP creation. Python archive construction starts after that durable selection. A later edit or native completion cannot change the accepted handover revision.
+
+If selection itself is interrupted, the original ID remains pending. Inspection reports that pending state without creating a new snapshot. Resume adopts a complete retained prepublication snapshot, or finishes selecting the database if none completed. A supplied workspace revision remains a selection precondition; a conflict before selection is acknowledged requires **New handover ID** to choose the current workspace. An accepted request always uses its retained original database and never falls back to the current live workspace.
+
+Keep the original application source available until its complete export basis has been retained. An incomplete basis needs the original selected files; replacing them with newer file contents would change the handover. Completed archives and sealed complete bases can be inspected and reused without rereading the live source.
+
+The server drains its own native operations and handover writes during an ordinary shutdown. The original receiving lease remains inherited by the Python exporter for its complete writing lifetime. A hard interruption is handled by the same inspect/resume path.
 
 ## Reuse original content after moving the workspace
 
@@ -64,7 +78,7 @@ If a private diagnostic file was omitted, the archive preserves its original des
 
 ## Source and workspace integrity
 
-The exporter obtains the SQLite backup through SQLite’s actual backup API. It does not copy a live database file while ignoring its journal.
+The application selects the original database with SQLite’s transactionally consistent VACUUM INTO operation, including committed WAL contents. The Python exporter uses SQLite’s actual backup API to create the detached receiving copy from that retained original snapshot. It never copies the live database file while ignoring its journal.
 
 Source file contents are checked against the complete retained edition manifest while writing the archive. Original native artifacts are checked against their native inventory. The archive is then reopened and every listed member is checked again before it is made available as a complete handover.
 

@@ -112,7 +112,7 @@ This is part of the connection object. The native integration verifies the origi
 4. **Native operations.** Select the edition, original action and complete input. Prepare a command plan, inspect its actual source, target and commands, then run the same operation.
 5. **Handover.** Export the complete receiving package after the desired native work is recorded. The package preserves all retained source editions and drafts. It includes native content by default and includes private diagnostic artifacts when explicitly selected.
 
-The editor keeps unsaved buffers while moving between its sections and files. Sealing saves the current draft’s outstanding text buffers before producing the candidate. Source writes check both the selected draft identity and original file identity. A conflict preserves the browser buffer so the operator can compare it with the current saved file.
+The editor keeps unsaved buffers while moving between its sections and files. Source reads remain bound to their requested edition, draft and path. A save or seal briefly disables changes to the selected draft while that complete write finishes; sealing saves its outstanding buffers before producing the candidate. Source writes check both the selected draft identity and original file identity. A conflict preserves the browser buffer so the operator can compare it with the current saved file.
 
 See [WORKFLOW.md](WORKFLOW.md) for the complete native sequence, recovery behavior and practical receiving commands.
 
@@ -128,6 +128,7 @@ See [WORKFLOW.md](WORKFLOW.md) for the complete native sequence, recovery behavi
 | deploy | Deploy the selected source through the original Lightdash command |
 | download | Export original native chart/dashboard content from the selected project |
 | upload | Upload an original retained content export or an explicitly selected immutable source-edition content tree |
+| run-chart | Execute the reviewed chart through the original query command and retain its query UUID, actual rows and CSV |
 | stop-preview | Remove only the exact preview bound to its original creation operation |
 
 Native operations keep one stable ID. Source edition, connection, inputs and original command plan are bound together. Reusing an ID with a different selection is a conflict.
@@ -154,7 +155,9 @@ The archive contains the complete application identified by source-manifest.json
 
 The exporter verifies the complete archive after reopening it. Its receiving SQLite copy has the host connection detached. This allows the receiver to read the original work immediately and explicitly configure the receiving runtime and target before another native operation.
 
-Existing handovers remain listed in the application. **Inspect original archive** adopts an already completed original archive after an interrupted result save. It does not launch another native operation or rebuild the original content.
+Before acknowledging a new handover, the application retains its selection intent, creates a transactionally consistent SQLite snapshot with SQLite VACUUM INTO, and durably publishes the complete original database and its revision-bearing request. Archive construction then runs in the background. If selection is interrupted before acknowledgment, its original ID remains visible as pending and can be resumed; no workspace revision has been promised before its actual snapshot is retained.
+
+Existing handovers remain listed in the application. **Inspect original handover** checks its actual writer and adopts a completed original ZIP, including a complete partial ZIP whose final publication was interrupted. **Resume original handover** continues from the same retained SQLite revision and complete file basis. A new handover ID selects the current workspace; retrying an existing ID preserves its original selection.
 
 See [HANDOVER.md](HANDOVER.md) for receiving, original archive recovery and content reuse.
 
@@ -185,6 +188,7 @@ Complete source and export commands:
     node cli.mjs content-exports --workspace /srv/lightdash-commissioning/customer-a --id ORIGINAL_DOWNLOAD_ID
     node cli.mjs package --workspace /srv/lightdash-commissioning/customer-a --id HANDOVER_UUID
     node cli.mjs inspect-handover --workspace /srv/lightdash-commissioning/customer-a --id HANDOVER_UUID
+    node cli.mjs resume-handover --workspace /srv/lightdash-commissioning/customer-a --id HANDOVER_UUID
 
 --revision binds a workspace change to an observed SQLite revision. Complete file edits additionally accept expectedFileSha256 and expectedDraftId. No command accepts arbitrary native shell arguments.
 
@@ -197,7 +201,7 @@ Complete source and export commands:
 | cli.mjs | Complete JSON command interface to the same workspace |
 | native/ | Original runtime bindings, execution, native artifacts and recovery |
 | receiving/ | Complete source-native commissioning program |
-| packaging.mjs / package.py | Consistent SQLite backup, portable archive and original archive adoption |
+| packaging.mjs / package.py | Original revision capture, complete retained export basis, portable archive and same-ID recovery |
 | source-manifest.json | Exact complete authored source cohort |
 
 This application runs only the selected original native tools. The included source is independent commissioning software; it does not calculate a substitute metrics engine or represent an upstream endorsement or accepted commercial engagement.
