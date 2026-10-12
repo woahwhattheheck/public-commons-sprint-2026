@@ -4,6 +4,8 @@ import {join,resolve,dirname,basename} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {setTimeout as pause} from 'node:timers/promises';
 import {Buyer} from '../node/client.mjs';
+import {readSuccessorRuntimeSource,verifySuccessorRuntimeSource,createRuntimeBoundBuyer} from '../node/runtime-source.mjs';
+import {normalizeNativeFileReservation} from '../node/file-reservation.mjs';
 import {privateDirectory,readBytes,readJson,writeBytes,writeJson,jsonBytes,digest,exists} from '../node/store.mjs';
 import {readOpenAlexMerchant,requestFor,validateQuery,ENTITIES} from '../../sf30-seller-sdk/openalex/config.mjs';
 import {createOpenAlexSource} from '../../sf30-seller-sdk/openalex/source.mjs';
@@ -118,7 +120,72 @@ async function openDirect({merchantConfig,budgetDirectory,productId,env}){
       async close(){await operation.finish();await source.close();}};
   }catch(error){await source.close();throw error;}
 }
-async function openNative({buyerProfile,clientFile,clientOrigin,productId,env}){
+const RUNTIME_SELECTION='stellar-forge.research-native-runtime-selection.v1';
+async function openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nativeRuntimeSource,nativeFileReservation}){
+  const chosenSource=nativeRuntimeSource===undefined?undefined:copy(nativeRuntimeSource);
+  const chosenReservation=normalizeNativeFileReservation(nativeFileReservation);
+  const root=join(stateDirectory,'research-runtime-selections'),path=join(root,digest(canonical(binding))+'.json');
+  let previous;try{previous=await readJson(path,1048576);}catch(error){if(error.code!=='ENOENT')throw error;}
+  if(previous!==undefined){
+    check(object(previous)&&previous.schema===RUNTIME_SELECTION&&
+      previous.originalRuntimeDirectory===runtimeDirectory&&canonical(previous.retrievalBinding)===canonical(binding)&&
+      object(previous.runtimeSource)&&previous.runtimeSource.directory!==runtimeDirectory&&
+      typeof previous.createdAt==='string','RESEARCH_RUNTIME_SELECTION_CHANGED',undefined,409);
+    const checked=await verifySuccessorRuntimeSource(previous.runtimeSource);
+    const savedReservation=normalizeNativeFileReservation(previous.nativeFileReservation);
+    if(chosenSource!==undefined){
+      const requested=await readSuccessorRuntimeSource(chosenSource);
+      check(canonical(requested)===canonical(checked),'RESEARCH_RUNTIME_ALREADY_SELECTED',undefined,409);
+    }
+    if(chosenReservation!==undefined)
+      check(canonical(chosenReservation)===canonical(savedReservation??null),'RESEARCH_RUNTIME_ALREADY_SELECTED',undefined,409);
+    return{...previous,runtimeSource:checked,...(savedReservation===undefined?{}:{nativeFileReservation:savedReservation}),path};
+  }
+  if(chosenSource===undefined){
+    check(chosenReservation===undefined,'RESEARCH_RUNTIME_SOURCE_REQUIRED',
+      'Select the complete native source before enabling its file reservation provider.');
+    return null;
+  }
+  const runtimeSource=await readSuccessorRuntimeSource(chosenSource);
+  check(runtimeSource.directory!==runtimeDirectory,'RESEARCH_RUNTIME_MUST_BE_DISTINCT');
+  await privateDirectory(root);
+  const value={schema:RUNTIME_SELECTION,originalRuntimeDirectory:runtimeDirectory,
+    retrievalBinding:copy(binding),runtimeSource,
+    ...(chosenReservation===undefined?{}:{nativeFileReservation:chosenReservation}),
+    createdAt:new Date().toISOString()};
+  try{await writeJson(path,value,{exclusive:true});}
+  catch(error){
+    if(error.code!=='EEXIST')throw error;
+    // A concurrent receiver may have chosen the same source. Reopen that exact
+    // first published selection; neither caller replaces it or creates a page.
+    return openRuntimeSelection({stateDirectory,runtimeDirectory,binding,
+      nativeRuntimeSource:chosenSource,nativeFileReservation:chosenReservation});
+  }
+  return{...value,path};
+}
+async function routedNativeBuyer(original,selection){
+  if(selection===null)return original;
+  const selected=await createRuntimeBoundBuyer(original,selection.runtimeSource);
+  return{
+    operation(intentId){return original.operation(intentId);},
+    async openOperation(intentId,options={}){
+      const operation=original.operation(intentId);
+      const saved=await readJson(join(operation.directory,'operation.json'));
+      if(saved.runtimeDirectory===selected.runtime.directory){
+        await verifySuccessorRuntimeSource(selection.runtimeSource,{signal:options.signal});
+        return selected.openOperation(intentId,options);
+      }
+      // The original opener follows only the exact runtime choice bound to
+      // this operation's parent. It does not prepare or follow another intent.
+      return original.openOperation(intentId,options);
+    },
+    async fromRequest(request,options){
+      await verifySuccessorRuntimeSource(selection.runtimeSource,{signal:request.signal});
+      return selected.fromRequest(request,options);
+    },
+  };
+}
+async function openNative({buyerProfile,clientFile,clientOrigin,productId,env,nativeRuntimeSource,nativeFileReservation}){
   check(typeof buyerProfile==='string'&&typeof clientFile==='string','NATIVE_CONFIGURATION_REQUIRED');
   const profile=await readJson(resolve(buyerProfile),1048576);
   check(object(profile)&&typeof profile.runtimeDirectory==='string'&&typeof profile.stateDirectory==='string'&&
@@ -145,12 +212,15 @@ async function openNative({buyerProfile,clientFile,clientOrigin,productId,env}){
   const runtimeOptions={environment:env};
   for(const key of ['node','timeoutMs','cleanupGraceMs','outputLimit'])if(profile[key]!==undefined)runtimeOptions[key]=profile[key];
   const operatorProfile=typeof profile.operatorProfile==='string'?await readJson(resolve(profile.operatorProfile),65536):copy(profile.operatorProfile);
-  const buyer=new Buyer({runtimeDirectory,stateDirectory,operatorProfile,...runtimeOptions});
-  await buyer.ready();
   const binding={schema:BINDING,mode:'NATIVE_BUYER',entity:profile.entity,productId,
     buyerStateDirectory:await realpath(stateDirectory),operatorProfileSha256:digest(canonical(operatorProfile)),origin:inspected.origin,
     clientSourceSha256:inspected.sourceSha256,clientFilesSha256:inspected.filesSha256,
     authorization:copy(profile.authorization)};
+  const runtimeSelection=await openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nativeRuntimeSource,nativeFileReservation});
+  const originalBuyer=new Buyer({runtimeDirectory,stateDirectory,operatorProfile,...runtimeOptions,
+    ...(runtimeSelection?.nativeFileReservation===undefined?{}:{nativeFileReservation:runtimeSelection.nativeFileReservation})});
+  await originalBuyer.ready();
+  const buyer=await routedNativeBuyer(originalBuyer,runtimeSelection);
   const buyerOptions={};
   for(const key of ['responseFile','requestTimeoutMs'])if(profile[key]!==undefined)buyerOptions[key]=profile[key];
   const nativeFetch=createBuyerPageFetcher({buyer,buyerOptions,requestForPage:(request,{intentId,signal})=>{
@@ -160,22 +230,30 @@ async function openNative({buyerProfile,clientFile,clientOrigin,productId,env}){
   const closing={value:false},operation=tracked(nativeFetch,closing);bind(operation.fetchPage,binding);
   return {mode:'NATIVE_BUYER',description:'Original native buyer · '+profile.entity+' · '+inspected.origin,
     fetchPage:operation.fetchPage,acceptsEntity:entity=>entity===profile.entity,
+    openOperation(intentId,options){return buyer.openOperation(intentId,options);},
     async snapshot(){return {mode:'NATIVE_BUYER',entity:profile.entity,productId,origin:inspected.origin,
       buyerStateDirectory:binding.buyerStateDirectory,clientSourceSha256:inspected.sourceSha256,
-      clientFilesSha256:inspected.filesSha256,authorization:copy(profile.authorization)};},
+      clientFilesSha256:inspected.filesSha256,authorization:copy(profile.authorization),
+      runtimeSelection:runtimeSelection===null?null:{path:runtimeSelection.path,runtimeSource:runtimeSelection.runtimeSource,
+        nativeFileReservation:runtimeSelection.nativeFileReservation??null}};},
     async close(){await operation.finish();}};
 }
 
 /** No signing, provider HTTP or payment engine is reimplemented here. */
 export async function openResearchRetrieval(options={}){
-  const {merchantConfig,budgetDirectory,productId,buyerProfile,clientFile,clientOrigin,env=process.env}=options;
+  const {merchantConfig,budgetDirectory,productId,buyerProfile,clientFile,clientOrigin,
+    nativeRuntimeSource,nativeFileReservation,env=process.env}=options;
   check(typeof productId==='string'&&productId.length>0,'RETRIEVAL_PRODUCT_REQUIRED');
+  const selectedRuntime=nativeRuntimeSource===undefined?undefined:copy(nativeRuntimeSource);
+  const selectedReservation=normalizeNativeFileReservation(nativeFileReservation);
   const direct=merchantConfig!==undefined,native=buyerProfile!==undefined;
   check(direct!==native,'RETRIEVAL_MODE_REQUIRED','Choose either a direct merchant configuration or an original native buyer profile.');
   if(direct){
-    check(clientFile===undefined&&clientOrigin===undefined,'RETRIEVAL_MODE_CONFLICT');
+    check(clientFile===undefined&&clientOrigin===undefined&&nativeRuntimeSource===undefined&&
+      nativeFileReservation===undefined,'RETRIEVAL_MODE_CONFLICT');
     return openDirect({merchantConfig,budgetDirectory,productId,env});
   }
   check(budgetDirectory===undefined,'RETRIEVAL_MODE_CONFLICT','The native merchant owns its shared provider budget.');
-  return openNative({buyerProfile,clientFile,clientOrigin,productId,env});
+  return openNative({buyerProfile,clientFile,clientOrigin,productId,env,
+    nativeRuntimeSource:selectedRuntime,nativeFileReservation:selectedReservation});
 }

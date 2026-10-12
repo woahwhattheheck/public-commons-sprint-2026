@@ -1,6 +1,7 @@
 // MIT — Private application state. Financial authority stays in the original SF36 ledger.
 import { constants } from 'node:fs';
 import { inspect } from 'node:util';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { open, mkdir, lstat, rename, link, unlink } from 'node:fs/promises';
 import { resolve, dirname, join, isAbsolute } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -90,22 +91,173 @@ export async function exists(path) {
   try { await lstat(path); return true; }
   catch (error) { if (error.code === 'ENOENT') return false; throw error; }
 }
-export async function writeBytes(path, data, { exclusive = false } = {}) {
-  path = absolute(path);
-  const temporary = join(dirname(path), `.write-${randomUUID()}`);
-  let handle;
+// Reservation scope carries only local file allocation. Financial configuration
+// and the original operation/response schemas do not acquire storage settings.
+const fileReservations = new AsyncLocalStorage();
+function reservationOptions(options = {}) {
+  need(object(options), 'FILE_RESERVATION_OPTIONS_INVALID');
+  const inherited = fileReservations.getStore();
+  const reserveFile = options.reserveFile ?? inherited?.reserveFile;
+  need(reserveFile === undefined || typeof reserveFile === 'function', 'FILE_RESERVATION_CALLBACK_INVALID');
+  const signals = [...new Set([inherited?.signal, options.signal].filter(value => value !== undefined))];
+  for (const signal of signals) need(signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
+  return { reserveFile, signal: signals.length > 1 ? AbortSignal.any(signals) : signals[0] };
+}
+export function currentFileReservation() {
+  const scope = fileReservations.getStore();
+  return scope ? Object.freeze({ reserveFile: scope.reserveFile, signal: scope.signal }) : null;
+}
+export function withFileReservation(options, work) {
+  need(typeof work === 'function', 'FILE_RESERVATION_WORK_REQUIRED');
+  const selected = reservationOptions(options);
+  need(selected.reserveFile, 'FILE_RESERVATION_CALLBACK_REQUIRED');
+  return fileReservations.run({ ...fileReservations.getStore(), ...selected }, work);
+}
+function retainedBytes(data) {
+  need(typeof data === 'string' || data instanceof Uint8Array, 'FILE_WRITE_BYTES_REQUIRED');
+  return Buffer.from(data);
+}
+function retainCleanup(error, cleanupError) {
+  if (cleanupError && error !== null && (typeof error === 'object' || typeof error === 'function'))
+    try { Object.defineProperty(error, 'cleanupError', { value: cleanupError, configurable: true }); } catch {}
+}
+async function closeTemporary(slot) {
+  let failure;
+  if (slot.handle) {
+    try { await slot.handle.close(); } catch (error) { failure = error; }
+    slot.handle = undefined;
+  }
+  // If the initial fstat itself failed, close the handle without deleting an
+  // unverified pathname. No capacity was allocated to that temporary file.
+  if (!slot.identity) { if (failure) throw failure; return; }
   try {
-    handle = await open(temporary, 'wx', 0o600);
-    await handle.writeFile(data);
-    await handle.sync();
-    await handle.close(); handle = undefined;
-    if (exclusive) { await link(temporary, path); await unlink(temporary); }
-    else await rename(temporary, path);
-    await syncDirectory(dirname(path));
-  } finally {
-    if (handle) await handle.close();
-    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+    const current = await lstat(slot.temporary);
+    need(current.isFile() && !current.isSymbolicLink() &&
+      current.dev === slot.identity.dev && current.ino === slot.identity.ino,
+    'FILE_RESERVATION_TEMPORARY_CHANGED');
+    await unlink(slot.temporary);
+  } catch (error) { if (error.code !== 'ENOENT') failure ??= error; }
+  if (failure) throw failure;
+}
+async function ownedTemporary(path, bytes, reserveFile, signal) {
+  need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
+  const temporary = join(dirname(path), '.write-' + randomUUID());
+  const handle = await open(temporary, 'wx', 0o600);
+  const slot = { path, temporary, handle, bytes, used: false };
+  try {
+    slot.identity = await handle.stat();
+    if (reserveFile && bytes > 0) {
+      const fd = handle.fd, before = await handle.stat({ bigint: true });
+      await reserveFile(Object.freeze({
+        fileHandle: handle, path: temporary, kind: 'buyer-metadata', bytes, signal,
+      }));
+      const after = await handle.stat({ bigint: true }), named = await lstat(temporary, { bigint: true });
+      need(handle.fd === fd && after.isFile() && named.isFile() && !named.isSymbolicLink() &&
+        before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
+        before.mode === after.mode && before.uid === after.uid && before.gid === after.gid &&
+        before.nlink === after.nlink && named.dev === after.dev && named.ino === after.ino &&
+        named.size === after.size && named.mode === after.mode && named.uid === after.uid &&
+        named.gid === after.gid, 'FILE_RESERVATION_TARGET_CHANGED');
+      need(typeof after.blocks === 'bigint' && after.blocks * 512n >= BigInt(bytes),
+        'FILE_RESERVATION_INCOMPLETE');
+      await handle.sync();
+      need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
+    }
+    return slot;
+  } catch (error) {
+    try { await closeTemporary(slot); } catch (cleanupError) { retainCleanup(error, cleanupError); }
+    throw error;
   }
 }
-export const writeJson = (path, value, options) => writeBytes(path, jsonBytes(value), options);
+async function publishTemporary(slot, data, exclusive, reserved) {
+  try {
+    if (reserved) {
+      // Positional writes consume the held destination inode; they never reopen
+      // it with a truncating flag that would discard the preallocated blocks.
+      let offset = 0;
+      while (offset < data.length) {
+        const { bytesWritten } = await slot.handle.write(data, offset, data.length - offset, offset);
+        need(Number.isInteger(bytesWritten) && bytesWritten > 0, 'FILE_WRITE_NO_PROGRESS');
+        offset += bytesWritten;
+      }
+      await slot.handle.truncate(data.length);
+    } else await slot.handle.writeFile(data);
+    await slot.handle.sync();
+    await slot.handle.close(); slot.handle = undefined;
+    if (exclusive) { await link(slot.temporary, slot.path); await unlink(slot.temporary); }
+    else await rename(slot.temporary, slot.path);
+    await syncDirectory(dirname(slot.path));
+  } finally { await closeTemporary(slot); }
+}
 
+/** Hold the actual future publication files before native work begins.
+ * Repeated paths reserve separate original atomic replacements in order. */
+export async function prepareWriteReservations(entries, options = {}) {
+  const { reserveFile, signal } = reservationOptions(options);
+  if (!reserveFile) return null;
+  need(Array.isArray(entries) && entries.length > 0 && entries.length <= 256,
+    'FILE_RESERVATION_PLAN_INVALID');
+  need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
+  const slots = [], byPath = new Map();
+  let closed = false;
+  try {
+    for (const entry of entries) {
+      need(object(entry) && Object.keys(entry).every(key => ['path', 'bytes', 'exclusive'].includes(key)) &&
+        Number.isSafeInteger(entry.bytes) && entry.bytes >= 0 && entry.bytes <= 2147483647 &&
+        (entry.exclusive === undefined || typeof entry.exclusive === 'boolean'),
+      'FILE_RESERVATION_ENTRY_INVALID');
+      const path = absolute(entry.path);
+      const slot = await ownedTemporary(path, entry.bytes, reserveFile, signal);
+      slot.exclusive = entry.exclusive ?? false;
+      slots.push(slot);
+      if (!byPath.has(path)) byPath.set(path, []);
+      byPath.get(path).push(slot);
+    }
+  } catch (error) {
+    const cleanup = await Promise.allSettled(slots.map(closeTemporary));
+    retainCleanup(error, cleanup.find(item => item.status === 'rejected')?.reason);
+    throw error;
+  }
+  const pool = {
+    async write(path, data, exclusive) {
+      need(!closed, 'FILE_RESERVATION_CLOSED');
+      const queue = byPath.get(path);
+      if (!queue) return false;
+      const slot = queue.find(item => !item.used);
+      need(slot, 'FILE_RESERVATION_PLAN_EXHAUSTED');
+      need(slot.exclusive === exclusive && data.length <= slot.bytes, 'FILE_RESERVATION_WRITE_MISMATCH');
+      slot.used = true;
+      // Once capacity is held, persist interruption/error checkpoints even if
+      // the operation's AbortSignal fired during its original native call.
+      await publishTemporary(slot, data, exclusive, true);
+      return true;
+    },
+    run(work) {
+      need(!closed && typeof work === 'function', 'FILE_RESERVATION_CLOSED');
+      return fileReservations.run({ reserveFile, signal, pool }, work);
+    },
+    writeBytes(path, data, options) { return pool.run(() => writeBytes(path, data, options)); },
+    writeJson(path, value, options) { return pool.run(() => writeJson(path, value, options)); },
+    summary() { return { files: slots.length, bytes: slots.reduce((sum, slot) => sum + slot.bytes, 0),
+      remaining: slots.filter(slot => !slot.used).length, closed }; },
+    async close() {
+      if (closed) return;
+      closed = true;
+      const cleanup = await Promise.allSettled(slots.filter(slot => !slot.used).map(closeTemporary));
+      const failure = cleanup.find(item => item.status === 'rejected');
+      if (failure) throw failure.reason;
+    },
+  };
+  return Object.freeze(pool);
+}
+export async function writeBytes(path, data, options = {}) {
+  path = absolute(path);
+  const { exclusive = false } = options;
+  const selected = reservationOptions(options), scope = fileReservations.getStore();
+  const raw = selected.reserveFile ? retainedBytes(data) : data;
+  if (scope?.pool && await scope.pool.write(path, raw, exclusive)) return;
+  const slot = await ownedTemporary(path, selected.reserveFile ? raw.length : 0,
+    selected.reserveFile, selected.signal);
+  await publishTemporary(slot, raw, exclusive, Boolean(selected.reserveFile));
+}
+export const writeJson = (path, value, options) => writeBytes(path, jsonBytes(value), options);

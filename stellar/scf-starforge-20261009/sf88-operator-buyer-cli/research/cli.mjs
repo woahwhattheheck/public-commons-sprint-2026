@@ -19,11 +19,12 @@ const HELP='Research workspace\n\n'+
  'report --workspace DIR --edition-id ID --out FILE [--before ID]\n'+
  'export --workspace DIR --edition-id ID --out DIR [--without-pages --without-native]\n'+
  'serve --workspace DIR [--port 8469] [same retrieval options as gather]\n\n'+
- 'Gather follows the saved cursor chain to its terminal empty page. --max-pages N pauses after an explicit batch.\n'+
+ 'Gather follows the saved cursor chain to its terminal page. --max-pages N pauses after an explicit batch.\n'+
+ 'Native runtime adoption: --runtime-source FILE --file-reservation FILE. The saved selection is reused on later calls.\n'+
  'Each native page uses its existing original buyer intent on continuation. Query revisions create new editions.\n';
 const stringOptions=['workspace','file','expected-revision','query-id','query-revision','edition-id','label','response','result','request',
  'buyer-result','source-url','product','merchant-config','budget-dir','buyer-profile','client','client-origin','record-id','status','notes',
- 'tags','before','after','out','port','max-pages'];
+ 'tags','before','after','out','port','max-pages','runtime-source','file-reservation'];
 const requireOption=(condition,message)=>{if(!condition)throw new ResearchError('COMMAND_OPTIONS_INVALID',message);};
 function integer(value,fallback,{min=0,max=Number.MAX_SAFE_INTEGER}={}){
   if(value===undefined)return fallback;
@@ -35,7 +36,9 @@ async function retrievalFor(v){
   return openResearchRetrieval({merchantConfig:v['merchant-config']?resolve(v['merchant-config']):undefined,
     budgetDirectory:v['budget-dir']?resolve(v['budget-dir']):undefined,productId:v.product,
     buyerProfile:v['buyer-profile']?resolve(v['buyer-profile']):undefined,clientFile:v.client?resolve(v.client):undefined,
-    clientOrigin:v['client-origin']});
+    clientOrigin:v['client-origin'],
+    nativeRuntimeSource:v['runtime-source']?await readJson(resolve(v['runtime-source']),1048576):undefined,
+    nativeFileReservation:v['file-reservation']?await readJson(resolve(v['file-reservation']),65536):undefined});
 }
 export async function main(args=process.argv.slice(2)){
   const {values:v,positionals}=parseArgs({args,strict:true,allowPositionals:true,options:Object.fromEntries([

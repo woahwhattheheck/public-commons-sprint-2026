@@ -50,7 +50,8 @@
     "examples",
     "agents",
     "FRAMEWORKS.md",
-    "unstructured"
+    "unstructured",
+    "PROTECTED_STORAGE.md"
   ],
   "sideEffects": false,
   "peerDependencies": {
