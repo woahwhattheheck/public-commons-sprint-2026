@@ -234,8 +234,10 @@ export async function exportIssuedReview({store,result,output}={}) {
   for(const format of ['portable','html','markdown','requirements','capabilities','teaming','milestones','questions']){
     const exported=await opportunityExport(store,result.projectId,{format,packageId:result.packageId});
     const bytes=Buffer.isBuffer(exported.bytes)?exported.bytes:Buffer.from(exported.bytes);
-    const receipt=await writeRetained(join(resolve(output),exported.filename),bytes);
-    outputs.push({format,...receipt,mediaType:exported.mediaType});
+    const filename=['requirements','capabilities','teaming','milestones','questions'].includes(format)
+      ? `${format}-${exported.filename}` : exported.filename;
+    const receipt=await writeRetained(join(resolve(output),filename),bytes);
+    outputs.push({format,...receipt,sourceFilename:exported.filename,mediaType:exported.mediaType});
   }
   const {journalPath,...customerResult}=result;
   const report={...customerResult,outputs};
