@@ -17,13 +17,13 @@ starforge runtime-install prepare \
   --dir /srv/starforge/runtimes/paid-jobs-01 \
   --archive /srv/starforge/downloads/original-merchant.tgz \
   --sha256 REPLACE_WITH_COMPLETE_ORIGINAL_ARCHIVE_SHA256 \
-  --native --operator
+  --native --feature schema --operator
 
 starforge runtime-install install \
   --dir /srv/starforge/runtimes/paid-jobs-01
 ```
 
-`--native` selects the existing release's payment dependencies. `--operator` records its Linux, Python, and `flock` requirements. Paid jobs adds no optional dependency group. The installer retains the original package under `package/`, installs its selected dependencies under `node_modules/`, and keeps their source and lock identities together.
+`--native` selects the existing release's payment dependencies. `--feature schema` selects the original merchant schema engine, including `re2js` 2.8.6 from the [original schema runtime manifest](../../../../stellar-forge/payment-auto-catalog/package.json). The seller compiles the job input schemas through that engine, so select it for job preparation as well as native service startup. `--operator` records the Linux, Python, and `flock` requirements. The installer retains the original package under `package/`, installs its selected dependencies under `node_modules/`, and keeps their source and lock identities together.
 
 The complete installation and interruption workflow is documented in [RUNTIME_INSTALL.md](../../distribution/RUNTIME_INSTALL.md). A populated npm cache can be selected with the original `--offline --cache ABSOLUTE_DIRECTORY` installation options.
 
@@ -142,6 +142,18 @@ starforge runtime-install run --dir "$SF_JOBS_RUNTIME" -- \
 
 Choose an output path that does not already exist. Start the owning service again with the same state directory before the customer submits the paid request.
 
+### Recover a lost purchase ticket
+
+If a prepared job's private handoff was lost before submission, select that job in the running operator workspace and use **Renew purchase ticket**. Supply the displayed revision and a reason, then save the returned private ticket through the existing handoff panel.
+
+For an offline operator session with the merchant lease available:
+
+```sh
+starforge runtime-install run --dir "$SF_JOBS_RUNTIME" -- jobs renew-claim --config "$SF_JOBS_APP/example-merchant.json" --state "$SF_JOBS_STATE" --id report-2026-q4 --revision CURRENT_REVISION --reason "Recover the prepared customer's lost purchase ticket" --out /srv/starforge/handoffs/report-2026-q4-replacement.json
+```
+
+Choose a new output file and preserve it before preparing the buyer. The command returns the same handoff schema as job creation, with `created: false`. It accepts only an unsubmitted PREPARED job with no settlement. The replacement keeps the original job, input and payment terms, increments its revision, and records the renewal reason in its history. Give the customer the replacement ticket for that prepared purchase.
+
 ### Retain, follow, and download an accepted job
 
 The installed buyer command accepts the original acceptance and the private job handoff:
@@ -191,6 +203,10 @@ await customer.download({
 
 `createJobBuyer` accepts exactly one original purchase source: `result` or `acceptanceFile`. Supply either the handoff or `claimToken`. Use `openJobBuyer({directory, transport})` to reopen the retained customer workflow. [BUYER.md](BUYER.md) contains the full interface and transport options.
 
+### Customer jobs, resource library and collections
+
+Open `starforge job-workspace serve --state /srv/starforge/customer-workspace` for the customer application over retained paid jobs. It accepts the original acceptance/handoff or an existing buyer directory, monitors execution, retrieves verified results, and carries those results into the maintained resource library and collections. Use Node 24 for its SQLite-backed library. The [customer workspace guide](../../sf88-operator-buyer-cli/job-workspace/README.md) covers first-open roots, intake, local tasks, research notes, export/receive, CLI and typed JavaScript integration.
+
 ## Operate retained work
 
 The live workspace is the operator surface for a running service. For offline CLI work, stop that service, open the same configuration/state pair, perform the command, and return service ownership to the normal supervisor.
@@ -199,6 +215,7 @@ The live workspace is the operator surface for a running service. For offline CL
 | --- | --- |
 | `status` | Read the retained merchant snapshot. |
 | `show --id JOB_ID` | Read one job and its retained details. |
+| `renew-claim --id JOB_ID --revision CURRENT_REVISION --reason TEXT --out NEW_TICKET_FILE` | Recover the private purchase ticket of an unsubmitted PREPARED job. |
 | `reconcile` | Reconcile retained paid orders with the merchant's jobs. |
 | `work --once` | Drain the currently available paid jobs through the original worker. |
 | `work` | Run the worker through this command's owning model. |
@@ -212,7 +229,9 @@ On restart, retain the same application, configuration, merchant directory, and 
 
 ## Upgrade the runtime while preserving merchant state
 
-Prepare a new original runtime through `runtime-install upgrade --from OLD_DIRECTORY --dir NEW_DIRECTORY --archive ORIGINAL_ARCHIVE --sha256 ORIGINAL_SHA256`. The installer inherits the selected native/operator profile unless explicitly changed and records the source and dependency comparison.
+Prepare a new original runtime through `runtime-install upgrade --from OLD_DIRECTORY --dir NEW_DIRECTORY --archive ORIGINAL_ARCHIVE --sha256 ORIGINAL_SHA256`. The installer inherits the native, feature, operator, and version-pin selections unless explicitly changed and records the source and dependency comparison. Keep the existing `schema` feature in that selected profile.
+
+For a runtime prepared before the schema feature was selected, use the same upgrade into a new directory with `--native --feature schema --operator`. Repeat `--feature NAME` for every additional feature the existing runtime needs; an explicit feature list replaces the inherited list. The new runtime's resolved lock will include the original schema dependency.
 
 Stop the owning service, select the new runtime in the existing process supervisor, and launch with the unchanged application/configuration/state paths. Preserve the previous runtime for the deployment workflow's rollback. If the retained dependency tree needs recovery, use the original `runtime-install recover` operation into a new directory.
 
