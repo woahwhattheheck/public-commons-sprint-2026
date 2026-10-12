@@ -115,6 +115,8 @@ class Workspace:
                 CREATE INDEX IF NOT EXISTS derived_entity ON derived(portfolio_id,revision,entity_key);
                 CREATE TABLE IF NOT EXISTS requests(id TEXT PRIMARY KEY,input_sha TEXT NOT NULL,body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS exports(id TEXT PRIMARY KEY,body TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS original_requests(origin TEXT,id TEXT,input_sha TEXT,body TEXT NOT NULL,
+                    PRIMARY KEY(origin,id));
             """)
             self.db.execute("INSERT OR IGNORE INTO meta VALUES('workspaceId',?)", (self.marker["workspaceId"],))
             self.db.execute("INSERT OR IGNORE INTO meta VALUES('revision','0')")
@@ -423,6 +425,10 @@ class Workspace:
                     "Pair each removed source edition with one distinct selected replacement")
             replace[pair["before"]] = pair["after"]
         selected_sources, entities, financial = self._selected(definition["sources"], overrides)
+        for before, after in replace.items():
+            old_source = (overrides or {}).get(before, {}).get("source") or self.source(before)
+            new_source = next(source for source in selected_sources if source["id"] == after)
+            require(old_source["standard"] == new_source["standard"], "Following editions must use the same original standard")
         require(len({ref_key(row) for row in entities}) == len(entities), "The original source repeats an entity identity")
         lookup = {ref_key(row): row for row in entities}
         decisions = reconcile_decisions(previous["decisions"], lookup, replace) if previous else []
@@ -614,6 +620,14 @@ class Workspace:
                             self._commit_source(source)
                         for item in prepared["history"]:
                             self._commit_revision(item)
+                        for original in prepared["originalRequests"]:
+                            origin, record = original["origin"], original["request"]
+                            prior = self.db.execute("SELECT body FROM original_requests WHERE origin=? AND id=?",
+                                                    (origin, record["id"])).fetchone()
+                            require(prior is None or parse(prior[0]) == record,
+                                    "The retained original request history conflicts", "ORIGINAL_REQUEST_CONFLICT", 409)
+                            self.db.execute("INSERT OR IGNORE INTO original_requests VALUES(?,?,?,?)",
+                                (origin, record["id"], record["inputSha256"], canonical(record).decode()))
                         result = prepared["result"]
                     self.db.execute("UPDATE meta SET value=CAST(value AS INTEGER)+1 WHERE key='revision'")
                     request.update(state="COMPLETED", updatedAt=now(), result=result,
@@ -649,11 +663,19 @@ class Workspace:
             source_rows = [self.source(ident, db) for ident in source_ids]
             operation_ids = {item["operationId"] for item in history}
             requests = []
-            for row in db.execute("SELECT body FROM requests ORDER BY id"):
-                request = parse(row[0])
-                if request["id"] in operation_ids or (request["action"] == "source.receive"
-                    and request["state"] == "COMPLETED" and request["result"]["id"] in source_ids):
-                    requests.append(request)
+            originals = [(self.marker["workspaceId"], parse(row[0]))
+                         for row in db.execute("SELECT body FROM requests ORDER BY id")]
+            originals.extend((row["origin"], parse(row["body"]))
+                             for row in db.execute("SELECT origin,body FROM original_requests ORDER BY origin,id"))
+            seen_requests = set()
+            for origin, request in originals:
+                if request["state"] == "COMPLETED" and (request["id"] in operation_ids or
+                    (request["action"] == "source.receive" and request["result"]["id"] in source_ids)):
+                    key = (origin, request["id"])
+                    if key not in seen_requests:
+                        requests.append({"origin": origin, "request": request})
+                        seen_requests.add(key)
+            requests.sort(key=lambda item: (item["origin"], item["request"]["id"]))
             files = {}
             def save(name, data):
                 path = folder / "files" / PurePosixPath(name)
@@ -808,19 +830,51 @@ class Workspace:
                 prepared_history.append(rebuilt)
                 previous = original
             require(previous["snapshot"] == manifest["snapshot"], "The original final revision differs")
-            from managed import sourceFileList
-            require(all("runtime/sf30-seller-sdk/" + name in manifest["files"] for name in sourceFileList()),
-                    "The complete original application source is missing")
+            source_manifest_name = "runtime/sf30-seller-sdk/grant-portfolio/source-files.json"
+            require(source_manifest_name in manifest["files"], "The incoming original source manifest is missing")
+            original_source = parse(archive.read(source_manifest_name))
+            shape(original_source, ("schema", "files"), ("schema", "files"))
+            require(original_source["schema"] == "stellar-forge.grant-portfolio-source-files.v1"
+                    and isinstance(original_source["files"], list) and original_source["files"],
+                    "The incoming original source closure is invalid")
+            declared = original_source["files"]
+            require(all(isinstance(name, str) and name and "\\\\" not in name and not name.startswith("/")
+                    and all(part not in ("", ".", "..") for part in name.split("/"))
+                    and not any(ord(char) < 32 for char in name) for name in declared),
+                    "The incoming source closure must contain ordinary original relative files")
+            require(declared == sorted(set(declared)) and "grant-portfolio/source-files.json" in declared,
+                    "The incoming original source closure repeats or omits its manifest")
+            require({name for name in manifest["files"] if name.startswith("runtime/")}
+                    == {"runtime/sf30-seller-sdk/" + name for name in declared},
+                    "Retain every file declared by the incoming original source closure")
             require({name for name in manifest["files"] if not name.startswith("runtime/")} == expected_data,
                     "The complete handoff has missing or undeclared domain members")
-            for request in requests:
+            request_keys = set()
+            retained_ids = set()
+            for original in requests:
+                shape(original, ("origin", "request"), ("origin", "request"))
+                identifier(original["origin"])
+                request = original["request"]
                 require(request["inputSha256"] == digest(request["input"]) and request["state"] == "COMPLETED",
                         "The retained original request input or result differs")
                 operation(request["id"])
+                require(request["input"]["operationId"] == request["id"], "The original operation id differs")
+                key = (original["origin"], request["id"])
+                require(key not in request_keys, "The original request history repeats an identity")
+                request_keys.add(key)
+                if request["id"] in {item["operationId"] for item in history}:
+                    require(request["action"] in {"portfolio.save", "review.save"}
+                            and request["result"] in history, "An original portfolio operation result differs")
+                    retained_ids.add(request["id"])
+                else:
+                    require(request["action"] == "source.receive" and request["result"]["id"] in source_ids,
+                            "An unrelated operation was included in this handoff")
+            require({item["operationId"] for item in history} <= retained_ids,
+                    "The complete original portfolio operation history is missing")
             # Preserve the entire archive and original request history under its original identity.
             immutable(folder / "manifest.json", canonical(manifest))
             immutable(folder / "original-requests.json", canonical(requests))
-        return {"sources": prepared_sources, "history": prepared_history,
+        return {"sources": prepared_sources, "history": prepared_history, "originalRequests": requests,
                 "result": {"schema": SCHEMA + ".received", "object": payload["object"],
                     "sourceWorkspaceId": manifest["workspaceId"], "workspaceId": self.marker["workspaceId"],
                     "portfolioId": manifest["portfolioId"], "revision": manifest["revision"],

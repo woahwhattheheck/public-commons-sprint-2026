@@ -36,7 +36,7 @@ def file_info(path):
 
 def tokens(value):
     result = {value} if value else set()
-    for item in re.split(r"[^A-Za-z0-9]+", value):
+    for item in re.split(r"[^A-Za-z0-9]+", value or ""):
         if len(item) >= 6 and any(char.isdigit() for char in item):
             result.add(item)
     return sorted(result)
@@ -46,10 +46,13 @@ def native_rows(query, build):
     """Read every native page with the source engine's own cursor and row count."""
     count, cursor, seen = 0, None, set()
     while True:
-        params = {"limit": "50"}
+        params = {"limit": "25"}
         if cursor is not None:
             params["cursor"] = cursor
-        response = query(build["id"], params)
+        envelope = query(build["id"], params)
+        require(envelope.get("ok") is True and isinstance(envelope.get("response"), dict),
+                "Original native query did not return its complete engine response")
+        response = envelope["response"]
         require(response.get("status") == 200, "Original native query did not complete")
         body = response["body"]
         fields = body.get("fields")
@@ -64,8 +67,8 @@ def native_rows(query, build):
             else:
                 require(isinstance(raw, dict), "Invalid original native row")
                 row = raw
-            require(all(isinstance(value, str) for value in row.values()),
-                    "The original string projection changed its value representation")
+            require(all(value is None or isinstance(value, str) for value in row.values()),
+                    "The original projection changed its string-or-null value representation")
             count += 1
             yield row
         cursor = body.get("page", {}).get("nextCursor")
@@ -210,8 +213,10 @@ def project_giving(packet, native_root, selection, entities, financial):
             original = {"native": row, "grantJson": row["original_grant"]}
             org_keys = []
             for field, role in (("funders", "funding"), ("recipients", "recipient")):
-                for org in parse(row[field]):
-                    org_keys.append(add_org(registry, "360giving", org, key, role))
+                for org in module.publisher.parse(row[field]) or []:
+                    original_org = {"id": org.get("id", ""), "name": org.get("name", ""),
+                                    "originalJson": module.publisher.exact(org)}
+                    org_keys.append(add_org(registry, "360giving", original_org, key, role))
             entities.write(canonical({"entityKey": key, "kind": "grant", "standard": "360giving",
                 "originalId": row["grant_id"], "title": row["title"], "nativeBuild": build["id"],
                 "original": original, "sha256": digest(original), "organizationKeys": sorted(set(org_keys)),
