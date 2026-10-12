@@ -1,6 +1,7 @@
 import { openapiWorkspaceTools, read, selection, page, selectedPackage, source, plan, revisionInput, packageName, digest, alias, uuid, offset, revision, policy, routeDecisions, PACKAGE, UUID } from './catalog/openapi-workspace.mjs';
 export { openapiWorkspaceTools } from './catalog/openapi-workspace.mjs';
 // MIT. Merchant authoring through the original SF61 console and SF82 releases.
+import { isRouteWorksheetTool, executeRouteWorksheet } from './openapi-route-worksheet.mjs';
 import { Sf61WorkspaceClient, SF61_ALIAS, SF61_SHA, SF61_MAX_SOURCE_BYTES, sf61Hash,
   sf61Failure as fail, sf61Plain as plain, sf61Exact as exact, sf61Checked as checked } from './sf61-connection.mjs';
 export { readSf61WorkspaceConfiguration as readOpenApiWorkspaceConfiguration } from './sf61-connection.mjs';
@@ -100,10 +101,11 @@ export class MerchantOpenApiWorkspaces {
     if (!await matches(original)) throw fail('OPENAPI_PACKAGE_CONFLICT', 'This name already identifies different original source, settings or revision. Reopen it or choose a new name.');
     return { recovered: true, package: inspected, saved: loaded(original, false) };
   }
-  async #save(client, input, changed) {
-    const selected = await this.#source(client, input);
+  async #save(client, input, changed, prepared) {
+    const selected = prepared?.source ?? await this.#source(client, input);
     const body = changed ? { ...input, specText: selected.text } : {
-      name: input.name, specText: selected.text, plan: await this.#plan(client, input) };
+      name: input.name, specText: selected.text, plan: prepared?.plan ?? await this.#plan(client, input),
+      ...(prepared?.capturedSource === undefined ? {} : { capturedSource: prepared.capturedSource }) };
     for (const key of ['specFile', 'expectedSourceSha256']) delete body[key];
     const matches = async original => {
       if (original.specText !== selected.text) return false;
@@ -137,7 +139,14 @@ export class MerchantOpenApiWorkspaces {
   }
   async #execute(name, args) {
     if (name === 'merchant_openapi_workspaces') return this.summary;
-    const { workspace, ...input } = args, client = this.#client(workspace);
+    const { workspace, ...input } = args, declared = this.#client(workspace);
+    // Keep one selected console through each operation's dependent reads and
+    // writes. A managed URL refresh takes effect at the next operation.
+    const selected = await declared.connection(), definition = { ...declared.definition };
+    delete definition.consoleUrlFile;
+    definition.consoleUrlEnv = 'OPENAPI_SELECTED_CONSOLE_URL';
+    const client = new Sf61WorkspaceClient(definition, { environment: {
+      OPENAPI_SELECTED_CONSOLE_URL: selected.origin + '/#' + selected.token } });
     for (const field of ['name', 'baseName']) if (input[field] !== undefined) checked(input[field], PACKAGE, 'package name');
     for (const field of ['expectedSourceSha256','expectedReviewSha256','expectedRefreshReviewId','expectedPackageManifestSha256','expectedManifestSha256','expectedSha256','exportId'])
       if (input[field] !== undefined) checked(input[field], SF61_SHA, field);
@@ -147,6 +156,9 @@ export class MerchantOpenApiWorkspaces {
     if (input.expectedRevision !== undefined) integer(input.expectedRevision, 0);
     if (input.offset !== undefined) integer(input.offset, 0);
     if (input.limit !== undefined) integer(input.limit, 1, name === 'merchant_openapi_file' ? 196608 : 200);
+    if (isRouteWorksheetTool(name)) return executeRouteWorksheet({ name, input, workspace, client,
+      readSource: value => this.#source(client, value), readPlan: value => this.#plan(client, value),
+      save: (value, prepared) => this.#save(client, value, false, prepared) });
     const result = native => ({ workspace, native: compact(native) });
     const cache = (operation, body, more = {}) => client.json(query('/api/cache-operations/' + operation, { name: input.name, ...more }), body);
     switch (name) {

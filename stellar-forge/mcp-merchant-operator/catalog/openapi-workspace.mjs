@@ -1,5 +1,6 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { SF61_SHA, SF61_ALIAS } from '../sf61-connection-contracts.mjs';
+import { routeWorksheetTools } from './openapi-route-worksheet.mjs';
 
 const PACKAGE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 
@@ -42,6 +43,7 @@ const policy = { type: 'object', properties: Object.fromEntries(['ttlMs', 'maxEn
 
 function openapiWorkspaceTools(tool) {
   return [
+    ...routeWorksheetTools(tool),
     tool('merchant_openapi_workspaces', 'List original SF61 consoles, declared API/plan file handles and complete receiving directories.', {}, [], read),
     tool('merchant_openapi_status', 'Read the original console-owned merchant runtime and cache state. The console stays shared with its browser and HAR operator.', selection, ['workspace'], read),
     tool('merchant_openapi_packages', 'Page every complete original saved API package. Continue nextCursor until complete; incomplete directories do not consume the page.', { ...selection, ...page }, ['workspace'], read),
