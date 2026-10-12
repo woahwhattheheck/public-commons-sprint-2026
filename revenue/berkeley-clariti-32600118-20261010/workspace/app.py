@@ -470,6 +470,11 @@ def restore(source, destination):
 
 
 def serve(workspace, port):
+    import sys
+    if str(ROOT.parent) not in sys.path:
+        sys.path.insert(0, str(ROOT.parent))
+    from cashiering.engine import Cashiering
+    cashiering = Cashiering(workspace, Conflict)
     token = secrets.token_urlsafe(24)
 
     class Handler(BaseHTTPRequestHandler):
@@ -504,6 +509,14 @@ def serve(workspace, port):
             parts = url.path.strip("/").split("/")
             query = {k: values[-1] for k, values in parse_qs(url.query).items()}
             try:
+                if url.path in ("/cashiering", "/cashiering/", "/cashiering/index.html", "/cashiering/app.mjs", "/cashiering/style.css"):
+                    name = "index.html" if url.path in ("/cashiering", "/cashiering/") else url.path.rsplit("/", 1)[-1]
+                    body = (ROOT.parent / "cashiering" / "public" / name).read_text().replace("__SESSION_TOKEN__", token)
+                    mime = "text/html" if name.endswith(".html") else "text/css" if name.endswith(".css") else "text/javascript"
+                    return self.respond(200, body, mime + "; charset=utf-8")
+                if url.path.startswith("/api/cashiering/"):
+                    result = cashiering.read(url.path, query)
+                    return self.respond(200, result[0], result[1], result[2])
                 if url.path in ("/", "/index.html", "/app.mjs", "/style.css"):
                     name = "index.html" if url.path in ("/", "/index.html") else url.path[1:]
                     body = (ROOT / "public" / name).read_text().replace("__SESSION_TOKEN__", token)
@@ -561,6 +574,9 @@ def serve(workspace, port):
                 payload = json.loads(self.rfile.read(length))
                 if not isinstance(payload, dict):
                     raise ValueError("Request must be an object.")
+                path = urlparse(self.path).path
+                if path.startswith("/api/cashiering/"):
+                    return self.respond(200, cashiering.write(path[len("/api/cashiering/"):], payload))
                 actions = {"/api/upload": workspace.upload, "/api/mapping": workspace.mapping, "/api/select-dataset": workspace.select_dataset, "/api/settings": workspace.settings, "/api/run": workspace.run, "/api/crosswalk": lambda p: workspace.upload(p, True), "/api/crosswalk/remove": workspace.remove_crosswalk, "/api/review": lambda p: workspace.decision(p, "finding"), "/api/scenario-review": lambda p: workspace.decision(p, "scenario"), "/api/cutover": lambda p: workspace.decision(p, "cutover")}
                 action = actions.get(urlparse(self.path).path)
                 if not action:
