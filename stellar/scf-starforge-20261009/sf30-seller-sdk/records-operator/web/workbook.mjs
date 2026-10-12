@@ -186,7 +186,7 @@ export function createWorkbookPanel(h) {
   }
   function mappingFields() {
     const book=selected(),choices=columnChoices(),disabled=!canEdit();
-    const fieldMap=book.fieldMap||(book.fieldMap={}),mapping=book.mapping||(book.mapping={});
+    const fieldMap=book.fieldMap||{},mapping=book.mapping||{};
     return card(txt('h3','Explicit original field mapping'),
       txt('p','Choose exact Excel column letters after reading the actual workbook. A merged header does not fill down into a box row. Raw numbers, dates and formula caches stay visible.'),
       el('datalist',{id:'workbook-columns'},choices.map(value=>el('option',{value}))),
@@ -205,10 +205,10 @@ export function createWorkbookPanel(h) {
       small('All time values must be actual whole-second UTC timestamps. No local timezone, midnight, destruction period, site or permanent barcode is inferred.'));
   }
   function contextFields() {
-    const book=selected(),context=book.context||(book.context={}),disabled=!canEdit();
+    const book=selected(),context=book.context||{},disabled=!canEdit();
     return card(txt('h3','Department, source authorities and verification'),
       txt('p','Record the actual department/account, applicable retention and rate authorities, and existing verification. These source inputs remain separate from the original four-ledger contract.'),
-      el('div',{class:'grid'},contexts.map(([key,label])=>field(label,input(context[key]||'',{disabled,oninput:e=>{context[key]=e.target.value;change();}})))),
+      el('div',{class:'grid'},contexts.map(([key,label])=>field(label,input(context[key]||'',{disabled,oninput:e=>{book.context ||= {};book.context[key]=e.target.value;change();}})))),
       el('details',{},txt('summary','Declare which context fields the original instructions require'),
         el('div',{class:'details-body'},contexts.map(([key,label])=>field(label,el('input',{type:'checkbox',
           checked:(book.requiredContext||[]).includes(key),disabled,onchange:e=>setRequired('requiredContext',key,e.target.checked)}))))),
@@ -228,32 +228,74 @@ export function createWorkbookPanel(h) {
       txt('p','A blank custody form is a template. Recording an acknowledgment requires the actual completed evidence and named original parties; the application never signs it.'));
   }
   function custodyForm() {
-    const book=selected(),custody=book.custody||(book.custody={}),disabled=!canEdit();
-    const choices=[['','Choose retained actual custody evidence'],...(book.documents||[]).filter(d=>['custody-transfer','custody-receipt','inventory'].includes(d.kind)).map(d=>[d.id,d.label||d.id])];
-    return card(txt('h3','Custody request and original acknowledgments'),
+    const book=selected(),custody=book.custody||{},disabled=!canEdit();
+    const choices=[['','Choose retained actual custody evidence'],...(book.documents||[])
+      .filter(d=>['custody-transfer','custody-receipt','inventory'].includes(d.kind))
+      .map(d=>[d.id,d.label||d.id])];
+    function writeField(key,value) {
+      book.custody ||= {};
+      book.custody[key]=value;
+      change();
+    }
+    function writeAcknowledgment(side,key,value) {
+      book.custody ||= {};
+      book.custody[side] ||= {status:'not-recorded'};
+      book.custody[side][key]=value;
+      change();
+    }
+    function writeEvidence(side,key,value) {
+      book.custody ||= {};
+      book.custody[side] ||= {status:'not-recorded'};
+      book.custody[side].evidence ||= {};
+      book.custody[side].evidence[key]=value;
+      change();
+    }
+    return card(
+      txt('h3','Custody request and original acknowledgments'),
       txt('p','Retain the original request details and each department’s actual acknowledgment. An unsigned or one-sided request remains a request; it does not become admission, withdrawal, destruction or an accepted handoff checkpoint.'),
-      el('div',{class:'grid'},custodyFields.map(([key,label])=>field(label,input(custody[key]||'',{disabled,oninput:e=>{custody[key]=e.target.value;change();}})))),
-      field('This transfer requires both retained acknowledgments before custody-source adoption',el('input',{type:'checkbox',checked:custody.requireBothAcknowledgments===true,disabled,
-        onchange:e=>{custody.requireBothAcknowledgments=e.target.checked;change();}}),'Choose this only when the original transfer workflow requires both sides. An independently evidenced warehouse admission remains a separate event; custody-source readiness does not by itself mean a complete signed form.'),
-      field('Detailed inventory was attached to the original request',el('input',{type:'checkbox',checked:custody.inventoryAttached===true,disabled,
-        onchange:e=>{custody.inventoryAttached=e.target.checked;change();}}),'Retain the inventory document and its box/record identifiers, labels and actual counts.'),
-      el('details',{},txt('summary','Required original custody-request fields'),el('div',{class:'details-body'},custodyFields.map(([key,label])=>
-        field(label,el('input',{type:'checkbox',checked:(custody.requiredFields||[]).includes(key),disabled,onchange:e=>{
-          const set=new Set(custody.requiredFields||[]);if(e.target.checked)set.add(key);else set.delete(key);custody.requiredFields=[...set];change();
-        }}))))),
+      el('div',{class:'grid'},custodyFields.map(([key,label])=>field(label,input(custody[key]||'',{
+        disabled,oninput:e=>writeField(key,e.target.value)
+      })))),
+      field('This transfer requires both retained acknowledgments before custody-source adoption',
+        el('input',{type:'checkbox',checked:custody.requireBothAcknowledgments===true,disabled,
+          onchange:e=>writeField('requireBothAcknowledgments',e.target.checked)}),
+        'Choose this only when the original transfer workflow requires both sides. An independently evidenced warehouse admission remains a separate event; custody-source readiness does not by itself mean a complete signed form.'),
+      field('Detailed inventory was attached to the original request',
+        el('input',{type:'checkbox',checked:custody.inventoryAttached===true,disabled,
+          onchange:e=>writeField('inventoryAttached',e.target.checked)}),
+        'Retain the inventory document and its box/record identifiers, labels and actual counts.'),
+      el('details',{},txt('summary','Required original custody-request fields'),
+        el('div',{class:'details-body'},custodyFields.map(([key,label])=>field(label,
+          el('input',{type:'checkbox',checked:(custody.requiredFields||[]).includes(key),disabled,
+            onchange:e=>{
+              const required=new Set(book.custody?.requiredFields||[]);
+              if(e.target.checked)required.add(key);else required.delete(key);
+              writeField('requiredFields',[...required]);
+            }}))))),
       ...['transferring','receiving'].map(side=>{
-        const a=custody[side]||(custody[side]={status:'not-recorded',evidence:{documentId:'',reference:''}});
-        a.evidence ||= {documentId:'',reference:''};
-        return el('section',{},txt('h3',side==='transferring'?'Transferring department acknowledgment':'Receiving department acknowledgment'),
+        const a=custody[side]||{},evidence=a.evidence||{};
+        return el('section',{},
+          txt('h3',side==='transferring'?'Transferring department acknowledgment':'Receiving department acknowledgment'),
           el('div',{class:'grid'},
-            field('Recorded state',select([['not-recorded','No acknowledgment recorded'],['requested','Requested / unsigned'],['acknowledged','Actual acknowledgment retained']],a.status,
-              {disabled,onchange:e=>{a.status=e.target.value;change();}})),
-            ...[['department','Actual department'],['name','Actual signatory name'],['title','Actual title'],['at','Actual acknowledgment time (UTC)']].map(([key,label])=>
-              field(label,input(a[key]||'',{disabled,oninput:e=>{a[key]=e.target.value;change();}}))),
-            field('Retained acknowledgment evidence',select(choices,a.evidence.documentId||'',{disabled,onchange:e=>{a.evidence.documentId=e.target.value;change();}})),
-            field('Exact original page / signature / receipt reference',input(a.evidence.reference||'',{disabled,oninput:e=>{a.evidence.reference=e.target.value;change();}}))));
+            field('Recorded state',select([
+              ['not-recorded','No acknowledgment recorded'],
+              ['requested','Requested / unsigned'],
+              ['acknowledged','Actual acknowledgment retained']
+            ],a.status||'not-recorded',{disabled,
+              onchange:e=>writeAcknowledgment(side,'status',e.target.value)})),
+            ...[['department','Actual department'],['name','Actual signatory name'],
+              ['title','Actual title'],['at','Actual acknowledgment time (UTC)']]
+              .map(([key,label])=>field(label,input(a[key]||'',{disabled,
+                oninput:e=>writeAcknowledgment(side,key,e.target.value)}))),
+            field('Retained acknowledgment evidence',select(choices,evidence.documentId||'',{disabled,
+              onchange:e=>writeEvidence(side,'documentId',e.target.value)})),
+            field('Exact original page / signature / receipt reference',input(evidence.reference||'',{disabled,
+              oninput:e=>writeEvidence(side,'reference',e.target.value)}))
+          )
+        );
       }),
-      output()?.assessment?.custody?detail('Original acknowledgment assessment',output().assessment.custody):null);
+      output()?.assessment?.custody?detail('Original acknowledgment assessment',output().assessment.custody):null
+    );
   }
   function selectedRows() {
     const o=output(),book=selected(),rows=o?.page?.items||[];
