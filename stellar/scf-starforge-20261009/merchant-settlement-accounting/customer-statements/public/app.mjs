@@ -16,7 +16,7 @@ function setOptions(element,rows,emptyLabel,selected=element.value){
   if([...element.options].some(option=>option.value===selected))element.value=selected;
 }
 function availability(){
-  document.querySelectorAll('button').forEach(button=>button.disabled=working);
+  document.querySelectorAll('button').forEach(button=>button.disabled=working||button.dataset.rangeDisabled==='true');
   $('assign-button').disabled=working||!$('customer-picker').value;
   $('retain').disabled=working||(!preview&&!pendingRetention);
   $('bindings-prev').disabled=working||bindingsOffset===0;
@@ -55,7 +55,9 @@ function takeState(value){
   setOptions($('register-customer'),customers,'All customers');
   setOptions($('statement-run'),state.runs.map(row=>({value:row.id,label:(row.name??row.id)+' · '+(row.completedAt??row.createdAt??'')})),'Choose completed run');
   setOptions($('statement-usage'),state.usageImports.map(row=>({value:row.id,label:row.name+' · '+row.sourceCreatedAt})),'Purchases only');
-  updateCorrections();
+  setOptions($('statement-usage-opening'),state.usageImports.filter(row=>row.sourceSchema==='stellar-forge.sf101.api-pass-export.v1')
+    .map(row=>({value:row.id,label:row.name+' · '+row.sourceCreatedAt})),'Choose opening snapshot');
+  updatePeriodMode();updateCorrections();
   $('metrics').replaceChildren();
   for(const [name,value] of [['Customers',state.customers.length],['Assigned orders',state.bindingCount],['Retained documents',state.statementCount],['Completed accounting runs',state.runs.length]]){
     const card=create('div',null,'metric');card.append(create('span',name),create('strong',value));$('metrics').append(card);
@@ -97,6 +99,7 @@ async function loadRegister(){
   const body=$('register-rows');body.replaceChildren();
   for(const row of page.items){
     knownStatements.set(row.id,row);const tr=create('tr'),number=create('td',row.number),person=create('td',row.customerName);
+    if(row.servicePeriod)number.append(create('small','Service '+row.servicePeriod.from+' to '+row.servicePeriod.until));
     person.append(create('small',row.customerReference));const stateCell=create('td');stateCell.append(create('span',row.status,'badge'));
     const open=create('button','Open');open.type='button';open.addEventListener('click',()=>run(()=>openDocument(row.id)));const action=create('td');action.append(open);
     tr.append(number,person,create('td',row.createdAt),create('td',row.orderCount,'numeric'),stateCell,action);body.append(tr);
@@ -128,6 +131,64 @@ const exclusionNames={
   SERVICE_PAYMENT_IDENTITY_MISMATCH:'The service usage snapshot differs from the original order, event or payment terms.',
   ORIGINAL_NATIVE_ORDER_REQUIRED:'The original native checkout capture is required for this order.'
 };
+function updatePeriodMode(){
+  const active=$('statement-usage-mode').value==='period';
+  $('service-period-fields').hidden=!active;
+  $('statement-usage-opening').disabled=!active;
+  $('statement-usage-opening').required=active;
+  $('statement-usage').required=active;
+  if(!active)$('service-period-preview').hidden=true;
+}
+function renderServicePeriod(period,target){
+  const section=create('section',null,'subsection');
+  section.append(create('h3','Service activity between snapshots'),
+    create('p','Order '+period.orderRef+' · '+period.from+' to '+period.until,'mono'),
+    create('p','Complete opening and closing snapshots define this interval. Earlier reserved calls and their later outcomes remain connected.','muted'));
+  const balances=create('table'),balanceHead=create('thead'),bh=create('tr');
+  for(const name of ['Service allowance','Opening','Closing'])bh.append(create('th',name));
+  balanceHead.append(bh);balances.append(balanceHead);const balanceBody=create('tbody');
+  for(const [name,key] of [['Purchased units','unitsPurchased'],['Consumed units','unitsUsed'],['Reserved units','unitsReserved'],['Available units','unitsRemaining']]){
+    const row=create('tr');row.append(create('th',name),create('td',period.opening[key],'numeric'),create('td',period.closing[key],'numeric'));balanceBody.append(row);
+  }
+  balances.append(balanceBody);section.append(balances);
+  const totals=period.totals;
+  section.append(create('p',totals.newCalls+' new calls · '+totals.admittedUnits+' units admitted · '+totals.consumedUnits+' consumed · '+totals.releasedUnits+' released.'),
+    create('p',totals.resultRecoveries+' original results recovered · '+totals.carriedReservations+' opening calls remain reserved.','muted'));
+  const routeTable=create('table'),routeHead=create('thead'),rh=create('tr');
+  for(const name of ['Purchased route','New calls','Admitted','Consumed','Released','Closing reserved'])rh.append(create('th',name));
+  routeHead.append(rh);routeTable.append(routeHead);const routeBody=create('tbody');
+  for(const route of period.routes){
+    const row=create('tr'),name=create('td',route.routeId,'mono');name.append(create('small',route.method+' '+route.path));row.append(name);
+    for(const key of ['newCalls','admittedUnits','consumedUnits','releasedUnits','closingReservedUnits'])row.append(create('td',route[key],'numeric'));
+    routeBody.append(row);
+  }
+  routeTable.append(routeBody);const routes=create('div',null,'table-wrap');routes.append(routeTable);section.append(routes);
+  const activity=create('details');activity.append(create('summary','Activity and carried reservations · '+period.calls.length+' calls'));
+  const table=create('table'),head=create('thead'),tr=create('tr');
+  for(const name of ['Request / route','Change','Opening outcome','Closing outcome','Admitted / consumed / released','Native update'])tr.append(create('th',name));
+  head.append(tr);table.append(head);const body=create('tbody');table.append(body);
+  const wrap=create('div',null,'table-wrap');wrap.append(table);activity.append(wrap);
+  const controls=create('div',null,'pager'),previous=create('button','Previous'),position=create('span'),next=create('button','Next');
+  previous.type=next.type='button';controls.append(previous,position,next);activity.append(controls);
+  let offset=0;
+  const page=()=>{
+    body.replaceChildren();
+    for(const call of period.calls.slice(offset,offset+50)){
+      const row=create('tr'),identity=create('td',call.requestId,'mono');identity.append(create('small',call.method+' '+call.path));
+      row.append(identity,create('td',readable(call.kind)),create('td',call.opening?readable(call.opening.storedStatus):'Not in opening snapshot'),
+        create('td',readable(call.closing.storedStatus)),create('td',call.admittedUnits+' / '+call.consumedUnits+' / '+call.releasedUnits,'numeric'),
+        create('td',call.closing.updatedAt));body.append(row);
+    }
+    position.textContent=period.calls.length?String(offset+1)+'–'+Math.min(offset+50,period.calls.length)+' of '+period.calls.length:'No activity or carried reservations';
+    previous.dataset.rangeDisabled=String(offset===0);next.dataset.rangeDisabled=String(offset+50>=period.calls.length);
+    previous.disabled=working||offset===0;next.disabled=working||offset+50>=period.calls.length;
+  };
+  previous.addEventListener('click',()=>{offset=Math.max(0,offset-50);page();});
+  next.addEventListener('click',()=>{offset+=50;page();});
+  page();section.append(activity,create('p',totals.unchangedCalls+' original calls retain their earlier durable state. Full activity and source projections are included in retained downloads.','muted'));
+  target.append(section);
+}
+
 function renderDocument(value,target){
   target.replaceChildren();
   const scope=create('p',value.selection.from?'Recorded purchases: '+value.selection.from+' through '+value.selection.until+' (end exclusive).':'All recorded purchases in the selected report.','document-scope');
@@ -139,7 +200,8 @@ function renderDocument(value,target){
   target.append(counts,assetsTable(value));
   const quotes=value.totals.merchantQuotedUsd;
   target.append(create('p','Known merchant USD quotes: '+quotes.knownTotal+' across '+quotes.knownOrders+' orders. '+quotes.unknownOrders+' orders have no recorded quote.','muted'));
-  if(value.source.usage)target.append(create('p','Service units are cumulative as of '+value.source.usage.createdAt+' · Service revision '+value.source.usage.revision+'.','inset'));
+  if(value.source.usage)target.append(create('p','Closing service allowance balances as of '+value.source.usage.createdAt+' · Service revision '+value.source.usage.revision+'.','inset'));
+  if(value.servicePeriod)renderServicePeriod(value.servicePeriod,target);
   for(const row of value.items){
     const article=create('article',null,'purchase'),heading=create('div',null,'purchase-head'),left=create('div');
     left.append(create('h3',row.label),create('p','Order '+row.orderRef+' · '+row.recordedAt,'mono'));
@@ -191,7 +253,9 @@ function renderDocument(value,target){
   }
   const source=create('details');source.append(create('summary','Statement source records'));
   const fields=create('dl',null,'key-values');addDefinition(fields,'Original run',value.source.runId,true);addDefinition(fields,'Report SHA-256',value.source.reportSha256,true);
-  if(value.source.usage)addDefinition(fields,'Usage SHA-256',value.source.usage.sha256,true);source.append(fields);target.append(source);
+  if(value.source.usage)addDefinition(fields,'Closing usage SHA-256',value.source.usage.sha256,true);
+  if(value.source.usageOpening)addDefinition(fields,'Opening usage SHA-256',value.source.usageOpening.sha256,true);
+  source.append(fields);target.append(source);
 }
 function renderRetained(result){
   currentDocument=result;knownStatements.set(result.statement.id,result.statement);
@@ -200,7 +264,8 @@ function renderRetained(result){
   if(result.statement.supersededBy)statusBlock.append(create('p','Superseded by retained document '+(knownStatements.get(result.statement.supersededBy)?.number??result.statement.supersededBy)+'.'));
   if(result.statement.replacesId)statusBlock.append(create('p','Correction of '+(knownStatements.get(result.statement.replacesId)?.number??result.statement.replacesId)+'.'));
   const links=$('document-downloads');links.replaceChildren();
-  for(const [name,title] of [['statement.html','Print document'],['statement.csv','Purchase CSV'],['usage.csv','Service call CSV'],['statement.json','Statement JSON'],['manifest.json','File manifest'],['status.json','Current document status']]){
+  for(const [name,title] of [['statement.html','Print document'],['statement.csv','Purchase CSV'],['usage.csv','Complete closing call CSV'],['period.csv','Period activity CSV'],['period-summary.csv','Period route totals CSV'],['usage-opening.json','Opening usage projection'],['usage-closing.json','Closing usage projection'],['statement.json','Statement JSON'],['manifest.json','File manifest'],['status.json','Current document status']]){
+    if(name!=='status.json'&&!Object.hasOwn(result.statement.files,name))continue;
     const link=create('a',title);link.href=API+'/statements/'+result.statement.id+'/download/'+name;link.download='';links.append(link);
   }
   renderDocument(result.document,$('document-content'));
@@ -220,6 +285,18 @@ $('refresh').addEventListener('click',()=>run(refresh));
 $('new-customer').addEventListener('click',()=>run(async()=>{$('customer-picker').value='';fillCustomer('');bindingsOffset=0;await loadBindings();$('customer-form').elements.reference.focus();status('Enter the new customer profile.');}));
 $('customer-picker').addEventListener('change',()=>run(async()=>{fillCustomer($('customer-picker').value);bindingsOffset=0;await loadBindings();}));
 $('statement-customer').addEventListener('change',updateCorrections);
+$('statement-usage-mode').addEventListener('change',updatePeriodMode);
+$('preview-form').addEventListener('change',()=>{
+  if(!pendingRetention)clearPreview();
+  $('service-period-preview').hidden=true;
+});
+$('inspect-period').addEventListener('click',()=>run(async()=>{
+  const usageOpeningId=$('statement-usage-opening').value,usageId=$('statement-usage').value;
+  if(!usageOpeningId||!usageId)throw new Error('Choose the complete original opening and closing API-pass captures.');
+  const result=await request('/usage-period',{usageOpeningId,usageId});
+  const target=$('service-period-preview');target.replaceChildren();target.hidden=false;
+  renderServicePeriod(result.period,target);status('Original service period opened at workspace revision '+result.revision+'.');
+}));
 $('customer-form').addEventListener('submit',event=>{
   event.preventDefault();run(async()=>{
     const form=event.currentTarget,value=Object.fromEntries(new FormData(form));value.revision=state.revision;value.actor=actor();
@@ -252,6 +329,10 @@ $('preview-form').addEventListener('submit',event=>{
   event.preventDefault();run(async()=>{
     if(pendingRetention)throw new Error('Retry the pending retention request first so the document register can return its saved result.');
     const values=Object.fromEntries(new FormData(event.currentTarget)),selection={customerId:values.customerId,runId:values.runId,usageId:values.usageId||null,replacesId:values.replacesId||null};
+    if(values.usageMode==='period'){
+      if(!values.usageOpeningId||!values.usageId)throw new Error('Choose both original snapshots for this service period.');
+      selection.usageOpeningId=values.usageOpeningId;
+    }
     if(values.from||values.until){if(!values.from||!values.until)throw new Error('Enter both UTC period bounds.');selection.from=utc(values.from);selection.until=utc(values.until);}
     preview=await request('/preview',selection);
     $('preview-panel').hidden=false;$('preview-title').textContent=preview.draft.customer.name+' · '+preview.draft.items.length+' original purchases';
@@ -288,6 +369,8 @@ $('correct-document').addEventListener('click',()=>run(async()=>{
   const {statement,document}=currentDocument;
   $('statement-customer').value=statement.customerId;updateCorrections();$('statement-replaces').value=statement.id;
   $('statement-run').value=statement.runId;$('statement-usage').value=statement.usageId??'';
+  $('statement-usage-mode').value=document.servicePeriod?'period':'snapshot';
+  $('statement-usage-opening').value=statement.usageOpeningId??'';updatePeriodMode();
   $('preview-form').elements.from.value=periodInput(document.selection.from);$('preview-form').elements.until.value=periodInput(document.selection.until);
   $('prepare').scrollIntoView({block:'start',behavior:'smooth'});status('Review source records and prepare the correction of '+statement.number+'.');
 }));

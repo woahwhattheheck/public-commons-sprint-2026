@@ -1,4 +1,10 @@
 import {createReceivablesClient} from './client.mjs';
+import {createPaymentRequestUi} from './payment-requests.mjs';
+import {createRefundUi} from './refunds.mjs';
+import {createCollectionsUi} from './collections.mjs';
+import {createCashPlanningUi} from './cash-planning.mjs';
+import {createCreditControlUi} from './credit-control.mjs';
+import {createBankUi} from './bank-statements.mjs';
 
 const $ = selector => document.querySelector(selector);
 const e = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -13,6 +19,24 @@ const storageKey = 'merchant-receivables:' + location.origin + config.apiPath + 
 function readSession(key, fallback = null) { try { const text = sessionStorage.getItem(storageKey + key); return text ? JSON.parse(text) : fallback; } catch { return fallback; } }
 function saveSession(key, value) { try { value === null ? sessionStorage.removeItem(storageKey + key) : sessionStorage.setItem(storageKey + key, JSON.stringify(value)); } catch { /* The open form remains in memory when browser storage is unavailable. */ } }
 const ui = {state:null, view:'invoices', selected:'', detail:null, editor:readSession('draft'), pending:readSession('pending'), busy:false, customer:'', search:'', status:'', asOf:today(), selectionVersion:0, preview:null, native:null, customerReport:null};
+const paymentUi = createPaymentRequestUi({api, openDialog, mutate, getState:()=>ui.state, getInvoice:detailInvoice,
+  saveBlob, showError, setBusy, readSession, saveSession, setMessage, isLocked:()=>ui.busy || Boolean(ui.pending)});
+const refundUi = createRefundUi({api, openDialog, mutate, getState:()=>ui.state, getInvoice:detailInvoice,
+  getAsOf:()=>ui.asOf, getCustomer:()=>ui.customer, units, amount, render,
+  saveBlob, showError, setBusy, readSession, saveSession, setMessage, isLocked:()=>ui.busy || Boolean(ui.pending)});
+const collectionsUi = createCollectionsUi({api,openDialog,mutate,getState:()=>ui.state,getAsOf:()=>ui.asOf,
+  getCustomer:()=>ui.customer,getSearch:()=>ui.search,units,amount,saveBlob,setBusy,showError,readSession,saveSession,setMessage,render,
+  isLocked:()=>ui.busy || Boolean(ui.pending)});
+const cashPlanningUi = createCashPlanningUi({api,openDialog,closeDialog,mutate,getState:()=>ui.state,
+  getAsOf:()=>ui.asOf,getCustomer:()=>ui.customer,getSearch:()=>ui.search,saveBlob,setBusy,showError,
+  readSession,saveSession,setMessage,render,isLocked:()=>ui.busy || Boolean(ui.pending)});
+const creditControlUi = createCreditControlUi({api,openDialog,closeDialog,mutate,getState:()=>ui.state,
+  getCustomer:()=>ui.customer,getSearch:()=>ui.search,saveBlob,setBusy,showError,readSession,saveSession,setMessage,render,
+  openInvoice:async invoiceId=>{if(ui.editor){ui.parkedEditor=ui.editor;persistEditor();ui.editor=null;}ui.view='invoices';await selectInvoice(invoiceId);},isLocked:()=>ui.busy || Boolean(ui.pending)});
+const bankUi = createBankUi({api, openDialog, mutate, getState:()=>ui.state, getAsOf:()=>ui.asOf, showBank:()=>{ui.view='bank';},
+  units, amount, render, saveBlob, showError, setBusy, readSession, saveSession, setMessage,
+  isLocked:()=>ui.busy || Boolean(ui.pending)});
+$('#dialog').addEventListener('close',()=>bankUi.close());
 $('#operator').value = readSession('actor','merchant-operator');
 $('#as-of').value = ui.asOf;
 function customerName(customerId) {
@@ -79,10 +103,14 @@ function context() {
   saveSession('actor',actor);
   return {revision:ui.state.revision,actor,requestId:id()};
 }
-async function mutate(method,args,label) {
+async function mutate(method,args,label,{revision}={}) {
   if (ui.busy) return;
   if (ui.pending) { setMessage('Finish the retained operation with Retry, or return to its form after a rejected request.',true); return; }
   const current=context(), values=structuredClone(args);
+  if(revision!==undefined){
+    if(!Number.isSafeInteger(revision)||revision<1)throw new Error('Review the original current account revision before saving.');
+    current.revision=revision;
+  }
   values[values.length-1]={...values[values.length-1],...current};
   if(new Blob([JSON.stringify(values[values.length-1])]).size>Number(config.requestBytes||2000000))throw new Error('The operation exceeds the workspace request limit. Reduce the source file size before saving.');
   ui.pending={method,args:values,label,requestId:current.requestId,revision:current.revision,createdAt:new Date().toISOString()};
@@ -99,7 +127,7 @@ async function runPending() {
   if (!ui.pending || ui.busy) return;
   const current=ui.pending; setBusy(true); dialogMessage('');
   try {
-    if (typeof api[current.method] !== 'function' || !['settings','saveDraft','importQuote','issue','voidInvoice','credit','receipt','importSettlement','allocate','release','voidReceipt'].includes(current.method)) throw new Error('This retained operation is not supported by the client.');
+    if (typeof api[current.method] !== 'function' || !['settings','saveDraft','importQuote','issue','voidInvoice','credit','receipt','importSettlement','allocate','release','voidReceipt',...paymentUi.methods,...refundUi.methods,...bankUi.methods,...collectionsUi.methods,...cashPlanningUi.methods,...creditControlUi.methods].includes(current.method)) throw new Error('This retained operation is not supported by the client.');
     const result=await api[current.method](...current.args);
     if (current.method === 'saveDraft' || current.method === 'importQuote') {
       ui.selected=result.invoice?.id || current.args.at(-1).id || ui.selected;
@@ -107,9 +135,16 @@ async function runPending() {
       else {ui.editor=null;persistEditor();}
     }
     if (['issue','voidInvoice','credit'].includes(current.method)) ui.selected=current.args[0];
+    if (result.paymentRequest?.invoiceId) ui.selected=result.paymentRequest.invoiceId;
     ui.pending=null; saveSession('pending',null); closeDialog();
     setMessage(current.label + ' completed.');
     await refresh({quiet:true});
+    await paymentUi.afterMutation(result,current);
+    await refundUi.afterMutation(result,current);
+    await collectionsUi.afterMutation(result,current);
+    await cashPlanningUi.afterMutation(result,current);
+    await creditControlUi.afterMutation(result,current);
+    await bankUi.afterMutation(result,current);
   } catch(error) {
     if (ui.pending?.requestId === current.requestId) {
       ui.pending.error=errorMessage(error);
@@ -130,6 +165,12 @@ async function refresh({quiet=false}={}) {
     $('#revision').textContent='Revision ' + state.revision + ' · As of ' + ui.asOf;
     $('#customer-filter').innerHTML=customerOptions(ui.customer,'All customers');
     $('#customer-filter').value=ui.customer;
+    await refundUi.loadList({customerId:ui.customer,date:asOf});
+    await collectionsUi.loadList();
+    await cashPlanningUi.loadList();
+    await creditControlUi.loadList();
+    if(ui.view==='bank')await bankUi.load({quiet:true});
+    if(ui.refreshVersion!==version||ui.asOf!==asOf)return;
     render();
     if (ui.selected && !ui.editor) await selectInvoice(ui.selected);
     if (ui.view==='aging' && ui.customer) await loadCustomerReport();
@@ -150,8 +191,13 @@ function render() {
     if(button.dataset.view===ui.view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
   });
   $('#status-filter').disabled=ui.view!=='invoices';
+  $('#as-of').disabled=ui.view==='credit-control';
+  $('#customer-filter').disabled=ui.view==='bank';
+  $('#search').disabled=ui.view==='bank';
+  $('#customer-filter').closest('.filters').hidden=ui.view==='bank';
   if(!ui.state)return;
-  $('#content').innerHTML=ui.view==='invoices'?renderInvoices():ui.view==='receipts'?renderReceipts():ui.view==='aging'?renderAging():renderActivity();
+  $('#revision').textContent='Revision '+ui.state.revision+(ui.view==='bank'?'':' · As of '+ui.asOf);
+  $('#content').innerHTML=ui.view==='invoices'?renderInvoices():ui.view==='receipts'?renderReceipts():ui.view==='aging'?renderAging():ui.view==='bank'?bankUi.render():ui.view==='collections'?collectionsUi.render():ui.view==='cash-planning'?cashPlanningUi.render():ui.view==='credit-control'?creditControlUi.render():renderActivity();
   renderPending(); setBusy(ui.busy);
 }
 function renderInvoices() {
@@ -181,10 +227,78 @@ async function selectInvoice(invoiceId) {
     if(ui.view==='invoices')render();
   } catch(error) { if(selectedVersion===ui.selectionVersion){ui.detailLoading=false;if(ui.view==='invoices')render();showError(error);} }
 }
+
+function renderImportedTariff(review) {
+  const imported=review?.tariff,tariff=imported?.binding,basis=tariff?.basis;
+  if(!basis)return '';
+  const usd=value=>'USD '+e(value??'—');
+  return '<section class="section"><h3>Tariff at quote import</h3><p class="small-text">'+e(basis.text)+'</p>'+
+    '<dl class="definition"><dt>Tariff / schedule</dt><dd>'+e(basis.tariffLabel)+' / '+e(basis.mode)+
+    '</dd><dt>Saved requests / month</dt><dd>'+e(basis.selectedQuantity)+
+    '</dd><dt>Quoted requests / month</dt><dd>'+e(basis.quotedQuantity)+
+    '</dd><dt>Quoted uniform rate / request</dt><dd>'+usd(basis.uniformUnitUsd)+
+    '</dd><dt>Original quoted route / month</dt><dd>'+usd(imported.originalMonthlyAmountUsd)+
+    '</dd><dt>Original tariff total at selected volume</dt><dd>'+usd(basis.originalTariffGrossUsd)+
+    '</dd><dt>Original upward unit rounding</dt><dd>'+usd(basis.originalRoundingDeltaUsd)+'</dd>'+
+    (imported.includedInScope?'<dt>Imported route charge</dt><dd>'+usd(imported.invoiceAmount)+' for '+
+      e(imported.periodCount)+' complete month'+(imported.periodCount===1?'':'s')+'</dd>':'')+'</dl>'+
+    (basis.changedQuantity?'<p class="small-text">At the quoted volume, the original tier comparison totals '+
+      usd(basis.tariffGrossAtQuotedQuantityUsd)+'. '+(basis.derivedUnitAtQuotedQuantityUsd===null?
+      'The zero-request comparison has no per-request rate.':'Its comparison rate is '+usd(basis.derivedUnitAtQuotedQuantityUsd)+
+      ' per request.')+' The accepted quotation uses its saved uniform rate of '+usd(basis.uniformUnitUsd)+' per request.</p>':'')+
+    '<details class="section"><summary>Original tariff tiers and source</summary><div class="table-wrap"><table><thead><tr>'+
+    '<th>Request quantity</th><th class="num">USD / request</th></tr></thead><tbody>'+
+    (tariff.tiers||[]).map(tier=>'<tr><td>'+(tier.upTo===null?'Remaining requests':'Through '+e(tier.upTo))+
+      '</td><td class="num">'+e(tier.unitPriceUsd)+'</td></tr>').join('')+'</tbody></table></div>'+
+    '<p class="small-text">Original selection '+e(tariff.selectionRequestId)+'</p><p class="small-text">Source '+e(tariff.id)+
+    '</p></details></section>';
+}
+
+
+function renderPerformanceBasis(binding, imported = null) {
+  if (!binding) return '';
+  const period = binding.period || {}, measured = binding.measuredQuote || {}, proposed = binding.proposed || {};
+  const date = value => String(value || '').replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+  const observed = [period.observedFrom, period.observedUntil].filter(Boolean).map(date).join(' → ');
+  const amount = value => value === null || value === undefined ? '—' : 'USD ' + e(value);
+  const row = (name, value) => '<tr><th scope="row">' + e(name) + '</th><td>' + value + '</td></tr>';
+  const counts = Object.entries(binding.basis?.counts || {});
+  const notes = Array.isArray(binding.issues) ? binding.issues : [];
+  return '<section class="section"><h3>Recorded usage and this quotation revision</h3>' +
+    '<p class="small-text">The saved review describes its measured period. This quotation records the proposed monthly requests and accepted price separately.</p>' +
+    '<div class="table-wrap"><table><tbody>' +
+    row('Measured quotation', e(measured.title || measured.id)) +
+    row('Observed period', e(observed || 'Saved observation period')) +
+    row('Recorded quantity', e(binding.basis?.quantity ?? '—') + ' ' + e(binding.basis?.label || '')) +
+    row('Measured route', e(binding.route?.method) + ' ' + e(binding.route?.path)) +
+    row('Earlier quoted uniform rate / request', amount(binding.quoted?.savedUnitUsd)) +
+    row('Earlier quote value at recorded quantity', amount(binding.quoted?.valueAtObservedQuantityUsd)) +
+    row('Original tariff total at recorded quantity', amount(binding.tariff?.quote?.totalUsd)) +
+    row('Proposed requests / month', e(proposed.monthlyRequests)) +
+    row('Revised quoted rate / request', amount(proposed.unitUsd)) +
+    row('Revised quoted route / month', amount(proposed.amountUsd)) +
+    (imported?.includedInScope ? row('Imported route charge', amount(imported.invoiceAmount) + ' · ' +
+      e(imported.periodCount) + ' complete month' + (imported.periodCount === 1 ? '' : 's')) : '') +
+    '</tbody></table></div><details class="section"><summary>Saved cost view, source counts and identities</summary>' +
+    '<div class="table-wrap"><table><tbody>' +
+    row('Estimated cost at recorded quantity', amount(binding.costs?.estimated?.valueAtBasisQuantityUsd)) +
+    row('Contribution using estimated unit cost', amount(binding.costs?.contributionUsingEstimatedUnitCostUsd)) +
+    (binding.costs?.recorded ? row('Recorded cost edition', e(binding.costs.recorded.edition)) +
+      row('Cost period alignment', e(typeof binding.costs.recorded.periodAlignment === 'object' ?
+        JSON.stringify(binding.costs.recorded.periodAlignment) : binding.costs.recorded.periodAlignment)) : '') +
+    counts.map(([key, value]) => row(key, e(value ?? '—'))).join('') +
+    '</tbody></table></div>' +
+    (notes.length ? '<ul>' + notes.map(note => '<li>' + e(note.message || note.code || '') + '</li>').join('') + '</ul>' : '') +
+    '<p class="small-text">Measured quote ' + e(measured.id) + ' · ' + e(measured.sha256) +
+    '</p><p class="small-text">Native source ' + e(binding.nativeSourceId) +
+    '</p><p class="small-text">Usage version ' + e(binding.usageVersion) + ' · revision ' + e(binding.usageRevision) +
+    '</p><p class="small-text">Recorded-usage source ' + e(binding.id) + '</p></details></section>';
+}
+
 function renderInvoiceDetail() {
   const row=detailInvoice(),doc=row.document||row.draft||{},credits=row.credits||[],allocations=row.allocations||[];
   const active=allocations.filter(item=>!item.releasedDate);
-  const actions=row.status==='DRAFT'?btn('Edit draft','edit-invoice',' data-write') + btn('Review and issue','preview-invoice',' data-write',true):
+  const actions=row.status==='DRAFT'?btn('Edit draft','edit-invoice',' data-write') + btn('Review and issue','preview-invoice',' data-write',true)+creditControlUi.invoiceAction(row):
     row.status==='ISSUED'?btn('Allocate receipt','allocate-invoice',' data-write',true)+btn('Credit note','credit-invoice',' data-write'):'';
   return '<div class="panel-head"><div><h2>' + e(row.number||'Draft invoice') + '</h2><p class="small-text muted">' + e(row.customerName||customerName(row.customerId)) + '</p></div>' + badge(row) +
     '</div><div class="panel-body"><div class="row">' + actions + '</div><div class="stats"><div class="stat"><span>Total · ' + e(row.currency?.code) + '</span><strong>' + e(row.total) +
@@ -197,7 +311,7 @@ function renderInvoiceDetail() {
     '</tbody></table></div>' + (doc.note?'<p class="preline small-text section">' + e(doc.note) + '</p>':'') + '</section>' +
     (row.status!=='DRAFT'?'<section class="section"><h3>Documents</h3><div class="row">' + ['invoice.html','invoice.json','invoice.csv','manifest.json','status.json'].map(name=>
       btn(name.endsWith('.html')?'Printable invoice':name.replace('invoice.','').replace('manifest.json','Manifest').replace('status.json','Current status'),'download',' data-id="' + e(row.id) + '" data-name="' + e(name) + '"')).join('') + '</div></section>':'') +
-    '<section class="section"><div class="row between"><h3>Allocations</h3><span class="small-text muted">' + active.length + ' active</span></div>' +
+    paymentUi.render(row) + refundUi.invoiceActions(row) + collectionsUi.invoiceAction(row) + '<section class="section"><div class="row between"><h3>Allocations</h3><span class="small-text muted">' + active.length + ' active</span></div>' +
     (allocations.length?'<div class="table-wrap"><table><thead><tr><th>Receipt / date</th><th class="num">Amount</th><th></th></tr></thead><tbody>' + allocations.map(item=>{
       const receipt=ui.state.receipts.find(receipt=>receipt.id===item.receiptId);
       return '<tr><td>' + e(receipt?.reference||item.receiptId) + '<span class="subline">' + e(item.allocatedDate) + (item.releasedDate?' · Released ' + e(item.releasedDate):'') +
@@ -208,7 +322,7 @@ function renderInvoiceDetail() {
         money(credit.totals?.total||item.total,row.currency) + '</span><span class="subline">' + e(credit.reason) + '</span></div><div class="row">' +
         btn('Print','download',' data-id="' + e(item.id) + '" data-name="credit.html"') + btn('JSON','download',' data-id="' + e(item.id) + '" data-name="credit.json"') + '</div></div>';
     }).join(''):'<p class="muted small-text">No credit notes have been issued.</p>') + '</section>' +
-    (row.sourceQuote?'<section class="section"><h3>Source quote</h3><p class="small-text">' + e(row.quoteDraftChanged?'The invoice draft has been edited since quote import. Review these changes before issuing.':'This invoice was prepared from a retained merchant quote.') + '</p><div class="row">' + ['quote.json','response.json','source.json','review.json'].filter(name=>Object.hasOwn(row.sourceQuote.files||{},name)).map(name=>btn(name.replace('.json',''),'quote-download',' data-id="' + e(row.id) + '" data-name="' + name + '"')).join('') + '</div></section>':'') + '<section class="section"><h3>Activity</h3>' + historyTable(row.history) + '</section>' +
+    (row.sourceQuote?'<section class="section"><h3>Source quote</h3><p class="small-text">' + e(row.quoteDraftChanged?'The invoice draft has been edited since quote import. Review these changes before issuing.':'This invoice was prepared from a retained merchant quote.') + '</p><div class="row">' + ['quote.json','response.json','source.json','review.json'].filter(name=>Object.hasOwn(row.sourceQuote.files||{},name)).map(name=>btn(name.replace('.json',''),'quote-download',' data-id="' + e(row.id) + '" data-name="' + name + '"')).join('') + '</div>' + renderImportedTariff(row.sourceQuote.review) + renderPerformanceBasis(row.sourceQuote.review?.performance?.binding, row.sourceQuote.review?.performance) + '</section>':'') + '<section class="section"><h3>Activity</h3>' + historyTable(row.history) + '</section>' +
     (row.status!=='VOID'?'<section class="section"><div class="row">' + btn('Void invoice','void-invoice',' data-write') + '</div></section>':'') + '</div>';
 }
 function newDraft() {
@@ -276,17 +390,18 @@ function renderReceipts() {
   const receipts=(ui.state.receipts||[]).filter(row=>(!ui.customer||row.customerId===ui.customer)&&(!ui.search||[row.reference,row.id,customerName(row.customerId),row.method].join(' ').toLowerCase().includes(ui.search.toLowerCase())));
   return '<section class="panel"><div class="panel-head"><h2>Receipts <span class="muted small-text">(' + receipts.length + ')</span></h2><div class="row">' +
     btn('Import native payment','native-receipt',' data-write') + btn('Record receipt','manual-receipt',' data-write',true) + '</div></div>' +
-    (receipts.length?'<div class="table-wrap"><table><thead><tr><th>Reference / customer</th><th>Date / method</th><th class="num">Received</th><th class="num">Allocated</th><th class="num">Available</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    (receipts.length?'<div class="table-wrap"><table><thead><tr><th>Reference / customer</th><th>Date / method</th><th class="num">Received</th><th class="num">Allocated</th><th class="num">Reserved</th><th class="num">Refunded</th><th class="num">Available</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
       receipts.map(row=>{
         const isVoid=row.voidDate&&row.voidDate<=ui.asOf;
         return '<tr><td>' + e(row.reference||row.id) + '<span class="subline">' + e(customerName(row.customerId)) +
           '</span>' + (row.source?.kind==='ORIGINAL_STELLAR_SETTLEMENT'?'<span class="subline">Native payment · ' + e(row.source.eventId||'') + '</span>':'') + '</td><td>' + e(row.receivedDate) +
           '<span class="subline">' + e(row.method) + '</span></td><td class="num">' + money(row.amount,row.currency) + '</td><td class="num">' + e(row.allocated??'—') +
+          '</td><td class="num">' + e(row.reserved??zero(row.currency)) + '</td><td class="num">' + e(row.refunded??zero(row.currency)) +
           '</td><td class="num">' + e(row.available) + '</td><td><span class="status">' + e(isVoid?'Void':row.receivedDate>ui.asOf?'Future':'Recorded') + '</span></td><td><div class="row">' +
           (!isVoid&&positive(row.available,row.currency)?btn('Allocate','allocate-receipt',' class="small" data-id="' + e(row.id) + '" data-write'):'') +
-          (!isVoid?btn('Void','void-receipt',' class="small" data-id="' + e(row.id) + '" data-write'):'') + '</div></td></tr>';
+          refundUi.receiptActions(row) + (!isVoid?btn('Void','void-receipt',' class="small" data-id="' + e(row.id) + '" data-write'):'') + '</div></td></tr>';
       }).join('') + '</tbody></table></div>':'<div class="panel-body"><p class="muted">Record a customer payment or import a verified native payment from a completed accounting report.</p></div>') +
-    '<div class="panel-foot small-text muted">Available receipt amounts remain unapplied until you allocate them to an invoice in the same customer account and currency.</div></section>';
+    '<div class="panel-foot small-text muted">Available balances include dated allocations, refund reservations and completed refunds. Apply remaining funds to an invoice in the same customer account and currency.</div></section>' + refundUi.renderLedger();
 }
 async function loadCustomerReport() {
   const customerId=ui.customer,asOf=ui.asOf;if(!customerId){ui.customerReport=null;return;}
@@ -335,7 +450,7 @@ function openDialog(title,content) {
   if(!$('#dialog').open)$('#dialog').showModal();
   setBusy(ui.busy);
 }
-function closeDialog() { if($('#dialog').open)$('#dialog').close();dialogMessage(''); }
+function closeDialog() { paymentUi.close(); refundUi.close(); bankUi.close(); if($('#dialog').open)$('#dialog').close();dialogMessage(''); }
 function currencyFields(currency={code:'USD',scale:2}) {
   return '<label>Currency<input name="currencyCode" maxlength="3" pattern="[A-Za-z]{3}" value="' + e(currency.code) + '" required></label><label>Decimal places<select name="currencyScale">' +
     [0,1,2,3,4,5,6].map(scale=>'<option value="' + scale + '"' + (Number(currency.scale)===scale?' selected':'') + '>' + scale + '</option>').join('') + '</select></label>';
@@ -363,8 +478,11 @@ function renderDocument(doc) {
 async function previewInvoice() {
   const invoice=detailInvoice();
   const preview=await api.preview(invoice.id);
+  if(preview.creditReviewRequired&&!preview.creditDecisionId){await creditControlUi.assess(invoice.id);return;}
   ui.preview={...preview,invoiceId:invoice.id,expectedVersion:preview.expectedVersion};
-  openDialog('Review invoice before issue',renderDocument(preview.document) + '<p class="hint">Issuing assigns the next invoice number and retains this document with its current customer and merchant details.</p>' +
+  openDialog('Review invoice before issue',renderDocument(preview.document) +
+    (preview.creditDecisionId?'<p class="notice">The current saved credit approval will be retained with this invoice. '+
+      btn('View credit decision','credit-control-decision',' data-id="'+e(preview.creditDecisionId)+'"')+'</p>':'')+'<p class="hint">Issuing assigns the next invoice number and retains this document with its current customer and merchant details.</p>' +
     '<div class="dialog-actions">' + btn('Back','close-dialog') + btn('Issue invoice','issue-invoice',' data-write',true) + '</div>');
 }
 function settingsDialog() {
@@ -561,14 +679,32 @@ function draftPayload() {
     ...(draft.replacesId?{replacesId:draft.replacesId}:{}),...(draft.sourceReference?{sourceReference:draft.sourceReference}:{}) };
 }
 document.addEventListener('input',event=>{
+  paymentUi.input(event.target);
+  refundUi.input(event.target);
+  collectionsUi.input(event.target);
+  cashPlanningUi.input(event.target);
+  bankUi.input(event.target);
+  creditControlUi.input(event.target);
   if(event.target.closest('#draft-form'))updateDraft(event.target);
   else if(event.target.id==='operator')saveSession('actor',event.target.value);
-  else if(event.target.id==='search'){ui.search=event.target.value;render();}
+  else if(event.target.id==='search'){
+    ui.search=event.target.value;
+    if(ui.view==='credit-control'){
+      clearTimeout(ui.creditSearchTimer);
+      ui.creditSearchTimer=setTimeout(()=>creditControlUi.loadList().then(()=>{if(ui.view==='credit-control')render();}),200);
+    } else render();
+  }
 });
 document.addEventListener('change',event=>{
   const target=event.target;
+  paymentUi.change(target);
+  refundUi.change(target);
+  bankUi.change(target);
+  collectionsUi.change(target);
+  cashPlanningUi.change(target).catch(showError);
+  creditControlUi.change(target);
   if(target.closest('#draft-form'))updateDraft(target);
-  else if(target.id==='customer-filter'){ui.customer=target.value;ui.customerReport=null;render();if(ui.view==='aging'&&ui.customer)loadCustomerReport();}
+  else if(target.id==='customer-filter'){ui.customer=target.value;ui.customerReport=null;render();refundUi.loadList({customerId:ui.customer,date:ui.asOf}).then(()=>{if(ui.view==='receipts')render();});collectionsUi.loadList().then(()=>{if(ui.view==='collections')render();});creditControlUi.loadList().then(()=>{if(ui.view==='credit-control')render();});if(ui.view==='aging'&&ui.customer)loadCustomerReport();}
   else if(target.id==='status-filter'){ui.status=target.value;render();}
   else if(target.id==='as-of'){ui.asOf=target.value||today();refresh({quiet:true});}
   else if(target.id==='quote-scope'){const recurring=target.value==='RECURRING';$('#quote-period-count').disabled=!recurring;$('#quote-period-label').disabled=!recurring;$('#quote-period-label').required=recurring;}
@@ -586,6 +722,12 @@ document.addEventListener('submit',async event=>{
   const form=event.target;if(!form.matches('form'))return;event.preventDefault();if(ui.busy)return;
   try {
     const values=Object.fromEntries(new FormData(form));
+    if(await paymentUi.submit(form,values))return;
+    if(await refundUi.submit(form,values))return;
+    if(await collectionsUi.submit(form,values))return;
+    if(await cashPlanningUi.submit(form,values))return;
+    if(await creditControlUi.submit(form,values))return;
+    if(await bankUi.submit(form,values))return;
     if(form.id==='draft-form'){
       if(!ui.editor.lines.length)throw new Error('Add an invoice line.');
       await mutate('saveDraft',[draftPayload()],'Save invoice draft');
@@ -619,7 +761,13 @@ document.addEventListener('click',async event=>{
   const action=button.dataset.action;
   if(ui.pending&&['new-invoice','settings','import-quote','edit-invoice','add-line','remove-line','preview-invoice','issue-invoice','manual-receipt','native-receipt','credit-invoice','allocate-invoice','allocate-receipt','release-allocation','void-receipt','void-invoice','adopt-draft-version'].includes(action)){setMessage('Finish the retained operation before starting another change.',true);return;}
   try{
-    if(action==='view'){ui.view=button.dataset.view;render();if(ui.view==='aging'&&ui.customer)await loadCustomerReport();}
+    if(await paymentUi.click(button))return;
+    if(await refundUi.click(button))return;
+    if(await collectionsUi.click(button))return;
+    if(await cashPlanningUi.click(button))return;
+    if(await creditControlUi.click(button))return;
+    if(await bankUi.click(button))return;
+    if(action==='view'){ui.view=button.dataset.view;render();if(ui.view==='bank')await bankUi.load();else if(ui.view==='credit-control'){await creditControlUi.loadList();render();}else if(ui.view==='aging'&&ui.customer)await loadCustomerReport();}
     else if(action==='refresh')await refresh();
     else if(action==='dismiss-message')setMessage('');
     else if(action==='new-invoice'){
@@ -641,7 +789,7 @@ document.addEventListener('click',async event=>{
     } else if(action==='preview-invoice')await previewInvoice();
     else if(action==='issue-invoice'){
       if(!ui.preview)throw new Error('Review the invoice before issuing.');
-      await mutate('issue',[ui.preview.invoiceId,{expectedVersion:ui.preview.expectedVersion,previewSha256:ui.preview.previewSha256}],'Issue invoice');
+      await mutate('issue',[ui.preview.invoiceId,{expectedVersion:ui.preview.expectedVersion,previewSha256:ui.preview.previewSha256,...(ui.preview.creditDecisionId?{creditDecisionId:ui.preview.creditDecisionId}:{})}],'Issue invoice');
     } else if(action==='close-dialog')closeDialog();
     else if(action==='manual-receipt')manualReceiptDialog();
     else if(action==='native-receipt')nativeReceiptDialog();

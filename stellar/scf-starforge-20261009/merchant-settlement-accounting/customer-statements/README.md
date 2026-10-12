@@ -20,6 +20,14 @@ node customer-statements/cli.mjs serve --workspace /absolute/merchant-accounting
 
 The original merchant accounting interface remains the entry for collecting native sources, importing official transfer results and running reconciliation. This module consumes those retained results.
 
+### Service activity between two native snapshots
+
+Choose **Activity between two native snapshots** in statement preparation, then select the complete opening and closing API-pass exports. **Inspect service period** opens their actual interval, allowance balances, route totals, call changes, carried reservations and recovered results.
+
+The original purchase may predate the service interval. Leave purchase dates empty to keep that original order in the selected accounting report. Service dates come from the two native snapshots. Retaining the statement freezes both sources with the same customer document and adds complete activity and route CSVs and customer-safe source projections.
+
+The [service period guide](SERVICE_PERIODS.md) covers the complete workflow, exact unit movement, downloads, CLI/API use, correction and reopening. The installed accounting component includes the period module through its existing source selection.
+
 ### Corrections and withdrawals
 
 Customer profiles and order assignments have explicit versions. A reassignment to a different customer requires the operator’s correction reason and is recorded in the original workspace history. Earlier retained documents keep their original customer snapshot.
@@ -158,7 +166,7 @@ A customer request includes `revision`, `actor`, `reference`, `name` and optiona
 
 An assignment request includes `revision`, `actor`, `customerId` and `orders: [{orderRef, label}]`. Explicit cross-customer corrections add `reassign: true` and `reason`.
 
-A selection contains `customerId`, `runId` and optional `usageId`, exact UTC `from`/`until`, and `replacesId`. Retention adds `revision`, `actor`, `requestId` and the returned `previewSha256`.
+A selection contains `customerId`, `runId` and optional `usageId`, `usageOpeningId` for a native service period, exact UTC purchase `from`/`until`, and `replacesId`. Retention adds `revision`, `actor`, `requestId` and the returned `previewSha256`.
 
 `show`, `statements`, `bindings`, `export` and `withdraw` expose the same document register and correction workflow. `--input -` accepts one JSON object from standard input; `export --output -` streams the exact retained file.
 
@@ -186,6 +194,7 @@ After entering the original operation, route `handleCustomerStatementRequest(sta
 | GET / POST | `/api/customer-statements/bindings` | Page assignments / save assignments |
 | POST | `/api/customer-statements/customers` | Save customer profile |
 | POST | `/api/customer-statements/usage` | Retain exact original usage input |
+| POST | `/api/customer-statements/usage-period` | Inspect two complete native snapshots with `usageOpeningId` and `usageId` |
 | POST | `/api/customer-statements/preview` | Prepare original statement projection |
 | POST | `/api/customer-statements/retain` | Retain the reviewed document |
 | GET | `/api/customer-statements/statements` | Page/filter register |
