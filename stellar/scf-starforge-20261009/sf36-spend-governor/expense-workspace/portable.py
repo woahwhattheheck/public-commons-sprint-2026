@@ -12,7 +12,7 @@ from native_mcp import reader_path
 CREDIT_READER_FILES = tuple(json.loads((Path(__file__).resolve().parent / 'credit-reader-files.json').read_text())['files'])
 
 APP_FILES = ("native.py", "domain.py", "store.py", "exports.py", "portable.py", "server.py",
-             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py", "native_woo.py", "credits.py", "credit_store.py", "credit-reader-files.json")
+             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py", "native_woo.py", "native_adjustments.py", "credits.py", "credit_store.py", "credit-reader-files.json")
 MCP_READER_FILES = ("stellar-forge/mcp-paid-agent/expense-statement.mjs",
                     "stellar-forge/mcp-paid-agent/quote-store.mjs",
                     "stellar-forge/mcp-paid-agent/remote-mcp.mjs",
@@ -60,7 +60,7 @@ No Node process starts until an operator explicitly captures an MCP source or im
 
 Native SF36 reservations, settled actual and unused capacity retain their original meanings. MCP quotes create no reservations in this workspace. Quote creation day is a source date, not a payment or accounting date. The operator supplies recognition dates and exact allocations; units remain separate by network and asset. A transfer shared by source rows requires explicit review, and the same exact matched event cannot be included twice in one period or another currently closed period.
 
-Credits and returns retain exact original customer refund packets in the native SQLite state, including their original manifest and member bytes. After receiving the complete project, those captured packets open without their former source directories. Importing another packet calls the included unchanged original Woo receiver and its native purchase/refund binding functions. Choose the exact retained manifest hash, store and original operation context. Operational and development inputs remain in separate workspaces.
+Credits and returns retain exact original customer refund packets in the native SQLite state, including their original member bytes. Woo retains its original merchant manifest; generic accounting exports retain their unchanged original JSON and an explicitly labelled buyer-selection manifest. After receiving the complete project, those captured packets open without their former source directories. Importing another Woo packet calls the included unchanged original Woo receiver and its native purchase/refund binding functions. Importing an original merchant adjustment export calls its included original accounting compiler and proof validators, preserving the selected event, original file SHA, optional paid-job binding and every decision. Original cancellations, pending returns and withdrawn requests remain source outcomes. Only an original proof-bound payment and verified returned transfer enter native expense and credit allocations. An export without an original payment proof can still be retained and accepted as a reference-only source; it creates no purchase or returned units. Choose the exact retained manifest hash, store and original operation context. Operational and development inputs remain in separate workspaces.
 
 Each accepted packet either binds to the same original buyer payment or explicitly registers the original reviewed merchant purchase. Allocate the purchase first, then its exact returned units against remaining original cost-center, project and account dimensions. Store-currency credit amounts remain independent of native returned units; no exchange rate is inferred. A return cannot be included twice or moved out of a currently closed period without reopening it. Corrected editions preserve every original issued edition and frozen source packet.
 
@@ -102,7 +102,7 @@ def _complete_project(store, state):
         "workspace": state["id"], "revision": state["revision"],
         "request_recovery": "sqlite-transaction-v1",
         "mcp_quote_capture": "native-readonly-v1",
-        "buyer_credit_capture": "original-woo-refund-v1",
+        "buyer_credit_capture": "original-native-refund-v2",
         "data_context": state["data_context"],
         "credit_count": state["credit_count"],
         "refund_packet_count": store.connection.execute("SELECT COUNT(*) FROM refund_packets").fetchone()[0],

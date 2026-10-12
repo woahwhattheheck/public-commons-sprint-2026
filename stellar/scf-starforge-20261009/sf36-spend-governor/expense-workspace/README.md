@@ -188,3 +188,26 @@ The original Woo order-18 customer packets completed this workflow on 2026-10-12
 The maintained MCP/customer SDK recovered the same capture and final-close request, reopened the host, exported the accountant and original source packets, and received the complete included-source project at revision 19. A brief desktop/mobile pass read the same received case without a mutation. The first final-close response occurred during shared storage exhaustion; the same retained request completed after capacity returned. This was the original controlled development operation, with no new payment, merchant mutation or independent-adopter count.
 
 The fixed refund-reader file list also includes the maintained Woo basket contract imported by the current original buyer module. It keeps the original SF104/SF88 implementation available in complete receiving; no alternate refund or payment engine is bundled.
+
+## Original merchant adjustments and paid-job returns
+
+Use **Credits and returns → Receive original merchant adjustment export** for the unchanged JSON from the existing `AdjustmentWorkspace.export({runId, format:'json'})` or `GET /api/adjustments/export?runId=UUID&format=json`. Select the original file, exact SHA-256, and one original `events[].original.eventId`. This is a private source intake; the original accounting engine, merchant job and payment operation remain unchanged.
+
+An optional original paid-job selection contains `job_id` and its unchanged `settlement`. The reader binds the event ID, receipt fingerprint, transaction fingerprint, network, asset and recipient digests, exact atomic amount, route, method and order-reference digest. The order-reference digest must be SHA-256 of the original job ID. This selection is a buyer guard; the original export and proofs provide the source authority.
+
+The fixed read-only reader reuses the original accounting compiler and original adjustment/payment/refund validators. The source retains its complete original JSON. Its separate `buyer-selection.json` is explicitly a buyer intake description, never a claimed original merchant manifest.
+
+| Original source state | Buyer behavior |
+| --- | --- |
+| No independent original payment proof | Accept the export as reference-only context; no expense or credit is created. A later complete source can retain the same origin and supply its actual payment. |
+| Independently proved original payment | Select the exact existing buyer payment, or explicitly register the original reviewed purchase. Amounts and parties must match. |
+| Requested, verifying or withdrawn refund | Retain the original decision and amount in the period source view; do not count returned units. |
+| Recorded cancellation | Retain the merchant's cancellation separately; it is not a reverse transfer. |
+| Verified native return | Bind it to the original payment and allocate its exact returned units against the original purchase dimensions. |
+| Return absent from a successor export | Keep the previous original verified return and show its absence from the latest accepted receipt. Earlier issued editions keep their own source. |
+
+Each original export may carry several adjustments. The source review accepts or rejects the selected original event and its decisions together. All eligible returns remain individually addressable and traceable to their original adjustment, native reverse transfer and packet history. An already retained adjustment cannot change its immutable payment, returned amount or buyer binding.
+
+The original API `POST /api/adjustment-packets` accepts `{expected_revision, payload:{name, provenance, data_context, source_file, source_sha256, event_id, expected_job?}}`. Its optional durable `request_id` envelope behaves like every existing mutation. Review, credit coding, period review/close/reopen and export reuse the same original routes. Accountant editions add `original-merchant-adjustments.csv` and preserve the exact source export plus buyer selection. Store-currency fields remain absent when the original source does not supply them.
+
+Complete project version `original-native-refund-v2` includes the new native source adapter, unchanged accounting compiler/reconciler and the full existing Woo reader closure. The trusted receiver also accepts previously issued `original-woo-refund-v1` projects with their original source member set. Receiving opens the retained state without reimporting any original source or starting a payment.
