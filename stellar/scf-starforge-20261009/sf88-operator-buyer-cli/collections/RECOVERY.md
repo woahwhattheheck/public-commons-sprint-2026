@@ -91,3 +91,9 @@ The existing host keeps its original collection, run, browser approval, result e
 | `POST /api/recovery/:requestId/files` | Native encrypted member download descriptors |
 
 The operation journal schema is `stellar-forge.sf88.collection-recovery-operation.v1`. The encrypted native application record schema is `stellar-forge.sf88.collection-workspace-recovery.v1`. Neither replaces original inbox or operator accounting.
+
+## Native operating example
+
+The single complete [recovery example](examples/recovery.mjs) creates its own clearly labeled original SF88 operator ledger and request collection, preserves a native cancelled attempt and a queued request, captures and downloads the complete encrypted state, then restores the original path and reopens it through browser and CLI. It checks the same result and input identities after restart and exercises refusal of a populated target. It makes no provider request or payment and does not substitute for the existing original customer run.
+
+Run `node collections/examples/recovery.mjs /ABS/OWNED_RUN` on a Linux host with the existing source dependencies, Python 3.11+, Playwright and Chromium. Set `PLAYWRIGHT_MODULE` and `CHROME_EXECUTABLE` to that host's existing runtime paths. Its native checkpoint remains in the supplied run directory; the original state is retained beside the restored copy. The generated backup passphrase stays in that run's private `native-environment.json` file and is never printed. Keep the run private.
