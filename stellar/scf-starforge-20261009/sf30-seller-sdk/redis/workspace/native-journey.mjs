@@ -11,8 +11,8 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime}){
   const environment={...process.env},connection=JSON.parse(await readFile(sourceFile,'utf8')).connection;
   const credential=connection.passwordEnv??connection.tokenEnv,hadCredential=credential&&Object.hasOwn(process.env,credential);
-  let workspace,server,browser;
-  const stages=[],downloads=[];
+  let workspace,server,browser,page;
+  const stages=[],downloads=[],issues=[];
   try{
     // Preview and the retained seller must use the workspace's explicit environment.
     if(credential)delete process.env[credential];
@@ -39,7 +39,7 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
       assert.equal(typeof chromium?.launch,'function','The selected Playwright module must expose Chromium.');
       browser=await chromium.launch({headless:true,args:['--no-sandbox'],
         ...(process.env.SF30_CHROMIUM_EXECUTABLE?{executablePath:process.env.SF30_CHROMIUM_EXECUTABLE}:{})});
-      const page=await browser.newPage({viewport:{width:1440,height:1000}}),issues=[];
+      page=await browser.newPage({viewport:{width:1440,height:1000}});
       page.on('pageerror',error=>issues.push(error.message));
       await page.goto(server.operatorUrl);await page.locator('#status').filter({hasText:'Workspace ready.'}).waitFor();
       await page.locator('#query-list button').filter({hasText:'leaderboard'}).click();
@@ -144,6 +144,12 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
     stages.push({kind:'retained-release',releaseId:release.id,digest:release.digest,challengeStatus:challenge.status,environment:'explicit-workspace'});
     return {result:'PASS',workspaceId,initialRevision,changedRevision,retainedRevision:workspace.metadata().head,
       publicFiles:names.length,stages,downloads};
+  }catch(error){
+    const diagnostic={error:error.message,browserErrors:issues,stages};
+    if(page&&!page.isClosed())diagnostic.status=await page.locator('#status').innerText().catch(()=>null);
+    if(process.env.SF30_REDIS_WORKSPACE_DIAGNOSTICS)await writeFile(process.env.SF30_REDIS_WORKSPACE_DIAGNOSTICS,JSON.stringify(diagnostic,null,2)+'\n',{mode:0o600}).catch(()=>{});
+    console.error(JSON.stringify({redisWorkspaceFailure:diagnostic}));
+    throw error;
   }finally{
     if(credential){if(hadCredential)process.env[credential]=environment[credential];else delete process.env[credential];}
     await browser?.close();if(server)await server.close();else await workspace?.close();

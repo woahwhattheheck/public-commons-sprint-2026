@@ -9,6 +9,12 @@ export const INTAKE_COMMAND_OPTIONS = Object.freeze({
   'request-draft': ['--catalog-file', '--origin', '--function', '--input', '--label', '--reference', '--intake-key-file'],
   'request-list': ['--query', '--phase', '--offset', '--limit'],
   'request-show': ['--request'],
+  'request-files': ['--request'],
+  'request-file-add': ['--request', '--slot', '--file', '--content-type', '--filename', '--expected-revision'],
+  'request-file-library': ['--request', '--slot', '--resource', '--content-type', '--filename', '--expected-revision'],
+  'request-file-remove': ['--request', '--slot', '--expected-revision'],
+  'request-file-cleanup': ['--request', '--expected-revision'],
+  'request-file-search': ['--query', '--offset', '--limit'],
   'request-prepare': ['--request', '--expected-revision', '--operator-workspace', '--operator-profile', '--runtime'],
   'request-import': ['--request', '--expected-revision', '--operator-workspace', '--operator-profile', '--runtime'],
   'request-withdraw': ['--request', '--expected-revision', '--reason'],
@@ -22,6 +28,14 @@ export const INTAKE_HELP = [
   '                 [--intake-key-file ABS]',
   'request-list     [--query TEXT] [--phase PHASE] [--offset N] [--limit N]',
   'request-show     --request ID',
+  'request-files    --request ID',
+  'request-file-add --request ID --slot NAME --file ABS --content-type MIME',
+  '                 --expected-revision N [--filename NAME] [--file-root ABS]',
+  'request-file-library --request ID --slot NAME --resource LIBRARY_ID',
+  '                     --expected-revision N [--content-type MIME] [--filename NAME]',
+  'request-file-remove  --request ID --slot NAME --expected-revision N',
+  'request-file-cleanup --request ID --expected-revision N',
+  'request-file-search  [--query TEXT] [--offset N] [--limit N]',
   'request-prepare  --request ID --expected-revision N',
   'request-import   --request ID --expected-revision N',
   'request-withdraw --request ID --expected-revision N --reason TEXT',
@@ -32,6 +46,10 @@ export const INTAKE_HELP = [
   'existing --operator-workspace ABS or --operator-profile ABS and --runtime ABS.',
   'The request and claim are saved before its inputs are sent. Prepare resumes',
   'that same reference and imports the merchant ticket into original Checkout.',
+  'File selection saves original bytes privately before Prepare uploads them.',
+  'Local paths must be in an existing configured --file-root. Rerunning with',
+  'the same source resumes its missing chunks. Library selection verifies the',
+  'original resource through this workspace library before staging it.',
   '',
 ].join('\n');
 
@@ -70,7 +88,25 @@ export async function runIntakeCommand({ model, command, flags, signal, print })
   }
   if (command === 'request-list') return print(intake.list({ q: flags.get('--query') ?? '',
     phase: flags.get('--phase') ?? '', offset: number('--offset', 0), limit: number('--limit', 50) }));
+  if (command === 'request-file-search') return print(intake.inputFiles.searchLibrary({
+    q: flags.get('--query') ?? '', offset: number('--offset', 0), limit: number('--limit', 20) }));
   const id = required('--request');
+  if (command === 'request-files') return print((await intake.get(id)).inputFiles);
+  if (command === 'request-file-add' || command === 'request-file-library') {
+    const options = { slot: required('--slot'), expectedRevision: number('--expected-revision'), signal,
+      ...(flags.has('--filename') ? { filename: flags.get('--filename') } : {}),
+      ...(flags.has('--content-type') ? { contentType: flags.get('--content-type') } : {}) };
+    if (command === 'request-file-add') {
+      options.path = absolute(required('--file')); options.contentType = required('--content-type');
+      return print(await intake.inputFiles.local(id, options));
+    }
+    options.resourceId = required('--resource');
+    return print(await intake.inputFiles.library(id, options));
+  }
+  if (command === 'request-file-remove') return print(await intake.inputFiles.remove(id, {
+    slot: required('--slot'), expectedRevision: number('--expected-revision'), signal }));
+  if (command === 'request-file-cleanup') return print(await intake.inputFiles.cleanup(id, {
+    expectedRevision: number('--expected-revision'), signal }));
   if (command === 'request-show') return print(await intake.get(id));
   if (command === 'request-ticket') return print(await saveNew(required('--out'), await intake.ticket(id)));
   if (command === 'request-access') return print(await intake.setAccess(id, {

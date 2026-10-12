@@ -1,4 +1,5 @@
 // MIT. Retain original upstream JSON as an immutable SF82 release input.
+import { upstreamReleaseSnapshot } from './release-input-contracts.mjs';
 import { createHash } from 'node:crypto';
 import { lstat, readFile, open } from 'node:fs/promises';
 import { join, dirname, basename, resolve } from 'node:path';
@@ -13,12 +14,7 @@ function normalize(value) {
   if (plain(value)) return Object.fromEntries(Object.keys(value).sort().map(key => [key, normalize(value[key])]));
   return value;
 }
-export function upstreamReleaseSnapshot(value) {
-  if (!plain(value) || Object.keys(value).some(key => !['file', 'sha256'].includes(key)) ||
-      !/^[a-f0-9]{64}$/.test(value.sha256 ?? '') || value.file !== `pilot-upstreams-${value.sha256}.json`)
-    throw new TypeError('Invalid original upstream release snapshot.');
-  return { file: value.file, sha256: value.sha256 };
-}
+export { upstreamReleaseSnapshot } from './release-input-contracts.mjs';
 /** Resolve a saved ORIGINAL workspace package through its own integrity reader. */
 export async function readReleaseWorkspace(path) {
   const { readPackage } = await import('../sf61-openapi-seller-import/workspace/model.mjs');

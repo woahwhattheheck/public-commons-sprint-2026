@@ -6,6 +6,12 @@ export declare const INTUIT_QBO_ENDPOINTS: Readonly<{authorization: string; toke
 export interface IntuitQuickBooksProvider { kind: typeof INTUIT_QBO_PROVIDER; environment: 'sandbox' | 'production' }
 export declare function intuitQboProfile(profile: unknown): boolean;
 export declare function qboRealm(value: unknown): value is string;
+export declare const XERO_OAUTH_PROVIDER: 'xero-accounting';
+export declare const XERO_ACCOUNTING_SCOPES: readonly ['accounting.settings.read', 'accounting.transactions'];
+export declare const XERO_OAUTH_SCOPES: readonly ['accounting.settings.read', 'accounting.transactions', 'offline_access'];
+export declare const XERO_OAUTH_ENDPOINTS: Readonly<{authorization: string; token: string; revoke: string; resource: string}>;
+export interface XeroAccountingProvider {kind: typeof XERO_OAUTH_PROVIDER}
+export declare function xeroOAuthProfile(profile: unknown): boolean;
 
 export interface OAuthSourceIdentity {
   /** SHA-256 of the exact original OpenAPI bytes. */
@@ -38,8 +44,8 @@ export interface OAuthProfileFields {
   resourceParameters: string[];
   /** Generic profiles use S256. The explicit Intuit confidential client dialect uses none. */
   pkceMethod: 'S256' | 'none';
-  provider?: IntuitQuickBooksProvider;
-  /** Intuit only: exact registered localhost sandbox or public HTTPS callback origin. */
+  provider?: IntuitQuickBooksProvider | XeroAccountingProvider;
+  /** Native provider: exact registered localhost development or public HTTPS callback origin. */
   callbackOrigin?: string;
 }
 

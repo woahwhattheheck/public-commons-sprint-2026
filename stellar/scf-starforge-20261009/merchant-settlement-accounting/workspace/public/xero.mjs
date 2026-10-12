@@ -19,12 +19,32 @@ function selectedPlan(){if(!$('plans').value)throw Error('Choose a saved journal
 function planPath(){return '/api/xero/plans/'+encodeURIComponent(selectedPlan());}
 function capturePath(){if(!$('capture').value)throw Error('Choose a retained comparison.');return planPath()+'/captures/'+encodeURIComponent($('capture').value);}
 function clearReturn(){returnPreview=null;$('return').hidden=true;}
-function connectionAvailable(){return Boolean(state?.connection?.available);}
+function managedConnection(){const value=state?.connection?.authorization;return value?.kind==='oauth-connection'?value:null;}
+function connectionAvailable(tenantId){const managed=managedConnection();return Boolean(state?.connection?.available)&&(!tenantId||!managed||managed.tenantId===tenantId);}
+function renderConnection(){
+  const selected=managedConnection(),form=$('context-form');
+  $('connection').textContent=selected?
+    (selected.organizationName??selected.tenantName??'Selected Xero organization')+' · '+(selected.baseCurrency??'')+' · '+(selected.isDemoCompany?'Demo organization':'Merchant books')+' · '+selected.state:
+    connectionAvailable()?'Xero connection configured in the server process.':'Native source import is available. Configure the Xero connection in the server process for API reads and draft creation.';
+  $('managed-connection').hidden=!selected;
+  if(selected){
+    form.elements.tenantId.value=selected.tenantId;
+    if(!form.elements.name.value.trim())form.elements.name.value=(selected.organizationName??selected.tenantName??'Xero organization').slice(0,160);
+    $('managed-connection-content').replaceChildren(table(['Selected field','Value'],[
+      ['Connection',selected.alias],['Organization',selected.organizationName??selected.tenantName],
+      ['Tenant ID',selected.tenantId],['Connection ID',selected.connectionId],['Authorization state',selected.state],
+      ['Selection SHA256',selected.selectionSha256],['Native tenant read',selected.lastTenantReadAt??''],
+    ]));
+    if(selected.lastError)$('managed-connection-content').append(node('p','Connection: '+selected.lastError));
+  }
+  form.elements.tenantId.readOnly=Boolean(selected);
+  document.querySelector('#context-form button[value="capture"]').disabled=!connectionAvailable();
+}
 async function refresh(){
   const oldHandoff=$('handoff').value,oldContext=$('context').value,oldPlan=$('plans').value;
   state=await api('/api/xero');
   $('workspace-revision').textContent='Workspace revision '+state.revision;
-  $('connection').textContent=connectionAvailable()?'Xero connection configured in the server process.':'Native source import is available. Configure the Xero connection in the server process for API reads and draft creation.';
+  renderConnection();
   options($('handoff'),state.handoffs,row=>row.name+' · '+row.id.slice(0,8),oldHandoff);
   options($('context'),state.contexts,row=>row.name+' · '+(row.baseCurrency??row.organization?.baseCurrency??'')+' · '+row.id.slice(0,8),oldContext);
   options($('plans'),state.plans,row=>row.name+' · '+(row.cancelledAt?'CANCELLED':row.createdAt??row.id.slice(0,8)),oldPlan);
@@ -63,7 +83,7 @@ $('refresh').addEventListener('click',()=>action(refresh));
 $('context-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
   const form=event.currentTarget,request={id:crypto.randomUUID(),revision:state.revision,actor:operator(),name:form.elements.name.value.trim(),tenantId:form.elements.tenantId.value.trim()};
   if(event.submitter.value==='import'){request.organizationBase64=await encoded(form.elements.organizationFile.files[0]);request.accountsBase64=await encoded(form.elements.accountsFile.files[0]);}
-  const result=await api('/api/xero/contexts/'+event.submitter.value,request);await refresh();const id=result.context?.id??result.record?.id??request.id;$('context').value=id;notice('Retained the original Xero organization and account responses.');form.reset();
+  const result=await api('/api/xero/contexts/'+event.submitter.value,request);await refresh();const id=result.context?.id??result.record?.id??request.id;$('context').value=id;notice('Retained the original Xero organization and account responses.');form.reset();renderConnection();
 });});
 $('source-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{source=await api('/api/xero/source?'+new URLSearchParams({handoffId:$('handoff').value,contextId:$('context').value}));renderSource();notice('Original source loaded. Enter an explicit accounting treatment for each component.');});});
 $('plan-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
@@ -83,8 +103,9 @@ async function loadPlan(){
   for(const intent of retained.returnIntents.filter(intent=>intent.status==='PREPARED')){const resume=node('button','Complete retained accountant return '+intent.id.slice(0,8),{type:'button'});resume.addEventListener('click',()=>action(async()=>{await api(planPath()+'/captures/'+encodeURIComponent(intent.captureId)+'/returns',{id:intent.id,previewSha256:intent.previewSha256});await refresh();await loadPlan();notice('Completed the retained original accountant return.');}));$('plan-detail').append(resume);}
   if(retained.cancelledAt)$('plan-detail').append(node('p','Cancelled: '+retained.cancellationReason,{class:'xero-callout'}));
   $('reload-plan').hidden=false;$('native').hidden=Boolean(retained.cancelledAt);$('response-form').hidden=Boolean(retained.cancelledAt);
-  $('create-drafts').disabled=!connectionAvailable()||!retained.journals.some(journal=>(!journal.attempted||journal.status==='REJECTED')&&!journal.journalId);
-  $('refresh-native').disabled=!connectionAvailable();
+  $('create-drafts').disabled=!connectionAvailable(plan.context.tenantId)||!retained.journals.some(journal=>(!journal.attempted||journal.status==='REJECTED')&&!journal.journalId);
+  $('refresh-native').disabled=!connectionAvailable(plan.context.tenantId);
+  if(managedConnection()&&plan.context.tenantId!==managedConnection().tenantId)$('plan-detail').append(node('p','This retained plan belongs to another Xero tenant. Open its reviewed connection to continue native delivery.',{class:'xero-callout'}));
   $('cancel-form').hidden=Boolean(retained.cancelledAt)||retained.journals.some(journal=>journal.attempted||journal.journalId)||retained.captures.some(capture=>capture.nativeJournalCount>0);
   const oldCapture=$('capture').value;options($('capture'),retained.captures,row=>row.createdAt+' · '+row.id.slice(0,8),oldCapture);
   $('captures').hidden=retained.captures.length===0;

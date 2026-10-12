@@ -50,6 +50,9 @@ const HELP = [
   'serve: --port N --approval-mode browser|terminal (default browser).',
   '       --landing request|checkout|jobs|library|collections (default request).',
   'watch/fetch: --deadline-ms N --poll-ms N.',
+  'File storage: --input-storage-bytes N --input-storage-files N.',
+  'File transfer deadline: --transfer-timeout-ms N (default 3600000).',
+  'Supply any storage overrides again on reopen.',
   'The running workspace owns its original lease; use the browser while it runs.',
   'Ctrl-C stops the current local operation and retains its original state.',
 ].join('\n') + '\n';
@@ -84,7 +87,7 @@ export async function runJobWorkspaceCommand(args = process.argv.slice(2), {
   };
   requireValue(Object.hasOwn(specific, command), 'JOB_WORKSPACE_COMMAND_INVALID');
   requireValue(rest.length % 2 === 0, 'OPTION_VALUE_REQUIRED');
-  const allowed = ['--state','--buyer-root','--file-root', ...specific[command]], flags = new Map(), buyerRoots = [], fileRoots = [];
+  const allowed = ['--state','--buyer-root','--file-root','--input-storage-bytes','--input-storage-files','--transfer-timeout-ms', ...specific[command]], flags = new Map(), buyerRoots = [], fileRoots = [];
   for (let index = 0; index < rest.length; index += 2) {
     const [key, value] = rest.slice(index, index + 2);
     requireValue(allowed.includes(key) && typeof value === 'string' &&
@@ -103,7 +106,12 @@ export async function runJobWorkspaceCommand(args = process.argv.slice(2), {
   requireValue(JOB_WORKSPACE_APPLICATIONS.approvalModes.includes(approvalMode), 'JOB_APPROVAL_MODE_INVALID');
   const landing = flags.get('--landing') ?? 'request';
   requireValue(JOB_WORKSPACE_APPLICATIONS.landings.includes(landing), 'JOB_WORKSPACE_LANDING_INVALID');
-  const model = await openJobWorkspace({ directory: flags.get('--state'), checkout,
+  const inputFileStorage = {
+    ...(flags.has('--input-storage-bytes') ? { maxBytes: number('--input-storage-bytes') } : {}),
+    ...(flags.has('--input-storage-files') ? { maxUploads: number('--input-storage-files') } : {}),
+  };
+  const model = await openJobWorkspace({ directory: flags.get('--state'), checkout, inputFileStorage,
+    ...(flags.has('--transfer-timeout-ms') ? { transferTimeoutMs: number('--transfer-timeout-ms') } : {}),
     ...(buyerRoots.length ? { buyerRoots } : {}), ...(fileRoots.length ? { fileRoots } : {}) });
   let host, selected = null, checkoutId = null;
   const controller = new AbortController();

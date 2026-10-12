@@ -13,7 +13,7 @@ SF98_DELIVERY_CHROMIUM=/absolute/existing/chromium \
 node experiments/managed-settlement-delivery-acceptance/journey.mjs all
 ```
 
-The selected product is fb3b93a7690c5c7c69b95ba1f564f61e571a4451. The operation ID is SCF-MANAGED-SF98-DELIVERY-E49D-20261012. The driver generates its own private signing and claim values in its output directory; the published source includes no account credentials or customer input.
+The selected product is b37adf4292b0a424fe14da153ae88e5815a492f1. The operation ID is SCF-MANAGED-SF98-DELIVERY-E49D-20261012. The driver generates its own private signing and claim values in its output directory; the published source includes no account credentials or customer input.
 
 The native phase serves and settles original Python requests with the existing local facilitator fixture, journals the original SF98 events, and sends signed bytes through the original sender. Its transport adapter follows the original7E23 loopback receiving pattern, with HTTPS destination identities retained in the original configuration. It verifies independent accounting retry, actual SF101 file fulfillment, original accounting capture replay, upgrade, retirement and rollback.
 

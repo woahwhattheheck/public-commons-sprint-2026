@@ -1,13 +1,9 @@
 // MIT. Existing private cache controls bound to the actual SF82 seller instance.
-import { join, resolve } from 'node:path';
+import { releaseCacheControlPath } from './release-input-contracts.mjs';
+export { releaseCacheControlPath } from './release-input-contracts.mjs';
 import { startCacheControl, callCacheControlFile } from '../sf30-seller-sdk/response-cache/control.mjs';
 
 const failure = (message, code = 'RELEASE_CONFLICT') => Object.assign(new Error(message), { code });
-export function releaseCacheControlPath(root, instanceId) {
-  if (typeof instanceId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(instanceId))
-    throw new TypeError('Original running seller instance ID required.');
-  return join(resolve(root), 'cache-control', instanceId + '.json');
-}
 
 /** Run in the existing seller child, without another cache or HTTP seller. */
 export async function attachReleaseCacheControls(session, { controlFile, routes } = {}) {

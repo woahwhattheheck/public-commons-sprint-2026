@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "baserow-mcp",
+  "description": "Operate Baserow source and merchant workspaces through MCP and receive complete native customer files",
+  "commands": {
+    "mcp-baserow-download": "stellar-forge/mcp-merchant-operator/baserow-workspace-download.mjs"
+  },
+  "commandDescriptions": {
+    "mcp-baserow-download": "Inspect, download, reopen and receive complete original Baserow source and merchant exports"
+  },
+  "exports": {
+    "./merchant/mcp/baserow": "./source/stellar-forge/mcp-merchant-operator/baserow-workspace.mjs",
+    "./merchant/mcp/baserow/export": "./source/stellar-forge/mcp-merchant-operator/baserow-workspace-files.mjs",
+    "./merchant/mcp/baserow/receiving": "./source/stellar-forge/mcp-merchant-operator/baserow-workspace-download.mjs",
+    "./seller/baserow/workspace/publisher-operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/publisher-operations.mjs"
+  }
+}
