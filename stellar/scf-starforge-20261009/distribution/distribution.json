@@ -363,6 +363,8 @@
     "nocodb-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/cli.mjs",
     "nocodb-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/publisher/cli.mjs",
     "nocodb-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/deployment-cli.mjs",
+    "dataset-ndjson": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/cli.mjs",
+    "dataset-ndjson-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs",
     "sdmx": "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/cli.mjs"
   },
   "exports": {
@@ -842,6 +844,8 @@
     "./seller/nocodb/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/capture.mjs",
     "./seller/nocodb/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/publisher/model.mjs",
     "./seller/nocodb/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/deployment.mjs",
+    "./merchant/mcp/source-workspaces": "./source/stellar-forge/mcp-merchant-operator/source-workspace.mjs",
+    "./seller/ndjson-merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs",
     "./seller/sdmx": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/merchant.mjs",
     "./buyer/sdmx": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/customer.mjs"
   },
