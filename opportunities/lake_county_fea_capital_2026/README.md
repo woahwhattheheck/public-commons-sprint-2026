@@ -158,4 +158,16 @@ The added historical registers preserve:
 
 GIS identifier coverage and published edit-marker consistency remain separate. The source files preserve original service geometry, including Z/M when supplied, and all bounded response pages. A complete source response does not imply a current professional asset assessment.
 
+### Preserve capture progress across a temporary runtime
+
+The selected collector records each complete raw body and its exact source receipt before optional text extraction. Both installed `pdftotext` and fallback `pypdf` run in a separate process with a 30-second deadline. A timeout leaves the original PDF retained and its derived-text status explicit.
+
+The connected commissioning producer in `source/continuous_producer.py` takes the original full work-order JSON, including the existing artifact ID and current version. Its source collector runs with `FEA_PUBLIC_SOURCE_CHECKPOINT_MODE=parent_stdio`. Between completed source batches and before long GIS/browser work, the collector pauses on a hash-bound checkpoint request. The producer verifies that source manifest, saves the complete current operating artifact as an explicitly incomplete checkpoint, and returns the actual saved identity/version before acquisition continues.
+
+Each checkpoint and final delivery replaces that same item using its last confirmed version. A missing or failed save result blocks further automatic writes. The checkpoint itself retains all complete originals, source receipts, current application source and prior attempt history; it is never labelled a completed capture or client handover.
+
+An explicit `resume_checkpoint` in that work order can select the same saved item's complete metadata result, actual version and ZIP hash/size. The unchanged official download helper restores it. Every archive member is verified before its public source directory is received; the selected checkpoint supplies the missing acknowledgement only for its own exact request. Existing captured sources retain their actual acquisition times and byte identities. This recovery path accepts only an incomplete source-only checkpoint from the same source commit, before native workspace creation. It does not substitute a new workspace for a partially executed native programme.
+
+The ordinary received client application remains a Python-standard-library workspace. The connected producer's official Library helpers are needed only for this internal acquisition/preservation workflow.
+
 The initial public operating publication is explicitly internal work with follow-up required. No client-approved register, private FEA model, condition assessment, replacement valuation, 15-year forecast, confirmed grant cash or client acceptance is fabricated from these public observations.
