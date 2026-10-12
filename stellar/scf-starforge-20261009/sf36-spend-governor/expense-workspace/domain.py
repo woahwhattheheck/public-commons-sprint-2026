@@ -191,7 +191,13 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 "receipt_ref":row["receipt_ref"], "observation_sha256":detail.get("observation_sha256"),
                 "transfer_identity":detail.get("transfer_identity"), "payer":detail.get("payer"),
                 "recipient":detail.get("recipient"), "result_file":detail.get("result_file"),
-                "result_preview":detail.get("result_preview"), "missing":item["missing"]})
+                "result_preview":detail.get("result_preview"),
+                "result_file_status":(detail.get("result_file") or {}).get("status"),
+                "result_file_sha256":(detail.get("result_file") or {}).get("sha256"),
+                "result_file_bytes":(detail.get("result_file") or {}).get("bytes"),
+                "result_preview_sha256":(detail.get("result_preview") or {}).get("bodySha256"),
+                "result_preview_bytes":(detail.get("result_preview") or {}).get("bodyBytes"),
+                "missing":item["missing"]})
         if row["state"] == "reserved":
             exposures.append({"item_id": item["id"], "request_id": row["request_id"], "source_name": item["source_name"],
                               "network": row["network"], "asset": row["asset"], "amount": row["reserved_base_units"],

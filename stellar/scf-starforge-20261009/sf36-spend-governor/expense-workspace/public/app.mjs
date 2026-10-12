@@ -285,7 +285,7 @@ async function renderSources(){
       el("div",{class:"actions"},button(source.kind==="mcp_quote"?"Capture original MCP quotes":"Capture original ledger",async()=>{if(!discard())return;const result=await mutate("/api/sources/"+source.id+"/capture");view.capture=result.id;view.captureOffset=0;await redrawAfter("New native capture is awaiting review.");},"primary"))));
     const data=await api("/api/sources/"+source.id+"/captures?offset="+view.sourceOffset+"&limit=20");
     content.append(el("section",{class:"card"},el("h2",{},"Capture history"),
-      table(["Captured","State","Native rows","Changes",""],data.items.map(c=>[c.created_at,badge(c.status),c.source.reservations,c.change_count,
+      table(["Captured","State","Native rows","Changes",""],data.items.map(c=>[c.created_at,badge(c.status),(c.source.records??c.source.reservations),c.change_count,
         button("Review capture",()=>navigate(()=>{view.capture=c.id;view.captureOffset=0;}),"small")])),
       pager(data,x=>navigate(()=>{view.sourceOffset=x;}),20)));
     content.append(formCard(source.kind==="mcp_quote"?"Rebind moved original MCP source":"Rebind moved original ledger",[
@@ -315,7 +315,7 @@ async function renderCapture(){
   content.append(button("← Source history",()=>navigate(()=>{view.capture=null;}),"small"));
   heading("Native capture review",c.id);
   content.append(el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},"Retained source edition"),badge(c.status)),
-    facts([["Captured",c.captured_at],["Original rows",c.source.reservations],["Journal events / last sequence",String(c.source.journal_events)+" / "+String(c.source.last_sequence)],
+    facts([["Captured",c.captured_at],["Original rows",(c.source.records??c.source.reservations)],["Journal events / last sequence",String(c.source.journal_events)+" / "+String(c.source.last_sequence)],
       ["Projection digest",c.source.projection_sha256],["Changes","Added "+c.change_counts.ADDED+" · Changed "+c.change_counts.CHANGED+" · Absent "+c.change_counts.ABSENT]]),
     button("Download original capture",()=>download("/api/captures/"+c.id+"/original","native-statement-capture.json"),"small")));
   content.append(el("section",{class:"card"},el("h2",{},"Original row differences"),

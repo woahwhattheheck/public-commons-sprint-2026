@@ -218,7 +218,7 @@ class Store:
                 report = captured["report"]
                 view.update(capture_time=report["captured_at"], projection_sha256=report["source"]["projection_sha256"],
                             journal_events=report["source"]["journal_events"], last_sequence=report["source"]["last_sequence"],
-                            rows=report["source"]["reservations"], portfolio=report["portfolio"],
+                            rows=report["source"].get("records", report["source"].get("reservations", 0)), portfolio=report["portfolio"],
                             record_kind=report["source"].get("record_kind", "reservations"),
                             source_basis=report.get("basis"), date_basis=report.get("date_basis"))
             result.append(view)

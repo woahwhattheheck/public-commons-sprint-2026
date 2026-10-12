@@ -15,7 +15,9 @@ FIELDS = ("source_name", "source_kind", "request_id", "recognition_date", "nativ
           "source_capture", "memo")
 OUTSTANDING = ("source_name", "request_id", "native_reservation_day", "network", "asset", "amount", "missing", "source_capture", "request_digest")
 NATIVE_OUTCOMES = ("source_name", "request_id", "quote_day", "native_status", "payment_classification", "network", "asset",
-                   "quoted_amount", "settled_actual", "receipt_ref", "observation_sha256", "payer", "recipient", "source_capture", "missing")
+                   "quoted_amount", "settled_actual", "receipt_ref", "observation_sha256", "payer", "recipient",
+                   "result_file_status", "result_file_sha256", "result_file_bytes", "result_preview_sha256", "result_preview_bytes",
+                   "source_capture", "missing")
 CSS = """
 :root{color-scheme:light;font-family:system-ui,sans-serif;color:#202224;background:#f2f3f3}
 *{box-sizing:border-box}body{margin:0;font-size:14px;line-height:1.55}
