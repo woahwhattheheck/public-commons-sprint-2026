@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { openCkanWorkbench } from './model.mjs';
 import { captureCkanResource, readCkanCapture, searchCkan } from './capture.mjs';
+import { inspectCkanWorkspaceArchive, receiveCkanWorkspaceArchive } from './archive.mjs';
 import { startCkanServer } from './server.mjs';
 
 const usage = [
@@ -16,6 +17,9 @@ const usage = [
   '  ckan inspect-capture --capture DIR/capture.json',
   '  ckan import --project DIR --capture DIR/capture.json',
   '  ckan status --project DIR',
+  '  ckan archive-workspace --project DIR [--out FILE.ckanw]',
+  '  ckan inspect-workspace --archive FILE.ckanw [--sha256 HASH]',
+  '  ckan receive-workspace --archive FILE.ckanw --project NEW_DIR --sha256 HASH',
   '  ckan edition --project DIR --id EDITION_ID',
   '  ckan compare --project DIR --before EDITION_ID --after EDITION_ID [--key _id]',
   '  ckan select --project DIR --id EDITION_ID --input selection.json',
@@ -47,6 +51,8 @@ export async function main(argv = process.argv.slice(2)) {
   if (command === 'search') { output(await searchCkan(required('origin'), { q: options.query ?? '', start: Number(options.start ?? 0), rows: Number(options.rows ?? 20), authTokenEnv: options['auth-token-env'] })); return; }
   if (command === 'capture') { const result = await captureCkanResource(await input('selection'), resolve(required('out'))); output(result.manifest); return; }
   if (command === 'inspect-capture') { const result = await readCkanCapture(resolve(required('capture'))); output({ manifest: result.manifest, sha256: result.manifestSha256, fields: result.fields, sample: result.rows.slice(0, 20) }); return; }
+  if (command === 'inspect-workspace') { output(await inspectCkanWorkspaceArchive({ file: resolve(required('archive')), expectedSha256: options.sha256 })); return; }
+  if (command === 'receive-workspace') { output(await receiveCkanWorkspaceArchive({ file: resolve(required('archive')), directory: resolve(required('project')), expectedSha256: required('sha256') })); return; }
   const project = await openCkanWorkbench({ directory: resolve(required('project')), create: command === 'init',
     ...(command === 'init' ? { origin: required('origin'), authTokenEnv: options['auth-token-env'] } : {}) });
   let served = false;
@@ -61,6 +67,7 @@ export async function main(argv = process.argv.slice(2)) {
     }
     let result;
     if (command === 'init' || command === 'status') result = project.status();
+    else if (command === 'archive-workspace') result = project.archiveWorkspace({ out: options.out });
     else if (command === 'import') result = project.importCapture(resolve(required('capture')));
     else if (command === 'edition') result = await project.edition(required('id'));
     else if (command === 'compare') result = await project.compare(required('before'), required('after'), options.key ?? '_id');

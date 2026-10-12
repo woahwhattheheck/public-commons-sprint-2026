@@ -81,16 +81,48 @@ def sync_directory(path):
 def immutable(path, value):
     path = Path(path)
     private_directory(path.parent)
+    prefix = ".immutable-" + digest(path.name.encode("utf-8") + b"\0" + value) + "-"
+    directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    temporary = None
     try:
-        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    except FileExistsError:
-        require(regular(path) == value, "ORIGINAL_CARRIER_DESTINATION_CHANGED:" + str(path))
-        return
-    with os.fdopen(descriptor, "wb") as stream:
-        stream.write(value)
-        stream.flush()
-        os.fsync(stream.fileno())
-    sync_directory(path.parent)
+        # Directory flock adds no file to the strict original carrier inventory.
+        # It also excludes another live publisher while owned staging is recovered.
+        fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        for pending in path.parent.iterdir():
+            if not pending.name.startswith(prefix):
+                continue
+            info = pending.lstat()
+            require(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid() and
+                    not info.st_mode & 0o077 and info.st_nlink in (1, 2),
+                    "ORIGINAL_IMMUTABLE_STAGING_CHANGED:" + str(pending))
+            prior = regular(pending, len(value))
+            require(value.startswith(prior), "ORIGINAL_IMMUTABLE_STAGING_BYTES_CHANGED:" + str(pending))
+            pending.unlink()
+        try:
+            existing = regular(path)
+        except FileNotFoundError:
+            existing = None
+        if existing is not None:
+            require(existing == value, "ORIGINAL_CARRIER_DESTINATION_CHANGED:" + str(path))
+            os.fsync(directory)
+            return
+        descriptor, temporary = tempfile.mkstemp(prefix=prefix, dir=path.parent)
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(value)
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.link(temporary, path, follow_symlinks=False)
+        except FileExistsError:
+            require(regular(path) == value, "ORIGINAL_CARRIER_DESTINATION_CHANGED:" + str(path))
+        os.fsync(directory)
+    finally:
+        try:
+            if temporary and os.path.exists(temporary):
+                os.unlink(temporary)
+                os.fsync(directory)
+        finally:
+            os.close(directory)
 
 
 def descriptor(name, value):

@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-socrata-workspaces",
+  "description": "Original socrata workspaces MCP provider",
+  "merchantProviders": {
+    "socrata-workspaces": "stellar-forge/mcp-merchant-operator/providers/socrata-workspaces.mjs"
+  }
+}

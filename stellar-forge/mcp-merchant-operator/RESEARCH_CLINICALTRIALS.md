@@ -2,6 +2,8 @@
 
 The Research operator takes a complete saved ClinicalTrials packet through question selection, reviewed local receiving, full study inspection, cohort analysis, analyst findings and complete customer exports. Every step uses the existing authenticated Research listener and its original retained packet, operation and dossier stores.
 
+Both the original v1 packet and a disclosure-batch v2 packet follow this receiving path. The receiver preserves the packet's actual schema and complete source bytes, including batch records and PRS files, through the native 16 MiB manifest limit. Batch decisions travel with that complete packet and reopen in the original ClinicalTrials workspace.
+
 The ClinicalTrials source operator prepares the packet. The Research application receives it under a question. The merchant MCP attachment exposes that same application to an agent and retains complete exports in its existing customer directory. The browser, Research client and agent read the same original records.
 
 ## Attach the existing application

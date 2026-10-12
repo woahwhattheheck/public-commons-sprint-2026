@@ -1,8 +1,8 @@
 # Data-service commissioning designs for SCF SF49
 
-These two designs turn the maintained merchant product into a defined installation that an API or data operator can commission. Use them with the [original SF49 adoption process](../SF49_ADOPTION_PILOT_PLAYBOOK_20261009.md) and its existing private workorder. The deliverable is one agreed useful operation on the merchant's host, its complete output in the buyer's application, and a receiving operator able to change and maintain it.
+These commissioning designs turn the maintained merchant product into a defined installation that an API or data operator can commission. Use them with the [original SF49 adoption process](../SF49_ADOPTION_PILOT_PLAYBOOK_20261009.md) and its existing private workorder. The deliverable is one agreed useful operation on the merchant's host, its complete output in the buyer's application, and a receiving operator able to change and maintain it.
 
-The reference products are **SEC company-data editions** and **OData collections**. They exercise different customer requirements: a filing-derived record whose publication history matters, and a typed operational collection whose pages, keys and source access must stay intact. Both already have source authoring, merchant configuration, original buyer handoffs and managed Applications integration. The selected release remains the shared Starforge installation.
+The reference products include **SEC company-data editions**, **OData collections**, and [**approved imagery deliveries**](IMAGERY.md). They exercise different customer requirements: a filing-derived record whose publication history matters, a typed operational collection whose pages, keys and source access must stay intact, and a geographic selection whose approved source, rights and exact image files reach the buyer together. SEC and OData already have source authoring, merchant configuration, original buyer handoffs and managed Applications integration. The selected release remains the shared Starforge installation.
 
 ## Choose the customer job
 
@@ -10,8 +10,9 @@ The reference products are **SEC company-data editions** and **OData collections
 | --- | --- | --- | --- |
 | SEC company-data editions | An analysis application obtains the reported facts for a selected company, concept, unit and filing/period window, retaining the observations needed for a source-aware financial review. A filing-index consumer can instead locate the selected company's original filing documents. | A versioned GET resource with explicit offered concepts or forms, immutable acquisition identity, complete selected rows and a source-bound continuation. | Select the actual company, offered product, filing and period policy, complete receiving consumer and refresh cadence. |
 | OData collection receiving | An operational application obtains the approved order or other entity collection and can reconcile a later edition by declared keys. A customer requiring current provider pages can use the live service. | Either an accepted captured collection published through the original dataset seller, or a live paid page from one reviewed query and source binding. | Select snapshot or live behavior, exact entity/projection/filter, row and byte ceilings, buyer spending cap and receiving application. |
+| Approved imagery receiving | A GIS user opens the agreed area, acquisition window, scene selection and image assets with their source metadata and rights. | A reviewed STAC edition and exact files carried through the existing merchant/buyer into a portable GIS handover and independently reopenable commissioning record. | Select the real catalog/identity, licensed collections, useful scene/asset pairs, payment unit, complete buyer cap, receiving application and refresh/maintenance owner. |
 
-For either design, the implementation price buys the agreed integration, source handling, deployment and operator handover. The merchant selects the commercial value and price of its own service. Its data receipts, implementation invoices and ongoing care remain the original distinct commercial events.
+For each design, the implementation price buys the agreed integration, source handling, deployment and operator handover. The merchant selects the commercial value and price of its own service. Its data receipts, implementation invoices and ongoing care remain the original distinct commercial events.
 
 ### SEC: an edition the receiving analyst can use
 
@@ -90,6 +91,12 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/managed-receiving
 `responseFiles` are the complete ordered native live envelopes, including the terminal response. Original supplier JSON pages and native live response envelopes have different shapes; select the envelopes produced by this existing service. The operation imports those original responses, prepares the original buyer continuations, stops the managed service and reopens its retained response inventory and continuation identity. An optional `environmentFile` selects the actual existing private Applications environment.
 
 Both source-owned runners retain complete outputs and original operation identities in their selected output directory. The merchant and buyer operation remain with their existing owners while receiving proceeds.
+
+## Commission approved imagery and receiving
+
+The [imagery commissioning guide](IMAGERY.md) carries the customer's selected geographic job through actual catalog access, eoAPI policy review, explicit file selection, the original merchant/buyer and the receiving GIS application. It includes native-schema examples for the [scene query](imagery-query.example.json), [private source references](imagery-source-runtime.example.json), [original Buyer](imagery-buyer-config.example.json) and [deployment access plan](imagery-commissioning-plan.example.json). The maintained STAC and Prescient owners perform source/SDK acquisition, receiving and recovery.
+
+The guide maps source/terms change, actual purchase continuation, receiving-host restoration and production operation onto the same six existing grant packages. Its [application insertion](IMAGERY_APPLICATION_TEXT.md) and complete five-scene demonstration join the current manuscript and customer demonstration.
 
 ## Continue into the buyer's recurring analysis
 

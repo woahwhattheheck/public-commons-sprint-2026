@@ -1,0 +1,10 @@
+{
+  "schema": "stellar-forge.buyer-accountant-source-files.v1",
+  "files": [
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/buyer-source.mjs",
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/buyer-return.mjs",
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/buyer-return-cli.mjs",
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/engine.mjs",
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/adjustments.mjs"
+  ]
+}

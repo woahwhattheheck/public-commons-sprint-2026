@@ -164,7 +164,8 @@ export async function createReleaseClientConsole(root, { directory = resolve(roo
       if (!closed) {
         closing = true;
         for (const controller of downloads.keys()) controller.abort();
-        closed = (async () => { await Promise.allSettled([...downloads.values()]); await exports.close(); })();
+        closed = (async () => { await Promise.allSettled([...downloads.values()]); await exports.close(); })()
+          .catch(error => { closed = null; throw error; });
       }
       return closed;
     } };

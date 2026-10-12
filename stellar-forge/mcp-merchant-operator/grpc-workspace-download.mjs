@@ -55,7 +55,8 @@ export async function downloadGrpcExport(options) {
     throw failure('CONFIGURATION', 'Choose a private receiving directory.');
   const root = await privateDirectory(resolve(options.directory));
   await requireEntries(root, new Set(['transfer', GRPC_EXPORT_MANIFEST, 'methods.json', 'openapi.json', 'client',
-    'grpc-revision.json', 'grpc-attempt.json', 'grpc-result.json', 'grpc-stream.ndjson']));
+    'grpc-revision.json', 'grpc-attempt.json', 'grpc-result.json', 'grpc-stream.ndjson',
+    'grpc-upgrade-review.json', 'grpc-upgrade-base.json', 'grpc-upgrade-candidate.json', 'grpc-upgrade-plan.json']));
   const result = await transport.download({ ...options, directory: join(root, 'transfer') });
   return { ...result, directory: root, transferDirectory: result.directory, ...await materialize(root, result.directory, result.exportId) };
 }

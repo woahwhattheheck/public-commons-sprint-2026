@@ -168,6 +168,7 @@ async function transmitPending() {
       ? await catalog.transmitFile(state.pending)
       : await api('/api/' + (state.pending.kind === 'save-draft' ? 'drafts' : state.pending.kind), state.pending.payload);
     await acceptOperation(result); await refresh();
+    return result;
   } catch (error) {
     if (error.requestRecorded === false) {
       const selectedView = state.pending?.kind.startsWith('catalog') ? 'catalog' : state.pending?.kind === 'deployment' ? 'deployment' : state.pending?.kind.startsWith('relevance-') ? 'relevance' : 'draft';
@@ -183,7 +184,7 @@ async function perform(kind, values) {
   if (new TextEncoder().encode(JSON.stringify(payload)).length > 1048576)
     throw new Error('The saved request exceeds 1 MiB. Reduce the editor contents before sending.');
   retainPending({ kind, payload });
-  await transmitPending();
+  return await transmitPending();
 }
 async function recover() {
   if (!state.pending) return;

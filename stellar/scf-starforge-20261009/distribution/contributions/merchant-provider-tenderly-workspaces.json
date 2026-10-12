@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-tenderly-workspaces",
+  "description": "Original tenderly workspaces MCP provider",
+  "merchantProviders": {
+    "tenderly-workspaces": "stellar-forge/mcp-merchant-operator/providers/tenderly-workspaces.mjs"
+  }
+}
