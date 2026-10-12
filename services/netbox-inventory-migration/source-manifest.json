@@ -64,13 +64,13 @@
     },
     {
       "path": "native/README.md",
-      "git_blob": "d26df19487737dabc0d8af4228b3bb5088633cf0",
-      "bytes": 15455
+      "git_blob": "6424911fafd6dbf31ca56aedcd8f76f2f2c76eaf",
+      "bytes": 16335
     },
     {
       "path": "native/receive_host.py",
-      "git_blob": "1082962ffb18e062865e0ebbf44093ff731cf235",
-      "bytes": 43041
+      "git_blob": "ec53ee50ac6b8bcf4e3aa9d5d2d4ab79edfa5d09",
+      "bytes": 44230
     },
     {
       "path": "native/run_native.py",
@@ -79,8 +79,8 @@
     },
     {
       "path": "native/runtime-request.json",
-      "git_blob": "f15853517d4ed1c520df9aa32a8f6930dd5f71a6",
-      "bytes": 2951
+      "git_blob": "3cb0d37176578868363abc89dba5c8c5688dd561",
+      "bytes": 3138
     },
     {
       "path": "operate_inventory.py",

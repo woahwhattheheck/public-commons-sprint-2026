@@ -68,6 +68,7 @@
       "desk-output/desk-result.json",
       "desk-output/inventory-handover.zip"
     ],
-    "browser_runtime": "Existing Node/Playwright/Chromium; explicit Chromium executable; temporary profile in same foreground private /dev"
+    "browser_runtime": "Existing Node/Playwright/Chromium; explicit Chromium executable; temporary profile in same foreground private /dev",
+    "native_build": "C compiler, Python development headers and original libpq development headers/pg_config for pinned psycopg[c,pool], or an existing verified NetBox4.7.2 environment"
   }
 }
