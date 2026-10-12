@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "matomo",
+  "description": "Matomo report editions, native merchant and customer receiving",
+  "commands": {
+    "matomo-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/cli.mjs",
+    "matomo-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/launch.mjs"
+  },
+  "commandDescriptions": {
+    "matomo-source": "Capture and review native Matomo reports, publish original SQLite data products, and receive complete source handovers.",
+    "matomo-workspace": "Launch the original saved Matomo browser with exact workspace/source identity and authenticated listener verification."
+  },
+  "exports": {
+    "./seller/matomo": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/provider.mjs",
+    "./seller/matomo/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/model.mjs",
+    "./seller/matomo/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/server.mjs",
+    "./seller/matomo/workspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/launch.mjs",
+    "./seller/matomo/editions": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/editions.mjs",
+    "./seller/matomo/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/merchant.mjs",
+    "./merchant/mcp/matomo": "./source/stellar-forge/mcp-merchant-operator/matomo-workspace.mjs"
+  },
+  "applicationProviders": {
+    "matomo": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/application-provider.mjs"
+  }
+}
