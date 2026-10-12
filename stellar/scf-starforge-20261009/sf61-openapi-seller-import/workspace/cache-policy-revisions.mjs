@@ -1,10 +1,11 @@
 // MIT. Retain observed cache policy through the original merchant revision engine.
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, mkdir, open, readFile, readdir } from 'node:fs/promises';
+import { lstat, mkdir, open, readFile, readdir, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readPackage, privateParent, packageName } from './model.mjs';
 import { reviewMerchantRevision, saveMerchantRevision, releaseCommands } from './revisions.mjs';
 import { retentionFields } from '../../sf30-seller-sdk/response-cache/workspace/model.mjs';
+import { operationLease } from '../../distribution/runtime-workspace/storage.mjs';
 
 const SCHEMA = 'stellar-forge.cache-policy-revision-review.v1';
 const BINDING = 'stellar-forge.cache-package-binding.v1';
@@ -61,9 +62,27 @@ async function readRecord(parent, id) {
 async function writeRecord(parent, record) {
   const bytes = Buffer.from(json(record));
   need(bytes.length <= LIMIT, 'Selected review exceeds 6 MiB. Choose fewer routes.');
-  const path = join(await directory(parent, true), identity(record.id) + '.json');
-  const file = await open(path, 'wx', 0o600);
-  try { await file.writeFile(bytes); await file.sync(); } finally { await file.close(); }
+  const root = await directory(parent, true), path = join(root, identity(record.id) + '.json');
+  const staging = join(root, '.pending-' + record.id + '-' + randomUUID());
+  const file = await open(staging, 'wx', 0o600);
+  try {
+    try { await file.writeFile(bytes); await file.sync(); } finally { await file.close(); }
+    // Share the original kernel lease with other review publishers. A partial
+    // preparation keeps its temporary name and never enters the retained list.
+    const lockPath = join(root, '.publish.lock'), lease = await operationLease(lockPath);
+    try {
+      try {
+        await lstat(path);
+        throw Object.assign(new Error('That retained review already exists.'), { code: 'EEXIST', status: 409 });
+      } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      const held = await lease.stat(), named = await lstat(lockPath);
+      need(held.dev === named.dev && held.ino === named.ino && held.nlink === 1,
+        'Retained review publication lease changed.', 409);
+      await rename(staging, path);
+      const directoryHandle = await open(root, 'r');
+      try { await directoryHandle.sync(); } finally { await directoryHandle.close(); }
+    } finally { await lease.close(); }
+  } finally { await rm(staging, { force: true }); }
 }
 function checkSnapshot(project, row) {
   need(plain(row) && plain(row.inspection) && samePackage(row.inspection.package, cachePackageBinding(project)),
