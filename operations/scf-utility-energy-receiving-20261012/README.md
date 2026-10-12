@@ -10,6 +10,8 @@ Use a complete checkout containing the source commit named by `source-manifest.j
 
 The declaration pins all 63 Utility, original source, native Python/XML and receiving transport files. That is an identity check for this workflow's declared source. The entire maintained repository/package supplies the other transitive modules, source-owned contributions, merchant provider registry, Applications worker and selected native dependencies. The runner imports the actual `config.mjs`, `operator.mjs`, `serve.mjs`, Utility owner/client and original Socrata publisher before opening the customer writer.
 
+The installed public Green Button examples are `sf30-seller-sdk/utility-energy/examples/test_usage_data.xml` and `examples/test_usage_data_01.xml`, with the original Apache 2.0 text at `contracts/GreenButtonAlliance-LICENSE.txt`. Their bytes and Git blobs are identical to the retained upstream reference files. The source contract preserves the original upstream paths, URLs and commit. These explicit production example paths are accepted by the existing package collector.
+
 Keep the package's original dependency resolution intact. A selected native runtime must already be complete through the original SF46 runtime manager and must contain the same declared source. Supplying a small overlay on an older installed keeper does not provide that complete source and dependency relationship.
 
 Use the existing supported Node and Python executables. The original managed binding checks Python and its XML parser against the maintained product requirements. Supply an existing Playwright module and Chromium executable explicitly. No dependency installation, browser download or repository build is part of the receiving command.
@@ -47,7 +49,7 @@ There are three mutually exclusive source receiving modes:
 | --- | --- |
 | `coreDirectory` | The existing closed `operate-example.py` output, including `operation.json` and its `seller/` workspace. |
 | `portable` plus `portableSha256` | The exact original complete workspace packet, restored through the maintained CLI into this receiving operation's own directory. The original report remains preserved verbatim. |
-| `reconstructOriginal: true` | Explicit reconstruction from the unchanged original fixture files after the original container's source/customer directories became unavailable. The new result must match the original report's input IDs, hashes, bytes, counts, reviewed row count, native snapshot, overlap count and receiving totals. |
+| `reconstructOriginal: true` | Explicit reconstruction from the unchanged original Green Button reference files after the original container's source/customer directories became unavailable. The new result must match the original report's input IDs, hashes, bytes, counts, reviewed row count, native snapshot, overlap count and receiving totals. |
 
 Keep `originalReport` in all three modes. A portable restore retains the packet's original source and review IDs. Source reconstruction invokes the original operation once and retains a new report alongside the original; its newly authored operation/review IDs remain distinct. The comparison uses the exact retained inputs and native results.
 
