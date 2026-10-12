@@ -1,15 +1,19 @@
 import { readFile, mkdir, open, link, unlink, rename, realpath } from 'node:fs/promises';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { join, resolve, dirname, relative } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
 const { values: args } = parseArgs({ options: {
   source: { type: 'string' }, 'source-manifest': { type: 'string' },
   'producer-record': { type: 'string' }, 'continuation-record': { type: 'string' }, output: { type: 'string' },
   playwright: { type: 'string' }, browser: { type: 'string' },
+  'native-record': { type: 'string' }, 'buyer-script': { type: 'string' }, 'buyer-sha256': { type: 'string' },
+  'pty-script': { type: 'string' }, 'pty-sha256': { type: 'string' }, 'driver-sha256': { type: 'string' }, python: { type: 'string' },
 } });
-for (const key of ['source', 'source-manifest', 'producer-record', 'continuation-record', 'output', 'playwright', 'browser'])
+for (const key of ['source', 'source-manifest', 'producer-record', 'continuation-record', 'output', 'playwright', 'browser',
+  'native-record', 'buyer-script', 'buyer-sha256', 'pty-script', 'pty-sha256', 'driver-sha256', 'python'])
   if (!args[key]) throw Error('Missing --' + key);
 const source = resolve(args.source), output = resolve(args.output), record = resolve(args['producer-record']);
 const continuationRecord = resolve(args['continuation-record']);
@@ -43,8 +47,20 @@ async function stage(name, details) {
   await atomic(join(output, 'journey.json'), report, { replace: true });
   console.log(JSON.stringify({ stage: name, ...details }));
 }
-let mcp, browser, client, activeWorkspace, activeBuyer, activeCustomer;
+let mcp, browser, client, activeWorkspace, activeBuyer, activeCustomer, child;
 try {
+  const currentRecord=resolve(args['native-record']);
+  const currentRequestBytes=await readFile(join(currentRecord,'request.json')),currentRequest=JSON.parse(currentRequestBytes);
+  const nativeArgv=currentRequest.intent?.command;
+  requireValue(Array.isArray(nativeArgv)&&nativeArgv.length===process.argv.length&&
+    nativeArgv.every((value,index)=>index===0?resolve(value)===resolve(process.execPath):value===process.argv[index])&&
+    resolve(currentRequest.intent.project)===dirname(output),'Use this original admitted native command and output');
+  requireValue(digest(await readFile(fileURLToPath(import.meta.url)))===args['driver-sha256']&&
+    digest(await readFile(resolve(args['buyer-script'])))===args['buyer-sha256']&&
+    digest(await readFile(resolve(args['pty-script'])))===args['pty-sha256'],'The admitted receiving source changed');
+  report.receiving={operationId:currentRequest.intent.operation_id,record:currentRecord,
+    requestSha256:digest(currentRequestBytes),project:currentRequest.intent.project,
+    driverSha256:args['driver-sha256'],buyerScriptSha256:args['buyer-sha256'],ptyScriptSha256:args['pty-sha256']};
   const closureBytes = await readFile(resolve(args['source-manifest'])), closure = JSON.parse(closureBytes);
   requireValue(digest(closureBytes) === 'be4e5afaf63ca73f8285b439abf3c42be0e81cdafd9a4223b2b6f7122826b290',
     'Use the exact retained receiving selection and published UI correction');
@@ -95,13 +111,13 @@ try {
   requireValue(observation.response.status === 200 && observation.bodySha256 === digest(response) &&
     observation.bodyBytes === response.length, 'Original provider and HTTP observation bytes differ');
   const completion = await nativeRecord(continuationRecord, '--output');
-  requireValue(completion.result.state === 'completed' && completion.result.exit_code === 0 && !completion.manifest.errors?.length,
-    'The original retained-workspace and Buyer continuation must finish successfully');
+  requireValue(completion.result.state === 'failed' && completion.result.exit_code === 1,
+    'Keep the original completed merchant/customer stages and its later Buyer initialization failure');
   requireValue(completion.option('--provider-record') === record && completion.option('--source') === source &&
     completion.option('--source-manifest') === resolve(args['source-manifest']),
     'The continuation no longer joins this original provider and receiving source');
   const completedJourney = JSON.parse(await completion.retained('journey.json'));
-  requireValue(completedJourney.outcome === 'COMPLETE' &&
+  requireValue(completedJourney.outcome === 'FAILED' &&
     completedJourney.source.manifestSha256 === digest(closureBytes), 'Completed receiving source changed');
   for (const [key, value] of Object.entries(provider.binding))
     requireValue(completedJourney.provider[key] === value, 'The completion changed original provider ' + key);
@@ -117,21 +133,38 @@ try {
     (await completion.retained('native-http-observation.json')).equals(observationBytes),
     'The completed receiver changed original provider bytes');
   const completeStages = new Set(completedJourney.stages.map(stage => stage.name));
-  for (const name of ['browser-price-restart-and-rollback', 'original-customer-reopened', 'original-buyer-executed-and-recovered'])
+  for (const name of ['original-staged-merchant-started', 'browser-price-restart-and-rollback', 'original-customer-reopened'])
     requireValue(completeStages.has(name), 'Completed workshare stage is missing: ' + name);
-  const buyerRoot = join(completion.root, 'buyer');
-  const buyerBytes = await completion.retained('buyer/buyer-complete.json'), buyerComplete = JSON.parse(buyerBytes);
-  requireValue(completedJourney.buyer.directory === buyerRoot && completedJourney.buyer.reportSha256 === digest(buyerBytes) &&
-    buyerComplete.httpStatus === 200 && buyerComplete.responseSha256 === digest(response) &&
-    buyerComplete.responseBytes === response.length && buyerComplete.recoveredIntentId === buyerComplete.intentId,
-    'Original completed Buyer no longer joins this response and retained native result');
+  const merchantStage=completedJourney.stages.find(stage=>stage.name==='browser-price-restart-and-rollback');
+  requireValue(merchantStage.active==='geocode-v1'&&merchantStage.generation===3&&merchantStage.sourceDispatches===0&&
+    merchantStage.browserErrors.length===0,'Original merchant completion changed');
+  const buyerRoot=join(output,'buyer');
+  const buyerInputRoot=join(completion.root,'buyer');
+  const buyerExit=await new Promise((accept,reject)=>{
+    child=spawn(resolve(args.python),['-B',resolve(args['pty-script']),process.execPath,resolve(args['buyer-script']),
+      '--source',producerSource,'--input-root',buyerInputRoot,'--work',buyerRoot,'--python',resolve(args.python)],
+      {stdio:'inherit',env:process.env,shell:false});
+    child.once('error',reject);child.once('exit',(code,signal)=>signal?reject(Error('Original Buyer child '+signal)):accept(code));
+  });
+  child=null;requireValue(buyerExit===0,'The original Buyer completion did not finish');
+  const buyerBytes=await readFile(join(buyerRoot,'buyer-complete.json')),buyerComplete=JSON.parse(buyerBytes);
+  requireValue(buyerComplete.httpStatus===200&&buyerComplete.responseSha256===digest(response)&&
+    buyerComplete.responseBytes===response.length&&buyerComplete.recoveredIntentId===buyerComplete.intentId&&
+    buyerComplete.operationMaxAtomic==='0'&&buyerComplete.operatorPolicyMaxAtomic==='1',
+    'Original completed Buyer no longer joins the retained response and explicit zero-limit operation');
+  await stage('original-buyer-executed-and-recovered',{operationId:report.receiving.operationId,
+    intentId:buyerComplete.intentId,httpStatus:buyerComplete.httpStatus,responseSha256:buyerComplete.responseSha256,
+    responseBytes:buyerComplete.responseBytes,configSha256:buyerComplete.configSha256,
+    buyerReportSha256:digest(buyerBytes),operationMaxAtomic:buyerComplete.operationMaxAtomic});
   const nativeData = JSON.parse(response);
   requireValue(nativeData.results.length === 1 && Array.isArray(nativeData.licenses) && nativeData.licenses.length > 0,
     'Use the actual documented provider sample and returned licenses');
   report.producer = { ...provider.binding, sourceRoot: producerSource, outcome: provider.result.state,
     responseSha256: digest(response), responseBytes: response.length };
   report.continuation = { ...completion.binding, outcome: completion.result.state,
-    output: completion.root, buyerRoot, buyerIntentId: buyerComplete.intentId, buyerReportSha256: digest(buyerBytes) };
+    output: completion.root, stages: [...completeStages], merchantGeneration: merchantStage.generation };
+  report.buyer={directory:buyerRoot,intentId:buyerComplete.intentId,reportSha256:digest(buyerBytes),
+    nativeReceivingOperation:report.receiving.operationId,...buyerComplete};
   report.source = { commit: closure.sourceCommit, overlays: closure.overlays,
     files: closure.files.length, manifestSha256: digest(closureBytes) };
   await stage('original-operations-joined', { providerOperationId: provider.intent.operation_id,
@@ -376,4 +409,5 @@ try {
 } finally {
   await browser?.close().catch(() => {});
   await mcp?.close().catch(() => {});
+  if(child&&child.exitCode===null)child.kill('SIGTERM');
 }
