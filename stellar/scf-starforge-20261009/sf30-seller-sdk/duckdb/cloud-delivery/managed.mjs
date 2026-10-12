@@ -102,11 +102,12 @@ function page(values,input){
  if(limit<1)throw failure('INVALID_PARAMS','Page size must be positive.');
  return {items:values.slice(offset,offset+limit),offset,limit,total:values.length,nextOffset:offset+limit<values.length?offset+limit:null};
 }
-function clean(value,root){
- if(Array.isArray(value))return value.map(item=>clean(item,root));
- if(typeof value==='string')return value===root||value.startsWith(root+'/')?'[private workspace]'+value.slice(root.length):value;
- if(!plain(value))return value;
- return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,clean(item,root)]));
+function clean(value,_root){
+ // These are original native records, including typed source cells, requests and
+ // editable plan values. A blanket path-looking string replacement would change
+ // those values while retaining their original hashes. Credentials stay in the
+ // private host configuration, which is never part of this returned record.
+ return value===undefined?undefined:JSON.parse(JSON.stringify(value));
 }
 function safe(error){
  const code=/^[A-Z][A-Z0-9_]{1,100}$/.test(error?.code??'')?error.code:'CLOUD_NATIVE_OPERATION_FAILED';
