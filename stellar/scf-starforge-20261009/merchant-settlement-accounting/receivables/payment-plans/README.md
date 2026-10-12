@@ -23,8 +23,8 @@ payment-plan route adapter directly.
    and credit notes. The selected currency and decimal precision come from that
    invoice.
 2. Enter installment dates and amounts. **Generate installments** divides the
-   selected balance into an explicit number of payments separated by a chosen
-   number of days. The final installment includes the exact remainder. The
+   selected balance into an explicit number of payments on a chosen fixed-day
+   or calendar-month cadence. The final installment includes the exact remainder. The
    generated rows stay editable before saving.
 3. Add a schedule title, reference and customer note. Save the draft. The total
    of all positive installments must exactly equal the selected invoice balance;
@@ -36,14 +36,64 @@ payment-plan route adapter directly.
    document includes the original invoice number, merchant and customer details,
    payment instructions, balance date, schedule reference and dated amounts.
 
-The generator's interval is **days**. For calendar-month installments, enter the
-actual month-end dates in the editable rows. Amounts are decimal strings at the
-invoice's explicit precision. A 100.00 balance divided into three installments
-produces 33.33, 33.33 and 33.34.
+Amounts are decimal strings at the invoice's explicit precision. A 100.00
+balance divided into three installments produces 33.33, 33.33 and 33.34.
 
 A saved draft and the active customer edition remain separate. Editing a draft
 keeps the existing active schedule available until its successor is reviewed
 and activated. Every activated edition retains its own original files.
+
+### Calendar scheduling
+
+Choose **Monthly**, **Quarterly**, **Yearly**, or **Custom calendar months** in
+the schedule editor. The generator uses the first due date as the anchor for
+every installment. A shorter month uses its last day, then the next installment
+returns to the original day. For example, a monthly schedule starting on
+2027-01-31 produces 2027-01-31, 2027-02-28 and 2027-03-31; one starting on
+2027-01-30 returns to 2027-03-30 after February.
+
+Choose **Last day of month** to keep every date at month end. The first due date
+must itself be the last day of its month, so a monthly schedule starting on
+2027-02-28 continues on 2027-03-31 and 2027-04-30. With **Original day of month**,
+the same February start continues on March 28 and April 28. Leap years follow
+the calendar: a yearly schedule starting on 2024-02-29 returns to February 29
+in 2028.
+
+**Weekly** and **Every two weeks** use fixed intervals of seven and fourteen
+days. **Fixed number of days** preserves any explicit interval from one to
+3,660 days; omitted intervals in existing API requests still mean 30 days.
+Custom calendar spacing accepts one to 120 months. The count includes the
+first installment and supports one to 1,000 rows. All dates must remain within
+four-digit calendar years.
+
+The generator returns explicit editable dates and exact amounts. Saving,
+review, activation, historical collections and customer files continue using
+those selected rows. Changing a generation control alone leaves the current
+rows as entered; choose **Prepare schedule** to replace them with a new
+calculation. The editor keeps the selected cadence while preparing or editing
+that draft. Dates and amounts can always be adjusted before saving.
+
+The same HTTP, native and CLI generate request accepts either `intervalDays`
+or `intervalMonths`, never both. Calendar-month requests also accept
+`monthAnchor: "DAY_OF_MONTH"` (default) or `"END_OF_MONTH"`. A month anchor
+on a fixed-day request is rejected.
+
+```json
+{
+  "invoiceId": "ORIGINAL_INVOICE_UUID",
+  "balanceDate": "2027-01-15",
+  "firstDueDate": "2027-01-31",
+  "count": 4,
+  "intervalMonths": 1,
+  "monthAnchor": "END_OF_MONTH",
+  "title": "Monthly customer schedule"
+}
+```
+
+Use the original invoice ID and its actual balance date. The request above
+selects January 31, February 28, March 31 and April 30. Quarterly and yearly
+requests use `intervalMonths: 3` and `intervalMonths: 12`. Keep the returned
+draft, workspace ID and revision for the existing save and review steps.
 
 ## Operate the collection desk
 
