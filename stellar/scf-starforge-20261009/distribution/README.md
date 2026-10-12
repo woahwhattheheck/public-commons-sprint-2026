@@ -4939,3 +4939,18 @@ Inside the installed package it is retained at
 `source/stellar-forge/mcp-paid-agent/ARCHIVES.md`. The original managed
 installation command catalog and runtime launcher consume this same
 `mcp-analysis-archive` mapping.
+
+## Completed paid-job result delivery and customer receiving
+
+The installed `jobs delivery` commands operate the original merchant's retained completed-result queue. The `jobs receiver` commands initialize and reopen the customer's signed-result store, run its receiving service, inspect verified files and export complete customer deliveries.
+
+~~~sh
+starforge jobs delivery --help
+starforge jobs receiver --help
+~~~
+
+Enable the merchant's private delivery desk with `jobs serve --delivery-config FILE` and start its dispatcher with `--start-delivery`. The original jobs page links to **Result delivery**. The customer receiver opens separately through **Paid-job result receiver** in the maintained Applications workspace, using the selected READY runtime and its existing Review, Save, Start, Open and Stop lifecycle.
+
+The receiver runs with Node built-ins and the original Linux delivery lease. Its receiving listener accepts the exact authenticated completed file; its separate loopback desk verifies, previews and downloads the retained result. A lost acknowledgment retries the same delivery identity and returns the original stored receipt.
+
+The [complete installed receiving guide](runtime-workspace/JOB_RESULT_RECEIVER.md) covers archive/runtime selection, paired destination setup, the private environment, HTTPS intake, managed startup, merchant delivery, complete exports and same-state recovery. Stable package imports under `seller/jobs/result-delivery` and `buyer/jobs/result-receiver` expose the same original modules.
