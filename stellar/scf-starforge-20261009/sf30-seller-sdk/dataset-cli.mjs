@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { loadDatasetConfig } from './dataset-handler.mjs';
 
 const USAGE = `Usage:
-  node dataset-cli.mjs feeds --help   Retained RSS/Atom capture, editions, merchant and buyer
+  node dataset-cli.mjs feeds --help   Retained RSS/Atom editions, operator workspace and merchant handoff
   node dataset-cli.mjs odata --help   OData source, retained editions and merchant workspace
   node dataset-cli.mjs xml --workspace DIRECTORY init|serve|source|plan|build|query|compare|export|import
   node dataset-cli.mjs ndjson --workspace DIRECTORY init|serve|source|plan|build|query|compare|export|import|merchant
