@@ -217,7 +217,7 @@ def compose(args):
             "content": body.decode("utf-8", errors="strict"),
         })
         metadata.append({key: row[key] for key in
-                         ("path", "gitBlobSha", "bytes", "sha256", "mode", "sourceUrl")})
+                         ("path", "gitBlobSha", "bytes", "sha256", "mode")})
     _, added_bytes = validate_rows(additions, receiver["relative"])
     need(len(additions) == packet["sourceFiles"] == 3
          and added_bytes == packet["sourceBytes"] == 30775,

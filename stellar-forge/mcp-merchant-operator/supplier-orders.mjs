@@ -28,7 +28,7 @@ function fullReply(value,label){
 function sourceView(value){return value?omit(value,['path','sourcePath']):value;}
 function reviewSummary(value){
   if(!value)return value;
-  return{...pick(value,['schema','errors','warnings','valid','net','tax','gross']),findingsCount:value.findings?.length??0,
+  return{...pick(value,['schema','profileId','profileSha256','errors','warnings','valid','net','tax','gross']),findingsCount:value.findings?.length??0,
     ...(value.findings?.length?{fullFindingsRetained:true}:{})};
 }
 function documentSummary(value){
@@ -57,12 +57,13 @@ export function projectSupplierOrderOperation(operation,{includeRequest=false}={
   const visible=omit(operation,includeRequest?['owner','context']:['owner','context','request']);
   if(size(visible)<=SUPPLIER_ORDER_REPLY_BYTES)return visible;
   const result=operation.result??{},summary={
-    ...pick(result,['documentId','draftId','revision']),
+    ...pick(result,['documentId','draftId','transmissionId','revision']),
     ...(Array.isArray(result.orderIds)?{orderCount:result.orderIds.length,
       ...(size(result.orderIds)<=65536?{orderIds:result.orderIds}:{})}:{}),
     ...(result.file?{file:fileView(result.file)}:{}),
     ...(result.document?{document:pick(result.document,['id','kind','documentId','revision','sha256'])}:{}),
-    ...(result.draft?{draft:pick(result.draft,['id','kind','title','revision','sha256'])}:{})
+    ...(result.draft?{draft:pick(result.draft,['id','kind','title','revision','sha256'])}:{}),
+    ...(result.transmission?{transmission:pick(result.transmission,['id','revision','workspaceId','direction','state','documentId','recipientProcessing','historyCount'])}:{})
   };
   const retained={...pick(operation,['id','kind','state','requestSha256','requestContentSha256','createdAt','updatedAt']),
     ...(operation.error?{error:boundedError(operation.error)}:{}),
@@ -127,7 +128,7 @@ export class MerchantSupplierOrders {
     const entry=this.#entry(alias);
     if(!this.#handles.has(alias)){
       const pending=(async()=>{const {openSupplierOrderWorkspace}=await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/workspace.mjs');
-        return openSupplierOrderWorkspace({directory:entry.directory});})();
+        return openSupplierOrderWorkspace({directory:entry.directory,...(entry.transportConfigPath?{transportConfigPath:entry.transportConfigPath}:{})});})();
       this.#handles.set(alias,pending);
       try{await pending;}catch(error){if(this.#handles.get(alias)===pending)this.#handles.delete(alias);throw error;}
     }
@@ -189,10 +190,14 @@ export class MerchantSupplierOrders {
         const view={...omit(value,['drafts','operations']),drafts:(value.drafts??[]).map(draftSummary),
           operations:(value.operations??[]).map(operation=>projectSupplierOrderOperation(operation))};
         if(size(view)<=SUPPLIER_ORDER_REPLY_BYTES)return view;
-        return fullReply({...pick(value,['schema','workspaceId','profileId','supplierIdentity','counts']),summary:true,
-          originalCollectionsRetained:true,collections:{orders:'merchant_supplier_order_orders',drafts:'merchant_supplier_order_drafts',documents:'merchant_supplier_order_documents'},
+        return fullReply({...pick(value,['schema','workspaceId','profileId','profile','supplierIdentity','counts']),summary:true,
+          originalCollectionsRetained:true,collections:{orders:'merchant_supplier_order_orders',drafts:'merchant_supplier_order_drafts',documents:'merchant_supplier_order_documents',transmissions:'merchant_supplier_order_transmissions'},
           operations:(value.operations??[]).map(operation=>pick(operation,['id','kind','state','requestSha256','createdAt','updatedAt']))},'workspace summary');
       }
+      case 'profile':return fullReply(await model.profile(),'retained profile selection');
+      case 'profile_template':return fullReply(await model.profileTemplate(selected),'complete declared profile template');
+      case 'profile_history':{const value=await model.profileHistory(selected);return boundedPage(value,selected,item=>projectSupplierOrderOperation(item,{includeRequest:true}),{profileSha256:value.profileSha256,revision:value.revision});}
+      case 'select_profile':return projectSupplierOrderOperation(await model.selectProfile(selected));
       case 'orders':return boundedPage(await model.orders(selected),selected,orderSummary);
       case 'order':return fullReply(await model.order(selected),'original order');
       case 'order_items':{
@@ -238,6 +243,18 @@ export class MerchantSupplierOrders {
           expectedBytes:input.bytes,expectedSha256:input.sha256}));
       }
       case 'export_workspace':return projectSupplierOrderOperation(await model.exportWorkspace(selected));
+      case 'transport_channels':return fullReply(await model.transport.channels(),'configured HTTPS channels');
+      case 'transmissions':return boundedPage(await model.transport.list(selected),selected);
+      case 'transmission':return fullReply(await model.transport.get(selected),'original transmission');
+      case 'transmission_history':{
+        const value=await model.transport.history(selected);
+        return boundedPage(value,selected,value=>value,{transmissionId:value.transmissionId,revision:value.revision});
+      }
+      case 'prepare_transmission':return projectSupplierOrderOperation(await model.transport.prepare(selected));
+      case 'send_transmission':return projectSupplierOrderOperation(await model.transport.send(selected));
+      case 'retry_transmission':return projectSupplierOrderOperation(await model.transport.retry(selected));
+      case 'resolve_transmission':return projectSupplierOrderOperation(await model.transport.resolve(selected));
+      case 'cancel_transmission':return projectSupplierOrderOperation(await model.transport.cancel(selected));
       case 'operation':return projectSupplierOrderOperation(await model.operation({requestId:args.requestId}),{includeRequest:args.includeRequest??false});
       case 'export_manifest':{
         const value=await this.#manifest(model,args.exportId);

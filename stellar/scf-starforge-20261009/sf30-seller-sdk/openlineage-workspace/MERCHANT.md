@@ -49,9 +49,9 @@ Save an owned private JSON file with mode 0600. Paths are relative to that file 
 }
 ~~~
 
-Add tokenFile to the workspace entry when required. Its contents remain in the host; tool responses expose workspace identity and input metadata. A configuration supports 1–32 distinct workspace aliases and up to 128 complete input aliases per workspace.
+Add tokenFile to the workspace entry when required. Select the operator token for this merchant connection; a separate producer token applies only to native event intake. Its contents remain in the host; tool responses expose workspace identity and input metadata. A configuration supports 1–32 distinct workspace aliases and up to 128 complete input aliases per workspace.
 
-The default host input capacity is 40 MiB. maxInputBytes may raise it to 1 GiB when the native server's intake capacity and host memory are configured for the corresponding complete base64 request. The default native HTTP intake is 64 MiB, including JSON/base64 overhead. A file beyond the configured capacity returns a size error and retains its original bytes.
+The default host input capacity is 40 MiB. maxInputBytes may raise the host's file-reading capacity to 1 GiB, while the selected native route and original source ceiling still apply. The default native action request is 64 MiB including JSON/base64 overhead; source imports have a 256 MiB wire/decoded ceiling. Configure the receiving host and choose the matching capacity before transferring a larger complete source. A file beyond the configured capacity returns its original size error.
 
 The selected application uses a literal HTTP loopback origin, 127.0.0.1 or ::1. Tool callers choose configured aliases, native entity keys, record collections, and retained object IDs.
 
@@ -114,6 +114,8 @@ Closing the borrowed owner aborts its local waits and drains its tasks. The nati
 1. Call merchant_lineage_workspaces to choose the original workspace and inspect complete input aliases.
 2. Call merchant_lineage_workspace_metadata and retain revision. Page merchant_lineage_records_read with collection, expectedRevision, offset, and limit. Follow nextOffset until null.
 3. Verify an input with merchant_lineage_input. Import a complete source with merchant_lineage_import_file, supplying input, expectedSha256, operationId, and expectedRevision. Native merchant_lineage_source_import also accepts complete text or base64 within the host's tool request capacity.
+For a compressed source, keep the original .gz input alias and its wire SHA-256, and pass contentEncoding: "gzip" to merchant_lineage_import_file or merchant_lineage_source_import. The saved request retains this encoding alongside the original bytes and operation identity. merchant_lineage_source_read with decode: true returns the original base64 plus verified decodedBase64 and decodedSha256; object ranges and source downloads remain the original compressed bytes. [PRODUCERS.md](PRODUCERS.md) also connects native producer HTTP clients to this same workspace.
+
 4. Inspect original entities with merchant_lineage_entity_read. Read their complete events, facets, source attribution, and reviews. Use merchant_lineage_lineage_read for upstream/downstream nodes and edges at a chosen depth.
 5. Save a named edition with merchant_lineage_edition_save. Compare it with another edition or the current workspace using merchant_lineage_edition_compare.
 6. Save named review decisions with merchant_lineage_review_save, including title, reason, entityKeys, decision, and the optional editionId.

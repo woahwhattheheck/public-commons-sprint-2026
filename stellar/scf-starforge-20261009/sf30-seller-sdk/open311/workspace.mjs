@@ -4,9 +4,11 @@ import { resolve, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { createClient } from './client.mjs';
 import { normalizeRequests, normalizeServices, compareCaptures, queryRequests } from './domain.mjs';
+import { createCollectionOperations } from './collections.mjs';
 
 const WORKSPACE = 'commons.open311.workspace.v1';
 const EXPORT = 'commons.open311.workspace-export.v1';
+const COLLECTIONS_EXPORT = 'commons.open311.workspace-export.v2';
 const STATES = new Set(['new', 'assigned', 'in_progress', 'done']);
 const KINDS = new Set(['requests', 'request', 'services', 'service', 'token', 'discovery']);
 const MAX_BUNDLE = 128 * 1024 * 1024;
@@ -82,7 +84,7 @@ function rawBytes(raw) {
 function connectionInput(input, requestId) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('CONNECTION_REQUIRED', 'Supply a connection.');
   if (Object.hasOwn(input, 'apiKey')) fail('USE_ENVIRONMENT_REFERENCE', 'Configure the API key in the server environment and supply its variable name in apiKeyEnv.');
-  const accepted = ['id', 'name', 'baseUrl', 'jurisdictionId', 'discoveryUrl', 'apiKeyEnv', 'apiKeyParameter', 'allowHttp', 'pagination', 'extendedAttributes', 'responseLimit', 'statusValues', 'queryExtensions', 'timeoutMs', 'maxResponseBytes', 'attribution'];
+  const accepted = ['id', 'name', 'baseUrl', 'jurisdictionId', 'discoveryUrl', 'apiKeyEnv', 'apiKeyParameter', 'allowHttp', 'pagination', 'extendedAttributes', 'responseLimit', 'responseLimitParameter', 'statusValues', 'queryExtensions', 'timeoutMs', 'maxResponseBytes', 'attribution'];
   const c = Object.fromEntries(accepted.filter(key => Object.hasOwn(input, key)).map(key => [key, input[key]]));
   c.id = c.id ? id(c.id, 'connection.id') : 'connection-' + sha256(requestId).slice(0, 20);
   c.name = text(c.name || c.id, 'connection.name', 200);
@@ -102,6 +104,8 @@ function connectionInput(input, requestId) {
     if (!Array.isArray(c[key]) || c[key].length > 100 || c[key].some(v => typeof v !== 'string' || !v || v.length > 100)) fail('INVALID_CONNECTION', key + ' must be an array of parameter names or values.');
     c[key] = [...new Set(c[key])];
   }
+  if (c.responseLimitParameter !== undefined && (typeof c.responseLimitParameter !== 'string' || !c.queryExtensions?.includes(c.responseLimitParameter)))
+    fail('INVALID_RESPONSE_LIMIT_PARAMETER', 'responseLimitParameter must name a declared provider-specific query parameter.');
   if (c.attribution !== undefined) {
     if (!c.attribution || typeof c.attribution !== 'object' || Array.isArray(c.attribution)) fail('INVALID_ATTRIBUTION', 'attribution must be an object.');
     c.attribution = Object.fromEntries(['publisher','title','license','licenseUrl','sourceUrl'].filter(key => c.attribution[key] !== undefined).map(key => [key, text(c.attribution[key], key, 2048, true)]));
@@ -136,6 +140,7 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
     'CREATE TABLE IF NOT EXISTS request_rows (capture_id TEXT NOT NULL REFERENCES captures(id), request_id TEXT NOT NULL, connection_id TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY(capture_id,request_id));',
     'CREATE INDEX IF NOT EXISTS request_identity ON request_rows(connection_id,request_id);',
     'CREATE TABLE IF NOT EXISTS reviews (connection_id TEXT NOT NULL, request_id TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY(connection_id,request_id));',
+    'CREATE TABLE IF NOT EXISTS collections (id TEXT PRIMARY KEY, connection_id TEXT NOT NULL REFERENCES connections(id), value TEXT NOT NULL);',
     'CREATE TABLE IF NOT EXISTS operations (request_id TEXT PRIMARY KEY, payload_hash TEXT NOT NULL, kind TEXT NOT NULL, state TEXT NOT NULL, intent TEXT NOT NULL, result TEXT, error TEXT, staged TEXT, owner TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);'
   ].join('\n'));
   db.prepare('INSERT OR IGNORE INTO workspace(one,value) VALUES(1,?)').run(canonical({ schema: WORKSPACE, workspaceId: randomUUID(), revision: 0, createdAt: now() }));
@@ -208,7 +213,7 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
       const captures = all('SELECT value FROM captures ORDER BY captured_at DESC,id DESC').map(row => parse(row.value).capture);
       const reviews = all('SELECT value FROM reviews ORDER BY connection_id,request_id').map(row => parse(row.value));
       return { ...m, connections: all('SELECT value FROM connections ORDER BY id').map(row => parse(row.value)),
-        captures, reviews,
+        captures, reviews, collections: collectionOperations.summaries(),
         operations: all('SELECT request_id,kind,state,created_at,updated_at FROM operations ORDER BY updated_at DESC,request_id DESC LIMIT 20').map(o => ({
           requestId: o.request_id, kind: o.kind, state: o.state, createdAt: o.created_at, updatedAt: o.updated_at })) };
     }, false);
@@ -223,10 +228,11 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
         const identityChanged = prior.baseUrl !== c.baseUrl || (prior.jurisdictionId || '') !== (c.jurisdictionId || '');
         const identityInUse = identityChanged && (
           get('SELECT id FROM captures WHERE connection_id=? LIMIT 1', c.id) ||
+          get('SELECT id FROM collections WHERE connection_id=? LIMIT 1', c.id) ||
           all('SELECT intent FROM operations WHERE kind=? AND state IN (?,?)', 'capture', 'FETCHING', 'FETCHED')
             .some(op => parse(op.intent).connectionId === c.id)
         );
-        if (identityInUse) fail('CONNECTION_IDENTITY_IN_USE', 'Create a new connection ID for a different endpoint or jurisdiction. Existing captures and source requests keep their original identity.', 409);
+        if (identityInUse) fail('CONNECTION_IDENTITY_IN_USE', 'Create a new connection ID for a different endpoint or jurisdiction. Existing captures, collection plans and source requests keep their original identity.', 409);
       }
       run('INSERT INTO connections(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value', c.id, canonical(c));
       return { connection: c };
@@ -268,7 +274,7 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
       return commitOperation('capture', input, hash, { capture }, op.createdAt);
     });
   }
-  async function capture(supplied) {
+  async function capture(supplied, selectedConnection = null) {
     const input = mutation(supplied);
     input.kind ??= 'requests'; input.query ??= {};
     if (!KINDS.has(input.kind)) fail('INVALID_CAPTURE_KIND', 'Choose a supported Open311 source resource.');
@@ -281,8 +287,12 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
       if (op?.state === 'FETCHED') return { fetched: true };
       if (op?.state === 'FAILED') return { error: op.error };
       if (op?.state === 'FETCHING' && (inflight.has(input.requestId) || activeOwner(op.owner))) fail('OPERATION_RUNNING', 'The original source request is still running.', 409, { requestId: input.requestId });
-      const selected = op ? op.intent.selected : { connection: copy(connection(input.connectionId)), kind: input.kind, query: copy(input.query), resourceId: input.resourceId || null };
-      if (!op) expected(input);
+      const current = connection(input.connectionId);
+      if (selectedConnection && (selectedConnection.id !== current.id || selectedConnection.baseUrl !== current.baseUrl ||
+          (selectedConnection.jurisdictionId || '') !== (current.jurisdictionId || '')))
+        fail('COLLECTION_SOURCE_CHANGED', 'The saved collection belongs to a different endpoint or jurisdiction.', 409);
+      const selected = op ? op.intent.selected : { connection: copy(selectedConnection || current), kind: input.kind, query: copy(input.query), resourceId: input.resourceId || null };
+      if (!op && !selectedConnection) expected(input);
       const intent = { ...input, selected };
       run('INSERT INTO operations(request_id,payload_hash,kind,state,intent,result,error,staged,owner,created_at,updated_at) VALUES(?,?,?,?,?,NULL,NULL,NULL,?,?,?) ON CONFLICT(request_id) DO UPDATE SET state=excluded.state,owner=excluded.owner,updated_at=excluded.updated_at',
         input.requestId, hash, 'capture', 'FETCHING', canonical(intent), canonical(owner), op?.createdAt || now(), now());
@@ -320,6 +330,8 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
     } finally { inflight.delete(input.requestId); }
   }
   function requests(filter = {}) {
+    if (filter.capture && filter.collection) fail('AMBIGUOUS_SOURCE_SELECTION', 'Select one capture or collection.');
+    if (filter.collection) return collectionOperations.requests(filter);
     return transaction(() => {
       const captureId = filter.capture;
       if (!captureId) fail('CAPTURE_REQUIRED', 'Select a saved request capture.');
@@ -330,6 +342,9 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
     }, false);
   }
   function request(filter = {}) {
+    if (['capture', 'connection', 'collection'].filter(key => Boolean(filter[key])).length !== 1)
+      fail('AMBIGUOUS_SOURCE_SELECTION', 'Select exactly one capture, connection or collection.');
+    if (filter.collection) return collectionOperations.request(filter);
     return transaction(() => {
       text(filter.id, 'service request ID', 500);
       let row, connectionId = filter.connection;
@@ -350,9 +365,14 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
   function putReview(supplied) {
     return mutate('review', supplied, input => {
       id(input.connectionId, 'connectionId'); text(input.serviceRequestId, 'serviceRequestId', 500);
-      const latest = get('SELECT r.value,c.id FROM request_rows r JOIN captures c ON c.id=r.capture_id WHERE r.connection_id=? AND r.request_id=? ORDER BY c.captured_at DESC,c.id DESC LIMIT 1', input.connectionId, input.serviceRequestId);
+      if (input.captureId && !input.expectedSourceSha256) fail('SOURCE_VERSION_REQUIRED', 'A pinned review requires the original source version hash.');
+      const latest = input.captureId
+        ? get('SELECT r.value,c.id FROM request_rows r JOIN captures c ON c.id=r.capture_id WHERE r.connection_id=? AND r.request_id=? AND c.id=?', input.connectionId, input.serviceRequestId, input.captureId)
+        : get('SELECT r.value,c.id FROM request_rows r JOIN captures c ON c.id=r.capture_id WHERE r.connection_id=? AND r.request_id=? ORDER BY c.captured_at DESC,c.id DESC LIMIT 1', input.connectionId, input.serviceRequestId);
       if (!latest) fail('REQUEST_NOT_FOUND', 'Capture the service request before assigning its internal review.', 404);
       const row = parse(latest.value), old = reviewRecord(input.connectionId, input.serviceRequestId);
+      if (input.expectedSourceSha256 !== undefined && input.expectedSourceSha256 !== row.sourceSha256)
+        fail('SOURCE_VERSION_CHANGED', 'The selected review source differs from the version on screen.', 409);
       const review = input.review || {};
       const status = review.status ?? old?.status ?? 'new';
       if (!STATES.has(status)) fail('INVALID_REVIEW_STATUS', 'Choose new, assigned, in_progress or done for the internal review.');
@@ -382,7 +402,9 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
       return { items: normalizeServices(record.value), capture: record.capture };
     }, false);
   }
-  function diff({ before, after }) {
+  function diff({ before, after, kind = 'capture' }) {
+    if (kind === 'collection') return collectionOperations.diff({ before, after });
+    if (kind !== 'capture') fail('INVALID_DIFF_KIND', 'Choose capture or collection comparison.');
     return transaction(() => {
       const a = captureRecord(before), b = captureRecord(after);
       if (!['requests', 'request'].includes(a.capture.kind) || !['requests', 'request'].includes(b.capture.kind)) fail('REQUEST_CAPTURES_REQUIRED', 'Choose two service-request captures.');
@@ -405,12 +427,13 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
   }
   function exportWorkspace() {
     return transaction(() => {
-      const running = get('SELECT request_id FROM operations WHERE state IN (?,?) LIMIT 1', 'FETCHING', 'FETCHED');
-      if (running) fail('SOURCE_CAPTURE_IN_PROGRESS', 'Finish or recover the current source capture before exporting the complete workspace.', 409, { requestId: running.request_id });
+      const running = get('SELECT request_id FROM operations WHERE state IN (?,?,?) LIMIT 1', 'FETCHING', 'FETCHED', 'RUNNING');
+      if (running) fail('SOURCE_CAPTURE_IN_PROGRESS', 'Finish, pause or recover the current source operation before exporting the complete workspace.', 409, { requestId: running.request_id });
       const payload = { workspace: meta(),
         connections: all('SELECT value FROM connections ORDER BY id').map(row => parse(row.value)),
         captures: all('SELECT value FROM captures ORDER BY captured_at,id').map(row => parse(row.value)),
         reviews: all('SELECT value FROM reviews ORDER BY connection_id,request_id').map(row => parse(row.value)),
+        collections: collectionOperations.exportRecords(),
         operations: all('SELECT * FROM operations ORDER BY created_at,request_id').map(row => ({
           requestId: row.request_id, payloadHash: row.payload_hash, kind: row.kind, state: row.state,
           intent: parse(row.intent), result: parse(row.result), error: parse(row.error), createdAt: row.created_at, updatedAt: row.updated_at
@@ -418,15 +441,17 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
       const json = canonical(payload);
       if (Buffer.byteLength(json) > MAX_BUNDLE) fail('WORKSPACE_EXPORT_SIZE', 'This workspace exceeds the 128 MiB portable JSON edition. Export its individual captures for this delivery.', 413);
       const editionAt = [payload.workspace.createdAt, ...payload.operations.map(op => op.updatedAt), ...payload.captures.map(c => c.capture.capturedAt)].filter(Boolean).sort().at(-1);
-      return { schema: EXPORT, exportedAt: editionAt, payload, manifest: { algorithm: 'sha256', payloadSha256: sha256(json), payloadBytes: Buffer.byteLength(json),
-        connectionCount: payload.connections.length, captureCount: payload.captures.length, reviewCount: payload.reviews.length, operationCount: payload.operations.length } };
+      return { schema: payload.collections.length ? COLLECTIONS_EXPORT : EXPORT, exportedAt: editionAt, payload, manifest: { algorithm: 'sha256', payloadSha256: sha256(json), payloadBytes: Buffer.byteLength(json),
+        connectionCount: payload.connections.length, captureCount: payload.captures.length, reviewCount: payload.reviews.length, operationCount: payload.operations.length, collectionCount: payload.collections.length } };
     }, false);
   }
-  function exportValue({ kind = 'workspace', capture: captureId } = {}) {
+  function exportValue({ kind = 'workspace', capture: captureId, collection: collectionId } = {}) {
+    if (captureId && collectionId) fail('AMBIGUOUS_SOURCE_SELECTION', 'Select one capture or collection for this file.');
     if (kind === 'workspace') {
       const bundle = exportWorkspace();
       return { filename: 'open311-workspace-' + bundle.payload.workspace.workspaceId + '.json', contentType: 'application/json; charset=utf-8', body: canonical(bundle) + '\n' };
     }
+    if (collectionId) return collectionOperations.exported({ kind, collection: collectionId });
     const saved = captureInfo({ id: captureId });
     if (kind === 'source') return { filename: 'original-' + captureId + '.json', contentType: saved.raw.contentType || 'application/json; charset=utf-8', body: rawBytes(saved.raw) };
     if (kind === 'json') return { filename: 'open311-' + captureId + '.json', contentType: 'application/json; charset=utf-8', body: JSON.stringify({ schema: 'commons.open311.capture-export.v1', ...saved }, null, 2) + '\n' };
@@ -448,7 +473,7 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
   }
   function receive(supplied) {
     const input = mutation(supplied), bundle = input.bundle;
-    if (!bundle || bundle.schema !== EXPORT || !bundle.payload || !bundle.manifest) fail('INVALID_WORKSPACE_EXPORT', 'Select a complete Open311 workspace export.');
+    if (!bundle || ![EXPORT, COLLECTIONS_EXPORT].includes(bundle.schema) || !bundle.payload || !bundle.manifest) fail('INVALID_WORKSPACE_EXPORT', 'Select a complete Open311 workspace export.');
     const encoded = canonical(bundle.payload);
     if (Buffer.byteLength(encoded) > MAX_BUNDLE) fail('WORKSPACE_EXPORT_SIZE', 'The portable workspace exceeds 128 MiB.', 413);
     if (sha256(encoded) !== bundle.manifest.payloadSha256 || Buffer.byteLength(encoded) !== bundle.manifest.payloadBytes) fail('WORKSPACE_HASH_MISMATCH', 'The workspace payload differs from its manifest.');
@@ -458,6 +483,9 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
     for (const [field, count] of [['connections', 'connectionCount'], ['captures', 'captureCount'], ['reviews', 'reviewCount'], ['operations', 'operationCount']]) {
       if (!Array.isArray(payload[field]) || payload[field].length !== bundle.manifest[count]) fail('WORKSPACE_COUNT_MISMATCH', 'The workspace ' + field + ' inventory differs from its manifest.');
     }
+    if (bundle.schema === EXPORT && payload.collections === undefined && bundle.manifest.collectionCount === undefined) payload.collections = [];
+    else if (!Array.isArray(payload.collections) || payload.collections.length !== bundle.manifest.collectionCount)
+      fail('WORKSPACE_COUNT_MISMATCH', 'The workspace collection inventory differs from its manifest.');
     const connections = new Map(), captureIds = new Set(), reviewIds = new Set(), operationIds = new Set();
     for (const c of payload.connections) {
       const checked = connectionInput(c, c.id);
@@ -499,6 +527,10 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
       if (op.state === 'SUCCEEDED' && (!op.result || op.result.workspaceId !== payload.workspace.workspaceId || op.result.requestId !== op.requestId || !Number.isSafeInteger(op.result.revision) || op.result.revision > payload.workspace.revision)) fail('SOURCE_OPERATION_RESULT_MISMATCH', 'An exported result belongs to a different workspace or revision.');
       operationIds.add(op.requestId);
     }
+    const sourceCollections = collectionOperations.validateReceived(payload.collections, {
+      connections, captures: new Map(payload.captures.map(c => [c.capture.id,c])),
+      operations: new Map(payload.operations.map(op => [op.requestId,op]))
+    });
     return mutate('receive', input, () => {
       if (get('SELECT id FROM connections LIMIT 1') || get('SELECT id FROM captures LIMIT 1') || get('SELECT request_id FROM operations LIMIT 1')) fail('DESTINATION_NOT_EMPTY', 'Open a new empty workspace directory to receive this complete customer workspace.', 409);
       saveMeta(payload.workspace);
@@ -509,10 +541,11 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
         if (['request', 'requests'].includes(info.kind)) for (const row of rowsByCapture.get(info.id)) run('INSERT INTO request_rows(capture_id,request_id,connection_id,value) VALUES(?,?,?,?)', info.id, row.serviceRequestId, info.connectionId, canonical(row));
       }
       for (const r of payload.reviews) run('INSERT INTO reviews(connection_id,request_id,value) VALUES(?,?,?)', r.connectionId, r.serviceRequestId, canonical(r));
+      collectionOperations.receive(sourceCollections);
       for (const op of payload.operations) run('INSERT INTO operations(request_id,payload_hash,kind,state,intent,result,error,staged,owner,created_at,updated_at) VALUES(?,?,?,?,?,?,?,NULL,NULL,?,?)',
         op.requestId, op.payloadHash, op.kind, op.state, canonical(op.intent), op.result == null ? null : canonical(op.result), op.error == null ? null : canonical(op.error), op.createdAt, op.updatedAt);
       return { received: { workspaceId: payload.workspace.workspaceId, sourceRevision: payload.workspace.revision, payloadSha256: bundle.manifest.payloadSha256,
-        connections: payload.connections.length, captures: payload.captures.length, reviews: payload.reviews.length } };
+        connections: payload.connections.length, captures: payload.captures.length, reviews: payload.reviews.length, collections: sourceCollections.length } };
     });
   }
   function close() {
@@ -520,5 +553,15 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
     if (inflight.size) fail('CAPTURE_IN_PROGRESS', 'Wait for the current source capture before closing this workspace.', 409);
     db.close(); closed = true;
   }
-  return { directory: root, state, putConnection, capture, putReview, requests, request, services, captureInfo, diff, operation, export: exportValue, receive, close };
+  const collectionOperations = createCollectionOperations({
+    all, get, run, transaction, meta, saveMeta, mutation, previous, expected, commitOperation, mutate,
+    connection, captureRecord, originalOperation, attachReview, fail, id, now, canonical, sha256, copy,
+    owner, activeOwner, inflight,
+    rowsForCapture: captureId => all('SELECT value FROM request_rows WHERE capture_id=? ORDER BY request_id', captureId).map(row => parse(row.value)),
+    captureSelected: (input, selected) => capture(input, selected)
+  });
+  return { directory: root, state, putConnection, capture: supplied => capture(supplied), putReview,
+    requests, request, services, captureInfo, diff, operation, export: exportValue, receive, close,
+    createCollection: collectionOperations.create, runCollection: collectionOperations.execute,
+    pauseCollection: collectionOperations.pause, collectionInfo: collectionOperations.info };
 }

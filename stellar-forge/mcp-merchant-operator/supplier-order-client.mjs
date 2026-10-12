@@ -19,7 +19,8 @@ const downloads=createRetainedDownload({
 });
 const pageIdentity={
   orderItems:['orderId','revision','stateSha256'],orderHistory:['orderId','revision','stateSha256'],
-  documentLines:['id','revision','sha256'],draftLines:['draftId','revision','sha256']
+  documentLines:['id','revision','sha256'],draftLines:['draftId','revision','sha256'],
+  transmissionHistory:['transmissionId','revision'],profileHistory:['profileSha256','revision']
 };
 /** One explicit alias. Construction does not open its native workspace. */
 export class SupplierOrderClient {
@@ -49,7 +50,7 @@ export class SupplierOrderClient {
   /** Yield complete pages and reject a changed selected order/draft during a line/history walk. */
   async *pages(method,args={},options){
     if(!SUPPLIER_ORDER_PAGED_METHODS.includes(method))
-      fail('SUPPLIER_ORDER_CLIENT_PAGINATION','Choose an original paged order, document or draft method.');
+      fail('SUPPLIER_ORDER_CLIENT_PAGINATION','Choose an original paged profile, order, document, draft or transmission method.');
     const selected={...args};let firstIdentity;
     while(true){
       const page=await this[method](selected,options);
@@ -60,7 +61,7 @@ export class SupplierOrderClient {
         const identity=JSON.stringify(Object.fromEntries(pageIdentity[method].map(key=>[key,page[key]])));
         if(firstIdentity===undefined)firstIdentity=identity;
         else if(firstIdentity!==identity)fail('SUPPLIER_ORDER_CLIENT_PAGE_CHANGED',
-          'The selected original order or draft changed between pages. Reopen the selection before continuing this view.');
+          'The selected original order, draft or transmission changed between pages. Reopen the selection before continuing this view.');
       }
       yield page;
       const next=page.nextOffset;

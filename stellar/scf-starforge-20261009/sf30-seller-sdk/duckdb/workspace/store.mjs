@@ -33,7 +33,8 @@ export function encodeAuthoring(authoring = []) {
 }
 const rowDraft = row => row ? { revision: row.revision, operationId: row.operation_id,
   sourceSha256: row.source_sha256, planSha256: row.plan_sha256,
-  savedAt: row.saved_at, plan: JSON.parse(row.plan), authoring: JSON.parse(row.authoring ?? '[]') } : null;
+  savedAt: row.saved_at, plan: JSON.parse(row.plan), authoring: JSON.parse(row.authoring ?? '[]'),
+  origin:row.origin?JSON.parse(row.origin):null } : null;
 const rowPackage = row => row ? { id: row.id, revision: row.revision, state: row.state,
   sourceSha256: row.source_sha256, reviewId: row.review_id, createdAt: row.created_at,
   completedAt: row.completed_at, error: row.error,
@@ -55,7 +56,7 @@ async function regularOrMissing(path) {
 }
 
 /** Read the retained selection before the normal workspace acquires its ownership lock. */
-export async function readSavedWorkspaceSource(directory) {
+export async function readSavedWorkspaceIdentity(directory) {
   const root = resolve(directory), filename = resolve(root, 'workspace.sqlite');
   if (await realpath(root) !== root || !(await lstat(root)).isDirectory())
     throw new WorkspaceError('PRIVATE_WORKSPACE_DIRECTORY_REQUIRED');
@@ -66,8 +67,14 @@ export async function readSavedWorkspaceSource(directory) {
     const source = db.prepare('SELECT value FROM metadata WHERE key=?').get('sourceFile')?.value;
     if (typeof source !== 'string' || !source || resolve(source) !== source || source.includes('\0'))
       throw new WorkspaceError('SAVED_WORKSPACE_SOURCE_REQUIRED', 404);
-    return source;
+    const workspaceId=db.prepare('SELECT value FROM metadata WHERE key=?').get('workspaceId')?.value;
+    if(typeof workspaceId!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(workspaceId))
+      throw new WorkspaceError('SAVED_WORKSPACE_IDENTITY_REQUIRED',409);
+    return {directory:root,workspaceId,sourceFile:source};
   } finally { db?.close(); }
+}
+export async function readSavedWorkspaceSource(directory) {
+  return (await readSavedWorkspaceIdentity(directory)).sourceFile;
 }
 
 /** A native SQLite lock is released by the OS after a crash, without PID guessing. */
@@ -105,6 +112,8 @@ export async function openWorkspaceStore({ directory, sourceFile }) {
     db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('workspaceId', randomUUID());
     if (!db.prepare('PRAGMA table_info(drafts)').all().some(column => column.name === 'authoring'))
       db.exec("ALTER TABLE drafts ADD COLUMN authoring TEXT NOT NULL DEFAULT '[]'");
+    if (!db.prepare('PRAGMA table_info(drafts)').all().some(column=>column.name==='origin'))
+      db.exec('ALTER TABLE drafts ADD COLUMN origin TEXT');
     db.exec("UPDATE packages SET state='INTERRUPTED' WHERE state='PREPARING'");
     const prior = db.prepare('SELECT body FROM runtime WHERE id=1').get();
     if (prior) {
@@ -131,6 +140,7 @@ export async function openWorkspaceStore({ directory, sourceFile }) {
   const getPackage = id => rowPackage(db.prepare('SELECT * FROM packages WHERE id=?').get(operationId(id)));
   return {
     directory: root, latest, getDraft, getPackage,
+    draftByOperation(id){return rowDraft(db.prepare('SELECT * FROM drafts WHERE operation_id=?').get(operationId(id)));},
     get sourceFile() { return db.prepare('SELECT value FROM metadata WHERE key=?').get('sourceFile').value; },
     extension(initialize) { return initialize({ db, transaction }); },
     selectSourceFile(value, expected) {
@@ -153,7 +163,7 @@ export async function openWorkspaceStore({ directory, sourceFile }) {
         .map(row => ({ revision: row.revision, sourceSha256: row.source_sha256,
           planSha256: row.plan_sha256, savedAt: row.saved_at }));
     },
-    saveDraft({ expectedRevision, operationId: id, sourceSha256, plan, authoring = [] }) {
+    saveDraft({ expectedRevision, operationId: id, sourceSha256, plan, authoring = [], origin = null }) {
       revisionNumber(expectedRevision); operationId(id);
       const bytes = encodePlan(plan), hash = sha256(bytes), authors = encodeAuthoring(authoring);
       if (Buffer.byteLength(bytes) + Buffer.byteLength(authors) > 262144)
@@ -161,7 +171,7 @@ export async function openWorkspaceStore({ directory, sourceFile }) {
       return transaction(() => {
         const repeat = rowDraft(db.prepare('SELECT * FROM drafts WHERE operation_id=?').get(id));
         if (repeat) {
-          if (repeat.planSha256 !== hash || repeat.sourceSha256 !== sourceSha256 || json(repeat.authoring) !== authors)
+          if (repeat.planSha256 !== hash || repeat.sourceSha256 !== sourceSha256 || json(repeat.authoring) !== authors || json(repeat.origin)!==json(origin))
             throw new WorkspaceError('OPERATION_CONTENT_CONFLICT', 409);
           return repeat;
         }
@@ -169,8 +179,8 @@ export async function openWorkspaceStore({ directory, sourceFile }) {
         if (current !== expectedRevision) throw new WorkspaceError('DRAFT_REVISION_CHANGED', 409,
           'Another save changed the current draft. Reopen it before saving your edits.');
         const revision = current + 1;
-        db.prepare('INSERT INTO drafts(revision,operation_id,source_sha256,plan_sha256,plan,saved_at,authoring) VALUES (?,?,?,?,?,?,?)')
-          .run(revision, id, sourceSha256, hash, bytes, new Date().toISOString(), authors);
+        db.prepare('INSERT INTO drafts(revision,operation_id,source_sha256,plan_sha256,plan,saved_at,authoring,origin) VALUES (?,?,?,?,?,?,?,?)')
+          .run(revision, id, sourceSha256, hash, bytes, new Date().toISOString(), authors,origin===null?null:json(origin));
         return getDraft(revision);
       });
     },
