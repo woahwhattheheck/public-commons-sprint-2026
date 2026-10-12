@@ -125,6 +125,31 @@ See [PROVIDER.md](./PROVIDER.md) for the original deployed profile semantics and
 
 The original model and scientific run on this retained cohort produced 1,112 reported A/B limits across 685 results, 452 non-detects, 146 qualified results, 10 reported estimates, 279 strict groups, and 413 rows in default arithmetic. The native join had zero issues, duplicate rows, or conflicting duplicates. These values describe the full cohort. The saved March review has its own selected inventory. Exact scientific result values and comparison reasons remain in the report.
 
+
+## Continue an interrupted native delivery
+
+Keep the existing journey directory, original source edition, local fixture files and SF88 buyer journal. Continue its original page sequence with:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/journey.mjs \
+  --resume-native \
+  --directory /absolute/existing-wqx-journey \
+  --page-size 25 \
+  --browser
+```
+
+Add the same installed Playwright module and Chromium executable options when the host requires them. The original native Python path is read from the saved buyer configuration. The native continuation completes in its terminal child before the existing retained-browser entrypoint starts.
+
+The continuation reopens the original saved project revision, review, complete capture and edition. It validates every recovered result page against its original normalized values, complete Result fields, Station/Activity joins and detection limits; it then follows the saved cursor under the original numbered intent IDs. At page size 25, the complete 1,035-result edition requires 42 result pages, followed by `wqx-journey-original-csv` and `wqx-journey-edition`. A March analysis window changes the review; the prepared edition still contains the whole captured quarter.
+
+`resumeQualityPurchase` uses the original SF88 operation API. Existing complete native output is recovered and its exported body is verified or restored. An existing prepared request with no attempt marker may execute after its original review; a future page uses the next ID in the original sequence. A recorded native attempt is recovered through its retained original output. If that output is still unavailable, `WQX_NATIVE_ATTEMPT_RECOVERY_REQUIRED` identifies the exact intent and its original inspection state so the same worker can finish native wire/output recovery before this command continues.
+
+The original certificate, CONNECT proxy address, signer, policy, SF36 keys and ledger remain bound to the saved buyer profile. Local fixture services start only when an unattempted request needs delivery. The continuation retains its own terminal transcript under `native-resume-attempts/`, preserving the first run's transcript.
+
+After all 44 original purchases at the default page size are available, the command completes the independently copied edition, reopens all original customer deliveries with the authoring capture temporarily relocated, restores that capture and writes the existing `native-result.json` checkpoint. B41A's `--resume-browser` path then opens the same completed native work. The final result records recovered and newly executed requests separately; facilitator and transport counters are scoped to that actual continuation.
+
+`native-resume-progress.json` records the current original page, delivered-row count and cursor. `native-resume-failure.json` retains an interrupted stage and exact native intent when applicable. Repeating the same continuation command after the original worker has ended resumes those retained files and purchases.
+
 ## Original commerce fixture
 
 The journey reuses the maintained USGS/native merchant fixture methods and the original SF81 terminal acceptance mechanism. It runs the original SF30 merchant and SF88 buyer against an owned local HTTPS gateway and local protocol facilitator.

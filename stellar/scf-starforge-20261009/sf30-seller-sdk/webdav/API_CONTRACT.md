@@ -510,16 +510,20 @@ The limits are 8,000 members, 256 MiB per member, 512 MiB expanded bytes and
 create-only output after fsync; it does not materialize a second whole archive
 buffer in the JavaScript process.
 
-A fresh import retains the original source workspace projection as
+A fresh import retains the exact incoming source workspace projection as
 `imported-workspace.json` and writes a separate `source-packet-import.json`
 receipt. It preserves original source/capture/mapping/edition/export IDs.
-Incomplete imports remain at their create-only destination with an incomplete
-receipt so the operator can inspect them. Existing recipient directories are
-never replaced.
+Every created intermediate directory is private (0700); each retained regular
+file is private (0600). Incomplete imports remain at their create-only
+destination with an incomplete receipt so the operator can inspect them.
+Existing recipient directories are never replaced.
 
 Native publisher, release, buyer, account, key and ledger directories stay with
 their original host/workspace and are not transplanted by this source packet.
-Original product references remain in the handoff. At a fresh recipient, select
+The active received workspace has `products: []` and `activeProductId: null`.
+Original product references in exact exports or an older incoming workspace
+projection remain in the retained source records, but cannot become active
+products without their original publisher state. At a fresh recipient, select
 a retained reviewed export and prepare it through the original publisher.
 Use that publisher's existing native receiving/recovery workflow for a customer
 or release transfer. This packet makes source preparation portable without
