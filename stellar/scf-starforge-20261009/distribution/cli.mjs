@@ -80,7 +80,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   buyer-expenses                            Allocate native buyer expenses and issue accountant periods
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
-  buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  buyer-agent-example                       Operate the original buyer through LangGraph checkpoints and LangChain tools
   stac                                      Discover imagery, compare scenes and deliver selected assets to customers
   coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
