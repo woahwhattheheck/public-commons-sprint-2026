@@ -121,22 +121,51 @@ async function verifyReceivingSourceAdoption(original,current,identityFile){
   expect(receipt.schema==='commons.aviary.browser-source-adoption.v1'&&receipt.operationId===OPERATION&&
     receipt.originalInputSha256===original.inputSha256&&receipt.reason==='original-preview-response-and-process-namespace-repair',
     'The explicit original browser source-adoption receipt is absent or differs');
-  expect(isDeepStrictEqual(receipt.originalIdentity,await fileRecord(identityFile))&&
-    isDeepStrictEqual(receipt.selectedRunner,selected),
-    'The browser source adoption changed its original identity or selected source');
+  const originalIdentity=await fileRecord(identityFile),baseAdoption=await fileRecord(receiptPath);
+  expect(isDeepStrictEqual(receipt.originalIdentity,originalIdentity),
+    'The browser source adoption changed its original identity');
   const previousPath=path.join(ROOT,'source-history',previous.sha256,'run-aviary-browser-receiving.mjs');
   expect(receipt.previousRunner.path===previousPath&&receipt.previousRunner.bytes===previous.bytes&&
     receipt.previousRunner.sha256===previous.sha256,'The original receiving source history differs');
   await verifyFile(receipt.previousRunner);
-  expect(Array.isArray(receipt.originalSteps),'The original source adoption lacks its retained step inventory');
-  const names=new Set();
-  for(const item of receipt.originalSteps){
-    const name=within(path.join(ROOT,'steps'),item.path);
-    expect(!names.has(name),'An original receiving step was duplicated in its source adoption');
-    names.add(name);await verifyFile(item);
+  async function verifySteps(items){
+    expect(Array.isArray(items),'The original source adoption lacks its retained step inventory');
+    const names=new Set();
+    for(const item of items){
+      const name=within(path.join(ROOT,'steps'),item.path);
+      expect(!names.has(name),'An original receiving step was duplicated in its source adoption');
+      names.add(name);await verifyFile(item);
+    }
   }
-  return {receipt:await fileRecord(receiptPath),previousRunner:receipt.previousRunner,
-    selectedRunner:selected,originalInputSha256:original.inputSha256,originalStepFiles:receipt.originalSteps.length};
+  await verifySteps(receipt.originalSteps);
+  let followup=null;
+  if(!isDeepStrictEqual(receipt.selectedRunner,selected)){
+    const baseline=receipt.selectedRunner;
+    expect(baseline.path===SELF&&baseline.bytes===75517&&baseline.sha256==='440752b548b1d005c3015678122e5594f046da83e2f0db0c157cf95378179591',
+      'The previous selected receiving source is not the accepted preview/process repair');
+    const followupPath=path.join(ROOT,'source-adoption-followup.json'),value=await readJson(followupPath);
+    const baselinePath=path.join(ROOT,'source-history',baseline.sha256,'run-aviary-browser-receiving.mjs');
+    expect(value.schema==='commons.aviary.browser-source-followup.v1'&&value.operationId===OPERATION&&
+      value.deliveryOperation==='AVIARY-COMPLETE-DELIVERY-6BA15-20261012'&&
+      value.reason==='original-download-artifact-link-repair'&&
+      value.originalInputSha256===original.inputSha256&&
+      value.sourcePacketSha256===receipt.sourcePacketSha256&&
+      value.applicationFilesChanged===0&&value.providerRequestsReplayed===0&&
+      isDeepStrictEqual(value.baseAdoption,baseAdoption)&&
+      isDeepStrictEqual(value.originalIdentity,originalIdentity)&&
+      isDeepStrictEqual(value.previousRunner,{path:baselinePath,bytes:baseline.bytes,sha256:baseline.sha256})&&
+      isDeepStrictEqual(value.selectedRunner,selected),
+      'The download-link source continuation changed its original identity, predecessor or selected source');
+    await verifyFile(value.previousRunner);
+    within(path.join(path.dirname(ROOT),'producer-source','history-86320'),value.failedReceivingHistory.path);
+    await verifyFile(value.failedReceivingHistory);
+    await verifySteps(value.originalSteps);
+    followup={receipt:await fileRecord(followupPath),previousRunner:value.previousRunner,
+      failedReceivingHistory:value.failedReceivingHistory,originalStepFiles:value.originalSteps.length};
+  }
+  return {receipt:baseAdoption,previousRunner:receipt.previousRunner,
+    selectedRunner:selected,originalInputSha256:original.inputSha256,originalStepFiles:receipt.originalSteps.length,
+    ...(followup?{followup}: {})};
 }
 
 const identityPath=path.join(ROOT,'identity.json'),oldIdentity=await optionalJson(identityPath);
@@ -746,7 +775,7 @@ async function downloadArchive(name,queued,filename){
     return completeStep(name,{file:expected,capture:await fileRecord(path.join(directory,'capture.json')),jobId:queued.job.id});
   }
   await page.locator('[data-tab=delivery]').click();
-  const linkElement=page.locator('#artifactList a').filter({hasText:path.basename(queued.archive.output)});
+  const linkElement=page.locator('#artifactList').getByRole('link',{name:path.basename(queued.archive.output),exact:true});
   await linkElement.waitFor();
   const event=page.waitForEvent('download',{timeout:30000});event.catch(()=>{});
   await linkElement.click();const download=await event;

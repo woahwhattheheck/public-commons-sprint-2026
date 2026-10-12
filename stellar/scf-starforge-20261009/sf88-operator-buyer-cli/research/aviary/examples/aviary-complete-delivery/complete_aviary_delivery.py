@@ -144,7 +144,8 @@ def retain_command_producer(program):
           "c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33":53244,
           "073938b61dbe10e7d771741ffe5f76a0f455c3f5515ddebf86245c68e6f71d18":70704,
            "6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98":74496,
-          "6cb5e3cc848bf2cdc3184c3ea0c6c93d48c3cb0a89c62165f301c5833f48755d":81715}
+          "6cb5e3cc848bf2cdc3184c3ea0c6c93d48c3cb0a89c62165f301c5833f48755d":81715,
+          "6c60cc5bda84133fe821b9398556136b5e8eed2c8b88bd54e9f6fab1b74e4f93":90602}
  require(allowed.get(previous_sha)==len(previous),
   "Original producer source needs exact source reconciliation")
  publish(ROOT/"producer-source"/(previous_sha+".py"),previous)
@@ -926,6 +927,35 @@ def retain_source_correction(packet):
  return {"correction":record(folder/"source-correction.json"),"history":receipt["receivingHistory"],
          "previousInput":receipt["previousInput"],"previousSourcePacket":receipt["previousSourcePacket"]}
 
+def browser_receiving_followup():
+ followup=PAYLOAD.get("receivingFollowup")
+ if followup is None:return None
+ require(isinstance(followup,dict) and set(followup)=={"schema","previous","selected","history","reason"}
+         and followup["schema"]=="commons.aviary.browser-receiving-source-followup.v1"
+         and followup["reason"]=="original-download-artifact-link-repair",
+         "The explicit original download-link receiving continuation differs")
+ relative="examples/run-aviary-browser-receiving.mjs"
+ require(followup["previous"]=={"path":relative,"bytes":75517,
+          "sha256":"440752b548b1d005c3015678122e5594f046da83e2f0db0c157cf95378179591"},
+         "The download-link continuation does not retain the accepted preview/process source")
+ selected=followup["selected"]
+ require(isinstance(selected,dict) and set(selected)=={"path","bytes","sha256","content"}
+         and selected["path"]==relative and selected["bytes"]==77494
+         and selected["sha256"]=="6f6fa4e54bef86b1df205219f6ece517d578ea4b5ddb0a69d0705941226c9b6a",
+         "The selected complete download-link receiving source differs")
+ raw=selected["content"].encode()
+ require(len(raw)==selected["bytes"] and sha(raw)==selected["sha256"],
+         "The complete download-link successor bytes differ")
+ history=followup["history"]
+ require(isinstance(history,dict) and set(history)=={"path","bytes","sha256","content"}
+         and history["path"]=="receiving-history.json" and history["bytes"]==37416
+         and history["sha256"]=="987c5464ea8b1b8ef28770207668fcc64f05a692ff23528712dc48712556df2e",
+         "The actual86320 receiving history differs")
+ history_raw=history["content"].encode()
+ require(len(history_raw)==history["bytes"] and sha(history_raw)==history["sha256"],
+         "The complete86320 history bytes differ")
+ return followup
+
 def adopt_browser_receiving_source(packet):
  repair=PAYLOAD.get("receivingRepair")
  require(isinstance(repair,dict) and set(repair)=={"schema","previous","selected","history","reason"}
@@ -1004,7 +1034,13 @@ def adopt_browser_receiving_source(packet):
   pubjson(receipt_path,receipt)
  require(entry.is_file() and not entry.is_symlink(),"The original browser entry is not a regular file")
  before=record(entry)
- require(before in (expected_previous,expected_selected),"The original browser source has an unreviewed change")
+ followup=browser_receiving_followup()
+ following=({"path":str(entry),"bytes":followup["selected"]["bytes"],"sha256":followup["selected"]["sha256"]}
+            if followup is not None else None)
+ require(before in (expected_previous,expected_selected,following),"The original browser source has an unreviewed change")
+ if following is not None and before==following:
+  require((browser/"source-adoption-followup.json").is_file(),
+          "The selected followup source has no retained source-adoption journal")
  if before==expected_previous:
   fd,temporary=tempfile.mkstemp(prefix=".aviary-receiving-source-",dir=entry.parent)
   try:
@@ -1014,20 +1050,111 @@ def adopt_browser_receiving_source(packet):
    os.replace(temporary,entry);syncdir(entry.parent)
   finally:
    with contextlib.suppress(FileNotFoundError):os.unlink(temporary)
- same(expected_selected,entry)
+ actual_selected=following if following is not None and before==following else expected_selected
+ same(actual_selected,entry)
  current_files=[]
  for item in packet["files"]:
   actual=record(beneath(APP,item["path"]))
-  expected_item=selected if item["path"]==relative else item
+  selected_member=followup["selected"] if following is not None and actual_selected==following else selected
+  expected_item=selected_member if item["path"]==relative else item
   require(actual["bytes"]==expected_item["bytes"] and actual["sha256"]==expected_item["sha256"],
           "An application member differs from its selected complete source")
   current_files.append({"path":item["path"],"bytes":actual["bytes"],"sha256":actual["sha256"]})
  emit("ORIGINAL_BROWSER_SOURCE_ADOPTED",originalInputSha256=identity["inputSha256"],
-      previous=previous,selected={key:selected[key] for key in ("path","bytes","sha256")},
+      previous=previous,selected={key:selected_member[key] for key in ("path","bytes","sha256")},
+      baseSelected={key:selected[key] for key in ("path","bytes","sha256")},
       retainedStepFiles=len(receipt["originalSteps"]),providerRequestsReplayed=0)
  return {"receipt":record(receipt_path),"previousRunner":record(old_path),
          "selectedRunner":record(entry),"originalInputSha256":identity["inputSha256"],
          "history":record(pubjson_history),"files":current_files}
+
+def adopt_browser_receiving_followup(packet,base):
+ followup=browser_receiving_followup()
+ if followup is None:return base
+ original_commands_quiet()
+ relative=followup["previous"]["path"]
+ selected=followup["selected"];history=followup["history"]
+ browser=ROOT/"browser-receiving";identity_path=browser/"identity.json"
+ identity=readjson(identity_path)
+ require(identity.get("inputSha256")==base["originalInputSha256"],
+         "The download-link continuation changed the original browser input")
+ entry=beneath(APP,relative)
+ base_path=browser/"source-adoption.json";base_receipt=readjson(base_path)
+ expected_previous={"path":str(entry),"bytes":followup["previous"]["bytes"],
+                    "sha256":followup["previous"]["sha256"]}
+ require(base["receipt"]==record(base_path) and base_receipt.get("selectedRunner")==expected_previous
+         and base_receipt.get("originalIdentity")==record(identity_path)
+         and base_receipt.get("sourcePacketSha256")==SOURCE_SHA,
+         "The original source adoption changed before download continuation")
+ previous=PAYLOAD["receivingRepair"]["selected"]
+ require({key:previous[key] for key in ("path","bytes","sha256")}==followup["previous"],
+         "The followup predecessor differs from the retained complete baseline source")
+ previous_raw=previous["content"].encode()
+ require(len(previous_raw)==previous["bytes"] and sha(previous_raw)==previous["sha256"],
+         "The full previous receiving runner bytes differ")
+ selected_raw=selected["content"].encode()
+ previous_path=browser/"source-history"/previous["sha256"]/"run-aviary-browser-receiving.mjs"
+ selected_path=browser/"source-history"/selected["sha256"]/"run-aviary-browser-receiving.mjs"
+ publish(previous_path,previous_raw);publish(selected_path,selected_raw)
+ history_path=ROOT/"producer-source"/"history-86320"/history["path"]
+ publish(history_path,history["content"].encode())
+ expected_selected={"path":str(entry),"bytes":selected["bytes"],"sha256":selected["sha256"]}
+ receipt_path=browser/"source-adoption-followup.json"
+ fixed={"schema":"commons.aviary.browser-source-followup.v1",
+        "operationId":"AVIARY-BROWSER-RECEIVING-6BA15-20261012","deliveryOperation":OP,
+        "reason":followup["reason"],"originalInputSha256":identity["inputSha256"],
+        "originalIdentity":record(identity_path),"baseAdoption":record(base_path),
+        "previousRunner":record(previous_path),"selectedRunner":expected_selected,
+        "failedReceivingHistory":record(history_path),"sourcePacketSha256":SOURCE_SHA,
+        "applicationFilesChanged":0,"providerRequestsReplayed":0}
+ if receipt_path.exists():
+  receipt=readjson(receipt_path)
+  require(set(receipt)==set(fixed)|{"originalSteps"}
+          and all(receipt.get(key)==value for key,value in fixed.items()),
+          "The existing download-link source continuation binding differs")
+  require(isinstance(receipt["originalSteps"],list),"The original followup step inventory is absent")
+  seen=set()
+  for item in receipt["originalSteps"]:
+   path=Path(item["path"])
+   require(path.is_absolute() and path.is_relative_to(browser/"steps")
+           and path!=browser/"steps" and path.resolve()==path and str(path) not in seen,
+           "An original followup step path differs")
+   seen.add(str(path));same(item,path)
+ else:
+  same(expected_previous,entry)
+  steps=[record(browser/"steps"/item["path"]) for item in inventory(browser/"steps",exclude_pixels=False)]
+  receipt={**fixed,"originalSteps":steps}
+  pubjson(receipt_path,receipt)
+ before=record(entry)
+ require(before in (expected_previous,expected_selected),
+         "The download-link continuation encountered another source version")
+ if before==expected_previous:
+  fd,temporary=tempfile.mkstemp(prefix=".aviary-download-source-",dir=entry.parent)
+  try:
+   with os.fdopen(fd,"wb") as output:
+    output.write(selected_raw);output.flush();os.fsync(output.fileno())
+   same(expected_selected,temporary);same(expected_previous,entry)
+   os.replace(temporary,entry);syncdir(entry.parent)
+  finally:
+   with contextlib.suppress(FileNotFoundError):os.unlink(temporary)
+ same(expected_selected,entry)
+ same(fixed["baseAdoption"],base_path);same(fixed["originalIdentity"],identity_path)
+ current_files=[]
+ for item in packet["files"]:
+  actual=record(beneath(APP,item["path"]))
+  expected=selected if item["path"]==relative else item
+  require(actual["bytes"]==expected["bytes"] and actual["sha256"]==expected["sha256"],
+          "An application member differs after the complete receiving followup")
+  current_files.append({"path":item["path"],"bytes":actual["bytes"],"sha256":actual["sha256"]})
+ result={**base,"selectedRunner":record(entry),"files":current_files,
+         "followup":{"receipt":record(receipt_path),"previousRunner":record(previous_path),
+                     "selectedRunner":record(entry),"failedReceivingHistory":record(history_path),
+                     "originalStepFiles":len(receipt["originalSteps"])}}
+ emit("ORIGINAL_BROWSER_SOURCE_FOLLOWUP_ADOPTED",originalInputSha256=identity["inputSha256"],
+      baseAdoption=record(base_path),previous=followup["previous"],
+      selected={key:selected[key] for key in ("path","bytes","sha256")},
+      retainedStepFiles=len(receipt["originalSteps"]),providerRequestsReplayed=0)
+ return result
 
 def main():
  global APP,ENV
@@ -1066,15 +1193,19 @@ def main():
  caller=PAYLOAD["caller"].encode();require(len(caller)==4034 and sha(caller)=="d1047f61b8c6b6b3a7f24a2d1fffe4b68e6407aa146f034b18beab3824bfb39e","Canonical caller differs")
  publish(ROOT/"library_upload_private_state.py",caller)
  APP=ROOT/"application";APP.mkdir(exist_ok=True,mode=0o700)
+ followup=browser_receiving_followup()
  for r in packet["files"]:
   raw=r["content"].encode();require(len(raw)==r["bytes"] and sha(raw)==r["sha256"],"Source member differs: "+r["path"])
   if r["path"]=="examples/run-aviary-browser-receiving.mjs" and beneath(APP,r["path"]).exists():
    current=record(beneath(APP,r["path"]));selected=PAYLOAD["receivingRepair"]["selected"]
-   require((current["bytes"],current["sha256"]) in ((r["bytes"],r["sha256"]),(selected["bytes"],selected["sha256"])),
-           "The saved standalone browser source differs from both reviewed versions")
+   versions=[(r["bytes"],r["sha256"]),(selected["bytes"],selected["sha256"])]
+   if followup is not None:versions.append((followup["selected"]["bytes"],followup["selected"]["sha256"]))
+   require((current["bytes"],current["sha256"]) in versions,
+           "The saved standalone browser source differs from the complete reviewed versions")
   else:publish(beneath(APP,r["path"]),raw)
   if r["path"].endswith(".py"):ast.parse(raw,filename=r["path"])
  receiving_source=adopt_browser_receiving_source(packet)
+ receiving_source=adopt_browser_receiving_followup(packet,receiving_source)
  tmp=ROOT/"tmp";tmp.mkdir(exist_ok=True,mode=0o700)
  ENV={**os.environ,"PYTHONDONTWRITEBYTECODE":"1","TMPDIR":str(tmp)}
  os.environ["TMPDIR"]=str(tmp);tempfile.tempdir=str(tmp)
