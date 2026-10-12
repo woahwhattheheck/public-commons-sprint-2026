@@ -34,6 +34,56 @@
         "coordinate_map_problem_size": 3
       },
       "companion_sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+    },
+    {
+      "id": "107-archive-scalar",
+      "sha256": "b1926eb41ee3c2483ed473a9bfb52afde3330185dee49c18c56c559aab2faddb",
+      "optimize_kwargs": {}
+    },
+    {
+      "id": "batch-random-d76c",
+      "sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "optimize_kwargs": {
+        "batch_size": 8,
+        "corpus_starts": false
+      },
+      "assets": [
+        {
+          "name": "warmstart_bank.npz",
+          "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39",
+          "bytes": 2170687
+        }
+      ]
+    },
+    {
+      "id": "batch-corpus-d76c",
+      "sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "optimize_kwargs": {
+        "batch_size": 8,
+        "corpus_starts": true
+      },
+      "assets": [
+        {
+          "name": "warmstart_bank.npz",
+          "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39",
+          "bytes": 2170687
+        }
+      ]
+    },
+    {
+      "id": "batch-corpus-cpu1-d76c",
+      "sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "optimize_kwargs": {
+        "batch_size": 1,
+        "corpus_starts": true
+      },
+      "assets": [
+        {
+          "name": "warmstart_bank.npz",
+          "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39",
+          "bytes": 2170687
+        }
+      ]
     }
   ],
   "common_objective": {
@@ -125,6 +175,60 @@
       "max_time_seconds": 14400,
       "container_cap_seconds": 16200,
       "purpose": "Original four-hour budget continuation on existing available compute; retained public inputs remain separate from hidden official tasks."
+    },
+    {
+      "id": "batch-corpus-broad-public",
+      "baseline": "099",
+      "candidates": [
+        "099",
+        "107-archive-scalar",
+        "batch-random-d76c",
+        "batch-corpus-d76c"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "container_cap_seconds": 16200,
+      "purpose": "Forty original GPU Objective cells comparing both retained scalar baselines and the batched random/corpus arms. The two batched arms share source, population, native batch width and seeds; donor initialization is their only option difference."
+    },
+    {
+      "id": "batch-corpus-cpu-public",
+      "baseline": "099",
+      "candidates": [
+        "099",
+        "batch-corpus-cpu1-d76c"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "container_cap_seconds": 16200,
+      "purpose": "Twenty original CPU Objective cells using the same eight-lane candidate with native scalar dispatch. Retained as a separate runtime condition from the GPU campaign."
     }
   ],
   "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",
@@ -143,6 +247,8 @@
     "dispatch": "One process per native cell inside one existing allocation; no second scheduler.",
     "compilation_cache": "New empty isolated cache per cell, at most128MiB; release only its own cache after child exit and retained completion.",
     "handoff": "Original raw report/context/console/attempt/completion and matched comparison in a complete output archive.",
-    "coordinate_map_cells": 6
+    "coordinate_map_cells": 6,
+    "batch_corpus_gpu_cells": 40,
+    "batch_corpus_cpu_cells": 20
   }
 }

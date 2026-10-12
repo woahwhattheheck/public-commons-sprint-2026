@@ -99,10 +99,11 @@ def freeze(args):
         candidate = candidates[key]
         pinned[candidate["submission"]] = candidate["submission_sha256"]
         pinned[candidate["requirements"]] = candidate["requirements_sha256"]
-        for companion in candidate.get("invocation", {}).get("companions", []):
-            previous = pinned.setdefault(companion["path"], companion["sha256"])
-            if previous != companion["sha256"]:
-                raise ValueError("Selected companion path has conflicting frozen bytes")
+        inputs = candidate.get("invocation", {})
+        for member in [*inputs.get("companions", []), *inputs.get("assets", [])]:
+            previous = pinned.setdefault(member["path"], member["sha256"])
+            if previous != member["sha256"]:
+                raise ValueError("Selected source path has conflicting frozen bytes")
     for name, expected in pinned.items():
         if sha(ROOT / name) != expected:
             raise ValueError("Frozen source differs: " + name)
@@ -145,7 +146,7 @@ def command_for(cell, intent, cell_root):
                            L2D_SOURCE_MANIFEST=str(ROOT / "SOURCES.json"), L2D_SOURCE_ID=cell["candidate"])
         command = ["bash", str(ROOT / "runner/run_recorded_cpu.sh"), *native]
     else:
-        environment.update(JAX_COMPILATION_CACHE_DIR=cache,
+        environment.update(JAX_PLATFORMS="gpu", JAX_COMPILATION_CACHE_DIR=cache,
                            JAX_COMPILATION_CACHE_MAX_SIZE="134217728",
                            JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS="1")
         command = [intent["runtime"]["python"], str(ROOT / "runner/run_recorded.py"),
