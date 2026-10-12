@@ -1,0 +1,101 @@
+// MIT. Shared action contract for Flowable's operator, installed SDK and agent tools.
+export const FLOWABLE_WORKSPACE_SCHEMA='stellar-forge.flowable-workspace.v1';
+export const FLOWABLE_MAX_JSON_BYTES=128*1024*1024;
+const text=maximum=>({type:'string',maxLength:maximum});
+const id={type:'string',pattern:'^[a-f0-9]{24}$'};
+const sha={type:'string',pattern:'^[a-f0-9]{64}$'};
+const uuid={type:'string',pattern:'^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$'};
+const revision={type:'integer',minimum:1};
+const kind={enum:['connection','portfolio','release','process','task','migration','delivery','receiving']};
+const operationKind={enum:['release','process','task','migration']};
+const reference={type:'object',properties:{sha256:sha,bytes:{type:'integer',minimum:0},mediaType:text(200)},
+  required:['sha256','bytes'],additionalProperties:false};
+const paging={offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:500}};
+const connection={type:'object',properties:{
+  schema:{enum:['stellar-forge.flowable-connection.v1']},id:text(128),label:text(300),
+  baseUrl:text(4000),usernameEnv:{type:'string',pattern:'^[A-Za-z_][A-Za-z0-9_]*$'},
+  passwordEnv:{type:'string',pattern:'^[A-Za-z_][A-Za-z0-9_]*$'},
+},required:['id','baseUrl','usernameEnv','passwordEnv'],additionalProperties:false};
+const preparation={connectionId:id,label:text(300),note:text(20000),selection:{type:'object'}};
+const dispatch={id,expectedRevision:revision,planSha256:sha};
+function action(title,description,write,properties,required=[]){
+  return Object.freeze({title,description,write,inputSchema:{type:'object',
+    properties:{...(write?{requestId:uuid}:{}),...properties},
+    required:[...(write?['requestId']:[]),...required],additionalProperties:false}});
+}
+export const FLOWABLE_WORKSPACE_ACTIONS=Object.freeze({
+  view:action('Workspace','Read saved engine connections, credential availability and record counts.',false,{}),
+  listRecords:action('Saved records','Page the current saved record heads using the original list snapshot.',false,
+    {kind,...paging,snapshot:sha}),
+  getRecord:action('Saved operation','Read an exact saved revision, native request, response and current receiving result.',false,
+    {kind,id,revision,...paging},['kind','id']),
+  readPortfolio:action('Portfolio','Page one captured native collection and its complete original source references.',false,
+    {id,revision,collection:text(100),...paging},['id','collection']),
+  readDefinition:action('Process definition','Read the original captured BPMN resource and its definition identity.',false,
+    {portfolioId:id,revision,definitionId:text(2000)},['portfolioId','definitionId']),
+  readSource:action('Original source','Read a complete saved source or native response by its immutable reference.',false,
+    {reference},['reference']),
+  readReview:action('Operation review','Read the saved request, native preimage, validation and complete response references.',false,
+    {kind:operationKind,id,revision},['kind','id']),
+  saveConnection:action('Save engine','Save the engine URL and names of its credential environment variables.',true,
+    {id,expectedRevision:{type:'integer',minimum:0},connection},['connection']),
+  capturePortfolio:action('Refresh portfolio','Capture complete native definitions, deployments, active work and history with original source resources.',true,
+    {connectionId:id,label:text(300)},['connectionId']),
+  prepareRelease:action('Prepare release','Retain the exact original BPMN deployment request and current engine preimage for review.',true,
+    preparation,['connectionId','selection']),
+  dispatchRelease:action('Deploy reviewed release','Submit the saved deployment once and receive its native definitions and original resources.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  prepareProcess:action('Prepare process','Retain the selected definition, native variables and business identity before starting a process.',true,
+    preparation,['connectionId','selection']),
+  dispatchProcess:action('Start reviewed process','Start the saved native process request once and receive its current tasks and history.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  prepareTask:action('Prepare task action','Read the current native task and retain its complete claim, assignment or completion request.',true,
+    preparation,['connectionId','selection']),
+  dispatchTask:action('Execute reviewed task','Submit the saved human task request once and read its native current and historic state.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  prepareMigration:action('Validate migration','Retain the original migration document and run Flowable native migration validation for the selected process.',true,
+    preparation,['connectionId','selection']),
+  dispatchMigration:action('Migrate reviewed process','Submit the saved, natively validated migration once and receive the target definition and work state.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  reconcileOperation:action('Refresh saved operation','Read the original native request outcome from its retained response and current or historic engine state.',true,
+    {kind:operationKind,id,expectedRevision:revision},['kind','id']),
+  exportWorkspace:action('Export handover','Export complete saved record revisions, native requests, source resources and journals.',true,
+    {label:text(300)}),
+  inspectDelivery:action('Inspect handover','Inspect and retain a complete local NDJSON workspace archive.',true,
+    {path:text(4000),label:text(300)},['path']),
+  adoptDelivery:action('Receive handover','Adopt the original complete source and saved history into this workspace.',true,
+    {id,expectedRevision:revision,manifestSha256:sha},['id','expectedRevision','manifestSha256']),
+});
+export const FLOWABLE_RECORD_STATES=Object.freeze([
+  'SAVED','CAPTURING','CAPTURED','COMPLETED','PREPARING','PREPARED','INVALID','DISPATCHED','READBACK',
+  'CONFIRMED','ACCEPTED','OBSERVED','REJECTED','UNKNOWN','STALE','PREPARE_FAILED','INTERRUPTED',
+  'EXPORTED','INSPECTED','ADOPTING','ADOPTED',
+]);
+export function validateFlowableAction(method,args){
+  const contract=FLOWABLE_WORKSPACE_ACTIONS[method];
+  const invalid=message=>{throw Object.assign(new Error(message),{code:'FLOWABLE_ACTION_INPUT_INVALID',status:400});};
+  if(!contract||!args||typeof args!=='object'||Array.isArray(args))invalid('Select a declared workspace action.');
+  const check=(value,schema,path)=>{
+    if(schema.enum&&!schema.enum.includes(value))invalid(path+' has an unsupported value.');
+    if(schema.type==='object'){
+      if(!value||typeof value!=='object'||Array.isArray(value))invalid(path+' must be an object.');
+      for(const key of schema.required??[])if(!Object.hasOwn(value,key))invalid(path+'.'+key+' is required.');
+      for(const[key,part]of Object.entries(value)){
+        if(schema.additionalProperties===false&&!Object.hasOwn(schema.properties??{},key))invalid(path+'.'+key+' is not declared.');
+        if(schema.properties?.[key])check(part,schema.properties[key],path+'.'+key);
+      }
+    }else if(schema.type==='string'){
+      if(typeof value!=='string'||schema.maxLength!==undefined&&value.length>schema.maxLength||
+        schema.pattern&&!(new RegExp(schema.pattern)).test(value))invalid(path+' must be valid text.');
+    }else if(schema.type==='integer'){
+      if(!Number.isSafeInteger(value)||schema.minimum!==undefined&&value<schema.minimum||
+        schema.maximum!==undefined&&value>schema.maximum)invalid(path+' is outside its range.');
+    }else if(schema.type==='boolean'&&typeof value!=='boolean')invalid(path+' must be true or false.');
+    else if(schema.type==='array'){
+      if(!Array.isArray(value)||schema.minItems!==undefined&&value.length<schema.minItems||
+        schema.uniqueItems&&new Set(value.map(item=>JSON.stringify(item))).size!==value.length)invalid(path+' must be a valid selection.');
+      value.forEach((item,index)=>check(item,schema.items,path+'['+index+']'));
+    }
+  };
+  check(args,contract.inputSchema,method);return contract;
+}
