@@ -1,0 +1,24 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "sheets",
+  "description": "Google Sheets data products",
+  "commands": {
+    "sheets-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/cli.mjs",
+    "sheets-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/cli.mjs"
+  },
+  "commandDescriptions": {
+    "sheets-source": "Capture, inspect and prepare selected Google Sheets columns",
+    "sheets-publisher": "Review and publish retained Sheet observations as datasets"
+  },
+  "exports": {
+    "./seller/sheets": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/source.mjs",
+    "./seller/sheets/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/capture.mjs",
+    "./seller/sheets/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/model.mjs",
+    "./seller/sheets/auth": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/oauth.mjs",
+    "./seller/sheets/auth/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/server.mjs"
+  },
+  "applicationProviders": {
+    "sheets": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/sheets.mjs",
+    "sheets-publisher": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/sheets-publisher.mjs"
+  }
+}

@@ -86,6 +86,9 @@ async function buyerDraft({ plan, bodyFile, ticketFile, intentId, out,
   } };
 }
 
+/** Prepare the same native config bytes without publishing an output file. */
+export { buyerDraft as prepareBuyerDraft };
+
 function workspaceInput(packet, review, ticketFile, requireCurrent) {
   const keys = ['schema', 'profile', 'planSha256', 'merchant', 'payment', 'body', 'operation', 'customer'];
   if (!plain(packet) || Object.keys(packet).length !== keys.length ||

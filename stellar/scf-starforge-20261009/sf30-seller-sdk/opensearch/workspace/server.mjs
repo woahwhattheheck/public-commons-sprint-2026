@@ -2,6 +2,8 @@
 import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createOpenSearchWorkspace } from './service.mjs';
@@ -10,6 +12,9 @@ import { WorkspaceError } from './store.mjs';
 const ASSETS = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/deployment.mjs', ['deployment.mjs', 'text/javascript; charset=utf-8']],
+  ['/catalog.mjs', ['catalog.mjs', 'text/javascript; charset=utf-8']],
+  ['/supplier.mjs', ['supplier.mjs', 'text/javascript; charset=utf-8']],
+  ['/file-sha256.mjs', ['file-sha256.mjs', 'text/javascript; charset=utf-8']],
   ['/relevance.mjs', ['../relevance/public.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
 function send(res, status, value) {
   const body = JSON.stringify(value);
@@ -23,6 +28,53 @@ function download(res, value) {
     'content-disposition': 'attachment; filename="' + value.filename.replaceAll('"', '') + '"',
     'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
   res.end(body);
+}
+async function catalogDownload(res, value) {
+  if (typeof value.body === 'string' || Buffer.isBuffer(value.body) || value.body instanceof Uint8Array)
+    return download(res, { ...value, body: Buffer.from(value.body) });
+  if (!value.body || (typeof value.body[Symbol.asyncIterator] !== 'function' && typeof value.body[Symbol.iterator] !== 'function'))
+    throw new WorkspaceError('WORKSPACE_CATALOG_EXPORT_INVALID', 'The catalog export did not provide a byte stream.', 500);
+  const filename = String(value.filename).replace(/[^\x20-\x7e]|["\\]/g, '_');
+  res.writeHead(200, { 'content-type': value.type,
+    'content-disposition': 'attachment; filename="' + filename + '"',
+    'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+  const stalled = () => res.destroy(new WorkspaceError('WORKSPACE_CATALOG_DOWNLOAD_TIMEOUT',
+    'The receiving client stopped consuming this catalog export.', 504));
+  res.setTimeout(60000, stalled);
+  try { await pipeline(Readable.from(value.body), res); }
+  finally { res.setTimeout(0); res.removeListener('timeout', stalled); }
+}
+function catalogQuery(url, fields) {
+  for (const key of url.searchParams.keys()) {
+    if (!fields.includes(key) || url.searchParams.getAll(key).length !== 1)
+      throw new WorkspaceError('WORKSPACE_CATALOG_ROUTE_INVALID', 'Use the declared catalog route and query fields.', 400);
+  }
+  const input = Object.fromEntries(url.searchParams);
+  for (const key of ['offset', 'limit']) {
+    if (input[key] !== undefined) {
+      if (!/^(0|[1-9][0-9]*)$/.test(input[key]) || !Number.isSafeInteger(Number(input[key])))
+        throw new WorkspaceError('WORKSPACE_CATALOG_PAGE_INVALID', 'Use a whole-number page offset and limit.', 400);
+      input[key] = Number(input[key]);
+      if (key === 'limit' && (input[key] < 1 || input[key] > 200))
+        throw new WorkspaceError('WORKSPACE_CATALOG_PAGE_INVALID', 'Page limits must be between 1 and 200.', 400);
+    }
+  }
+  return input;
+}
+function catalogMetadata(req) {
+  const raw = req.headers['x-catalog-metadata'];
+  if (typeof raw !== 'string' || Buffer.byteLength(raw) > 12288 || !raw.length)
+    throw new WorkspaceError('WORKSPACE_CATALOG_METADATA_REQUIRED', 'Supply the catalog file metadata header, up to 12 KiB.', 400);
+  let value;
+  try { value = JSON.parse(raw); } catch {}
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new WorkspaceError('WORKSPACE_CATALOG_METADATA_INVALID', 'Catalog upload metadata must be a JSON object.', 400);
+  if (!Number.isSafeInteger(value.bytes) || value.bytes < 1)
+    throw new WorkspaceError('WORKSPACE_CATALOG_LENGTH_INVALID', 'Supply the exact nonzero file size.', 400);
+  const declared = req.headers['content-length'];
+  if (declared !== undefined && (typeof declared !== 'string' || !/^[0-9]+$/.test(declared) || Number(declared) !== value.bytes))
+    throw new WorkspaceError('WORKSPACE_CATALOG_LENGTH_INVALID', 'The upload length differs from its selected file.', 400);
+  return value;
 }
 async function body(req) {
   if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? '')) throw new WorkspaceError('WORKSPACE_JSON_REQUIRED');
@@ -64,6 +116,53 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
       if (req.method === 'GET') {
         if (path === '/api/session') return send(res, 200, { token, workspaceId: workspace.store.id });
         if (path === '/api/state') return send(res, 200, workspace.state());
+        if (path === '/api/catalog/state') {
+          catalogQuery(url, []);
+          return send(res, 200, await workspace.catalog.state());
+        }
+        if (path.startsWith('/api/catalog/supplier/')) {
+          const action = path.slice('/api/catalog/supplier/'.length), supplier = workspace.catalog.supplier;
+          const fields = { profile: [], state: ['catalogId'], plan: ['planId'], history: ['planId'],
+            product: ['planId','materialKey'], review: ['reviewId'], row: ['reviewId','materialKey'],
+            rows: ['reviewId','offset','limit','status','search'], export: ['reviewId','format','expectedReviewSha256'] }[action];
+          if (!fields) throw new WorkspaceError('WORKSPACE_SUPPLIER_ROUTE_INVALID', 'Supplier route not found.', 404);
+          const input = catalogQuery(url, fields);
+          if (action === 'export') return catalogDownload(res, supplier.export(input));
+          const result = action === 'profile' ? supplier.templates() : action === 'state' ? supplier.state(input)
+            : action === 'plan' ? supplier.plan(input.planId) : action === 'history' ? { revisions: supplier.planHistory(input.planId) }
+            : action === 'product' ? supplier.currentProduct(input) : action === 'review' ? supplier.review(input.reviewId)
+            : action === 'row' ? supplier.reviewRow(input) : supplier.rows(input);
+          return send(res, 200, result);
+        }
+        if (path.startsWith('/api/catalog/')) {
+          const parts = path.slice('/api/catalog/'.length).split('/');
+          if (parts.length === 2 && ['catalogs', 'sources', 'editions'].includes(parts[0])) {
+            catalogQuery(url, []);
+            let id;
+            try { id = decodeURIComponent(parts[1]); } catch {
+              throw new WorkspaceError('WORKSPACE_CATALOG_IDENTIFIER_INVALID', 'Use a valid catalog record identifier.', 400);
+            }
+            const method = { catalogs: 'catalog', sources: 'source', editions: 'edition' }[parts[0]];
+            return send(res, 200, await workspace.catalog[method](id));
+          }
+          if (path === '/api/catalog/materials')
+            return send(res, 200, await workspace.catalog.materials(catalogQuery(url, ['editionId', 'offset', 'limit', 'search'])));
+          if (path === '/api/catalog/changes')
+            return send(res, 200, await workspace.catalog.changes(catalogQuery(url, ['editionId', 'offset', 'limit'])));
+          if (path === '/api/catalog/suggest')
+            return send(res, 200, await workspace.catalog.suggest(catalogQuery(url, ['catalogId', 'text', 'customerId', 'offset', 'limit', 'category', 'manufacturer', 'unit'])));
+          if (path === '/api/catalog/facets')
+            return send(res, 200, await workspace.catalog.facets(catalogQuery(url, ['catalogId', 'editionId'])));
+          if (path === '/api/catalog/quantity')
+            return send(res, 200, await workspace.catalog.quantity(catalogQuery(url, ['catalogId', 'materialKey', 'expectedMaterialSha256', 'quantity', 'unit'])));
+          if (path === '/api/catalog/decisions')
+            return send(res, 200, await workspace.catalog.decisions(catalogQuery(url, ['catalogId', 'offset', 'limit'])));
+          if (path === '/api/catalog/export') {
+            const { catalogId, format, ...options } = catalogQuery(url, ['catalogId', 'format', 'editionId', 'index']);
+            return catalogDownload(res, await workspace.catalog.export(catalogId, format, options));
+          }
+          throw new WorkspaceError('WORKSPACE_CATALOG_ROUTE_INVALID', 'Catalog route not found.', 404);
+        }
         if (path.startsWith('/api/deployment/')) {
           const action = path.slice('/api/deployment/'.length);
           const allowed = { status: [], compare: ['from', 'to'], clients: ['after', 'limit'],
@@ -126,14 +225,37 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
           return send(res, 200, comparison);
         }
       }
-      if (req.method === 'POST' && ['/api/drafts', '/api/validate', '/api/inspect', '/api/capture', '/api/prepare',
+      if (req.method === 'POST' && ['/api/catalog/upload', '/api/catalog/import'].includes(path) && !url.search) {
+        const supplied = req.headers['x-workspace-token'];
+        if (req.headers.origin !== origin || typeof supplied !== 'string' || Buffer.byteLength(supplied) !== Buffer.byteLength(token) ||
+          !timingSafeEqual(Buffer.from(supplied), Buffer.from(token)))
+          return send(res, 403, { error: 'WORKSPACE_TOKEN_REQUIRED' });
+        if (!/^application\/octet-stream(?:;|$)/i.test(req.headers['content-type'] ?? ''))
+          throw new WorkspaceError('WORKSPACE_CATALOG_BYTES_REQUIRED', 'Send the selected file as application/octet-stream.', 400);
+        const metadata = catalogMetadata(req);
+        operationId = metadata.requestId;
+        const result = path === '/api/catalog/import' ? await workspace.catalog.importBundle(metadata, req)
+          : await workspace.catalog.upload(metadata, req);
+        return send(res, result.state === 'RUNNING' ? 202 : 200, result);
+      }
+      if (req.method === 'POST' && ['/api/catalog', '/api/catalog/suggest', '/api/drafts', '/api/validate', '/api/inspect', '/api/capture', '/api/prepare',
         '/api/relevance-save', '/api/relevance-run', '/api/relevance-promote', '/api/relevance/validate', '/api/relevance/normalize', '/api/deployment'].includes(path) && !url.search) {
         const supplied = req.headers['x-workspace-token'];
         if (req.headers.origin !== origin || typeof supplied !== 'string' || Buffer.byteLength(supplied) !== Buffer.byteLength(token) ||
           !timingSafeEqual(Buffer.from(supplied), Buffer.from(token)))
           return send(res, 403, { error: 'WORKSPACE_TOKEN_REQUIRED' });
         const input = await body(req);
-        if (!['/api/validate', '/api/relevance/validate', '/api/relevance/normalize'].includes(path)) operationId = input.requestId;
+        if (!['/api/validate', '/api/relevance/validate', '/api/relevance/normalize', '/api/catalog/suggest'].includes(path)) operationId = input.requestId;
+        if (path === '/api/catalog/suggest') return send(res, 200, await workspace.catalog.suggest(input));
+        if (path === '/api/catalog') {
+          const { action, ...values } = input;
+          const actions = { save: 'save', preview: 'preview', select: 'select', decision: 'saveDecision', 'create-draft': 'createDraft',
+            'supplier-save': 'supplierSave', 'supplier-correction': 'supplierCorrection', 'supplier-review': 'supplierReview' };
+          const method = Object.hasOwn(actions, action) ? actions[action] : null;
+          if (!method) throw new WorkspaceError('WORKSPACE_CATALOG_ACTION_INVALID', 'Choose a declared catalog action.', 400);
+          const result = await workspace.catalog[method](values);
+          return send(res, result.state === 'RUNNING' ? 202 : 200, result);
+        }
         if (path === '/api/drafts') return send(res, 200, workspace.save(input));
         if (path === '/api/validate') return send(res, 200, workspace.validate(input.draftId, input.expectedRevision));
         if (path === '/api/relevance/normalize') return send(res, 200, workspace.relevance.normalize(input.set));
@@ -147,7 +269,7 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
       return send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
     }).catch(error => {
       if (res.writableEnded || res.destroyed) return;
-      const known = error instanceof WorkspaceError || /^OPENSEARCH_|^MERCHANT_|^QUERY_|^SELLER_/.test(error?.code ?? '');
+      const known = error instanceof WorkspaceError || /^OPENSEARCH_|^MERCHANT_|^QUERY_|^SELLER_|^SUPPLIER_/.test(error?.code ?? '');
       let requestRecorded;
       if (operationId !== undefined) {
         try { workspace.operation(operationId); requestRecorded = true; }

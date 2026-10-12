@@ -1,0 +1,16 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "oai",
+  "description": "Original OAI-PMH repository metadata workflow and native dataset publisher",
+  "commands": {
+    "oai": "stellar/scf-starforge-20261009/sf30-seller-sdk/oai-pmh/cli.mjs",
+    "oai-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/oai-pmh/publisher/cli.mjs"
+  },
+  "commandDescriptions": {
+    "oai": "Capture, review, query and reopen original repository metadata editions.",
+    "oai-publisher": "Publish a reviewed repository source through the original dataset, merchant and customer workflow."
+  },
+  "applicationProviders": {
+    "oai": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/oai.mjs"
+  }
+}

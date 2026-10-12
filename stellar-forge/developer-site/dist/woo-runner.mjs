@@ -3,19 +3,22 @@
 // remains in the selected original toolkit. The Site includes these same bytes
 // as merchant.mjs in a downloaded setup packet; this file is not a browser module.
 import {constants} from 'node:fs';
-import {readFile, mkdir, copyFile, lstat, writeFile, mkdtemp, rename, rm} from 'node:fs/promises';
+import {readFile, mkdir, copyFile, lstat, writeFile, mkdtemp, rename, rm, realpath} from 'node:fs/promises';
 import {basename, dirname, isAbsolute, join, resolve} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {spawn} from 'node:child_process';
 import {isDeepStrictEqual} from 'node:util';
 
 const SCHEMA = 'stellar-forge.frontdoor-woo-packet.v1';
+const BASKET_PACKET_SCHEMA = 'stellar-forge.frontdoor-woo-packet.v2';
 const SOURCE = 'stellar/scf-starforge-20261009';
 const WOO = 'sf104-woocommerce-merchant-bridge';
 const PLUGIN = ['starforge-sf98-woo.php','checkout-gateway.php','checkout-admission.php',
   'merchant-console.php','merchant-console.js','merchant-console.css','OPERATIONS.md',
   'merchant-operator.php','NATIVE_REVIEW.md', 'merchant-refunds.php','merchant-refunds.js',
-  'merchant-refunds.css','refund-networks.json','REFUNDS.md'];
+  'merchant-refunds.css','refund-networks.json','REFUNDS.md','checkout-basket.php','BASKET.md',
+  'merchant-erp.php','merchant-erp-mapping.php','merchant-erp-acumatica.php','merchant-erp-store.php',
+  'merchant-erp-console.php','merchant-erp.js','merchant-erp.css','ERP.md','erp-map.example.json'];
 const ENTRIES = {seller:WOO + '/seller.mjs', buyer:WOO + '/buyer.mjs',
   refund:WOO + '/refund-operator-cli.mjs',
   operator:'sf88-operator-buyer-cli/cli.mjs', queue:'sf88-operator-buyer-cli/queue-cli.mjs',
@@ -41,7 +44,8 @@ node merchant.mjs agent-stdio --toolkit /absolute/checkout-or-installed-package 
 
 plugin copies the original PHP, browser assets and operating guide for WordPress.
 prepare is offline and creates a NEW private directory plus the original plugin
-folder. inspect reuses it. preflight sends an unsigned {} to the shop and creates
+folder. Saved basket catalogs retain exact bytes and original unit terms. An
+explicit existing outbox stays at its original path across catalog upgrades. inspect reuses it. preflight sends an unsigned {} to the shop and creates
 no order. serve / deliver run original foreground services with the existing
 SF98_WEBHOOK_SECRET environment. buyer / operator / queue / refund forward only explicit
 arguments to their original CLI, including its normal approval and wallet flow.
@@ -115,7 +119,12 @@ async function originalSource(toolkit, agent = false) {
 }
 
 async function sourceCommand(base, entry, args) {
-  const child = spawn(process.execPath, [join(base,ENTRIES[entry] ?? AGENT_ENTRIES[entry]),...args], {stdio:'inherit',shell:false,env:process.env});
+  const selected = join(base,ENTRIES[entry] ?? AGENT_ENTRIES[entry]);
+  await regular(selected);
+  // Node resolves its main module through linked source directories. Launch
+  // that same original file so its CLI entry guard and dependency root agree.
+  const filename = await realpath(selected);
+  const child = spawn(process.execPath, [filename,...args], {stdio:'inherit',shell:false,env:process.env});
   const stop = signal => { if (!child.killed) child.kill(signal); };
   const interrupt = () => stop('SIGINT'), terminate = () => stop('SIGTERM');
   process.once('SIGINT',interrupt); process.once('SIGTERM',terminate);
@@ -132,26 +141,45 @@ async function sourceCommand(base, entry, args) {
 
 async function setup(base) {
   const input = await json(join(PACKET,'setup.json'));
-  need(input.schema === SCHEMA && typeof input.privateDirectory === 'string' &&
+  need([SCHEMA,BASKET_PACKET_SCHEMA].includes(input.schema) && typeof input.privateDirectory === 'string' &&
     isAbsolute(input.privateDirectory) && resolve(input.privateDirectory) === input.privateDirectory && input.privateDirectory !== '/',
     'setup.json requires a new absolute private directory.');
-  need(Array.isArray(input.routes) && input.routes.length >= 1 && input.routes.length <= 64 &&
+  const basketFiles = input.schema === BASKET_PACKET_SCHEMA ? input.baskets ?? [] : [];
+  need(Array.isArray(input.routes) && input.routes.length <= 64 &&
     input.routes.every(path => typeof path === 'string' && /^routes\/product-[1-9][0-9]{0,17}\.json$/.test(path)) &&
     new Set(input.routes).size === input.routes.length, 'setup.json contains invalid route file paths.');
-  const {compileMerchant,readJson} = await import(pathToFileURL(join(base,ENTRIES.seller)).href);
+  need(Array.isArray(basketFiles) && basketFiles.length <= 32 &&
+    basketFiles.every(path => typeof path === 'string' && /^catalogs\/[a-f0-9]{64}\.json$/.test(path)) &&
+    new Set(basketFiles).size === basketFiles.length && input.routes.length + basketFiles.length > 0,
+    'Import original product routes or exact retained basket catalogs.');
+  const selectedOutbox = input.schema === BASKET_PACKET_SCHEMA ? input.outboxDirectory : undefined;
+  need(selectedOutbox === undefined || typeof selectedOutbox === 'string' &&
+    isAbsolute(selectedOutbox) && resolve(selectedOutbox) === selectedOutbox && selectedOutbox !== '/' &&
+    !/[\0\r\n]/.test(selectedOutbox), 'Select the original absolute delivery outbox.');
+  if (selectedOutbox) {
+    need(input.privateDirectory !== selectedOutbox && !input.privateDirectory.startsWith(selectedOutbox + '/'),
+      'Keep the new configuration directory outside the original delivery outbox.');
+    need((await lstat(selectedOutbox)).isDirectory(), 'The selected original delivery outbox must already exist.');
+  }
+  const seller = await import(pathToFileURL(join(base,ENTRIES.seller)).href);
+  need(!basketFiles.length || seller.BASKET_MERCHANT_SCHEMA === 'stellar-forge.sf104.merchant.v2',
+    'This packet needs the maintained toolkit with native digital baskets.');
   const routeFiles = input.routes.map(path => join(PACKET,path));
-  const raw = {schema:'stellar-forge.sf104.merchant.v1', storeOrigin:input.storeOrigin,
-    admissionUrl:input.admissionUrl, outbox:join(input.privateDirectory,'outbox'),
-    routes:await Promise.all(routeFiles.map(path => readJson(path)))};
-  const compiled = compileMerchant(raw);
+  const catalogFiles = basketFiles.map(path => join(PACKET,path));
+  const raw = {schema:basketFiles.length ? seller.BASKET_MERCHANT_SCHEMA : 'stellar-forge.sf104.merchant.v1',
+    storeOrigin:input.storeOrigin,admissionUrl:input.admissionUrl,
+    outbox:selectedOutbox ?? join(input.privateDirectory,'outbox'),
+    routes:await Promise.all(routeFiles.map(path => seller.readJson(path))),
+    ...(basketFiles.length ? {baskets:await Promise.all(catalogFiles.map(path => seller.readJson(path)))} : {})};
+  need(Buffer.byteLength(JSON.stringify(raw,null,2) + '\n') <= 2097152, 'Keep the original merchant configuration within 2 MiB.');
+  const compiled = seller.compileMerchant(raw);
   const {publicUrl} = await import(pathToFileURL(join(base,ENTRIES.buyer)).href);
   const facilitator = publicUrl(input.facilitatorUrl);
   need(!facilitator.search && !facilitator.href.endsWith('?'), 'Configure the actual facilitator URL without a query string.');
   const settlementUrl = compiled.admissionUrl.replace(/checkout-admission$/, 'settlement');
   need(input.settlementUrl === settlementUrl, 'The settlement endpoint must match the same configured WordPress REST base.');
-  return {input,raw,compiled,routeFiles,settlementUrl,config:join(input.privateDirectory,'merchant.json')};
+  return {input,raw,compiled,routeFiles,catalogFiles,basketFiles,settlementUrl,config:join(input.privateDirectory,'merchant.json')};
 }
-
 
 const AGENT_INPUT_SCHEMA = 'stellar-forge.frontdoor-woo-agents.v1';
 const AGENT_SETUP_SCHEMA = 'stellar-forge.frontdoor-woo-agent-setup.v1';
@@ -233,7 +261,7 @@ async function agentInput(base, state, path, modules) {
   if (external) need(external !== directory && !external.startsWith(directory + '/'),
     'Select the existing operator outside the new agent directory.');
   if (!external) {
-    const saved = await json(state.config);
+    const saved = await json(state.config,2097152);
     need(isDeepStrictEqual(saved,state.raw), 'Prepare the matching original merchant configuration before creating its first operator.');
   }
   return {input,directory,siteUrl,external,rawOperator,operator};
@@ -241,7 +269,7 @@ async function agentInput(base, state, path, modules) {
 async function prepareAgent(base, state, path) {
   const modules = await agentModules(base), selected = await agentInput(base,state,path,modules);
   const {input,directory,siteUrl,external,rawOperator,operator} = selected;
-  const entryPath = join(modules.directory,'stdio.mjs');
+  const entryPath = await realpath(join(modules.directory,'stdio.mjs'));
   const configPath = join(directory,'host','merchant-mcp.json');
   const connection = {schema:modules.WOOCOMMERCE_CONNECTION_SCHEMA, stores:{
     [input.store]:{label:input.label, operator:external ?? './operator.json',
@@ -287,7 +315,8 @@ async function readAgent(base,directory) {
     saved.connection === join(directory,'woocommerce.json') && saved.client === join(directory,'client.json'),
     'Reopen the original agent directory with its matching setup record.');
   const modules = await agentModules(base);
-  need(saved.entryPath === join(modules.directory,'stdio.mjs') &&
+  const logicalEntry = join(modules.directory,'stdio.mjs'), originalEntry = await realpath(logicalEntry);
+  need((saved.entryPath === logicalEntry || saved.entryPath === originalEntry) &&
     saved.source === resolve(base,'../..'), 'Use the same toolkit path as this prepared agent. For an intentional source relocation, use the new toolkit’s original client-config.mjs with the saved host configuration.');
   const config = await modules.readMerchantConfig(saved.configuration);
   const store = config.woocommerce?.stores[saved.store];
@@ -368,6 +397,7 @@ export async function main(args = process.argv.slice(2)) {
       // Compile/copy the whole new directory before publishing it. The native
       // config already binds the FINAL outbox path; no service uses staging.
       await sourceCommand(base,'seller',['prepare',...state.routeFiles.flatMap(path => ['--route',path]),
+        ...state.catalogFiles.flatMap(path => ['--basket',path]),
         '--store-origin',state.compiled.storeOrigin,'--admission-url',state.compiled.admissionUrl,
         '--outbox',state.raw.outbox,'--out',join(staging,'merchant.json')]);
       const stagedPlugin = join(staging,'wordpress-plugin','starforge-sf98-woo');
@@ -375,13 +405,17 @@ export async function main(args = process.argv.slice(2)) {
       await mkdir(join(staging,'routes'),{mode:0o700});
       for (const [index,path] of state.input.routes.entries())
         await writeFile(join(staging,path),await readFile(state.routeFiles[index]),{flag:'wx',mode:0o600});
+      if (state.basketFiles.length) await mkdir(join(staging,'catalogs'),{mode:0o700});
+      for (const [index,path] of state.basketFiles.entries())
+        await writeFile(join(staging,path),await readFile(state.catalogFiles[index]),{flag:'wx',mode:0o600});
     });
     const plugin = join(state.input.privateDirectory,'wordpress-plugin','starforge-sf98-woo');
     console.log(JSON.stringify({status:'WOO_SETUP_PREPARED',privateDirectory:state.input.privateDirectory,
-      pluginDirectory:plugin,config:state.config,routes:state.raw.routes.length,networkRequests:0}));
+      pluginDirectory:plugin,config:state.config,routes:state.raw.routes.length,
+      basketCatalogs:state.catalogFiles.length,outbox:state.raw.outbox,networkRequests:0}));
     return;
   }
-  const saved = await json(state.config);
+  const saved = await json(state.config,2097152);
   need(isDeepStrictEqual(saved,state.raw), 'The prepared merchant config differs from this packet. Reopen its matching setup-input.json or operate that configuration with the original native CLI.');
   if (action === 'inspect') { await sourceCommand(base,'seller',['inspect','--config',state.config]); return; }
   if (action === 'preflight') {

@@ -14,3 +14,49 @@
 #view-deployment .record>div{min-width:0;overflow-wrap:anywhere}
 #view-deployment .record>a{flex-shrink:0}
 @media(max-width:620px){#view-deployment .record{flex-wrap:wrap}#view-deployment .record>a{flex-shrink:1}}
+
+/* Material catalogs use the original neutral operator surface. */
+#view-catalog{min-width:0}
+#view-catalog label{min-width:0}
+#view-catalog input,#view-catalog select,#view-catalog textarea{max-width:100%}
+#view-catalog .help{display:block;font-weight:400}
+.cat-selector{display:grid;grid-template-columns:minmax(220px,1fr) auto;align-items:end;gap:12px;max-width:850px}
+.cat-selector>label{margin:0}
+.cat-selector>button{min-height:37px}
+.cat-selector>.actions{margin:0}
+.cat-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:22px 0 18px;padding-bottom:9px;border-bottom:1px solid #b9b9b9}
+.cat-tabs>button{background:transparent;border-color:transparent}
+.cat-tabs>button[aria-selected=true]{background:#fff;border-color:#999;font-weight:700}
+.cat-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}
+.cat-field-grid label{min-width:0}
+.cat-banner{padding:12px 15px;border:1px solid #aaa;background:#eee;margin:16px 0}
+.cat-banner p{margin:0;overflow-wrap:anywhere}
+.cat-banner .actions{margin-bottom:0}
+.cat-source-info{padding:0 12px;border-left:3px solid #aaa;overflow-wrap:anywhere}
+.cat-source-info:empty{display:none}
+.cat-source-info p{margin:6px 0}
+.cat-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+.cat-counts>div{padding:12px;border:1px solid #c4c4c4;background:#fff}
+.cat-counts strong{display:block;font-size:22px;font-variant-numeric:tabular-nums;line-height:1.3}
+.cat-counts span{display:block;color:#626262;font-size:12px;margin-top:4px}
+.cat-table-controls{display:grid;grid-template-columns:minmax(180px,1fr) minmax(200px,1.6fr) auto;gap:12px;align-items:end;margin-top:20px}
+.cat-table-controls label{margin:0}
+.cat-table-controls>button{min-height:37px}
+#view-catalog input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;vertical-align:middle}
+#view-catalog .cat-check{font-weight:400;margin:13px 0}
+#view-catalog .actions>label{margin:0;min-width:180px}
+#view-catalog .actions{overflow-wrap:anywhere}
+#view-catalog .summary{overflow-wrap:anywhere}
+#view-catalog .table-wrap td:last-child{white-space:nowrap;min-width:75px}
+#view-catalog .file-list{margin:14px 0}
+#view-catalog .file-list>div{padding:5px 0;border-bottom:1px solid #e3e3e3}
+#view-catalog .file-list>div:last-child{border-bottom:0}
+#cat-source-info .code{font-size:11px}
+.cat-quantity-fields{display:grid;grid-template-columns:minmax(140px,1fr) minmax(130px,1fr) auto;align-items:end;gap:12px}
+.cat-quantity-fields>label{margin:0}
+.cat-quantity-fields>button{min-height:37px}
+@media(max-width:1100px){.cat-table-controls,.cat-quantity-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.cat-table-controls>button,.cat-quantity-fields>button{justify-self:start}.cat-counts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.cat-selector,.cat-field-grid,.cat-table-controls,.cat-quantity-fields{grid-template-columns:minmax(0,1fr)}.cat-selector>button,.cat-table-controls>button,.cat-quantity-fields>button{justify-self:stretch}.cat-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.cat-tabs>button{padding:8px}.cat-counts{gap:8px}.cat-counts>div{padding:10px}.cat-counts strong{font-size:20px}}
+
+/* Supplier delivery retains the catalog's neutral industrial controls. */
+#cat-panel-supplier fieldset{border:1px solid #bdbdbd;padding:12px;margin:0}#cat-panel-supplier legend{font-weight:600;padding:0 6px}#sup-bindings table{min-width:640px}#sup-bindings td:first-child{width:32%}#sup-bindings td:nth-child(2){width:56%}.sup-finding{padding:12px 0;border-bottom:1px solid #d0d0d0}.sup-finding p{margin:5px 0}.sup-finding a{margin-left:12px}#sup-patches td{max-width:420px;overflow-wrap:anywhere}#sup-product{border-top:1px solid #bdbdbd;margin-top:20px;padding-top:12px}#sup-product pre{max-height:360px;overflow:auto}

@@ -1,0 +1,421 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Web API",
+    "description": "Macrobond Web Api used for loading series from server.",
+    "version": "v1"
+  },
+  "paths": {
+    "/loadseries": {
+      "get": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Finds and returns a list of values from the server by name.",
+        "parameters": [
+          {
+            "name": "n",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  },
+                  "example": "[\n  {          \n    \"data\": {\n        \"values\": [\n            4, 3, 4, 5, 4, 3,                            \n            4, 5, 4, 3, 4, 5\n        ],\n        \"dates\": [\n            \"2017-01-01T00:00:00\",\n            \"2017-01-02T00:00:00\",\n            \"2017-01-03T00:00:00\",\n            \"2017-01-04T00:00:00\",\n            \"2017-01-06T00:00:00\",\n            \"2017-01-07T00:00:00\",\n            \"2017-01-08T00:00:00\",\n            \"2017-01-09T00:00:00\",\n            \"2017-01-11T00:00:00\",\n            \"2017-01-12T00:00:00\",\n            \"2017-01-13T00:00:00\",\n            \"2017-01-14T00:00:00\"\n        ],\n        \"metaData\": {\n            \"Description\": \"DateTime skip test\",\n            \"Region\": \"mb\",\n            \"Source\": \"me\",\n            \"StartDate\": \"2017-01-01T00:00:00\",\n            \"EntityType\": \"TimeSeries\",\n            \"PrimName\": \"dt\"\n        }\n    },\n    \"error\": null\n  }\n]"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found, no series could be found with given n parameter."
+          }
+        }
+      }
+    },
+    "/searchseries": {
+      "get": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Gets a list of meta data of series from given search query",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  },
+                  "example": "[\n  {\n    \"Description\": \"United States\",\n    \"Region\": \"se\",\n    \"Source\": \"src_plgus\",\n    \"StartDate\": \"1978-01-01T00:00:00\",\n    \"Frequency\": \"monthly\",\n    \"EntityType\": \"TimeSeries\",\n    \"PrimName\": \"setour0141\"\n  }\n]",
+                  "description": "A list of dictionaries with items of type string, that holds the metadata of the series."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loadtree": {
+      "get": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Returns a tree or subtree from the database by name.\r\nIf query is null this will return the entire tree.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  },
+                  "example": "[\n  {\n    \"Description\": \"Sweden\",\n    \"Children\": [\n      {\n          \"Description\": \"Trade\",\n          \"ChildrenReference\": \"SwedenTrade\"\n      },\n      {\n          \"Description\": \"Tourism\",\n          \"SeriesReference\": \"SwedenTourism\"\n      }\n    ]\n  }\n]"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listseries": {
+      "get": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Lists all series in the current branch.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Name of the branch to list from.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getcapabilities": {
+      "get": {
+        "tags": [
+          "Series"
+        ],
+        "summary": "Get the capabilities of this server.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "appliction/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerCapabilities"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/createseries": {
+      "post": {
+        "tags": [
+          "Series"
+        ],
+        "parameters": [
+          {
+            "name": "series",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Series"
+            }
+          },
+          {
+            "name": "lastmodified",
+            "in": "query",
+            "description": "Will be null when creating a new series and not null when overwriting an existing series.",
+            "schema": {
+              "type": "object",
+              "example": "2019-12-04T00:00:00"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success, should return new lastmodified time for the series.",
+            "content": {
+              "application/json": {
+                "example": "2019-12-04T00:00:00"
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found, if lastmodified has a value but the series could not be found."
+          },
+          "409": {
+            "description": "Conflict, if the lastmodified parameter does not match the LastModifiedTimeStamp attribute of the series metadata."
+          }
+        }
+      }
+    },
+    "/removeseries": {
+      "post": {
+        "tags": [
+          "Series"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "pltour0001"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success. the series was removed"
+          },
+          "404": {
+            "description": "Not Found, series with given name parameter could not be found."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DownloadResult": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Series"
+          },
+          "error": {
+            "type": "string",
+            "example": "Series could not be found!",
+            "nullable": true
+          }
+        },
+        "description": "A wrapper for the series class that allows server to send an error back to client. Both values shouldn't be present at the same time, if data has a value then error should be null and vice versa."
+      },
+      "Series": {
+        "required": [
+          "metaData",
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "An array of nullable values.",
+            "example": "767161, 782911, 866119, 929586"
+          },
+          "metaData": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": {
+              "Description": "Total",
+              "StartDate": "2003-01-01T00:00:00",
+              "Frequency": "monthly",
+              "LastModifiedTimeStamp": "2019-12-04T00:00:00"
+            },
+            "description": "A dictionary of type string, object that holds the metadata of the series."
+          },
+          "dates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "2017-01-01T00:00:00",
+            "nullable": true,
+            "description": "An array of dates that corresponds to each value in values, if the series has a constant frequency this can be null."
+          }
+        }
+      },
+      "Aspect": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of this aspect.",
+            "example": "Men & Women",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "A description that is shown as a ToolTip when hovering over this aspect.",
+            "example": "Aspect for Men & Women",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SeriesRow": {
+        "required": [
+          "entityMeta"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Test",
+            "description": "The name of this Series Row can be null."
+          },
+          "indentation": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0,
+            "nullable": true,
+            "description": "The amount of indentation this Series Row should have."
+          },
+          "emphasized": {
+            "type": "boolean",
+            "example": true,
+            "nullable": true,
+            "description": "Should this series be shown in bold?"
+          },
+          "spaceAbove": {
+            "type": "boolean",
+            "example": false,
+            "nullable": true,
+            "description": "If true, adds extra space above this series."
+          },
+          "entityMeta": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": {
+              "Description": "Total",
+              "StartDate": "2003-01-01T00:00:00",
+              "Frequency": "monthly",
+              "LastModifiedTimeStamp": "2019-12-04T00:00:00"
+            },
+            "description": "A dictionary of type string, object that holds the metadata of the series."
+          }
+        },
+        "description": "A class that holds display options for a row of series as well as the series themselves."
+      },
+      "Group": {
+        "required": [
+          "series"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of this group of series, can be null if there is only one Group in the current SeriesList."
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesRow"
+            },
+            "description": "A list of series rows."
+          }
+        },
+        "additionalProperties": false,
+        "description": "A Group of series rows, used for sorting in client."
+      },
+      "SeriesList": {
+        "required": [
+          "groups"
+        ],
+        "type": "object",
+        "properties": {
+          "aspects": {
+            "type": "array",
+            "description": "A list of all the aspects in this series list or null if there is only one.",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/Aspect"
+            }
+          },
+          "groups": {
+            "type": "array",
+            "description": "A list of all the groups in this series list",
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ServerCapabilities": {
+        "properties": {
+          "browse": {
+            "type": "boolean",
+            "example": true,
+            "description": "Does the server allow browsing?"
+          },
+          "search": {
+            "type": "boolean",
+            "example": false,
+            "description": "Does the server allow searching?"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Tells the client if the server allows browsing or searching."
+      }
+    }
+  }
+}

@@ -19,12 +19,32 @@ function selectedPlan(){if(!$('plans').value)throw Error('Choose a saved journal
 function planPath(){return '/api/xero/plans/'+encodeURIComponent(selectedPlan());}
 function capturePath(){if(!$('capture').value)throw Error('Choose a retained comparison.');return planPath()+'/captures/'+encodeURIComponent($('capture').value);}
 function clearReturn(){returnPreview=null;$('return').hidden=true;}
-function connectionAvailable(){return Boolean(state?.connection?.available);}
+function managedConnection(){const value=state?.connection?.authorization;return value?.kind==='oauth-connection'?value:null;}
+function connectionAvailable(tenantId){const managed=managedConnection();return Boolean(state?.connection?.available)&&(!tenantId||!managed||managed.tenantId===tenantId);}
+function renderConnection(){
+  const selected=managedConnection(),form=$('context-form');
+  $('connection').textContent=selected?
+    (selected.organizationName??selected.tenantName??'Selected Xero organization')+' · '+(selected.baseCurrency??'')+' · '+(selected.isDemoCompany?'Demo organization':'Merchant books')+' · '+selected.state:
+    connectionAvailable()?'Xero connection configured in the server process.':'Native source import is available. Configure the Xero connection in the server process for API reads and draft creation.';
+  $('managed-connection').hidden=!selected;
+  if(selected){
+    form.elements.tenantId.value=selected.tenantId;
+    if(!form.elements.name.value.trim())form.elements.name.value=(selected.organizationName??selected.tenantName??'Xero organization').slice(0,160);
+    $('managed-connection-content').replaceChildren(table(['Selected field','Value'],[
+      ['Connection',selected.alias],['Organization',selected.organizationName??selected.tenantName],
+      ['Tenant ID',selected.tenantId],['Connection ID',selected.connectionId],['Authorization state',selected.state],
+      ['Selection SHA256',selected.selectionSha256],['Native tenant read',selected.lastTenantReadAt??''],
+    ]));
+    if(selected.lastError)$('managed-connection-content').append(node('p','Connection: '+selected.lastError));
+  }
+  form.elements.tenantId.readOnly=Boolean(selected);
+  document.querySelector('#context-form button[value="capture"]').disabled=!connectionAvailable();
+}
 async function refresh(){
   const oldHandoff=$('handoff').value,oldContext=$('context').value,oldPlan=$('plans').value;
   state=await api('/api/xero');
   $('workspace-revision').textContent='Workspace revision '+state.revision;
-  $('connection').textContent=connectionAvailable()?'Xero connection configured in the server process.':'Native source import is available. Configure the Xero connection in the server process for API reads and draft creation.';
+  renderConnection();
   options($('handoff'),state.handoffs,row=>row.name+' · '+row.id.slice(0,8),oldHandoff);
   options($('context'),state.contexts,row=>row.name+' · '+(row.baseCurrency??row.organization?.baseCurrency??'')+' · '+row.id.slice(0,8),oldContext);
   options($('plans'),state.plans,row=>row.name+' · '+(row.cancelledAt?'CANCELLED':row.createdAt??row.id.slice(0,8)),oldPlan);
@@ -35,19 +55,23 @@ function labelled(text,input){const label=node('label',text);label.append(input)
 function input(name,{value='',required=false,type='text',placeholder='',maxLength}={}){const element=node('input',null,{name,type});element.value=value;element.required=required;element.placeholder=placeholder;if(maxLength)element.maxLength=maxLength;return element;}
 function accountSelect(name,accounts){const el=node('select',null,{name});el.required=true;el.append(node('option','Choose an account',{value:''}));for(const account of accounts)el.append(node('option',account.code+' · '+account.name,{value:account.code}));return el;}
 function renderSource(){
-  $('components').replaceChildren();$('source-summary').textContent=source.components.length+' original payment or verified refund components. Choose an accounting treatment for each.';
+  $('components').replaceChildren();$('source-summary').textContent=source.components.length+' retained source components. Choose an accounting treatment for each.';
   $('plan-form').elements.purpose.value=source.context.organization.isDemoCompany?'demo':'books';
   $('plan-form').elements.name.value=source.handoff.name+' · Xero';
   const accounts=source.context.accounts.filter(account=>account.eligible);
   for(const [index,component]of source.components.entries()){
     const article=node('article',null,{class:'xero-component','data-component':component.id});
-    article.append(node('h4',(index+1)+'. '+component.kind+' · '+component.eventId),node('p','Original '+component.amountAtomic+' atomic units · '+component.network,{class:'source'}),jsonDetails('Original component',component));
+    article.append(node('h4',(index+1)+'. '+component.kind+' · '+(component.sourceLineId??component.eventId)),node('p','Original '+component.amountAtomic+' atomic units · '+component.network,{class:'source'}),jsonDetails('Original component',component));
     const decision=node('select',null,{name:'decision'});decision.append(node('option','Choose treatment',{value:''}),node('option','Include in journals',{value:'include'}),node('option','Exclude with a reason',{value:'exclude'}));decision.required=true;article.append(labelled('Accounting treatment',decision));
+    if(component.kind.startsWith('BUYER_')&&BigInt(component.amountAtomic)===0n){
+      decision.querySelector('option[value="include"]').disabled=true;
+      article.append(node('p','This original allocation is zero. Select exclusion and record its reason; a separate fee must retain its own source.',{class:'source'}));
+    }
     const included=node('div',null,{'data-included':'1',hidden:''}),excluded=node('div',null,{'data-excluded':'1',hidden:''});
     const first=node('div',null,{class:'xero-grid'}),second=node('div',null,{class:'xero-grid'});
     first.append(labelled('Value in '+source.context.organization.baseCurrency,input('amount',{placeholder:'0.00',required:true})),labelled('Journal date',input('date',{type:'date',value:component.sourceAt?.slice(0,10)??'',required:true})));
     second.append(labelled('Debit account',accountSelect('debitAccountCode',accounts)),labelled('Credit account',accountSelect('creditAccountCode',accounts)));
-    included.append(first,second,labelled('Valuation source for this component',input('valuationNote',{required:true,maxLength:2000})),labelled('Description',input('description',{value:component.kind+' '+component.eventId,maxLength:2000})));
+    included.append(first,second,labelled('Valuation source for this component',input('valuationNote',{required:true,maxLength:2000})),labelled('Description',input('description',{value:component.kind+' '+(component.sourceLineId??component.eventId),maxLength:2000})));
     excluded.append(labelled('Exclusion reason',input('reason',{required:true,maxLength:2000})));
     function treatment(){included.hidden=decision.value!=='include';excluded.hidden=decision.value!=='exclude';for(const control of included.querySelectorAll('input,select'))control.disabled=included.hidden;for(const control of excluded.querySelectorAll('input'))control.disabled=excluded.hidden;invalidatePreview();}
     decision.addEventListener('change',treatment);article.append(included,excluded);$('components').append(article);treatment();
@@ -63,7 +87,7 @@ $('refresh').addEventListener('click',()=>action(refresh));
 $('context-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
   const form=event.currentTarget,request={id:crypto.randomUUID(),revision:state.revision,actor:operator(),name:form.elements.name.value.trim(),tenantId:form.elements.tenantId.value.trim()};
   if(event.submitter.value==='import'){request.organizationBase64=await encoded(form.elements.organizationFile.files[0]);request.accountsBase64=await encoded(form.elements.accountsFile.files[0]);}
-  const result=await api('/api/xero/contexts/'+event.submitter.value,request);await refresh();const id=result.context?.id??result.record?.id??request.id;$('context').value=id;notice('Retained the original Xero organization and account responses.');form.reset();
+  const result=await api('/api/xero/contexts/'+event.submitter.value,request);await refresh();const id=result.context?.id??result.record?.id??request.id;$('context').value=id;notice('Retained the original Xero organization and account responses.');form.reset();renderConnection();
 });});
 $('source-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{source=await api('/api/xero/source?'+new URLSearchParams({handoffId:$('handoff').value,contextId:$('context').value}));renderSource();notice('Original source loaded. Enter an explicit accounting treatment for each component.');});});
 $('plan-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
@@ -83,8 +107,9 @@ async function loadPlan(){
   for(const intent of retained.returnIntents.filter(intent=>intent.status==='PREPARED')){const resume=node('button','Complete retained accountant return '+intent.id.slice(0,8),{type:'button'});resume.addEventListener('click',()=>action(async()=>{await api(planPath()+'/captures/'+encodeURIComponent(intent.captureId)+'/returns',{id:intent.id,previewSha256:intent.previewSha256});await refresh();await loadPlan();notice('Completed the retained original accountant return.');}));$('plan-detail').append(resume);}
   if(retained.cancelledAt)$('plan-detail').append(node('p','Cancelled: '+retained.cancellationReason,{class:'xero-callout'}));
   $('reload-plan').hidden=false;$('native').hidden=Boolean(retained.cancelledAt);$('response-form').hidden=Boolean(retained.cancelledAt);
-  $('create-drafts').disabled=!connectionAvailable()||!retained.journals.some(journal=>(!journal.attempted||journal.status==='REJECTED')&&!journal.journalId);
-  $('refresh-native').disabled=!connectionAvailable();
+  $('create-drafts').disabled=!connectionAvailable(plan.context.tenantId)||!retained.journals.some(journal=>(!journal.attempted||journal.status==='REJECTED')&&!journal.journalId);
+  $('refresh-native').disabled=!connectionAvailable(plan.context.tenantId);
+  if(managedConnection()&&plan.context.tenantId!==managedConnection().tenantId)$('plan-detail').append(node('p','This retained plan belongs to another Xero tenant. Open its reviewed connection to continue native delivery.',{class:'xero-callout'}));
   $('cancel-form').hidden=Boolean(retained.cancelledAt)||retained.journals.some(journal=>journal.attempted||journal.journalId)||retained.captures.some(capture=>capture.nativeJournalCount>0);
   const oldCapture=$('capture').value;options($('capture'),retained.captures,row=>row.createdAt+' · '+row.id.slice(0,8),oldCapture);
   $('captures').hidden=retained.captures.length===0;

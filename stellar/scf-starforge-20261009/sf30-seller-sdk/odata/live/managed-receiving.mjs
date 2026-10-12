@@ -8,7 +8,7 @@ import { setTimeout as pause } from 'node:timers/promises';
 import { inspectMerchantRuntime } from '../../../sf46-release/runtime-package.mjs';
 import { readPackage, readBytes } from './client.mjs';
 import { validatePage } from './contract.mjs';
-import { odataWorkspaceIdentity, odataLiveIdentity } from './startup.mjs';
+import { odataWorkspaceIdentity, odataLiveIdentity, odataPrivateJson } from './startup.mjs';
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const json = value => JSON.stringify(value, null, 2) + '\n';
@@ -65,7 +65,8 @@ export async function runManagedReceiving(input) {
     'Select the complete original saved live response sequence.');
   const workspaceIdentity = await odataWorkspaceIdentity(workspaceDirectory);
   const liveIdentity = await odataLiveIdentity(workspaceDirectory, input.liveServiceId);
-  const prepared = await readPackage(liveIdentity.packageDirectory);
+  const profile = await odataPrivateJson(join(liveIdentity.packageDirectory, '..', 'profile.json'));
+  const prepared = await readPackage(liveIdentity.packageDirectory, { allowLoopback: profile.value.settings?.allowLoopback === true });
   need(prepared.sourceBinding === liveIdentity.sourceBinding, 'The original selected live source changed.');
   const operation = prepared.selection.operation, pages = [];
   let seenRows = 0, fingerprint = null;

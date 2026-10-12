@@ -69,6 +69,67 @@ def register(subparsers, common):
     target.add_argument("--file", required=True)
     target.add_argument("--name", required=True)
     mutation(target)
+    target = command("support-preview", "Review an original merchant support handoff for this delivery case", case=True, output=True)
+    target.add_argument("--file", required=True, help="Original SF74 portable support handoff")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("support-receive", "Attach reviewed support source and native report to a deployment", case=True, output=True)
+    mutation(target, version=True)
+    target.add_argument("--file", required=True, help="Same original support file used for preview")
+    target.add_argument("--expected-preview-sha256", required=True)
+    deployment = target.add_mutually_exclusive_group(required=True)
+    deployment.add_argument("--deployment", help="Original deployment ID from this operations case")
+    deployment.add_argument("--deployment-file", help="JSON fields for a new original deployment")
+    target = command("completion-calendar", "Read payment-derived completion clocks and original award dates", case=True, output=True)
+    target.add_argument("--as-of", help="Explicit YYYY-MM-DD calendar date; defaults to current UTC date")
+    target = command("completion-seed", "Open the original tranche assignments without saving", case=True, output=True)
+    target.add_argument("--tranche", type=int, choices=(1, 2, 3), required=True)
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("completion-preview", "Preview completed deliverables against their actual previous payment", case=True, output=True)
+    target.add_argument("--data", required=True, help="JSON with receiptId, asOfDate and summary")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("completion-save", "Save the complete original tranche assignment input", case=True, output=True)
+    target.add_argument("--inputs", required=True, help="Original completion-seed inputs JSON, edited by the operator")
+    mutation(target, version=True)
+    for verb in ("prepare", "extension", "submit", "decision"):
+        target = command("completion-" + verb, "Retain the original completion " + verb + " through its case journal", case=True, output=True)
+        target.add_argument("--data", required=True, help="Native completion action data JSON")
+        mutation(target, version=True)
+    target = command("completion-export", "Download the frozen form preparation and its exact selected sources", case=True)
+    target.add_argument("--review", required=True)
+    target.add_argument("--output", required=True)
+    target = command("forecast-preview", "Calculate a dated forecast from current original records", case=True, output=True)
+    target.add_argument("--inputs", required=True, help="Forecast input JSON file")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("forecast-save", "Save exactly the reviewed forecast and its original source snapshot", case=True, output=True)
+    mutation(target, version=True)
+    target.add_argument("--inputs", required=True, help="Same forecast input JSON used for preview")
+    target.add_argument("--expected-preview-sha256", required=True)
+    command("forecasts", "List immutable saved forecasts", case=True, output=True)
+    target = command("forecast-show", "Reopen the complete original saved forecast", case=True, output=True)
+    target.add_argument("--forecast", required=True)
+    target = command("forecast-export", "Download the complete saved forecast and dated cash/work CSVs", case=True)
+    target.add_argument("--forecast", required=True)
+    target.add_argument("--output", required=True)
+    target = command("portfolio-seed", "Prepare allocation inputs from one original saved forecast", case=True, output=True)
+    target.add_argument("--forecast", required=True)
+    target.add_argument("--expected-version", type=int, required=True)
+    for verb in ("portfolio-preview", "portfolio-save"):
+        target = command(verb, "Calculate or retain source-bound delivery alternatives", case=True, output=True)
+        target.add_argument("--inputs", required=True)
+        if verb == "portfolio-save":
+            mutation(target, version=True)
+            target.add_argument("--expected-preview-sha256", required=True)
+        else:
+            target.add_argument("--expected-version", type=int, required=True)
+    command("portfolios", "List retained delivery allocations", case=True, output=True)
+    for verb in ("portfolio-show", "portfolio-export", "portfolio-selection"):
+        target = command(verb, "Reopen, export or select an original saved allocation", case=True, output=verb != "portfolio-export")
+        target.add_argument("--portfolio", required=True)
+        if verb == "portfolio-export":
+            target.add_argument("--output", required=True)
+        if verb == "portfolio-selection":
+            target.add_argument("--alternative", required=True)
+            target.add_argument("--expected-version", type=int, required=True)
     target = command("intake", "Import a supplied original pre-award source packet without inferring receipts")
     selection(target); mutation(target)
     target.add_argument("--file", required=True)
@@ -116,6 +177,81 @@ def operate(workspace, args):
         result = ops.read(args.case) if action == "show" else ops.report(args.case)
     elif action == "history":
         result = ops.history(args.case, args.after, args.limit)
+    elif action == "forecasts":
+        result = {"forecasts": ops.list_forecasts(args.case)}
+    elif action == "forecast-show":
+        result = ops.forecast(args.case, args.forecast)
+    elif action == "forecast-export":
+        return {"forecastId": args.forecast, "output": publish(args.output, ops.export_forecast(args.case, args.forecast))}
+    elif action in ("support-preview", "support-receive"):
+        original = {"filename": Path(args.file).name,
+                    "contentBase64": base64.b64encode(read_bytes(args.file, MAX_SOURCE)).decode("ascii")}
+        if action == "support-preview":
+            result = ops.preview_support(args.case, {"expectedVersion": args.expected_version, **original})
+        else:
+            data = {**original, "expectedPreviewSha256": args.expected_preview_sha256,
+                    "deploymentId": args.deployment}
+            if args.deployment_file:
+                try:
+                    data["deployment"] = json.loads(read_bytes(args.deployment_file, MAX_SOURCE))
+                except (UnicodeError, ValueError) as exc:
+                    raise Problem("New deployment fields must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "support.receive", "data": data})
+    elif action == "completion-calendar":
+        result = ops.completion_calendar(args.case, args.as_of)
+    elif action == "completion-seed":
+        result = ops.seed_completion(args.case, {"expectedVersion": args.expected_version, "tranche": args.tranche})
+    elif action == "completion-export":
+        return {"reviewId": args.review, "output": publish(args.output, ops.export_completion(args.case, args.review))}
+    elif action.startswith("completion-"):
+        filename = args.inputs if action == "completion-save" else args.data
+        try:
+            data = json.loads(read_bytes(filename, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Completion input must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "completion-preview":
+            if not isinstance(data, dict) or "expectedVersion" in data:
+                raise Problem("Use only the native completion preview fields in the data file.", 422, "INVALID_COMPLETION")
+            result = ops.preview_completion(args.case, {"expectedVersion": args.expected_version, **data})
+        else:
+            if action == "completion-save":
+                data = {"inputs": data}
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": action.replace("-", ".", 1), "data": data})
+    elif action in ("forecast-preview", "forecast-save"):
+        try:
+            inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Forecast input must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "forecast-preview":
+            result = ops.preview_forecast(args.case, {"expectedVersion": args.expected_version, "inputs": inputs})
+        else:
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "forecast.save",
+                "data": {"inputs": inputs, "expectedPreviewSha256": args.expected_preview_sha256}})
+    elif action == "portfolio-seed":
+        result = ops.seed_portfolio(args.case, {"expectedVersion": args.expected_version, "forecastId": args.forecast})
+    elif action == "portfolios":
+        result = {"portfolios": ops.list_portfolios(args.case)}
+    elif action == "portfolio-show":
+        result = ops.portfolio(args.case, args.portfolio)
+    elif action == "portfolio-export":
+        return {"portfolioId": args.portfolio, "output": publish(args.output, ops.export_portfolio(args.case, args.portfolio))}
+    elif action == "portfolio-selection":
+        result = ops.select_portfolio(args.case, {"expectedVersion": args.expected_version,
+            "portfolioId": args.portfolio, "alternativeId": args.alternative})
+    elif action in ("portfolio-preview", "portfolio-save"):
+        try:
+            inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Portfolio input must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "portfolio-preview":
+            result = ops.preview_portfolio(args.case, {"expectedVersion": args.expected_version, "inputs": inputs})
+        else:
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "portfolio.save",
+                "data": {"inputs": inputs, "expectedPreviewSha256": args.expected_preview_sha256}})
     elif action == "review":
         result = ops.review(args.case, args.review)
     elif action in ("create", "intake"):

@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grant-reviewer",
+  "description": "Complete original grant purchase reviewer, native Buyer results and controlled receiving handover.",
+  "applicationProviders": {
+    "grant-reviewer": "stellar/scf_2026/presentation/reviewer/application-provider.mjs"
+  },
+  "exports": {
+    "./grant/reviewer-workbench": {
+      "types": "./source/stellar/scf_2026/presentation/reviewer/workbench.d.mts",
+      "import": "./source/stellar/scf_2026/presentation/reviewer/workbench.mjs"
+    }
+  }
+}

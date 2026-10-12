@@ -30,7 +30,7 @@ const WORDS = {
     resolvedCounterpressAttempts: 'Resolved attempts', interruptedAttempts: 'Interrupted attempts',
     successRatePct: 'Regain rate', meanRecoverySeconds: 'Mean recovery', expiredAttempts: 'Expired attempts',
     unattemptedWindows: 'Without a qualifying press', unsettledLossWindows: 'Unsettled loss windows',
-    unknown: '—', notes: 'Coach notes', saveNotes: 'Save notes', reloadNotes: 'Reload saved notes', saved: 'Saved in the match archive.',
+    unknown: '—', savedInsights: 'Saved match insights', originalMoment: 'Open original moment', notes: 'Coach notes', saveNotes: 'Save notes', reloadNotes: 'Reload saved notes', saved: 'Saved in the match archive.',
     shared: 'This shared match is read-only. Import its exported package to create an editable copy.',
     reviewConflict: 'The saved review changed. Your draft is retained; reload saved notes or download your draft before replacing it.',
     draft: 'Download note draft', draftKept: 'Draft retained in this browser.', moments: 'Press moments', anyOutcome: 'Every press outcome',
@@ -66,7 +66,7 @@ const WORDS = {
     resolvedCounterpressAttempts: 'Intentos resueltos', interruptedAttempts: 'Intentos interrumpidos',
     successRatePct: 'Tasa de recuperación', meanRecoverySeconds: 'Tiempo medio', expiredAttempts: 'Ventanas agotadas',
     unattemptedWindows: 'Sin presión válida', unsettledLossWindows: 'Ventanas sin resolver', unknown: '—',
-    notes: 'Notas del entrenador', saveNotes: 'Guardar notas', reloadNotes: 'Cargar notas guardadas', saved: 'Guardado en el archivo del partido.',
+    savedInsights: 'Análisis guardados del partido', originalMoment: 'Abrir momento original', notes: 'Notas del entrenador', saveNotes: 'Guardar notas', reloadNotes: 'Cargar notas guardadas', saved: 'Guardado en el archivo del partido.',
     shared: 'Este partido compartido es de solo lectura. Importa su paquete para crear una copia editable.',
     reviewConflict: 'El análisis guardado cambió. Tu borrador se conserva; carga las notas guardadas o descarga el borrador antes de sustituirlo.',
     draft: 'Descargar borrador', draftKept: 'Borrador conservado en este navegador.', moments: 'Momentos de presión', anyOutcome: 'Todos los resultados',
@@ -325,6 +325,20 @@ function matchPanel(match) {
   source.append(identity);
   const replayLink = node('a', words().player, 'button'); replayLink.href = replay(match.id, match.count); source.append(replayLink);
   grid.append(source); panel.append(grid);
+  if (match.insights?.length) {
+    const retained = node('section', undefined, 'notes');
+    retained.append(node('h3', words().savedInsights));
+    for (const record of match.insights) {
+      const item = node('details');
+      item.append(node('summary', time(record.source.frameSecond) + ' · ' + record.response.caption),
+        node('p', record.response.text),
+        node('p', record.response.provider + ' · ' + record.response.model, 'muted'));
+      const link = node('a', words().originalMoment, 'button');
+      link.href = replay(match.id, record.source.count);
+      item.append(link); retained.append(item);
+    }
+    panel.append(retained);
+  }
   const controls = node('div', undefined, 'moment-filter'); controls.append(node('strong', words().moments));
   const select = node('select'); select.setAttribute('aria-label', words().moments + ' · ' + match.title);
   for (const value of ['all', 'success', 'expired', 'interrupted']) {

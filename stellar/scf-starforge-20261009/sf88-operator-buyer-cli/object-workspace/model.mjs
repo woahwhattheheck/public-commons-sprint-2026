@@ -11,6 +11,7 @@ import { createObjectSession, inspectObjectSession, runObjectSession,
 import { renderObjectReport } from '../object-report.mjs';
 import { openObjectReceiving } from './intake.mjs';
 import { createObjectWorkspaceRecovery } from './recovery.mjs';
+import { objectResearchConnection } from './research.mjs';
 import { analysisLauncher } from '../dataset-workspace/analysis.mjs';
 import { atomicJson } from '../../sf30-seller-sdk/postgres/publisher/files.mjs';
 import { acquireRunbookMetadataLease } from '../../buyer-runbook/runbook.mjs';
@@ -116,7 +117,8 @@ const accountingIssue = entry => entry.viewStatus === 'SAVE_FAILED' ||
   !FINALIZED.has(entry.outcome) && !['NO_PAYMENT_REQUIRED', 'NOT_ATTEMPTED'].includes(entry.outcome);
 
 /** The profile contains trusted local references. Browser actions select IDs only. */
-export async function openObjectWorkspace({ stateDirectory, profilePath = null, operatorSettings, analysisPython = 'python3' } = {}) {
+export async function openObjectWorkspace({ stateDirectory, profilePath = null, operatorSettings, analysisPython = 'python3',
+  researchConnectionFile = null, researchDirectory = null } = {}) {
   const root = absolute(stateDirectory);
   await privateDirectory(root, true);
   const sessionsRoot = join(root, 'sessions'), outputsRoot = join(root, 'downloads'), inputsRoot = join(root, 'preparations');
@@ -124,6 +126,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
   const receiving = await openObjectReceiving({ directory: join(root, 'received'), operatorSettings });
   const analysis = analysisLauncher({ python: analysisPython, directory: join(root, 'analysis'),
     checkout: resolve(fileURLToPath(new URL('../../../../', import.meta.url))) });
+  const research = objectResearchConnection({stateDirectory:root,connectionFile:researchConnectionFile,directory:researchDirectory});
   let profiles = [], profileSha256 = null;
   if (profilePath !== null) {
     const rawProfile = await read(profilePath, 262144), profile = json(rawProfile);
@@ -379,6 +382,16 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
       active: active?.kind?.startsWith('ANALYSIS_') ? runView(active) : null,
       available: !active && !mutation };
   }
+  async function openResearch({session,expectedRevision}={}) {
+    assertIdle();mutation={kind:'OPEN_RESEARCH',session};
+    try {
+      const report=await checked(session,expectedRevision),assembly=assemblyRecord(session,report);
+      need(report.status==='COMPLETE'&&assembly,'OBJECT_WORKSPACE_ASSEMBLY_REQUIRED',409);
+      return await research.open({session,sessionId:report.sessionId,configurationSha256:report.configurationSha256,
+        snapshot:report.expectedSnapshot,bytes:assembly.bytes,sha256:assembly.sha256});
+    } finally {mutation=null;}
+  }
+
   async function reviewAnalysis({ session, expectedRevision, name, format } = {}) {
     assertIdle();
     need(/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name ?? '') && ['json', 'csv'].includes(format),
@@ -465,7 +478,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     need(['all', 'QUEUED', 'VERIFIED', 'RECONCILIATION_REQUIRED'].includes(filter), 'OBJECT_WORKSPACE_FILTER_INVALID');
     need(typeof query === 'string' && query.length <= 160, 'OBJECT_WORKSPACE_QUERY_INVALID');
     const state = { sessions: [...index.values()].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || a.id.localeCompare(b.id)),
-      selected: null, section, active: runView(active), mutation, analysis: analysisState(), updatedAt: now() };
+      selected: null, section, active: runView(active), mutation, analysis: analysisState(), research:research.state(), updatedAt: now() };
     if (!session) return state;
     if (section === 'accounting') {
       // This path never inspects or hashes a delivered object. The native
@@ -773,12 +786,12 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     if (closePromise) return closePromise;
     closed = true;
     closePromise = (async () => {
-      const analysisClosed = analysis.close();
+      const analysisClosed = analysis.close(), researchClosed = research.close();
       while (active || mutation) {
         if (active) { active.stopping = true; active.controller.abort(); await active.promise; }
         else await new Promise(resolve => setTimeout(resolve, 20));
       }
-      await analysisClosed; reviews.clear(); analysisReviews.clear();
+      await Promise.all([analysisClosed,researchClosed]); reviews.clear(); analysisReviews.clear();
     })();
     return closePromise;
   }
@@ -786,14 +799,21 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
   return { products, reviewSelection, create, view, refresh, run, stop, recover, assemble,
     finalize, openAccountingExport, exportReport, openDownload, close,
     inspectRecovery, snapshotRecovery, startRecovery, recoveryState,
-    reviewAnalysis, startAnalysis, analysisState, waitForAnalysis: () => analysis.wait(),
+    openResearch, researchState:research.state, reviewAnalysis, startAnalysis, analysisState, waitForAnalysis: () => analysis.wait(),
     inspectAnalysis: options => { assertIdle(); return analysis.inspect(options); },
     waitForAnalysisAction: async id => {
       if (active?.id === id && active.kind.startsWith('ANALYSIS_')) await active.promise;
       return lastAnalysis?.id === id ? lastAnalysis : null;
     },
+    operatorState: () => { assertOpen(); return receiving.operatorState(); },
+    operatorRevision: id => { assertOpen(); return receiving.operatorRevision(id); },
+    operatorAttachment: id => { assertOpen(); return receiving.operatorAttachment(id); },
+    reviewOperatorSettings: value => receivingMutation('REVIEW_OPERATOR_SETTINGS', () => receiving.reviewOperatorSettings(value)),
+    saveOperatorSettings: value => receivingMutation('SAVE_OPERATOR_SETTINGS', () => receiving.saveOperatorSettings(value)),
     receivingState: () => { assertOpen(); return receiving.state(); },
     receivingOptions: (id, objectId) => { assertOpen(); return receiving.options(id, objectId); },
+    receivedReview: id => { assertOpen(); return receiving.reviewed(id); },
     receive: value => receivingMutation('RECEIVE_OBJECT', () => receiving.receive(value)),
     reviewReceived: value => receivingMutation('REVIEW_RECEIVED_OBJECT', () => receiving.review(value)), createReceived };
 }
+

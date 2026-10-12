@@ -23,7 +23,7 @@ root.mkdir(parents=True, exist_ok=True, mode=0o700)
 info = root.stat()
 if root.is_symlink() or root.resolve() != root or not root.is_dir() or info.st_uid != os.getuid() or info.st_mode & 0o077:
     raise SystemExit("Select an owned private receiving directory")
-if not engine.is_file() or hashlib.sha256(engine.read_bytes()).hexdigest() != "52c2b42c1b222174679d07da89893ae268fbfe04f785f9dfdcda617ec727fb41":
+if not engine.is_file() or hashlib.sha256(engine.read_bytes()).hexdigest() != "0a11ddd116f0d093470f0f67e4707da3192d250f08d9a894c5ebf7596e144be8":
     raise SystemExit("Use the exact published engine.py for this producer")
 if not (source / "pyproject.toml").is_file():
     raise SystemExit("Select the original e287 Python project directory")

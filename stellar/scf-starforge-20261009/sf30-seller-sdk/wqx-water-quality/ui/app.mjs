@@ -1,3 +1,6 @@
+import { mountOpenWaters } from '/openwaters.mjs';
+import { mountReviewSheets } from '/review-sheet.mjs';
+
 const $ = id => document.getElementById(id);
 const make = (tag, text, attrs = {}) => {
   const element = document.createElement(tag);
@@ -134,6 +137,7 @@ async function refresh(reset = false) {
   state = await api('/api/workspace');
   if (reset) applyProjectForm(state.project);
   renderCaptures(); renderReviews(); renderEditions();
+  openWaters.update(state); reviewSheets.update(state);
   if (state.jobs?.some(x => x.status === 'RUNNING')) schedulePoll();
 }
 async function refreshStatus() {
@@ -422,6 +426,13 @@ function showCustomerDelivery(response) {
   jsonView('customer-result', response); renderCustomerControls();
 }
 
+
+const openWaters = mountOpenWaters({ api, notice, refresh });
+const reviewSheets = mountReviewSheets({ api, notice, refresh, openPlan: async record => {
+  const shown = structuredClone(record);
+  if (!shown.files?.length) { delete shown.planId; delete shown.files; }
+  openWaters.open(shown); tab('open-waters');
+} });
 
 document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => tab(button.dataset.tab)));
 $('project-form').addEventListener('input', () => { projectDirty = true; $('capture').disabled = true; $('revision').textContent = 'Unsaved selection changes. Save before acquiring source.'; });

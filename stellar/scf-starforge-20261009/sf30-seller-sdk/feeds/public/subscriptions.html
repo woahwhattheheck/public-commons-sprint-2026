@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Subscription collections · Stellar Forge</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/subscriptions.css"><script src="/subscriptions.js" defer></script></head>
+<body>
+<header><div><span class="eyebrow">STELLAR FORGE</span><h1>Subscription collections</h1><p class="muted">Original subscription lists, retained feed acquisitions and native dataset editions.</p></div><div class="actions"><a href="/">Feed workspace</a><button id="refresh">Refresh</button></div></header>
+<div id="notice" role="status" aria-live="polite">Opening subscription library…</div>
+<section id="activity" class="activity" hidden><strong id="activity-title"></strong><span id="activity-detail"></span><button id="cancel">Cancel acquisition</button></section>
+<section id="pending" class="activity" hidden><span id="pending-text"></span><button id="retry">Resume saved action</button><button id="forget">Clear browser action</button></section>
+<main class="collection-layout">
+<aside>
+<h2>Saved collections</h2><div id="collection-list"></div><button id="new">New collection</button>
+<h2>Original OPML</h2><form id="import-form"><label>Subscription document<input id="opml-file" type="file" accept=".opml,.xml,application/xml,text/xml,text/x-opml" required></label><button>Retain original document</button></form>
+<div id="sources"></div>
+<details><summary>Receive a complete collection</summary><form id="receive-form"><label>Collection project<input id="packet-file" type="file" accept=".zip,application/zip" required></label><button>Receive and reopen</button></form></details>
+</aside>
+<article>
+<section class="panel">
+<h2>Collection selection</h2><form id="collection-form">
+<div class="form-grid"><label>Collection ID<input id="collection-id" required maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,79}"></label><label>Title<input id="collection-title" required maxlength="160"></label><label>Saved revision<input id="collection-revision" value="0" readonly></label></div>
+<p class="muted">Select subscription entries and their feed IDs. Saving registers the displayed new feeds with their exact source URLs. Existing feed configurations are retained.</p>
+<div class="actions"><label class="grow">Find an entry<input id="entry-filter" type="search" placeholder="Folder, label or exact URL"></label><button type="button" id="select-visible">Enable visible</button><button type="button" id="clear-visible">Disable visible</button></div>
+<p id="selection-count" class="muted"></p><div id="member-list"></div>
+<div class="actions"><label class="grow">Add an existing registered feed<select id="manual-feed"></select></label><button type="button" id="add-manual">Add feed</button></div>
+<div class="actions"><button id="save">Save collection and new feeds</button><button type="button" id="save-action">Download selection JSON</button><button type="button" id="selected-opml">Download saved OPML</button></div>
+</form></section>
+<section id="saved-panel" class="panel" hidden>
+<h2 id="saved-title">Saved collection</h2><p id="saved-meta" class="mono"></p><div id="feed-status"></div>
+<form id="capture-form"><div class="actions"><label>Pages per feed<input id="pages" type="number" min="1" max="1000" value="100" required></label><label class="check"><input id="force" type="checkbox">Request full representations</label><button id="capture">Acquire selected feeds</button></div></form>
+<p class="muted">Each feed keeps its original capture, HTTP responses and conditional validators. A partial acquisition can resume with the same operation.</p>
+<h3>Retained acquisitions</h3><label>Acquisition<select id="run-select"></select></label><div class="actions"><button id="run-refresh" type="button">Refresh review</button><button id="run-resume" type="button">Resume incomplete acquisition</button></div><div id="run-review"></div>
+<form id="edition-form"><h3>Combined native edition</h3><label>Edition name<input id="edition-name" required maxlength="160"></label><fieldset><legend>Exposed fields</legend><div id="edition-fields" class="field-grid"></div></fieldset><p class="muted">Review and apply every selected capture. The edition uses those exact applied revisions in the original dataset engine.</p><button>Create collection edition</button></form>
+<h3>Saved customer editions</h3><div id="binding-list"></div>
+</section>
+</article>
+</main>
+</body></html>

@@ -125,10 +125,23 @@
           <div id="comparison-rows" class="table-wrap"></div>
           <div id="comparison-pagination" class="pagination"></div>
           <div id="comparison-files" class="downloads inset"></div>
+          <details class="details section-gap">
+            <summary>Customer briefing</summary>
+            <p class="muted small">Create an offline report from this reviewed comparison. Its archive includes the exact dated measures, every row change, both editions' source context, and the complete original comparison delivery.</p>
+            <form id="briefing-form" class="form-grid">
+              <label class="span-2">Complete comparison delivery<select id="briefing-source" required><option value="">Create a complete comparison delivery first</option></select></label>
+              <div class="form-actions span-2"><button id="briefing-source-create" type="button" class="secondary">Create comparison delivery</button></div>
+              <label class="span-2">Report title<input id="briefing-title" required maxlength="240"></label>
+              <label class="span-2">Audience<input id="briefing-audience" maxlength="400" placeholder="Who will read this report?"></label>
+              <label class="span-2">Analyst notes<textarea id="briefing-notes" rows="4" maxlength="64000" placeholder="Add the interpretation and context you want to share."></textarea></label>
+              <div class="form-actions span-2"><button id="briefing-create" type="submit">Create complete briefing</button></div>
+            </form>
+            <div id="briefing-results" class="inset"></div>
+          </details>
         </section>
         <section class="panel section-gap">
           <div class="panel-heading"><div><h3>Complete exports</h3><p class="muted small">Delivery archives include their original data, review context, and file manifest.</p></div></div>
-          <div id="exports-list"><p class="empty">Capture, edition, comparison, and merchant exports appear here.</p></div>
+          <div id="exports-list"><p class="empty">Capture, edition, comparison, briefing, and merchant exports appear here.</p></div>
         </section>
       </section>
       <section id="view-publish" class="view" hidden aria-labelledby="publish-heading">
@@ -164,9 +177,10 @@
           <div id="buyer-result" class="inset" hidden></div>
         </section>
       </section>
-      <footer class="workspace-footer"><span>Exact source values · Retained editions · Original seller and buyer</span><span id="workspace-revision"></span></footer>
+      <footer class="workspace-footer"><span>Exact source values · Retained editions · Original seller and buyer</span><span id="workspace-operator" hidden></span><span id="workspace-revision"></span></footer>
     </main>
   </div>
   <noscript><p class="notice">Enable JavaScript to operate this local workspace. Source captures and editions remain in the workspace directory.</p></noscript>
 </body>
 </html>
+

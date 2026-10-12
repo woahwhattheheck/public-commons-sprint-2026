@@ -146,8 +146,13 @@ export async function openApplication({ applicationId, runtimeDirectory, handoff
       need(same(await readJSON(identityPath), schema), 'APPLICATION_SELECTION_CHANGED');
     }
   }
+  const {lockPrivateDirectory} = await import(pathToFileURL(join(runtimeDirectory,'private-directory-lock.mjs')).href);
+  const release = await lockPrivateDirectory({directory:stateDirectory,filename:'.application-owner.lock',
+    namespace:'stellar-application',busyCode:'APPLICATION_STATE_ALREADY_OPEN',unavailableCode:'APPLICATION_STATE_LOCK_UNAVAILABLE'});
+  let closed=false,closing;
   const selections = original.requests, pending = new Map();
   async function current() {
+    need(!closed,'APPLICATION_CLOSED');
     const fresh = await inspectHandoff(handoffDirectory);
     need(fresh.manifestSha256 === original.manifestSha256, 'APPLICATION_HANDOFF_CHANGED');
     need(same(await readJSON(identityPath), schema), 'APPLICATION_STATE_IDENTITY_CHANGED');
@@ -214,6 +219,12 @@ export async function openApplication({ applicationId, runtimeDirectory, handoff
   const publicRequest = entry => structuredClone(entry.view);
   return {
     identity: structuredClone(schema),
+    selectedIntentIds: Object.freeze([...selections.keys()]),
+    async retainedReview(context,intentId) {
+      const entry=selected(intentId);await current();await permitted(context,'status',entry);
+      const {agent,binding}=await attached(entry,context);
+      return {request:publicRequest(entry),binding:publicBinding(binding),review:await agent.savedReview()};
+    },
     async requests(context) {
       await current(); await permitted(context, 'list', null);
       const out = [];
@@ -266,7 +277,11 @@ export async function openApplication({ applicationId, runtimeDirectory, handoff
       pending.set(intentId, operation);
       try { return await operation; } finally { pending.delete(intentId); }
     },
-    async close() { await Promise.allSettled([...pending.values()]); },
+    close() {
+      if(closing)return closing;closed=true;
+      closing=(async()=>{try{await Promise.allSettled([...pending.values()]);}finally{await release();}})();
+      return closing;
+    },
   };
 }
 
@@ -287,20 +302,58 @@ export const TOOLS = Object.freeze([
       intentId: { type: 'string' }, format: { type: 'string', enum: ['json','text','base64','file'] },
       limitBytes: { type: 'integer', minimum: 1, maximum: 1048576 } }, required: ['intentId'], additionalProperties: false } },
 ]);
+const REMOTE_TOOLS = Object.freeze([
+  ...['cancel','spending'].map(action => ({
+    name: 'stellar_request_' + action,
+    description: action === 'cancel' ?
+      'Cancel this selected remote MCP quote through the original broker and retain any spending reservation.' :
+      'Read this selected remote MCP quote’s original aggregate budget preview or durable reservation.',
+    annotations: { readOnlyHint: action === 'spending', destructiveHint: false, idempotentHint: true },
+    inputSchema: selectedSchema,
+  })),
+  { name: 'stellar_request_reconcile',
+    description: 'Reconcile this selected remote MCP quote’s original transaction and finalize its retained SF36 spending record.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { intentId: { type: 'string' },
+      transaction: { type: 'string', pattern: '^[0-9a-fA-F]{64}$' } },
+      required: ['intentId'], additionalProperties: false } },
+]);
 export function applicationTools(application, context, { signal } = {}) {
-  return { tools: TOOLS, async call(name, args = {}) {
+  const extras = REMOTE_TOOLS.filter(tool => application.supportsAction?.(tool.name.slice('stellar_request_'.length)));
+  const tools = TOOLS.filter(tool=>!(application.readOnly&&tool.name==='stellar_request_execute')).map(tool => {
+    if (!application.identity.remoteMcp || tool.name !== 'stellar_request_read') return tool;
+    const copy = structuredClone(tool); copy.inputSchema.properties.limitBytes.maximum = 2097152;
+    return copy;
+  }).concat(extras);
+  for(const action of application.projectCapabilities?.actions??[]){
+    const properties=action==='snapshot'?{operationId:{type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$'}}:
+      ['restore','reattach','open'].includes(action)?{expectedRecordSha256:{type:'string',pattern:'^[a-f0-9]{64}$'},
+        mode:{type:'string',enum:['restore','reattach']}}:action==='inspect'?{mode:{type:'string',enum:['restore','reattach']}}:{};
+    tools.push({name:'stellar_project_'+action.replaceAll('-','_'),
+      description:'Use the receiving host selected application project: '+action+'. Original financial owners retain their complete history.',
+      annotations:{readOnlyHint:['inspect','archives'].includes(action),destructiveHint:false,idempotentHint:action!=='snapshot'},
+      inputSchema:{type:'object',properties,additionalProperties:false,
+        ...(['restore','reattach','open'].includes(action)?{required:['expectedRecordSha256']}: {})}});
+  }
+  return { tools, async call(name, args = {}) {
     need(object(args), 'APPLICATION_TOOL_ARGUMENTS_INVALID');
+    if(name.startsWith('stellar_project_')){
+      const tool=tools.find(row=>row.name===name);need(tool,'TOOL_NOT_FOUND');
+      need(Object.keys(args).every(key=>Object.hasOwn(tool.inputSchema.properties,key)), 'APPLICATION_TOOL_ARGUMENTS_INVALID');
+      return application.project(context,name.slice('stellar_project_'.length).replaceAll('_','-'),{...args,signal});
+    }
     if (name === 'stellar_requests') {
       need(Object.keys(args).length === 0, 'APPLICATION_TOOL_ARGUMENTS_INVALID');
       return application.requests(context);
     }
     const action = name.startsWith('stellar_request_') ? name.slice('stellar_request_'.length) : '';
-    need(['review','execute','status','recover','read'].includes(action), 'TOOL_NOT_FOUND');
-    const allowed = action === 'read' ? ['intentId','format','limitBytes'] : ['intentId'];
+    need(tools.some(tool => tool.name === name), 'TOOL_NOT_FOUND');
+    const allowed = action === 'read' ? ['intentId','format','limitBytes'] :
+      action === 'reconcile' ? ['intentId','transaction'] : ['intentId'];
     need(Object.keys(args).every(x => allowed.includes(x)), 'APPLICATION_TOOL_ARGUMENTS_INVALID');
     return application.call(context, action, args.intentId,
       { signal, ...(args.format === undefined ? {} : { format: args.format }),
-        ...(args.limitBytes === undefined ? {} : { limitBytes: args.limitBytes }) });
+        ...(args.limitBytes === undefined ? {} : { limitBytes: args.limitBytes }),
+        ...(args.transaction === undefined ? {} : { transaction: args.transaction }) });
   } };
 }
-

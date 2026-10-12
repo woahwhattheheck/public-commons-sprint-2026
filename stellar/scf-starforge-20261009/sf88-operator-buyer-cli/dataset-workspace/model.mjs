@@ -14,7 +14,7 @@ import { analysisLauncher } from './analysis.mjs';
 
 const now = () => new Date().toISOString();
 const ACTION = /^[A-Za-z0-9][A-Za-z0-9_-]{7,99}$/;
-const FILES = new Set(['dataset.jsonl', 'dataset.csv', 'review.html', 'manifest.json']);
+const FILES = new Set(['dataset.jsonl', 'dataset.csv', 'review.html', 'manifest.json', 'semantics.json']);
 const savedRecord = (records, id) => Object.hasOwn(records, id) ? records[id] : null;
 const revision = report => identity({ sessionId: report.sessionId, configurationSha256: report.configurationSha256,
   status: report.status, completedPages: report.completedPages, snapshot: report.snapshot,
@@ -24,6 +24,7 @@ const summary = (entry, report) => ({ id: entry.id, label: entry.label, sessionI
   completedPages: report?.completedPages ?? null, acquiredRows: report?.acquiredRows ?? null,
   snapshot: report?.snapshot ?? null, delivery: entry.delivery ? {
     paymentStatus: entry.delivery.paymentStatus, rows: entry.delivery.nativeStatus?.rows,
+    ...(entry.delivery.semantics ? { semantics: entry.delivery.semantics } : {}),
     files: Object.fromEntries(Object.entries(entry.delivery.outputs).map(([key, value]) => [key, { bytes: value.bytes, sha256: value.sha256 }])) } : null });
 
 export async function openDatasetWorkspace({ stateDirectory, profilePath = null, operatorSettings = null, analysis = null } = {}) {
@@ -261,6 +262,11 @@ export async function openDatasetWorkspace({ stateDirectory, profilePath = null,
         jobs: Object.values(state.jobs).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(publicJob),
         active: active ? publicJob(active.job) : null, analysis: launcher.state(), persistenceError };
     },
+    operatorState: () => receiving.operatorState(),
+    operatorRevision: id => receiving.operatorRevision(id),
+    operatorAttachment: id => receiving.operatorAttachment(id),
+    reviewOperatorSettings: value => exclusive(() => receiving.reviewOperatorSettings(value)),
+    saveOperatorSettings: value => exclusive(() => receiving.saveOperatorSettings(value)),
     receive: value => exclusive(async () => { const result = await receiving.receive(value); state.sources[result.id] = result; await save(); return result; }),
     source: id => receiving.describe(id),
     review: value => exclusive(() => receiving.review(value)),

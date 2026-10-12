@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Pure tool schema: safe to import without the local analytical host or filesystem.
 import {nativeWorkbookOperations} from './native-analysis-workbooks-schema.mjs';
+import {nativeSourceOperations} from './native-analysis-sources-schema.mjs';
 import {nativeArchiveOperations} from './native-analysis-archives-schema.mjs';
 const name={type:'string',pattern:'^[A-Za-z][A-Za-z0-9_-]{0,63}$'};
 const id={type:'string',pattern:'^[a-f0-9]{32}$'};
@@ -33,12 +34,20 @@ export const nativeAnalysisOperations=Object.freeze({
   sources:spec([],{...page},'Page host-registered native dataset/API/stream sources without exposing local paths.'),
   'attach-dataset':spec(['acquisition_id','name','expected_revision'],{
     acquisition_id:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$'},name,expected_revision:integer},
-    'Attach a COMPLETE original native dataset acquisition already retained by this MCP workspace. The host supplies and verifies its original session and SF100 room. No acquisition or payment.'),
+    'Attach a COMPLETE original acquisition or host-received finalized dataset ID retained by this MCP workspace. Original SF100_SCAN and SF88_SESSION identities remain distinct. No acquisition or payment.'),
   'response-source':spec(['name','revision'],{name,revision,collection:text,sse_data:{enum:['text','json']}},
     'Inspect a host-registered original response revision and discover row collections/field hints. Samples are explicitly partial; response-preview scans all projected rows.'),
   versions:spec([],{before:revision},'Page immutable imported data editions.'),
   version:spec(['version_id'],{version_id:hash},'Read one exact retained data edition and its original source identity.'),
   manifest:spec(['version_id'],{version_id:hash},'Read the original hash-verified retained source manifest as structured JSON.'),
+  semantics:spec(['version_id'],{version_id:hash,...page,maxBytes:{type:'integer',minimum:1024,maximum:65536},
+    section:{enum:['columns','virtual-columns','issues','table','mapping']}},
+    'Read bounded pieces of the original retained semantic dictionary plus exact source-to-SQL mapping. Dictionary scope remains the full published dataset; selected fields stay explicit. No units or code meanings are inferred.'),
+  'semantic-compare':spec(['before_version_id','after_version_id'],{
+    before_version_id:hash,after_version_id:hash,...page,maxBytes:{type:'integer',minimum:1024,maximum:65536}},
+    'Read the original semantic comparison, separating definition, capture and SQL mapping changes from record changes. Page original changed definitions; exact dictionaries remain separately readable.'),
+  'semantics-file':spec(['version_id'],{version_id:hash,...range},
+    'Read exact retained original dictionary bytes in at most 64 KiB pieces. A small bounded cache verifies the whole original file once per live service/edition, survives no service restart, and performs no source query.'),
   import:spec(['id','source','source_revision'],{id,source:name,source_revision:revision,columns_text:parameters},
     'Start the original dataset import. columns_text is an optional JSON object of original field-to-SQL-column mappings. Keep the request ID for recovery.'),
   'response-preview':spec(['id','source','source_revision','mapping'],{id,source:name,source_revision:revision,mapping},
@@ -96,6 +105,7 @@ export const nativeAnalysisOperations=Object.freeze({
     'Read an original completed full-query export through the shared verified native descriptor/hash cache, at most 64 KiB per call. Native manifest and source query retain exact types and source bindings; no whole-file HTTP reread or new export.'),
   backup:spec(['id'],{id},'Create the original portable SQLite backup containing imported rows, recipes, histories, reports and publications. External native files/registrations remain host-side.'),
   file:spec(['id'],{id,...range},'Read a completed report-export/change-export/backup through the original verified descriptor, at most 64 KiB per call. Reuse sha256 across ranges.'),
+  ...nativeSourceOperations,
   ...nativeWorkbookOperations,
   ...nativeArchiveOperations,
 
@@ -115,3 +125,4 @@ export const nativeAnalysisSchema=Object.freeze({
       analysisRequest:{type:'object',additionalProperties:false,required,properties,description}}
   }))
 });
+

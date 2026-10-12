@@ -3,8 +3,9 @@
 (() => {
   const $=id=>document.getElementById(id);
   const state={token:'',identity:null,requests:[],selected:null,tab:'review',search:'',
-    reviews:new Map(),outcomes:new Map(),artifacts:new Map(),errors:new Map(),running:new Set(),
-    inflight:new Set(),connected:false,generation:0,noticeTimer:null};
+    reviews:new Map(),outcomes:new Map(),artifacts:new Map(),spending:new Map(),errors:new Map(),running:new Set(),
+    inflight:new Set(),connected:false,generation:0,noticeTimer:null,
+    project:null,projectBusy:false,projectMode:'restore',projectArchives:[],projectOperationId:null,projectResult:null};
   function node(tag,attributes={},...children) {
     const element=document.createElement(tag);
     for(const [key,value] of Object.entries(attributes)) {
@@ -46,7 +47,8 @@
     state.generation+=1;
     for(const controller of state.inflight)controller.abort();
     state.inflight.clear();state.token='';state.identity=null;state.requests=[];state.selected=null;
-    state.reviews.clear();state.outcomes.clear();state.artifacts.clear();state.errors.clear();state.running.clear();
+    state.reviews.clear();state.outcomes.clear();state.artifacts.clear();state.spending.clear();state.errors.clear();state.running.clear();
+    state.project=null;state.projectArchives=[];state.projectResult=null;state.projectBusy=false;
     state.connected=false;$('access-token').value='';$('application').hidden=true;$('access').hidden=false;
     $('connection').replaceChildren(node('span',{},'Disconnected'));
     if($('execute-dialog').open)$('execute-dialog').close();
@@ -69,6 +71,10 @@
     } finally {state.inflight.delete(controller);}
   }
   function selected(){return state.requests.find(request=>request.intentId===state.selected);}
+  const remote=request=>request.requestKind==='mcp';
+  const requestName=request=>remote(request)?request.label??request.toolName:request.method;
+  const amount=request=>request.acceptedTerms?.amount??request.acceptedTerms?.maxAtomic;
+  const responseLimit=request=>request.responseByteLimit??1048576;
   function requestState(request) {
     const outcome=state.outcomes.get(request.intentId);
     return outcome?.operation?.state??outcome?.state??request.state?.state??'AVAILABLE';
@@ -96,7 +102,7 @@
       const identity=await api('/api/application');
       state.identity=identity;await refreshRequests();
       state.connected=true;$('access-token').value='';$('access').hidden=true;$('application').hidden=false;
-      renderIdentity();renderIntegration();
+      renderIdentity();renderIntegration();await refreshProject();
       $('connection').replaceChildren(node('span',{},'Connected · '+identity.subject),
         button('Disconnect',()=>disconnect()));
       notice('Original application handoff opened.');
@@ -116,7 +122,7 @@
   }
   function renderRequests() {
     const search=state.search.trim().toLowerCase();
-    const requests=state.requests.filter(request=>[request.intentId,request.method,request.url,requestState(request)]
+    const requests=state.requests.filter(request=>[request.intentId,request.method,request.toolName,request.label,request.url,requestState(request)]
       .join(' ').toLowerCase().includes(search));
     $('request-count').textContent=requests.length+' of '+state.requests.length+' selected requests';
     $('request-list').replaceChildren(...requests.map(request=>button('',()=>{
@@ -124,14 +130,14 @@
     },{class:'request-choice','aria-current':String(request.intentId===state.selected),
       'aria-label':'Open '+request.intentId})));
     [...$('request-list').children].forEach((element,index)=>{
-      const request=requests[index];element.append(node('strong',{},request.method),
+      const request=requests[index];element.append(node('strong',{},requestName(request)),
         node('span',{class:'request-id'},request.intentId),
         node('span',{class:'request-state'},requestState(request)));
     });
     if(!requests.length)$('request-list').append(node('p',{class:'muted'},'No selected request matches this search.'));
   }
   function bodyPanel(request) {
-    return section('Exact request body',
+    return section(remote(request)?'Exact MCP tool arguments':'Exact request body',
       kv([['Body bytes',request.bodyBytes],['Body SHA-256',request.bodySha256,true]]),
       node('pre',{},request.bodyText),
       node('div',{class:'actions'},button('Copy request body',async()=>{
@@ -142,7 +148,7 @@
     const terms=request.acceptedTerms??{};
     return section('Accepted payment terms',kv([
       ['Scheme',terms.scheme],['Payment network',terms.network??request.paymentNetwork],
-      ['Asset',terms.asset,true],['Pay to',terms.payTo,true],['Maximum atomic amount',terms.maxAtomic],
+      ['Asset',terms.asset,true],['Pay to',terms.payTo,true],['Maximum atomic amount',terms.amount??terms.maxAtomic],
       ['Maximum timeout',terms.maxTimeoutSeconds===undefined?'—':terms.maxTimeoutSeconds+' seconds']]),
       rawDetails('All retained terms',terms));
   }
@@ -150,34 +156,68 @@
     const review=state.reviews.get(request.intentId),busy=state.running.has(request.intentId);
     return node('div',{class:'tab-content',role:'tabpanel','aria-label':'Request review'},
       section('Selected request',kv([
-        ['Intent',request.intentId,true],['RPC method',request.method],['HTTP request','POST '+request.url],
-        ['Data network',request.dataNetwork],['Payment network',request.paymentNetwork],
-        ['Release',request.releaseId,true],['Release digest',request.releaseDigest,true],
+        ['Intent',request.intentId,true],
+        ...(remote(request)?[['Protocol','Remote MCP'],['Tool',request.toolName],['Transport',request.transport],
+          ['Endpoint',request.url],['Payment resource',request.paymentResourceUrl,true],
+          ['Tool schema SHA-256',request.inputSchemaSha256,true]]:
+          [['RPC method',request.method],['HTTP request','POST '+request.url],['Data network',request.dataNetwork],
+            ['Release',request.releaseId,true],['Release digest',request.releaseDigest,true]]),
+        ['Payment network',request.paymentNetwork],
         ['Source config SHA-256',request.configSha256,true]])),
       termsPanel(request),bodyPanel(request),
-      section('Original buyer review',
+      section(remote(request)?'Original MCP quote and spending review':'Original buyer review',
         review?node('div',{class:'review-note'},node('strong',{},'Original review complete'),
           kv([['Reviewed at',review.review?.reviewedAt],['Native mode',review.review?.native?.mode],
             ['Body binding',review.binding?.bodySha256,true],['Operation config binding',review.binding?.configSha256,true]])):
           node('p',{class:'empty'},'Open the original review to inspect the saved native binding and current receiving configuration.'),
         review?rawDetails('Complete original review',review):null,
+        review?.review?.spending?rawDetails('Original aggregate spending preview',review.review.spending):null,
         node('div',{class:'actions'},
           button(review?'Refresh original review':'Run original review',()=>perform('review'),{disabled:busy}),
-          button('Execute or recover',()=>executionDialog(request),{class:'primary',disabled:busy||!review})),
-        node('p',{class:'muted'},'Execution enters this original intent and the receiving operator’s current approval and signer configuration.')));
+          state.identity.readOnly?null:button('Execute or recover',()=>executionDialog(request),{class:'primary',disabled:busy||!review})),
+        node('p',{class:'muted'},state.identity.readOnly?
+          'This view reads the captured original review. Open the original live host from the project panel to resume paid work.':
+          'Execution enters this original intent and the receiving operator’s current approval and signer configuration.')));
   }
   function operationPanel(request) {
     const outcome=state.outcomes.get(request.intentId),operation=outcome?.operation??request.state??{},
-      result=outcome?.result,busy=state.running.has(request.intentId);
+      result=outcome?.result,busy=state.running.has(request.intentId),
+      spending=state.spending.get(request.intentId)??outcome?.spending??result?.reconciliation?.spending;
+    const transaction=node('input',{type:'text',maxlength:64,autocomplete:'off',spellcheck:false,
+      'aria-label':'Original transaction hash',placeholder:'Original 64-character transaction hash',
+      value:result?.paymentResponse?.transaction??'',disabled:Boolean(result?.paymentResponse?.transaction)});
     return node('div',{class:'tab-content',role:'tabpanel','aria-label':'Original operation'},
       section('Current original operation',kv([
         ['State',requestState(request)],['Phase',outcome?.phase],['Source',outcome?.source],
         ['Native status',operation.nativeStatus],['Delivery status',operation.deliveryStatus],
         ['Result recoverable',operation.resultRecoverable===undefined?'—':String(operation.resultRecoverable)],
         ['Native attempt',operation.attemptRecorded===undefined?'See the original state below':String(operation.attemptRecorded)]]),
-        node('div',{class:'actions'},button('Read current status',()=>perform('status'),{disabled:busy}),
-          button('Recover original operation',()=>perform('recover'),{disabled:busy})),
+        node('div',{class:'actions'},button('Read current status',()=>perform('status'),{disabled:busy&&!remote(request)}),
+          button('Recover original operation',()=>perform('recover'),{disabled:busy}),
+          remote(request)&&state.identity.actions.includes('cancel')?button('Cancel remote quote',()=>perform('cancel'),
+            {disabled:!operation.quoteId&&!state.reviews.has(request.intentId)}):null),
         node('p',{class:'muted'},'Status and recovery reopen the same native operation and its saved attempt.')),
+      remote(request)?section('Aggregate spending and payment',
+        kv([['Original quote',operation.quoteId??state.reviews.get(request.intentId)?.binding?.quoteId,true],
+          ['Signed dispatch',operation.signedRequestDispatched===undefined?'—':String(operation.signedRequestDispatched)],
+          ['Ledger outcome',spending?.outcome],['Original transaction',result?.paymentResponse?.transaction,true],
+          ['Transfer observation',result?.reconciliation?.outcome]]),
+        node('label',{},'Original transaction for reconciliation',transaction),
+        node('p',{class:'muted'},result?.paymentResponse?.transaction?
+          'The retained payment receipt selects this transaction.':
+          'If the retained receipt omitted its hash, enter the original transaction reference from the operator record.'),
+        node('div',{class:'actions'},button('Read aggregate spending',()=>perform('spending'),
+          {disabled:!operation.quoteId&&!state.reviews.has(request.intentId)}),
+          state.identity.actions.includes('reconcile')?button('Reconcile original payment',()=>{
+            const value=transaction.value.trim();
+            if(value&&!/^[0-9a-fA-F]{64}$/.test(value))throw Object.assign(
+              new Error('Enter the original 64-character transaction hash.'),{code:'APPLICATION_TRANSACTION_INVALID'});
+            return perform('reconcile',value?{transaction:value}:{});
+          },
+            {disabled:busy||operation.signedRequestDispatched!==true}):null),
+        spending?rawDetails('Complete original spending record',spending):null,
+        result?.reconciliation?rawDetails('Original transaction observation',result.reconciliation):null,
+        node('p',{class:'muted'},'The same native quote and original SF36 ledger remain attached after restart. Reconciliation records the original transaction and finalizes its reservation.')):null,
       result?section('Returned native outcome',kv([
         ['Recorded at',result.recordedAt],['Native status',result.status],['Successful',String(result.ok)],
         ['Exit code',result.exitCode],['Runtime error',result.runtimeError],
@@ -190,7 +230,7 @@
     const format=node('select',{'aria-label':'Result format',id:'result-format'},
       ['json','text','base64','file'].map(name=>node('option',{value:name},name==='file'?'Verified metadata':name.toUpperCase())));
     format.value=artifact?.format??'json';
-    const limit=node('input',{id:'result-limit',type:'number',min:1,max:1048576,step:1,value:1048576,'aria-label':'Result byte limit'});
+    const limit=node('input',{id:'result-limit',type:'number',min:1,max:responseLimit(request),step:1,value:responseLimit(request),'aria-label':'Result byte limit'});
     return node('div',{class:'tab-content',role:'tabpanel','aria-label':'Retained result'},
       section('Read the retained response',
         node('p',{},'Open the saved response through the original buyer’s verification and decoding methods.'),
@@ -202,7 +242,8 @@
           button('Download response',()=>downloadResult(request),{disabled:busy})),
         artifact?null:node('p',{class:'empty'},'A retained response will appear here after the original execution produces one.')),
       artifact?section('Verified response metadata',kv([
-        ['Native status',artifact.result?.nativeStatus],['HTTP status',artifact.result?.httpStatus],
+        ['Native status',artifact.result?.nativeStatus],
+        ...(remote(request)?[['Representation',artifact.result?.representation]]:[['HTTP status',artifact.result?.httpStatus]]),
         ['Recorded at',artifact.result?.recordedAt],['Delivery',artifact.result?.deliveryStatus],
         ['Bytes',artifact.result?.file?.bytes],['SHA-256',artifact.result?.file?.sha256,true],
         ['Content type',artifact.result?.file?.contentType],['Format',artifact.format],
@@ -224,7 +265,7 @@
     content.id='request-tab-content';content.setAttribute('aria-labelledby','tab-'+state.tab);
     const error=state.errors.get(request.intentId);
     detail.replaceChildren(...[node('div',{class:'detail-head'},node('div',{},
-      node('p',{class:'eyebrow'},'SELECTED ORIGINAL INTENT'),node('h2',{},request.method),
+      node('p',{class:'eyebrow'},'SELECTED ORIGINAL INTENT'),node('h2',{},requestName(request)),
       node('p',{class:'muted'},request.intentId)),node('span',{class:'status-badge'},
         state.running.has(request.intentId)?'OPERATION IN PROGRESS':requestState(request))),tabs,
       error?node('div',{class:'review-note'},node('strong',{},error.message),node('code',{class:'mono'},error.code)):null,
@@ -232,8 +273,9 @@
   }
   async function perform(action,options={}) {
     const intent=state.selected,generation=state.generation;
-    if(!intent||state.running.has(intent))return;
-    state.running.add(intent);state.errors.delete(intent);
+    const background=state.running.has(intent)&&['status','cancel','spending'].includes(action);
+    if(!intent||state.running.has(intent)&&!background)return;
+    if(!background)state.running.add(intent);state.errors.delete(intent);
     if(action==='read')state.tab='result';
     else if(action!=='review')state.tab='operation';
     renderDetail();
@@ -243,16 +285,21 @@
       if(action==='review')state.reviews.set(intent,result);
       else if(action==='read')state.artifacts.set(intent,result);
       else {state.outcomes.set(intent,result);updateRequest(result,intent);}
+      if(result.spending)state.spending.set(intent,result.spending);
+      if(result.review?.spending)state.spending.set(intent,result.review.spending);
+      if(result.result?.reconciliation?.spending)state.spending.set(intent,result.result.reconciliation.spending);
       await refreshRequests();
       const messages={review:'Original request review opened.',status:'Original operation status refreshed.',
-        recover:'Original operation recovered.',execute:'Original execution or recovery returned.',read:'Retained response verified and opened.'};
+        recover:'Original operation recovered.',execute:'Original execution or recovery returned.',read:'Retained response verified and opened.',
+        cancel:'Original quote cancellation recorded.',spending:'Original aggregate spending refreshed.',
+        reconcile:'Original payment observation and spending record refreshed.'};
       notice(messages[action]);
       return result;
     } catch(error) {
       if(generation===state.generation)state.errors.set(intent,{code:error.code??'APPLICATION_CLIENT_ERROR',message:error.message});
       throw error;
     } finally {
-      state.running.delete(intent);
+      if(!background)state.running.delete(intent);
       if(generation===state.generation){renderRequests();renderDetail();}
     }
   }
@@ -268,8 +315,9 @@
     dialog.replaceChildren(node('p',{class:'eyebrow'},'ORIGINAL BUYER EXECUTION'),
       node('h2',{id:'execute-title'},'Continue '+request.intentId+'?'),
       node('p',{},'The current host authority is checked again before the receiving operator runs or recovers this same saved intent.'),
-      section('Reviewed selection',kv([['Request','POST '+request.url],
-        ['Payment network',request.paymentNetwork],['Maximum atomic amount',request.acceptedTerms?.maxAtomic],
+      section('Reviewed selection',kv([['Request',remote(request)?request.toolName+' · '+request.url:'POST '+request.url],
+        ...(remote(request)?[['Transport',request.transport],['Payment resource',request.paymentResourceUrl,true]]:[]),
+        ['Payment network',request.paymentNetwork],['Maximum atomic amount',amount(request)],
         ['Body SHA-256',request.bodySha256,true],['Native review',review.review?.reviewedAt]])),
       node('label',{class:'confirmation'},accept,
         node('span',{},'Run this exact request through the receiving operator’s current approval and signer configuration.')),
@@ -287,6 +335,86 @@
       notice('Original retained response downloaded.'+(result.sha256?' SHA-256 '+result.sha256.slice(0,16)+'…':''));
     } finally {state.running.delete(request.intentId);renderDetail();}
   }
+  async function refreshProject() {
+    if(!state.identity?.project){$('project').hidden=true;return;}
+    state.project=await api('/api/project/inspect',state.identity.project.mode==='LIVE'?{}:{mode:state.projectMode});
+    if(state.identity.project.mode==='LIVE'){
+      const history=await api('/api/project/archives',{});state.projectArchives=history.archives??[];
+    }
+    renderProject();
+  }
+  async function projectAction(action) {
+    if(state.projectBusy)return;
+    state.projectBusy=true;renderProject();
+    try{
+      const payload=action==='snapshot'?{operationId:state.projectOperationId??=crypto.randomUUID()}:
+        ['restore','reattach','open'].includes(action)?
+          {expectedRecordSha256:state.project.recordSha256,mode:state.projectMode}:{};
+      state.projectResult=await api('/api/project/'+action,payload);
+      if(action==='snapshot')state.projectOperationId=null;
+      state.identity=await api('/api/application');
+      state.reviews.clear();state.outcomes.clear();state.spending.clear();
+      if(action==='open')state.projectMode='reattach';
+      await refreshRequests();await refreshProject();renderIdentity();renderIntegration();
+      notice(({snapshot:'Encrypted project created.',restore:'Original project paths restored.',
+        reattach:'Current original host and journal history verified.',open:'Original live application reopened.',
+        'close-live':'Returned to the captured request and result archive.'})[action]??'Project action completed.');
+    }finally{state.projectBusy=false;renderProject();}
+  }
+  function fileTable(title,rows) {
+    if(!rows?.length)return null;
+    return rawDetails(title,nodeTable(rows));
+  }
+  function nodeTable(rows) {
+    return rows.map(row=>({path:row.path,status:row.status,sha256:row.sha256??null}));
+  }
+  function renderProject() {
+    const area=$('project'),project=state.project,capability=state.identity?.project;
+    if(!project||!capability){area.hidden=true;return;}
+    area.hidden=false;
+    const live=capability.mode==='LIVE',restored=capability.mode==='RESTORED_LIVE',busy=state.projectBusy;
+    const owners=project.financialOwners??[];
+    const mode=node('select',{'aria-label':'Project receiving mode',disabled:busy||restored,
+      onchange:event=>{state.projectMode=event.target.value;void run(refreshProject);}},
+      node('option',{value:'restore'},'Restore original paths'),
+      node('option',{value:'reattach'},'Attach current original host'));
+    mode.value=state.projectMode;
+    const summary=live?[
+      ['Application',project.applicationId],['Host subject',project.subject],['Private exports',project.exportsDirectory],
+      ['Passphrase environment',project.passphraseEnv],['Passphrase available',project.passphraseAvailable?'Yes':'Set on the receiving host'],
+      ['HTTP / MCP spending owners',owners.length],['Configuration SHA-256',project.configurationSha256,true]]:
+      [['Application',project.applicationId],['Original subject',project.originalSubject],
+        ['Requests',project.requests],['Retained response bytes',project.resultBytes],
+        ['Capture operation',project.operationId],['Project record SHA-256',project.recordSha256,true],
+        ['Encrypted manifest SHA-256',project.manifestSha256,true]];
+    const controls=live?node('div',{class:'actions'},
+      button(busy?'Capturing project…':'Create encrypted project',()=>projectAction('snapshot'),{class:'primary',disabled:busy}),
+      button('Refresh backup history',refreshProject,{disabled:busy})):
+      node('div',{class:'actions'},mode,
+        button('Inspect destination',refreshProject,{disabled:busy}),
+        restored?button('Close live application',()=>projectAction('close-live'),{disabled:busy}):
+          button(state.projectMode==='restore'?'Restore original paths':'Verify current host',
+            ()=>projectAction(state.projectMode==='restore'?'restore':'reattach'),{disabled:busy}),
+        restored?null:button('Open live application',()=>projectAction('open'),{class:'primary',disabled:busy}));
+    const history=live?state.projectArchives.map(row=>node('article',{class:'project-archive'},
+      node('strong',{},row.operationId),kv([['Created',row.createdAt],['Encrypted directory',row.bundle],
+        ['Requests',row.requests],['Response bytes',row.resultBytes],['Manifest SHA-256',row.manifestSha256,true]]))):[];
+    area.replaceChildren(
+      node('div',{class:'section-title'},node('h2',{},live?'Project backup':restored?'Restored live project':'Received project'),
+        node('span',{class:'status-badge'},busy?'PROJECT OPERATION RUNNING':capability.mode)),
+      node('p',{},live?
+        'Capture the selected handoff, native request and quote history, complete response files and original encrypted financial owners together. Original request cancellation remains available while the capture waits for running work.':
+        'Read the captured requests and full response files below. Restore publishes missing original state without replacing existing files. Current-host attachment verifies the captured journal history and preserves later legitimate work.'),
+      kv(summary),controls,
+      !live?node('p',{class:'muted'},'Live reopening uses the original subject, trusted source modules and canonical paths shown in the destination review. Wallet and provider credentials come from this host.'):null,
+      live?node('p',{class:'muted'},'Move the complete encrypted directory with its manifest.json and objects folder. The installed project-receive command authenticates it and opens the same browser workspace.'):null,
+      owners.length?rawDetails('Original financial owners',owners):null,
+      !live?fileTable('Destination files',project.paths):null,
+      !live?fileTable('Trusted source and host modules',project.references):null,
+      state.projectResult?rawDetails('Latest project operation',state.projectResult):null,
+      live?section('Retained encrypted projects',history.length?history:
+        node('p',{class:'empty'},'Create an encrypted project to retain the complete receiving package.')):null);
+  }
   function renderIntegration() {
     const identity=state.identity,endpoint=location.origin+identity.mcp.path;
     const configuration={type:'http',url:endpoint,headers:{Authorization:'Bearer '+'$'+'{STELLAR_APP_ACCESS_TOKEN}'}};
@@ -298,8 +426,8 @@
       rawDetails('Available original tools',identity.mcp.tools),
       node('details',{},node('summary',{},'HTTP request contract'),
         node('pre',{},pretty({list:{method:'GET',path:'/api/requests'},
-          action:{method:'POST',path:'/api/requests/{intentId}/{review|execute|status|recover}',body:{}},
-          read:{method:'POST',path:'/api/requests/{intentId}/read',body:{format:'json',limitBytes:1048576}},
+          action:{method:'POST',path:'/api/requests/{intentId}/{'+identity.actions.filter(name=>name!=='read').join('|')+'}',body:{}},
+          read:{method:'POST',path:'/api/requests/{intentId}/read',body:{format:'json',limitBytes:identity.remoteMcp?2097152:1048576}},
           authentication:'Authorization: Bearer <receiving host token>',
           receivingContext:'The host selects the authenticated subject; the application checks current authority for every action.'}))));
   }

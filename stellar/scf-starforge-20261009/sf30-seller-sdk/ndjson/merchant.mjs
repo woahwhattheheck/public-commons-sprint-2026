@@ -6,6 +6,8 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 
+export { prepareNdjsonRelease, inspectNdjsonRelease } from './release.mjs';
+
 const SCHEMA = 'stellar-forge.ndjson-merchant.v1';
 const HASH = /^[a-f0-9]{64}$/;
 const MAX_BYTES = 256 * 1024 * 1024;
@@ -154,11 +156,18 @@ async function originalSeller(root, args) {
 
 export async function main(args = process.argv.slice(2)) {
   if (args.includes('--help')) {
-    console.log('NDJSON merchant:\n  status --prepared DIRECTORY\n  serve --prepared DIRECTORY [original seller options]\n  prepare --prepared WORKSPACE_EXPORT --origin HTTPS_ORIGIN [--path /data]');
+    console.log('NDJSON merchant:\n  status --prepared DIRECTORY\n  serve --prepared DIRECTORY [original seller options]\n  prepare --prepared WORKSPACE_EXPORT --origin HTTPS_ORIGIN [--path /data]\n  release-package --prepared DIRECTORY --dataset-directory DIRECTORY --out DIRECTORY\n  release-status --package DIRECTORY');
     return;
   }
   const [command, ...rest] = args;
-  if (!['prepare', 'status', 'serve'].includes(command)) throw new Error('Choose prepare, status or serve; use --help');
+  if (command === 'release-status') {
+    if (rest.length !== 2 || rest[0] !== '--package' || !rest[1] || rest[1].startsWith('--'))
+      throw new Error('release-status requires --package DIRECTORY');
+    const { inspectNdjsonRelease } = await import('./release.mjs');
+    console.log(json(await inspectNdjsonRelease({ directory: rest[1] }))); return;
+  }
+  if (!['prepare', 'status', 'serve', 'release-package'].includes(command))
+    throw new Error('Choose prepare, status, serve, release-package or release-status; use --help');
   const index = rest.indexOf('--prepared');
   if (index < 0 || !rest[index + 1] || rest[index + 1].startsWith('--') || rest.lastIndexOf('--prepared') !== index)
     throw new Error('Supply one --prepared directory');
@@ -171,12 +180,20 @@ export async function main(args = process.argv.slice(2)) {
     if (rest.length) throw new Error('status accepts only --prepared');
     console.log(json(await inspectNdjsonMerchant({ prepared }))); return;
   }
-  const options = {};
+  const options = {}, allowed = command === 'release-package'
+    ? ['--dataset-directory', '--out'] : ['--origin', '--path'];
   for (let i = 0; i < rest.length; i += 2) {
     const flag = rest[i];
-    if (!['--origin', '--path'].includes(flag) || options[flag] !== undefined ||
+    if (!allowed.includes(flag) || options[flag] !== undefined ||
         !rest[i + 1] || rest[i + 1].startsWith('--')) throw new Error('Invalid merchant preparation options');
     options[flag] = rest[i + 1];
+  }
+  if (command === 'release-package') {
+    if (!options['--dataset-directory'] || !options['--out'])
+      throw new Error('release-package requires --dataset-directory and --out');
+    const { prepareNdjsonRelease } = await import('./release.mjs');
+    console.log(json(await prepareNdjsonRelease({ prepared,
+      datasetDirectory: options['--dataset-directory'], outputDirectory: options['--out'] }))); return;
   }
   if (!options['--origin']) throw new Error('--origin is required');
   console.log(json(await prepareNdjsonMerchant({ prepared, origin: options['--origin'], path: options['--path'] })));

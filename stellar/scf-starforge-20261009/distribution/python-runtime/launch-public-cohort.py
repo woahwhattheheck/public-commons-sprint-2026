@@ -17,9 +17,9 @@ import sys
 
 OPERATION = "scf-public-python-e287-workbooks-agents-a66c-20261012"
 PUBLISHED = {
-    "engine.py": "52c2b42c1b222174679d07da89893ae268fbfe04f785f9dfdcda617ec727fb41",
-    "run-public-cohort.sh": "0edb219271be5c7ca4648fb19c1f56f28752b82d79cac585c3c347360d3dc2cb",
-    "public-cohort-foreground.py": "898880e9b51b032ec8e4b7a23f63497f241ac18371ae38cb81c81a7d6ab2c29d",
+    "engine.py": "0a11ddd116f0d093470f0f67e4707da3192d250f08d9a894c5ebf7596e144be8",
+    "run-public-cohort.sh": "38c31168d4fbedc5b34595ea28e54879d3329cbf767dde782695b275cd654259",
+    "public-cohort-foreground.py": "f05efddfa9f1b609a76b19a817e57e0c3fae37e4668457782c3998d8af9d8a67",
 }
 HELPERS = {
     "library_upload.py": "5bc473dadefe1f68ee8797baaed19d6662642d0ea4bcba128fa12938faa0d767",

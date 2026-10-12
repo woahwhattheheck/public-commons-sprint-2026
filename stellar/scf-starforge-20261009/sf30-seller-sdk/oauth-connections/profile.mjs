@@ -13,6 +13,16 @@ export const INTUIT_QBO_ENDPOINTS = Object.freeze({
   production: 'https://quickbooks.api.intuit.com',
 });
 export const intuitQboProfile = profile => profile?.provider?.kind === INTUIT_QBO_PROVIDER;
+export const XERO_OAUTH_PROVIDER = 'xero-accounting';
+export const XERO_ACCOUNTING_SCOPES = Object.freeze(['accounting.settings.read', 'accounting.transactions']);
+export const XERO_OAUTH_SCOPES = Object.freeze([...XERO_ACCOUNTING_SCOPES, 'offline_access']);
+export const XERO_OAUTH_ENDPOINTS = Object.freeze({
+  authorization: 'https://login.xero.com/identity/connect/authorize',
+  token: 'https://identity.xero.com/connect/token',
+  revoke: 'https://identity.xero.com/connect/revocation',
+  resource: 'https://api.xero.com',
+});
+export const xeroOAuthProfile = profile => profile?.provider?.kind === XERO_OAUTH_PROVIDER;
 export const qboRealm = value => typeof value === 'string' && /^[0-9]{1,64}$/.test(value);
 export const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   [Object.prototype, null].includes(Object.getPrototypeOf(value));
@@ -86,15 +96,19 @@ export function normalizeOAuthProfile(raw, { allowLoopback = false } = {}) {
   let provider;
   if (raw.provider !== undefined) {
     exact(raw.provider, ['kind', 'environment'], 'provider dialect');
-    if (raw.provider.kind !== INTUIT_QBO_PROVIDER || !['sandbox', 'production'].includes(raw.provider.environment))
-      fail('Choose the explicit QuickBooks sandbox or production provider dialect.');
-    provider = { kind: INTUIT_QBO_PROVIDER, environment: raw.provider.environment };
+    if (raw.provider.kind === INTUIT_QBO_PROVIDER && ['sandbox', 'production'].includes(raw.provider.environment))
+      provider = { kind: INTUIT_QBO_PROVIDER, environment: raw.provider.environment };
+    else if (raw.provider.kind === XERO_OAUTH_PROVIDER && raw.provider.environment === undefined)
+      provider = { kind: XERO_OAUTH_PROVIDER };
+    else fail('Choose an explicit QuickBooks environment or the native Xero accounting provider.');
   }
   const pkceMethod = raw.pkceMethod ?? 'S256';
-  if (pkceMethod !== 'S256' && !(provider && pkceMethod === 'none'))
+  if (pkceMethod !== 'S256' && !(provider?.kind === INTUIT_QBO_PROVIDER && pkceMethod === 'none'))
     fail('Use PKCE S256, or the explicit confidential QuickBooks SDK flow.');
-  if (provider && (pkceMethod !== 'none' || authMethod !== 'client_secret_basic' || raw.clientId.includes(':')))
+  if (provider?.kind === INTUIT_QBO_PROVIDER && (pkceMethod !== 'none' || authMethod !== 'client_secret_basic' || raw.clientId.includes(':')))
     fail('The QuickBooks dialect uses the documented confidential client-secret Basic flow and pkceMethod none.');
+  if (provider?.kind === XERO_OAUTH_PROVIDER && (pkceMethod !== 'S256' || authMethod !== 'client_secret_basic' || raw.clientId.includes(':')))
+    fail('The Xero accounting profile uses PKCE S256 and the registered confidential client-secret Basic flow.');
   if (!Array.isArray(raw.resourceOrigins) || raw.resourceOrigins.length < 1 || raw.resourceOrigins.length > 32 ||
       new Set(raw.resourceOrigins).size !== raw.resourceOrigins.length) fail('Select distinct approved upstream origins.');
   const resourceOrigins = raw.resourceOrigins.map(value => endpoint(value, { allowLoopback, origin: true })).sort();
@@ -113,21 +127,28 @@ export function normalizeOAuthProfile(raw, { allowLoopback = false } = {}) {
     if (raw.callbackOrigin !== callback.origin || callback.username || callback.password)
       fail('Register one exact callback origin without a path, query or credentials.');
     if (callback.protocol === 'http:') {
-      if (provider.environment !== 'sandbox' || !callback.port ||
+      if (provider.kind === INTUIT_QBO_PROVIDER && provider.environment !== 'sandbox' || !callback.port ||
           !(callback.hostname === 'localhost' || allowLoopback && callback.hostname === '127.0.0.1'))
         fail('Use localhost with an explicit port for sandbox callbacks, or the registered public HTTPS origin.');
     } else endpoint(raw.callbackOrigin, { origin:true });
     callbackOrigin = raw.callbackOrigin;
     const local = value => { const url = new URL(value); return allowLoopback && url.protocol === 'http:' && url.hostname === '127.0.0.1' && Boolean(url.port); };
     const exactEndpoint = (actual, expected) => actual === expected || local(actual);
-    if (!raw.revocationEndpoint ||
+    if (provider.kind === INTUIT_QBO_PROVIDER && (!raw.revocationEndpoint ||
         !exactEndpoint(authorizationEndpoint, INTUIT_QBO_ENDPOINTS.authorization) ||
         !exactEndpoint(tokenEndpoint, INTUIT_QBO_ENDPOINTS.token) ||
         !exactEndpoint(endpoint(raw.revocationEndpoint, { allowLoopback }), INTUIT_QBO_ENDPOINTS.revoke) ||
         resourceOrigins.length !== 1 || resourceOrigins[0] !== INTUIT_QBO_ENDPOINTS[provider.environment] ||
-        resourceParameters.length || scopes(raw.scopes).length !== 1 || raw.scopes[0] !== INTUIT_QBO_SCOPE)
+        resourceParameters.length || scopes(raw.scopes).length !== 1 || raw.scopes[0] !== INTUIT_QBO_SCOPE))
       fail('The QuickBooks profile must use its declared native endpoints, environment and accounting scope.');
-  } else if (raw.callbackOrigin !== undefined) fail('A registered callback origin requires the explicit QuickBooks provider dialect.');
+    if (provider.kind === XERO_OAUTH_PROVIDER && (!raw.revocationEndpoint ||
+        !exactEndpoint(authorizationEndpoint, XERO_OAUTH_ENDPOINTS.authorization) ||
+        !exactEndpoint(tokenEndpoint, XERO_OAUTH_ENDPOINTS.token) ||
+        !exactEndpoint(endpoint(raw.revocationEndpoint, { allowLoopback }), XERO_OAUTH_ENDPOINTS.revoke) ||
+        resourceOrigins.length !== 1 || resourceOrigins[0] !== XERO_OAUTH_ENDPOINTS.resource ||
+        resourceParameters.length || JSON.stringify(scopes(raw.scopes)) !== JSON.stringify(XERO_OAUTH_SCOPES)))
+      fail('The Xero profile must retain the native accounting endpoints and exact accounting/offline scopes.');
+  } else if (raw.callbackOrigin !== undefined) fail('A registered callback origin requires an explicit native provider dialect.');
   return {
     schema: PROFILE_SCHEMA, label: raw.label, source: { ...raw.source }, authorizationEndpoint, tokenEndpoint,
     ...(raw.revocationEndpoint === undefined ? {} : { revocationEndpoint: endpoint(raw.revocationEndpoint, { allowLoopback }) }),

@@ -390,6 +390,9 @@ class AnalysisWorkspace:
                 result = self.archives.run(job_id, spec)
             elif kind in {"response-preview", "response-import"}:
                 result = self.responses.execute(kind, spec)
+            elif kind == "import" and spec["source"].get("kind") == "finalized-dataset":
+                from .analysis_native_delivery import import_finalized_source
+                result = import_finalized_source(self, spec["source"], spec["columns"])
             elif kind == "import":
                 source = spec["source"]
                 path = Path(source["session"]) / "session.json"
@@ -716,6 +719,21 @@ def serve(workspace, *, port=0):
                 if len(parts) == 3 and parts[:2] == ["api", "change-export"]:
                     path, record = workspace.change_export_file(parts[2])
                     return self._file_reply(path, record)
+                if url.path == "/api/semantic-compare":
+                    if set(query) != {"before", "after"}:
+                        raise StateError("DATASET_SEMANTIC_COMPARISON_VERSIONS_REQUIRED")
+                    return self._reply(200, workspace.database.compare_semantics(get("before"), get("after")))
+                if len(parts) == 3 and parts[:2] == ["api", "semantics"]:
+                    if query:
+                        raise StateError("DATASET_SEMANTIC_QUERY_INVALID")
+                    return self._reply(200, workspace.database.semantics(parts[2]))
+                if len(parts) == 3 and parts[:2] == ["api", "semantics-file"]:
+                    if query:
+                        raise StateError("DATASET_SEMANTIC_QUERY_INVALID")
+                    raw = workspace.database.semantics_bytes(parts[2])
+                    if raw is None:
+                        raise StateError("DATASET_SEMANTIC_DICTIONARY_UNAVAILABLE")
+                    return self._reply(200, raw, "application/json", "source-semantics.json")
                 if len(parts) == 3 and parts[:2] == ["api", "version"]:
                     return self._reply(200, workspace.database.version(parts[2]))
                 if len(parts) == 3 and parts[:2] == ["api", "manifest"]:
@@ -745,6 +763,9 @@ def serve(workspace, *, port=0):
                 body = parse(raw)
                 if not isinstance(body, dict):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
+                if url.path == "/api/native-finalized-dataset-source":
+                    from .analysis_native_delivery import register_finalized_source
+                    return self._reply(200, register_finalized_source(workspace, body))
                 if url.path == "/api/native-dataset-source":
                     from .analysis_native import attach_dataset
                     return self._reply(200, attach_dataset(workspace, body))
@@ -756,6 +777,11 @@ def serve(workspace, *, port=0):
                     if body:
                         raise StateError("ANALYSIS_EXPORT_CANCEL_FIELDS_INVALID")
                     return self._reply(200, workspace.exports.cancel(parts[2]))
+                if url.path == "/api/native-response-source":
+                    return self._reply(200, workspace.responses.register(body.get("name"), "native",
+                        native_workspace=body.get("native_workspace"), native_kind=body.get("native_kind"),
+                        native_id=body.get("native_id"), native_inbox=body.get("native_inbox"), expected_native=body.get("expected_native"),
+                        format=body.get("format"), expected_revision=body.get("expected_revision")))
                 if url.path == "/api/object-source":
                     return self._reply(200, workspace.responses.register(body.get("name"), "object",
                         session=body.get("session"), destination=body.get("destination"),
@@ -826,13 +852,13 @@ def main():
     source.add_argument("--session", required=True)
     source.add_argument("--room", help="Existing SF100 room, or a new private destination")
     source.add_argument("--expected-revision", type=int, default=0)
-    response = commands.add_parser("response", help="Register a retained native API response or original typed stream export")
+    response = commands.add_parser("response", help="Register a retained native API response, original typed stream export, or source document")
     response.add_argument("--name", required=True)
-    response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp", "object"])
+    response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp", "object", "document"])
     response.add_argument("--config", help="Original SF88 configuration or SF31 response-file writer options")
     response.add_argument("--result", help="Original SF88 result record or SF31 response-file receipt")
     response.add_argument("--stream-export", help="Original Python StreamDelivery directory")
-    response.add_argument("--manifest", help="Original native MCP result .meta.json file")
+    response.add_argument("--manifest", help="Original native MCP result .meta.json file or retained source-document source.json")
     response.add_argument("--object-session", help="Existing COMPLETE native ObjectSession directory")
     response.add_argument("--object-destination", help="Selected recorded object assembly; defaults to the latest recorded assembly")
     response.add_argument("--format", choices=["json", "csv"], default="json")
@@ -882,3 +908,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

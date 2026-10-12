@@ -2,6 +2,8 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { readFile, lstat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { createNativeProcessesClient } from './processes.mjs';
+import { openWorkerFiles } from './inputs/worker.mjs';
 import { canonical, digest } from './config.mjs';
 
 const stopped = new AbortController();
@@ -17,7 +19,14 @@ async function run() {
   const module = await import(pathToFileURL(application).href);
   if (!Object.hasOwn(module, functionId) || typeof module[functionId] !== 'function') throw new Error('JOB_FUNCTION_UNAVAILABLE');
   stopped.signal.throwIfAborted();
-  const result = await module[functionId](input, Object.freeze({ jobId, attemptId, signal: stopped.signal }));
+  let received = null, result;
+  const processes = createNativeProcessesClient(parentPort, stopped.signal);
+  try {
+    if (workerData.inputFiles) received = await openWorkerFiles({ ...workerData.inputFiles,
+      reference: jobId, functionId, input, inputSha256: workerData.inputSha256, signal: stopped.signal });
+    result = await module[functionId](input, Object.freeze({ jobId, attemptId, signal: stopped.signal, processes,
+      ...(received ? { files: received.files } : {}) }));
+  } finally { processes.close(); await received?.close(); }
   stopped.signal.throwIfAborted();
   let body;
   if (output.format === 'json') body = Buffer.from(canonical(result));
@@ -31,5 +40,6 @@ async function run() {
 run().catch(error => {
   const allowed = new Set(['JOB_APPLICATION_CHANGED', 'JOB_FUNCTION_UNAVAILABLE', 'JOB_EXECUTION_CANCELLED',
     'JOB_OUTPUT_TYPE_INVALID', 'JOB_OUTPUT_TOO_LARGE', 'JOB_JSON_REQUIRED', 'JOB_JSON_TOO_COMPLEX']);
-  parentPort.postMessage({ type: 'failure', code: allowed.has(error?.message) ? error.message : 'JOB_APPLICATION_FAILED' });
+  parentPort.postMessage({ type: 'failure', code: allowed.has(error?.message) ? error.message :
+    /^JOB_(?:INPUT|NATIVE)_[A-Z_]+$/.test(error?.code ?? '') ? error.code : 'JOB_APPLICATION_FAILED' });
 });

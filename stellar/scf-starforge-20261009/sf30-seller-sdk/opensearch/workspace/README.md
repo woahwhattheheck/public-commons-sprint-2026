@@ -2,7 +2,7 @@
 
 Author a named query, inspect its native OpenSearch contract, capture a durable result edition, and prepare the original Stellar Forge merchant and generated customer client. The workspace uses the same source adapter and merchant compiler as the command-line product.
 
-MCP agents can operate the same retained workspace through [the merchant MCP workflow](../../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md). Host-declared aliases expose saved query revisions, native evaluations, judgment history and complete customer file reads. The browser and MCP share the original operation IDs, results and prepared packages.
+MCP agents can operate the same retained workspace through [the merchant MCP workflow](../../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md). Its 44 tools cover saved query revisions, native evaluations, judgment history, prepared packages, managed releases and complete customer delivery. Stage a saved package into this workspace's original deployment store, compare and select its release, run the seller, and generate a retained client from its actual public contract. Browser and MCP share the original operation IDs, release generations, owned instances and customer exports through upgrade, rollback, customer completion recovery and reopening.
 
 ## Open an existing source
 
@@ -107,3 +107,16 @@ The **Deployment** view stages a saved merchant package into this workspace's or
 The private deployment and deployment.clients directories stay beside workspace.sqlite3. Complete client archives, deployment handovers, selection history and saved requests reopen with the workspace. Copied packages resolve beneath the current workspace directory and retain their original file manifests; historical request and package records keep their source identities.
 
 See [OpenSearch managed deployments](../../../sf82-seller-pilot/OPENSEARCH_RELEASES.md) for the complete browser, CLI, MCP, upgrade, rollback and receiving workflow.
+
+
+### Runtime loading and close recovery
+
+Opening a source, using material catalogs or relevance, and reading workspace state keep the original synchronous workspace and deployment-summary interfaces. The SF82 release store, OpenSearch release preparation, and release console load when their corresponding deployment operation is selected. A catalog-only installation therefore does not import the release console's complete runtime graph merely to open its workspace.
+
+Await workspace close before moving or reopening its SQLite directory. If an original deployment close fails, the workspace keeps the original console and store and continues rejecting new writes. Correct that condition and call `close()` again on the same workspace; the store closes after its original deployment owner finishes. Concurrent close calls share the current attempt.
+
+## Material catalogs and customer matching
+
+Open **Material catalogs** to retain original CSV, TSV, JSONL or JSON sources; map material identifiers, text, references and quantity units; review full or delta editions; and select the intended catalog revision. Customer decisions bind the exact selected material, with changed matches returned for review after later editions. The same view exports native OpenSearch index, bulk, delta and query files and opens an original merchant query draft.
+
+The complete [material catalog operating guide](../catalog/GUIDE.md) covers real SAP source examples, declared text and unit lookups, exact quantity conversion, source upload recovery, portable customer catalog receiving and the installed batch CLI. This view uses the existing workspace directory, operation IDs, SQLite store and local session.

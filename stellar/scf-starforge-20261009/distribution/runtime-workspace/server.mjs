@@ -9,6 +9,7 @@ import { imageOperationFields } from './image-workspace.mjs';
 import { managedOperationFields } from './managed-workspace.mjs';
 import { pythonOperationFields } from '../python-runtime/workspace.mjs';
 import { openRuntimeWorkspace } from './model.mjs';
+import { OPENAPI_SETUP_ROUTES, openApiSetupBodyLimit } from './openapi-connection-setup.mjs';
 import { plain, need, fail } from './storage.mjs';
 
 const HOST = '127.0.0.1';
@@ -33,15 +34,19 @@ function params(url, allowed) {
   return Object.fromEntries(url.searchParams);
 }
 
-export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
+export async function startRuntimeWorkspace({ directory, port = 8465, openApiSetupPolicy = {} } = {}) {
   need(Number.isInteger(port) && port >= 0 && port <= 65535, 'RUNTIME_WORKSPACE_PORT_INVALID');
-  const model = await openRuntimeWorkspace({ directory });
+  const model = await openRuntimeWorkspace({ directory, openApiSetupPolicy });
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/managed.mjs', 'managed.mjs', 'text/javascript; charset=utf-8'],
     ['/applications.mjs', 'applications.mjs', 'text/javascript; charset=utf-8'],
+    ['/application-review.mjs', 'application-review.mjs', 'text/javascript; charset=utf-8'],
+    ['/openapi-application.mjs', 'openapi-application.mjs', 'text/javascript; charset=utf-8'],
+    ['/accounting-application.mjs', 'accounting-application.mjs', 'text/javascript; charset=utf-8'],
+    ['/openapi-connection-setup.mjs', 'openapi-connection-setup.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
     ['/transfer.mjs', 'transfer.mjs', 'text/javascript; charset=utf-8'],
     ['/image.mjs', 'image.mjs', 'text/javascript; charset=utf-8'],
@@ -123,7 +128,20 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
         const value = params(url, ['runtimeId']); return send(200, await model.handoff(value.runtimeId));
       }
       if (req.method === 'GET' && url.pathname === '/api/applications/state') {
-        params(url, []); return send(200, await model.applicationsState());
+        const value = params(url, ['historyLimit']);
+        if (value.historyLimit !== undefined) {
+          need(/^(?:[1-9][0-9]?|100)$/.test(value.historyLimit), 'APPLICATION_HISTORY_LIMIT_INVALID');
+          value.historyLimit = Number(value.historyLimit);
+        }
+        return send(200, await model.applicationsState(value));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/applications/history') {
+        const value = params(url, ['applicationId', 'limit', 'cursor']);
+        if (value.limit !== undefined) {
+          need(/^(?:[1-9][0-9]?|100)$/.test(value.limit), 'APPLICATION_HISTORY_LIMIT_INVALID');
+          value.limit = Number(value.limit);
+        }
+        return send(200, await model.applicationsHistory(value));
       }
       if (req.method === 'GET' && url.pathname === '/api/applications/output')
         return send(200, await model.applicationsOutput(params(url, ['applicationId', 'operationId'])));
@@ -214,6 +232,12 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
       if (url.pathname === '/api/resume-queued') {
         const value = await body(req, ['operationId']); return send(202, await model.resumeQueued(value.operationId));
       }
+      if (url.pathname.startsWith('/api/applications/openapi-setup/')) {
+        const action = url.pathname.slice('/api/applications/openapi-setup/'.length);
+        need(!url.search && Object.hasOwn(OPENAPI_SETUP_ROUTES, action), 'OAUTH_SETUP_INPUT_INVALID');
+        const value = await body(req, ['runtimeId', 'context', 'input'], openApiSetupBodyLimit(action));
+        return send(200, await model.applicationsOpenApiSetup({ ...value, action }));
+      }
       if (url.pathname === '/api/applications/review')
         return send(200, await model.applicationsReview(await body(req, ['runtimeId', 'kind', 'settings', 'label', 'applicationId', 'expectedRevision', 'homeId'])));
       if (url.pathname === '/api/applications/save')
@@ -221,7 +245,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
       if (url.pathname === '/api/applications/connect')
         return send(202, await model.applicationsConnect(await body(req, ['applicationId'])));
       if (url.pathname === '/api/applications/start-review')
-        return send(200, await model.applicationsStartReview(await body(req, ['applicationId'])));
+        return send(200, await model.applicationsStartReview({ ...await body(req, ['applicationId']), navigationOrigin: origin }));
       if (url.pathname === '/api/applications/start')
         return send(202, await model.applicationsStart(await body(req, ['applicationId', 'requestId', 'reviewId'])));
       if (url.pathname === '/api/applications/stop')
@@ -253,7 +277,8 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
   server.requestTimeout = 120000; server.headersTimeout = 10000; server.keepAliveTimeout = 5000;
   server.maxRequestsPerSocket = 100;
   await new Promise((done, reject) => { server.once('error', reject); server.listen(port, HOST, done); });
-  host = HOST + ':' + server.address().port; origin = 'http://' + host;
+  origin = new URL('http://' + HOST + ':' + server.address().port).origin;
+  host = new URL(origin).host;
   return { origin, url: origin + '/#' + token, directory: model.directory,
     async close() {
       if (closing) return;

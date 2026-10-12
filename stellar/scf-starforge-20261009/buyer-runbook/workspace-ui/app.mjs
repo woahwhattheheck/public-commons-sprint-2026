@@ -4,16 +4,22 @@ import {createSellerClientUI} from './clients.mjs';
 import {createPaidFileUI} from './paid-files.mjs';
 import {createRunbookAccountingUI} from './accounting.mjs';
 import {createRunbookRecoveryUI} from './recovery.mjs';
+import {createBuyerOperatorUI} from './operator.mjs';
+import {createApprovalPanel} from '/approval-ui/approval-panel.mjs';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const formatTime = value => value ? new Date(value).toLocaleString() : '—';
 const readable = value => String(value ?? '—').toLowerCase().replaceAll('_',' ');
 let state, token, draft = null, rows = [], currentRun = null, view = 'welcome', dirty = false, saving = false, timer;
 let navigation = 0, editorVersion = 0, sourceRefresh = 0;
+let approvalRead = 0, runRead = 0, approvalSnapshot = null, approvalContext = null;
+let otherApprovalRun = null, approvalFresh = false, runActionPending = false;
+const approvalUI = createApprovalPanel({host:$('#purchase-approval'),decide:decideApproval,refresh:refreshApprovalSelection});
 const resourcePreviews = new Map();
 const previewToOpen = new Set();
 const accountingUI=createRunbookAccountingUI({current:()=>currentRun,action,notice});
 const recoveryUI=createRunbookRecoveryUI({request,notice,refreshState,openPanel(){navigation++;show('recovery');}});
+const operatorUI=createBuyerOperatorUI({request,notice,refreshState,openPanel(){navigation++;show('operator');}});
 const intakeUI = createHandoffIntakeUI({request,notice,refreshState,
   openPanel(){navigation++;show('requests');},
   onPrepared:(prepared,item)=>addReceivedToPlan(prepared,item,item.view.method)});
@@ -50,18 +56,168 @@ async function request(path, data) {
 const handle = action => async event => { if (event?.type === 'submit') event.preventDefault(); try { await action(event); } catch (error) { notice(error.message,true); } };
 function show(name) {
   view = name;
-  for (const target of ['welcome','draft-panel','run-panel','requests-panel','clients-panel','paid-files-panel','recovery-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
+  if (name !== 'run') resetApproval();
+  for (const target of ['welcome','draft-panel','run-panel','requests-panel','clients-panel','paid-files-panel','recovery-panel','operator-panel']) $('#' + target).hidden = target !== (name === 'welcome' ? name : name + '-panel');
   renderNavigation();
 }
+
+function browserApproval(subject = currentRun ?? state) {
+  return subject?.approvalMode === 'BROWSER';
+}
+function canPurchase(subject = currentRun ?? state) {
+  return browserApproval(subject) ? subject.approvalAvailable === true : subject?.terminalAvailable === true;
+}
+function liveTermsHelp(subject = state) {
+  return browserApproval(subject)
+    ? 'The buyer reads live merchant terms when this acquisition runs. Review and approve each exact purchase in this browser.'
+    : 'The buyer reads live merchant terms when this acquisition runs and asks for approval in its operator terminal.';
+}
+function resetApproval() {
+  approvalRead++; approvalSnapshot = null; approvalContext = null;
+  otherApprovalRun = null; approvalFresh = false; approvalUI.reset();
+}
+function sameApprovalContext(a, b) {
+  return Boolean(a && b && ['runId','executionId','operationId','intentId'].every(key => a[key] === b[key]));
+}
+function selectedApproval() {
+  return view === 'run' && currentRun && approvalContext?.runId === currentRun.id &&
+    approvalContext.executionId === currentRun.active?.executionId &&
+    currentRun.state.operations.some(row => row.id === approvalContext.operationId && row.intentId === approvalContext.intentId);
+}
+function approvalPending() {
+  return runActionPending || !approvalFresh || !selectedApproval() ||
+    Boolean(currentRun?.active?.finishedAt) || currentRun?.active?.cancelRequested === true || !canPurchase(currentRun);
+}
+function approvalPanelPending() {
+  return runActionPending || !selectedApproval() || Boolean(currentRun?.active?.finishedAt) ||
+    currentRun?.active?.cancelRequested === true || !canPurchase(currentRun);
+}
+function renderApprovalStatus() {
+  const section = $('#purchase-approval-section');
+  section.hidden = !currentRun || !browserApproval(currentRun);
+  if (section.hidden) return;
+  const active = currentRun.active, running = Boolean(active && !active.finishedAt);
+  const available = currentRun.approvalAvailable === true;
+  const selected = selectedApproval();
+  $('#approval-mode-badge').textContent = available ? 'Browser approval' : 'Runtime support needed';
+  $('#approval-operation').textContent = selected
+    ? currentRun.state.operations.find(row => row.id === approvalContext.operationId)?.label ?? approvalContext.operationId
+    : 'Live purchase review';
+  $('#approval-binding').hidden = !selected;
+  if (selected) {
+    for (const [key, target] of [['runId','approval-run-id'],['executionId','approval-execution-id'],
+      ['operationId','approval-operation-id'],['intentId','approval-intent-id']])
+      $('#' + target).textContent = approvalContext[key];
+  }
+  const message = !available
+    ? 'This selected runtime cannot approve purchases in the browser. Reopen the workspace with browser approval support, or use its Terminal approval mode.'
+    : active?.finishedAt && selected
+      ? 'The original execution has finished. This recorded review and the saved resource and accounting results remain available below.'
+      : active?.cancelRequested
+      ? 'Cancellation requested. The current review is disabled while the original execution finishes cleanup.'
+      : !approvalFresh
+        ? 'Refresh this original operation to read its current payment review and recorded result.'
+        : otherApprovalRun
+          ? 'A different acquisition owns the current purchase review. Open that acquisition to inspect its exact request.'
+          : selected
+            ? approvalSnapshot ? 'This review belongs to the operation identified below.'
+              : 'The original buyer is reading the merchant response. Its exact payment terms appear here when approval is required.'
+            : running && active.kind === 'ACCOUNTING'
+              ? 'The original accounting refresh is active. Follow its receipts below.'
+              : running && active.kind?.startsWith('PAID_FILE_')
+                ? 'The original file transfer is active. Follow its retained bytes and explicit resume controls below.'
+                : running
+                  ? 'Waiting for the original buyer to select its next operation.'
+                  : 'Execute an untouched operation to receive its live payment terms here. Completed purchases and saved resources remain below.';
+  $('#approval-connection').textContent = message;
+  $('#refresh-approval').hidden = Boolean(approvalSnapshot && selected && approvalFresh && !active?.finishedAt && !active?.cancelRequested);
+  $('#refresh-approval').disabled = runActionPending;
+  $('#open-current-approval').hidden = !otherApprovalRun;
+  $('#open-current-approval').disabled = runActionPending;
+  if (approvalSnapshot && selected)
+    approvalUI.render(approvalSnapshot, {intentId:approvalContext.intentId,pending:approvalPanelPending(),fresh:false});
+}
+function disconnectApproval() {
+  approvalFresh = false; approvalRead++; approvalUI.disconnect(); renderApprovalStatus();
+}
+async function refreshApproval() {
+  if (view !== 'run' || !currentRun) return;
+  const generation = ++approvalRead, selectedRun = currentRun.id, selectedNavigation = navigation;
+  try {
+    const result = await request('/api/approval');
+    if (generation !== approvalRead || selectedNavigation !== navigation || view !== 'run' || currentRun?.id !== selectedRun) return;
+    if (!result || !['BROWSER','TERMINAL'].includes(result.approvalMode) ||
+      typeof result.approvalAvailable !== 'boolean' ||
+      result.current !== null && (!result.current || ['runId','executionId','operationId','intentId'].some(key =>
+        typeof result.current[key] !== 'string' || !result.current[key])) ||
+      result.approval !== null && (!result.approval || typeof result.approval !== 'object' || Array.isArray(result.approval)) ||
+      result.approval && !result.current)
+      throw new Error('The approval response was incomplete. Refresh this original operation.');
+    currentRun.approvalMode = result.approvalMode;
+    currentRun.approvalAvailable = result.approvalAvailable;
+    const incoming = result.current, snapshot = result.approval;
+    const belongsHere = incoming?.runId === currentRun.id &&
+      incoming.executionId === currentRun.active?.executionId &&
+      currentRun.state.operations.some(row => row.id === incoming.operationId && row.intentId === incoming.intentId);
+    if (!belongsHere) {
+      approvalContext = null; approvalSnapshot = null; approvalUI.reset();
+      otherApprovalRun = incoming && incoming.runId !== currentRun.id ? incoming.runId : null;
+      approvalFresh = !incoming || Boolean(otherApprovalRun);
+      renderRun(); return;
+    }
+    if (snapshot && snapshot.intentId !== incoming.intentId)
+      throw new Error('The payment review changed operation. Refresh this original acquisition.');
+    if (!sameApprovalContext(approvalContext,incoming) || approvalSnapshot?.id !== snapshot?.id) approvalUI.reset();
+    approvalContext = {...incoming}; approvalSnapshot = snapshot; otherApprovalRun = null; approvalFresh = true;
+    approvalUI.render(snapshot,{intentId:incoming.intentId,pending:approvalPanelPending(),fresh:true});
+    renderRun();
+  } catch (error) {
+    if (generation === approvalRead && selectedNavigation === navigation && currentRun?.id === selectedRun) disconnectApproval();
+    throw error;
+  }
+}
+async function refreshApprovalSelection() {
+  if (view !== 'run' || !currentRun) return;
+  await refreshSelectedRun();
+}
+async function decideApproval(binding) {
+  if (!selectedApproval() || approvalPending() || !approvalSnapshot ||
+    binding.intent !== approvalContext.intentId || binding.approvalId !== approvalSnapshot.id ||
+    binding.requestSha256 !== approvalSnapshot.review?.request_sha256)
+    throw new Error('This purchase review changed. Refresh the original operation before deciding.');
+  const selected = {...approvalContext};
+  const decision = {runId:selected.runId,executionId:selected.executionId,operationId:selected.operationId,...binding};
+  // Keep the reviewed identity frozen across the asynchronous native decision.
+  await request('/api/approval',decision);
+}
+async function refreshSelectedRun() {
+  if (view !== 'run' || !currentRun) return;
+  const generation = ++runRead, selectedNavigation = navigation, id = currentRun.id;
+  approvalRead++;
+  try {
+    const result = await request('/api/runs/' + id);
+    if (generation !== runRead || selectedNavigation !== navigation || view !== 'run' || currentRun?.id !== id) return;
+    currentRun = result; renderRun();
+    await refreshApproval();
+  } catch (error) {
+    if (generation === runRead && selectedNavigation === navigation && currentRun?.id === id) disconnectApproval();
+    throw error;
+  }
+}
+
 async function refreshState() {
   const generation = ++sourceRefresh, result = await request('/api/state');
   if (generation !== sourceRefresh) return;
   state = result; token = state.token; renderNavigation();
   intakeUI.update(state.intake);
+  operatorUI.update(state.intake.operatorSetup);
   clientUI.update(state.intake.clients);
   paidFileUI.update(state.paidFiles);
   recoveryUI.update(state.recovery);
-  $('#terminal-state').textContent = state.terminalAvailable ? 'Operator terminal available' : 'Open in a terminal to execute';
+  $('#terminal-state').textContent = browserApproval(state)
+    ? state.approvalAvailable ? 'Purchase approvals in this browser' : 'Browser approval support needed'
+    : state.terminalAvailable ? 'Operator terminal available' : 'Open in a terminal to execute';
+  for (const element of document.querySelectorAll('[data-live-terms-help]')) element.textContent = liveTermsHelp(state);
   const valid = state.configurations.filter(item => item.valid).length;
   $('#source-summary').innerHTML = `<strong>${valid} ready buyer configuration${valid === 1 ? '' : 's'}</strong><p class="wrap">${escape(state.configsDirectory)}</p>`;
   if (state.errors.length) notice(`${state.errors.length} saved item${state.errors.length === 1 ? '' : 's'} need local attention: ${state.errors.map(item => item.id + ' · ' + readable(item.code)).join('; ')}`,true);
@@ -146,7 +302,7 @@ function terms(row) {
 function renderReview() {
   $('#draft-review').hidden = false;
   $('#revision-picker').innerHTML = draft.revisions.map(revision => `<option value="${revision}" ${revision === draft.revision ? 'selected' : ''}>${revision}</option>`).join('');
-  $('#draft-review-content').innerHTML = budgetTable(draft.plan) + '<p class="review-note">These are the selected request ceilings. The original buyer reviews live terms and requests approval in the operator terminal.</p>' + draft.plan.operations.map(row =>
+  $('#draft-review-content').innerHTML = budgetTable(draft.plan) + `<p class="review-note">These are the selected request ceilings. ${escape(liveTermsHelp(state))}</p>` + draft.plan.operations.map(row =>
     `<article class="review-operation"><h3>${escape(row.label)}</h3><p class="operation-url">${escape(row.method)} ${escape(row.url)}</p>${terms(row)}</article>`).join('');
 }
 function manifestFromEditor() {
@@ -176,13 +332,17 @@ async function saveDraft() {
   }
 }
 async function openRun(id) {
-  const generation = ++navigation, result = await request('/api/runs/' + id);
+  const generation = ++navigation; runRead++; resetApproval();
+  const result = await request('/api/runs/' + id);
   if (generation !== navigation) return;
   currentRun = result; show('run'); renderRun();
+  await refreshApproval();
 }
 function renderRun() {
   const restoreAccountingFocus=accountingUI.preserveFocus();
-  const {id, state:run, active, terminalAvailable} = currentRun;
+  const {id, state:run, active} = currentRun;
+  const purchaseAvailable = canPurchase(currentRun), inBrowser = browserApproval(currentRun);
+  if (approvalContext && !selectedApproval()) resetApproval();
   const running = Boolean(active && !active.finishedAt), lock = run.executionLock;
   const rows = run.operations, untouched = rows.filter(row => row.state === 'UNATTEMPTED');
   const saved = rows.filter(row => row.result?.summary?.responseFile?.status === 'SAVED');
@@ -194,20 +354,25 @@ function renderRun() {
   $('#run-metrics').innerHTML = [[rows.length,'Selected operations'],[untouched.length,'Untouched'],[saved.length,'Resources saved'],[attention.length,'Need attention']]
     .map(([value,label]) => `<div class="metric"><strong>${value}</strong><span>${label}</span></div>`).join('');
   const accountingActive=running&&active.kind==='ACCOUNTING',fileActive=running&&active.kind?.startsWith('PAID_FILE_');
-  $('#execution-message').textContent = running ? active.cancelRequested ? 'Cancellation requested' : fileActive?'Customer file transfer is active':accountingActive?'Original accounting is active':'Original buyer execution is active' : terminalAvailable ? 'Continue through the operator terminal' : 'Operator terminal required for new purchases';
-  $('#execution-detail').textContent = running ? fileActive?'The original file transfer keeps its retained bytes for an explicit resume.':accountingActive?'Existing attempts are reconciled with their original operator ledgers. Each completed receipt is retained.':'Progress and results update here while the original buyer finishes its current operation.' : active?.error ? readable(active.error) : terminalAvailable ? 'Each untouched operation receives its original live-term review and terminal approval.' : 'Accounting and resource inspection remain available here. Start this workspace in a controlling terminal to execute new purchases.';
-  $('#execute-run').disabled = running || Boolean(lock) || !terminalAvailable || !untouched.length;
+  $('#execution-message').textContent = running ? active.cancelRequested ? 'Cancellation requested' : fileActive?'Customer file transfer is active':accountingActive?'Original accounting is active':approvalSnapshot?.state === 'AWAITING_OPERATOR' && selectedApproval() ? 'Review this purchase below' : 'Original buyer execution is active'
+    : inBrowser ? purchaseAvailable ? 'Review and approve purchases here' : 'Browser approval support needed'
+      : purchaseAvailable ? 'Continue through the operator terminal' : 'Operator terminal required for new purchases';
+  $('#execution-detail').textContent = running ? fileActive?'The original file transfer keeps its retained bytes for an explicit resume.':accountingActive?'Existing attempts are reconciled with their original operator ledgers. Each completed receipt is retained.':'Progress and results update here while the original buyer finishes its current operation.'
+    : active?.error ? readable(active.error)
+      : inBrowser ? purchaseAvailable ? 'Each untouched operation reads live merchant terms. Review its exact amount, request and native budget here before approving.' : 'Reopen this workspace with a runtime that supports browser approval, or use its Terminal approval mode.'
+        : purchaseAvailable ? 'Each untouched operation receives its original live-term review and terminal approval.' : 'Accounting and resource inspection remain available here. Start this workspace in a controlling terminal to execute new purchases.';
+  $('#execute-run').disabled = runActionPending || running || Boolean(lock) || !purchaseAvailable || !untouched.length;
   $('#cancel-run').hidden = !running;
   $('#cancel-run').textContent=fileActive?'Pause file transfer':accountingActive?'Cancel accounting refresh':'Cancel current execution';
-  $('#cancel-run').disabled = Boolean(active?.cancelRequested);
-  $('#recover-run').disabled = running || Boolean(lock);
+  $('#cancel-run').disabled = runActionPending || Boolean(active?.cancelRequested);
+  $('#recover-run').disabled = runActionPending || running || Boolean(lock);
   $('#lease-panel').hidden = !lock;
   if (lock) {
     $('#lease-description').textContent = `PID ${lock.pid} · ${lock.host} · generation ${lock.generation} · started ${formatTime(lock.startedAt)} · ${lock.ownerRunning === true ? 'running' : lock.ownerRunning === false ? 'owner process has ended' : 'host liveness unavailable'}`;
-    $('#unlock-run').disabled = lock.ownerRunning !== false;
+    $('#unlock-run').disabled = runActionPending || lock.ownerRunning !== false;
   }
   $('#run-budgets').innerHTML = budgetTable(run.plan);
-  accountingUI.summary(run,running||Boolean(lock));
+  accountingUI.summary(run,runActionPending||running||Boolean(lock));
   $('#download-json').href = `/files/${id}/report.json`;
   $('#download-report').href = `/files/${id}/report.html`;
   const opened = new Set([...$('#run-operations').querySelectorAll('details[open]')].map(element => element.dataset.detail));
@@ -218,41 +383,48 @@ function renderRun() {
     const preview = resourcePreviews.get(id + ':' + row.id);
     const requestedPreview = previewToOpen.delete(id + ':' + row.id);
     const previewOpen = opened.has(row.id + '-resource') || requestedPreview;
-    const only = row.state === 'UNATTEMPTED' && row.integrity === 'UNCHANGED' && !running && !lock && terminalAvailable;
+    const only = row.state === 'UNATTEMPTED' && row.integrity === 'UNCHANGED' && !runActionPending && !running && !lock && purchaseAvailable;
     return `<article class="result-operation"><div class="operation-title"><div><h3>${escape(row.label)}</h3><span class="muted">${escape(row.id)}</span></div><span class="badge">${escape(readable(status))}</span></div>
       <p class="operation-url">${escape(row.method)} ${escape(row.url)}</p>
       <dl class="detail-grid"><div><dt>Original buyer status</dt><dd>${escape(summary?.status ?? summary?.error?.code ?? row.lastError?.code ?? 'Awaiting execution')}</dd></div><div><dt>Saved resource</dt><dd>${escape(resource?.status ?? 'Awaiting original response')}${resource?.bytes !== undefined ? ' · ' + escape(resource.bytes) + ' bytes' : ''}</dd></div><div><dt>Input snapshot</dt><dd>${escape(readable(row.integrity))}${row.integrityError ? ' · ' + escape(row.integrityError) : ''}</dd></div><div><dt>Original evidence</dt><dd><code>${escape(summary?.evidencePath ?? row.evidenceDirectory)}</code></dd></div></dl>
       <div class="result-actions">${available ? `<button data-preview="${escape(row.id)}">Preview resource</button><a class="button" href="/files/${id}/resources/${escape(row.id)}">Download ${escape(row.downloadName)}</a>` : ''}${only ? `<button data-only="${escape(row.id)}">Execute this operation</button>` : ''}</div>
       ${preview ? `<details data-detail="${escape(row.id)}-resource" ${previewOpen ? 'open' : ''}><summary>${escape(preview.name)} · ${preview.bytes} bytes${preview.truncated ? ' · first 64 KiB shown' : ''}</summary>${preview.text === null ? '<p class="muted">Download this binary resource to open it in its original format.</p>' : `<pre>${escape(preview.text)}</pre>`}</details>` : ''}
-      ${accountingUI.operation(row,{runId:id,disabled:running||Boolean(lock),opened})}
-      ${paidFileUI.operation(row,{runId:id,disabled:running||Boolean(lock)})}
+      ${accountingUI.operation(row,{runId:id,disabled:runActionPending||running||Boolean(lock),opened})}
+      ${paidFileUI.operation(row,{runId:id,disabled:runActionPending||running||Boolean(lock)})}
       <details data-detail="${escape(row.id)}-terms" ${opened.has(row.id + '-terms') ? 'open' : ''}><summary>Exact request and snapshot</summary>${terms(row)}</details>
       ${row.result || row.lastError ? `<details data-detail="${escape(row.id)}-result" ${opened.has(row.id + '-result') ? 'open' : ''}><summary>Original retained result</summary><pre>${escape(JSON.stringify(row.result ?? row.lastError,null,2))}</pre></details>` : ''}</article>`;
   }).join('');
   restoreAccountingFocus();
+  renderApprovalStatus();
   $('#progress-events').innerHTML = active?.events?.length ? active.events.map(event => `<div class="event"><span>${escape(new Date(event.at).toLocaleTimeString())}</span><code>${escape(event.id)} · ${escape(readable(event.status))}${event.code ? ' · ' + escape(event.code) : ''}</code></div>`).join('') : '<p class="muted">Execution events appear here while this workspace owns a run.</p>';
 }
 async function action(path, extra = {}) {
+  if (runActionPending) throw new Error('The current action is still being recorded. Read its original result before continuing.');
   const id = currentRun.id, generation = navigation;
-  await request('/api/runs/' + path,{id,...extra});
-  if (generation === navigation && view === 'run' && currentRun?.id === id) await openRun(id);
+  runActionPending = true; approvalFresh = false; approvalUI.disconnect(); renderRun();
+  try {
+    await request('/api/runs/' + path,{id,...extra});
+  } finally {
+    // A lost response is recovered by reading the same run, never by replaying this action.
+    if (generation === navigation && view === 'run' && currentRun?.id === id)
+      await refreshSelectedRun().catch(error => { disconnectApproval(); notice(error.message,true); });
+    runActionPending = false;
+    if (generation === navigation && view === 'run' && currentRun?.id === id) renderRun();
+  }
 }
 async function poll() {
   clearTimeout(timer);
-  try { if (view === 'run' && currentRun) {
-    const id = currentRun.id, generation = navigation, result = await request('/api/runs/' + id);
-    if (generation === navigation && view === 'run' && currentRun?.id === id) { currentRun = result; renderRun(); }
-  }
+  try { if (view === 'run' && currentRun) await refreshSelectedRun();
     if(view==='recovery'||state?.recovery?.active&&!state.recovery.active.finishedAt)await refreshState();
   }
   catch (error) { notice(error.message,true); }
-  timer = setTimeout(poll,currentRun?.active && !currentRun.active.finishedAt ||
+  timer = setTimeout(poll,approvalContext || otherApprovalRun || currentRun?.active && !currentRun.active.finishedAt ||
     state?.recovery?.active&&!state.recovery.active.finishedAt ? 1500 : 6000);
 }
 
 $('#new-draft').addEventListener('click',handle(newDraft));
 $('#welcome-new').addEventListener('click',handle(newDraft));
-$('#refresh').addEventListener('click',handle(async () => { await refreshState(); if (view === 'run') await openRun(currentRun.id); if(view==='requests')await intakeUI.refresh(); if(view==='clients')await clientUI.refresh(); notice('Local sources refreshed.'); }));
+$('#refresh').addEventListener('click',handle(async () => { await refreshState(); if (view === 'run') await openRun(currentRun.id); if(view==='requests')await intakeUI.refresh(); if(view==='clients')await clientUI.refresh(); if(view==='operator')await operatorUI.refresh(); notice('Local sources refreshed.'); }));
 $('.sidebar').addEventListener('click',handle(async event => {
   const run = event.target.closest('[data-run]'), plan = event.target.closest('[data-draft]');
   if (run) { notice(''); await openRun(run.dataset.run); }
@@ -307,7 +479,11 @@ $('#initialize-run').addEventListener('click',handle(async () => {
   }
 }));
 $('#revision-picker').addEventListener('change',handle(event => openDraft(draft.id,Number(event.target.value))));
-$('#execute-run').addEventListener('click',handle(async () => { await action('execute'); notice('The original buyer is running. Continue its approval in the operator terminal.'); }));
+$('#execute-run').addEventListener('click',handle(async () => { const inBrowser = browserApproval(currentRun); await action('execute'); notice(inBrowser ? 'The original buyer is running. Review its live payment terms in the purchase approval panel.' : 'The original buyer is running. Continue its approval in the operator terminal.'); }));
+$('#refresh-approval').addEventListener('click',handle(refreshApprovalSelection));
+$('#open-current-approval').addEventListener('click',handle(async () => { const id = otherApprovalRun; if (id) await openRun(id); }));
+window.addEventListener('offline',disconnectApproval);
+window.addEventListener('pagehide',() => { approvalRead++; approvalUI.disconnect(); });
 $('#cancel-run').addEventListener('click',handle(async () => { await action('cancel',{executionId:currentRun.active.executionId}); notice('Cancellation requested. Waiting for the current original operation to finish cleanup.'); }));
 $('#recover-run').addEventListener('click',handle(async () => { await action('recover'); notice('Retained original output inspected for recovery.'); }));
 $('#unlock-run').addEventListener('click',handle(async () => { await action('unlock',{ownerPid:currentRun.state.executionLock.pid}); notice('The selected dead owner lease has been released.'); }));

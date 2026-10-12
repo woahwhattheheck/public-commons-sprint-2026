@@ -12,7 +12,8 @@ import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { compileSellerOpenApi } from '../sf30-seller-sdk/developer-portal.mjs';
 import { CLIENT_EXPORT_FILES, CLIENT_EXPORT_MANIFEST, inspectSellerClientExport } from '../sf30-seller-sdk/developer/client-export.mjs';
 
-export const OPENSEARCH_SOURCE_SCHEMA = 'stellar-forge.opensearch-seller-release-manifest.v1';
+import { OPENSEARCH_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { OPENSEARCH_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'opensearch/package';
 const MiB = 1024 * 1024;
 const FILES = ['source.json', 'merchant-plan.json', 'service.json', 'bindings.json', 'openapi.json',
@@ -96,7 +97,8 @@ export async function prepareOpenSearchRelease(packageDirectory) {
       id: route.id, offer: route.offer, handler() { throw new Error('Release inspection only'); }, admit() { return true; },
     })));
     const openapi = compileSellerOpenApi(routes, { mode: 'CHALLENGE_ONLY' });
-    if (!isDeepStrictEqual(parse(retained['openapi.json']), openapi) ||
+    // Compare the emitted JSON contract; compiler maps can have a null prototype.
+    if (stable(parse(retained['openapi.json'])) !== stable(openapi) ||
         !retained['openapi.json'].equals(retained['client/seller-openapi.json']))
       fail('The prepared OpenSearch OpenAPI or generated customer contract differs from its source.');
     const client = await inspectSellerClientExport({ directory: join(directory, 'client') });

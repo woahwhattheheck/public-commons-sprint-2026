@@ -134,6 +134,14 @@ def _read_source(input_kind, paths, format, checkout, node, cache_dir):
         inputs.append(item)
         return parse(raw), raw
 
+    if input_kind == "document":
+        from .response_documents import read_document_source
+        return read_document_source(paths, format)
+
+    if input_kind == "native":
+        from .analysis_native_sources import read_native_source
+        return read_native_source(paths, format, checkout, node, cache_dir, _read_source)
+
     if input_kind == "stream":
         directory = private_directory(Path(paths["stream"]), create=False)
         manifest, manifest_raw = take("manifest", 1_048_576)
@@ -556,15 +564,36 @@ class AnalysisResponses:
                 path.unlink()
 
     def _open(self, source):
+        if source.get("input_kind") == "document":
+            from .response_documents import document_path
+            document_id = source.get("document_id")
+            if source.get("paths") != {"document_id": document_id}:
+                raise StateError("ANALYSIS_DOCUMENT_REGISTERED_PATH_INVALID")
+            # The original DB history stores a content address. The receiving
+            # directory supplies location after a complete workspace restore.
+            source = {**source, "paths": {"document_id": document_id,
+                "manifest": str(document_path(self.database.directory, document_id))}}
         return open_source(source, checkout=self.checkout, node=self.node, cache_dir=self.database.directory / "response-cache")
 
     def register(self, name, input_kind, *, config=None, result=None, stream=None, manifest=None,
-                 session=None, destination=None, format="json", expected_revision=0):
+                 session=None, destination=None, format="json", expected_revision=0,
+                 native_workspace=None, native_kind=None, native_id=None, native_inbox=None, expected_native=None):
         if not isinstance(name, str) or not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}", name):
             raise StateError("ANALYSIS_NAME_INVALID")
         if type(expected_revision) is not int or expected_revision < 0:
             raise StateError("ANALYSIS_SOURCE_REVISION_REQUIRED")
-        if input_kind == "stream":
+        if input_kind == "document":
+            from .response_documents import retain_document
+            if not manifest:
+                raise StateError("ANALYSIS_DOCUMENT_MANIFEST_REQUIRED")
+            retained = retain_document(manifest, self.database.directory)
+            paths = {"document_id": retained["document_id"]}
+        elif input_kind == "native":
+            from .analysis_native_sources import native_source_paths
+            if not isinstance(expected_native, str) or not _HASH.fullmatch(expected_native):
+                raise StateError("ANALYSIS_NATIVE_SOURCE_REVIEW_REQUIRED")
+            paths = native_source_paths(native_workspace, native_kind, native_id, native_inbox)
+        elif input_kind == "stream":
             directory = private_directory(Path(stream), create=False)
             paths = {"stream": str(directory), "manifest": str(directory / "manifest.json"), "request": str(directory / "source.json")}
         elif input_kind == "object":
@@ -584,11 +613,17 @@ class AnalysisResponses:
             paths = {"config": str(Path(config).expanduser().absolute()), "result": str(Path(result).expanduser().absolute())}
         source = {"schema": _SOURCE, "kind": "response", "name": name, "input_kind": input_kind,
                   "format": format, "paths": paths}
+        if input_kind == "document":
+            source["document_id"] = paths["document_id"]
         opened = self._open(source)
         # The original same-descriptor reader verifies the retained file now.
         with opened.file.open():
             pass
         opened.check_inputs()
+        if input_kind == "native":
+            if opened.context.get("nativeSourceSha256") != expected_native:
+                raise StateError("ANALYSIS_NATIVE_SOURCE_CHANGED_BEFORE_REGISTRATION")
+            source["native_source"] = {"sha256": expected_native, "binding": opened.context["nativeSource"]}
         if input_kind == "object":
             # Pin the chosen recorded destination, including when the caller
             # selected the latest assembly. Later assemblies cannot change it.
@@ -603,7 +638,7 @@ class AnalysisResponses:
                 old = parse(row["record"].encode())
                 if old.get("kind") == "response" and all(old.get(k) == source.get(k) for k in ("paths", "source_sha256", "input_kind", "format")):
                     db.commit()
-                    return old
+                    return {**old, "native_source": source["native_source"]} if input_kind == "native" else old
             revision = row["revision"] if row else 0
             if revision != expected_revision:
                 raise StateError("ANALYSIS_SOURCE_CHANGED")
@@ -686,3 +721,4 @@ class AnalysisResponses:
             return {"version": version, "source": source["name"], "source_revision": source["revision"],
                     "preview_id": spec["preview_id"], "preview_sha256": spec["preview_sha256"],
                     "allow_incomplete": spec["allow_incomplete"]}
+

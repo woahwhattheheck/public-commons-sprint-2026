@@ -2,6 +2,7 @@
 // Every acquisition, page, lock, recovery and export belongs to the original runtime.
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {executeLostOutputCommand} from './dataset-recovery.mjs';
 import { absolute, readJson, writeJson, writeBytes, jsonBytes, exists, object, need, safeCode } from './store.mjs';
 
 const [runtimePath, entryPath, command, requestPath, resultPath] = process.argv.slice(2);
@@ -73,6 +74,19 @@ async function main() {
     result = await api.inspectDatasetSession(directory);
     need(result.status !== 'RUNNING', 'DATASET_SESSION_RUNNING_USE_STATUS');
     await bind(result); check(result);
+  } else if(command==='attach-recovery') {
+    need(metadata.source?.kind==='attached','DATASET_RECOVERY_ATTACHMENT_REQUIRED');
+    const definition=api.validateDatasetDefinition(await readJson(join(directory,'session.json'),262144),directory);
+    await bind({configurationSha256:definition.configurationSha256,sessionId:definition.config.operation.intentId,
+      limits:definition.limits,expectedSnapshot:definition.expectedSnapshot,
+      workspaceDirectory:definition.workspaceDirectory??null});
+    result={schema:'stellar-forge.node-dataset-recovery-attachment.v1',directory,
+      sessionId:binding.sessionId,configurationSha256:binding.configurationSha256,
+      limits:binding.limits,expectedSnapshot:binding.expectedSnapshot,workspaceDirectory:binding.workspaceDirectory};
+  } else if(['inspect-lost-output','recover-lost-output','read-lost-output','export-lost-output'].includes(command)) {
+    await executeLostOutputCommand({runtime,entry,metadata,binding,request,requestPath:absolute(requestPath),
+      resultPath:absolute(resultPath),command,signal:controller.signal});
+    return;
   } else if (command === 'accounting' || command === 'finalize') {
     need(binding || command === 'accounting' && request.initializeAccounting === true &&
       metadata.source.kind === 'attached', 'DATASET_INITIALIZE_OR_ATTACH_REQUIRED');
