@@ -80,6 +80,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -156,7 +160,11 @@
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.js",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-refunds.css",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-networks.json",
-    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/REFUNDS.md"
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/REFUNDS.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/README.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/WORKSPACE.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/examples/lifecycle.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/browser-assets.json"
   ],
   "commands": {
     "openalex": "stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",
@@ -364,7 +372,9 @@
     "nocodb-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/publisher/cli.mjs",
     "nocodb-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/deployment-cli.mjs",
     "dataset-ndjson": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/cli.mjs",
-    "dataset-ndjson-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs"
+    "dataset-ndjson-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs",
+    "buyer-collections": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/cli.mjs",
+    "buyer-collections-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/server.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -844,7 +854,9 @@
     "./seller/nocodb/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/publisher/model.mjs",
     "./seller/nocodb/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/deployment.mjs",
     "./merchant/mcp/source-workspaces": "./source/stellar-forge/mcp-merchant-operator/source-workspace.mjs",
-    "./seller/ndjson-merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs"
+    "./seller/ndjson-merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs",
+    "./buyer/collections": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/model.mjs",
+    "./buyer/collections/server": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
