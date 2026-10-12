@@ -85,6 +85,10 @@ Comparison JSON has `context`, compatibility findings, complete `counts` and a s
 
 The original request is `{action,payload,operationId,expectedRevision}`. The native ledger reconciles its operation ID and exact request hash before current revision. An accepted action with a lost response can return its original result on an explicit retry.
 
+Station, mapping and source-review drafts retain the exact saved record they were opened from. Background capture progress may advance the workspace revision without rebasing those drafts. If that same saved record changes, compare the original version, current version and entered draft, then explicitly choose which fields to retain before saving. A new subject or record remains distinct.
+
+The original request also retains its originating draft identity. Both normal completion and exact replay apply the original saved station/mapping ID and saved-record baseline before the completed browser journal is written. Later unsaved field edits survive; a different newly opened draft does not receive another draft’s result.
+
 The browser preserves the original request and later unsaved drafts separately. Authentication errors, transport failures and incomplete/5xx replies retain the request. Read its native operation status, reopen the original session, then choose retry. A definitively rejected request can be closed while keeping its form. An uncertain request is not silently discarded or given a new ID.
 
 Source-package import verifies every response hash and advertised station/resource/request binding, then uses the same capture machinery. It retains source-observed times, never refetches a missing response and never relabels imported evidence as freshly observed. One package import is bounded to 64 MiB; larger raw source sets remain individually downloadable by original receipt.
