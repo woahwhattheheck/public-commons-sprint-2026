@@ -245,3 +245,19 @@ files plus a single complete result with source hashes.
 The source commissioning and managed application journeys use the selected
 actual Redis/Valkey deployment separately. Their complete source is retained in
 the same Redis component.
+
+## Operate the complete Redis-to-Valkey receiving pair
+
+The same installed Redis contribution includes the whole paired operator:
+
+~~~sh
+starforge redis-cutover-operator open --directory /srv/customer/original-cutover --input /srv/customer/approved-cutover.json --port 8440
+~~~
+
+Open the returned operator URL. The source/contract editor, original native receiving, exact-request continuation, both saved authoring editors, full difference paging, corrected receiving editions and complete handover share the original paired directory. Reopen that directory without `--input` to continue its saved operations.
+
+A source correction uses New edition so the earlier original observations and result stay available. The browser retains one complete local draft/request under one editing tab owner; native directory locks and review preimages also protect separate operator/CLI writers. Compare saved results and complete handover verification work after the source databases stop.
+
+The ZIP carries the approved contract, original receiving reports/source revisions, every full native preview, complete generated customer packages and all difference files with their exact manifest. Download verifies the complete original bytes; `redis-cutover-operator export` supports original-prefix continuation and complete-file reuse.
+
+The complete installed guide is `source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/CUTOVER_OPERATOR.md`. The existing two-engine programme accepts `SF30_REDIS_CUTOVER_BROWSER=1` to receive this browser flow in the same physical migration and original customer operation. Use its retained `NATIVE_CUTOVER.md` and the actual selected installed browser/Redis/Valkey equipment.

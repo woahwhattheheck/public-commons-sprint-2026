@@ -7,13 +7,11 @@ store, query author and package/runtime controller.
 ## Source and ownership
 
 - Repository: `woahwhattheheck/public-commons-sprint-2026`.
-- Branch: `scf/coinmetrics-cloud-workspace-26b1`, initially main
-  `b9d40f9f99a99ec0aec1e9211536f7fc7adab597`.
+- The maintained `duckdb` contribution selects this complete source and its installed entrypoints.
 - Source root relative to a repository checkout: `stellar/scf-starforge-20261009`.
 - New core: `sf30-seller-sdk/duckdb/cloud-delivery/`.
 - Original host: `sf30-seller-sdk/duckdb/workspace/{model,store,server,cli}.mjs`.
-- Root owns `cloud-delivery/public/{app.mjs,style.css}` and original
-  `workspace/public/{app.mjs,index.html,style.css}` UI joins. Core owner owns host joins.
+- Browser assets remain `cloud-delivery/public/` and the original `workspace/public/`.
 - The maintained source, query author, compiler and runtime dependencies remain in
   that same repository. Run the original workspace CLI against a private state directory.
 
@@ -243,3 +241,97 @@ Native work has one OS-released SQLite ownership lock per retained operation and
 immutable attempt inputs/results. A failed or interrupted local attempt can resume;
 a completed result is reused. Prepared database publication and export snapshots
 are recoverable without changing the original source, review or delivery identity.
+
+## Installed, remote and resumed operation
+
+The source-owned `duckdb` contribution now exposes `cloud-workspace`,
+`cloud-mcp` and `cloud-remote` alongside its original commands. See
+[CLIENT.md](CLIENT.md) for the complete host setup, typed requests, transfer,
+receiving and editable merchant workflow. The declared catalog contains 33
+tools, including 12 native actions. It is shared by the host and client.
+
+### Listener identity and original operation recovery
+
+`GET /api/identity` returns
+`{schema:'stellar-forge.duckdb-workspace-listener.v1',workspaceId,instanceId,pid}`.
+The saved workspace UUID and the current listener instance are distinct.
+The installed launch and Applications provider verify this authenticated
+identity before accepting the loopback URL.
+
+`GET /api/cloud/operation?operationId=ID` reads the original retained Cloud
+record without entering a second mutation. Remote `merchant_cloud_operation`
+also accepts `kind:'draft'|'package'` for the original merchant stores. A
+missing response is reconciled through that original identity before any
+explicit supported continuation. Source, comparison review and merchant draft
+revisions keep their existing separate meanings.
+
+### Resumable source and archive bytes
+
+`GET /api/cloud/upload-status?edition=ID&file=ID` returns the original upload's
+`state`, `bytes`, `offset`, `prefixSha256`, `requestSha256`, `sha256` and current
+Cloud `revision`, together with `editionId` and `fileId`. Counts that can
+describe files are decimal strings. Reading an already retained request
+validates its bytes without creating another immutable request file.
+
+`PUT /api/cloud/upload-chunk?edition=ID&file=ID&offset=DECIMAL&sha256=HEX`
+accepts one raw `application/octet-stream` chunk with its exact Content-Length,
+at most 8 MiB. The SHA is for that chunk, not the whole source file. A repeated
+range must equal its original retained bytes. The writer verifies the chunk,
+fsyncs accepted bytes and then advances its committed prefix. Recovery checks
+the complete committed prefix before reconciling its own uncommitted tail.
+Complete publication verifies both the immutable request's expected hash and
+the source selection's hash where declared. It retains the actual archive hash
+when the original browser intake omitted that outer SHA.
+
+The browser uses `File.slice` and bounded WebCrypto hashing. It proves retained
+ranges against a reselected file before continuing. The Node upload helper
+holds and verifies the local descriptor and hashes the remote prefix before
+sending remaining bytes. MCP uses the same native upload with at most 196,608
+decoded bytes per chunk and a 3 MiB complete request limit. These transport
+bounds do not change the original 2 GiB source-file and 8 GiB total limits.
+
+The original complete-stream PUT route remains available. Both routes finish
+the same immutable intake. Commit still explicitly inspects the original
+source files; uploading bytes alone does not create a READY data edition.
+
+### Editable merchant receiving
+
+An export that includes an original merchant package also freezes that
+package's original editable draft and authoring entries. The handover records
+`originalDraft` and `originalDraftSha256`; receiving checks that hash and the
+included original package's plan bytes. Earlier handovers without an editable
+draft remain readable.
+
+`GET /api/cloud/received-draft?receivingId=ID` returns
+`{receivingId,delivery,editionIds,originalDraft,originalDraftSha256,sourceSelectionRequired:true}`.
+This reads retained input. It does not alter the recipient's source or plan.
+
+`POST /api/cloud/adopt-draft` accepts
+`{operationId,expectedRevision,sourceSha256,plan,authoring?,receivingId,originalDraftSha256}`.
+Here `expectedRevision` is the current merchant draft revision. The receiving
+must be READY and the selected source must be one of its retained editions.
+The original merchant editor/compiler validates the current source and plan.
+The saved draft records `stellar-forge.cloud-draft-adoption.v1` provenance,
+including the original delivery/draft hash and selected edition. The operator
+can edit query authoring against actual current relations, then use the
+original review, preview and prepare commands.
+
+The browser callback preserves its existing save/discard decision for dirty
+merchant edits. It opens the received plan and authoring in the original
+editor, and only an explicit save records adoption. Former seller and payment
+runtime instances are retained history rather than newly started services.
+
+### Complete retained downloads and close
+
+The typed client selects an original source, complete comparison, delivery ZIP
+or original package member. The selection binds the workspace UUID, native
+artifact identity, byte length and SHA256. The unchanged retained-download
+writer stores exact ranges and supports local reopen without an endpoint.
+Only the original missing-read outcome permits a new descriptor for the same
+artifact/hash/offset.
+
+The existing HTTP source/report/delivery routes stream their complete selected
+bytes. Each response is owned before filesystem awaits; prefix and file bytes
+share one cancellable pipeline. Closing the listener aborts those streams and
+drains the original model. The remote client closes only its outgoing requests
+and file reads; closing the original workspace is a separate explicit command.

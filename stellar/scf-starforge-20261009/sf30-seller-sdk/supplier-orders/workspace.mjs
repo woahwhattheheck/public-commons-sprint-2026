@@ -11,6 +11,7 @@ import { parseOpenTransDocument, renderOpenTransDocument } from './opentrans.mjs
 import { writeSupplierOrderPackage, readSupplierOrderPackage } from './portable.mjs';
 import { loadSupplierOrderTransportConfig } from './transport-config.mjs';
 import { SupplierOrderTransport } from './transport.mjs';
+import { SUPPLIER_ORDER_PROFILE_SELECTION_SCHEMA, defaultSupplierOrderProfile, normalizeSupplierOrderProfile, supplierOrderProfileTemplate, supplierOrderProfileSha256, supplierOrderDocumentProfile, supplierOrderProfilesEqual } from './profiles.mjs';
 
 export const TABLES=Object.freeze({
   supplier_order_sources:['id','sha256','record_json'],
@@ -148,15 +149,68 @@ export class SupplierOrderWorkspace {
     if(!s.isFile()||s.isSymbolicLink()||s.size!==record.bytes)fail('ORDER_FILE_CHANGED','The complete retained file is unavailable.',409);
     return{...record,path};
   }
+  profileBusinessEmpty(){
+    return ['supplier_order_sources','supplier_order_documents','supplier_order_drafts','supplier_order_transmissions','supplier_order_receivings','supplier_order_foreign_records']
+      .every(table=>!this.db.prepare('SELECT 1 AS found FROM '+table+' LIMIT 1').get());
+  }
+  profile(){
+    this.assertOpen();
+    const row=this.db.prepare('SELECT value FROM meta WHERE key=?').get('supplier_order_profile');
+    let selection;
+    if(row){
+      selection=JSON.parse(row.value);const {sha256,...sealed}=selection;if(digest(sealed)!==sha256)fail('ORDER_PROFILE_SELECTION_CHANGED','The retained profile selection changed.',409);const profile=normalizeSupplierOrderProfile(selection.profile);
+      if(selection.schema!==SUPPLIER_ORDER_PROFILE_SELECTION_SCHEMA||selection.profileSha256!==supplierOrderProfileSha256(profile)||!Number.isSafeInteger(selection.revision)||selection.revision<1)fail('ORDER_PROFILE_SELECTION_CHANGED','The retained profile selection differs from its complete declaration.',409);
+      selection={...selection,profile};
+    }else{const profile=defaultSupplierOrderProfile();selection={schema:SUPPLIER_ORDER_PROFILE_SELECTION_SCHEMA,profile,profileSha256:supplierOrderProfileSha256(profile),revision:0,implicit:true,selectedAt:null,requestId:null,reason:'Original Unite default'};}
+    return{...clone(selection),workspaceId:this.store.id,canSelect:this.profileBusinessEmpty()&&!this.active.size&&!this.inFlight.size};
+  }
+  profileTemplate(options={}){this.assertOpen();return supplierOrderProfileTemplate(options);}
+  profileHistory({offset=0,limit=50}={}){
+    this.assertOpen();const p=page(offset,limit),selection=this.profile();
+    const total=Number(this.db.prepare("SELECT count(*) n FROM operations WHERE (kind='supplier-orders-select-profile' OR kind='supplier-orders-import-workspace' AND json_extract(record_json,'$.request.mode')='merge' AND json_extract(record_json,'$.result.profile.adoptionRequired')=1) AND state='COMPLETE'").get().n);
+    const items=this.db.prepare("SELECT record_json FROM operations WHERE (kind='supplier-orders-select-profile' OR kind='supplier-orders-import-workspace' AND json_extract(record_json,'$.request.mode')='merge' AND json_extract(record_json,'$.result.profile.adoptionRequired')=1) AND state='COMPLETE' ORDER BY created_at DESC,id LIMIT ? OFFSET ?").all(p.limit,p.offset).map(parsed);
+    return{items,total,...p,revision:selection.revision,profileSha256:selection.profileSha256};
+  }
+  selectProfile(request){
+    return this.sync('select-profile',request,()=>{
+      const current=this.profile(),profile=normalizeSupplierOrderProfile(request.profile);
+      if(request.profile===undefined||request.profile===null)fail('ORDER_PROFILE_REQUIRED','Select the complete declared profile.');
+      if(request.expectedProfileSha256!==current.profileSha256||request.expectedSelectionRevision!==current.revision)fail('ORDER_PROFILE_SELECTION_CHANGED','Reopen the current profile selection before saving this declaration.',409,{currentProfileSha256:current.profileSha256,currentRevision:current.revision});
+      if(!this.profileBusinessEmpty()||this.active.size||this.inFlight.size)fail('ORDER_PROFILE_LOCKED','This workspace has original business intake or an active operation. Use a separate empty workspace for a different customer profile.',409);
+      const selected={schema:SUPPLIER_ORDER_PROFILE_SELECTION_SCHEMA,profile,profileSha256:supplierOrderProfileSha256(profile),revision:current.revision+1,implicit:false,selectedAt:now(),requestId:request.requestId,reason:text(request.reason,'Profile selection reason',4000),previousProfileSha256:current.profileSha256};
+      selected.sha256=digest(selected);
+      this.db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('supplier_order_profile',JSON.stringify(selected));
+      return{profileSelection:clone(selected)};
+    });
+  }
+  documentProfile(document){
+    const profile=supplierOrderDocumentProfile(document),current=this.profile();
+    if(!supplierOrderProfilesEqual(profile,current.profile))fail('ORDER_DOCUMENT_PROFILE_DIFFERS','This original document belongs to a different selected customer profile. Use that profile’s workspace.',409,{workspaceProfileSha256:current.profileSha256,documentProfileSha256:supplierOrderProfileSha256(profile)});
+    return profile;
+  }
+  assertProfile(expected){
+    const selected=this.profile();if(expected!==undefined&&expected!==selected.profileSha256)fail('ORDER_PROFILE_SELECTION_CHANGED','The selected customer profile changed before intake.',409,{currentProfileSha256:selected.profileSha256});
+    return selected;
+  }
+  adoptPackageProfile(profile,{requestId,sourceWorkspaceId,adoptProfile=false,expectedProfileSha256,expectedSelectionRevision,sourceSelection=null}={}){
+    const current=this.profile();
+    if(supplierOrderProfilesEqual(profile,current.profile))return current;
+    if(!adoptProfile||!this.profileBusinessEmpty())fail('ORDER_PACKAGE_PROFILE_DIFFERS','Inspect this package and explicitly adopt its complete profile into an empty workspace, or open a workspace with the same retained profile.',409);
+    if(current.profileSha256!==expectedProfileSha256||current.revision!==expectedSelectionRevision)fail('ORDER_PROFILE_SELECTION_CHANGED','The receiving profile selection changed. Inspect the package again before adopting it.',409);
+    const selected={schema:SUPPLIER_ORDER_PROFILE_SELECTION_SCHEMA,profile:normalizeSupplierOrderProfile(profile),profileSha256:supplierOrderProfileSha256(profile),revision:current.revision+1,implicit:false,selectedAt:now(),requestId,reason:'Explicit complete customer-package profile adoption',previousProfileSha256:current.profileSha256,sourceWorkspaceId,sourceSelection:clone(sourceSelection)};
+    selected.sha256=digest(selected);
+    this.db.prepare('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('supplier_order_profile',JSON.stringify(selected));
+    return selected;
+  }
   supplierIdentity(){const row=this.db.prepare('SELECT value FROM meta WHERE key=?').get('supplier_order_issuer');return row?JSON.parse(row.value):null;}
   bindSupplier(document){
     const current=this.supplierIdentity(),explicit=document.header.supplierId??null;
     let selected=explicit;
-    if(!selected&&document.kind==='ORDERRESPONSE'){
+    if(!selected&&document.kind==='ORDERRESPONSE'&&this.documentProfile(document).supplierIdentity.inheritOrderResponse){
       const prior=parsed(this.db.prepare('SELECT record_json FROM supplier_order_heads WHERE order_id=?').get(document.orderId));
       if(prior)selected=this.document({id:prior.documentId}).document.header.supplierId??null;
     }
-    if(!selected)fail('ORDER_SUPPLIER_IDENTITY_REQUIRED','Retain an unambiguous original Unite supplier number before adding this document to a supplier workspace.',422,{supplierIdentity:document.header.supplierIdentity??null});
+    if(!selected)fail('ORDER_SUPPLIER_IDENTITY_REQUIRED',this.documentProfile(document).id===PROFILE_ID?'Retain an unambiguous original Unite supplier number before adding this document to a supplier workspace.':'Retain an unambiguous supplier identity under the selected customer declaration before adding this original document.',422,{supplierIdentity:document.header.supplierIdentity??null});
     if(current&&current.value!==selected)fail('ORDER_SUPPLIER_WORKSPACE_DIFFERS','This original supplier has a different workspace identity. Receive its complete documents into that supplier’s workspace.',409,{workspaceSupplier:current.value,documentSupplier:selected});
     if(!current){if(document.kind!=='ORDER')fail('ORDER_ORIGINAL_REQUIRED','Import this supplier’s complete original ORDER before related documents.');const value={value:selected,identity:clone(document.header.supplierIdentity??null),originalOrderId:document.orderId,createdAt:now()};this.db.prepare('INSERT INTO meta(key,value) VALUES(?,?)').run('supplier_order_issuer',JSON.stringify(value));}
     return selected;
@@ -164,7 +218,7 @@ export class SupplierOrderWorkspace {
   state(){
     this.assertOpen();this.store.recoverInterrupted();
     const count=table=>Number(this.db.prepare('SELECT count(*) AS n FROM '+table).get().n);
-    return{schema:'stellar-forge.supplier-orders-workspace.v1',workspaceId:this.store.id,profileId:PROFILE_ID,supplierIdentity:this.supplierIdentity(),
+    return{schema:'stellar-forge.supplier-orders-workspace.v1',workspaceId:this.store.id,profileId:this.profile().profile.id,profile:this.profile(),supplierIdentity:this.supplierIdentity(),
       counts:{orders:count('supplier_order_heads'),documents:count('supplier_order_documents'),drafts:count('supplier_order_drafts'),sources:count('supplier_order_sources'),transmissions:count('supplier_order_transmissions')},
       orderRevisions:Object.fromEntries(this.db.prepare('SELECT order_id,revision FROM supplier_order_heads').all().map(row=>[row.order_id,row.revision])),
       orderStateSha256:Object.fromEntries(this.db.prepare('SELECT order_id,record_json FROM supplier_order_heads').all().map(row=>[row.order_id,digest(parsed(row))])),
@@ -172,7 +226,7 @@ export class SupplierOrderWorkspace {
       operations:this.db.prepare("SELECT id,kind,state,created_at,updated_at,request_sha256,json_extract(record_json,'$.error.code') error_code,json_extract(record_json,'$.error.message') error_message,json_extract(record_json,'$.result.documentId') document_id,json_extract(record_json,'$.result.draftId') draft_id,json_extract(record_json,'$.result.file') file_json FROM operations WHERE kind LIKE 'supplier-orders-%' ORDER BY updated_at DESC LIMIT 30").all().map(row=>({id:row.id,kind:row.kind,state:row.state,createdAt:row.created_at,updatedAt:row.updated_at,requestSha256:row.request_sha256,error:row.error_code?{code:row.error_code,message:row.error_message}:null,result:{documentId:row.document_id,draftId:row.draft_id,file:row.file_json?JSON.parse(row.file_json):null}}))};
   }
   head(id,expected){
-    const value=parsed(this.db.prepare('SELECT record_json FROM supplier_order_heads WHERE order_id=?').get(orderId(id)));
+    const value=parsed(this.db.prepare('SELECT record_json FROM supplier_order_heads WHERE order_id=?').get(orderId(id,this.profile().profile)));
     if(!value)fail('ORDER_NOT_FOUND','Original order not found.',404);
     if(expected!==undefined&&value.revision!==revision(expected))fail('ORDER_CHANGED','The selected order changed. Reopen it before continuing.',409,{orderId:id,expectedRevision:expected,currentRevision:value.revision});
     return value;
@@ -205,7 +259,7 @@ export class SupplierOrderWorkspace {
     return{items,total,...p};
   }
   documents({orderId:id,kind,offset=0,limit=50}={}){
-    const p=page(offset,limit),where=[],args=[];if(id){orderId(id);where.push('EXISTS(SELECT 1 FROM supplier_order_document_orders r WHERE r.document_id=d.id AND r.order_id=?)');args.push(id);}
+    const p=page(offset,limit),where=[],args=[];if(id){orderId(id,this.profile().profile);where.push('EXISTS(SELECT 1 FROM supplier_order_document_orders r WHERE r.document_id=d.id AND r.order_id=?)');args.push(id);}
     if(kind){where.push('d.kind=?');args.push(kind);}
     const clause=where.length?' WHERE '+where.join(' AND '):'';
     const total=Number(this.db.prepare('SELECT count(*) AS n FROM supplier_order_document_index d'+clause).get(...args).n);
@@ -242,7 +296,7 @@ export class SupplierOrderWorkspace {
   select(record,ids,request,{initial=false}={}){
     const results={};
     for(const id of ids){
-      orderId(id);const existing=parsed(this.db.prepare('SELECT record_json FROM supplier_order_heads WHERE order_id=?').get(id));
+      orderId(id,this.profile().profile);const existing=parsed(this.db.prepare('SELECT record_json FROM supplier_order_heads WHERE order_id=?').get(id));
       if(record.kind==='ORDER'){
         if(record.document.orderId!==id)fail('ORDER_DOCUMENT_REFERENCE_INVALID','Select this original order by its own order number.');
         if(existing&&existing.documentId===record.id){results[id]=existing.revision;continue;}
@@ -268,7 +322,7 @@ export class SupplierOrderWorkspace {
     return results;
   }
   recordDocument(document,source,{direction='incoming',draftId=null,draftRevision=null}={}){
-    const value=normalizedDocument(document);this.bindSupplier(value);const key=businessKey(value),id=sourceDocumentId(value,source.sha256);
+    const value=normalizedDocument(document);this.documentProfile(value);this.bindSupplier(value);const key=businessKey(value),id=sourceDocumentId(value,source.sha256);
     const existing=this.db.prepare('SELECT id FROM supplier_order_documents WHERE id=?').get(id);if(existing)return this.document({id});
     const rev=Number(this.db.prepare('SELECT coalesce(max(revision),0)+1 AS n FROM supplier_order_documents WHERE business_key=?').get(key).n),referencedOrderIds=referencedOrders(value);
     const earlier=this.db.prepare('SELECT record_json FROM supplier_order_documents WHERE business_key=? ORDER BY revision').all(key).map(parsed);
@@ -283,17 +337,18 @@ export class SupplierOrderWorkspace {
   }
   async importDocument(request){return this.owned(()=>this.#importDocument(request));}
   async #importDocument(request){
+    const profileSelection=this.assertProfile(request.expectedProfileSha256),profile=profileSelection.profile;
     const name=safeName(request.name??basename(request.sourcePath??'document.xml')),origin=provenance(request.provenance);
     const s=await lstat(request.sourcePath);if(!s.isFile()||s.isSymbolicLink()||s.size<1||s.size>MAX_SOURCE_BYTES)fail('ORDER_SOURCE_FILE_INVALID','Select a complete original XML file of up to 64 MiB.');
     const file=await this.retain(createReadStream(request.sourcePath,{flags:constants.O_RDONLY|constants.O_NOFOLLOW}),{name});
     this.verifyInput(file,request);
     const selected={requestId:identifier(request.requestId,'Request ID'),name,provenance:origin,source:{bytes:file.bytes,sha256:file.sha256},
-      selection:request.selection??'history',...(request.expectedOrderRevision!==undefined?{expectedOrderRevision:request.expectedOrderRevision}:{}),
+      selection:request.selection??'history',...(profile.id!==PROFILE_ID?{profileSha256:profileSelection.profileSha256}:{}),...(request.expectedOrderRevision!==undefined?{expectedOrderRevision:request.expectedOrderRevision}:{}),
       ...(request.expectedOrderRevisions?{expectedOrderRevisions:clone(request.expectedOrderRevisions)}:{}),...(request.reason?{reason:text(request.reason,'Selection reason',4000)}:{})};
     if(!['current','history'].includes(selected.selection))fail('ORDER_SELECTION_INVALID','Choose current or history for the original document.');
     const source={id:digest([name,file.sha256,origin]),name,bytes:file.bytes,sha256:file.sha256,fileId:file.id,provenance:origin,capturedAt:now()};
     return this.perform('import',selected,async()=>{
-      const raw=await readFile(file.path),document=await parseOpenTransDocument(raw,{name,provenance:origin});
+      const raw=await readFile(file.path),document=await parseOpenTransDocument(raw,{name,provenance:origin,profile});
       return this.store.transaction(()=>{
         const record=this.recordDocument(document,source),ids=record.orderIds;let revisions={};
         if(record.kind==='ORDER'&&!this.db.prepare('SELECT order_id FROM supplier_order_heads WHERE order_id=?').get(document.orderId))
@@ -307,7 +362,7 @@ export class SupplierOrderWorkspace {
     const orders=(orderIds??[]).map(id=>this.order({orderId:id}));return createDocumentDraft(kind,orders,{...(documentId?{documentId}:{}),roundingPolicy:roundingPolicy??null});
   }
   drafts({orderId:id,offset=0,limit=50}={}){
-    const p=page(offset,limit),where=id?' WHERE EXISTS(SELECT 1 FROM json_each(d.record_json,\'$.orderIds\') refs WHERE refs.value=?)':'',args=id?[orderId(id)]:[];
+    const p=page(offset,limit),where=id?' WHERE EXISTS(SELECT 1 FROM json_each(d.record_json,\'$.orderIds\') refs WHERE refs.value=?)':'',args=id?[orderId(id,this.profile().profile)]:[];
     const total=Number(this.db.prepare('SELECT count(*) AS n FROM supplier_order_drafts d'+where).get(...args).n);
     const items=this.db.prepare('SELECT json_remove(d.record_json,\'$.document\',\'$.review.findings\') record_json FROM supplier_order_drafts d'+where+' ORDER BY d.updated_at DESC,d.id LIMIT ? OFFSET ?').all(...args,p.limit,p.offset).map(parsed).map(({document,...draft})=>draft);
     return{items,total,...p};
@@ -323,14 +378,15 @@ export class SupplierOrderWorkspace {
       if(prior&&prior.revision!==revision(request.expectedRevision))fail('ORDER_DRAFT_CHANGED','The saved draft changed. Reopen it before saving.',409,{currentRevision:prior.revision});
       const kind=request.kind??prior?.kind;if(!['ORDERRESPONSE','DISPATCHNOTIFICATION','INVOICE'].includes(kind))fail('ORDER_DRAFT_KIND_INVALID','Choose a confirmation, dispatch notification or invoice.');
       if(prior&&kind!==prior.kind)fail('ORDER_DRAFT_KIND_CHANGED','Create another draft for a different document kind.');
-      const ids=[...new Set(request.orderIds??prior?.orderIds??[])].map(orderId);
+      const ids=[...new Set(request.orderIds??prior?.orderIds??[])].map(id=>orderId(id,this.profile().profile));
       if(!ids.length||kind==='ORDERRESPONSE'&&ids.length!==1)fail('ORDER_DRAFT_ORDERS_INVALID','Select the original order or compatible orders for this document.');
       const originals=ids.map(id=>this.order({orderId:id}));
       const expectedStates=request.expectedOrderStateSha256??request.orderStateSha256;
       for(const order of originals){this.head(order.orderId,revision(request.expectedOrderRevisions?.[order.orderId]??request.orderRevisions?.[order.orderId]));
         if(!expectedStates?.[order.orderId]||expectedStates[order.orderId]!==order.stateSha256)fail('ORDER_DRAFT_SOURCE_CHANGED','The selected original order branch differs from the draft input. Reopen its current order selection before saving.',409,{orderId:order.orderId,currentStateSha256:order.stateSha256});}
-      const document=clone(data(request.document));if(document.kind!==kind||document.schema!=='stellar-forge.supplier-order-document.v1'||document.version!=='1.0'||document.profileId!==PROFILE_ID)
+      const document=clone(data(request.document));if(document.kind!==kind||document.schema!=='stellar-forge.supplier-order-document.v1'||document.version!=='1.0')
         fail('ORDER_DRAFT_DOCUMENT_INVALID','Keep the selected original document profile and kind.');
+      this.documentProfile(document);
       if(referencedOrders(document).some(id=>!ids.includes(id)))fail('ORDER_DRAFT_REFERENCES_FOREIGN','Every document line must refer to one of the selected original orders.');
       const policy=request.roundingPolicy??prior?.roundingPolicy??null;if(policy)roundedPolicy(policy);
       const at=now(),result={schema:DRAFT_SCHEMA,id:prior?.id??randomUUID(),revision:(prior?.revision??0)+1,
@@ -350,7 +406,7 @@ export class SupplierOrderWorkspace {
     return this.perform('prepare-document',request,async operation=>{
       const draft=operation.context.draft,rendered=await renderOpenTransDocument(draft.document);
       if(!(rendered.bytes instanceof Uint8Array))fail('ORDER_RENDER_BYTES_MISSING','The original document adapter returned no complete XML bytes.');
-      const parsedDocument=rendered.document??await parseOpenTransDocument(rendered.bytes,{name:draft.kind+'.xml',provenance:{draftId:draft.id,draftRevision:draft.revision}});
+      const parsedDocument=rendered.document??await parseOpenTransDocument(rendered.bytes,{name:draft.kind+'.xml',profile:this.documentProfile(draft.document),provenance:{draftId:draft.id,draftRevision:draft.revision}});
       const check=reviewDocument(parsedDocument,{orders:draft.orderIds.map(id=>this.order({orderId:id})),roundingPolicy:draft.roundingPolicy,forOutput:true});
       const errors=[...(rendered.findings??parsedDocument.findings??[]),...check.findings].filter(f=>f.severity==='error');
       if(errors.length)fail('ORDER_OUTPUT_REVIEW_REQUIRED','Correct the document fields shown in the review before preparing this output.',422,{findings:errors});
@@ -375,7 +431,7 @@ export class SupplierOrderWorkspace {
   selectDocument(request){
     return this.sync('select-document',request,()=>{
       text(request.reason,'Reason for this selection',4000);
-      const record=this.document({id:request.id}),ids=request.orderId?[orderId(request.orderId)]:record.orderIds;
+      const record=this.document({id:request.id}),ids=request.orderId?[orderId(request.orderId,this.profile().profile)]:record.orderIds;
       const revisions=this.select(record,ids,request);
       return{documentId:record.id,orderIds:ids,revisions};
     });
@@ -399,8 +455,10 @@ export class SupplierOrderWorkspace {
     if(!info.isFile()||info.isSymbolicLink()||info.size<1||info.size>MAX_PACKAGE_BYTES)fail('ORDER_PACKAGE_FILE_INVALID','Select a complete package of up to 8 GiB.');
     const file=await this.retain(createReadStream(input,{flags:constants.O_RDONLY|constants.O_NOFOLLOW}),{name:request.name??basename(input),kind:'package',mimeType:'application/zip',maxBytes:MAX_PACKAGE_BYTES});
     this.verifyInput(file,request);
-    const selected={requestId:identifier(request.requestId,'Request ID'),mode:request.mode??'merge',source:{bytes:file.bytes,sha256:file.sha256}};
-    return this.perform('import-workspace',selected,()=>readSupplierOrderPackage(this,file.path,{mode:selected.mode,requestId:selected.requestId,packageSha256:file.sha256}));
+    if(request.adoptProfile!==undefined&&typeof request.adoptProfile!=='boolean')fail('ORDER_PROFILE_ADOPTION_INVALID','Profile adoption must be an explicit Boolean.');
+    const selected={requestId:identifier(request.requestId,'Request ID'),mode:request.mode??'merge',source:{bytes:file.bytes,sha256:file.sha256},...(request.adoptProfile?{adoptProfile:true,expectedProfileSha256:request.expectedProfileSha256,expectedSelectionRevision:request.expectedSelectionRevision}:{})};
+    if(selected.adoptProfile&&(typeof selected.expectedProfileSha256!=='string'||!Number.isSafeInteger(selected.expectedSelectionRevision)))fail('ORDER_PROFILE_ADOPTION_REQUIRED','Inspect the package and retain the current profile SHA and selection revision before adoption.');
+    return this.perform('import-workspace',selected,()=>readSupplierOrderPackage(this,file.path,{mode:selected.mode,requestId:selected.requestId,packageSha256:file.sha256,adoptProfile:selected.adoptProfile??false,expectedProfileSha256:selected.expectedProfileSha256,expectedSelectionRevision:selected.expectedSelectionRevision}));
   }
   close(){
     if(this.closed)return Promise.resolve();if(this.closePromise)return this.closePromise;this.closing=true;

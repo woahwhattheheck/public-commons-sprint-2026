@@ -106,3 +106,23 @@ const reopened = await inspectRedisValkeyCutoverJourney({ directory: result.dire
 ## Customer commissioning
 
 Use `CUTOVER.md`, `COMMISSIONING.md` and `CUSTOMER_EXPORT.md` for the selected customer's actual source pair, application terms and buyer. This companion supplies a complete two-engine product receiving operation; the customer's editable cutover input identifies its own approved source edition/window, connection profiles, expected results and acceptance operator. The Percona workshare consumes those existing product APIs and preserves its original company case and contact.
+
+## Include the complete cutover browser
+
+Set `SF30_REDIS_CUTOVER_BROWSER=1` on the same original run command:
+
+~~~sh
+SF30_REDIS_CUTOVER_BROWSER=1 \
+SF30_PLAYWRIGHT_MODULE=/installed/original/playwright/index.mjs \
+SF30_CHROMIUM_EXECUTABLE=/installed/original/chromium \
+node source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/native-cutover.mjs run \
+  --directory /private/receiving/redis-valkey-cutover-001 \
+  --redis-server /installed/redis/bin/redis-server \
+  --valkey-server /installed/valkey/bin/valkey-server
+~~~
+
+Use the actual installed browser/module paths, or omit those optional browser variables when the existing runtime resolves Playwright and Chromium. The operator source/assets and the original local draft store come from the same selected product.
+
+The flag replaces only the two original receiving entry calls with the complete browser operator. The original RDB migration, mismatch/correction, both generated customers, source-page assertions and owned engine closure remain in this programme. The browser also receives the same admitted original request after a lost reply, exercises one tab's editing ownership and cold handoff, pages actual differences, opens both original authoring editors and creates/verifies the full handover after the engines stop.
+
+The final result adds `browserReceiving`. `native-cutover-browser.json` retains those original phases. Each original pair includes its full browser-downloaded handover and an operator screenshot. The corrected pair can retain a following editable edition; it performs no third physical receiving run. The [complete operator guide](CUTOVER_OPERATOR.md) describes its installed commands and continuation semantics.
