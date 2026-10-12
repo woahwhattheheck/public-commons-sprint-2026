@@ -80,7 +80,7 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
   }
   async function state() {
     const result = await store.read();
-    return { ...result, editions: result.editions.map(summary), running: [...running.keys()] };
+    return { ...result, liveProducts:result.liveProducts||[], editions: result.editions.map(summary), running: [...running.keys()] };
   }
   async function connect(input) {
     if (closed) throw fault('ODATA_CLOSED','Reopen the workspace.');
@@ -259,22 +259,54 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
     const context={query:new URLSearchParams(query)},admitted=await dataset.admit(context);
     return admitted===true?await dataset.handle(context):admitted;
   }
+  function liveFilePaths(record){
+    identifier(record.id,'live service ID');
+    const expected=['profile.json','package/catalog.json','package/plan.json','package/seller-service.json',
+      'package/offers.json','package/openapi.json','package/customer-query.json','package/request.json','package/package.json'];
+    if(record.schema!=='stellar-forge.odata-live-profile.v1'||!/^[a-f0-9]{64}$/.test(record.sourceBinding||'')||
+      !Array.isArray(record.files)||record.files.length!==expected.length||new Set(record.files).size!==expected.length||
+      record.files.some(name=>!expected.includes(name)))throw fault('ODATA_LIVE_PROFILE','Use a complete original live service profile.');
+    return record.files.map(name=>'live/products/'+record.id+'/'+name);
+  }
+  async function recordLiveProduct(record){
+    liveFilePaths(record);
+    if(stable(await readJson(join(root,'live','products',record.id,'profile.json')))!==stable(record))
+      throw fault('ODATA_LIVE_PROFILE','The retained live service profile differs.',409);
+    return store.mutate(state=>{state.liveProducts||=[];const previous=state.liveProducts.find(value=>value.id===record.id);
+      if(previous){if(stable(previous)!==stable(record))throw fault('ODATA_LIVE_EXISTS','The saved live service differs.',409);return copy(previous);}
+      state.liveProducts.push(copy(record));return copy(record);});
+  }
   async function backup(){
     if(running.size)throw fault('ODATA_TRANSFER_RUNNING','Pause active imports before making a portable workspace.',409);
     const saved=await store.read(),files=[];
+    const liveLease=saved.liveProducts?.length?await acquireReleaseLease(join(root,'live'),'state.lock'):null;
+    try{
     const hashes=new Set(saved.editions.flatMap(value=>value.pages.flatMap(page=>[page.source.sha256,page.rowsSha256])));
     for(const catalog of [...saved.connections.map(value=>value.catalog),...saved.editions.map(value=>value.catalog)])
       for(const receipt of Object.values(catalog.receipts||{}))if(receipt.sha256)hashes.add(receipt.sha256);
     for(const hash of hashes){const bytes=await raw(hash);files.push({path:'sources/'+hash,sha256:hash,bodyBase64:bytes.toString('base64')});}
     for(const record of saved.exports)for(const name of record.files){const bytes=await readFile(join(root,'exports',record.id,name));
       files.push({path:'exports/'+record.id+'/'+name,sha256:digest(bytes),bodyBase64:bytes.toString('base64')});}
+    for(const record of saved.liveProducts||[]){
+      for(const path of liveFilePaths(record)){const bytes=await readFile(join(root,path));files.push({path,sha256:digest(bytes),bodyBase64:bytes.toString('base64')});}
+      const selected={buyers:['request.json','offers.json','buyer.json','handoff.json','response.json'],
+        receiving:['original-response.json','rows.jsonl','receiving.json','next-request.json']};
+      for(const [kind,names]of Object.entries(selected)){const parent='live/products/'+record.id+'/'+kind;let entries;
+        try{entries=await readdir(join(root,parent),{withFileTypes:true});}catch(error){if(error.code==='ENOENT')continue;throw error;}
+        for(const entry of entries){if(!entry.isDirectory()||!/^[a-f0-9]{64}$/.test(entry.name))continue;
+          for(const name of names){const path=parent+'/'+entry.name+'/'+name;let bytes;
+            try{bytes=await readFile(join(root,path));}catch(error){if(error.code==='ENOENT')continue;throw error;}
+            files.push({path,sha256:digest(bytes),bodyBase64:bytes.toString('base64')});}}
+      }
+    }
     return {schema:'stellar-forge.odata-transfer.v1',exportedAt:now(),state:saved,files};
+    }finally{await liveLease?.close();}
   }
   async function restore(bundle){
     if(bundle?.schema!=='stellar-forge.odata-transfer.v1'||bundle.state?.schema!=='stellar-forge.odata-workspace.v1'||!Array.isArray(bundle.files))
       throw fault('ODATA_TRANSFER_SCHEMA','Use an original OData workspace transfer.');
     const current=await store.read();if(current.connections.length||current.editions.length||current.plans.length)throw fault('ODATA_RESTORE_TARGET','Restore into an empty workspace.',409);
-    const permitted=/^(sources\/[a-f0-9]{64}|exports\/[a-f0-9]{64}\/(dataset\.csv|dataset\.json|source\.json|rows\.json|seller\.json))$/;
+    const permitted=/^(sources\/[a-f0-9]{64}|exports\/[a-f0-9]{64}\/(dataset\.csv|dataset\.json|source\.json|rows\.json|seller\.json)|live\/products\/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\/(profile\.json|package\/[a-z-]+\.json|buyers\/[a-f0-9]{64}\/(request|offers|buyer|handoff|response)\.json|receiving\/[a-f0-9]{64}\/(original-response\.json|rows\.jsonl|receiving\.json|next-request\.json)))$/;
     const seen=new Set(),validated=[];
     for(const file of bundle.files){if(!permitted.test(file.path)||seen.has(file.path))throw fault('ODATA_TRANSFER_PATH','The transfer contains an unsupported or repeated file path.');
       const bytes=Buffer.from(file.bodyBase64,'base64');if(digest(bytes)!==file.sha256)throw fault('ODATA_TRANSFER_HASH','A transfer file differs from its original hash.',409);
@@ -284,14 +316,27 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
     for(const catalog of [...bundle.state.connections.map(value=>value.catalog),...bundle.state.editions.map(value=>value.catalog)])
       for(const receipt of Object.values(catalog.receipts||{}))if(receipt.sha256)required.add('sources/'+receipt.sha256);
     for(const record of bundle.state.exports){identifier(record.id);for(const name of record.files)required.add('exports/'+record.id+'/'+name);}
-    if([...required].some(path=>!seen.has(path)))throw fault('ODATA_TRANSFER_MISSING','The transfer omits a referenced source or export.');
+    for(const record of bundle.state.liveProducts||[]){
+      for(const path of liveFilePaths(record))required.add(path);
+      const original=validated.find(file=>file.path==='live/products/'+record.id+'/profile.json');
+      if(!original||stable(JSON.parse(original.bytes.toString('utf8')))!==stable(record))throw fault('ODATA_LIVE_PROFILE','The transferred live profile differs from its saved identity.',409);
+    }
+    for(const file of validated){
+      if(file.path.match(/\/buyers\/[a-f0-9]{64}\/handoff\.json$/)){
+        const parent=file.path.slice(0,file.path.lastIndexOf('/')+1);for(const name of ['request.json','offers.json','buyer.json'])required.add(parent+name);
+      }else if(file.path.match(/\/receiving\/[a-f0-9]{64}\/receiving\.json$/)){
+        const parent=file.path.slice(0,file.path.lastIndexOf('/')+1),record=JSON.parse(file.bytes.toString('utf8'));
+        required.add(parent+'original-response.json');required.add(parent+'rows.jsonl');if(record.nextRequest)required.add(parent+'next-request.json');
+      }
+    }
+    if([...required].some(path=>!seen.has(path)))throw fault('ODATA_TRANSFER_MISSING','The transfer omits a referenced source, export, or live service file.');
     for(const file of validated){const target=join(root,file.path);await mkdir(resolve(target,'..'),{recursive:true,mode:0o700});
       try{await writeNew(target,file.bytes);}catch(error){if(error.code!=='EEXIST')throw error;if(digest(await readFile(target))!==digest(file.bytes))throw fault('ODATA_RESTORE_CHANGED','A receiving file differs.',409);}}
     return store.mutate(state=>{const revision=state.revision;Object.assign(state,copy(bundle.state));state.revision=revision;state.restoredAt=now();
       for(const record of state.exports)record.directory=join(root,'exports',record.id);
-      for(const record of state.editions)if(record.status==='IMPORTING')record.status='PAUSED';return {connections:state.connections.length,editions:state.editions.length,exports:state.exports.length};});
+      for(const record of state.editions)if(record.status==='IMPORTING')record.status='PAUSED';return {connections:state.connections.length,editions:state.editions.length,exports:state.exports.length,liveProducts:state.liveProducts?.length||0};});
   }
   async function close(){closed=true;for(const control of running.values())control.abort();await Promise.allSettled([...completions.values()]);await store.settle();}
   return {directory:root,state,connect,refreshConnection,plan,reviewPlan,startCapture,capture,pause,edition,rows,reviewEdition,compare,
-    exportEdition,queryExport,backup,restore,raw,close};
+    exportEdition,queryExport,recordLiveProduct,backup,restore,raw,close};
 }

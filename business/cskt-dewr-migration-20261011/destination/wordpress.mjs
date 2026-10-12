@@ -125,3 +125,67 @@ export async function applyRelease(rawConfig,input) {
   return request(config,'/releases/'+encodeURIComponent(manifest.id)+'/apply',{method:'POST',body:{sha256,operationId:input.operationId,...(input.planSha256?{planSha256:input.planSha256}:{})}});
 }
 export async function rollbackRelease(config,{releaseId,operationId}) {if(!validId(releaseId)||!validId(operationId))problem('rollback_identity','Retain the exact release ID and a stable rollback operation ID.');return request(config,'/releases/'+encodeURIComponent(releaseId)+'/rollback',{method:'POST',body:{operationId}});}
+
+function capturedAssetDescriptor(item,capture) {
+  const document=item.document;
+  if(!document||['remove','consolidate'].includes(item.disposition))problem('asset_not_selected','Choose an original file selected by this reviewed release.',{detail:{itemId:item.id}});
+  if(typeof capture.file!=='string'||!isAbsolute(capture.file)||capture.file.length>4096||/[\0\r\n]/.test(capture.file))problem('asset_capture_file','Use an absolute ordinary file from the retained source capture.',{detail:{itemId:item.id}});
+  if(!validSha(document.sha256)||!Number.isSafeInteger(document.bytes)||document.bytes<1||document.bytes>MAX_ASSET)problem('asset_capture_review','Approve this retained file\'s exact SHA-256 and byte count before staging it.',{detail:{itemId:item.id}});
+  if(capture.sourceUrl!==document.sourceUrl||capture.sha256!==document.sha256||capture.bytes!==document.bytes)problem('asset_capture_identity','The selected capture must match the exact reviewed source URL, SHA-256 and byte count.',{detail:{itemId:item.id}});
+  for(const [name,value] of [['sourceUrl',capture.sourceUrl],['finalUrl',capture.finalUrl]]) {
+    let url;try{url=new URL(value);}catch{problem('asset_capture_url','Retain the actual source and final response URLs.',{detail:{itemId:item.id,field:name}});}
+    if(typeof value!=='string'||value.length>8192||/[\0\r\n]/.test(value)||url.protocol!=='https:'||url.username||url.password||url.hash)problem('asset_capture_url','Retained capture URLs must be complete HTTPS URLs without credentials or fragments.',{detail:{itemId:item.id,field:name}});
+  }
+  if(typeof capture.responseContentType!=='string'||capture.responseContentType.length>512||/[\0\r\n]/.test(capture.responseContentType)||capture.responseContentType.split(';')[0].trim().toLowerCase()!==document.mimeType.toLowerCase())problem('asset_capture_mime','The captured response type must match the reviewed file type.',{detail:{itemId:item.id}});
+  return {itemId:item.id,sourceUrl:capture.sourceUrl,finalUrl:capture.finalUrl,responseContentType:capture.responseContentType,sha256:capture.sha256,bytes:capture.bytes};
+}
+async function spoolCapturedAsset(capture,descriptor,folder) {
+  let source,target;const file=join(folder,'source.asset'),hash=createHash('sha256');let bytes=0;
+  try {
+    source=await open(capture.file,'r');const stat=await source.stat();
+    if(!stat.isFile()||stat.size!==descriptor.bytes)problem('asset_capture_size','The retained source must be an ordinary file with the exact reviewed byte count.',{detail:{itemId:descriptor.itemId,expectedBytes:descriptor.bytes,actualBytes:stat.size}});
+    target=await open(file,'wx',0o600);
+    for await(const raw of source.createReadStream({highWaterMark:CHUNK,autoClose:false})) {
+      const chunk=Buffer.from(raw);bytes+=chunk.length;
+      if(bytes>descriptor.bytes)problem('asset_capture_changed','The retained source grew while it was being read.',{detail:{itemId:descriptor.itemId}});
+      hash.update(chunk);let at=0;
+      while(at<chunk.length){const written=await target.write(chunk,at,chunk.length-at);if(!written.bytesWritten)problem('asset_spool_failed','The runtime could not retain the original captured file.');at+=written.bytesWritten;}
+    }
+    const actualSha256=hash.digest('hex');
+    if(bytes!==descriptor.bytes||actualSha256!==descriptor.sha256)problem('asset_capture_changed','The retained file differs from its approved source capture.',{detail:{itemId:descriptor.itemId,expectedSha256:descriptor.sha256,actualSha256,expectedBytes:descriptor.bytes,actualBytes:bytes}});
+    await target.sync();return file;
+  }catch(error){if(error instanceof DestinationError)throw error;problem('asset_capture_unavailable','The selected retained source file could not be read or staged.',{detail:{itemId:descriptor.itemId,cause:error.code||error.name}});}
+  finally{await source?.close();await target?.close();}
+}
+
+/** Stage reviewed original captures through the same resumable native media API. */
+export async function stageReleaseAssets(rawConfig,input) {
+  const config=normalizeDestinationConfig(rawConfig),{manifest,sha256}=originalManifest(input);
+  if(!validId(input.operationId))problem('operation_id','Retain one stable operation ID for the captured asset upload.');
+  if(!Array.isArray(input.files)||input.files.length<1||input.files.length>manifest.items.length)problem('asset_capture_selection','Select one or more captured files from this exact reviewed release.');
+  const selected=new Map(manifest.items.map(item=>[item.id,item])),seen=new Set();
+  const files=input.files.map(capture=>{
+    if(!capture||typeof capture!=='object'||Array.isArray(capture)||!selected.has(capture.itemId)||seen.has(capture.itemId))problem('asset_capture_selection','Each selected source item must appear exactly once in the retained capture input.');
+    seen.add(capture.itemId);return {capture,descriptor:capturedAssetDescriptor(selected.get(capture.itemId),capture)};
+  });
+  const state=await readbackRelease(config,{releaseId:manifest.id});
+  if(state.sha256!==sha256)problem('release_hash_mismatch','The retained destination release has different exact source bytes.',{status:409});
+  const existing=new Map(state.assets.map(asset=>[asset.itemId,asset])),outcomes=[];
+  for(const {capture,descriptor} of files) {
+    const retained=existing.get(descriptor.itemId);
+    if(retained) {
+      if(!retained.fileMatches||retained.sha256!==descriptor.sha256||retained.bytes!==descriptor.bytes||retained.sourceUrl!==descriptor.sourceUrl)problem('native_asset_changed','The existing native attachment does not match the approved captured file.',{status:409,detail:{itemId:descriptor.itemId,attachmentId:retained.attachmentId}});
+      outcomes.push({itemId:descriptor.itemId,recovered:true,asset:retained});continue;
+    }
+    if(['APPLIED','ROLLED_BACK','PARTIALLY_ROLLED_BACK'].includes(state.status))problem('release_closed','This completed release cannot import additional source files.',{status:409});
+    const folder=await mkdtemp(join(tmpdir(),'cskt-capture-'));
+    try {
+      const file=await spoolCapturedAsset(capture,descriptor,folder);
+      const asset=await uploadAsset(config,manifest.id,{...descriptor,manifestSha256:sha256,operationId:input.operationId},file);
+      outcomes.push({itemId:descriptor.itemId,recovered:false,asset});
+    }finally{await rm(folder,{recursive:true,force:true});}
+  }
+  const readback=await readbackRelease(config,{releaseId:manifest.id}),retained=new Map(readback.assets.map(asset=>[asset.itemId,asset]));
+  for(const {descriptor} of files){const asset=retained.get(descriptor.itemId);if(!asset?.fileMatches||asset.sha256!==descriptor.sha256||asset.bytes!==descriptor.bytes)problem('asset_stage_readback','The destination did not retain the complete selected original file.',{status:502,detail:{itemId:descriptor.itemId}});}
+  return {schema:'cskt.migration.asset-stage.v1',status:'STAGED',releaseId:manifest.id,manifestSha256:sha256,operationId:input.operationId,nativeStatus:readback.status,assets:outcomes.map(row=>({...row,asset:retained.get(row.itemId)}))};
+}
