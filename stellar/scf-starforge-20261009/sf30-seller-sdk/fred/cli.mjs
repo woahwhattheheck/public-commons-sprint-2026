@@ -12,6 +12,7 @@ import { initializeFredProject, fredProjectView, configureFredProject, importFre
   publishFredReview, selectFredPublication, exportFredProject, receiveFredProject, abandonFredOperation,
   previewFredBriefing, getFredBriefing, downloadFredBriefing } from './project.mjs';
 import { pageFredBriefing } from './briefing/model.mjs';
+import { FRED_TEMPLATE_COMMANDS, FRED_TEMPLATE_USAGE, runFredTemplateCommand } from './briefing/template-cli.mjs';
 import { startFredMerchant, prepareFredPurchase, executeFredPurchase, recoverFredPurchase, exportFredPurchase } from './merchant.mjs';
 import { startFredWorkspace } from './workspace.mjs';
 import { retainFredWorkspaceConnection } from './connection-record.mjs';
@@ -81,8 +82,13 @@ async function foreground(session, connectionFile) {
   return { state: 'CLOSED' };
 }
 export async function main(args = process.argv.slice(2)) {
-  if (!args.length || args.includes('--help') || ['help','-h'].includes(args[0])) { console.log(USAGE); return; }
-  const [command, ...rest] = args, flags = options(command, rest), directory = resolve(flags.project);
+  if (!args.length || args.includes('--help') || ['help','-h'].includes(args[0])) { console.log(USAGE + '\n\n' + FRED_TEMPLATE_USAGE); return; }
+  const [command, ...rest] = args;
+  if (FRED_TEMPLATE_COMMANDS.includes(command)) {
+    const result = await runFredTemplateCommand(args);
+    console.log(JSON.stringify(result, null, 2)); return result;
+  }
+  const flags = options(command, rest), directory = resolve(flags.project);
   const common = () => ({ directory, id: flags.id, expectedRevision: integer(flags['expected-revision'], 'Project revision') });
   const selected = () => selectFredPublication(directory, flags.publication);
   const buyer = async () => { need(flags['buyer-config'], '--buyer-config is required.'); return new Buyer(await readPrivateJson(resolve(flags['buyer-config']), 65536)).ready(); };

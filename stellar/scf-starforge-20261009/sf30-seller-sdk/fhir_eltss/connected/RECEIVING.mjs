@@ -237,10 +237,27 @@ async function retainedExport(key,action,args){
     const retained=journal.exports[key],info=await client.manifest({workspace:retained.workspace,exportId:retained.exportId});
     need(info.manifestFile?.sha256===retained.manifestSha256,'ELTSS_CONNECTED_EXPORT_CHANGED',key);return retained;
   }
-  const retained=await client.call(action,args,{timeoutMs:600000});
-  need(retained.state==='COMPLETED'&&retained.retention?.state==='COMPLETE'&&retained.native?.ok,
-    'ELTSS_CONNECTED_COMPLETE_EXPORT_REQUIRED',key);
-  journal.exports[key]=retained;await checkpoint();return retained;
+  journal.exportAttempts??={};
+  let request=journal.exportAttempts[key];
+  if(request)need(request.action===action&&same(request.arguments,args),
+    'ELTSS_CONNECTED_EXPORT_REQUEST_CHANGED',key);
+  else request=journal.exportAttempts[key]={key,action,arguments:args,startedAt:now(),attempts:[]};
+  const attempt={startedAt:now()};request.state='REQUESTED';request.attempts.push(attempt);
+  await checkpoint();
+  try{
+    const retained=await client.call(action,args,{timeoutMs:600000});
+    // Preserve the complete original response before deciding whether its file
+    // is usable. A native error or a failed file retention remains inspectable.
+    attempt.result=retained;attempt.returnedAt=now();await checkpoint();
+    need(retained.state==='COMPLETED'&&retained.retention?.state==='COMPLETE'&&retained.native?.ok,
+      'ELTSS_CONNECTED_COMPLETE_EXPORT_REQUIRED',key+' '+JSON.stringify({
+        state:retained.state,native:retained.native,retention:retained.retention,
+        exportId:retained.exportId,manifestSha256:retained.manifestSha256}));
+    request.state='COMPLETE';journal.exports[key]=retained;await checkpoint();return retained;
+  }catch(error){
+    request.state='INTERRUPTED';attempt.error={code:error.code??null,message:error.message};
+    await checkpoint();throw error;
+  }
 }
 async function download(key,retained,{pause=false}={}){
   const directory=join(output,'downloads',key);

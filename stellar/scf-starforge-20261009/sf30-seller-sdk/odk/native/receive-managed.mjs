@@ -235,11 +235,18 @@ export async function receiveManagedWorkspace(input){
   const paths={original:join(root,'original-workspace'),received:join(root,'received-workspace'),
     output:join(root,'delivery'),private:join(root,'private'),logs:join(root,'private','logs'),
     browser:join(root,'private','browser'),retained:join(root,'private','retained-files')};
-  const closeActive=async()=>{if(!active)return;const owner=active;active=null;
-    const exit=await stopChild(owner);await owner.closeLogs?.();
-    requireValue(exit.code===0,'CENTRAL_MANAGED_CLOSE','The original managed child did not close successfully: '+JSON.stringify(exit));
-    requireValue(await absent(join(owner.directory,'odk.connection.json')),'CENTRAL_MANAGED_CLOSE','The closed original listener still has its live connection file.');
-    return {phase:owner.phase,pid:owner.child.pid,exit};};
+  const closeActive=async()=>{if(!active)return;const owner=active;let failure;
+    try{
+      const exit=await stopChild(owner);
+      requireValue(exit.code===0,'CENTRAL_MANAGED_CLOSE','The original managed child did not close successfully: '+JSON.stringify(exit));
+      requireValue(await absent(join(owner.directory,'odk.connection.json')),'CENTRAL_MANAGED_CLOSE','The closed original listener still has its live connection file.');
+      return {phase:owner.phase,pid:owner.child.pid,exit};
+    }catch(error){failure=error;throw error;}
+    finally{
+      try{await owner.closeLogs?.();}
+      catch(error){if(failure)failure.logCleanup=describe(error);else throw error;}
+      finally{if(owner.exit&&active===owner)active=null;}
+    }};
   try{
     for(const directory of Object.values(paths))await mkdir(directory,{recursive:true,mode:0o700});
     const packageDirectory=await realpath(input.packageDirectory),packagePath=join(packageDirectory,'package.json');

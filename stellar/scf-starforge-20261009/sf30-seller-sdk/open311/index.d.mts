@@ -4,7 +4,7 @@ export interface Open311Connection {
   discoveryUrl?: string | null; allowHttp?: boolean;
   attribution?: { publisher?: string; title?: string; license?: string; licenseUrl?: string; sourceUrl?: string };
   apiKey?: string; apiKeyEnv?: string; apiKeyParameter?: string;
-  timeoutMs?: number; maxResponseBytes?: number; responseLimit?: number;
+  timeoutMs?: number; maxResponseBytes?: number; responseLimit?: number; responseLimitParameter?: string;
   pagination?: boolean; extendedAttributes?: boolean;
   statusValues?: string[]; queryExtensions?: string[];
 }
@@ -42,7 +42,11 @@ export class Open311Error extends Error {
   code: string; result: SourceResult | null; receipt: ResponseReceipt | null; raw: RawResponse | null;
   toJSON(): { name: string; code: string; message: string; result: SourceResult | null; receipt: ResponseReceipt | null };
 }
+export interface PreparedRequestQuery {
+  query: Record<string, string>; url: string; documentedLimit: number; paginationDeclared: boolean;
+}
 export interface Open311Client {
+  prepareRequests(query?: RequestQuery): PreparedRequestQuery;
   services(query?: ProviderQuery, options?: RequestOptions): Promise<SourceResult>;
   service(code: string | number, query?: ProviderQuery, options?: RequestOptions): Promise<SourceResult>;
   requests(query?: RequestQuery, options?: RequestOptions): Promise<SourceResult>;
@@ -51,6 +55,8 @@ export interface Open311Client {
   discovery(options?: RequestOptions): Promise<SourceResult>;
 }
 export function createClient(config: Open311Connection, options?: { fetchImpl?: typeof fetch }): Open311Client;
+export function describeRequests(config: Open311Connection, query?: RequestQuery): PreparedRequestQuery;
+export function sourceDateTime(value: string, name: string): number;
 export interface RequestRow {
   id: string; key: string; connectionId: string; jurisdictionId: string | null;
   serviceRequestId: string; serviceCode: string | null; serviceName: string | null;
@@ -86,3 +92,11 @@ export interface RequestFilter {
 }
 export interface RequestPage { items: RequestRow[]; total: number; offset: number; limit: number; }
 export function queryRequests(rows: RequestRow[], filter?: RequestFilter): RequestPage;
+
+export { COLLECTION_SCHEMA, normalizeCollectionPlan, collectionNodeQuery, splitCollectionWindow,
+  projectCollection, queryCollection, compareCollections } from './collection-domain.mjs';
+export type { CollectionPolicy, CollectionState, CollectionWindowState, CollectionSourceError, CollectionAttempt,
+  CollectionWindow, CollectionSelection, CollectionPlan, SourceCollection, CollectionCounts, CollectionSummary,
+  CollectionRequest, CollectionOccurrence, CollectionVersion, CollectionObservation, CollectionRecord,
+  CollectionProjection, CollectionFilter, CollectionPage, CollectionInfo, CollectionRequestView,
+  CollectionComparison, CollectionResult, CollectionCreateInput, CollectionRunInput, CollectionExport } from './collection-domain.mjs';

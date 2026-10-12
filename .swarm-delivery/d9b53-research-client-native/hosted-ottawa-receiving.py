@@ -46,9 +46,39 @@ def safe_name(name):
     return p
 
 payload=globals().get("INPUT_PAYLOAD")
-if payload is None: payload=json.loads(sys.stdin.readline())
+input_directory=None
+if payload is None:
+    if len(sys.argv)==3 and sys.argv[1]=="--input-file":
+        input_file=Path(sys.argv[2]).resolve(strict=True);input_directory=input_file.parent
+        payload=json.loads(raw(input_file))
+    else:
+        need(len(sys.argv)==1,"Use --input-file with the complete following-stage selection")
+        payload=json.loads(sys.stdin.readline())
+if input_directory is not None:
+    for field,file_field in (("inputText","inputFile"),("originalInputText","originalInputFile"),
+            ("program","programFile"),("sourceEnvelope","sourceEnvelopeFile"),
+            ("keeper","keeperFile"),("guide","guideFile")):
+        if file_field in payload:
+            need(field not in payload,"Select one complete "+field+" carrier")
+            payload[field]=raw(input_directory/str(safe_name(payload[file_field]))).decode("utf-8")
 need(payload["schema"]=="sf88.research-client.ottawa-following-owner.v1","Use the complete following-stage input")
 selected=json.loads(payload["inputText"]);business=selected["operationId"]
+original_input=payload.get("originalInputText")
+if original_input is not None:
+    original_selected=json.loads(original_input)
+    allowed_fields=("directory","sourceDirectory","outputDirectory","originalNativeReport","sourceEnvelopeFile")
+    expected_selected=dict(original_selected)
+    selected_root=Path(selected["directory"]).parent
+    original_root=Path(original_selected["directory"]).parent
+    need(selected_root.is_absolute() and original_root==Path("/dev/research-original-d9b53-20261012"),
+         "Keep the original input root as provenance")
+    for name in allowed_fields:
+        original_path=Path(original_selected[name])
+        need(original_path.is_relative_to(original_root),"Unexpected original runtime selector")
+        expected_selected[name]=str(selected_root/original_path.relative_to(original_root))
+    expected_selected["bundle"]={**original_selected["bundle"],
+        "file":str(selected_root/Path(original_selected["bundle"]["file"]).relative_to(original_root))}
+    need(expected_selected==selected,"Only original runtime paths may differ on the receiving host")
 need(selected["schema"]=="sf88.research-client.source-bundle-receiving-input.v1","Use the original receiving input")
 output=Path(selected["outputDirectory"]); stage=output.parent
 need(output.is_absolute() and stage.name=="ottawa-source-bundle","Use the original private stage directory")
@@ -178,12 +208,35 @@ write_new(program,payload["program"].encode())
 write_new(keeper_path,payload["keeper"].encode())
 write_new(guide_path,payload["guide"].encode())
 write_new(input_path,payload["inputText"].encode())
+if original_input is not None:
+    write_new(stage/"original-receiving-input.json",original_input.encode())
+    write_new(stage/"receiving-host-binding.json",(json.dumps({
+        "schema":"sf88.research-client.following-host-binding.v1","operationId":business,
+        "originalRoot":str(original_root),"selectedRoot":str(selected_root),
+        "originalInput":{"bytes":len(original_input.encode()),"sha256":digest(original_input.encode())},
+        "selectedInput":{"bytes":len(payload["inputText"].encode()),"sha256":digest(payload["inputText"].encode())},
+        "runtimeFields":[*allowed_fields,"bundle.file"]},sort_keys=True,indent=2)+"\n").encode())
 write_new(selected["sourceEnvelopeFile"],payload["sourceEnvelope"].encode())
 if "__file__" in globals() and Path(__file__).is_file():
     write_new(stage/"original-owner.py",raw(__file__))
 
 bundle=Path(selected["bundle"]["file"]); expected={key:selected["bundle"][key] for key in ("bytes","sha256")}
 if bundle.exists(): need(identity(bundle)==expected,"The retained original Ottawa bundle changed")
+elif payload.get("bundleFile") is not None:
+    local_bundle=Path(payload["bundleFile"]).resolve(strict=True)
+    need(local_bundle.is_absolute() and identity(local_bundle)==expected,
+         "The receiving host's complete original Ottawa file differs")
+    bundle.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    temporary=bundle.with_name(bundle.name+"."+uuid.uuid4().hex+".copy")
+    source_fd=os.open(local_bundle,os.O_RDONLY|os.O_NOFOLLOW)
+    target_fd=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(source_fd,"rb") as source_stream,os.fdopen(target_fd,"wb") as target_stream:
+        shutil.copyfileobj(source_stream,target_stream,1024*1024)
+        target_stream.flush();os.fsync(target_stream.fileno())
+    need(identity(temporary)==expected,"The original local Ottawa file changed while copying")
+    try:os.link(temporary,bundle)
+    except FileExistsError:need(identity(bundle)==expected,"A different selected bundle appeared")
+    finally:temporary.unlink()
 else:
     url=urllib.parse.urlsplit(payload["bundleUrl"])
     need(url.scheme=="https" and url.netloc and not url.username and not url.password and not url.fragment,
@@ -207,7 +260,19 @@ else:
 emit({"state":"original-ottawa-inputs-ready","operationId":business,"sourceFiles":len(source["files"]),
       "sourceCommit":selected["sourceCommit"],"bundle":expected})
 
-case_config=json.loads(raw(Path(selected["directory"]).parent/"case-input.json"))
+case_root=Path(selected["directory"]).parent
+case_input=case_root/"case-input.json"
+host_binding_path=case_root/"native-host-binding.json"
+if host_binding_path.exists():
+    host_binding=json.loads(raw(host_binding_path))
+    case_input=case_root/"case-input-host.json"
+    need(host_binding["operationId"]==business and host_binding["nativeOperationId"]==business+"-CONTINUATION-01"
+         and host_binding["selectedCaseInput"]["path"]==str(case_input)
+         and identity(case_input)=={key:host_binding["selectedCaseInput"][key] for key in ("bytes","sha256")},
+         "The preceding original native case binding changed")
+case_config=json.loads(raw(case_input))
+need(case_config["operationId"]==business and case_config["directory"]==str(case_root),
+     "Use the same actual case directory as the preceding native launcher")
 node=case_config["node"]; version=subprocess.check_output([node,"--version"],text=True,timeout=10).strip()
 need(version.startswith("v") and int(version[1:].split(".")[0])>=22,"Use the existing supported Node runtime")
 command=[node,str(program),str(input_path)]
@@ -312,7 +377,8 @@ for directory,folder in ((output,"receiving"),):
             path=Path(current)/name; info=path.lstat()
             need(stat.S_ISREG(info.st_mode),"Preserve only original ordinary receiving files")
             selected_files[folder+"/"+path.relative_to(directory).as_posix()]=path
-for name in ("application-command.json","owner-return.json","RECEIVING.md","preceding-native-return.json"):
+for name in ("application-command.json","owner-return.json","RECEIVING.md","preceding-native-return.json",
+             "original-receiving-input.json","receiving-input.json","receiving-host-binding.json"):
     if (stage/name).is_file(): selected_files["operation/"+name]=stage/name
 for attempt in journal["attempts"]:
     for key in ("stdout","stderr"):

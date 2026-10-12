@@ -660,13 +660,14 @@ def original_action(workspace, key):
     if not request_path.exists():
         return None
     request = read_json(request_path)
+    request_file = identity(request_path)
     started_path = root / "started.json"
     started = read_json(started_path) if started_path.exists() else None
     if started:
         need(started["actionKey"] == key
-             and started["requestSha256"] == sha(canonical(request)),
+             and started["requestSha256"] == request_file["sha256"],
              "Original provider action changed")
-    return {"request": request, "requestFile": identity(request_path),
+    return {"request": request, "requestFile": request_file,
             "started": started, "startedFile": identity(started_path) if started else None,
             "result": read_json(result_path) if result_path.exists() else None,
             "resultFile": identity(result_path) if result_path.exists() else None}

@@ -1,13 +1,58 @@
 # Grant purchase reviewer
 
-Install the original grant purchase workbench, review the retained source and
-payment outcome, read both complete Buyer results, then export the closed view
-for another receiving operator. The `grant-reviewer` selection packages this
-whole workflow through the maintained distribution and runtime installer.
+Install the complete SCF application reader and original grant purchase workbench.
+Read the selected Build application, product and financing companion, budget and
+source downloads, then review the retained purchase and both complete Buyer
+results. The `grant-reviewer` selection packages these original workflows through
+the maintained distribution and runtime installer.
 
 The reviewer reads the retained purchase. Receiving, reading, closing and
 exporting it preserve the original quote identities, outcome and source vintage.
 They do not dispatch another payment or refresh the underlying data.
+
+## Read and compose the complete application
+
+Open the selected application through the original local source server:
+
+~~~sh
+starforge grant-application --port 8787
+~~~
+
+The returned URL opens `/grant.html`. Begin with **Explore the working product**
+to inspect the original film, complete economic report and installed purchase
+reviewer. Read all nine application answers, the existing-work section, complete
+product and financing companion, budget and source index. Its current economic, coastal and Datasette source selections
+remain attached to the downloaded files. If the original setup listener is
+already open, use `/grant.html` at that same origin.
+
+Choose **Prepare submission** to edit the full answers and map the actual issuer
+fields, prompts and limits. Save a complete version, copy the selected answer or
+field text, and export the whole working draft. The same workspace receives a
+later source edition while preserving manual edits and their original baselines.
+Its [submission operating guide](../../../../stellar-forge/developer-site/GRANT_SUBMISSION.md)
+travels under `source/stellar-forge/developer-site/GRANT_SUBMISSION.md`; the original
+browser draft store retains optimistic revisions and complete version history.
+
+The installed composer receives an owner's selected manuscript into those
+same four reader files:
+
+~~~sh
+starforge grant-compose \
+  --directory /absolute/path/to/current/developer-site/dist \
+  --manuscript /absolute/path/to/current-scf-application.md \
+  --source-pins-output /absolute/path/to/current-reader-source-pins.json
+~~~
+
+The existing index supplies the retained product commits. For a newly selected
+edition, pass the actual `--fred-commit` and optional `--coops-commit`, plus the
+paired `--datasette-commit` and `--datasette-publisher-commit` selections.
+Omit `--manuscript` to render edits already retained in the reader downloads.
+
+The original `GRANT_RECEIVING.mjs` callback accepts the four resulting
+`sourcePins` on its owner's existing Page. Its other declared reader assets
+remain selected. The complete operating contract travels at
+`source/stellar-forge/developer-site/GRANT_COMPOSITION.md`, with the Datasette
+workflow at `source/stellar-forge/developer-site/GRANT_DATASETTE.md`.
 
 ## Build or receive the selected source
 
@@ -240,7 +285,7 @@ completion is recorded separately from those completed direct phases.
 
 ## Preserve the installed source and receiving identity
 
-The selection retains six original component roots in their relative layout.
+The selection retains seven original component roots in their relative layout.
 The maintained builder also follows their real static imports and required
 runtime declarations.
 
@@ -252,13 +297,16 @@ runtime declarations.
 | `stellar-forge/mcp-paid-agent` | Native Buyer, quote/result stores, computed console assets, browser client and declared MCP runtime inputs |
 | `stellar-forge/mcp-merchant-operator` | Original merchant host, provider registry, retained file readers/downloads and computed operator assets |
 | `stellar/scf-starforge-20261009/sf82-seller-pilot` | Original release-store setup, selection and native release lifecycle |
+| `stellar-forge/developer-site` | Complete application and source downloads, original local server and asset manifest, composer, film/report entry, guides and controlled reviewer receiving |
 
 The selected command catalog contains `installation`, `runtime-profile`,
 `runtime-install`, `runtime-workspace`, `runtime-transfer`, `grant-demo`,
-`merchant-mcp` and `merchant-grant-reviewer`.
+`merchant-mcp`, `merchant-grant-reviewer`, `grant-application` and `grant-compose`.
 Its Applications provider is `grant-reviewer` and its merchant provider is
 `grant-reviewer-workbenches`; its public workbench import is
-`@tokenjunkielabs/starforge-merchant/grant/reviewer-workbench`. Use
+`@tokenjunkielabs/starforge-merchant/grant/reviewer-workbench`. The same selected
+package exports `grant/application-server` and `grant/application-composer`
+through its original source modules. Use
 `starforge --help` and `starforge registrations` for the actual installed
 declarations.
 

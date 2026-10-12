@@ -78,7 +78,7 @@ def inspect_runtime(payload, *, temp_root=None):
         python = json.loads(probe.stdout.strip().splitlines()[-1])
     except (ValueError,IndexError) as exc:
         raise Problem("runtime_probe","Native Python did not return its actual dependency fingerprint.") from exc
-    binaries = {}
+    binaries, observations = {}, {}
     with tempfile.TemporaryDirectory(prefix="groundwater-version-",dir=temp_root) as directory:
         for engine,key,arguments,version_pattern in (
             ("mf6","mf6_executable",["-v"],r"(?<!\d)6\.8\.1(?!\d)"),
@@ -89,9 +89,42 @@ def inspect_runtime(payload, *, temp_root=None):
             output = (outcome.stdout+outcome.stderr).decode("utf-8",errors="replace")
             if not re.search(version_pattern,output):
                 raise Problem("solver_version","Selected solver does not report the pinned publisher version.",engine=engine,observed=output[-6000:])
-            binaries[engine] = {**file_info(path),"version":"6.8.1" if engine=="mf6" else "1.12.00","version_output":output[:6000],"version_probe_exit":outcome.returncode}
+            binaries[engine] = {**file_info(path),"version":"6.8.1" if engine=="mf6" else "1.12.00"}
+            observations[engine] = {"version_output":output,"version_probe_exit":outcome.returncode}
     identity = {"python":python,"python_binary":file_info(selected["python_executable"]),"binaries":binaries,"required_native":{"mf6_release":"6.8.1","mf2005dbl_release":"29.0","flopy":"3.11.0","modflow_devtools":"1.7.0"}}
-    return {"paths":selected,"identity":identity,"sha256":digest(identity)}
+    return {"paths":selected,"identity":identity,"sha256":digest(identity),"observations":observations}
+
+def runtime_identity(runtime):
+    """Compare complete executable content; retain volatile probe text separately.
+
+    Older saved runtimes hashed the Fortran EOF traceback, including its PID and
+    address-space layout. Validate that entire original object before deriving
+    the same content identity used by newly inspected runtimes.
+    """
+    if not isinstance(runtime,dict) or not isinstance(runtime.get("identity"),dict):
+        raise Problem("runtime_identity","The complete original runtime identity is unavailable.")
+    identity=copy.deepcopy(runtime["identity"])
+    if runtime.get("sha256")!=digest(identity):
+        raise Problem("runtime_identity","The saved runtime fingerprint does not match its original identity.")
+    if not {"python","python_binary","binaries","required_native"}<=identity.keys():
+        raise Problem("runtime_identity","The original runtime closure is incomplete.")
+    binaries=identity["binaries"]
+    dependencies=identity["python"].get("dependencies",{})
+    if not isinstance(binaries,dict) or set(binaries)!={"mf6","mf2005"} or not dependencies:
+        raise Problem("runtime_identity","The original solver or dependency closure is incomplete.")
+    for item in [identity["python_binary"],*binaries.values()]:
+        if not isinstance(item,dict) or not re.fullmatch(r"[0-9a-f]{64}",str(item.get("sha256",""))) or not isinstance(item.get("bytes"),int) or item["bytes"]<=0:
+            raise Problem("runtime_identity","An original executable content identity is incomplete.")
+    for item in dependencies.values():
+        if not isinstance(item,dict) or not item.get("version") or not re.fullmatch(r"[0-9a-f]{64}",str(item.get("files_sha256",""))) or not item.get("files"):
+            raise Problem("runtime_identity","An original installed dependency identity is incomplete.")
+    for item in binaries.values():
+        item.pop("version_output",None)
+        item.pop("version_probe_exit",None)
+    return identity
+
+def runtime_matches(original,actual):
+    return runtime_identity(original)==runtime_identity(actual)
 
 def run_directory(workspace,run_id):
     return workspace.directory/"runs"/run_id
@@ -189,11 +222,11 @@ def prepare_launch(workspace,db,run,retry,rebind,actor,reason):
         if not configured:
             raise Problem("runtime_required","Configure the receiving host runtime before rebinding.")
         runtime=json.loads(configured)
-        if runtime["sha256"]!=run["runtime_sha256"]:
+        if run["runtime"].get("sha256")!=run["runtime_sha256"] or not runtime_matches(run["runtime"],runtime):
             raise Problem("runtime_mismatch","The receiving host runtime differs from the exact frozen binary and dependency closure.")
         body={k:v for k,v in run.items() if k not in ("id","project_id","created","updated")}
-        body["runtime_rebindings"]=[*run.get("runtime_rebindings",[]),{"before":run["runtime"]["paths"],"after":runtime["paths"],"runtime_sha256":runtime["sha256"],"actor":actor,"reason":reason,"created":now()}]
-        body["runtime"]=runtime
+        body["runtime_rebindings"]=[*run.get("runtime_rebindings",[]),{"before":run["runtime"]["paths"],"after":runtime["paths"],"runtime_sha256":run["runtime_sha256"],"observed_runtime":runtime,"actor":actor,"reason":reason,"created":now()}]
+        body["runtime"]={**run["runtime"],"paths":runtime["paths"]}
         run=workspace._put(db,run["id"],"run",body,run["project_id"])
     return run
 
@@ -220,8 +253,8 @@ def launch(workspace,run_id,retry_incomplete=False):
         for row in run["application_files"]:
             workspace.objects.bytes(row)
         actual=inspect_runtime(run["runtime"]["paths"],temp_root=workspace.directory)
-        if actual["sha256"]!=run["runtime_sha256"]:
-            raise Problem("runtime_changed","The configured native runtime changed after the original run was queued.")
+        if run["runtime"].get("sha256")!=run["runtime_sha256"] or not runtime_matches(run["runtime"],actual):
+            raise Problem("runtime_changed","The configured native binary or installed dependency content changed after the original run was queued.")
         edition=workspace.record(run["edition_id"],"edition")
         source=workspace.record(run["source_id"],"source")
         if edition["sha256"]!=run["edition_sha256"] or source["sha256"]!=run["source_sha256"]:
