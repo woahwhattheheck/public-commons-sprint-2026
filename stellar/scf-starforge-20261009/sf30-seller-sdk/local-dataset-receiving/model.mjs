@@ -42,8 +42,15 @@ export async function openLocalDatasetReceiving({publisher,customer,environment=
  const check=()=>need(!closed,'LOCAL_WORKSPACE_CLOSED','This original host is closing.',409);
  const rd=id=>join(directory,'records',uuid(id));
  const opPath=id=>join(directory,'requests',uuid(id)+'.json');
- async function operation(id){return publicOperation(await readJson(opPath(id),8*1024*1024));}
- async function internalOperation(id){return readJson(opPath(id),8*1024*1024);}
+ async function operation(id){return publicOperation(await internalOperation(id));}
+ async function internalOperation(id){
+  try{return await readJson(opPath(id),8*1024*1024);}
+  catch(e){
+   if(e.code!=='ENOENT')throw e;
+   await privateDirectory(join(directory,'requests'));
+   throw fault('LOCAL_REQUEST_NOT_FOUND','No request is retained under this original ID.',404);
+  }
+ }
  async function record(id){return readJson(join(rd(id),'record.json'),16*1024*1024);}
  async function saveRecord(r){r.updatedAt=stamp();await atomicJson(rd(r.id),'record.json',r);return r;}
  async function history(id,op){

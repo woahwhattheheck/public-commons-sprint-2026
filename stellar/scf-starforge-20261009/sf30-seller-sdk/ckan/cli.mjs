@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { openCkanWorkbench } from './model.mjs';
 import { captureCkanResource, readCkanCapture, searchCkan } from './capture.mjs';
+import { receivePublicSourceCapture } from './retained-public-source.mjs';
 import { inspectCkanWorkspaceArchive, receiveCkanWorkspaceArchive } from './archive.mjs';
 import { startCkanServer } from './server.mjs';
 
@@ -14,6 +15,7 @@ const usage = [
   '  ckan serve --project DIR [--port 0]',
   '  ckan search --origin https://catalog.example [--query TEXT] [--start 0] [--rows 20]',
   '  ckan capture --selection selection.json --out DIR',
+  '  ckan capture-received --bundle FILE --bytes N --sha256 HASH --operation ID --selection selection.json --out DIR',
   '  ckan inspect-capture --capture DIR/capture.json',
   '  ckan import --project DIR --capture DIR/capture.json',
   '  ckan status --project DIR',
@@ -57,6 +59,12 @@ export async function main(argv = process.argv.slice(2)) {
   const input = async (name = 'input', optional = false) => !options[name] && optional ? {} : JSON.parse(await readFile(resolve(required(name)), 'utf8'));
   if (command === 'search') { output(await searchCkan(required('origin'), { q: options.query ?? '', start: Number(options.start ?? 0), rows: Number(options.rows ?? 20), authTokenEnv: options['auth-token-env'] })); return; }
   if (command === 'capture') { const result = await captureCkanResource(await input('selection'), resolve(required('out'))); output(result.manifest); return; }
+  if (command === 'capture-received') {
+    const result = await receivePublicSourceCapture({ bundleFile: resolve(required('bundle')),
+      bundleBytes: Number(required('bytes')), bundleSha256: required('sha256'), operationId: required('operation'),
+      selection: await input('selection'), captureDirectory: resolve(required('out')) });
+    output({ ...result.locator, binding: result.binding, manifest: result.capture.manifest }); return;
+  }
   if (command === 'inspect-capture') { const result = await readCkanCapture(resolve(required('capture'))); output({ manifest: result.manifest, sha256: result.manifestSha256, fields: result.fields, sample: result.rows.slice(0, 20) }); return; }
   if (command === 'inspect-workspace') { output(await inspectCkanWorkspaceArchive({ file: resolve(required('archive')), expectedSha256: options.sha256 })); return; }
   if (command === 'receive-workspace') { output(await receiveCkanWorkspaceArchive({ file: resolve(required('archive')), directory: resolve(required('project')), expectedSha256: required('sha256') })); return; }

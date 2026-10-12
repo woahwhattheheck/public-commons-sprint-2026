@@ -101,7 +101,68 @@ def active_retry(root,item):
    if when>now:active.append((when,record))
  return max(active,key=lambda x:x[0])[1] if active else None
 
+
+PUBLISHER_TEXT_REPRESENTATION="Web open extracted text with original source-line numbering; HTTP entity bytes and response status are not supplied"
+
+def publisher_text(record,body):
+ """Read the retained retrieval representation and check its original source identity."""
+ if record.get("schema")!="commons.publisher.text-capture.v1" or record.get("transport")!="web-open-extraction":
+  raise ValueError("Unsupported publisher text representation")
+ if record.get("status") is not None or record.get("headers")!={} or record.get("final_url") is not None:
+  raise ValueError("A retrieved text representation does not supply an HTTP status, headers or final redirect URL")
+ if record.get("body_representation")!=PUBLISHER_TEXT_REPRESENTATION or not record.get("body_complete") or record.get("body_truncated"):
+  raise ValueError("Publisher text representation is incomplete")
+ if len(body)!=record.get("bytes") or sha(body)!=record.get("sha256"):raise ValueError("Publisher text bytes changed")
+ original=body.decode("utf-8-sig")
+ marker=re.search(r"^【([^】]+)】[^\n]*Source: open\((\{[^\n]*\})\); Total lines: (\d+)$",original,re.M)
+ if marker is None:raise ValueError("Original retrieval metadata is absent")
+ request=json.loads(marker.group(2));total=int(marker.group(3));retrieval=record.get("retrieval",{})
+ url=allowed_url(record["request_url"])
+ if request.get("ref_id")!=url or request.get("lineno") is not None or record.get("source_url")!=url:
+  raise ValueError("Publisher text belongs to another source request")
+ if retrieval.get("tool")!="web.open" or retrieval.get("source_ref")!=marker.group(1) or retrieval.get("source_url")!=url or retrieval.get("total_lines")!=total:
+  raise ValueError("Publisher retrieval identity differs")
+ rows=re.findall(r"^L(\d+): ?(.*)$",original,re.M)
+ if len(rows)!=total or [int(row[0]) for row in rows]!=list(range(total)):
+  raise ValueError("Publisher retrieval is missing source lines")
+ # Retain the unmodified retrieval separately. Only remove its line/link/heading
+ # display notation when extracting readable publisher text.
+ text="\n".join(value for _,value in rows)
+ text=re.sub(r"【\d+†([^†】]+)(?:†[^】]+)?】",lambda m:m.group(1),text)
+ return re.sub(r"(?m)^#{1,6}[ \t]+","",text)
+
+def publisher_text_inputs(path,packet):
+ if path is None:return {},None
+ raw=Path(path).read_bytes();value=json.loads(raw)
+ if value.get("schema")!="commons.aviary.publisher-text-input.v1" or value.get("operation")!=packet["operation"]:
+  raise ValueError("Publisher text input belongs to another receiving operation")
+ declared={item["id"]:item for item in packet["downloads"] if item["media_type"]=="text/html"}
+ captured={}
+ for entry in value.get("captures",[]):
+  identifier=entry["id"]
+  if identifier in captured or identifier not in declared:raise ValueError("Unexpected or repeated publisher capture")
+  item=declared[identifier];record=entry["record"];body=entry["body"].encode("utf-8")
+  if record.get("request_url")!=item["url"] or record.get("source_path")!=str(PurePosixPath(item["path"]).with_suffix(".web-open.txt")):
+   raise ValueError("Publisher capture source URL or representation path differs")
+  problem=validate_capture(item,record,body)
+  if problem:raise ValueError(identifier+": "+problem)
+  captured[identifier]=(record,body)
+ return captured,raw
+
+def capture_source_path(item,record):
+ if record.get("schema")=="commons.publisher.text-capture.v1":
+  return str(PurePosixPath(item["path"]).with_suffix(".web-open.txt"))
+ return item["path"]
+
 def validate_capture(item,record,body):
+ if record.get("schema")=="commons.publisher.text-capture.v1":
+  if item["media_type"]!="text/html" or not item["id"].endswith("-page"):return "Text retrieval is only valid for the declared publisher pages"
+  if not body or len(body)>item["max_bytes"]:return "Publisher text is empty or exceeds its declared maximum"
+  try:text=publisher_text(record,body)
+  except (ValueError,KeyError,UnicodeError,TypeError) as error:return str(error)
+  if record["request_url"]!=item["url"]:return "Publisher text source differs"
+  if not re.search(r"Public\s+Domain",text,re.I):return "The original publisher public-domain statement is absent"
+  return None
  if record["status"]!=200:return "Original source returned HTTP "+str(record["status"])
  if record.get("error"):return record["error"]
  if not record.get("body_complete",True) or record.get("body_truncated",False):return "Original response body is incomplete"
@@ -205,6 +266,53 @@ class PublisherBrowser:
     try:page.close()
     except Exception as error:self.cleanup_errors.append({"stage":"page","error":type(error).__name__+": "+str(error)})
 
+
+class NodePublisherBrowser:
+ """Use the installed Node Playwright runtime with the same original capture contract."""
+ def __init__(self,executable=None,node_executable=None,playwright_module=None):
+  self.executable=executable;self.node=node_executable or os.environ.get("CODEX_PRIMARY_RUNTIME_NODE") or shutil.which("node")
+  self.module=playwright_module;self.cleanup_errors=[]
+ def close(self):return self.cleanup_errors
+ def capture(self,root,item):
+  import signal,subprocess
+  started=stamp();directory=Path(tempfile.mkdtemp(prefix="publisher-node-",dir=root))
+  record=None;body=b""
+  try:
+   helper=Path(__file__).resolve().with_name("capture-publisher-page.mjs")
+   if not self.node or not helper.is_file():raise RuntimeError("Node publisher browser or its companion source is unavailable")
+   request={"item":item,"directory":str(directory),"executable":self.executable,"playwright_module":self.module}
+   process=subprocess.Popen([self.node,str(helper)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
+   try:stdout,stderr=process.communicate(raw_json(request),timeout=120)
+   except subprocess.TimeoutExpired:
+    os.killpg(process.pid,signal.SIGTERM)
+    try:stdout,stderr=process.communicate(timeout=5)
+    except subprocess.TimeoutExpired:os.killpg(process.pid,signal.SIGKILL);stdout,stderr=process.communicate()
+    raise RuntimeError("Publisher browser exceeded its capture timeout; child group drained")
+   result_path=directory/"result.json"
+   if not result_path.is_file():raise RuntimeError("Publisher browser returned no capture result: "+stderr.decode("utf-8","replace")[-3000:])
+   result=json.loads(result_path.read_text("utf-8"))
+   if result.get("schema")!="commons.browser.publisher-capture.v1" or result.get("request_url")!=item["url"]:
+    raise ValueError("Publisher browser result belongs to another request")
+   self.cleanup_errors.extend(result.get("cleanup",[]))
+   for entry in result["records"]:
+    record=json.loads(safe(directory,entry["record"]).read_text("utf-8"));body=safe(directory,entry["body"]).read_bytes()
+    if record.get("request_url")!=item["url"] or len(body)!=record["bytes"] or sha(body)!=record["sha256"]:
+     raise ValueError("Publisher browser original response changed")
+    allowed_url(record["final_url"])
+    problem=validate_capture(item,record,body)
+    if not problem and entry["finalDocument"]:return record,body
+    record["error"]=problem or "Earlier browser navigation response; final document differs"
+    store_attempt(root,item,record,body)
+   raise CaptureFailure(result.get("navigation_error") or "Browser did not return the original publisher document",record)
+  except CaptureFailure:raise
+  except Exception as error:
+   record=capture_record(item,"node-playwright-chromium",started)
+   record["error"]=type(error).__name__+": "+str(error);finish_record(record,b"")
+   store_attempt(root,item,record,b"");raise CaptureFailure(record["error"],record) from error
+  finally:
+   try:shutil.rmtree(directory)
+   except Exception as error:self.cleanup_errors.append({"stage":"node-capture-directory","error":type(error).__name__+": "+str(error)})
+
 def publish_captured(path,original,record):
  """Link immutable captured bytes into the source tree; copy only across filesystems."""
  path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -221,7 +329,7 @@ def publish_captured(path,original,record):
   if error.errno!=errno.EXDEV:raise
   publish(path,original.read_bytes())
 
-def read_capture(root,item,browser=None):
+def read_capture(root,item,browser=None,publisher_texts=None):
  folder=safe(root,"captures/"+item["id"])
  if folder.exists():
   record=json.loads((folder/"response.json").read_text("utf-8"));body=(folder/"body.bin").read_bytes()
@@ -229,6 +337,13 @@ def read_capture(root,item,browser=None):
    raise ValueError("Captured source changed: "+item["id"])
   problem=validate_capture(item,record,body)
   if problem:raise ValueError("Retained capture is invalid: "+item["id"]+": "+problem)
+  return record,body
+ if publisher_texts and item["id"] in publisher_texts:
+  record,body=publisher_texts[item["id"]]
+  problem=validate_capture(item,record,body)
+  if problem:raise ValueError(problem)
+  store_capture(folder,record,body)
+  print(json.dumps({"captured":item["id"],"bytes":len(body),"sha256":record["sha256"],"transport":record["transport"],"source_ref":record["retrieval"]["source_ref"]}),flush=True)
   return record,body
  waiting=active_retry(root,item)
  if waiting:raise CaptureFailure("Original host Retry-After remains active until "+waiting["retry_at"],waiting)
@@ -252,39 +367,43 @@ class PageText(html.parser.HTMLParser):
  def handle_data(self,value):
   if not self.skip:self.parts.append(value)
  def text(self):return "".join(self.parts)
-def source_transcript(raw):
- parser=PageText();parser.feed(raw.decode("utf-8-sig"))
- match=re.search(r"(?:^|\n)\s*Transcript\s*\n(.*?)\n\s*Show\s+Transcript(?:\s*\n|$)",parser.text(),re.S)
- if not match:raise ValueError("The original transcript section was not found; inspect the retained HTML instead of substituting text.")
+def source_transcript(raw,record=None):
+ if record and record.get("schema")=="commons.publisher.text-capture.v1":text=publisher_text(record,raw)
+ else:
+  parser=PageText();parser.feed(raw.decode("utf-8-sig"));text=parser.text()
+ match=re.search(r"(?:^|\n)\s*Transcript\s*\n(.*?)\n\s*Show\s+Transcript(?:\s*\n|$)",text,re.S)
+ if not match:raise ValueError("The original transcript section was not found in the retained publisher representation.")
  text=match.group(1).strip()
  text=re.sub(r"[ \t]*\n[ \t]*","\n",text)
  text=re.sub(r"\n{3,}","\n\n",text)
  if not 100<len(text)<50000:raise ValueError("Unexpected original transcript length")
  return (text+"\n").encode("utf-8")
 def main():
- ap=argparse.ArgumentParser();ap.add_argument("--packet",required=True);ap.add_argument("--directory",required=True);ap.add_argument("--api-documentation",action="store_true");ap.add_argument("--publisher-browser",action="store_true",help="Use installed Playwright/Chromium for publisher pages after a failed direct response");ap.add_argument("--browser-executable",help="Optional existing Chromium executable");args=ap.parse_args()
+ ap=argparse.ArgumentParser();ap.add_argument("--packet",required=True);ap.add_argument("--directory",required=True);ap.add_argument("--api-documentation",action="store_true");ap.add_argument("--publisher-browser",action="store_true",help="Use installed Playwright/Chromium for publisher pages after a failed direct response");ap.add_argument("--browser-executable",help="Optional existing Chromium executable");ap.add_argument("--publisher-browser-runtime",choices=("python","node"),default="python",help="Use the installed Python or Node Playwright runtime");ap.add_argument("--node-executable",help="Existing Node executable for publisher browser capture");ap.add_argument("--playwright-module",help="Existing Node Playwright module entrypoint");ap.add_argument("--publisher-text-manifest",help="Retained original web.open page representations and source identities; media still use their original HTTP captures");args=ap.parse_args()
  packet_raw=Path(args.packet).read_bytes();packet=json.loads(packet_raw)
  if packet["schema"]!="commons.aviary.public-source-example-input.v1":raise ValueError("Unsupported packet")
  root=Path(args.directory).resolve();root.mkdir(parents=True,exist_ok=True,mode=0o700)
  with open(root/".receiving.lock","a+b") as lock:
   fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
   publish(root/"receiving-input.json",packet_raw)
+  publisher_texts,publisher_input=publisher_text_inputs(args.publisher_text_manifest,packet)
+  if publisher_input is not None:publish(root/"publisher-text-input.json",publisher_input)
   source=root/"source";source.mkdir(exist_ok=True,mode=0o700)
   for item in packet["files"]:
    raw=item["content"].encode("utf-8")
    if len(raw)!=item["bytes"] or sha(raw)!=item["sha256"]:raise ValueError("Packet member hash differs: "+item["path"])
    publish(safe(source,item["path"]),raw)
   captures={};capture_bodies={};failures=[]
-  browser=PublisherBrowser(args.browser_executable) if args.publisher_browser else None
+  browser=(NodePublisherBrowser(args.browser_executable,args.node_executable,args.playwright_module) if args.publisher_browser_runtime=="node" else PublisherBrowser(args.browser_executable)) if args.publisher_browser else None
   try:
    for item in packet["downloads"]:
-    try:record,body=read_capture(root,item,browser)
+    try:record,body=read_capture(root,item,browser,publisher_texts)
     except CaptureFailure as error:
      failures.append({"id":item["id"],"url":item["url"],"error":str(error),"response":error.record})
      continue
     captures[item["id"]]=record
     if item["media_type"]=="text/html":capture_bodies[item["id"]]=body
-    publish_captured(safe(source,item["path"]),safe(root,"captures/"+item["id"]+"/body.bin"),record)
+    publish_captured(safe(source,capture_source_path(item,record)),safe(root,"captures/"+item["id"]+"/body.bin"),record)
   finally:
    if browser:
     cleanup=browser.close()
@@ -301,11 +420,14 @@ def main():
    raise SystemExit(2)
   for item in packet["downloads"]:
    if item["media_type"]=="text/html":
-    parsed=PageText();parsed.feed(capture_bodies[item["id"]].decode("utf-8-sig"))
-    if not re.search(r"Public\s+Domain",parsed.text(),re.I):raise ValueError("Original public-domain statement is absent: "+item["id"])
-  tr=packet["generated_transcript"];body=capture_bodies[tr["source_page_id"]];transcript=source_transcript(body)
+    record=captures[item["id"]]
+    if record.get("schema")=="commons.publisher.text-capture.v1":page_text=publisher_text(record,capture_bodies[item["id"]])
+    else:
+     parsed=PageText();parsed.feed(capture_bodies[item["id"]].decode("utf-8-sig"));page_text=parsed.text()
+    if not re.search(r"Public\s+Domain",page_text,re.I):raise ValueError("Original public-domain statement is absent: "+item["id"])
+  tr=packet["generated_transcript"];body=capture_bodies[tr["source_page_id"]];transcript_record=captures[tr["source_page_id"]];transcript=source_transcript(body,transcript_record)
   publish(safe(source,tr["path"]),transcript)
-  transformation={"schema":"commons.source-text-extraction.v1","source_url":captures[tr["source_page_id"]]["request_url"],"source_sha256":sha(body),"output_path":tr["path"],"output_bytes":len(transcript),"output_sha256":sha(transcript),"method":"HTMLParser text from Transcript heading to Show Transcript; decode HTML entities; normalize paragraph whitespace; retain original wording; no timing or generated speech."}
+  transformation={"schema":"commons.source-text-extraction.v1","source_url":captures[tr["source_page_id"]]["request_url"],"source_sha256":sha(body),"output_path":tr["path"],"output_bytes":len(transcript),"output_sha256":sha(transcript),"source_representation":transcript_record.get("body_representation"),"source_ref":transcript_record.get("retrieval",{}).get("source_ref"),"method":("Retained web.open source lines from Transcript heading to Show Transcript; remove retrieval line numbers, link-reference labels and Markdown heading display markers; normalize paragraph whitespace; retain original wording." if transcript_record.get("schema")=="commons.publisher.text-capture.v1" else "HTMLParser text from Transcript heading to Show Transcript; decode HTML entities; normalize paragraph whitespace; retain original wording.")}
   publish(source/"provenance/transcript-extraction.json",raw_json(transformation))
   publish(root/"mapping.json",raw_json(packet["mapping"]))
   counts={}
@@ -315,7 +437,7 @@ def main():
     if any(len(row)!=width for row in values):raise ValueError("Source CSV width differs: "+kind)
     counts[kind]=len(values)-1
     if counts[kind]!=expected:raise ValueError("Source CSV count differs: "+kind)
-  sources={"schema":"commons.aviary.public-source-capture.v1","operation":packet["operation"],"packet_sha256":sha(packet_raw),"sources":captures,"transcript":transformation,"rights":packet["rights"],"declared_navigation":"The two VTT files are authored navigation indexes; publisher stated durations define their intervals. They are not original speech transcripts."}
+  sources={"schema":"commons.aviary.public-source-capture.v1","operation":packet["operation"],"packet_sha256":sha(packet_raw),"sources":captures,"transcript":transformation,"rights":packet["rights"],"publisher_text_input":({"bytes":len(publisher_input),"sha256":sha(publisher_input),"schema":"commons.aviary.publisher-text-input.v1"} if publisher_input is not None else None),"source_paths":{item["id"]:capture_source_path(item,captures[item["id"]]) for item in packet["downloads"]},"declared_navigation":"The two VTT files are authored navigation indexes; publisher stated durations define their intervals. They are not original speech transcripts."}
   publish(source/"provenance/source-capture.json",raw_json(sources))
   api=None
   if args.api_documentation:

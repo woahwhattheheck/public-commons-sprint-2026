@@ -215,8 +215,9 @@ export class MerchantGrpcWorkspaces {
     } finally { this.#controllers.delete(controller); }
   }
   async #json(definition, route, body) {
+    const maximum = route.startsWith('/api/operations-') ? OPERATIONS_MAX_BYTES + 1048576 : MAX_JSON;
     return this.#request(await this.#connection(definition), route, body, async response =>
-      JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await responseBytes(response, MAX_JSON))));
+      JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await responseBytes(response, maximum))));
   }
   async #state(definition) {
     const state = await this.#json(definition, '/api/state');

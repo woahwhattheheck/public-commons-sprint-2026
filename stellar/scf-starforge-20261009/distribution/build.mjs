@@ -31,7 +31,8 @@ function isRuntimeFile(path, explicitRuntime = false) {
     (explicitRuntime || !excludedName.test(parts.at(-1))) &&
     (supported.test(path) || (explicitRuntime && /\.(?:zip|parquet)$/i.test(path)) ||
       ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)) ||
-      (explicitRuntime && ['COPYING', 'DESCRIPTION'].includes(parts.at(-1))));
+      (explicitRuntime && (['COPYING', 'DESCRIPTION'].includes(parts.at(-1)) ||
+        /^(?:LICENSE|NOTICE)[.-][A-Za-z0-9][A-Za-z0-9._-]*$/i.test(parts.at(-1)))));
 }
 function valuesDeep(value) {
   return typeof value === 'string' ? [value] : Object.values(value).flatMap(valuesDeep);

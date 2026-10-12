@@ -208,10 +208,19 @@ function backupFor(context,pricingSourceId,expectedArchiveSha256){
     .map(material=>({material,binding:materialBinding(material)}))
     .filter(row=>row.binding.pricing.sourceId===pricingSourceId&&
       (expectedArchiveSha256===undefined||row.material.sha256===expectedArchiveSha256));
-  if(values.length!==1)fail('COMMERCIAL_PRICING_BACKUP_SELECTION',
+  const archives=new Set(values.map(row=>row.material.sha256));
+  if(archives.size!==1)fail('COMMERCIAL_PRICING_BACKUP_SELECTION',
     values.length?'Select the exact archive SHA-256 when this original pricing source has multiple retained backups.':
       'Attach the complete original pricing/cost backup for this selected pricing source.',409);
-  return values[0];
+  // Separate reviewed attachment requests can retain the same original bytes.
+  // Keep their history and select a stable material within that one archive.
+  values.sort((a,b)=>a.material.id<b.material.id?-1:a.material.id>b.material.id?1:0);
+  const selected=values[0],identity=({binding})=>({
+    pricing:binding.pricing,backup:binding.backup,costOrigin:binding.costOrigin
+  });
+  for(const row of values.slice(1))
+    same(identity(row),identity(selected),'COMMERCIAL_PRICING_BACKUP_CHANGED');
+  return selected;
 }
 /** Append two native original documents with their separately retained request IDs. */
 export async function attachCommercialReceivingSource({store,casesDirectory,id,expectedRevision,pricingRequestId,
@@ -243,8 +252,11 @@ export async function attachCommercialReceivingSource({store,casesDirectory,id,e
       reference:'urn:stellar-forge:commercial-pricing:'+source.source.pricing.sourceId}};
   const attached=await operateCaseCommissioning(store,{id,expectedRevision:current.record.revision,command});
   const reopened=await caseContext({store,id,workspaceId:commercialWorkspaceId(cases)});
-  const selected=backupFor(reopened.context,source.source.pricing.sourceId,source.backupFile.sha256);
-  same(materialBinding(selected.material),binding);
+  const material=reopened.context.state.materials.find(row=>row.id==='commercial-backup:'+attachmentRequestId);
+  if(!material)fail('COMMERCIAL_PRICING_BACKUP_SELECTION','Reopen this original backup attachment after its retained case save.',409);
+  const selected={material,binding:materialBinding(material)};
+  same(selected.binding,binding);
+  same(selected.material.sha256,source.backupFile.sha256);
   return {schema:ATTACHMENT_SCHEMA,state:'ATTACHED',case:{id,revision:reopened.record.revision},
     pricingSourceId:source.source.pricing.sourceId,sourceSha256:source.sourceSha256,
     archiveSha256:selected.material.sha256,materialId:selected.material.id,
