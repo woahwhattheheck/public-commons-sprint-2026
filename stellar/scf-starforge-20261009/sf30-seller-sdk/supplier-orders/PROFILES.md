@@ -1,6 +1,10 @@
 # Customer supplier profiles
 
-A supplier workspace now retains the complete interface declaration that gives its
+For the daily profile, order, confirmation, dispatch, invoice and handover workflow,
+start with the [customer operating guide](GUIDE.md). This reference documents the
+complete declaration and its programmatic interfaces.
+
+A supplier workspace retains the complete interface declaration that gives its
 original openTRANS 1.0 documents their business meaning. The same declaration is
 used by XML intake, current-order reconciliation, working drafts, output preparation,
 configured HTTPS channels and complete customer packages. Browser, native CLI and
@@ -20,15 +24,17 @@ the existing source format.
 ## Select the interface before receiving business data
 
 Use one private supplier workspace per declared interface and supplier account.
-Open **Customer profile** before its first original intake. The page shows the
-retained declaration, selection revision, complete profile SHA and whether selection
-is still available.
+Open **Customer profile** before its first original intake. Its overview shows the
+current rules, selection revision and whether selection is still available. Expand
+**Complete interface settings** to inspect the full declaration and profile SHA.
+The settings open automatically in an empty editable workspace.
 
 Choose **Start from openTRANS rules** or **Start from Unite rules**, or load a
 complete reviewed declaration JSON. Fill in the actual interface reference and
 revision, original specification URL/hash when available, supplier identity choices
 and the agreed document rules. Every rule in the extra required-field array carries
-its own source reference. The complete working JSON remains visible below the form.
+its own source reference. The complete working JSON remains available inside
+**Complete interface settings**.
 
 Selecting the declaration retains:
 
@@ -43,11 +49,12 @@ also blocks selection changes. Once business intake begins, another interface us
 a separate empty workspace. Even an invalid original document remains a source
 receipt; it cannot be silently reinterpreted by selecting different rules afterward.
 
-A lost selection response is recovered through **Continue original request**. The
-page reopens the same operation before creating another request. Confirmed conflicts
-open the actual current selection alongside the earlier complete attempted
-declaration. Newer unsaved editor changes remain available when an older saved
-request is recovered.
+After a lost selection response, open **Continue saved request** and choose
+**Reopen original request**. The page reads the same operation before creating
+another request. A confirmed conflict offers **Review current revisions**, showing
+the actual current selection alongside the earlier complete attempted declaration.
+Newer unsaved editor changes remain available when an older saved request is
+recovered.
 
 ### Original source and customer rule are separate
 
@@ -130,20 +137,22 @@ Fraunhofer openTRANS 1.0 corpus, keeps original source supplier identity priorit
 rejects negative confirmations, requires all original confirmation lines and adds
 one output supplier-reference rule.
 
-Those three additional choices are labeled as demonstration choices. They are
-not asserted to be requirements of Unite, CosmoShop, Aurebus, DBC or another live
-recipient. Use the original customer agreement when preparing an operational
-declaration.
+Those three additional choices are explicitly labeled as demonstration choices.
+Use the actual recipient agreement when preparing an operational declaration;
+the example does not establish that recipient's requirements.
 
 ## Browser workflow
 
 1. Open the empty supplier workspace and select **Customer profile**.
-2. Review a complete template or load the agreed declaration. Fill all contract
-   fields and explain the selection.
+2. Review the current rules. Expand **Complete interface settings** to start from
+   a complete template or load the agreed declaration. Fill all contract fields
+   and explain the selection.
 3. Select the declaration. Inspect its saved SHA and original selection history.
 4. Receive the complete original ORDER XML through **Receive document**. The form
-   displays and pins the currently selected profile SHA with its original source
-   hash, provenance and current-order revision choices.
+   pins the selected profile SHA, original source hash and provenance. Review
+   **Current revision**, which defaults to current. A later edition can enter
+   current reconciliation through that explicit choice; choose history to retain
+   it without changing the current contribution.
 5. Inspect findings, original XML, supplier account and current line quantities.
    Create a complete confirmation, dispatch or invoice from the actual selected
    order revisions.
@@ -155,7 +164,8 @@ declaration.
 8. Export the complete workspace and use the customer package flow below.
 
 The profile title and selected revision remain visible in the operator header.
-The full declaration remains inspectable after the editor locks. Transmission
+The full declaration remains inspectable in **Complete interface settings** after
+the editor locks. Transmission
 filters use the actual profile's order-number limit. The customer editor does not
 contain endpoint or credential fields; those remain with the host operator.
 
@@ -397,30 +407,36 @@ resolution/retry sequence establishes what to do. Selecting a customer profile
 does not add a live recipient connection, alternate credential source or automatic
 outreach.
 
-## Original-source receiving and installation
+## Maintainer verification and selected installation
+
+Use the [selected package installation instructions](../../distribution/selections/SUPPLIER_ORDERS.md)
+to install an operational desk. The program below verifies product behavior using
+complete original examples and earlier receiving reports; it is separate from the
+customer's acceptance of an operational connection.
 
 The installed profile receiving export is
 `./supplier-orders/profile-receiving`, implemented by
-`receiving/supplier-order-profile-native.mjs`. Its source-owned entrypoint is
+`receiving/supplier-order-profile-native.mjs`. Its entrypoint is
 `runSupplierOrderProfileReceiving(options)`.
 
-The complete retained execution sequence uses three source selections in order:
+The full verification chain retains three source selections:
 
-1. The unchanged original selected release runs the original 27-tool operator,
-   its original baseline supplier/customer receiving and complete retained files.
-2. The released configured-HTTPS cohort runs its 36-tool following continuation,
-   with real local TLS, original provider/client/browser and complete customer
-   transport histories.
-3. This customer-profile cohort runs the following 40-tool operation, using those
-   completed reports and its separately declared profile producer/customer
-   workspaces. It preserves the original publisher XML/DTDs and original source
-   selections before applying the authored profile declaration.
+1. The selected earlier release runs its 27-tool operator and complete baseline
+   supplier/customer receiving.
+2. The configured-HTTPS release runs its 36-tool continuation, including actual
+   local TLS, provider/client/browser operations and customer transport histories.
+3. The customer-profile release runs the following 40-tool operation using the
+   completed earlier reports and separate profile producer/customer workspaces.
+   It preserves the publisher XML/DTDs and source selections before applying the
+   explicitly authored example profile.
 
-A later source edition is never relabeled as an earlier signed installer. The
-receiving program records actual completed phases and lifetimes; source publication
-alone is not a native receiving result.
+Use the actual reports and their retained artifacts as inputs. Record the source
+edition, completed phases, findings and lifetime closure from the returned report.
+Publishing this program or installing its source does not establish that the
+verification ran. A local TLS result also does not establish activation or
+certification of a customer's external endpoint.
 
-The ordinary selected build remains:
+The selected source build is:
 
 ~~~sh
 node stellar/scf-starforge-20261009/distribution/build.mjs \
@@ -430,13 +446,17 @@ node stellar/scf-starforge-20261009/distribution/build.mjs \
   --out /private/supplier-orders-release
 ~~~
 
-Use its actual returned archive with the maintained installer and declared
-`schema`/`mcp` runtime features. The same source contribution ships the profile
-module, editor, full declaration example, captured original XML/DTDs and complete
-native receiving program. Node 24+ and Python 3 remain the native requirements.
-The optional browser receiving uses the selected installed Playwright/Chromium;
-place its temporary directory inside the operation's own available private
-filesystem before launch.
+Use the returned archive and its actual SHA-256 with the maintained installer,
+selecting the declared `schema` and `mcp` features. Follow its separate
+prepare/install/inspect steps and readiness result. The package includes the
+profile module, editor, complete example declaration, captured XML/DTDs and
+receiving program.
+
+The application requires Node 24+ and Python 3. The maintained Linux installer also
+requires npm, Python 3.11+ and flock. A browser verification run uses an actually
+installed Playwright/Chromium pair; place its temporary directory on the selected
+operation's available private filesystem. Preserve the chosen source, reports,
+operation ID and directories when continuing an interrupted run.
 
 ## Scope for a real customer adaptation
 
