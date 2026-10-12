@@ -41,6 +41,18 @@ const supportSelection = {allOf:[{
   then:{properties:{deployment:emptyDeployment}},
   else:{required:['deployment'],properties:{deployment:supportDeployment}}
 }]};
+const buyerDeployment = {...supportDeployment,
+  properties:{...supportDeployment.properties, role:{enum:['BUYER','BOTH']}},
+  required:['name','operator','role']};
+const buyerSelection = {allOf:[{
+  if:{properties:{deploymentId:id('deployment')},required:['deploymentId']},
+  then:{properties:{deployment:emptyDeployment}},
+  else:{required:['deployment'],properties:{deployment:buyerDeployment}}
+}]};
+const buyerJobs = {type:'array',minItems:1,maxItems:100,uniqueItems:true,
+  items:{type:'object',additionalProperties:false,
+    properties:{jobId:digest,purchaseId:{anyOf:[id('purchase'),{type:'null'}]}},
+    required:['jobId','purchaseId']}};
 function tool(suffix, description, properties = {}, required = [], readOnly = false, rules = {}) {
   return {name:'merchant_grant_' + suffix, description,
     annotations:{readOnlyHint:readOnly, destructiveHint:false, idempotentHint:true, openWorldHint:false},
@@ -152,6 +164,15 @@ export const grantWorkspaceTools = [
       deployment:{anyOf:[supportDeployment,...emptyDeployment.anyOf]}},
     ['workspace','caseId','expectedVersion','input','expectedInputSha256','filename',
       'expectedPreviewSha256','requestId','actor'], false, supportSelection),
+  tool('buyer_preview', 'Review complete original SF88 buyer handoff bytes against the current Operations case. Retain original source and reader identities, every source job, native outcome/output observations, existing purchase matches, deployment choices and preview SHA. This invokes the original saved-source reader without a buyer or provider execution.',
+    {...ws, ...caseSelection, ...originalInput, filename:nonempty(240)},
+    ['workspace','caseId','expectedVersion','input','expectedInputSha256','filename'], true),
+  tool('buyer_receive', 'Receive explicitly selected original buyer jobs through the existing case transaction. Retain matching jobs on their original purchase/deployment; select null purchaseId only for a new original purchase. Preserve exact source bytes, filename, preview SHA, current version, participant attribution and original request ID. The full handoff, native review and selected/unselected source links remain in complete case export.',
+    {...ws, ...caseSelection, ...originalInput, ...originalRequest, filename:nonempty(240),
+      expectedPreviewSha256:digest, deploymentId:{anyOf:[id('deployment'),{type:'null'}]},
+      deployment:{anyOf:[buyerDeployment,...emptyDeployment.anyOf]}, selections:buyerJobs},
+    ['workspace','caseId','expectedVersion','input','expectedInputSha256','filename',
+      'expectedPreviewSha256','requestId','actor','selections'], false, buyerSelection),
   tool('source_attach', 'Attach exact original bytes through source.add, retaining filename, MIME, URL, observation date and native content hash.',
     {...ws, ...caseSelection, ...originalInput, ...originalRequest, filename:nonempty(240), kind:nonempty(80),
       mediaType:nonempty(200), sourceUrl:str(2000), observedAt:str(100)},
