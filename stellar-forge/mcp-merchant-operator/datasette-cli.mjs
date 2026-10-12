@@ -4,13 +4,15 @@ import {constants} from 'node:fs';
 import {open} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {datasetteActions,openDatasetteClient,downloadDatasetteExport,inspectDatasetteExport,reopenDatasetteExport} from './datasette-client.mjs';
+import {datasetteActions,openDatasetteClient,downloadDatasetteExport,inspectDatasetteExport,reopenDatasetteExport,uploadDatasetteFile} from './datasette-client.mjs';
 
 const HELP=[
   'Starforge Datasette MCP customer',
   '',
   '  datasette-mcp tools',
   '  datasette-mcp call --url MCP_URL --action ACTION --arguments PRIVATE_JSON [--workspace ALIAS] [--token-env NAME] [--output NEW_JSON]',
+  '  datasette-mcp upload --url MCP_URL --workspace ALIAS --upload-id UUID --file PRIVATE_ARCHIVE --name ORIGINAL_NAME --bytes DECIMAL --sha256 SHA [--chunk-size BYTES] [--token-env NAME] [--output NEW_JSON]',
+  '  datasette-mcp upload-status --url MCP_URL --workspace ALIAS --upload-id UUID [--token-env NAME] [--output NEW_JSON]',
   '  datasette-mcp inspect --url MCP_URL --workspace ALIAS --export EXPORT_ID [--token-env NAME] [--output NEW_JSON]',
   '  datasette-mcp download --url MCP_URL --workspace ALIAS --export EXPORT_ID --directory PRIVATE_DIRECTORY [--manifest-sha256 SHA] [--token-env NAME] [--chunk-size BYTES] [--output NEW_JSON]',
   '  datasette-mcp reopen --export EXPORT_ID --directory PRIVATE_DIRECTORY [--manifest-sha256 SHA] [--output NEW_JSON]',
@@ -22,6 +24,9 @@ const HELP=[
   'After an uncertain reply inspect the original status and saved operation before continuing.',
   'export_prepare pins existing complete files; run original workspace.export explicitly first',
   'when the receiving package should include an editable native workspace archive.',
+  'upload verifies the complete reviewed file, then continues its original UUID and durable native prefix.',
+  'A failed chunk stops without replay. Inspect upload-status and explicitly rerun the same upload command.',
+  'Only a COMPLETE native upload supplies archiveFile for the unchanged source.receive/workspace.receive.',
   'download resumes the same original manifest and byte ranges. reopen is fully offline.',
   '',
 ].join('\n');
@@ -68,6 +73,17 @@ export async function main(argv=process.argv.slice(2)) {
     args=options(rest,[...shared,...remote,'--action','--arguments'],['--url','--action','--arguments']);
     const client=await openDatasetteClient({url:args['--url'],tokenEnv:args['--token-env'],workspace:args['--workspace']});
     result=await client.call(args['--action'],await argumentsFile(args['--arguments']));
+  } else if(command==='upload') {
+    args=options(rest,[...shared,...remote,'--upload-id','--file','--name','--bytes','--sha256','--chunk-size'],
+      ['--url','--workspace','--upload-id','--file','--name','--bytes','--sha256']);
+    if(args['--chunk-size']!==undefined&&!/^[1-9][0-9]*$/.test(args['--chunk-size']))fail('Use a positive integer chunk size.');
+    result=await uploadDatasetteFile({url:args['--url'],workspace:args['--workspace'],tokenEnv:args['--token-env'],
+      uploadId:args['--upload-id'],path:args['--file'],name:args['--name'],bytes:args['--bytes'],sha256:args['--sha256'],
+      ...(args['--chunk-size']===undefined?{}:{chunkSize:Number(args['--chunk-size'])})});
+  } else if(command==='upload-status') {
+    args=options(rest,[...shared,...remote,'--upload-id'],['--url','--workspace','--upload-id']);
+    const client=await openDatasetteClient({url:args['--url'],tokenEnv:args['--token-env'],workspace:args['--workspace']});
+    result=await client.uploadStatus({uploadId:args['--upload-id']});
   } else if(command==='inspect') {
     args=options(rest,[...shared,...remote,'--export'],['--url','--workspace','--export']);
     result=await inspectDatasetteExport({url:args['--url'],tokenEnv:args['--token-env'],
@@ -83,7 +99,7 @@ export async function main(argv=process.argv.slice(2)) {
     args=options(rest,[...shared,'--export','--directory','--manifest-sha256'],['--export','--directory']);
     result=await reopenDatasetteExport({directory:args['--directory'],exportId:args['--export'],
       expectedManifestSha256:args['--manifest-sha256']});
-  } else fail('Choose tools, call, inspect, download or reopen.');
+  } else fail('Choose tools, call, upload, upload-status, inspect, download or reopen.');
   return output(result,args['--output']);
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)

@@ -65,11 +65,11 @@ def now():
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def absolute(value):
+def absolute(value, *, physical=True):
     if not isinstance(value, str) or not value or "\x00" in value:
         fail("PATH_INVALID", "Use an absolute, normalized filesystem path.")
     path = Path(value)
-    if not path.is_absolute() or path == Path("/") or str(path) != value or path.resolve() != path:
+    if not path.is_absolute() or path == Path("/") or str(path) != value or physical and path.resolve() != path:
         fail("PATH_INVALID", "Use an absolute, normalized path without symbolic links.")
     return path
 
@@ -231,18 +231,19 @@ def retain_file(source, destination, expected):
             pass
 
 
-def ignored(name):
-    return name == "publisher.lock" or name.startswith(".source-archive-")
+def ignored(name, member=None):
+    return (name == "publisher.lock" or name.startswith(".source-archive-")
+            or member in ("dataset/control.json", "dataset/control.sock"))
 
 
 def inventory(root, output=None):
     files, directories = [], []
     def visit(directory):
         for child in sorted(directory.iterdir(), key=lambda item: item.name):
-            if ignored(child.name) or child == output:
+            name = child.relative_to(root).as_posix()
+            if ignored(child.name, name) or child == output:
                 continue
             info = child.lstat()
-            name = child.relative_to(root).as_posix()
             relative(name)
             if stat.S_ISDIR(info.st_mode):
                 directories.append(name)
@@ -332,7 +333,7 @@ def validate_manifest(manifest):
     if (not isinstance(workspace, dict) or workspace.get("schema") != WORKSPACE_SCHEMA
             or not isinstance(workspace.get("workspaceId"), str) or not workspace["workspaceId"]):
         fail("WORKSPACE_INVALID")
-    origin = absolute(workspace.get("originDirectory"))
+    origin = absolute(workspace.get("originDirectory"), physical=False)
     files = manifest.get("files")
     directories = manifest.get("directories")
     bindings = manifest.get("bindings")

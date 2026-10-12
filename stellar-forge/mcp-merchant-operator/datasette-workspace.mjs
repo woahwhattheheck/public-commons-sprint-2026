@@ -70,6 +70,26 @@ function nativeFiles(inventory) {
   if(files.length!==total) throw error('INVENTORY_INCOMPLETE','The declared full native inventory has not been received.');
   return files;
 }
+function nativeUpload(value,workspaceId,input) {
+  const decimal=value=>typeof value==='string'&&/^(0|[1-9][0-9]*)$/.test(value)&&
+    Number.isSafeInteger(Number(value))&&Number(value)<=DATASETTE_MAX_FILE_BYTES;
+  if(!plain(value)||value.schema!=='stellar-forge.datasette-upload.v1'||value.workspaceId!==workspaceId||
+      value.uploadId!==input.uploadId||!['RECEIVING','FINALIZABLE','COMPLETE','REJECTED'].includes(value.state)||
+      !['bytes','receivedBytes','uncheckpointedBytes'].every(key=>decimal(value[key]))||
+      Number(value.receivedBytes)>Number(value.bytes)||!HASH.test(value.sha256??'')||
+      !HASH.test(value.prefixSha256??'')||typeof value.name!=='string')
+    throw error('UPLOAD_REPLY_INVALID','The native upload reply must retain its complete original file and prefix identity.');
+  for(const field of ['name','bytes','sha256'])if(input[field]!==undefined&&value[field]!==input[field])
+    throw error('UPLOAD_REPLY_CHANGED','The native upload belongs to another original file declaration.');
+  if(value.state==='COMPLETE') {
+    const file=datasetteNativeFile(value.retainedFile,workspaceId);
+    if(value.receivedBytes!==value.bytes||value.prefixSha256!==value.sha256||
+        value.uncheckpointedBytes!=='0'||file.bytes!==value.bytes||file.sha256!==value.sha256||
+        file.name!==value.name||typeof value.archiveFile!=='string'||!value.archiveFile)
+      throw error('UPLOAD_REPLY_INVALID','A completed upload must name the original fully verified retained file.');
+  }
+  return value;
+}
 function retainedRecord(inventory,raw=jsonBytes(inventory)) {
   const files=nativeFiles(inventory),nativeSha=digest(raw);
   const selected=createDatasetteDownloadManifest({workspaceId:inventory.workspaceId,
@@ -262,7 +282,18 @@ export class MerchantDatasetteWorkspaces extends OriginalDatasetteWorkspaces {
   }
   async #execute(short,args,{client,health}) {
     const workspaceId=workspaceIdentity(health.workspaceId),scope=this.#scope(args.workspace,workspaceId);
-    if(!['reconnect','files','file'].includes(short))await this.#checkStorageLocation(client,health);
+    if(!['reconnect','files','file','upload_status','upload_chunk'].includes(short))await this.#checkStorageLocation(client,health);
+    if(short==='upload_status')
+      return {workspace:args.workspace,native:nativeUpload(await client.uploadStatus({uploadId:args.uploadId}),workspaceId,args)};
+    if(short==='upload_chunk') {
+      if(typeof args.data!=='string'||args.data.length>11184812)
+        throw error('UPLOAD_RANGE_INVALID','Supply canonical base64 for one original range of at most 8 MiB.');
+      const raw=Buffer.from(args.data,'base64');
+      if(raw.length>8*1024*1024||raw.toString('base64')!==args.data||String(raw.length)!==args.length)
+        throw error('UPLOAD_RANGE_INVALID','The complete original chunk must match its declared byte count and canonical base64.');
+      const input=Object.fromEntries(['uploadId','name','bytes','sha256','offset','length'].map(key=>[key,args[key]]));
+      return {workspace:args.workspace,native:nativeUpload(await client.uploadChunk(input,raw),workspaceId,input)};
+    }
     if(short==='reconnect') {
       if(workspaceIdentity(args.workspaceId)!==workspaceId)throw error('WORKSPACE_CHANGED','Reconnect the original persistent native workspace.');
       return {state:'CONNECTED',workspace:args.workspace,workspaceId,native:health,

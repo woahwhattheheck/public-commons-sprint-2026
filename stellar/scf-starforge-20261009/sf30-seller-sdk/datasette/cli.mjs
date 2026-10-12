@@ -30,8 +30,10 @@ Options:
   --connection-file PATH      Atomically save the same workspace's current server announcement
   --startup-format managed    Emit the original JSON server announcement
   --expected-workspace-id ID  Bind remote access to the original workspace
-  --seller-file PATH          Original seller configuration for local workspace creation
-  --resource-file PATH        Original resource configuration for local workspace creation
+  --seller URL                Original local dataset seller http://127.0.0.1:PORT
+  --resource URL              Exact advertised HTTPS dataset resource
+  --seller-file PATH          Read that seller URL from a private JSON string file
+  --resource-file PATH        Read that resource URL from a private JSON string file
   --environment-file PATH     Original environment object for local workspace creation
   --archive-file PATH         Complete source/workspace archive for export or receiving
   --sha256 SHA256             Expected SHA256 of that original archive
@@ -44,7 +46,7 @@ runId; publishing takes that same runId and the saved reviewId.
 `;
 const valued = new Set(['directory','url','url-file','operation','input','input-file','out',
   'port','connection-file','startup-format','expected-workspace-id','seller-file','resource-file',
-  'environment-file','archive-file','sha256','destination']);
+  'environment-file','archive-file','sha256','destination','seller','resource']);
 const switches = new Set(['create','help']);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = message => Object.assign(new Error(message), {code: 'DATASETTE_CLI_INPUT'});
@@ -69,14 +71,19 @@ export function parseDatasetteArguments(argv) {
   if (result.url && result['url-file'] || result.input && result['input-file']) throw fail('Choose one connection and one operation input.');
   if (result['startup-format'] && result['startup-format'] !== 'managed') throw fail('The startup format is managed.');
   if (result.port !== undefined && (!/^(0|[1-9][0-9]*)$/.test(result.port) || Number(result.port) > 65535)) throw fail('Port must be an integer from 0 to 65535.');
+  for (const name of ['seller','resource'])
+    if (result[name] && result[name + '-file']) throw fail('Choose one --' + name + ' or --' + name + '-file.');
+  const sellerGiven = Boolean(result.seller || result['seller-file']);
+  const resourceGiven = Boolean(result.resource || result['resource-file']);
+  if (sellerGiven !== resourceGiven) throw fail('Configure the original seller URL and its exact advertised resource together.');
   const remote = Boolean(result.url || result['url-file']);
   if (remote && (result.directory || result.create || result.command === 'serve' ||
-      ['seller-file','resource-file','environment-file'].some(key => result[key])))
+      ['seller','resource','seller-file','resource-file','environment-file'].some(key => result[key])))
     throw fail('Remote access uses the original running workspace URL. Local creation uses --directory.');
   const offlineReceive = result.command === 'receive-workspace' && !remote && !result.directory;
   if (!remote && !result.directory && !offlineReceive) throw fail('Supply the original --directory, --url or --url-file.');
   if (offlineReceive && (result.create || result['expected-workspace-id'] ||
-      ['seller-file','resource-file','environment-file'].some(key => result[key])))
+      ['seller','resource','seller-file','resource-file','environment-file'].some(key => result[key])))
     throw fail('Offline workspace receiving uses its archive, SHA256 and separate destination.');
   if (result.command !== 'serve' && ['port','connection-file','startup-format'].some(key => result[key]))
     throw fail('Server launch options belong to the serve command.');
@@ -185,8 +192,14 @@ export async function runDatasetteCLI(argv = process.argv.slice(2), {
     } else {
       const {openDatasetteWorkspace} = await import('./workspace.mjs');
       const configuration = {};
-      for (const field of ['seller', 'resource', 'environment'])
-        if (args[field + '-file']) configuration[field] = await jsonFile(args[field + '-file']);
+      for (const field of ['seller', 'resource']) {
+        if (args[field]) configuration[field] = args[field];
+        else if (args[field + '-file']) {
+          configuration[field] = JSON.parse(await privateFile(args[field + '-file'], 16384));
+          if (typeof configuration[field] !== 'string') throw fail('The ' + field + ' file must contain its original URL as a JSON string.');
+        }
+      }
+      if (args['environment-file']) configuration.environment = await jsonFile(args['environment-file']);
       workspace = await openDatasetteWorkspace({directory: resolve(args.directory), create: Boolean(args.create), ...configuration});
       if (args['expected-workspace-id'] && workspace.workspaceId !== args['expected-workspace-id'])
         throw fail('The selected directory belongs to a different workspace.');

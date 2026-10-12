@@ -64,8 +64,10 @@ from the source client.
 | `files.list`, `files.inspect`, `files.read` | Read complete original file identities and exact native byte ranges. |
 | `operations.inspect`, `operations.cancel` | Inspect a saved capture/extraction by its original ID or cancel the actual active native operation. |
 
-There are 31 native operations in this source edition. The merchant tool catalog
-has five original control tools plus ten receiving tools. Catalog presence is
+The source client declares the original 31 native operations and, in the joined
+request-recovery edition, `requests.inspect` and `requests.list`. The merchant
+tool catalog has five original control tools plus twelve upload and receiving
+tools. Catalog presence is
 separate from an operation being executed; receiving reports record the actual
 calls and files.
 
@@ -85,6 +87,68 @@ For example, inspecting an already-retained edition requires its existing ID:
   "input": {"id": "THE_SAVED_EDITION_ID", "offset": 0, "limit": 250}
 }
 ```
+
+## Upload a complete reviewed archive
+
+Use the original upload UUID, original filename, exact decimal byte count and
+whole-file SHA-256. The same native file authority retains the declaration,
+durable prefix and original chunk history. Its existing workspace gate owns
+cancellation and shutdown; the merchant attaches that owner.
+
+`merchant_datasette_upload_status` reads the original declaration and
+`merchant_datasette_upload_chunk` forwards one original range through the
+native client. Tool byte fields remain decimal strings. Its `data` is canonical
+base64 for at most 8 MiB; the native request body is the exact decoded bytes.
+The selected provider declares a 12 MiB MCP request ceiling for that encoding.
+The original native operation JSON ceiling remains 1 MiB.
+
+The SDK and CLI transfer a complete reviewed local file with bounded buffers:
+
+~~~sh
+starforge datasette-mcp upload \
+  --url http://127.0.0.1:8123/mcp \
+  --workspace geothermal \
+  --upload-id ORIGINAL_UPLOAD_UUID \
+  --file /private/customer/wri-geothermal.sfds.gz \
+  --name wri-geothermal.sfds.gz \
+  --bytes 59792 \
+  --sha256 53f2486406d61f18c9e1c9ceaac659c265bbad7afe2fe54b1a17f43307cb0ca0
+~~~
+
+Those bytes identify the original retained WRI source archive; a different
+archive must use its own reviewed declaration. Before the first chunk the
+helper hashes the complete private regular file and verifies its original size.
+An existing upload must match all four declaration fields, and its durable
+prefix must match those same local bytes. The helper then sends complete ranges
+of 1 MiB by default, or the selected 64 KiB–8 MiB size. It keeps one native UUID
+and does not create a separate upload ledger or workspace.
+
+A failed chunk stops without automatic repetition. Read its actual state with:
+
+~~~sh
+starforge datasette-mcp upload-status \
+  --url http://127.0.0.1:8123/mcp \
+  --workspace geothermal \
+  --upload-id ORIGINAL_UPLOAD_UUID
+~~~
+
+Explicitly run the same upload command to continue. The original authority
+verifies the committed prefix before discarding only an uncheckpointed partial
+suffix. FINALIZABLE permits the native zero-byte finish at the complete length.
+COMPLETE returns its original archiveFile and retainedFile. REJECTED retains the
+original failure and bytes; correcting a declaration requires another reviewed
+UUID. Local file changes stop the transfer without replacing native history.
+
+After COMPLETE, explicitly pass that native archiveFile and SHA to the existing
+source.receive operation with a stable destination id, or to workspace.receive
+with the selected receiving directory. Those unchanged engines validate and
+receive the archive. An upload alone does not capture, approve, publish or restore
+a dataset.
+
+The SDK equivalent is `client.uploadFile({path,uploadId,name,bytes,sha256})`.
+Its result retains state, the complete native upload reply, the reviewed local
+identity and resumedBytes. The standalone `uploadDatasetteFile` function
+accepts the same fields with the original merchant URL/alias or client.
 
 ## Preserve the source’s meaning
 
@@ -215,7 +279,7 @@ command separately when opening the editable workspace.
 import {
   openDatasetteClient,
   reopenDatasetteExport
-} from '@tokenjunkielabs/starforge-merchant/merchant/mcp/datasette/client';
+} from '@tokenjunkielabs/starforge-merchant/operator/datasette';
 
 const client = await openDatasetteClient({
   url: merchantUrl,
@@ -253,8 +317,10 @@ The companion receiving program attaches the existing merchant HTTP tool
 handler to the exact source-owned provider, reads its actual advertised names,
 inspects the retained source edition, receives all declared native files, closes
 and reattaches the merchant component, then verifies complete offline receiving.
-Its report includes actual native workspace/edition/export IDs, calls and file
-hashes. It does not launch another Python or Node source owner, capture provider
+When its owner supplies originalUpload, it also inspects and zero-byte replays
+that exact completed upload, verifying the unchanged native reply and retained
+file. Its report includes actual native workspace/edition/export IDs, advertised
+and invoked tool names, upload outcome, calls and file hashes. It does not launch another Python or Node source owner, capture provider
 pages, create a new review, dispatch a buyer payment or repeat publication.
 
 The merchant attachment drains its own in-flight callbacks and retained file

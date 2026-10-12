@@ -11,7 +11,7 @@ export const DATASETTE_OPERATIONS = Object.freeze([
   'publisher.publish', 'publisher.recover', 'publisher.buyer-offer',
   'publisher.prepare-buyer', 'release.prepare', 'release.stage',
   'source.export', 'source.receive', 'files.list', 'files.inspect', 'files.read',
-  'workspace.export', 'workspace.receive', 'operations.inspect', 'operations.cancel',
+  'workspace.export', 'workspace.receive', 'requests.inspect', 'requests.list', 'operations.inspect', 'operations.cancel',
 ]);
 const operationNames = new Set(DATASETTE_OPERATIONS);
 
@@ -94,10 +94,11 @@ export function createDatasetteClient({url, expectedWorkspaceId, fetchImpl = glo
     }).finally(() => {connectionPending = null;});
     return connectionPending;
   }
-  async function request(path, {operation = null, input, signal} = {}) {
-    const mutating = input !== undefined, operationId = input?.operationId ?? input?.runId ?? input?.id ?? null;
-    let body;
-    if (mutating) {
+  async function request(path, {operation = null, input, signal, rawBody, uploadInput} = {}) {
+    const mutating = input !== undefined || rawBody !== undefined;
+    const operationId = input?.requestId ?? input?.operationId ?? input?.runId ?? input?.id ?? uploadInput?.uploadId ?? null;
+    let body = rawBody;
+    if (input !== undefined) {
       try {body = JSON.stringify({operation, input});}
       catch (cause) {throw new DatasetteClientError('DATASETTE_INPUT_INVALID', 'Use serializable JSON operation input.', {operation, operationId, cause});}
       if (utf8.encode(body).byteLength > MAX_REQUEST_BYTES)
@@ -108,7 +109,7 @@ export function createDatasetteClient({url, expectedWorkspaceId, fetchImpl = glo
     try {
       response = await fetchImpl(connection.origin + path, {
         method: mutating ? 'POST' : 'GET', redirect: 'error', signal: lifetime.signal,
-        headers: {Accept: 'application/json', ...(mutating ? {'Content-Type': 'application/json'} : {}),
+        headers: {Accept: 'application/json', ...(mutating ? {'Content-Type': rawBody !== undefined ? 'application/octet-stream' : 'application/json'} : {}),
           ...(workspaceId !== null ? {'X-Datasette-Workspace-ID': workspaceId} : {})},
         ...(mutating ? {body} : {}),
       });
@@ -145,6 +146,40 @@ export function createDatasetteClient({url, expectedWorkspaceId, fetchImpl = glo
     async operations(requestOptions) {
       if (!verified) await connect(options(requestOptions));
       return request('/api/operations', options(requestOptions));
+    },
+    async uploadStatus(input, requestOptions) {
+      if (!object(input) || Object.keys(input).some(key => key !== 'uploadId') ||
+          !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(input.uploadId ?? ''))
+        throw new DatasetteClientError('DATASETTE_UPLOAD_INPUT_INVALID', 'Select the original upload UUID.');
+      const selected = options(requestOptions);
+      if (!verified) await connect(selected);
+      return request('/api/upload?' + new URLSearchParams(input), {
+        operation:'files.upload', uploadInput:input, ...selected,
+      });
+    },
+    async uploadChunk(input, rawBytes, requestOptions) {
+      const keys = ['uploadId', 'name', 'bytes', 'sha256', 'offset', 'length'];
+      const canonical = value => typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value) && Number.isSafeInteger(Number(value));
+      if (!object(input) || Object.keys(input).length !== keys.length ||
+          Object.keys(input).some(key => !keys.includes(key)) ||
+          !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(input.uploadId ?? '') ||
+          typeof input.name !== 'string' || !input.name || utf8.encode(input.name).byteLength > 240 ||
+          /[\\/\u0000-\u001f\u007f]/.test(input.name) || !/^[a-f0-9]{64}$/.test(input.sha256 ?? '') ||
+          !['bytes', 'offset', 'length'].every(key => canonical(input[key])) ||
+          Number(input.bytes) > 2 * 1024 * 1024 * 1024 || Number(input.length) > 8 * 1024 * 1024 ||
+          Number(input.offset) + Number(input.length) > Number(input.bytes))
+        throw new DatasetteClientError('DATASETTE_UPLOAD_INPUT_INVALID', 'Use the original upload declaration and one exact range of at most 8 MiB.',
+          {operation:'files.upload', operationId:input?.uploadId ?? null});
+      const size = rawBytes instanceof Uint8Array || rawBytes instanceof ArrayBuffer ? rawBytes.byteLength
+        : typeof Blob !== 'undefined' && rawBytes instanceof Blob ? rawBytes.size : null;
+      if (size === null || String(size) !== input.length)
+        throw new DatasetteClientError('DATASETTE_UPLOAD_LENGTH_INVALID', 'Supply the complete original bytes for this declared range.',
+          {operation:'files.upload', operationId:input.uploadId});
+      const selected = options(requestOptions);
+      if (!verified) await connect(selected);
+      return request('/api/upload?' + new URLSearchParams(input), {
+        operation:'files.upload', uploadInput:input, rawBody:rawBytes, ...selected,
+      });
     },
     async dispatch(operation, input = {}, requestOptions) {
       if (!operationNames.has(operation) || !object(input))

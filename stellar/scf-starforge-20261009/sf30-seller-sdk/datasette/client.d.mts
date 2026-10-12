@@ -49,6 +49,8 @@ export interface SourceReview {
 }
 export interface PublisherReview {
   runId: string;
+  /** Retain this exact original request through a lost response. */
+  requestId?: string;
   reviewer: string;
   note: string;
   initialize?: boolean;
@@ -70,8 +72,8 @@ export interface DatasetteOperationInputs {
   'editions.list': Record<string, never>;
   'editions.inspect': PageSelection & { id: string };
   'editions.compare': { left: string; right: string };
-  'source.select': { editionId: string; query?: string };
-  'publisher.status': Record<string, never>;
+  'source.select': { editionId: string; query?: string; requestId?: string; expectedSelectionHash?: string | null };
+  'publisher.status': { limit?: number; plansOffset?: number; runsOffset?: number; historyOffset?: number };
   'publisher.source': Record<string, never>;
   'publisher.target': Record<string, never>;
   'publisher.plan': {
@@ -100,6 +102,8 @@ export interface DatasetteOperationInputs {
   'files.read': { path: string; sha256: string; offset?: number | string; limit?: number | string };
   'workspace.export': { outputFile?: string };
   'workspace.receive': { archiveFile: string; directory: string; sha256: string };
+  'requests.inspect': { requestId: string };
+  'requests.list': PageSelection;
   'operations.inspect': { operationId: string };
   'operations.cancel': { operationId: string };
 }
@@ -164,7 +168,53 @@ export interface DatasetteWorkspaceReceiving extends JsonObject {
   reused: boolean;
   manifest: JsonObject;
 }
+/** Original archive declaration retained before the first body byte. */
+export interface DatasetteUploadDeclaration {
+  uploadId: string;
+  name: string;
+  bytes: string;
+  sha256: string;
+}
+export interface DatasetteUploadRange extends DatasetteUploadDeclaration {
+  offset: string;
+  length: string;
+}
+export interface DatasetteUploadStatus extends JsonObject {
+  schema: 'stellar-forge.datasette-upload.v1';
+  workspaceId: string;
+  uploadId: string;
+  state: 'RECEIVING' | 'FINALIZABLE' | 'COMPLETE' | 'REJECTED';
+  name: string;
+  bytes: string;
+  sha256: string;
+  receivedBytes: string;
+  prefixSha256: string;
+  uncheckpointedBytes: string;
+  chunks: number;
+  maximumChunkBytes: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  archiveFile?: string;
+  retainedFile?: DatasetteRetainedFile;
+  error?: JsonObject;
+  replayed?: boolean;
+}
+export interface DatasetteOriginalRequest extends JsonObject {
+  schema: 'stellar-forge.datasette-request.v1';
+  workspaceId: string; requestId: string; operation: string; input: JsonObject; requestHash: string;
+  state: 'PENDING' | 'COMPLETE' | 'REJECTED'; createdAt: string; completedAt: string | null;
+  result: JsonValue | null; error: JsonObject | null;
+  receiving?: {originDirectory:string;directory:string;note:string};
+}
+export interface DatasetteRequestPage extends JsonObject {
+  schema: 'stellar-forge.datasette-request-list.v1'; workspaceId: string;
+  requests: Array<JsonObject & {requestId:string;operation:string;requestHash:string;state:string}>;
+  page: {offset:number;limit:number;total:number;next:number|null;previous:number|null};
+}
 export interface DatasetteOperationResults {
+  'requests.inspect': DatasetteOriginalRequest;
+  'requests.list': DatasetteRequestPage;
   'files.list': DatasetteFilePage;
   'files.inspect': DatasetteRetainedFile;
   'files.read': DatasetteFileChunk;
@@ -191,6 +241,10 @@ export interface DatasetteClient {
   health(options?: DatasetteRequestOptions): Promise<DatasetteHealth>;
   status(options?: DatasetteRequestOptions): Promise<JsonValue>;
   operations(options?: DatasetteRequestOptions): Promise<JsonValue>;
+  uploadStatus(input: {uploadId: string}, options?: DatasetteRequestOptions): Promise<DatasetteUploadStatus>;
+  /** At most 8 MiB per request. Retain uploadId and read status after interruption. */
+  uploadChunk(input: DatasetteUploadRange, rawBytes: Uint8Array | ArrayBuffer | Blob,
+    options?: DatasetteRequestOptions): Promise<DatasetteUploadStatus>;
   /** Every action uses the original workspace dispatch and retains native results.
    * No transport or timeout failure automatically repeats a mutation. */
   dispatch<K extends DatasetteOperation>(
