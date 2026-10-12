@@ -32,6 +32,8 @@ Composition preserves all nine original answer headings and every unrelated comp
 
 The maintained delivery-plan module owns three H3 subsections inside answers 6–8. It updates each subsection in place and preserves all other answer text, the six cost rows and the original capacity, cash and submission fields. A fresh canonical manuscript therefore retains the same component mapping, installation responsibilities and maintenance handover in the composed reader. The source index records that module’s Git blob beside the composer and customer projection. Edit these owned subsections in the module when changing this delivery narrative; the next normal composition updates the Markdown and HTML together.
 
+The maintained customer projection receives the completed Customer-use Calendar procedure within the original Product selection, installation and recurring buyer work chapter. Its guide and Installation source links populate the same source register. Preserve the native operation's separate eight-record archived case, the application's eighteen-purchase development baseline, and the prospective independent customer cohort. Calendar plans, prepared Cohort seeds and received files do not become new payments or completed adoption. The same delivery-plan module maps the selected customer adaptation and full calendar/actual-record receiving to the existing six packages.
+
 ## Receive the four reader files
 
 The original receiving callback accepts the four Git blob overrides emitted by `--source-pins-output`:
