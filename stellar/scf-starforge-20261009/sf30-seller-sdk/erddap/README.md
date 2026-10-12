@@ -208,7 +208,7 @@ Continue an interrupted paid page using the same original session and recover. I
 
 ## Connect the existing merchant MCP host
 
-The source-owned erddap-workspaces provider adds 26 tools for existing operator aliases, complete catalogue/metadata/query/acquisition/source review, mappings, native builds/queries, edition comparisons and exact file receiving. It borrows the original running HTTP workspace.
+The source-owned erddap-workspaces provider adds 36 tools for existing operator aliases, complete catalogue/metadata/query/acquisition/source review, mappings, native builds/queries, edition comparisons and exact file receiving. It borrows the original running HTTP workspace.
 
 Create a private connection JSON using the actual absolute workspace/startup paths and original source-file hashes:
 
@@ -233,7 +233,7 @@ Create a private connection JSON using the actual absolute workspace/startup pat
 }
 ~~~
 
-The placeholder must be replaced with the real 64-character hash before initialization. A customer packet input uses kind packet. Input aliases are selected by the host; a tool caller cannot substitute an arbitrary filesystem path.
+The placeholder must be replaced with the real 64-character hash before initialization. A customer packet input uses kind packet; a complete provider intake bundle uses kind handoff. Input aliases are selected by the host; a tool caller cannot substitute an arbitrary filesystem path.
 
 In the complete merchant configuration, set erddapWorkspaceConnection to this private file. The original provider registry reads the source-owned distribution contribution automatically. A programmatic original setup helper is also available:
 
@@ -252,9 +252,15 @@ Large file receiving uses the existing RetainedFileReads interface, complete SHA
 
 The typed client export is ./client/erddap; merchant/buyer exports are ./seller/erddap and ./buyer/erddap. See [HTTP_API.md](HTTP_API.md) for the full native operator ABI.
 
+## Complete provider intake and receiving
+
+The same saved source now supplies an explicit provider profile, immutable reviewed revisions, readiness findings and complete review/ready bundles. Source-derived fields preserve their original descriptions, units, time representations, station identifiers, masks and license text. The operator reviews contacts, attribution, station context, time conventions and quality definitions before marking a ready bundle. Customer receiving independently verifies the complete retained source and original review; it keeps that handoff separate from the local source/build catalogue.
+
+Use `starforge-merchant erddap provider-handoff --help` or the installed `erddap-provider-handoff` command for the original standalone CLI. The typed `./provider/erddap` client and ten provider MCP methods use the same running ERDDAP HTTP owner. [PROVIDER_CLIENT.md](PROVIDER_CLIENT.md) gives complete original CLI, SDK, MCP and file-receiving instructions. [PROVIDER_HANDOFF.md](PROVIDER_HANDOFF.md) describes the complete station, time, quality, source and readiness rules.
+
 ## Whole native and browser receiving
 
-The complete source includes two reusable receiving entrypoints. They consume actual captured source ZIPs and keep their original workspaces and checkpoints through failure.
+The complete source includes reusable native dataset, provider handoff and browser receiving entrypoints. They consume actual captured source ZIPs and keep their original workspaces and checkpoints through failure.
 
 First, the original native source-to-customer operation:
 
@@ -280,6 +286,31 @@ The browser owner uses the selected Node/Playwright/Chromium environment. It own
 Set CODEX_PRIMARY_RUNTIME_NODE and CODEX_PRIMARY_RUNTIME_NODE_MODULES to the existing installed runtime. ERDDAP_CHROMIUM_EXECUTABLE selects the existing Chromium binary. A selected --temporary-root moves only this invocation's transient native/browser scratch to that volume; all input packets, original workspaces, outputs and checkpoints remain under the retained operation root. --screenshots records optional browser views in the private operation.
 
 Continue the same command and operation directory after a concrete failure. Original completed output identities are checked before reuse. The drivers do not repeat provider acquisition or issue a paid customer request.
+
+### Complete retained NDBC provider receiving
+
+For the exact retained NOAA NDBC station 46042 selection on 1 June 2023, the provider entrypoint runs the original dataset receiving operation and continues through the complete saved provider review:
+
+~~~sh
+python3 -B "$ERDDAP/delivery/provider-native-receive.py" \
+  --source-root "$ERDDAP" --operation-root "$PROVIDER_OPERATION" \
+  --capture "$NDBC_2023_CAPTURE" --ndbc-2023-reference
+~~~
+
+Select NDBC_2023_CAPTURE as the complete original five-response capture ZIP. The reference recipe verifies all five original response hashes, the 144 selected rows, the nine original columns and station/time selection before preparing its profile. It retains the exact public technical contact, source licensing and processing history. It leaves the separately appointed scientific contact for the provider to supply.
+
+The same entrypoint first completes the original native dataset build, full cursor read and independent customer reconstruction. It then saves two source-bound provider review revisions, recovers the exact saved request, exercises the original stale-parent conflict, exports both complete review bundles and independently receives and reopens their original bytes. A ready export follows the actual core review. The direct profile is retained as handoff-profile.json; provider-native/provider-result.json records the returned disposition and complete original artifacts.
+
+The browser continues that same closed workspace and profile:
+
+~~~sh
+python3 -B "$ERDDAP/delivery/browser-owner.py" \
+  --source-root "$ERDDAP" --operation-root "$PROVIDER_OPERATION" \
+  --workspace "$PROVIDER_OPERATION/workspace" \
+  --handoff-profile "$PROVIDER_OPERATION/handoff-profile.json"
+~~~
+
+Use Playwright 1.51 or later for the original IndexedDB draft-recovery phase. For another actual source, supply its complete reviewed direct profile with --profile instead of selecting the NDBC reference recipe. Keep the original operation directory across interruption: the helper retains its source, request, native workspaces, profile and accepted export/receiving checkpoints.
 
 ## Source, rights and operating limits
 
