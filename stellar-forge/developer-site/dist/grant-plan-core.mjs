@@ -231,8 +231,24 @@ export function applyPlanReview(draft, {kind, id, mode = 'replace', now = new Da
   if (kind === 'answer') need(id === 'delivery', 'Apply the complete plan to the existing Delivery answer.');
   const target = (kind === 'answer' ? draft.answers : draft.fields).find(x => x.id === id);
   need(target, 'Select an existing draft answer or issuer field.');
+  const beforeText = target.text;
   target.text = mode === 'append' && target.text.trim() ? target.text.trimEnd() + '\n\n' + review.previewText : review.previewText;
-  review.applications.push({at: now, kind, id, mode, text: review.previewText, basis: review.previewBasis});
+  const previous = (draft.planningTargets || []).find(row => row.kind === kind && row.id === id);
+  let costIds = [...review.costIds];
+  if (mode === 'append' && previous?.sourceSha === review.sourceSha && previous.revision === review.revision &&
+      previous.appliedText === beforeText) {
+    const chosen = new Set([...previous.costIds, ...costIds]);
+    costIds = source.document.revisions.find(row => row.revision === review.revision).scenario.future_costs
+      .map(row => row.id).filter(value => chosen.has(value));
+  }
+  const native = source.document.revisions.find(row => row.revision === review.revision);
+  const binding = {schema: 'stellar-forge.grant-plan-target.v1', kind, id, sourceSha: source.sha256,
+    revision: native.revision, planId: native.id, contentSha256: native.contentSha256, costIds,
+    generatedText: composePlan(source, {...review, costIds}), appliedText: target.text, at: now};
+  draft.planningTargets = (draft.planningTargets || []).filter(row => row.kind !== kind || row.id !== id);
+  draft.planningTargets.push(binding);
+  review.applications.push({at: now, kind, id, mode, text: review.previewText, basis: review.previewBasis,
+    beforeText, afterText: target.text});
   draft.updatedAt = now;
   return draft;
 }

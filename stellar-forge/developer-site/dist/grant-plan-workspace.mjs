@@ -1,3 +1,5 @@
+import {renderPlanningUpdates} from './grant-plan-update-workspace.mjs';
+import {selectPlanningRevision} from './grant-plan-update-core.mjs';
 // MIT. Native planning review and application use the existing submission editor.
 import {newPlanReview, planSummary, selectedPlan, preparedReview, planningReadiness,
   applyPlanReview, reviewBasis, usd} from './grant-plan-core.mjs';
@@ -31,18 +33,20 @@ export function renderPlanning(root, context) {
     }));
     return;
   }
+  if (renderPlanningUpdates(root, context)) return;
   const {source, plan} = selectedPlan(sources, selected);
   const selectors = node('div', undefined, 'grid');
   selectors.append(select('Retained planning file', source.sha256,
     sources.map(x => [x.sha256, x.filename + ' · ' + x.document.name]), key => work(() => {
       const next = retainVersion(draft, 'Before selecting another native planning file');
-      next.planningReview = newPlanReview(sources.find(x => x.sha256 === key)); commit(next);
+      const chosen = sources.find(x => x.sha256 === key);
+      selectPlanningRevision(next, key, chosen.document.currentRevision, {id: uid()}); commit(next);
     })).wrap);
   selectors.append(select('Native saved revision', String(plan.revision),
     source.document.revisions.map(x => [String(x.revision), 'Revision ' + x.revision + ' · ' + planTime(x.savedAt)]),
     revision => work(() => {
       const next = retainVersion(draft, 'Before selecting another native plan revision');
-      next.planningReview = newPlanReview(source, Number(revision)); commit(next);
+      selectPlanningRevision(next, source.sha256, Number(revision), {id: uid()}); commit(next);
     })).wrap);
   root.append(selectors, node('p', source.filename + ' · ' + source.document.name, 'muted plan-source-caption'));
   if (plan.note) root.append(node('p', plan.note, 'plan-revision-note'));
