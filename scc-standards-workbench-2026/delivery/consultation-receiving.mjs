@@ -189,7 +189,7 @@ try{
    [first,"Authored observation: retain the Census reference date separately from the municipal change date.",proposedEn,proposedFr],
    [second,"Authored observation: confirm that a missing value remains distinct from a recorded zero.","",""]
   ]){
-   await reviewer.locator('[data-clause="'+clause.id+'"]').click();
+   await reviewer.locator('#outline [data-clause="'+clause.id+'"]').click();
    await reviewer.locator('[data-add-comment="'+clause.id+'"]').click();
    const d=reviewer.locator("#comment-dialog");
    await d.locator('[name="body"]').fill(body);await d.locator('[name="proposed_text_en"]').fill(en);await d.locator('[name="proposed_text_fr"]').fill(fr);
@@ -202,7 +202,9 @@ try{
  });
 
  await stage("recipient_progress_and_readable_return",async()=>{
-  await reviewer.locator('[data-clause="'+first.id+'"]').click();
+  await reviewer.locator("#open-file").setInputFiles(firstFile);
+  await reviewer.locator("#saved").filter({hasText:/The saved draft is open for this exact packet\.|Le brouillon enregistré est ouvert pour ce dossier exact\./}).waitFor();
+  await reviewer.locator('#outline [data-clause="'+first.id+'"]').click();
   const mark=reviewer.locator('[data-reviewer-action="mark-read"]');
   if(await mark.getAttribute("aria-pressed")!=="true")await mark.click();
   const draftFile=savedResponse("Reviewer_Progress_Draft.json");
@@ -210,7 +212,9 @@ try{
   const draft=JSON.parse(fs.readFileSync(draftFile,"utf8"));
   assert.ok(draft.read_clause_ids.includes(first.id));
   await reviewer.reload();
-  await reviewer.locator('[data-clause="'+first.id+'"]').click();
+  await reviewer.locator("#open-file").setInputFiles(draftFile);
+  await reviewer.locator("#saved").filter({hasText:/The saved draft is open for this exact packet\.|Le brouillon enregistré est ouvert pour ce dossier exact\./}).waitFor();
+  await reviewer.locator('#outline [data-clause="'+first.id+'"]').click();
   assert.equal(await reviewer.locator('[data-reviewer-action="mark-read"]').getAttribute("aria-pressed"),"true");
   await reviewer.locator("#preview-response").click();
   const copy=savedResponse("Reviewer_Response_Readable_Copy.html");
