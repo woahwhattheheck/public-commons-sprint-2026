@@ -45,6 +45,18 @@ Select the actual MF6 simulation namefile and legacy namefile. Provide explicit 
 
 Generated files from an actual retained run may themselves be captured as an original package with their native file paths. Do not label a source filename mentioned in prose as an uploaded file unless those bytes are present.
 
+### Reinspect the same saved import after a reader correction
+
+Open the existing source and use **Inspect retained native references** in **Current reference inspection**. Enter the reason for the inspection. The request names the original source SHA and the installed reader; it rechecks the retained ZIP against every original file before saving. It creates no replacement source or baseline edition and starts no solver.
+
+The page keeps **Findings retained by the original import** separate from the current inspection. Each inspection records its actor, reason, reader fingerprint, exact original member inventory and selected namefiles. An earlier false missing-reference finding remains historical rather than being silently edited. A real missing required input remains blocking. If the selected source itself needs different files, namefiles or layer mapping, retain that explicitly changed source through the original intake workflow.
+
+New edition reviews and newly queued runs bind the exact displayed inspection basis. A later inspection leaves earlier reviews and runs intact; prepare any new review against the current basis. The run's frozen inspection is carried into its result and report, while a full backup retains all original imports, inspections and operations. Already queued or completed native attempts keep their original application and scientific identities.
+
+MF6 references follow its simulation/model blocks and resolve from the selected simulation directory. Legacy namefiles use `type unit filename`, including `BAS6`; their `EXTERNAL` controls refer to namefile units. Relative native paths resolve within the retained archive tree. Listing files, `FILEOUT` declarations and declared output data are retained as outputs, so an absent intended output is not a missing-input error. An unresolved fixed-format legacy array control is shown explicitly as uninspected. The source inspector checks supported literal references; the actual native parser and solver still validate the model.
+
+The reference rules are grounded in pinned FloPy 3.11.0: [namefile parsers](https://raw.githubusercontent.com/modflowpy/flopy/a43f79127d0383e5328a602e72faf9a9730c7d61/flopy/utils/mfreadnam.py), [MF6 file paths](https://raw.githubusercontent.com/modflowpy/flopy/a43f79127d0383e5328a602e72faf9a9730c7d61/flopy/mf6/mfbase.py), and [legacy array controls](https://raw.githubusercontent.com/modflowpy/flopy/a43f79127d0383e5328a602e72faf9a9730c7d61/flopy/utils/util_array.py).
+
 ## 3. Understand the publisher findings
 
 | Finding | Original observation | Operator treatment |

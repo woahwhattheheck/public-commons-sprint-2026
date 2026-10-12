@@ -194,9 +194,32 @@ class Workbench:
             sql += " AND project_id=?"; args.append(project_id)
         sql += " ORDER BY created,id"
         return [{**json.loads(x["body"]),"id":x["id"],"project_id":x["project_id"],"created":x["created"],"updated":x["updated"]} for x in db.execute(sql,args)]
-    def _latest_review(self, db, subject_kind, subject_id, subject_sha):
-        reviews = [r for r in self._list(db,"review") if r["subject_kind"] == subject_kind and r["subject_id"] == subject_id and r["subject_sha256"] == subject_sha]
+    def _latest_review(self, db, subject_kind, subject_id, subject_sha, reference_basis_sha256=None):
+        reviews = [r for r in self._list(db,"review") if r["subject_kind"] == subject_kind and r["subject_id"] == subject_id and r["subject_sha256"] == subject_sha and r.get("reference_basis_sha256") == reference_basis_sha256]
         return reviews[-1] if reviews else None
+    def _reference_status(self, db, source):
+        if source["kind"] != "native_package":
+            return None
+        inspections = [row for row in self._list(db,"source_inspection",source["project_id"]) if row["source_id"] == source["id"]]
+        basis = sources.reference_basis(source, inspections[-1] if inspections else None)
+        reader = sources.reference_reader()
+        return {"current":basis["reader"] == reader, "reader":reader, "basis":basis,
+                "inspections":inspections, "original_findings":source["findings"]}
+    def _reference_for_action(self, db, source, payload):
+        status = self._reference_status(db,source)
+        if status is None:
+            return None
+        if not status["current"]:
+            raise Problem("reference_inspection_required",
+                          "Inspect these same retained source bytes with the installed reference reader before a new review or native run.",
+                          source_id=source["id"], source_sha256=source["sha256"],
+                          reader=status["reader"])
+        basis = status["basis"]
+        if payload.get("reference_basis_sha256") != basis["sha256"]:
+            raise Problem("reference_basis_changed",
+                          "The selected reference inspection changed. Read the source and review its exact current basis before a new request.",
+                          source_id=source["id"], reference_basis_sha256=basis["sha256"])
+        return basis
     def runtime(self):
         with self.connect() as db:
             row = db.execute("SELECT value FROM meta WHERE key='runtime'").fetchone()
@@ -215,12 +238,18 @@ class Workbench:
             selected = self._project(db,project_id) if project_id else None
             value = {"workspace":{"id":meta["id"],"version":int(meta["version"]),"created":meta["created"]},
                      "projects":projects,"project":selected,"runtime":json.loads(meta["runtime"]) if "runtime" in meta else None}
-            for key, kind in (("sources","source"),("editions","edition"),("reviews","review"),("runs","run"),("reports","report"),("receivers","receiver"),("deliveries","delivery"),("acknowledgments","acknowledgment"),("backups","backup")):
+            for key, kind in (("sources","source"),("reference_inspections","source_inspection"),("editions","edition"),("reviews","review"),("runs","run"),("reports","report"),("receivers","receiver"),("deliveries","delivery"),("acknowledgments","acknowledgment"),("backups","backup")):
                 rows = self._list(db,kind,project_id if kind not in ("receiver","backup") else None)
                 if kind == "edition":
                     for row in rows:
-                        review = self._latest_review(db,"edition",row["id"],row["sha256"])
-                        row["review_state"] = review["decision"] if review else "unreviewed"
+                        source = self._record(db,row["source_id"],"source")
+                        status = self._reference_status(db,source)
+                        basis_sha = status["basis"]["sha256"] if status else None
+                        review = self._latest_review(db,"edition",row["id"],row["sha256"],basis_sha)
+                        row["review_state"] = "inspection_required" if status and not status["current"] else review["decision"] if review else "unreviewed"
+                        if status:
+                            row["reference_basis_sha256"] = basis_sha
+                            row["reference_inspection_current"] = status["current"]
                 if kind == "run":
                     rows = [run_summary(self,row) for row in rows]
                 if kind == "report":
@@ -232,11 +261,12 @@ class Workbench:
     def source_detail(self, source_id):
         with self.connect() as db:
             source = self._record(db,source_id,"source")
-            return {"source":source,"editions":[r for r in self._list(db,"edition",source["project_id"]) if r["source_id"]==source_id]}
+            return {"source":source,"reference_inspection":self._reference_status(db,source),"editions":[r for r in self._list(db,"edition",source["project_id"]) if r["source_id"]==source_id]}
     def edition_detail(self, edition_id):
         with self.connect() as db:
             edition = self._record(db,edition_id,"edition")
-            return {"edition":edition,"source":self._record(db,edition["source_id"],"source"),"reviews":[r for r in self._list(db,"review",edition["project_id"]) if r["subject_id"]==edition_id],"runs":[r for r in self._list(db,"run",edition["project_id"]) if r["edition_id"]==edition_id]}
+            source = self._record(db,edition["source_id"],"source")
+            return {"edition":edition,"source":source,"reference_inspection":self._reference_status(db,source),"reviews":[r for r in self._list(db,"review",edition["project_id"]) if r["subject_id"]==edition_id],"runs":[r for r in self._list(db,"run",edition["project_id"]) if r["edition_id"]==edition_id]}
     def source_file(self, source_id, name):
         source = self.record(source_id,"source")
         row = next((r for r in source["files"] if r["path"] == relative(name)),None)
@@ -347,7 +377,7 @@ class Workbench:
     def _same_project(self,record,project_id):
         if record["project_id"] != project_id:
             raise Problem("project_binding","The selected original belongs to a different project.")
-    def _review(self,db,kind,subject,sha,payload,actor,op,findings):
+    def _review(self,db,kind,subject,sha,payload,actor,op,findings,reference_basis=None):
         decision = payload.get("decision")
         if decision not in ("approved","changes_requested"):
             raise Problem("decision","Choose approved or changes_requested.",400)
@@ -369,7 +399,12 @@ class Workbench:
                 raise Problem("unresolved_findings","Review each source/result finding explicitly before approval.",required=sorted(required-acknowledged))
             if any(x.get("severity") == "blocking" for x in findings):
                 raise Problem("blocking_finding","An incomplete native source/result must be corrected before approval.")
-        record = self._put(db,self._id("review",op),"review",{"subject_kind":kind,"subject_id":subject["id"],"subject_sha256":sha,"decision":decision,"reason":reason,"findings":choices,"actor":actor},subject["project_id"])
+        body = {"subject_kind":kind,"subject_id":subject["id"],"subject_sha256":sha,"decision":decision,"reason":reason,"findings":choices,"actor":actor}
+        if reference_basis is not None:
+            body.update({"reference_basis_sha256":reference_basis["sha256"],
+                         "reference_inspection_id":reference_basis["inspection_id"],
+                         "reference_reader":reference_basis["reader"]})
+        record = self._put(db,self._id("review",op),"review",body,subject["project_id"])
         return {"id":record["id"],"project_id":subject["project_id"],"subject_id":subject["id"],"decision":decision}
     def _apply(self,db,action,p,actor,op,request_sha):
         effect = None
@@ -407,12 +442,53 @@ class Workbench:
                 kind,name = "native_package",text(p.get("name"),"Source name",300,True)
                 archive = {**archive,"filename":text(p.get("filename"),"Original ZIP filename",500,True)}
             source_body = {"kind":kind,"name":text(name,"Source name",300,True),"files":files,"archive":archive,"profile":profile,"findings":findings,"actor":actor}
+            if kind == "native_package":
+                source_body["reference_reader"] = sources.reference_reader()
             source_body["sha256"] = digest(source_body)
             self._put(db,source_id,"source",source_body,project_id)
             body = {"source_id":source_id,"parent_id":None,"baseline_id":edition_id,"kind":"baseline","name":name,"description":"Unchanged original source baseline.","changes":[],"parameters":param,"profile":profile,"source_sha256":source_body["sha256"],"actor":actor}
             body["sha256"] = digest(body)
             self._put(db,edition_id,"edition",body,project_id)
             result = {"id":source_id,"source_id":source_id,"edition_id":edition_id,"project_id":project_id}
+        elif action == "source.inspect":
+            source = self._record(db,p["id"],"source")
+            project_id = source["project_id"]
+            if source["kind"] != "native_package":
+                raise Problem("reference_source_kind","Reference reinspection is for a retained native package; publisher source findings remain unchanged.",400)
+            sources.verify_source_identity(source)
+            if p.get("source_sha256") != source["sha256"]:
+                raise Problem("source_identity","The request does not name this exact original source identity.")
+            reader = sources.reference_reader()
+            if p.get("reader_sha256") != reader["source_sha256"]:
+                raise Problem("reference_reader_changed","The reference reader changed. Reopen this same source before preparing a new inspection request.",reader=reader)
+            reason = text(p.get("reason"),"Reference inspection reason",8000,True)
+            members = [(row["path"],self.objects.bytes(row)) for row in source["files"]]
+            from .common import zip_members
+            archived = zip_members(self.objects.bytes(source["archive"]))
+            observed = sorted([{"path":name,"bytes":len(raw),"sha256":digest(raw)} for name,raw in archived],key=lambda row:row["path"])
+            manifest = sources.reference_file_manifest(source)
+            if observed != manifest:
+                raise Problem("source_archive_identity","The retained ZIP and source member inventory differ; no new inspection was committed.")
+            profile, findings = sources.package_profile(members,sources.reference_selection(source["profile"]))
+            if sources.reference_selection(profile) != sources.reference_selection(source["profile"]):
+                raise Problem("reference_selection_changed","A reference inspection cannot change the original selected namefiles, layer map or intended units.")
+            prior = self._reference_status(db,source)
+            record_id = self._id("inspection",op)
+            body = {"schema":"starforge.groundwater-source-inspection.v1",
+                    "source_id":source["id"],"source_sha256":source["sha256"],
+                    "file_manifest_sha256":digest(manifest),"reader":reader,
+                    "profile":profile,"findings":findings,
+                    "original_findings_sha256":digest(source["findings"]),
+                    "previous_basis_sha256":prior["basis"]["sha256"],
+                    "reason":reason,"actor":actor,"operation_id":op,"request_sha256":request_sha}
+            body["sha256"] = digest(body)
+            inspection = self._put(db,record_id,"source_inspection",body,project_id)
+            basis = sources.reference_basis(source,inspection)
+            result = {"id":record_id,"inspection_id":record_id,"source_id":source["id"],
+                      "source_sha256":source["sha256"],"project_id":project_id,
+                      "reference_basis_sha256":basis["sha256"],
+                      "blocking_findings":sum(row.get("severity")=="blocking" for row in findings),
+                      "source_edition_created":False,"native_execution":False}
         elif action == "edition.create":
             parent = self._record(db,p["parent_id"],"edition")
             project_id = parent["project_id"]
@@ -428,14 +504,16 @@ class Workbench:
             kind = action.split(".")[0]
             subject = self._record(db,p["id"],kind)
             project_id = subject["project_id"]
+            reference_basis = None
             if kind == "edition":
                 source = self._record(db,subject["source_id"],"source")
-                sha,findings = subject["sha256"],source["findings"]
+                reference_basis = self._reference_for_action(db,source,p)
+                sha,findings = subject["sha256"],reference_basis["findings"] if reference_basis else source["findings"]
             else:
                 from .native import completed_result
                 native = completed_result(self,subject)
                 sha,findings = digest(native),native["findings"]
-            result = self._review(db,kind,subject,sha,p,actor,op,findings)
+            result = self._review(db,kind,subject,sha,p,actor,op,findings,reference_basis)
         elif action == "runtime.configure":
             from .native import inspect_runtime
             runtime = inspect_runtime(p,temp_root=self.directory)
@@ -446,10 +524,12 @@ class Workbench:
             edition = self._record(db,p["edition_id"],"edition")
             source = self._record(db,edition["source_id"],"source")
             project_id = edition["project_id"]
-            if any(x.get("severity")=="blocking" for x in source["findings"]):
+            reference_basis = self._reference_for_action(db,source,p)
+            reference_findings = reference_basis["findings"] if reference_basis else source["findings"]
+            if any(x.get("severity")=="blocking" for x in reference_findings):
                 raise Problem("source_incomplete","Resolve the original native source selection and missing references before running.")
             if edition["kind"] == "scenario":
-                review = self._latest_review(db,"edition",edition["id"],edition["sha256"])
+                review = self._latest_review(db,"edition",edition["id"],edition["sha256"],reference_basis["sha256"] if reference_basis else None)
                 if not review or review["decision"] != "approved":
                     raise Problem("scenario_review","Approve this exact immutable scenario before native execution.")
             meta = self._meta(db)
@@ -466,6 +546,8 @@ class Workbench:
             if not any(row["path"]=="groundwater_workspace/native_attempt.py" for row in application_files):
                 raise Problem("application_source","The complete original native application must be installed before creating a run.")
             body = {"edition_id":edition["id"],"edition_sha256":edition["sha256"],"source_id":source["id"],"source_sha256":source["sha256"],"state":"queued","attempt":0,"reason":text(p.get("reason"),"Run purpose",8000,True),"actor":actor,"runtime":runtime,"runtime_sha256":runtime["sha256"],"application_sha256":digest(application_files),"application_files":application_files,"operation_id":op,"request_sha256":request_sha,"runtime_rebindings":[]}
+            if reference_basis is not None:
+                body["reference_basis"] = reference_basis
             self._put(db,record_id,"run",body,project_id)
             result = {"id":record_id,"project_id":project_id,"state":"queued"}
         elif action in ("run.execute","run.resume"):

@@ -2,6 +2,7 @@
 from __future__ import annotations
 import copy
 import json
+import posixpath
 from pathlib import Path, PurePosixPath
 import re
 import shlex
@@ -48,90 +49,260 @@ def _tokens(line):
     try:
         lexer = shlex.shlex(line, posix=True)
         lexer.whitespace_split = True
+        lexer.escape = ""
         lexer.commenters = "#!"
         return list(lexer)
     except ValueError:
         return []
 
+# This identity belongs to the reader loaded by this process. Editing its file
+# cannot make an already-imported parser claim to have executed newer code.
+_REFERENCE_READER = {
+    "schema": "starforge.groundwater-reference-reader.v1",
+    "grammar": "selected-mf6-and-mf2005-input-closure-v2",
+    "source_sha256": digest(Path(__file__).read_bytes()),
+}
+
+def reference_reader():
+    return copy.deepcopy(_REFERENCE_READER)
+
+def reference_selection(profile):
+    return {key: copy.deepcopy(profile.get(key)) for key in
+            ("mf6_namefile", "legacy_namefile", "layer_mapping", "intended_units")}
+
+def reference_file_manifest(source):
+    return sorted([{"path": row["path"], "bytes": row["bytes"], "sha256": row["sha256"]}
+                   for row in source["files"]], key=lambda row: row["path"])
+
+def verify_source_identity(source):
+    body = {key: value for key, value in source.items()
+            if key not in ("id", "project_id", "created", "updated", "sha256")}
+    if digest(body) != source["sha256"]:
+        raise Problem("source_identity", "The retained source body differs from its original immutable identity.")
+
+def reference_basis(source, inspection=None):
+    """A diagnostic basis supplements the immutable source; it never rewrites it."""
+    verify_source_identity(source)
+    if source["kind"] != "native_package":
+        return None
+    if inspection is None:
+        reader = source.get("reference_reader")
+        profile, findings = source["profile"], source["findings"]
+        inspection_id, inspection_sha = None, None
+    else:
+        body = {key: value for key, value in inspection.items()
+                if key not in ("id", "project_id", "created", "updated", "sha256")}
+        if (digest(body) != inspection["sha256"] or
+                inspection["source_id"] != source["id"] or
+                inspection["source_sha256"] != source["sha256"] or
+                inspection["file_manifest_sha256"] != digest(reference_file_manifest(source)) or
+                reference_selection(inspection["profile"]) != reference_selection(source["profile"])):
+            raise Problem("reference_inspection_identity",
+                          "The retained reference inspection does not belong to these unchanged source bytes and selections.")
+        reader = inspection["reader"]
+        profile, findings = inspection["profile"], inspection["findings"]
+        inspection_id, inspection_sha = inspection["id"], inspection["sha256"]
+    value = {
+        "schema": "starforge.groundwater-reference-basis.v1",
+        "source_id": source["id"], "source_sha256": source["sha256"],
+        "file_manifest_sha256": digest(reference_file_manifest(source)),
+        "inspection_id": inspection_id, "inspection_sha256": inspection_sha,
+        "reader": copy.deepcopy(reader), "profile": copy.deepcopy(profile),
+        "findings": copy.deepcopy(findings),
+    }
+    value["sha256"] = digest(value)
+    return value
+
+def verify_reference_basis(basis, source):
+    verify_source_identity(source)
+    if (not isinstance(basis, dict) or
+            basis.get("schema") != "starforge.groundwater-reference-basis.v1" or
+            digest({key: value for key, value in basis.items() if key != "sha256"}) != basis.get("sha256") or
+            basis.get("source_id") != source["id"] or
+            basis.get("source_sha256") != source["sha256"] or
+            basis.get("file_manifest_sha256") != digest(reference_file_manifest(source)) or
+            reference_selection(basis.get("profile", {})) != reference_selection(source["profile"])):
+        raise Problem("reference_basis_identity",
+                      "The frozen native run reference inspection differs from its original source or selections.")
+    return basis
+
+
 def package_profile(files, selected):
-    names = {name for name, _ in files}
+    """Inspect only the selected native input graphs, preserving every source byte.
+
+    FloPy 3.11 uses the simulation directory for MF6 references and the selected
+    legacy model/namefile directory for MODFLOW-2005 references. A filename's
+    suffix cannot select either grammar: BAS6 is a legacy unit-table record.
+    """
+    originals = dict(files)
+    names = set(originals)
+    if len(names) != len(files):
+        raise Problem("duplicate_member", "Original native paths must be unique.")
     mf6_candidates = sorted(n for n in names if PurePosixPath(n).name.lower() == "mfsim.nam")
     legacy_candidates = sorted(n for n in names if n.lower().endswith(".nam") and n not in mf6_candidates)
     mf6 = selected.get("mf6_namefile") or (mf6_candidates[0] if len(mf6_candidates) == 1 else None)
     legacy = selected.get("legacy_namefile")
-    findings = []
-    if mf6 is not None:
-        relative(mf6)
-    if legacy is not None:
-        relative(legacy)
+    findings, refs, visited, pending = [], [], set(), []
+    units, input_paths, output_paths = {}, set(), set()
     for engine, chosen, candidates in (("mf6",mf6,mf6_candidates),("mf2005",legacy,legacy_candidates)):
+        if chosen is not None:
+            relative(chosen)
         if not chosen or chosen not in names:
-            findings.append({"id":"SELECT_"+engine.upper(), "severity":"blocking", "message":"Select the exact original native namefile for "+engine+".", "candidates":candidates})
-    refs = []
-    units = {}
-    texts = {}
-    for name, raw in files:
+            findings.append({"id":"SELECT_"+engine.upper(), "severity":"blocking",
+                             "message":"Select the exact original native namefile for "+engine+".",
+                             "candidates":candidates})
+    if mf6 and legacy and mf6 == legacy:
+        findings.append({"id":"NAMEFILE_ENGINE_COLLISION","severity":"blocking",
+                         "message":"The selected simulation and legacy namefiles cannot be the same original file."})
+
+    def finding(code, message, **detail):
+        findings.append({"id":code+"_"+str(len(findings)), "severity":"blocking",
+                         "message":message, **detail})
+
+    def resolve(base, candidate):
+        if (not isinstance(candidate,str) or not candidate or "\\" in candidate or
+                ":" in candidate or PurePosixPath(candidate).is_absolute()):
+            raise Problem("unsafe_native_reference","Native reference is not a supported retained relative path.")
+        # Native ./ and ../ are meaningful. Normalize them, then require the
+        # result to stay inside the original archive root.
+        return relative(posixpath.normpath(posixpath.join(base,candidate)))
+
+    def add(engine, source, line, candidate, base, *, role="input", kind="package", unit=None):
+        row = {"engine":engine,"role":role,"from":source,"line":line,
+               "reference":candidate,"base":base}
+        if unit is not None:
+            row["unit"] = unit
+        try:
+            target = resolve(base,candidate)
+        except Problem:
+            refs.append({**row,"path":None,"present":False})
+            finding("EXTERNAL","Original native reference is outside the retained relative tree or uses an unsupported path.",path=source,line=line,reference=candidate,role=role)
+            return None
+        present = target in names
+        refs.append({**row,"path":target,"present":present})
+        if role == "output":
+            output_paths.add(target)
+            return target
+        input_paths.add(target)
+        if not present:
+            finding("MISSING","Original required native input file is absent.",path=source,line=line,reference=candidate,resolved_path=target,engine=engine)
+        elif kind != "data":
+            pending.append((engine,target,kind,base,unit))
+        return target
+
+    def lines(name):
+        raw = originals[name]
         try:
             content = raw.decode("utf-8-sig")
         except UnicodeDecodeError:
-            continue
+            finding("INPUT_TEXT","A selected native control file is not readable UTF-8 text.",path=name)
+            return []
         if "\x00" in content:
-            continue
-        texts[name] = content
-        for lineno, line in enumerate(content.splitlines(), 1):
+            finding("INPUT_TEXT","A selected native control file contains binary data.",path=name)
+            return []
+        return enumerate(content.splitlines(),1)
+
+    mf6_base = str(PurePosixPath(mf6).parent) if mf6 else "."
+    legacy_base = str(PurePosixPath(legacy).parent) if legacy else "."
+    if mf6 in names:
+        input_paths.add(mf6)
+        pending.append(("mf6",mf6,"simulation_namefile",mf6_base,None))
+
+    # Build the complete selected legacy unit map before following any EXTERNAL
+    # control. LIST and output DATA records are not required input files.
+    if legacy in names:
+        input_paths.add(legacy)
+        visited.add(("mf2005",legacy,"legacy_namefile",None))
+        for lineno, line in lines(legacy):
             tokens = _tokens(line)
             if not tokens:
                 continue
-            upper = [x.upper() for x in tokens]
-            candidates = []
-            for keyword in ("FILEIN", "OPEN/CLOSE"):
-                for index, value in enumerate(upper[:-1]):
-                    if value == keyword:
-                        candidates.append(tokens[index+1])
-            # MF6 model/simulation namefiles use type, original filename, modelname.
-            if name == mf6 or name.lower().endswith(".nam"):
-                if upper[0] not in ("BEGIN","END","#") and len(tokens) >= 2:
-                    if upper[0].endswith("6"):
-                        candidates.append(tokens[1])
-                    elif len(tokens) >= 3 and re.fullmatch(r"\d+", tokens[1]):
-                        units[(str(PurePosixPath(name).parent), tokens[1])] = tokens[2]
-                        if upper[0] not in ("LIST","DATA","DATA(BINARY)") or "OLD" in upper:
-                            candidates.append(tokens[2])
-            for candidate in candidates:
-                parent = PurePosixPath(name).parent
-                joined = str(parent / candidate)
-                try:
-                    relative(joined)
-                except Problem:
-                    findings.append({"id":f"EXTERNAL_{len(findings)}", "severity":"blocking", "message":"Original package refers outside the retained relative file tree.", "path":name,"line":lineno,"reference":candidate})
-                    continue
-                exists = joined in names
-                refs.append({"from":name,"line":lineno,"reference":candidate,"path":joined,"present":exists})
-                if not exists:
-                    findings.append({"id":f"MISSING_{len(findings)}","severity":"blocking","message":"Original referenced file is absent.","path":name,"line":lineno,"reference":joined})
-    # Legacy EXTERNAL unit numbers resolve against the original namefile table.
-    if legacy:
-        parent = str(PurePosixPath(legacy).parent)
-        for name, content in texts.items():
-            if str(PurePosixPath(name).parent) != parent:
+            if len(tokens) < 3 or not re.fullmatch(r"[+-]?\d+",tokens[1]):
+                finding("LEGACY_NAMEFILE","Legacy namefile records require type, integer unit and original filename.",path=legacy,line=lineno,record=line)
                 continue
-            for lineno, line in enumerate(content.splitlines(),1):
-                token = _tokens(line)
-                if len(token) > 1 and token[0].upper() == "EXTERNAL":
-                    ref = units.get((parent, token[1]))
-                    if not ref:
-                        findings.append({"id":f"UNIT_{len(findings)}","severity":"blocking","message":"Legacy EXTERNAL unit has no original namefile mapping.","path":name,"line":lineno,"unit":token[1]})
+            ftype, unit, filename = tokens[0].upper(), abs(int(tokens[1])), tokens[2]
+            status = {token.upper() for token in tokens[3:]}
+            unit_key = unit if unit else ftype
+            if unit_key in units and units[unit_key]["filename"] != filename:
+                finding("LEGACY_UNIT_DUPLICATE","The selected legacy namefile maps one unit to different original files.",path=legacy,line=lineno,unit=unit)
+                continue
+            units[unit_key] = {"filename":filename,"type":ftype,"status":sorted(status),"line":lineno}
+            if ftype == "LIST":
+                add("mf2005",legacy,lineno,filename,legacy_base,role="output",unit=unit)
+            elif ftype.startswith("DATA"):
+                if "REPLACE" in status or "NEW" in status:
+                    add("mf2005",legacy,lineno,filename,legacy_base,role="output",unit=unit)
+                elif "OLD" in status:
+                    add("mf2005",legacy,lineno,filename,legacy_base,kind="data",unit=unit)
+                # DATA with unspecified access remains a unit declaration.
+                # It becomes required if an actual EXTERNAL input uses it.
+            else:
+                add("mf2005",legacy,lineno,filename,legacy_base,unit=unit)
+
+    while pending:
+        engine, name, kind, base, current_unit = pending.pop(0)
+        key = (engine,name,kind,current_unit)
+        if key in visited:
+            continue
+        visited.add(key)
+        block = None
+        for lineno,line in lines(name):
+            tokens = _tokens(line)
+            if not tokens:
+                continue
+            upper = [token.upper() for token in tokens]
+            if engine == "mf6" and kind in ("simulation_namefile","model_namefile"):
+                if upper[0] == "BEGIN":
+                    block = upper[1] if len(upper)>1 else None
+                    continue
+                if upper[0] == "END":
+                    block = None
+                    continue
+                accepted = {"TIMING","MODELS","EXCHANGES","SOLUTIONGROUP"} if kind=="simulation_namefile" else {"PACKAGES"}
+                if block in accepted:
+                    if block=="SOLUTIONGROUP" and upper[0]=="MXITER":
+                        continue
+                    if len(tokens)<2 or not re.fullmatch(r"[A-Z][A-Z0-9-]*6",upper[0]):
+                        finding("MF6_NAMEFILE","Selected MF6 input block requires native file type and original filename.",path=name,line=lineno,block=block,record=line)
                     else:
-                        target = str(PurePosixPath(parent) / ref)
-                        safe = True
-                        try:
-                            relative(target)
-                        except Problem:
-                            safe = False
-                        present = safe and target in names
-                        refs.append({"from":name,"line":lineno,"unit":token[1],"reference":ref,"path":target,"present":present})
-                        if not present:
-                            findings.append({"id":f"UNIT_FILE_{len(findings)}","severity":"blocking","message":"Legacy EXTERNAL unit maps to an absent or external original file.","path":name,"line":lineno,"unit":token[1],"reference":ref})
+                        next_kind = "model_namefile" if block=="MODELS" else "package"
+                        add(engine,name,lineno,tokens[1],base,kind=next_kind)
+                    continue
+                if kind=="model_namefile" and block=="OPTIONS" and upper[0]=="LIST":
+                    if len(tokens)>1:
+                        add(engine,name,lineno,tokens[1],base,role="output")
+                    continue
+            # Only reachable control files are scanned. Listing text, generated
+            # output and unrelated .nam files are retained without this grammar.
+            for index, keyword in enumerate(upper[:-1]):
+                if keyword == "FILEOUT":
+                    add(engine,name,lineno,tokens[index+1],base,role="output")
+                elif keyword == "FILEIN":
+                    add(engine,name,lineno,tokens[index+1],base)
+                elif keyword == "OPEN/CLOSE":
+                    add(engine,name,lineno,tokens[index+1],base,kind="data")
+            if engine == "mf2005" and upper[0] == "EXTERNAL":
+                if len(tokens)<2 or not re.fullmatch(r"[+-]?\d+",tokens[1]):
+                    finding("UNIT","Legacy EXTERNAL requires an integer original unit.",path=name,line=lineno,record=line)
+                    continue
+                unit = abs(int(tokens[1]))
+                mapping = units.get(unit)
+                if mapping is None:
+                    finding("UNIT","Legacy EXTERNAL unit has no selected original namefile mapping.",path=name,line=lineno,unit=unit)
+                elif "REPLACE" in mapping["status"] or "NEW" in mapping["status"] or mapping["type"]=="LIST":
+                    finding("UNIT_OUTPUT","Legacy EXTERNAL input refers to a declared output unit.",path=name,line=lineno,unit=unit)
+                else:
+                    add(engine,name,lineno,mapping["filename"],base,kind="data",unit=unit)
+            # Fixed-format array LOCAT fields require native package context to
+            # distinguish internal records. Do not declare such references
+            # resolved from a guess about arbitrary numeric model data.
+            if engine=="mf2005" and len(line)>=40:
+                locat, factor, fmt = line[:10].strip(),line[10:20].strip(),line[20:40].strip()
+                if re.fullmatch(r"[+-]?\d+",locat) and re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[EDed][+-]?\d+)?",factor) and fmt.startswith("("):
+                    value = int(locat)
+                    if value and (value<0 or abs(value)!=current_unit):
+                        finding("FIXED_FORMAT_UNINSPECTED","A legacy fixed-format LOCAT array control requires native package-aware inspection; reference completeness is unresolved.",path=name,line=lineno,locat=value,current_unit=current_unit,record=line)
+
     mapping = selected.get("layer_mapping", [])
     if not isinstance(mapping, list) or not mapping:
         findings.append({"id":"LAYER_MAPPING_REQUIRED","severity":"blocking","message":"Supply explicit aquifer layer pairs after inspecting the original native model."})
@@ -144,7 +315,13 @@ def package_profile(files, selected):
             if a in left or b in right:
                 raise Problem("layer_mapping", "Each selected aquifer layer is mapped once.", 400)
             left.add(a); right.add(b)
-    profile = {"adapter":"native_package","mf6_namefile":mf6,"legacy_namefile":legacy,"layer_mapping":mapping,"intended_units":selected.get("intended_units"),"file_references":refs,"coordinates":{"kind":"model_local","crs":None}}
+    profile = {"adapter":"native_package","mf6_namefile":mf6,"legacy_namefile":legacy,
+               "layer_mapping":mapping,"intended_units":selected.get("intended_units"),
+               "file_references":refs,"coordinates":{"kind":"model_local","crs":None},
+               "reference_scope":{"input_files":sorted(input_paths),"declared_output_files":sorted(output_paths),
+                                  "untraversed_original_files":sorted(names-input_paths),
+                                  "literal_inputs_resolved":not any(row.get("severity")=="blocking" for row in findings),
+                                  "scope":"Selected MF6 block/control files and selected legacy package/unit inputs; all original members remain retained."}}
     return profile, findings
 
 def derive(parent, changes, reason):
