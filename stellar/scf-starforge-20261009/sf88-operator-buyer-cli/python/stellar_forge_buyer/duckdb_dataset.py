@@ -214,7 +214,7 @@ def _descriptor(path, name=None):
         while chunk := stream.read(_CHUNK):
             size += len(chunk)
             checksum.update(chunk)
-    suffix = Path(path).suffix
+    suffix = Path(name or path).suffix
     return {"name": name or Path(path).name, "path": str(path), "bytes": size,
             "sha256": checksum.hexdigest(), "mime": {".csv": "text/csv", ".json": "application/json",
             ".parquet": "application/vnd.apache.parquet", ".duckdb": "application/octet-stream"}.get(suffix, "application/octet-stream")}

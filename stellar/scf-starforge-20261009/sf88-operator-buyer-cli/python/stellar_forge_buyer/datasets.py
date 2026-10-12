@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 import os
 import hashlib
+from decimal import Decimal
 import json
 import re
 from pathlib import Path
@@ -13,7 +14,7 @@ import stat
 from .errors import DeliveryError, NativeError, StateError
 from .result import FileDelivery, SessionAccountingResult
 from .runtime import Runtime
-from .storage import digest, parse, private_directory, read
+from .storage import digest, parse, private_directory, read, unique_object
 
 _MODE = "ORIGINAL_PYTHON_DATASET"
 _ACQUISITION = "stellar-forge.sf88.dataset-acquisition.v1"
@@ -196,7 +197,44 @@ class DatasetDelivery:
                                    "rows": scan["count"], "total": scan["total"], "snapshot": scan["snapshot"],
                                    "lastRecordDigest": scan["chain"]},
                   "paymentStatus": manifest["paymentStatus"], "outputs": outputs, "archives": archives}
-        return cls(native, directory)
+        delivery = cls(native, directory)
+
+        def exact(raw):
+            try:
+                return json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object,
+                                  parse_float=Decimal,
+                                  parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
+            except (UnicodeError, ValueError):
+                raise DeliveryError("DATASET_NATIVE_ROW_INVALID") from None
+
+        def same(first, second):
+            if type(first) is not type(second):
+                return False
+            if isinstance(first, dict):
+                return first.keys() == second.keys() and all(same(first[key], second[key]) for key in first)
+            if isinstance(first, list):
+                return len(first) == len(second) and all(same(a, b) for a, b in zip(first, second))
+            return first == second
+
+        # The manifest's output digest alone cannot bind rows to the original
+        # page chain. Stream the typed JSONL against those exact archived rows.
+        # Decimal parsing retains numeric values without binary float rounding.
+        with delivery.file("dataset.jsonl").open() as stream:
+            for index in range(len(scan["pages"])):
+                name = f"pages/{index:05d}.json"
+                archive_raw = read(directory / name, 2 * 1024 * 1024 + 4096)
+                expected = archive_expected[name]
+                if len(archive_raw) != expected["bytes"] or digest(archive_raw) != expected["sha256"]:
+                    raise DeliveryError("DATASET_NATIVE_ARCHIVE_CHANGED_DURING_RECEIVING")
+                source_rows = exact(archive_raw)["payload"]["rows"]
+                for source_row in source_rows:
+                    raw = stream.readline(2_097_153)
+                    if (len(raw) > 2_097_152 or not raw.endswith(b"\n")
+                            or not same(exact(raw), source_row)):
+                        raise DeliveryError("DATASET_NATIVE_JSONL_SOURCE_CHANGED")
+            if stream.read(1):
+                raise DeliveryError("DATASET_NATIVE_JSONL_SOURCE_CHANGED")
+        return delivery
 
     def file_names(self):
         """Original finalized outputs and any direct SF100 session/page archives."""
