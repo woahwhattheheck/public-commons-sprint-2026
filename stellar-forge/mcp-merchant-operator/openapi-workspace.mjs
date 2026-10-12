@@ -2,6 +2,7 @@ import { openapiWorkspaceTools, read, selection, page, selectedPackage, source, 
 export { openapiWorkspaceTools } from './catalog/openapi-workspace.mjs';
 // MIT. Merchant authoring through the original SF61 console and SF82 releases.
 import { isRouteWorksheetTool, executeRouteWorksheet } from './openapi-route-worksheet.mjs';
+import { isOperationPolicyTool, executeOperationPolicies } from './openapi-operation-policies.mjs';
 import { Sf61WorkspaceClient, SF61_ALIAS, SF61_SHA, SF61_MAX_SOURCE_BYTES, sf61Hash,
   sf61Failure as fail, sf61Plain as plain, sf61Exact as exact, sf61Checked as checked } from './sf61-connection.mjs';
 export { readSf61WorkspaceConfiguration as readOpenApiWorkspaceConfiguration } from './sf61-connection.mjs';
@@ -156,6 +157,8 @@ export class MerchantOpenApiWorkspaces {
     if (input.expectedRevision !== undefined) integer(input.expectedRevision, 0);
     if (input.offset !== undefined) integer(input.offset, 0);
     if (input.limit !== undefined) integer(input.limit, 1, name === 'merchant_openapi_file' ? 196608 : 200);
+    if (isOperationPolicyTool(name)) return executeOperationPolicies({ name, input, workspace, client,
+      readSource: value => this.#source(client, value), readPlan: value => this.#plan(client, value) });
     if (isRouteWorksheetTool(name)) return executeRouteWorksheet({ name, input, workspace, client,
       readSource: value => this.#source(client, value), readPlan: value => this.#plan(client, value),
       save: (value, prepared) => this.#save(client, value, false, prepared) });
@@ -229,7 +232,8 @@ export class MerchantOpenApiWorkspaces {
     const definition = definitions.get(name);
     if (!definition) throw fail('TOOL_NOT_FOUND', 'Unknown original OpenAPI merchant operation.');
     exact(args, Object.keys(definition.properties), definition.required);
-    const pending = Promise.resolve().then(() => this.#execute(name, args)); this.#pending.add(pending);
+    const selected = structuredClone(args);
+    const pending = Promise.resolve().then(() => this.#execute(name, selected)); this.#pending.add(pending);
     try { return await pending; } finally { this.#pending.delete(pending); }
   }
   close() {
