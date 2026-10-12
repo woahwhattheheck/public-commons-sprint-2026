@@ -380,7 +380,8 @@
     "sdmx": "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/cli.mjs",
     "dataset-feeds": "stellar/scf-starforge-20261009/sf30-seller-sdk/feeds/cli.mjs",
     "atlas": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
-    "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs"
+    "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs",
+    "mcp-oauth": "stellar-forge/mcp-paid-agent/oauth-resource-cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -869,7 +870,11 @@
     "./buyer/feeds": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/feeds/merchant.mjs",
     "./catalog/atlas/workspace": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace.mjs",
     "./catalog/atlas/transfer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-transfer.mjs",
-    "./catalog/explorer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs"
+    "./catalog/explorer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
+    "./mcp/oauth-resource": "./source/stellar-forge/mcp-paid-agent/oauth-resource.mjs",
+    "./mcp/oauth-host": "./source/stellar-forge/mcp-paid-agent/oauth-host.mjs",
+    "./mcp/oauth-discovery": "./source/stellar-forge/mcp-paid-agent/oauth-discovery.mjs",
+    "./mcp/oauth-operator": "./source/stellar-forge/mcp-paid-agent/oauth-resource-cli.mjs"
   },
   "nativePeers": {
     "@x402/core": {
