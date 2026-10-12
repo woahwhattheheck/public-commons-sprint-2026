@@ -196,6 +196,53 @@ starforge sensorthings download \
 
 Select a returned file selector and full SHA256 identity. Continue the same original read ID, selector, SHA256 and offset. After process restart, use the same selector, hash and offset without an expired read ID. The runtime's original read owner holds files and enforces its chunk contract. Closing the merchant provider drains its own pending work and releases its borrowed reads; it does not stop the original managed application.
 
+### Installed JavaScript and TypeScript clients
+
+The same package exports the native workspace client and retained-file receiver at `@tokenjunkielabs/starforge-merchant/sensorthings/mcp` and `@tokenjunkielabs/starforge-merchant/sensorthings/download`. Their paired declarations describe the actual tool inputs, capture pages, native file selections and receiving results. The pure catalog and validator are available at `@tokenjunkielabs/starforge-merchant/sensorthings/mcp-protocol`; setup keeps its existing `/sensorthings/setup` export.
+
+This complete ES module receives files selected from the original running workspace. In a project installation, place it beside the existing `node_modules` directory that resolves the selected merchant package, outside the immutable package/source directory. Pass the private connection file, its declared alias, a JSON file containing the returned native selection, and the original receiving directory:
+
+```js
+import { readFile } from 'node:fs/promises';
+import {
+  readSensorThingsWorkspaceConfiguration,
+  MerchantSensorThingsWorkspaces,
+} from '@tokenjunkielabs/starforge-merchant/sensorthings/mcp';
+import {
+  inspectSensorThingsFiles,
+  downloadSensorThingsFiles,
+} from '@tokenjunkielabs/starforge-merchant/sensorthings/download';
+
+const [connectionFile, workspace, selectionFile, directory] = process.argv.slice(2);
+if (!connectionFile || !workspace || !selectionFile || !directory) {
+  throw new Error('Pass CONNECTION_FILE ALIAS SELECTION_FILE RECEIVING_DIRECTORY.');
+}
+const configuration = await readSensorThingsWorkspaceConfiguration(connectionFile);
+const workspaceId = configuration.workspaces[workspace]?.workspaceId;
+if (!workspaceId) throw new Error('Choose an alias retained in this connection file.');
+const selection = JSON.parse(await readFile(selectionFile, 'utf8'));
+const client = new MerchantSensorThingsWorkspaces(configuration);
+try {
+  const scope = { client, workspace, workspaceId, selection };
+  const inspected = await inspectSensorThingsFiles(scope);
+  const result = await downloadSensorThingsFiles({
+    ...scope,
+    directory,
+    exportId: inspected.manifest.id,
+    expectedManifestSha256: inspected.manifestSha256,
+  });
+  process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+} finally {
+  await client.close();
+}
+```
+
+Run the script with that project's selected Node executable. Command-only installations can use the original `starforge sensorthings download` command above with the same inputs and recovery behavior. The private connection remains the authority for the alias and persistent workspace UUID. The example does not print its private URL or token. `inspectSensorThingsFiles` binds the complete native file list; the subsequent download requires that same client selection ID and receiving-manifest SHA256. Provider file bytes retain their own full hashes and original names in `sensorthings-download.json`.
+
+After an interruption, run the same script against the same selected files and receiving directory. The original downloader verifies its saved manifest, completed files and partial prefix before continuing. A changed selection or file list is a conflict; preserve the existing checkpoint and recover the original retained selection. Process-local generated review snapshots must be read through the original `file_read` operation; the complete-file receiver rejects them until a fixed native file selection exists.
+
+The direct workspace client belongs to this caller, so `close()` drains its pending calls and releases its remaining held reads. The separate `url` form supported by the retained downloader uses the original stateless HTTP merchant client and its declared bearer-token environment reference. It does not accept a private SensorThings `/#token` URL as an MCP endpoint.
+
 ## 6. Restart, interrupted setup and receiving recovery
 
 Re-run the same merchant setup options after an interrupted installation. Setup first verifies the retained intent and normalized source bindings. It uses the original directory lease, complete private file publication and the original SF82 reader.
