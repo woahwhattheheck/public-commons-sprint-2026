@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Data migrations · API merchant</title><link rel="stylesheet" href="/migrations/style.css"></head>
+<body>
+<header><div><a id="merchant-link" href="/">API merchant</a><span class="breadcrumb"> / Data migrations</span><h1>Messari → Blockworks</h1><p>Move an existing application through source review, complete acquisition, comparison and release.</p></div><label class="operator">Operator<input id="operator" autocomplete="name" placeholder="Your name" maxlength="180"></label></header>
+<div id="notice" role="status" aria-live="polite">Opening the workspace…</div>
+<div class="layout">
+<aside><div class="heading"><h2>Projects</h2><button id="refresh-projects" class="small-button" type="button">Refresh</button></div><div id="project-list"></div><details><summary>New migration</summary><form id="new-project"><label>Project name<input name="title" required maxlength="180" placeholder="Customer data platform"></label><label>Project ID<input name="id" required pattern="[a-z0-9][a-z0-9_-]{0,79}" placeholder="customer-migration"></label><label>Customer or team<input name="customer" maxlength="240"></label><button type="submit">Create project</button></form></details><details><summary>Receive a handover</summary><form id="handover-import-form"><label>Workspace name<input name="name" required pattern="[a-z0-9][a-z0-9_-]{0,79}" maxlength="80" placeholder="received-migration"></label><label>Original handover archive<input name="file" type="file" accept=".gz,application/gzip,application/octet-stream" required><span class="hint">A complete migration archive, up to 32 MiB.</span></label><button type="submit">Import and open workspace</button></form></details><h3>Received workspaces</h3><div id="received-workspaces"></div></aside>
+<main>
+<section id="empty"><h2>Open a migration project</h2><p>Retain the provider descriptions and the application’s existing requests, then select the source data and mappings to carry through release.</p></section>
+<div id="project" hidden>
+<div class="project-heading"><div><h2 id="project-title"></h2><p id="project-meta"></p></div><button id="show-history" type="button">Edition history</button></div>
+<nav aria-label="Migration steps"><button type="button" data-tab="sources" aria-selected="true">Sources</button><button type="button" data-tab="acquire">Acquisition</button><button type="button" data-tab="mapping">Mapping</button><button type="button" data-tab="results">Results</button><button type="button" data-tab="release">Release</button><button type="button" data-tab="receiving">Receiving</button><button type="button" data-tab="handover">Handover</button></nav>
+
+<section data-panel="sources">
+<div class="heading"><div><h3>Source editions</h3><p>The exact source files remain available with each project edition.</p></div></div>
+<div id="source-list"></div>
+<details open><summary>Import a source</summary><form id="source-form" class="form-grid">
+<label>Purpose<select name="kind"><option value="openapi">Blockworks OpenAPI</option><option value="legacy-openapi">Legacy OpenAPI</option><option value="inventory">Application request inventory</option><option value="legacy-response">Legacy response or customer export</option><option value="catalog">Retained catalog response</option></select></label>
+<label>Original file<input name="file" type="file" accept=".json,.yaml,.yml,.csv,.txt,application/json" required></label>
+<label class="wide">Source URL<input name="url" type="url" placeholder="Original provider or application source"></label>
+<label>Captured or retrieved at<input name="capturedAt" type="datetime-local" step="1"><span class="hint">UTC; preserve the original retrieval time when known.</span></label>
+<label>Source reference<input name="reference" placeholder="Export, request or documentation reference"></label>
+<label>HTTP status, when recorded<input name="status" type="number" min="100" max="599" step="1" placeholder="Leave empty for a file export"></label>
+<label class="wide">Additional original response metadata<textarea name="metadata" rows="3" spellcheck="false">{}</textarea><span class="hint">Retain the original request, response headers and paging details when available.</span></label>
+<div class="wide actions"><button type="submit">Retain source</button></div></form></details>
+<h3>Application request inventory</h3><p>Connect each legacy request to the feature that depends on it.</p><div id="inventory"></div>
+<details><summary>Add a request</summary><form id="inventory-form" class="form-grid"><label>Request ID<input name="id" required pattern="[a-z0-9][a-z0-9_-]{0,79}" placeholder="asset-list"></label><label>Application feature<input name="feature" required placeholder="Asset selector"></label><label>Family<select name="family"><option value="assets">Assets</option><option value="blockchains">Networks</option><option value="stablecoins">Stablecoin products</option></select></label><label>Legacy GET path<input name="path" required placeholder="/metrics/v2/assets"></label><div class="wide actions"><button type="submit">Save request</button></div></form></details>
+<div id="source-inspection"></div>
+</section>
+
+<section data-panel="acquire" hidden>
+<h3>Native data acquisition</h3><p>Keep the selected query, its original responses and its completion state together. Resume the same acquisition after a restart.</p>
+<form id="acquisition-form" class="form-grid">
+<label>Acquisition ID<input name="id" required pattern="[a-z0-9][a-z0-9_-]{0,79}" placeholder="catalog-20261011"></label><label>Application feature<input name="feature" placeholder="Source discovery"></label>
+<label>Data family<select name="family"><option value="assets">Assets</option><option value="blockchains">Networks</option><option value="stablecoins">Stablecoin products</option></select></label>
+<label>Request type<select name="model" id="request-model"><option value="catalog">Tabular catalog</option><option value="series-catalog">Timeseries catalog</option><option value="assets">Assets</option><option value="blockchains">Blockchains</option><option value="stablecoin-products">Stablecoin products</option><option value="asset-price">Asset prices</option><option value="network-series">Network timeseries</option><option value="stablecoin-series">Stablecoin timeseries</option></select></label>
+<label>Canonical entity ID<input name="entity" id="request-entity" placeholder="Returned assetID, networkID or token id"></label><label>Granularity<select name="granularity" id="request-granularity"><option value="1d">1 day</option><option value="1w">1 week</option><option value="1h">1 hour</option><option value="5m">5 minutes</option></select></label>
+<label class="wide">Native GET path<input name="path" id="request-path" required value="/query/tabular/catalog"></label>
+<label>Credential environment name<input name="credentialEnv" pattern="[A-Za-z_][A-Za-z0-9_]*" placeholder="Leave empty for a public request"><span class="hint">Enter the environment name; the key stays on the host.</span></label><label>Role<select name="role"><option value="candidate">Candidate data</option><option value="baseline">Baseline data</option><option value="catalog">Discovery catalog</option></select></label>
+<label class="wide">Exact query parameters<textarea name="query" rows="4" spellcheck="false">{}</textarea><span class="hint">Use the provider’s declared selections, filters and window. Lists use pageSize; timeseries uses its selected start/end or timeframe.</span></label>
+<label class="wide">Selection note<input name="reason" placeholder="Selected model, entity and time window"></label>
+<div class="wide actions"><button type="submit" name="mode" value="prepare">Prepare request</button><button type="submit" name="mode" value="run" class="primary">Prepare and acquire</button></div></form>
+<h3>Retained acquisitions</h3><div id="acquisition-list"></div><div id="acquisition-detail"></div>
+<details><summary>Import an existing native response</summary><form id="capture-form" class="form-grid"><label>Acquisition<select name="id" id="capture-run" required></select></label><label>Original response file<input name="file" type="file" accept=".json,application/json" required></label><label class="wide">Exact requested URL<input name="url" type="url" required></label><label>HTTP status<input name="status" type="number" min="100" max="599" required></label><label>Captured at, UTC<input name="capturedAt" type="datetime-local" step="1" required></label><label class="wide">Original response headers<textarea name="headers" rows="3" spellcheck="false">{}</textarea></label><label class="wide">Capture reference<input name="reference" required placeholder="Original collector or export identity"></label><div class="wide actions"><button type="submit">Import exact response</button></div></form></details>
+</section>
+
+<section data-panel="mapping" hidden>
+<h3>Semantic mapping</h3><p>Choose the exact baseline and candidate, then review entity keys, values, units, dimensions and the selected time window.</p><div id="mapping-list"></div>
+<form id="mapping-form" class="form-grid"><label>Mapping ID<input name="id" id="mapping-id" required pattern="[a-z0-9][a-z0-9_-]{0,79}"></label><label>Family<select name="family" id="mapping-family"><option value="assets">Assets</option><option value="blockchains">Networks</option><option value="stablecoins">Stablecoin products</option></select></label>
+<label>Baseline data<select name="baseline" id="mapping-baseline" required></select></label><label>Candidate data<select name="candidate" id="mapping-candidate" required></select></label>
+<details class="wide"><summary>Imported response layout and coverage</summary><p class="hint">Use these selections for imported customer response files. Retained acquisitions already carry their exact response layout and coverage. JSON pointers select fields from the original bytes; a whole-export declaration describes an actual complete customer export.</p>
+<div class="form-grid"><label>Baseline layout preset<select id="legacy-preset"><option value="assets">Messari asset list</option><option value="networks">Messari network or stablecoin list</option><option value="series">Messari time series</option><option value="csv">Customer CSV with header</option></select></label><div></div>
+<label>Baseline file selection<textarea id="legacy-selection" rows="13" spellcheck="false">{"schemaVersion":"blockworks-legacy-projection/v1","format":"json","kind":"tabular","rowsPointer":"/data","wholeExport":false}</textarea></label>
+<label>Candidate file selection<textarea id="candidate-selection" rows="13" spellcheck="false">{"schemaVersion":"blockworks-legacy-projection/v1","format":"json","kind":"tabular","rowsPointer":"/data","metadataPointer":"/metadata","totalRowsPointer":"/metadata/totalRows","totalPagesPointer":"/metadata/totalPages","wholeExport":false}</textarea></label></div></details>
+<div class="wide"><div class="heading"><h4>Keys and measures</h4><div class="actions"><button type="button" id="add-key">Add key</button><button type="button" id="add-measure">Add measure</button><button type="button" id="add-decision">Add review decision</button></div></div><div id="mapping-fields"></div></div>
+<label class="wide">Mapping definition<textarea name="definition" id="mapping-definition" rows="16" spellcheck="false"></textarea><span class="hint">The table and this exact definition edit the same mapping. Selector paths are arrays of original field names.</span></label>
+<div class="wide actions"><button type="submit">Save mapping</button><button type="button" id="review-mapping">Review saved mapping</button><button type="button" id="compare-mapping">Compare results</button></div></form>
+<div id="mapping-review"></div>
+</section>
+
+<section data-panel="results" hidden><h3>Customer result comparison</h3><p>Inspect the complete comparison alongside its source coverage and accepted mapping.</p><div id="comparison-list"></div><div id="comparison-detail"></div></section>
+
+<section data-panel="release" hidden>
+<h3>Merchant source update</h3><p>Keep the existing merchant’s route identities and commercial settings while reviewing the new provider contract.</p>
+<form id="source-review-form" class="form-grid"><label class="wide">Original saved merchant<select name="baselineName" id="baseline-package" required></select></label><label class="wide">Operation mappings and settings<textarea name="decisions" id="source-decisions" rows="9" spellcheck="false">{"schema":"stellar-forge.api-source-refresh-decisions.v1","mappings":[],"additions":[]}</textarea></label><div class="wide actions"><button type="submit">Review source update</button><a id="merchant-setup-link" href="/">Open merchant setup</a></div></form><div id="source-review"></div>
+<form id="merchant-export-form" class="inline-form"><label>New package name<input name="name" required placeholder="customer-blockworks-v1"></label><button type="submit">Export reviewed package</button></form>
+<h3>Releases and rollback</h3><form id="stage-form" class="form-grid"><label>Saved package<select name="package" id="stage-package" required></select></label><label>Release ID<input name="id" required placeholder="blockworks-v1"></label><label>Release label<input name="label" required placeholder="Reviewed Blockworks integration"></label><label>Listener port<input name="port" type="number" min="0" max="65535" value="0"></label><label class="wide">Native facilitator URL, when configured<input name="facilitator" type="url" placeholder="Leave empty for the original challenge preview"></label><div class="wide actions"><button type="submit">Stage release</button></div></form>
+<div id="release-state"></div><div id="release-list"></div><div id="release-diff"></div><div class="actions"><button type="button" id="select-release" disabled>Select reviewed release</button><button type="button" id="rollback-release" disabled>Roll back to reviewed release</button><button type="button" id="start-release">Start selected release</button><button type="button" id="stop-release">Stop owned release</button></div>
+</section>
+
+<section data-panel="receiving" hidden>
+<h3>Receiving application</h3><p>Use the original customer workspace to review an incoming request, choose its offer and budget, prepare a runbook, and execute or recover its saved operation. Its accounting, downloads and backup remain available in the same workspace.</p>
+<div class="actions"><button id="open-receiver" type="button">Open receiving workspace</button><button id="close-receiver" type="button" disabled>Close receiving workspace</button></div><div id="receiver-state"></div>
+<h3>Use a saved receiving result</h3><p>Select the original run and operation after its response has been saved. The retained response can then be selected as baseline or candidate data in Mapping.</p>
+<form id="receiver-result-form" class="form-grid">
+<label>Original run ID<input name="runId" required placeholder="Run ID from the receiving workspace"></label><label>Original operation ID<input name="operationId" required placeholder="Operation ID from the saved run"></label>
+<label class="wide">Response name<input name="name" maxlength="240" placeholder="Leave empty to use the original run and operation IDs"></label>
+<label class="wide">Original response layout<textarea name="selection" rows="10" spellcheck="false">{"schemaVersion":"blockworks-legacy-projection/v1","format":"json","kind":"tabular","rowsPointer":"/data","metadataPointer":"/metadata","totalRowsPointer":"/metadata/totalRows","totalPagesPointer":"/metadata/totalPages","wholeExport":false}</textarea><span class="hint">Select the fields present in the saved response. Preserve its actual paging and export coverage.</span></label>
+<div class="wide actions"><button type="submit">Retain verified response for mapping</button></div></form></section>
+
+<section data-panel="handover" hidden><h3>Receiving team handover</h3><p>Package the saved project, original captures, reviewed mapping and selected merchant for the receiving application.</p><div id="handover-summary"></div><form id="handover-form" class="form-grid"><label>Handover name<input name="name" required pattern="[a-z0-9][a-z0-9_-]{0,79}" maxlength="80" placeholder="customer-handover-v1"></label><label>Receiving team<input name="receiver" required maxlength="240" placeholder="Application operations"></label><label class="wide">Operator handover note<textarea name="note" required rows="5" maxlength="8000" placeholder="Selected scope, source access, operating responsibilities and release instructions"></textarea></label><div class="wide actions"><button type="submit">Create portable handover</button></div></form><div id="handover-list"></div></section>
+</div>
+<section id="history" hidden><div class="heading"><h3>Project edition history</h3><button id="close-history" type="button">Close</button></div><div id="history-list"></div></section>
+</main></div><script type="module" src="/migrations/browser.mjs"></script>
+</body></html>

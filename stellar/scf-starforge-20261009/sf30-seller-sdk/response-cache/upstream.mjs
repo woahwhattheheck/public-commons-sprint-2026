@@ -1,7 +1,7 @@
 // MIT. One response-cache engine and the original SF30 upstream transport.
 import { createHash } from 'node:crypto';
 import { createUpstreamHandler, beginUpstreamRequest, resolveUpstreamHeaders } from '../upstream-handler.mjs';
-import { createResponseCache } from './cache.mjs';
+import { createResponseCache, normalizeCacheRetention } from './cache.mjs';
 import { cacheDirectives, upstreamCacheBypass, upstreamFreshness } from './http-freshness.mjs';
 
 const META = ['cache-control', 'vary', 'age', 'date', 'expires', 'pragma'];
@@ -31,12 +31,16 @@ export function createCachedUpstream(options, cacheOptions) {
   if (Object.hasOwn(cacheOptions, 'handler') || Object.hasOwn(cacheOptions, 'storagePolicy') || Object.hasOwn(cacheOptions, 'bypassRequest')) {
     throw new TypeError('Upstream factory owns handler and HTTP cache policy hooks');
   }
-  const { headers = {}, lookup, onResult, invokeSource, credentialProvider, supplierQuota, ...serializable } = options;
+  const { headers = {}, lookup, onResult, invokeSource, credentialProvider, supplierQuota, tls, agent, ...serializable } = options;
   if (invokeSource !== undefined && typeof invokeSource !== 'function') throw new TypeError('invokeSource must be a trusted source function');
   const fixed = structuredClone(serializable);
   if (lookup !== undefined) fixed.lookup = lookup;
   if (onResult !== undefined) fixed.onResult = onResult;
   if (supplierQuota !== undefined) fixed.supplierQuota = supplierQuota;
+  // Native TLS contexts and the host-owned agent retain their identity across
+  // cache generations; neither belongs in the serializable request declaration.
+  if (tls !== undefined) fixed.tls = tls;
+  if (agent !== undefined) fixed.agent = agent;
   const headerFactory = typeof headers === 'function' ? headers : null;
   const staticHeaders = headerFactory ? null : frozenHeaders(headers);
   const expose = new Set((fixed.responseHeaders ?? ['content-type', 'content-language']).map(name => name.toLowerCase()));
@@ -44,7 +48,7 @@ export function createCachedUpstream(options, cacheOptions) {
   fixed.cachePolicyMetadata = true;
   const forwarded = [...new Set((fixed.requestHeaders ?? []).map(name => name.toLowerCase()))];
   const varyHeaders = [...new Set([...forwarded, ...(cacheOptions.varyHeaders ?? [])])];
-  const ttlMs = cacheOptions.ttlMs ?? 1000;
+  let ttlMs = cacheOptions.ttlMs ?? 1000;
   const maxSourceInFlight = Math.min(cacheOptions.maxSourceInFlight ?? 16, fixed.maxInFlight ?? 16);
   const { admit, ...cacheData } = cacheOptions;
   const policy = { ...structuredClone(cacheData), ...(admit === undefined ? {} : { admit }), varyHeaders,
@@ -56,7 +60,7 @@ export function createCachedUpstream(options, cacheOptions) {
   const maxCredentialWaiters = admission.stats().limits.maxWaiters;
   const totals = { requests: 0, credentialUnavailable: 0, credentialRotations: 0, invalidations: 0, credentialInFlight: 0,
     sourceStarted: 0, sourceCompleted: 0, sourceInFlight: 0, sourceFailed: 0, sourceResponseBytes: 0 };
-  let current = null, sequence = 0, closed = false, closing;
+  let current = null, sequence = 0, revision = 0, closed = false, closing;
 
   function release(generation) {
     if (generation !== current && generation.users === 0 && generation.active === 0) {
@@ -65,7 +69,7 @@ export function createCachedUpstream(options, cacheOptions) {
   }
   function retire() {
     if (!current) return;
-    const previous = current; current = null;
+    const previous = current; current = null; revision++;
     previous.cache.invalidate(); release(previous);
   }
   function select(serverHeaders, credentialGeneration) {
@@ -102,7 +106,7 @@ export function createCachedUpstream(options, cacheOptions) {
         return { cacheable: decision.cacheable, ttlMs: decision.ttlMs };
       },
     });
-    current = generation; generations.add(generation);
+    current = generation; generations.add(generation); revision++;
     return generation;
   }
 
@@ -156,9 +160,31 @@ export function createCachedUpstream(options, cacheOptions) {
   }
 
   const stats = () => Object.freeze({ schema: 'stellar-forge.upstream-response-cache.v1', ...totals,
-    generation: current?.number ?? null, retiredGenerations: generations.size - Number(current !== null),
+    generation: current?.number ?? null, revision, retiredGenerations: generations.size - Number(current !== null),
     cache: current?.cache.stats() ?? null, closed });
-  const invalidate = () => { totals.invalidations++; retire(); return Object.freeze({ generation: null }); };
+  const invalidate = () => {
+    totals.invalidations++; revision++; retire();
+    return Object.freeze({ generation: null, revision });
+  };
+  const inspect = () => {
+    const snapshot = stats(), limits = admission.stats().limits;
+    return { kind: 'upstream', revision, generation: snapshot.generation,
+      cacheGeneration: snapshot.cache?.generation ?? null, closed,
+      policy: Object.fromEntries(['ttlMs', 'maxEntries', 'maxBytes', 'maxEntryBytes'].map(key => [key, limits[key]])),
+      limits, stats: snapshot };
+  };
+  const configure = value => {
+    if (closed) throw Object.assign(new Error('Upstream response cache is closed'), { code: 'CACHE_CONTROL_CLOSED' });
+    const next = normalizeCacheRetention(value, admission.stats().limits);
+    const previous = inspect().policy;
+    // Retain this outer controller's admission, availability and global source
+    // counters. Retired credential generations still occupy their existing
+    // slots until every active source and admitted consumer has finished.
+    const invalidated = invalidate();
+    admission.configure(next);
+    Object.assign(policy, next); ttlMs = next.ttlMs;
+    return { previous, policy: { ...next }, ...invalidated };
+  };
   const close = options => {
     if (closing) return closing;
     closed = true;
@@ -173,7 +199,7 @@ export function createCachedUpstream(options, cacheOptions) {
   };
   handler.admit = admission.admit;
   handler.snapshot = stats;
-  return Object.freeze({ handler, admit: admission.admit, stats, invalidate, close });
+  return Object.freeze({ handler, admit: admission.admit, stats, inspect, configure, invalidate, close });
 }
 
 /** Convenience export for existing application.mjs handler bindings. */

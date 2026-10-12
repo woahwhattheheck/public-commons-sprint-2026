@@ -145,7 +145,7 @@ async function runtimeOptions(opts, out, source) {
     runtime.upstreams = await prepareUpstreamSnapshot({ out,
       input: opts.has('--upstreams') ? resolve(opts.get('--upstreams')) : undefined,
       saved: runtime.upstreams, config: await readSellerConfig(join(out, 'seller-service.json')),
-      allowLoopback: runtime.allowLoopbackUpstream === true });
+      allowLoopback: runtime.allowLoopbackUpstream === true, deferCredentials: !runtime.facilitator });
   }
   return runtime;
 }
