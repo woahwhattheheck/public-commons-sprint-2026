@@ -11,6 +11,7 @@ import {importEvidence,safeFile} from './artifacts.mjs';
 import {preparePublication} from './publication.mjs';
 import {exportProject,importProject} from './transfer.mjs';
 import {preparePythonSource} from './python-document.mjs';
+import {componentCatalog} from './components.mjs';
 
 const clone=v=>structuredClone(v),find=(rows,id,label)=>{const v=(rows??[]).find(x=>x.id===id);if(!v)throw fault('ANALYSIS_SELECTION','Select an existing '+label+'.',404);return v;};
 const collections=['analysisProjects','analysisVersions','analysisComparisons','analysisEvidence','analysisViewers','analysisPublications','analysisExports','analysisImports','analysisReceipts','analysisPythonSources'];
@@ -112,14 +113,14 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
   }
   async function streams(editionId){
     const e=await edition(editionId),scalar=e.plan.streams.filter(s=>s.kind==='Datastreams');
-    if(!scalar.length)return {editionId,streams:[],scope:e.scope,issues:e.issues};
+    const componentCatalogue=await componentCatalog(store,e);
     // The full source profile is the original stream catalogue, not a new capture.
     const all=[];
     for(let offset=0;offset<scalar.length;offset+=ANALYSIS_LIMITS.streams){
       const selection=normalizeSelection({streamKeys:scalar.slice(offset,offset+ANALYSIS_LIMITS.streams).map(s=>s.key),period:null,view:'events'},e);
       all.push(...(await describeSelection(store,e,selection)).streams);
     }
-    return {editionId,streams:all,scope:e.scope,issues:e.issues,license:e.source.license};
+    return {editionId,streams:all,componentCatalogue,scope:e.scope,issues:e.issues,license:e.source.license};
   }
   async function rows(id,options){const v=await version(id);return rowsPage(store,await edition(v.editionId),v.selection,options);}
   async function sta(id,mode,request){
@@ -170,8 +171,12 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
         if(p.editionId!==undefined)editionId=hash(p.editionId,'source edition');
         const e=await edition(editionId);
         if(p.selection!==undefined)selection=normalizeSelection(p.selection,e);
-        else if(editionId!==prior.editionId)selection=normalizeSelection({streamKeys:prior.selection.streamKeys,period:prior.selection.period?
-          {start:prior.selection.period.start,end:prior.selection.period.end}:null,view:prior.selection.view,viewerId:prior.selection.viewerId},e);
+        else if(editionId!==prior.editionId){
+          if(Array.isArray(prior.selection.componentSelections))
+            throw fault('ANALYSIS_COMPONENT_REBIND','Choose and review each exact positional binding in the new source edition before saving a revised component selection.',409);
+          selection=normalizeSelection({streamKeys:prior.selection.streamKeys,period:prior.selection.period?
+            {start:prior.selection.period.start,end:prior.selection.period.end}:null,view:prior.selection.view,viewerId:prior.selection.viewerId},e);
+        }
         if(p.title!==undefined)title=text(p.title,'the analysis title',200);
         // Prior annotations retain their original cited edition. They remain
         // visible history, never relabeled as evidence for this later edition.
