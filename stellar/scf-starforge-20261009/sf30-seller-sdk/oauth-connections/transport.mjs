@@ -6,7 +6,7 @@ import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
 import { isPublicAddress } from '../../sf31-buyer-client/public-transport.mjs';
 import { fault } from '../postgres/publisher/files.mjs';
-import { plain, endpoint, intuitQboProfile } from './profile.mjs';
+import { plain, endpoint, intuitQboProfile, xeroOAuthProfile } from './profile.mjs';
 
 export function oauthFailure(code, message, outcome = 'unknown', status = 502) {
   return Object.assign(fault(code, message, status), { outcome });
@@ -51,7 +51,7 @@ export async function oauthRequest(profile, mode, fields, {
   }
   const headers = { accept: 'application/json', 'accept-encoding': 'identity', 'content-type': 'application/x-www-form-urlencoded' };
   if (profile.authMethod === 'client_secret_basic')
-    headers.authorization = 'Basic ' + Buffer.from(intuit ? profile.clientId + ':' + selected.secret :
+    headers.authorization = 'Basic ' + Buffer.from(intuit || xeroOAuthProfile(profile) ? profile.clientId + ':' + selected.secret :
       formPart(profile.clientId) + ':' + formPart(selected.secret)).toString('base64');
   else {
     form.set('client_id', profile.clientId);

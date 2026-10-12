@@ -329,3 +329,9 @@ this same retained-file path.
 `merchant_pricing_close` drains accepted work, releases temporary readers,
 and closes this process's capture view. Reopening loads the original saved
 reviews, decisions and scenario plans.
+
+## Supplier costs and complete recovery
+
+The same pricing connection now supports retained supplier cost originals, exact charge mappings and allocations, corrected cost editions, saved price proposals, and complete pricing/cost/scenario backups. Use the host-declared `costInputs` and `costBooks` aliases with the original `merchant-mcp pricing cost-*` commands; download original source, edition and TAR bytes with resumable `cost-download`.
+
+See [COSTS.md](./COSTS.md) for the complete source-to-pricing workflow, exact request recovery, quoted versus billed costs, and the original archive restore handoff. These controls use the existing pricing workspace and authentication. Original atomic payment terms and saved scenario behavior remain governed by their original operations.

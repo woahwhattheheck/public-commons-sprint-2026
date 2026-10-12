@@ -1,6 +1,6 @@
 // MIT. Private industrial operator UI over the maintained FRED project and native engines.
 import { createServer } from 'node:http';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { loadDatasetConfig } from '../dataset-handler.mjs';
@@ -8,8 +8,9 @@ import { readPrivateJson } from '../routescan/quota.mjs';
 import { Buyer } from '../../sf88-operator-buyer-cli/node/index.mjs';
 import { need, inspectCapture, MAX_CAPTURE_BYTES, operationId } from './model.mjs';
 import { jsonBytes } from './source.mjs';
+import { readFredWorkspaceLaunch, FRED_WORKSPACE_STARTUP } from './launch.mjs';
 import { readFredProject, fredProjectView, getFredCapture, configureFredProject, importFredCapture, acquireFredCapture,
-  selectFredCapture, reviewFredCapture, compareFredCaptures, publishFredReview, exportFredProject,
+  selectFredCapture, combineFredTables, reviewFredCapture, compareFredCaptures, publishFredReview, exportFredProject,
   selectFredPublication, abandonFredOperation } from './project.mjs';
 import { startFredMerchant, readFredMerchant, prepareFredPurchase, executeFredPurchase,
   recoverFredPurchase, exportFredPurchase } from './merchant.mjs';
@@ -39,16 +40,22 @@ function output(value) {
   return plain;
 }
 export async function startFredWorkspace({ directory, port = 0, buyerConfig, environment = process.env,
-  facilitator, allowLocalFacilitator = false } = {}) {
-  directory = resolve(directory);
-  await readFredProject(directory);
+  facilitator, allowLocalFacilitator = false, merchantPort = 0, expectedBindingSha256 } = {}) {
+  const launch = await readFredWorkspaceLaunch({ directory, buyerConfig, facilitator,
+    allowLocalFacilitator, merchantPort, expectedBindingSha256 });
+  const binding = launch.binding;
+  directory = binding.directory; facilitator = binding.facilitator ?? undefined;
+  merchantPort = binding.merchantPort;
   need(Number.isInteger(port) && port >= 0 && port <= 65535, 'Use an available local port.');
   const token = randomBytes(32).toString('hex'), abort = new AbortController(), assetMap = new Map([
     ['/', ['index.html', 'text/html; charset=utf-8']], ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
     ['/style.css', ['style.css', 'text/css; charset=utf-8']] ]);
   const assets = new Map();
   for (const [route, [file, type]] of assetMap) assets.set(route, [await readFile(new URL('./ui/' + file, import.meta.url)), type]);
-  const buyer = buyerConfig ? await new Buyer(await readPrivateJson(resolve(buyerConfig), 65536)).ready() : null;
+  const buyer = launch.buyerSettings ? await new Buyer(launch.buyerSettings).ready() : null;
+  const instanceId = randomUUID(), startedAt = new Date().toISOString();
+  const launchView = () => ({ schema: FRED_WORKSPACE_STARTUP, state: 'LISTENING', binding,
+    instanceId, startedAt, buyerConfigured: Boolean(buyer) });
   let merchant = null, runningPublication = null, pending = null, closing = false, origin;
   const runtimeView = () => merchant ? { publicationId: runningPublication, url: merchant.url, mode: merchant.mode,
     editionId: merchant.editionId, snapshot: merchant.snapshot, resource: merchant.resource } : null;
@@ -58,6 +65,7 @@ export async function startFredWorkspace({ directory, port = 0, buyerConfig, env
       case 'configure': return configureFredProject({ ...common, selection: request.selection });
       case 'capture': return acquireFredCapture({ ...common, environment, signal: abort.signal });
       case 'import': return importFredCapture({ ...common, capture: request.capture });
+      case 'combine': return combineFredTables({ ...common, captureIds: request.captureIds });
       case 'select': return selectFredCapture({ ...common, captureId: request.captureId });
       case 'review': return reviewFredCapture({ ...common, captureId: request.captureId, policy: request.policy, note: request.note });
       case 'publish': return publishFredReview({ ...common, reviewId: request.reviewId, origin: request.origin, path: request.path, payment: request.payment });
@@ -65,7 +73,7 @@ export async function startFredWorkspace({ directory, port = 0, buyerConfig, env
       case 'merchant-start': {
         need(!merchant, 'Stop the currently owned merchant before selecting another publication.', 'FRED_MERCHANT_RUNNING', 409);
         const selected = await selectFredPublication(directory, request.publicationId);
-        merchant = await startFredMerchant({ directory: selected, port: 0, facilitator, allowLocalFacilitator });
+        merchant = await startFredMerchant({ directory: selected, port: merchantPort, facilitator, allowLocalFacilitator });
         runningPublication = request.publicationId; return runtimeView();
       }
       case 'merchant-stop': {
@@ -104,6 +112,11 @@ export async function startFredWorkspace({ directory, port = 0, buyerConfig, env
       need(typeof supplied === 'string' && supplied.length === expected.length &&
         timingSafeEqual(Buffer.from(supplied), Buffer.from(expected)), 'Use the original workspace session.', 'FRED_SESSION_REQUIRED', 403);
       need(!closing, 'The workspace is closing.', 'FRED_WORKSPACE_CLOSING', 503);
+      if (req.method === 'GET' && url.pathname === '/api/launch') {
+        need((await readFredProject(directory)).id === binding.projectId,
+          'The original project directory changed.', 'FRED_WORKSPACE_BINDING_CHANGED', 409);
+        return send(res, 200, launchView());
+      }
       if (req.method === 'GET' && url.pathname === '/api/state')
         return send(res, 200, { project: await fredProjectView(directory), merchant: runtimeView(),
           busy: pending?.action ?? null, buyerConfigured: Boolean(buyer) });
@@ -171,7 +184,8 @@ export async function startFredWorkspace({ directory, port = 0, buyerConfig, env
   await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); });
   origin = 'http://127.0.0.1:' + server.address().port;
   let closePromise;
-  return { server, directory, url: origin + '/#' + token, origin, close: () => closePromise ??= (async () => {
+  return { server, directory, url: origin + '/#' + token, origin,
+    startup: { ...launchView(), url: origin + '/#' + token }, close: () => closePromise ??= (async () => {
     closing = true; abort.abort();
     await pending?.task.catch(() => {});
     try { if (merchant) await merchant.close(); }

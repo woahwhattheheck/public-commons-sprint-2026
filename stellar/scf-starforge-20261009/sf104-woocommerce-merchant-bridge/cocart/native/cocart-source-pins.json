@@ -1,0 +1,1497 @@
+[
+  {
+    "path": ".claude",
+    "type": "tree",
+    "sha": "811af14a063cd143aa3b0916e454e9e662be2d6c"
+  },
+  {
+    "path": ".claude/agents",
+    "type": "tree",
+    "sha": "2077370605bc782eccdcb3ee83239dad27f40905"
+  },
+  {
+    "path": ".claude/agents/git-workflow-guide.md",
+    "type": "blob",
+    "sha": "1da045c0850cc3808b513ef6cd60ef409d5109f2"
+  },
+  {
+    "path": ".claude/agents/openspec-guide.md",
+    "type": "blob",
+    "sha": "a559602b434329e8adf21fb265bf9a2dd2845ab1"
+  },
+  {
+    "path": ".claude/agents/wordpress-review.md",
+    "type": "blob",
+    "sha": "43985ea2bc20fd91075f59e5573d6136452d493c"
+  },
+  {
+    "path": ".codeclimate.yml",
+    "type": "blob",
+    "sha": "6d728bca94522a36f7b30aae77cb8c09d99ad7ea"
+  },
+  {
+    "path": ".cursor",
+    "type": "tree",
+    "sha": "2a1c3f7c283c4460d9751166330914d78bd0fb21"
+  },
+  {
+    "path": ".cursor/rules",
+    "type": "tree",
+    "sha": "230cad239e885a4d77349b5d9aaf9cf8dfd8aa99"
+  },
+  {
+    "path": ".cursor/rules/git.mdc",
+    "type": "blob",
+    "sha": "994bc02caf24f5409a43c827831c188733cdfe39"
+  },
+  {
+    "path": ".distignore",
+    "type": "blob",
+    "sha": "44dd291f6806bc8b666066871a570549c4cf2055"
+  },
+  {
+    "path": ".editorconfig",
+    "type": "blob",
+    "sha": "c3dfa83750f68169e68cdde1f5d82a74710b50cd"
+  },
+  {
+    "path": ".gitattributes",
+    "type": "blob",
+    "sha": "4043a4fcbeda3d9db06629ea064e6232fdbd6b59"
+  },
+  {
+    "path": ".github",
+    "type": "tree",
+    "sha": "dd11e4cfe601b7618ef4d598a1b5b4b2a55a9678"
+  },
+  {
+    "path": ".github/CODEOWNERS",
+    "type": "blob",
+    "sha": "7579b71ddab642b9fb8149d633821873d3172549"
+  },
+  {
+    "path": ".github/CONTRIBUTING.md",
+    "type": "blob",
+    "sha": "60bcbfc271fc4d541d0068700ca03d49a7a625e4"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE",
+    "type": "tree",
+    "sha": "0b07f5934cbdf4d68de958440b2ca2be3328b10f"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+    "type": "blob",
+    "sha": "865d901c7c1bd165db1ec0b50cc03ee7428aa574"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/config.yml",
+    "type": "blob",
+    "sha": "02f2caf72d966ad63349084875405fbab6522c8d"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/enhancement.yml",
+    "type": "blob",
+    "sha": "1ac230ee2084bff8ba3d1ad9dea268a5834c5493"
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+    "type": "blob",
+    "sha": "4590d9d95edaf967f76645e603ba7b9ca03fe324"
+  },
+  {
+    "path": ".github/Logo-1024x534.png.webp",
+    "type": "blob",
+    "sha": "a470120292ba66cc6253fbb9dc2659f304831310"
+  },
+  {
+    "path": ".github/PULL_REQUEST_TEMPLATE.md",
+    "type": "blob",
+    "sha": "f25c2e71c744de3eacbef8a550f367dfede2d9a2"
+  },
+  {
+    "path": ".github/labels.json",
+    "type": "blob",
+    "sha": "2cb1f2a0445d799afec9f4212884be85afb6d907"
+  },
+  {
+    "path": ".github/workflows",
+    "type": "tree",
+    "sha": "71f0f352878a17a68a32c87ab4c5c41e660a6133"
+  },
+  {
+    "path": ".github/workflows/bump-version.yml",
+    "type": "blob",
+    "sha": "2c196c00c6be550d17eb2b7fade170758cdc1fdc"
+  },
+  {
+    "path": ".github/workflows/community-label.yml",
+    "type": "blob",
+    "sha": "5a25854b74c2fb105ed6ead0147fab8b3fa44273"
+  },
+  {
+    "path": ".github/workflows/create-release.yml",
+    "type": "blob",
+    "sha": "899391a98932f72d83073a7dbb1c7b2dad86eeef"
+  },
+  {
+    "path": ".github/workflows/dependency-review.yml",
+    "type": "blob",
+    "sha": "6f4913cea47e016509c6b2cfbc91fd368c2aab20"
+  },
+  {
+    "path": ".github/workflows/download-translations.yml",
+    "type": "blob",
+    "sha": "6c58e4e63ddf003a2899ac8c60bbe7176dd62ae7"
+  },
+  {
+    "path": ".github/workflows/lint-css.yml",
+    "type": "blob",
+    "sha": "b536f450d855409dab9eed7506c5bd404b3fc55a"
+  },
+  {
+    "path": ".github/workflows/nightly-builds.yml",
+    "type": "blob",
+    "sha": "c7caaf11fde75a3acb5432da3f7f81e55939bdd0"
+  },
+  {
+    "path": ".github/workflows/no-response.yml",
+    "type": "blob",
+    "sha": "161217fdbbdb5c3510037e1d3d7d084b208e2b90"
+  },
+  {
+    "path": ".github/workflows/phpunit-tests.yml",
+    "type": "blob",
+    "sha": "7295f304bd487a93962fd1fb465efbb767791555"
+  },
+  {
+    "path": ".github/workflows/pr-highlight-rest-api-changes.yml",
+    "type": "blob",
+    "sha": "8920eaf3e028e54a8073cd532da841e2ab31f116"
+  },
+  {
+    "path": ".github/workflows/run-on-release.yml",
+    "type": "blob",
+    "sha": "cb806c8a09519aa79d0c923bd119eabafcde0942"
+  },
+  {
+    "path": ".github/workflows/scripts",
+    "type": "tree",
+    "sha": "59156b202457fdc4dc9d9a7c3a6739a9326a01f9"
+  },
+  {
+    "path": ".github/workflows/scripts/is-community-contributor.js",
+    "type": "blob",
+    "sha": "0ce4bcf8936bb031e204d822e2bfb49eed6c4e45"
+  },
+  {
+    "path": ".github/workflows/stalebot.yml",
+    "type": "blob",
+    "sha": "706c78e6860a971e3ae9e043ab03893a598101bf"
+  },
+  {
+    "path": ".github/workflows/sync-labels.yml",
+    "type": "blob",
+    "sha": "08895137be5d816aaaca423762a1119128c9e85a"
+  },
+  {
+    "path": ".github/workflows/triage-label.yml",
+    "type": "blob",
+    "sha": "77aac80a374b7a90b040313aebc8fc0432ab3653"
+  },
+  {
+    "path": ".github/workflows/triage-replies.yml",
+    "type": "blob",
+    "sha": "db5e334f2c874589692518919f0d84b3fa2447ea"
+  },
+  {
+    "path": ".github/workflows/update-feedback-labels.yml",
+    "type": "blob",
+    "sha": "ba20fdcb5b546f2b55be9bd0b06f42bba811921f"
+  },
+  {
+    "path": ".gitignore",
+    "type": "blob",
+    "sha": "d3087612fbd2fad162e8f75a94a77cb9360a8733"
+  },
+  {
+    "path": ".nvmrc",
+    "type": "blob",
+    "sha": "92f279e3e666d01def7e6fac12406dd9d23cd6a3"
+  },
+  {
+    "path": ".phpcs.xml.dist",
+    "type": "blob",
+    "sha": "b67c89b10bcad5ae424b4034c40c67c016a43d67"
+  },
+  {
+    "path": ".scrutinizer.yml",
+    "type": "blob",
+    "sha": "de23fd55a9850e2c0697be2766b49b254ef616f4"
+  },
+  {
+    "path": ".stylelintrc",
+    "type": "blob",
+    "sha": "62e7110ed2485c6d8341005260457ffab0726aa0"
+  },
+  {
+    "path": ".wordpress-org",
+    "type": "tree",
+    "sha": "a78f26c9918eadf5d0213087cc1c90e21c2a299a"
+  },
+  {
+    "path": ".wordpress-org/banner-1544x500.png",
+    "type": "blob",
+    "sha": "cd4dffb4b5eb6b09566d2005d8589dfca0575640"
+  },
+  {
+    "path": ".wordpress-org/banner-772x250.png",
+    "type": "blob",
+    "sha": "e1834d08210faaab90044d1c1c112ecc01d478ef"
+  },
+  {
+    "path": ".wordpress-org/blueprints",
+    "type": "tree",
+    "sha": "e73861bfec7244ddd9cbbaeb6056d57874244d61"
+  },
+  {
+    "path": ".wordpress-org/blueprints/blueprint.json",
+    "type": "blob",
+    "sha": "38a3295baa3b59177b92df9ad5b8664fe7b96805"
+  },
+  {
+    "path": ".wordpress-org/blueprints/dashboard.php",
+    "type": "blob",
+    "sha": "5a09ab71f16156132f26592a13ff55e4d49561a0"
+  },
+  {
+    "path": ".wordpress-org/icon-128x128.png",
+    "type": "blob",
+    "sha": "acc4a144e5b2513a47a1bd62e7ab47b3f2c6ad0c"
+  },
+  {
+    "path": ".wordpress-org/icon-256x256.png",
+    "type": "blob",
+    "sha": "e22207372b795fc334148a5a88b0ca89c02a5638"
+  },
+  {
+    "path": ".wordpress-org/screenshot-1.png",
+    "type": "blob",
+    "sha": "b69ec74b83dcff3113d769e63874852b981b2594"
+  },
+  {
+    "path": ".wordpress-org/screenshot-2.png",
+    "type": "blob",
+    "sha": "45faaa989db9a5cb09af8e474a4e141f582a8b78"
+  },
+  {
+    "path": ".wordpress-org/screenshot-3.png",
+    "type": "blob",
+    "sha": "ee3df6577f875a2796bae33de41d1e2bb4ab80aa"
+  },
+  {
+    "path": "AGENTS.md",
+    "type": "blob",
+    "sha": "6cb2c0f2e58b904a7771e6ed279baae616fd5207"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "type": "blob",
+    "sha": "686db248d390b0b651daa0fce87e3fb32a2feaf5"
+  },
+  {
+    "path": "CLAUDE.md",
+    "type": "blob",
+    "sha": "eef4bd20cf972fc2f3c7405fdae3fdcff80e59d4"
+  },
+  {
+    "path": "CODE_OF_CONDUCT.md",
+    "type": "blob",
+    "sha": "4c7d5ebfa8cf381a7abf0bfffbd114230ecc2bec"
+  },
+  {
+    "path": "Gruntfile.js",
+    "type": "blob",
+    "sha": "6c7ffd7f01f9335cf779a24bda832d6cebfb13a1"
+  },
+  {
+    "path": "README.md",
+    "type": "blob",
+    "sha": "8bf372c880ee8d44e21180847ed93fc2afccbf81"
+  },
+  {
+    "path": "SECURITY.md",
+    "type": "blob",
+    "sha": "811746923b8533ca1aed229d8bc5795bb456dd07"
+  },
+  {
+    "path": "assets",
+    "type": "tree",
+    "sha": "b6d92080524de0f8631366a1bc414bb2e90d1f9a"
+  },
+  {
+    "path": "assets/images",
+    "type": "tree",
+    "sha": "cd5ab48daabdca7d3decaa50710400cbde0ef91a"
+  },
+  {
+    "path": "assets/images/avatar.jpeg",
+    "type": "blob",
+    "sha": "f71c88696a3a60fea44b3948e34b8576c69e461d"
+  },
+  {
+    "path": "assets/images/brand",
+    "type": "tree",
+    "sha": "a352f36f84fc012ef5e4e5b1a0939186c47a4476"
+  },
+  {
+    "path": "assets/images/brand/cocart-icon.svg",
+    "type": "blob",
+    "sha": "46390177aad8d09c847d2dc1cf9d3feec512979d"
+  },
+  {
+    "path": "assets/images/brand/cocart-logo.svg",
+    "type": "blob",
+    "sha": "3f00d546cc188e19ea730a0b0cfce300791d01c7"
+  },
+  {
+    "path": "assets/images/brand/icon-logo.png",
+    "type": "blob",
+    "sha": "92198429c3dd900253add1058655c04fae4542ad"
+  },
+  {
+    "path": "assets/images/integration",
+    "type": "tree",
+    "sha": "a018d88f035ac0c54faa2b581493bdcd2c4b8fa6"
+  },
+  {
+    "path": "assets/images/integration/acf.svg",
+    "type": "blob",
+    "sha": "da505b1737986bac212a858b52123d8ed9873760"
+  },
+  {
+    "path": "assets/images/integration/advanced-shipping-packages.png",
+    "type": "blob",
+    "sha": "dd1a9fd5fa4fb9026b6cff4dbcae8a9f1c87e924"
+  },
+  {
+    "path": "assets/images/integration/free-gift-coupons.jpg",
+    "type": "blob",
+    "sha": "6f9a256e89d198317b553f0b221cb91f61844a8e"
+  },
+  {
+    "path": "assets/images/integration/litespeed.svg",
+    "type": "blob",
+    "sha": "9ece1b782bfc27c50d6ea620a63776953fbedc45"
+  },
+  {
+    "path": "assets/images/integration/taxjar-simplified-taxes-for-woocommerce.png",
+    "type": "blob",
+    "sha": "d1b7098ae2cb9bc08cfeb2c10416d9a9a948c988"
+  },
+  {
+    "path": "assets/images/integration/two-factor.svg",
+    "type": "blob",
+    "sha": "cc15690b795c8af5bcf5b715a681aaaf999c85e3"
+  },
+  {
+    "path": "assets/images/star-filled.svg",
+    "type": "blob",
+    "sha": "760ad08d7f8ffb16455a4b4a4a691a4522c43160"
+  },
+  {
+    "path": "assets/js",
+    "type": "tree",
+    "sha": "b432754fc980e38ea2aaa788f05625e55e349f1f"
+  },
+  {
+    "path": "assets/js/admin",
+    "type": "tree",
+    "sha": "3cdd5e152fccc804b87e73d2358cbc6cde797f69"
+  },
+  {
+    "path": "assets/js/admin/cocart-admin-settings.js",
+    "type": "blob",
+    "sha": "1383e24c7b12a8acc234a2b20828400f8529f89c"
+  },
+  {
+    "path": "assets/js/admin/plugin-suggestions.js",
+    "type": "blob",
+    "sha": "e5931f1ab4ef34eed739771353e09e8f9cd8a3c7"
+  },
+  {
+    "path": "assets/js/admin/plugin-suggestions.min.js",
+    "type": "blob",
+    "sha": "e7cfe9525015dbda69a053e54c12488c479ad814"
+  },
+  {
+    "path": "assets/scss",
+    "type": "tree",
+    "sha": "742307af96a51dfe5b7a0145f77bfc94f7fba9ce"
+  },
+  {
+    "path": "assets/scss/admin",
+    "type": "tree",
+    "sha": "280948ab6d69392f2673afeaa53dc9b24eeaa7f2"
+  },
+  {
+    "path": "assets/scss/admin/cocart-setup.scss",
+    "type": "blob",
+    "sha": "b4504c5b532c34195efe2a18b71f09dc2b223b7a"
+  },
+  {
+    "path": "assets/scss/admin/cocart.scss",
+    "type": "blob",
+    "sha": "1c11ab470c0adcfa1c69ec25b41f3f7512539636"
+  },
+  {
+    "path": "assets/scss/admin/parts",
+    "type": "tree",
+    "sha": "e31d56499c83c3ad9e52a60708d89ee11951e9aa"
+  },
+  {
+    "path": "assets/scss/admin/parts/cocart-integrations.scss",
+    "type": "blob",
+    "sha": "59a8ba726875d060b272615b3e413090a36d64af"
+  },
+  {
+    "path": "assets/scss/admin/parts/cocart-modal.scss",
+    "type": "blob",
+    "sha": "c2c322af4dd763cadbcdf57c2a34b6ceff21c869"
+  },
+  {
+    "path": "assets/scss/admin/parts/cocart-settings.scss",
+    "type": "blob",
+    "sha": "d405bd47ff78f691367e64375d240907d60416b5"
+  },
+  {
+    "path": "assets/scss/admin/parts/common.scss",
+    "type": "blob",
+    "sha": "02a8653b91a5800e2513cd6bf6c320fcd7a4605d"
+  },
+  {
+    "path": "assets/scss/admin/parts/engage.scss",
+    "type": "blob",
+    "sha": "c22a8e5d3855f6e0cd8d83c4594a0ff0fa313566"
+  },
+  {
+    "path": "assets/scss/admin/parts/notices.scss",
+    "type": "blob",
+    "sha": "d4e0653031155aeee9342b532582471ce39cb32d"
+  },
+  {
+    "path": "assets/scss/admin/parts/untested-plugins.scss",
+    "type": "blob",
+    "sha": "e00e69a0de85b81fa271487ab828a014e821f5c7"
+  },
+  {
+    "path": "assets/scss/admin/parts/wc-admin.scss",
+    "type": "blob",
+    "sha": "496ebe55091d642e980c00c0d2c8d3b64933db3e"
+  },
+  {
+    "path": "assets/scss/admin/parts/wp-7.scss",
+    "type": "blob",
+    "sha": "65a33fcc7f266d2de971e9ff262ed0aae3fad928"
+  },
+  {
+    "path": "assets/scss/admin/plugin-suggestions.scss",
+    "type": "blob",
+    "sha": "824fe4b650d225f93988b108378b4db264009c8b"
+  },
+  {
+    "path": "assets/scss/variables.scss",
+    "type": "blob",
+    "sha": "f8aed61ae9d38d457ac65be3075d994f71ef4830"
+  },
+  {
+    "path": "bin",
+    "type": "tree",
+    "sha": "396dfd1bbe15925f81cb4efc12a32b779d2f128f"
+  },
+  {
+    "path": "bin/install-wp-tests.sh",
+    "type": "blob",
+    "sha": "49e3f34df5d46c2ca221c86b780c8da701dd1994"
+  },
+  {
+    "path": "bin/package-update-textdomain.js",
+    "type": "blob",
+    "sha": "d317cec4f92bbb54f471fe3a5930839e28f9d618"
+  },
+  {
+    "path": "cart-rest-api-for-woocommerce.php",
+    "type": "blob",
+    "sha": "5d4c5732895235788d6ffe844ad6793558cfda4b"
+  },
+  {
+    "path": "composer.json",
+    "type": "blob",
+    "sha": "a10807923c056d53339161b792e89c15c37c0c0e"
+  },
+  {
+    "path": "composer.lock",
+    "type": "blob",
+    "sha": "d42654d50cea0a92f0ab5989da97bc75a79556db"
+  },
+  {
+    "path": "includes",
+    "type": "tree",
+    "sha": "b54fca153399c846e1b59bce2540eebc9b2de66c"
+  },
+  {
+    "path": "includes/abstracts",
+    "type": "tree",
+    "sha": "c803ac46447b6bb083fc534b63c433141b13398c"
+  },
+  {
+    "path": "includes/abstracts/abstract-cocart-extension-callback.php",
+    "type": "blob",
+    "sha": "936189399868ef3d4d51d752ce385851e1af2b82"
+  },
+  {
+    "path": "includes/class-cocart-autoloader.php",
+    "type": "blob",
+    "sha": "c8cd939a6d1a89c26f3f33489e7ac34261565bfb"
+  },
+  {
+    "path": "includes/class-cocart.php",
+    "type": "blob",
+    "sha": "3c7885994ab80223f94e973974fca2252974acac"
+  },
+  {
+    "path": "includes/classes",
+    "type": "tree",
+    "sha": "16d00bcffa6c1f276b685e0b4e1efa81e46a9757"
+  },
+  {
+    "path": "includes/classes/admin",
+    "type": "tree",
+    "sha": "bbe0766724d97b702c4ca959f8a343435a875af5"
+  },
+  {
+    "path": "includes/classes/admin/abstract",
+    "type": "tree",
+    "sha": "db6bdce197e4a8a23608d4992130486ea2d76a53"
+  },
+  {
+    "path": "includes/classes/admin/abstract/abstract-class-submenu-page.php",
+    "type": "blob",
+    "sha": "f18abc4e57707523ac966840b7ac99f45bba9e30"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin-action-links.php",
+    "type": "blob",
+    "sha": "537a071c5e404b5d6e8348e0b96d8260d8f1dcfa"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin-assets.php",
+    "type": "blob",
+    "sha": "8a31a06ee2588e2809b5253ec9ccb1692b6f4159"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin-footer.php",
+    "type": "blob",
+    "sha": "ccb29b041dde5c5545fb628734907014a8cd9d96"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin-help-tab.php",
+    "type": "blob",
+    "sha": "fc4737f7624926119f8cc3cab972a79611e246ab"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin-menus.php",
+    "type": "blob",
+    "sha": "2f4e8b38e8170c37d4b4cf05044140c3e953fe15"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin-notices.php",
+    "type": "blob",
+    "sha": "11f11b4270fe68cd80cc8e95daa4594108fa5da8"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin-settings-renderer.php",
+    "type": "blob",
+    "sha": "4beb9f9a41fe6c4ac513948f1a50c640ddd1f34e"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin-setup-wizard.php",
+    "type": "blob",
+    "sha": "059b6b5f8ae5fa40688f7512ab00e53f4bd093e6"
+  },
+  {
+    "path": "includes/classes/admin/class-cocart-admin.php",
+    "type": "blob",
+    "sha": "0f36e137e549d64bd040401a655a81973837e882"
+  },
+  {
+    "path": "includes/classes/admin/pages",
+    "type": "tree",
+    "sha": "e9f18c04a0e3b0cbb23627f971f3d0deb73f8b8b"
+  },
+  {
+    "path": "includes/classes/admin/pages/class-cocart-admin-pages-integrations.php",
+    "type": "blob",
+    "sha": "2fda57a645c98c7bc21ea281c0fafd012aab8547"
+  },
+  {
+    "path": "includes/classes/admin/pages/class-cocart-admin-pages-settings.php",
+    "type": "blob",
+    "sha": "56178b8644b6b893763cb097c013f4193ac491b6"
+  },
+  {
+    "path": "includes/classes/admin/pages/class-cocart-admin-pages-support.php",
+    "type": "blob",
+    "sha": "f3e9593c7dc63937daf04a2bafabe7dc7be076d8"
+  },
+  {
+    "path": "includes/classes/admin/plugin-suggestions",
+    "type": "tree",
+    "sha": "3be88826b34e6d55ec3d1faac2a49abb7e904a8b"
+  },
+  {
+    "path": "includes/classes/admin/plugin-suggestions/class-cocart-admin-plugin-search.php",
+    "type": "blob",
+    "sha": "649e7b030a25e01d3be2daa3d8f39b00e3784b51"
+  },
+  {
+    "path": "includes/classes/admin/plugin-suggestions/class-cocart-admin-plugin-suggestions.php",
+    "type": "blob",
+    "sha": "f2fb2a7761cbcb6a3054368b5331724a796bce92"
+  },
+  {
+    "path": "includes/classes/admin/plugin-updates",
+    "type": "tree",
+    "sha": "aae154cb9065745707d90270c0bbd083a2724200"
+  },
+  {
+    "path": "includes/classes/admin/plugin-updates/class-cocart-admin-addon-update-watcher.php",
+    "type": "blob",
+    "sha": "5903441809545062393d0fd65800c042f2379358"
+  },
+  {
+    "path": "includes/classes/admin/plugin-updates/class-cocart-admin-plugin-screen-update.php",
+    "type": "blob",
+    "sha": "2db402c99ed11f14e748875e32914f86c3c0d321"
+  },
+  {
+    "path": "includes/classes/admin/plugin-updates/class-cocart-admin-plugin-updates.php",
+    "type": "blob",
+    "sha": "a4fdd7adadf25aa5fb4d66a02cd20dcd28eb8e5b"
+  },
+  {
+    "path": "includes/classes/admin/plugin-updates/class-cocart-admin-updates-screen-updates.php",
+    "type": "blob",
+    "sha": "1c2215a20008a114c69bc7f19b8e5664326b201f"
+  },
+  {
+    "path": "includes/classes/admin/plugin-updates/views",
+    "type": "tree",
+    "sha": "dd5d64b3eb165ea86380f123bea75e35a928d0cf"
+  },
+  {
+    "path": "includes/classes/admin/plugin-updates/views/html-notice-untested-extensions-inline.php",
+    "type": "blob",
+    "sha": "e8e41b57c371b3b9c97293eb0a0f64938b3231da"
+  },
+  {
+    "path": "includes/classes/admin/plugin-updates/views/html-notice-untested-extensions-modal.php",
+    "type": "blob",
+    "sha": "a8349dcf343d2e29310aa2bee59faa7c74fa2b21"
+  },
+  {
+    "path": "includes/classes/admin/views",
+    "type": "tree",
+    "sha": "44d9d143cd9a31ae733de94df86980ff9ba39586"
+  },
+  {
+    "path": "includes/classes/admin/views/html-integrations-card.php",
+    "type": "blob",
+    "sha": "5d8902b22e90203b3a49cfde3a4fa49084f500c1"
+  },
+  {
+    "path": "includes/classes/admin/views/html-integrations.php",
+    "type": "blob",
+    "sha": "ef4e9f2de4580b83a388018f781c5ec228ee0a84"
+  },
+  {
+    "path": "includes/classes/admin/views/html-next-steps.php",
+    "type": "blob",
+    "sha": "3276ac1811b543bddd5e9c552891b8409050c67a"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-base-table-missing.php",
+    "type": "blob",
+    "sha": "45d8b6aebbbf16df9e5abc86c2675255df038f28"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-custom.php",
+    "type": "blob",
+    "sha": "fdc80dff38d8e143163f6710c04f1e23e2a24098"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-playground.php",
+    "type": "blob",
+    "sha": "9abac209fd3fa9edf33fcc13be48a51f9af05323"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-please-review.php",
+    "type": "blob",
+    "sha": "aafc34ad05027d98c829d5b18a72d047436036b1"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-required-wc.php",
+    "type": "blob",
+    "sha": "247cd64029c81c5772ace61cddef82244dab1bc4"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-requirement-php.php",
+    "type": "blob",
+    "sha": "c0c68cd80cf7a1fabb2e4461883cbc4bb2a34ea1"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-requirement-wp.php",
+    "type": "blob",
+    "sha": "ec1217bae981943b578037dac51e31f85a61c935"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-setup-wizard.php",
+    "type": "blob",
+    "sha": "2411a32de8a74aa42fd480976cfd30360e9491f2"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-trying-beta.php",
+    "type": "blob",
+    "sha": "7795c056bd197f407ff86c65ff995839dda44149"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-update.php",
+    "type": "blob",
+    "sha": "02af287366ec2d7ade538c1923cad040f3538939"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-updated.php",
+    "type": "blob",
+    "sha": "2fdab5832f8a7a30725967b7bbc3b5af85b5a6f0"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-updating.php",
+    "type": "blob",
+    "sha": "e672d5f6de083bc39f986b7b5b563409c1d44256"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-upgrade-warning.php",
+    "type": "blob",
+    "sha": "96bdb05867c292141f0de8ee3f740e1342388ffe"
+  },
+  {
+    "path": "includes/classes/admin/views/html-notice-wc-not-installed.php",
+    "type": "blob",
+    "sha": "94e860feccaab84b1d60f26986561ca80870681f"
+  },
+  {
+    "path": "includes/classes/admin/views/html-settings.php",
+    "type": "blob",
+    "sha": "330b62b6e030013277bdc02f41ab71fb57250c3c"
+  },
+  {
+    "path": "includes/classes/admin/views/html-setup-ready.php",
+    "type": "blob",
+    "sha": "8c4e5ada9412e17a27e188b901df5bf203ed60da"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce",
+    "type": "tree",
+    "sha": "ce2ece02c4a08ad33906ae319c1903a8496ab676"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/class-cocart-wc-admin-notices.php",
+    "type": "blob",
+    "sha": "71eb6e9b4b5998ab4667b7eefb4fc4127404e63e"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/class-cocart-wc-admin-system-status.php",
+    "type": "blob",
+    "sha": "bdc1aef4baf5cd151d359058176e01904e7c55a5"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/notes",
+    "type": "tree",
+    "sha": "433e8fd7cb8ba91ff6159d70e9207e2881576acd"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/notes/class-cocart-wc-admin-note-do-with-products.php",
+    "type": "blob",
+    "sha": "e2d53b00fbdf1b64a23fb55ae0e690ee19c0ebab"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/notes/class-cocart-wc-admin-note-need-help.php",
+    "type": "blob",
+    "sha": "ccfcb559e8378ba86582f643fa641a04db0b0c4f"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/notes/class-cocart-wc-admin-note-thanks-install.php",
+    "type": "blob",
+    "sha": "f52c33a06f72ef371968bfaeafc441809f572286"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/notes/class-cocart-wc-admin-note-upgrade.php",
+    "type": "blob",
+    "sha": "f6e58546b335424c9755b3dc4145ea0c56260b44"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/views",
+    "type": "tree",
+    "sha": "f542c0d1f31d01d4cc684e6b08bf4cc4f261959a"
+  },
+  {
+    "path": "includes/classes/admin/woocommerce/views/html-wc-system-status.php",
+    "type": "blob",
+    "sha": "d6c1b7eeab1603e404896ebd9ce5567cd85bab11"
+  },
+  {
+    "path": "includes/classes/class-cocart-background-updater.php",
+    "type": "blob",
+    "sha": "970f2104a2edf140ceb96857a00f40e3d72c848e"
+  },
+  {
+    "path": "includes/classes/class-cocart-cart-cache.php",
+    "type": "blob",
+    "sha": "47220dd49767aa56c69d6b27a02c14af81116363"
+  },
+  {
+    "path": "includes/classes/class-cocart-cli.php",
+    "type": "blob",
+    "sha": "19f7e0529c5e80db3c4c51a7c7cd870b81e4966d"
+  },
+  {
+    "path": "includes/classes/class-cocart-data-exception.php",
+    "type": "blob",
+    "sha": "f787c9db4e69848b698ebbbed7cb6d53a916a342"
+  },
+  {
+    "path": "includes/classes/class-cocart-datetime.php",
+    "type": "blob",
+    "sha": "58f1349578184de060fa9b8c3a56e0e99dbafa84"
+  },
+  {
+    "path": "includes/classes/class-cocart-helpers.php",
+    "type": "blob",
+    "sha": "9dfd033782f8ebfd9270f3caed6d0ed931a044fd"
+  },
+  {
+    "path": "includes/classes/class-cocart-install.php",
+    "type": "blob",
+    "sha": "efb1ce3c45cbb69f4964a24100faf38198441927"
+  },
+  {
+    "path": "includes/classes/class-cocart-integrations.php",
+    "type": "blob",
+    "sha": "da192c55c548b380d093fbd187f11a0255b4f9c5"
+  },
+  {
+    "path": "includes/classes/class-cocart-logger.php",
+    "type": "blob",
+    "sha": "845b2a21570c15de5db616a3afc21e9cd0aa368e"
+  },
+  {
+    "path": "includes/classes/class-cocart-session-handler.php",
+    "type": "blob",
+    "sha": "a350b698096777f5eaa50c17ba90c70e9b65ac63"
+  },
+  {
+    "path": "includes/classes/class-cocart-session.php",
+    "type": "blob",
+    "sha": "1898376b278b614b615439ee381621de30c625d8"
+  },
+  {
+    "path": "includes/classes/class-cocart-woocommerce.php",
+    "type": "blob",
+    "sha": "d01788d94502e7853df45739b1be0e8ef70b46fd"
+  },
+  {
+    "path": "includes/classes/cli",
+    "type": "tree",
+    "sha": "a98b0f8d697a60a7437e80cac860a94082d123f0"
+  },
+  {
+    "path": "includes/classes/cli/class-cocart-cli-update-command.php",
+    "type": "blob",
+    "sha": "07185448f9c332c9a0284df466d320dc101e702f"
+  },
+  {
+    "path": "includes/classes/cli/class-cocart-cli-version-command.php",
+    "type": "blob",
+    "sha": "0e3a3399c9fa19065257d856a55ad5624bd74576"
+  },
+  {
+    "path": "includes/classes/integrations",
+    "type": "tree",
+    "sha": "7536c8cbf4c861522e3822bce4079c148327e064"
+  },
+  {
+    "path": "includes/classes/integrations/compatibility",
+    "type": "tree",
+    "sha": "96c761f966ef4207f05a51b20f66c6d4e2f82c7a"
+  },
+  {
+    "path": "includes/classes/integrations/compatibility/class-cocart-advanced-shipping-packages.php",
+    "type": "blob",
+    "sha": "aed1466f16abd4aa2f8ea713bbc2942e83f9db44"
+  },
+  {
+    "path": "includes/classes/integrations/compatibility/class-cocart-free-gift-coupons.php",
+    "type": "blob",
+    "sha": "77744ee8f494c32b4289f3af524d343d87eacf50"
+  },
+  {
+    "path": "includes/classes/integrations/third-party",
+    "type": "tree",
+    "sha": "24f1d565a7ded94de8eb040aecccfee09ee516c6"
+  },
+  {
+    "path": "includes/classes/integrations/third-party/class-cocart-plugin-litespeed-cache.php",
+    "type": "blob",
+    "sha": "33dc12d0f02682f57488ad66f3a0fedda82c3264"
+  },
+  {
+    "path": "includes/classes/integrations/third-party/class-cocart-plugin-taxjar.php",
+    "type": "blob",
+    "sha": "6aa28e4f23e41f26d5c6db1820b6b88765e20e0c"
+  },
+  {
+    "path": "includes/classes/rest-api",
+    "type": "tree",
+    "sha": "c55f86faa56051f46b889a9e1927f21f749cdce1"
+  },
+  {
+    "path": "includes/classes/rest-api/callbacks",
+    "type": "tree",
+    "sha": "b70b071d2142e5919368d6276bff3776065e0f0c"
+  },
+  {
+    "path": "includes/classes/rest-api/callbacks/update-cart.php",
+    "type": "blob",
+    "sha": "98218b503ce64b418c1849b810eb23063642232a"
+  },
+  {
+    "path": "includes/classes/rest-api/callbacks/update-customer.php",
+    "type": "blob",
+    "sha": "2d70458fc50a7731517c1883115d812960ae3fab"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-authentication.php",
+    "type": "blob",
+    "sha": "06134b5b4a4f818b78d64b8403afaba59b0c3591"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-cart-callbacks.php",
+    "type": "blob",
+    "sha": "301fc9e8c978d0a8551ec03c7f054b7d77779115"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-cart-extension.php",
+    "type": "blob",
+    "sha": "295051a76c05e33a1d3cfda0fffd8fee69741c82"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-cart-formatting.php",
+    "type": "blob",
+    "sha": "acba81d157737ca13b3fef0ba6510a32fc161f13"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-cart-validation.php",
+    "type": "blob",
+    "sha": "140005b3eb38f562c29edf5669f7ad6def689544"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-etag.php",
+    "type": "blob",
+    "sha": "ef9d235a3626d5d57a6b203b18e3c175571c5e7c"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-product-validation.php",
+    "type": "blob",
+    "sha": "9fbc1c0e8a26c9154b51d743e6348bd21f482445"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-response.php",
+    "type": "blob",
+    "sha": "7108917a3e771907d2a3033e2b9b4949597909a6"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-rest-api.php",
+    "type": "blob",
+    "sha": "5629b181b505fccaf0d34bb33025b3501925c2ad"
+  },
+  {
+    "path": "includes/classes/rest-api/class-cocart-security.php",
+    "type": "blob",
+    "sha": "7fdb346f21f2e7914ae7982933208310c8026363"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers",
+    "type": "tree",
+    "sha": "cabf1d5e939c7068a1c28b9be7ee321dfe499e7f"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1",
+    "type": "tree",
+    "sha": "c6388ba7e78dfcc321eb2c99ed5293967bde40ce"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart",
+    "type": "tree",
+    "sha": "95ba62c5dc0726da6985425765bce79147b33716"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart/class-cocart-add-item-controller.php",
+    "type": "blob",
+    "sha": "698a355a392bf99fe4eb0dd07f99dcd44b54dd7d"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart/class-cocart-calculate-controller.php",
+    "type": "blob",
+    "sha": "989f0b042d23b7e2d3416fabc5c18f921e6c4e9b"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart/class-cocart-clear-cart-controller.php",
+    "type": "blob",
+    "sha": "d1dfd67de4cef51b119a28c27791bc080e921cf2"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart/class-cocart-controller.php",
+    "type": "blob",
+    "sha": "fe76104240d36183589605c3b2f5a2de110f4b94"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart/class-cocart-count-controller.php",
+    "type": "blob",
+    "sha": "fc0c55eeeaeb1b49a57d27a1e04c325369dd1e83"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart/class-cocart-item-controller.php",
+    "type": "blob",
+    "sha": "85be04e44c5a5d908bfbc3d9f7b61871416d8460"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart/class-cocart-logout-controller.php",
+    "type": "blob",
+    "sha": "a66a672b0d39c89fd6b00936f51c9103575004bc"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/cart/class-cocart-totals-controller.php",
+    "type": "blob",
+    "sha": "221d1ab09a695bf20ddc99f74b0c0a3fa51fe556"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products",
+    "type": "tree",
+    "sha": "b73c4c5002a95a8ba1de922f04329cd552c4ca08"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products/class-cocart-abstract-terms-controller.php",
+    "type": "blob",
+    "sha": "0916fcba4242fa2ea106a71d20225e2ee3df0a20"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products/class-cocart-product-attribute-terms-controller.php",
+    "type": "blob",
+    "sha": "a171db9597a2fb01f3a582034bab6fe8af8b5e47"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products/class-cocart-product-attributes-controller.php",
+    "type": "blob",
+    "sha": "03d5199ae311d1da1290fe51db7793138775c20f"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products/class-cocart-product-categories-controller.php",
+    "type": "blob",
+    "sha": "10bbd260299cf43cf539910f2cc716a4abc00bb5"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products/class-cocart-product-reviews-controller.php",
+    "type": "blob",
+    "sha": "0c7ff44ed84f7fd15673c40e7178cc96d0bb92b9"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products/class-cocart-product-tags-controller.php",
+    "type": "blob",
+    "sha": "e70eb63a621684551e0b009063f2432781fc5ca0"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products/class-cocart-product-variations-controller.php",
+    "type": "blob",
+    "sha": "bd7cd11ae6fc135e18129a877aa18adc4afbca59"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v1/products/class-cocart-products-controller.php",
+    "type": "blob",
+    "sha": "ff15bb3687593d1edac5fd02e9b0391d4786f0cb"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2",
+    "type": "tree",
+    "sha": "c8863b325e362e66ab908bcc9cc0c619c155023b"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/admin",
+    "type": "tree",
+    "sha": "dc90b20096f7fed00568e0d7f688a108d4a13653"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/admin/class-cocart-session-controller.php",
+    "type": "blob",
+    "sha": "97e0b1ec1947ee6c372af32bcff788073a682daf"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/admin/class-cocart-sessions-controller.php",
+    "type": "blob",
+    "sha": "0706a479795cf862d423bb618148740ed9dc92d4"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart",
+    "type": "tree",
+    "sha": "d0df942b80c1e41370011e7c7e013de795e257e8"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-add-item-controller.php",
+    "type": "blob",
+    "sha": "67a3b92689f3c515f30e00a2a68765505695dc1b"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-add-items-controller.php",
+    "type": "blob",
+    "sha": "3ee8b58381a226f4cbe96e10f26c560f60dda74f"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-calculate-controller.php",
+    "type": "blob",
+    "sha": "791598a95335cb54b6ba282075277a8d41eae99b"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-cart-controller.php",
+    "type": "blob",
+    "sha": "2eb908f0986c1d2a51ff3e9a53d2e02d9f17b0ed"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-clear-cart-controller.php",
+    "type": "blob",
+    "sha": "5c3b6671d0f51b5ac4f4bfb0391b5ec4e5c52028"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-count-controller.php",
+    "type": "blob",
+    "sha": "26d1bc5b8828be1ac4f238f5d5b093c0d5dda629"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-item-controller.php",
+    "type": "blob",
+    "sha": "033c10b2e06ee1714bea9b8a49299a3e30e7cfe4"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-items-controller.php",
+    "type": "blob",
+    "sha": "7fc634f574949e03969c69c2a1de3e55c89248f7"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-remove-item-controller.php",
+    "type": "blob",
+    "sha": "7628dff525e0c4b1fcb53efed8c0ddbab9f59515"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-restore-item-controller.php",
+    "type": "blob",
+    "sha": "3ffe5d5864d8dbdb5d6b8808d5ad3f8171a0ab3a"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-totals-controller.php",
+    "type": "blob",
+    "sha": "8588b1d3287156349958ad870c127e50092adb93"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-update-cart-controller.php",
+    "type": "blob",
+    "sha": "cdbec9c19b61122640f0d3e503d9903ec8993c1e"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/cart/class-cocart-update-item-controller.php",
+    "type": "blob",
+    "sha": "7df8aab308e0c4f505eeffb686522b0722e9a3ec"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/others",
+    "type": "tree",
+    "sha": "4ff87ab5e8de435c188caf2685c0c32625313000"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/others/class-cocart-login-controller.php",
+    "type": "blob",
+    "sha": "47a2764b5b9d47c0cd944895136fd1ca45a303a1"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/others/class-cocart-logout-controller.php",
+    "type": "blob",
+    "sha": "308df009da6a4bcaf0fb40b4205df65144e120de"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/others/class-cocart-store-controller.php",
+    "type": "blob",
+    "sha": "2f97ad6b3ef99e53ebd0d46a10c7e86977b1d398"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products",
+    "type": "tree",
+    "sha": "52d3f0cc4ee4d419284073ea8f171c5bc3798c81"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products/class-cocart-abstract-terms-controller.php",
+    "type": "blob",
+    "sha": "d1260d4653820cf34727e2cdf91cb240f0e5824b"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products/class-cocart-product-attribute-terms-controller.php",
+    "type": "blob",
+    "sha": "ca1e1a4707d1cc0b01b7c8646b121f441ca5c2cc"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products/class-cocart-product-attributes-controller.php",
+    "type": "blob",
+    "sha": "99ac65b91a1430291ce8f3b97c1fa12c22b2da9c"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products/class-cocart-product-categories-controller.php",
+    "type": "blob",
+    "sha": "1918125e0f65c62fd79a868af3413cc6e26312b2"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products/class-cocart-product-reviews-controller.php",
+    "type": "blob",
+    "sha": "45b5522ce70b759835a283c192c8d64e1743eb9f"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products/class-cocart-product-tags-controller.php",
+    "type": "blob",
+    "sha": "51d884744d5d861e15a171a13dbf21198d54b568"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products/class-cocart-product-variations-controller.php",
+    "type": "blob",
+    "sha": "5ab786c7b811b6a46c750a48fa33c9ff42fec67a"
+  },
+  {
+    "path": "includes/classes/rest-api/controllers/v2/products/class-cocart-products-controller.php",
+    "type": "blob",
+    "sha": "ccbda9c0d395d102bb33486a811c912a802c1dd0"
+  },
+  {
+    "path": "includes/classes/utilities",
+    "type": "tree",
+    "sha": "d9bc7f96a52e5bd787f5d81a1d4204fff3a1a2c1"
+  },
+  {
+    "path": "includes/classes/utilities/class-cocart-utilities-cart-helpers.php",
+    "type": "blob",
+    "sha": "67d43013177d23bf4aec652069b0a8e5b13939c9"
+  },
+  {
+    "path": "includes/classes/utilities/class-cocart-utilities-product-helpers.php",
+    "type": "blob",
+    "sha": "881a11a5be33beb970e8b39b05e18fb97e7e7457"
+  },
+  {
+    "path": "includes/cocart-background-functions.php",
+    "type": "blob",
+    "sha": "f26bdbdc594bc7c8f3b01e8b91d7cca91179d170"
+  },
+  {
+    "path": "includes/cocart-core-functions.php",
+    "type": "blob",
+    "sha": "f35b253f85e78447222bec9c69ff01ba375a1387"
+  },
+  {
+    "path": "includes/cocart-deprecated-functions.php",
+    "type": "blob",
+    "sha": "a72dd22f9ef1b114cbdcfc63bfdc76b889ef94ee"
+  },
+  {
+    "path": "includes/cocart-formatting-functions.php",
+    "type": "blob",
+    "sha": "a4e0323b5ea6d8a91381b01d3b10ea5e7be5a0f7"
+  },
+  {
+    "path": "includes/cocart-polyfill-functions.php",
+    "type": "blob",
+    "sha": "89a4ff479a735be38ca9ecf545cb9852e4b74692"
+  },
+  {
+    "path": "includes/cocart-rest-functions.php",
+    "type": "blob",
+    "sha": "7cfa71b71d1d91c1885f1f7245f19c084c72b261"
+  },
+  {
+    "path": "includes/cocart-task-functions.php",
+    "type": "blob",
+    "sha": "e59eedd8200e7ba9c9e6097262a6606bb7e234b6"
+  },
+  {
+    "path": "includes/cocart-update-functions.php",
+    "type": "blob",
+    "sha": "0f842b78265c0f713e9f629671470d9e45e73e65"
+  },
+  {
+    "path": "languages",
+    "type": "tree",
+    "sha": "e7e41a3e87ccef0dc7253a1344f016908689b873"
+  },
+  {
+    "path": "languages/README.md",
+    "type": "blob",
+    "sha": "1f3b156f3cce474b24cf782b28d6596e930b86ea"
+  },
+  {
+    "path": "license.txt",
+    "type": "blob",
+    "sha": "eed58b4a8d99429f3f7e78dc3b83a0fee08bb4d1"
+  },
+  {
+    "path": "load-package.php",
+    "type": "blob",
+    "sha": "df68f3beb1f27c2ac772901f359936681edde0a0"
+  },
+  {
+    "path": "package-lock.json",
+    "type": "blob",
+    "sha": "52dd9b3f7f4863f6c0d1a2099ba519832e7f26ed"
+  },
+  {
+    "path": "package.json",
+    "type": "blob",
+    "sha": "b8aed50ea96acffc29f4093c6c210af21d54ac69"
+  },
+  {
+    "path": "phpcs.xml",
+    "type": "blob",
+    "sha": "ba32e234a0a2f338de268328616cabfee13d38e9"
+  },
+  {
+    "path": "phpstan.neon",
+    "type": "blob",
+    "sha": "bcb3f4c8d6ea6c136b13be136995cc3781ee9b83"
+  },
+  {
+    "path": "phpunit.xml.dist",
+    "type": "blob",
+    "sha": "e88edc57d88c840e9619d3473432995533efe5bb"
+  },
+  {
+    "path": "readme.txt",
+    "type": "blob",
+    "sha": "43357f6eb9426a509dbbbff6acfa7415b3b59162"
+  },
+  {
+    "path": "renovate.json",
+    "type": "blob",
+    "sha": "f45d8f110c3034162a1091dafe4b03d2e56b323e"
+  },
+  {
+    "path": "tests",
+    "type": "tree",
+    "sha": "7e701a31e514e1c9efd2da5bd37e9aa9e0ecebbe"
+  },
+  {
+    "path": "tests/README.md",
+    "type": "blob",
+    "sha": "ed76ef0a356ad097f302395c4955253935e56b7b"
+  },
+  {
+    "path": "tests/bootstrap.php",
+    "type": "blob",
+    "sha": "80bc33ed30de3605f378920b82863a683c555069"
+  },
+  {
+    "path": "tests/framework",
+    "type": "tree",
+    "sha": "63d86862c545ef3325498e315cab192b959b5df6"
+  },
+  {
+    "path": "tests/framework/class-cocart-api-test-case.php",
+    "type": "blob",
+    "sha": "94e4c8dd9ad0e931b34d2eecabcea16ac2952d29"
+  },
+  {
+    "path": "tests/framework/class-cocart-api-v1-test-case.php",
+    "type": "blob",
+    "sha": "3a5643437512196264477f3d7fb88bdd507f0159"
+  },
+  {
+    "path": "tests/framework/class-cocart-api-v2-test-case.php",
+    "type": "blob",
+    "sha": "a8c264c344e7e32cf64e8c717611f30f8f7fad43"
+  },
+  {
+    "path": "tests/framework/class-cocart-rest-test-case.php",
+    "type": "blob",
+    "sha": "994652dde2405885a4a04608de40a8ba3b09dc09"
+  },
+  {
+    "path": "tests/framework/class-cocart-test-spy-rest-server.php",
+    "type": "blob",
+    "sha": "7a01d5d2a2a1c0d5a7cebefa0b3968fdaa718485"
+  },
+  {
+    "path": "tests/framework/class-cocart-unit-test-case.php",
+    "type": "blob",
+    "sha": "338b28848415f4df1a9f360b857a941a52fb4b59"
+  },
+  {
+    "path": "tests/unit",
+    "type": "tree",
+    "sha": "1ed1216aada3c2476c6a75461bbf1aea21477e1b"
+  },
+  {
+    "path": "tests/unit/class-cocart-authentication-injection-test.php",
+    "type": "blob",
+    "sha": "263847f190829fb4fb3494bb88bfc0c5d8a9da73"
+  },
+  {
+    "path": "tests/unit/class-cocart-authentication-nonce-scope-test.php",
+    "type": "blob",
+    "sha": "fbeb9173993efbf6aae2c77701ab4c6241f0c395"
+  },
+  {
+    "path": "tests/unit/class-cocart-authentication-test.php",
+    "type": "blob",
+    "sha": "e3ab93a0ade8f134280da342a6a55c9b6ef52bf5"
+  },
+  {
+    "path": "tests/unit/class-cocart-logout-controller-test.php",
+    "type": "blob",
+    "sha": "c10ae1c60ef136422ce1f213a792a4319c41a57a"
+  },
+  {
+    "path": "tests/unit/class-cocart-session-handler-route-scope-test.php",
+    "type": "blob",
+    "sha": "fea30154a67681dcf935091ec0be15aecdaaf257"
+  },
+  {
+    "path": "tests/unit/class-cocart-session-idor-test.php",
+    "type": "blob",
+    "sha": "bb3259d2191f4042459a7bc972b260c6cf6cdfdd"
+  },
+  {
+    "path": "tests/unit/class-cocart-store-controller-test.php",
+    "type": "blob",
+    "sha": "742372db455edb5e2179569b55a69f3a4f819304"
+  },
+  {
+    "path": "tests/unit/class-cocart-test.php",
+    "type": "blob",
+    "sha": "37eb64af1904a3f25e96582e2e33da80325fbb1f"
+  },
+  {
+    "path": "uninstall.php",
+    "type": "blob",
+    "sha": "ec07daa168b31d1a07d62483721b0a28e20f145b"
+  }
+]

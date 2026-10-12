@@ -1,5 +1,5 @@
 import {mountEoapi} from './eoapi/ui.mjs';
-let eoapiMount=null;
+let eoapiMount=null,eoapiElement=null,eoapiWorkspaceId=null;
 const root=document.querySelector('#app');
 const state={workspace:null,jobs:[],queryId:null,editionId:null,tab:'search',mode:'table',page:0,pageSize:25,filter:'',statusFilter:'all',draft:null,detail:null,csrf:null,maxRequestBytes:128*1024*1024,dialog:null,notice:null,comparison:null,comparisonIds:null,pendingJobs:new Set(),busy:new Set()};
 const array=value=>Array.isArray(value)?value:value&&typeof value==='object'?Object.values(value):[];
@@ -48,11 +48,11 @@ async function safely(action){
   try{return await action();}
   catch(error){toast(error.message||String(error),true);}
 }
-async function api(path,{method='GET',body,raw=false}={}){
+async function api(path,{method='GET',body,raw=false,signal}={}){
   const headers={};if(body!==undefined)headers['content-type']='application/json';
   if(method!=='GET'&&method!=='HEAD'&&state.csrf)headers['x-csrf-token']=state.csrf;
-  const response=await fetch(path,{method,headers,credentials:'same-origin',...(body===undefined?{}:{body:JSON.stringify(body)})});
-  if(!response.ok){let data;try{data=await response.json();}catch{}const error=new Error(data?.error?.message||'The local operator returned HTTP '+response.status+'.');error.code=data?.error?.code;error.status=response.status;throw error;}
+  const response=await fetch(path,{method,headers,credentials:'same-origin',signal,...(body===undefined?{}:{body:JSON.stringify(body)})});
+  if(!response.ok){let data;try{data=await response.json();}catch{}const error=new Error(data?.error?.message||(typeof data?.error==='string'?data.error.replaceAll('_',' '):'The local operator returned HTTP '+response.status+'.'));error.code=typeof data?.error==='string'?data.error:data?.error?.code;error.field=data?.field;error.status=response.status;throw error;}
   return raw?response:response.json();
 }
 function downloadBlob(bytes,filename,mime='application/octet-stream'){
@@ -163,7 +163,7 @@ function paginationControls(total){
 function rememberFocus(){
   const element=document.activeElement;
   if(!element||!root.contains(element))return null;
-  const retained=state.processingView?.root.contains(element);
+  const retained=state.processingView?.root.contains(element)||eoapiElement?.contains(element);
   if(!element.id&&!retained)return null;
   return {id:element.id,element:retained?element:null,start:element.selectionStart,end:element.selectionEnd};
 }
@@ -251,9 +251,13 @@ function renderApp(){
   for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.eoapi?[['eoapi','Customer operations']]:[]),...(state.processingCapabilities?[['processing','Processing history']]:[])]){
     tabs.append(button(label,()=>{state.tab=key;renderApp();},{role:'tab','aria-selected':state.tab===key}));
   }
-  eoapiMount?.destroy();eoapiMount=null;
+  if(state.tab!=='eoapi'||eoapiWorkspaceId!==workspace.id){eoapiMount?.destroy();eoapiMount=null;eoapiElement=null;eoapiWorkspaceId=null;}
   const main=node('main',{class:'workspace',id:'main'},title,tabs);
-  if(state.tab==='eoapi'){const panel=node('div');main.append(panel);eoapiMount=mountEoapi(panel,{api,workspace:state.workspace,editionId:state.editionId});}
+  if(state.tab==='eoapi'){
+    if(!eoapiMount){eoapiElement=node('div');eoapiWorkspaceId=workspace.id;eoapiMount=mountEoapi(eoapiElement,{api,workspace:state.workspace,editionId:state.editionId});}
+    else void eoapiMount.refresh().catch(error=>toast(error.message,true));
+    main.append(eoapiElement);
+  }
   if(state.tab==='search')main.append(renderSearch());
   if(state.tab==='scenes')main.append(renderScenes());
   if(state.tab==='compare')main.append(renderCompare());

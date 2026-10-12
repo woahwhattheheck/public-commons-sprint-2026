@@ -1,5 +1,7 @@
 // MIT. Saved scenario operations through the original authenticated merchant MCP.
 import { createRetainedDownload, openMerchantFileClient } from './retained-download.mjs';
+import { pricingCostClientOperations } from './pricing-cost-client.mjs';
+export { downloadMerchantCosts, inspectMerchantCosts } from './pricing-cost-client.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const HASH = /^[a-f0-9]{64}$/;
@@ -9,6 +11,7 @@ const fail = (code,message) => Object.assign(new Error(message),{code:'PRICING_C
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export const pricingClientOperations = Object.freeze({
+  ...pricingCostClientOperations,
   status:'merchant_pricing_status',open:'merchant_pricing_open',close:'merchant_pricing_close',
   capture:'merchant_pricing_source','review-preview':'merchant_pricing_preview',
   'review-save':'merchant_pricing_save','review-load':'merchant_pricing_load',

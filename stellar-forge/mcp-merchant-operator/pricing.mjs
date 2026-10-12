@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { exact, failure, identifier, line, plain, privateSupportDirectory } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
+import { costToolDefinitions, normalizePricingCostSources, MerchantPricingCosts, PricingCostArchiveReads } from './pricing-costs.mjs';
 import { normalizeReleaseRuntime, readReleaseState } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
 
 export const PRICING_CONNECTION_SCHEMA = 'stellar-forge.pricing-workspace-connection.v1';
@@ -52,6 +53,7 @@ const scenarioViews = ['scenarios','routes','goals','suggestionRoutes'];
 const suggestionKind = { type: 'string', enum: ['BREAK_EVEN_PRICE','BREAK_EVEN_VOLUME','TARGET_PRICE','TARGET_VOLUME'] };
 const scenarioPage = { view: { type: 'string', enum: scenarioViews }, scenarioId: scenarioChoice, suggestionKind, ...page };
 const definitions = [
+  ...costToolDefinitions,
   ['merchant_pricing_status', 'List host-declared pricing workspaces and their process-local capture/file-read state. Does not capture operations or open a workspace.', { ...base }, [], read],
   ['merchant_pricing_open', 'Open the original SF97 workspace model and capture its configured native operations source. Reopening the same alias reuses its original captures. Original per-save compare-and-swap remains shared with the browser.', base, ['workspace'], { idempotent: true }],
   ['merchant_pricing_close', 'Release this MCP handle\'s source view and temporary file reads. Original saved reviews, price decisions and staged releases remain in their original stores.', base, ['workspace'], { idempotent: true }],
@@ -142,7 +144,7 @@ export async function readPricingConfiguration(path) {
   const workspaces = Object.create(null), seen = new Set();
   for (const [name, item] of Object.entries(raw.workspaces)) {
     identifier(name, 'Pricing workspace alias');
-    exact(item, ['label', 'config', 'directory', 'snapshot', 'history', 'opsUrl', 'nativeOutbox', 'sourcePackage', 'releaseStore', 'releaseRuntime'], ['config', 'directory']);
+    exact(item, ['label', 'config', 'directory', 'snapshot', 'history', 'opsUrl', 'nativeOutbox', 'sourcePackage', 'releaseStore', 'releaseRuntime', 'costInputs', 'costBooks', 'supplierUsage', 'accountingReport'], ['config', 'directory']);
     const settings = { label: line(item.label ?? name, 'Pricing workspace label'), config: hostPath(item.config, baseDirectory),
       directory: hostPath(item.directory, baseDirectory) };
     await privateSupportDirectory(settings.directory);
@@ -150,7 +152,8 @@ export async function readPricingConfiguration(path) {
     if (canonical !== settings.directory || seen.has(canonical))
       throw failure('CONFIGURATION_ERROR', 'Use one alias per original, real pricing directory.');
     seen.add(canonical);
-    for (const key of ['snapshot', 'history', 'nativeOutbox', 'sourcePackage', 'releaseStore'])
+    Object.assign(settings, normalizePricingCostSources(item, baseDirectory));
+    for (const key of ['snapshot', 'history', 'nativeOutbox', 'sourcePackage', 'releaseStore', 'supplierUsage', 'accountingReport'])
       if (item[key] !== undefined) settings[key] = hostPath(item[key], baseDirectory);
     if (item.opsUrl !== undefined) {
       let url;
@@ -268,15 +271,17 @@ function planningSelectionView(value,args = {}) {
 }
 
 export class MerchantPricing {
-  #config; #entries = new Map(); #files = new RetainedFileReads({ errorPrefix: 'PRICING' }); #closing = false; #close;
+  #config; #entries = new Map(); #files = new RetainedFileReads({ errorPrefix: 'PRICING' }); #costArchives = new PricingCostArchiveReads(); #closing = false; #close;
   constructor(config) { this.#config = config; }
   get summary() {
-    return { configured: Boolean(this.#config.pricing), ...this.#files.summary,
+    return { configured: Boolean(this.#config.pricing), ...this.#files.summary, ...this.#costArchives.summary,
       workspaces: Object.entries(this.#config.pricing?.workspaces ?? {}).map(([workspace, value]) => {
         const entry = this.#entries.get(workspace);
         return { workspace, label: value.label, state: entry ? entry.closing ? 'CLOSING' : entry.model ? 'OPEN' : 'OPENING' : 'CLOSED',
           live: Boolean(value.opsUrl), sourceKinds: value.opsUrl ? ['SESSION', 'DURABLE_HISTORY'] :
             [...(value.snapshot ? ['SESSION'] : []), ...(value.history ? ['DURABLE_HISTORY'] : [])],
+          costSourceInputs: Object.keys(value.costInputs ?? {}).length, costBookInputs: Object.keys(value.costBooks ?? {}).length,
+          costConfiguredCaptures: [...(value.supplierUsage ? ['USAGE'] : []), ...(value.accountingReport ? ['ACCOUNTING'] : [])],
           nativeAttached: Boolean(value.nativeOutbox), sourcePackageAvailable: Boolean(value.sourcePackage),
           releaseAvailable: Boolean(value.releaseStore),
           operatorReleaseStore: Boolean(value.releaseStore && resolve(value.releaseStore) === resolve(this.#config.releaseStore)),
@@ -301,11 +306,11 @@ export class MerchantPricing {
     if (!entry) {
       // Only capture-handle ownership is shared here. Native writes continue to
       // use the original SF97 per-save CAS alongside browser/process handles.
-      entry = { model: null, planning: null, source: null, pending: new Set(), closing: null, opening: null };
+      entry = { model: null, planning: null, costs: null, source: null, pending: new Set(), closing: null, opening: null };
       this.#entries.set(name, entry);
       entry.opening = (async () => {
         const { openWorkspace } = await import('../../stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/model.mjs');
-        const { label, ...settings } = configured;
+        const { label, costInputs, costBooks, ...settings } = configured;
         const model = await openWorkspace(settings), source = await model.state();
         entry.model = model; entry.source = source;
       })();
@@ -324,8 +329,9 @@ export class MerchantPricing {
       await entry.opening.catch(() => {});
       await Promise.allSettled([...entry.pending]);
       await this.#files.closeScope(name);
+      await this.#costArchives.closeScope(name);
       if (this.#entries.get(name) === entry) this.#entries.delete(name);
-      entry.source = null; entry.model = null; entry.planning = null;
+      entry.source = null; entry.model = null; entry.planning = null; entry.costs = null;
       return { workspace: name, state: 'CLOSED' };
     })();
     return entry.closing;
@@ -352,6 +358,11 @@ export class MerchantPricing {
     return {bytes,manifest:JSON.parse(bytes.toString('utf8')),manifestFile:{name:'manifest.json',bytes:bytes.length,sha256:sha(bytes)}};
   }
   async #execute(name, args, entry) {
+    if (name.startsWith('merchant_pricing_cost_')) {
+      entry.costs ??= new MerchantPricingCosts({settings:this.#declared(args.workspace),model:()=>entry.model,
+        files:this.#files,archives:this.#costArchives});
+      return entry.costs.call(name,args);
+    }
     const { workspace, view, offset, limit, ...input } = args, model = entry.model;
     switch (name) {
       case 'merchant_pricing_source': {
@@ -458,6 +469,7 @@ export class MerchantPricing {
       this.#close = (async () => {
         await Promise.all([...this.#entries.keys()].map(name => this.#closeWorkspace(name)));
         await this.#files.close();
+        await this.#costArchives.close();
       })();
     }
     return this.#close;

@@ -33,7 +33,7 @@
 <section class="panel"><h2>Saved reviews</h2><div id="reviews" class="record-list"></div></section>
 </aside>
 <div class="content">
-<nav class="tabs" aria-label="Workspace sections"><button type="button" data-tab="analysis" aria-current="page">Results &amp; review</button><button type="button" data-tab="source" aria-current="false">Original source</button><button type="button" data-tab="merchant" aria-current="false">Merchant &amp; customer</button></nav>
+<nav class="tabs" aria-label="Workspace sections"><button type="button" data-tab="analysis" aria-current="page">Results &amp; review</button><button type="button" data-tab="source" aria-current="false">Original source</button><button type="button" data-tab="merchant" aria-current="false">Merchant &amp; customer</button><button type="button" data-tab="open-waters" aria-current="false">Open Waters</button></nav>
 <section id="tab-analysis" class="tab-panel">
 <div class="panel">
 <div class="section-head"><h2>Comparable sample results</h2><span id="analysis-status" class="tag">Choose a capture</span></div>
@@ -69,6 +69,102 @@
 </div>
 </section>
 <section id="tab-source" class="tab-panel" hidden><div class="panel"><div class="section-head"><h2>Original source files</h2><span id="source-state" class="tag">Choose a capture</span></div><div id="source-details"></div><p class="caption">Station and Activity records join to each result through original provider, organization, location, and activity identifiers. Every returned detection-limit record keeps its origin and source row.</p><div id="source-profiles"></div><h3>Retained files and native responses</h3><div id="source-files"></div></div></section>
+
+<section id="tab-open-waters" class="tab-panel" hidden>
+<fieldset id="ow-controls" class="ow-controls">
+<div class="panel">
+<div class="section-head"><div><h2>Open Waters receiving plan</h2><p class="caption">Translate a saved review into the native location and sample/result tab imports. Keep original identities, limit types, and every selected result in the complete handoff.</p></div><span id="ow-status" class="tag">Choose a saved review</span></div>
+<form id="ow-form">
+<div class="two"><label>Saved review<select id="ow-review" required><option value="">Select a saved review</option></select></label><label>Receiving organization<input id="ow-organization" required autocomplete="off" placeholder="Exact organization identifier"></label></div>
+<div class="three"><label>Receiving project<input id="ow-project" required autocomplete="off" placeholder="Exact project identifier"></label><label>Station handling<select id="ow-location-mode"><option value="create">Create location rows</option><option value="existing">Use existing locations</option></select></label><label>Sample identity policy<select id="ow-identity-mode"><option value="compact">Compact IDs with exact crosswalk</option><option value="source">Keep source IDs</option></select></label></div>
+<p class="caption">Each station can override the default handling. Compact IDs preserve a complete source-to-destination crosswalk; the preview checks the receiving field limits.</p>
+<label>Receiving notes<textarea id="ow-notes" rows="3" placeholder="Record the receiving project, intended import, and mapping decisions."></textarea></label>
+<div class="actions"><button id="ow-preview" type="submit">Preview receiving rows</button><button id="ow-new" type="button">Start another plan</button></div>
+</form>
+<p id="ow-draft-status" class="caption" role="status" aria-live="polite">Choose the saved review and receiving identifiers, then preview the complete selection.</p>
+<details><summary>Complete mapping options JSON</summary><p class="caption">These are the same mapping options used by the controls. Per-result corrections use resultOverrides with the exact sourceRecordId returned by this preview. Apply edited JSON before updating the preview.</p><label>Options<textarea id="ow-options-json" rows="12" spellcheck="false"></textarea></label><div class="actions"><button id="ow-apply-json" type="button">Apply options to draft</button><button id="ow-reset-json" type="button">Show current draft options</button></div></details>
+</div>
+
+<div class="panel">
+<div class="section-head"><h2>Saved receiving plans</h2><span id="ow-plan-count" class="count">0</span></div>
+<div class="two"><label>Saved plan<select id="ow-saved-plan"><option value="">Select an immutable plan</option></select></label><div class="ow-button-field"><button id="ow-open-plan" type="button" disabled>Reopen saved plan</button></div></div>
+<p class="caption">Reopening a plan loads its saved mappings and outputs. Changes are saved under a new plan name.</p>
+<details><summary>Receive a complete plan bundle</summary><form id="ow-receive-form"><label>Complete Open Waters bundle<input id="ow-receive-file" type="file" accept=".json,application/json" required></label><p class="caption">Receive into an empty workspace. The bundle restores the original capture, saved review, mapping plan, and output files. Maximum file size: 128 MiB.</p><button id="ow-receive" type="submit">Receive complete plan</button></form></details>
+</div>
+
+<div id="ow-preview-body" hidden>
+<div class="panel">
+<div class="section-head"><h2 id="ow-preview-title">Receiving preview</h2><span id="ow-preview-identity" class="tag"></span></div>
+<div id="ow-summary" class="metrics ow-metrics"></div>
+<p class="caption">Compatible means a row satisfies the local tab-import contract. Reference matching below uses only the receiving lists you supply. The location and result imports contain compatible rows; the crosswalk, report, and complete bundle retain every selected row and its original source.</p>
+<details><summary>Review and capture identity</summary><dl id="ow-source-identity" class="ow-identities"></dl></details>
+<nav class="ow-tabs" aria-label="Receiving plan sections">
+<button type="button" data-ow-pane="identities" aria-current="page">Stations &amp; sample IDs</button>
+<button type="button" data-ow-pane="translations" aria-current="false">Fields &amp; limits</button>
+<button type="button" data-ow-pane="results" aria-current="false">All result rows</button>
+<button type="button" data-ow-pane="references" aria-current="false">Receiving references</button>
+<button type="button" data-ow-pane="issues" aria-current="false">Review issues</button>
+</nav>
+
+<section id="ow-pane-identities" class="ow-pane">
+<h3>Station identity and handling</h3><p class="caption">The source identity includes the original provider and organization. Enter an override only when the receiving location uses a different ID.</p>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Source location</th><th>Preview destination</th><th>Destination ID override</th><th>Handling override</th><th>Compatibility / fields</th></tr></thead><tbody id="ow-locations"></tbody></table></div>
+<div class="pagination"><button id="ow-locations-previous" type="button">Previous</button><span id="ow-locations-page"></span><button id="ow-locations-next" type="button">Next</button></div>
+<h3>Sample and activity identity</h3><p class="caption">Every result keeps its exact original sample identity and receiving activity ID in the crosswalk.</p>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Source activity</th><th>Preview destination</th><th>Destination ID override</th><th>Changes / receiving fields</th></tr></thead><tbody id="ow-activities"></tbody></table></div>
+<div class="pagination"><button id="ow-activities-previous" type="button">Previous</button><span id="ow-activities-page"></span><button id="ow-activities-next" type="button">Next</button></div>
+</section>
+
+<section id="ow-pane-translations" class="ow-pane" hidden>
+<h3>Exact field translations</h3><p class="caption">A rule replaces an exact observed value in one native destination field. The original value and the stated reason remain in the crosswalk and report. Use row detail for a correction limited to one source result.</p>
+<form id="ow-translation-form">
+<div class="two"><label>Native receiving field<input id="ow-translation-field" list="ow-field-names" required autocomplete="off"></label><label>Exact value to replace<input id="ow-translation-from" list="ow-observed-values" autocomplete="off"></label></div>
+<div class="two"><label>Receiving value<input id="ow-translation-to" autocomplete="off"></label><label>Reason<input id="ow-translation-reason" required autocomplete="off"></label></div>
+<datalist id="ow-field-names"></datalist><datalist id="ow-observed-values"></datalist>
+<p id="ow-observed-count" class="caption"></p>
+<div class="actions"><button id="ow-add-translation" type="submit">Add translation rule</button><button id="ow-cancel-translation" type="button" hidden>Cancel rule edit</button></div>
+</form>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Native field</th><th>Exact source value</th><th>Receiving value</th><th>Reason</th><th>Rule</th></tr></thead><tbody id="ow-translations"></tbody></table></div>
+<h3>Detection and quantitation limits</h3><p class="caption">Choose a native field for each exact source limit type. Values left in original comments and the crosswalk remain available in the complete handoff. Mapping types to the same receiving field can require a result-specific decision; the preview shows the actual conflict.</p>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Original limit type</th><th>Occurrences / examples</th><th>Native receiving field</th><th>Choice reason</th></tr></thead><tbody id="ow-limits"></tbody></table></div>
+</section>
+
+<section id="ow-pane-results" class="ow-pane" hidden>
+<div class="three ow-filters"><label>Result compatibility<select id="ow-result-filter"><option value="all">All selected rows</option><option value="ready">Compatible rows</option><option value="review">Rows needing attention</option><option value="error">Rows with field errors</option></select></label><label>Find a source or receiving value<input id="ow-result-search" type="search" placeholder="ID, characteristic, date, value"></label><label>Additional receiving field<select id="ow-result-field"><option value="">No additional field</option></select></label></div>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Source result / sample date</th><th>Characteristic / receiving value</th><th>Destination sample / location</th><th id="ow-result-field-heading">Limits / changes</th><th>Compatibility</th><th>Record</th></tr></thead><tbody id="ow-results"></tbody></table></div>
+<div class="pagination"><button id="ow-results-previous" type="button">Previous</button><span id="ow-results-page"></span><button id="ow-results-next" type="button">Next</button></div>
+</section>
+
+<section id="ow-pane-references" class="ow-pane" hidden>
+<h3>Native reference requirements</h3><p class="caption">Review the values required by this receiving plan against the destination's actual reference lists. Field-reference families can be compared with exported values below; location and analytical-method requirements retain their native identity and context for a receiving lookup. A match means exact membership in the supplied values.</p>
+<div class="three ow-filters"><label>Reference status<select id="ow-reference-filter"><option value="all">All requirements</option><option value="unknown">Receiving lookup required</option><option value="missing">Absent from supplied list</option><option value="matched">Matched supplied value</option></select></label><label>Requirement kind<select id="ow-reference-kind-filter"><option value="">All requirement kinds</option></select></label><label>Find a reference<input id="ow-reference-search" type="search"></label></div>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Native reference</th><th>Required value</th><th>Context / count</th><th>Supplied-list match</th></tr></thead><tbody id="ow-references"></tbody></table></div>
+<div class="pagination"><button id="ow-references-previous" type="button">Previous</button><span id="ow-references-page"></span><button id="ow-references-next" type="button">Next</button></div>
+<details><summary>Supply receiving reference values</summary><form id="ow-reference-form"><label>Reference family<select id="ow-reference-kind"><option value="">Select a reference family</option></select></label><label>Actual receiving values, one per line<textarea id="ow-reference-values" rows="7" spellcheck="false"></textarea><small>Use exact exported values from the receiving system. Leading and trailing spaces are preserved.</small></label><div class="actions"><button type="submit">Apply reference values to draft</button><button id="ow-remove-reference-kind" type="button">Remove this supplied list</button></div></form><label>Or load a complete reference-values JSON file<input id="ow-reference-file" type="file" accept=".json,application/json"></label><p class="caption">JSON shape: an object whose keys are the native reference family names, such as ActivityType, and whose values are arrays of exact strings.</p></details>
+</section>
+
+<section id="ow-pane-issues" class="ow-pane" hidden>
+<div class="three ow-filters"><label>Issue severity<select id="ow-issue-filter"><option value="all">All receiving issues</option><option value="error">Field errors</option><option value="review">Review decisions</option></select></label><label>Find an issue<input id="ow-issue-search" type="search" placeholder="Code, field, source ID"></label><div id="ow-issue-counts" class="caption"></div></div>
+<div class="table-wrap"><table class="ow-table"><thead><tr><th>Source record</th><th>Severity / code</th><th>Native field</th><th>Receiving issue</th><th>Record</th></tr></thead><tbody id="ow-issues"></tbody></table></div>
+<div class="pagination"><button id="ow-issues-previous" type="button">Previous</button><span id="ow-issues-page"></span><button id="ow-issues-next" type="button">Next</button></div>
+</section>
+
+<section id="ow-detail" class="record-detail" hidden>
+<div class="section-head"><h3 id="ow-detail-title">Receiving record detail</h3><button id="ow-close-detail" type="button">Close detail</button></div>
+<div id="ow-detail-content"></div>
+<details id="ow-field-editor"><summary>Set an exact field override for this record</summary><form id="ow-field-form"><label>Native receiving field<select id="ow-field-name"></select></label><p id="ow-field-current" class="caption"></p><label>Receiving value<textarea id="ow-field-value" rows="3" spellcheck="false"></textarea><small>An empty value is an explicit override. Removing an override restores the mapper's value on the next preview.</small></label><div class="actions"><button type="submit">Apply field override to draft</button><button id="ow-remove-field" type="button">Remove this field override</button></div></form></details>
+</section>
+</div>
+
+<div class="panel">
+<div class="section-head"><h2>Save and download the complete plan</h2><span id="ow-save-state" class="tag">Preview first</span></div>
+<form id="ow-save-form"><label>New immutable plan name<input id="ow-plan-id" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" maxlength="96" autocomplete="off"></label><p class="caption">The saved plan binds this exact review, capture, and mapping options. Revise a reopened plan by saving a new name.</p><button id="ow-save" type="submit" disabled>Save complete receiving plan</button></form>
+<div id="ow-files" hidden><h3>Saved receiving files</h3><div id="ow-downloads" class="record-list ow-download-list"></div></div>
+</div>
+</div>
+</fieldset>
+</section>
+
 <section id="tab-merchant" class="tab-panel" hidden>
 <div class="panel"><h2>Prepare a merchant edition</h2><form id="edition-form"><div class="two"><label>Saved review<select id="edition-review" required><option value="">Select a saved review</option></select></label><label>Workspace edition name<input id="edition-name" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" placeholder="potomac-q1"></label></div><button type="submit">Prepare edition</button></form><p class="caption">An edition includes the complete captured cohort. The saved review keeps its own selected dates, baseline, and numeric inclusion choices.</p><div id="editions" class="record-list"></div></div>
 <div class="panel"><div class="section-head"><h2>Original merchant</h2><span id="merchant-state" class="tag">Stopped</span></div><label>Edition<select id="merchant-edition"><option value="">Select an edition</option></select></label><form id="stage-form"><div class="two"><label>Public HTTPS origin<input id="merchant-origin" type="url" placeholder="https://water.example.com" required></label><label>Application path<input id="merchant-path" value="/water-quality" required></label></div><label>Original payment terms JSON<textarea id="payment" rows="6" required spellcheck="false">{}</textarea></label><button type="submit">Prepare merchant offers</button></form><div class="actions"><button id="start-merchant" type="button">Start merchant</button><button id="stop-merchant" type="button" disabled>Stop merchant</button></div><pre id="merchant-result" hidden></pre></div>

@@ -2,7 +2,7 @@
 // MIT. Native operator CLI for the original eoAPI deployment policy workflow.
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readJson } from '../../../sf88-operator-buyer-cli/node/store.mjs';
+import { readJson, readBytes } from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { openDeploymentPolicyWorkspace, validateDeploymentPolicyPackage } from './policy-workspace.mjs';
 import { compileDeploymentPolicy } from './deployment-policy.mjs';
 
@@ -43,7 +43,10 @@ export async function runDeploymentPolicyCLI(argv = process.argv.slice(2)) {
       const result = await workspace.exportPackage({ approvalId: options['--approval'], directory: resolve(required('--output')) });
       return { directory: result.directory, digest: result.package.digest, policyDigest: result.package.policyDigest, files: result.package.files.length };
     }
-    if (command === 'receive') return workspace.importPackage({ package: await readJson(resolve(required('--input')), 16 * 1024 ** 2), expectedRevision });
+    if (command === 'receive') {
+      const packageText = new TextDecoder('utf-8', { fatal: true }).decode(await readBytes(resolve(required('--input')), 24 * 1024 ** 2));
+      return workspace.importPackage({ packageText, expectedRevision });
+    }
     throw new Error('EOAPI_CLI_COMMAND_UNKNOWN');
   } finally { await workspace.close(); }
 }

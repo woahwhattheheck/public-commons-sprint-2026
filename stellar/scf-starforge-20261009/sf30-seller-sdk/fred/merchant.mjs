@@ -32,7 +32,7 @@ function editionIdentity(value) {
   return { schema: EDITION, captureSha256: value.captureSha256, reviewId: value.reviewId,
     selection: value.selection, series: value.series, policy: value.policy, snapshot: value.snapshot,
     sourceNotice: value.sourceNotice, sourceTerms: value.sourceTerms, sourceMode: value.sourceMode, timeBasis: value.timeBasis,
-    rowCount: value.rowCount, files: value.files };
+    ...(value.retrievalWindow ? { retrievalWindow: value.retrievalWindow } : {}), rowCount: value.rowCount, files: value.files };
 }
 export async function prepareFredEdition({ directory, capture, review } = {}) {
   directory = await privateDirectory(resolve(directory));
@@ -59,7 +59,7 @@ export async function prepareFredEdition({ directory, capture, review } = {}) {
     const edition = { schema: EDITION, captureSha256: capture.captureSha256, reviewId: review.id,
       selection: model.selection, series: model.series, policy, snapshot: description.snapshot,
       sourceNotice: FRED_NOTICE, sourceTerms: FRED_TERMS, sourceMode: model.sourceMode, timeBasis: model.timeBasis,
-      rowCount: model.rowCount, files };
+      ...(model.retrievalWindow ? { retrievalWindow: model.retrievalWindow } : {}), rowCount: model.rowCount, files };
     edition.editionId = 'fred-' + digest(editionIdentity(edition));
     await exactFile(directory, 'edition.json', jsonBytes(edition));
     return { ...edition, directory };
@@ -98,7 +98,7 @@ export async function stageFredMerchant({ directory, origin, path = '/economic-d
   route.id = 'fred-observations';
   route.definition.serviceName = 'Economic editions';
   route.definition.description = 'Original FRED observations; ' +
-    (edition.sourceMode === 'PUBLIC_TABLE' ? 'public table retrieved ' : 'API information vintage ') +
+    (edition.sourceMode === 'PUBLIC_TABLE' ? edition.retrievalWindow ? 'public tables collected through ' : 'public table retrieved ' : 'API information vintage ') +
     edition.selection.asOf + '; one native payment per selected page.';
   route.definition.queryParameters.push(clone(DATASET_SNAPSHOT_PARAMETER));
   const editionBytes = await readBytes(join(edition.directory, 'edition.json'), 4 * 1024 * 1024);
