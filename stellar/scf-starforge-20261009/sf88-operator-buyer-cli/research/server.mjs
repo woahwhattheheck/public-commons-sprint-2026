@@ -62,11 +62,11 @@ function contentType(name){
 }
 const CRC_TABLE=Uint32Array.from({length:256},(_,n)=>{for(let k=0;k<8;k++)n=(n&1)?0xedb88320^(n>>>1):n>>>1;return n>>>0;});
 function crc32(bytes){let n=0xffffffff;for(const b of bytes)n=CRC_TABLE[(n^b)&255]^(n>>>8);return(n^0xffffffff)>>>0;}
-/** Store exact retained bytes in a standard ZIP without another disk spool or compression pass. */
-function zipArchive(files){
-  const entries=Object.entries(files).sort(([a],[b])=>a.localeCompare(b)),chunks=[],central=[];let offset=0;
-  check(entries.length<=65535,'EXPORT_ZIP_MEMBER_LIMIT');
-  for(const [path,bytes] of entries){
+/** Yield exact ZIP members with backpressure; retain only the small central directory. */
+async function* zipArchive(entries){
+  const central=[];let offset=0,members=0;
+  for await(const [path,bytes] of entries){
+    check(++members<=65535,'EXPORT_ZIP_MEMBER_LIMIT');
     check(/^[A-Za-z0-9][A-Za-z0-9_./-]*$/.test(path)&&!path.includes('..')&&Buffer.isBuffer(bytes),'EXPORT_MEMBER_INVALID');
     const name=Buffer.from(path),crc=crc32(bytes),local=Buffer.alloc(30),header=Buffer.alloc(46);
     check(name.length<=65535&&bytes.length<=0xffffffff&&offset<=0xffffffff,'EXPORT_ZIP_SIZE_LIMIT');
@@ -74,13 +74,19 @@ function zipArchive(files){
     local.writeUInt32LE(crc,14);local.writeUInt32LE(bytes.length,18);local.writeUInt32LE(bytes.length,22);local.writeUInt16LE(name.length,26);
     header.writeUInt32LE(0x02014b50,0);header.writeUInt16LE(20,4);header.writeUInt16LE(20,6);header.writeUInt16LE(0x0800,8);header.writeUInt16LE(33,14);
     header.writeUInt32LE(crc,16);header.writeUInt32LE(bytes.length,20);header.writeUInt32LE(bytes.length,24);header.writeUInt16LE(name.length,28);header.writeUInt32LE(offset,42);
-    chunks.push(local,name,bytes);central.push(header,name);offset+=local.length+name.length+bytes.length;
+    central.push(header,name);offset+=local.length+name.length+bytes.length;
+    yield local;yield name;
+    for(let start=0;start<bytes.length;start+=65536)yield bytes.subarray(start,start+65536);
   }
   const centralBytes=central.reduce((n,b)=>n+b.length,0),end=Buffer.alloc(22);
   check(offset+centralBytes+22<=0xffffffff,'EXPORT_ZIP_SIZE_LIMIT');
-  end.writeUInt32LE(0x06054b50,0);end.writeUInt16LE(entries.length,8);end.writeUInt16LE(entries.length,10);
+  end.writeUInt32LE(0x06054b50,0);end.writeUInt16LE(members,8);end.writeUInt16LE(members,10);
   end.writeUInt32LE(centralBytes,12);end.writeUInt32LE(offset,16);
-  return {chunks:[...chunks,...central,end],bytes:offset+centralBytes+end.length};
+  yield* central;yield end;
+}
+async function* prependEntry(first,entries){
+  try{if(!first.done)yield first.value;yield* entries;}
+  finally{await entries.return?.();}
 }
 export async function startResearchWorkspace({workspace,port=0,retrieval=null}={}){
   check(typeof workspace==='string'&&Number.isInteger(port)&&port>=0&&port<=65535,'WORKSPACE_OPTIONS_INVALID');
@@ -191,21 +197,21 @@ export async function startResearchWorkspace({workspace,port=0,retrieval=null}={
       if(req.method==='GET'&&match){send(200,await store.pageBytes(match[1],Number(match[2]),match[3]),contentType(match[3]),match[1]+'-page-'+match[2]+'-'+match[3]);return;}
       match=path.match(/^\/api\/editions\/([A-Za-z0-9][A-Za-z0-9_-]{0,79})\/export-index$/);
       if(req.method==='GET'&&match){
-        const {manifest}=await store.exportFiles(match[1],{includePages:false});
+        const manifest=await store.exportManifest(match[1],{includePages:false});
         send(200,{editionId:match[1],files:Object.entries(manifest.files).map(([name,info])=>({name,...info})),manifest});return;
       }
       match=path.match(/^\/api\/editions\/([A-Za-z0-9][A-Za-z0-9_-]{0,79})\/download\/([A-Za-z0-9][A-Za-z0-9_.-]{0,120})$/);
       if(req.method==='GET'&&match){
         let data;
         if(match[2]==='report.html'&&url.searchParams.get('before'))data=Buffer.from(await store.report(match[1],{compareWith:url.searchParams.get('before')}));
-        else data=(await store.exportFiles(match[1],{includePages:false})).files[match[2]];
+        else data=await store.exportFile(match[1],match[2],{includePages:false});
         check(data,'EXPORT_FILE_NOT_FOUND',undefined,404);send(200,data,contentType(match[2]),match[2]);return;
       }
       match=path.match(/^\/api\/editions\/([A-Za-z0-9][A-Za-z0-9_-]{0,79})\/bundle\.zip$/);
       if(req.method==='GET'&&match){
-        const {files}=await store.exportFiles(match[1],{includeNative:url.searchParams.get('native')!=='0'}),archive=zipArchive(files);
-        res.writeHead(200,{...headers,'Content-Type':'application/zip','Content-Length':archive.bytes,'Content-Disposition':'attachment; filename="'+match[1]+'.zip"'});
-        await pipeline(Readable.from(archive.chunks),res);return;
+        const entries=store.exportEntries(match[1],{includeNative:url.searchParams.get('native')!=='0'}),first=await entries.next();
+        res.writeHead(200,{...headers,'Content-Type':'application/zip','Content-Disposition':'attachment; filename="'+match[1]+'.zip"'});
+        await pipeline(Readable.from(zipArchive(prependEntry(first,entries)),{objectMode:false,highWaterMark:65536}),res);return;
       }
       match=path.match(/^\/api\/editions\/([A-Za-z0-9][A-Za-z0-9_-]{0,79})\/export$/);
       if(req.method==='POST'&&match){await jsonBody(req);send(201,await store.export(match[1]));return;}
