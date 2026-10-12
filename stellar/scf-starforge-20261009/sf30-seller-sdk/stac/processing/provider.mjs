@@ -54,6 +54,7 @@ function pointer(document, ref) {
 
 export function readProcessingContract(body, deployment, metadata = {}) {
   need(Buffer.isBuffer(body) && body.length > 0 && body.length <= MAX_BODY, 'PROCESSING_OPENAPI_BYTES_REQUIRED');
+  need(metadata.status === undefined || metadata.status === null || Number.isSafeInteger(metadata.status) && metadata.status >= 100 && metadata.status <= 599, 'PROCESSING_SOURCE_HTTP_STATUS_INVALID');
   if (metadata.sha256 !== undefined) need(hashPattern.test(metadata.sha256) && sha256(body) === metadata.sha256, 'PROCESSING_SOURCE_HASH_MISMATCH');
   let doc; try { doc = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)); }
   catch { need(false, 'PROCESSING_OPENAPI_JSON_INVALID'); }
@@ -105,6 +106,7 @@ export function nextProcessingRequest(document, current, contract, { immutableQu
   if (!links.length) return null;
   const link = links[0]; need(typeof link.href === 'string' && (!link.method || link.method.toUpperCase() === 'GET'), 'PROCESSING_NEXT_LINK_INVALID');
   const url = new URL(processingUrl(new URL(link.href, current.url).href, contract.baseUrl));
+  need(url.pathname === new URL(current.url).pathname, 'PROCESSING_PAGINATION_ROUTE_CHANGED');
   for (const [name, value] of Object.entries(immutableQuery))
     need(canonicalJson(url.searchParams.getAll(name)) === canonicalJson((Array.isArray(value) ? value : [value]).map(String)),
       'PROCESSING_PAGINATION_SELECTION_CHANGED');
@@ -204,7 +206,7 @@ export function createProcessingProvider({ deployment: input, transport, environ
     if (metadata.sha256 !== undefined) need(sha256(body) === metadata.sha256, 'PROCESSING_IMPORTED_HASH_MISMATCH');
     await privateDirectory(directory);
     const requestHash = digest(request), record = { requestHash, status: metadata.status, ...retainedHeaders(metadata.headers),
-      capturedAt: metadata.capturedAt ?? null, importedAt: stamp(), imported: true, retryAt: retryAt(metadata.headers?.['retry-after']),
+      capturedAt: metadata.capturedAt ?? null, importedAt: stamp(), imported: true, retryAt: retryAt(retainedHeaders(metadata.headers).headers['retry-after']),
       bytes: body.length, sha256: sha256(body) };
     if (await exists(join(directory, 'response.json'))) {
       const prior = await readProcessingCapture(directory, requestHash);
