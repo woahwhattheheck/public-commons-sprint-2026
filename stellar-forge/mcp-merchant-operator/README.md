@@ -40,6 +40,20 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
+## Operate a saved Redis merchant
+
+Connect an existing Redis workspace with `init-redis-workspaces --dir NEW_HOST
+--connection REDIS_CONNECTION_JSON`. The browser and 17 agent tools share its
+original model, saved source revisions, query results and package operations.
+The same merchant release controls use that workspace's existing release store.
+Large original records and public customer files have complete resumable downloads.
+See [REDIS.md](REDIS.md) for the host connection, authoring-to-release workflow,
+source continuation and retained operation recovery.
+
+## Customer statements through accounting
+
+Manage original customer profiles and order assignments, import native service/API usage, review and retain statements or corrections, reconcile interrupted replies and deliver all five original statement files through the existing accounting MCP connection. The customer SDK, durable CLI and original file reader share the native statement IDs, revisions and lifecycle. See [ACCOUNTING_STATEMENTS.md](ACCOUNTING_STATEMENTS.md) for configuration, operation recovery and delivery.
+
 ## Operate existing WooCommerce stores
 
 Connect the current SF104 merchant operator using
@@ -540,3 +554,20 @@ or add `socrataWorkspaceConnection` to the existing merchant configuration.
 The `merchant_socrata_*` tools use the original source and publisher objects.
 Their industrial browser borrows that same operator, and complete customer files
 use the existing verified retained-file reader.
+
+
+## XML and NDJSON source workspaces
+
+Operate complete source-file datasets through the original private source console.
+The browser and the `merchant_source_*` tools share saved source bytes, explicit
+mappings, native SF30 builds and queries, and keyed edition comparisons. Prepare
+complete project, dataset, changes or NDJSON merchant exports, read their exact
+bytes across interrupted downloads, and import a project into another original
+receiving workspace.
+
+Use `init-source-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or attach `--source-workspaces` during ordinary merchant initialization. The
+[complete source workspace guide](SOURCE_WORKSPACES.md) covers original console
+startup, source-file handles, mapping, merchant preparation, resumable delivery
+and reconstruction. `starforge dataset ndjson` opens the source application;
+its browser remains the same workspace used by the agent.

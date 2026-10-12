@@ -414,7 +414,7 @@ async function run(options){
   if(await exists(downloadedPlan))need(sha(await readFile(downloadedPlan))===PLAN_SHA,'RETAINED_PAID_PLAN_BYTES_CHANGED');
   else{
    const paidFile=await retrieveFile({handoff,destination:downloadedPlan,token:secrets.claim,
-    fetchImpl:createPublicHttpsFetch({trustedProxy:{mode:'explicit-connect',origin:network.origin,proxyUrl:network.proxyUrl}})});
+    trustedProxy:{mode:'explicit-connect',origin:network.origin,proxyUrl:network.proxyUrl}});
    need(paidFile.file.sha256===PLAN_SHA&&paidFile.file.bytes===412,'ORIGINAL_PAID_PLAN_DOWNLOAD_CHANGED');
    await retain(join(root,'original-paid-plan-download.json'),paidFile);
   }
@@ -456,8 +456,10 @@ async function run(options){
    await retain(join(root,'original-api-usage-export.json'),
     await pythonJson(options.python,join(HERE,'../api-access/cli.py'),
      ['export','--state',compiled.state,'--order',ORDER,'--out',join(root,'original-api-usage.json')]));
-  if(!await exists(join(root,'buyer-history.html')))await retain(join(root,'original-buyer-report.json'),
-   await purchase.exportReport(join(root,'buyer-history.html')));
+  const historyName=lostRecovery?'buyer-history-recovered.html':'buyer-history.html';
+  const historyRecord=lostRecovery?'original-buyer-report-recovered.json':'original-buyer-report.json';
+  if(!await exists(join(root,historyName)))await retain(join(root,historyRecord),
+   await purchase.exportReport(join(root,historyName)));
   const original=await purchase.inspect();
   const outcome=original.native?.outcome??current.native?.outcome;
   const completed={schema:'stellar-forge.sf101.native-api-journey-result.v1',state:'NATIVE_API_PURCHASE_AND_APPLICATION_COMPLETED',

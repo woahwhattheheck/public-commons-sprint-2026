@@ -15,6 +15,10 @@ const commands = {init:[], enqueue:['--config'], list:[], show:['--intent'],
   'recover-missing-receipt':['--intent','--workspace','--transaction','--request-sha']};
 let signalExit;
 async function main(args) {
+  if (args[0] === 'review-jobs') {
+    const {main: reviewJobs} = await import('./review-jobs/cli.mjs');
+    return reviewJobs(args.slice(1));
+  }
   if (args[0] === 'library') {
     const {main: resourceLibrary} = await import('./resource-library/cli.mjs');
     return resourceLibrary(args.slice(1));
@@ -25,6 +29,7 @@ async function main(args) {
       'Missing receipt: inspect-missing-receipt | read-missing-receipt | recover-missing-receipt --transaction HASH --request-sha HASH; each requires --intent ID --workspace ABS. Read/recover accept --attempt ID --config-sha HASH --node ABS.\n' +
       'Lost local output: inspect-lost-output --approved-request ABS | read-lost-output | recover-lost-output --transaction HASH --request-sha HASH --approved-request ABS; each requires --intent ID --workspace ABS.\n' +
       'Delivered resources: library --help (search, preview, download and retain analyst reviews).\n' +
+      'Customer review jobs: review-jobs --help (source, native request, review, delivery and recovery).\n' +
       'Execute invokes the original SF88 operator approval for one exact intent. An attempted intent is never replayed.\n');
     return;
   }

@@ -52,6 +52,20 @@ supports interrupted-install continuation, fresh-directory upgrades, recovery,
 and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
 for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
 
+### Incoming OAuth for the installed MCP service
+
+The original buyer and merchant MCP launchers accept the same reviewed incoming
+OAuth resource configuration. Use `starforge mcp-oauth` to create and inspect
+that configuration, discover the deployed provider, produce a native Claude Code
+registration and receive the complete authenticated MCP tool catalog.
+
+Select the original `mcp` runtime feature to install its pinned MCP/x402 packages
+and JOSE dependency. The maintained runtime installer reads those versions from
+the selected archive's original MCP package manifest and starts that archive's
+own commands. The [complete installed OAuth guide](source/stellar/scf-starforge-20261009/distribution/MCP_OAUTH.md)
+covers preparation, all five operator commands, buyer/merchant launch, direct API
+imports and recovery. Within the source tree, the same guide is [MCP_OAUTH.md](MCP_OAUTH.md).
+
 ### Runtime installation workspace
 
 Use the private browser workspace to select an original archive, review its exact
@@ -4867,3 +4881,56 @@ continuation instructions travel with the component in
 ## Merchant cache operations
 
 `starforge cache-operations` opens the maintained cache operating workspace or performs its native commands. The original `openapi-workspace` also opens these controls directly for a saved merchant package. Saved activity snapshots, retention comparisons, live changes, restoration, interrupted-response recovery, HTML reporting and complete history receiving share the original seller's cache manager. See the [operating guide](../sf30-seller-sdk/response-cache/workspace/README.md). Installed exports are `@tokenjunkielabs/starforge-merchant/seller/response-cache/workspace`, its `/server`, and `/report`.
+
+## SDMX sources, exact editions and customer receiving
+
+The installed `starforge sdmx` command and `starforge dataset sdmx` dispatch the same original source workspace. Retain complete SDMX data and structural metadata, inspect exact values, save and compare editions, run the native dataset engine, and transfer the original project/source history. The merchant bridge binds the native snapshot and source lineage to explicit SF30 public terms; publication uses the original version store's current/revision comparison. The customer bridge reviews the live original offer, pins the selected snapshot and continues through the original SF88 page acquisition and data-room delivery.
+
+Public imports: `@tokenjunkielabs/starforge-merchant/seller/sdmx` and `@tokenjunkielabs/starforge-merchant/buyer/sdmx`. The [SDMX operator guide](../sf30-seller-sdk/sdmx/README.md) includes the complete captured ECB case, acquisition receipts, source/edition/receiving CLI, merchant publication and original buyer commands.
+
+## Portable customer Analysis workspaces
+
+The original Analysis application can export its complete SQLite snapshot and
+retained query-export, report and workbook files. Its native MCP adapter exposes
+selection review, export history/progress, cancellation, exact same-ID recovery
+and verified file ranges through the existing customer host.
+
+The maintained package registers the complete archive transport command:
+
+~~~sh
+npx --no-install starforge mcp-analysis-archive inspect \
+  --url http://127.0.0.1:3210/mcp --workspace customer --id EXPORT_UUID32
+
+npx --no-install starforge mcp-analysis-archive download \
+  --url http://127.0.0.1:3210/mcp --workspace customer --id EXPORT_UUID32 \
+  --dir /private/customer/transfers/export-1 \
+  --sha256 ZIP_SHA256 --manifest-sha256 MANIFEST_SHA256
+
+npx --no-install starforge mcp-analysis-archive reopen \
+  --dir /private/customer/transfers/export-1 \
+  --sha256 ZIP_SHA256 --manifest-sha256 MANIFEST_SHA256
+~~~
+
+Use the exact completed original job and digests. The same private download
+directory retains verified progress after interruption. Offline reopening uses
+its saved original binding; the maintained Python receiver then inspects and
+atomically publishes the complete customer workspace.
+
+Applications can import the same transport without a checkout:
+
+~~~js
+import {
+  openNativeAnalysisArchiveClient,
+  inspectNativeAnalysisArchive,
+  downloadNativeAnalysisArchive,
+  reopenNativeAnalysisArchive
+} from '@tokenjunkielabs/starforge-merchant/buyer/mcp/analysis-archives';
+~~~
+
+The [complete native archive guide](../../../stellar-forge/mcp-paid-agent/ARCHIVES.md)
+covers host registration, review/export requests, interruption recovery, the
+original Python receiving command and reopening the customer's saved work.
+Inside the installed package it is retained at
+`source/stellar-forge/mcp-paid-agent/ARCHIVES.md`. The original managed
+installation command catalog and runtime launcher consume this same
+`mcp-analysis-archive` mapping.

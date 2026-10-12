@@ -124,7 +124,8 @@ function privateURL(value) {
   try{
     const url=new URL(value);
     return url.protocol==='http:' && ['127.0.0.1','localhost','[::1]'].includes(url.hostname) &&
-      url.port && url.hash && !url.username && !url.password && value.length<=4096?url:null;
+      Number(url.port||80)>=1 && Number(url.port||80)<=65535 &&
+      url.hash && !url.username && !url.password && value.length<=4096?url:null;
   }catch{return null;}
 }
 async function privateControl(path) {
@@ -171,7 +172,7 @@ export function observePythonApplicationOutput(request,directory,{pid}={}) {
       'PYTHON_APPLICATION_PRIVATE_LAUNCH_CHANGED');
     const control=await privateControl(ready.file),url=privateURL(control.url);
     need(control.schema===ready.schema && control.pid===pid && url &&
-      url.href.split('#')[0]===announcement.address,'PYTHON_APPLICATION_PRIVATE_LAUNCH_CHANGED');
+      url.href.split('#')[0]===new URL(announcement.address).href,'PYTHON_APPLICATION_PRIVATE_LAUNCH_CHANGED');
     const identity=await originalAnalysisIdentity(descriptor);
     need(identity.schema===ready.schema && identity.workspace_id===control.workspace_id,
       'PYTHON_APPLICATION_DATABASE_CHANGED');
