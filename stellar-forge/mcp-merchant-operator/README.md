@@ -50,6 +50,10 @@ Large original records and public customer files have complete resumable downloa
 See [REDIS.md](REDIS.md) for the host connection, authoring-to-release workflow,
 source continuation and retained operation recovery.
 
+## Customer statements through accounting
+
+Manage original customer profiles and order assignments, import native service/API usage, review and retain statements or corrections, reconcile interrupted replies and deliver all five original statement files through the existing accounting MCP connection. The customer SDK, durable CLI and original file reader share the native statement IDs, revisions and lifecycle. See [ACCOUNTING_STATEMENTS.md](ACCOUNTING_STATEMENTS.md) for configuration, operation recovery and delivery.
+
 ## Operate existing WooCommerce stores
 
 Connect the current SF104 merchant operator using
