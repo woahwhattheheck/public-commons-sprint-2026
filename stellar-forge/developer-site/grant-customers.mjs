@@ -25,6 +25,9 @@ export function projectGrantMarkdown(markdown, { application = false } = {}) {
     .replace(/ \. /g, '. ').replace(/\.\s*·\s*\[/g, '. [')
     .replaceAll('enterprise@openfn.org', 'OpenFn’s published enterprise mailbox');
   if (application) {
+    // The application and its complete companion are one composed edition.
+    value = value.replace(/(\]\()https:\/\/github\.com\/woahwhattheheck\/(?:public-commons-sprint-2026|tjlabs-stellar-merchant-workspace)\/blob\/(?:[a-f0-9]{40}|main)\/stellar-forge\/developer-site\/dist\/grant-data\/product-and-finance\.md([?#][^)\s]*)?(\))/g,
+      '$1./product-and-finance.md$2$3');
     value = value.replace(/\n\*\*(?:Application sources|Source basis):\*\*[\s\S]*$/, '\n\n**Sources and supporting detail:** The [product and finance companion](./product-and-finance.md) retains the complete installation workflows, customer implementation context, funded packages and resource study. The [source index](./source-index.json) identifies the selected product sources and application edition. Issuer references are the [SCF #46 round](https://communityfund.stellar.org/awards/recxrSMYwAl8vcglg), [Build submission criteria](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria), [budget and deliverable guidance](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines) and [Official Rules](https://stellar.gitbook.io/scf-handbook/scf-awards/official-rules-for-submissions).\n')
       .replace(/§9A connects this task to the existing six funded packages\./g,
         'The [complete customer workflow](./product-and-finance.md#environmental-provider-intake-complete-source-editions-commissioning-and-receiving) connects this task to the existing six funded packages.')

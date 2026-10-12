@@ -142,6 +142,8 @@ A receiving continuation keeps the original operation ID, full checkpoint, selec
 
 ## Read the complete companion
 
+The application’s links to the complete product and finance plan resolve to the companion in the same composed edition. The original customer projector converts only the two maintained repositories’ `dist/grant-data/product-and-finance.md` URLs to `./product-and-finance.md`, preserving section anchors. The existing HTML composition opens the same edition’s full reader at `./grant-companion.html`, preserving those chapter anchors; downloaded Markdown opens its sibling companion. Product source and operating-guide URLs retain their original published identities.
+
 Choose **Product and financing** in the application navigation. The maintained
 [companion reader](GRANT_COMPANION.md) consumes the same complete Markdown and
 source index, with chapter navigation, full-text chapter search, original-file
