@@ -95,6 +95,7 @@ Supply the actual preview UUID returned by the original start operation:
 
     {
       "projectUuid": "ACTUAL_OWNED_PREVIEW_UUID",
+      "startOperationId": "ORIGINAL_START_PREVIEW_OPERATION_ID",
       "severity": "error",
       "only": ["tables", "charts", "dashboards"]
     }
@@ -109,6 +110,7 @@ Use run-chart against the actual preview or selected project. The path is relati
 
     {
       "projectUuid": "ACTUAL_OWNED_PREVIEW_UUID",
+      "startOperationId": "ORIGINAL_START_PREVIEW_OPERATION_ID",
       "chartPath": "dbt/charts/regional-sales-total-row-total-demo.yml",
       "limit": 500,
       "pageSize": 500
@@ -119,6 +121,8 @@ The original query command returns its query UUID, actual rows and complete CSV.
 The complete Jaffle receiving programme adds weighted Revenue per Unit to the original regional_sales model and its consuming chart. The metric divides total revenue by total units using NULLIF for a zero denominator. The unchanged original CSV contains 72 transactions and 18 month-and-region groups from January through June 2025. The receiving comparison identifies all 18 returned groups, checks each group's actual units and revenue, and compares its raw weighted USD-per-unit result. Its source-derived expectations are comparison inputs; the native run supplies the actual results.
 
 ## 7. Back up content and promote source/content
+
+For validate, run-chart, download, deploy or upload against an owned preview, include both its actual projectUuid and the original startOperationId. The native integration uses that original binding whenever the destination differs from the configured source project.
 
 Use download on the intended original target before a content change. The result contains the complete original content export and manifest:
 
