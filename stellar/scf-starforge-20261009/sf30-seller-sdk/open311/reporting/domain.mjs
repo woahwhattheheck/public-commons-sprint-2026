@@ -1,6 +1,6 @@
 // MIT. Immutable original-source imports and explicit service reporting calculations.
 import { canonicalJson, normalizeRequests } from '../domain.mjs';
-import { normalizeCollectionPlan, splitCollectionWindow, collectionNodeQuery, projectCollection } from '../collection-domain.mjs';
+import { normalizeCollectionPlan, splitCollectionWindow, nextCollectionPage, collectionNodeQuery, projectCollection } from '../collection-domain.mjs';
 import { fail, copy, digest, object, label, instant, maybeInstant, normalizeCalendar, calendarResolver, resolveLocal } from './calendar.mjs';
 
 export const SOURCE_SCHEMA = 'commons.open311.collection-export.v1';
@@ -52,21 +52,26 @@ export function validateSource(originalText) {
   if (nodes.size !== c.nodes.length) fail('DUPLICATE_WINDOW', 'An original collection window is repeated.');
   for (let i = 0; i < expected.length; i++) {
     const planned = expected[i], n = nodes.get(planned.id);
-    if (!n || n.startDate !== planned.startDate || n.endDate !== planned.endDate || n.parentId !== planned.parentId)
+    if (!n || n.startDate !== planned.startDate || n.endDate !== planned.endDate || n.parentId !== planned.parentId || n.page !== planned.page)
       fail('COLLECTION_WINDOW_MISMATCH', 'An original window differs from its recorded automatic subdivision.');
-    if (!['PENDING', 'FETCHING', 'CAPTURED', 'SPLIT', 'LIMITED', 'FAILED'].includes(n.state)) fail('INVALID_WINDOW_STATE', 'An original window state is unsupported.');
+    if (!['PENDING', 'FETCHING', 'CAPTURED', 'SPLIT', 'PAGED', 'LIMITED', 'FAILED'].includes(n.state)) fail('INVALID_WINDOW_STATE', 'An original window state is unsupported.');
     if (n.captureId) {
       const r = captures.get(n.captureId);
       if (!r || referenced.has(n.captureId) || !eq(r.capture.query, collectionNodeQuery(c, n)))
         fail('COLLECTION_CAPTURE_MISMATCH', 'A member capture does not match its exact window query.');
       referenced.add(n.captureId);
       if (n.state === 'CAPTURED' && r.capture.saturated) fail('UNRESOLVED_SOURCE_CAP', 'A capped member is marked below its source ceiling.');
-    } else if (['CAPTURED', 'SPLIT', 'LIMITED'].includes(n.state)) fail('MISSING_ORIGINAL', 'A completed window has no original source response.');
+    } else if (['CAPTURED', 'SPLIT', 'PAGED', 'LIMITED'].includes(n.state)) fail('MISSING_ORIGINAL', 'A completed window has no original source response.');
     if (n.state === 'SPLIT') {
       const children = splitCollectionWindow(n, c.policy);
       if (!children || !eq(n.children, children.map(child => child.id))) fail('INVALID_SUBDIVISION', 'A split differs from the original collection policy.');
       expected.push(...children);
-    } else if (n.children?.length) fail('INVALID_SUBDIVISION', 'An unsplit window has child references.');
+    } else if (n.state === 'PAGED') {
+      const next = nextCollectionPage(n, c.policy);
+      if (!next || !eq(n.children, [next.id])) fail('INVALID_PAGINATION', 'A page continuation differs from the original provider selection.');
+      if (!captures.get(n.captureId)?.capture.saturated) fail('UNNECESSARY_PAGE_CONTINUATION', 'A continued page must retain its full source page.');
+      expected.push(next);
+    } else if (n.children?.length) fail('INVALID_SUBDIVISION', 'A terminal or pending window has child references.');
   }
   if (expected.length !== nodes.size || referenced.size !== records.length) fail('INCOMPLETE_COLLECTION', 'The source has missing windows or unreferenced original responses.');
   const projection = projectCollection(c, records);
@@ -232,7 +237,10 @@ export function buildReport(input, sources, profile, identity) {
     const row = { ...source, sourceStatus: source.status, reportingStatus: Object.hasOwn(profile.statusMappings, source.status) ? profile.statusMappings[source.status] : source.status,
       group: source.serviceCode == null || source.serviceCode === '' ? 'Unmapped service' : 'Service ' + source.serviceCode,
       priority: null, mappingId: null, reviewStatus: source.review?.status ?? 'new', assignee: source.review?.assignee ?? '',
-      issues: [], sourceExpectedAt: source.expectedAt, reviewDueDate: source.review?.dueDate ?? null,
+      issues: [], sourceExpectedAt: source.expectedAt, sourceClosedAt: null,
+      sourceStatusNotes: source.source?.status_notes == null ? null : typeof source.source.status_notes === 'string'
+        ? source.source.status_notes : canonicalJson(source.source.status_notes),
+      reviewDueDate: source.review?.dueDate ?? null,
       reviewDueAt: null, policyDueAt: null, policyId: null, ageMinutes: null, resolutionMinutes: null, businessMinutes: null,
       target: { basis: definition.targetBasis, dueAt: null, completedAt: null, state: 'UNASSESSED', reason: null } };
     function issue(code, message) { row.issues.push({ code, message }); }
@@ -244,7 +252,7 @@ export function buildReport(input, sources, profile, identity) {
     const updated = maybeInstant(source.updatedAt);
     let sourceClosed = profile.provider === 'georeport-v2' && String(source.status).toLowerCase() === 'closed' ? updated : null;
     if (sourceClosed !== null && (sourceClosed < requested || sourceClosed > asOf)) { issue('INVALID_CLOSURE_INTERVAL', 'The source closure time lies before creation or after the report cutoff.'); sourceClosed = null; }
-    if (sourceClosed !== null) row.resolutionMinutes = (sourceClosed - requested) / 60000;
+    if (sourceClosed !== null) { row.sourceClosedAt = iso(sourceClosed); row.resolutionMinutes = (sourceClosed - requested) / 60000; }
     const pinnedReview = source.reviewNeedsRebase ? null : source.review;
     if (source.reviewNeedsRebase) issue('REVIEW_SOURCE_CHANGED', 'The retained internal review names a different source version.');
     let reviewDone = pinnedReview?.status === 'done' ? maybeInstant(pinnedReview.updatedAt) : null;
@@ -316,10 +324,15 @@ export function buildReport(input, sources, profile, identity) {
       collectionId: s.envelope.collection.id, connection: copy(s.envelope.collection.connection),
       query: copy(s.envelope.collection.query), requestedQuery: copy(s.envelope.collection.requestedQuery),
       summary: copy(s.envelope.summary),
-      unresolvedWindows: s.envelope.collection.nodes.filter(n => !['CAPTURED', 'SPLIT'].includes(n.state)).map(copy) })),
+      selectionTimeBasis: s.envelope.collection.policy.timeBasis ?? 'created',
+      traversal: s.envelope.collection.policy.strategy ?? 'windows',
+      populationDescription: s.envelope.collection.policy.timeBasis === 'updated'
+        ? 'Requests observed through the exact retained updated-time filters; an updated feed selects changed cases and does not establish the whole creation-period intake.'
+        : 'Requests observed through the exact retained creation-time filters.',
+      unresolvedWindows: s.envelope.collection.nodes.filter(n => !['CAPTURED', 'SPLIT', 'PAGED'].includes(n.state)).map(copy) })),
     resolvedCalendarIntervals: resolver.intervals(),
     calculationRuntime: { node: process.versions.node, icu: process.versions.icu ?? null, tz: process.versions.tz ?? null },
-    interpretation: 'Creation-period cohort using the latest retained original observation at or before asOf. Source status, internal review and operator target remain separate.'
+    interpretation: 'Creation-period cohort using the latest retained original observation at or before asOf. Source case status and closure disposition, internal review and operator target remain separate.'
   };
   report.sha256 = digest(report); return report;
 }

@@ -19,7 +19,8 @@ const HELP = [
   'capture        --connection ID [--kind requests] [--query query.json]',
   '               [--resource-id ID] [--ids ID,ID] [--service CODE] [--status STATUS]',
   '               [--start ISO_DATETIME] [--end ISO_DATETIME]',
-  '               [--page N] [--page-size N] [--extensions true|false]',
+  '               [--updated-after ISO_DATETIME] [--updated-before ISO_DATETIME]',
+  '               [--page N] [--page-size N | --per-page N] [--extensions true|false]',
   '               [--request-id ID] [--expected-revision N]',
   'collection-plan   --file collection.json',
   'collection-create --file collection.json [--request-id ID] [--expected-revision N]',
@@ -44,9 +45,14 @@ const HELP = [
   'Mutations print their request ID and original revision before submission.',
   'Repeat those exact values and inputs when resuming the same operation.',
   'Capture and collection-run read the chosen civic endpoint. Reviews change this workspace.',
-  'Collection files contain connectionId, name, query with fixed start/end dates, and optional policy.',
+  'Collection files contain connectionId, name, query with a fixed source period, and optional policy.',
+  'policy.timeBasis is created (default: start_date/end_date) or updated (updated_after/updated_before).',
+  'policy.strategy is windows (default) or pages for a connection with declared pagination.',
+  'Updated collections may retain start_date/end_date as an additional creation-time filter.',
+  'Use the provider-native page-size field: Boston per_page accepts 1..300; page numbering starts at 1.',
   'Collection-plan prints the exact initial queries and redacted source URLs without contacting the source.',
-  'Collection-run retains every capped parent and refines its children until complete, limited or interrupted.',
+  'Window traversal retains capped parents and refines children; page traversal retains every numbered page.',
+  'A short page finishes its sequence. Repeated identical full pages remain visible as LIMITED.',
   'Pause from a second process after reading the latest revision; resume the saved run intent on uncertain delivery.',
 ].join('\n');
 const MUTATIONS = new Set(['connection-put', 'capture', 'review-put', 'receive', 'collection-create', 'collection-run', 'collection-pause']);
@@ -54,7 +60,7 @@ const OPTIONS = {
   serve: ['host', 'port', 'expected-workspace-id', 'expected-binding-sha256'], state: [], services: ['connection'],
   'capture-info': ['id'], operation: ['id'], 'connection-put': ['file'],
   capture: ['connection', 'kind', 'query', 'resource-id', 'ids', 'service', 'status',
-    'start', 'end', 'page', 'page-size', 'extensions'],
+    'start', 'end', 'updated-after', 'updated-before', 'page', 'page-size', 'per-page', 'extensions'],
   'collection-plan': ['file'], 'collection-create': ['file'],
   'collection-run': ['id'], 'collection-pause': ['id'], 'collection-info': ['id', 'offset', 'limit'],
   requests: ['capture', 'collection', 'status', 'service', 'q', 'offset', 'limit', 'sort', 'order', 'changed-only', 'review-status', 'assignee'],
@@ -119,10 +125,13 @@ async function output(value, options, raw = false) {
   } else process.stdout.write(body);
 }
 function sourceQuery(options, initial) {
+  if (options['page-size'] != null && options['per-page'] != null)
+    throw new TypeError('Choose the provider-native --page-size or --per-page parameter.');
   const result = { ...initial };
   for (const [flag, field] of Object.entries({
     ids: 'service_request_id', service: 'service_code', status: 'status',
-    start: 'start_date', end: 'end_date', page: 'page', 'page-size': 'page_size',
+    start: 'start_date', end: 'end_date', 'updated-after': 'updated_after', 'updated-before': 'updated_before',
+    page: 'page', 'page-size': 'page_size', 'per-page': 'per_page',
   })) if (options[flag] != null) result[field] = options[flag];
   if (options.extensions != null) {
     if (!['true', 'false'].includes(options.extensions)) throw new TypeError('--extensions must be true or false');
