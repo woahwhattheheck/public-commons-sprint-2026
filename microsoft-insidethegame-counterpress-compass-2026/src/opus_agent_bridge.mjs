@@ -104,43 +104,80 @@ function matchesOriginalWorker(result, payload) {
       call.call_id === 'call_' + createHash('sha256').update(workflow + ':call:' + turn.turn + ':' + call.name).digest('hex').slice(0, 32)));
 }
 
+// Canonical quantities the AI lane may cite: overlay text/metrics (checked
+// by the guard itself) plus numbers that are already displayed product data -
+// seconds of the cited evidence events, the recorded prefix count and the
+// shown match stats. Anything else still fails as unobserved.
+function canonicalQuantities(overlay, snapshot, events, count) {
+  const ids = new Set((overlay.evidenceIds || []).map(String));
+  const out = [count];
+  for (const e of events) if (ids.has(e.id) && Number.isFinite(e.second)) out.push(e.second);
+  const walk = (v) => {
+    if (Number.isFinite(v)) { out.push(v); return; }
+    if (v && typeof v === 'object') for (const x of Object.values(v)) walk(x);
+  };
+  walk(snapshot.stats);
+  return out;
+}
+
+function grounded(caption, insight, overlay, canonical, guard = validateDraftGrounding) {
+  if (!guard(caption, overlay, canonical)?.ok) return false;
+  // parseFinal already enforces 1–4 sentences and 700 total characters.
+  // Apply the same factual checks to that full insight; a valid sentence
+  // need not fit the separate 135-character caption limit.
+  // Paragraph whitespace is normalized only for checking; original text is retained.
+  return guard(insight.replace(/\s+/g, ' ').trim(), overlay, canonical, 700)?.ok === true;
+}
+
+
+export function buildAgentPayload({sessionId, count, snapshot, events}) {
+  if (!Number.isInteger(count) || count < 1 || !Array.isArray(events) || events.length !== count ||
+      !snapshot || !Array.isArray(snapshot.overlays)) throw new TypeError('Original observed insight input required');
+  const overlay = snapshot.overlays.at(-1);
+  if (!overlay) throw new TypeError('An original counterpress moment is required');
+  const {team, audience, locale} = snapshot;
+  if (!TEAMS.includes(team) || !['casual', 'analyst'].includes(audience) ||
+      !['en', 'es'].includes(locale)) throw new TypeError('Unsupported insight view');
+  const facts = buildFacts({count, snapshot, events});
+  return {
+    version: AGENT_PROMPT_VERSION,
+    context: {sessionId: String(sessionId), count, team, audience, locale,
+      frameSecond: snapshot.elapsedSeconds, momentId: overlay.id},
+    facts: {match: {dataset: facts.dataset, recordedEventCount: facts.recordedEventCount,
+                    elapsedSeconds: facts.elapsedSeconds, focusTeam: facts.focusTeam,
+                    rivalTeam: facts.rivalTeam, counterpressRule: facts.counterpressRule,
+                    focusStats: facts.focusStats, recentEvents: facts.recentEvents,
+                    fieldPrecision: facts.fieldPrecision, goalsRecorded: facts.goalsRecorded},
+            latestMoment: facts.latestMoment},
+  };
+}
+
+// The live worker and the local completed-result receiver share this exact
+// original-context and completed-turn admission. This function never launches.
+export function admitCompletedAgentInsight(input, raw, {guard = validateDraftGrounding} = {}) {
+  const payload = buildAgentPayload(input), parsed = parseWorkerOutput(raw);
+  const {sessionId, count, snapshot, events} = input, overlay = snapshot.overlays.at(-1);
+  if (!parsed || parsed.status !== 'ready' || !matchesOriginalWorker(parsed, payload) ||
+      !grounded(parsed.caption, parsed.insight, overlay,
+        canonicalQuantities(overlay, snapshot, events, count), guard)) return null;
+  return {
+    state: 'ready', operation: workflowIdFor(payload.context), sessionId: String(sessionId),
+    recordedCount: count, frameSecond: snapshot.elapsedSeconds, momentId: overlay.id,
+    promptVersion: AGENT_PROMPT_VERSION, team: snapshot.team, audience: snapshot.audience, locale: snapshot.locale,
+    engine: 'agent-framework-core==1.21.0', caption: parsed.caption, text: parsed.insight,
+    provider: 'Anthropic Claude via Microsoft Agent Framework tool loop (optional AI insight)',
+    model: parsed.model, sdk: parsed.sdkVersion, workflowId: parsed.workflowId,
+    toolCalls: parsed.toolCalls, turns: parsed.turns, providerTurns: parsed.providerTurns,
+  };
+}
+
 export function createOpusAgentInsight({env = process.env, spawn = nodeSpawn,
   guard = validateDraftGrounding,
   admission = createFoundryAdmission({maxPerHour: 8, maxInFlight: 1})} = {}) {
   const journal = new Map();
 
-  // Canonical quantities the AI lane may cite: overlay text/metrics (checked
-  // by the guard itself) plus numbers that are already displayed product data -
-  // seconds of the cited evidence events, the recorded prefix count and the
-  // shown match stats. Anything else still fails as unobserved.
-  function canonicalQuantities(overlay, snapshot, events, count) {
-    const ids = new Set((overlay.evidenceIds || []).map(String));
-    const out = [count];
-    for (const e of events) if (ids.has(e.id) && Number.isFinite(e.second)) out.push(e.second);
-    const walk = (v) => {
-      if (Number.isFinite(v)) { out.push(v); return; }
-      if (v && typeof v === 'object') for (const x of Object.values(v)) walk(x);
-    };
-    walk(snapshot.stats);
-    return out;
-  }
-
-  function grounded(caption, insight, overlay, canonical) {
-    if (!guard(caption, overlay, canonical)?.ok) return false;
-    // parseFinal already enforces 1–4 sentences and 700 total characters.
-    // Apply the same factual checks to that full insight; a valid sentence
-    // need not fit the separate 135-character caption limit.
-    return guard(insight, overlay, canonical, 700)?.ok === true;
-  }
-
   function view(entry) {
-    const out = {state: entry.state, ...entry.meta};
-    if (entry.state === 'ready') Object.assign(out, {
-      caption: entry.caption, text: entry.insight,
-      provider: 'Anthropic Claude via Microsoft Agent Framework tool loop (optional AI insight)',
-      model: entry.actualModel, sdk: entry.sdkVersion, workflowId: entry.workerWorkflowId,
-      toolCalls: entry.toolCalls, turns: entry.turns, providerTurns: entry.providerTurns});
-    return out;
+    return entry.state === 'ready' ? {...entry.completed} : {state: entry.state, ...entry.meta};
   }
 
   function trim() {
@@ -148,7 +185,7 @@ export function createOpusAgentInsight({env = process.env, spawn = nodeSpawn,
     for (const [k, v] of journal) { if (v.state !== 'pending') { journal.delete(k); if (journal.size <= JOURNAL_MAX) return; } }
   }
 
-  async function launch(c, workflowId, payload, entry, ticket) {
+  async function launch(c, workflowId, payload, entry, ticket, input) {
     try {
       const child = spawn(c.python, [c.worker], {
         shell: false, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, env});
@@ -159,17 +196,12 @@ export function createOpusAgentInsight({env = process.env, spawn = nodeSpawn,
       await new Promise(done => { child.once('error', done); child.once('close', done); });
       // No timeout kill: the worker's own paid children are never killed and
       // retried; a still-running workflow stays 'pending' in the journal.
-      const parsed = parseWorkerOutput(out);
-      if (parsed && parsed.status === 'ready' && matchesOriginalWorker(parsed, payload) &&
-          grounded(parsed.caption, parsed.insight, entry.overlay,
-                   entry.canonical)) {
-        Object.assign(entry, {state: 'ready', caption: parsed.caption, insight: parsed.insight,
-          toolCalls: parsed.toolCalls, turns: parsed.turns,
-          actualModel: parsed.model, sdkVersion: parsed.sdkVersion,
-          workerWorkflowId: parsed.workflowId, providerTurns: parsed.providerTurns});
-      } else {
+      const completed = admitCompletedAgentInsight(input, out, {guard});
+      if (completed) Object.assign(entry, {state: 'ready', completed});
+      else {
         entry.state = 'unavailable';
-        if (parsed && parsed.heldReason) entry.meta.heldReason = parsed.heldReason;
+        const parsed = parseWorkerOutput(out);
+        if (parsed?.heldReason) entry.meta.heldReason = parsed.heldReason;
       }
     } catch {
       entry.state = 'unavailable';
@@ -191,18 +223,7 @@ export function createOpusAgentInsight({env = process.env, spawn = nodeSpawn,
       const workflowId = workflowIdFor({sessionId, count, team, audience, locale});
       const known = journal.get(workflowId);
       if (known) return view(known);
-      const facts = buildFacts({count, snapshot, events});
-      const payload = {
-        version: AGENT_PROMPT_VERSION,
-        context: {sessionId: String(sessionId), count, team, audience, locale,
-          frameSecond: snapshot.elapsedSeconds, momentId: overlay.id},
-        facts: {match: {dataset: facts.dataset, recordedEventCount: facts.recordedEventCount,
-                        elapsedSeconds: facts.elapsedSeconds, focusTeam: facts.focusTeam,
-                        rivalTeam: facts.rivalTeam, counterpressRule: facts.counterpressRule,
-                        focusStats: facts.focusStats, recentEvents: facts.recentEvents,
-                        fieldPrecision: facts.fieldPrecision, goalsRecorded: facts.goalsRecorded},
-                latestMoment: facts.latestMoment},
-      };
+      const payload = buildAgentPayload({sessionId, count, snapshot, events});
       const entry = {state: 'pending', overlay,
         canonical: canonicalQuantities(overlay, snapshot, events, count),
         meta: {operation: workflowId,
@@ -214,7 +235,7 @@ export function createOpusAgentInsight({env = process.env, spawn = nodeSpawn,
       trim();
       const ticket = admission.reserve();
       if (!ticket.ok) { journal.delete(workflowId); return {state: 'busy', retryAfterSeconds: ticket.retryAfterSeconds}; }
-      launch(c, workflowId, payload, entry, ticket).catch(() => {});
+      launch(c, workflowId, payload, entry, ticket, {sessionId, count, snapshot, events}).catch(() => {});
       return view(entry);
     },
   };
