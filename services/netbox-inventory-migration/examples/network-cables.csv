@@ -1,2 +1,0 @@
-source_key,match_id,label,type,status,color,length,length_unit,description,a_interface_key,b_interface_key
-chassis-switch,,CHASSIS-SWITCH-01,cat6,connected,808080,1.5,m,Customer uplink,chassis-uplink,switch-uplink

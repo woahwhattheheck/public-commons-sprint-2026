@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "merchant-provider-support",
-  "description": "Original support MCP provider",
-  "merchantProviders": {
-    "support": "stellar-forge/mcp-merchant-operator/providers/support.mjs"
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "mpp",
-  "description": "mpp original Applications",
-  "applicationProviders": {
-    "mpp": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/mpp.mjs"
-  }
-}
