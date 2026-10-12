@@ -28,10 +28,10 @@ The preparation browser signs into both actual accounts. It opens the native lau
 The complete original capsule is Git blob:
 
 ```text
-c0570f6172a46c09b8577fb0bef4d33f06f942f7
+6b128ef61baf7011292099e4945acf6903238d59
 ```
 
-It belongs to the reviewed runtime continuation at source head `e201913e1d2a48b71f941d5202f4a2492848e1dd`, built from the original [PR 2312](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2312) application. It contains all 64 application files, including the unchanged publisher originals and complete Tethys adapter. The correction separates stable executable/dependency identity from variable legacy version-probe diagnostics and preserves the original model operation and queued worker.
+It belongs to the reviewed runtime continuation at source head `3a8d89d32904f2e1d61db1a47e813dc4607a5fbb`, built from the original [PR 2312](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2312) application. It contains all 64 application files, including the unchanged publisher originals and complete Tethys adapter. The retained runtime correction separates stable executable/dependency identity from variable legacy version-probe diagnostics. The browser continuation now persists the selected project and reloads the exact detail route before interaction, including the restored-workspace pass. Both corrections preserve the original model operation, queued worker, source revisions and phase requests.
 
 The initial portal preparation used capsule `715b64b00e14355a2492b6dc13d701136c2ea684` and stopped during package installation before portal configuration, database or accounts. Its unsaved process namespace became unavailable. The continued preparation explicitly adopts this reviewed source before its first completed installation; it does not claim that the lost partial archive was restored. The actual earlier failure and save outcome remain in the producing operation's observation.
 
