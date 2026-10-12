@@ -25,9 +25,12 @@ The memory declaration remains 896 MiB plus 128 MiB reserve. The original projec
 
 ## Run the complete existing operation
 
+The original source cache is a partial Git cache. The original source repair also needs eight original blob entries in its six changed tree directories. Their exact bytes are carried by `restore-original-tree-inputs.py`; every body is checked before publication into the same original cache. The original tree and commit checks remain unchanged.
+
 From the retained source checkout:
 
 ```sh
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3 -B .swarm-delivery/8f43-managed-customers/restore-original-tree-inputs.py
 bash .swarm-delivery/8f43-managed-customers/foreground-source-command.sh
 ```
 
