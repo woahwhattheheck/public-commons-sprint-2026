@@ -51,6 +51,7 @@ function buttons() {
   $('review-form').querySelector('button[type=submit]').disabled = state.busy || Boolean(running) || !candidate ||
     !state.target?.connected && !state.target?.initializable;
   $('publish').disabled = state.busy || Boolean(running) || !selected?.data.review || !['REVIEWED', 'PUBLICATION_UNKNOWN'].includes(selected.state);
+  window.dispatchEvent(new Event('publisher:change'));
   $('saved-plan').textContent = state.plan ? `Saved plan ${state.plan}${state.dirty ? ' · unsaved edits' : ' · ready to extract'}` : 'Save a plan before extraction.';
 }
 function inputChanged() { state.dirty = true; buttons(); }
@@ -120,7 +121,10 @@ async function freshPlan() {
   state.plan = null; state.dirty = false;
   clear($('query-name'));
   for (const name of Object.keys(state.source.queries)) $('query-name').append(node('option', name, { value: name }));
-  renderQuery(state.source.queries[$('query-name').value]); buttons();
+  const definition = state.source.queries[$('query-name').value];
+  $('plan-form').hidden = !definition;
+  if (!definition) { state.query = null; clear($('columns')); clear($('parameters')); buttons(); return; }
+  renderQuery(definition); buttons();
 }
 function planInput() {
   const input = {};
@@ -139,7 +143,8 @@ function planInput() {
   }
   return { title: $('plan-title').value, query: $('query-name').value, input, sourceHash: state.editorHash,
     dataset: { name: $('dataset-name').value, columns, filters, ranges, sorts,
-      defaultLimit: Number($('default-limit').value), maxLimit: Number($('max-limit').value) },
+      defaultLimit: Number($('default-limit').value), maxLimit: Number($('max-limit').value),
+      ...($('max-cell-chars') ? { maxCellChars: Number($('max-cell-chars').value) } : {}) },
     extraction: { maxRows: Number($('max-rows').value), maxBytes: Number($('max-mib').value) * 1048576,
       maxRowBytes: 1048576, timeoutMs: Number($('timeout').value) * 1000,
       order: $('order').value.split(',').map(value => value.trim()).filter(Boolean).map(value => ({
@@ -153,6 +158,8 @@ async function choosePlan(id) {
   $('query-name').value = value.query; $('plan-title').value = value.title; $('dataset-name').value = value.dataset.name;
   $('max-rows').value = value.extraction.maxRows; $('max-mib').value = value.extraction.maxBytes / 1048576;
   $('timeout').value = value.extraction.timeoutMs / 1000; $('default-limit').value = value.dataset.defaultLimit; $('max-limit').value = value.dataset.maxLimit;
+  $('plan-form').hidden = false;
+  if ($('max-cell-chars')) $('max-cell-chars').value = value.dataset.maxCellChars ?? 65536;
   renderQuery(value.sourceQuery, value); renderLists(); buttons();
 }
 function pager(name, title) {
@@ -323,5 +330,8 @@ schedulePanel = createSchedulePanel({ api, action, notice, context: () => state,
     await loadRun(true); renderLists();
     $('candidate').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } });
+export const publisherHost = Object.freeze({ api, action, notice, refresh, newPlan:freshPlan, context:()=>state,
+  async openRun(id) { state.selected=id;state.detailVersion=null;state.offer=null;await loadRun(true);renderLists();buttons(); }
+});
 await action(async () => { await freshPlan(); await refresh(); });
 setInterval(() => refresh().catch(error => notice(error.message)), 4000);
