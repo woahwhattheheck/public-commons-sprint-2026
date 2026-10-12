@@ -36,7 +36,7 @@ export interface Column {
 }
 export interface IatiPlan {
   schema?: 'stellar-forge.iati-mapping.v1';
-  domainVersion?: 'iati-2.03-associations-1';
+  domainVersion?: 'iati-2.03-associations-2';
   collection: Collection;
   name?: string;
   language?: string;
