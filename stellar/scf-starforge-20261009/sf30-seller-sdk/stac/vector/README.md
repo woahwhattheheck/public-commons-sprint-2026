@@ -515,3 +515,9 @@ operation IDs, native package hashes, browser output and screenshot.
 native-result.json and browser-result.json describe the actual outcome of
 each invocation. An interrupted or failed invocation retains its completed
 steps and original error for continuation.
+
+### Exact GeoPackage timestamps
+
+GeoPackage date and datetime columns remain native `DATE` and `DATETIME` fields. The reader verifies their SQLite text through the selected feature table’s actual integer primary key and Fiona’s feature ID. This avoids Fiona’s fractional-second conversion changing an original millisecond value during source capture or native receiving. Schema, geometry, CRS, field coverage and every original feature binding still pass the native reader. Timestamp comparison retains exact fractional seconds; it does not admit a rounding tolerance. The original complete feature records remain in the export.
+
+For an archived GeoPackage, the reader privately opens only its selected original member. A temporal feature view without the required table primary-key contract returns an explicit review requirement; the reader does not infer identity from row order.
