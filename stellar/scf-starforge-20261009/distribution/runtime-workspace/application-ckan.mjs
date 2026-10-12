@@ -2,7 +2,7 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
-import { absolute, need, plain, hash } from './storage.mjs';
+import { absolute, need, plain, digest, json, canonical } from './storage.mjs';
 
 const ROOT = 'stellar-forge/mcp-merchant-operator/';
 const STARTUP = 'stellar-forge.ckan-agent-startup.v1';
@@ -58,7 +58,7 @@ export async function prepareCkanAgentApplication(settings, { inputPath, runtime
     args: ['serve', '--config', selection.binding.configFile, '--workspace', selection.binding.workspace,
       '--token-env', tokenEnv, '--managed-selection', JSON.stringify(selection)],
     inputs, createDirectories: [],
-    resourceKey: hash({ family: 'merchant-mcp', directory: selection.binding.configFile }),
+    resourceKey: digest(json(canonical({ family: 'merchant-mcp', directory: selection.binding.configFile }))),
   };
 }
 function option(request, name, optional = false) {

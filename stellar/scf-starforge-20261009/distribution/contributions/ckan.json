@@ -22,5 +22,8 @@
     "./seller/ckan/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/model.mjs",
     "./seller/ckan/publisher/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/release.mjs",
     "./merchant/mcp/ckan-launcher": "./source/stellar-forge/mcp-merchant-operator/ckan-workspace-launcher.mjs"
+  },
+  "applicationProviders": {
+    "ckan-agent": "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/application-provider.mjs"
   }
 }
