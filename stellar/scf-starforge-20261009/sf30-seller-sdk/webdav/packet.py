@@ -29,6 +29,10 @@ PATTERNS = [re.compile(value + r"\Z") for value in [
     rf"cache/{HASH}/captures/{UUID}/(intent\.json|progress\.json|transfer\.json|receipt\.json|body\.bin|body\.part|uncheckpointed-{UUID}\.bin)",
     rf"editions/{UUID}/(intent\.json|schema\.csv|dataset\.csv|dataset\.json|source\.json|edition\.json)",
     rf"exports/{UUID}/(dataset\.csv|dataset\.json|source\.json|seller\.json|manifest\.json)",
+    rf"exports/{UUID}/webdav/(source\.json|mapping\.json|merchant\.json)",
+    rf"exports/{UUID}/webdav/capture/(intent\.json|progress\.json|transfer\.json|receipt\.json|body\.bin|uncheckpointed-{UUID}\.bin)",
+    rf"exports/{UUID}/webdav/edition/(intent\.json|schema\.csv|dataset\.csv|dataset\.json|source\.json|edition\.json)",
+    rf"exports/{UUID}/webdav/listings/{UUID}\.(xml|json)",
 ]]
 def fault(code, message):
     raise ValueError(code + ": " + message)

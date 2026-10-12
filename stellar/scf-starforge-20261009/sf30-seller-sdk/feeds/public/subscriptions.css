@@ -1,0 +1,16 @@
+/* MIT. Neutral industrial subscription workspace. */
+.collection-layout{display:grid;grid-template-columns:minmax(230px,300px) minmax(0,1fr);gap:28px;max-width:1500px;margin:auto}
+.collection-layout>aside{border-right:1px solid #c9cccf;padding-right:22px}.collection-layout>article{min-width:0}
+.panel{padding:0 0 24px;margin:0 0 24px;border-bottom:1px solid #c9cccf}
+.form-grid{display:grid;grid-template-columns:1fr 2fr 130px;gap:14px}.grow{flex:1;min-width:220px}
+#collection-list{display:grid;gap:7px;margin-bottom:14px}#collection-list button{text-align:left;width:100%}
+#sources{margin:16px 0 24px}.source-row{padding:10px 0;border-bottom:1px solid #ddd}.source-row p{margin:4px 0;overflow-wrap:anywhere}
+.subscription-label strong{display:block;font-weight:600}.subscription-label p{max-width:620px;overflow-wrap:anywhere;margin:3px 0}
+.subscription-label .mono{font-size:12px}.subscription-id{min-width:190px;width:100%;font-family:ui-monospace,monospace}
+#member-list{max-height:580px;overflow:auto;border:1px solid #d1d4d6;margin:12px 0}#member-list table{margin:0}
+#member-list thead{position:sticky;top:0;background:#eef0f1;z-index:1}#member-list input[type=checkbox]{width:auto}
+#member-list tr[data-disabled=true]{background:#f5f6f6}.field-grid{display:flex;flex-wrap:wrap;gap:12px 18px}
+.field-grid label,.check{display:flex;align-items:center;gap:7px}.field-grid input{width:auto}fieldset{border:1px solid #d1d4d6;padding:14px;margin:15px 0}
+.actions{display:flex;align-items:end;flex-wrap:wrap;gap:10px}.actions>a,nav>a{display:inline-block;padding:9px 12px;color:#222;border:1px solid #aeb4b8;border-radius:3px;text-decoration:none;background:#f8f9f9}
+#run-review{margin:14px 0}.run-error{max-width:450px;overflow-wrap:anywhere;color:#333}.binding{padding:12px 0;border-bottom:1px solid #ddd}
+@media(max-width:850px){.collection-layout{grid-template-columns:1fr}.collection-layout>aside{border-right:0;border-bottom:1px solid #c9cccf;padding:0 0 20px}.form-grid{grid-template-columns:1fr}.actions{align-items:stretch}.grow{min-width:180px}header{align-items:start}}

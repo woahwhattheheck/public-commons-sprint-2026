@@ -15,10 +15,12 @@ import { MYSQL_SOURCE_SCHEMA, stageMysqlRelease, inspectMysqlRelease } from './r
 import { MSSQL_SOURCE_SCHEMA, stageMssqlRelease, inspectMssqlRelease } from './release-mssql.mjs';
 import { POSTGRES_SOURCE_SCHEMA, stagePostgresRelease, inspectPostgresRelease } from './release-postgres.mjs';
 import { REDIS_SOURCE_SCHEMA, stageRedisRelease, inspectRedisRelease } from './release-redis.mjs';
+import { OPENSEARCH_SOURCE_SCHEMA, stageOpenSearchRelease, inspectOpenSearchRelease } from './release-opensearch.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
 import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
 import { DATASET_SOURCE_SCHEMA, stageDatasetRelease, inspectDatasetRelease } from './release-dataset.mjs';
 import { CLICKHOUSE_SOURCE_SCHEMA, stageClickHouseRelease, inspectClickHouseRelease } from './release-clickhouse.mjs';
+import { GRPC_SOURCE_SCHEMA, stageGrpcRelease, inspectGrpcRelease } from './release-grpc.mjs';
 import { acquireReleaseLease, releaseProcessOwner, releaseOwnerLiveness, recordedSellerAlive,
   validProcessIdentity, validReleaseLease, sameReleaseLease } from './release-process.mjs';
 import { NATIVE_SDK_VERSION } from '../sf30-seller-sdk/native-factory.mjs';
@@ -34,10 +36,12 @@ const MYSQL_PILOT = fileURLToPath(new URL('./release-mysql.mjs', import.meta.url
 const MSSQL_PILOT = fileURLToPath(new URL('./release-mssql.mjs', import.meta.url));
 const POSTGRES_PILOT = fileURLToPath(new URL('./release-postgres.mjs', import.meta.url));
 const REDIS_PILOT = fileURLToPath(new URL('./release-redis.mjs', import.meta.url));
+const OPENSEARCH_PILOT = fileURLToPath(new URL('./release-opensearch.mjs', import.meta.url));
 const JSONRPC_PILOT = fileURLToPath(new URL('./release-jsonrpc.mjs', import.meta.url));
 const SQLITE_PILOT = fileURLToPath(new URL('./release-sqlite.mjs', import.meta.url));
 const DATASET_PILOT = fileURLToPath(new URL('./release-dataset.mjs', import.meta.url));
 const CLICKHOUSE_PILOT = fileURLToPath(new URL('./release-clickhouse.mjs', import.meta.url));
+const GRPC_PILOT = fileURLToPath(new URL('./release-grpc.mjs', import.meta.url));
 const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -216,9 +220,19 @@ function runtimeOptions(value = {}) {
 }
 export { runtimeOptions as normalizeReleaseRuntime };
 
+export { sourceSnapshot as inspectReleaseSource };
+
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
+  if (manifest.schema === GRPC_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('A gRPC release owns its original method and transport bindings.');
+    const snapshot = await inspectGrpcRelease(path);
+    const routes = sourceRoutes(snapshot.service, new Map()).map(route => ({ ...route,
+      application: { ...route.application, grpcExecutionSha256: snapshot.grpc.executionSha256,
+        grpcMethod: snapshot.grpc.methods.find(method => method.id === route.id)?.path ?? null } }));
+    return { ...snapshot, routes };
+  }
   if (manifest.schema === CLICKHOUSE_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('A ClickHouse release owns its original typed query bindings.');
     const snapshot = await inspectClickHouseRelease(path);
@@ -247,6 +261,13 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
     if (upstreams) throw new TypeError('An RPC package owns its original method and provider bindings.');
     const snapshot = await inspectJsonrpcRelease(path);
     return { ...snapshot, routes: sourceRoutes(snapshot.service, new Map(), null, null, null, null, snapshot.jsonrpc) };
+  }
+  if (manifest.schema === OPENSEARCH_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('An OpenSearch package owns its original typed query bindings.');
+    const snapshot = await inspectOpenSearchRelease(path);
+    const routes = sourceRoutes(snapshot.service, new Map()).map(route => ({ ...route,
+      application: { ...route.application, openSearchExecutionSha256: snapshot.opensearch.executionSha256 } }));
+    return { ...snapshot, routes };
   }
   if (manifest.schema === REDIS_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('A Redis package owns its original read command bindings.');
@@ -355,11 +376,13 @@ function publicRelease(record) {
     ...(record.mssql ? { mssql: record.mssql } : {}),
     ...(record.postgres ? { postgres: record.postgres } : {}),
     ...(record.redis ? { redis: record.redis } : {}),
+    ...(record.opensearch ? { opensearch: record.opensearch } : {}),
     ...(record.s3 ? { s3: record.s3 } : {}),
     ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}),
     ...(record.sqlite ? { sqlite: record.sqlite } : {}),
     ...(record.dataset ? { dataset: record.dataset } : {}),
-    ...(record.clickhouse ? { clickhouse: record.clickhouse } : {}) };
+    ...(record.clickhouse ? { clickhouse: record.clickhouse } : {}),
+    ...(record.grpc ? { grpc: record.grpc } : {}) };
 }
 function checkFacilitatorReview(record) {
   const review = record.facilitatorReview;
@@ -403,11 +426,13 @@ async function releaseRecord(root, releaseId, verify = false) {
         stable(snapshot.mssql ?? null) !== stable(record.mssql ?? null) ||
         stable(snapshot.postgres ?? null) !== stable(record.postgres ?? null) ||
         stable(snapshot.redis ?? null) !== stable(record.redis ?? null) ||
+        stable(snapshot.opensearch ?? null) !== stable(record.opensearch ?? null) ||
         stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null) ||
         stable(snapshot.jsonrpc ?? null) !== stable(record.jsonrpc ?? null) ||
         stable(snapshot.sqlite ?? null) !== stable(record.sqlite ?? null) ||
         stable(snapshot.dataset ?? null) !== stable(record.dataset ?? null) ||
-        stable(snapshot.clickhouse ?? null) !== stable(record.clickhouse ?? null))
+        stable(snapshot.clickhouse ?? null) !== stable(record.clickhouse ?? null) ||
+        stable(snapshot.grpc ?? null) !== stable(record.grpc ?? null))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
     if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
       throw new Error('Trusted handler entry changed after staging. Restore it or stage a new release.');
@@ -436,6 +461,11 @@ export async function stageRelease(root, options) {
     throw new TypeError('A reviewed PostgreSQL input hash requires postgresPackage.');
   const mysqlSource = options.mysqlPackage !== undefined;
   const mssqlSource = options.mssqlPackage !== undefined;
+  const opensearchSource = options.opensearchPackage !== undefined;
+  if (opensearchSource && (Object.keys(options).some(key =>
+      !['id', 'label', 'runtime', 'opensearchPackage'].includes(key) && options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the original prepared OpenSearch package or another source; OpenSearch owns its typed named-query bindings.');
   const redisSource = options.redisPackage !== undefined;
   if (redisSource && (Object.keys(options).some(key =>
       !['id', 'label', 'alias', 'runtime', 'redisPackage'].includes(key) && options[key] !== undefined) ||
@@ -452,6 +482,11 @@ export async function stageRelease(root, options) {
   const jsonrpcSource = options.jsonrpcPackage !== undefined;
   const sqliteSource = options.sqlitePackage !== undefined;
   const clickhouseSource = options.clickhousePackage !== undefined;
+  const grpcSource = options.grpcPackage !== undefined;
+  if (grpcSource && (Object.keys(options).some(key =>
+      !['id', 'label', 'alias', 'runtime', 'grpcPackage', 'signal'].includes(key) && options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the original prepared gRPC package or another source; the package owns its captured method and transport bindings.');
   if (clickhouseSource && (Object.keys(options).some(key => !['id', 'label', 'alias', 'clickhousePackage', 'clickhouseColumnTypes', 'runtime', 'signal'].includes(key) && options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
     throw new TypeError('Choose the original prepared ClickHouse package or another source; ClickHouse owns its native typed query bindings.');
@@ -495,6 +530,8 @@ export async function stageRelease(root, options) {
     else if (postgresSource) await stagePostgresRelease(temp, options.postgresPackage, {
       signal: options.signal, expectedInputManifestSha256: options.postgresInputManifestSha256 });
     else if (clickhouseSource) await stageClickHouseRelease(temp, options.clickhousePackage, { columnTypes: options.clickhouseColumnTypes });
+    else if (grpcSource) await stageGrpcRelease(temp, options.grpcPackage);
+    else if (opensearchSource) await stageOpenSearchRelease(temp, options.opensearchPackage);
     else if (redisSource) await stageRedisRelease(temp, options.redisPackage);
     else if (mysqlSource) await stageMysqlRelease(temp, options.mysqlPackage);
     else if (mssqlSource) await stageMssqlRelease(temp, options.mssqlPackage);
@@ -524,7 +561,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.mssql && !source.postgres && !source.redis && !source.s3 && !source.jsonrpc && !source.sqlite && !source.dataset && !source.clickhouse && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.mssql && !source.postgres && !source.redis && !source.opensearch && !source.s3 && !source.jsonrpc && !source.sqlite && !source.dataset && !source.clickhouse && !source.grpc && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -541,13 +578,19 @@ export async function stageRelease(root, options) {
       ...(source.mssql ? { mssql: source.mssql } : {}),
       ...(source.postgres ? { postgres: source.postgres } : {}),
       ...(source.redis ? { redis: source.redis } : {}),
+      ...(source.opensearch ? { opensearch: source.opensearch } : {}),
       ...(source.s3 ? { s3: source.s3 } : {}),
       ...(source.jsonrpc ? { jsonrpc: source.jsonrpc } : {}),
       ...(source.sqlite ? { sqlite: source.sqlite } : {}),
       ...(source.dataset ? { dataset: source.dataset } : {}),
       ...(source.clickhouse ? { clickhouse: source.clickhouse } : {}),
+      ...(source.grpc ? { grpc: source.grpc } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
-        ...(source.dataset ? { kind: 'VERSIONED_DATASET_PACKAGE', baselineSnapshot: source.dataset.baselineSnapshot,
+        ...(source.grpc ? { kind: 'GRPC_MERCHANT_PACKAGE', packageSha256: source.grpc.packageSha256,
+          protoSha256: source.grpc.protoSha256, sourceConfigSha256: source.grpc.sourceConfigSha256,
+          planSha256: source.grpc.planSha256, bindingsSha256: source.grpc.bindingsSha256,
+          executionSha256: source.grpc.executionSha256 }
+          : source.dataset ? { kind: 'VERSIONED_DATASET_PACKAGE', baselineSnapshot: source.dataset.baselineSnapshot,
           contractSha256: source.dataset.contractSha256, sourceConfigSha256: source.dataset.sourceConfigSha256,
           csvSha256: source.dataset.csvSha256, sourceSha256: source.dataset.sourceSha256,
           bindingSha256: source.dataset.bindingSha256, executionSha256: source.dataset.executionSha256 }
@@ -558,6 +601,10 @@ export async function stageRelease(root, options) {
           originalSourceConfigSha256: source.postgres.originalSourceConfigSha256,
           originalServiceConfigSha256: source.postgres.originalServiceConfigSha256,
           sourceConfigSha256: source.postgres.sourceConfigSha256, executionSha256: source.postgres.executionSha256 }
+          : source.opensearch ? { kind: 'OPENSEARCH_MERCHANT_PACKAGE',
+          sourceConfigSha256: source.opensearch.sourceConfigSha256, planSha256: source.opensearch.planSha256,
+          bindingsSha256: source.opensearch.bindingsSha256, openapiSha256: source.opensearch.openapiSha256,
+          executionSha256: source.opensearch.executionSha256 }
           : source.redis ? { kind: 'REDIS_MERCHANT_PACKAGE', packageManifestSha256: source.redis.packageManifestSha256,
           sourceConfigSha256: source.redis.sourceConfigSha256, planSha256: source.redis.planSha256,
           executionSha256: source.redis.executionSha256 }
@@ -735,6 +782,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'mssql', before: before?.mssql ?? null, after: after.mssql ?? null });
   if (stable(before?.postgres ?? null) !== stable(after.postgres ?? null))
     runtimeChanges.push({ field: 'postgres', before: before?.postgres ?? null, after: after.postgres ?? null });
+  if (stable(before?.opensearch ?? null) !== stable(after.opensearch ?? null))
+    runtimeChanges.push({ field: 'opensearch', before: before?.opensearch ?? null, after: after.opensearch ?? null });
   if (stable(before?.redis ?? null) !== stable(after.redis ?? null))
     runtimeChanges.push({ field: 'redis', before: before?.redis ?? null, after: after.redis ?? null });
   if (stable(before?.s3 ?? null) !== stable(after.s3 ?? null))
@@ -745,6 +794,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'sqlite', before: before?.sqlite ?? null, after: after.sqlite ?? null });
   if (stable(before?.clickhouse ?? null) !== stable(after.clickhouse ?? null))
     runtimeChanges.push({ field: 'clickhouse', before: before?.clickhouse ?? null, after: after.clickhouse ?? null });
+  if (stable(before?.grpc ?? null) !== stable(after.grpc ?? null))
+    runtimeChanges.push({ field: 'grpc', before: before?.grpc ?? null, after: after.grpc ?? null });
   if (stable(before?.facilitatorReview ?? null) !== stable(after.facilitatorReview ?? null))
     runtimeChanges.push({ field: 'facilitatorReview', before: before?.facilitatorReview ?? null, after: after.facilitatorReview ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
@@ -961,15 +1012,16 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     // Replace only original mutable runtime settings, never compiled source. This
     // prevents a previous manual resume override from leaking into the release.
     const originalOptions = { ...record.runtime, port: String(record.runtime.port),
-      ...((record.jsonrpc || record.postgres || record.clickhouse) && operationsNavigationOrigin ? { operationsNavigationOrigin } : {}) };
+      ...((record.jsonrpc || record.postgres || record.clickhouse || record.opensearch || record.grpc) && operationsNavigationOrigin ? { operationsNavigationOrigin } : {}) };
     await atomic(join(path, 'pilot-runtime.json'), { schema: 'stellar-forge.seller-pilot-runtime.v1',
-      source: { offersSha256: record.source.offersSha256, serviceConfigSha256: record.source.serviceConfigSha256 },
+      source: { offersSha256: record.source.offersSha256, serviceConfigSha256: record.source.serviceConfigSha256,
+        ...(record.opensearch ? { executionSha256: record.opensearch.executionSha256 } : {}) },
       options: originalOptions });
     const instanceId = randomUUID(), mode = record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.dataset ? DATASET_PILOT : record.clickhouse ? CLICKHOUSE_PILOT : record.postgres ? POSTGRES_PILOT : record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.mssql ? MSSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId), releaseLock.lifetime ? '4' : '-'],
+    child = spawn(process.execPath, [CHILD, record.grpc ? GRPC_PILOT : record.dataset ? DATASET_PILOT : record.clickhouse ? CLICKHOUSE_PILOT : record.postgres ? POSTGRES_PILOT : record.opensearch ? OPENSEARCH_PILOT : record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.mssql ? MSSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId), releaseLock.lifetime ? '4' : '-'],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc', ...(releaseLock.lifetime ? [releaseLock.lifetime.fd] : [])],
         windowsHide: true, detached: process.platform !== 'win32', env: { ...env } });
     let readyResolve, readyReject, ownerResolve, ownerReject, stdout = '', stderr = '';
@@ -1027,7 +1079,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
         report.cacheControlAvailable !== Boolean(cacheRoutes.length))
       throw new Error('Original pilot reported a different release source.');
     const operations = report.operations ?? null;
-    if (Boolean(record.jsonrpc || record.postgres || record.clickhouse) !== Boolean(operations) || operations && (!/^http:\/\/127\.0\.0\.1:\d+$/.test(operations.url) ||
+    if (Boolean(record.jsonrpc || record.postgres || record.clickhouse || record.opensearch || record.grpc) !== Boolean(operations) || operations && (!/^http:\/\/127\.0\.0\.1:\d+$/.test(operations.url) ||
         operations.availability !== operations.url + '/availability' ||
         operations.availabilityControl !== null && !new RegExp('^' + operations.url.replaceAll('.', '\\.') + '/availability#[0-9a-f]{64}$').test(operations.availabilityControl)))
       throw new Error('Original merchant reported invalid private operations links.');

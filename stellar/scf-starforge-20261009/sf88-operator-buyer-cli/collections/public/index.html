@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Request collections · Starforge</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/approval.css">
   <script type="module" src="/app.mjs"></script>
 </head>
 <body>
@@ -34,6 +35,13 @@
       <details class="workspace-paths"><summary>Workspace locations</summary><dl id="locations"></dl></details>
     </aside>
     <div class="content">
+      <section id="execution-panel" class="panel" hidden>
+        <div class="section-heading"><div><span class="eyebrow">CURRENT RUN</span><h2 id="execution-title"></h2><p id="execution-summary" class="muted"></p></div><button id="pause-run" type="button">Pause run</button></div>
+        <p id="execution-state" role="status" aria-live="polite"></p>
+        <p id="execution-request" class="mono"></p>
+        <div id="approval-host"></div>
+        <p class="muted">Each payment uses its original request review. Original results and run history remain with the collection.</p>
+      </section>
       <section id="empty" class="panel empty">
         <span class="eyebrow">BUYER OPERATIONS</span>
         <h2>A clear view of work in progress</h2>
@@ -80,10 +88,17 @@
             <span class="toolbar-spacer"></span>
             <button id="recover" type="button">Recover selected</button>
             <button id="cancel" type="button">Cancel selected</button>
-            <button id="run-command" class="primary" type="button">Prepare terminal command</button>
+            <button id="run-command" type="button">Prepare terminal command</button>
+            <button id="run-browser" class="primary" type="button">Run selected here</button>
           </div>
           <div id="detail-items"></div>
-          <p class="muted footnote">Run the prepared command in a terminal to approve each selected request through the existing buyer workflow. This page tracks its progress when refreshed.</p>
+          <details id="run-workspaces" class="workspace-options"><summary>Operator workspaces</summary>
+            <label for="shared-workspace">Shared workspace directory</label><input id="shared-workspace" spellcheck="false" placeholder="/absolute/private/operator-workspace">
+            <p class="muted">Leave empty to use this host\'s existing operator environment.</p>
+            <label for="intent-workspaces">Separate workspace per request</label><textarea id="intent-workspaces" rows="3" spellcheck="false" placeholder="original-intent=/absolute/private/operator-workspace"></textarea>
+            <p class="muted">Use one shared directory or one intent=directory line per selected request.</p>
+          </details>
+          <p class="muted footnote">Run the selection here and review each original payment above. The terminal command remains available for a separate terminal session.</p>
         </div>
         <section id="command-panel" class="panel" hidden>
           <div class="section-heading"><h3>Run selected requests</h3><button id="copy-command" type="button">Copy command</button></div>

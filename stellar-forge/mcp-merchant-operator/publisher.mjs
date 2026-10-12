@@ -172,6 +172,7 @@ function operationFailure(error) {
 /** Only constant original driver imports are selected by a host-declared kind.
  * No module, path, connection URL, source JSON or executable is an MCP argument. */
 async function originalFactory(kind) {
+  if (kind === 'bls-labor') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/model.mjs')).openBlsPublisher;
   if (kind === 'census-acs') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs')).openCensusPublisher;
   if (kind === 'postgres') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/model.mjs')).openPostgresPublisher;
   if (kind === 'sqlite') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/model.mjs')).openSqlitePublisher;

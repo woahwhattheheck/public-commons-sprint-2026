@@ -45,10 +45,17 @@ export async function acknowledgeIncident({directory,id,expectedRevision,by,note
     return structuredClone(incident);
   });
 }
-export async function remindIncident({directory,id,expectedRevision,environment=process.env}) {
+export async function remindIncident({directory,id,expectedRevision,expectedNotificationId,environment=process.env}) {
   const store=await openIncidentStore(directory);
   return store.transaction(state=>{
     const incident=selectedIncident(state,id,expectedRevision);
+    if(expectedNotificationId!==undefined) {
+      if(expectedNotificationId!==null&&(typeof expectedNotificationId!=='string'||
+          !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(expectedNotificationId)))
+        fail('NOTIFICATION_EXPECTATION_INVALID');
+      const latest=state.notifications.findLast(event=>event.incidentId===incident.id)?.id??null;
+      if(latest!==expectedNotificationId)fail('NOTIFICATION_SELECTION_CONFLICT');
+    }
     const event=queueNotification(state,incident,'REMINDER',environment,Date.now());
     return {incidentId:incident.id,eventId:event?.id ?? null,status:event?.status ?? incident.notificationIssue ?? incident.notificationState};
   });

@@ -4,7 +4,8 @@ const fields = ['ttlMs', 'maxEntries', 'maxBytes', 'maxEntryBytes'];
 const params = new URLSearchParams(location.search), packageName = params.get('name');
 const token = location.hash.slice(1);
 const base = '/api/cache-operations/';
-let state, selected, live, prepared, busy = false, offset = 0;
+let state, selected, live, prepared, retainedPolicy, busy = false, offset = 0;
+let policyOffset = 0, policyCount = 0;
 const node = (tag, value, className) => {
   const result = document.createElement(tag);
   if (value !== undefined) result.textContent = String(value);
@@ -60,6 +61,12 @@ function available() {
   $('policy-fields').hidden = $('action').value !== 'configure';
   for (const field of fields) $(field).required = $('action').value === 'configure';
   $('restore').disabled = busy || !state || state.revision !== 0 || !$('archive').files.length;
+  $('policy-review').disabled = busy || !packageName || !selected?.inspection.package ||
+    !$('policy-package-name').value.trim() || !$('policy-package-routes').querySelector('input:checked');
+  $('policy-save').disabled = busy || !retainedPolicy || retainedPolicy.state === 'SAVED';
+  $('policy-open').disabled = busy || !$('policy-review-list').value;
+  $('policy-review-previous').disabled = busy || policyOffset === 0;
+  $('policy-review-next').disabled = busy || policyOffset + 50 >= policyCount;
 }
 function table(headers, rows) {
   const result = node('table'), head = node('thead'), tr = node('tr'), body = node('tbody');
@@ -144,7 +151,7 @@ async function selectInspection(id) {
   const previous = $('route').value;
   options($('route'), Object.keys(selected.inspection.routes).map(id => ({ id, label: id })), previous);
   $('review-source').textContent = selected.label + ' · ' + selected.capturedAt + ' · Runtime revision ' + selected.inspection.revision;
-  fillPolicy(); routeTable(selected.inspection); drawSnapshots(); available();
+  fillPolicy(); routeTable(selected.inspection); drawSnapshots(); selectPolicySnapshot(); available();
 }
 function fillPolicy() {
   const route = selected?.inspection.routes[$('route').value];
@@ -181,7 +188,7 @@ async function refresh() {
   if (!$('compare-before').dataset.initialized && choices.length > 1) {
     $('compare-before').value = choices[1].id; $('compare-before').dataset.initialized = 'true';
   }
-  drawSnapshots(); drawChanges(); available();
+  drawSnapshots(); drawChanges(); await refreshPolicyReviews(); available();
 }
 async function download(operation, filename) {
   const response = await fetch(url(operation, { source: $('source').value || undefined }), { headers: { 'x-workspace-token': token } });
@@ -189,11 +196,89 @@ async function download(operation, filename) {
   const blob = await response.blob(), href = URL.createObjectURL(blob), a = node('a'); a.href = href; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(href), 5000);
 }
+function selectPolicySnapshot() {
+  retainedPolicy = null;
+  $('retained-policy-review').replaceChildren(); $('retained-policy-result').replaceChildren();
+  $('policy-package-routes').replaceChildren();
+  const binding = selected?.inspection.package;
+  $('policy-snapshot').textContent = binding ? selected.label + ' · ' + selected.capturedAt +
+    ' · Runtime revision ' + selected.inspection.revision :
+    'Save and select a current operating snapshot from this package to retain its policy.';
+  if (!binding) return;
+  for (const id of Object.keys(selected.inspection.routes)) {
+    const label = node('label'), input = node('input');
+    input.type = 'checkbox'; input.value = id; input.checked = true;
+    input.addEventListener('change', clearPolicyReview); label.append(input, document.createTextNode(' ' + id));
+    $('policy-package-routes').append(label);
+  }
+  available();
+}
+function clearPolicyReview() {
+  retainedPolicy = null; $('retained-policy-review').replaceChildren(); $('retained-policy-result').replaceChildren(); available();
+}
+function drawPolicyReview() {
+  $('retained-policy-review').replaceChildren(); $('retained-policy-result').replaceChildren();
+  if (!retainedPolicy) return;
+  const record = retainedPolicy.record, card = node('article', undefined, 'record');
+  card.append(node('h3', record.base.name + ' → ' + record.name));
+  card.append(node('p', record.snapshot.label + ' · ' + record.snapshot.capturedAt, 'quiet'));
+  for (const route of record.changes) {
+    card.append(node('h4', route.routeId));
+    card.append(table(['Retention setting', 'Saved package', 'Selected snapshot'],
+      fields.map(key => [key, format(route.before[key]), format(route.after[key])])));
+  }
+  if (record.note) card.append(node('p', record.note));
+  card.append(details({ reviewId: record.id, reviewSha256: record.reviewSha256,
+    package: record.base, operatingSnapshot: record.snapshot.id }, 'Retained review identity'));
+  $('retained-policy-review').append(card);
+  if (retainedPolicy.saved) {
+    const saved = retainedPolicy.saved, link = node('a', 'Open ' + saved.name + ' in the merchant workspace');
+    link.href = '/?package=' + encodeURIComponent(saved.name) + '#' + token;
+    $('retained-policy-result').append(node('p', 'Package saved. Open it and use the original seller controls to start its retained policy.'), link,
+      details(saved.release, 'Original release staging commands'));
+  }
+  available();
+}
+async function refreshPolicyReviews() {
+  $('retained-policy').hidden = !packageName;
+  if (!packageName) return;
+  const result = await api('policy-list', undefined, { offset: policyOffset });
+  policyCount = result.count;
+  options($('policy-review-list'), result.reviews.map(row => ({
+    id: row.id, label: row.name + ' · ' + row.createdAt
+  })), retainedPolicy?.record.id ?? $('policy-review-list').value);
+  $('policy-review-count').textContent = result.count + ' saved reviews';
+}
+$('retained-policy-form').addEventListener('submit', event => {
+  event.preventDefault(); act(async () => {
+    retainedPolicy = await api('policy-review', { inspectionId: selected.id,
+      routeIds: [...$('policy-package-routes').querySelectorAll('input:checked')].map(input => input.value),
+      name: $('policy-package-name').value.trim(), note: $('policy-package-note').value });
+    policyOffset = 0; await refreshPolicyReviews(); drawPolicyReview();
+    note('Package revision reviewed and retained. Review the saved settings, then save the package.');
+  });
+});
+for (const id of ['policy-package-name', 'policy-package-note']) $(id).addEventListener('input', clearPolicyReview);
+$('policy-save').addEventListener('click', () => act(async () => {
+  const record = retainedPolicy.record;
+  retainedPolicy = await api('policy-save', { id: record.id, expectedReviewSha256: record.reviewSha256 });
+  await refreshPolicyReviews(); drawPolicyReview();
+  note(retainedPolicy.recovered ? 'The original completed package was recovered.' : 'The reviewed policy is now saved in a new merchant package.');
+}));
+$('policy-open').addEventListener('click', () => act(async () => {
+  retainedPolicy = await api('policy-show', undefined, { id: $('policy-review-list').value }); drawPolicyReview();
+  note('Retained package review reopened.');
+}));
+$('policy-review-list').addEventListener('change', available);
+$('policy-review-previous').addEventListener('click', () => act(async () => { policyOffset = Math.max(0, policyOffset - 50); await refreshPolicyReviews(); }));
+$('policy-review-next').addEventListener('click', () => act(async () => { policyOffset += 50; await refreshPolicyReviews(); }));
+$('policy-package-name').value = packageName ? packageName.slice(0, 48) + '-policy' : '';
+
 $('source').addEventListener('change', () => act(async () => { offset = 0; selected = null; prepared = null; live = null; routeTable(null); $('route').replaceChildren();
   $('review-source').textContent = 'Select a saved operating snapshot to review changes.';
   $('comparison').replaceChildren();
   for (const id of ['compare-before', 'compare-after', 'restore-target']) $(id).replaceChildren();
-  delete $('compare-before').dataset.initialized; drawPrepared(); await refresh(); }));
+  delete $('compare-before').dataset.initialized; drawPrepared(); selectPolicySnapshot(); await refresh(); }));
 $('refresh').addEventListener('click', () => act(async () => { await refresh(); note('Operating history refreshed.'); }));
 $('inspect').addEventListener('click', () => act(async () => { live = await api('inspect', { sourceId: $('source').value }); routeTable(live); note('Current original runtime inspected. Save a snapshot to prepare an operating change.'); }));
 $('capture').addEventListener('click', () => act(async () => {
@@ -238,6 +323,6 @@ $('restore').addEventListener('click', () => act(async () => {
   const archive = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer()));
   await api('restore', { archive }); await refresh(); note('Complete operating history received. Configure its original controls on this host for live operation.');
 }));
-$('back').href = '/#' + token;
+$('back').href = (packageName ? '/?package=' + encodeURIComponent(packageName) : '/') + '#' + token;
 if (!/^[0-9a-f]{64}$/.test(token)) note('Open the complete private workspace URL printed by the operator.', true);
 else act(async () => { await refresh(); note('Ready. Select a source and inspect its original running cache.'); });
