@@ -142,81 +142,91 @@ def run(input_path):
             return result
         context={**read(root/"bootstrap-context.json"),**config}
         context_file=root/"context.json";publish(context_file,context)
-        environment=environment_for(context)
-        credentials_file=root/"credentials.json";home=root/"portal_home"
-        python=root/"environment"/"bin"/"python"
-        stage=lambda name:[python,HERE/"provision.py","--context",context_file,"--phase",name]
-        server=None
-        with Children(root/"logs",lock,environment) as owned:
-            owned.run("verify-original-installed-source",stage("installed"))
-            owned.run("verify-original-database",stage("database"))
-            owned.run("original-account-permissions",stage("accounts"))
-            accounts=read(output/"accounts.json")
-            installed_state=read(output/"installed-phase.json")
-            owned.run("original-private-receiving",stage("receive"),timeout=600)
-            receiving=read(output/"receiving-readback.json")
-            selection=read(root/"receiving-input.json")["expected"]
-            original=receiving["original_result"]
-            browser_input={"schema":"groundwater.tethys-browser-input.v1","operation_id":config["operation_id"],
-                "base_url":"http://127.0.0.1:"+str(config["port"]),"portal_path":receiving["portal_path"],
-                "login_path":accounts["portal"]["login"],"home_path":accounts["portal"]["home"],
-                "credentials_file":str(credentials_file),"expected":selection,
-                "report_formats":original["verified"]["reports"][0]["formats"],
-                "accounts":{"operator":accounts["operator"],"reader":accounts["reader"]},
-                "playwright_directory":config["playwright_directory"],"chromium_executable":config["chromium_executable"],
-                "output_directory":str(output/"browser")}
-            publish(root/"browser-input.json",browser_input)
-            def open_portal():
-                # Direct native Django entry keeps this process's inherited original lock.
-                child=owned.start("portal-server",[python,"-m","django","runserver","127.0.0.1:"+str(config["port"]),"--noreload"])
-                deadline=time.monotonic()+90
-                url=browser_input["base_url"]+accounts["portal"]["login"]
-                while time.monotonic()<deadline and child.poll() is None and not owned.stopping:
-                    try:
-                        with urllib.request.urlopen(url,timeout=3) as response:
-                            if response.status==200: return child
-                    except (urllib.error.URLError,TimeoutError): pass
-                    time.sleep(.25)
-                owned.close(child)
-                raise PortalRunError("The actual selected Tethys server did not become ready; retain its original log.")
-            server=open_portal()
-            owned.run("ordinary-account-browser",[config["node_executable"],HERE/"browser.mjs",root/"browser-input.json"],timeout=600)
-            owned.close(server);server=None
-            # Reopen the very same private portal/account/database after its first server drains.
-            browser=read(output/"browser"/"browser-result.json")
-            reopen={**browser_input,"reopen_only":True,"original_browser_result":{"path":str(output/"browser"/"browser-result.json"),**info(output/"browser"/"browser-result.json")},
-                    "output_directory":str(output/"reopened-browser")}
-            publish(root/"reopened-browser-input.json",reopen)
-            server=open_portal()
-            owned.run("same-portal-reopen-browser",[config["node_executable"],HERE/"browser.mjs",root/"reopened-browser-input.json"],timeout=600)
-            owned.close(server);server=None
-            owned.run("complete-original-data-readback",stage("final"),timeout=600)
-            final=read(output/"final-readback.json")
-            require(not owned.children,"An original owned portal child remains active.")
-        native=read(config["native_result"]["path"])
-        # Every executable source and original input is retained separately from the private data.
-        publish(output/"requirements-lock.json",installed_state["dependencies"])
-        requirements="\n".join(name+"=="+version for name,version in sorted(installed_state["dependencies"].items())
-            if name.lower().replace("_","-") not in ("starforge-groundwater-workspace","stellar-groundwater-tethys"))+"\n"
-        publish_bytes(output/"requirements.txt",requirements.encode())
-        source_rows=[{"path":row["path"],"git_blob_sha":row["git_blob_sha"],"bytes":row["bytes"]} for row in capsule["manifest"]]
-        publish(output/"original-application-manifest.json",source_rows)
-        archive,manifest=bundle(context,native,browser,final)
-        result={"schema":"groundwater.tethys-native-result.v1","state":"complete","operation_id":config["operation_id"],
-                "parent_operation_id":config["parent_operation_id"],"input_sha256":digest(config),
-                "source_head":native["source_head"],"workspace_id":native["workspace_id"],
-                "portal":{"version":"4.6.1","database":"SQLite","url":browser_input["base_url"]+receiving["portal_path"],
-                          "accounts":browser["accounts"],"private_user_workspace":True,"stopped":True},
-                "original_receiving":receiving,"browser":browser,
-                "reopened_browser":read(output/"reopened-browser"/"browser-result.json"),"final_readback":final,
-                "private_handover":archive,"files":len(manifest["files"]),
-                "native_runs_started":0,"all_owned_services_closed":True,
-                "local_technical_receiving":True,"customer_or_production_tenant_acceptance":False,
-                "result_files":[x for x in inventory(output,excluded=("portal-result.json",archive["path"].split("/")[-1])) if "/screenshots/" not in "/"+x["path"]]}
-        publish(done,result)
-        print(json.dumps({"state":"complete","result_file":str(done),"private_handover":archive,
-                          "native_runs_started":0,"all_owned_services_closed":True}),flush=True)
-        return result
+        try:
+            environment=environment_for(context)
+            credentials_file=root/"credentials.json";home=root/"portal_home"
+            python=root/"environment"/"bin"/"python"
+            stage=lambda name:[python,HERE/"provision.py","--context",context_file,"--phase",name]
+            server=None
+            with Children(root/"logs",lock,environment) as owned:
+                owned.run("verify-original-installed-source",stage("installed"))
+                owned.run("verify-original-database",stage("database"))
+                owned.run("original-account-permissions",stage("accounts"))
+                accounts=read(output/"accounts.json")
+                installed_state=read(output/"installed-phase.json")
+                owned.run("original-private-receiving",stage("receive"),timeout=600)
+                receiving=read(output/"receiving-readback.json")
+                selection=read(root/"receiving-input.json")["expected"]
+                original=receiving["original_result"]
+                browser_input={"schema":"groundwater.tethys-browser-input.v1","operation_id":config["operation_id"],
+                    "base_url":"http://127.0.0.1:"+str(config["port"]),"portal_path":receiving["portal_path"],
+                    "login_path":accounts["portal"]["login"],"home_path":accounts["portal"]["home"],
+                    "credentials_file":str(credentials_file),"expected":selection,
+                    "report_formats":original["verified"]["reports"][0]["formats"],
+                    "accounts":{"operator":accounts["operator"],"reader":accounts["reader"]},
+                    "playwright_directory":config["playwright_directory"],"chromium_executable":config["chromium_executable"],
+                    "output_directory":str(output/"browser")}
+                publish(root/"browser-input.json",browser_input)
+                def open_portal():
+                    # Direct native Django entry keeps this process's inherited original lock.
+                    child=owned.start("portal-server",[python,"-m","django","runserver","127.0.0.1:"+str(config["port"]),"--noreload"])
+                    deadline=time.monotonic()+90
+                    url=browser_input["base_url"]+accounts["portal"]["login"]
+                    while time.monotonic()<deadline and child.poll() is None and not owned.stopping:
+                        try:
+                            with urllib.request.urlopen(url,timeout=3) as response:
+                                if response.status==200: return child
+                        except (urllib.error.URLError,TimeoutError): pass
+                        time.sleep(.25)
+                    owned.close(child)
+                    raise PortalRunError("The actual selected Tethys server did not become ready; retain its original log.")
+                server=open_portal()
+                owned.run("ordinary-account-browser",[config["node_executable"],HERE/"browser.mjs",root/"browser-input.json"],timeout=600)
+                owned.close(server);server=None
+                # Reopen the very same private portal/account/database after its first server drains.
+                browser=read(output/"browser"/"browser-result.json")
+                reopen={**browser_input,"reopen_only":True,"original_browser_result":{"path":str(output/"browser"/"browser-result.json"),**info(output/"browser"/"browser-result.json")},
+                        "output_directory":str(output/"reopened-browser")}
+                publish(root/"reopened-browser-input.json",reopen)
+                server=open_portal()
+                owned.run("same-portal-reopen-browser",[config["node_executable"],HERE/"browser.mjs",root/"reopened-browser-input.json"],timeout=600)
+                owned.close(server);server=None
+                owned.run("complete-original-data-readback",stage("final"),timeout=600)
+                final=read(output/"final-readback.json")
+                require(not owned.children,"An original owned portal child remains active.")
+            native=read(config["native_result"]["path"])
+            # Every executable source and original input is retained separately from the private data.
+            publish(output/"requirements-lock.json",installed_state["dependencies"])
+            requirements="\n".join(name+"=="+version for name,version in sorted(installed_state["dependencies"].items())
+                if name.lower().replace("_","-") not in ("starforge-groundwater-workspace","stellar-groundwater-tethys"))+"\n"
+            publish_bytes(output/"requirements.txt",requirements.encode())
+            source_rows=[{"path":row["path"],"git_blob_sha":row["git_blob_sha"],"bytes":row["bytes"]} for row in capsule["manifest"]]
+            publish(output/"original-application-manifest.json",source_rows)
+            archive,manifest=bundle(context,native,browser,final)
+            result={"schema":"groundwater.tethys-native-result.v1","state":"complete","operation_id":config["operation_id"],
+                    "parent_operation_id":config["parent_operation_id"],"input_sha256":digest(config),
+                    "source_head":native["source_head"],"workspace_id":native["workspace_id"],
+                    "portal":{"version":"4.6.1","database":"SQLite","url":browser_input["base_url"]+receiving["portal_path"],
+                              "accounts":browser["accounts"],"private_user_workspace":True,"stopped":True},
+                    "original_receiving":receiving,"browser":browser,
+                    "reopened_browser":read(output/"reopened-browser"/"browser-result.json"),"final_readback":final,
+                    "private_handover":archive,"files":len(manifest["files"]),
+                    "native_runs_started":0,"all_owned_services_closed":True,
+                    "local_technical_receiving":True,"customer_or_production_tenant_acceptance":False,
+                    "result_files":[x for x in inventory(output,excluded=("portal-result.json",archive["path"].split("/")[-1])) if "/screenshots/" not in "/"+x["path"]]}
+            publish(done,result)
+            print(json.dumps({"state":"complete","result_file":str(done),"private_handover":archive,
+                              "native_runs_started":0,"all_owned_services_closed":True}),flush=True)
+            return result
+        except BaseException as error:
+            # Children has drained all original services before retaining the same receiving state.
+            from prepare_portal import prepared_archive
+            failure={"type":type(error).__name__,"message":str(error),"input_sha256":digest(config)}
+            publish(output/"portal-failure.json",failure,replace=True)
+            partial,_=prepared_archive(context,state="interrupted",failure=failure)
+            print(json.dumps({"state":"interrupted","prepared_handover":partial,"failure":failure,
+                              "native_runs_started":0,"all_owned_services_closed":True}),flush=True)
+            raise
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
