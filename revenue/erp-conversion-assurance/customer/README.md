@@ -411,3 +411,13 @@ capture operation from the currently saved customer.
 A changed complete archive keeps its actual verification error in transfer
 history. A matching upload plan is reused after reopening the browser;
 an existing customer directory remains a distinct installation.
+
+To move a whole operated customer cohort to another private disk or volume,
+stop its customer server first. Move the customer installation, its sibling
+received installations, and the sibling `customer-transfers-CUSTOMER_ID`
+directory together beneath a new real, private parent. Reopen the same customer
+installation at its new absolute path. Saved receiving names resolve under
+that current parent, while original archives, identities and historical
+receipts stay intact. An interrupted receiving with a historical receipt checks
+the complete relocated destination against its original archive before it
+continues.
