@@ -204,6 +204,7 @@ Ordinary source, workspace and archive commands select `python3` unless `--pytho
 | `workspace-review` | `review` | `--workspace --input` |
 | `workspace-history` | `history` | `--workspace` |
 | `workspace-operation` | `operation` | `--workspace --request-id` |
+| `field` | `field` | `--workspace --input`; native field actions also select `nativeRuntime` in that input |
 | `native-inspect` | `native-inspect` | `--workspace --input`, QGIS Python binding |
 | `native-save` | `native-save` | `--workspace --input`, QGIS Python binding |
 | `native-open` | `native-open` | `--workspace --project-id`, QGIS Python binding |
@@ -275,4 +276,72 @@ starforge stac-qgis native-open --workspace RECEIVER_WORKSPACE --project-id RETA
 ~~~
 
 Use the exact archive SHA from the export result. Receiving reconstructs the same source editions, analyst state, events, request results, saved maps and styles, together with the complete maintained plugin source and guides. A retry of the same archive in the same receiving directory reuses the original receiving identity. Opening the retained project at that destination verifies its own complete local closure and native layer bindings.
+
+### Continue the original field workflow from the installed entry
+
+The same installed command operates the complete QField commissioning and receiving workflow described in [FIELD_OPERATIONS.md](FIELD_OPERATIONS.md). It uses the existing workspace, source editions, native maps, field campaigns and saved requests.
+
+~~~sh
+starforge stac-qgis field --workspace WORKSPACE --input ORIGINAL_FIELD_ACTION.json --progress > field-result.json
+~~~
+
+The outer command uses ordinary Python or the existing `--python` / `STARFORGE_QGIS_PYTHON` selection. Field operations that need QGIS run through the original field bridge and the action file's explicit `nativeRuntime`. That binding names the actual installed QGIS Python or wrapper, installed QFieldSync/libqfieldsync path and QGIS prefix. The original bridge owns its native child and saved request; the installed entry streams its full result and progress.
+
+Use absolute paths for returned device directories, device destinations and the native runtime. This keeps the selected files explicit across the office workspace, the caller and the native child. The original action JSON is passed unchanged by pathname.
+
+Read the retained field state with this input:
+
+~~~json
+{
+  "action": "field.state",
+  "payload": {}
+}
+~~~
+
+The result contains `workspaceId`, `revision` and the complete `fieldCampaigns` array. Select original saved project, campaign, round, return and profile IDs from the actual retained state and operation results.
+
+| Field action | Original payload and result |
+| --- | --- |
+| `field.state` | Empty payload; returns the current workspace identity, revision and campaigns. |
+| `field.inspect` | `projectId` and the selected native runtime; reads the actual saved map and native layer/form choices. |
+| `field.commission` | Complete `configuration` from FIELD_OPERATIONS.md; retains its original source project, field rules, device profiles and first office edition. |
+| `field.export` | `campaignId`, `profileId`; creates the next native export and returns its retained round/binding. |
+| `field.copy` | `roundId`, absolute new `destination`; copies the complete original package to the selected device-transfer directory. |
+| `field.inventory` | Absolute saved-device `directory`; returns the complete file list, `filesSha256`, `fileCount` and `totalBytes`. |
+| `field.receive` | `roundId`, that same absolute `directory`, original inventory `expectedFilesSha256`; retains actual returned data and its native review. |
+| `field.review` | `roundId`, `returnId`, optional `offset`, `limit`, `layerId`, `kind`; returns actual changes, global summary, readiness and `reviewSha256`. |
+| `field.accept` | `roundId`, `returnId`, reviewed `reviewSha256`, operator's `note`; synchronizes once into a new retained office edition and accepted map. |
+| `field.reopen` | Accepted `projectId` and the selected native runtime; reopens that original accepted office map. |
+| `field.close` | `roundId`, actual closure `note`; records closure of an unused open export. |
+| `field.note` | `campaignId`, operator's `note`; appends the original project history. |
+
+Mutations retain top-level `revision`, `requestId` and `actor`. Native commissioning, export, receiving and acceptance also carry `nativeRuntime`; native inspect and reopen use that runtime as well. For example, the original export action has this structure:
+
+~~~json
+{
+  "action": "field.export",
+  "revision": 12,
+  "requestId": "office-export-round-2",
+  "actor": "Actual office operator",
+  "payload": {
+    "campaignId": "COPY_THE_RETAINED_CAMPAIGN_ID",
+    "profileId": "COPY_THE_SELECTED_DEVICE_PROFILE_ID"
+  },
+  "nativeRuntime": {
+    "native_command": ["/absolute/existing/qgis-python"],
+    "qfieldsync_path": "/absolute/installed/QFieldSync",
+    "prefix_path": "/absolute/qgis/prefix"
+  }
+}
+~~~
+
+Replace the descriptive paths, revision and identifiers with the selected original runtime and retained records. Keep this exact action file for continuation. The native bridge preserves its complete request, operation lock, child result and original product. Read a completed request through `workspace-operation`; continuing the same unfinished action uses the same file and request ID.
+
+Commission the actual saved map, export a round, copy the complete directory to QField and save the operator's real field changes. Inventory the complete saved device folder after the native application closes. Use its returned `filesSha256` as the receiving action's `expectedFilesSha256`; a changed folder is a new inventory and receiving selection.
+
+After receiving, follow `field.review` pages while `hasMore` is true, increasing `offset` by the number of returned `items`. Review filters are `added`, `changed`, `deleted`, `attachment`, `issue` or `problems`. Each page preserves the same global `summary`, `ready` state and original `reviewSha256`. An actual corrected device folder may be retained as another return for the same open round; the operator chooses the reviewed ready return.
+
+Acceptance binds that exact review and office base edition, runs the original offline synchronization in an owned office copy and commits its new native map to the same workspace. Start a fresh export from that accepted edition for the next collection round. FIELD_OPERATIONS.md contains the complete original form configuration, attachment behavior and field-to-office recovery sequence.
+
+Finally use `project-export` and `project-receive` from this guide. Their existing complete archive now includes all field campaigns, native office editions, exports, retained returns, attachment bytes, accepted maps, history, saved requests and complete field software. Open `field.state` in the independently received workspace, reopen its accepted project and continue from its retained current office edition.
 
