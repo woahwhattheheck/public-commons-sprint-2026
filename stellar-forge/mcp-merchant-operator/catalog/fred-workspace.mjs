@@ -14,9 +14,26 @@ const purchase = { ...publication, intentId: operation };
 const read = { readOnly: true, idempotent: true };
 const change = { idempotent: true };
 const records = ['captures', 'reviews', 'publications', 'operations'];
+export const fredBriefingSelection = {
+  type: 'object', additionalProperties: false,
+  properties: {
+    schema: { type: 'string', enum: ['stellar-forge.fred-briefing-spec.v1'] },
+    title: { type: 'string', minLength: 1, maxLength: 160 }, notes: { type: 'string', maxLength: 8000 },
+    start: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }, end: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+    decimalPlaces: { type: 'integer', minimum: 0, maximum: 12 },
+    series: { type: 'array', minItems: 1, maxItems: 50, items: { type: 'object', additionalProperties: false,
+      required: ['id'], properties: {
+        id: { type: 'string', minLength: 1, maxLength: 120 },
+        comparisons: { type: 'array', minItems: 1, maxItems: 3, uniqueItems: true,
+          items: { type: 'string', enum: ['previous_period', 'year_earlier', 'previous_observation'] } },
+        relativeChange: { type: 'boolean' }
+      } } }
+  }
+};
 export const fredFileSelection = {
-  kind: { type: 'string', enum: ['source', 'comparison', 'project', 'customer'] },
-  captureId: digest, before: digest, after: digest, publicationId: digest, intentId: operation
+  kind: { type: 'string', enum: ['source', 'comparison', 'project', 'customer', 'briefing'] },
+  captureId: digest, before: digest, after: digest, publicationId: digest, intentId: operation, reviewId: digest,
+  format: { type: 'string', enum: ['html', 'csv', 'json', 'manifest'] }
 };
 export function fredWorkspaceTools(tool) {
   return [
@@ -39,6 +56,12 @@ export function fredWorkspaceTools(tool) {
     tool('merchant_fred_compare', 'Page the original change report between two retained source editions, including revisions and missing values.', {
       ...workspace, before: digest, after: digest, offset
     }, ['workspace', 'before', 'after'], read),
+    tool('merchant_fred_briefing_preview', 'Preview exact previous-period, year-earlier or previous-original-observation measures on one retained economic capture. Preserve original frequency, units, missing markers and vintage; relative percent is an explicit separate selection. Follow nextOffset.', {
+      ...workspace, captureId: digest, briefing: fredBriefingSelection, offset
+    }, ['workspace', 'captureId', 'briefing'], read),
+    tool('merchant_fred_briefing', 'Open a saved analyst briefing, original comparison page and complete HTML/CSV/JSON/manifest file descriptors. Follow nextOffset; use file_read with kind briefing for the full selected file.', {
+      ...workspace, reviewId: digest, offset
+    }, ['workspace', 'reviewId'], read),
     tool('merchant_fred_configure', 'Save the complete original FRED selection with its stable operation ID and reviewed project revision.', {
       ...recorded, selection: object
     }, ['workspace', 'id', 'expectedRevision', 'selection'], change),
@@ -53,8 +76,8 @@ export function fredWorkspaceTools(tool) {
     tool('merchant_fred_select', 'Select the original retained capture in this same project.', {
       ...recorded, captureId: digest
     }, ['workspace', 'id', 'expectedRevision', 'captureId'], change),
-    tool('merchant_fred_review', 'Save the exact source projection policy and review note against an original capture and project revision.', {
-      ...recorded, captureId: digest, policy: object, note: { type: 'string', maxLength: 8000 }
+    tool('merchant_fred_review', 'Save the exact source projection, review note and optional analyst briefing against the original capture and revision. A briefing retains its full source-bound HTML, measures CSV, JSON and manifest.', {
+      ...recorded, captureId: digest, policy: object, note: { type: 'string', maxLength: 8000 }, briefing: fredBriefingSelection
     }, ['workspace', 'id', 'expectedRevision', 'captureId'], change),
     tool('merchant_fred_publish', 'Publish the saved review using one host-selected original merchant origin, route and complete payment profile.', {
       ...recorded, reviewId: digest, profile: alias
@@ -82,7 +105,7 @@ export function fredWorkspaceTools(tool) {
       ['workspace', 'publicationId', 'intentId'], { openWorld: true }),
     tool('merchant_fred_recover', 'Recover the original intent, native receipt and retained response without preparing another payment. Use file_read for the complete delivered bytes.', purchase,
       ['workspace', 'publicationId', 'intentId'], { idempotent: true, openWorld: true }),
-    tool('merchant_fred_file_read', 'Read complete original source, comparison, project export or saved customer-delivery bytes in retained chunks. Continue the returned readId/offset; verify the complete file SHA256.', {
+    tool('merchant_fred_file_read', 'Read complete original source, comparison, analyst briefing, project export or saved customer-delivery bytes in retained chunks. Continue the returned readId/offset; verify the complete file SHA256.', {
       ...workspace, ...fredFileSelection, expectedSha256: digest,
       readId: { type: 'string', minLength: 1, maxLength: 96 }, offset: { type: 'integer', minimum: 0, maximum: 268435456 },
       limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES }

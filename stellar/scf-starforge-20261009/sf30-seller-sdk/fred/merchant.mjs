@@ -15,7 +15,11 @@ import { readBytes, writeBytes } from '../../sf88-operator-buyer-cli/node/store.
 import { need, canonical, clone, COLUMNS, projectionPolicy, observationCsv, operationId, MAX_CAPTURE_BYTES, FRED_NOTICE, FRED_TERMS } from './model.mjs';
 import { hash, digest, jsonBytes, optionalJson, validateCapture } from './source.mjs';
 
+import { validateFredReview } from './review.mjs';
+import { createFredBriefingFiles, validateFredBriefingFiles, retainFredBriefingFiles, readFredBriefingFiles, BRIEFING_MEMBERS, BRIEFING_MANIFEST_MEMBER } from './briefing/files.mjs';
+
 const EDITION = 'stellar-forge.fred-edition.v1';
+const BRIEFING_EDITION = 'stellar-forge.fred-edition.v2';
 const PLAN = 'stellar-forge.fred-merchant.v1';
 const PURCHASE = 'stellar-forge.fred-purchase.v1';
 const PAGE_BYTES = 900 * 1024;
@@ -29,16 +33,20 @@ async function exactFile(directory, name, bytes) {
 }
 const member = (path, bytes, contentType, role) => ({ path, bytes: bytes.length, sha256: hash(bytes), contentType, role });
 function editionIdentity(value) {
-  return { schema: EDITION, captureSha256: value.captureSha256, reviewId: value.reviewId,
+  return { schema: value.schema, captureSha256: value.captureSha256, reviewId: value.reviewId,
     selection: value.selection, series: value.series, policy: value.policy, snapshot: value.snapshot,
     sourceNotice: value.sourceNotice, sourceTerms: value.sourceTerms, sourceMode: value.sourceMode, timeBasis: value.timeBasis,
-    ...(value.retrievalWindow ? { retrievalWindow: value.retrievalWindow } : {}), rowCount: value.rowCount, files: value.files };
+    ...(value.retrievalWindow ? { retrievalWindow: value.retrievalWindow } : {}), rowCount: value.rowCount, files: value.files,
+    ...(value.schema === BRIEFING_EDITION ? { briefing: value.briefing } : {}) };
 }
-export async function prepareFredEdition({ directory, capture, review } = {}) {
+export async function prepareFredEdition({ directory, capture, review, briefing = null } = {}) {
   directory = await privateDirectory(resolve(directory));
   const model = validateCapture(capture), policy = projectionPolicy(review?.policy);
-  need(review?.captureId === capture.captureSha256 &&
-    review.id === digest({ captureId: review.captureId, policy, note: review.note }), 'Use the original retained source review.');
+  validateFredReview(review, model);
+  need(review.captureId === capture.captureSha256, 'Use the original retained source review.');
+  const analyst = review.briefing ? validateFredBriefingFiles(briefing ?? createFredBriefingFiles({ capture, review }),
+    { captureId: capture.captureSha256, reviewId: review.id }) : null;
+  need(review.briefing || briefing === null, 'The selected review does not include an analyst briefing.');
   return withPrivateLock(directory, 'edition.lock', async () => {
     const csv = Buffer.from(observationCsv(model, policy));
     need(csv.length <= 256 * 1024 * 1024, 'The native dataset exceeds its 256 MiB source capacity.');
@@ -54,12 +62,17 @@ export async function prepareFredEdition({ directory, capture, review } = {}) {
       member('review.json', reviewBytes, 'application/json', 'SAVED_REVIEW')];
     for (const [name, bytes] of [['capture.json', sourceBytes], ['observations.csv', csv], ['dataset.json', configBytes], ['review.json', reviewBytes]])
       await exactFile(directory, name, bytes);
+    if (analyst) {
+      await retainFredBriefingFiles({ directory, value: analyst });
+      for (const file of analyst.files) { const { body, ...descriptor } = file; files.push(descriptor); }
+    }
     const dataset = await loadDatasetConfig(join(directory, 'dataset.json')), description = dataset.describe();
     need(description.rowCount === model.rowCount, 'Original dataset projection changed row count.');
-    const edition = { schema: EDITION, captureSha256: capture.captureSha256, reviewId: review.id,
+    const edition = { schema: analyst ? BRIEFING_EDITION : EDITION, captureSha256: capture.captureSha256, reviewId: review.id,
       selection: model.selection, series: model.series, policy, snapshot: description.snapshot,
       sourceNotice: FRED_NOTICE, sourceTerms: FRED_TERMS, sourceMode: model.sourceMode, timeBasis: model.timeBasis,
-      ...(model.retrievalWindow ? { retrievalWindow: model.retrievalWindow } : {}), rowCount: model.rowCount, files };
+      ...(model.retrievalWindow ? { retrievalWindow: model.retrievalWindow } : {}), rowCount: model.rowCount, files,
+      ...(analyst ? { briefing: { reportId: analyst.manifest.reportId, manifestSha256: analyst.manifest.manifestSha256 } } : {}) };
     edition.editionId = 'fred-' + digest(editionIdentity(edition));
     await exactFile(directory, 'edition.json', jsonBytes(edition));
     return { ...edition, directory };
@@ -68,9 +81,10 @@ export async function prepareFredEdition({ directory, capture, review } = {}) {
 export async function readFredEdition(directory) {
   directory = resolve(directory);
   const edition = await readPrivateJson(join(directory, 'edition.json'), 4 * 1024 * 1024);
-  need(edition.schema === EDITION && edition.editionId === 'fred-' + digest(editionIdentity(edition)) &&
+  need([EDITION, BRIEFING_EDITION].includes(edition.schema) && edition.editionId === 'fred-' + digest(editionIdentity(edition)) &&
     Array.isArray(edition.files), 'Retained edition manifest changed.');
-  const names = ['capture.json', 'observations.csv', 'dataset.json', 'review.json'];
+  const names = ['capture.json', 'observations.csv', 'dataset.json', 'review.json',
+    ...(edition.schema === BRIEFING_EDITION ? [...BRIEFING_MEMBERS, BRIEFING_MANIFEST_MEMBER].map(file => file.path) : [])];
   need(edition.files.length === names.length && new Set(edition.files.map(file => file.path)).size === names.length &&
     edition.files.every(file => names.includes(file.path)), 'Edition file inventory changed.');
   for (const item of edition.files) {
@@ -82,6 +96,16 @@ export async function readFredEdition(directory) {
   const model = validateCapture(capture);
   need(capture.captureSha256 === edition.captureSha256 && model.rowCount === edition.rowCount,
     'Edition source binding changed.');
+  const review = await readPrivateJson(join(directory, 'review.json'), 1024 * 1024);
+  validateFredReview(review, model);
+  need(review.id === edition.reviewId && review.captureId === edition.captureSha256, 'Edition review binding changed.');
+  if (edition.schema === BRIEFING_EDITION) {
+    need(review.briefing && edition.briefing, 'The analyst edition lost its original selection.');
+    const briefing = await readFredBriefingFiles(directory, { captureId: edition.captureSha256, reviewId: edition.reviewId, includeFiles: true });
+    need(briefing.manifest.reportId === edition.briefing.reportId && briefing.manifest.manifestSha256 === edition.briefing.manifestSha256 &&
+      briefing.files.every(file => edition.files.some(item => canonical(item) === canonical((({ body, ...descriptor }) => descriptor)(file)))),
+      'Edition analyst file binding changed.');
+  } else need(!review.briefing && edition.briefing === undefined, 'The original edition format cannot carry an analyst review.');
   return { ...edition, directory };
 }
 function planIdentity(plan) {
@@ -103,12 +127,17 @@ export async function stageFredMerchant({ directory, origin, path = '/economic-d
   route.definition.queryParameters.push(clone(DATASET_SNAPSHOT_PARAMETER));
   const editionBytes = await readBytes(join(edition.directory, 'edition.json'), 4 * 1024 * 1024);
   const candidates = [member('edition.json', editionBytes, 'application/json', 'EDITION_MANIFEST'),
+    ...edition.files.filter(file => file.role.startsWith('BRIEFING_')),
     ...edition.files.filter(file => ['ORIGINAL_SOURCE', 'CUSTOMER_PROJECTION'].includes(file.role))];
   const downloads = [];
   let bytes = 0, maxResponseBytes = PAGE_BYTES;
   for (const file of candidates) {
     // Larger originals stay in the complete receiving bundle; paginated data remains available.
-    if (file.bytes > MAX_ASSET_BYTES || bytes + file.bytes > MAX_ASSET_BUDGET) continue;
+    if (file.bytes > MAX_ASSET_BYTES || bytes + file.bytes > MAX_ASSET_BUDGET) {
+      need(!(edition.briefing && (file.role.startsWith('BRIEFING_') || file.role === 'EDITION_MANIFEST')),
+        'The complete analyst edition exceeds the selected native asset capacity.', 'FRED_BRIEFING_FILE_CAPACITY');
+      continue;
+    }
     bytes += file.bytes; maxResponseBytes = Math.max(maxResponseBytes, file.bytes);
     const assetPath = base + '/files/' + file.path;
     downloads.push({ ...file, resource: config.publicOrigin + assetPath });

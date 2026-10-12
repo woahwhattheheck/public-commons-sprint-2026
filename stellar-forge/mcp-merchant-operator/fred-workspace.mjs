@@ -148,6 +148,8 @@ export class MerchantFredWorkspaces {
     if (name === 'merchant_fred_operation') return client.operation(args.id);
     if (name === 'merchant_fred_observations') return client.observations(args);
     if (name === 'merchant_fred_compare') return client.compare(args);
+    if (name === 'merchant_fred_briefing_preview') return client.previewBriefing(args);
+    if (name === 'merchant_fred_briefing') return client.briefing(args);
     if (name === 'merchant_fred_import') {
       const source = await this.#input(alias, args.input, args.expectedSha256);
       return client.importCapture({ id: args.id, expectedRevision: args.expectedRevision, capture: source.value });
