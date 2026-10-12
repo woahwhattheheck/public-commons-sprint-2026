@@ -107,6 +107,7 @@ export async function openPublisherDrafts({ datasetDirectory, directory = join(d
     }
     function view() {
       return { schema: SCHEMA, revision: state.revision, createdAt: state.createdAt,
+        datasetDirectory: state.datasetDirectory, datasetRelocations: copy(state.datasetRelocations ?? []),
         selectedDraftId: state.selectedDraftId, selection: copy(state.selection),
         candidates: copy(state.candidates), buyers: copy(state.buyers), workbookSources: copy(state.workbookSources ?? []),
         recoveryWarnings: copy(recoveryWarnings),
@@ -271,6 +272,54 @@ export async function openPublisherDrafts({ datasetDirectory, directory = join(d
         await this.buyer(id);
         await save(next => { next.buyers = next.buyers.filter(value => value.id !== id); next.removedBuyerIds.push(id); });
         await rm(join(roots.buyers, id + '.json')); await rm(join(roots.buyers, id + '.metadata.json')); await syncDirectory(roots.buyers);
+      },
+      // Trusted restored-state composition only. The HTTP publisher exposes no
+      // filesystem rebinding route; its original kernel lease remains authoritative.
+      async adoptDatasetDirectory({ datasetDirectory: target, expectedDirectory,
+        expectedRevision, expectedSnapshot, expectedDatasetRevision,
+        sourceManifestSha256, sourcePlanSha256, operationId } = {}) {
+        if (closed) throw fault('WORKSPACE_CLOSED');
+        if (![sourceManifestSha256, sourcePlanSha256, operationId, expectedSnapshot].every(value => HASH.test(value ?? '')) ||
+            !Number.isSafeInteger(expectedRevision) || expectedRevision < 1 ||
+            !Number.isSafeInteger(expectedDatasetRevision) || expectedDatasetRevision < 1)
+          throw fault('PUBLISHER_RELOCATION_REVIEW_REQUIRED', 'Use the exact authenticated recovery review and native revisions.');
+        await privateDirectory(target);
+        if (directory === target || target.startsWith(directory + '/') ||
+            directory === join(target, 'versions') || directory.startsWith(join(target, 'versions') + '/'))
+          throw fault('SEPARATE_WORKSPACE_REQUIRED', 'Keep restored draft work outside the original published-version directories.');
+        const current = await readJson(join(target, 'state.json'), 262144);
+        if (!['stellar-forge.dataset-versions.v1', 'stellar-forge.dataset-versions.v2'].includes(current.schema) ||
+            current.current !== expectedSnapshot || current.revision !== expectedDatasetRevision)
+          throw fault('PUBLISHER_RELOCATION_DATASET_CHANGED', 'The restored original dataset differs from the reviewed version.', 409);
+        const history = state.datasetRelocations ?? [];
+        if (!Array.isArray(history) || history.some(value => !value || typeof value !== 'object' || Array.isArray(value)))
+          throw fault('PUBLISHER_RELOCATION_HISTORY_INVALID');
+        const prior = history.find(value => value.operationId === operationId);
+        if (prior) {
+          if (prior.from !== expectedDirectory || prior.to !== target ||
+              prior.previousRevision !== expectedRevision || prior.sourceManifestSha256 !== sourceManifestSha256 ||
+              prior.sourcePlanSha256 !== sourcePlanSha256 || prior.snapshot !== expectedSnapshot ||
+              prior.datasetRevision !== expectedDatasetRevision)
+            throw fault('PUBLISHER_RELOCATION_CONFLICT', 'This retained recovery operation belongs to a different binding.', 409);
+          return { changed: false, reused: true, bindingCurrent: state.datasetDirectory === target,
+            relocation: copy(prior), workspace: view() };
+        }
+        if (state.datasetDirectory !== expectedDirectory || state.revision !== expectedRevision)
+          throw fault('PUBLISHER_RELOCATION_CHANGED', 'The original publisher binding or revision changed after review.', 409);
+        if (target === expectedDirectory || history.length >= 256)
+          throw fault('PUBLISHER_RELOCATION_INVALID', 'Choose a distinct restored dataset; retain at most 256 relocations.');
+        const relocation = { schema: 'stellar-forge.dataset-publisher-relocation.v1',
+          operationId, sourceManifestSha256, sourcePlanSha256,
+          from: expectedDirectory, to: target, previousRevision: state.revision,
+          revision: state.revision + 1, snapshot: expectedSnapshot,
+          datasetRevision: expectedDatasetRevision, createdAt: stamp() };
+        await save(next => {
+          next.datasetDirectory = target;
+          next.datasetRelocations = [...history, relocation];
+        });
+        datasetDirectory = target;
+        return { changed: true, reused: false, bindingCurrent: true,
+          relocation: copy(relocation), workspace: view() };
       },
       async close() { if (!closed) { closed = true; await unlock(); } },
     };
