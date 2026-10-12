@@ -177,7 +177,7 @@ starforge gdelt customer-reopen --project /absolute/event-desk \
 
 Use `dataset-recover` with the same ID after interruption. `dataset-accounting` reads original page accounting; `dataset-finalize` continues the engine's original accounting finalization. `dataset-deliver` produces complete CSV, typed JSONL, review HTML, manifest and available published semantics. `dataset-file` verifies their original delivery hashes before returning bytes.
 
-Source receiving uses the original SourceFiles contract. It verifies the entire acquired projection, each original member, the manifest's exact source-set/review binding and both original ZIP decodings. It then records the original receiving identity. Offline reopen checks that same manifest and every delivered member again before creating the customer project and reconstructing the original saved review. A changed review or dictionary cannot replace its delivered original silently.
+Source receiving uses the original SourceFiles contract. It verifies the entire acquired projection, each original member, the manifest's exact source-set/review binding and every selected original ZIP decoding. It then records the original receiving identity. Offline reopen checks that same manifest and every delivered member again before creating the customer project and reconstructing the original saved review. A changed review or dictionary cannot replace its delivered original silently.
 
 In the browser, **Open received event desk** starts that normal received project and preserves the original customer's source/review history. Parent closure drains its child browser. The CLI supports explicit paths for an independently transported original delivery:
 
@@ -255,7 +255,7 @@ starforge gdelt serve --project /absolute/received-event-desk
 
 A project bundle includes the complete source captures, retained reviews, source-operation history and public merchant plans. The native buyer keeps its payer configuration, paid intent and accounting journals in the original buyer store. Transport the original buyer/runtime through its maintained customer receiving workflow when those operations need to move too.
 
-Receiving verifies all original captures, review definitions and merchant snapshots. It records the complete source closure before publishing the normal project index. If the final receipt is lost, the same bundle can recover after the customer has already created later reviews or source operations: original history is checked and the current project index is preserved.
+Receiving verifies all original captures, review definitions and merchant snapshots. It records the complete source closure before publishing the normal project index. If the final receipt is lost, the same bundle can recover after the customer has already created later reviews or source operations: original history is checked and the current project index is preserved. A completed receiving retry also opens every original capture, review and merchant publication and checks the inherited history before returning its original receipt. If startup finds an unfinished receiving operation without a project index, continue the same `receive --source ORIGINAL_BUNDLE` command; initialization preserves that receiving directory for the original project.
 
 ## Operating envelope
 

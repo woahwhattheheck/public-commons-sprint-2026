@@ -25,6 +25,12 @@ export async function initializeGdeltProject({directory,title='GDELT event desk'
   return withPrivateLock(directory,'project.lock',async()=>{
     const existing=await optionalJson(join(directory,'project.json'),STATE_BYTES);
     if(existing) { validState(existing);need(existing.title===title,'This directory already retains another project title.','GDELT_PROJECT_EXISTS',409);return existing; }
+    const receiving=await optionalJson(join(directory,'receiving.json'));
+    const prepared=await optionalJson(join(directory,'received-prepared.json'));
+    const received=await optionalJson(join(directory,'received.json'));
+    need(receiving===null&&prepared===null&&received===null,
+      'This directory retains an original project receiving operation. Resume receive with the same complete bundle before opening the workspace.',
+      'GDELT_RECEIVING_PENDING',409);
     const state={schema:PROJECT,id:randomUUID(),title,revision:1,createdAt:new Date().toISOString(),
       selectedCapture:null,selectedReview:null,captures:[],reviews:[],publications:[],operations:[],pending:null};
     await atomicJson(directory,'project.json',state);return state;
@@ -234,6 +240,42 @@ export async function exportGdeltProject({directory}={}) {
     return bundle;
   });
 }
+function receivedLineage(current,state) {
+  validState(current);
+  const inherited=['captures','reviews','publications','operations'].every(name=>
+    state[name].every(original=>current[name].some(value=>value.id===original.id&&canonical(value)===canonical(original))));
+  need(current.id===state.id&&current.createdAt===state.createdAt&&current.revision>=state.revision&&inherited,
+    'This destination does not retain the original received project lineage.','GDELT_RECEIVING_CONFLICT',409);
+}
+async function inspectReceivedClosure(directory,state,body,{signal}={}) {
+  for(const original of body.captures) {
+    signal?.throwIfAborted();
+    need(state.captures.some(item=>item.id===original.captureId),'Unexpected capture in project bundle.');
+    const capture=await getGdeltCapture(directory,original.captureId);
+    need(canonical(capture)===canonical(original),'The original received source capture changed.','GDELT_RECEIVING_CONFLICT',409);
+  }
+  for(const original of state.reviews) {
+    signal?.throwIfAborted();
+    const review=await getGdeltReview(directory,original.id);
+    need(canonical(review)===canonical(original),'The original received review changed.','GDELT_RECEIVING_CONFLICT',409);
+  }
+  if(body.publications.length) {
+    const {readGdeltMerchant}=await import('./merchant.mjs');
+    for(const publication of body.publications) {
+      signal?.throwIfAborted();
+      const expected=state.publications.find(item=>item.id===publication.id);
+      const review=state.reviews.find(item=>item.id===publication.reviewId);
+      need(expected&&review&&publication.id===digest({reviewId:review.id,origin:publication.origin,path:publication.path,payment:publication.payment}),
+        'Original publication identity changed.');
+      const {edition,plan}=await readGdeltMerchant(join(directory,'publications',publication.id));
+      need(edition.editionId===expected.editionId&&edition.reviewId===review.id&&
+        canonical(edition.captureIds)===canonical(review.captureIds)&&edition.snapshot===expected.snapshot&&
+        edition.sourceSnapshot===expected.sourceSnapshot&&plan.resource===expected.resource&&plan.sourceResource===expected.sourceResource&&
+        plan.origin===publication.origin&&plan.path===publication.path&&canonical(plan.payment)===canonical(publication.payment),
+        'The original received merchant edition changed.','GDELT_RECEIVING_CONFLICT',409);
+    }
+  }
+}
 export async function receiveGdeltProject({directory,bundle,signal,python}={}) {
   const {bundleSha256,...body}=bundle??{};
   need(body.schema===BUNDLE&&isHash(bundleSha256)&&bundleSha256===digest(body)&&Array.isArray(body.captures)&&
@@ -250,7 +292,12 @@ export async function receiveGdeltProject({directory,bundle,signal,python}={}) {
       need(receipt.schema==='stellar-forge.gdelt-project-receipt.v1'&&receipt.bundleSha256===bundleSha256&&receipt.projectId===state.id,
         'This destination already received another project.','GDELT_RECEIVING_CONFLICT',409);
       const current=await readGdeltProject(directory);
-      need(current.id===state.id,'Original receiving project identity changed.');
+      receivedLineage(current,state);
+      need(receipt.captures===state.captures.length&&receipt.reviews===state.reviews.length&&
+        receipt.publications===state.publications.length&&receipt.revision===state.revision&&
+        (receipt.originalIndexSha256===undefined||receipt.originalIndexSha256===digest(state)),
+        'The original receiving receipt changed.','GDELT_RECEIVING_CONFLICT',409);
+      await inspectReceivedClosure(directory,state,body,{signal});
       return {...receipt,revision:current.revision,reused:true};
     }
     const current=await optionalJson(join(directory,'project.json'),STATE_BYTES);
@@ -258,14 +305,11 @@ export async function receiveGdeltProject({directory,bundle,signal,python}={}) {
     const prior=await optionalJson(join(directory,'receiving.json'));
     need(prior===null||canonical(prior)===canonical(intent),'Another original bundle owns this receiving operation.','GDELT_RECEIVING_CONFLICT',409);
     if(current!==null){
-      validState(current);
       // A published index is usable immediately. A lost final receipt must not
       // roll back its later legitimate customer operations on same-bundle retry.
-      const inherited=['captures','reviews','publications','operations'].every(name=>
-        state[name].every(original=>current[name].some(value=>value.id===original.id&&canonical(value)===canonical(original))));
-      need(current.id===state.id&&current.createdAt===state.createdAt&&current.revision>=state.revision&&inherited&&
-        (prior!==null||canonical(current)===canonical(state)),
-        'This destination does not retain the original received project lineage.','GDELT_RECEIVING_CONFLICT',409);
+      receivedLineage(current,state);
+      need(prior!==null||canonical(current)===canonical(state),
+        'This destination does not retain the original receiving binding.','GDELT_RECEIVING_CONFLICT',409);
     }
     if(prior===null)await atomicJson(directory,'receiving.json',intent);
     for(const capture of body.captures) {
