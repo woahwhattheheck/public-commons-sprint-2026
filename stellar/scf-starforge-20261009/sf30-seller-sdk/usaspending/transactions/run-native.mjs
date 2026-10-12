@@ -35,6 +35,8 @@ export async function run({source,out}) {
     const awardOnly=workspace.exportPacket();await save('award-only-workspace.json',awardOnly);
     server=await serveWorkspace(workspace,{port:0});const secret=new URL(server.url).hash.slice(1);
     async function http(path,body){const r=await fetch(server.origin+path,{method:body===undefined?'GET':'POST',headers:{'x-research-token':secret,...(body===undefined?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});requireThat(r.ok,'NATIVE_HTTP_FAILED',path+' '+r.status+' '+(!r.ok?await r.text():''));return r;}
+    const identity=await (await http('/api/identity')).json();
+    requireThat(canonical(identity)===canonical(server.identity)&&identity.workspaceId===workspace.state().id&&identity.instanceId===workspace.instance&&identity.pid===process.pid,'ORIGINAL_SESSION_IDENTITY_MISMATCH');
     const imported=await (await http('/api/transactions/import',{editionId:detail.editionId,awardKey:packet.award_id,pages:[{request,receipt,responseBase64:response.toString('base64')}]})).json();
     const capture=imported.captureId,q='?capture='+encodeURIComponent(capture);
     const summary=await (await http('/api/transactions/summary'+q)).json();
@@ -68,7 +70,7 @@ export async function run({source,out}) {
     }finally{received.close();}
     const cliSummary=await cli(['tx-summary','--workspace',workspaceDir,'--capture',capture],{print:false});
     requireThat(cliSummary.analysis.net_obligation_usd===summary.analysis.net_obligation_usd,'CLI_RECEIVING_MISMATCH');
-    const result={schema:'usaspending-transactions.native-receiving.v1',completedAt:new Date().toISOString(),awardKey:packet.award_id,editionId:detail.editionId,captureId:capture,receivedCaptureId:receivedResult.captureId,pages:imported.pages,transactions:rows.total,netObligationUsd:summary.analysis.net_obligation_usd,awardDifferenceUsd:summary.analysis.award_obligation_difference_usd,originalResponseSha256:sha(response),portableCaptureSha256:portable.sha256,workflow:['original_award','private_http','original_transactions','assessment','source_export','brief','workspace_restore','capture_receiving','receiving_replay','prepared_capture_receiving','cli'],artifacts};
+    const result={schema:'usaspending-transactions.native-receiving.v1',completedAt:new Date().toISOString(),awardKey:packet.award_id,editionId:detail.editionId,captureId:capture,receivedCaptureId:receivedResult.captureId,pages:imported.pages,transactions:rows.total,netObligationUsd:summary.analysis.net_obligation_usd,awardDifferenceUsd:summary.analysis.award_obligation_difference_usd,originalResponseSha256:sha(response),portableCaptureSha256:portable.sha256,sessionIdentity:identity,workflow:['original_award','private_http','session_identity','original_transactions','assessment','source_export','brief','workspace_restore','capture_receiving','receiving_replay','prepared_capture_receiving','cli'],artifacts};
     await put(join(out,'receiving-result.json'),result);process.stdout.write(JSON.stringify(result,null,2)+'\n');return result;
   }finally{if(server)await server.close();else{try{workspace.close();}catch{}}}
 }
