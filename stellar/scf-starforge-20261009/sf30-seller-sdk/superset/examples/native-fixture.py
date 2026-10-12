@@ -204,9 +204,20 @@ def configure(directory, redis_port):
         sync_dir(directory)
 
 def set_cohort(directory, cohort):
-    selection = json.loads((directory / (cohort + ".json")).read_text())
+    if cohort not in INPUTS:
+        raise ValueError("Choose a retained original source cohort")
+    raw = (directory / (cohort + ".json")).read_bytes()
+    intent = json.loads((directory / "input.json").read_text())
+    bound = intent["sourceDocuments"][cohort]
+    if len(raw) != bound["bytes"] or digest(raw) != bound["sha256"]:
+        raise ValueError("The retained source document differs from its original workbook binding")
+    selection = json.loads(raw)
+    if selection["workbook"] != intent[cohort] or selection["workbook"]["sha256"] != INPUTS[cohort][0]:
+        raise ValueError("The selected native source belongs to another original workbook")
     rows = selection["rows"]
     expected = digest(raw_json(rows))
+    if expected != bound["rowsSha256"]:
+        raise ValueError("The retained native source rows differ from their original selection")
     with locked(directory / "source-writer.lease"):
         with sqlite3.connect(directory / "source.sqlite3") as database:
             database.execute("PRAGMA busy_timeout=10000")
@@ -233,7 +244,10 @@ def bootstrap(args):
             raise ValueError("Use the original Apache Superset 6.1.0 environment; found " + version)
         before, after = read_workbook(Path(args.before).resolve(), "before"), read_workbook(Path(args.after).resolve(), "after")
         intent = {"schema": SCHEMA, "officialCommit": PIN, "supersetVersion": version,
-                  "before": before["workbook"], "after": after["workbook"], "columns": COLS, "redisPort": args.redis_port}
+                  "before": before["workbook"], "after": after["workbook"], "columns": COLS, "redisPort": args.redis_port,
+                  "sourceDocuments": {name: {"bytes": len(raw_json(selection)), "sha256": digest(raw_json(selection)),
+                                              "rowsSha256": digest(raw_json(selection["rows"]))}
+                                      for name, selection in (("before", before), ("after", after))}}
         write_json(directory / "input.json", intent)
         write_json(directory / "before.json", before)
         write_json(directory / "after.json", after)
