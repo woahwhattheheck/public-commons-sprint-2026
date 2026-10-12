@@ -76,7 +76,11 @@
     "stellar-forge/mcp-merchant-operator/lab-edd-receiving.example.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/current-field-decisions.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/baseline-field-decisions.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/operator-source-result.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/operator-source-result.json",
+    "stellar-forge/mcp-merchant-operator/lab-edd-native-receiving.mjs",
+    "stellar-forge/mcp-merchant-operator/lab-edd-native-receiving.py",
+    "stellar-forge/mcp-merchant-operator/LAB_EDD_NATIVE_RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/checkout/native-continuation.py"
   ],
   "applicationProviders": {
     "laboratory-edd": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application-provider.mjs"

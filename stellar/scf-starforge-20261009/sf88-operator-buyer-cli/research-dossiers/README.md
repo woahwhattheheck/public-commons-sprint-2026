@@ -442,3 +442,11 @@ Start the existing research command with `--pipeline-source /absolute/private/pi
 ## Acquired Object Buyer files
 
 [OBJECT_INPUTS.md](./OBJECT_INPUTS.md) joins a completed original whole or assembled Object Buyer file to this same Research workspace. Launch Research with `--object-state`, review the exact delivered file in Pipelines, then prepare and submit its original managed operation. Captured reviews and portable editions retain the native session, snapshot, configuration and content identity. The original Object workspace can connect through `--research-connection-file` and `--research-directory`; no second Research listener is started.
+
+## Recurring customer work
+
+[Customer updates](customer-updates/CUSTOMER_UPDATES.md) completes the original customer brief, query/source intake, native research selection, frozen reports and editable handover. Open `/customer-updates.html` in the existing workspace or use `research-client customer-updates-help`. Its received working forms, exact saved-request replay, Node attachment, Merchant tools and complete terminal receiving stay on the original dossier history.
+
+## Study extraction, evidence tables and appraisal
+
+[Study extraction](STUDY-EXTRACTION-OPERATOR.md) operates complete forms, independent reviewer entries, original source values, adjudication, immutable evidence-table publications and exact-request recovery in this same application. [The full browser receiving guide](STUDY-EXTRACTION-BROWSER.md) documents the original author/inspect programme. [Appraisal](risk-of-bias/BROWSER.md) adds source-bound design/result review on the same Eligibility studies and extraction records. Their Node and CLI operations preserve the same dossier revisions and editable portable history. Optional Zotero navigation opens its original library workspace through the current host.

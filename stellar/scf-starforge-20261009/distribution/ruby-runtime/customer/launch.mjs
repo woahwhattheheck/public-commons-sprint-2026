@@ -7,7 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 export const RUBY_CUSTOMER_STARTUP_SCHEMA = 'stellar-forge.ruby-customer-workspace-startup.v1';
 const HERE = dirname(fileURLToPath(import.meta.url));
-const FILES = ['source.mjs','model.mjs','browser.mjs','panel.mjs','cli.mjs','index.html','launch.mjs','server.mjs','customer.css','README.md', 'runtime-browser.mjs','runtime-style.css','../workspace/uploads.mjs','../model.mjs','../files.mjs'];
+const FILES = ['source.mjs','model.mjs','browser.mjs','panel.mjs','editions.mjs','cli.mjs','index.html','launch.mjs','server.mjs','customer.css','README.md', 'runtime-browser.mjs','runtime-style.css','../workspace/uploads.mjs','../model.mjs','../files.mjs','../engine.rb','../application.rb','../editions/model.mjs','../editions/source.mjs','../editions/native.rb'];
 const fault = (code, message) => Object.assign(new Error(message), { code, status: 409 });
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const encode = value => JSON.stringify(value);

@@ -1,4 +1,5 @@
 import {commercialReceivingTools} from './commercial-receiving.mjs';
+import {commercialTariffTools} from './commercial-tariffs.mjs';
 // MIT. Quotation controls use the configured original SF74 case writer.
 import {MAX_MATERIAL_BYTES} from '../../../stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs';
 import {MAX_RETAINED_CHUNK_BYTES} from '../retained-file-contracts.mjs';
@@ -15,12 +16,16 @@ const draft=object({parentId:nullable(uuid),title:text(400),customer:object({nam
   pricing:object({routes:rows(object({routeId:text(200),monthlyRequests:text(24)}))}),
   terms:object({scope:text(64000),deliverables:text(64000),exclusions:text(64000),payment:text(64000),acceptance:text(64000)}),
   notes:text(16000)});
+draft.properties.tariffSourceId=text(200);
 const selected={id:uuid,expectedRevision:digest},change={...selected,requestId:uuid,actor:text(200)};
+const implementationSelection={quoteId:uuid,quoteSha256:digest,acceptanceId:uuid,
+  resolutions:{type:'object',additionalProperties:{enum:['accepted','current']}}};
 export function commercialTools(tool) {
   const read={readOnly:true,idempotent:true},write={idempotent:true};
   return [
     ...commercialReceivingTools(tool),
-    tool('merchant_case_commercial','Open the complete original saved quotation workspace: implementation editions, service terms, received SF97 pricing sources, unfinished draft, immutable quotes and actual customer responses. Keep its current case revision for a new change.',
+    ...commercialTariffTools(tool),
+    tool('merchant_case_commercial','Open the complete original saved quotation workspace: implementation editions, service terms, received SF97 pricing sources, unfinished draft, immutable quotes, actual customer responses and accepted-quote implementation adoption. Keep its current case revision for a new change.',
       {id:uuid,revision:digest},['id'],read),
     tool('merchant_case_commercial_preview','Review explicit work hours, service fees and monthly route requests against the retained original sources. Returns exact decimal calculations, a customer-readable proposal and reviewSha256. No case write.',
       {...selected,draft},['id','expectedRevision','draft'],read),
@@ -35,6 +40,11 @@ export function commercialTools(tool) {
       {...change,quoteId:uuid,quoteSha256:digest,status:{enum:['ACCEPTED','REVISION_REQUESTED','DECLINED']},
         observedAt:text(24),source:text(4096),note:text(16000)},
       ['id','expectedRevision','requestId','actor','quoteId','quoteSha256','status','observedAt','source'],write),
+    tool('merchant_case_commercial_preview_implementation','Preview how an accepted quote creates or updates the saved implementation. Returns changes, conflicts and reviewSha256. Resolutions select accepted or current values using the returned conflict keys.',
+      {...selected,...implementationSelection},['id','expectedRevision','quoteId','quoteSha256'],read),
+    tool('merchant_case_commercial_adopt_implementation','Apply the reviewed accepted quote through the original case writer. Keep the exact case revision, immutable quote, recorded acceptance, reviewSha256, resolutions and requestId for identical recovery after an interrupted reply.',
+      {...change,...implementationSelection,reviewSha256:digest,note:text(16000)},
+      ['id','expectedRevision','requestId','actor','quoteId','quoteSha256','acceptanceId','reviewSha256'],write),
     tool('merchant_case_commercial_compare','Compare two retained quote editions, exact decimal amounts, original source bindings, customer terms and their recorded responses.',
       {...selected,beforeId:uuid,afterId:uuid},['id','expectedRevision','beforeId','afterId'],read),
     tool('merchant_case_commercial_file','Read a complete retained customer Markdown or machine quotation through the original bounded file reader. The exact saved case revision reopens after later edits. Continue with readId, expectedSha256 and nextOffset; cold reopen uses the same selection and expectedSha256. Use merchant_case_export for the complete case.',

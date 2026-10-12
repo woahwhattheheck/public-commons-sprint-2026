@@ -1,0 +1,39 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-acquisition.v1",
+  "role": "iotlab-multi-native-catalogue",
+  "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams?%24orderby=id+asc&%24top=3&%24count=true",
+  "requestedFilename": "iotlab-multi-native-catalogue.json",
+  "requestedAt": "2026-10-12T12:55:20.907Z",
+  "uploadCompletedAt": "2026-10-12T12:55:29.237Z",
+  "downloadRequestedAt": "2026-10-12T12:55:29.237Z",
+  "downloadCompletedAt": "2026-10-12T12:55:29.755Z",
+  "originalHttp": {
+    "method": null,
+    "status": null,
+    "headers": null
+  },
+  "originalBody": {
+    "path": "originals/iotlab-multi-native-catalogue.json",
+    "bytes": 1581,
+    "sha256": "11dcc81eedfcd1316b294242e196870154e5700c8070491216ee5b2440172b88",
+    "gitSha": "035ca812061b2b216569b50f46e3b5b6c6f6ffea"
+  },
+  "uploadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-8146-9dc7-00b25d04d83d\",\"filename\":\"iotlab-multi-native-catalogue.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":1581,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-8146-9dc7-00b25d04d83d\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-8146-9dc7-00b25d04d83d\\\"></file>\"}"
+      }
+    ],
+    "isError": false
+  },
+  "downloadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-8146-9dc7-00b25d04d83d\",\"filename\":\"iotlab-multi-native-catalogue.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":1581,\"content\":\"{\\\"@iot.count\\\":1,\\\"value\\\":[{\\\"@iot.selfLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)\\\",\\\"@iot.id\\\":23,\\\"description\\\":\\\"Surface water conductivity in river Spree\\\",\\\"multiObservationDataTypes\\\":[\\\"https://qudt.org/vocab/unit/SEC\\\",\\\"https://saref.etsi.org/saref4watr/Temperature\\\",\\\"https://saref.etsi.org/saref4watr/Conductivity\\\",\\\"https://saref.etsi.org/saref4watr/TotalDissolvedSolids\\\"],\\\"name\\\":\\\"Surface water conductivity in river Spree\\\",\\\"observationType\\\":\\\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_ComplexObservation\\\",\\\"observedArea\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[13.39,52.52]},\\\"unitOfMeasurements\\\":[{\\\"name\\\":\\\"seconds\\\",\\\"symbol\\\":\\\"s\\\",\\\"definition\\\":\\\"https://qudt.org/vocab/unit/SEC\\\"},{\\\"name\\\":\\\"temperature\\\",\\\"symbol\\\":\\\"C\\\",\\\"definition\\\":\\\"https://saref.etsi.org/saref4watr/Temperature\\\"},{\\\"name\\\":\\\"specific conductivity\\\",\\\"symbol\\\":\\\"uS/cm\\\",\\\"definition\\\":\\\"https://saref.etsi.org/saref4watr/Conductivity\\\"},{\\\"name\\\":\\\"total dissolved solids\\\",\\\"symbol\\\":\\\"ppt\\\",\\\"definition\\\":\\\"https://saref.etsi.org/saref4watr/TotalDissolvedSolids\\\"}],\\\"Sensor@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Sensor\\\",\\\"Thing@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Thing\\\",\\\"Campaigns@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Campaigns\\\",\\\"Observations@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations\\\",\\\"ObservedProperties@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/ObservedProperties\\\"}]}\"}"
+      }
+    ],
+    "isError": false
+  }
+}

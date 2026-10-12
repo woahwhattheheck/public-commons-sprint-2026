@@ -10,7 +10,10 @@
     "sensorthings-receive-bgs": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/receive-bgs.mjs",
     "sensorthings-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/launch.mjs",
     "sensorthings-python-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/python-document-cli.mjs",
-    "sensorthings-analysis-native": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/native-journey.mjs"
+    "sensorthings-analysis-native": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/native-journey.mjs",
+    "sensorthings-record-multicomponent": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/record-multicomponent.mjs",
+    "sensorthings-receive-multicomponent": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/receive-multicomponent.mjs",
+    "sensorthings-report-multicomponent": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/report-multicomponent.mjs"
   },
   "commandDescriptions": {
     "sensorthings": "Open the original SensorThings workspace, operate retained source editions and recover the same native operations.",
@@ -20,7 +23,10 @@
     "sensorthings-receive-bgs": "Receive the complete retained BGS pressure source through the original workspace, source review, dataset publication and archive.",
     "sensorthings-analysis": "Start the original SensorThings analysis Desk and retained Helgoland deployment using its existing private workspace session.",
     "sensorthings-python-source": "Prepare the complete retained source edition and original source export for the existing Python Analysis document intake.",
-    "sensorthings-analysis-native": "Continue the same original retained-edition analysis, native Helgoland browser, publication, Python programme and complete customer receiving."
+    "sensorthings-analysis-native": "Continue the same original retained-edition analysis, native Helgoland browser, publication, Python programme and complete customer receiving.",
+    "sensorthings-record-multicomponent": "Reconstruct the complete original multi-component recording from its retained source files.",
+    "sensorthings-receive-multicomponent": "Receive and resume the original multi-component source, explicit component review, publication and complete portable handover.",
+    "sensorthings-report-multicomponent": "Produce and reopen the complete component report from its original source files and explicit selected plan."
   },
   "exports": {
     "./sensorthings": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/core.mjs",
@@ -68,7 +74,18 @@
     "./sensorthings/analysis/types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/types.d.mts",
     "./sensorthings/analysis/python-document": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/python-document.mjs",
     "./sensorthings/analysis/python-document-cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/python-document-cli.mjs",
-    "./sensorthings/analysis/native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/native-journey.mjs"
+    "./sensorthings/analysis/native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/native-journey.mjs",
+    "./sensorthings/record-multicomponent": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/record-multicomponent.mjs",
+    "./sensorthings/receive-multicomponent": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/receive-multicomponent.mjs",
+    "./sensorthings/report-multicomponent": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/report-multicomponent.mjs",
+    "./sensorthings/analysis/components": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/components.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/components.mjs"
+    },
+    "./sensorthings/analysis/component-report": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/component-report.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/component-report.mjs"
+    }
   },
   "merchantProviders": {
     "sensorthings-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/merchant-provider.mjs"

@@ -1,0 +1,85 @@
+{
+  "schema": "commons.openlineage.upstream-fixtures.v1",
+  "files": [
+    {
+      "file": "fixture-event-simple.json",
+      "repository": "OpenLineage/OpenLineage",
+      "path": "proxy/fluentd/events/event_simple.json",
+      "tree": "07864a6b5f5d30b878e157eba8409dda84d68d4f",
+      "gitBlob": "3b6936894172b4fc78f9b385771695fb6e2a8720",
+      "bytes": 729,
+      "url": "https://api.github.com/repos/OpenLineage/OpenLineage/git/blobs/3b6936894172b4fc78f9b385771695fb6e2a8720",
+      "originalUrl": "https://github.com/OpenLineage/OpenLineage/blob/main/proxy/fluentd/events/event_simple.json"
+    },
+    {
+      "file": "fixture-event-full.json",
+      "repository": "OpenLineage/OpenLineage",
+      "path": "proxy/fluentd/events/event_full.json",
+      "tree": "07864a6b5f5d30b878e157eba8409dda84d68d4f",
+      "gitBlob": "d0f19663859955c95afde83bd7bd3fcdffc641e8",
+      "bytes": 9006,
+      "url": "https://api.github.com/repos/OpenLineage/OpenLineage/git/blobs/d0f19663859955c95afde83bd7bd3fcdffc641e8",
+      "originalUrl": "https://github.com/OpenLineage/OpenLineage/blob/main/proxy/fluentd/events/event_full.json"
+    },
+    {
+      "file": "fixture-lineage-mixed-sources.json",
+      "repository": "OpenLineage/OpenLineage",
+      "path": "spec/tests/LineageFacet/mixed-sources.json",
+      "tree": "07864a6b5f5d30b878e157eba8409dda84d68d4f",
+      "gitBlob": "b93a3502f5f711aacc52dec765a1e50b635c8a27",
+      "bytes": 1313,
+      "url": "https://api.github.com/repos/OpenLineage/OpenLineage/git/blobs/b93a3502f5f711aacc52dec765a1e50b635c8a27",
+      "originalUrl": "https://github.com/OpenLineage/OpenLineage/blob/main/spec/tests/LineageFacet/mixed-sources.json"
+    },
+    {
+      "file": "fixture-lineage-dataset.json",
+      "repository": "OpenLineage/OpenLineage",
+      "path": "spec/tests/LineageFacet/dataset-to-dataset.json",
+      "tree": "07864a6b5f5d30b878e157eba8409dda84d68d4f",
+      "gitBlob": "3541805ffabf604f9fb1c8398e0388d0d97e8a67",
+      "bytes": 777,
+      "url": "https://api.github.com/repos/OpenLineage/OpenLineage/git/blobs/3541805ffabf604f9fb1c8398e0388d0d97e8a67",
+      "originalUrl": "https://github.com/OpenLineage/OpenLineage/blob/main/spec/tests/LineageFacet/dataset-to-dataset.json"
+    },
+    {
+      "file": "fixture-lineage-implicit-job.json",
+      "repository": "OpenLineage/OpenLineage",
+      "path": "spec/tests/LineageFacet/implicit-job.json",
+      "tree": "07864a6b5f5d30b878e157eba8409dda84d68d4f",
+      "gitBlob": "69c153f006d97018d0d41097e9f93579d449cd3b",
+      "bytes": 575,
+      "url": "https://api.github.com/repos/OpenLineage/OpenLineage/git/blobs/69c153f006d97018d0d41097e9f93579d449cd3b",
+      "originalUrl": "https://github.com/OpenLineage/OpenLineage/blob/main/spec/tests/LineageFacet/implicit-job.json"
+    },
+    {
+      "file": "OPENLINEAGE_LICENSE",
+      "repository": "OpenLineage/OpenLineage",
+      "path": "LICENSE",
+      "tree": "07864a6b5f5d30b878e157eba8409dda84d68d4f",
+      "gitBlob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "bytes": 11357,
+      "url": "https://api.github.com/repos/OpenLineage/OpenLineage/git/blobs/261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "originalUrl": "https://github.com/OpenLineage/OpenLineage/blob/main/LICENSE"
+    },
+    {
+      "file": "schema-core-1-0-1.json",
+      "repository": "OpenLineage/OpenLineage",
+      "path": "website/static/spec/1-0-1/OpenLineage.json",
+      "tree": "07864a6b5f5d30b878e157eba8409dda84d68d4f",
+      "gitBlob": "1215bd651abe077924f402ef8854f948a380859d",
+      "bytes": 18663,
+      "url": "https://api.github.com/repos/OpenLineage/OpenLineage/git/blobs/1215bd651abe077924f402ef8854f948a380859d",
+      "originalUrl": "https://github.com/OpenLineage/OpenLineage/blob/main/website/static/spec/1-0-1/OpenLineage.json"
+    },
+    {
+      "file": "schema-core-1-0-5.json",
+      "repository": "OpenLineage/OpenLineage",
+      "path": "website/static/spec/1-0-5/OpenLineage.json",
+      "tree": "07864a6b5f5d30b878e157eba8409dda84d68d4f",
+      "gitBlob": "92ba83147885c9b5ae1a1124d8d01d49b9f1d3cc",
+      "bytes": 8493,
+      "url": "https://api.github.com/repos/OpenLineage/OpenLineage/git/blobs/92ba83147885c9b5ae1a1124d8d01d49b9f1d3cc",
+      "originalUrl": "https://github.com/OpenLineage/OpenLineage/blob/main/website/static/spec/1-0-5/OpenLineage.json"
+    }
+  ]
+}

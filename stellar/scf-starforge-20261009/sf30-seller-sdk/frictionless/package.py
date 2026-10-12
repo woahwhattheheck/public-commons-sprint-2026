@@ -769,7 +769,10 @@ def read_source(filename):
 def source_inspection(filename):
     _, raw, config, capture, queries = read_source(filename)
     return {"hash": sha(raw), "bytes": len(raw), "queries": queries, "captureSha256": capture["sha256"],
-            "captureFile": str(capture["filename"]), "config": config, "capture": capture["manifest"]}
+            "captureFile": str(capture["filename"]), "config": config, "capture": capture["manifest"],
+            # Preserve the original Python JSON semantics and large integer tokens for
+            # source authoring; browser/MCP clients need not reconstruct this text.
+            "queriesText": json.dumps(config["queries"], ensure_ascii=False, indent=2, allow_nan=False)}
 
 def projected_value(raw, value, spec, alias):
     if value is None:

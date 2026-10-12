@@ -1,4 +1,5 @@
 import {merchantCommercialReceiving} from './support-commercial-receiving.mjs';
+import {merchantCommercialTariffs} from './support-commercial-tariffs.mjs';
 // MIT. Original saved merchant quotation through the configured support owner.
 import {openCaseCommercial,commercialWorkspaceId} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-commercial.mjs';
 import {failure,exact,privateSupportDirectory} from './config.mjs';
@@ -6,12 +7,14 @@ const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}
 const HASH=/^[a-f0-9]{64}$/;
 export function merchantCommercial({cases,casesDirectory,exportsDirectory,reads,environment=process.env}) {
   const receiving=merchantCommercialReceiving({cases,casesDirectory,environment});
+  const tariffs=merchantCommercialTariffs({cases,casesDirectory,exportsDirectory,reads});
   let model;
   const original=async()=>model??=openCaseCommercial({store:await cases(),workspaceId:commercialWorkspaceId(casesDirectory())});
   const selected=args=>{if(!UUID.test(args.id??''))throw failure('INVALID_CASE_ID','Choose the original saved case UUID.');return 'commercial:'+args.id;};
   return {
     handles:name=>name.startsWith('merchant_case_commercial'),
     async call(name,args) {
+      if(tariffs.handles(name))return tariffs.call(name,args);
       if(receiving.handles(name))return receiving.call(name,args);
       const scope=selected(args);
       if(name==='merchant_case_commercial_file_reads') {
@@ -41,10 +44,12 @@ export function merchantCommercial({cases,casesDirectory,exportsDirectory,reads,
         merchant_case_commercial_save_draft:'saveDraft',merchant_case_commercial_publish:'publish',
         merchant_case_commercial_receive_pricing:'receivePricing',merchant_case_commercial_receive:'receive',
         merchant_case_commercial_compare:'compare',
+        merchant_case_commercial_preview_implementation:'previewImplementation',
+        merchant_case_commercial_adopt_implementation:'adoptImplementation',
       }[name];
       if(!method)throw failure('TOOL_NOT_FOUND','Unknown original merchant quotation operation.');
       return (await original())[method](args);
     },
-    close:()=>receiving.close(),
+    close:async()=>{const results=await Promise.allSettled([receiving.close(),tariffs.close()]);const failed=results.find(row=>row.status==='rejected');if(failed)throw failed.reason;},
   };
 }

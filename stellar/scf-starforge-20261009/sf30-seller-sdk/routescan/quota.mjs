@@ -4,7 +4,7 @@ import { constants } from 'node:fs';
 import { open, mkdir, lstat, realpath, rename, unlink } from 'node:fs/promises';
 import { resolve, join, isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { fail, json, plain } from './config.mjs';
+import { fail, json, plain } from './primitives.mjs';
 
 const SCHEMA = 'stellar-forge.routescan-quota.v1';
 const WINDOW = 86400000, BUCKET = 60000;

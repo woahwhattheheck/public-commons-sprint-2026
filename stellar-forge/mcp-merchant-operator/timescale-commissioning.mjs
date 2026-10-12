@@ -120,7 +120,7 @@ export async function dispatchTimescaleCommissioning({tool,name,resource,args,ex
           const value=await sourceFile(model,args);
           if(args.expectedSha256!==value.file.sha256)throw failure('TIMESCALE_COMMISSIONING_FILE_CHANGED','Use the inspected complete original file hash.');
           return{bytes:Buffer.from(value.content,'utf8'),name:value.file.name,type:'application/json'};
-        });
+        }});
     }
     case'file_release':{
       fields(args,['readId'],['readId']);await resource.reads.release(name+':commissioning',uuid(args.readId));return{released:true,readId:args.readId};

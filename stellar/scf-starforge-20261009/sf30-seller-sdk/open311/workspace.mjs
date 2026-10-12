@@ -218,9 +218,15 @@ export function openWorkspace(directory, { clientFactory = createClient } = {}) 
       const c = connectionInput(input.connection, input.requestId);
       clientFactory(c);
       const old = get('SELECT value FROM connections WHERE id=?', c.id);
-      if (old && get('SELECT id FROM captures WHERE connection_id=? LIMIT 1', c.id)) {
+      if (old) {
         const prior = parse(old.value);
-        if (prior.baseUrl !== c.baseUrl || (prior.jurisdictionId || '') !== (c.jurisdictionId || '')) fail('CONNECTION_IDENTITY_IN_USE', 'Create a new connection ID for a different endpoint or jurisdiction. Existing captures keep their original identity.', 409);
+        const identityChanged = prior.baseUrl !== c.baseUrl || (prior.jurisdictionId || '') !== (c.jurisdictionId || '');
+        const identityInUse = identityChanged && (
+          get('SELECT id FROM captures WHERE connection_id=? LIMIT 1', c.id) ||
+          all('SELECT intent FROM operations WHERE kind=? AND state IN (?,?)', 'capture', 'FETCHING', 'FETCHED')
+            .some(op => parse(op.intent).connectionId === c.id)
+        );
+        if (identityInUse) fail('CONNECTION_IDENTITY_IN_USE', 'Create a new connection ID for a different endpoint or jurisdiction. Existing captures and source requests keep their original identity.', 409);
       }
       run('INSERT INTO connections(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value', c.id, canonical(c));
       return { connection: c };

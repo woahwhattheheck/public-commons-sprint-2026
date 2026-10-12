@@ -2,7 +2,6 @@
 import { basename, dirname, resolve } from 'node:path';
 import { realpath } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { readPrivateJson } from '../routescan/quota.mjs';
 import { exact, plain, line, identifier, fileBytes, privateSupportDirectory, failure } from '../../../../stellar-forge/mcp-merchant-operator/host-files.mjs';
 import { canonicalJson } from './domain.mjs';
 
@@ -29,6 +28,7 @@ function freeze(value) {
 }
 export async function readOpen311WorkspaceConfiguration(path) {
   path = resolve(pathText(path, 'connection file'));
+  const { readPrivateJson } = await import('../routescan/quota.mjs');
   const raw = await readPrivateJson(path, 1024 * 1024);
   exact(raw, ['schema', 'workspaces'], ['schema', 'workspaces']);
   requireValue(raw.schema === OPEN311_HOST_SCHEMA && plain(raw.workspaces) &&
