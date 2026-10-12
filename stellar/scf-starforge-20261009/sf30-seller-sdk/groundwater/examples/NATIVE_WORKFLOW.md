@@ -12,7 +12,7 @@ Reuse verified installed components when available. The Python environment must 
 /absolute/private/native-environment/bin/python /absolute/reviewed/groundwater/examples/prepare_runtime.py --directory /absolute/private/prepared-runtime
 ```
 
-The preparation helper retains an original request and calls the unchanged bundled FloPy `run_main` for MODFLOW6 release 6.8.1's `mf6` and executables release 29.0's `mf2005dbl`. It does not use the old MF6 in the latter archive. Both actual binary returns/versions and the full installed Python closure are fingerprinted. Keep downloads and binary source provenance with this original runtime.
+The preparation helper retains an original request and calls the unchanged bundled FloPy `run_main` for MODFLOW6 release 6.8.1's `mf6` and executables release 29.0's `mf2005dbl`. It does not use the old MF6 in the latter archive. The executable bytes, pinned versions and complete installed Python closure define the runtime fingerprint. Full version-probe output and return codes remain separate observations: the legacy Fortran EOF diagnostic contains process IDs and memory addresses that change between otherwise identical probes. Keep downloads and binary source provenance with this original runtime.
 
 Select an existing Node, Playwright module and Chromium executable for the browser. The caller uses those paths, `--disable-dev-shm-usage` and its own private browser temporary directory; it does not install another browser.
 
@@ -42,7 +42,7 @@ Only known source findings have supplied example dispositions. A new blocking, l
 
 ## Original request recovery
 
-The parent stores each original request in `requests/<phase>.json` before dispatch. It reads the native operation first on replay and uses the same ID, expected version and payload if the commit is still absent. The browser likewise binds one phase and its exact pending UI request in one private publication before permitting the network request. A lost response is recovered through the original operation endpoint. A missing source file or differing original request stops the continuation.
+The parent stores each original request in `requests/<phase>.json` before dispatch. It reads the native operation first on replay and uses the same ID, expected version and payload if the commit is still absent. If that exact execute request committed but its queued run has no dispatch, replay continues the same native side effect under the original run lock. It does not replay a dispatched or completed attempt. The browser likewise binds one phase and its exact pending UI request in one private publication before permitting the network request. A lost response is recovered through the original operation endpoint. A missing source file or differing original request stops the continuation.
 
 The core retains native run identity across all attempts. The default caller does not repeat an interrupted dispatched attempt. If the operator has inspected the actual stopped attempt and approved continuation, supply its actual ID:
 
@@ -56,6 +56,18 @@ This option applies to the parent-owned baseline/reference runs. A browser-owned
 
 A timeout leaves the actual original run pending. A completed run/report whose frozen bytes disappeared is reported unavailable. Neither recovery path generates fresh outputs under a completed identity.
 
+## Continue after a reviewed application correction
+
+An existing journey retains `journey-input.json`, its exact configuration and every queued run's frozen source. To continue it with a reviewed caller or launcher correction, supply `--source-revision /absolute/source-revision.json`. The record must contain:
+
+- `schema: "starforge.groundwater-journey-source-revision.v1"`, the original `operation_id`, and `initial_input_sha256` computed with the application's `digest` over the original journey input.
+- The complete current `application_files` inventory and its `application_sha256`, plus the actual reviewed 40-character `source_head`.
+- The original operator's `actor`, a concrete `reason`, and timezone-qualified `created`.
+
+The caller verifies these against the original input and current complete application, then retains the new selection in `application-revisions/<application_sha256>.json`. Subsequent continuation can use that same retained revision. The original input is not replaced. The handoff and native result identify both the initial and current application and include the source revision.
+
+Legacy runtime records remain immutable. Their entire original fingerprint is validated before removing only the volatile version-output and probe-exit fields for comparison with current executable/dependency content. A changed binary, dependency file closure, version or interpreter remains a real mismatch. A reviewed current launcher can therefore start a never-dispatched original worker without changing that worker's scientific source, request or run ID.
+
 ## Actual deliverables
 
 - `output/native-result.json`: complete source/runtime/run/browser/receiving/restore result after drains.
@@ -66,3 +78,9 @@ A timeout leaves the actual original run pending. A completed run/report whose f
 - Original logs, private input, phase requests, exact native attempt trees, independent report receipt and restored workspace.
 
 The result distinguishes actual model completion, technical review, file delivery and the named example-package acceptance. Tethys needs an existing configured portal and account; the separate [portal receiving continuation](../TETHYS.md) consumes this exact backup and never reruns a solver. Source publication or syntax validation does not establish portal or solver completion.
+
+## Original browser detail navigation
+
+The browser continuation selects the saved project through the operator control and waits for that choice to be retained. Project selection intentionally returns the UI to the page inventory. The caller then reopens and reloads the exact source, edition, run or report route, verifies the selected project and original workspace, and checks that the requested record is rendered before it interacts with that detail. Reloading avoids a late project-selection refresh replacing the requested detail. The same sequence is used in the restored-workspace pass.
+
+This is a read-only navigation correction. It preserves the original browser journal, phase requests, operation IDs, queued worker and completed native outputs. An existing journey adopts the complete reviewed source through the source-revision mechanism above; it does not replace the initial input or create another model run.

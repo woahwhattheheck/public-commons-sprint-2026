@@ -387,9 +387,13 @@ class DuckDBWorkspace:
         return [{"name": name, "edition_id": edition, "revision": revision}
                 for name, edition, revision in db.execute("SELECT name,edition_id,revision FROM sf_views ORDER BY name").fetchall()]
 
-    def _delivery(self, report_path):
+    def _delivery(self, report_path, *, db=None):
         report_path = Path(os.path.abspath(Path(report_path).expanduser()))
         raw = read(report_path, 8 * 1024 * 1024)
+        from .timescale_intake.source import open_delivery as open_timescale_delivery
+        native_table = open_timescale_delivery(report_path, raw, self, db)
+        if native_table is not None:
+            return native_table
         report = parse(raw)
         # Accept the original bridge's whole output or its unchanged report.
         if isinstance(report, dict) and report.get("mode") == "ORIGINAL_PYTHON_DATASET":
@@ -427,6 +431,18 @@ class DuckDBWorkspace:
 
     @staticmethod
     def _rows(delivery, fields, total):
+        if hasattr(delivery, "iter_rows"):
+            count = 0
+            for row in delivery.iter_rows():
+                if not isinstance(row, dict) or set(row) != set(fields):
+                    raise StateError("DUCKDB_ORIGINAL_ROW_FIELDS_CHANGED")
+                count += 1
+                if count > total:
+                    raise StateError("DUCKDB_ORIGINAL_ROW_COUNT_CHANGED")
+                yield row
+            if count != total:
+                raise StateError("DUCKDB_ORIGINAL_ROW_COUNT_CHANGED")
+            return
         with delivery.file("dataset.jsonl").open() as stream:
             count = 0
             while raw := stream.readline(_LINE + 1):
@@ -498,7 +514,7 @@ class DuckDBWorkspace:
             raise StateError("DUCKDB_DELIVERY_CHANGED_DURING_REVIEW")
         for row in self._rows(delivery, inspected["fields"], inspected["row_count"]):
             for column in mapped:
-                _convert(row[column["source"]], column)
+                getattr(delivery, "convert", _convert)(row[column["source"]], column)
         semantic_fields = _semantics.delivery_fields(delivery, source["manifest"], mapped)
         identity = {"schema": SCHEMA, "manifest_sha256": inspected["manifest_sha256"],
                     "source_binding_sha256": inspected["source_binding_sha256"], "columns": mapped, "keys": keys}
@@ -524,7 +540,11 @@ class DuckDBWorkspace:
             if existing:
                 return {**_semantics.edition_fields(db, parse(existing[0].encode())),
                         "import_status": "UNCHANGED"}
-            delivery, manifest_raw, source = self._delivery(review["report_path"])
+            if review.get("timescale_source") is not None:
+                from .timescale_intake.source import open_review_delivery
+                delivery, manifest_raw, source = open_review_delivery(review, self, db)
+            else:
+                delivery, manifest_raw, source = self._delivery(review["report_path"], db=db)
             if source["manifest_sha256"] != review["manifest_sha256"] or source["source_binding_sha256"] != review["source_binding_sha256"]:
                 raise StateError("DUCKDB_REVIEWED_DELIVERY_CHANGED")
             table = "sf_edition_" + review_id
@@ -539,7 +559,7 @@ class DuckDBWorkspace:
                 batch = []
                 for row in self._rows(delivery, source["fields"], source["row_count"]):
                     count += 1
-                    batch.append([count] + [_convert(row[c["source"]], c) for c in columns])
+                    batch.append([count] + [getattr(delivery, "convert", _convert)(row[c["source"]], c) for c in columns])
                     if len(batch) == 256:
                         db.executemany(sql, batch)
                         batch.clear()
@@ -566,7 +586,8 @@ class DuckDBWorkspace:
                         raise StateError("DUCKDB_ORIGINAL_SOURCE_CHANGED")
                     db.execute("INSERT INTO sf_files VALUES(?,?,?,?)", [review_id, name, length, checksum.hexdigest()])
                     files.append({"name": name, "bytes": length, "sha256": checksum.hexdigest()})
-                input_raw = read(Path(review["report_path"]), 8 * 1024 * 1024)
+                input_raw = (delivery.input_raw if hasattr(delivery, "input_raw") else
+                             read(Path(review["report_path"]), 8 * 1024 * 1024))
                 if digest(input_raw) != source["input_report_sha256"]:
                     raise StateError("DUCKDB_ORIGINAL_REPORT_CHANGED")
                 db.execute("INSERT INTO sf_files VALUES(?,?,?,?)", [review_id, "input-report.json", len(input_raw), digest(input_raw)])
@@ -687,7 +708,8 @@ class DuckDBWorkspace:
                 db.rollback()
                 raise
 
-    def save_query(self, name, sql, parameters=None, expected_revision=0):
+    def _save_query_on(self, db, name, sql, parameters=None, expected_revision=0):
+        """Original query writer borrowed by an already owned native transaction."""
         name = _name(name)
         parameters = [] if parameters is None else parameters
         sql = self._sql(sql, parameters)
@@ -696,25 +718,28 @@ class DuckDBWorkspace:
         if type(expected_revision) is not int or expected_revision < 0:
             raise StateError("DUCKDB_QUERY_REVISION_REQUIRED")
         query_id = digest(name.casefold().encode())
+        current = db.execute("SELECT revision,record FROM sf_queries WHERE id=?", [query_id]).fetchone()
+        revision = current[0] if current else 0
+        if revision != expected_revision:
+            raise StateError("DUCKDB_SAVED_QUERY_CHANGED")
+        if current:
+            prior = parse(current[1].encode())
+            if prior["sql"] == sql and prior["parameters"] == parameters:
+                return {**prior, "parameters_text": _json(prior["parameters"])}
+            name = prior["name"]
+        record = {"query_id": query_id, "name": name, "revision": revision + 1, "sql": sql,
+                  "parameters": parameters, "saved_at": _now()}
+        db.execute("INSERT INTO sf_queries VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,record=excluded.record", [query_id, name, revision + 1, _json(record)])
+        db.execute("INSERT INTO sf_query_history VALUES(?,?,?)", [query_id, revision + 1, _json(record)])
+        return {**record, "parameters_text": _json(record["parameters"])}
+
+    def save_query(self, name, sql, parameters=None, expected_revision=0):
         with self._guard(), self._connection(writeable=True) as db:
             db.execute("BEGIN")
             try:
-                current = db.execute("SELECT revision,record FROM sf_queries WHERE id=?", [query_id]).fetchone()
-                revision = current[0] if current else 0
-                if revision != expected_revision:
-                    raise StateError("DUCKDB_SAVED_QUERY_CHANGED")
-                if current:
-                    prior = parse(current[1].encode())
-                    if prior["sql"] == sql and prior["parameters"] == parameters:
-                        db.commit()
-                        return {**prior, "parameters_text": _json(prior["parameters"])}
-                    name = prior["name"]
-                record = {"query_id": query_id, "name": name, "revision": revision + 1, "sql": sql,
-                          "parameters": parameters, "saved_at": _now()}
-                db.execute("INSERT INTO sf_queries VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,record=excluded.record", [query_id, name, revision + 1, _json(record)])
-                db.execute("INSERT INTO sf_query_history VALUES(?,?,?)", [query_id, revision + 1, _json(record)])
+                result = self._save_query_on(db, name, sql, parameters, expected_revision)
                 db.commit()
-                return {**record, "parameters_text": _json(record["parameters"])}
+                return result
             except BaseException:
                 db.rollback()
                 raise
@@ -728,11 +753,24 @@ class DuckDBWorkspace:
         with self._guard(), self._connection() as db:
             return {"exports": [parse(row[0].encode()) for row in db.execute("SELECT record FROM sf_exports ORDER BY id").fetchall()]}
 
-    def export_query(self, query_id, destination, expected_revision, expected_views=None):
+    def export_query(self, query_id, destination, expected_revision, expected_views=None, *, retained_query=None):
         query_id = _hex(query_id)
         if type(expected_revision) is not int or expected_revision < 1:
             raise StateError("DUCKDB_QUERY_REVISION_REQUIRED")
         with self._guard():
+            if retained_query is not None:
+                # Trusted report exporters may bind an immutable historical
+                # recipe. Validate it against the original query history, not
+                # caller-supplied SQL, while ordinary callers keep current CAS.
+                with self._connection() as db:
+                    historical = db.execute("SELECT record FROM sf_query_history WHERE id=? AND revision=?",
+                                            [query_id, expected_revision]).fetchone()
+                if historical is None:
+                    raise StateError("DUCKDB_RETAINED_QUERY_MISSING")
+                historical = parse(historical[0].encode())
+                historical["parameters_text"] = _json(historical["parameters"])
+                if _json(retained_query) != _json(historical):
+                    raise StateError("DUCKDB_RETAINED_QUERY_CHANGED")
             target = _new_destination(destination, self.directory)
             request_file = target / "request.json"
             if request_file.exists():
@@ -748,11 +786,13 @@ class DuckDBWorkspace:
                 # The retained original revision owns this export even when
                 # the operator has since saved a newer version of the recipe.
                 views = request["views"]
+                if retained_query is not None and _json(query) != _json(retained_query):
+                    raise StateError("DUCKDB_RETAINED_QUERY_CHANGED")
             else:
                 if any(target.iterdir()):
                     raise StateError("DUCKDB_EXPORT_DESTINATION_NOT_EMPTY")
                 with self._connection() as db:
-                    query = self._record(db, "sf_queries", query_id)
+                    query = historical if retained_query is not None else self._record(db, "sf_queries", query_id)
                     views = self._views(db)
                 if query["revision"] != expected_revision:
                     raise StateError("DUCKDB_SAVED_QUERY_CHANGED")

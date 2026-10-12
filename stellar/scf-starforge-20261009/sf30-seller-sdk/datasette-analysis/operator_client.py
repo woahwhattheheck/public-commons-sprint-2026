@@ -18,6 +18,27 @@ SCHEMA = "stellar-forge.datasette-operator.v1"
 _ID = re.compile(r"[a-f0-9]{32}")
 _HASH = re.compile(r"[a-f0-9]{64}")
 _MAX_JSON = 32 * 1024 * 1024
+_QUERY = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
+
+
+def operator_route(route, *, mutation=False):
+    """Select only the original Datasette or supported Analysis HTTP operation."""
+    if not isinstance(route, str) or any(ord(char) < 32 for char in route) or "\\" in route:
+        return False
+    parsed = urlsplit(route)
+    if parsed.scheme or parsed.netloc or parsed.fragment or not parsed.path.startswith("/api/"):
+        return False
+    if parsed.path.startswith("/api/datasette/"):
+        return True
+    if parsed.query:
+        return False
+    if not mutation and parsed.path == "/api/state":
+        return True
+    if re.fullmatch(r"/api/queries/[A-Za-z][A-Za-z0-9_]{0,63}", parsed.path):
+        return True
+    if mutation and parsed.path == "/api/start/query":
+        return True
+    return not mutation and re.fullmatch(r"/api/jobs/[a-f0-9]{32}", parsed.path) is not None
 
 
 class DatasetteClientError(RuntimeError):
@@ -84,9 +105,9 @@ class DatasetteOperatorClient:
         return cls(OperatorConnection.from_workspace(workspace), **options)
 
     def _open(self, route, *, body=None, headers=None):
-        if not route.startswith("/api/datasette/") or route.startswith("//"):
+        if not operator_route(route, mutation=body is not None):
             raise DatasetteClientError("DATASETTE_OPERATOR_ROUTE_INVALID",
-                                       "Use an original Datasette operator route.")
+                                       "Use a supported route on the original Datasette and Analysis operator.")
         values = {"X-Analysis-Capability": self.connection.capability,
                   "Origin": self.connection.origin, **(headers or {})}
         data = None
@@ -129,6 +150,46 @@ class DatasetteOperatorClient:
             raise DatasetteClientError("DATASETTE_OPERATOR_IDENTITY_CHANGED",
                                        "Reconnect to the original workspace and operation.")
         return value
+
+
+    def analysis_state(self):
+        """Read the original Analysis views used to bind a customer query."""
+        self.status()
+        return self._json("/api/state")
+
+    def saved_query(self, name):
+        if not isinstance(name, str) or not _QUERY.fullmatch(name):
+            raise DatasetteClientError("DATASETTE_QUERY_NAME_INVALID",
+                                       "Use the original saved Analysis query name.")
+        self.status()
+        return self._json("/api/queries/" + name)
+
+    def save_query(self, name, fields, *, expected_revision):
+        if not isinstance(name, str) or not _QUERY.fullmatch(name):
+            raise DatasetteClientError("DATASETTE_QUERY_NAME_INVALID",
+                                       "Use the original saved Analysis query name.")
+        if (not isinstance(fields, dict) or type(expected_revision) is not int
+                or expected_revision < 0 or "expected_revision" in fields):
+            raise DatasetteClientError("DATASETTE_QUERY_INPUT_INVALID",
+                                       "Supply the saved SQL fields and its selected revision separately.")
+        self.status()
+        return self._json("/api/queries/" + name,
+                          body={**fields, "expected_revision": expected_revision})
+
+    def start_query(self, fields, *, job_id):
+        if (not isinstance(fields, dict) or "id" in fields
+                or not isinstance(job_id, str) or not _ID.fullmatch(job_id)):
+            raise DatasetteClientError("DATASETTE_QUERY_JOB_INVALID",
+                                       "Use the original query fields and stable Analysis job ID.")
+        self.status()
+        return self._json("/api/start/query", body={"id": job_id, **fields})
+
+    def analysis_job(self, job_id):
+        if not isinstance(job_id, str) or not _ID.fullmatch(job_id):
+            raise DatasetteClientError("DATASETTE_QUERY_JOB_INVALID",
+                                       "Use the original Analysis job ID.")
+        self.status()
+        return self._json("/api/jobs/" + job_id)
 
     def rows(self, *, edition_id=None, offset=0, limit=100):
         query = {"offset": offset, "limit": limit}

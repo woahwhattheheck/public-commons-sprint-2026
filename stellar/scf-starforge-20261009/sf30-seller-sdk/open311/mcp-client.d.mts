@@ -1,3 +1,5 @@
+import type { CollectionSummary, CollectionCreateInput, CollectionRunInput, CollectionResult, CollectionInfo,
+  CollectionRequest, CollectionRequestView, CollectionFilter } from './collection-domain.mjs';
 import type { Buffer } from 'node:buffer';
 import type { Open311Connection, RequestFilter, RequestRow, ServiceRow, RawResponse, ResponseReceipt } from './index.mjs';
 import type { MutationIntent, MutationResult, WorkspaceConnection, WorkspaceCapture, WorkspaceOperation, WorkspaceReview, CaptureInput, CaptureResult, ReviewInput, ReviewedRequest, RequestView, WorkspaceBundle } from './workspace.mjs';
@@ -22,7 +24,7 @@ export interface Page<T> {
 export interface RevisionView { revision: number; workspaceId: string; }
 export interface WorkspaceStatus extends RevisionView {
   schema: 'commons.open311.workspace.v1'; workspace: string; label: string; createdAt: string;
-  counts: { connections: number; captures: number; reviews: number };
+  counts: { connections: number; captures: number; collections: number; reviews: number };
   recentOperations: Pick<WorkspaceOperation, 'requestId' | 'kind' | 'state' | 'createdAt' | 'updatedAt'>[];
   originalFileReads: number; sessions: { readId: string; kind: string; file: FileMetadata; storage: string; closing: boolean; expiresAt: string }[];
 }
@@ -31,7 +33,8 @@ export type FileSelection =
   | { kind: 'workspace'; expectedRevision: number }
   | { kind: 'source'; capture: string; expectedRevision?: number }
   | { kind: 'json' | 'csv' | 'report'; capture: string; expectedRevision: number }
-  | { kind: 'comparison'; before: string; after: string; expectedRevision?: number }
+  | { kind: 'json' | 'csv' | 'report'; collection: string; expectedRevision: number }
+  | { kind: 'comparison'; before: string; after: string; comparisonKind?: 'capture' | 'collection'; expectedRevision?: number }
   | { kind: 'operation'; operationId: string; expectedRevision?: number };
 export interface FileContinuation { readId?: string; expectedSha256?: string; offset?: number; limit?: number; }
 export interface RetainedChunk {
@@ -40,16 +43,18 @@ export interface RetainedChunk {
 }
 export interface SourceProfileSummary {
   profile: string; connectionId: string; name: string; baseUrl: string; jurisdictionId: string;
-  statusValues: string[]; responseLimit: number; pagination: boolean; extendedAttributes: boolean;
-  queryExtensions: string[]; attribution: Open311Connection['attribution'] | null;
+  statusValues: string[]; responseLimit: number; responseLimitParameter: string | null; pagination: boolean; extendedAttributes: boolean;
+  queryExtensions: string[]; queryDateRanges: NonNullable<Open311Connection['queryDateRanges']>;
+  apiKeyTransport: 'query' | 'bearer'; minimumRequestIntervalMs: number;
+  attribution: Open311Connection['attribution'] | null;
 }
 export interface WorkspaceAliases {
   workspace: string; label: string;
   inputs: { input: string; label: string; sha256: string; kind: 'workspace' }[];
   connectionProfiles: SourceProfileSummary[];
 }
-export type RecordKind = 'connections' | 'captures' | 'reviews';
-export interface RecordTypes { connections: WorkspaceConnection; captures: WorkspaceCapture; reviews: WorkspaceReview; }
+export type RecordKind = 'connections' | 'captures' | 'collections' | 'reviews';
+export interface RecordTypes { connections: WorkspaceConnection; captures: WorkspaceCapture; collections: CollectionSummary; reviews: WorkspaceReview; }
 export interface PageInput { offset?: number; limit?: number; }
 export type DifferenceSection = 'added' | 'changed' | 'unchanged' | 'missingFromCapture';
 export interface DifferenceItem {
@@ -65,6 +70,10 @@ export class Open311MerchantClient {
     Promise<RevisionView & Page<RecordTypes[K]> & { kind: K }>;
   configure(input: MutationIntent & { profile: string }): Promise<MutationResult & { connection: WorkspaceConnection }>;
   capture(input: CaptureInput): Promise<CaptureResult>;
+  createCollection(input: CollectionCreateInput): Promise<CollectionResult>;
+  runCollection(input: CollectionRunInput): Promise<CollectionResult>;
+  pauseCollection(input: CollectionRunInput): Promise<CollectionResult>;
+  collectionInfo(input: PageInput & { id: string; expectedRevision: number }): Promise<CollectionInfo & { returned: number }>;
   captureInfo(id: string): Promise<{ capture: WorkspaceCapture; receipt: ResponseReceipt; raw: Omit<RawResponse, 'body'>;
     itemCount: number; completeFiles: { source: 'source'; records: 'json' } }>;
   services(input: PageInput & { connection: string; expectedRevision: number }):
@@ -72,12 +81,17 @@ export class Open311MerchantClient {
   requests(input: Omit<RequestFilter, 'status' | 'service' | 'serviceCode' | 'offset' | 'limit'> & PageInput & {
     status?: string; service?: string; capture: string; expectedRevision: number }):
     Promise<RevisionView & Page<ReviewedRequest> & { capture: string }>;
+  requests(input: Omit<CollectionFilter, 'status' | 'service' | 'serviceCode' | 'offset' | 'limit' | 'changedOnly'> & PageInput & {
+    status?: string; service?: string; changedOnly?: boolean; expectedRevision: number }):
+    Promise<RevisionView & Page<CollectionRequest> & { collection: CollectionSummary }>;
+  request(input: { id: string; collection: string; expectedRevision?: number }): Promise<RevisionView & CollectionRequestView>;
   request(input: { id: string; capture?: string; connection?: string; expectedRevision?: number }):
     Promise<RevisionView & RequestView>;
-  diff(input: PageInput & { before: string; after: string; section?: DifferenceSection }):
+  diff(input: PageInput & { before: string; after: string; kind?: 'capture' | 'collection'; section?: DifferenceSection }):
     Promise<Page<RequestRow | DifferenceItem> & { before: string; after: string; scopeComparable: boolean;
-      section: DifferenceSection; counts: Record<DifferenceSection, number> }>;
-  review(input: MutationIntent & { connectionId: string; serviceRequestId: string; review: ReviewInput }):
+      section: DifferenceSection; kind: 'capture' | 'collection'; counts: Record<DifferenceSection, number>;
+      coverage?: { before: CollectionSummary; after: CollectionSummary }; interpretation?: string }>;
+  review(input: MutationIntent & { connectionId: string; serviceRequestId: string; review: ReviewInput; captureId?: string; expectedSourceSha256?: string }):
     Promise<MutationResult & { review: WorkspaceReview }>;
   operation(requestId: string): Promise<WorkspaceOperation>;
   input(input: string): Promise<{ workspace: string; input: string; name: string; bytes: number; sha256: string;

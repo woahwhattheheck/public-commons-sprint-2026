@@ -336,3 +336,48 @@ Original CoCart product and managed operating results remain attached to
 PR1618 and PR1708; a following front-door receiving operation retains its own
 actual result. Publish this cumulative subtree through the same existing
 Site project and its current audience.
+
+## Prepare and retain the SCF submission
+
+The existing application reader now opens **Prepare submission** at
+/grant-submission.html. It receives the same nine complete canonical answers
+and their exact original source index, then carries answer editing, whole-text
+copying, actual issuer-field mapping, recorded limits and editorial review into
+a portable working draft.
+
+The editor uses the original browser draft store with optimistic revisions.
+Complete export/reopen includes every source edition, manual answer, field
+mapping, review note and saved version. A later source refresh preserves edited
+answers against their earlier baseline and shows the new source alongside them.
+The existing composer maintains the navigation entry and current source
+descriptor without another manuscript or data file.
+
+The complete [submission operating guide](GRANT_SUBMISSION.md) covers the
+issuer-form mapping, exact copy-format counts, receiving and source adoption.
+The maintained implementation is grant-submission.mjs, the four original
+dist/grant-submission assets and the three dist/grant-plan modules, registered
+in the existing browser-assets declaration. The same editor receives a complete
+native SF47 planning JSON or ZIP, lets staff review its exact source and selected
+revision, and applies the accepted planning material to the existing working draft. Continue the original Site and issuer-submission operation with
+this same complete source.
+
+## Review the operating product before the application
+
+The existing `/grant.html` opens with the retained purchase film, complete economic
+report and original reviewer operating path. Choose **Explore the working product**
+to follow Applications, prepare the installed or source command for the selected
+private workbench, and download its complete opening and handover guide.
+
+The original film remains linked from its previous application section. The guided
+entry uses the same report, package, purchase and source URLs as the current
+reader. Its [full operating guide](GRANT_ENTRY.md) covers command preparation,
+original purchase receiving and the existing customer-delivery recipes.
+
+The complete composer and installed source contract is in
+[GRANT_COMPOSITION.md](GRANT_COMPOSITION.md). Its public customer projection,
+reviewer opening and submission workspace are composed into the same current
+application edition before the four reader identities are emitted.
+
+### Maintain the financial application source
+
+The [merchant financial application chapter](GRANT_FINANCIAL_OPERATIONS.md) connects the current manuscript to settlement accounting, invoices, payment plans and Xero handover. The same composer accepts **--finance-commit** to select the actual merged product and preserves it through later manuscript refreshes. The concise nine answers and complete companion remain the original reader's source, and its current application identity also flows into **Prepare submission**.

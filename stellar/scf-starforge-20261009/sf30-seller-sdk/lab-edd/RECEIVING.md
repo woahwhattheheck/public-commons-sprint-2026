@@ -9,7 +9,9 @@ same completed reports and downloads.
 ## Select the exact original inputs
 
 Copy `receiving.example.json` for the laboratory's two published CSV families
-or `receiving.dts.example.json` for the original DTS XLSX workbook. The EQuIS
+or `receiving.dts.example.json` for the original DTS XLSX workbook and
+`receiving.legacy.example.json` for an original BIFF8 XLS. The complete legacy
+container, formula and native reissue contract is in [LEGACY_XLS.md](LEGACY_XLS.md). The EQuIS
 example already selects both complete bundled original ZIPs and their exact
 acquisition hashes. Keep relative source and merchant paths relative to the
 configuration file, or replace them with the actual absolute retained paths.
@@ -133,7 +135,9 @@ is created by this driver.
 
 DTS adds the same maintained
 `dataset-refresh/workbook/reader.py` alongside
-`workbook_bridge.py`. Both use Python 3.10+ standard library. The interpreter
+`workbook_bridge.py`. XLSX uses Python 3.10+ standard library; BIFF8 XLS adds
+`workbook_legacy.py` and the complete included `vendor/xlrd` package and license.
+The interpreter
 can be selected with `LAB_EDD_PYTHON`. Original input/output encodings, ZIP
 members, source epoch, worksheet identity and explicit literal choices remain
 part of native receiving.
@@ -196,3 +200,16 @@ merchant application keeps its declared environment and execution policy.
 ## Complete EQuIS3 / EQuIS4 receiving continuation
 
 Use `receiving.cross-profile.example.json` for the complete two-source cross-profile operation. It selects both retained 2508877 public originals and the full source-bound `examples/mccampbell/cross-profile-decisions.json`. The same maintained receiver performs original sealed-file execution and same-job replay, both native field/file checks, complete correspondence CSV/TSV reopening, every visible cross-profile download, exact baseline-row navigation, draft import/export and immutable reload. See [RECONCILIATION.md](RECONCILIATION.md) for the complete application contract and source-derived totals. Keep an already accepted earlier receiving edition with its original configuration; this named continuation retains its own exact source pair and review operation.
+
+## Legacy XLS receiving
+
+[LEGACY_XLS.md](LEGACY_XLS.md) carries the complete original XLS intake, formula
+choices, separately named native XLSX and source-bound result reopen. The
+original worker and browser use `receiving.legacy.example.json`; the maintained
+`workbook-legacy-receiving.py` also receives the exact upstream formula workbook
+and all 150 generated DTS headers through the real native reader/writer. Add
+`--node /absolute/existing/node` to perform its complete original CLI intake,
+300-field CSV/TSV editing, native preparation and independent result reopen in
+the same operation. The completed source and full native output are available
+in the [legacy receiving delivery](../../../../deliveries/dts8d-legacy-excel-20261012/README.md).
+This product includes software developed by David Giffin <david@giffin.org>.

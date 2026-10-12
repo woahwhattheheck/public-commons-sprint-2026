@@ -28,6 +28,7 @@ import { openUnstructuredPipelineWorkspace, openSavedPipelineSource, PIPELINE_UP
 
 import {openEuropePmcController,handleEuropePmcRoute} from './europe-pmc-routes.mjs';
 import {openResearchObjectSource} from './object-inputs.mjs';
+import {inspectStudyProtocolBundle} from './study-protocol-inspection.mjs';
 
 const PUBLIC = fileURLToPath(new URL('./public/', import.meta.url));
 const TYPES = Object.freeze({
@@ -53,6 +54,9 @@ const TYPES = Object.freeze({
   'clinical-trials.js': 'text/javascript; charset=utf-8',
   'clinical-trials.css': 'text/css; charset=utf-8',
   'source-bundles.js': 'text/javascript; charset=utf-8',
+  'study-protocol.js': 'text/javascript; charset=utf-8',
+  'study-protocol-storage.js': 'text/javascript; charset=utf-8',
+  'study-protocol.css': 'text/css; charset=utf-8',
   'source-inspection.js': 'text/javascript; charset=utf-8',
   'citation-review.js': 'text/javascript; charset=utf-8',
   'citation-review.css': 'text/css; charset=utf-8',
@@ -186,6 +190,16 @@ function safeFilename(value) {
     'EXPORT_FILENAME_INVALID');
   return value;
 }
+function templateDownloadDisposition(value){
+  requireValue(typeof value==='string'&&value.length>0&&value.length<=240&&
+    !/[\u0000-\u001f\u007f/\\]/.test(value),'TEMPLATE_FILENAME_INVALID');
+  const extension=value.match(/\.[A-Za-z0-9]{1,10}$/)?.[0]??'';
+  const stem=value.slice(0,value.length-extension.length).replace(/[^A-Za-z0-9._-]/g,'_').slice(0,160)||'research-template';
+  let encoded;
+  try{encoded=encodeURIComponent(value).replace(/['()*]/g,char=>'%'+char.charCodeAt(0).toString(16).toUpperCase());}
+  catch{fail('TEMPLATE_FILENAME_INVALID');}
+  return 'attachment; filename="'+stem+extension+'"; filename*=UTF-8\'\''+encoded;
+}
 function providerRegistry(value) {
   requireValue(plain(value), 'EDITION_ADAPTER_PROVIDERS_INVALID');
   for (const [name, provider] of Object.entries(value)) {
@@ -227,7 +241,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
   const zotero=zoteroStateDirectory===null?null:openZoteroResearchBridge({directory:zoteroStateDirectory,dossierStore:store});
   if(zotero)owners.add('zotero',()=>zotero.close(),10);
   const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
-  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,sourceInspection:true,
+  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,sourceInspection:true,studyProtocolInspection:true,
     studyExtraction:true,studyExtractionRequestLimit:STUDY_EXTRACTION_REVIEW_LIMIT,extractionPublications:true,zoteroBridge:zotero!==null,
     customerUpdates:true,customerUpdateRequestLimit:16*1024*1024,
     customerCommerce:true,customerCommerceConfigured:customerCommerceConfiguration!==null,customerCommerceRequestLimit:2*1024*1024,
@@ -331,6 +345,12 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         'RESEARCH_WORKSPACE_CHANGED');
       requireValue(!req.headers['x-research-instance-id']||req.headers['x-research-instance-id']===instanceId,
         'RESEARCH_INSTANCE_CHANGED');
+      if(req.method==='POST'&&path==='/api/study-protocol/inspect'){
+        const body=await readJson(req,MAX_SOURCE_BUNDLE_BODY);
+        requireValue(plain(body)&&Object.keys(body).length===1&&typeof body.rawText==='string',
+          'PROTOCOL_ORIGINAL_SOURCE_REQUIRED');
+        send(200,inspectStudyProtocolBundle(body.rawText));return;
+      }
       const templateMatch=path.match(/^\/api\/research\/dossiers\/([^/]+)\/template-exchange(?:\/(.*))?$/);
       if(templateMatch){
         const dossierId=pathId(templateMatch[1]),action=templateMatch[2]||'';
@@ -347,7 +367,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         if(Number.isSafeInteger(revision))res.setHeader('X-Research-Dossier-Revision',String(revision));
         if(result.kind==='file'){
           res.setHeader('X-Content-SHA256',result.sha256);
-          send(200,result.body,result.contentType,result.filename);
+          res.setHeader('Content-Disposition',templateDownloadDisposition(result.filename));
+          send(200,result.body,result.contentType);
         }else send(200,result.body);
         return;
       }

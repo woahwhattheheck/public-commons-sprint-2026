@@ -9,7 +9,7 @@ sys.dont_write_bytecode=True
 APPLICATION=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(APPLICATION))
 from groundwater_workspace.common import Problem,Lock,digest,file_info,json_text,read_json,write_json
-from groundwater_workspace.native import inspect_runtime
+from groundwater_workspace.native import inspect_runtime,runtime_matches
 from groundwater_workspace.sources import publisher_source
 
 def main():
@@ -43,7 +43,7 @@ def main():
         path=directory/"runtime.json"
         if path.exists():
             prior=read_json(path)
-            if prior["sha256"]!=runtime["sha256"] or prior["paths"]!=runtime["paths"]:
+            if not runtime_matches(prior,runtime) or prior["paths"]!=runtime["paths"]:
                 raise Problem("runtime_changed","The retained prepared runtime differs from its original actual fingerprint.")
             runtime=prior
         else:

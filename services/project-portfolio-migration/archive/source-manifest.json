@@ -1,0 +1,94 @@
+{
+  "schema": "portfolio.archive-source.v1",
+  "project": "Portfolio archive and reporting",
+  "source_model": "project-portfolio-model.v1",
+  "projection": "portfolio.archive-projection.v1",
+  "integration": "Original PortfolioWorkspace and portfolio_target workspace/action/browser",
+  "files": [
+    {
+      "path": "__init__.py",
+      "bytes": 156,
+      "sha256": "18fa9256165b0857adc26986e020186b2be93890a12bbdafd87555f9acb7db6c"
+    },
+    {
+      "path": "projection.py",
+      "bytes": 29662,
+      "sha256": "c54fdc5070dbdc5c855215edf0019801f07b3195e282467ff928612c85c55f34"
+    },
+    {
+      "path": "measures.py",
+      "bytes": 13708,
+      "sha256": "aa490e8742b1e1fdc958b79a0f3b625ee502c9b2a92de951423e33ffd5ac1e20"
+    },
+    {
+      "path": "closure.py",
+      "bytes": 11375,
+      "sha256": "c4bfee77b5133eb7416a3d8989253a55731f803e9f254e406f3445cdd5c63d06"
+    },
+    {
+      "path": "dataset.py",
+      "bytes": 12266,
+      "sha256": "e51fed394814e2a1c878e8dc810696e2d4b3eafe8d081ad35bf4210b123e2509"
+    },
+    {
+      "path": "delivery.py",
+      "bytes": 22612,
+      "sha256": "9086df9fe8d7c322abdeb29fffcb393603223830aab7f0c6f04a3470c91b7c43"
+    },
+    {
+      "path": "workspace.py",
+      "bytes": 36756,
+      "sha256": "ebaf1642f6aa810e20a3046e9e889b55cfd6d738d74dd32f70c9b2915c30f5c2"
+    },
+    {
+      "path": "web/archive.js",
+      "bytes": 24011,
+      "sha256": "5859b066c4ef33ad9bcda0afcc16acf5781670cd46a2695a4f22d9b613670be4"
+    },
+    {
+      "path": "web/companions.js",
+      "bytes": 11946,
+      "sha256": "6ad22803230f80726599be65390b12d40e5666d14683993e156997eb805d294c"
+    },
+    {
+      "path": "README.md",
+      "bytes": 12302,
+      "sha256": "93dbf6278cad1c6b883ede2755418db09a2004cae78dad248326a1f33601a52c"
+    },
+    {
+      "path": "native/browser.mjs",
+      "bytes": 10754,
+      "sha256": "49de36b15476a8d67cf40dd68e433ff4dd6c7111b432cfca3e4cb0d9391ffa52"
+    },
+    {
+      "path": "native/receive.py",
+      "bytes": 12104,
+      "sha256": "2aaa79ce90e3ee90ffd03ad407a3f4e2c4c40c3a950ac7776c161ede37904347"
+    },
+    {
+      "path": "native/README.md",
+      "bytes": 6212,
+      "sha256": "0759d0d0c75489cabceba777dfc94e9d5d7506dcf33021c4c38196528b4d29cc"
+    },
+    {
+      "path": "examples/cohort.json",
+      "bytes": 744,
+      "sha256": "3e804a7cdd7c4d889630cb50b54c20947050bb2b960f04398af970b735776cad"
+    },
+    {
+      "path": "examples/query.sql",
+      "bytes": 178,
+      "sha256": "dc52b297023e0c2d264ecbae5514194433a0fdf4e5b08e1a9349898683204423"
+    },
+    {
+      "path": "examples/parameters.json",
+      "bytes": 17,
+      "sha256": "777c0406343d0066b0be506c46659abd1a3195a56c280c918037cd337c4ccc2d"
+    },
+    {
+      "path": "SOURCE_REFERENCES.json",
+      "bytes": 2111,
+      "sha256": "70a6b0313b1fea7034fc61280ba863ed101a97f5b4e240c14451da8888ca8900"
+    }
+  ]
+}

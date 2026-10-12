@@ -102,3 +102,9 @@ const result = await receiveRedisCutover({
 receiveRedisCutover accepts review, create, receive or compare. Supply inputSha256 when receiving a previously selected complete input file; otherwise the API uses canonical JSON. The CLI pins the full input bytes. Keep that same input representation when reopening its original directory.
 
 compareRedisCutoverRows exposes the same exact comparison for an existing operator view. The full receiving API verifies original native page custody before using it.
+
+## Complete paired operator
+
+Open this same original paired directory through `starforge redis-cutover-operator open --directory ORIGINAL`. The [complete browser and CLI](CUTOVER_OPERATOR.md) provide full editable profiles/contracts, retained receiving progress, exact-request continuation, corrected edition history, sparse whole-file difference paging and a complete original customer handover.
+
+The operator's cold comparison and archive generation hold the existing pair writer and both original workspace owners while reading the full native observations. Its model uses the original source input, request IDs and immutable workspace bindings described above.

@@ -50,7 +50,9 @@ class PortfolioWorkspace:
     def read_edition(self, edition_id):
         record = self.store.record("editions", edition_id)
         require(record["schema"] == EDITION_SCHEMA, "edition_schema", "Open the selected edition with its original application version.")
-        return {**record, "model": self.store.object_json(record["sha256"])}
+        model = self.store.object_json(record["sha256"])
+        return {**record, "model": model,
+                "companion_captures": companion_source.capture_selections(model.get("companions", []))}
 
     def list_editions(self, cursor="", limit=25):
         return self.store.records("editions", cursor=cursor, limit=limit)
