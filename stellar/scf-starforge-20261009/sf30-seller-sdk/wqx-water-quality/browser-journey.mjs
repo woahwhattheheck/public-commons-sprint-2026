@@ -13,7 +13,7 @@ const equal = (a, b, label) => assert.equal(canonicalJson(a), canonicalJson(b), 
 const date = value => value ? value.slice(6) + '-' + value.slice(0, 2) + '-' + value.slice(3, 5) : '';
 const profileControls = { Station: '#profile-station', Activity: '#profile-activity', Result: '#profile-result', ResultDetectionQuantitationLimit: '#profile-limits' };
 export async function inspectWaterQualityWorkspace({ directory, outputDirectory, buyer, reviewId = 'march-versus-january',
-  editionId = 'potomac-q1-water-quality', originalIntent = 'wqx-journey-page-0001', playwrightModule, browserExecutable } = {}) {
+  editionId = 'potomac-q1-water-quality', originalIntent = 'wqx-journey-page-0001', projectSnapshot, playwrightModule, browserExecutable } = {}) {
   outputDirectory = await privateDirectory(resolve(outputDirectory));
   const { chromium } = createRequire(import.meta.url)(playwrightModule ?? process.env.PLAYWRIGHT_MODULE ?? 'playwright');
   const deniedSource = { async request() { throw new Error('This retained browser workflow unexpectedly requested new source.'); } };
@@ -21,7 +21,7 @@ export async function inspectWaterQualityWorkspace({ directory, outputDirectory,
   const errors = [], mutations = [], downloads = [], screenshots = [];
   try {
     workspace = await startWaterQualityWorkspace({ directory, buyer, transport: deniedSource });
-    const originalProject = await workspace.project.read(), originalReview = await workspace.project.readReview(reviewId);
+    const originalProject = projectSnapshot ?? await workspace.project.read(), originalReview = await workspace.project.readReview(reviewId);
     const originalEdition = await workspace.project.readEdition(editionId);
     const capture = await workspace.project.capture(originalReview.captureId);
     browser = await chromium.launch({ headless: true, ...(browserExecutable ?? process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: browserExecutable ?? process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}),
