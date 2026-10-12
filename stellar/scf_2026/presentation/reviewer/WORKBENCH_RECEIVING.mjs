@@ -18,7 +18,9 @@ for (let i = 2; i < process.argv.length; i += 2) {
 }
 for (const name of ['--operation', '--source-root', '--playwright', '--chromium']) assert(options[name], name + ' is required.');
 assert(Number(process.versions.node.split('.')[0]) >= 22, 'Use the maintained native Node 22 or later runtime.');
-const {chromium} = await import(pathToFileURL(options['--playwright']).href);
+const playwright = await import(pathToFileURL(options['--playwright']).href);
+const chromium = playwright.chromium ?? playwright.default?.chromium;
+assert(chromium && typeof chromium.launch === 'function', 'The selected Playwright package must expose Chromium.');
 const root = options['--operation'];
 await mkdir(root, {recursive:true, mode:0o700});
 for (const name of ['workbenches', 'downloads', 'screenshots', 'browser-temp']) await mkdir(join(root, name), {mode:0o700}).catch(error => {
