@@ -143,7 +143,12 @@ export async function openTenderlyWorkspace({
           const prepared = await readPreparedProduct(destination);
           need(saved.profile === id && prepared.planSha256 === profile.review.planSha256,
             'Prepared package does not match the saved profile', 409);
-          return saved;
+          // Reopening may receive the complete workspace at a new directory.
+          // Keep its saved identity, and use paths from the verified current package.
+          const { directory, stateDirectory, planFile, serviceFile,
+            upstreamsFile, openapiFile, clientDirectory } = prepared;
+          return { ...saved, directory, stateDirectory, planFile, serviceFile,
+            upstreamsFile, openapiFile, clientDirectory };
         } catch (error) { if (error.code !== 'ENOENT') throw error; }
         const result = await prepareProduct({ plan: profile.plan, out: destination });
         const saved = { ...result, schema: SCHEMA + '.package', profile: id,
