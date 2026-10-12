@@ -617,18 +617,47 @@ class AnalysisLineage:
                 if stage is not None and recorded_outcome:
                     shutil.rmtree(stage, ignore_errors=True)
 
-    def download(self, plan_id, name):
+    def _download_bundle(self, plan_id, event):
+        """Render one original read transaction; the index binds its exact bytes."""
+        with self.database._connection(readonly=True) as db:
+            db.execute("BEGIN")
+            row, record, events = self._plan_row(db, plan_id)
+            publication = self._publication(db, record)
+            history = self._observations(db, publication["job_id"]) if publication else []
+            view = self._view(db, row, record, events, with_events=False)
+        self.stopped(event)
+        from .analysis_lineage_reports import files
+        members = files(view, record["snapshot"], events, history)
+        self.stopped(event)
+        entries = []
+        for name, (data, mime) in sorted(members.items()):
+            need(len(data) <= 128 * 1024 * 1024, "HANDOVER_TOO_LARGE")
+            entries.append({"name": name, "bytes": len(data), "sha256": digest(data), "mime": mime})
+        index = {"schema": "stellar-forge.analysis-lineage-downloads.v1",
+                 "workspace_id": self.identity, "plan_id": plan_id,
+                 "plan_sha256": view["plan_sha256"], "events_sha256": view["events_sha256"],
+                 "manifest_sha256": next(item["sha256"] for item in entries if item["name"] == "manifest.json"),
+                 "files": entries}
+        index["index_sha256"] = digest(encode(index))
+        return index, members
+
+    def downloads(self, plan_id):
+        """Read a hash-bound index of the original event, receipt and report files."""
+        with self._operation() as event:
+            index, _ = self._download_bundle(identifier(plan_id), event)
+            return index
+
+    def download(self, plan_id, name, *, expected_sha256=None):
         allowed = {"events.json", "plan.json", "native-bindings.json", "receipts.json",
                    "report.html", "manifest.json", "handover.zip"}
         need(name in allowed, "DOWNLOAD_INVALID")
-        with self._operation():
-            with self.database._connection(readonly=True) as db:
-                row, record, events = self._plan_row(db, plan_id)
-                publication = self._publication(db, record)
-                history = self._observations(db, publication["job_id"]) if publication else []
-                view = self._view(db, row, record, events, with_events=False)
-            from .analysis_lineage_reports import files
-            members = files(view, record["snapshot"], events, history)
+        if expected_sha256 is not None:
+            checksum(expected_sha256)
+        with self._operation() as event:
+            index, members = self._download_bundle(identifier(plan_id), event)
             data, mime = members[name]
+            selected = next(item for item in index["files"] if item["name"] == name)
+            need(expected_sha256 is None or selected["sha256"] == expected_sha256,
+                 "DOWNLOAD_CHANGED")
             return {"bytes": data, "mime": mime, "filename": "analysis-lineage-" + plan_id + "-" + name,
-                    "sha256": digest(data)}
+                    "sha256": selected["sha256"]}

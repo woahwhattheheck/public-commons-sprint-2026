@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { composeGrantEntry } from './grant-entry.mjs';
 import { attachGrantSubmission } from './grant-submission.mjs';
+import { attachGrantReviewRounds } from './grant-review-round.mjs';
 import { receiveFinancialApplication, attachFinancialSources } from './grant-financial-operations.mjs';
 import { projectGrantMarkdown, receiveGrantCustomerSections, projectGrantSourceIndex, receiveGrantCustomerSources } from './grant-customers.mjs';
 import { receiveDatasetteApplication, datasetteSourceSelection, addDatasetteGrantSources, receiveDatasetteExistingWork } from './grant-datasette.mjs';
@@ -25,6 +26,16 @@ const ANSWERS = [
   'Delivery capacity, payment timing and sustainability',
   'Applicant, experience and submission',
 ];
+// Accepted headings keep the original answer identities and links across retained source editions.
+const ANSWER_HEADINGS = new Map([
+  ...ANSWERS.map(title => [title, title]),
+  ["Customer problem, first payer and adoption", "Customer problem, need and adoption"],
+  ["Why Stellar and how the product differs", "Why Stellar and what we contribute"],
+  ["Defined architecture and customer operation", "Defined architecture and operating behavior"],
+  ["Working foundation and demonstrated customer results", "Working product and demonstrated results"],
+  ["Threat response and measurable acceptance", "Threat response and outcome measurement"],
+  ["Capacity, payment timing and sustainability", "Delivery capacity, payment timing and sustainability"],
+]);
 const ARTICLE = '<article class="application-prose" aria-label="Complete Build application">';
 const EXISTING_WORK = '<h2 id="open-the-existing-work">Open the existing work</h2>';
 const ECONOMIC_HEADING = '## Recurring economic-report installation';
@@ -53,7 +64,8 @@ function cells(line) {
   return line.trim().replace(/^\|/, '').replace(/\|$/, '').split(/(?<!\\)\|/).map(value => value.trim().replaceAll('\\|', '|'));
 }
 function headingId(value) {
-  return value.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+  const selected = ANSWER_HEADINGS.get(value) ?? value;
+  return selected.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
 }
 
 /** Render the prose, headings and tables used by the maintained application. */
@@ -78,9 +90,23 @@ export function renderGrantMarkdown(markdown) {
         rows.slice(2).map(row => '<tr>' + row.map((cell, column) => column === 0 ? '<th scope="row">' + inline(cell) + '</th>' : '<td>' + inline(cell) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>');
       continue;
     }
+    const ordered = line.match(/^(\d+)\.\s+(.+)$/);
+    if (ordered) {
+      const items = [];
+      while (i < lines.length) {
+        const item = lines[i].match(/^(\d+)\.\s+(.+)$/);
+        if (!item) break;
+        const number = Number(item[1]);
+        need(Number.isSafeInteger(number) && number >= 0, 'Use a complete ordered step with a valid number.');
+        items.push('<li value="' + number + '">' + inline(item[2]) + '</li>');
+        i++;
+      }
+      output.push('<ol>' + items.join('') + '</ol>');
+      continue;
+    }
     need(!/^(?:\x60{3}|~{3}|>|[-*+]\s|\d+\.\s)/.test(line), 'The reviewer answer uses a prose or table construct that requires an explicit renderer update: ' + line.slice(0,80));
     const paragraph = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,6})\s/.test(lines[i]) && !lines[i].trim().startsWith('|')) paragraph.push(lines[i++]);
+    while (i < lines.length && lines[i].trim() && !/^(#{1,6})\s/.test(lines[i]) && !lines[i].trim().startsWith('|') && !/^(?:\x60{3}|~{3}|>|[-*+]\s|\d+\.\s)/.test(lines[i])) paragraph.push(lines[i++]);
     output.push('<p>' + inline(paragraph.join(' ')) + '</p>');
   }
   return output.join('\n') + '\n';
@@ -134,6 +160,21 @@ export function receiveCoastalApplication(productAndFinanceMarkdown, manuscript)
   return clean(companion.slice(0, place) + coastal + '\n' + companion.slice(place));
 }
 
+/** Keep the selected answer wording beside its original stable section link. */
+function receiveApplicationNavigation(templateHtml, headings) {
+  const startTag = '<nav aria-label="Application sections"><ol>';
+  const begin = templateHtml.indexOf(startTag), end = templateHtml.indexOf('</nav>', begin);
+  need(begin >= 0 && end > begin, 'Retain the existing application section navigation.');
+  let navigation = templateHtml.slice(begin, end);
+  for (const title of headings) {
+    const id = headingId(title);
+    const links = [...navigation.matchAll(new RegExp('<a href="#' + id + '">[\\s\\S]*?</a>', 'g'))];
+    need(links.length === 1, 'Retain one original section link for the application answer: ' + title);
+    navigation = navigation.replace(links[0][0], '<a href="#' + id + '">' + inline(title) + '</a>');
+  }
+  return templateHtml.slice(0, begin) + navigation + templateHtml.slice(end);
+}
+
 /** Pure composition; the caller chooses whether and where the result is written. */
 export function composeGrantApplication({
   applicationMarkdown, productAndFinanceMarkdown, templateHtml, sourceIndex,
@@ -148,7 +189,7 @@ export function composeGrantApplication({
   if (coopsCommit) need(companion.includes(COASTAL_HEADING + '\n'), 'Retain the selected complete coastal installation with its source commit.');
   need(!application.includes('{{') && !companion.includes('{{'), 'Resolve all application source placeholders before composition.');
   const headings = [...application.matchAll(/^## (.+)$/gm)].map(match => match[1]);
-  need(JSON.stringify(headings) === JSON.stringify(ANSWERS), 'Retain the complete nine original application answers in their existing order.');
+  need(JSON.stringify(headings.map(title => ANSWER_HEADINGS.get(title))) === JSON.stringify(ANSWERS), 'Retain the complete nine application answer identities in their existing order, using an accepted source heading.');
   need(application.includes('38,000') && application.includes('400') && application.includes('150'), 'Retain the selected grant amount, delivery hours and duration.');
   const articleAt = templateHtml.indexOf(ARTICLE), existingAt = templateHtml.indexOf(EXISTING_WORK, articleAt);
   need(articleAt >= 0 && existingAt > articleAt, 'Use the complete existing grant.html shell and existing-work section.');
@@ -158,6 +199,7 @@ export function composeGrantApplication({
     'href="./grant-data/$1'
   );
   let html = receiveDatasetteExistingWork(templateHtml.slice(0, articleAt) + ARTICLE + renderedAnswer + templateHtml.slice(existingAt), datasetteSelection || {});
+  html = receiveApplicationNavigation(html, headings);
   let index = JSON.parse(JSON.stringify(sourceIndex));
   need(index.schema === 'stellar-forge.grant-reviewer-source-index.v1', 'Use the original application source-index schema.');
   index.application = { ...index.application, bytes: bytes(application), sha256: digest(application), git_blob: gitBlob(application), canonical_manuscript: canonicalManuscript };
@@ -209,8 +251,9 @@ export function composeGrantApplication({
   index = projectGrantSourceIndex(index);
   const reviewerEntry = composeGrantEntry(html);
   const submission = attachGrantSubmission({ templateHtml: reviewerEntry.html, sourceIndex: index });
-  html = submission.templateHtml;
-  index = submission.sourceIndex;
+  const reviewRound = attachGrantReviewRounds(submission);
+  html = reviewRound.templateHtml;
+  index = reviewRound.sourceIndex;
   const indexText = JSON.stringify(index, null, 2) + '\n';
   const files = {
     'grant.html': html,
@@ -219,7 +262,7 @@ export function composeGrantApplication({
     'grant-data/source-index.json': indexText,
   };
   return { files, sourcePins: Object.fromEntries(Object.entries(files).map(([path, body]) => ['/' + path, gitBlob(body)])),
-    application: index.application, productAndFinance: index.product_and_finance, economicSource: source, coastalSource, financialSources, financialOperation, datasetteSources, reviewerEntry: reviewerEntry.entry, submissionWorkspace: index.submission_workspace };
+    application: index.application, productAndFinance: index.product_and_finance, economicSource: source, coastalSource, financialSources, financialOperation, datasetteSources, reviewerEntry: reviewerEntry.entry, submissionWorkspace: index.submission_workspace, submissionReviewRound: index.submission_review_round };
 }
 
 function argumentsFor(argv) {
@@ -270,7 +313,7 @@ export async function runGrantComposition(argv = process.argv.slice(2)) {
   });
   for (const [path, body] of Object.entries(result.files)) await writeFile(join(directory, path), body);
   if (options['--source-pins-output']) await writeFile(resolve(options['--source-pins-output']), JSON.stringify(result.sourcePins, null, 2) + '\n');
-  return { sourcePins: result.sourcePins, application: result.application, productAndFinance: result.productAndFinance, economicSource: result.economicSource, coastalSource: result.coastalSource, financialSources: result.financialSources, financialOperation: result.financialOperation, datasetteSources: result.datasetteSources, reviewerEntry: result.reviewerEntry, submissionWorkspace: result.submissionWorkspace };
+  return { sourcePins: result.sourcePins, application: result.application, productAndFinance: result.productAndFinance, economicSource: result.economicSource, coastalSource: result.coastalSource, financialSources: result.financialSources, financialOperation: result.financialOperation, datasetteSources: result.datasetteSources, reviewerEntry: result.reviewerEntry, submissionWorkspace: result.submissionWorkspace, submissionReviewRound: result.submissionReviewRound };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   runGrantComposition().then(result => process.stdout.write(JSON.stringify(result, null, 2) + '\n')).catch(error => {

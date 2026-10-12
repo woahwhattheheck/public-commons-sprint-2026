@@ -12,6 +12,28 @@ database, imports, query jobs, reports, workbooks, archives and local capability
 
 Open **Datasette customer Analysis** in the existing merchant runtime's Applications pane. Select the original Python installation with its workbooks extra, the same Analysis database and operation ID, then use the original review, start, open and stop controls. The source-owned `datasette-analysis` command uses that installed environment and source release. [INSTALLATION.md](INSTALLATION.md) gives the complete installation, source-selection, command-line and receiving workflow.
 
+
+## Native NLD operations
+
+The **NLD operations** view adds a complete retained-source commissioning path
+inside this same customer workspace. Select the original complete edition,
+review the ordered business keys, field mapping, units and source years, and
+retain the complete native project. Its existing NLD SQLFlowTask writes only
+the adapter's owned SQLite reference target. The original Analysis query,
+report, workbook and archive engines receive the result.
+
+The workflow retains exact numeric source spellings, original row references,
+native by-key execution state, failed or uncertain run evidence and complete
+target snapshots. Same-content DELTA and explicit backfill keep their original
+execution meanings. A later source selection does not authorize deletion of
+target rows outside that selection.
+
+The full operator/CLI/runtime/source/receiving instructions are in
+[NLD.md](NLD.md), with machine-readable source pins in
+[NLD_SOURCE_CONTRACT.json](NLD_SOURCE_CONTRACT.json). The original WRI source
+capture is reused. Native NLD execution and received-project completion are
+established only by their actual returned operation receipts.
+
 ## Open the customer workspace
 
 Use the original repository or selected runtime with Python 3.11 or later and

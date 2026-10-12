@@ -2,3 +2,20 @@
 @media(max-width:1100px){.stats,.phase-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.clause-layout{grid-template-columns:185px minmax(0,1fr)}.clause-card .pair{display:block}.pair>div+div{border-left:0;border-top:1px solid var(--line);padding:20px 0 0;margin-top:20px}.split{grid-template-columns:1fr}}
 @media(max-width:760px){.topbar{padding:12px;display:block}.topbar>div:first-child{display:flex;gap:12px;align-items:center}.topbar span{margin:0}.project-tools{max-width:none;margin-top:10px}.project-tools select{flex:1;width:0}.project-tools button{font-size:11px;padding:6px 8px}.shell{display:block}nav{display:flex;overflow:auto;padding:7px;border-right:0;border-bottom:1px solid var(--line)}nav .nav-group{display:none}nav button{width:auto;min-width:max-content;font-size:12px;margin:0 2px;gap:7px}main{padding:20px 12px 50px}.heading{display:block}.heading>.toolbar{margin-top:15px}.grid{display:block}.clause-layout{display:block}.outline{position:static;max-height:160px;margin-bottom:15px}.clause-card{padding:17px}.stats,.phase-cards{gap:8px}.stat,.phase-card{padding:14px}.stat strong{font-size:22px}.panel{padding:16px}.field-map{grid-template-columns:1fr}.field-map input{margin-bottom:8px}#editor-fields .form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}dialog{width:98vw;max-height:97vh}dialog header{padding:17px}#editor-fields,#viewer-content{padding:17px;max-height:66vh}dialog footer{padding:12px 17px}.amount-grid{grid-template-columns:repeat(2,1fr)}.definition{grid-template-columns:1fr;gap:3px}.definition dd{margin-bottom:8px}.toolbar{gap:6px}.toolbar select{max-width:100%;width:100%}.source-preview{max-height:280px}.menu{right:8px;top:103px;width:300px}}
 @media print{.topbar,nav,.toolbar,button,#notice{display:none!important}.shell{display:block}main{padding:0}.panel,.clause-card{break-inside:avoid;box-shadow:none}.clause-layout{display:block}.outline{display:none}body{background:white}.pair>div+div{border:0}.table-wrap{overflow:visible}}
+/* Record views keep original values in details while presenting named fields on phones. */
+.record-details{margin:14px 0}.record-details>summary{cursor:pointer;font-size:12px;font-weight:600;line-height:1.6}.record-details[open]>summary{margin-bottom:10px}
+.record-table .row-actions{min-width:130px}.record-table .row-actions button{margin:0 5px 5px 0}
+.record-table time{font-variant-numeric:tabular-nums}.stat strong{overflow-wrap:anywhere}.heading .eyebrow{overflow-wrap:anywhere}
+@media(max-width:760px){
+ .record-table{border:0;background:transparent;overflow:visible}
+ .record-table table,.record-table tbody,.record-table tr,.record-table td{display:block;width:100%;max-width:none}
+ .record-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ .record-table tr{border:1px solid var(--line);background:#fff;margin:0 0 12px;padding:8px 12px}
+ .record-table td{border:0;padding:7px 0;line-height:1.5}
+ .record-table td::before{content:attr(data-label);display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px}
+ .record-table .row-actions{border-top:1px solid var(--line);margin-top:5px;padding-top:10px}
+ .record-table .row-actions::before{margin-bottom:6px}
+ .record-table .row-actions button{min-height:36px}
+ .record-table .badge{white-space:normal;overflow-wrap:anywhere}
+ .record-table tr:hover td{background:transparent}
+}

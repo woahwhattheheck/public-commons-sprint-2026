@@ -299,3 +299,21 @@ returns that retained result.
 - [Native source, subscription protocol and complete native journey](README.md)
 - [Browser, client, CLI and MCP workbench](WORKBENCH.md)
 - [Original Runtime Workspace and Applications](../../distribution/runtime-workspace/README.md)
+
+## Browser continuation in the installed application
+
+The selected application includes both private browser recovery modules.
+Browser drafts live with the adopted workbench under browser-workspaces.
+Stopping and reopening the same application restores the editor through the
+new printed URL, including source/report drafts, typed controls and original
+operation requests. The private connection token is supplied by the new launch.
+
+Use Transfer to reopen another retained browser draft, export the complete
+editor or import it back into the same workbench. Source saves, customer
+preparations, captures and comparisons continue their original request IDs.
+The existing native receiving programme and its complete capture/comparison
+files remain the operating case for this continuation.
+
+### Complete browser draft receiving in both managed launches
+
+The installed `examples/browser-workbench.mjs` callback runs the same complete browser journey during `first` and `reopen`. After its original ten desktop/mobile views and twenty complete source, edition and comparison downloads, it edits the source and merchant fields, report columns, parameter definitions and probes, membership filters, typed preview/capture inputs, capture controls, raw source/payment JSON and the selected original customer's run, query, intent and payment choice. It saves that whole editor through the original `POST /api/browser-workspace`, verifies the returned workspace identity and version against the complete rendered forms, and downloads its exact UTF-8 JSON under the original private receiving directory. Reload and Import must reproduce every field, dynamic array, selected view, retained request body and ID, operation journal, download selection and buyer draft. The callback retains both edited workspaces, restores the complete pre-edit browser edition, then opens and saves the original source so the next managed launch continues the same native case. Each phase keeps five complete browser JSON exports with SHA-256 identities and four additional draft screenshots; the browser result records the actual saved versions and source continuity. The receiving callback admits only the original authenticated browser-workspace save with the selected workbench identity; native capture, source-save, subscription, publication, seller and buyer mutations remain in their original operating programme.

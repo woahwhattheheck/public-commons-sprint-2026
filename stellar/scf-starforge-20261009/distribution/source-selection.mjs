@@ -120,7 +120,16 @@ export function selectDistributionSources({ base, contributions, selection }) {
       put(selected.runtimePackageManifests, name, base.runtimePackageManifests[name]);
   }
   const browser = new Map((base.browserAssets ?? []).map(entry => [entry.server, entry]));
-  selected.browserAssets = (recipe.base.browserAssets ?? []).map(server => {
+  // Complete selected components include their original HTTP servers and pages.
+  // Carry those servers' maintained route maps too, so browser-relative imports
+  // resolve to the same source files that the actual server serves.
+  const browserServers = new Set(recipe.base.browserAssets ?? []);
+  for (const server of browser.keys()) {
+    if (!selected.excludeFiles.includes(server) &&
+        (selected.components.some(root => server.startsWith(root + '/')) ||
+         selected.supportFiles.includes(server))) browserServers.add(server);
+  }
+  selected.browserAssets = [...browserServers].map(server => {
     need(browser.has(server), 'Unknown selected base browser server: ' + server);
     return copy(browser.get(server));
   });

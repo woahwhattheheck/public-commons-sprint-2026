@@ -48,6 +48,11 @@ module Starforge
                   get :changes
                   get :history
                   get :attachments
+                  get :records
+                  get :record
+                  post :capture_data
+                  get :data_export
+                  get :data_attachment
                   get :download
                   get :receipt
                   get :attachment
@@ -62,6 +67,7 @@ module Starforge
           # installations use their application's configured durable queue.
           PrepareJob.queue_adapter = :inline
           ImportJob.queue_adapter = :inline
+          DataCaptureJob.queue_adapter = :inline
           @application
         end
       end

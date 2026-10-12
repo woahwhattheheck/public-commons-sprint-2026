@@ -173,7 +173,6 @@
           "Title": "label",
           "File Path": "local_file",
           "Public": "visibility",
-          "Sequence #": "sequence",
           "Description": "description"
         },
         "defaults": {},
@@ -185,7 +184,8 @@
           }
         },
         "ignoredColumns": [
-          "attachment_key"
+          "attachment_key",
+          "sequence"
         ]
       }
     },
@@ -194,7 +194,7 @@
       "media": {}
     },
     "exclude": {},
-    "note": "Explicit source mapping for the USGS public-domain audiovisual example. The source transcript header Tile maps only through the entered Title mapping. Public access is an explicit example choice. Empty key maps are completed through assign-keys; original non-numeric catalogue/media keys remain in the retained source."
+    "note": "Explicit source mapping for the USGS public-domain audiovisual example. The source transcript header Tile maps only through the entered Title mapping. Public access is an explicit example choice. Empty key maps are completed through assign-keys; original non-numeric catalogue/media keys remain in the retained source. Supplemental source sequence values remain in the exact original CSV and are explicitly unmapped: this application's supplemental import sends no sequence or sort parameter and retains original CSV row order. No provider-side supplemental ordering is claimed. The original rejected Sequence # mapping and its receiving failure are retained in the delivery history."
   },
   "files": [
     {

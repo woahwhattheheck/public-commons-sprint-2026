@@ -1,6 +1,8 @@
+import {HANDOVER_ROUTES,attachGrantHandover} from './grant-handover.mjs';
 // MIT. Connect the complete submission workspace to the existing grant composer.
 export const SUBMISSION_OPERATION = 'SCF-SUBMISSION-WORKSPACE-22B705-20261012';
 export const SUBMISSION_ROUTES = [
+  ...HANDOVER_ROUTES,
   ['/grant-submission.html',['grant-submission.html','text/html; charset=utf-8']],
   ['/grant-submission.css',['grant-submission.css','text/css; charset=utf-8']],
   ['/grant-submission-core.mjs',['grant-submission-core.mjs','text/javascript; charset=utf-8']],
@@ -25,7 +27,7 @@ export function attachGrantSubmission({templateHtml,sourceIndex}){
     planning:{source_schema:'stellar-forge.grant-plan-source.v1',review_schema:'stellar-forge.grant-plan-review.v1',native_schema:'stellar-forge.sf47-planning.v1',formats:['json','zip'],operation:'SCF-PLAN-SUBMISSION-INTEGRATION-7F5A-20261012'},
     guide:'https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION.md',
   };
-  return {templateHtml:html,sourceIndex:index};
+  return {templateHtml:html,sourceIndex:attachGrantHandover(index)};
 }
 /** Preserve every current route and append the selected submission assets once. */
 export function registerGrantSubmissionAssets(manifest){

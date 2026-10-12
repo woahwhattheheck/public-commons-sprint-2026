@@ -18,7 +18,8 @@ const ROOT_FILE = 'ruby-runtime.json';
 const PROJECT_EXCLUDES = ['.git', '.bundle', 'vendor/bundle'];
 const terminal = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED']);
 const SIMPLE_ACTIONS = new Set(['install', 'verify', 'export']);
-const CUSTOMER_ENTRIES = new Set(['native-dataset-lifecycle', 'baserow-customer-lifecycle']);
+const CUSTOMER_ENTRIES = new Set(['native-dataset-lifecycle', 'baserow-customer-lifecycle', 'dataset-records', 'dataset-records-lifecycle']);
+const CAPTURE_UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const DEFAULT_GEMFILE = '# Original managed Rails operator dependencies; the complete resolved lock is retained before install.\n' +
   'source "https://rubygems.org"\n' +
   'gem "rails", ">= 7.1", "< 9"\n' +
@@ -222,7 +223,8 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
       current.phase === 'SUCCEEDED' || current.phase === 'CANCELLED' ? 'STOPPED' : current.phase;
     return { id: value, title: input.title, environmentId: input.environmentId, directory: input.directory,
       source: input.source, selectionSha256: input.sha256, phase, registration: registration ?? registered,
-      current: current ? { ...current, operationId: current.id } : null, runs: launches };
+      current: current ? { ...current, operationId: current.id } : null, runs: launches,
+      ...(input.workingCapture ? { workingCapture: { ...input.workingCapture } } : {}) };
   }
   async function inspect() {
     const environments = [], applications = [];
@@ -245,7 +247,24 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
       await treeDirectories(join(path, 'support'), dirname(join(path, 'support', name)));
       await once(join(path, 'support', name), bytes); entries.push({ name, bytes: bytes.length, sha256: digest(bytes) });
     }
+    const capability = json({ schema: 'stellar-forge.ruby-runtime-support-capabilities.v1',
+      capturedWorkingState: 1, datasetRecords: 1 });
+    await once(join(path, 'support', 'capabilities.json'), capability);
+    entries.push({ name: 'capabilities.json', bytes: capability.length, sha256: digest(capability) });
     return entries;
+  }
+  async function requireRecordSupport(value) {
+    const selection = await selected(value), entry = selection.support.find(file => file.name === 'capabilities.json');
+    need(entry, 'RUBY_WORKING_CAPTURE_RUNTIME_REQUIRED',
+      'Select an installed environment containing the complete data-record operator.');
+    const bytes = await regular(join(envPath(value), 'support', entry.name), 4096);
+    const profile = JSON.parse(bytes.toString('utf8'));
+    need(bytes.length === entry.bytes && digest(bytes) === entry.sha256 &&
+      profile.schema === 'stellar-forge.ruby-runtime-support-capabilities.v1' &&
+      profile.capturedWorkingState === 1 && profile.datasetRecords === 1,
+      'RUBY_SUPPORT_CHANGED');
+    need(await exists(join(envPath(value), 'client', 'developer/ruby-client/examples/rails_dataset/operator/records.rb')),
+      'RUBY_WORKING_CAPTURE_CLIENT_REQUIRED', 'Select the complete customer package with committed-data records.');
   }
   async function createEnvironment(input = {}) {
     const value = id(input.id), title = label(input.title), key = operationId(input.requestId);
@@ -340,12 +359,25 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
     return operation({ operationId: key });
   }
 
-  async function start({ id: value, operationId: key, action, offline = false, applicationId = null } = {}) {
+  async function start({ id: value, operationId: key, action, offline = false, applicationId = null,
+    workingCapture } = {}) {
     need(SIMPLE_ACTIONS.has(action) && typeof offline === 'boolean', 'RUBY_ACTION_INVALID');
     id(value); operationId(key);
     if (applicationId) need(['export','verify'].includes(action), 'RUBY_APPLICATION_EXPORT_OR_VERIFY_REQUIRED');
+    const parameters = { offline };
+    if (workingCapture !== undefined) {
+      need(applicationId && ['export','verify'].includes(action) && plain(workingCapture) &&
+        Object.keys(workingCapture).sort().join(',') === 'captureId,expectedCaptureSha256,reviewId' &&
+        typeof workingCapture.reviewId === 'string' && CAPTURE_UUID.test(workingCapture.reviewId) &&
+        typeof workingCapture.captureId === 'string' && CAPTURE_UUID.test(workingCapture.captureId),
+        'RUBY_WORKING_CAPTURE_INVALID');
+      parameters.workingCapture = { reviewId: operationId(workingCapture.reviewId),
+        captureId: operationId(workingCapture.captureId),
+        expectedCaptureSha256: sha(workingCapture.expectedCaptureSha256) };
+    }
     const observed = await selectionAdmission(value, applicationId, async () => {
-      return admit({ environmentId: value, applicationId, action, operationId: key, parameters: { offline } });
+      if (parameters.workingCapture) await requireRecordSupport(value);
+      return admit({ environmentId: value, applicationId, action, operationId: key, parameters });
     });
     if (observed.phase === 'FAILED' || observed.phase === 'INTERRUPTED') return observed;
     return spawnWorker(key);
@@ -357,6 +389,7 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
       Buffer.byteLength(JSON.stringify(argv)) <= 1024 * 1024, 'RUBY_CUSTOMER_ARGUMENTS_INVALID');
     const observed = await selectionAdmission(value, null, async () => {
       need(await exists(join(envPath(value), 'installation.json')), 'RUBY_INSTALLATION_REQUIRED');
+      if (entry === 'dataset-records' || entry === 'dataset-records-lifecycle') await requireRecordSupport(value);
       return admit({ environmentId: value, action: 'customer-command', operationId: key, parameters: { entry, argv } });
     });
     if (['FAILED','INTERRUPTED','CANCELLED'].includes(observed.phase)) return observed;

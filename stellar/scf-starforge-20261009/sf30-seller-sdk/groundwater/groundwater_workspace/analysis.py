@@ -253,7 +253,11 @@ def extract_outputs(sim,mf,attempt,request,publisher_completed):
     for a,b in mapping:
         if a>=engines["mf6"]["shape"][0] or b>=engines["mf2005"]["shape"][0]:
             raise Problem("layer_mapping","The selected aquifer mapping is outside the actual native head arrays.")
-    findings = list(request["source"]["findings"])
+    reference_basis = request["run"].get("reference_basis")
+    if reference_basis is not None:
+        from .sources import verify_reference_basis
+        verify_reference_basis(reference_basis,request["source"])
+    findings = list(reference_basis["findings"] if reference_basis else request["source"]["findings"])
     if units6 != units5:
         findings.append({"id":"NATIVE_UNIT_DISAGREEMENT","severity":"review","message":"Actual native models declare different length or time units. Numeric head agreement does not establish a physical same-unit/same-time comparison.","mf6":units6,"mf2005":units5})
     for engine,content in engines.items():
@@ -265,6 +269,8 @@ def extract_outputs(sim,mf,attempt,request,publisher_completed):
         if any(step["counts"].get("dry",0)+step["counts"].get("no_flow",0)+step["counts"].get("nonfinite",0) for step in content["heads"]):
             findings.append({"id":"EXCLUDED_HEADS_"+engine.upper(),"severity":"review","message":"Native dry, no-flow or nonfinite values are excluded and counted in paired comparisons."})
     result = {"schema":"starforge.groundwater-native-result.v1","run_id":request["run"]["id"],"project_id":request["run"]["project_id"],"edition_id":request["edition"]["id"],"edition_sha256":request["edition"]["sha256"],"source_id":request["source"]["id"],"source_sha256":request["source"]["sha256"],"runtime_sha256":request["run"]["runtime_sha256"],"application_sha256":request["run"]["application_sha256"],"engines":engines,"layer_mapping":mapping,"intended_units":request["edition"]["profile"].get("intended_units"),"time_semantics":"steady_solution" if request["edition"]["profile"].get("time",{}).get("steady") else "native_periods","findings":findings,"publisher_comparison":{"executed":bool(publisher_completed),"criterion":request["edition"]["profile"].get("publisher_criterion"),"scope":"Unchanged publisher all-cell numeric assertion and normalized-discharge plots; native unit compatibility is a separate result."},"scientific_precision":"Head/budget arrays read from original native binary files. JSON uses 17 significant decimal digits; exact original binary bytes remain authoritative."}
+    if reference_basis is not None:
+        result["reference_basis_sha256"] = reference_basis["sha256"]
     result["cross_engine"] = cross_engine(result)
     # Keep per-side source/units even when the original publisher numeric assertion passes.
     return result

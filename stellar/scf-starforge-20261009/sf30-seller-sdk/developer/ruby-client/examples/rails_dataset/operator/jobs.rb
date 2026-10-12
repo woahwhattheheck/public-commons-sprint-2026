@@ -12,6 +12,13 @@ module Starforge
       end
     end
 
+    class DataCaptureJob < ActiveJob::Base
+      queue_as :default
+      def perform(tenant_key,review_id,capture_id)
+        DatasetOperator.workspace(tenant_key).complete_data_capture(review_id,capture_id)
+      end
+    end
+
     class ImportJob < ActiveJob::Base
       queue_as :default
       def perform(tenant_key, review_id)

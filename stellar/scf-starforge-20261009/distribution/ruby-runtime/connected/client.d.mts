@@ -14,10 +14,16 @@ export interface RubyEnvironment {
   id: string; title: string; directory?: string; selectionSha256?: string;
   selection?: Record<string, unknown>; operations?: RubyOperation[]; [key: string]: unknown;
 }
+export interface RubyWorkingCapture {
+  reviewId: string;
+  captureId: string;
+  expectedCaptureSha256: string;
+}
 export interface RubyApplication {
   id: string; title: string; environmentId: string; directory: string;
   selectionSha256: string; phase: string; source: Record<string, unknown>;
-  current?: RubyOperation | null; runs: RubyOperation[]; [key: string]: unknown;
+  current?: RubyOperation | null; runs: RubyOperation[]; workingCapture?: RubyWorkingCapture;
+  [key: string]: unknown;
 }
 export interface RubyUnavailable { id: string; phase: 'UNAVAILABLE'; error: RubyError; }
 export interface RubyWorkspace {
@@ -185,8 +191,8 @@ export interface RubyInputs {
   inspect: {  };
   probe: { ruby: string; bundlerVersion?: string; };
   create: { id: string; title: string; ruby: string; bundlerVersion: string; projectDirectory?: string; gemfile?: string; requestId: string; };
-  start: { id: string; operationId: string; action: "install" | "verify" | "export"; offline?: boolean; applicationId?: string; };
-  run: { id: string; operationId: string; entry: "native-dataset-lifecycle" | "baserow-customer-lifecycle"; argv?: Array<string>; };
+  start: { id: string; operationId: string; action: "install" | "verify" | "export"; offline?: boolean; applicationId?: string; workingCapture?: RubyWorkingCapture; };
+  run: { id: string; operationId: string; entry: "native-dataset-lifecycle" | "baserow-customer-lifecycle" | "dataset-records" | "dataset-records-lifecycle"; argv?: Array<string>; };
   resume: { operationId: string; };
   cancel: { operationId: string; };
   operation: { operationId: string; };

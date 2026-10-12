@@ -20,6 +20,8 @@ The files in this directory have these responsibilities:
 | `receive-and-continue.py` | Complete caller with both qualified archive inputs, actual optional-Git admission and the existing source/application continuation loop. |
 | `one-allocation.py` | Complete wrapper that verifies original source/builders, runs the caller, captures full results and uploads the complete archive through the maintained transfer engine. |
 | `native-receiving.py` | Complete original dispatch with twenty exact-byte intake members, the existing carrier and a retained terminal for following source or transfer commands. Private provider selections arrive from an owned request file. |
+| `native-source-receiving.py` | Complete source-qualification companion. It receives the pinned saved checkout, verifies matching original blobs, stages the existing flat intake and executes the unchanged native procedure in the same terminal. |
+| `native-source-receiving.py.gz.b64` | Whole gzip transport of that same companion, encoded as base64 text for one compact source transfer. |
 
 The original bundle includes the selected private input, its original shared predecessor, both preceding native callers, and all eight selected product source bodies. The dispatch replaces only the selected receiving caller, supplies the current wrapper and retains the earlier caller/wrapper preimages with native-01's actual result and transfer reconciliation.
 
@@ -37,6 +39,48 @@ Both complete archives are original source-owned deliveries. The original receiv
 The primary archive declaration in `operation-code/source-selection.json` remains exact. The explicit paths use `STAC_DECLARED_SOURCE_ARCHIVE` and `STAC_D16E_SOURCE_ARCHIVE`. Each selected file must be a canonical regular file with its declared byte count; the receiver verifies the whole archive SHA-256.
 
 The optional D1CC Git repository is checked through the original `git --no-replace-objects --no-lazy-fetch ... cat-file --batch-check`. The caller records the actual result and includes the donor only when its object metadata is usable. Its existing alternate configuration remains in its original custody.
+
+## Complete checkout qualification and existing source intake
+
+The complete companion reads the original saved `completed-scf-checkout-sources-20261012.tar.gz`, pinned as `libfile_60f77ed06a608191be37d1c9e1cd7394/v0` and `file_00000000b2f081f5b2ef6b5c967f41d8`. Its selected compressed byte count is 17,463,296. The existing LibraryFileMaterializer receives that exact version; the qualifier computes its full archive SHA-256 from the actual bytes.
+
+The residual source selection is the complete `native-02-missing-objects.json`, 71,756 bytes / SHA-256 `b2c56fbccf5b58e7de48592c30ea2bcf367d8a716d864a38ed6c6566265e92d6`. It records 467 original Git blobs for source 7169. The qualifier streams regular archive members, reads candidates of the selected sizes and calculates each original Git blob ID. Only exact matches are retained, with their full bytes and original archive member names.
+
+The companion copies those verified bytes into `/dev/b710-stac-applications-7169/operation-base/incoming/<OID>.blob`. The selected source receiver already supports this flat incoming format; the original receiving caller, builder and application loop are unchanged. All three complete source programmes are embedded and hash-checked: the 53,232-byte native procedure, the 6,490-byte qualifier and the 6,315-byte carrier.
+
+The actual qualification result, original qualifier stdout and complete preceding native-02 result files enter the same delivery. A failed qualification opens the original carrier in that same allocation so its original diagnostics and selected inputs remain available. A successful qualification enters the unchanged full native procedure.
+
+### Compact transport of the complete programme
+
+The plain companion contains 93,866 bytes with SHA-256 `2ba2af8ab83d02a1b63df3123368323c085be3133b7103c613325bf9a93e662e`.
+
+Its checked transport is:
+
+| Representation | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Gzip payload | 29,904 | `9ae517021a31a98d1eb05b0d3225d76491836a8f20973e708dfb13010165afdf` |
+| Base64 text file | 39,872 | `a8c6ef0803f2f9f0022611d9fe0858baa744b2ed746602487c84f43e5ecb675b` |
+
+The unmodified [pako 2.1.0 gzip encoder](https://raw.githubusercontent.com/nodeca/pako/2.1.0/dist/pako_deflate.min.js) produced the gzip. The existing standalone decoder independently checked the gzip CRC, complete output length and every restored source byte. The compression changes the transport representation; the decoded programme remains the original complete companion.
+
+A receiver with both source files can compare them using Python's existing standard library:
+
+```python
+import base64, gzip, hashlib
+from pathlib import Path
+
+encoded = Path("native-source-receiving.py.gz.b64").read_bytes()
+assert hashlib.sha256(encoded).hexdigest() == "a8c6ef0803f2f9f0022611d9fe0858baa744b2ed746602487c84f43e5ecb675b"
+packed = base64.b64decode(encoded, validate=True)
+assert len(packed) == 29904
+assert hashlib.sha256(packed).hexdigest() == "9ae517021a31a98d1eb05b0d3225d76491836a8f20973e708dfb13010165afdf"
+source = gzip.decompress(packed)
+assert len(source) == 93866
+assert hashlib.sha256(source).hexdigest() == "2ba2af8ab83d02a1b63df3123368323c085be3133b7103c613325bf9a93e662e"
+assert source == Path("native-source-receiving.py").read_bytes()
+```
+
+A native bootstrap can embed the complete base64 text and verify the same bytes before compiling and executing the source. Keep the original terminal and private request-file argument through that transport.
 
 ## Equipped source and runtime inputs
 
@@ -75,19 +119,20 @@ The following attempt continues this same operation with `attemptLabel: "native-
 
 Prepare both pinned source versions through the existing materialization contract. Prepare the final `SCF_STAC_Managed_Applications_Native_20261012.zip` upload through the original file-provider contract. Write the complete private request into an owned file with mode 0600 in the same allocation:
 
+- `qualificationTransfer`: the complete original transfer object for the pinned 17,463,296-byte checkout archive above.
 - `archiveTransfers`: the complete original db3d9 transfer object followed by the complete original d16e transfer object.
 - `upload`: the complete original opaque upload object.
-- `attemptLabel`: `native-03` for the continuation after completed native-02. Labels use letters, digits and hyphens; omission retains the original native-02 default.
+- `attemptLabel`: `native-03` for this complete qualification and following native attempt.
 
 Launch the actual command with the execution tool's terminal setting enabled, passing the private file as an argument:
 
 ```sh
-python3 -B -u native-receiving.py PRIVATE_REQUEST.json
+python3 -B -u native-source-receiving.py PRIVATE_REQUEST.json
 ```
 
 The request-file argument leaves the original terminal available. Standard-input redirection consumes that channel; it retains the earlier one-shot behavior and ends the private allocation when the preloaded commands finish.
 
-The procedure downloads and verifies both complete archives, applies their returned attributes, reads the unchanged original bundle, verifies all twenty intake members and runs the selected wrapper through the original carrier. The fixed source receiver expands source closure against the original tree and invokes the maintained STAC application continuation when complete. The continuation performs the real source build, predecessor installation/upgrade, installed-source verification, managed-application receiving and lifecycle.
+The complete companion qualifies the saved checkout and stages exact matching blobs into the original incoming directory. It then runs the unchanged procedure, which downloads and verifies both selected source archives, applies their returned attributes, reads the unchanged original bundle, verifies all twenty intake members and runs the selected wrapper through the original carrier. The fixed source receiver expands source closure against the original tree and invokes the maintained STAC application continuation when complete. The continuation performs the real source build, predecessor installation/upgrade, installed-source verification, managed-application receiving and lifecycle.
 
 After the initial put and run, the input adapter reads the next command from the original terminal. The existing carrier, its command implementations and operation phases remain in the same process. Its original `read`, `put` and `run` commands are available for the next action. Read specific result files or logs by their known paths; the original `status` command also enumerates the whole source tree and can produce a very large response.
 

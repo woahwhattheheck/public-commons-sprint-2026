@@ -6,7 +6,7 @@ The bundled study is the unchanged USGS MODFLOW 6 TWRI example at commit `8be96e
 
 ## What the operator completes
 
-- Retain the publisher baseline or a complete original native-model ZIP, inspect every original and resolve literal native file references.
+- Retain the publisher baseline or a complete original native-model ZIP, inspect every original and resolve literal native file references. Reinspect a saved package with an attributed current reader while retaining its original source, editions and findings.
 - Create immutable scenarios with an exact parent, original and selected recharge/well values, and attributed reasons. Preserve the legacy unit metadata discrepancy in the original baseline.
 - Review each edition, queue its source/application/runtime identities and execute MF6 and MODFLOW-2005 double precision under one original run. Inspect actual solver receipts, heads, masks, budgets, listings, plots and file hashes.
 - Compare original runs with explicit aquifer, grid, time and unit compatibility. Review the actual result before freezing a report.

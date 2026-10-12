@@ -85,6 +85,69 @@
         "public/profile.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/presentation.mjs",
+      [
+        "public/presentation.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/public/presentation.mjs",
+      [
+        "public/presentation.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/guide",
+      [
+        "public/guide.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/guide.mjs",
+      [
+        "public/guide.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/guide/operator.md",
+      [
+        "GUIDE.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/guide/profiles.md",
+      [
+        "PROFILES.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/guide/transport.md",
+      [
+        "TRANSPORT.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/guide/installation.md",
+      [
+        "../../distribution/selections/SUPPLIER_ORDERS.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/guide/merchant.md",
+      [
+        "../../../../stellar-forge/mcp-merchant-operator/SUPPLIER_ORDERS.md",
+        "text/markdown; charset=utf-8"
+      ]
     ]
   ]
 }

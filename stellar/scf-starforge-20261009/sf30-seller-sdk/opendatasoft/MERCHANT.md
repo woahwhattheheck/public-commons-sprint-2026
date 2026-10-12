@@ -240,6 +240,22 @@ For geographic export choose `geometryField: "location"`. Absent geometry stays
 null; original latitude/longitude text stays in properties. Features carry the
 original URL identifier and source row index.
 
+## Review and stage a facilitator
+
+Open the same original workbench with --facilitators HOST_PROFILE_JSON and choose
+Facilitators in its browser. The native workflow binds the complete merchant
+package and retained capture, reviews the installed SDK's ordered payment
+alternatives, and stages the exact saved provider observation through SF82.
+History, full review/source downloads, CLI and the original merchant MCP are
+available together. [FACILITATORS.md](FACILITATORS.md) gives the complete host
+configuration, review, original release lifecycle, same-operation recovery and
+customer receiving workflow.
+
+The existing full Huwise export can include facilitatorReviewId alongside the
+same merchantExportId. It retains the complete native review, source binding and
+operating guide with the original merchant and analyst files. Earlier completed
+exports keep their original identities.
+
 ## Merchant and customer receiving
 
 The implementation composes these existing engines:

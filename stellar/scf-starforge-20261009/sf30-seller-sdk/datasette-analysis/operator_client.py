@@ -197,6 +197,21 @@ class DatasetteOperatorClient:
             query["edition_id"] = edition_id
         return self._json("/api/datasette/rows?" + urlencode(query))
 
+    def nld_status(self, *, project_id=None):
+        self.status()
+        query = "?" + urlencode({"project_id": project_id}) if project_id else ""
+        return self._json("/api/datasette/nld/status" + query)
+
+    def nld_rows(self, *, project_id, definition_id=None, run_id=None,
+                 kind="source", offset=0, limit=100):
+        self.status()
+        query = {"project_id": project_id, "kind": kind, "offset": offset, "limit": limit}
+        if definition_id is not None:
+            query["definition_id"] = definition_id
+        if run_id is not None:
+            query["run_id"] = run_id
+        return self._json("/api/datasette/nld/rows?" + urlencode(query))
+
     def submit(self, action, body, *, request_id):
         if not _ID.fullmatch(request_id):
             raise DatasetteClientError("DATASETTE_REQUEST_ID_REQUIRED",

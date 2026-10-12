@@ -154,7 +154,8 @@ export class MerchantResearchWorkspaces{
       const client=new ResearchWorkspaceClient({connectionFile:definition.consoleUrlFile,directory:definition.directory});
       try{
         const status=await client.status();
-        const entry={alias,id:randomUUID(),definition,client,directory,pending:new Set(),detaching:false};
+        const entry={alias,id:randomUUID(),definition,client,directory,pending:new Set(),detaching:false,
+          closedResources:new Set()};
         this.#entries.set(alias,entry);this.#detached.delete(alias);
         return this.#describe(entry,status);
       }catch(error){await client.close();throw error;}
@@ -187,16 +188,29 @@ export class MerchantResearchWorkspaces{
       entry.detaching=true;
       entry.close=(async()=>{
         await Promise.allSettled([...entry.pending]);
-        if(entry.commerce)await entry.commerce.close();
-        await this.#reads.closeScope(entry.id);
-        await entry.client.close();
+        // Each closer owns separate resources. Drain every attempt before
+        // reporting failures, and never repeat a successful close on retry.
+        const closers=[
+          ['commerce',()=>entry.commerce?.close()],
+          ['exports',()=>this.#reads.closeScope(entry.id)],
+          ['connection',()=>entry.client.close()],
+        ].filter(([resource])=>!entry.closedResources.has(resource));
+        const results=await Promise.allSettled(closers.map(async([resource,close])=>{
+          await close();entry.closedResources.add(resource);
+        }));
+        const failed=results.flatMap((result,index)=>result.status==='rejected'?
+          [{resource:closers[index][0],error:result.reason}]:[]);
+        if(failed.length)throw Object.assign(new AggregateError(failed.map(value=>value.error),
+          'Research attachment cleanup failed. Retry closing the same attachment.'),
+          {code:'RESEARCH_ATTACHMENT_CLOSE_INCOMPLETE',workspace:alias,attachmentId:id,
+            resources:failed.map(value=>value.resource)});
         if(this.#entries.get(alias)===entry)this.#entries.delete(alias);
         this.#detached.set(alias,id);
         return {workspace:alias,attachmentId:id,state:'DETACHED',workspaceId:entry.client.workspaceId,
           listenerOwnership:'ORIGINAL_APPLICATIONS_WORKSPACE'};
       })().catch(error=>{
-        // RetainedFileReads preserves failed handles for the SAME owner to
-        // retry. Keep detaching and the entry, but release the failed promise.
+        // Preserve the original owner and successful cleanup state while
+        // failed resources retry. Admission stays closed for this attachment.
         entry.close=null;throw error;
       });
     }
@@ -485,8 +499,20 @@ export class MerchantResearchWorkspaces{
       this.#closed=true;
       this.#closing=(async()=>{
         await Promise.allSettled([...this.#pending]);
-        await Promise.all([...this.#entries.values()].map(entry=>this.#detach(entry.alias,entry.id)));
-        await this.#reads.close();
+        const entries=[...this.#entries.values()];
+        const results=await Promise.allSettled(entries.map(entry=>this.#detach(entry.alias,entry.id)));
+        const failures=results.flatMap((result,index)=>result.status==='rejected'?
+          [{workspace:entries[index].alias,attachmentId:entries[index].id,error:result.reason}]:[]);
+        // Global read ownership also drains after every attachment attempt,
+        // including when another resource failed to close.
+        try{
+          await this.#reads.close();
+          for(const entry of entries)entry.closedResources.add('exports');
+        }catch(error){failures.push({resource:'exports',error});}
+        if(failures.length)throw Object.assign(new AggregateError(failures.map(value=>value.error),
+          'Research merchant cleanup failed. Retry closing the same merchant.'),
+          {code:'RESEARCH_MERCHANT_CLOSE_INCOMPLETE',
+            resources:failures.map(({error,...resource})=>resource)});
         return {state:'DETACHED',listenerOwnership:'ORIGINAL_APPLICATIONS_WORKSPACE'};
       })().catch(error=>{
         // Closing remains admission-closed while its original readers retry.
