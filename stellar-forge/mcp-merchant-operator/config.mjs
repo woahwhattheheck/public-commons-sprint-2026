@@ -1114,18 +1114,22 @@ export async function initializeGeocodioWorkspaceMerchant({ directory, connectio
 
 
 /** Attach original captured API consoles to the existing merchant provider. */
-export async function initializeHarWorkspaceMerchant({directory,connection,name='Starforge HAR workspaces'}) {
+export async function initializeHarWorkspaceMerchant({directory,connection,openapiWorkspaces,name='Starforge HAR workspaces'}) {
   const root=resolve(directory),harWorkspaceConnection=hostPath(connection,process.cwd());
   name=line(name,'Merchant name');
   const configured=await readHarWorkspaceConfiguration(harWorkspaceConnection);
+  const openapiWorkspaceConnection=openapiWorkspaces===undefined?undefined:hostPath(openapiWorkspaces,process.cwd());
+  if(openapiWorkspaceConnection)await readOpenApiWorkspaceConfiguration(openapiWorkspaceConnection);
   await mkdir(root,{mode:0o700});
   await initReleaseStore(join(root,'releases'));
   await mkdir(join(root,'customer-exports'),{mode:0o700});
   const configuration=join(root,'merchant-mcp.json');
   await writePrivate(configuration,{schema:CONFIG_SCHEMA,name,releaseStore:'./releases',
-    exportsDirectory:'./customer-exports',sources:{},harWorkspaceConnection});
+    exportsDirectory:'./customer-exports',sources:{},harWorkspaceConnection,
+    ...(openapiWorkspaceConnection?{openapiWorkspaceConnection}:{})});
   await readMerchantConfig(configuration);
   return {schema:CONFIG_SCHEMA,configuration,state:'INITIALIZED',harWorkspacesConfigured:true,
+    openapiWorkspacesConfigured:Boolean(openapiWorkspaceConnection),
     workspaces:Object.entries(configured.workspaces).map(([workspace,v])=>({workspace,label:v.label})),
     ownership:'EXISTING_SF61_MERCHANT_CONSOLE'};
 }
