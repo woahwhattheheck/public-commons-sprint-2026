@@ -67,7 +67,8 @@ async function transport(connection, route, {body, inputFile, outputFile, conten
       };
       const request = httpRequest(target, {method:length === undefined ? 'GET' : 'POST', agent:false, maxHeaderSize:32768,
         headers:{Authorization:'Bearer ' + connection.token, Accept:'application/json, application/octet-stream',
-          ...(length === undefined ? {} : {'Content-Type':contentType, 'Content-Length':String(length)})}},
+          ...(length === undefined ? {} : {'Content-Type':contentType, 'Content-Length':String(length)}),
+          ...(original ? {'X-Content-SHA256':inputFile.sha256} : {})}},
       response => {
         (async () => {
           const chunks = [], digest = createHash('sha256'); let count = 0;
