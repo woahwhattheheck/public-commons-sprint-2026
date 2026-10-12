@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grpc-health",
+  "description": "Retained standard gRPC health through the original merchant workspace, CLI, agent and receiving lifecycle",
+  "commands": {
+    "grpc-health": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health-cli.mjs"
+  },
+  "commandDescriptions": {
+    "grpc-health": "Check, list, watch and receive native service-health observations on saved gRPC endpoints"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/HEALTH.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health/health.proto",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health/LICENSE",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health/PROTOCOL.md",
+    "stellar-forge/mcp-merchant-operator/GRPC_HEALTH.md"
+  ],
+  "exports": {
+    "./seller/grpc/health": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health.mjs",
+    "./seller/grpc/health-cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health-cli.mjs",
+    "./seller/grpc/health-record": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health-record.mjs",
+    "./seller/grpc/health-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health-receiving.mjs",
+    "./merchant/mcp/grpc/health": "./source/stellar-forge/mcp-merchant-operator/grpc-health.mjs",
+    "./merchant/mcp/grpc/health-receiving": "./source/stellar-forge/mcp-merchant-operator/grpc-health-download.mjs"
+  }
+}
