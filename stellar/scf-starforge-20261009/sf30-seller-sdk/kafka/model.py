@@ -12,7 +12,7 @@ import zipfile
 
 from shared import RetainedWorkspace, InputError, json_bytes, load_json, private_write, file_digest, sync_dir, ndjson_source
 from contract import (MAX_SOURCE, ACTIVE, STATUS, now, digest, ident, operation, exact, integer,
-                      offset, label, config, wire, unb64, decoded, api_message, default_plan)
+                      offset, label, config, wire, unb64, decoded, api_message, api_message_summary, default_plan)
 from transport import client_status, inspect_source, capture_batches, CaptureProblem
 
 SCHEMA = "stellar-forge.kafka-workspace.v1"
@@ -432,10 +432,10 @@ class Workspace(RetainedWorkspace):
         with self.mutex:
             self.capture(value)
             total = self._kdb.execute("SELECT COUNT(*) FROM kafka_capture_messages WHERE capture_id=? AND role='record'", (value,)).fetchone()[0]
-            rows = self._kdb.execute("""SELECT m.body FROM kafka_capture_messages c JOIN kafka_messages m ON m.id=c.message_id
+            rows = self._kdb.execute("""SELECT m.body,m.sha,m.bytes,m.goldsky_operation FROM kafka_capture_messages c JOIN kafka_messages m ON m.id=c.message_id
                 WHERE c.capture_id=? AND c.role='record' ORDER BY m.partition_id,m.offset_value LIMIT ? OFFSET ?""", (value, limit, start))
             return {"capture": value, "offset": start, "limit": limit, "total": total,
-                    "messages": [api_message(load_json(row["body"])) for row in rows]}
+                    "messages": [api_message_summary(load_json(row["body"]), row["sha"], row["bytes"], row["goldsky_operation"]) for row in rows]}
 
     def message(self, value):
         return api_message(self._record("kafka_messages", value))

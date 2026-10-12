@@ -221,6 +221,33 @@ def api_message(raw):
         "valueJson": ndjson_source.exact_json(envelope["value"]) if envelope["valueState"] == "json" else None}
 
 
+
+def api_message_summary(raw, checksum, retained_bytes, goldsky_operation):
+    """List validated retained wire metadata without decoding every message value."""
+    key = unb64(raw["keyBase64"])
+    state, preview, truncated = "null", None, False
+    if key is not None:
+        if not key:
+            state, preview = "empty", ""
+        else:
+            try:
+                text = key.decode("utf-8")
+                state, preview, truncated = "utf8", text[:256], len(text) > 256
+            except UnicodeError:
+                state = "binary"
+    encoded = raw["valueBase64"]
+    value_bytes = None if encoded is None else len(encoded) // 4 * 3 - (2 if encoded.endswith("==") else 1 if encoded.endswith("=") else 0)
+    return {"id": wire_identity(raw), "sha256": ident(checksum),
+        **{key: raw[key] for key in ("clusterId", "topicId", "topic", "partition", "offset",
+                                    "timestampType", "timestampMs", "leaderEpoch")},
+        "keyState": state, "keyUtf8Preview": preview, "keyPreviewTruncated": truncated,
+        "keyBytes": None if key is None else len(key), "valueBytes": value_bytes,
+        "headerCount": len(raw["headers"]), "wireBytes": retained_bytes,
+        "valueState": "tombstone" if encoded is None else "present",
+        "goldskyOperation": goldsky_operation,
+        "deleted": encoded is None or goldsky_operation == "d"}
+
+
 def exact_document(value):
     """Emit original numeric lexemes while retaining ordinary API metadata numbers."""
     if isinstance(value, ndjson_source.JsonNumber) or value is None or type(value) is bool or isinstance(value, str):

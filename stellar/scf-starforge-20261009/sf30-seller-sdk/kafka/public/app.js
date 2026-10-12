@@ -270,7 +270,9 @@ async function loadMessages(start = 0) {
   for (const record of page.messages) {
     const row = el("tr");
     for (const value of [record.partition, record.offset, record.timestampMs ?? "Unavailable", record.valueState, record.goldskyOperation ?? "—"]) row.append(el("td", value));
-    row.append(el("td", record.keyUtf8 ?? (record.keyBase64 === null ? "null key" : "Binary key"), { class: "key-preview" }));
+    const keyPreview = record.keyState === "null" ? "null key" : record.keyState === "empty" ? "empty key" :
+      record.keyState === "binary" ? "Binary key" : (record.keyUtf8Preview ?? "") + (record.keyPreviewTruncated ? "…" : "");
+    row.append(el("td", keyPreview, { class: "key-preview" }));
     const cell = el("td"), open = el("button", "Inspect", { type: "button", class: "small", "aria-label": "Inspect partition " + record.partition + " offset " + record.offset });
     open.addEventListener("click", () => act("Opening the original event bytes…", async () => {
       selectedMessage = await api("/api/kafka/message?id=" + encodeURIComponent(record.id));
@@ -494,6 +496,7 @@ for (const anchor of document.querySelectorAll('a[href^="#"]')) {
 }
 document.addEventListener("visibilitychange", () => { clearTimeout(timer); if (!document.hidden) schedulePoll(); });
 window.addEventListener("pagehide", () => { closed = true; clearTimeout(timer); });
+window.addEventListener("pageshow", () => { closed = false; schedulePoll(); });
 syncControls();
 await act("Opening retained Kafka sources and captures…", async () => {
   await refreshKafka(); notify("Workspace ready. Select a saved source connection or receive an existing Kafka project.");
