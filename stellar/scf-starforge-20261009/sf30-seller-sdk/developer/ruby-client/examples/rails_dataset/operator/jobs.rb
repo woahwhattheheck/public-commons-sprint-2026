@@ -5,6 +5,13 @@ require_relative "workspace"
 
 module Starforge
   module DatasetOperator
+    class SourcePrepareJob < ActiveJob::Base
+      queue_as :default
+      def perform(tenant_key,review_id)
+        DatasetOperator.workspace(tenant_key).prepare_source(review_id)
+      end
+    end
+
     class PrepareJob < ActiveJob::Base
       queue_as :default
       def perform(tenant_key, review_id)

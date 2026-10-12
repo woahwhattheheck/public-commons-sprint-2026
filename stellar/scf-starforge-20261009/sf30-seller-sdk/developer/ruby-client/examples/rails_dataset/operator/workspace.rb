@@ -151,7 +151,9 @@ module Starforge
             "DATASET_OPERATOR_CANDIDATE")
           stream(value.fetch("stream_id"))
           mapping = value["mapping"]
-          mapping = Files.parse(Files.read(value.fetch("mapping_path"))) if mapping.nil?
+          if mapping.nil?
+            mapping = value["mapping_path"] ? Files.parse(Files.read(value.fetch("mapping_path"))) : {}
+          end
           Files.need(mapping.is_a?(Hash), "DATASET_OPERATOR_MAPPING")
           chosen = {"id"=>value["id"], "title"=>value["title"], "stream_id"=>value["stream_id"].to_s,
             "directory"=>Files.directory(value.fetch("directory")), "format"=>value.fetch("format","dataset"),
@@ -285,17 +287,7 @@ module Starforge
           chosen = selection(id).fetch("candidate")
           state(id,"preparing")
           begin
-            receiver = File.join(directory,"received")
-            if Store.present?(File.join(directory,"received.json"))
-              package = selected_delivery(id)
-            else
-              package = @formats.fetch(chosen.fetch("format")).call(chosen.fetch("directory"), chosen.fetch("manifest_sha256"))
-              package.copy_to(receiver)
-              package = selected_delivery(id)
-              Files.once(File.join(directory,"received.json"), Files.json({
-                "manifest_sha256"=>package.manifest_sha256, "format"=>chosen.fetch("format")}))
-            end
-            Files.need(package.manifest_sha256 == chosen.fetch("manifest_sha256"), "DATASET_OPERATOR_DELIVERY_CHANGED")
+            package = receive_delivery(id)
             preview = retained_preview(id)
             begin
               descriptors = []
@@ -545,7 +537,11 @@ module Starforge
         directory = path(id)
         result = nil
         Files.lock(directory) do
-          review(id)
+          if Store.present?(File.join(directory,"review.json"))
+            review(id)
+          else
+            validate_source_handoff(id)
+          end
           files = []
           visit = lambda do |base,relative|
             Dir.children(base).sort.each do |name|
@@ -613,3 +609,5 @@ end
 
 # The same private Workspace owns committed-data captures and query receiving.
 require_relative "records"
+require_relative "source"
+require_relative "mapping"
