@@ -8,13 +8,14 @@ export async function dispatchDuckDBReconciliation({operation,body,get,post,work
  if(pageKind)return get(route+'/'+pageKind+query(body));
  if(operation==='reconcile-status')return get(route+'/status');
  if(operation==='reconcile-review')return post(route+'/review',body);
+ if(operation==='reconcile-normalization-preview')return post(route+'/normalization-preview',body);
  if(operation==='reconcile-pair')return get(route+'/pairs/'+encode(body.pair_id)+query({revision:body.revision}));
  if(operation==='reconcile-run')return get(route+'/runs/'+encode(body.run_id));
  if(operation==='reconcile-report')return get(route+'/reports/'+encode(body.report_id));
  if(operation==='reconcile-request')return get(route+'/requests/'+encode(body.request_id));
  if(operation==='reconcile-resume')return post(route+'/requests/'+encode(body.request_id)+'/resume',{workspace_id:workspaceId});
  if(operation==='reconcile-changes'){const {report_id,...paging}=body;return get(route+'/reports/'+encode(report_id)+'/changes'+query(paging));}
- const grid={'reconcile-groups':'groups','reconcile-rows':'rows','reconcile-fields':'fields','reconcile-row':'row','reconcile-decisions':'decisions'}[operation];
+ const grid={'reconcile-groups':'groups','reconcile-rows':'rows','reconcile-fields':'fields','reconcile-normalizations':'normalizations','reconcile-row':'row','reconcile-decisions':'decisions'}[operation];
  if(grid){const {run_id,...parameters}=body;return get(route+'/runs/'+encode(run_id)+'/'+grid+query(parameters));}
  const action={'reconcile-save-pair':'pairs','reconcile-execute':'run','reconcile-decide':'decision','reconcile-save-report':'report'}[operation];
  if(action)return post(route+'/'+action,scoped(body));

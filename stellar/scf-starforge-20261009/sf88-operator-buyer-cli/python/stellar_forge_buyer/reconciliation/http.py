@@ -78,9 +78,10 @@ def get(operator, path, parameters):
         return getattr(native, {"runs": "run", "reports": "report", "requests": "request"}[parts[0]])(parts[1])
     if len(parts) == 3 and parts[0] == "runs":
         run_id, kind = parts[1:]
-        if kind in {"groups", "rows", "fields"}:
+        if kind in {"groups", "rows", "fields", "normalizations"}:
             allowed = (("category", "duplicates") if kind == "groups" else ("group_id", "column_name", "state")
-                       if kind == "fields" else ("side", "status", "group_id"))
+                       if kind == "fields" else ("side", "group_id", "column_name", "state") if kind == "normalizations"
+                       else ("side", "status", "group_id"))
             values = _parameters(parameters, ("offset", "limit", *allowed))
             options = _paging(values)
             for name in allowed:
@@ -127,6 +128,9 @@ def perform(operator, path, body):
     if parts == ["review"]:
         fields(body, ("definition",))
         return native.review(body["definition"])
+    if parts == ["normalization-preview"]:
+        fields(body, ("definition", "side", "column_name"), ("offset", "limit"))
+        return native.normalization_preview(**body)
     if len(parts) == 1 and parts[0] in {"pairs", "run", "decision", "report"}:
         return native.perform(parts[0], body)
     if len(parts) == 3 and parts[0] == "requests" and parts[2] == "resume":
