@@ -13,11 +13,111 @@ import {initializeHarWorkspaceMerchant} from '../config.mjs';
 import {startMerchantMcp} from '../serve.mjs';
 import {openMerchantFileClient} from '../retained-download.mjs';
 import {downloadHarExport} from '../har-download.mjs';
+import {downloadOpenApiRouteWorksheet,readOpenApiRouteWorksheet} from '../openapi-route-worksheet-client.mjs';
 
 const encode=v=>JSON.stringify(v,null,2)+'\n';
 const parse=b=>JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(b));
 const check=(value,message)=>{if(!value)throw new Error(message);};
 async function write(path,value){await writeFile(path,value,{flag:'wx',mode:0o600});}
+
+
+async function priceReceivedMerchant({client,call,receiverParent,receivingSelection,packageOriginal,output}) {
+  const workspace='receiver',baseName='received-merchant';
+  const inventory=await call('merchant_openapi_routes',{workspace,baseName,limit:64});
+  const captured=inventory.context.capturedSource;
+  check(captured?.kind===receivingSelection.kind&&captured.id===receivingSelection.id&&
+    captured.revision===receivingSelection.revision,'The worksheet did not retain the original received HAR selection.');
+  const context={baseName,expectedSourceSha256:inventory.context.sourceSha256,
+    expectedPlanSha256:inventory.context.planSha256,capturedSource:captured};
+  const originalPath=join(output,'original-route-worksheet.json');
+  const originalDownload=await downloadOpenApiRouteWorksheet({client,workspace,request:context,path:originalPath,chunkBytes:4096});
+  const original=await readOpenApiRouteWorksheet({path:originalPath,expectedSha256:originalDownload.sha256});
+  const worksheet=structuredClone(original.sheet),operation=packageOriginal.plan.operations[0];
+  const selected=worksheet.rows.find(row=>row.method===operation.method.toUpperCase()&&row.path===operation.path);
+  check(selected?.selected&&selected.amountAtomic===operation.amountAtomic,'The worksheet changed the original first route or atomic price.');
+  const before=selected.amountAtomic,after=String(BigInt(before)+1n);selected.amountAtomic=after;
+  const request={...context,worksheet};
+  const review=await call('merchant_openapi_route_sheet_review',{workspace,...request});
+  check(review.counts.changed===1&&review.counts.selected===packageOriginal.plan.operations.length,
+    'Review changed another route selection or price.');
+  const name='received-merchant-priced',saveRequest={workspace,...request,name,expectedReviewSha256:review.review.sha256};
+  const saved=await call('merchant_openapi_route_sheet_save',saveRequest);
+  const replay=await call('merchant_openapi_route_sheet_save',saveRequest);
+  check(replay.native.recovered===true,'The same reviewed price save did not reopen its completed package.');
+  const priced=await readPackage(receiverParent,name),expectedPlan=structuredClone(packageOriginal.plan);
+  expectedPlan.operations[0].amountAtomic=after;
+  check(priced.specText===packageOriginal.specText&&canonical(priced.plan)===canonical(expectedPlan),
+    'Pricing changed original source, route policies, operation IDs or other merchant settings.');
+  const pricedPath=join(output,'priced-route-worksheet.json');
+  const download=await downloadOpenApiRouteWorksheet({client,workspace,request,path:pricedPath,
+    expectedWorksheetSha256:review.worksheet.sha256,chunkBytes:4096});
+  const reopened=await readOpenApiRouteWorksheet({path:pricedPath,expectedSha256:download.sha256});
+  check(canonical(reopened.sheet)===canonical(worksheet),'The complete downloaded worksheet differs from the reviewed original.');
+  const fileReplay=await downloadOpenApiRouteWorksheet({client,workspace,request,path:pricedPath,
+    expectedWorksheetSha256:download.sha256,chunkBytes:4096});
+  check(fileReplay.state==='REOPENED','The complete worksheet retry did not reopen its exact original file.');
+  await call('merchant_openapi_load',{workspace,name,includeSource:true});
+  await call('merchant_openapi_package_inspect',{workspace,name});
+  const sourceFiles={};
+  for(const file of ['../openapi-route-worksheet.mjs','../openapi-route-worksheet-client.mjs','../openapi-workspace.mjs',
+    '../../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/route-sheet-model.mjs'])
+    sourceFiles[file]=digest(await readFile(new URL(file,import.meta.url)));
+  const result={schema:'stellar-forge.har-route-worksheet-receiving.v1',sourceFiles,
+    originalPackage:packageOriginal.folder,capturedSource:captured,
+    context:inventory.context,review:review.review,change:{method:operation.method,path:operation.path,before,after},
+    merchant:{directory:priced.folder,name,planSha256:digest(await readRegular(join(priced.folder,'merchant-plan.json'),4*1024*1024)),
+      routes:priced.manifest.preview.routes},originalWorksheet:originalDownload,worksheet:download,
+    packageReopened:replay.native.recovered,fileReopened:fileReplay.state};
+  await write(join(output,'route-worksheet-result.json'),encode(result));
+  return result;
+}
+
+/** Continue an already completed HAR agent result without repeating its capture or receiving work. */
+export async function receiveHarRouteWorksheet({agentResult,output}) {
+  const inputBytes=await readRegular(resolve(agentResult),4*1024*1024),input=parse(inputBytes);
+  check(input.operation==='AF825-HAR-AGENT-WORKSPACE-20261012'&&input.receivingSelection?.kind==='refresh',
+    'Select the completed original HAR agent result.');
+  const original=await readPackage(dirname(input.merchant.directory),basename(input.merchant.directory));
+  const planBytes=await readRegular(join(original.folder,'merchant-plan.json'),4*1024*1024);
+  check(digest(planBytes)===input.merchant.planSha256,'The original received merchant plan changed.');
+  if(input.routeWorksheet) {
+    const kept=input.routeWorksheet,priced=await readPackage(dirname(kept.merchant.directory),basename(kept.merchant.directory));
+    check(priced.specText===original.specText&&digest(await readRegular(join(priced.folder,'merchant-plan.json'),4*1024*1024))===kept.merchant.planSha256,
+      'The completed priced package changed.');
+    await readOpenApiRouteWorksheet({path:kept.worksheet.path,expectedSha256:kept.worksheet.sha256});
+    return {operation:'AF825-HAR-ROUTE-WORKSHEET-20261012',reused:true,originalAgentResult:resolve(agentResult),routeWorksheet:kept};
+  }
+  output=resolve(output);await mkdir(output,{mode:0o700});
+  await write(join(output,'original-selection.json'),encode({agentResult:resolve(agentResult),resultSha256:digest(inputBytes),
+    merchant:input.merchant,receivingSelection:input.receivingSelection}));
+  const receiverParent=dirname(original.folder),environment={HAR_NATIVE_MCP_TOKEN:randomBytes(32).toString('hex'),MCP_CLIENT_ORIGINS:''};
+  const operations=[];let receiver,mcp;
+  try {
+    receiver=await startWorkspace({parent:receiverParent,noSignals:true});
+    const urlFile=join(output,'receiver-url.txt');await write(urlFile,receiver.url+'\n');
+    const connection=join(output,'har-connection.json'),openapiConnection=join(output,'openapi-connection.json');
+    await write(connection,encode({schema:'stellar-forge.har-workspace-connection.v1',
+      workspaces:{receiver:{projectsDirectory:receiverParent,consoleUrlFile:urlFile}}}));
+    await write(openapiConnection,encode({schema:'stellar-forge.sf61-workspace-connection.v1',
+      workspaces:{receiver:{consoleUrlFile:urlFile}}}));
+    const configured=await initializeHarWorkspaceMerchant({directory:join(output,'merchant-mcp'),connection,openapiWorkspaces:openapiConnection});
+    mcp=await startMerchantMcp({configPath:configured.configuration,port:0,tokenEnv:'HAR_NATIVE_MCP_TOKEN',environment});
+    const client=await openMerchantFileClient({url:mcp.url,tokenEnv:'HAR_NATIVE_MCP_TOKEN',environment,errorPrefix:'HAR'});
+    const call=async(name,args)=>{const value=await client.call(name,args);operations.push({name,workspace:args.workspace});return value;};
+    const routeWorksheet=await priceReceivedMerchant({client,call,receiverParent,receivingSelection:input.receivingSelection,packageOriginal:original,output});
+    await mcp.close();mcp=null;await receiver.close();receiver=null;
+    const result={operation:'AF825-HAR-ROUTE-WORKSHEET-20261012',node:process.version,platform:process.platform,
+      directory:output,originalAgentResult:resolve(agentResult),operations,routeWorksheet};
+    await write(join(output,'result.json'),encode(result));return result;
+  }catch(error){
+    await write(join(output,'failure.json'),encode({operation:'AF825-HAR-ROUTE-WORKSHEET-20261012',error:String(error.stack??error),operations}));
+    throw error;
+  }finally{
+    const closed=await Promise.allSettled([mcp?.close(),receiver?.close()]);
+    const failures=closed.filter(value=>value.status==='rejected').map(value=>value.reason);
+    if(failures.length)throw new AggregateError(failures,'The original worksheet receiving hosts did not finish closing.');
+  }
+}
 
 export async function receiveHarAgent({consoleResult,output}) {
   const resultBytes=await readRegular(resolve(consoleResult),4*1024*1024),input=parse(resultBytes);
@@ -56,7 +156,11 @@ export async function receiveHarAgent({consoleResult,output}) {
         destinations:{handover:{directory:join(output,'complete-receiving-source')}}},
       receiver:{projectsDirectory:receiverParent,consoleUrlFile:receiverUrl,files:{terms}}
     }}));
-    const configured=await initializeHarWorkspaceMerchant({directory:join(output,'merchant-mcp'),connection});
+    const openapiConnection=join(output,'openapi-connection.json');
+    await write(openapiConnection,encode({schema:'stellar-forge.sf61-workspace-connection.v1',workspaces:{
+      sender:{consoleUrlFile:senderUrl},receiver:{consoleUrlFile:receiverUrl}
+    }}));
+    const configured=await initializeHarWorkspaceMerchant({directory:join(output,'merchant-mcp'),connection,openapiWorkspaces:openapiConnection});
     mcp=await startMerchantMcp({configPath:configured.configuration,port:0,tokenEnv:'HAR_NATIVE_MCP_TOKEN',environment});
     const endpoint=mcp.url,port=Number(new URL(endpoint).port);
     client=await openMerchantFileClient({url:endpoint,tokenEnv:'HAR_NATIVE_MCP_TOKEN',environment,errorPrefix:'HAR'});
@@ -150,6 +254,7 @@ export async function receiveHarAgent({consoleResult,output}) {
     check((await readRegular(join(output,'received-openapi','openapi.json'),4*1024*1024,true)).equals(Buffer.from(packageOriginal.specText)),'Downloaded OpenAPI differs from the original native package.');
     await call('merchant_har_exports',{workspace:'sender',limit:1});
     await call('merchant_har_load',{workspace:'receiver',name:'received-merchant'});
+    const routeWorksheet=await priceReceivedMerchant({client,call,receiverParent,receivingSelection,packageOriginal:receiving,output});
     const sourceFiles={};
     for(const file of ['../har-workspace.mjs','../har-export.mjs','../har-download.mjs','../sf61-connection.mjs','../config.mjs','../operator.mjs','../serve.mjs'])
       sourceFiles[file]=digest(await readFile(new URL(file,import.meta.url)));
@@ -158,7 +263,7 @@ export async function receiveHarAgent({consoleResult,output}) {
       selection,receivingSelection,copyContinuation,groups:groups.length,reviewOperations:reviews.length,changes:changes.length,
       merchant:{directory:receivedPackage.native.folder,routes:receiving.manifest.preview.routes,planSha256:digest(planBytes)},
       exports:exports.map(v=>({exportId:v.exportId,manifestSha256:v.manifestSha256,kind:v.manifest.kind,files:v.manifest.files})),
-      resumed:downloaded,sourceConsoleClosed:true};
+      resumed:downloaded,sourceConsoleClosed:true,routeWorksheet};
     await mcp.close();mcp=null;await receiver.close();receiver=null;
     await write(join(output,'result.json'),encode(result));return result;
   }catch(error){
@@ -173,11 +278,14 @@ export async function receiveHarAgent({consoleResult,output}) {
 export async function main(args=process.argv.slice(2)){
   const values=new Map();
   for(let i=0;i<args.length;i+=2){
-    if(!['--console-result','--out'].includes(args[i])||values.has(args[i])||!args[i+1])throw new TypeError('Use --console-result ORIGINAL_RESULT.json --out NEW_PRIVATE_DIRECTORY');
+    if(!['--console-result','--agent-result','--out'].includes(args[i])||values.has(args[i])||!args[i+1])throw new TypeError('Use --console-result ORIGINAL_CONSOLE_RESULT.json or --agent-result ORIGINAL_AGENT_RESULT.json, with --out NEW_PRIVATE_DIRECTORY');
     values.set(args[i],args[i+1]);
   }
-  if(values.size!==2)throw new TypeError('Use --console-result ORIGINAL_RESULT.json --out NEW_PRIVATE_DIRECTORY');
-  const result=await receiveHarAgent({consoleResult:values.get('--console-result'),output:values.get('--out')});
+  if(values.size!==2||!values.has('--out')||values.has('--console-result')===values.has('--agent-result'))
+    throw new TypeError('Choose one original --console-result or --agent-result and --out NEW_PRIVATE_DIRECTORY');
+  const result=values.has('--agent-result')
+    ? await receiveHarRouteWorksheet({agentResult:values.get('--agent-result'),output:values.get('--out')})
+    : await receiveHarAgent({consoleResult:values.get('--console-result'),output:values.get('--out')});
   process.stdout.write(encode(result));return result;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)

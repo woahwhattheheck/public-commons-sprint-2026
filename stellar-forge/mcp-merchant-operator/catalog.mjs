@@ -29,6 +29,7 @@ import { stellarExpertWorkspaceTools } from './catalog/stellar-expert-workspace.
 import { coingeckoWorkspaceTools } from './catalog/coingecko-workspace.mjs';
 import { redisWorkspaceTools } from './catalog/redis-workspace.mjs';
 import { usaSpendingWorkspaceTools } from './catalog/usaspending-workspace.mjs';
+import { researchWorkspaceTools } from './catalog/research-workspace.mjs';
 import { grantsWorkspaceTools } from './catalog/grantsgov-workspace.mjs';
 import { sourceWorkspaceTools } from './catalog/source-workspace.mjs';
 import { baserowWorkspaceTools } from './catalog/baserow-workspace.mjs';
@@ -90,6 +91,7 @@ const familyTools = {
   coingeckoWorkspaces: coingeckoWorkspaceTools(tool),
   redisWorkspaces: redisWorkspaceTools(tool),
   usaSpendingWorkspaces: usaSpendingWorkspaceTools(tool),
+  researchWorkspaces: researchWorkspaceTools(tool),
   grantsWorkspaces: grantsWorkspaceTools(tool),
   sourceWorkspaces: sourceWorkspaceTools(tool),
   baserowWorkspaces: baserowWorkspaceTools(tool),
@@ -180,6 +182,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.coingeckoWorkspaces,
   ...familyTools.redisWorkspaces,
   ...familyTools.usaSpendingWorkspaces,
+  ...familyTools.researchWorkspaces,
   ...familyTools.grantsWorkspaces,
   ...familyTools.sourceWorkspaces,
   ...familyTools.baserowWorkspaces,
