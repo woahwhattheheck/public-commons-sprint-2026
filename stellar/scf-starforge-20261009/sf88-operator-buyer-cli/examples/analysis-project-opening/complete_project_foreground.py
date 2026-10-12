@@ -116,7 +116,8 @@ def source_selection(frame):
     publish(history/"original-module-pins.json",old_pins)
     receiver_raw=frame["receiver"].encode()
     driver_raw=frame["driver"].encode()
-    ast.parse(receiver_raw.decode());ast.parse(driver_raw.decode())
+    retention_raw=frame["response_sources"].encode()
+    ast.parse(receiver_raw.decode());ast.parse(driver_raw.decode());ast.parse(retention_raw.decode())
     selected=[]
     for row in rows:
         name=row["path"]
@@ -130,6 +131,11 @@ def source_selection(frame):
             if ident(raw)["sha256"]!=OLD_RECEIVER: raise ValueError("The original receiver differs")
             publish(history/"workspace_archive_receive.before.py",raw)
             raw=receiver_raw
+        elif name=="stellar_forge_buyer/response_sources.py":
+            if ident(raw)["sha256"]!="dd2c6492ffb5a3f48d3da96204ba30407423e2524d8053b9c8bf955597a5dc80":
+                raise ValueError("The original response retention source differs")
+            publish(history/"response_sources.before.py",raw)
+            raw=retention_raw
         ast.parse(raw.decode())
         publish(target/name,raw)
         selected.append({**row,**ident(raw),
@@ -160,8 +166,10 @@ def source_selection(frame):
                "original_inventory":ident(old_pins),"selected_inventory":ident(pins),
                "receiver":{"before":OLD_RECEIVER,"after":ident(receiver_raw)},
                "journey":{"before":OLD_DRIVER,"after":ident(driver_raw)},
+               "response_retention":{"before":"dd2c6492ffb5a3f48d3da96204ba30407423e2524d8053b9c8bf955597a5dc80",
+                                     "after":ident(retention_raw),"native_file_contract":"FileDelivery.expected_destination"},
                "previous_attempt":frame["previous_attempt"],
-               "reason":"Explicit private intermediate directories and original immutable database source selection",
+               "reason":"Explicit private intermediate directories, immutable original database, and native verified FileDelivery destination",
                "donor_unchanged":True}
     save(history/"source-amendment.json",amendment)
     return target,target/"module-pins.json",native,selected,native_rows,amendment
