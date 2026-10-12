@@ -83,7 +83,7 @@ Publisher prepares that exact delivery through the original Socrata dataset publ
 
 ## Original operating example
 
-fixtures/test_usage_data.xml and fixtures/test_usage_data_01.xml are unchanged Green Button Alliance reference sources. The full file contains 1,340 readings, including a daylight-saving transition; the single-day source contains 96 readings that overlap it. The Apache 2.0 notice and original comments are retained.
+examples/test_usage_data.xml and examples/test_usage_data_01.xml are unchanged Green Button Alliance reference sources. The full file contains 1,340 readings, including a daylight-saving transition; the single-day source contains 96 readings that overlap it. The Apache 2.0 notice at contracts/GreenButtonAlliance-LICENSE.txt and the original comments are retained. The original upstream paths and exact Git blobs remain recorded in contracts/source-contracts.json.
 
 contracts/utilityapi-examples.json holds the original published provider blocks and two complete meter-state examples with exact source locations. contracts/source-contracts.json records source repository commits and schema editions.
 
