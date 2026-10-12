@@ -253,7 +253,7 @@ class CreditStore:
         sources = {s["id"]: s for s in self._bodies("sources")}
         heads = {row["credit_id"]: json.loads(row["body"]) for row in self.connection.execute(
             "SELECT h.credit_id,c.body FROM credit_coding_heads h JOIN credit_codings c ON c.id=h.coding_id")}
-        latest = {s["id"]: {n["adjustment_id"] for n in native_credits(self._packet(s["latest_refund_packet"])["native"])}
+        latest = {s["id"]: {n["adjustment_id"]: n for n in self._packet(s["latest_refund_packet"])["native"]["adjustments"]}
                   for s in sources.values() if s.get("kind") == "merchant_adjustments" and s.get("latest_refund_packet")}
         values = []
         for row in self.connection.execute("SELECT body FROM credits ORDER BY id"):
@@ -261,6 +261,9 @@ class CreditStore:
             value.update(source_name=source["name"], capture_id=source["current_capture"],
                          coding=heads.get(value["id"]),
                          present_in_latest_receipt=value["native"]["adjustment_id"] in latest[source["id"]] if source["id"] in latest else True)
+            current_decision = latest.get(source["id"], {}).get(value["native"]["adjustment_id"])
+            value["latest_source_status"] = current_decision["status"] if current_decision else None
+            value["latest_source_eligibility"] = current_decision.get("eligibility") if current_decision else None
             value["basis"] = coding_basis(value, purchases.get(value["item_id"]))
             value["status"] = "UNCODED" if not value["coding"] else "CODED" if value["coding"]["basis"] == value["basis"] else "STALE"
             values.append(value)
