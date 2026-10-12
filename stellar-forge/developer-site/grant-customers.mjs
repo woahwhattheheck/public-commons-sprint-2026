@@ -2,6 +2,7 @@
 const WEBHOOK = '## Webhook customer adoption: complete event tasks and operator handover';
 const OPENFN = '## OpenFn: paid workflow commissioning and complete receiving';
 const REFERRAL = '## Referral implementation: source changes, returned outcomes and complete receiving';
+const RISINGWAVE = '## Recurring subscription delivery and streaming-data commissioning';
 const OPENFN_PARAGRAPHS = [
   '**Paid workflow commissioning and complete receiving — OpenFn.**',
   '**OpenFn implementation opportunity.**',
@@ -53,7 +54,7 @@ function paragraph(manuscript, prefix) {
 /** Update complete accepted customer text while retaining every other chapter and table. */
 export function receiveGrantCustomerSections(productAndFinanceMarkdown, manuscript) {
   let companion = clean(productAndFinanceMarkdown);
-  for (const heading of [WEBHOOK, REFERRAL]) {
+  for (const heading of [WEBHOOK, REFERRAL, RISINGWAVE]) {
     const incoming = section(manuscript, heading);
     if (incoming) companion = installSection(companion, heading, projectGrantMarkdown(incoming.text));
   }
@@ -111,5 +112,10 @@ export function receiveGrantCustomerSources(index, companion) {
     /https:\/\/github\.com\/woahwhattheheck\/commons\/blob\/([a-f0-9]{40})\/(tools\/revenue_owner_console_\d{8}\/case_assets\/elimu-gravity-referral-implementation-\d{8}-450e\/OPERATED_GRAVITY_RECEIVING\.md)/, referral);
   receive('gravity-referral-commissioning', 'Complete referral commissioning and staff handover scope',
     /https:\/\/github\.com\/woahwhattheheck\/commons\/blob\/([a-f0-9]{40})\/(tools\/revenue_owner_console_\d{8}\/case_assets\/elimu-gravity-referral-implementation-\d{8}-450e\/Elimu_Referral_Implementation_Workshare_Offer_\d{8}\.md)/, referral);
+  const subscriptions = section(companion, RISINGWAVE)?.text || '';
+  receive('risingwave-subscription-operation', 'Source subscription delivery and complete customer receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/public-commons-sprint-2026\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/risingwave\/README\.md)/, subscriptions);
+  receive('risingwave-subscription-commissioning', 'Complete subscription delivery commercial and receiving package',
+    /https:\/\/github\.com\/woahwhattheheck\/commons\/tree\/([a-f0-9]{40})\/(tools\/revenue_owner_console_\d{8}\/case_assets\/risingwave-subscription-delivery-pilot-\d{8})/, subscriptions);
   return index;
 }
