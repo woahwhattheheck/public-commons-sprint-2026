@@ -206,6 +206,29 @@ def period_bounds(value, frequency):
     return None, None
 
 
+
+def header_links(node):
+    """Retain whether the actual Header links a dataflow or a data structure."""
+    links = []
+    for link in children(node, "Structure"):
+        usage = children(link, "StructureUsage")
+        structure = children(link, "Structure")
+        if len(usage) + len(structure) > 1:
+            raise InputError("The SDMX Header declares multiple structural reference targets")
+        target = usage[0] if usage else structure[0] if structure else link
+        ref = reference(target)
+        kind = "dataflow" if usage else "datastructure"
+        if not usage and not structure and ref.get("class") == "Dataflow":
+            kind = "dataflow"
+        links.append({
+            "structure_id": link["attrs"].get("structureID", ""),
+            "dimension_at_observation": link["attrs"].get("dimensionAtObservation", ""),
+            "reference": ref, "reference_kind": kind,
+            "raw_attributes": dict(link["attrs"]),
+        })
+    return links
+
+
 def parse_xml(path, on_series, on_observation, on_group):
     result = {"format": None, "kind": "data", "flows": [], "structures": [], "codelists": [],
               "dimensions": [], "other_structures": [], "header": None, "header_references": [], "datasets": [],
@@ -283,6 +306,7 @@ def parse_xml(path, on_series, on_observation, on_group):
                 links = result["header_references"]
             if len(links) == 1:
                 dataset["structure_reference"] = dict(links[0]["reference"])
+                dataset["structure_reference_kind"] = links[0]["reference_kind"]
                 dataset["dimension_at_observation"] = links[0]["dimension_at_observation"]
             if dataset["action"] not in {"Append", "Replace", "Delete", "Information"}:
                 raise InputError("Unknown SDMX dataset action: " + dataset["action"])
@@ -374,11 +398,7 @@ def parse_xml(path, on_series, on_observation, on_group):
             if not captured:
                 if tag == "Header":
                     result["header"] = node
-                    result["header_references"] = [
-                        {"structure_id": link["attrs"].get("structureID", ""),
-                         "dimension_at_observation": link["attrs"].get("dimensionAtObservation", ""),
-                         "reference": reference(link), "raw_attributes": dict(link["attrs"])}
-                        for link in children(node, "Structure")]
+                    result["header_references"] = header_links(node)
                 else:
                     maintained(node, result)
                 metadata_bytes += capture_bytes

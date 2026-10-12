@@ -19,7 +19,7 @@ import threading
 import uuid
 import zipfile
 
-from sdmx_source import InputError, MAX_SOURCE, MAX_METADATA, parse_source, period_bounds, canonical
+from sdmx_source import InputError, MAX_SOURCE, MAX_METADATA, parse_source, period_bounds, canonical, header_links
 
 HERE = Path(__file__).resolve().parent
 XML = HERE.parent / "xml"
@@ -553,8 +553,25 @@ class Workspace:
             if selected_datasets and ds["id"] not in selected_datasets:
                 continue
             ref = ds.get("structure_reference", {})
-            if ref and (ref.get("id") != structure["id"] or (ref.get("agency_id") and ref["agency_id"] != structure["agency_id"]) or (ref.get("version") and ref["version"] != structure["version"])):
-                raise InputError("Selected metadata differs from the source Header DSD identity")
+            kind = ds.get("structure_reference_kind")
+            if ref and kind is None and source.get("header"):
+                # Older workspaces retained the complete Header before recording
+                # reference kind. Recover it from that original XML element.
+                raw_id = ds["raw_attributes"].get("structureRef", "")
+                links = [link for link in header_links(source["header"])
+                         if link["reference"] == ref and
+                         (not raw_id or link["structure_id"] == raw_id)]
+                kinds = {link["reference_kind"] for link in links}
+                if len(kinds) == 1:
+                    kind = next(iter(kinds))
+            if kind not in {None, "dataflow", "datastructure"}:
+                raise InputError("Unknown retained SDMX Header reference kind")
+            target = flow if kind == "dataflow" else structure
+            if ref and (ref.get("id") != target["id"] or
+                        (ref.get("agency_id") and ref["agency_id"] != target["agency_id"]) or
+                        (ref.get("version") and ref["version"] != target["version"])):
+                raise InputError("Selected metadata differs from the source Header " +
+                                 ("dataflow" if kind == "dataflow" else "DSD") + " identity")
             ds_ref = ds["raw_attributes"].get("structureRef")
             if not ref and ds_ref and ds_ref not in {structure["id"], qualified(structure)}:
                 raise InputError("A selected dataset names a different DSD; select its actual dataset and dataflow")
