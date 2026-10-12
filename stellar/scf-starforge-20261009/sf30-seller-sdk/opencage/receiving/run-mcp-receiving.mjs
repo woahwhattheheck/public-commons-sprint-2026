@@ -138,9 +138,9 @@ try {
     continuationOperationId: completion.intent.operation_id, responseSha256: digest(response),
     buyerIntentId: buyerComplete.intentId, installedFiles: closure.files.length });
 
-  const [{ initializeOpenCageWorkspaceMerchant, startMerchantMcp }, { openMerchantFileClient },
+  const [{ initializeOpenCageWorkspaceMerchant }, { startMerchantMcp }, { openMerchantFileClient },
     { GeocodeDelivery }, { relativeFile }] = await Promise.all([
-    imp(join(merchant, 'serve.mjs')), imp(join(merchant, 'retained-download.mjs')),
+    imp(join(merchant, 'config.mjs')), imp(join(merchant, 'serve.mjs')), imp(join(merchant, 'retained-download.mjs')),
     imp(join(component, 'customer.mjs')),
     imp(join(source, 'stellar/scf-starforge-20261009/sf30-seller-sdk/twelvedata/files.mjs')),
   ]);
