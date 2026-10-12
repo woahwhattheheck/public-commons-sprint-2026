@@ -51,13 +51,15 @@ export interface OperatorOptions extends ConfigurationOptions {
   directory: string; environment?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch;
 }
 export interface VerificationRequest extends OperationOptions {
-  directory: string; expectedManifestSha256: Sha256; role: string; requireUnchangedRows: true;
+  directory: string; expectedManifestSha256: Sha256; role: string; requireUnchangedRows: true; layerIds: string[];
 }
 export interface NativePostgisVerification {
   verified: true; manifestFile: SourceFile; manifest: Record<string, unknown>; profile: Record<string, unknown>;
   current: { projectId: string; editionId: string; revision: number; database: string;
     role: string; sessionRole: string; readOnly: true; [key: string]: unknown };
-  observations: { allAcceptedRowsMatch: true; layers: unknown[] };
+  selection: { layerIds: string[] };
+  observations: { allAcceptedRowsMatch: true; layers: Array<{ layerId: string; role: string;
+    rowCount: string; rowSha256: Sha256; matchesAcceptedRows: true; [key: string]: unknown }> };
 }
 export interface PublisherOptions {
   directory: string; profile: GeoServerProfile;
