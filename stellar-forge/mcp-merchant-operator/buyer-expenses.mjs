@@ -147,7 +147,7 @@ export function parseBuyerExpenseExport(bytes,exportId) {
      typeof v.workspaceId!=='string'||!Number.isSafeInteger(v.revision)||!['project','accountant','capture','issued-json','issued-html','refund-packet','buyer-accountant-source','bookkeeping','accountant-return','node-operation'].includes(v.kind))
     throw fail('MANIFEST','Use a complete original buyer expense export manifest.');
   const f=v.files[0];
-  if(!['buyer-expense-project.zip','accountant-edition.zip','original-capture.json','issued-edition.json','issued-edition.html','original-refund-packet.zip','issued-buyer-accountant-source.json','buyer-bookkeeping-period.zip','original-accountant-return.json'].includes(f.name)||
+  if(!['buyer-expense-project.zip','accountant-edition.zip','original-capture.json','issued-edition.json','issued-edition.html','original-refund-packet.zip','issued-buyer-accountant-source.json','buyer-bookkeeping-period.zip','original-accountant-return.json','original-node-accounting-export.json'].includes(f.name)||
      !Number.isSafeInteger(f.bytes)||f.bytes<1||f.bytes>MAX_BYTES||!new RegExp(sha.pattern).test(f.sha256))
     throw fail('MANIFEST','The retained export file identity is invalid.');
   return v;
