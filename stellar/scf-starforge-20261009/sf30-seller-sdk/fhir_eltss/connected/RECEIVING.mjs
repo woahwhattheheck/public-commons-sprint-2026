@@ -393,10 +393,13 @@ try{
       playwright=createRequire(import.meta.url)(join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'playwright'));
     }
   }
-  browser=await playwright.chromium.launchPersistentContext(join(output,'browser-profile'),{
-    headless:true,acceptDownloads:true,viewport:{width:1440,height:1080},
-    ...(options['--chromium']?{executablePath:options['--chromium']}:{})});
-  page=browser.pages()[0]??await browser.newPage();watchPage();
+  const openBrowser=async()=>{
+    browser=await playwright.chromium.launchPersistentContext(join(output,'browser-profile'),{
+      headless:true,acceptDownloads:true,viewport:{width:1440,height:1080},
+      ...(options['--chromium']?{executablePath:options['--chromium']}:{})});
+    page=browser.pages()[0]??await browser.newPage();watchPage();
+  };
+  await openBrowser();
   await startMerchant();
   const catalogue=await client.schema();
   need(catalogue.tools?.length===77,'ELTSS_CONNECTED_COMPLETE_CATALOGUE_REQUIRED');
@@ -406,6 +409,10 @@ try{
   const finalBuild=native.buildIds.at(-1),expectedRows=before.builds.find(item=>item.id===finalBuild)?.rowCount;
   need(expectedRows===2,'ELTSS_CONNECTED_ORIGINAL_BUILD_REQUIRED');
   await browserRun('01-original-operator',expectedRows);
+  // The complete first browser observation is retained. Release idle Chromium
+  // during file/MCP receiving; later queries reopen this same persistent profile
+  // against the original continuously owned native operator.
+  await captures();await browser.close();browser=null;page=null;
   await call('catalogue',{workspace:'original'},'native-field-and-source-catalogue');
   await call('auth_profiles',{workspace:'original'},'native-configured-profile-metadata');
 
@@ -635,6 +642,7 @@ try{
   await closeMerchant();
   need((await operatorIdentity('original')).identity.instanceId===beforeOperator.instanceId,
     'ELTSS_CONNECTED_BORROWED_OPERATOR_CLOSED');
+  await openBrowser();
   await browserRun('02-merchant-closed-native-open',2);
   await startMerchant();
   const reopened=includesRecords((await call('state',{workspace:'original'},'original-reopened')).value,{additional});
