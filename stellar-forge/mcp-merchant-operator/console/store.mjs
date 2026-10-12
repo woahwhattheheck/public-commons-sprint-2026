@@ -2,23 +2,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, lstatSync, chmodSync, realpathSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 export const CONSOLE_SCHEMA = 'stellar-forge.merchant-operator-console.v1';
 export const ARCHIVE_SCHEMA = 'stellar-forge.merchant-operator-profile.v1';
-export const digest = value => createHash('sha256').update(value).digest('hex');
-export function fail(code, message, status = 409) {
-  return Object.assign(new Error(message), { code, status });
-}
-export function canonical(value) {
-  if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
-  if (value && typeof value === 'object')
-    return '{' + Object.keys(value).sort().filter(key => value[key] !== undefined)
-      .map(key => JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}';
-  const result = JSON.stringify(value);
-  if (result === undefined) throw fail('CONSOLE_JSON', 'Use JSON values.', 400);
-  return result;
-}
+import { canonical, digest, fail } from './records.mjs';
+export { canonical, digest, fail } from './records.mjs';
+import { installWorkflowTables, archiveWorkflowRows, validateWorkflowRows, importWorkflowRows } from './workflow-records.mjs';
 const json = value => JSON.stringify(value);
 const parse = value => JSON.parse(value);
 const now = () => new Date().toISOString();
@@ -79,6 +69,7 @@ export class MerchantConsoleStore {
       'CREATE TABLE IF NOT EXISTS deliveries (id TEXT PRIMARY KEY, profile_id TEXT NOT NULL REFERENCES profiles(id), value TEXT NOT NULL)',
       'CREATE TABLE IF NOT EXISTS imports (sha TEXT PRIMARY KEY, profile_id TEXT NOT NULL, imported_at TEXT NOT NULL)'
     ].join(';'));
+    installWorkflowTables(this.db);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('schema', CONSOLE_SCHEMA);
     this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('id', randomUUID());
     if (this.db.prepare('SELECT value FROM metadata WHERE key=?').get('schema').value !== CONSOLE_SCHEMA)
@@ -236,7 +227,9 @@ export class MerchantConsoleStore {
     const drafts = this.db.prepare('SELECT value FROM drafts WHERE profile_id=? ORDER BY id,revision').all(profileId).map(row => parse(row.value));
     const calls = this.calls(profileId);
     const deliveries=this.deliveries(profileId);
-    const packet = { schema: ARCHIVE_SCHEMA, sourceWorkspaceId: this.id, profile, drafts, calls, deliveries };
+    const workflowData=archiveWorkflowRows(this.db,profileId);
+    const packet = { schema: ARCHIVE_SCHEMA, sourceWorkspaceId: this.id, profile, drafts, calls, deliveries,
+      ...(workflowData===undefined?{}:{workflowData}) };
     const contentSha256 = digest(canonical(packet));
     return { ...packet, contentSha256 };
   }
@@ -302,6 +295,7 @@ export class MerchantConsoleStore {
         for(const file of value.files) if(!plain(file)||typeof file.name!=='string'||!Number.isSafeInteger(file.bytes)||file.bytes<0) throw fail('CONSOLE_ARCHIVE','Retain each original customer file identity.',400); else sha(file.sha256);
       }
     }
+    const workflowData=validateWorkflowRows(packet.workflowData,{profile,drafts:packet.drafts,calls:packet.calls});
     return this.transaction(() => {
       const imported = this.db.prepare('SELECT profile_id FROM imports WHERE sha=?').get(contentSha256);
       if (imported) return { profile: this.profile(imported.profile_id), reused: true, contentSha256 };
@@ -321,6 +315,7 @@ export class MerchantConsoleStore {
       for (const draft of packet.drafts) this.db.prepare('INSERT INTO drafts VALUES (?,?,?,?)').run(draft.id, draft.revision, profile.id, json(draft));
       for (const call of packet.calls) this.db.prepare('INSERT INTO calls VALUES (?,?,?)').run(call.id, profile.id, json(call));
       for(const value of packet.deliveries)this.db.prepare('INSERT INTO deliveries VALUES (?,?,?)').run(value.id,profile.id,json(value));
+      importWorkflowRows(this.db,workflowData);
       this.db.prepare('INSERT INTO imports VALUES (?,?,?)').run(contentSha256, profile.id, now());
       return { profile, reused: false, contentSha256 };
     });

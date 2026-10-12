@@ -4,12 +4,14 @@ import { basename, dirname, resolve, join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
 import { createConsoleCustomers } from './customers.mjs';
+import { createMerchantWorkflows } from './workflows.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
 
 const ROOT = new URL('./public/', import.meta.url);
 const assets = new Map([
   ['/operator/', ['index.html', 'text/html; charset=utf-8']],
   ['/operator/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/workflows.mjs', ['workflows.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
 const equal = (a,b) => typeof a === 'string' && typeof b === 'string' &&
@@ -65,7 +67,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     required:value.inputSchema.required ?? [],schemaSha256:digest(canonical(value))}));
   const active = new Map(); let closing=false,closed;
   const snapshot = () => ({...operator.inspectHost(),configuration,
-    console:{schema:CONSOLE_SCHEMA,workspaceId:store.id,activeCalls:active.size,closing,customers:customers.summary,
+    console:{schema:CONSOLE_SCHEMA,workspaceId:store.id,activeCalls:active.size,closing,customers:customers.summary,workflows:workflows.summary,
       ...(launchBinding===undefined?{}:{binding:JSON.parse(JSON.stringify(launchBinding))})}});
   const callView = value => {
     const {resultJson,...rest}=value;
@@ -131,6 +133,8 @@ export async function createMerchantConsole({operator,configPath,directory,autho
   const sourceConfiguration=JSON.parse(configurationBytes);
   const customers=createConsoleCustomers({operator,store,definitions,getHost:snapshot,authorize:authorizeRequest,
     releaseStore:resolve(dirname(configPath),sourceConfiguration.releaseStore)});
+  const workflows=createMerchantWorkflows({store,definitions,getHost:snapshot,startCall,requireTool,
+    isCallActive:id=>active.has(id),waitCall:async id=>{await active.get(id);return store.call(id);}});
   async function handler(req,res) {
     let url; try { url=new URL(req.url,'http://127.0.0.1'); } catch { return false; }
     if(url.pathname==='/operator' && req.method==='GET'){res.writeHead(302,{location:'/operator/','cache-control':'no-store'});res.end();return true;}
@@ -177,6 +181,16 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         const value=definitions.get(decodeURIComponent(route.slice(5)));
         if(!value)throw fail('CONSOLE_TOOL_UNAVAILABLE','Choose a configured native tool.',404);
         send(res,200,{definition:value,family:merchantToolFamily(value.name)??'core',schemaSha256:digest(canonical(value))});return true;
+      }
+      if(req.method==='GET'&&route==='workflows'){
+        send(res,200,await workflows.list(url.searchParams.get('profile'),context));return true;
+      }
+      if(req.method==='GET'&&route.startsWith('workflow/')){
+        const revision=url.searchParams.get('revision');
+        send(res,200,{definition:await workflows.definition(decodeURIComponent(route.slice(9)),revision===null?undefined:Number(revision),context)});return true;
+      }
+      if(req.method==='GET'&&route.startsWith('workflow-run/')){
+        send(res,200,{run:await workflows.run(decodeURIComponent(route.slice(13)),context)});return true;
       }
       if(req.method==='GET'&&route==='profiles'){send(res,200,{profiles:store.profiles(),host:snapshot()});return true;}
       if(req.method==='GET'&&route.startsWith('profile/')){
@@ -238,6 +252,12 @@ export async function createMerchantConsole({operator,configPath,directory,autho
           {exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})});
         send(res,200,{delivery:customers.pause(input.id)});return true;
       }
+      if(route==='workflows'){send(res,200,await workflows.save(input,context));return true;}
+      if(route==='workflow-runs'){send(res,202,await workflows.start(input,context));return true;}
+      if(route==='workflow-resume'){send(res,202,await workflows.resume(input,context));return true;}
+      if(route==='workflow-pause'){send(res,200,await workflows.pause(input,context));return true;}
+      if(route==='workflow-resolve'){send(res,200,await workflows.resolve(input,context));return true;}
+      if(route==='workflow-handover'){send(res,200,await workflows.handover(input,context));return true;}
       if(route==='profiles'){send(res,200,{profile:store.saveProfile(input,snapshot())});return true;}
       if(route==='bind'){send(res,200,{profile:store.bindProfile(input,snapshot())});return true;}
       if(route==='drafts'){
@@ -262,13 +282,13 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     }
   }
   return {
-    store,handler,snapshot,startCall,
-    beginClose(){closing=true;customers.beginClose();},
+    store,handler,snapshot,startCall,workflows,
+    beginClose(){closing=true;workflows.beginClose();customers.beginClose();},
     close(){
       if(!closed){
-        closing=true;customers.beginClose();
+        closing=true;workflows.beginClose();customers.beginClose();
         closed=(async()=>{
-          const results=await Promise.allSettled([...active.values(),customers.close()]);
+          const results=await Promise.allSettled([...active.values(),customers.close(),workflows.close()]);
           const errors=results.filter(value=>value.status==='rejected').map(value=>value.reason);
           if(errors.length)throw Object.assign(new AggregateError(errors,'Original console shutdown is incomplete; retry this owner.'),{code:'CONSOLE_CLOSE_INCOMPLETE'});
           store.close();
