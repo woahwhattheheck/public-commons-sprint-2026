@@ -11,6 +11,7 @@ import { openApiApplication, prepareOpenApiApplication } from './application-ope
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
+import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
@@ -49,6 +50,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
   collectionsApplication(common),
+  grantApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
@@ -221,6 +223,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'buyer-collections') {
     const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'grant-workspace') {
+    const prepared = await prepareGrantApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
     createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'dataset-buyer') {
