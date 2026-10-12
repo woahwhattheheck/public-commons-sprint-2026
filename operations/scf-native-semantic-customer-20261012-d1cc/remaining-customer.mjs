@@ -13,7 +13,7 @@ const predecessorRaw=await readFile(join(originalRoot,'results.json'));
 assert.equal(createHash('sha256').update(predecessorRaw).digest('hex'),'ac457ee2bc8bb422ce0786eabc4295d8d0cda248d268ea336c7492d084b83435');
 const predecessor=JSON.parse(predecessorRaw);
 assert.equal(predecessor.status,'INTERRUPTED');assert.deepEqual(predecessor.stages,[]);
-const closureRaw=await readFile(join(project,'source-closure-complete82.json'));
+const closureRaw=await readFile(join(project,'source-closure-db3d.json'));
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const expectedClosureSha256=process.argv[3];
 assert.match(expectedClosureSha256??'',/^[a-f0-9]{64}$/,'Pass the exact completed source-closure SHA256.');
