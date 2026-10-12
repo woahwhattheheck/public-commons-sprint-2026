@@ -247,7 +247,7 @@ async function completed(options, action) {
       throw fail('EDITION_CHANGED', 'The received manifest differs from the selected original digest.');
     const value = manifest(original, selected.editionId, selected);
     await engine.loadContext(context, original, selected.editionId, JSON.stringify(selected));
-    for (const file of value.files) { options.signal?.throwIfAborted(); await engine.verifiedFile(join(context.root, file.name), file); }
+    for (const file of value.files) { options.signal?.throwIfAborted(); await engine.verifiedFile(join(context.root, file.name), file, options.signal); }
     options.signal?.throwIfAborted();
     const { reopenEdition } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/edition.mjs');
     const edition = await reopenEdition(context.root);
