@@ -1,20 +1,26 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "usaspending",
-  "description": "USAspending award research",
+  "description": "USAspending award, modification and prime workshare research",
   "commands": {
     "usaspending-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/cli.mjs",
-    "usaspending-dossier": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier-cli.mjs"
+    "usaspending-dossier": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier-cli.mjs",
+    "usaspending-application": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/application.mjs"
   },
   "commandDescriptions": {
     "usaspending-research": "Capture federal awards, review prime workshares and operate saved editions",
-    "usaspending-dossier": "Receive award editions, write research findings and recover source packets"
+    "usaspending-dossier": "Receive award editions, write research findings and recover source packets",
+    "usaspending-application": "Open and reopen the saved federal award and transaction browser through the original managed Applications lifecycle"
   },
   "exports": {
     "./research/usaspending": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/workspace.mjs",
     "./research/usaspending/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/merchant.mjs",
     "./research/usaspending/source-import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/source-import.mjs",
     "./research/usaspending/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/server.mjs",
-    "./buyer/usaspending/dossier": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier.mjs"
+    "./buyer/usaspending/dossier": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier.mjs",
+    "./research/usaspending/application": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/application.mjs"
+  },
+  "applicationProviders": {
+    "usaspending": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/application-provider.mjs"
   }
 }
