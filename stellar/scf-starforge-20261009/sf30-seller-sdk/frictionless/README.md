@@ -396,3 +396,11 @@ For a customer migration, retain the current SQLite edition and the complete ori
 Direct DuckDB access to the public bucket follows PUDL's documented anonymous path-style S3 configuration. A retained local Parquet copy can be queried offline. The source archive, original descriptor, reviewed projections, source/member identities and complete native outputs travel together so the receiving operator can reproduce the selected edition without relying on a mutable public URL.
 
 PUDL's published data and documentation use [CC-BY-4.0](https://github.com/catalyst-cooperative/pudl/blob/bb9eac77cd9c60e3139716c0b220afabdf569f26/README.md); preserve its attribution and source DOI metadata. Its software is MIT. Keep any customer's separate private-input and publication terms in that customer's agreed workshare.
+
+## Complete installed source workbench
+
+The [source workbench](workbench/README.md) adds host-declared input intake, full native resource inspection, immutable ordered query editions, complete review, atomic publisher source selection and original plan saving to this same Frictionless publisher. The installed **frictionless-agent** application borrows the original merchant publisher and scheduler. The **frictionless-source** client exposes the same retained operations and complete resumable source handover.
+
+Use [FRICTIONLESS_WORKSPACE.md](../../../../stellar-forge/mcp-merchant-operator/FRICTIONLESS_WORKSPACE.md) for complete host configuration, operator screens, agent tools and installed launch. The source export includes [RECEIVING.md](workbench/RECEIVING.md), the exact native archive, query text, capture inspection, all then-retained edition reviews and original source-selection/saved-plan bindings. Dataset generations and customer warehouses keep their existing complete receiving paths described above.
+
+Source selection advances an opting-in Frictionless publisher's workspace marker to v2 before committing its current source. Retained earlier plans keep their own original source captures. The maintained release/config readers recognize that marker; runtimes that only understand v1 must use the current complete source instead of reverting the original source selection.
