@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sourceSelectionPath, validateSourceSelection, selectedContributionPaths,
+  selectDistributionSources, validateSourceSelectionRecord, requireSourceSelectionMatch } from './source-selection.mjs';
 
 export const distributionPath = 'stellar/scf-starforge-20261009/distribution/distribution.json';
 export const contributionDirectory = 'stellar/scf-starforge-20261009/distribution/contributions';
@@ -146,12 +148,14 @@ function count(data) {
 }
 
 /** Compose declarations without reading a working tree or evaluating source code. */
-export function composeDistribution({ base, contributions = [] }) {
+export function composeDistribution({ base, contributions = [], selection }) {
   if (!plain(base) || base.schema !== baseSchema || !packagePattern.test(base.name ?? '') ||
       !Array.isArray(base.components) || !Array.isArray(base.supportFiles) ||
       !plain(base.commands) || !plain(base.exports) || !plain(base.nativePeers) || !Array.isArray(contributions))
     throw new TypeError('Unsupported merchant distribution specification');
   validateRegistrations(base, distributionPath);
+  if (selection !== undefined) ({ base, contributions, selection } =
+    selectDistributionSources({ base, contributions, selection }));
   const spec = copy(base), origins = Object.fromEntries(fields.map(field => [field, record()]));
   const sources = [{ id: 'base', path: distributionPath, description: 'Maintained base registrations',
     registrations: Object.fromEntries(fields.filter(field => base[field] !== undefined).map(field => [field, copy(base[field])])),
@@ -224,7 +228,8 @@ export function composeDistribution({ base, contributions = [] }) {
     sources.push({ id, path, description: data.description, counts: count(data),
       registrations: Object.fromEntries(fields.filter(field => data[field] !== undefined).map(field => [field, copy(data[field])])) });
   }
-  return { spec, origins, sources, contributions: sources.slice(1).map(({ registrations, ...entry }) => entry) };
+  return { spec, origins, sources, contributions: sources.slice(1).map(({ registrations, ...entry }) => entry),
+    ...(selection === undefined ? {} : { selection }) };
 }
 
 /** Inspect the combined command or its source-owned registration file. */
@@ -232,7 +237,8 @@ export function inspectDistributionRegistrations(distribution, { source, command
   if (source !== undefined && command !== undefined) throw new TypeError('Select one --source ID or --command NAME');
   const { spec, sources, origins } = distribution;
   const header = { schema: 'stellar-forge.merchant-registrations.v1', packageName: spec.name,
-    sourceCommit: distribution.manifest?.sourceCommit ?? null };
+    sourceCommit: distribution.manifest?.sourceCommit ?? null,
+    ...(distribution.selection ? { sourceSelection: { id: distribution.selection.id, title: distribution.selection.title } } : {}) };
   if (command !== undefined) {
     if (!Object.hasOwn(spec.commands, command)) throw new TypeError('Unknown merchant command: ' + command);
     return { ...header, command, entry: spec.commands[command], description: spec.commandDescriptions?.[command] ?? null,
@@ -269,36 +275,63 @@ async function originalJson(root, path) {
 }
 
 /** Load the same declarations from a source checkout or original installed archive. */
-export async function readDistributionSpecification({ sourceRoot = ownRoot } = {}) {
+export async function readDistributionSpecification({ sourceRoot = ownRoot, selection } = {}) {
   const root = await realpath(sourceRoot), original = await originalJson(root, distributionPath);
-  let names = [];
-  try {
-    names = (await readdir(resolve(root, contributionDirectory), { withFileTypes: true }))
-      .map(entry => contributionDirectory + '/' + entry.name + (entry.isDirectory() ? '/' : ''));
-  } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  const paths = contributionPaths(names), inputFiles = [original.descriptor], contributions = [];
-  for (const path of paths) {
-    const file = await originalJson(root, path);
-    inputFiles.push(file.descriptor); contributions.push({ path, data: file.data });
-  }
-  const distribution = composeDistribution({ base: original.data, contributions });
+  sourceSelectionPath(selection);
   let manifest = null;
   try {
     const candidate = JSON.parse(await readFile(resolve(root, '../manifest.json'), 'utf8'));
-    if (candidate.schema === 'stellar-forge.merchant-distribution-manifest.v1' && candidate.packageName === distribution.spec.name)
+    if (candidate.schema === 'stellar-forge.merchant-distribution-manifest.v1' && candidate.packageName === original.data.name)
       manifest = candidate;
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
   if (manifest) {
     if (!/^[0-9a-f]{40}$/.test(manifest.sourceCommit ?? '') || !Array.isArray(manifest.files))
       throw new TypeError('Installed distribution manifest is invalid');
+    selection = requireSourceSelectionMatch(manifest.sourceSelection, selection);
+  }
+  const recipePath = sourceSelectionPath(selection);
+  const recipeFile = recipePath ? await originalJson(root, recipePath) : null;
+  const recipe = recipeFile ? validateSourceSelection(recipeFile.data, recipePath) : undefined;
+  let names = [];
+  try {
+    names = (await readdir(resolve(root, contributionDirectory), { withFileTypes: true }))
+      .map(entry => contributionDirectory + '/' + entry.name + (entry.isDirectory() ? '/' : ''));
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const discoveredPaths = contributionPaths(names);
+  const paths = recipe ? selectedContributionPaths(discoveredPaths, recipe) : discoveredPaths;
+  if (manifest && recipe && !same(paths, discoveredPaths))
+    throw new TypeError('Installed source selection contains unselected contribution files');
+  const inputFiles = [original.descriptor], contributions = [];
+  for (const path of paths) {
+    const file = await originalJson(root, path);
+    inputFiles.push(file.descriptor); contributions.push({ path, data: file.data });
+  }
+  if (recipeFile) inputFiles.push(recipeFile.descriptor);
+  const distribution = composeDistribution({ base: original.data, contributions, selection: recipe });
+  if (manifest) {
     const entries = new Map(manifest.files.map(entry => [entry.path, entry]));
-    const expected = [distributionPath, ...contributionPaths([...entries.keys()])];
+    if (entries.size !== manifest.files.length) throw new TypeError('Installed distribution has duplicate files');
+    const expected = [distributionPath, ...contributionPaths([...entries.keys()]), ...(recipePath ? [recipePath] : [])];
     if (!same(inputFiles.map(entry => entry.path), expected))
       throw new TypeError('Installed distribution contribution inventory changed');
     for (const input of inputFiles) {
       const retained = entries.get(input.path);
       if (!retained || retained.bytes !== input.bytes || retained.sha256 !== input.sha256)
         throw new TypeError('Installed distribution declaration changed: ' + input.path);
+    }
+    if (recipeFile) {
+      const retained = validateSourceSelectionRecord(manifest.sourceSelection), entry = entries.get(recipePath);
+      if (retained.id !== recipe.id || retained.title !== recipe.title ||
+          retained.bytes !== recipeFile.descriptor.bytes || retained.sha256 !== recipeFile.descriptor.sha256 ||
+          retained.gitBlob !== entry.gitBlob)
+        throw new TypeError('Installed distribution source selection changed');
+      if (!Array.isArray(manifest.distributionInputs) ||
+          !same(manifest.distributionInputs.map(input => input.path), expected) ||
+          !manifest.distributionInputs.every(input => {
+            const file = entries.get(input.path);
+            return file && input.bytes === file.bytes && input.sha256 === file.sha256 && input.gitBlob === file.gitBlob;
+          }))
+        throw new TypeError('Installed distribution selection inputs changed');
     }
   }
   return { ...distribution, sourceRoot: root, inputFiles, manifest };
