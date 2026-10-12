@@ -47,7 +47,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description="Receive original UtilityAPI and Green Button sources, review intervals and deliver the native customer workspace")
     parser.add_argument("--workspace",required=True,help="Original private workspace directory")
     sub=parser.add_subparsers(dest="command",required=True)
-    for name in ("init","status","operations"):sub.add_parser(name)
+    for name in ("init","status","operations","binding"):sub.add_parser(name)
     incoming=sub.add_parser("import");incoming.add_argument("--file",required=True)
     incoming.add_argument("--name");incoming.add_argument("--provider",default="auto",choices=("auto","utilityapi","greenbutton"))
     incoming.add_argument("--kind",default="auto");incoming.add_argument("--context",default="{}")
@@ -73,7 +73,15 @@ def main(argv=None):
     action=sub.add_parser("action");action.add_argument("--file",required=True)
     serve=sub.add_parser("serve");serve.add_argument("--port",type=int,default=0)
     serve.add_argument("--connection-file");serve.add_argument("--startup-format",choices=("legacy","json"),default="legacy")
+    serve.add_argument("--expected-binding",help="Exact original workspace/Python/source digest returned by binding")
     args=parser.parse_args(argv)
+    if args.command == "binding":
+        from managed import inspect_binding
+        print(json.dumps(inspect_binding(args.workspace),ensure_ascii=False,allow_nan=False,separators=(",",":")),flush=True)
+        return
+    if args.command == "serve":
+        from managed import require_binding
+        require_binding(args.workspace,args.expected_binding)
     with Workspace(args.workspace,create=args.command=="init") as ws:
         def act(name,payload):
             return ws.act(name,payload,ws.meta("revision",0))["result"]
@@ -132,18 +140,27 @@ def main(argv=None):
             value=read_object(args.file)
             result=ws.act(value["action"],value.get("payload"),value.get("expected_revision"),value.get("request_id"))
         elif command=="serve":
-            server=OperatorServer(ws,args.port)
-            previous={}
-            def stop(_signum,_frame):threading.Thread(target=server.shutdown,daemon=True).start()
+            # Recheck after the original Workspace has acquired its sole writer.
+            binding=require_binding(ws.root,args.expected_binding)
+            server=OperatorServer(ws,args.port,binding=binding,connection_file=args.connection_file)
+            previous={};stopping=threading.Event()
+            def stop(_signum,_frame):
+                if not stopping.is_set():
+                    stopping.set();server.launch_available=False
+                    threading.Thread(target=server.shutdown,daemon=True).start()
             for sig in (signal.SIGINT,signal.SIGTERM):
                 previous[sig]=signal.signal(sig,stop)
             try:
                 with connection_file(args.connection_file,server.url):
-                    print(json.dumps({"schema":"stellar-forge.utility-startup.v1","url":server.url,"pid":os.getpid(),
-                        "workspace":str(ws.root)}) if args.startup_format=="json" else server.url,flush=True)
-                    try:server.serve_forever(poll_interval=0.2)
-                    finally:server.server_close()
+                    announcement=server.launch_metadata if args.expected_binding else {
+                        "schema":"stellar-forge.utility-startup.v1","url":server.url,"pid":os.getpid(),
+                        "workspace":str(ws.root)}
+                    print(json.dumps(announcement,ensure_ascii=False,separators=(",",":"))
+                        if args.startup_format=="json" else server.url,flush=True)
+                    server.serve_forever(poll_interval=0.2)
             finally:
+                server.launch_available=False
+                server.server_close()
                 for sig,handler in previous.items():signal.signal(sig,handler)
             return
         else:raise InputError("Unknown utility command")
