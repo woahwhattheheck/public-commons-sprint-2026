@@ -1,12 +1,12 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "supplier-orders",
-  "description": "Complete Unite openTRANS 1.0 supplier orders, confirmations, dispatches, invoices, revision review, original XML, private browser/CLI and portable customer receiving.",
+  "description": "Complete Unite openTRANS 1.0 supplier orders, configured HTTPS ORDER intake and reviewed delivery, exact transport receipts, native browser/CLI and portable customer receiving.",
   "commands": {
     "supplier-orders": "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/cli.mjs"
   },
   "commandDescriptions": {
-    "supplier-orders": "Operate original supplier orders, confirmations, dispatch documents, invoices and complete customer workspaces"
+    "supplier-orders": "Operate supplier documents, configured HTTPS intake/delivery, review and complete customer workspaces"
   },
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders"
@@ -41,7 +41,13 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/source/openTRANS_1_0_eng/Examples/DTD/openTRANS_INVOICE_1_0_example.xml",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/store.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/public/file-sha256.mjs",
-    "stellar/scf-starforge-20261009/distribution/browser-assets.mjs"
+    "stellar/scf-starforge-20261009/distribution/browser-assets.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/transport-config.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/transport.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/https-intake.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/public/transport.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/TRANSPORT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/source/UNITE_HTTPS_TRANSPORT.json"
   ],
   "exports": {
     "./supplier-orders": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/index.mjs",
@@ -52,7 +58,11 @@
     "./supplier-orders/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/portable.mjs",
     "./supplier-orders/opentrans": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/opentrans.mjs",
     "./supplier-orders/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/cli.mjs",
-    "./supplier-orders/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-orders-native.mjs"
+    "./supplier-orders/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-orders-native.mjs",
+    "./supplier-orders/transport": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/transport.mjs",
+    "./supplier-orders/transport-config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/transport-config.mjs",
+    "./supplier-orders/https-intake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/https-intake.mjs",
+    "./supplier-orders/https-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/supplier-order-https-native.mjs"
   },
   "browserAssets": [
     {
