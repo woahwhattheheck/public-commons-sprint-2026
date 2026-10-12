@@ -4,14 +4,17 @@ from __future__ import annotations
 import argparse
 import base64
 import contextlib
+import email.utils
 import fcntl
 import hashlib
+import http.client
 import json
 import os
 import platform
 import re
 import resource
 import shutil
+import socket
 import stat
 import sys
 import tarfile
@@ -29,11 +32,20 @@ MAX_PACKAGE = 256 * 1024 * 1024
 MAX_FILES = 40000
 CHUNK = 64 * 1024
 REGISTRY = "registry.npmjs.org"
+REGISTRY_ATTEMPTS = 3
 
 class ReceivingError(Exception):
     def __init__(self, code, detail):
         self.code, self.detail = code, detail
         super().__init__(detail)
+
+class ArchiveIncompleteRead(http.client.IncompleteRead):
+    def __init__(self, received, declared):
+        super().__init__(b"", declared - received)
+        self.received, self.declared = received, declared
+
+    def __str__(self):
+        return f"Original registry body ended after {self.received} of {self.declared} declared bytes"
 
 def require(value, code, detail):
     if not value:
@@ -187,14 +199,29 @@ class RegistryRedirect(urllib.request.HTTPRedirectHandler):
                 "MPP_RUNTIME_REGISTRY_REDIRECT_INVALID", newurl)
         return super().redirect_request(request, fp, code, message, headers, newurl)
 
-def receive_archive(meta, cache, offline):
-    archive = child_path(cache, meta["archiveSha512"] + ".tgz")
-    if archive.exists():
-        require(archive.is_file() and archive.stat().st_size <= MAX_ARCHIVE
-                and digest_file(archive, "sha512") == meta["archiveSha512"],
-                "MPP_RUNTIME_ARCHIVE_CONFLICT", str(archive))
-        return archive, 0
-    require(not offline, "MPP_RUNTIME_ARCHIVE_REQUIRED", str(archive))
+def registry_retry_delay(error, attempt):
+    delay = float(2 ** (attempt - 1))
+    if isinstance(error, urllib.error.HTTPError):
+        if error.code not in (408, 429, 500, 502, 503, 504):
+            return None
+        supplied = error.headers.get("Retry-After")
+        if supplied:
+            try:
+                delay = max(delay, float(supplied))
+            except ValueError:
+                try:
+                    delay = max(delay, email.utils.parsedate_to_datetime(supplied).timestamp() - time.time())
+                except (TypeError, ValueError, OverflowError):
+                    return None
+        elif error.code == 429:
+            return None
+        return delay if 0 <= delay <= 30 else None
+    reason = error.reason if isinstance(error, urllib.error.URLError) else error
+    if isinstance(reason, socket.gaierror):
+        return delay if reason.errno == socket.EAI_AGAIN else None
+    return delay if isinstance(reason, (TimeoutError, ConnectionError, http.client.IncompleteRead)) else None
+
+def download_archive(meta, cache, archive):
     fd, temporary = tempfile.mkstemp(prefix=".download-", suffix=".part", dir=cache)
     count, digest = 0, hashlib.sha512()
     try:
@@ -203,11 +230,16 @@ def receive_archive(meta, cache, offline):
         opener = urllib.request.build_opener(RegistryRedirect())
         with opener.open(request, timeout=45) as response, os.fdopen(fd, "wb") as stream:
             require(response.status == 200, "MPP_RUNTIME_REGISTRY_RESPONSE_INVALID", str(response.status))
+            length = response.headers.get("Content-Length", "").strip()
+            declared = int(length) if re.fullmatch(r"[0-9]{1,12}", length) else None
+            require(declared is None or declared <= MAX_ARCHIVE, "MPP_RUNTIME_ARCHIVE_TOO_LARGE", meta["resolved"])
             for block in iter(lambda: response.read(CHUNK), b""):
                 count += len(block)
                 require(count <= MAX_ARCHIVE, "MPP_RUNTIME_ARCHIVE_TOO_LARGE", meta["resolved"])
                 digest.update(block)
                 stream.write(block)
+            if declared is not None and count < declared:
+                raise ArchiveIncompleteRead(count, declared)
             stream.flush()
             os.fsync(stream.fileno())
         fd = None
@@ -215,15 +247,46 @@ def receive_archive(meta, cache, offline):
         os.chmod(temporary, 0o600)
         os.replace(temporary, archive)
         return archive, count
-    except urllib.error.HTTPError as error:
-        raise ReceivingError("MPP_RUNTIME_REGISTRY_ERROR", json.dumps({
-            "status": error.code, "url": meta["resolved"], "retryAfter": error.headers.get("Retry-After")})) from error
     finally:
         if fd is not None:
             with contextlib.suppress(OSError):
                 os.close(fd)
         with contextlib.suppress(FileNotFoundError):
             os.unlink(temporary)
+
+def receive_archive(meta, cache, offline, relative):
+    archive = child_path(cache, meta["archiveSha512"] + ".tgz")
+    if archive.exists():
+        require(archive.is_file() and archive.stat().st_size <= MAX_ARCHIVE
+                and digest_file(archive, "sha512") == meta["archiveSha512"],
+                "MPP_RUNTIME_ARCHIVE_CONFLICT", str(archive))
+        return archive, 0, 0
+    require(not offline, "MPP_RUNTIME_ARCHIVE_REQUIRED", str(archive))
+    for attempt in range(1, REGISTRY_ATTEMPTS + 1):
+        try:
+            received, downloaded = download_archive(meta, cache, archive)
+            return received, downloaded, attempt - 1
+        except (urllib.error.URLError, TimeoutError, ConnectionError,
+                socket.gaierror, http.client.IncompleteRead) as error:
+            try:
+                context = {"path": relative, "url": meta["resolved"], "version": meta["version"],
+                           "attempt": attempt, "maximumAttempts": REGISTRY_ATTEMPTS, "reason": str(error)}
+                if isinstance(error, ArchiveIncompleteRead):
+                    context.update(receivedBytes=error.received, declaredBytes=error.declared)
+                if isinstance(error, urllib.error.HTTPError):
+                    context.update(status=error.code, retryAfter=error.headers.get("Retry-After"))
+                delay = registry_retry_delay(error, attempt)
+            finally:
+                if isinstance(error, urllib.error.HTTPError):
+                    with contextlib.suppress(OSError):
+                        error.close()
+            if delay is None or attempt == REGISTRY_ATTEMPTS:
+                code = "MPP_RUNTIME_REGISTRY_ERROR" if isinstance(error, urllib.error.HTTPError) else "MPP_RUNTIME_REGISTRY_UNAVAILABLE"
+                raise ReceivingError(code, json.dumps(context, separators=(",", ":"))) from error
+            print(json.dumps({"state": "ARCHIVE_RETRY", **context, "nextAttempt": attempt + 1,
+                              "retryAfterSeconds": delay}, separators=(",", ":")), file=sys.stderr, flush=True)
+            time.sleep(delay)
+    raise AssertionError("archive receiving exhausted without a result")
 
 def package_files(directory, nested):
     files = {}
@@ -432,7 +495,7 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
         records_dir = child_path(metadata, "packages")
         if not inspect:
             records_dir.mkdir(exist_ok=True, mode=0o700)
-        counts = {"packages": 0, "files": 0, "bytes": 0, "downloadedBytes": 0, "reusedPackages": 0}
+        counts = {"packages": 0, "files": 0, "bytes": 0, "downloadedBytes": 0, "reusedPackages": 0, "registryRetries": 0}
         package_summaries = []
         for relative, meta in selected.items():
             key = hashlib.sha256(relative.encode()).hexdigest()
@@ -448,8 +511,9 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
                 counts["reusedPackages"] += 1
             else:
                 require(not inspect, "MPP_RUNTIME_PACKAGE_RECEIPT_REQUIRED", relative)
-                archive, downloaded = receive_archive(meta, cache_root, offline)
+                archive, downloaded, retries = receive_archive(meta, cache_root, offline, relative)
                 counts["downloadedBytes"] += downloaded
+                counts["registryRetries"] += retries
                 stage_parent = child_path(metadata, "staging")
                 stage_parent.mkdir(exist_ok=True, mode=0o700)
                 staging = Path(tempfile.mkdtemp(prefix=key[:16] + "-", dir=stage_parent))

@@ -52,7 +52,14 @@ interfaces.
 The receiver retains completed packages and their exact file descriptions under
 the private directory's .mpp-runtime state. Repeat the same command after an
 interruption to inspect completed packages and continue from the next unfinished
-package. Existing matching template files or package files can be adopted;
+package. Each original registry GET can retry a transient timeout, reset or
+incomplete read up to three attempts in the same receiving process. Retry
+progress and final errors identify the original lock path and URL. Short
+Retry-After responses retain the provider's wait; longer waits and permission
+or integrity errors return their original context for the same-directory
+continuation. Completed package checkpoints survive either outcome.
+
+Existing matching template files or package files can be adopted;
 conflicting original bytes identify the precise file that needs a separate
 installation directory. --inspect checks the completed tree and command links
 without registry requests.
@@ -72,8 +79,8 @@ The default per-install archive is released after that package is retained.
 An explicit cache keeps the original SHA512-addressed archives for another
 worker or installation. The final READY result includes the original lock and
 manifest hashes, received package/file counts, downloaded and installed byte
-counts, elapsed time and this receiver process's measured maximum resident
-memory.
+counts, registry retry count, elapsed time and this receiver process's measured
+maximum resident memory.
 
 This command follows the current installation's --ignore-scripts --omit=dev
 selection. It uses locked production package locations and respects the lock's
