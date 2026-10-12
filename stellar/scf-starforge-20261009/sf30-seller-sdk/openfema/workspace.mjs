@@ -72,7 +72,7 @@ export async function startOpenFemaWorkspace({directory,inboxDirectory,port=0,re
         if(path==='/api/schema'&&!url.search)return reply(200,app.schema());
         if(path==='/api/view'&&!url.search)return reply(200,await app.view());
         if(path==='/api/editions'&&!url.search)return reply(200,await app.editions());
-        if(path==='/api/edition')return reply(200,await app.store.edition(url.searchParams.get('editionId')));
+        if(path==='/api/edition')return reply(200,await app.capture.readEdition(url.searchParams.get('editionId')));
         if(path==='/api/operation')return reply(200,await app.operation(url.searchParams.get('operationId')));
         if(path==='/api/rows')return reply(200,await app.rows(url.searchParams.get('versionId'),{
           table:url.searchParams.get('table')??'projects',search:url.searchParams.get('search')??'',sort:url.searchParams.get('sort')??'',direction:url.searchParams.get('direction')??'asc',offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??100)}));
