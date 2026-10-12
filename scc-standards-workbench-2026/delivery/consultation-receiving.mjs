@@ -286,7 +286,7 @@ try{
   if(unchanged.comment.disposition==="rejected")return{comment_id:unchanged.comment.id,already_recorded:true};
   assert.equal(detail.decision_carry.eligible_count,1);
   await showResponse(correctedResponse);await operator.locator('[data-review="carry"][data-id="'+correctedResponse+'"]').click();
-  const d=operator.locator("#consultation-dialog");assert.equal(await d.locator('[name="entry_id"]:checked').count(),1);
+  const d=operator.locator("#consultation-dialog");await d.locator('[name="entry_id"]:checked').first().waitFor({state:"visible"});assert.equal(await d.locator('[name="entry_id"]:checked').count(),1);
   await d.locator('[name="rationale"]').fill("Adopt the prior decision for the unchanged missing-versus-zero entry; review the changed date explanation separately.");
   await d.locator("#review-submit").click();await d.waitFor({state:"hidden"});
   const fresh=await api("/api/projects/"+projectId+"/review/responses/"+correctedResponse);
@@ -335,6 +335,7 @@ try{
    views.push(row);return row;
   };
   await reviewer.locator("#open-file").setInputFiles(correctedFile);
+  await reviewer.locator("#saved").filter({hasText:/The saved draft is open for this exact packet\.|Le brouillon enregistré est ouvert pour ce dossier exact\./}).waitFor();
   await reviewer.locator("#language").selectOption("bilingual");
   for(const [label,width,height] of [["desktop",1440,1000],["phone",390,844]]){
    await reviewer.setViewportSize({width,height});
