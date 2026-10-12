@@ -15,7 +15,7 @@ const START='stellar-forge.sf101.api-pass-workspace-launch.v1';
 const STATE='stellar-forge.sf101.api-pass-workspace.v1';
 const SOURCE_FILES=['browser-assets.json','configuration.mjs','model.mjs','server.mjs','cli.mjs','agent-setup.mjs','public/index.html','public/style.css','public/app.mjs'];
 const AGENT_ROOT='stellar-forge/mcp-merchant-operator/';
-const AGENT_FILES=['api-pass-setup.mjs','api-pass-connection.mjs','api-pass-protocol.mjs','api-pass-operations.mjs','api-pass-exports.mjs','api-pass-workspace.mjs','client-config.mjs','config.mjs','operator.mjs','serve.mjs','stdio.mjs'];
+const AGENT_FILES=['api-pass-setup.mjs','api-pass-connection.mjs','api-pass-protocol.mjs','api-pass-operations.mjs','api-pass-exports.mjs','api-pass-workspace.mjs','client-config.mjs','config.mjs','catalog.mjs','providers.mjs','instructions.mjs','operator.mjs','serve.mjs','stdio.mjs'];
 const HASH=/^[a-f0-9]{64}$/,UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const same=(a,b)=>digest(json(canonical(a)))===digest(json(canonical(b)));
 const field=(name,label,type='path',required=false,description='')=>({name,label,type,required,description});

@@ -18,7 +18,7 @@ export const managedOperationFields = Object.freeze({
   'managed-inspect': ['homeId', 'releaseId', 'load'],
   'managed-doctor': ['homeId', 'releaseId', 'requireNative', 'requiredFeatures'],
   'managed-config-save': ['homeId', 'path', 'content', 'expectedSha256'],
-  'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision', 'applicationId', 'terminal', 'terminalPython', 'environmentFile', 'environmentSha256', 'pythonCommand'],
+  'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision', 'applicationId', 'terminal', 'terminalPython', 'environmentFile', 'environmentSha256', 'pythonCommand', 'buyerRunbook', 'jobResultReceiver', 'stellarApplication'],
 });
 const TYPES = ['managed-homes', 'managed-reviews', 'managed-observations'];
 const pathFor = (root, type, id) => join(root, type, recordId(id) + '.json');

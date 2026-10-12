@@ -11,6 +11,7 @@ import {createGrantsTransport} from './transport.mjs';
 export const CAPTURE_VERSION='stellar-forge.grantsgov-capture.v1';
 export const CAPTURE_EXPORT_VERSION='stellar-forge.grantsgov-capture-export.v1';
 const MAX_SOURCE_BYTES=24*1024*1024,MAX_MANIFEST_BYTES=32*1024*1024,MAX_EXPORT_BYTES=1024*1024*1024;
+const CAPTURE_STATUSES=new Set(['capturing','partial','interrupted','completed']);
 const stamp=()=>new Date().toISOString();
 const encoded=value=>Buffer.from(JSON.stringify(value,null,2)+'\n');
 const sourceName=(kind,value)=>kind==='search'?
@@ -70,6 +71,12 @@ function calculateCoverage(manifest){
     missingDetailIds:missing,duplicateIds:[...duplicates],changedHitCounts:counts.length>1?counts:[],
     nextStartRecord:next,warnings};
 }
+// Only use this outcome after the original coverage has been verified. A complete
+// source checkpoint may still be capturing/interrupted until its final journal write.
+export function captureIsComplete(capture){
+  return capture.coverage?.searchComplete===true&&
+    (capture.includeDetails===false||capture.coverage?.detailsComplete===true);
+}
 function sourceSignature(manifest){
   return sha({schema:CAPTURE_VERSION,captureId:manifest.captureId,operationId:manifest.operationId,
     query:manifest.query,includeDetails:manifest.includeDetails,
@@ -97,12 +104,23 @@ function validateManifest(manifest){
   }
   need(manifest.sourceSignature===sourceSignature(manifest),'GRANTS_CAPTURE_SIGNATURE_MISMATCH');
   need(canonical(manifest.coverage)===canonical(calculateCoverage(manifest)),'GRANTS_CAPTURE_COVERAGE_MISMATCH');
+  need(CAPTURE_STATUSES.has(manifest.status),'GRANTS_CAPTURE_STATUS_INVALID');
+  const complete=captureIsComplete(manifest);
+  need(manifest.status!=='completed'||complete,'GRANTS_CAPTURE_COMPLETION_MISMATCH',
+    'The original search and every requested detail must be complete before the capture can be completed.');
+  need(manifest.status!=='partial'||!complete,'GRANTS_CAPTURE_COMPLETION_MISMATCH',
+    'A finished partial capture must retain incomplete source coverage.');
+  need(manifest.status==='completed'?
+    typeof manifest.completedAt==='string'&&Number.isFinite(Date.parse(manifest.completedAt)):
+    manifest.completedAt===null,'GRANTS_CAPTURE_COMPLETION_TIME_INVALID',
+    'A completion timestamp belongs only to a completed capture.');
   return manifest;
 }
 async function writeManifest(directory,manifest){
   manifest.coverage=calculateCoverage(manifest);
   manifest.sourceSignature=sourceSignature(manifest);
   manifest.updatedAt=stamp();
+  validateManifest(manifest);
   await atomicJson(directory,'capture.json',manifest);
 }
 async function optionalJson(path,maximum=MAX_MANIFEST_BYTES){
@@ -290,13 +308,13 @@ export async function captureGrants({directory,query,operationId,transport=creat
       }
     }
     manifest.coverage=calculateCoverage(manifest);
-    manifest.status=manifest.coverage.searchComplete&&(!includeDetails||manifest.coverage.detailsComplete)?'completed':'partial';
+    manifest.status=captureIsComplete(manifest)?'completed':'partial';
     manifest.completedAt=manifest.status==='completed'?stamp():null;manifest.lastError=null;
     await writeManifest(directory,manifest);await progress('finished');
     return await readCapture(directory);
   }catch(error){
     if(manifest&&canCheckpoint){
-      manifest.status='interrupted';manifest.lastError=issueRecord(error);
+      manifest.status='interrupted';manifest.completedAt=null;manifest.lastError=issueRecord(error);
       try{await writeManifest(directory,manifest);}catch(writeError){
         error.checkpointError={code:writeError.code??'WRITE_FAILED',message:String(writeError.message).slice(0,300)};
       }
