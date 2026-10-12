@@ -15,6 +15,7 @@ The closure includes the original seller SDK developer portal's eagerly loaded `
 | `worker-research-launch.py` | Admit the operation through the existing controller's `ForegroundLaunch` and shared memory/disk capacity registries. |
 | `receive-original-crossref-operation.mjs` | Reopen the current original portable, restore the original capture/operation records and receive the reviewed missing edition by fresh revision CAS. |
 | `run-original-research-case.py` | Continue the whole client/CLI/merchant journey and retain its complete portable, reports, original captures and artifact manifest. |
+| `hosted-original-owner.py` | Original hosted preparation, measured resource selection, native handoff and complete owner-controlled result save in one uninterrupted command. |
 
 The selected worker needs Python 3.9+ compatible with its existing native controller and an existing Node 22+ interpreter. Setup records the actual Node path and version. It uses the already present controller and capacity registries.
 
@@ -63,3 +64,28 @@ The native record selects these files under the project:
 - `results/native-return.tar.gz`: complete selected reports, original raw source/capture/operation records, and portable exports with `delivery-manifest.json`.
 
 Use the returned artifact manifest to collect the complete original result. Keep the native case and operation available for receiving until the owner-controlled copy has been verified. The private `case-input.json`, source selection and original archives stay with that operation for continuation.
+
+## Original hosted owner and complete return
+
+`hosted-original-owner.py` preserves the exact self-contained owner used for this operation on the ChatGPT Linux worker. It prepares the original archives and all selected source, observes the full original portable's memory use, invokes the existing native launcher, and packages the complete operated case and native records before its process exits. Its original source identity is 13,264 bytes, SHA256 `0507320ebf0fbba555f3dd18ba53ff8fbe008ff0fc54c75f13bd5b94d13c324a`.
+
+The owner selects the original private root `/dev/research-original-d9b53-20261012`, existing controller `/workspace/scratch/d9b53a575d9a/af-estate-recovery/host`, shared registries `/workspace/shared/swarm`, exact original companion under `/dev/shm/crossref-workspace-d9b5/native/artifacts/`, and the original host-upload helper `/dev/shm/crossref-workspace-d9b5/library-save-jj3jcjwu`. These are the actual already equipped worker paths. Its initial root creation is exclusive; recovery begins from the original native record and owner return, preserving existing state.
+
+Supply one private UTF-8 JSON line on stdin, with:
+
+- `lineage`: the exact original prepared case-input string.
+- `sourceIdentity`: the current envelope's repository, sourceMerge, files, bytes, SHA256 and Git blob identity.
+- `sourceEnvelope`: the exact complete envelope string.
+- `helpers`: the four original helper records, each with path, complete source string, byte count and SHA256.
+- `masterUrl`: a fresh reference to the original master archive.
+- `preparedUpload`: the unchanged opaque result from the existing host-upload preparation for the complete owner return.
+
+The owner accepts the entire input before handing off the native operation, so it requires no later stdin command. Its retained original case and archive exclude the transient download and upload credentials. The exact source, original prepared input, selected case, source-memory observation and native launch intent remain in that same private operation.
+
+The observation imports the complete Research client/server/merchant closure and decodes and parses the full original gzip portable. It records actual process RSS, heap and Node executable/version. The selected native memory is the observed full-portable peak plus two imported-runtime companions and a 64 MiB controller/buffer allowance, rounded to 64 MiB with a 384 MiB floor and the original 768 MiB ceiling. The existing controller still performs actual admission. The original 29-revision input observation selected 384 MiB plus 128 MiB reserve from a 144,024 KiB peak process and approximately 50 MiB fully imported runtime.
+
+The launch is the original `ForegroundLaunch` on the same operation and record. Its first `queued_disk` acknowledgement establishes the foreground handoff; the original supervisor then owns admission and logs to that record. Inspect that actual supervisor state and result when collecting or recovering the operation.
+
+After an observed native return, the owner emits `original-return-ready` with the full `NCC_Research_Original_Operation_20261012.tar.gz` byte count and SHA256. This outer return contains the original workspace, captures, private input archives, complete selected source, controller closure, native record and reports. Its `owner-return.json` binds every selected file to its byte count and SHA256 and carries the actual native outcome. The underlying native collector's `results/native-return.tar.gz` remains included.
+
+The owner then uses the existing upload helper with the already prepared destination, emits `original-library-return`, and retains `library-upload-intent.json` and `library-upload-result.json`. Completion of the save requires the actual successful file receipt and applied local metadata. If the transport response is lost, reconcile the original record, owner files and same prepared transfer before another placement or publication.
