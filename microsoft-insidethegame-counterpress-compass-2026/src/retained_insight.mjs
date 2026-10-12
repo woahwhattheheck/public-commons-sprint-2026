@@ -42,7 +42,7 @@ export function insightScope({match, count, snapshot, events}) {
 
 function responseValues(raw) {
   object(raw, 'Saved insight response');
-  return {
+  const response = {
     operation: text(raw.operation, 160, 'Insight operation'),
     originalSessionId: text(raw.originalSessionId, 160, 'Original insight session'),
     promptVersion: text(raw.promptVersion, 160, 'Insight prompt edition'),
@@ -51,6 +51,36 @@ function responseValues(raw) {
     caption: text(raw.caption, 200, 'Insight caption'),
     text: text(raw.text, 2000, 'Insight text'),
   };
+  for (const key of ['sdk', 'workflowId']) {
+    if (raw[key] !== undefined) response[key] = text(raw[key], 160, 'Insight ' + key);
+  }
+  if (raw.turns !== undefined) {
+    if (!Number.isInteger(raw.turns) || raw.turns < 0 || raw.turns > 3) throw fail(400, 'Invalid insight turn count');
+    response.turns = raw.turns;
+  }
+  if (raw.toolCalls !== undefined) {
+    if (!Array.isArray(raw.toolCalls) || raw.toolCalls.length > 2) throw fail(400, 'Invalid insight tool calls');
+    response.toolCalls = raw.toolCalls.map(value => {
+      object(value, 'Insight tool call');
+      if (!['get_match_state', 'get_latest_moment'].includes(value.name)) throw fail(400, 'Unknown insight tool');
+      const call = {call_id: text(value.call_id, 80, 'Insight tool identity'), name: value.name};
+      if (value.jobId !== undefined) call.jobId = text(value.jobId, 80, 'Insight tool provider job');
+      return call;
+    });
+  }
+  if (raw.providerTurns !== undefined) {
+    if (!Array.isArray(raw.providerTurns) || raw.providerTurns.length > 3) throw fail(400, 'Invalid original provider turns');
+    response.providerTurns = raw.providerTurns.map(value => {
+      object(value, 'Original provider turn');
+      if (!Number.isInteger(value.turn) || value.turn < 0 || value.turn > 3) throw fail(400, 'Invalid original provider turn');
+      return {turn: value.turn, jobId: text(value.jobId, 80, 'Original provider job'),
+        requestId: text(value.requestId, 160, 'Original provider request'),
+        receiptState: text(value.receiptState, 40, 'Original provider outcome'),
+        decision: text(value.decision, 80, 'Original provider decision'),
+        promptSha256: text(value.promptSha256, 64, 'Original provider prompt hash')};
+    });
+  }
+  return response;
 }
 
 export function normalizeRetainedInsight(raw, match) {
@@ -86,9 +116,10 @@ export function normalizeRetainedInsights(raw, match) {
   });
 }
 
-export function findRetainedInsight(records, input) {
+export function findRetainedInsight(records, input, edition) {
   const scope = insightScope(input);
-  return (records || []).find(record => JSON.stringify(record.source) === JSON.stringify(scope)) || null;
+  return (records || []).findLast(record => (!edition || record.response.promptVersion === edition) &&
+    JSON.stringify(record.source) === JSON.stringify(scope)) || null;
 }
 
 export function presentRetainedInsight(record, sessionId, {retained = true, durable = true} = {}) {
