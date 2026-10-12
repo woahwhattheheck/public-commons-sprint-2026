@@ -30,7 +30,8 @@ function briefSource(source){
 }
 function briefStartup(value){
  if(!value)return null;
- return {...copy(value),source:briefSource(value.source)};
+ const {path,...retained}=copy(value);
+ return {...retained,source:briefSource(value.source)};
 }
 export function buyerAccountingCapabilities(definition){
  const mode=configuredAccountingMode(definition);
@@ -39,8 +40,10 @@ export function buyerAccountingCapabilities(definition){
 }
 export function buyerAccountingState(workspace){
  requireBuyerAccounting({sourceMode:accountingSourceMode(workspace.state)});
+ const binding=accountingWorkspaceBinding(workspace.directory,workspace.state);
  return {schema:'stellar-forge.buyer-accounting-operation.v1',sourceMode:'buyer',
-  binding:accountingWorkspaceBinding(workspace.directory,workspace.state),
+  binding:{schema:binding.schema,workspaceId:binding.workspaceId,sourcesSha256:binding.sourcesSha256,
+   sourceMode:'buyer',sourceSha256:binding.sources.buyerSourceSha256,sourceBytes:binding.sources.buyerSourceBytes},
   workspaceRevision:workspace.state.revision,source:briefStartup(buyerStartupView(workspace.directory,workspace.state))};
 }
 export function buyerStartupProjection(value){return briefStartup(value);}

@@ -99,7 +99,10 @@ Initialization uses the original Store lease and startup writer. It retains the
 complete issued bytes in the accountant's private inputs, source context and
 summary, original initialization name/operator, and the native first-handoff
 UUID. Its result includes the actual workspace/source binding and that startup
-record. The configured accounting session then opens normally, or remains in
+record. The response keeps the original workspace ID and source-binding digest;
+host-owned input paths are omitted from the buyer projection. Original source
+values and reviewed request text remain unchanged. The configured accounting
+session then opens normally, or remains in
 the explicitly declared paused-recovery mode.
 
 After an uncertain response, repeat the identical initialization arguments.

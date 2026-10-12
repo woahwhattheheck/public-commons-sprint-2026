@@ -240,7 +240,10 @@ export class MerchantAccounting {
     if (operation.startsWith('merchant_accounting_cryptoworth_') || operation.startsWith('merchant_accounting_runbooks_')) return value;
     if (value?.record?.revisions) value = { ...value, record: handoffBrief(value.record) };
     if (value?.definition?.versions) value = { ...value, definition: periodBrief(value.definition) };
-    return this.#safe(value?.state ? { ...value, state: this.#state(key, value.state) } : value);
+    const result = value?.state ? { ...value, state: this.#state(key, value.state) } : value;
+    // Issued buyer rows and reviewed request strings are original business data.
+    // Their digest-bound text must not be rewritten by host-path substitutions.
+    return configuredAccountingMode(this.#definition(key)) === 'buyer' ? result : this.#safe(result);
   }
   #source(key, kind, source) {
     const map = this.#definition(key)[kind] ?? {}; named(source);
@@ -265,7 +268,11 @@ export class MerchantAccounting {
   #sessionState(key, record) {
     if (record.workspace) return this.#state(key, record.workspace.view());
     return { workspace: key, revision: null, sources: this.#sources(key),
-      maintenance: this.#maintenanceState(key, record.maintenance.view()) };
+      maintenance: this.#safe(this.#maintenanceState(key, record.maintenance.view())) };
+  }
+  #openResult(key, record, initialization) {
+    const result = { ...this.#sessionState(key, record), ...(initialization ? { initialization } : {}) };
+    return configuredAccountingMode(this.#definition(key)) === 'buyer' ? result : this.#safe(result);
   }
   async #maintenanceExecute(operation, args, record) {
     const maintenance = record.maintenance;
@@ -330,7 +337,7 @@ export class MerchantAccounting {
         if (!retained) throw fail('ACCOUNTING_BUYER_INITIALIZATION_PAUSED', 'Close this paused session before recovering its original buyer initialization.');
         recovered = { ...assertBuyerInitialization(retained, initialization), recovered: true };
       }
-      return this.#safe({ ...this.#sessionState(key, existing), ...(recovered ? { initialization: recovered } : {}) });
+      return this.#openResult(key, existing, recovered);
     }
     const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, maintenance: null, closing: false, calls: new Set() };
     this.#sessions.set(key, record);
@@ -350,7 +357,7 @@ export class MerchantAccounting {
       record.maintenance = await openAccountingMaintenance({ directory: definition.directory, ...definition.recovery, hostSources,
         openRuntime: () => this.#openRuntime(key, record), closeRuntime: runtime => this.#closeRuntime(key, record, runtime) });
     })();
-    try { await record.opening; return this.#safe({ ...this.#sessionState(key, record), ...(initialization ? { initialization: record.initialized } : {}) }); }
+    try { await record.opening; return this.#openResult(key, record, initialization ? record.initialized : null); }
     catch (error) { if (this.#sessions.get(key) === record) this.#sessions.delete(key); throw error; }
   }
   async #closeWorkspace(key) {
@@ -562,7 +569,7 @@ export class MerchantAccounting {
       if (operation === 'merchant_accounting_buyer_source_preview') {
         const pending = previewBuyerAccountingSource(this.#definition(args.workspace), this.#source(args.workspace, 'buyerSources', args.source), args);
         this.#sourcePreviews.add(pending);
-        try { return this.#safe(await pending); } finally { this.#sourcePreviews.delete(pending); }
+        try { return await pending; } finally { this.#sourcePreviews.delete(pending); }
       }
       if (operation === 'merchant_accounting_buyer_initialize') return await this.#open(args.workspace, args);
       if (operation === 'merchant_accounting_open') return await this.#open(args.workspace);

@@ -98,6 +98,8 @@ For existing clients, add optional `mappingId` to the ordinary `dataset.prepare`
 
 The original request is `{action,payload,operationId,expectedRevision}`. The native ledger reconciles its operation ID and exact request hash before current revision. An accepted action with a lost response can return its original result on an explicit retry.
 
+Station saves, archives and source-review saves also reserve the exact selected record, including its original absence when creating a record. Before the first write, the same native transaction compares that subject again. Unrelated capture progress may advance the workspace revision; a newer change to the selected subject requires another explicit review instead of being overwritten by an interrupted older request. Completed writes still return their original retained result after later edits. An unfinished request from an older version without this comparison stops for review. Archiving retains the preceding station profile in its history.
+
 Station, mapping and source-review drafts retain the exact saved record they were opened from. Background capture progress may advance the workspace revision without rebasing those drafts. If that same saved record changes, compare the original version, current version and entered draft, then explicitly choose which fields to retain before saving. A new subject or record remains distinct.
 
 The original request also retains its originating draft identity. Both normal completion and exact replay apply the original saved station/mapping ID and saved-record baseline before the completed browser journal is written. Later unsaved field edits survive; a different newly opened draft does not receive another draft’s result.
