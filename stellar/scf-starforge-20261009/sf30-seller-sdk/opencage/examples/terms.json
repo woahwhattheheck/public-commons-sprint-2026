@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.opencage-payment-terms.v1",
+  "publicOrigin": "https://locations.example",
+  "paymentOptions": [
+    {
+      "scheme": "exact",
+      "network": "stellar:testnet",
+      "amount": "20000",
+      "asset": "DEMO_NONPAYABLE_ASSET",
+      "payTo": "DEMO_NONPAYABLE_RECIPIENT",
+      "maxTimeoutSeconds": 60
+    }
+  ]
+}

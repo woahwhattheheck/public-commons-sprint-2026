@@ -156,6 +156,41 @@ stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
 host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
 
+
+### Deliver customer SDKs from fleet merchants
+
+The original fleet owner now includes a retained customer handover desk for every
+declared tenant and slot. Generate from the exact owned instance, inspect the
+original receipt and offers, complete an inspected legacy export, and retrieve
+its original manifest and SHA-pinned file chunks. Retained exports remain usable
+after slot retirement and provider reopening.
+
+Use `merchant_fleet_client_list`, `merchant_fleet_client_status`,
+`merchant_fleet_client_generate`, `merchant_fleet_client_adopt`,
+`merchant_fleet_client_manifest`, `merchant_fleet_client_file`, and
+`merchant_fleet_client_file_release` with the selected `tenant` and `slot`.
+The managed fleet workspace exposes the same original customer controls, and
+`fleet-release` supplies a resumable `client-download` command. See
+[the fleet customer handover guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/CLIENT_HANDOVER.md)
+for the complete browser, foreground CLI, and authenticated MCP workflow.
+
+### Publish tenant discovery and serve the original buyer explorer
+
+The same fleet owner now operates each tenant's original seller enrollment,
+signed catalogue and native buyer explorer across release slots. Review the
+current serving source and exact payment choices, apply the original signed
+publication, inspect retained resource history, and withdraw a route from an
+older retained release. Interrupted enrollment can be inspected, preserved and
+completed through the original setup workflow.
+
+Use the `merchant_fleet_discovery_*` tools for enrollment, start/stop,
+retained-source inspection, publication review/apply, original history and
+native discovery pages. The managed browser and foreground CLI expose the
+complete workflow over the same lifecycle owner. See
+[the tenant discovery guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/DISCOVERY.md)
+for exact inputs, recovery, slot changes and the original buyer preparation
+workflow.
+
 ## Operate a Tenderly simulation merchant
 
 Use `init-tenderly-workspaces --dir NEW_OPERATOR_DIRECTORY --connection CONNECTION.json`
@@ -598,8 +633,12 @@ contains multiple projects. Initialization binds the original project's
 `seller-releases` to this merchant operator. Agents use the same capture, typed
 projection, edition comparison, original publisher and portable merchant model as
 the CKAN workbench, then activate and run its release with the normal merchant
-tools. Each change returns the original operation identity for status and
-lost-response recovery. The original buyer configuration and merchant archives
+tools. The 28 CKAN tools include read-only `merchant_ckan_semantics_preview`
+for a proposed field projection and `merchant_ckan_source_semantics` for the
+saved reviewed dictionary, including after project reopen. A live capture can
+select its original CSVW document with `schemaUrl`; source meaning stays bound
+through publication, merchant packaging and customer pages. Each change returns
+the original operation identity for status and lost-response recovery. The original buyer configuration and merchant archives
 are available through SHA-pinned file reads. Both HTTP and stdio expose the same
 source tools and release lifecycle. The [complete CKAN agent and operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/MCP_WORKFLOW.md)
 covers host configuration, the joined source-to-customer workflow and reopening.

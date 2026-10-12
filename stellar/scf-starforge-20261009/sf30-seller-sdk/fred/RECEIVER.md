@@ -113,3 +113,7 @@ The original Buyer journal stays in its existing configured state directory. The
 ## Programmatic operation
 
 `receiver.mjs` exports `runFredReceiver({directory, configFile, phase, signal, onProgress})` and `readFredReceiver({directory, id})`. It composes the existing application functions; ordinary project commands and the browser continue to operate the same retained project.
+
+## Start on the existing configured native host
+
+The [native host command](NATIVE_HOST.md) provides the working operator/facilitator/TLS/CONNECT setup around this same receiver. Run `starforge fred receiver-host --project ABS --config PRIVATE_HOST_JSON` on the host that owns the original private operator resources. It creates or adopts the Node buyer settings and original receiver configuration, uses the controlling approval terminal, calls the original single-operation accounting finalizer and releases the native services before browser work. Its `--phase browser` and `--phase status` continue the same retained receiver.
