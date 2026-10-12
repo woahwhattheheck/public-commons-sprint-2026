@@ -282,17 +282,57 @@ export async function inspectGrantDemoWorkspace({directory, sourceRoot} = {}) {
   return {...describe(value), directory:root, receivedAt:receipt.receivedAt, ...await nativeState(root, value)};
 }
 
+/** Recover only this exact already-published export, without reading later mutable history. */
+async function acceptedExport(output, value, requestId, exportedAt) {
+  let bytes;
+  try { bytes = await readSourceFile(resolve(output), {privateFile:true}); }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  const packet = json(bytes), files = await validatePacket(packet, value.native);
+  const path = 'receiving/history-' + requestId + '.json';
+  const item = packet.documents.find(entry => entry.path === path), retained = files.get(path);
+  need(item && retained, 'REVIEWER_EXPORT_OUTPUT_CHANGED');
+  const history = retained.value, original = value.packet;
+  need(history.schema === 'stellar-forge.grant-reviewer-native-history.v1' &&
+    history.exportedAt === exportedAt && history.receivedPacketId === original.packetId &&
+    history.sourceOperationId === original.source.operationId && Array.isArray(history.quotes) &&
+    history.quotes.length === original.quotes.length, 'REVIEWER_EXPORT_OUTPUT_CHANGED');
+  const expected = structuredClone(original);
+  expected.documents.push(item);
+  expected.receivingHistory = [...(original.receivingHistory ?? []), path];
+  expected.packetId = packetIdentity(expected);
+  need(same(packet, expected), 'REVIEWER_EXPORT_OUTPUT_CHANGED');
+  const ids = new Set();
+  for (const quote of history.quotes) {
+    const origin = original.quotes.find(item => item.snapshot.quoteId === quote.quoteId);
+    need(origin && !ids.has(quote.quoteId), 'REVIEWER_EXPORT_OUTPUT_CHANGED');
+    ids.add(quote.quoteId);
+    const source = origin.snapshot, result = value.files.get(origin.resultFile).entry;
+    need(quote.status === source.status && quote.attempts === source.attempts &&
+      quote.signedRequestDispatched === source.signedRequestDispatched &&
+      quote.observation === source.result.reconciliation.outcome && quote.result?.bytes === result.bytes &&
+      quote.result.sha256 === result.sha256 && Array.isArray(quote.checkpoints), 'REVIEWER_EXPORT_OUTPUT_CHANGED');
+  }
+  return {schema:PACKET_SCHEMA, packetId:packet.packetId, sourcePacketId:original.packetId,
+    exportedAt, path:resolve(output), bytes:bytes.length, sha256:sha(bytes), quotes:history.quotes,
+    requestId, reused:true};
+}
+
 /** Export the complete public receiving packet and current native import history. */
 export async function exportGrantDemo({directory, output, sourceRoot, requestId, exportedAt: selectedAt} = {}) {
   need(typeof output === 'string' && isAbsolute(output), 'REVIEWER_ABSOLUTE_PATH_REQUIRED');
-  const {root, value} = await retainedInput(directory, sourceRoot);
-  // The original writer lease establishes a closed, coherent receiving view.
-  // Its data and complete result files remain owned by the existing native stores.
-  const state = await nativeState(root, value, {write:true});
   need((requestId === undefined) === (selectedAt === undefined), 'REVIEWER_EXPORT_IDENTITY_REQUIRED');
   if (requestId !== undefined) need(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(requestId) &&
     typeof selectedAt === 'string' && Number.isFinite(Date.parse(selectedAt)) &&
     new Date(selectedAt).toISOString() === selectedAt, 'REVIEWER_EXPORT_IDENTITY_INVALID');
+  const {root, value} = await retainedInput(directory, sourceRoot);
+  // An accepted artifact is its own original outcome. Reconcile it before
+  // considering the current writer or any history added after publication.
+  if (requestId !== undefined) {
+    const existing = await acceptedExport(output, value, requestId, selectedAt);
+    if (existing) return existing;
+  }
+  // New exports require the original closed writer view, including transitions.
+  const state = await nativeState(root, value, {write:true});
   const packet = structuredClone(value.packet), exportedAt = selectedAt ?? new Date().toISOString();
   const history = encoded({schema:'stellar-forge.grant-reviewer-native-history.v1', exportedAt,
     receivedPacketId:packet.packetId, sourceOperationId:packet.source.operationId, quotes:state.quotes});
@@ -304,16 +344,15 @@ export async function exportGrantDemo({directory, output, sourceRoot, requestId,
   await validatePacket(packet, value.native);
   const bytes = encoded(packet);
   need(bytes.length <= MAX_PACKET_BYTES, 'REVIEWER_PACKET_LIMIT');
-  let saved, reused = false;
+  let saved;
   try { saved = await writeSourceFile(resolve(output), bytes); }
   catch (error) {
     if (error.code !== 'EEXIST' || requestId === undefined) throw error;
-    const existing = await readSourceFile(resolve(output), {privateFile:true});
-    need(existing.equals(bytes), 'REVIEWER_EXPORT_OUTPUT_CHANGED');
-    saved = {path:resolve(output), bytes:bytes.length, sha256:sha(bytes)}; reused = true;
+    // A concurrent create-only publication must still match this exact request.
+    return acceptedExport(output, value, requestId, selectedAt);
   }
   return {schema:PACKET_SCHEMA, packetId:packet.packetId, sourcePacketId:value.packet.packetId,
-    exportedAt, ...saved, quotes:state.quotes, ...(requestId !== undefined ? {requestId, reused} : {})};
+    exportedAt, ...saved, quotes:state.quotes, ...(requestId !== undefined ? {requestId, reused:false} : {})};
 }
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char =>

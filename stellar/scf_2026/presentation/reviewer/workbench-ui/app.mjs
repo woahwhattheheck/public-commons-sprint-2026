@@ -63,10 +63,10 @@ async function action(name, values = {}) {
 }
 async function run(fn, source) {
   if (state.busy) return;
-  state.busy = true; if (source) source.disabled = true;
+  state.busy = true; document.body.setAttribute('aria-busy', 'true'); if (source) source.disabled = true;
   try { await fn(); }
   catch (error) { notice((error.code ? error.code + ': ' : '') + error.message, true); }
-  finally { state.busy = false; if (source?.isConnected) source.disabled = false; }
+  finally { state.busy = false; document.body.setAttribute('aria-busy', 'false'); if (source?.isConnected) source.disabled = false; }
 }
 function resetNative() {
   client.disconnect(); state.nativeInstance = null; state.nativeQuote = null;

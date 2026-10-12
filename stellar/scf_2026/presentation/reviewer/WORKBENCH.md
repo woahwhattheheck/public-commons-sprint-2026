@@ -86,8 +86,10 @@ The export keeps the original packet's quote IDs, attempts, seller statuses,
 observations, source documents and complete result bytes. Its new receiving
 history is a distinct stage. The original action UUID and creation time bind
 that history and its create-only output. If response publication is interrupted,
-the same action can recognize its exact already-written file; it does not append
-another stage or replace different bytes.
+the same action validates and recovers its exact already-written file before
+reading later mutable history. It does not append another stage or replace
+different bytes. Reconciliation of that accepted artifact also works while a
+later Buyer holds the writer; creating a new export still requires full close.
 
 Download the receiving packet and retain the displayed SHA-256. Another operator
 can select it in a new Applications review:
@@ -115,8 +117,10 @@ a revisioned receiving decision. Each action records the original UUID, selected
 input hash, attempt count and either COMPLETED or CONTINUATION_REQUIRED.
 
 The browser retains only action UUIDs and input digests in its tab. A failed
-response can retry the same input with its original UUID. A completed action
-returns its existing result; changed input under the same UUID is rejected.
+response can retry the same input with its original UUID. A completed action returns its existing result; changed input under the same
+UUID is rejected. Open/close replays separately expose the recorded outcome and
+the current live Buyer state, so an earlier active receipt cannot claim that a
+closed process is still running.
 Receiving itself uses the original resumable native grant function.
 
 On process loss, reopen the same workbench. Completed actions and files remain.

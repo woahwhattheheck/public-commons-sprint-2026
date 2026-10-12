@@ -74,7 +74,9 @@ export async function openReviewerWorkbench({directory: selected, sourceRoot, pa
     let record = await read(actionPath(id), true);
     if (record) {
       need(record.kind === kind && record.inputHash === inputHash, 'REVIEWER_ACTION_ID_REUSED', undefined, 409);
-      if (record.state === 'COMPLETED') return {...record.result, actionId:id, replayed:true};
+      if (record.state === 'COMPLETED') return {...record.result,
+        ...(['open', 'close'].includes(kind) ? {recordedResult:record.result, buyer:buyerView()} : {}),
+        actionId:id, replayed:true};
     } else {
       record = {schema:ACTION_SCHEMA, id, kind, input, inputHash, createdAt:now(), state:'PREPARED', attempts:0};
       await save(actionPath(id), record);
