@@ -81,6 +81,7 @@ The private state is:
 | commissioning/terms.json | Exact public source/payment terms |
 | commissioning/approvals/ | Original page review, request and attempt identity before each decision |
 | commissioning/chain-observations/ | Same-receipt native RPC observations when needed |
+| commissioning/session-recovery/ | Original SF88 lock recovery and same-intent checkout observations before an interrupted journey resumes |
 | commissioning/native-journey.log | Original full WordPress child output |
 | buyer/ | Original SF88 workspace, signer references, keys and live SF36 ledger |
 | native-work/ | Original native WordPress state and source/customer workspaces |
@@ -88,7 +89,9 @@ The private state is:
 
 After interruption, use the original native record's supported resume operation and the same input file. The host retains the fixed source, accounts, ports, native budget and original page intents. A prior completed WordPress journey is reused while any remaining same-receipt chain observation completes. A completed whole result is returned from its retained native acceptance hash.
 
-If an original paid attempt requires reconciliation, use the original acquisition's retained checkout and native accounting interfaces for that same page. The journey records the original state and evidence. Source changes, account replacement, new payment intents, port rotation, or deletion of retained attempts are separate actions and cannot silently become a continuation.
+Before restarting an unfinished journey, the host calls original SF88 recoverDatasetSession for each retained acquisition. SF88 checks the previous lock owner's actual liveness. When the original stopped page requires checkout reconciliation, the host asks SF82 recoverCheckoutEvidence to finish observation of that same saved intent, using the original evidence directory, commissioned payer and fixed testnet RPC, then asks SF88 to recover again. The before/after reports and checkout observation are retained under commissioning/session-recovery/. This step creates no buyer invocation or replacement page.
+
+An acquisition that still requires a native continuation remains at its original page and produces a concrete retained recovery record. Its existing checkout and accounting interfaces remain available. The approval observer scans only the last retained page because the original buyer runs pages serially, then uses the full immutable attempt reader when a review is pending. Source changes, account replacement, new payment intents, port rotation, or deletion of retained attempts cannot silently become a continuation.
 
 ## Original source contracts
 
