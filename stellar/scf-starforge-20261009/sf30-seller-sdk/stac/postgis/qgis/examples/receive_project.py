@@ -54,6 +54,7 @@ def read_json(path, limit=256 * 1024 * 1024):
 def ordinary_directory(value):
     require(isinstance(value, str) and Path(value).is_absolute(), "Use an absolute selected directory.")
     path = Path(value)
+    require(".." not in path.parts, "Select an original normalized directory without parent traversal.")
     require(not any(parent.is_symlink() for parent in (path, *path.parents)),
             "Preserve the selected ordinary directory and every original parent.")
     return path
@@ -167,10 +168,31 @@ def checked_handoff(path):
     require(handoff.get("projectCrs") is None or isinstance(handoff["projectCrs"], str),
             "Select a native QGIS project CRS or retain the original layer CRS.")
     roots = [ordinary_directory(handoff[name]) for name in
-             ("workspaceDirectory", "receivingDirectory", "outputDirectory")]
+             ("workspaceDirectory", "receivingDirectory", "outputDirectory", "qgisProfileDirectory")]
     require(all(a != b and not a.is_relative_to(b) and not b.is_relative_to(a)
                 for index, a in enumerate(roots) for b in roots[index + 1:]),
-            "Keep the original workspace, receiving copy and output in separate directories.")
+            "Keep the private authentication profile, original workspace, receiving copy and output in separate directories.")
+    profile_root = ordinary_directory(handoff["qgisProfileDirectory"])
+    source_root = ordinary_directory(handoff["sourceDirectory"])
+    require(profile_root != source_root and not profile_root.is_relative_to(source_root) and
+            not source_root.is_relative_to(profile_root),
+            "Keep authentication files outside the accepted source receiving package.")
+    successor = handoff.get("successor")
+    if successor is not None:
+        require(isinstance(successor, dict) and
+                isinstance(successor.get("workspaceId"), str) and
+                HASH.fullmatch(successor.get("leftSourceId", "")) and
+                type(successor.get("expectedRevision")) is int and successor["expectedRevision"] >= 0 and
+                isinstance(successor.get("note"), str) and successor["note"].strip(),
+                "Bind the existing workspace, original source, starting revision and reviewed successor reason.")
+        choices = successor.get("decisions")
+        require(isinstance(choices, list) and choices and
+                all(isinstance(row, dict) and isinstance(row.get("layerId"), str) and
+                    row.get("decision") in ("keep", "update", "remove") for row in choices) and
+                len({row["layerId"] for row in choices}) == len(choices),
+                "Supply the complete explicit original layer choices for the existing workspace.")
+        require(successor["leftSourceId"] != handoff["expectedManifestSha256"],
+                "Review a different accepted receipt, preserving the original source.")
     return handoff, raw
 
 
@@ -234,12 +256,25 @@ def continue_receiving(handoff, operation_root, output, qgis_prefix):
     from starforge_stac.postgis.source import connection_profile
 
     workspace_path = ordinary_directory(handoff["workspaceDirectory"])
-    workspace = QgisWorkspace(workspace_path, create=True, title=handoff["title"])
+    successor = handoff.get("successor")
+    if successor:
+        original_db = workspace_path / "workspace.sqlite"
+        require(original_db.is_file() and not original_db.is_symlink(),
+                "Continue the existing office workspace; a successor never initializes its replacement.")
+        workspace = QgisWorkspace(workspace_path, create=False)
+        require(workspace.read()["id"] == successor["workspaceId"],
+                "The successor handoff must select the actual original office workspace.")
+    else:
+        workspace = QgisWorkspace(workspace_path, create=True, title=handoff["title"])
     original_state_file = operation_root / "workspace-before.json"
     if original_state_file.exists():
         original_state, _ = read_json(original_state_file)
     else:
         original_state = workspace.snapshot()
+        if successor:
+            require(original_state["state"]["revision"] == successor["expectedRevision"] and
+                    any(row["id"] == successor["leftSourceId"] for row in original_state["state"]["sources"]),
+                    "Start from the reviewed original office revision and its retained database receipt.")
         publish_json(original_state_file, original_state)
     require(original_state["state"]["id"] == workspace.read()["id"],
             "Preserve the same original QGIS workspace across continuation.")
@@ -428,97 +463,219 @@ def continue_receiving(handoff, operation_root, output, qgis_prefix):
                   "file": {"path": name, **file_digest(path)}}
         return publish_json(manifest_path, record)
 
+    def preserves_history(earlier, later):
+        require(earlier["state"]["id"] == later["state"]["id"] and
+                later["state"]["revision"] >= earlier["state"]["revision"] and
+                later["events"][:len(earlier["events"])] == earlier["events"] and
+                all(row in later["requests"] for row in earlier["requests"]),
+                "Keep the original workspace identity, events and committed requests.")
+        before = earlier.get("analystRequests", [])
+        current = later.get("analystRequests", [])
+        if isinstance(before, list):
+            require(isinstance(current, list) and all(row in current for row in before),
+                    "Keep every original retained analyst request.")
+        elif isinstance(before, dict):
+            require(isinstance(current, dict) and
+                    all(key in current and current[key] == value for key, value in before.items()),
+                    "Keep every original retained analyst request.")
+        else:
+            require(False, "Keep the original supported analyst request catalogue.")
+
+    def frozen_step(name, frozen_snapshot):
+        request, _ = read_json(operation_root / (name + ".request.json"))
+        result, _ = read_json(operation_root / (name + ".result.json"))
+        request_id = handoff["operationId"] + ":" + name
+        require(request.get("requestId") == request_id and
+                request.get("actor") == handoff["actor"],
+                "Keep the original receiving request and actor.")
+        records = [row for row in frozen_snapshot["requests"] if row["requestId"] == request_id]
+        require(len(records) == 1 and records[0]["result"] == result and
+                workspace.operation(request_id) == result,
+                "Recover only the committed original operation retained in the frozen archive.")
+        actions = {"source-import": "source.imported", "native-check": "postgis.checked",
+                   "retain-layers": "layers.saved", "review-successor": "edition.reviewed",
+                   "save-project": "project.saved"}
+        require(result.get("event", {}).get("requestId") == request_id and
+                result["event"].get("actor") == handoff["actor"].strip() and
+                result["event"].get("action") == actions[name],
+                "Keep the exact original phase result and action.")
+        if name == "source-import":
+            require(request.get("expectedManifestSha256") == source.id and
+                    request.get("sourceDirectory") == handoff["sourceDirectory"],
+                    "Keep the original imported receipt and selected source path.")
+            payload = {"sourceId": source.id}
+        elif name == "native-check":
+            require(request.get("sourceId") == source.id and
+                    request.get("layerIds") == handoff["layerIds"] and
+                    request.get("connection") == connection,
+                    "Keep the original native layer and connection selection.")
+            payload = {"sourceId": source.id, "layerIds": request["layerIds"],
+                       "connection": request["connection"]}
+        elif name == "review-successor":
+            require(request.get("leftSourceId") == successor["leftSourceId"] and
+                    request.get("rightSourceId") == source.id and
+                    request.get("decisions") == successor["decisions"] and
+                    request.get("note") == successor["note"],
+                    "Keep the exact original successor decisions.")
+            payload = {"leftId": request["leftSourceId"], "rightId": request["rightSourceId"],
+                       "decisions": request["decisions"], "note": request["note"].strip()}
+        elif name == "retain-layers":
+            payload = {"layers": request["layers"]}
+        else:
+            require(request.get("projectCrs") == handoff.get("projectCrs") and
+                    result.get("project", {}).get("id") in
+                    {row["id"] for row in frozen_snapshot["state"]["projects"]},
+                    "Keep the original saved project and selected CRS.")
+            require(result["project"] in frozen_snapshot["state"]["projects"],
+                    "Keep the exact original saved project definition in the frozen snapshot.")
+            payload = {"inputSha256": result["project"]["inputSha256"]}
+        if payload is not None:
+            require(records[0]["inputSha256"] == value_sha({"action": actions[name], "payload": payload}),
+                    "The retained request body differs from its original committed input.")
+        return result
+
+    def archive_result(archive, frozen_snapshot):
+        require(not archive.is_symlink() and archive.is_file(),
+                "Preserve the original ordinary complete archive.")
+        with zipfile.ZipFile(archive) as package:
+            names = package.namelist()
+            require(len(names) == len(set(names)) and len(names) <= 1000000,
+                    "Keep the complete original project member list.")
+            for name in ("workspace-snapshot.json", "qgis-package.json"):
+                require(package.getinfo(name).file_size <= 256 * 1024 * 1024,
+                        "The original project metadata exceeds its native bound.")
+            raw_snapshot = package.read("workspace-snapshot.json")
+            manifest_bytes = package.read("qgis-package.json")
+            manifest = json.loads(manifest_bytes)
+        require(raw_snapshot == json_bytes(frozen_snapshot) and
+                manifest.get("workspaceId") == frozen_snapshot["state"]["id"] and
+                manifest.get("revision") == frozen_snapshot["state"]["revision"],
+                "The saved archive does not bind the original frozen native workspace.")
+        return {"path": str(archive), **file_digest(archive),
+                "manifestSha256": digest(manifest_bytes),
+                "workspaceId": manifest["workspaceId"], "revision": manifest["revision"],
+                "fileCount": len(manifest["files"]) + 1,
+                "totalDecodedBytes": manifest["totalBytes"]}
+
     try:
         version = native_version()
-        imported = step("source-import", lambda: change_request(
-            requestId=handoff["operationId"] + ":source-import",
-            sourceDirectory=handoff["sourceDirectory"],
-            expectedManifestSha256=handoff["expectedManifestSha256"]),
-            lambda request: workspace.import_source(request["sourceDirectory"],
-                expected_manifest_sha256=request["expectedManifestSha256"],
-                revision=request["revision"], request_id=request["requestId"],
-                actor=request["actor"], progress=progress))
-        source_id = imported["source"]["id"]
-        require(source_id == source.id, "The native workspace retained a different original source.")
-        source = workspace.source(source_id, verify=True, progress=progress)
-
-        checked = step("native-check", lambda: change_request(
-            requestId=handoff["operationId"] + ":native-check", sourceId=source_id,
-            layerIds=handoff["layerIds"], connection=connection),
-            lambda request: record_check(workspace, request["sourceId"], request["layerIds"],
-                request["connection"], revision=request["revision"],
-                request_id=request["requestId"], actor=request["actor"], progress=progress))
-        if handoff.get("requireUnchangedRows", True):
-            require(not any(row["changedSinceReceipt"] for row in checked["report"]["layers"]),
-                    "Current role-visible rows differ from the accepted receipt. Keep this observation and review the original changes.")
-
-        def selection_request():
-            definitions = copy.deepcopy(workspace.read()["layers"])
-            by_id = {row["id"]: row for row in definitions}
-            for layer_id in handoff["layerIds"]:
-                selected = source.layer_definition(layer_id, connection)
-                existing = by_id.get(selected["id"])
-                if existing is not None:
-                    require(existing.get("sourceId") == selected["sourceId"] and
-                            existing.get("postgis") == selected["postgis"],
-                            "Retain the existing layer and explicitly review its different source or connection.")
-                else:
-                    definitions.append(selected)
-                    by_id[selected["id"]] = selected
-            return change_request(requestId=handoff["operationId"] + ":retain-layers",
-                                  layers=definitions)
-
-        retained = step("retain-layers", selection_request,
-            lambda request: save_selection(workspace, request["layers"],
-                revision=request["revision"], request_id=request["requestId"],
-                actor=request["actor"]))
-        saved = step("save-project", lambda: change_request(
-            requestId=handoff["operationId"] + ":save-project",
-            projectCrs=handoff.get("projectCrs")),
-            lambda request: save_project(workspace, revision=request["revision"],
-                request_id=request["requestId"], actor=request["actor"],
-                project_crs=request["projectCrs"], progress=progress))
-        project_id = saved["project"]["id"]
-        project, reopened = reopen_project(workspace, project_id, progress=progress)
-        projects.append(project)
-        refreshed = refresh_project(workspace, project, progress=progress)
-        reopened = retain_observation("original-native-reopen", reopened)
-        refreshed = retain_observation("original-native-refresh", refreshed)
-        map_image = render(project, "PostGIS_QGIS_Received_Map.png")
-
-        snapshot = workspace.snapshot()
-        snapshot_path = operation_root / "export-snapshot.json"
-        if snapshot_path.exists():
-            frozen_snapshot, _ = read_json(snapshot_path)
-            require(frozen_snapshot == snapshot, "The original export revision changed; preserve its existing continuation.")
-        else:
-            frozen_snapshot = snapshot
-            publish_json(snapshot_path, snapshot)
         archive = output / "Starforge_PostGIS_QGIS_Complete_Project.zip"
-        if archive.exists():
-            require(not archive.is_symlink() and archive.is_file(), "Preserve the original ordinary complete archive.")
-            with zipfile.ZipFile(archive) as package:
-                names = package.namelist()
-                require(len(names) == len(set(names)) and len(names) <= 1000000,
-                        "Keep the complete original project member list.")
-                for name in ("workspace-snapshot.json", "qgis-package.json"):
-                    require(package.getinfo(name).file_size <= 256 * 1024 * 1024,
-                            "The original project metadata exceeds its native bound.")
-                raw_snapshot = package.read("workspace-snapshot.json")
-                manifest_bytes = package.read("qgis-package.json")
-                manifest = json.loads(manifest_bytes)
-            require(raw_snapshot == json_bytes(frozen_snapshot) and
-                    manifest.get("workspaceId") == snapshot["state"]["id"] and
-                    manifest.get("revision") == snapshot["state"]["revision"],
-                    "The saved archive does not bind the original frozen native workspace.")
-            exported = {"path": str(archive), **file_digest(archive),
-                        "manifestSha256": digest(manifest_bytes),
-                        "workspaceId": manifest["workspaceId"], "revision": manifest["revision"],
-                        "fileCount": len(manifest["files"]) + 1,
-                        "totalDecodedBytes": manifest["totalBytes"]}
+        snapshot_path = operation_root / "export-snapshot.json"
+        if archive.exists() or archive.is_symlink():
+            # The archive freezes the selected source and complete original history.
+            # Recover its already committed phases without reopening or changing the
+            # current office selection, which may legitimately have advanced.
+            frozen_snapshot, _ = read_json(snapshot_path)
+            exported = archive_result(archive, frozen_snapshot)
+            preserves_history(original_state, frozen_snapshot)
+            preserves_history(frozen_snapshot, workspace.snapshot())
+            imported = frozen_step("source-import", frozen_snapshot)
+            checked = frozen_step("native-check", frozen_snapshot)
+            retained = frozen_step("review-successor" if successor else "retain-layers", frozen_snapshot)
+            saved = frozen_step("save-project", frozen_snapshot)
+            source_id = imported["source"]["id"]
+            require(source_id == source.id, "Retain the exact frozen accepted source.")
+            project_id = saved["project"]["id"]
+            reopened, _ = read_json(operation_root / "original-native-reopen.json")
+            refreshed, _ = read_json(operation_root / "original-native-refresh.json")
+            observation_value("original-native-reopen", reopened)
+            observation_value("original-native-refresh", refreshed)
+            map_image, _ = read_json(operation_root / "PostGIS_QGIS_Received_Map.png.json")
+            if map_image.get("file"):
+                require(map_image["file"].get("path") == "PostGIS_QGIS_Received_Map.png",
+                        "Keep the original frozen map filename.")
+                verify_record(output / map_image["file"]["path"], map_image["file"])
+            history = observation_history()
+            require(all(any(row["phase"] == phase and row["observationSha256"] == digest(raw_json(report))
+                            for row in history) for phase, report in
+                        (("original-native-reopen", reopened), ("original-native-refresh", refreshed))),
+                    "Keep the exact frozen native reports in the original observation catalogue.")
         else:
+            require(not (operation_root / "complete-package.json").exists(),
+                    "The already published original archive is unavailable; restore its exact bytes.")
+            imported = step("source-import", lambda: change_request(
+                requestId=handoff["operationId"] + ":source-import",
+                sourceDirectory=handoff["sourceDirectory"],
+                expectedManifestSha256=handoff["expectedManifestSha256"]),
+                lambda request: workspace.import_source(request["sourceDirectory"],
+                    expected_manifest_sha256=request["expectedManifestSha256"],
+                    revision=request["revision"], request_id=request["requestId"],
+                    actor=request["actor"], progress=progress))
+            source_id = imported["source"]["id"]
+            require(source_id == source.id, "The native workspace retained a different original source.")
+            source = workspace.source(source_id, verify=True, progress=progress)
+
+            checked = step("native-check", lambda: change_request(
+                requestId=handoff["operationId"] + ":native-check", sourceId=source_id,
+                layerIds=handoff["layerIds"], connection=connection),
+                lambda request: record_check(workspace, request["sourceId"], request["layerIds"],
+                    request["connection"], revision=request["revision"],
+                    request_id=request["requestId"], actor=request["actor"], progress=progress))
+            if handoff.get("requireUnchangedRows", True):
+                require(not any(row["changedSinceReceipt"] for row in checked["report"]["layers"]),
+                        "Current role-visible rows differ from the accepted receipt. Keep this observation and review the original changes.")
+
+            def selection_request():
+                definitions = copy.deepcopy(workspace.read()["layers"])
+                by_id = {row["id"]: row for row in definitions}
+                for layer_id in handoff["layerIds"]:
+                    selected = source.layer_definition(layer_id, connection)
+                    existing = by_id.get(selected["id"])
+                    if existing is not None:
+                        require(existing.get("sourceId") == selected["sourceId"] and
+                                existing.get("postgis") == selected["postgis"],
+                                "Retain the existing layer and explicitly review its different source or connection.")
+                    else:
+                        definitions.append(selected)
+                        by_id[selected["id"]] = selected
+                return change_request(requestId=handoff["operationId"] + ":retain-layers",
+                                      layers=definitions)
+
+            if successor:
+                # The maintained review preserves logical layer IDs, styles, unrelated
+                # selections, accepted field maps and the complete original history.
+                retained = step("review-successor", lambda: change_request(
+                    requestId=handoff["operationId"] + ":review-successor",
+                    leftSourceId=successor["leftSourceId"], rightSourceId=source_id,
+                    decisions=successor["decisions"], note=successor["note"]),
+                    lambda request: workspace.review_successor(
+                        request["leftSourceId"], request["rightSourceId"], request["decisions"],
+                        revision=request["revision"], request_id=request["requestId"],
+                        actor=request["actor"], note=request["note"]))
+            else:
+                retained = step("retain-layers", selection_request,
+                    lambda request: save_selection(workspace, request["layers"],
+                        revision=request["revision"], request_id=request["requestId"],
+                        actor=request["actor"]))
+            saved = step("save-project", lambda: change_request(
+                requestId=handoff["operationId"] + ":save-project",
+                projectCrs=handoff.get("projectCrs")),
+                lambda request: save_project(workspace, revision=request["revision"],
+                    request_id=request["requestId"], actor=request["actor"],
+                    project_crs=request["projectCrs"], progress=progress))
+            project_id = saved["project"]["id"]
+            project, reopened = reopen_project(workspace, project_id, progress=progress)
+            projects.append(project)
+            refreshed = refresh_project(workspace, project, progress=progress)
+            reopened = retain_observation("original-native-reopen", reopened)
+            refreshed = retain_observation("original-native-refresh", refreshed)
+            map_image = render(project, "PostGIS_QGIS_Received_Map.png")
+
+            snapshot = workspace.snapshot()
+            if snapshot_path.exists():
+                frozen_snapshot, _ = read_json(snapshot_path)
+                require(frozen_snapshot == snapshot,
+                        "The original frozen archive is unavailable after workspace progress; "
+                        "preserve its existing snapshot and continuation.")
+            else:
+                frozen_snapshot = snapshot
+                publish_json(snapshot_path, frozen_snapshot)
+            preserves_history(original_state, frozen_snapshot)
             exported = workspace.export_package(archive,
-                expected_revision=snapshot["state"]["revision"], progress=progress)
+                expected_revision=frozen_snapshot["state"]["revision"], progress=progress)
+            # Bind the actual exporter output to the same frozen snapshot as replay.
+            require(exported == archive_result(archive, frozen_snapshot),
+                    "The original exported package descriptor changed.")
         publish_json(operation_root / "complete-package.json", exported)
 
         received = receive_package(archive, handoff["receivingDirectory"],
@@ -535,10 +692,13 @@ def continue_receiving(handoff, operation_root, output, qgis_prefix):
         receive_map = render(receiving_project, "PostGIS_QGIS_Reopened_Map.png")
         original_event_count = len(original_state["events"])
         after = workspace.snapshot()
-        require(after["events"][:original_event_count] == original_state["events"] and
-                all(value in after["requests"] for value in original_state["requests"]),
-                "Preserve every original workspace event and operation.")
-        require(after == frozen_snapshot, "Receiving must not mutate the original workspace after export.")
+        preserves_history(original_state, after)
+        preserves_history(frozen_snapshot, after)
+        current_office = {"workspaceId": after["state"]["id"],
+                          "revision": after["state"]["revision"],
+                          "historyEvents": len(after["events"]),
+                          "historyRequests": len(after["requests"]),
+                          "advancedSinceExport": after != frozen_snapshot}
         result = {
             "schema": "starforge.postgis-qgis-native-result.v1",
             "operationId": handoff["operationId"], "sourceHead": handoff.get("sourceHead"),
@@ -547,8 +707,9 @@ def continue_receiving(handoff, operation_root, output, qgis_prefix):
             "sourceEditionJson": source.source.get("sourceEditionJson"),
             "databaseRevision": source.manifest["revision"],
             "acceptedEditionId": source.manifest["editionId"],
-            "projectId": project_id, "workspaceId": after["state"]["id"],
-            "workspaceRevision": after["state"]["revision"], "actor": handoff["actor"],
+            "projectId": project_id, "workspaceId": frozen_snapshot["state"]["id"],
+            "workspaceRevision": frozen_snapshot["state"]["revision"], "actor": handoff["actor"],
+            "currentOriginalWorkspace": current_office,
             "layerIds": handoff["layerIds"], "nativeCheck": checked["report"],
             "originalNativeReopen": reopened, "originalNativeRefresh": refreshed,
             "completePackage": exported, "receiving": received["receipt"],
@@ -556,8 +717,15 @@ def continue_receiving(handoff, operation_root, output, qgis_prefix):
             "receivedNativeRefresh": receiving_refresh, "images": [map_image, receive_map],
             "nativeObservations": observation_history(),
             "originalEventsPreserved": original_event_count,
-            "historyEvents": len(after["events"]), "historyRequests": len(after["requests"]),
+            "historyEvents": len(frozen_snapshot["events"]),
+            "historyRequests": len(frozen_snapshot["requests"]),
             "noDatabaseMutation": True, "noCredentialExport": True}
+        if successor:
+            result["successor"] = {"originalWorkspaceId": successor["workspaceId"],
+                "leftSourceId": successor["leftSourceId"], "rightSourceId": source_id,
+                "startingRevision": successor["expectedRevision"],
+                "reviewRequestId": handoff["operationId"] + ":review-successor",
+                "review": retained["review"], "originalWorkspaceReused": True}
         publish_json(output / "qgis-native-result.json", result)
         print(json.dumps({"operationId": handoff["operationId"], "state": "complete",
                           "result": str(output / "qgis-native-result.json"),

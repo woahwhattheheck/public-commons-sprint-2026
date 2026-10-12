@@ -260,3 +260,14 @@ A failed phase is resumed from the same request, operation and directory. A phas
 - [PostgreSQL row security](https://www.postgresql.org/docs/15/ddl-rowsecurity.html)
 - [PostGIS ST_Transform](https://postgis.net/docs/ST_Transform.html)
 - [GeoServer/GeoTools primary-key metadata](https://docs.geoserver.org/3.0.x/en/user/data/database/primarykey/)
+
+
+## Accepted QField corrections and successor receiving
+
+The **Field corrections** pane continues an actual completed office acceptance from the original QField workflow. It retains the native acceptance/review/source files, pages every change, exposes exact field before/after values beside current role-visible database rows, and requires an explicit keep/apply reason and complete attribute/geometry choices. The saved field review then enters this operator's existing stage/review/promote transaction.
+
+The field plan targets original sf_key values through the configured native role and row-level policies. Publication applies it only to the new live edition, retains the original vector baseline/_sf_source and earlier live tables, and binds the exact field review into the receiving/backup history. Attachments remain original evidence until a separate actual target attachment workflow exists.
+
+See [the complete field publication guide](FIELD_PUBLICATION.md) for source inspection, full decision controls, native casts/CRS review, original operation recovery, CLI/API requests and the existing QGIS successor continuation. Its programme can adopt the exact already-committed UI import/review/stage/promotion IDs read-only; it does not make another publication for receiving.
+
+The resulting complete handover includes the original field evidence, database receiving and full backup, native QGIS project/export/receiving observations, original requests and a verified independent file receiving copy. Actual installed PostGIS/QGIS services, private connection references and original accepted field data remain required.
