@@ -87,8 +87,11 @@ Native commands (arguments pass unchanged to the maintained implementation):
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
+  goldrush-merchant                          Prepare the provider's original Stellar wallet-data merchant
+  goldrush                                  Open wallet research, prepare requests and recover saved purchases
   research-dossiers                         Retain research questions, evidence, findings and portable reports
   research-workspace                        Open the private research dossier operator workspace
+  linkup-research                           Receive saved Linkup purchases, analyse sources and deliver research dossiers
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
@@ -122,7 +125,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   opensearch-workspace                       Save drafts, capture and compare search editions, and prepare merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
-  oauth-connection                           Authorize, review, renew and disconnect an existing provider grant
+  oauth-connection                           Authorize, renew and select a QuickBooks company or API grant
   openapi postman                            Review collections, retain source and create merchant packages
   openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
