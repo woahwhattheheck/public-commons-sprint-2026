@@ -158,7 +158,7 @@ function receivingMaterials(state,materialIds,indexes=subjectIndexes(state)) {
 function receivingDeliverables(state,editionId,taskIds,materialIds,indexes=subjectIndexes(state)) {
   const tasks=new Set(taskIds),selected=new Set(materialIds.filter(id=>indexes.materials.get(id)?.kind!=='observation'));
   for(const row of state.materials)
-    if(row.kind!=='observation'&&(row.editionId===editionId||row.editionId===null)&&
+    if(row.kind!=='observation'&&(editionId===null||row.editionId===editionId||row.editionId===null)&&
       row.taskIds.some(id=>tasks.has(id)))selected.add(row.id);
   return receivingMaterials(state,[...selected],indexes);
 }
@@ -176,7 +176,7 @@ export function commissioningSummary(state) {
   const latest=new Map(),matches=new Map(),indexes=subjectIndexes(state);
   const order=(a,b)=>Date.parse(a.observedAt)-Date.parse(b.observedAt)||
     Date.parse(a.recordedAt)-Date.parse(b.recordedAt);
-  for(const row of state.receiving)if(row.editionId===state.activeEditionId&&!superseded.has(row.id))
+  for(const row of state.receiving)if((row.editionId===state.activeEditionId||row.editionId===null)&&!superseded.has(row.id))
     for(const taskId of row.taskIds) {
       const key=row.kind+':'+taskId,prior=latest.get(key);
       if(!prior||order(row,prior)>=0)latest.set(key,row);
@@ -312,10 +312,13 @@ export async function validateCommissioning(value) {
   for(const row of state.receiving) {
     record(row,['id','editionId','taskIds','materialIds','outcome','kind','observedAt','recordedAt',
       'actor','reference','notes','supersedesId','subject','subjectSha256'],'receiving record');
-    ensure(editionIds.has(row.editionId),'Receiving workorder is missing');
+    ensure(row.editionId===null||editionIds.has(row.editionId),'Receiving workorder is missing');
     ensure(['technical','customer'].includes(row.kind)&&RECEIVING_OUTCOMES.includes(row.outcome),'Invalid receiving result');
     array(row.taskIds,2000,'receiving tasks');unique(row.taskIds,'receiving task');
     ensure(row.taskIds.length&&row.taskIds.every(x=>taskIds.has(x)),'Select retained receiving tasks');
+    if(row.editionId===null)ensure(row.taskIds.every(taskId=>{
+      const task=byTask.get(taskId);return task.sourceKey===null&&task.editionId===null;
+    }),'Receiving without a workorder is limited to operator-created implementation tasks');
     array(row.materialIds,2000,'receiving deliverables');unique(row.materialIds,'receiving deliverable');
     ensure(row.materialIds.every(x=>materialIds.has(x)),'Receiving deliverable is missing');
     utc(row.observedAt);utc(row.recordedAt);text(row.actor,200,'receiving operator',{empty:false});
@@ -564,7 +567,7 @@ function acceptChanges(state,payload) {
 async function addMaterial(state,payload,context) {
   record(payload,['id','name','mediaType','data','kind','description','taskIds','editionId','reference','sourceFile'],'deliverable payload');
   id(payload.id);ensure(!state.materials.some(row=>row.id===payload.id),'Deliverable identifier already exists','MATERIAL_CONFLICT');
-  const editionId=payload.editionId??state.activeEditionId;
+  const editionId=own(payload,'editionId')?payload.editionId:state.activeEditionId;
   let sha256,bytes,name=payload.name,sourceFile;
   if(payload.sourceFile!==undefined) {
     ensure(payload.data===undefined,'Choose the original bundle file or supplied file bytes');
@@ -586,7 +589,7 @@ async function addMaterial(state,payload,context) {
 }
 async function receive(state,payload,context) {
   record(payload,['id','editionId','taskIds','materialIds','outcome','kind','observedAt','reference','notes','supersedesId'],'receiving payload');
-  const row={id:payload.id,editionId:payload.editionId??state.activeEditionId,taskIds:payload.taskIds??[],
+  const row={id:payload.id,editionId:own(payload,'editionId')?payload.editionId:state.activeEditionId,taskIds:payload.taskIds??[],
     materialIds:payload.materialIds??[],outcome:payload.outcome,kind:payload.kind,observedAt:payload.observedAt,
     recordedAt:context.recordedAt,actor:context.actor,reference:payload.reference??'',notes:payload.notes??'',
     supersedesId:payload.supersedesId??null};

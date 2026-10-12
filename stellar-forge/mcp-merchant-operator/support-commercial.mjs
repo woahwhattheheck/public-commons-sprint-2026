@@ -41,6 +41,8 @@ export function merchantCommercial({cases,casesDirectory,exportsDirectory,reads,
         merchant_case_commercial_save_draft:'saveDraft',merchant_case_commercial_publish:'publish',
         merchant_case_commercial_receive_pricing:'receivePricing',merchant_case_commercial_receive:'receive',
         merchant_case_commercial_compare:'compare',
+        merchant_case_commercial_preview_implementation:'previewImplementation',
+        merchant_case_commercial_adopt_implementation:'adoptImplementation',
       }[name];
       if(!method)throw failure('TOOL_NOT_FOUND','Unknown original merchant quotation operation.');
       return (await original())[method](args);
