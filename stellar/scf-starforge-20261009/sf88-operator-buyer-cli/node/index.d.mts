@@ -215,6 +215,11 @@ export class Operation {
   /** Reads saved output only. This method never launches a native buyer. */
   recover(): Promise<BuyerResult | null>;
   inspect(): Promise<OperationStatus>;
+  /** Inspect original source and recover a selected transfer through the original SF36 worker. */
+  inspectLostOutput(options: NodeLostOutputInspectOptions): Promise<NodeLostOutputAttempt>;
+  recoverLostOutput(options: NodeLostOutputRecoveryOptions): Promise<NodeLostOutputFinalization>;
+  readLostOutputRecovery(options?: NodeLostOutputReadOptions): Promise<NodeLostOutputFinalization | null>;
+  exportLostOutputProof(options: NodeLostOutputReadOptions & { output: string }): Promise<NodeLostOutputProofExport>;
   /** Inspect the original definitive unpaid result and any explicit successor; read-only. */
   inspectUnpaidContinuation(): Promise<UnpaidContinuationStatus>;
   /** Prepare one selected successor. Does not execute or authorize a payment. */
@@ -1219,4 +1224,86 @@ export class AcquisitionWorkspace {
   }): Promise<AcquisitionSuccess<AcquisitionArchive>>;
   verify(options: AcquisitionArchiveOptions): Promise<AcquisitionSuccess<AcquisitionArchive>>;
   restore(options: AcquisitionArchiveOptions): Promise<AcquisitionSuccess<AcquisitionArchive>>;
+}
+
+/** Exact original SF36 request preimage; approved request and selected transaction stay bound. */
+export interface NodeLostOutputApprovedRequest {
+  request_id: string; actor: string; service: string; network: string; asset: string;
+  scheme: 'exact'; max_amount: string; resource: string; pay_to: string;
+  max_timeout_seconds: number; method: string; body_present: boolean; body_bytes: number;
+  body_sha256: string; accepted_terms_sha256: string;
+}
+export interface NodeLostOutputFileState {
+  condition: 'ABSENT' | 'EMPTY' | 'SAVED' | 'JSON' | 'INVALID_JSON';
+  bytes: number; sha256: string | null;
+}
+export interface NodeLostOutputInspectOptions {
+  /** Original private operator workspace. Optional only when the operation recorded nativeWorkspace. */
+  workspace?: string;
+  approvedRequest?: NodeLostOutputApprovedRequest;
+  approvedRequestFile?: string;
+  expectedRequestSha256?: string;
+  expectedAttemptId?: string;
+  expectedConfigSha256?: string;
+  signal?: AbortSignal;
+}
+export interface NodeLostOutputReadOptions {
+  workspace?: string;
+  expectedRequestSha256?: string;
+  expectedAttemptId?: string;
+  expectedConfigSha256?: string;
+  node?: string;
+  environment?: Record<string, string | undefined>;
+  signal?: AbortSignal;
+}
+export interface NodeLostOutputRecoveryOptions extends NodeLostOutputInspectOptions {
+  transaction: string;
+  expectedRequestSha256: string;
+  node?: string;
+  environment?: Record<string, string | undefined>;
+}
+export interface NodeLostOutputAttempt {
+  schema: 'stellar-forge.sf88.node-lost-output-attempt.v1';
+  sourceKind: 'node-operation';
+  stateDirectory: string; operationDirectory: string; runtimeDirectory: string; workspace: string;
+  intentId: string; attemptId: string; attemptState: string; attemptStartedAt: string;
+  configSha256: string; expectedRequestSha256: string;
+  bodyPresent: boolean; bodyBytes: number; bodySha256: string; ticketSha256: string | null;
+  nativeWorkspace: string | null; evidencePath: string; evidenceState: NodeLostOutputFileState;
+  localOutcome: Record<string, NodeLostOutputFileState>;
+  transportCheckpointSha256: string | null;
+  sourceHashes: Record<string, string | null>;
+  expected: { network: string; asset: string; amount: string; payTo: string; payer: string };
+}
+export interface NodeLostOutputVerifiedFacts {
+  schema: 'stellar-forge.sf36.verified-facts.v1';
+  intentId: string; transaction: string; network: string; asset: string;
+  payer: string; recipient: string; atomicAmount: string; request_sha256: string;
+  ledger: number; eventId: string; transactionCreatedAt: string;
+}
+export interface NodeLostOutputFinalization {
+  schema: 'stellar-forge.sf88.node-lost-output-finalization.v1';
+  sourceKind: 'node-operation';
+  intentId: string; attemptId: string; configSha256: string; requestSha256: string;
+  transaction: string; workspace: string; stateDirectory: string; operationDirectory: string;
+  sourceHashes: Record<string, string | null>; sourcePath: string; sourceSha256: string;
+  evidenceState: NodeLostOutputFileState; localOutcome: Record<string, NodeLostOutputFileState>;
+  attemptStartedAt: string; completedAt: string; observedAt: string;
+  requestBinding: string; recordAuthority: string;
+  association: 'OPERATOR_SELECTED_TRANSACTION_AFTER_LOCAL_OUTPUT_LOSS';
+  result: Record<string, unknown> & {
+    outcome: 'FINALIZED' | 'IDEMPOTENT_FINALIZED';
+    actual: string; receipt_ref: string; request_sha256: string; proof_sha256: string;
+    verifiedFacts: NodeLostOutputVerifiedFacts;
+  };
+}
+export interface NodeLostOutputProofExport {
+  path: string; bytes: number; sha256: string;
+  proof: Record<string, unknown> & {
+    schema: 'stellar-forge.sf88.lost-output-verified-transfer.v1';
+    sourceKind: 'node-operation';
+    intentId: string; transaction: string; requestSha256: string;
+    network: string; asset: string; payer: string; recipient: string; atomicAmount: string;
+    ledger: number; sealedRecoverySha256: string;
+  };
 }
