@@ -199,6 +199,8 @@ export async function continueFollowingApplications(config, { onProgress = () =>
     const outcome = { schema: 'starforge.following-applications-result.v1', status: 'COMPLETED',
       operationId: config.operationId, completedAt: new Date().toISOString(), sourceCommit: config.sourceCommit,
       source, runtime, originalDatasetOperation: config.originalDatasetOperation,
+      datasetWorkspace: copied, receivingDirectory: receiving.receivingDirectory,
+      retainedPaths: { datasetWorkspace: 'delivery/dataset-workspace', applications: 'delivery/apps-receiving' },
       receiving: result };
     await save(join(project, 'continuation.json'), outcome);
     progress({ phase: 'COMPLETED', applicationId: result.applicationId, sourceCommit: runtime.sourceCommit });
@@ -233,8 +235,9 @@ export async function continueFollowingApplications(config, { onProgress = () =>
         if (await exists(join(project, name, file)))
           await copyFile(join(project, name, file), join(target, file));
     }
-    if (await exists(join(project, 'apps-receiving')))
-      await cp(join(project, 'apps-receiving'), join(delivery, 'apps-receiving'), { recursive: true });
+    for (const name of ['dataset-workspace', 'apps-receiving'])
+      if (await exists(join(project, name)))
+        await cp(join(project, name), join(delivery, name), { recursive: true });
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
