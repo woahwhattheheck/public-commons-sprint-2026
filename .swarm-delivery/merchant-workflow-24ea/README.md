@@ -78,8 +78,9 @@ The original operation now has a complete continuation for two customer periods.
 It runs the merged recurring merchant product from
 `woahwhattheheck/tjlabs-stellar-merchant-workspace` at
 `264a1022ce890f2356a2e3e5501a95b6ce121bdd`, with the native receiving entry and
-operating chapter selected from candidate commit
-`7cfe93bd78c747c66d64f413824d534cf7567f8c` (PR 240).
+operating chapter selected from commit
+`7cfe93bd78c747c66d64f413824d534cf7567f8c`. PR 240 integrated that complete
+native continuation at `1316a5cebdfbcdfc3b23a2d39881d4a58abd07d0`.
 
 Keep `run-series-native.py` and `series-source-map.json` together. The packet
 contains the full bodies and Git blob identities of all 692 selected source
@@ -108,9 +109,28 @@ python3 run-series-native.py \
 
 The installed application dependencies must supply `@x402/core`,
 `@x402/stellar` and `@x402/extensions` 2.28.0, Stellar SDK 16.3.1,
-`yaml` and `re2js`. The runner composes a private dependency view from those
-complete installed packages. Runtime paths are explicit arguments, so the
-original receiving owner can use the equipped Linux worker.
+`yaml` and `re2js`. The runner creates a small read-only dependency view by linking each complete
+installed package at its real location. Node resolves that package's own imports
+through its original installed dependency tree. Runtime paths are explicit arguments, so the
+original receiving owner can use the equipped Linux worker. When the selected
+worker needs the original `yaml` 2.9.1 or `re2js` 2.8.6 packages, a private
+`--dependency-transfers` JSON file may provide their original complete metadata
+and archive download URLs. The runner checks the exact package names, versions,
+archive lengths and npm SHA-512 integrity, extracts only these two complete
+packages, and retains their original archives and metadata. Existing different
+package bytes remain protected.
+
+A held receiver may omit `payload.files` when all 692 selected source files
+already exist on that same worker. The runner verifies each existing file
+against the complete `file_blobs` selection. After materializing or reading the
+source, it releases the full source-body packet before starting the native
+merchant and browser.
+
+Keep the receiving directory on the accepting worker's persistent storage.
+A free private tmpfs mount does not establish available RAM, and a directory
+from another process namespace does not establish custody of an earlier
+operation. The recorded host, boot ID, PID namespace and process start time
+identify the original native child.
 
 ### Customer journey
 
@@ -138,7 +158,8 @@ directory. The runner prints `ORIGINAL_NATIVE_DISPATCH` only after it creates
 the actual native child, including that child's PID and source selection.
 It streams the complete child output and retains the log in the same directory.
 
-After the native child exits, the runner packages the complete operation
+After the native child exits, the runner streams the archive and its SHA-256
+without loading the complete output bundle into memory. It packages the operation
 reports, customer files, profile exports and both Console states into
 `merchant-original-native-artifacts.tar.gz` under the work directory.
 `ORIGINAL_NATIVE_OUTPUT_READY` reports the exact bundle size, SHA-256 and
@@ -149,3 +170,12 @@ requested byte offset; advance by the returned byte count until the whole
 bundle is preserved and its reported digest matches. Send
 `{"op":"close"}` after transfer. Keep the complete receiving state with its
 original owner so further customer periods continue the same operation.
+
+A managed receiving session can include the complete current Library upload helper
+and its two companion modules as `payload.libraryHelpers`, or pass their existing
+directory through `--library-helpers`. The receiver writes
+those original helper bodies together in a private directory and submits one
+closed-stdin batch for the customer archive and a readable native delivery
+summary. It retains each returned file identity for the original operation.
+The complete original output-transfer interface remains available until the
+receiving owner finishes preserving the produced customer files.
