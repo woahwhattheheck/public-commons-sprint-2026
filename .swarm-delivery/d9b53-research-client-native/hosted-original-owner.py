@@ -23,7 +23,7 @@ def file_sha(path):
     return h.hexdigest()
 emit({"state":"awaiting-original-input","directory":str(root),"pid":os.getpid()})
 payload=json.loads(sys.stdin.readline())
-reserved_upload=payload["preparedUpload"]
+reserved_upload=payload.get("preparedUpload")
 original_text=payload["lineage"];config=json.loads(original_text)
 if config["operationId"]!="SCF-RESEARCH-CLIENT-NCC-D9B53-20261012":raise RuntimeError("Wrong original operation")
 source=payload["sourceEnvelope"].encode()
@@ -39,6 +39,13 @@ for file in payload["helpers"]:
     raw=file["source"].encode()
     if len(raw)!=file["bytes"] or sha(raw)!=file["sha256"]:raise RuntimeError("Original helper changed")
     write(root/"inbox"/name,raw)
+keeper_source=root/"inbox/hosted-artifact-retention.py"
+if (not keeper_source.is_file()
+        or file_sha(keeper_source)!="ea73242334dd408f1399a5090f32b3a761ff66196d62f8c9d4b711511fc869d1"):
+    raise RuntimeError("Select the complete pinned hosted artifact keeper before native work")
+keeper_namespace={"__name__":"hosted_artifact_retention","__file__":str(keeper_source)}
+exec(compile(keeper_source.read_bytes(),str(keeper_source),"exec"),keeper_namespace)
+retain_artifact=keeper_namespace["retain_artifact"]
 config.update(directory=str(root),sharedControl="/workspace/shared/swarm",controllerSource="/workspace/scratch/d9b53a575d9a/af-estate-recovery/host")
 companion=Path("/dev/shm/crossref-workspace-d9b5/native/artifacts/ncc-crossref-workspace-operating-companion.zip").read_bytes()
 if len(companion)!=config["companionArchive"]["bytes"] or sha(companion)!=config["companionArchive"]["sha256"]:raise RuntimeError("Original companion changed")
@@ -161,20 +168,13 @@ finally:
     emit({"state":"original-return-ready","operationId":config["operationId"],"outcome":state,"artifact":artifact,
       "nativeResult":native_result,"nativeArtifacts":native_artifacts})
     helper=Path("/dev/shm/crossref-workspace-d9b5/library-save-jj3jcjwu")
-    sys.path.insert(0,str(helper))
-    from library_upload import LibraryUploadWorkflow,UploadRequest,PreparedUpload,SignedUrlUploader
-    from library_file_transfer import LibraryFileMaterializer
-    from library_hosted_apps import HostedAppsClient
-    temporary=root/"library-transfer";temporary.mkdir(mode=0o700)
-    workflow=LibraryUploadWorkflow(HostedAppsClient(),LibraryFileMaterializer(),SignedUrlUploader(),state_parent=temporary)
-    def existing_prepared(requests):
-        if len(requests)!=1:raise RuntimeError("Use the one original prepared result destination")
-        return ((PreparedUpload.parse(requests[0],reserved_upload),),{},frozenset())
-    workflow._prepare=existing_prepared
-    saved_json(root/"library-upload-intent.json",{"artifact":artifact,"uploadSessionId":reserved_upload["upload_session_id"],"startedAt":time.time()})
-    saved=workflow.run({"uploads":[{"local_path":str(destination),"purpose":"create_library_file","library_artifact_type":"report"}]})
+    saved=retain_artifact(
+        root,artifact,config["operationId"],helper,
+        prepared_upload=reserved_upload,input_stream=sys.stdin,
+        emit=lambda line:print(line,flush=True),artifact_type="report",
+    )
     saved_json(root/"library-upload-result.json",saved)
-    emit({"state":"original-library-return","operationId":config["operationId"],"outcome":state,"artifact":artifact,"receipt":saved})
-    good=len(saved.get("results",[]))==1 and all(row.get("status")=="succeeded" and row.get("library_file_id") and row.get("local_metadata_applied") is True for row in saved["results"])
-    if not good:raise RuntimeError("Original result upload needs its same prepared-session reconciliation")
+    emit({"state":"original-library-return","operationId":config["operationId"],"outcome":state,
+          "artifact":artifact,"receipt":saved})
+
 sys.exit(status)
