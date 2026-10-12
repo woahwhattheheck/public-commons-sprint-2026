@@ -110,12 +110,15 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     need(bytes.length === metadata.bytes && digest(bytes) === metadata.sha256, 'RESEARCH_BLOB_CHANGED');
     return bytes;
   }
-  async function commit(id, expectedRevision, label, update) {
+  const metadata = state => ({ ...summary(state), schema: DOCUMENT,
+    questions: clone(state.questions), editions: clone(state.editions),
+    selections: clone(state.selections), findings: clone(state.findings) });
+  async function commit(id, expectedRevision, label, update, { projection = 'full' } = {}) {
     const current = await head(id);
     need(Number.isSafeInteger(expectedRevision) && current.state.revision === expectedRevision, 'REVISION_CONFLICT');
     const next = clone(current.state);
     const changed = await update(next, current.state);
-    if (changed === false) return get(id);
+    if (changed === false) return projection === 'metadata' ? metadata(current.state) : get(id);
     next.revision += 1;
     need(next.revision < 100000000, 'REVISION_LIMIT');
     next.previous = current.sha256; next.updatedAt = timestamp(); next.change = label;
@@ -123,7 +126,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     need(jsonBytes(envelope).length <= MAX_STATE, 'DOSSIER_STATE_TOO_LARGE');
     try { await writeJson(join(await revisionsDirectory(id), filename(next.revision)), envelope, { exclusive: true }); }
     catch (error) { if (error.code === 'EEXIST') throw new BuyerError('REVISION_CONFLICT'); throw error; }
-    return get(id);
+    return projection === 'metadata' ? metadata(next) : get(id);
   }
   async function projections(state, { references = true } = {}) {
     const views = new Map();
@@ -182,6 +185,8 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     };
   }
   async function get(id, { revision } = {}) { return view((await head(id, revision)).state); }
+  // Return saved revision metadata without loading or projecting retained response bodies.
+  async function getMetadata(id, { revision } = {}) { return metadata((await head(id, revision)).state); }
   async function list() {
     const entries = await readdir(projects, { withFileTypes: true });
     const values = [];
@@ -221,7 +226,8 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     });
 
   async function receive(id, { questionId, label, provider = 'research', rawText, response, sourceReference = '',
-    expectedRevision, origin = null, rawBytes } = {}) {
+    expectedRevision, origin = null, rawBytes, projection = 'full' } = {}) {
+    need(['full', 'metadata'].includes(projection), 'RESEARCH_PROJECTION_INVALID');
     label = text(label, 'EDITION_LABEL_REQUIRED', 240);
     provider = text(provider, 'EDITION_PROVIDER_REQUIRED', 80);
     need(origin === null || object(origin), 'RESEARCH_ORIGIN_INVALID');
@@ -239,7 +245,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       state.editions.push({ id: editionId, questionId, label, provider,
         mode: 'retained', createdAt: timestamp(), raw, sourceReference,
         sourceTerms: parsed.sourceTerms, origin: origin ? clone(origin) : null });
-    });
+    }, { projection });
   }
 
   async function receiveBuyerResult(id, { result, questionId, label, provider = 'research',
@@ -478,6 +484,6 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     return get(id);
   }
 
-  return Object.freeze({ directory, list, create, get, update, addQuestion, updateQuestion,
+  return Object.freeze({ directory, list, create, get, getMetadata, update, addQuestion, updateQuestion,
     receive, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding, compare, exportDossier, reopen });
 }
