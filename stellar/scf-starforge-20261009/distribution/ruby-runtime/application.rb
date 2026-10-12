@@ -91,36 +91,53 @@ module StarforgeRubyRuntime
     def initialize_copy(record)
       root = record.fetch("directory")
       marker = optional(File.join(root,MARKER))
-      return root if marker
-      source,meta = original(record)
-      need(root != source && !root.start_with?(source + "/") && !source.start_with?(root + "/"),"RUBY_APPLICATION_COPY_TARGET")
-      if meta.fetch("format") == "native"
-        Starforge::NativeDatasetLifecycle.copy_application(source,
-          expected_manifest_sha256: meta.fetch("manifest").fetch("sha256"),out: root)
-      else
-        # Use the actual original completed application and its complete file
-        # set, retaining the original result separately from later working state.
-        Starforge::DatasetOperator::Commission.reopen(directory: source)
-        result = parse(File.join(source,"operator-result.json"))
-        private_directory(root,create: true)
-        Starforge::Files.lock(source) do
-          need(Starforge::DatasetOperator::Commission.file_set(source) == result.fetch("files"),
-            "RUBY_ORIGINAL_APPLICATION_CHANGED")
-          result.fetch("files").each do |entry|
-            path = File.join(root,member(entry.fetch("name")))
-            directories(root,File.dirname(path))
-            copy_file(File.join(source,entry.fetch("name")),path,entry)
+      unless marker
+        source,meta = original(record)
+        need(root != source && !root.start_with?(source + "/") && !source.start_with?(root + "/"),"RUBY_APPLICATION_COPY_TARGET")
+        if meta.fetch("format") == "native"
+          Starforge::NativeDatasetLifecycle.copy_application(source,
+            expected_manifest_sha256: meta.fetch("manifest").fetch("sha256"),out: root)
+        else
+          # Use the actual original completed application and its complete file
+          # set, retaining the original result separately from later working state.
+          Starforge::DatasetOperator::Commission.reopen(directory: source)
+          result = parse(File.join(source,"operator-result.json"))
+          private_directory(root,create: true)
+          Starforge::Files.lock(source) do
+            need(Starforge::DatasetOperator::Commission.file_set(source) == result.fetch("files"),
+              "RUBY_ORIGINAL_APPLICATION_CHANGED")
+            result.fetch("files").each do |entry|
+              path = File.join(root,member(entry.fetch("name")))
+              directories(root,File.dirname(path))
+              copy_file(File.join(source,entry.fetch("name")),path,entry)
+            end
+            copy_file(File.join(source,"operator-result.json"),File.join(root,"operator-result.json"),meta.fetch("manifest"))
+            need(Starforge::DatasetOperator::Commission.file_set(source) == result.fetch("files"),
+              "RUBY_ORIGINAL_APPLICATION_CHANGED")
           end
-          copy_file(File.join(source,"operator-result.json"),File.join(root,"operator-result.json"),meta.fetch("manifest"))
-          need(Starforge::DatasetOperator::Commission.file_set(source) == result.fetch("files"),
-            "RUBY_ORIGINAL_APPLICATION_CHANGED")
+        end
+        marker = {"schema"=>"stellar-forge.managed-ruby-application.v1","format"=>meta.fetch("format"),
+          "originalManifestSha256"=>meta.fetch("manifest").fetch("sha256"),
+          "originalApplicationSource"=>meta}
+        save(File.join(root,MARKER),marker)
+      end
+      private_directory(root)
+      meta = record.fetch("source")
+      need(marker["schema"] == "stellar-forge.managed-ruby-application.v1" &&
+        marker["format"] == meta.fetch("format") &&
+        marker["originalManifestSha256"] == meta.fetch("manifest").fetch("sha256") &&
+        marker["originalApplicationSource"] == meta,"RUBY_APPLICATION_MARKER_CHANGED")
+      key_path = File.join(root,"access-key")
+      unless File.exist?(key_path)
+        begin
+          write(key_path,SecureRandom.hex(32) + "\n")
+        rescue StarforgeRubyRuntime::Error => error
+          # Another original initializer may have retained the same app's key.
+          raise unless error.code == "RUBY_RETAINED_FILE_CHANGED" && File.exist?(key_path)
         end
       end
-      marker = {"schema"=>"stellar-forge.managed-ruby-application.v1","format"=>meta.fetch("format"),
-        "originalManifestSha256"=>meta.fetch("manifest").fetch("sha256"),
-        "originalApplicationSource"=>meta}
-      save(File.join(root,MARKER),marker)
-      write(File.join(root,"access-key"),SecureRandom.hex(32) + "\n") unless File.exist?(File.join(root,"access-key"))
+      file_descriptor(key_path)
+      need(HASH.match?(read(key_path,1024).strip),"RUBY_APPLICATION_ACCESS_KEY_INVALID")
       root
     end
     def verify_working(root,http: true)

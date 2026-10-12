@@ -890,19 +890,32 @@ module StarforgeRubyRuntime
         key = @request.fetch("environmentId")[0,64] + "-application"
         target = private_directory(File.join(@root,"applications",key),create: true)
         working = File.join(target,"workspace")
-        copy_tree(File.join(unpacked,"application"),working)
         body = original.reject { |name,_| %w[sha256 id title environmentId directory requestId environmentSelectionSha256].include?(name) }.merge(
           "id"=>key,"title"=>@selection.fetch("title") + " application","environmentId"=>@request.fetch("environmentId"),
           "directory"=>working,"requestId"=>@operation_id,"environmentSelectionSha256"=>@selection.fetch("sha256"),
           "receivedFrom"=>{"archiveSha256"=>input.fetch("sha256"),"applicationSha256"=>original.fetch("sha256")})
         body["title"] = body.fetch("title")[0,160]
         record = body.merge("sha256"=>identity(body))
-        save(File.join(target,"application.json"),record)
-        output = File.join(@attempt_root,"received-application.json")
-        application_command("verify",File.join(target,"application.json"),output: output)
-        app_result = parse(output)
-        save(File.join(target,"registered.json"),{"schema"=>"stellar-forge.ruby-application-registration.v1",
-          "applicationSha256"=>record.fetch("sha256"),"operationId"=>@operation_id,"registeredAt"=>stamp,"result"=>app_result})
+        retained_record = optional(File.join(target,"application.json"))
+        if retained_record
+          need(retained_record == record,"RUBY_APPLICATION_CHANGED")
+        else
+          copy_tree(File.join(unpacked,"application"),working)
+          save(File.join(target,"application.json"),record)
+        end
+        registration = optional(File.join(target,"registered.json"))
+        if registration
+          need(registration["schema"] == "stellar-forge.ruby-application-registration.v1" &&
+            registration["applicationSha256"] == record.fetch("sha256") &&
+            registration["operationId"] == @operation_id,"RUBY_APPLICATION_CHANGED")
+          app_result = registration.fetch("result")
+        else
+          output = File.join(@attempt_root,"received-application.json")
+          application_command("verify",File.join(target,"application.json"),output: output)
+          app_result = parse(output)
+          save(File.join(target,"registered.json"),{"schema"=>"stellar-forge.ruby-application-registration.v1",
+            "applicationSha256"=>record.fetch("sha256"),"operationId"=>@operation_id,"registeredAt"=>stamp,"result"=>app_result})
+        end
         app_result = {"id"=>key,"directory"=>working,"result"=>app_result}
       end
       {"environmentId"=>@request.fetch("environmentId"),"installation"=>installed,"application"=>app_result,

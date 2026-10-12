@@ -53,8 +53,8 @@ async function startup(request,line) {
   const requestedPort=Number(option(request.args,'--port',true)??(command==='serve'?8474:9292));
   need(url.protocol==='http:' && url.hostname==='127.0.0.1' && !url.username && !url.password &&
     !url.search && /^#token=[a-f0-9]{64}$/.test(url.hash) &&
-    Number(url.port)>0 && Number(url.port)<=65535 &&
-    (requestedPort===0 || Number(url.port)===requestedPort),'APPLICATION_RUBY_STARTUP_CHANGED');
+    Number(url.port || 80)>0 && Number(url.port || 80)<=65535 &&
+    (requestedPort===0 || Number(url.port || 80)===requestedPort),'APPLICATION_RUBY_STARTUP_CHANGED');
   if(command==='serve') {
     need(value.schema===WORKSPACE && value.status==='RUBY_RUNTIME_WORKSPACE_READY' &&
       value.directory===expected.directory && url.pathname==='/','APPLICATION_RUBY_STARTUP_CHANGED');
