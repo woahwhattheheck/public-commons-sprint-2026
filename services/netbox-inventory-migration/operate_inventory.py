@@ -463,7 +463,7 @@ def report(directory):
         "<dt>Tenant ID</dt><dd>" + esc(manifest["tenant_id"]) + "</dd><dt>Source payload SHA-256</dt><dd>" + esc(manifest["payload_sha256"]) + "</dd>",
         "<dt>Reviewed digest</dt><dd>" + esc((result or {}).get("review_digest", "Awaiting native review")) + "</dd>",
         "<dt>Native NetBox version</dt><dd>" + esc((result or {}).get("netbox_version", "Awaiting native review")) + "</dd></dl>",
-        "<p>Counts describe mapped inventory rows and additional affected child devices. The complete JSON includes "
+        "<p>Counts describe mapped inventory rows, affected child devices and native cable effects. The complete JSON includes "
         "the original native catalogue and all generated component values and relations.</p>",
         "<h2>Original source files</h2><ul>",
     ]

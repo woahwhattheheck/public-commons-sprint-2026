@@ -11,6 +11,7 @@ import html
 import io
 import ipaddress
 import json
+from urllib.parse import urljoin, urlsplit
 
 SCHEMA = "tjlabs.netbox.network-commissioning/v1"
 FAMILIES = ("route_targets", "vrfs", "vlans", "prefixes", "interfaces", "ip_addresses", "cables")
@@ -34,7 +35,7 @@ def _json(value):
 
 def reference_label(value):
     if value is None:
-        return "Global / unassigned"
+        return "—"
     if isinstance(value, bool):
         return "Yes" if value else "No"
     if isinstance(value, dict):
@@ -46,6 +47,17 @@ def reference_label(value):
     if isinstance(value, list):
         return "; ".join(reference_label(item) for item in value) or "None"
     return str(value)
+
+
+def native_url(base, value):
+    if not isinstance(base, str) or not isinstance(value, str) or not value:
+        return None
+    candidate = urljoin(base.rstrip("/") + "/", value)
+    selected, origin = urlsplit(candidate), urlsplit(base)
+    if (selected.scheme not in ("http", "https") or selected.username or selected.password
+            or (selected.scheme, selected.netloc) != (origin.scheme, origin.netloc)):
+        return None
+    return candidate
 
 
 def network_inventory(result):
@@ -60,7 +72,7 @@ def network_inventory(result):
         native = resolved.get((kind, change.get("key")), {})
         objects[family].append({"kind": kind, "key": change.get("key"),
                                 "action": change.get("action"), "native_id": native.get("id", change.get("original_id")),
-                                "native_url": native.get("url"), "source": change.get("source"),
+                                "native_url": native_url(result.get("netbox_url"), native.get("url")), "source": change.get("source"),
                                 "before": change.get("before"), "after": change.get("after")})
     # Prefix aliases share one interval group. Address rows refer to that group,
     # keeping repeated native prefixes compact without dropping any selected row.
@@ -99,7 +111,7 @@ def network_inventory(result):
                 (identity for network, identity in by_vrf.get(vrf_key, [])
                  if address.version == network.version and address in network), None)
         row["selected_prefix_group"] = address_cache[cache_key]
-    return {"schema": SCHEMA, "operation_id": result.get("operation_id"),
+    return {"schema": SCHEMA, "operation_id": result.get("operation_id"), "netbox_url": result.get("netbox_url"),
             "state": result.get("state", "AWAITING_REVIEW"), "review_digest": result.get("review_digest"),
             "receipt_sha256": result.get("receipt_sha256"), "netbox_version": result.get("netbox_version"),
             "contract_source_commit": result.get("contract_source_commit"), "tenant": result.get("tenant"),
@@ -126,7 +138,7 @@ def network_csv(value):
                 "native_id": row["native_id"], "native_url": row["native_url"],
                 "name": fields.get("name", fields.get("label", "")),
                 "address_or_prefix": fields.get("address", fields.get("prefix", "")),
-                "vrf": reference_label(fields.get("vrf")),
+                "vrf": "Global routing table" if "vrf" in fields and fields["vrf"] is None else reference_label(fields.get("vrf")),
                 "vlan": reference_label(fields.get("vlan", fields.get("untagged_vlan"))),
                 "device_or_endpoint_a": reference_label(fields.get("device", fields.get("a_interface"))),
                 "interface_or_endpoint_b": reference_label(fields.get("interface", fields.get("b_interface"))),
@@ -176,9 +188,22 @@ def network_html(value):
         parts.append('</tr></thead><tbody>')
         for row in rows:
             fields = row["after"] or {}
-            parts += ['<tr class="object"><td><strong>' + esc(row["key"]) + '</strong>',
-                      '<small>Native ID ' + esc(row["native_id"]) + '</small></td><td>' + esc(row["action"]) + '</td>']
-            parts += ['<td>' + esc(reference_label(fields.get(name))) + '</td>' for name in columns]
+            label = '<strong>' + esc(row["key"]) + '</strong>'
+            if row["native_url"]:
+                label = '<a href="' + esc(row["native_url"]) + '">' + label + '</a>'
+            parts += ['<tr class="object"><td>' + label,
+                      '<small>' + ('Native ID ' + esc(row["native_id"]) if row["native_id"] is not None
+                                  else 'Native ID assigned after apply') + '</small>']
+            provenance = row["source"] if isinstance(row["source"], dict) else None
+            if provenance:
+                parts += ['<details><summary>Source row ' + esc(provenance.get("row", "—")) + '</summary>',
+                          '<code>' + esc(provenance.get("sha256", "")) + '</code></details>']
+            parts += ['<details><summary>Complete native change</summary><h3>Before</h3><pre>',
+                      esc(json.dumps(row["before"], ensure_ascii=False, indent=2)),
+                      '</pre><h3>After</h3><pre>', esc(json.dumps(row["after"], ensure_ascii=False, indent=2)),
+                      '</pre></details></td><td>' + esc(row["action"]) + '</td>']
+            parts += ['<td>' + esc('Global routing table' if name == 'vrf' and fields.get(name) is None
+                                   else reference_label(fields.get(name))) + '</td>' for name in columns]
             if family == "ip_addresses":
                 group = groups.get(row.get("selected_prefix_group"))
                 selected = group["prefix"] + " · " + ", ".join(item["key"] for item in group["objects"]) if group else "No selected prefix"

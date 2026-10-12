@@ -849,6 +849,7 @@ def _cable_effect_path(path, alias, user, cache=None):
                 obj = _one(model, alias, {"pk": object_id}, user, lock=True)
                 if obj is None:
                     raise InventoryError("A native cable path contains a missing original node.")
+                _cable_effect_model_alias(model, alias, instance=obj)
                 resolved[identity] = _cable_effect_freeze(obj)
             nodes.append(resolved[identity])
             node_count += 1
@@ -1230,6 +1231,9 @@ def migrate(script, packet, tenant, commit, review_digest):
             if obj is None:
                 obj = model()
             if obj.pk:
+                selected_label = inverse.get((obj._meta.label_lower, obj.pk))
+                if selected_label is not None and selected_label != label:
+                    raise InventoryError("Two source rows resolve to the same original or newly created NetBox object.")
                 obj.refresh_from_db(using=alias)
             action = "change" if obj.pk else "add"
             _allowed(user, model, action, obj if obj.pk else None, alias)

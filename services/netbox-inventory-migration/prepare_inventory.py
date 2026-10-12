@@ -316,7 +316,7 @@ def compile_mapping(mapping, mapping_path, operation_id):
                             values = [value]
                         selected = []
                         for item in values:
-                            if isinstance(item, str):
+                            if isinstance(item, str) and rule.get("trim", True):
                                 item = item.strip()
                             converted = convert(item, "text" if mode == "key" else "id")
                             if converted is None or converted is OMIT or converted == "":
