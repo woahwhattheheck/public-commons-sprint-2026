@@ -103,6 +103,27 @@ function resourceKey(selection, settings) {
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
   return hash({ family: type.id, directory: value });
 }
+function applicationResourceKeys(value) {
+  const keys = value.resourceKeys ?? [value.resourceKey];
+  need(Array.isArray(keys) && keys.length >= 1 && keys.length <= 16 &&
+    keys.every(key => typeof key === 'string' && /^[a-f0-9]{64}$/.test(key)) &&
+    keys.includes(value.resourceKey) && new Set(keys).size === keys.length,
+    'APPLICATION_RESOURCES_CHANGED', 'Keep the complete reviewed original workspace selection.');
+  return [...keys].sort();
+}
+async function withApplicationResources(root, selected, work) {
+  const leases = []; let failure;
+  try {
+    for (const key of applicationResourceKeys(selected))
+      leases.push(await operationLease(join(root, 'application-resource-locks', key + '.lock')));
+    return await work();
+  } catch (error) { failure = error; throw error; }
+  finally {
+    const results = await Promise.allSettled(leases.reverse().map(lease => lease.close()));
+    const rejected = results.find(result => result.status === 'rejected');
+    if (!failure && rejected) throw rejected.reason;
+  }
+}
 async function application(root, id) {
   const value = await readJSON(join(directoryFor(root, id), 'application.json'));
   need(value.schema === SCHEMA && value.id === id && /^[a-f0-9]{64}$/.test(value.revision), 'APPLICATION_RECORD_CHANGED');
@@ -235,6 +256,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
     applicationProvider: selection.binding,
     homeId: home.id, homeDirectory: home.directory, releaseId: release?.id ?? null,
     resourceKey: command.resourceKey ?? resourceKey(selection, settings),
+    ...(command.resourceKeys ? { resourceKeys: applicationResourceKeys(command) } : {}),
     adoption: adoptionReview ? { requestId: uuidFrom('application-adopt:' + home.id + ':' + adoptionReview.id),
       operation: 'managed-adopt', homeId: home.id, reviewId: adoptionReview.id } : null };
   const id = hash(value).slice(0, 24), path = reviewPath(root, id);
@@ -271,7 +293,8 @@ export async function saveApplication(root, { requestId, reviewId, applicationId
     const body = { kind: reviewed.kind, label: reviewed.label, runtimeId: reviewed.runtimeId, runtime: reviewed.runtime,
       ...(reviewed.applicationProvider ? { providerId: reviewed.applicationProvider.id } : {}),
       settings: reviewed.settings, homeId: reviewed.homeId, homeDirectory: reviewed.homeDirectory,
-      adoption: reviewed.adoption, resourceKey: reviewed.resourceKey };
+      adoption: reviewed.adoption, resourceKey: reviewed.resourceKey,
+      ...(reviewed.resourceKeys ? { resourceKeys: applicationResourceKeys(reviewed) } : {}) };
     const revision = hash(body);
     const value = { schema: SCHEMA, id, ...body, revision, createdAt: previous?.createdAt ?? now(), updatedAt: now(),
       saveRequestId: requestId, saveRequestHash: requestHash, reviewId };
@@ -295,11 +318,13 @@ export async function reviewApplicationStart(root, id, { navigationOrigin = null
   const command = await applicationCommand(selection, saved.settings, saved.runtime.directory, {
     root, runtimeId: saved.runtimeId, navigationOrigin,
   });
-  need(command.resourceKey === undefined || command.resourceKey === saved.resourceKey,
-    'APPLICATION_STATE_CHANGED', 'Review and save this application with its current private state directory before starting', 409);
+  need((command.resourceKey === undefined || command.resourceKey === saved.resourceKey) &&
+    hash(applicationResourceKeys({ ...command, resourceKey: command.resourceKey ?? saved.resourceKey })) === hash(applicationResourceKeys(saved)),
+    'APPLICATION_STATE_CHANGED', 'Review and save this application with its current original workspace selection before starting', 409);
   const value = { schema: 'stellar-forge.application-start-review.v1', applicationId: id,
     applicationRevision: saved.revision, runtime: saved.runtime, homeId: home.id, homeRevision: home.revision,
     releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command,
+    ...(saved.resourceKeys ? { resourceKeys: applicationResourceKeys(saved) } : {}),
     applicationProvider: selection.binding,
     ...(navigationOrigin !== null ? { navigationOrigin } : {}) };
   const reviewId = hash(value).slice(0, 24);
@@ -313,19 +338,23 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
   const requestHash = hash({ applicationId, requestId, reviewId });
   const original = await readJSON(file, true);
   if (original) { need(original.requestHash === requestHash, 'APPLICATION_RUN_ID_REUSED'); return original; }
-  const lease = await operationLease(join(root, 'application-resource-locks', saved.resourceKey + '.lock'));
-  try {
+  return withApplicationResources(root, saved, async () => {
+    const resources = new Set(applicationResourceKeys(saved));
     const again = await readJSON(file, true);
     if (again) { need(again.requestHash === requestHash, 'APPLICATION_RUN_ID_REUSED'); return again; }
+    const currentSaved = await application(root, id);
+    need(currentSaved.revision === saved.revision &&
+      hash(applicationResourceKeys(currentSaved)) === hash(applicationResourceKeys(saved)),
+      'APPLICATION_START_REVIEW_CHANGED', 'Review the current application and its complete original workspace selection.', 409);
     const reviewed = await readJSON(reviewPath(root, reviewId));
     need(reviewed.schema === 'stellar-forge.application-start-review.v1' && reviewed.applicationId === id &&
-      reviewed.applicationRevision === (await application(root, id)).revision, 'APPLICATION_START_REVIEW_CHANGED');
+      reviewed.applicationRevision === currentSaved.revision, 'APPLICATION_START_REVIEW_CHANGED');
     const names = (await readdir(join(root, 'applications'))).filter(name => /^[a-f0-9]{24}$/.test(name));
     for (const other of names) {
       const candidate = await readJSON(join(directoryFor(root, other), 'application.json'), true);
-      if (candidate?.resourceKey === saved.resourceKey)
+      if (candidate && applicationResourceKeys(candidate).some(key => resources.has(key)))
         need(!await busyApplication(root, other), 'APPLICATION_WORKSPACE_BUSY',
-          'The original application for this data directory already has a retained operation. Reopen or stop that operation.', 409);
+          'An original application for a selected client or coordinator workspace already has a retained operation. Reopen or stop that operation.', 409);
     }
     const selection = await applicationSelection(saved.kind, saved.providerId ?? null,
       reviewed.applicationProvider ?? null);
@@ -350,7 +379,7 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
       createdAt: now(), revision: saved.revision, reviewId, requestHash, request };
     await saveJSON(file, value);
     return value;
-  } finally { await lease.close(); }
+  });
 }
 export async function dispatchApplicationStart(root, input, dispatch) {
   const lease = await operationLease(join(directoryFor(root, input.applicationId), 'application.lock'));

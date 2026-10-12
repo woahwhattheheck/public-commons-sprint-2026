@@ -141,7 +141,14 @@ class AccountingMaintenance{
     return {...runtime,release:()=>{if(released)return;released=true;this.requests--;if(this.requests===0)for(const done of this.drainWaiters.splice(0))done();}};
   }
   async requestsDrained(){if(this.requests)await new Promise(done=>this.drainWaiters.push(done));}
-  async stopRuntime(){await this.requestsDrained();if(this.runtime){const runtime=this.runtime;try{await this.closeRuntime(runtime);}finally{this.runtime=null;}}}
+  async stopRuntime(){
+    await this.requestsDrained();
+    if(this.runtime){
+      const runtime=this.runtime;
+      await this.closeRuntime(runtime);
+      if(this.runtime===runtime)this.runtime=null;
+    }
+  }
   normalize(kind,value,target){
     need(object(value),'ACCOUNTING_MAINTENANCE_REQUEST','Send a maintenance request object.');
     const fields={pause:[],review:[],resume:[],backup:['expectedReviewId','externalWritersStopped','label'],verify:['backupId','expectedSha256'],
@@ -240,7 +247,7 @@ class AccountingMaintenance{
       }else if(job.kind==='restore'){
         await phase('RESTORING_ORIGINAL_PATHS');job.result=await restoreAccountingWorkspace({...base,...password,bundle:join(this.config.backupRoot,input.backupId),expectedSha256:input.expectedSha256});
       }else if(job.kind==='resume'){
-        await phase('REOPENING_ACCOUNTING');this.runtime=await this.openRuntime();this.mode='RUNNING';this.state.requestedMode='RUNNING';this.review=null;
+        await phase('REOPENING_ACCOUNTING');await this.stopRuntime();this.runtime=await this.openRuntime();this.mode='RUNNING';this.state.requestedMode='RUNNING';this.review=null;
         job.result={status:'ACCOUNTING_REOPENED',revision:this.runtime.workspace.view().revision};
       }
       job.status='COMPLETE';job.phase='COMPLETE';
@@ -263,9 +270,15 @@ class AccountingMaintenance{
     need(false,'ACCOUNTING_MAINTENANCE_NOT_FOUND','This maintenance operation was not found.',404);
   }
   close(){
-    if(!this.closingPromise){this.closing=true;this.closingPromise=(async()=>{
-      try{await this.commands;await this.activePromise;await this.stopRuntime();await this.tail;}
-      finally{await this.lease?.close();}
-    })();}return this.closingPromise;
+    if(!this.closingPromise){
+      this.closing=true;
+      const attempt=(async()=>{
+        await this.commands;await this.activePromise;await this.stopRuntime();await this.tail;
+        const lease=this.lease;await lease?.close();if(this.lease===lease)this.lease=null;
+      })();
+      this.closingPromise=attempt;
+      attempt.catch(()=>{if(this.closingPromise===attempt)this.closingPromise=null;});
+    }
+    return this.closingPromise;
   }
 }
