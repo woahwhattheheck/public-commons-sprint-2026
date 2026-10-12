@@ -39,20 +39,28 @@ export async function runGrpcUpgradeAgentReceiving({ sourceRoot, sourceCommit, d
   if (record.state === 'COMPLETE') return record;
   if (record.sourceCommit && record.sourceCommit !== sourceCommit) record.sourceHistory.push(record.sourceCommit);
   record.sourceCommit = sourceCommit; record.state = 'STARTED';
+  for (const field of ['error', 'closeError', 'applicationCallsError', 'checkpointError', 'completedAt', 'merchantClosed'])
+    delete record[field];
   const checkpoint = () => atomicJson(recordPath, record);
   await checkpoint();
   const silent = { write() {} };
   const cli = args => upgradeMain([...args, '--console-url-file', consoleUrlFile], { stdout: silent });
   const exact = (a, b, message) => required(canonical(a) === canonical(b), message);
-  const original = await cli(['open', '--id', reviewId, '--section', 'full']);
-  required(original.adoption && original.planValidation.valid, 'Continue an original completed valid adoption.');
-  const revision = original.adoption.revision, callsBefore = applicationCalls?.();
-  record.reviewSha256 = original.reviewSha256; record.revision = revision;
-  record.sourceFiles = await Promise.all(['grpc-upgrades.mjs', 'grpc-workspace.mjs', 'grpc-upgrade-download.mjs']
-    .map(async path => ({ path: merchantPath + path, sha256: hash(await readFile(join(sourceRoot, merchantPath, path))) })));
-  required(/^[a-z0-9][a-z0-9_-]{0,63}$/.test(workspaceAlias), 'Use the original configured workspace alias.');
-  let merchant, client = suppliedClient;
+  let merchant, client = suppliedClient, failure, callsBefore, received = false;
+  record.ownsMerchant = false;
+  const failed = (error, field = 'error') => {
+    record.state = 'INTERRUPTED'; record[field] = { code: error.code ?? error.message };
+    record.error ??= record[field]; failure ??= error;
+  };
   try {
+    callsBefore = applicationCalls?.();
+    const original = await cli(['open', '--id', reviewId, '--section', 'full']);
+    required(original.adoption && original.planValidation.valid, 'Continue an original completed valid adoption.');
+    const revision = original.adoption.revision;
+    record.reviewSha256 = original.reviewSha256; record.revision = revision;
+    record.sourceFiles = await Promise.all(['grpc-upgrades.mjs', 'grpc-workspace.mjs', 'grpc-upgrade-download.mjs']
+      .map(async path => ({ path: merchantPath + path, sha256: hash(await readFile(join(sourceRoot, merchantPath, path))) })));
+    required(/^[a-z0-9][a-z0-9_-]{0,63}$/.test(workspaceAlias), 'Use the original configured workspace alias.');
     if (!client) {
       const connectionPath = join(directory, 'connection.json'), configPath = join(directory, 'merchant-agent', 'merchant-mcp.json');
       try { await access(connectionPath); }
@@ -63,6 +71,7 @@ export async function runGrpcUpgradeAgentReceiving({ sourceRoot, sourceCommit, d
       const env = { ...environment, GRPC_UPGRADE_MCP_TOKEN: randomBytes(32).toString('hex') };
       merchant = await startMerchantMcp({ configPath, port: record.mcpPort ?? 0,
         tokenEnv: 'GRPC_UPGRADE_MCP_TOKEN', environment: env });
+      record.ownsMerchant = true; record.merchantClosed = false;
       record.mcpPort = Number(new URL(merchant.url).port); await checkpoint();
       client = await openMerchantFileClient({ url: merchant.url, tokenEnv: 'GRPC_UPGRADE_MCP_TOKEN', environment: env });
     }
@@ -141,8 +150,7 @@ export async function runGrpcUpgradeAgentReceiving({ sourceRoot, sourceCommit, d
     record.receiving = { exportId: repeatedReceiving.exportId, manifestSha256: repeatedReceiving.manifestSha256,
       files: repeatedReceiving.nativeFiles, bytes: repeatedReceiving.bytes, resumedBytes: resumed.resumedBytes,
       nativeCompiled: repeatedReceiving.upgrade.nativeCompiled };
-    const cliView = await cli(['open', '--id', reviewId, '--section', 'full']);
-    const cliDirectory = join(directory, 'cli-received-' + hash(canonical(cliView)));
+    const cliDirectory = join(directory, 'cli-received');
     const cliReceived = await cli(['export', '--id', reviewId, '--review-sha', original.reviewSha256, '--out', cliDirectory]);
     await cli(['export', '--id', reviewId, '--review-sha', original.reviewSha256, '--out', cliDirectory]);
     const inspected = await upgradeMain(['inspect', '--directory', cliDirectory, '--review-sha', original.reviewSha256], { stdout: silent });
@@ -166,18 +174,28 @@ export async function runGrpcUpgradeAgentReceiving({ sourceRoot, sourceCommit, d
     record.customer = { exportId: customer.exportId, manifestSha256: customer.manifestSha256,
       preparation: preparationId, revision, files: customer.nativeFiles, bytes: customer.bytes,
       exports: Object.keys(sdk) };
-    if (applicationCalls) {
-      record.applicationCalls = { before: callsBefore, after: applicationCalls() };
-      required(record.applicationCalls.after === callsBefore, 'Review/receiving unexpectedly called an application method.');
-    }
-    record.state = 'COMPLETE'; record.completedAt = new Date().toISOString();
+    received = true;
   } catch (error) {
-    record.state = 'INTERRUPTED'; record.error = { code: error.code ?? error.message };
-    throw error;
+    failed(error);
   } finally {
-    if (merchant) { await merchant.close(); record.merchantClosed = true; }
-    await checkpoint();
+    if (merchant) {
+      record.merchantClosed = false;
+      try { await merchant.close(); record.merchantClosed = true; }
+      catch (error) { failed(error, 'closeError'); }
+    }
+    if (applicationCalls) {
+      try {
+        record.applicationCalls = { before: callsBefore, after: applicationCalls() };
+        required(record.applicationCalls.after === callsBefore, 'Review/receiving unexpectedly called an application method.');
+      } catch (error) { failed(error, 'applicationCallsError'); }
+    }
+    if (received && !failure) {
+      record.state = 'COMPLETE'; record.completedAt = new Date().toISOString();
+    }
+    try { await checkpoint(); }
+    catch (error) { failed(error, 'checkpointError'); }
   }
+  if (failure) throw failure;
   return record;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

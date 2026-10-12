@@ -171,34 +171,56 @@ export async function readGrpcUpgradeJson(path, maximum) {
   const bytes = await readGrpcUpgradeBytes(path, maximum);
   return { bytes, value: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) };
 }
-async function publishFile(path, bytes) {
+async function publishFile(path, bytes, { maximum = bytes.length, acceptExisting } = {}) {
+  let retained = bytes;
   const temporary = join(dirname(path), '.upgrade-' + randomUUID() + '.tmp');
   try {
     const handle = await open(temporary, 'wx', 0o600);
     try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
     await link(temporary, path).catch(async error => {
       if (error.code !== 'EEXIST') throw error;
-      const existing = await readGrpcUpgradeJson(path, bytes.length);
-      requireValue(existing.bytes.length === bytes.length && sha256(existing.bytes) === sha256(bytes),
-        'GRPC_UPGRADE_RECEIVING_FILE_EXISTS');
+      const existing = await readGrpcUpgradeJson(path, maximum);
+      if (existing.bytes.length !== bytes.length || sha256(existing.bytes) !== sha256(bytes)) {
+        requireValue(typeof acceptExisting === 'function', 'GRPC_UPGRADE_RECEIVING_FILE_EXISTS');
+        await acceptExisting(existing.value);
+      }
+      retained = existing.bytes;
     });
     await syncDirectory(dirname(path));
+    return retained;
   } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
 }
 
-/** New complete files become visible atomically; retries preserve equal already-received files. */
+/** Publish the frozen closure; a repeat keeps its first valid review observation and exact bytes. */
 export async function writeGrpcUpgradeDirectory(directory, payload) {
   directory = await privateDirectory(directory, true);
-  const result = await verifyGrpcUpgradeValues(payload.values, { expectedReviewSha256: payload.result.reviewSha256 });
+  const expectedReviewSha256 = payload.result.reviewSha256;
+  const values = { ...payload.values }, files = [];
+  await verifyGrpcUpgradeValues(values, { expectedReviewSha256 });
+  requireValue(Array.isArray(payload.sources) && payload.sources.length === GRPC_UPGRADE_FILES.length);
+  let total = 0;
   for (let index = 0; index < GRPC_UPGRADE_FILES.length; index++) {
     const file = GRPC_UPGRADE_FILES[index], source = payload.sources[index];
     requireValue(source?.path === file.path && Buffer.isBuffer(source.bytes) &&
       source.bytes.length <= file.maximum &&
-      same(JSON.parse(source.bytes.toString('utf8')), payload.values[['review', 'base', 'candidate', 'plan'][index]]));
-    await publishFile(join(directory, file.path), source.bytes);
+      same(JSON.parse(source.bytes.toString('utf8')), values[['review', 'base', 'candidate', 'plan'][index]]));
+    total += source.bytes.length;
   }
-  return { ...result, directory, files: payload.sources.map(file => ({
-    path: file.path, bytes: file.bytes.length, sha256: sha256(file.bytes) })) };
+  requireValue(total <= GRPC_UPGRADE_MAX_BYTES);
+  for (let index = 0; index < GRPC_UPGRADE_FILES.length; index++) {
+    const file = GRPC_UPGRADE_FILES[index], source = payload.sources[index];
+    const bytes = await publishFile(join(directory, file.path), source.bytes, {
+      maximum: file.maximum,
+      ...(index === 0 ? { acceptExisting: async retainedReview => {
+        requireValue(same(immutableReview(retainedReview), immutableReview(values.review)),
+          'GRPC_UPGRADE_RECEIVING_FILE_EXISTS');
+        await verifyGrpcUpgradeValues({ ...values, review: retainedReview }, { expectedReviewSha256 });
+      } } : {}),
+    });
+    if (index === 0) values.review = JSON.parse(bytes.toString('utf8'));
+    files.push({ path: file.path, bytes: bytes.length, sha256: sha256(bytes) });
+  }
+  return { ...await verifyGrpcUpgradeValues(values, { expectedReviewSha256 }), directory, files };
 }
 
 export async function readGrpcUpgradeDirectory(directory, { expectedReviewSha256, native = false } = {}) {
