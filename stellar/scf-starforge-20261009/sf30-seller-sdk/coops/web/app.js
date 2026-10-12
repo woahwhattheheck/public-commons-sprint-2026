@@ -296,14 +296,16 @@ async function inspectMappingFile(form){
  await persist();mappingFileReview();
 }
 async function applyMappingFile(){
- const incoming=A.mappingImport;if(!incoming)throw new Error('Inspect the selected original file first.');
+ const incoming=A.mappingImport,review=$('#dialog [data-cmd="mapping-file-apply"]');
+ if(!incoming||!review?.isConnected||!$('#dialog').open)throw new Error('Inspect the selected original file first.');
  await refresh(false);
+ if(A.mappingImport?.token!==incoming.token||!review.isConnected||!$('#dialog').open)throw new Error('The incoming file review changed while its target was refreshed. The later selection was kept; apply it from its current review.');
  const current=incoming.targetId?A.view.mappings.find(m=>m.id===incoming.targetId)??null:null;
  if(recordKey(current)!==recordKey(incoming.targetRecord))throw new Error('The receiving mapping changed after inspection. Review another target / file to compare its current revision.');
  if(A.draftTokens.mapping!==incoming.draftToken||recordKey(A.drafts.mapping)!==recordKey(incoming.draftValue))throw new Error('A later browser draft is open. Keep it or inspect the incoming file again before replacing its fields.');
  const d={mappingId:incoming.targetId??'',...mappingFields(incoming.preview.mapping),
   mappingSource:{...clone(incoming.file),decision:incoming.decision},mappingSourceReceipt:clone(incoming.preview.source)};
- setDraft('mapping',d);A.mappingImport=null;await persist();$('#dialog').close();A.tab='mappings';renderPage();
+ setDraft('mapping',d);A.mappingImport=null;$('#dialog').close();A.tab='mappings';renderPage();await persist();
  notice('The reviewed file is open as a draft. Edit intended headings, record the decision and explicitly save its mapping revision.');
 }
 function mappingSourceDetails(d){
