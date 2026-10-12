@@ -27,8 +27,14 @@ operations capture and commercial terms stay attached to every alternative.
    plan, choose a scenario and **Use selected scenario in pricing review**.
    The existing pricing form opens with that scenario's commercial assumptions.
    Calculate and save the new review with its current operations capture.
-8. If the deployed atomic amounts also need to change, use that new saved review
-   in the existing **Prepare seller price change** and retained-release workflow.
+8. If the deployed atomic amounts also need to change, load that new saved review
+   in **Prepare seller price change**. Choose **Use saved USD quotes with entered
+   valuations**, select payment choices, and enter the USD value of a stated
+   number of their atomic units with its source or assumption. Review the exact
+   rounding and complete payment terms, save the original price decision, then
+   continue through its existing retained-release workflow. The
+   [workspace guide](WORKSPACE.md#prepare-atomic-prices-from-saved-usd-quotes)
+   covers conversion and the original request interface.
 
 Reopen the same workspace and select a saved comparison to continue. Its
 calculated values remain attached to the original review. A direct saved-plan
