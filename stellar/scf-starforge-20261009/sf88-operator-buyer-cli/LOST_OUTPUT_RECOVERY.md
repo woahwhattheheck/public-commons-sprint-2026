@@ -86,6 +86,17 @@ of the fixed finality worker.
 
 The worker requires the original approved network, successful transaction, asset
 contract, payer, recipient, atomic amount, ledger, and matching SEP-41 event.
+It also retains the original RPC transaction inclusion time and requires it to
+be at or after the original attempt, at the provider's whole-second resolution.
+The sealed observation must be at or after that inclusion time. These facts
+remain bound on completed reopen.
+
+Stellar documents `getTransaction.createdAt` as the Unix timestamp of inclusion
+in the ledger; see the [original RPC contract](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getTransaction).
+The worker compares the attempt and observation at that same resolution and
+does not add a clock-skew allowance. The selected transaction remains an
+explicit operator choice among transfers matching the approved terms.
+
 It preserves the complete original SF43 observation and its verified facts.
 The operation then invokes the original SF36 reconciliation transaction, which
 audits the ledger, enforces the original reserved amount, and prevents a receipt
@@ -149,7 +160,7 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs \
 
 The export retains the selected transaction, actual verified transfer facts,
 matching event ID, original attempt/configuration/request hashes, loss state,
-observation and completion times, and sealed completion digest. It uses schema
+original attempt and transaction inclusion times, observation and completion times, and sealed completion digest. It uses schema
 `stellar-forge.sf88.lost-output-verified-transfer.v1` and authority
 `ORIGINAL_SF36_HMAC_JOURNAL_AND_SEALED_LOST_OUTPUT_RECOVERY`.
 

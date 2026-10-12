@@ -234,7 +234,8 @@ export async function exportLostOutputProof({output,...options}={}) {
     intentId:options.intentId,attemptId:view.attemptId,configSha256:view.configSha256,
     requestSha256:view.requestSha256,transaction:facts.transaction,network:facts.network,
     asset:facts.asset,payer:facts.payer,recipient:facts.recipient,atomicAmount:facts.atomicAmount,
-    ledger:facts.ledger,matchingEventId:facts.eventId,
+    ledger:facts.ledger,matchingEventId:facts.eventId,transactionCreatedAt:facts.transactionCreatedAt,
+    attemptStartedAt:view.attemptStartedAt,
     observedAt:view.observedAt,completedAt:view.completedAt,sealedRecoverySha256:sha(completion.raw),
     sourceHashes:view.sourceHashes,evidenceState:view.evidenceState,recordAuthority:view.recordAuthority};
   const stored=await createSelection(output,proof);

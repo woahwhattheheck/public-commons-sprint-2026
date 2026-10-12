@@ -119,7 +119,14 @@ export async function checkStellarTransaction({ receipt, expected, fetchImpl = f
     return failure(tx.status === 'NOT_FOUND' ? 'RPC_TRANSACTION_NOT_FOUND' : 'RPC_TRANSACTION_NOT_SUCCESS',
       {reportedStatus:tx.status??null});
   }
+  // getTransaction.createdAt is the included ledger's Unix close timestamp.
+  // Keep the original provider fact when available. Temporal-recovery callers
+  // require it explicitly; other existing receipt observers remain compatible.
+  const createdAt=typeof tx.createdAt==='string'&&/^[1-9][0-9]{0,12}$/.test(tx.createdAt)&&
+    Number.isSafeInteger(Number(tx.createdAt))?tx.createdAt:
+    Number.isSafeInteger(tx.createdAt)&&tx.createdAt>0?String(tx.createdAt):null;
   const inclusion={ network:expected.network, transaction:tx.txHash, ledger:tx.ledger,
+    ...(createdAt===null?{}:{createdAt}),
     proof:'INDEPENDENT_STELLAR_RPC_GET_TRANSACTION_SUCCESS' };
   if (typeof decodeContractEvent !== 'function')
     return {status:'TX_INCLUDED_TRANSFER_UNVERIFIED',...inclusion,reason:'NO_SOROBAN_EVENT_DECODER'};

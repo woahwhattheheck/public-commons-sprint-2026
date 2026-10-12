@@ -154,7 +154,11 @@ function lostOutputProofCheck(p,fileDigest) {
     !paymentDecimal(p.atomicAmount)||
     !Number.isSafeInteger(p.ledger)||p.ledger<=0||typeof p.matchingEventId!=='string'||
     p.matchingEventId.length<1||p.matchingEventId.length>1024||/[\u0000-\u001f\u007f]/.test(p.matchingEventId)||
-    !instant(p.observedAt)||!instant(p.completedAt)||Date.parse(p.completedAt)<Date.parse(p.observedAt)||
+    !instant(p.attemptStartedAt)||!instant(p.observedAt)||!instant(p.completedAt)||Date.parse(p.completedAt)<Date.parse(p.observedAt)||
+    typeof p.transactionCreatedAt!=='string'||!/^(0|[1-9][0-9]{0,15})$/.test(p.transactionCreatedAt)||
+    !Number.isSafeInteger(Number(p.transactionCreatedAt))||
+    Number(p.transactionCreatedAt)<Math.floor(Date.parse(p.attemptStartedAt)/1000)||
+    Number(p.transactionCreatedAt)>Math.floor(Date.parse(p.observedAt)/1000)||
     !hex64(p.sealedRecoverySha256)||!strictObject(sources)||
     !originalSourceKeys.every(key=>hex64(sources[key]))||sources.configuration!==p.configSha256||
     !(sources.body===null||hex64(sources.body))||!(sources.evidence===null||hex64(sources.evidence))||
@@ -236,6 +240,7 @@ const publicRow = (e,proof,resolution,delivery,classification,reason) => {
     verificationOrigin:LOST_OUTPUT_ORIGIN,verificationMatchBasis:'ORIGINAL_SF43_SELECTED_TRANSFER_EVENT',
     buyerRecovery:{intentId:proof.data.intentId,attemptId:proof.data.attemptId,
       configSha256:proof.data.configSha256,requestSha256:proof.data.requestSha256,
+      attemptStartedAt:proof.data.attemptStartedAt,transactionCreatedAt:proof.data.transactionCreatedAt,
       observedAt:proof.data.observedAt,completedAt:proof.data.completedAt,
       sealedRecoverySha256:proof.data.sealedRecoverySha256,recordAuthority:proof.data.recordAuthority,
       sourceHashes:{...proof.data.sourceHashes},evidenceState:{...proof.data.evidenceState}}

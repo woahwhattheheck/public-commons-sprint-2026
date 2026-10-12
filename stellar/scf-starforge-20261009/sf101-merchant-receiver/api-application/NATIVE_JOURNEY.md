@@ -14,7 +14,9 @@ node --use-system-ca \
   --host merchant.routescan39da.scf.test
 ```
 
-The TLS directory contains the operator's existing `server-key.pem` and `server.pem`. The host must match the certificate. The runner carries system trust into the original buyer's Node subprocess through `NODE_OPTIONS`. It uses the original public transport and official event decoder to check the real TESTNET RPC connection before the first purchase attempt.
+The TLS directory contains the operator's existing `server-key.pem` and `server.pem`. The host must match the certificate. The runner carries system trust into the original buyer subprocess through `NODE_OPTIONS` and into the isolated finality observer through `SF36_OBSERVER_USE_SYSTEM_CA=1`. Set `NODE_EXTRA_CA_CERTS` to the existing public merchant CA when it is not already in host trust. Preserve the installed SDK and `re2js` dependency paths; an installation using shared modules can select its existing `NODE_PATH` before this command. It uses the original public transport and official event decoder to check the real TESTNET RPC connection before the first purchase attempt.
+
+The first payment review requires a controlling terminal, such as the original operator console PTY or `script -q -e -c '<command above>' /dev/null`. Inspect and approve the exact terms displayed by the original approval process.
 
 Choose a private directory that persists across separate native invocations. Repeating the same command opens the same account keys, original order, workspace, inbox, application execution, and response files. The original Linux file lease prevents overlapping operation owners.
 
@@ -51,7 +53,7 @@ The original customer then downloads and verifies the 412-byte paid plan. The or
 
 The runner retains the original native files in its private directory. `operation.json` binds input identity; `accounts.private.json` and `merchant.private.json` retain host-local credentials. The buyer state, inbox, workspace, merchant SQLite, SF98 outbox, application profile, job store, and response files remain the authorities for recovery.
 
-`journey-result.json` is written after the native payment is finalized and the paid application result has been reopened. It includes the original transaction reference, source plan digest, actual application response and digest, same-request replay, transport counters, and paths to the original state. The original buyer history is exported to `buyer-history.html`.
+`journey-result.json` is written after the native payment is finalized and the paid application result has been reopened. It includes the original transaction reference, source plan digest, actual application response and digest, same-request replay, transport counters, and paths to the original state. The original buyer history is exported to `buyer-history.html`. Completed lost-output accounting is authenticated against the original ledger before it appears in that history. `original-api-usage.json` is the full original API usage export for the order, suitable for the existing merchant accounting and customer statement.
 
 An interrupted process is resumed with the same arguments. A retained native purchase attempt follows the original buyer recovery. A retained API call follows the original customer response recovery. Operator application recovery is available through the existing `api-application inspect` and `recover` commands when an interrupted gateway response needs its completed native result attached.
 
@@ -62,3 +64,25 @@ An interrupted process is resumed with the same arguments. A retained native pur
 - [Original SF101 checkout](../CHECKOUT.md)
 - [Official TESTNET account setup](https://developers.stellar.org/docs/build/guides/transactions/create-account)
 - [Official native asset setup](https://developers.stellar.org/docs/tokens/quickstart)
+
+
+## Resume an original paid attempt after local output loss
+
+If the network transfer completed while the original native output was absent, empty, or invalid JSON, retain that exact original file and the complete original workspace. Supply the exact 15-field request displayed by the actual approval in a private JSON file. The original HMAC reservation must authenticate its canonical digest.
+
+Resume the same operation with the already-paid transaction:
+
+```sh
+node --use-system-ca \
+  stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/native-journey.mjs \
+  --dir /private/persistent/api-pass-native-chain-921ba0 \
+  --tls-dir /private/existing-merchant-tls \
+  --recover-transaction ORIGINAL_TRANSACTION_HASH \
+  --approved-request /private/persistent/original-approved-request.json
+```
+
+These two selection arguments do not alter the original operation identity. Original SF43 verification checks the selected transaction, asset, payer, recipient, amount, successful ledger event, and inclusion time against the original attempt. SF36 retains the authenticated observation before settling the existing audited reservation. Its sealed completion is reopened against the same request and ledger.
+
+The operation then drains its existing original SF98 event, retrieves the paid plan, runs or recovers the same application request, exports original usage, and renders authenticated recovered accounting in the original buyer history. The exported transfer facts in `recovered-proofs/` are accepted by the existing C94 reconciliation alongside that original event. Output records use complete temporary writes before publishing their immutable names.
+
+See [Lost-output recovery](../../sf88-operator-buyer-cli/LOST_OUTPUT_RECOVERY.md) for direct inspect, recover, authenticated reopen, and proof-export commands.
