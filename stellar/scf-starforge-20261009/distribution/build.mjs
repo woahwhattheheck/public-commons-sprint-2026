@@ -6,15 +6,16 @@ import { resolve, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openGitSource, MAX_SOURCE_FILE_BYTES, MAX_SOURCE_BYTES } from './git-source.mjs';
 import { createBrowserAssetIndex } from './browser-assets.mjs';
+import { productPackageMetadata } from './product-package.mjs';
+import { distributionPath, contributionPaths, composeDistribution } from './specification.mjs';
 import { readDistributionBuildPin, recoverCompletedDistribution, openDistributionBuild,
   inspectDistributionBuild } from './build-state.mjs';
 
 export { inspectDistributionBuild };
 
-const ownPath = 'stellar/scf-starforge-20261009/distribution';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|go|rs|java|json|toml|md|html|css|txt|sql|csv|xml|svg|png|woff2|service|proto)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|go|rs|java|json|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|yaml|yml|svg|png|woff2|service|proto)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
@@ -23,7 +24,8 @@ function isRuntimeFile(path, explicitRuntime = false) {
   return !parts.some(part => excludedDirs.has(part) || part.startsWith('.')) &&
     (explicitRuntime || !excludedName.test(parts.at(-1))) &&
     (supported.test(path) || (explicitRuntime && /\.zip$/i.test(path)) ||
-      ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)));
+      ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)) ||
+      (explicitRuntime && ['COPYING', 'DESCRIPTION'].includes(parts.at(-1))));
 }
 function valuesDeep(value) {
   return typeof value === 'string' ? [value] : Object.values(value).flatMap(valuesDeep);
@@ -88,11 +90,15 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   if (pin && pin.sourceCommit !== commit) throw Object.assign(new Error('The selected ref differs from the retained distribution source.'),
     { code: 'DISTRIBUTION_SOURCE_COMMIT_CONFLICT' });
   const byPath = new Map(tree.map(item => [item.path, item]));
-  const initial = source.readFiles([byPath.get(ownPath + '/distribution.json'), byPath.get('LICENSE')]);
-  const spec = JSON.parse(initial.get(ownPath + '/distribution.json'));
+  const specificationPaths = [distributionPath, ...contributionPaths(tree.map(item => item.path))];
+  const initial = source.readFiles([...specificationPaths.map(path => byPath.get(path)), byPath.get('LICENSE')]);
+  const distribution = composeDistribution({ base: JSON.parse(initial.get(distributionPath)),
+    contributions: specificationPaths.slice(1).map(path => ({ path, data: JSON.parse(initial.get(path)) })) });
+  const spec = distribution.spec;
+  const product = productPackageMetadata(spec.product);
   if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
   const excluded = new Set(spec.excludeFiles ?? []);
-  const explicitRuntime = new Set(spec.supportFiles);
+  const explicitRuntime = new Set([...spec.supportFiles, ...specificationPaths]);
   // Explicit support files include maintained ZIP data and can override a
   // test-like filename. Undeclared archives remain outside source selection;
   // directory, explicit exclusion and regular-file checks still apply.
@@ -101,8 +107,9 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   for (const root of spec.components)
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
-  const required = [...Object.values(spec.commands), ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9))];
-  for (const path of [...required, ...spec.supportFiles, ...Object.values(spec.runtimePackageManifests ?? {})])
+  const required = [...Object.values(spec.commands), ...Object.values(product.bin), product.readme,
+    ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9))];
+  for (const path of [...required, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();
   let totalBytes = 0;
@@ -116,7 +123,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     }
     return loaded;
   };
-  source.progress('selected', { files: selected.length, components: spec.components.length });
+  source.progress('selected', { files: selected.length, components: spec.components.length, contributions: distribution.contributions.length });
   loadSources(selected);
   // The same manifests drive the actual servers. Retain every mapped source
   // and resolve browser imports in its served URL context, not by inventing a
@@ -193,24 +200,27 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const version = spec.version + '-source.g' + commit.slice(0, 12);
   const metadata = {
     name: spec.name, version, private: true, type: 'module', license: 'MIT',
-    description: 'Original Starforge Stellar x402 merchant, buyer and operations toolkit',
+    description: product.description,
     engines: { node: '>=22.16.0' },
-    bin: { starforge: './source/' + ownPath + '/cli.mjs' },
+    bin: Object.fromEntries(Object.entries(product.bin).map(([name, path]) => [name, './source/' + path])),
     exports: spec.exports, files: ['source/', 'manifest.json', 'README.md', 'LICENSE'],
     peerDependencies: Object.fromEntries(Object.entries(optionalPeers).map(([name, value]) => [name, value.version])),
     peerDependenciesMeta: Object.fromEntries(Object.keys(optionalPeers).map(name => [name, { optional: true }])),
     optionalDependencies: runtimeDependencies,
-    repository: { type: 'git', url: 'https://github.com/woahwhattheheck/public-commons-sprint-2026.git', directory: ownPath },
+    repository: product.repository,
   };
   const metadataBytes = Buffer.from(json(metadata));
-  const readme = sources.get(ownPath + '/README.md');
+  const readme = sources.get(product.readme);
   const license = initial.get('LICENSE');
   if (!readme || !byPath.get('LICENSE')) throw new TypeError('Distribution README and license required');
   const manifest = {
     schema: 'stellar-forge.merchant-distribution-manifest.v1',
     packageName: spec.name, packageVersion: version, sourceCommit: commit,
-    sourceRepository: 'https://github.com/woahwhattheheck/public-commons-sprint-2026',
+    sourceRepository: product.sourceRepository,
     components: spec.components, sourceBytes: totalBytes,
+    distributionInputs: specificationPaths.map(path => ({ path, gitBlob: byPath.get(path).blob,
+      sha256: digest(sources.get(path)), bytes: sources.get(path).length })),
+    distributionContributions: distribution.contributions.map(({ id, path }) => ({ id, path })),
     files: selected.map(item => ({ path: item.path, packagePath: 'source/' + item.path,
       gitBlob: item.blob, sha256: digest(sources.get(item.path)), bytes: sources.get(item.path).length, mode: item.mode })),
     packageFiles: { 'package.json': digest(metadataBytes), 'README.md': digest(readme), 'LICENSE': digest(license) },

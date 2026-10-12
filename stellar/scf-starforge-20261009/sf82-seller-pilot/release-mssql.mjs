@@ -9,7 +9,8 @@ import { verifyPreparedMssqlSeller, compileMssqlMerchantPlan } from '../sf30-sel
 import { readMssqlSourceFile } from '../sf30-seller-sdk/mssql/config.mjs';
 import { startMssqlSeller, createMssqlNativeFactory } from '../sf30-seller-sdk/mssql/merchant.mjs';
 
-export const MSSQL_SOURCE_SCHEMA = 'stellar-forge.mssql-seller-release-manifest.v1';
+import { MSSQL_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { MSSQL_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'mssql/package';
 const MiB = 1024 * 1024;
 const hash = value => createHash('sha256').update(value).digest('hex');

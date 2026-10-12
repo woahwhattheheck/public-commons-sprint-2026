@@ -13,8 +13,14 @@ const localResultStamps = new Map();
 const actionNames = {
   push: 'Upload encrypted snapshot', pull: 'Download encrypted snapshot', restore: 'Cold restore',
   snapshot: 'Create encrypted snapshot', verify: 'Verify local encrypted bundle', 'local-verify': 'Verify local encrypted bundle',
+  'publisher-prepare': 'Prepare restored dataset publisher',
 };
-const localCommand = command => command === 'snapshot' || command === 'local-verify';
+const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare'].includes(command);
+const captureKindNames = {
+  generic: 'Original snapshot plan',
+  'paid-jobs': 'Paid-job merchant with original writer leases',
+  'dataset-publisher': 'Dataset publisher with original writer leases',
+};
 const capturePlans = () => profile()?.capturePlans ?? [];
 const capturePlan = () => capturePlans().find(item => item.id === $('capture-plan').value);
 const bytes = value => {
@@ -86,6 +92,10 @@ function updateStart() {
 }
 function syncFields() {
   const action = $('action').value, capture = action === 'snapshot', verify = action === 'verify';
+  const publisher = action === 'publisher-prepare';
+  $('restored-field').hidden = !publisher;
+  $('restore-operation').disabled = !publisher; $('restore-operation').required = publisher;
+  refreshRestoreChoices();
   const usesBundle = action === 'push' || action === 'restore' || verify;
   const usesRemote = action === 'pull' || action === 'restore';
   $('bundle-field').hidden = !usesBundle; $('bundle').disabled = !usesBundle;
@@ -121,7 +131,8 @@ function syncFields() {
       '. Leave the name empty to use the operation ID.' :
     (action === 'restore' ? 'Plaintext destination under ' : 'Encrypted download under ') +
       (action === 'restore' ? profile()?.restoreRoot : profile()?.downloadRoot) + '.';
-  $('review-button').textContent = capture ? 'Review capture' : verify ? 'Review verification' : 'Review transfer';
+  $('review-button').textContent = capture ? 'Review capture' : verify ? 'Review verification' :
+    publisher ? 'Review restored publisher' : 'Review transfer';
   const selected = $('bundle').value;
   $('bundle').replaceChildren();
   if (action === 'restore') {
@@ -141,8 +152,27 @@ function syncFields() {
   }
 }
 
+function refreshRestoreChoices() {
+  const rows = new Map(journal);
+  for (const row of requests.values())
+    if (row.profileId === profileId && row.operation?.command === 'restore')
+      rows.set(row.operationId, row.operation);
+  $('restored-options').replaceChildren();
+  for (const item of rows.values()) if (item.command === 'restore' && item.status === 'COMPLETE') {
+    const option = element('option'); option.value = item.operationId;
+    option.label = item.operationId + ' · ' + (item.destination ?? item.snapshotId);
+    $('restored-options').append(option);
+  }
+}
+function useRestoredPublisher(restoreId) {
+  invalidateReview(); $('action').value = 'publisher-prepare';
+  $('operation-id').value = nextId(); $('restore-operation').value = restoreId;
+  $('sources-quiesced').checked = false; syncFields();
+  $('transfer-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  notice('Review this completed typed cold restore and its original-to-restored publisher binding before preparing it.');
+}
 function newSelection() {
-  invalidateReview(); $('operation-id').value = nextId(); $('destination').value = '';
+  invalidateReview(); $('operation-id').value = nextId(); $('destination').value = ''; $('restore-operation').value = '';
   $('snapshot').value = ''; $('sources-quiesced').checked = false; $('action').value = 'push'; syncFields();
 }
 
@@ -150,6 +180,7 @@ function intent() {
   const action = $('action').value;
   const input = { profileId, action, id: $('operation-id').value.trim() };
   if (action === 'push' || action === 'verify') input.bundleId = $('bundle').value;
+  else if (action === 'publisher-prepare') input.restoreId = $('restore-operation').value.trim();
   else if (action === 'snapshot') {
     if (!$('sources-quiesced').checked) throw new Error('Stop the declared source writers, then explicitly confirm they are quiesced before reviewing a capture.');
     if (!capturePlan()) throw new Error('Select a capture plan declared by the host administrator.');
@@ -167,6 +198,7 @@ function intent() {
 function showReview(value) {
   review = value;
   const isLocal = localCommand(value.command), capture = value.command === 'snapshot';
+  const publisher = value.command === 'publisher-prepare', receiving = value.restoredPublisher;
   const files = value.files ?? value.plan?.files, size = value.plainBytes ?? value.plan?.bytes;
   const details = [
     ['Profile', current?.profiles.find(item => item.id === value.profileId)?.label ?? value.profileId],
@@ -178,7 +210,7 @@ function showReview(value) {
     ['Bucket / prefix', value.store.bucket + '/' + (value.store.prefix ?? '')]);
   if (capture) details.push(
     ['Capture plan', value.capturePlan?.label ?? value.capturePlan?.id ?? value.intent.capturePlanId],
-    ['Capture kind', value.plan?.captureKind === 'paid-jobs' ? 'Paid-job merchant with original writer leases' : 'Original snapshot plan'],
+    ['Capture kind', captureKindNames[value.plan?.captureKind] ?? value.plan?.captureKind ?? captureKindNames.generic],
     ['Plan SHA-256', value.plan?.planSha256 ?? '—'],
     ['Original plan', value.source],
     ['New encrypted bundle', value.destination],
@@ -186,6 +218,15 @@ function showReview(value) {
   else details.push(
     ['Encrypted source', value.source ?? 'Selected remote snapshot'],
     ['Destination', value.destination ?? (isLocal ? 'Verification of the existing encrypted bundle' : 'Immutable remote bundle and completion descriptor')]);
+  if (publisher) details.push(
+    ['Completed cold restore', value.options.sourceRestoreId],
+    ['Original dataset', receiving.originalPaths.datasetDirectory],
+    ['Original publisher', receiving.originalPaths.publisherDirectory],
+    ['Restored dataset', receiving.paths.datasetDirectory],
+    ['Restored publisher', receiving.paths.publisherDirectory],
+    ['Retained seller configuration', receiving.paths.sellerConfigFile ?? 'Use the host’s existing seller configuration'],
+    ['Native preparation ID', receiving.operationId],
+    ['Native review SHA-256', receiving.reviewSha256]);
   details.push(
     ['Snapshot', value.snapshotId ?? (capture ? 'Assigned by the original capture after creation' : '—')],
     ['Files / bytes', Number.isInteger(files) ? files + ' files · ' + bytes(size) : 'Read and verified by the original engine']);
@@ -198,12 +239,16 @@ function showReview(value) {
     row.append(element('td', root.name), element('td', root.kind), element('td', root.path, 'mono'));
     $('review-roots').append(row);
   }
-  $('review-heading').textContent = capture ? 'Selected capture' : isLocal ? 'Selected verification' : 'Selected transfer';
-  $('start-button').textContent = capture ? 'Start capture' : isLocal ? 'Start verification' : 'Start transfer';
+  renderPublisherReview(publisher ? receiving : null);
+  $('review-heading').textContent = capture ? 'Selected capture' : publisher ? 'Restored publisher binding' :
+    isLocal ? 'Selected verification' : 'Selected transfer';
+  $('start-button').textContent = capture ? 'Start capture' : publisher ? 'Prepare restored publisher' :
+    isLocal ? 'Start verification' : 'Start transfer';
   $('review-state').textContent = value.originalStatus ?? 'REVIEWED';
   $('review-note').textContent = value.originalStatus === 'COMPLETE' ?
     'This original operation is complete. Opening it retains its completed result.' :
     capture ? 'Keep every declared source writer stopped until this capture finishes. Start rereads the exact original plan and binds its roots, output and native capture identity.' :
+    publisher ? 'Preparation reopens the captured work through its original stores and adopts this reviewed dataset path. Keep this operation ID for continuation; the returned paths are used by the normal dataset seller and publisher.' :
     isLocal ? 'The original recovery engine authenticates this exact manifest and every encrypted object. Its result remains attached to this workspace operation.' :
     value.command === 'restore' ? 'The original engine verifies the encrypted bundle and restores into this new destination. Keep the same operation ID to continue.' :
     'Starting repeats the exact selection check and uses the original transfer journal.';
@@ -211,6 +256,35 @@ function showReview(value) {
   $('review-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function renderPublisherReview(receiving) {
+  $('publisher-review-panel').hidden = !receiving;
+  $('publisher-review-summary').replaceChildren(); $('publisher-versions').replaceChildren();
+  $('publisher-pending').replaceChildren();
+  if (!receiving) return;
+  const dataset = receiving.summary.dataset, publisher = receiving.summary.publisher;
+  const fields = [
+    ['Current dataset snapshot', dataset.current], ['Dataset revision', dataset.revision],
+    ['Publisher revision', publisher.revision], ['Retained candidates', publisher.candidates],
+    ['Original workbooks', publisher.workbooks], ['Saved mappings / editions', publisher.mappings + ' / ' + publisher.mappingEditions],
+    ['Buyer configurations', publisher.buyerConfigurations],
+    ['Preparation phase', receiving.preparation?.phase ?? 'Awaiting explicit preparation'],
+  ];
+  for (const [name, value] of fields)
+    $('publisher-review-summary').append(element('dt', name), element('dd', value ?? '—'));
+  for (const item of dataset.versions ?? []) {
+    const row = element('tr');
+    row.append(element('td', item.snapshot, 'mono'), element('td', bytes(item.sourceBytes)),
+      element('td', date(item.expiresAt)));
+    $('publisher-versions').append(row);
+  }
+  if (!dataset.versions?.length) emptyRow($('publisher-versions'), 'No retained dataset generations.', 3);
+  for (const item of publisher.pendingPublications ?? []) {
+    const row = element('tr');
+    row.append(element('td', item.candidateId, 'mono'), element('td', item.state), element('td', item.publicationId, 'mono'));
+    $('publisher-pending').append(row);
+  }
+  if (!publisher.pendingPublications?.length) emptyRow($('publisher-pending'), 'No pending publication decisions in this capture.', 3);
+}
 function applyState(value, initialize = false) {
   current = value; if (!requestsExpanded) requestCursor = value.nextRequestsCursor;
   for (const row of value.requests) requests.set(row.profileId + '/' + row.operationId, row);
@@ -230,7 +304,7 @@ function applyState(value, initialize = false) {
     value.active.operationId + (value.active.cancelRequested ? ' · Stop requested; reading the original completion state.' : ' · Original engine is running.') :
     'Original recovery results and transfer journals supply operation status.';
   $('requests-more').hidden = !requestCursor;
-  renderRequests(); updateStart();
+  renderRequests(); refreshRestoreChoices(); updateStart();
 }
 async function refreshState() {
   const initialized = Boolean(current);
@@ -332,6 +406,7 @@ function restoreSavedSelection(row) {
   $('operation-id').value = saved.id ?? row.operationId;
   $('destination').value = saved.destinationName ?? '';
   $('snapshot').value = saved.snapshotId ?? '';
+  $('restore-operation').value = saved.restoreId ?? '';
   $('sources-quiesced').checked = false;
   syncFields();
   for (const [id, value] of [['capture-plan', saved.capturePlanId], ['bundle', saved.bundleId]]) {
@@ -346,7 +421,9 @@ function restoreSavedSelection(row) {
   $('transfer-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
   notice(saved.action === 'snapshot' ?
     'The saved capture selection is open. Stop the declared source writers, confirm their current quiescence, and review again before starting.' :
-    'The saved local verification selection is open. Review the exact original bundle before continuing.');
+    saved.action === 'publisher-prepare' ?
+      'The saved restored-publisher selection is open. Review the original restore and native binding before continuing.' :
+      'The saved local verification selection is open. Review the exact original bundle before continuing.');
 }
 function newCaptureSelection(row) {
   restoreSavedSelection(row);
@@ -389,11 +466,13 @@ function renderJournal() {
     const row = element('tr'), id = element('td'); id.append(element('code', item.operationId));
     const controls = element('div', undefined, 'actions');
     controls.append(button('Details', () => details(item.operationId)), button('Review continuation', () => adopt(item.operationId)));
+    if (item.command === 'restore' && item.status === 'COMPLETE')
+      controls.append(button('Review publisher recovery', () => useRestoredPublisher(item.operationId)));
     const use = element('td'); use.append(controls);
     row.append(id, element('td', item.command), element('td', item.status), use); tbody.append(row);
   }
   if (!journal.size) emptyRow(tbody, 'No original recovery operations in this profile’s journal.');
-  $('operations-more').hidden = !journalCursor;
+  $('operations-more').hidden = !journalCursor; refreshRestoreChoices();
 }
 async function refreshJournal(more = false) {
   const selected = profileId;
@@ -413,8 +492,9 @@ function progressText(row) {
     if (Number.isInteger(op?.files)) parts.push(op.files + ' files');
     if (Number.isFinite(op?.plainBytes)) parts.push(bytes(op.plainBytes));
     if (op?.verified) parts.push('Original bundle verified');
+    if (op?.prepared?.status === 'RESTORED_PUBLISHER_PREPARED') parts.push('Original dataset and publisher prepared');
     if (op?.status) parts.push(op.status);
-    return parts.join(' · ') || 'Following the retained original capture or local verification.';
+    return parts.join(' · ') || 'Following the retained original local recovery operation.';
   }
   if (!op) return 'Waiting for the original operation journal.';
   const parts = [];
@@ -446,7 +526,7 @@ function renderRequests() {
       progress.setAttribute('aria-label', 'Encrypted objects completed'); item.append(progress);
     }
     if (row.error) item.append(element('p', row.error.code + ': ' + row.error.message, 'request-error'));
-    if (row.cancelRequested) item.append(element('p', 'Stop requested. The current original capture, verification or restore phase may finish before the final readback.', 'hint'));
+    if (row.cancelRequested) item.append(element('p', 'Stop requested. The current original capture, verification, restore or publisher preparation may finish before the final readback.', 'hint'));
     const retained = row.local?.retainedCaptures ?? row.operation?.retainedCaptures;
     if (Array.isArray(retained) && retained.length) {
       const list = element('details', undefined, 'retained-captures');
@@ -456,7 +536,7 @@ function renderRequests() {
     }
     const controls = element('div', undefined, 'actions');
     if (row.operation) controls.append(button('Details', () => isLocal ? showDetails(row) : details(row.operationId)));
-    if (row.running) controls.append(button('Stop transfer', async () => {
+    if (row.running) controls.append(button('Stop execution', async () => {
       await post('/api/cancel', { profileId: row.profileId, id: row.operationId });
       notice('Stop requested for ' + row.operationId + '. Reading its retained original result.');
       await refreshState();
@@ -472,6 +552,17 @@ function renderRequests() {
       }
     }
     controls.append(button('View selection', () => showDetails(row)));
+    if (row.review.command === 'restore' && row.operation?.status === 'COMPLETE')
+      controls.append(button('Review publisher recovery', () => useRestoredPublisher(row.operationId)));
+    if (row.operation?.prepared?.status === 'RESTORED_PUBLISHER_PREPARED') {
+      const prepared = row.operation.prepared, paths = element('dl', undefined, 'key-values');
+      for (const [name, path] of [
+        ['Dataset state', prepared.datasetDirectory], ['Publisher workspace', prepared.publisherDirectory],
+        ['Seller configuration', prepared.sellerConfigFile], ['Prepared', date(prepared.preparedAt)],
+      ]) if (path) paths.append(element('dt', name), element('dd', path));
+      item.append(paths, element('p',
+        'Open the normal dataset seller and publisher with these paths and the captured capacity settings. Retained publication decisions remain in the publisher.', 'hint'));
+    }
     if (isLocal && row.operation?.bundle && row.operation?.snapshotId) {
       const bundle = local.find(item => item.directory === row.operation.bundle && item.snapshotId === row.operation.snapshotId);
       if (bundle) controls.append(button('Verify bundle', () => useBundle(bundle, 'verify')), button('Upload bundle', () => useBundle(bundle, 'push')));
@@ -496,14 +587,16 @@ $('profile').addEventListener('change', () => task($('profile'), async () => { p
 $('action').addEventListener('change', () => { invalidateReview(); $('sources-quiesced').checked = false; syncFields(); });
 $('capture-plan').addEventListener('change', () => { invalidateReview(); $('sources-quiesced').checked = false; syncFields(); });
 $('sources-quiesced').addEventListener('change', invalidateReview);
-for (const id of ['bundle', 'snapshot', 'operation-id', 'destination']) $(id).addEventListener('input', invalidateReview);
+for (const id of ['bundle', 'snapshot', 'operation-id', 'destination', 'restore-operation']) $(id).addEventListener('input', invalidateReview);
 $('new-selection').addEventListener('click', newSelection);
 $('transfer-form').addEventListener('submit', event => {
   event.preventDefault();
   task($('review-button'), async () => {
     const value = await reviewSelection(intent());
     if (value) notice(value.command === 'snapshot' ? 'Review the exact source roots, plan and encrypted output below.' :
-      value.command === 'local-verify' ? 'Review the exact original encrypted bundle below.' : 'Review the exact snapshot, store and destination below.');
+      value.command === 'local-verify' ? 'Review the exact original encrypted bundle below.' :
+      value.command === 'publisher-prepare' ? 'Review the old and restored bindings, saved work, expiry and publication decisions below.' :
+      'Review the exact snapshot, store and destination below.');
   });
 });
 $('discard-review').addEventListener('click', invalidateReview);

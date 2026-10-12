@@ -69,7 +69,7 @@ async function stage(key,fn){
 async function records(kind,projectId,alias=workspace){
   const items=[];let offset=0,total;
   do{
-    const page=await native('merchant_coingecko_records',{workspace:alias,projectId,kind,offset,limit:128});
+    const page=await native('merchant_coingecko_records',{workspace:alias,projectId,kind,offset});
     insist(page.offset===offset&&Array.isArray(page.items),'Invalid native record page');
     total=page.total;items.push(...page.items);offset+=page.items.length;
     insist(page.items.length||offset===total,'Native collection ended before its total');
@@ -79,7 +79,7 @@ async function records(kind,projectId,alias=workspace){
 async function rows(kind,id,projectId,alias=workspace){
   const items=[];let offset=0,total;
   do{
-    const page=await native('merchant_coingecko_rows',{workspace:alias,projectId,kind,id,offset,limit:128});
+    const page=await native('merchant_coingecko_rows',{workspace:alias,projectId,kind,id,offset});
     total=page.total;items.push(...page.items);offset+=page.items.length;
     insist(page.items.length||offset===total,'Native rows ended before their total');
   }while(offset<total);

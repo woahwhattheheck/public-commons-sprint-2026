@@ -5,6 +5,7 @@ import { csvLine } from '../postgres/publisher/plan.mjs';
 import { datasetExtractionOptions } from '../postgres/publisher/stream.mjs';
 import { readCkanSourceFile } from './declaration.mjs';
 import { ExactCkanNumber, readCkanCapture } from './capture.mjs';
+import { checkCkanSemanticReview } from './semantics.mjs';
 
 export function bindCkanCapture(capture, config, query) {
   if (capture.manifest.catalogOrigin !== config.catalogOrigin ||
@@ -12,6 +13,7 @@ export function bindCkanCapture(capture, config, query) {
     throw fault('CKAN_CAPTURE_SELECTION_MISMATCH');
   const names = new Set(capture.fields.map(field => field.id));
   if (Object.values(query.projection).some(spec => !names.has(spec.field))) throw fault('CKAN_SELECTED_FIELD_MISSING');
+  checkCkanSemanticReview(capture, query);
   return capture;
 }
 export function projectCkanValue(value, spec) {
@@ -58,7 +60,8 @@ export function encodeCkanRow(row, dataset) {
     return text;
   }));
 }
-const description = query => ({ sql: query.sql, columns: query.columns, parameters: {}, parameterOrder: [],
+const description = (query, capture) => ({ sql: query.sql, columns: query.columns, parameters: {}, parameterOrder: [],
+  semantics: checkCkanSemanticReview(capture, query),
   columnTypes: Object.entries(query.projection).map(([name, spec]) => ({ name, type: spec.type,
     nullable: spec.nullable, sourceField: spec.field, encoding: spec.encoding })) });
 export async function inspectCkanSource(filename) {
@@ -67,7 +70,7 @@ export async function inspectCkanSource(filename) {
   for (const query of Object.values(selected.queries)) bindCkanCapture(capture, selected.config, query);
   return { hash: selected.hash, bytes: selected.original.length, sourceName: 'CKAN',
     connectionKind: 'capture', observation: { ...capture.manifest, manifestSha256: capture.manifestSha256 },
-    queries: Object.fromEntries(Object.entries(selected.queries).map(([name, query]) => [name, description(query)])) };
+    queries: Object.fromEntries(Object.entries(selected.queries).map(([name, query]) => [name, description(query, capture)])) };
 }
 export async function openCkanSourceFile(filename) {
   const selected = await readCkanSourceFile(filename);
@@ -123,7 +126,8 @@ export async function openCkanSourceFile(filename) {
           valueEncoding: 'ckan-reviewed-projection', nullEncoding: 'json-null',
           observation: { schema: 'stellar-forge.ckan-edition-observation.v1', kind: 'RETAINED_DATASTORE_PAGES',
             readOnly: true, capture: { ...capture.manifest, manifestSha256: capture.manifestSha256, file: capture.manifestFile },
-            projection: query.projection } };
+            projection: query.projection,
+            ...(query.semanticReview ? { semanticReview: { ...query.semanticReview } } : {}) } };
       } finally { active = false; }
     },
     close() { closed = true; lifetime.abort(); },

@@ -1,6 +1,7 @@
 // MIT. Research dossier operator; all provider and persistence operations stay in the original server.
 import {createCrossrefPanel} from './crossref.js';
 import {createUnstructuredPanel} from './unstructured.js';
+import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -61,6 +62,10 @@ import {createUnstructuredPanel} from './unstructured.js';
       AUTH_REQUIRED: 'The local session needs to be reopened with its complete workspace address.',
       JSON_INVALID: 'This file is not valid JSON. Choose the original saved result file.',
       UPLOAD_SIZE_LIMIT: 'The selected upload is larger than the workspace accepts.',
+      PORTABLE_SIZE_LIMIT: 'The complete uncompressed dossier exceeds 256 MiB.',
+      PORTABLE_JSON_INVALID: 'Choose a complete portable dossier JSON or gzip file.',
+      PORTABLE_TRUNCATED: 'The dossier file is incomplete. Choose the complete saved archive.',
+      PORTABLE_HISTORY_CONFLICT: 'This file and the saved dossier contain different changes. Open the file in a separate workspace to keep both histories.',
       VALYU_REFERENCE_REQUIRED: 'Add this research through Provider edition using its original edition reference.',
       PROVIDER_REFERENCE_REQUIRED: 'Choose Provider edition and use the reference from the original provider workspace.'
     };
@@ -85,11 +90,12 @@ import {createUnstructuredPanel} from './unstructured.js';
     if (!value) renderNoteState();
     crossrefPanel.updateBusy();
     documentPanel.updateBusy();
+    pipelinePanel.updateBusy();
   }
-  async function api(path, {method = 'GET', body, download = false} = {}) {
+  async function api(path, {method = 'GET', body, file, download = false} = {}) {
     const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
-      ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
-      ...(body === undefined ? {} : {body: JSON.stringify(body)}), credentials: 'omit', cache: 'no-store'});
+      ...(file ? {'Content-Type': 'application/octet-stream'} : body === undefined ? {} : {'Content-Type': 'application/json'})},
+      ...(file ? {body: file} : body === undefined ? {} : {body: JSON.stringify(body)}), credentials: 'omit', cache: 'no-store'});
     if (!response.ok) {
       let value = {};
       try { value = await response.json(); } catch {}
@@ -137,6 +143,7 @@ import {createUnstructuredPanel} from './unstructured.js';
     $('import-openalex-mode').hidden = !state.openalexConfigured;
     crossrefPanel.configure(result.crossref);
     documentPanel.configure(result.unstructured);
+    pipelinePanel.configure(result.pipelines);
     renderList();
   }
   async function openDossier(id) {
@@ -177,6 +184,7 @@ import {createUnstructuredPanel} from './unstructured.js';
     $('dossier-workspace').hidden = !view;
     crossrefPanel.setDossier(view);
     documentPanel.setDossier(view);
+    pipelinePanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -538,7 +546,7 @@ import {createUnstructuredPanel} from './unstructured.js';
   function showTab(tab) {
     if (tab === 'crossref' && $('crossref-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents', 'pipelines'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
@@ -546,6 +554,7 @@ import {createUnstructuredPanel} from './unstructured.js';
     });
     crossrefPanel.show(tab === 'crossref');
     documentPanel.show(tab === 'documents');
+    pipelinePanel.show(tab === 'pipelines');
   }
   function clearFormError(form) { const box = form.querySelector('.form-error'); if (box) {box.textContent = ''; box.hidden = true;} }
   function showDossier(edit = false) {
@@ -662,6 +671,9 @@ import {createUnstructuredPanel} from './unstructured.js';
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   const documentPanel = createUnstructuredPanel({root:$('view-documents'),tab:$('documents-tab'),api,task,notify,
+    getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const pipelinePanel = createUnstructuredPipelinesPanel({root:$('view-pipelines'),tab:$('pipelines-tab'),api,task,notify,
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {
@@ -832,8 +844,10 @@ import {createUnstructuredPanel} from './unstructured.js';
   ['open-portable', 'empty-open'].forEach(id => $(id).addEventListener('click', () => {if (!state.busy) {$('portable-file').value = ''; $('portable-file').click();}}));
   $('portable-file').addEventListener('change', () => task(async () => {
     const file = $('portable-file').files?.[0]; if (!file) return;
-    const portable = parseJson(await readOriginalFile(file, {portable: true}));
-    const view = await api('/api/reopen', {method: 'POST', body: {portable}});
+    if (file.size > MAX_PORTABLE_FILE_BYTES)
+      throw Object.assign(new Error('FILE_TOO_LARGE'), {detail: 'Choose a portable JSON or gzip file up to 256 MiB.'});
+    notify('Opening the dossier and its retained sources…');
+    const view = await api('/api/reopen-stream', {method: 'POST', file});
     applyDossier(view); await refreshList(); notify('Portable dossier reopened.');
   }));
   $('session-form').addEventListener('submit', event => {

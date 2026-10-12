@@ -9,8 +9,10 @@ import { captureProtoSource, compileProtoSource } from '../proto.mjs';
 import { grpcMethodSchema, normalizeGrpcRequest } from '../values.mjs';
 import { validateGrpcConfig, grpcEnvironmentNames } from '../config.mjs';
 import { createGrpcSource } from '../source.mjs';
+import { captureGrpcStream, inspectGrpcStream } from '../stream-capture.mjs';
 import { compileGrpcMerchantPlan, prepareGrpcSeller, readGrpcPrepared, CUSTOMER_FILES } from '../prepare.mjs';
 import { startGrpcMerchant } from '../merchant.mjs';
+import { assertGrpcWorkspaceBinding } from './binding.mjs';
 import { fields, text, canonical, sha256, jsonBytes, readJson, readBytes, writeNew,
   syncDirectory, privateDirectory, fail, assertProtoArchiveFits, writeJsonSnapshot } from '../common.mjs';
 
@@ -33,7 +35,7 @@ function describe(contract) {
   return Object.entries(contract.methods).map(([path, item]) => ({
     path, requestType: item.requestType, responseType: item.responseType,
     requestStream: Boolean(item.requestStream), responseStream: Boolean(item.responseStream),
-    selectable: !item.requestStream && !item.responseStream,
+    selectable: !item.requestStream,
   }));
 }
 function draft(source, protoSource, plan) {
@@ -47,14 +49,14 @@ function draft(source, protoSource, plan) {
 }
 export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDirectory, entrypoints, planFile,
   sellerPort = 0, operationsPort = 0, maxInFlight = 64, drainGraceMs = 60000,
-  nativeFactory = null, releaseRuntime, env = process.env } = {}) {
+  nativeFactory = null, releaseRuntime, env = process.env, expectedBinding } = {}) {
   if (typeof stateDirectory !== 'string' || !isAbsolute(stateDirectory)) fail('GRPC_ABSOLUTE_WORKSPACE_REQUIRED');
   const root = await privateDirectory(stateDirectory, true), lease = await acquireStateLease(root);
   const environment = { ...env };
   const retainedRuntime = releaseRuntime === undefined ? (nativeFactory ? null : { port: sellerPort }) : structuredClone(releaseRuntime);
   const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary'].map(name => [name, join(root, name)]));
   let current = null, revisionIndex = [], busy = null, closing = false, closePromise, active = null, previousRun = null;
-  let navigationOrigin = null, releaseConsole = null;
+  let navigationOrigin = null, releaseConsole = null, activeCall = null;
   const cached = new Map();
   const execute = action => {
     if (closing) return Promise.reject(Object.assign(new Error('GRPC_WORKSPACE_CLOSING'), { status: 503 }));
@@ -132,6 +134,31 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       operations: active.session?.operations?.url, availability: active.session?.operations?.availabilityControlUrl,
       source: active.session?.source.status() } : null,
     previous: previousRun, releaseConsole: releaseConsole ? { url: releaseConsole.operatorUrl } : null });
+  async function attemptInventory() {
+    lease.assertHeld();
+    const attempts = [];
+    for (const file of await readdir(folders.attempts)) {
+      if (!file.endsWith('.json') || !UUID.test(file.slice(0, -5))) continue;
+      const attempt = await readJson(join(folders.attempts, file), 65536);
+      attempts.push({ id: attempt.id, revision: attempt.revision, method: attempt.method, phase: attempt.phase,
+        startedAt: attempt.startedAt, finishedAt: attempt.finishedAt, error: attempt.error,
+        inputSha256: attempt.inputSha256, responseSha256: attempt.responseSha256 });
+    }
+    return attempts.sort((a, b) => b.startedAt.localeCompare(a.startedAt) || a.id.localeCompare(b.id));
+  }
+  async function attemptsPage(input = {}) {
+    fields(input, ['offset', 'limit', 'expectedSnapshot'], 'GRPC_ATTEMPTS_PAGE_FIELDS_INVALID');
+    const offset = input.offset ?? 0, limit = input.limit ?? 50;
+    if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 250)
+      fail('GRPC_ATTEMPTS_PAGE_RANGE_INVALID');
+    if (offset && input.expectedSnapshot === undefined) fail('GRPC_ATTEMPTS_SNAPSHOT_REQUIRED', 409);
+    const items = await attemptInventory(), snapshot = sha256(canonical(items));
+    if (input.expectedSnapshot !== undefined && identifier(input.expectedSnapshot) !== snapshot)
+      fail('GRPC_ATTEMPTS_SNAPSHOT_CHANGED', 409);
+    if (offset > items.length) fail('GRPC_ATTEMPTS_PAGE_RANGE_INVALID');
+    return { schema: 'stellar-forge.grpc-workspace-attempt-page.v1', total: items.length, snapshot, offset,
+      items: items.slice(offset, offset + limit), nextOffset: offset + limit < items.length ? offset + limit : null };
+  }
   async function state() {
     lease.assertHeld();
     const revisions = structuredClone(revisionIndex);
@@ -145,18 +172,11 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     for (const file of await readdir(folders.intents)) {
       if (file.endsWith('.json') && UUID.test(file.slice(0, -5))) intents.push(await readJson(join(folders.intents, file), 65536));
     }
-    const attempts = [];
-    for (const file of await readdir(folders.attempts)) {
-      if (!file.endsWith('.json') || !UUID.test(file.slice(0, -5))) continue;
-      const attempt = await readJson(join(folders.attempts, file), 65536);
-      attempts.push({ id: attempt.id, revision: attempt.revision, method: attempt.method, phase: attempt.phase,
-        startedAt: attempt.startedAt, finishedAt: attempt.finishedAt, error: attempt.error,
-        inputSha256: attempt.inputSha256, responseSha256: attempt.responseSha256 });
-    }
+    const attempts = await attemptInventory();
     return { schema: 'stellar-forge.grpc-workspace-state.v1', stateDirectory: root, currentRevision: currentId(),
       generation: current?.generation ?? 0, revisions: revisions.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       prepared: prepared.sort((a, b) => b.createdAt.localeCompare(a.createdAt)), intents,
-      attempts: attempts.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50),
+      attempts: attempts.slice(0, 50),
       attemptCount: attempts.length, runtime: runtime() };
   }
   const save = body => execute(() => saveInside(body));
@@ -181,7 +201,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   };
   const review = body => execute(async () => {
     selected(body.revision); const saved = await revision(body.revision);
-    if (!saved.bundle) fail('GRPC_SELECT_AT_LEAST_ONE_UNARY_METHOD');
+    if (!saved.bundle) fail('GRPC_SELECT_AT_LEAST_ONE_SINGLE_REQUEST_METHOD');
     const source = await createGrpcSource(saved.source, saved.protoSource, { env: environment, contract: saved.contract });
     try {
       const observed = await source.ready();
@@ -192,23 +212,42 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await atomicJson(join(root, 'review-' + saved.id + '.json'), report); return report;
     } finally { await source.close(); }
   });
-  async function attemptResult(id, recover = false) {
+  const incompleteStreamAction = 'Inspect the retained response prefix and upstream outcome. An interrupted or non-OK stream is not complete; a new intentional request needs a new operation ID.';
+  async function attemptResult(id, recover = false, inspectStream = true) {
     const file = join(folders.attempts, identifier(id, UUID) + '.json'), saved = await optional(file, 65536);
     if (!saved) return null;
     const inputBytes = await readBytes(join(folders.attempts, id + '.input'), 33554432);
     const input = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(inputBytes));
     if (sha256(canonical(input)) !== saved.inputSha256) fail('GRPC_CALL_INPUT_CHANGED', 409);
     const result = await optional(join(folders.attempts, id + '.output'), 17825792);
+    const streaming = saved.responseFormat === 'ndjson';
+    if (streaming && saved.responseSha256 && !result) fail('GRPC_STREAM_TERMINAL_RESULT_MISSING', 409);
     if (result) {
       if (result.id !== id || result.fingerprint !== saved.fingerprint ||
           result.sha256 !== sha256(canonical(result.output))) fail('GRPC_CALL_OUTPUT_CHANGED', 409);
-      if (saved.phase !== 'COMPLETED' && recover) {
-        Object.assign(saved, { phase: 'COMPLETED', responseSha256: result.sha256, finishedAt: result.completedAt });
+      const phase = streaming && !result.output.complete ? 'OUTCOME_UNCONFIRMED' : 'COMPLETED';
+      if (saved.phase !== phase && recover) {
+        Object.assign(saved, { phase, responseSha256: result.sha256, finishedAt: result.completedAt,
+          ...(phase === 'OUTCOME_UNCONFIRMED' ? { nextAction: incompleteStreamAction } : {}) });
         await atomicJson(file, saved);
       }
       if (saved.responseSha256 && saved.responseSha256 !== result.sha256) fail('GRPC_CALL_OUTPUT_CHANGED', 409);
     }
-    return { ...saved, input, ...(result ? { output: result.output, outputRetained: true } : {}) };
+    let stream;
+    if (streaming && inspectStream) {
+      const selected = await revision(saved.revision);
+      try {
+        ({ capture: stream } = await inspectGrpcStream({ directory: folders.attempts, id,
+          fingerprint: saved.fingerprint, limits: selected.source.limits, expected: result?.output }));
+      } catch (issue) { if (issue.code !== 'ENOENT' || result) throw issue; }
+      if (stream && !result && saved.phase === 'ATTEMPTED' && recover) {
+        Object.assign(saved, { phase: 'OUTCOME_UNCONFIRMED', error: 'GRPC_STREAM_INTERRUPTED',
+          nextAction: incompleteStreamAction });
+        await atomicJson(file, saved);
+      }
+    }
+    return { ...saved, input, ...(result ? { output: result.output, outputRetained: true } : {}),
+      ...(stream ? { stream } : {}) };
   }
   const call = (body, { signal } = {}) => execute(async () => {
     selected(body.revision); identifier(body.id, UUID);
@@ -226,34 +265,71 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     const earlierInput = await optional(inputPath, 33554432);
     if (earlierInput && sha256(canonical(earlierInput)) !== inputSha256) fail('GRPC_CALL_ID_REUSED_WITH_DIFFERENT_INPUT', 409);
     if (!earlierInput) await writeJsonSnapshot(inputPath, input, 17825792);
+    const streaming = Boolean(saved.contract.methods[body.method].responseStream);
     const attempt = { schema: 'stellar-forge.grpc-workspace-call.v1', id: body.id, revision: saved.id,
-      fingerprint, method: body.method, inputSha256, phase: 'ATTEMPTED', startedAt: stamp() };
+      fingerprint, method: body.method, inputSha256, phase: 'ATTEMPTED', startedAt: stamp(),
+      ...(streaming ? { responseFormat: 'ndjson' } : {}) };
     await atomicJson(file, attempt, { exclusive: true });
+    const controller = new AbortController(), abort = () => controller.abort();
+    activeCall = { id: body.id, controller };
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
     let source, called = false;
     try {
+      controller.signal.throwIfAborted();
       source = await createGrpcSource(saved.source, saved.protoSource, { env: environment, contract: saved.contract });
-      called = true;
-      const output = await source.call(body.method, input, { signal });
+      let output;
+      if (streaming) {
+        output = await captureGrpcStream({ directory: folders.attempts, id: body.id, fingerprint,
+          limits: saved.source.limits, openStream() {
+            controller.signal.throwIfAborted(); called = true;
+            return source.stream(body.method, input, { signal: controller.signal });
+          } });
+      } else {
+        called = true;
+        output = await source.call(body.method, input, { signal: controller.signal });
+      }
       const result = { id: body.id, fingerprint, output, sha256: sha256(canonical(output)), completedAt: stamp() };
       await writeJsonSnapshot(join(folders.attempts, body.id + '.output'), result, 17825792);
-      Object.assign(attempt, { phase: 'COMPLETED', responseSha256: result.sha256, finishedAt: result.completedAt });
+      Object.assign(attempt, { phase: streaming && !output.complete ? 'OUTCOME_UNCONFIRMED' : 'COMPLETED',
+        responseSha256: result.sha256, finishedAt: result.completedAt,
+        ...(streaming && !output.complete ? { error: output.error ?? 'GRPC_STREAM_INCOMPLETE',
+          nextAction: incompleteStreamAction } : {}) });
     } catch (issue) {
       // A failed/cancelled transport is not proof that an upstream mutation was
       // not applied. The same operation ID returns its retained attempt.
       Object.assign(attempt, { phase: called ? 'OUTCOME_UNCONFIRMED' : 'NOT_STARTED',
         error: issue.code ?? 'GRPC_CALL_FAILED', ...(issue.grpcCode ? { grpcCode: issue.grpcCode } : {}),
-        finishedAt: stamp(), nextAction: called ?
+        finishedAt: stamp(), nextAction: called ? streaming ? incompleteStreamAction :
           'Inspect the upstream outcome. A new intentional request uses a new operation ID.' :
           'Correct the connection settings or environment, then submit a new intentional request.' });
-    } finally { await source?.close(); }
+    } finally {
+      signal?.removeEventListener('abort', abort);
+      try { await source?.close(); } finally { activeCall = null; }
+    }
     await atomicJson(file, attempt);
-    return attemptResult(body.id, true);
+    return attemptResult(body.id, true, false);
   });
   const readAttempt = body => execute(() => attemptResult(body.id, true));
+  const cancelCall = ({ id }) => {
+    lease.assertHeld(); identifier(id, UUID);
+    if (activeCall?.id === id) {
+      activeCall.controller.abort();
+      return { id, cancellationRequested: true, nextAction: 'Read this same attempt after its native terminal and retained file settle.' };
+    }
+    return { id, cancellationRequested: false, nextAction: 'Inspect the same retained attempt; no other request was cancelled.' };
+  };
+  const streamDownload = (body, { signal } = {}) => execute(async () => {
+    const attempt = await attemptResult(identifier(body.id, UUID), true, false);
+    if (!attempt || attempt.responseFormat !== 'ndjson') fail('GRPC_STREAM_ATTEMPT_REQUIRED', 404);
+    const saved = await revision(attempt.revision);
+    return inspectGrpcStream({ directory: folders.attempts, id: attempt.id, fingerprint: attempt.fingerprint,
+      limits: saved.source.limits, expected: attempt.output, signal, keepOpen: true });
+  });
   const prepare = body => execute(async () => {
     selected(body.revision); identifier(body.id, UUID);
     const saved = await revision(body.revision);
-    if (!saved.bundle) fail('GRPC_SELECT_AT_LEAST_ONE_UNARY_METHOD');
+    if (!saved.bundle) fail('GRPC_SELECT_AT_LEAST_ONE_SINGLE_REQUEST_METHOD');
     const intentPath = join(folders.intents, body.id + '.json'), target = join(folders.prepared, body.id);
     const intent = { schema: 'stellar-forge.grpc-workspace-prepare.v1', id: body.id,
       revision: saved.id, createdAt: stamp() };
@@ -307,14 +383,32 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   });
   async function stopInside() {
     if (!active) return runtime();
-    active.phase = 'DRAINING';
-    await atomicJson(join(root, 'run.json'), { ...runtime().active, pid: process.pid });
-    try {
-      await active.session.close();
-      previousRun = { id: active.id, releaseId: active.releaseId, revision: active.revision,
-        phase: 'STOPPED', startedAt: active.startedAt, endedAt: stamp() };
-      active = null; await atomicJson(join(root, 'run.json'), previousRun); return runtime();
-    } catch (issue) { active.phase = 'STOP_UNCONFIRMED'; throw issue; }
+    const owned = active, path = join(root, 'run.json');
+    owned.phase = 'DRAINING';
+    let recordingIssue;
+    try { await atomicJson(path, { ...runtime().active, pid: process.pid }); }
+    catch (issue) { recordingIssue = issue; }
+    // A full disk or failed status write must not prevent the owned native drain.
+    try { await owned.session.close(); }
+    catch (issue) {
+      owned.phase = 'STOP_UNCONFIRMED';
+      try { await atomicJson(path, { ...runtime().active, pid: process.pid }); }
+      catch (recordIssue) {
+        throw Object.assign(new AggregateError([issue, recordIssue], 'GRPC_WORKSPACE_STOP_FAILED'),
+          { code: 'GRPC_WORKSPACE_STOP_FAILED' });
+      }
+      throw issue;
+    }
+    previousRun = { id: owned.id, releaseId: owned.releaseId, revision: owned.revision,
+      phase: 'STOPPED', startedAt: owned.startedAt, endedAt: stamp() };
+    active = null;
+    try { await atomicJson(path, previousRun); }
+    catch (issue) {
+      if (recordingIssue) throw Object.assign(new AggregateError([recordingIssue, issue],
+        'GRPC_WORKSPACE_STOP_RECORD_FAILED'), { code: 'GRPC_WORKSPACE_STOP_RECORD_FAILED' });
+      throw issue;
+    }
+    return runtime();
   }
   const stop = () => execute(stopInside);
   const download = body => execute(async () => {
@@ -376,13 +470,23 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   function close() {
     if (closePromise) return closePromise;
     closing = true;
+    activeCall?.controller.abort();
     closePromise = (async () => {
-      try { await busy; await releaseConsole?.close(); releaseConsole = null; await stopInside(); }
-      finally { await lease.close(); }
+      // The request owns its failure; shutdown still closes every owned runtime.
+      try { await busy; } catch {}
+      const issues = [];
+      try { await releaseConsole?.close(); releaseConsole = null; } catch (issue) { issues.push(issue); }
+      try { await stopInside(); } catch (issue) { issues.push(issue); }
+      try { await lease.close(); } catch (issue) { issues.push(issue); }
+      if (issues.length === 1) throw issues[0];
+      if (issues.length) throw Object.assign(new AggregateError(issues, 'GRPC_WORKSPACE_CLOSE_FAILED'),
+        { code: 'GRPC_WORKSPACE_CLOSE_FAILED' });
     })();
     return closePromise;
   }
   try {
+    // The same original writer lease owns this check and every later source read.
+    if (expectedBinding !== undefined) await assertGrpcWorkspaceBinding(root, expectedBinding);
     for (const directory of Object.values(folders)) await privateDirectory(directory, true);
     revisionIndex = await optional(join(root, 'revisions.json'), 1048576) ?? [];
     if (!Array.isArray(revisionIndex) || revisionIndex.some(row => !REV.test(row.id))) fail('GRPC_WORKSPACE_INDEX_INVALID', 409);
@@ -401,11 +505,12 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await saveInside({ source, protoSource, plan, baseRevision: null, title: 'gRPC merchant' });
     }
   } catch (issue) { await lease.close(); throw issue; }
-  return { stateDirectory: root, state, runtime, save, capture, open, checkout, method, review,
-    call, readAttempt, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
+  return { stateDirectory: root, state, attemptsPage, runtime, save, capture, open, checkout, method, review,
+    call, readAttempt, cancelCall, streamDownload, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
     bindOperationsNavigationOrigin(origin) {
       const url = new URL(origin);
       if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.origin !== origin) fail('GRPC_WORKSPACE_ORIGIN_INVALID');
       navigationOrigin = origin;
     } };
 }
+

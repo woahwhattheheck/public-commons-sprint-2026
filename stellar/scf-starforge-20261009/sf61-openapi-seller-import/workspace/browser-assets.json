@@ -134,6 +134,48 @@
         "../har/browser.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/har/review-browser.mjs",
+      [
+        "../har/review-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/har/ui.js",
+      [
+        "../har/ui.js",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/har/model.mjs",
+      [
+        "../har/model.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/har/review.css",
+      [
+        "../har/review.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/route-sheet-model.mjs",
+      [
+        "route-sheet-model.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/route-sheet-browser.mjs",
+      [
+        "route-sheet-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

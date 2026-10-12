@@ -2,11 +2,11 @@
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { pipeline } from 'node:stream/promises';
+import { createVerifiedDownloads } from './verified-downloads.mjs';
 import { requireValue } from './files.mjs';
 
-async function body(request, maximum = 65536) {
-  requireValue(Number.isSafeInteger(maximum) && maximum > 0 && maximum <= 4*1024*1024,'BODY_LIMIT_INVALID');
+async function body(request, maximum = 65536, ceiling = 4*1024*1024) {
+  requireValue(Number.isSafeInteger(maximum) && maximum > 0 && maximum <= ceiling,'BODY_LIMIT_INVALID');
   requireValue((request.headers['content-type'] ?? '').split(';')[0] === 'application/json', 'JSON_REQUIRED',415);
   let count = 0; const parts = [];
   for await (const part of request) {
@@ -18,10 +18,11 @@ async function body(request, maximum = 65536) {
   requireValue(value !== null && typeof value === 'object' && !Array.isArray(value),'JSON_OBJECT_REQUIRED');
   return value;
 }
-export async function serveLibrary(library,{port=0,additionalAssets=[],authenticatedRoute=[]} = {}) {
+export async function serveLibrary(library,{port=0,additionalAssets=[],authenticatedRoute=[],maxBodyBytes=4*1024*1024} = {}) {
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535,'PORT_INVALID');
-  const token = randomBytes(32).toString('hex'), transfers = new Map(), controllers = new Set(), ownedTransfers = new Set();
-  let transferSlots = 0;
+  requireValue(Number.isSafeInteger(maxBodyBytes) && maxBodyBytes >= 65536 && maxBodyBytes <= 48*1024*1024,'BODY_LIMIT_INVALID');
+  const token = randomBytes(32).toString('hex'), controllers = new Set(), pending = new Set();
+  const downloads = createVerifiedDownloads();
   const assets = new Map(await Promise.all([['/','index.html','text/html'],['/app.js','app.js','text/javascript'],
     ['/style.css','style.css','text/css']].map(async ([route,file,type]) =>
       [route,{bytes:await readFile(new URL(file,import.meta.url)),type}])));
@@ -35,7 +36,7 @@ export async function serveLibrary(library,{port=0,additionalAssets=[],authentic
   }
   const handlers=typeof authenticatedRoute==='function' ? [authenticatedRoute] : authenticatedRoute;
   requireValue(Array.isArray(handlers) && handlers.every(handler=>typeof handler==='function'),'EXTENSION_HANDLER_INVALID');
-  let origin, lastScan = null, scanWork = null, closing = false;
+  let origin, lastScan = null, scanWork = null, closing = false, closePromise;
   const server = createServer((request,response) => {
     const controller = new AbortController(); controllers.add(controller);
     const deadline = setTimeout(() => controller.abort(new Error('REQUEST_DEADLINE')),120000);
@@ -46,24 +47,7 @@ export async function serveLibrary(library,{port=0,additionalAssets=[],authentic
       response.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Content-Length':bytes.length});
       response.end(bytes);
     };
-    const registerDownload = async produce => {
-      requireValue(transferSlots < 4,'DOWNLOAD_CAPACITY_REACHED',429);
-      transferSlots++;
-      let saved, published = false;
-      try {
-        saved = await produce(controller.signal);
-        controller.signal.throwIfAborted(); requireValue(!closing,'SERVER_CLOSING',503);
-        const key = randomBytes(24).toString('hex');
-        let released = false;
-        const transfer = {saved,async release() {
-          if(released)return;released=true;transferSlots--;ownedTransfers.delete(transfer);
-          transfers.delete(key);clearTimeout(transfer.timer);await saved.dispose();
-        }};
-        transfer.timer = setTimeout(() => {void transfer.release().catch(() => {});},60000);
-        transfer.timer.unref();transfers.set(key,transfer);ownedTransfers.add(transfer);published=true;
-        return {url:'/transfer/' + key,bytes:saved.bytes,sha256:saved.sha256};
-      } finally {if(!published){transferSlots--;if(saved)await saved.dispose();}}
-    };
+    const registerDownload = produce => downloads.register(produce, { signal: controller.signal });
     const run = async () => {
       response.setHeader('Cache-Control','no-store');
       response.setHeader('X-Content-Type-Options','nosniff');
@@ -79,19 +63,7 @@ export async function serveLibrary(library,{port=0,additionalAssets=[],authentic
         response.writeHead(200,{'Content-Type':asset.type + '; charset=utf-8','Content-Length':asset.bytes.length});
         response.end(asset.bytes); return;
       }
-      // A single-use, short-lived capability addresses only already-verified
-      // bytes. Native browser downloads stream to disk without buffering a Blob.
-      if (url.pathname.startsWith('/transfer/') && request.method === 'GET') {
-        const key = url.pathname.slice('/transfer/'.length), transfer = transfers.get(key);
-        requireValue(transfer,'DOWNLOAD_EXPIRED',404);
-        transfers.delete(key); clearTimeout(transfer.timer);
-        try {
-          response.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':transfer.saved.bytes,
-            'Content-Disposition':`attachment; filename="resource-${transfer.saved.resource.id.slice(0,12)}"; filename*=UTF-8''${encodeURIComponent(transfer.saved.resource.name).replaceAll("'",'%27')}`});
-          await pipeline(transfer.saved.file.createReadStream({start:0,autoClose:false}),response,{signal:controller.signal});
-        } finally { await transfer.release(); }
-        return;
-      }
+      if (await downloads.serve({ request, response, path: url.pathname, signal: controller.signal })) return;
       requireValue(request.headers.authorization === 'Bearer ' + token,'PRIVATE_SESSION_REQUIRED',401);
       const route = url.pathname, method = request.method;
       if (method === 'GET' && route === '/api/status') return send({...library.status(),lastScan,
@@ -116,7 +88,7 @@ export async function serveLibrary(library,{port=0,additionalAssets=[],authentic
       if (method === 'PUT' && route === '/api/selection') return send(library.select((await body(request)).id));
       for (const handler of handlers) {
         if (await handler({request,response,url,send,signal:controller.signal,
-          body:(maximum)=>body(request,maximum),registerDownload})) return;
+          body:(maximum)=>body(request,maximum,maxBodyBytes),registerDownload})) return;
       }
       const selected = /^\/api\/resources\/([a-f0-9]{64})(?:\/(preview|download|note|revisions))?$/.exec(route);
       requireValue(selected,'ROUTE_NOT_FOUND',404);
@@ -131,23 +103,28 @@ export async function serveLibrary(library,{port=0,additionalAssets=[],authentic
       }
       requireValue(false,'METHOD_NOT_ALLOWED',405);
     };
-    run().catch(e => {
+    const work = run().catch(e => {
       if (response.headersSent || response.destroyed) response.destroy();
       else send({error:typeof e.code === 'string' && /^[A-Z0-9_]{1,100}$/.test(e.code) ? e.code : 'RESOURCE_OPERATION_FAILED'},e.status ?? 500);
     }).finally(() => {clearTimeout(deadline); controllers.delete(controller); response.off('close',disconnected);});
+    pending.add(work); work.finally(() => pending.delete(work)).catch(() => {});
   });
   server.requestTimeout = 30000; server.headersTimeout = 10000; server.maxRequestsPerSocket = 100;
   await new Promise((resolve,reject) => {server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
   origin = new URL(`http://127.0.0.1:${server.address().port}`).origin;
   return {origin,url:origin + '/#' + token,token,server,
-    async close() {
-      if (closing) return;
+    close() {
+      if (closePromise) return closePromise;
       closing = true;
       for (const controller of controllers) controller.abort(new Error('SERVER_CLOSED'));
       library.cancelScan();
-      for (const transfer of ownedTransfers) await transfer.release();
-      transfers.clear();
-      await new Promise(resolve => {server.close(resolve);server.closeAllConnections();});
-      if (scanWork) await scanWork;
+      closePromise = (async () => {
+        const results = await Promise.allSettled([downloads.close(), ...pending,
+          new Promise(resolve => {server.close(resolve);server.closeAllConnections();}),
+          ...(scanWork ? [scanWork] : [])]);
+        const errors = results.filter(item => item.status === 'rejected').map(item => item.reason);
+        if (errors.length) throw new AggregateError(errors, 'RESOURCE_SERVER_CLOSE_FAILED');
+      })();
+      return closePromise;
     }};
 }

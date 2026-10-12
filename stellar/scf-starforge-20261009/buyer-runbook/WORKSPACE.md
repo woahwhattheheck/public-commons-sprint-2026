@@ -24,12 +24,13 @@ Keep their original signer, policy, ledger, evidence and request-body references
 on the same trusted operator host. Each selected operation has its own stable
 native intent ID.
 
-Start the workspace from the same controlling terminal used for SF81 approval:
+Start the original workspace with browser approval selected:
 
 ```sh
 node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
   --state /private/acquisitions/workspace \
   --configs /private/acquisitions/buyer-configs \
+  --approval-mode browser \
   --port 8460
 ```
 
@@ -38,8 +39,16 @@ the configuration directory must already exist. Private directories use `0700`
 on POSIX systems. The new workspace and its files use `0700` and `0600`.
 
 Open the printed `http://127.0.0.1:PORT` URL. Port `0` selects an available port.
-The server binds only to loopback. The page shows whether a controlling terminal
-is available, along with the selected configuration directory.
+The server binds only to loopback. Keep the host process running while using the
+workspace. The page reports browser approval support independently of whether
+a controlling terminal exists, along with the selected configuration directory.
+
+For the existing terminal workflow, use `--approval-mode terminal` and start in
+the controlling terminal that receives the original SF81 prompt. The direct
+command defaults to terminal mode. Approval mode is chosen by the launching host;
+select `--approval-mode browser` again on each browser reopen. Applications
+reviews the selected runtime and starts this same original workspace; see
+[BROWSER_WORKSPACE.md](BROWSER_WORKSPACE.md) for its source and lifecycle contract.
 
 To reopen, use the same state directory. `--configs` can be omitted after the
 first start. To include an existing original runbook, add its directory:
@@ -47,6 +56,7 @@ first start. To include an existing original runbook, add its directory:
 ```sh
 node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
   --state /private/acquisitions/workspace \
+  --approval-mode browser \
   --run /private/acquisitions/earlier-run
 ```
 
@@ -91,6 +101,7 @@ when executing, or uses its existing local provider.
 node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
   --state /private/acquisitions/workspace \
   --configs /private/acquisitions/buyer-configs \
+  --approval-mode browser \
   --operator-settings /private/acquisitions/local-operator.json
 ```
 
@@ -124,7 +135,9 @@ local policy and identity. See [OPERATOR_SETUP.md](OPERATOR_SETUP.md).
    editable plan rows are preserved; an initialized plan starts a new draft.
 
 Preparation does not load a wallet or send a payment. The original buyer owns
-live terms and terminal approval when the acquisition executes. Each received
+live terms and operator approval when the acquisition executes. Browser mode
+presents that same native review in the acquisition; terminal mode retains its
+original terminal prompt. Each received
 stable intent is bound to one local prepared request. The workspace publishes
 the ordinary source config only after native setup is complete, and records the
 ready reference last. Repeating preparation after an interrupted final publication
@@ -206,19 +219,43 @@ saved resources, local setup errors and the original execution owner. Use
 untouched operation from its row.
 
 The workspace calls the original `executeRunbook` API. That engine launches its
-original SF88 CLI serially, preserving original live-term lookup, SF81 controlling
-terminal approval, signer, SF36 reservations and SF82/SF31 evidence and response
-handling. Continue the prompt in the terminal that started the workspace.
+original SF88 CLI serially, preserving live-term lookup, the SF81 native review,
+configured signer, SF36 reservations and SF82/SF31 evidence and response handling.
+Terminal mode keeps its prompt in the controlling terminal. Browser mode presents
+the original review in **Purchase approval**, inside the selected acquisition.
 
-One workspace process owns one acquisition execution at a time, keeping its
-terminal prompts serial across all opened runs. The original per-run lease also
-coordinates with existing CLI processes. Previously attempted operations keep
-their original status and are skipped by resumed execution.
+The panel identifies the acquisition, execution, operation and stable purchase
+intent. It shows the exact amount in atomic units, method and resource, network,
+asset, recipient, scheme, timeout, operator/service and request-body identity.
+**Complete payment terms** retains every accepted term. **Request identity and
+native review** includes the original request and accepted-terms digests and the
+complete native review. **Budget at review** shows available capacity under all five original spending
+limits; capacity is checked again when the operator records approval.
+
+Choose **Approve purchase** or **Reject purchase** for that exact live request.
+After a reservation is approved, follow the original payment, resource and
+accounting result below. A completed review remains readable with its execution;
+it cannot approve another purchase. Moving between acquisitions or operations
+resets the old selection before loading the newly selected native review.
+
+A disconnected or expired review disables purchase decisions. Use **Refresh
+approval** or **Refresh original operation** to read the same execution and its
+recorded result. A lost decision response is reconciled from that original state.
+The browser refresh path does not launch another operation. Expiry ends that
+review's decision window; inspect the retained native result before preparing
+further work.
+
+One workspace process owns one acquisition execution at a time. The original
+per-run lease also coordinates with existing CLI processes. Previously attempted
+operations keep their original status and are skipped by resumed execution.
 
 **Cancel current execution** addresses the exact execution shown in the page.
-It aborts the workspace's own controller, lets the original buyer finish its
-cancellation and output capture, and then stops launching further operations.
-Closing the workspace with `Ctrl+C` or `SIGTERM` follows the same drain path.
+It disables further approval, retires the pending native review, aborts the
+workspace's own controller and lets the original buyer finish its cancellation
+and output capture. The run stops launching further operations. Read its saved
+payment, resource and accounting outcome after cleanup.
+Closing the workspace with `Ctrl+C` or `SIGTERM`, or **Stop** in Applications,
+follows the same drain path before closing the original approval broker.
 Refreshes and other browser windows continue to read original state while the
 process owns the acquisition. Incomplete rows with a running original lease
 are displayed as in progress.
@@ -318,13 +355,22 @@ plan. Create-only file publication retains byte identity across interrupted and
 concurrent continuations. Existing CLI callers retain their original behavior.
 
 The browser entrypoint is `startRunbookWorkspace({directory,configsDirectory,
-operatorSettings,runs,port})` from `workspace.mjs`. It returns `{url,server,model,close}`. The
-existing `buyer-runbook` package alias continues to target `cli.mjs`; the new
+operatorSettings,paidFileClaimEnvs,runs,port,approvalMode,expectedSelectionSha256,
+signal})` from `workspace.mjs`. It returns `{url,server,model,launch,close}`.
+`approvalMode` is `BROWSER` or `TERMINAL`; the default preserves terminal callers.
+The optional signal cancels startup or drains the live host. The launch record
+and `GET /api/launch` identify the actual selected source, directories, process
+instance, loopback URL and approval availability. The read-only
+`inspectRunbookWorkspaceSelection` helper binds the same source and inputs for
+managed review, Start and Reopen.
+
+The existing `buyer-runbook` package alias continues to target `cli.mjs`; the
 `workspace` subcommand is available through that alias. Include the complete
 buyer-runbook component so `handoff-intake.mjs`, `client-intake.mjs`, the
 `workspace-ui` modules and [CLIENT_SDK.md](CLIENT_SDK.md) travel with the model
-and server. Its original sibling dependencies remain the
-same native buyer and runbook components. There is no new package dependency.
+and server. Browser mode also uses the original sibling SF81 broker, bridge and
+shared `browser-ui` assets from that selected runtime. There is no new package
+dependency.
 
 The loopback server checks Host, Origin and browser fetch context. Mutations use
 the current workspace session header and a JSON body. Reports and resource bytes
@@ -337,7 +383,34 @@ ticket metadata without the bearer. Intake mutations share the original runbook
 metadata lease and workspace shutdown queue. `executeRunbook` accepts an optional
 trusted `environmentForOperation(op)` function; it resolves after original input
 preflight and before the durable started record. This callback is code supplied
-by the local workspace, never a manifest field or a received setting.
+by the local workspace, never a manifest field or a received setting. The host
+keeps each prepared operator's original three keys and selects the SF81 transport
+for that operation. It checks the selected channel before the attempt starts.
+
+The shared panel is served at `/approval-ui/approval-panel.mjs`, with
+`/approval-ui/approval.css`. `GET /api/approval` returns:
+
+```json
+{
+  "approvalMode": "BROWSER",
+  "approvalAvailable": true,
+  "current": null,
+  "approval": null
+}
+```
+
+`current` and `approval` are explicitly `null` when absent. During an operation,
+`current` is `{runId,executionId,operationId,intentId}`, with its actual native
+identities. The approval field contains the original SF81 broker object,
+including its exact native review and budget.
+An authoritative successful read renders that object with the matching intent;
+a local busy redraw never declares a disconnected review fresh.
+
+`POST /api/approval` uses the existing `x-runbook-session` header and exactly
+`{runId,executionId,operationId,intent,approvalId,requestSha256,decision}`.
+The host matches every selected identity and delegates the explicit
+`approve` or `reject` decision to the original broker. The private socket and
+transport token are selected by the host and stay outside browser payloads.
 
 ## Back up acquisitions
 
