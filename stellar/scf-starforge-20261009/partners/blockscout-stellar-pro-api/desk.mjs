@@ -63,7 +63,10 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
       if (req.method === 'POST' && !origins.has(req.headers.origin))
         return respond(res, 403, { error: 'BLOCKSCOUT_ORIGIN_REQUIRED' });
       if (req.method === 'GET' && url.pathname === '/api/status' && !url.search)
-        return respond(res, 200, { ...application.snapshot(), originalMerchant: { seller: seller.url,
+        return respond(res, 200, { ...application.snapshot(), deployment: {
+          mode: seller.mode === 'NATIVE_X402' ? 'paid' : 'challenge-only',
+          merchantMode: seller.mode, lifecycle: seller.lifecycle.snapshot(),
+        }, originalMerchant: { seller: seller.url,
           operations: operations.url, availability: operations.availabilityUrl, fulfillment: operations.url + '/fulfillment' } });
       if (req.method === 'GET' && url.pathname === '/api/navigation' && !url.search)
         return respond(res, 200, { operations: operations.url, availability: operations.availabilityControlUrl,
