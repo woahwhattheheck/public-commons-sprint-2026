@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 import zipfile
+from domain import Problem
 
 APP_FILES = ("native.py", "domain.py", "store.py", "exports.py", "portable.py", "server.py",
              "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs")
@@ -49,7 +50,15 @@ Use Period review to inspect current source/coding decisions, name the reviewer 
 """
 
 
-def complete_project(store):
+def complete_project(store, expected_revision=None):
+    with store.lock:
+        state = store.state()
+        if expected_revision is not None and (type(expected_revision) is not int or expected_revision != state["revision"]):
+            raise Problem("WORKSPACE_CHANGED", "Refresh the original workspace revision before exporting this complete project", 409)
+        return _complete_project(store, state)
+
+
+def _complete_project(store, state):
     app = Path(__file__).resolve().parent
     entries = {}
     for name in APP_FILES:
@@ -66,6 +75,7 @@ def complete_project(store):
     entries["README.md"] = GUIDE.encode()
     entries["prepare_private.py"] = PREPARE.encode()
     entries["manifest.json"] = (json.dumps({"schema": "stellar-forge.buyer-expense-private-project.v1",
+        "workspace": state["id"], "revision": state["revision"],
         "files": [{"path": name, "bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()} for name, value in sorted(entries.items())]}, indent=2) + "\n").encode()
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
