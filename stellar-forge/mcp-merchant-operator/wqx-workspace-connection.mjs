@@ -190,7 +190,7 @@ export class WqxWorkspaceConnection {
     const { token, ...workspace } = value; this.#workspace = workspace;
     await this.assertCurrent(); return this;
   }
-  async request(path, input, { maximumRequestBytes = 2 * 1024 * 1024 } = {}) {
+  async request(path, input, { maximumRequestBytes = 2 * 1024 * 1024, retainErrorResponse = false } = {}) {
     if (!this.#launch || typeof path !== 'string' || !path.startsWith('/api/') || path.startsWith('//') || /[\r\n#]/.test(path))
       throw failure('INVALID_PARAMS', 'Select an original WQX operation.');
     const changing = input !== undefined, body = changing ? JSON.stringify(input) : undefined;
@@ -209,7 +209,7 @@ export class WqxWorkspaceConnection {
           : 'The current managed host could not return the original response.');
       failureValue.launchId = this.#launch.value.launchId; failureValue.operation = path; throw failureValue;
     }
-    if (!response.ok) {
+    if (!response.ok && !retainErrorResponse) {
       let value;
       try { value = wqxDecode(await responseBytes(response, 65536)); }
       catch { throw failure('WQX_HTTP_ERROR', 'The original WQX host returned HTTP ' + response.status + '.'); }
