@@ -1,6 +1,6 @@
 // MIT. Recover a paid Dataset attempt through the original SF36 finality worker.
 import {constants} from 'node:fs';
-import {open,lstat,mkdir,realpath,link,unlink} from 'node:fs/promises';
+import {open,lstat,mkdir,realpath,link,unlink,readdir} from 'node:fs/promises';
 import {dirname,join,isAbsolute,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {need,execution} from './config.mjs';
@@ -70,6 +70,26 @@ async function createAtomic(path,value) {
   const parent=await open(dirname(path),constants.O_RDONLY);
   try {await parent.sync();}finally{await parent.close();}
  } finally {await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
+ // A killed earlier publication can leave its completed file with its own
+ // temporary hard link. Retire only aliases of this exact published inode.
+ const target=await lstat(path);
+ if(target.nlink>1) {
+  let removed=false;
+  for(const name of await readdir(dirname(path))) {
+   if(!/^\.dataset-recovery-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(name))continue;
+   const candidate=join(dirname(path),name);
+   let info;
+   try {info=await lstat(candidate);}catch(error){if(error.code==='ENOENT')continue;throw error;}
+   if(!info.isFile()||info.isSymbolicLink()||info.dev!==target.dev||info.ino!==target.ino)continue;
+   const current=await lstat(path);
+   need(current.dev===target.dev&&current.ino===target.ino,'DATASET_LOST_OUTPUT_PUBLICATION_CHANGED');
+   try {await unlink(candidate);removed=true;}catch(error){if(error.code!=='ENOENT')throw error;}
+  }
+  if(removed) {
+   const parent=await open(dirname(path),constants.O_RDONLY);
+   try {await parent.sync();}finally{await parent.close();}
+  }
+ }
  const retained=await file(path);
  need(same(retained.value,value),'DATASET_LOST_OUTPUT_SELECTION_CONFLICT');
  return {path,bytes:retained.raw.length,sha256:digest(retained.raw),value:retained.value};
