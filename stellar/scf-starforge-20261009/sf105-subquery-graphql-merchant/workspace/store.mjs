@@ -107,6 +107,22 @@ async function acquireWriter(root) {
   } catch (error) { await file.close(); throw error; }
 }
 
+/** Read an original immutable revision without acquiring a writer or starting a runtime. */
+export async function readWorkspaceRevision(directory, id, revision) {
+const root = await privateDir(resolve(directory)), projects = join(root, 'projects');
+  projectName(id);
+  const folder = await privateDir(join(projects, id));
+  const head = await regular(join(folder, 'head.json'), 4096);
+  if (head.id !== id || !Number.isSafeInteger(head.revision) || head.revision < 1) fail('Saved project head is invalid.');
+  const selected = revision ?? head.revision;
+  if (!Number.isSafeInteger(selected) || selected < 1 || selected > head.revision) fail('Unknown project revision.', 404);
+  const text = await regular(join(folder, selected + '.json'));
+  const value = validateVersion(text, id);
+  if (value.revision !== selected || selected === head.revision && head.inputDigest !== value.inputDigest)
+    fail('Saved project revision is inconsistent.');
+  return { ...value, currentRevision: head.revision };
+}
+
 /** One process owns the local writer; readers never load partial version files. */
 export async function openWorkspaceStore(directory) {
   if (typeof directory !== 'string' || !directory) fail('Choose --workspace PRIVATE_DIRECTORY.');
@@ -118,19 +134,7 @@ export async function openWorkspaceStore(directory) {
   const previews = await privateDir(join(root, 'previews'), true);
   const writer = await acquireWriter(root);
   let busy = false, closed = false;
-  async function read(id, revision) {
-    projectName(id);
-    const folder = await privateDir(join(projects, id));
-    const head = await regular(join(folder, 'head.json'), 4096);
-    if (head.id !== id || !Number.isSafeInteger(head.revision) || head.revision < 1) fail('Saved project head is invalid.');
-    const selected = revision ?? head.revision;
-    if (!Number.isSafeInteger(selected) || selected < 1 || selected > head.revision) fail('Unknown project revision.', 404);
-    const text = await regular(join(folder, selected + '.json'));
-    const value = validateVersion(text, id);
-    if (value.revision !== selected || selected === head.revision && head.inputDigest !== value.inputDigest)
-      fail('Saved project revision is inconsistent.');
-    return { ...value, currentRevision: head.revision };
-  }
+  const read = (id, revision) => readWorkspaceRevision(root, id, revision);
   async function list() {
     const entries = await readdir(projects, { withFileTypes: true }), items = [];
     for (const entry of entries.filter(value => value.isDirectory() && NAME.test(value.name))) {

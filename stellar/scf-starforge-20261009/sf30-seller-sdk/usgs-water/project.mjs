@@ -236,6 +236,7 @@ export async function openWaterProject(directory, { transport, env = process.env
       mapping, previousExport, previousEditionDirectory };
   }
   async function nativeDss(work) {
+    active();
     const controller = new AbortController(); dssControllers.add(controller);
     try { return await work(controller.signal); } finally { dssControllers.delete(controller); }
   }
