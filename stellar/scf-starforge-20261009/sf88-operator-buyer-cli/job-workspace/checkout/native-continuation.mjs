@@ -23,15 +23,18 @@ import { startJobCustomerWorkspace } from '../server.mjs';
 import { readJobWorkspaceLaunch } from '../launch.mjs';
 import { readJobCheckoutTicket } from './contract.mjs';
 
-const operation = 'SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012';
-const jobId = 'checkout:2026.10', origin = 'https://jobs-merchant.example';
+const origin = 'https://jobs-merchant.example';
 const fixture = resolve(process.env.SF_JOBS_CHECKOUT_FIXTURE_DIR ?? '/');
 assert.notEqual(fixture, '/', 'Use the original native-continuation.py launcher.');
 const marker = await readJson(join(fixture, 'fixture.json'));
+const browserApproval = marker.approvalMode === 'BROWSER';
+const operation = browserApproval ? 'SCF-JOB-BROWSER-APPROVAL-0B8D-20261012'
+  : 'SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012';
+const jobId = browserApproval ? 'browser-checkout:2026.10' : 'checkout:2026.10';
 assert.equal(marker.schema, 'stellar-forge.sf88.job-checkout-journey.v1');
 assert.equal(marker.operation, operation);
 assert.equal(marker.fixtureDirectory, fixture);
-assert.equal(fixture, join(marker.retainedDirectory, 'checkout-continuation'));
+assert.equal(fixture, join(marker.retainedDirectory, browserApproval ? 'checkout-browser-continuation' : 'checkout-continuation'));
 const retained = marker.retainedDirectory, runtimeDirectory = resolve(fileURLToPath(new URL('../../', import.meta.url)));
 assert.equal(marker.runtimeDirectory, runtimeDirectory);
 assert.equal(process.env.NODE_EXTRA_CA_CERTS, join(fixture, 'tls', 'tls.pem'));
@@ -103,9 +106,68 @@ async function api(path, body, method) {
     { code: 'CHECKOUT_API_FAILED', status: response.status });
   return value;
 }
+// This launcher can approve only its existing disposable native fixture.
+// Read the SF62 review through the same authenticated route used by the browser.
+async function approveBrowserFixture(taskId) {
+  const path = '/api/job-checkout/checkouts/' + checkoutId + '/approval';
+  const handoff = await readJson(handoffPath);
+  assert.equal(handoff.job.id, jobId); assert.equal(handoff.purchase.orderReference, jobId);
+  const body = Buffer.from(JSON.stringify({ jobId }));
+  let snapshot;
+  const deadline = Date.now() + 80000;
+  while (Date.now() < deadline) {
+    assert.equal(interrupted, false, 'Browser fixture was interrupted.');
+    const current = await api(path);
+    assert.equal(current.mode, 'BROWSER');
+    assert.equal(current.checkoutId, checkoutId); assert.equal(current.intentId, intentId);
+    if (current.snapshot?.state === 'AWAITING_OPERATOR') {
+      assert.equal(current.taskId, taskId); assert.equal(current.executing, true);
+      snapshot = current.snapshot; break;
+    }
+    const task = model.checkout.get(checkoutId).task;
+    assert.equal(task?.id, taskId, 'Original checkout task changed while loading its live review.');
+    assert.equal(task.state, 'RUNNING', JSON.stringify(task));
+    await new Promise(done => setTimeout(done, 100));
+  }
+  assert.ok(snapshot, 'Original SF62 browser review was not received.');
+  assert.equal(snapshot.intentId, intentId);
+  const expected = {
+    schema: 'stellar-forge.sf62.operator-review.v1',
+    request_id: intentId, actor: 'fixture-job-checkout', service: 'fixture-application-jobs',
+    resource: origin + '/analysis?sf98_order=' + encodeURIComponent(jobId), method: 'POST',
+    scheme: 'exact', network: 'stellar:testnet', asset: fixtureAsset, pay_to: 'UNVERIFIED_DEMO_RECIPIENT',
+    max_atomic_units_to_reserve: '10000', max_timeout_seconds: 60,
+    body_present: true, body_bytes: body.length, body_sha256: digest(body),
+  };
+  for (const [key, value] of Object.entries(expected))
+    assert.equal(snapshot.review[key], value, 'Disposable native review changed: ' + key);
+  assert.deepEqual(snapshot.review.complete_original_accepted_terms, handoff.purchase.payment);
+  assert.match(snapshot.review.request_sha256, /^[a-f0-9]{64}$/);
+  assert.match(snapshot.review.accepted_terms_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(snapshot.current_native_budget_estimate.approved, true);
+  assert.equal(snapshot.current_native_budget_estimate.reserved_max_base_units, '10000');
+  for (const key of ['max_single', 'max_total', 'max_per_utc_day',
+    'max_per_actor_utc_day', 'max_per_service_utc_day'])
+    assert.match(snapshot.current_native_budget_estimate.limit_remaining[key], /^(0|[1-9][0-9]*)$/);
+  await immutable(join(fixture, 'browser-review.json'), jsonBytes(snapshot));
+  const decision = { intent: intentId, approvalId: snapshot.id,
+    requestSha256: snapshot.review.request_sha256, decision: 'approve', taskId };
+  // A delayed decision from an earlier task must leave this live review unchanged.
+  await assert.rejects(api(path, { ...decision, taskId: 'previous-checkout-task' }),
+    error => error.status === 409 && error.message.includes('JOB_CHECKOUT_APPROVAL_TASK_CHANGED'));
+  const unchanged = await api(path);
+  assert.equal(unchanged.snapshot.id, snapshot.id);
+  assert.equal(unchanged.snapshot.state, 'AWAITING_OPERATOR');
+  const decided = await api(path, decision);
+  assert.equal(decided.approval.snapshot.id, snapshot.id);
+  assert.ok(['APPROVING', 'APPROVED'].includes(decided.approval.snapshot.state));
+  progress('original browser decision accepted');
+}
+
 async function runCheckout(kind) {
   const before = await api('/api/job-checkout/checkouts/' + checkoutId);
-  await api('/api/job-checkout/checkouts/' + checkoutId + '/start', { kind, expectedRevision: before.revision });
+  const started = await api('/api/job-checkout/checkouts/' + checkoutId + '/start', { kind, expectedRevision: before.revision });
+  if (browserApproval && kind === 'execute') await approveBrowserFixture(started.task.id);
   const after = await model.checkout.wait(checkoutId);
   assert.equal(after.task.state, 'COMPLETE', JSON.stringify({ kind, phase: after.phase, error: after.lastError,
     nativeDirectory: after.nativeDirectory }));
@@ -114,7 +176,7 @@ async function runCheckout(kind) {
 async function startWorkspace() {
   model = await openJobWorkspace({ directory, buyerRoots: [], fileRoots: [], fetchImpl: transport,
     checkout: { operatorProfile: profilePath, runtimeDirectory, timeoutMs: 90000 } });
-  host = await startJobCustomerWorkspace({ model, port: 0 });
+  host = await startJobCustomerWorkspace({ model, port: 0, browserApproval });
   const ready = await readJobWorkspaceLaunch({ directory, runtimeDirectory,
     operatorProfile: profilePath, pid: process.pid });
   assert.equal(ready.checkoutUrl, host.checkoutUrl);
@@ -168,12 +230,12 @@ try {
   await immutable(join(fixture, 'signer.mjs'), Buffer.from([
     '// Disposable signer envelope for this one local original-protocol journey.',
     'export async function sign({ challenge, accepted }) {',
-    "  if (challenge.resource?.url !== 'https://jobs-merchant.example/analysis?sf98_order=checkout%3A2026.10' ||",
+    "  if (challenge.resource?.url !== " + JSON.stringify(origin + '/analysis?sf98_order=' + encodeURIComponent(jobId)) + " ||",
     "      accepted.scheme !== 'exact' || accepted.network !== 'stellar:testnet' ||",
     "      accepted.asset !== 'C' + 'A'.repeat(55) || accepted.payTo !== 'UNVERIFIED_DEMO_RECIPIENT' ||",
     "      accepted.amount !== '10000') throw new Error('CHECKOUT_FIXTURE_TERMS_CHANGED');",
     "  return { x402Version: 2, resource: challenge.resource, accepted, extensions: challenge.extensions,",
-    "    payload: { fixture: 'LOCAL_PAID_JOB_PROTOCOL', jobId: 'checkout:2026.10' } };",
+    "    payload: { fixture: 'LOCAL_PAID_JOB_PROTOCOL', jobId: " + JSON.stringify(jobId) + " } };",
     '}', '',
   ].join('\n')));
   const profile = {
@@ -235,9 +297,9 @@ try {
     minVersion: 'TLSv1.2',
   }, (request, response) => {
     const allowedPurchase = request.method === 'POST' &&
-      request.url === '/analysis?sf98_order=checkout%3A2026.10';
+      request.url === '/analysis?sf98_order=' + encodeURIComponent(jobId);
     const allowedGet = request.method === 'GET' &&
-      ['/jobs/checkout%3A2026.10', '/jobs/checkout%3A2026.10/result'].includes(request.url);
+      ['/jobs/' + encodeURIComponent(jobId), '/jobs/' + encodeURIComponent(jobId) + '/result'].includes(request.url);
     if (request.headers.host !== 'jobs-merchant.example' || !(allowedPurchase || allowedGet)) {
       response.writeHead(404); response.end(); return;
     }
@@ -390,7 +452,8 @@ try {
     result: 'PASS', operation, node: process.version, nativeSdk,
     retainedWorkDirectory: retained, fixtureDirectory: fixture, customerWorkspace: directory,
     fixture: { protocol: 'LOCAL_PAID_JOB_PROTOCOL', transport: 'ORIGINAL_EXPLICIT_CONNECT_AND_VERIFIED_TLS',
-      approval: 'ORIGINAL_SF62_PTY_WITH_DISPOSABLE_FIXTURE_POLICY',
+      approval: browserApproval ? 'ORIGINAL_SF62_BROWSER_BROKER_WITH_DISPOSABLE_FIXTURE_POLICY'
+        : 'ORIGINAL_SF62_PTY_WITH_DISPOSABLE_FIXTURE_POLICY',
       source: { originalConfigSha256: original.configSha256, originalApplicationSha256: original.applicationSha256,
         checkoutConfigSha256: digest(await readBytes(configPath)), application: marker.application,
         asset: fixtureAsset, network: 'stellar:testnet' } },
@@ -403,10 +466,18 @@ try {
     collection: { id: collectionId, archiveSha256: exported.sha256, receivedResources: receivedRows.length },
     nativeVerifies: counters.verifies, nativeSettlements: counters.settles, traffic,
     lifecycle: ['retained merchant application', 'prepared private ticket', 'original SDK offline review',
-      'original native CLI and SF62/SF36 reservation', 'native paid 202 and SF98 activation',
+      browserApproval ? 'original browser decision and SF62/SF36 reservation'
+        : 'original native CLI and SF62/SF36 reservation', 'native paid 202 and SF98 activation',
       'actual BuyerResult adoption', 'verified application result', 'library preview and download',
       'collection export and receiving', 'same-checkout recovery and customer restart'],
   };
+  if (browserApproval) {
+    const review = await readJson(join(fixture, 'browser-review.json'));
+    assert.equal(review.intentId, intentId);
+    summary.browserApproval = { approvalId: review.id, intentId,
+      requestSha256: review.review.request_sha256, acceptedTermsSha256: review.review.accepted_terms_sha256,
+      staleTaskDecision: 'REJECTED_BEFORE_RESERVATION', retainedReview: join(fixture, 'browser-review.json') };
+  }
   await received.close(); received = null;
   await closeWorkspace();
   await writeJson(output, summary); complete = true;

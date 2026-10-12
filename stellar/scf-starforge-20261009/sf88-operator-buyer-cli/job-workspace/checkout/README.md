@@ -1,6 +1,6 @@
 # Paid job checkout
 
-Checkout brings the merchant’s prepared application job into the existing customer workspace. Import the private handoff, review its exact request with the original SF88 buyer, approve the purchase through the original terminal, then open the accepted job. Execution status, verified output, research notes and collections continue in the same customer application.
+Checkout brings the merchant’s prepared application job into the existing customer workspace. Import the private handoff, review its exact request with the original SF88 buyer, review and approve the merchant’s live payment request in the private browser, then open the accepted job. Execution status, verified output, research notes and collections continue in the same customer application.
 
 The original merchant owns job admission and settlement. The original SF88 operation owns the request, operator binding, permanent attempt and native result. Checkout retains that operation and joins its accepted response to the original paid-job buyer.
 
@@ -28,7 +28,7 @@ The CLI derives its native runtime from the installed source containing this com
 node /srv/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/cli.mjs serve --state /srv/private/customer-jobs --operator-workspace /srv/private/operator --runtime /srv/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli
 ~~~
 
-Keep this foreground process attached to its terminal. When a purchase reaches approval, the original operator asks for input there. In the maintained Applications console, the existing managed PTY supplies that terminal. The [Applications join](APPLICATIONS.md) describes its catalog, input and startup bindings.
+The private customer host opens the original SF81 browser approval broker before constructing a native Buyer. Purchase approval appears in **Payment approval** on the selected checkout. The maintained Applications console continues to own the process, lifecycle and private launch URL; its [Applications join](APPLICATIONS.md) describes the existing catalog and input bindings. Standalone checkout commands use their original controlling terminal. Use the server’s explicit `--approval-mode terminal` option when opening a retained native runtime that predates browser approval.
 
 The launch prints one JSON record containing private links for **Checkout**, **Jobs**, **Resource library** and **Collections**. Open the supplied Checkout URL. These views share the existing local server and its session token.
 
@@ -50,7 +50,7 @@ The checkout ID is stable for the merchant’s job status URL. Importing identic
 
 Select **Review request**. Checkout creates one original SF88 operation with its stable intent, original operator configuration, exact job body and a 64 KiB JSON response destination. The original offline review appears in the detail view, including its operator, service, request/body binding and review time.
 
-Select **Start checkout** when the displayed request is ready. Continue in the original connected terminal. The native buyer performs its existing approval, signing, policy/reservation and HTTP purchase flow. Checkout holds one active native preparation, review or purchase operation at a time, so terminal prompts stay associated with one selected job.
+Select **Start checkout** when the displayed request is ready. The native buyer obtains the merchant’s current payment challenge and asks the original SF62 operator for approval. **Payment approval** displays that request, its complete accepted terms and current budget review. Choose **Approve** or **Reject** for the selected request. The original governor makes the fresh reservation and the existing signer completes the same purchase. Checkout holds one active native preparation, review or purchase operation at a time.
 
 After an original settled HTTP 202 response, the application passes the actual BuyerResult and matching handoff to createJobBuyer. That original buyer verifies and retains the accepted bytes and native purchase record. **Open accepted job** then selects the same retained entry in Jobs.
 
@@ -58,9 +58,19 @@ The job’s execution state progresses independently of purchase acceptance. Use
 
 If that same accepted identity is already registered, the workspace reuses its original entry and receipt. Checkout keeps its native operation and result beside that entry.
 
+## Browser payment review
+
+The offline request review and the live payment decision are separate stages in the same checkout. The first confirms the retained request and operator configuration. The second is produced by the original native operator after the merchant returns its payment terms.
+
+The shared panel displays the original approval snapshot. Each decision carries the selected intent, approval identifier and request digest. The private checkout API also binds it to the currently executing checkout task. A decision for another checkout or an earlier run is rejected before it reaches the operator. On a failed refresh the panel disables decisions until a fresh snapshot arrives. A local display update does not renew an old approval.
+
+The controller records a successful browser decision in the checkout history; the original broker retains the approval record during this host’s lifetime and the original governor retains the reservation. **Purchase outcome** and the accepted customer job continue to report the actual native result. A browser decision alone does not change those result states.
+
+The broker's private socket and token come from the owning host. They are passed through that Buyer's explicit environment. The saved operator JSON and incoming HTTP body do not select either value. Existing workspace keys, signer settings, policy and ledger continue through the original native implementation.
+
 ## Stop and recover
 
-**Stop local operation** aborts the original preparation, review or checkout process through the original SDK’s AbortSignal. The task remains active until its native child finishes cleanup. A result returned during shutdown is retained and adopted before the customer lease is released.
+**Stop checkout** revokes its pending browser review and aborts the original preparation, review or purchase process through the SDK’s AbortSignal. The task remains active until its native child finishes cleanup. A result returned during shutdown is retained and adopted before the customer lease is released. The owning host drains customer input preparation before checkout, then closes its approval broker. Closing the model again joins the same shutdown.
 
 Checkout saves its task before starting the original operation. If the browser disconnects, reopen the same checkout and read its state. If the customer process restarts, interrupted tasks appear in the retained history. Select **Recover original operation** to inspect the original request, permanent attempt and saved result.
 
@@ -206,3 +216,15 @@ keys and ledger remain in checkout-continuation/. The complete result is
 checkout-continuation/native-complete.json; its source identities, actual
 native outcome, delivered artifact hash, received collection and ledger audit
 describe the completed flow.
+
+### Run the same lifecycle with browser approval
+
+The default native command exercises the original terminal approval path. To exercise the private browser API and original shared broker, select browser approval explicitly:
+
+~~~sh
+python3 /srv/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/checkout/native-continuation.py --retained /srv/private/original-paid-job-journey --node /absolute/node --approval browser --out /srv/private/results/browser-checkout.json
+~~~
+
+This mode retains its own `checkout-browser-continuation` directory and `browser-checkout:2026.10` job under the same source application. It validates the actual SF62 review against the exact disposable merchant, request body, terms and budget, then sends that decision through the authenticated checkout API. The original native buyer, governor, TLS transport, merchant worker, accepted-result adoption, library and collection receiving remain the exercised implementation. The marker, policy, ledger, captured original browser review and output preserve the selected mode through recovery. A terminal approval prompt in browser mode fails the journey.
+
+The same retained directory is reused after interruption. Completed purchases are recovered from their existing operation and result before the customer/library continuation proceeds.

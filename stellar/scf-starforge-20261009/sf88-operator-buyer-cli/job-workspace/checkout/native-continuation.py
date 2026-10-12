@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from urllib.parse import quote
 
 HERE = Path(__file__).resolve().parent
 RUNTIME = HERE.parents[1]
@@ -108,20 +109,20 @@ def current_review(transcript: bytes) -> dict:
     return review
 
 
-def answer_fixture(transcript: bytes, command: bytes, fixture: Path, expected_intent: str) -> None:
+def answer_fixture(transcript: bytes, command: bytes, fixture: Path, expected_intent: str, job: str) -> None:
     envelope = current_review(transcript)
     review = envelope["review"]
     handoff = json.loads(private_read(fixture / "checkout.handoff.json", 65536))
     purchase = handoff["purchase"]
-    require(handoff["job"]["id"] == JOB and purchase["orderReference"] == JOB,
+    require(handoff["job"]["id"] == job and purchase["orderReference"] == job,
             "FIXTURE_TICKET_ID_CHANGED")
-    body = json.dumps({"jobId": JOB}, separators=(",", ":")).encode("ascii")
+    body = json.dumps({"jobId": job}, separators=(",", ":")).encode("ascii")
     expected = {
         "schema": "stellar-forge.sf62.operator-review.v1",
         "request_id": expected_intent,
         "actor": "fixture-job-checkout",
         "service": "fixture-application-jobs",
-        "resource": ORIGIN + "/analysis?sf98_order=checkout%3A2026.10",
+        "resource": ORIGIN + "/analysis?sf98_order=" + quote(job, safe=""),
         "method": "POST",
         "scheme": "exact",
         "network": "stellar:testnet",
@@ -169,7 +170,11 @@ def main() -> int:
     parser.add_argument("--retained", type=Path, required=True)
     parser.add_argument("--node", type=Path)
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--approval", choices=("terminal", "browser"), default="terminal")
     args = parser.parse_args()
+    browser_approval = args.approval == "browser"
+    operation = "SCF-JOB-BROWSER-APPROVAL-0B8D-20261012" if browser_approval else OPERATION
+    job = "browser-checkout:2026.10" if browser_approval else JOB
     require(args.retained.is_absolute(), "ABSOLUTE_RETAINED_DIRECTORY_REQUIRED")
     retained = args.retained.resolve(strict=True)
     original_config = private_read(retained / "merchant.json")
@@ -187,7 +192,7 @@ def main() -> int:
     }
     require(all(original_source["source"].get(key) == value for key, value in original.items()),
             "ORIGINAL_MERCHANT_SOURCE_CHANGED")
-    fixture = retained / "checkout-continuation"
+    fixture = retained / ("checkout-browser-continuation" if browser_approval else "checkout-continuation")
     fixture.mkdir(mode=0o700, exist_ok=True)
     require(fixture.is_dir() and not fixture.is_symlink() and not fixture.stat().st_mode & 0o077,
             "PRIVATE_CHECKOUT_FIXTURE_DIRECTORY_REQUIRED")
@@ -195,13 +200,15 @@ def main() -> int:
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     marker = {
         "schema": "stellar-forge.sf88.job-checkout-journey.v1",
-        "operation": OPERATION,
+        "operation": operation,
         "retainedDirectory": str(retained),
         "fixtureDirectory": str(fixture),
         "runtimeDirectory": str(RUNTIME),
         "application": str(application),
         "original": original,
     }
+    if browser_approval:
+        marker["approvalMode"] = "BROWSER"
     immutable(fixture / "fixture.json", encoded(marker))
     keys_path = fixture / "fixture-keys.json"
     if not keys_path.exists():
@@ -258,7 +265,9 @@ def main() -> int:
     })
     env.pop("NODE_TLS_REJECT_UNAUTHORIZED", None)
     env.pop("SF_JOBS_CHECKOUT_PROXY", None)
-    ticket_identity = json.dumps(["paid-job-checkout", ORIGIN + "/jobs/checkout%3A2026.10"],
+    env.pop("SF81_APPROVAL_SOCKET", None)
+    env.pop("SF81_APPROVAL_TOKEN", None)
+    ticket_identity = json.dumps(["paid-job-checkout", ORIGIN + "/jobs/" + quote(job, safe="")],
                                  separators=(",", ":")).encode("ascii")
     expected_intent = "job-checkout:" + hashlib.sha256(ticket_identity).hexdigest()
     terminal_log = fixture / ("terminal-" + str(time.time_ns()) + ".log")
@@ -290,8 +299,9 @@ def main() -> int:
                     transcript.extend(chunk)
                     require(len(transcript) <= 262144, "CHECKOUT_TERMINAL_OUTPUT_LIMIT")
                     for match in prompt.finditer(transcript, scanned):
+                        require(not browser_approval, "BROWSER_FIXTURE_REQUIRES_ORIGINAL_BROKER")
                         require(approvals == 0, "FIXTURE_ALLOWS_ONE_ORIGINAL_APPROVAL")
-                        answer_fixture(bytes(transcript[:match.start()]), match.group(1), fixture, expected_intent)
+                        answer_fixture(bytes(transcript[:match.start()]), match.group(1), fixture, expected_intent, job)
                         os.write(descriptor, match.group(1) + b"\n")
                         approvals += 1
                         scanned = match.end()
@@ -312,7 +322,7 @@ def main() -> int:
                 for kind, handler in previous_signals.items():
                     signal.signal(kind, handler)
     summary = json.loads(private_read(fixture / "native-result.json", 1048576))
-    require(summary.get("result") == "PASS" and summary.get("operation") == OPERATION,
+    require(summary.get("result") == "PASS" and summary.get("operation") == operation,
             "ORIGINAL_CHECKOUT_RESULT_REQUIRED")
     with sqlite3.connect(fixture / "ledger.sqlite") as ledger:
         reservations = ledger.execute("SELECT request_id, amount, state FROM reservations ORDER BY request_id").fetchall()
@@ -332,6 +342,7 @@ def main() -> int:
         "operatorLedger": {"path": str(fixture / "ledger.sqlite"), "reservations": len(reservations),
                            "state": reservations[0][2], "journalRows": journal_rows, "audit": audit["outcome"]},
         "terminal": {"mode": "DISPOSABLE_FIXTURE_PTY", "responsesThisRun": approvals, "log": str(terminal_log)},
+        "approvalMode": "ORIGINAL_BROWSER_BROKER" if browser_approval else "ORIGINAL_TERMINAL",
     })
     save(fixture / "native-complete.json", encoded(summary))
     if args.out:
@@ -347,7 +358,10 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as error:
-        print(json.dumps({"result": "FAILED", "operation": OPERATION,
+        failed_operation = "SCF-JOB-BROWSER-APPROVAL-0B8D-20261012" if (
+            "--approval" in sys.argv and sys.argv.index("--approval") + 1 < len(sys.argv)
+            and sys.argv[sys.argv.index("--approval") + 1] == "browser") or "--approval=browser" in sys.argv else OPERATION
+        print(json.dumps({"result": "FAILED", "operation": failed_operation,
                           "error": str(error), "errorType": type(error).__name__,
                           "retained": str(Path(sys.argv[sys.argv.index("--retained") + 1]).resolve())
                           if "--retained" in sys.argv else None}), file=sys.stderr, flush=True)

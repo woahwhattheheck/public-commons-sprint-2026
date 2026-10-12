@@ -72,7 +72,7 @@ export interface WorkspaceOptions {
   fetchImpl?: typeof fetch; requestTimeoutMs?: number; maxConcurrent?: number; checkout?: CheckoutOptions;
 }
 export function openJobWorkspace(options: WorkspaceOptions): Promise<JobWorkspace>;
-export function startJobCustomerWorkspace(options: {model: JobWorkspace; port?: number}): Promise<{
+export function startJobCustomerWorkspace(options: {model: JobWorkspace; port?: number; browserApproval?: boolean}): Promise<{
   origin: string; url: string; libraryUrl: string; collectionsUrl: string; checkoutUrl: string;
   token: string; server: Server; launch: JobWorkspaceLaunch; privateLaunch: string; close(): Promise<void>;
 }>;
@@ -121,10 +121,37 @@ export interface CheckoutEntry {
   history: Array<{at: string; action: string; revision: number; previousRevision?: number; [key: string]: unknown}>;
   actions: {review: boolean; execute: boolean; recover: boolean; replace: boolean; stop: boolean};
 }
+export interface CheckoutApprovalDecision {
+  intent: string; approvalId: string; requestSha256: string; decision: 'approve' | 'reject'; taskId: string;
+}
+export interface CheckoutNativeApproval {
+  id: string; intentId: string;
+  state: 'AWAITING_OPERATOR' | 'APPROVING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'FAILED';
+  createdAt: string; expiresAt: string; decidedAt?: string; completedAt?: string;
+  review: {
+    schema: 'stellar-forge.sf62.operator-review.v1'; request_id: string; request_sha256: string;
+    accepted_terms_sha256: string; actor: string; service: string; resource: string; method: string;
+    scheme: string; network: string; asset: string; pay_to: string;
+    max_atomic_units_to_reserve: string; max_timeout_seconds: number;
+    body_present: boolean; body_bytes: number; body_sha256: string | null;
+    complete_original_accepted_terms: Record<string, unknown>;
+  };
+  current_native_budget_estimate: {
+    approved: boolean; reserved_max_base_units: string;
+    limit_remaining: Record<'max_single' | 'max_total' | 'max_per_utc_day' |
+      'max_per_actor_utc_day' | 'max_per_service_utc_day', string>;
+    denied_by?: string[];
+  };
+}
+export interface CheckoutApproval {
+  checkoutId: string; intentId: string; mode: 'BROWSER' | 'TERMINAL';
+  taskId: string | null; executing: boolean; snapshot: CheckoutNativeApproval | null;
+}
 export interface CheckoutStatus {
   schema: 'stellar-forge.sf88.job-checkout.v1'; directory: string; runtimeDirectory: string;
   entries: number; counts: Partial<Record<CheckoutPhase, number>>; capacity: 1; closing: boolean;
   selection: CheckoutSelection | null; active: (CheckoutTask & {checkoutId: string}) | null;
+  approvalMode: 'BROWSER' | 'TERMINAL';
 }
 export type CheckoutOptions = {
   runtimeDirectory?: string; environment?: Record<string, string | undefined>; timeoutMs?: number;
@@ -142,6 +169,9 @@ export interface JobCheckout {
     total: number; offset: number; limit: number; items: CheckoutEntry[];
   };
   status(): CheckoutStatus;
+  enableBrowserApproval(): Promise<{mode: 'BROWSER'}>;
+  approval(id: string): CheckoutApproval;
+  decideApproval(id: string, decision: CheckoutApprovalDecision): Promise<{checkout: CheckoutEntry; approval: CheckoutApproval}>;
   start(id: string, options: {kind?: CheckoutTask['kind']; expectedRevision: number}): Promise<CheckoutEntry>;
   cancel(id: string, options?: {taskId?: string}): Promise<CheckoutEntry>;
   wait(id: string): Promise<CheckoutEntry>;

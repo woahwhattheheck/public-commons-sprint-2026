@@ -1,4 +1,5 @@
 // MIT. Checkout browser over the original private customer host and SF88 operation.
+import { createApprovalPanel } from '/jobs/checkout/approval-panel.mjs';
 const byId = id => document.getElementById(id);
 const SESSION = 'sf88-paid-job-customer-session';
 let token = location.hash.slice(1);
@@ -9,6 +10,10 @@ const requested = new URL(location.href).searchParams.get('checkout');
 let requestedId = /^[a-f0-9]{64}$/.test(requested ?? '') ? requested : null;
 let selected = null, selectionEpoch = 0, offset = 0, total = 0, rows = [], status = null;
 let refreshing = false, stopped = false, timer, requestPending = false, replacementRevision = null;
+let approvalState = null, approvalConnected = false, approvalPending = false, approvalEpoch = 0;
+const approvalPanel = createApprovalPanel({
+  host: byId('approvalPanel'), decide: decideApproval, refresh: refreshApproval,
+});
 const endpoint = (id, action = '') => prefix + '/checkouts/' + id + (action ? '/' + action : '');
 const words = value => String(value ?? '').replaceAll('_', ' ').toLowerCase();
 function message(text, error = false) { byId('message').textContent = text; byId('message').dataset.error = String(error); }
@@ -22,6 +27,9 @@ function problem(error) {
     JOB_CHECKOUT_OPERATION_ACTIVE: 'One original checkout operation is already active in this workspace.',
     JOB_CHECKOUT_ATTEMPT_REQUIRES_RECOVERY: 'This checkout has an original attempt. Use Recover original operation.',
     JOB_CHECKOUT_REVIEW_CHANGED: 'The saved original review changed. Review this request again.',
+    JOB_CHECKOUT_APPROVAL_INTENT_CHANGED: 'The selected request changed. Refresh its payment review.',
+    JOB_CHECKOUT_APPROVAL_TASK_CHANGED: 'This payment review belongs to an earlier run. Refresh the current checkout.',
+    JOB_CHECKOUT_BROWSER_APPROVAL_REQUIRED: 'Reopen this checkout through its private customer workspace.',
   };
   message(descriptions[error?.code] ?? words(error?.code ?? 'REQUEST_FAILED'), true);
 }
@@ -33,6 +41,78 @@ async function api(path, { method = 'GET', body } = {}) {
   if (!response.ok) throw Object.assign(new Error(value.error ?? 'REQUEST_FAILED'), { code: value.error ?? 'REQUEST_FAILED', status: response.status });
   return value;
 }
+
+function resetApproval() {
+  approvalEpoch++;
+  approvalState = null; approvalConnected = false;
+  approvalPanel.reset();
+}
+function receiveApproval(value, id) {
+  if (!selected || selected.id !== id || value.checkoutId !== id || value.intentId !== selected.intentId)
+    throw Object.assign(new Error('JOB_CHECKOUT_APPROVAL_INTENT_CHANGED'), { code: 'JOB_CHECKOUT_APPROVAL_INTENT_CHANGED' });
+  approvalState = value; approvalConnected = true;
+}
+function renderApproval({ fresh = false } = {}) {
+  byId('approvalSection').hidden = !selected;
+  if (!selected) { approvalPanel.reset(); return; }
+  if (!approvalState || approvalState.checkoutId !== selected.id) {
+    approvalPanel.reset();
+    byId('approvalHint').textContent = 'Loading the payment review for this checkout.';
+    return;
+  }
+  byId('approvalHint').textContent = approvalState.mode === 'BROWSER'
+    ? 'When the merchant returns its payment terms, review them here and approve or reject this request.'
+    : 'This operation uses the terminal attached to its original operator.';
+  if (!approvalConnected) { approvalPanel.disconnect(); return; }
+  const executing = approvalState.executing && selected.task?.kind === 'execute' &&
+    selected.task.state === 'RUNNING' && selected.task.id === approvalState.taskId;
+  approvalPanel.render(approvalState.snapshot, { intentId: selected.intentId,
+    pending: requestPending || approvalPending || !executing, fresh });
+}
+async function refreshApproval() {
+  if (!selected || stopped) return;
+  const id = selected.id, selection = selectionEpoch, epoch = ++approvalEpoch;
+  try {
+    const value = await api(endpoint(id, 'approval'));
+    if (selection !== selectionEpoch || epoch !== approvalEpoch || selected?.id !== id) return;
+    receiveApproval(value, id); renderApproval({ fresh: true });
+  } catch (error) {
+    if (selection === selectionEpoch && epoch === approvalEpoch && selected?.id === id) {
+      approvalConnected = false; approvalPanel.disconnect();
+    }
+    throw error;
+  }
+}
+async function decideApproval(binding) {
+  if (!selected || requestPending || approvalPending || !approvalConnected) return;
+  const id = selected.id, epoch = selectionEpoch, current = approvalState;
+  if (!current || current.checkoutId !== id || binding.intent !== selected.intentId ||
+      !current.executing || selected.task?.id !== current.taskId) {
+    throw Object.assign(new Error('JOB_CHECKOUT_APPROVAL_TASK_CHANGED'), { code: 'JOB_CHECKOUT_APPROVAL_TASK_CHANGED' });
+  }
+  approvalPending = true; renderApproval();
+  try {
+    const result = await api(endpoint(id, 'approval'), { method: 'POST',
+      body: { intent: binding.intent, approvalId: binding.approvalId,
+        requestSha256: binding.requestSha256, decision: binding.decision, taskId: current.taskId } });
+    if (selected?.id === id && epoch === selectionEpoch) {
+      selected = result.checkout; receiveApproval(result.approval, id);
+      renderDetail(); renderApproval({ fresh: true });
+      message(binding.decision === 'approve'
+        ? 'Decision recorded. The operator is completing the purchase.'
+        : 'Payment request rejected.');
+    }
+    return result.approval.snapshot;
+  } catch (error) {
+    if (selected?.id === id && epoch === selectionEpoch) {
+      approvalConnected = false; approvalPanel.disconnect(); problem(error);
+    }
+    throw error;
+  } finally {
+    approvalPending = false; renderApproval(); await refresh();
+  }
+}
+
 function node(tag, text, className) {
   const value = document.createElement(tag);
   if (text !== undefined) value.textContent = text;
@@ -70,13 +150,15 @@ function renderList() {
   byId('previous').disabled = offset === 0; byId('next').disabled = offset + 50 >= total;
 }
 function progress(value) {
-  if (value.phase === 'ACCEPTED') return 'The original buyer accepted this job. Open it to follow execution, retrieve its result and use the resource library.';
+  if (value.phase === 'ACCEPTED') return 'The job was accepted. Open it to follow execution, retrieve the result and use the resource library.';
   const task = value.task;
-  if (task?.state === 'CANCELLING') return 'Stopping the original operation process and retaining its current state.';
+  if (task?.state === 'CANCELLING') return 'Stopping checkout and saving its current state.';
   if (task?.state === 'RUNNING') return {
-    PREPARING: 'Preparing the exact job request with the original operator.',
-    REVIEWING: 'Reading the original buyer review.',
-    EXECUTING: 'Complete the original purchase approval in the terminal connected to this customer workspace.',
+    PREPARING: 'Preparing the job request with the selected operator.',
+    REVIEWING: 'Reading the request review.',
+    EXECUTING: status?.approvalMode === 'BROWSER'
+      ? 'Review the merchant’s live payment terms in Payment approval below.'
+      : 'Complete purchase approval in the terminal connected to this customer workspace.',
     RECOVERING: 'Reopening the retained original request, attempt and result.',
     RETAINING_RESULT: 'Retaining the accepted response in the original job buyer.',
   }[task.stage] ?? 'The original operation is running.';
@@ -86,7 +168,7 @@ function progress(value) {
     JOB_CHECKOUT_PROCESS_REOPENED: 'This customer process reopened. Recover the saved original operation to read its current outcome.',
   }[value.lastError] ?? words(value.lastError);
   if (value.pendingTicket) return 'A renewed ticket was saved. Recover this checkout to finish its retained replacement.';
-  if (value.phase === 'REVIEWED') return 'The exact request is reviewed. Start checkout when ready to use the original terminal approval.';
+  if (value.phase === 'REVIEWED') return 'The exact request is reviewed. Start checkout to receive the merchant’s current payment terms.';
   if (value.phase === 'FINISHED') return 'The original purchase returned the outcome below.';
   if (value.attempted) return 'The original attempt is retained. Recover it to read the saved result.';
   return 'Review the exact merchant request and its existing operator connection.';
@@ -94,7 +176,7 @@ function progress(value) {
 function renderDetail() {
   byId('unselected').hidden = Boolean(selected); byId('detail').hidden = !selected;
   byId('stage').hidden = !selected;
-  if (!selected) return;
+  if (!selected) { renderApproval(); return; }
   const value = selected, ticket = value.ticket, terms = ticket.acceptedTerms, native = value.native, review = value.review;
   byId('detailHeading').textContent = value.label || ticket.jobId;
   byId('identity').textContent = ticket.jobId;
@@ -111,8 +193,8 @@ function renderDetail() {
   };
   for (const [id, text] of Object.entries(labels)) byId(id).textContent = text;
   byId('reviewHint').textContent = review
-    ? 'The saved original buyer review is bound to this request, body and operator configuration.'
-    : 'Review prepares the exact request through your existing operator configuration.';
+    ? 'The saved review is bound to this request, input and operator configuration.'
+    : 'Review the request with your selected operator configuration.';
   for (const [id, action] of [['reviewButton','review'],['executeButton','execute'],['recoverButton','recover'],['replaceButton','replace']])
     byId(id).disabled = requestPending || !value.actions[action];
   byId('stopButton').hidden = !['RUNNING','CANCELLING'].includes(value.task?.state);
@@ -128,7 +210,7 @@ function renderDetail() {
       native.deliveryStatus ? 'Response file: ' + native.deliveryStatus : null,
       native.recovered ? 'Recovered from the saved original output.' : 'Recorded by the original buyer.',
       native.runtimeError ? 'Runtime: ' + native.runtimeError : null].filter(Boolean).join('\n')
-    : value.attempted ? 'Recover this checkout to inspect its original recorded response.' : 'The original buyer result will appear here.';
+    : value.attempted ? 'Recover this checkout to inspect its original recorded response.' : 'The purchase result will appear here.';
   byId('requestDetails').textContent = JSON.stringify({
     intentId: value.intentId, sellerUrl: ticket.sellerUrl, method: ticket.method,
     orderReference: ticket.orderReference, statusUrl: ticket.statusUrl, resultUrl: ticket.resultUrl,
@@ -143,6 +225,7 @@ function renderDetail() {
     if (entry.reason) li.append(node('span', entry.reason));
     history.append(li);
   }
+  renderApproval();
 }
 function renderStatus() {
   if (!status) return;
@@ -154,20 +237,24 @@ function renderStatus() {
   byId('operator').textContent = setting ? (setting.kind === 'workspace' ? setting.directory : setting.path) +
     '\n' + setting.runtimeDirectory : 'Existing checkouts retain their original operator selection.';
   byId('operatorHint').textContent = setting
-    ? 'Start checkout here, then complete the original approval in the connected terminal. Each ticket retains this operator selection.'
+    ? status.approvalMode === 'BROWSER'
+      ? 'Start checkout, then review and decide its payment request in this workspace. Each ticket retains this operator selection.'
+      : 'Start checkout here, then complete the original approval in the connected terminal. Each ticket retains this operator selection.'
     : 'To import a new ticket, open job-workspace serve with --operator-workspace or --operator-profile. Existing checkouts reopen from their saved selection.';
   byId('importButton').disabled = requestPending || !setting;
 }
 async function select(id) {
-  const epoch = ++selectionEpoch, value = await api(endpoint(id));
+  const epoch = ++selectionEpoch;
+  resetApproval(); renderApproval();
+  const [value, review] = await Promise.all([api(endpoint(id)), api(endpoint(id, 'approval'))]);
   if (epoch !== selectionEpoch) return;
   if (selected?.id !== id) {
     replacementRevision = null;
     byId('replaceForm').reset(); byId('replacement').open = false;
   }
-  selected = value;
+  selected = value; receiveApproval(review, id);
   history.replaceState(null, '', location.pathname + '?checkout=' + id);
-  renderList(); renderDetail();
+  renderList(); renderDetail(); renderApproval({ fresh: true });
 }
 async function refresh() {
   if (refreshing || stopped) return;
@@ -176,14 +263,20 @@ async function refresh() {
     const query = new URLSearchParams({ q: byId('query').value, phase: byId('phase').value, offset: String(offset), limit: '50' });
     const [current, page] = await Promise.all([api(prefix + '/state'), api(prefix + '/checkouts?' + query)]);
     status = current; rows = page.items; total = page.total;
+    let freshApproval = false;
     const selectedId = selected?.id ?? requestedId, epoch = selectionEpoch;
     if (selectedId) {
-      const value = await api(endpoint(selectedId));
-      if (epoch === selectionEpoch && (!selected || selected.id === selectedId)) { selected = value; requestedId = null; }
+      const approvalVersion = ++approvalEpoch;
+      const [value, review] = await Promise.all([api(endpoint(selectedId)), api(endpoint(selectedId, 'approval'))]);
+      if (epoch === selectionEpoch && (!selected || selected.id === selectedId)) {
+        selected = value; requestedId = null;
+        if (approvalVersion === approvalEpoch) { receiveApproval(review, selectedId); freshApproval = true; }
+      }
     }
-    renderStatus(); renderList(); renderDetail();
+    renderStatus(); renderList(); renderDetail(); renderApproval({ fresh: freshApproval });
     byId('connection').textContent = 'Connected · ' + new Date().toLocaleTimeString();
   } catch (error) {
+    approvalConnected = false; approvalPanel.disconnect();
     byId('connection').textContent = 'Connection interrupted';
     if (error.status === 401) message('Open the private launch URL again to restore this session.', true);
     else { requestedId = null; problem(error); }
@@ -196,8 +289,10 @@ async function perform(kind) {
   try {
     const value = await api(endpoint(id, 'start'), { method: 'POST', body: { kind, expectedRevision: revision } });
     if (selected?.id === id) selected = value;
-    message(kind === 'execute' ? 'Checkout started. Continue in the original connected terminal.' :
-      kind === 'review' ? 'Original request review started.' : 'Original operation recovery started.');
+    message(kind === 'execute' ? status?.approvalMode === 'BROWSER'
+      ? 'Checkout started. Review its live payment request below.'
+      : 'Checkout started. Continue in the original connected terminal.' :
+      kind === 'review' ? 'Request review started.' : 'Checkout recovery started.');
   } catch (error) { problem(error); }
   finally { requestPending = false; renderDetail(); renderStatus(); await refresh(); }
 }
@@ -230,7 +325,7 @@ byId('stopButton').addEventListener('click', async () => {
   try {
     const value = await api(endpoint(id, 'stop'), { method: 'POST', body: { taskId } });
     if (selected?.id === id) selected = value;
-    message('Stop requested for the current local operation.');
+    message('Stop requested for this checkout.');
   } catch (error) { problem(error); }
   finally { requestPending = false; renderDetail(); await refresh(); }
 });
@@ -261,7 +356,9 @@ async function poll() {
   if (!stopped) timer = setTimeout(poll, document.hidden ? 10000 : 2500);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void poll(); });
-window.addEventListener('pagehide', () => { stopped = true; clearTimeout(timer); }, { once: true });
+window.addEventListener('pagehide', () => {
+  stopped = true; clearTimeout(timer); approvalConnected = false; approvalPanel.dispose();
+}, { once: true });
 links();
 if (!token) message('Open the private launch URL printed by job-workspace serve.', true);
 else void poll();
