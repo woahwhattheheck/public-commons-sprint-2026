@@ -190,6 +190,59 @@ If the destination was already received, reopen it with
 `WorkbookDelivery(destination, expected_manifest_sha256=...)` and
 `inspect()` instead of creating a second receiving tree.
 
+## Run the complete original receiving example
+
+The [complete receiving example](examples/analysis-native-receiving.py) carries
+the original North America edition through producer and customer workspaces in
+one retained operation. It accepts the original 14,330-byte managed customer
+handover with SHA256
+`c99f7386ae02742eb0d5c91b1c051eab753fc210d2cd689eb21127109de391fb`.
+
+Use an existing Python 3.11+ environment with `openpyxl==3.1.5`:
+
+```sh
+python3 -B examples/analysis-native-receiving.py \
+  --workspace /absolute/private/worldbank-analysis \
+  --handover /absolute/WorldBank_Managed_Customer_Handover_20261012.zip
+```
+
+The example receives the two required source folders from immutable commit
+`ad176c013d239cbb307e7d3a168fe9029e0570eb`, retains their Git blob inventory,
+and reopens those same files on a repeated invocation. The original Analysis
+module must match SHA256
+`923fa1b5ad8476cc9294e78d33d8a891b0ea5a13ec79f61dc350c8e438c9721f`.
+If the workbook dependency is installed in an existing private target directory,
+pass `--python-dependencies /absolute/that-directory`.
+
+The producer uses operation `13c281c36fca40fe8377af367911bb4d`. The customer
+receives the completed workspace with operation
+`431e21b8c6e44f65a3d6c279f5b8e012`, runs the original observations query,
+compares all 42 rows to the reviewed handover, and retains a Canada GDP query.
+It then repeats the same workspace receiving operation and confirms that the
+customer's saved query survives. The private Analysis HTTP application opens
+inside the same invocation.
+
+The workbook is received through `WorkbookDelivery`; the example checks the
+received file against the original Excel delivery. Its four data sheets contain
+42 observations, 6 coverage rows, 42 annual-change rows and 21 GDP/population
+rows. The original Readme and Sources sheets remain present. The Canada 2024
+GDP token `2270076189683.46` remains a text cell, while calculated changes and
+ratios use numeric cells.
+
+Progress and actual errors are printed as JSON. `producer-result.json`,
+`customer-result.json` and `native-errors.jsonl` are retained at the operation
+root. The complete customer bundle is at:
+
+```text
+<workspace>/producer/worldbank-analysis/13c281c36fca40fe8377af367911bb4d/delivery/WorldBank_Analysis_Delivery.zip
+```
+
+Continue an interrupted run with the same command, original handover and
+workspace directory. The producer, received customer workspace and separate
+received workbook stay under that directory. A completed receiving is reopened
+against its original archive and manifest, preserving the customer's saved
+query and the original job histories.
+
 ## Source references
 
 - [World Bank API request structure](https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures)
