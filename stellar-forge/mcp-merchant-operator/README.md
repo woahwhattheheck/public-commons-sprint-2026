@@ -675,3 +675,8 @@ create another workspace or transfer engine.
 
 See [GRAPHQL_WORKSPACES.md](GRAPHQL_WORKSPACES.md) for host configuration, the
 complete authoring-to-release flow, exact tool arguments and customer receiving.
+
+## CoinGecko market research and native purchase workspaces
+
+[COINGECKO-WORKSPACE.md](COINGECKO-WORKSPACE.md) connects the original CoinGecko browser and research model to this same merchant MCP. Its 32 tools cover complete request collections, exact source imports, paged market rows and linked entities, snapshots and comparisons, versioned research notes, original provider compilation, native SF88 purchase preparation/action recovery, and full retained handover downloads/restoration. The host declares private directory, input and buyer-profile aliases; browser and agents share the original project revision and operation IDs. Start with `starforge merchant-mcp init-coingecko-workspaces --dir NEW_PRIVATE_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json`. Opening the CoinGecko native SQLite workspace requires Node.js 24 or later.
+
