@@ -143,15 +143,16 @@ def retain_command_producer(program):
  allowed={"ff6762270c9eb821ff649b253ff3d1a9ab378dd9c4353999af226b18d126cbf3":36626,
           "c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33":53244,
           "073938b61dbe10e7d771741ffe5f76a0f455c3f5515ddebf86245c68e6f71d18":70704,
-           "6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98":74496}
+           "6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98":74496,
+          "6cb5e3cc848bf2cdc3184c3ea0c6c93d48c3cb0a89c62165f301c5833f48755d":81715}
  require(allowed.get(previous_sha)==len(previous),
   "Original producer source needs exact source reconciliation")
  publish(ROOT/"producer-source"/(previous_sha+".py"),previous)
  pubjson(ROOT/"producer-source"/("adoption-"+previous_sha+"-"+current_sha+".json"),
   {"schema":"commons.aviary-producer-source-adoption.v1","operation":OP,"previous":record(original),"selected":record(retained),
    "sourcePacketSha256":SOURCE_SHA,"callerSha256":"d1047f61b8c6b6b3a7f24a2d1fffe4b68e6407aa146f034b18beab3824bfb39e",
-   "reason":"Preserve original producer and command history while selecting the explicit supplemental source-mapping correction.",
-   "originalSourceChanged":False,"nativeApplicationSourceChanged":False,"exampleMappingChanged":True})
+   "reason":"Preserve original producer and command history while continuing the saved31388 browser with its explicit response/process repair.",
+   "originalSourceChanged":False,"nativeApplicationSourceChanged":False,"exampleMappingChanged":False,"receivingSourceChanged":True})
 COMMAND_BOOTSTRAP = r'''
 import hashlib,json,os,pathlib,sys
 def need(ok,message):
@@ -925,6 +926,109 @@ def retain_source_correction(packet):
  return {"correction":record(folder/"source-correction.json"),"history":receipt["receivingHistory"],
          "previousInput":receipt["previousInput"],"previousSourcePacket":receipt["previousSourcePacket"]}
 
+def adopt_browser_receiving_source(packet):
+ repair=PAYLOAD.get("receivingRepair")
+ require(isinstance(repair,dict) and set(repair)=={"schema","previous","selected","history","reason"}
+         and repair["schema"]=="commons.aviary.browser-receiving-source-repair.v1"
+         and repair["reason"]=="original-preview-response-and-process-namespace-repair",
+         "The explicit original browser receiving source repair is absent")
+ previous=repair["previous"];selected=repair["selected"];history=repair["history"]
+ relative="examples/run-aviary-browser-receiving.mjs"
+ require(previous=={"path":relative,"bytes":68597,
+                   "sha256":"1f130fabdcaf50f0f701f3d74545e80f2ca885ceec330216c5fd11ac12db722e"},
+         "The original reviewed browser source descriptor differs")
+ expected=next((item for item in packet["files"] if item["path"]==relative),None)
+ require(expected is not None and all(expected[key]==previous[key] for key in previous),
+         "The original source packet browser member differs")
+ original=expected["content"].encode()
+ require(len(original)==previous["bytes"] and sha(original)==previous["sha256"],
+         "The complete original browser source is not retained")
+ require(set(selected)=={"path","bytes","sha256","content"} and selected["path"]==relative
+         and selected["bytes"]==75517 and selected["sha256"]=="440752b548b1d005c3015678122e5594f046da83e2f0db0c157cf95378179591",
+         "The selected reviewed browser successor differs")
+ successor=selected["content"].encode()
+ require(len(successor)==selected["bytes"] and sha(successor)==selected["sha256"],
+         "The full selected browser source bytes differ")
+ history_raw=history["content"].encode()
+ require(set(history)=={"path","bytes","sha256","content"} and history["path"]=="31388-receiving-history.json"
+         and history["bytes"]==36363 and history["sha256"]=="7d34c2ebc508414820707aa225b0a420ed1e9a785a8bdae2f3de81206d97bf5a"
+         and len(history_raw)==history["bytes"] and sha(history_raw)==history["sha256"],
+         "The original31388 receiving and saved checkpoint history differs")
+ pubjson_history=ROOT/"producer-source"/"history-31388"/history["path"]
+ publish(pubjson_history,history_raw)
+ browser=ROOT/"browser-receiving";identity_path=browser/"identity.json"
+ require(identity_path.is_file() and not identity_path.is_symlink(),
+         "Restore the original saved31388 checkpoint before this receiving continuation")
+ original_commands_quiet()
+ identity=readjson(identity_path)
+ require(identity.get("schema")=="commons.aviary.complete-browser-receiving.v2"
+         and identity.get("operationId")=="AVIARY-BROWSER-RECEIVING-6BA15-20261012"
+         and isinstance(identity.get("inputSha256"),str) and re.fullmatch(r"[0-9a-f]{64}",identity["inputSha256"]),
+         "The original browser identity is not the saved receiving operation")
+ entry=beneath(APP,relative)
+ expected_previous={"path":str(entry),"bytes":previous["bytes"],"sha256":previous["sha256"]}
+ require(identity["input"]["runner"]==expected_previous
+         and identity["input"]["workspace"]==str(ROOT/"public-workspace")
+         and identity["input"]["providerWorkspace"]==str(Path(ARCHIVES[0]["target"])/"received"/"workspace")
+         and identity["input"]["output"]==str(browser)
+         and identity["input"]["originalProviderOperationId"]==PROVIDER_OPERATION,
+         "The saved browser input changed its original source, workspaces or provider operation")
+ old_path=browser/"source-history"/previous["sha256"]/"run-aviary-browser-receiving.mjs"
+ new_path=browser/"source-history"/selected["sha256"]/"run-aviary-browser-receiving.mjs"
+ publish(old_path,original);publish(new_path,successor)
+ expected_selected={"path":str(entry),"bytes":selected["bytes"],"sha256":selected["sha256"]}
+ receipt_path=browser/"source-adoption.json"
+ fixed={"schema":"commons.aviary.browser-source-adoption.v1",
+        "operationId":"AVIARY-BROWSER-RECEIVING-6BA15-20261012","deliveryOperation":OP,
+        "reason":repair["reason"],"originalInputSha256":identity["inputSha256"],
+        "originalIdentity":record(identity_path),"previousRunner":record(old_path),
+        "selectedRunner":expected_selected,"sourcePacketSha256":SOURCE_SHA,
+        "failedReceivingHistory":record(pubjson_history),
+        "applicationFilesChanged":0,"providerRequestsReplayed":0}
+ if receipt_path.exists():
+  receipt=readjson(receipt_path)
+  require(set(receipt)==set(fixed)|{"originalSteps"}
+          and all(receipt.get(key)==value for key,value in fixed.items()),
+          "The existing original browser source-adoption binding differs")
+  require(isinstance(receipt["originalSteps"],list),"The original step inventory is absent")
+  seen=set()
+  for item in receipt["originalSteps"]:
+   path=Path(item["path"])
+   require(path.is_absolute() and path.is_relative_to(browser/"steps")
+           and path!=browser/"steps" and path.resolve()==path and str(path) not in seen,
+           "An original source-adoption step path differs")
+   seen.add(str(path));same(item,path)
+ else:
+  steps=[record(browser/"steps"/item["path"]) for item in inventory(browser/"steps",exclude_pixels=False)]
+  receipt={**fixed,"originalSteps":steps}
+  pubjson(receipt_path,receipt)
+ require(entry.is_file() and not entry.is_symlink(),"The original browser entry is not a regular file")
+ before=record(entry)
+ require(before in (expected_previous,expected_selected),"The original browser source has an unreviewed change")
+ if before==expected_previous:
+  fd,temporary=tempfile.mkstemp(prefix=".aviary-receiving-source-",dir=entry.parent)
+  try:
+   with os.fdopen(fd,"wb") as output:
+    output.write(successor);output.flush();os.fsync(output.fileno())
+   same(expected_selected,temporary);same(expected_previous,entry)
+   os.replace(temporary,entry);syncdir(entry.parent)
+  finally:
+   with contextlib.suppress(FileNotFoundError):os.unlink(temporary)
+ same(expected_selected,entry)
+ current_files=[]
+ for item in packet["files"]:
+  actual=record(beneath(APP,item["path"]))
+  expected_item=selected if item["path"]==relative else item
+  require(actual["bytes"]==expected_item["bytes"] and actual["sha256"]==expected_item["sha256"],
+          "An application member differs from its selected complete source")
+  current_files.append({"path":item["path"],"bytes":actual["bytes"],"sha256":actual["sha256"]})
+ emit("ORIGINAL_BROWSER_SOURCE_ADOPTED",originalInputSha256=identity["inputSha256"],
+      previous=previous,selected={key:selected[key] for key in ("path","bytes","sha256")},
+      retainedStepFiles=len(receipt["originalSteps"]),providerRequestsReplayed=0)
+ return {"receipt":record(receipt_path),"previousRunner":record(old_path),
+         "selectedRunner":record(entry),"originalInputSha256":identity["inputSha256"],
+         "history":record(pubjson_history),"files":current_files}
+
 def main():
  global APP,ENV
  ROOT.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -964,13 +1068,29 @@ def main():
  APP=ROOT/"application";APP.mkdir(exist_ok=True,mode=0o700)
  for r in packet["files"]:
   raw=r["content"].encode();require(len(raw)==r["bytes"] and sha(raw)==r["sha256"],"Source member differs: "+r["path"])
-  publish(beneath(APP,r["path"]),raw)
+  if r["path"]=="examples/run-aviary-browser-receiving.mjs" and beneath(APP,r["path"]).exists():
+   current=record(beneath(APP,r["path"]));selected=PAYLOAD["receivingRepair"]["selected"]
+   require((current["bytes"],current["sha256"]) in ((r["bytes"],r["sha256"]),(selected["bytes"],selected["sha256"])),
+           "The saved standalone browser source differs from both reviewed versions")
+  else:publish(beneath(APP,r["path"]),raw)
   if r["path"].endswith(".py"):ast.parse(raw,filename=r["path"])
+ receiving_source=adopt_browser_receiving_source(packet)
  tmp=ROOT/"tmp";tmp.mkdir(exist_ok=True,mode=0o700)
  ENV={**os.environ,"PYTHONDONTWRITEBYTECODE":"1","TMPDIR":str(tmp)}
  os.environ["TMPDIR"]=str(tmp);tempfile.tempdir=str(tmp)
- pubjson(ROOT/"source-verification.json",{"packet":{"bytes":len(packet_raw),"sha256":SOURCE_SHA},"applicationBaseMerge":"79586025b5b8916b8ea254ce43093623931b8544","sourceCorrection":source_history,"files":[{k:r[k] for k in ("path","bytes","sha256")} for r in packet["files"]],"python":sys.version,"pythonAst":"PASS"})
- emit("SOURCE_READY",files=20,root=str(ROOT),python=sys.version.split()[0])
+ original_verification=readjson(ROOT/"source-verification.json")
+ require(original_verification["packet"]=={"bytes":len(packet_raw),"sha256":SOURCE_SHA}
+         and original_verification["files"]==[{k:r[k] for k in ("path","bytes","sha256")} for r in packet["files"]]
+         and original_verification["sourceCorrection"]==source_history,
+         "The original application/source verification changed")
+ selected_verification={"schema":"commons.aviary.selected-receiving-source.v1","operation":OP,
+                        "originalVerification":record(ROOT/"source-verification.json"),
+                        "sourcePacketSha256":SOURCE_SHA,"receivingSource":receiving_source,
+                        "python":sys.version,"pythonAst":"PASS"}
+ selected_verification_path=ROOT/"producer-source"/("execution-source-"+sha(encoded(selected_verification))+".json")
+ pubjson(selected_verification_path,selected_verification)
+ emit("SOURCE_READY",files=20,root=str(ROOT),python=sys.version.split()[0],
+      originalSourcePacketSha256=SOURCE_SHA,receivingSource=receiving_source["selectedRunner"])
  restored=[restore_archive(r) for r in ARCHIVES];pubjson(ROOT/"archive-restoration.json",restored)
  native=Path(ARCHIVES[0]["target"]);provider=native/"received"/"workspace"
  require((native/"receiving-result.json").is_file(),"Original complete19 receipt not at retained native root")
@@ -1023,7 +1143,7 @@ def main():
  native_zip=artifacts/"Aviary_USGS_Native_Package_20261012.zip";copy_exact(result["nativePackage"]["path"],native_zip,result["nativePackage"])
  summary={
  "schema":"commons.aviary.complete-delivery-result.v1","operation":OP,"state":"COMPLETE","completedAt":now(),
- "source":{"applicationBaseMerge":"79586025b5b8916b8ea254ce43093623931b8544","pullRequest":2164,"packetSha256":SOURCE_SHA,"files":20,"correction":source_history},
+ "source":{"applicationBaseMerge":"79586025b5b8916b8ea254ce43093623931b8544","pullRequest":2164,"packetSha256":SOURCE_SHA,"files":20,"correction":source_history,"receivingSource":receiving_source,"executionVerification":record(selected_verification_path)},
  "nativeAccepted":{"workspaceId":WORKSPACE_ID,"operationId":PROVIDER_OPERATION,"checks":accepted["checks"],"scope":accepted["scope"],"archives":restored,"replayedProviderRequests":0},
  "publicExample":source,"browser":result,"visualInspection":visual,
  "savedBrowserCheckpoint":{"source":checkpoint["source"],"result":checkpoint["providerReceipt"]["result"],"privateRecoveryPixelsIncluded":checkpoint.get("pixelFilesSaved",False),"customerPixelFilesSaved":False},
@@ -1048,6 +1168,7 @@ The complete source mapping, five-table native package, saved migration workflow
 - Public example: 2 resources, 3 media records, 1 original transcript, 2 authored navigation indexes and 2 supplemental records.
 - Original public binaries: all five retained exact captures were reused. Their original SHA-256 receipts and all five publisher representations are included.
 - Supplemental source sequence values are retained byte for byte in the original CSV and explicitly unmapped. The maintained supplemental import sends no ordering parameter. The rejected mapping and exact 50662 failure/reconciliation remain in delivery history.
+- The saved31388 public workspace and accepted browser steps were restored from their original checkpoint. The receiving source repair binds the exact previous and selected runner, original identity and every retained step; it does not repeat committed key allocation, notes, exclusion or restoration.
 - Browser: complete mapping/key allocation, delayed-save/later typing, exclusion and restoration, all five previews, original queued native/export downloads, cold application receiving and saved-operation/new-draft continuity passed.
 - Original provider mutations during this browser journey: zero. Every original provider action and ID remains retained.
 - Browser pages, servers, context, browser and control children drained before the original PASS publication.
@@ -1083,7 +1204,7 @@ The native service exercise uses the actual application and a pinned-contract lo
 Native application base: https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2164
 Application base merge: 79586025b5b8916b8ea254ce43093623931b8544
 Selected20 carrier SHA256: {SOURCE_SHA}
-The only selected application-packet correction is the explicit supplemental example mapping. All nineteen other source members and every original source data file remain byte-identical. Original complete input and failed-run evidence are in delivery-history/producer-source/history-50662/.
+The retained base application packet contains the explicit supplemental example mapping. Its standalone browser receiver is advanced through a separate reviewed source-adoption receipt for the original preview response and process namespace defects; all ten functional application files and original data bytes remain unchanged. Complete prior source, original50662 failure and actual31388 checkpoint history remain in delivery-history/producer-source/. The actual selected browser source and original input identity are retained in browser-evidence/source-adoption.json and the current execution source verification.
 Official Aviary OpenAPI source: https://www.aviaryplatform.com/aviary-api.json
 Original schema capture: 200,348 bytes; SHA2561bf29e93ede6bc7aa755be25603e1fed4ddb899dac1964f4f63eaaca930c1291; retrieved2026-10-12T09:20:11.412169+00:00.
 Original provider/importer source: https://github.com/WeAreAVP/aviary-api-scripts/tree/9f189144f6434e6561696983edce17494aa66dd0
@@ -1125,7 +1246,7 @@ The complete machine-readable result records every source, package, screenshot d
   if rel in (Path(result["nativePackage"]["path"]).name,Path(result["publicWorkspaceExport"]["path"]).name):continue
   items.append(("browser-evidence/"+rel,browser/rel))
  complete=artifacts/"Aviary_Complete_Application_and_Receiving_20261012.zip"
- zip_selected(complete,items,{"applicationBaseMerge":"79586025b5b8916b8ea254ce43093623931b8544","sourcePacketSha256":SOURCE_SHA,"sourceCorrection":source_history,"nativeWorkspaceId":WORKSPACE_ID,"publicWorkspaceId":result["publicWorkspaceId"],"originalProviderOperation":PROVIDER_OPERATION,"localQAScreenshotDescriptors":result["screenshots"],"pixelFilesIncluded":False})
+ zip_selected(complete,items,{"applicationBaseMerge":"79586025b5b8916b8ea254ce43093623931b8544","sourcePacketSha256":SOURCE_SHA,"sourceCorrection":source_history,"receivingSource":receiving_source,"nativeWorkspaceId":WORKSPACE_ID,"publicWorkspaceId":result["publicWorkspaceId"],"originalProviderOperation":PROVIDER_OPERATION,"localQAScreenshotDescriptors":result["screenshots"],"pixelFilesIncluded":False})
  saved=[]
  for path in (complete,public_zip,native_zip,reporthtml,reportmd,evidence):
   saved.append(save_artifact(path))

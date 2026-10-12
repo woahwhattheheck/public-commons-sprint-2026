@@ -1,9 +1,10 @@
 # Aviary complete delivery and original receiving continuation
 
-This companion completes the existing Aviary project from its already accepted
-native receiving archives. It finishes the retained USGS source example, opens
-the original saved provider operation in the real browser workflow, preserves
-the complete application/workspace and records the actual file-save receipts.
+This companion continues the existing Aviary project from the successfully saved
+31388 browser checkpoint and the original accepted native archives. It reopens
+the same USGS public workspace and saved provider operation, finishes the real
+browser workflow, preserves the complete application/workspace and records the
+actual file-save receipts.
 
 It does not run the original nineteen provider checks again or create a second
 provider migration. It verifies their saved result and every member of both
@@ -21,17 +22,21 @@ The preceding twenty-file packet is Git blob
 64cbf2ae87cc8fa00aa37d8f7d849cca250a5b62, 601,618 UTF-8 bytes, SHA-256
 12da23f08cda04634318e6944c071286348effc0ec88ed63fa79cceaa61e34bf.
 
-This successor changes one example member, examples/usgs-example-input.json,
+The retained base changes one example member, examples/usgs-example-input.json,
 after the actual public initialization rejected its supplemental Sequence #
-target. All nineteen other source members and every original data file remain
-byte-identical. The selected twenty-file source packet is 603,245 UTF-8 bytes,
-SHA-256 cb5f1cd8d5fabee6b6e43eb1571f13fe660b1c195462118ec929328607855fc3.
+target. Its twenty-file packet remains 603,245 UTF-8 bytes, SHA-256
+cb5f1cd8d5fabee6b6e43eb1571f13fe660b1c195462118ec929328607855fc3.
+This continuation selects a separately retained browser-receiver successor through
+an explicit source-adoption receipt. All ten functional application files, the
+corrected example mapping and every original data file remain unchanged.
 
-The complete producer is 81,715 UTF-8 bytes, SHA-256
-6cb5e3cc848bf2cdc3184c3ea0c6c93d48c3cb0a89c62165f301c5833f48755d.
+The complete continuation producer is 90,602 UTF-8 bytes, SHA-256
+6c60cc5bda84133fe821b9398556136b5e8eed2c8b88bd54e9f6fab1b74e4f93.
+Its selected browser runner is 75,517 UTF-8 bytes, SHA-256
+440752b548b1d005c3015678122e5594f046da83e2f0db0c157cf95378179591.
 The complete input includes the unchanged 4,034-byte canonical private-state
 caller, all selected application source, the three preceding complete producers
-and the original 50662 history. Before any provider or browser work, it
+and the original 50662 and31388 histories. Before any provider or browser work, it
 reconstructs and checks the complete original 832,813-byte input against SHA-256
 99fdb99fe21012f6bfe76947d72bb0fe2a402f02e90eb81eb5f762d9633569da,
 then retains its exact bytes alongside the original source packet, mapping,
@@ -44,6 +49,7 @@ The producer history contains:
 | Original delivery producer | 36626 | ff6762270c9eb821ff649b253ff3d1a9ab378dd9c4353999af226b18d126cbf3 |
 | Reviewed command recovery | 53244 | c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33 |
 | Actual 50662 producer | 74496 | 6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98 |
+| Saved31388 browser checkpoint producer | 81715 | 6cb5e3cc848bf2cdc3184c3ea0c6c93d48c3cb0a89c62165f301c5833f48755d |
 
 An original revision 1 checkpoint made by the 70,704-byte producer, SHA-256
 073938b61dbe10e7d771741ffe5f76a0f455c3f5515ddebf86245c68e6f71d18,
@@ -60,10 +66,59 @@ started. The complete process census later found no original process or private
 root. A complete Library metadata reconciliation found no finalized artifact
 from that attempt. Its attempted failure save is therefore not claimed as saved.
 
-This corrected source is prepared for the next complete continuation. Its
-native syntax, public initialization, browser and visual result are recorded
-only when that actual run returns them. The original nineteen native checks
-remain accepted and saved; they are reused without provider replay.
+The corrected PR2496 source actually ran in session31388. Public initialization
+succeeded as c4c35210-9d2c-4837-8fba-10298d2e9b1b. The browser completed original
+key assignment, two notes, delayed-save/later-typing proof, reasoned exclusion
+and restoration. It then stopped in the table preview because a delayed
+previous-table response matched a broad response predicate. Cleanup exposed a
+separate host/namespace PID comparison. No screenshot phase had yet run.
+
+The entire interrupted workspace was successfully saved before exit1:
+Aviary_Receiving_Checkpoint_8745b7919ddf4bed.zip, 7,095,823 bytes, SHA-256
+58d8e6926591373390e9c330c9126bde0591d8054472a5ec353983fbb1f8bc3e,
+file_000000005d8881f58afcd34e5e51c246 /
+libfile_ba6c3f6021788191932e3abf88555598, version0. The complete original
+canonical save receipt is supplied in31388-checkpoint-selection.json.
+The original nineteen checks remain accepted; continuation reuses them
+without provider replay. Final browser PASS, image inspection and customer
+artifact saves remain pending until their actual receipts return.
+
+## Continue the exact saved browser identity
+
+Use the existing authorized checkpoint file. The source companion carries no
+private checkpoint bytes, signed download URL or new external transfer.
+
+The selected runner composes the independently reviewed response correction
+de93897f1ef708b26942aca95e056f3bbd734ae9 and process correction
+d6de9cc12fb52fb9e3418a1018c83ab10d6f5053. Preview responses are matched to the
+requested table, offset and exact revision/document, then bound to the original
+workspace, mapping and source. The displayed source row keys are checked before
+continuing. Owned ChildProcess handles stay authoritative; host procfs identities
+are translated only through verified namespace geometry.
+
+The producer requires the saved browser identity before adopting this source.
+It retains original0c4e and the selected full runner under browser-receiving/
+source-history/. It publishes source-adoption.json with the exact original
+identity file, original input SHA, original step-file inventory, previous and
+selected source identities and the complete31388 failure/save history. Only the
+standalone receiving runner is atomically replaced. The ten functional
+application files and provider state stay fixed.
+
+The new runner verifies that receipt before accepting the source change.
+identity.json and its inputSha256 stay byte-identical, so completed mapping,
+typing and row-review steps reopen through their original receipts. Each real
+new invocation records its actual execution source separately under its own
+runs directory. The original source-verification.json is retained, and the
+producer adds a separate selected-source verification for the actual twenty
+current files. Both source versions and all these records enter the next
+private checkpoint and final handoff.
+
+The supplied input is a continuation of this saved public workspace. A fresh
+directory without the authorized checkpoint is rejected before creating another
+public workspace. If the restored private root remains available after an
+ordinary failure, continue the same input without applying an older checkpoint
+over its later state. If the runtime was lost, restore the latest saved complete
+checkpoint into the original root and resume it.
 
 ## Explicit supplemental sequence treatment
 
@@ -298,13 +353,13 @@ This option accepts an already-authorized local copy of a checkpoint created by
 this producer with the same selected source-packet SHA. It makes no remote file
 transfer or sharing change. A checkpoint from the preceding source profile
 must remain bound to its original input; this option does not silently change
-its application files or command requests. No finalized 50662 checkpoint was
-found, so the correction continues from the already saved original archives
-and carries that failed execution as immutable history.
+its application files or command requests. No finalized50662 checkpoint was
+found. The later31388 checkpoint is saved and is the required current public
+workspace source; the preceding failed execution remains immutable history.
 
     python3 -B complete_aviary_delivery.py \
       --input aviary-delivery-input.json \
-      --restore-checkpoint original-checkpoint-selection.json
+      --restore-checkpoint 31388-checkpoint-selection.json
 
 The selection JSON contains exactly:
 
