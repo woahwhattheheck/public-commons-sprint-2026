@@ -75,6 +75,10 @@ def describe_layer(layer):
                        "featureCount": layer.featureCount(),
                        "fields": [{"name": f.name(), "type": f.typeName(), "length": f.length(), "precision": f.precision()}
                                   for f in layer.fields()]})
+    if isinstance(layer, core.QgsVectorLayer) and layer.providerType() == "postgres":
+        observed = layer.customProperty("starforge/postgisReadback", "")
+        result["postgis"] = json.loads(observed) if observed else {"verified": False}
+        result["liveDatabaseReference"] = True
     return result
 
 
@@ -173,6 +177,9 @@ def _uri_binding(provider, uri):
 
 
 def _verify_native_selection(layer, path, definition, *, subset=True):
+    if definition.get("postgis"):
+        from .postgis.native import verify_layer
+        return verify_layer(layer, path, subset=subset)
     core = native()
     provider, expected_uri = _expected_native_uri(path, definition)
     expected_kind = core.QgsRasterLayer if definition["kind"] == "raster" else core.QgsVectorLayer
@@ -190,6 +197,9 @@ def _verify_native_selection(layer, path, definition, *, subset=True):
 
 def expected_layer_path(workspace, definition, *, progress=None):
     source = workspace.source(definition["sourceId"])
+    if source.sourceKind == "postgis":
+        from .postgis.native import binding
+        return binding(workspace, definition), []
     if definition["kind"] == "footprints":
         require(source.sourceKind == "stac", "VECTOR_LAYER_KIND",
                 "The vector source retains its original native layers.")
@@ -212,10 +222,14 @@ def build_layer(workspace, definition, *, progress=None):
     core = native()
     path, derived = expected_layer_path(workspace, definition, progress=progress)
     label = definition["label"]
-    provider, uri = _expected_native_uri(path, definition)
-    layer = core.QgsRasterLayer(uri, label, provider) if provider == "gdal" else core.QgsVectorLayer(uri, label, provider)
+    if definition.get("postgis"):
+        from .postgis.native import create_layer
+        layer = create_layer(path)
+    else:
+        provider, uri = _expected_native_uri(path, definition)
+        layer = core.QgsRasterLayer(uri, label, provider) if provider == "gdal" else core.QgsVectorLayer(uri, label, provider)
     require(layer.isValid(), "NATIVE_LAYER_INVALID", "QGIS could not open this selected retained file.",
-            layerId=definition["id"], path=str(path))
+            layerId=definition["id"], path=("accepted database relation" if definition.get("postgis") else str(path)))
     if isinstance(layer, core.QgsVectorLayer) and definition.get("vectorSubsetString"):
         require(layer.setSubsetString(definition["vectorSubsetString"]), "NATIVE_SUBSET_INVALID",
                 "The native provider could not apply the selected vector filter.", layerId=definition["id"])
@@ -255,6 +269,8 @@ def build_layer(workspace, definition, *, progress=None):
         layer.renderer().setOpacity(float(definition["opacity"]))
     else:
         layer.setOpacity(float(definition["opacity"]))
+    if definition.get("postgis"):
+        _verify_native_selection(layer, path, definition)
     layer.setCustomProperty("starforge/workspaceId", workspace.read()["id"])
     layer.setCustomProperty("starforge/layerId", definition["id"])
     layer.setCustomProperty("starforge/sourceId", definition["sourceId"])
@@ -266,6 +282,8 @@ def add_to_project(workspace, project=None, *, progress=None):
     core = native()
     project = project or core.QgsProject.instance()
     state = workspace.read()
+    from .postgis.native import guard_edit_buffers
+    guard_edit_buffers(workspace, project)
     built = [build_layer(workspace, row, progress=progress)[0] for row in state["layers"]]
     require(built, "LAYER_SELECTION_REQUIRED", "Choose at least one received GIS layer.")
     # Native preparation completes before replacing only this workspace's earlier map layers.
@@ -413,6 +431,9 @@ def capture_styles(workspace, project=None, *, revision, request_id, actor):
 
 def _verify_project_file(workspace, filename, definitions, input_sha256, *, progress=None):
     core = native()
+    if any(row.get("postgis") for row in definitions):
+        from .postgis.native import preflight_project
+        preflight_project(workspace, filename, definitions)
     project = core.QgsProject()
     require(project.read(str(filename)), "NATIVE_PROJECT_READ", "QGIS could not reopen the saved native project.")
     require(project.readEntry("starforge", "workspaceId", "")[0] == workspace.read()["id"] and
@@ -433,11 +454,20 @@ def _verify_project_file(workspace, filename, definitions, input_sha256, *, prog
         qgs = [n for n in archive.namelist() if n.endswith(".qgs")]
         require(len(qgs) == 1, "NATIVE_PROJECT_XML", "Keep the complete native QGZ project.")
         xml = ET.fromstring(archive.read(qgs[0]))
-        for node in xml.findall(".//maplayer/datasource"):
-            value = node.text or ""
-            require(value.startswith("./") or value.startswith("../"), "NATIVE_RELATIVE_PATHS",
-                    "The native map must use portable relative paths for every retained layer.", source=value)
-    return project, {"native": native_version(), "layers": layers, "projectCrs": _crs(project.crs()), "relativePaths": True}
+        for node in xml.findall(".//projectlayers/maplayer"):
+            value = node.findtext("datasource") or ""
+            layer_id = node.findtext("id")
+            native_layer = project.mapLayer(layer_id)
+            definition = next((d for d in definitions if native_layer and native_layer.customProperty("starforge/layerId") == d["id"]), None)
+            require(definition is not None, "NATIVE_PROJECT_XML_LAYER", "The saved layer XML must bind an original selected layer.")
+            if definition.get("postgis"):
+                from .postgis.native import binding, xml_binding
+                xml_binding(node, binding(workspace, definition))
+            else:
+                require(value.startswith("./") or value.startswith("../"), "NATIVE_RELATIVE_PATHS",
+                        "Retained file layers must use portable relative paths.", source=value)
+    return project, {"native": native_version(), "layers": layers, "projectCrs": _crs(project.crs()), "relativePaths": True,
+                     "databaseReferences": sum(bool(d.get("postgis")) for d in definitions)}
 
 
 def save_project(workspace, *, revision, request_id, actor, project_crs=None, progress=None):

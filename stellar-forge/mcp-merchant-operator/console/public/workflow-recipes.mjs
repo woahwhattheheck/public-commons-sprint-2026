@@ -513,5 +513,13 @@ export function createWorkflowRecipes({
   for(const id of ['workflow-recipe-export-name','workflow-recipe-export-description','workflow-recipe-export-inputs'])
     ui[id].addEventListener('input',()=>{if(!model)return;remember();model.exportVersion++;model.exportRecipe=null;renderExport();sync();});
   file.addEventListener('change',()=>busy(file,loadFile));
-  return {refresh,profileChanged,reset,sync,syncSelection,prefillDefinition};
+  async function useRecipe(recipe,inputs){
+    requireProfile();const ctx=context();
+    await refresh();
+    if(!current(ctx))throw new Error('The operator profile changed before recipe intake.');
+    const parsed=parseRecipe(JSON.stringify(recipe)),selectedInputs=parseObject(JSON.stringify(inputs),'Workflow inputs');
+    adoptRecipe(parsed);model.inputsText=pretty(selectedInputs);writeForm();show();sync();
+    return {recipeSha256:parsed.contentSha256,profileId:ctx.profileId};
+  }
+  return {refresh,profileChanged,reset,sync,syncSelection,prefillDefinition,useRecipe};
 }

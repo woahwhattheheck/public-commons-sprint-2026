@@ -40,6 +40,7 @@ export interface WqxLaunch {
 }
 export interface WqxNativeResult<T = WqxObject> {
   workspace: string; launch: WqxLaunch; httpStatus: number; result: T; file: WqxRetainedFile;
+  error?: WqxObject;
 }
 export interface WqxPage<T = WqxObject> {
   total: number; snapshot: string; offset: number; items: T[]; nextOffset: number | null;
@@ -110,6 +111,24 @@ export interface WqxFileArgs extends WqxScope {
 export type WqxDocumentSelection =
   | { document: WqxObject; documentRef?: never }
   | { document?: never; documentRef: WqxInputRef };
+export interface WqxConcentrationUnitsArgs extends WqxScope { planId: string; expectedPlanSha256?: string }
+export type WqxConcentrationSelection =
+  | { resultIds: string[]; fromUnit?: never; reportedLimitsOnly?: never }
+  | { resultIds?: never; fromUnit: string; reportedLimitsOnly?: never }
+  | { resultIds?: never; fromUnit?: never; reportedLimitsOnly: true };
+export type WqxConcentrationPrepareArgs = WqxScope & WqxDocumentSelection & WqxConcentrationSelection & {
+  targetUnit: string; reason: string; expectedPlanSha256?: string;
+};
+export interface WqxConcentrationPreparation extends WqxNativeResult {
+  /** A document is exposed only when the complete native proposal is PREPARED. */
+  documentFile: WqxRetainedFile | null; documentRef: WqxInputRef | null;
+  reportCsvFile: WqxRetainedFile | null; proposalFile?: WqxRetainedFile;
+}
+export interface WqxConcentrationReportArgs extends WqxScope { reviewId: string; format?: 'json' | 'csv' }
+export interface WqxConcentrationReport extends WqxNativeResult {
+  format?: 'csv'; reportFile?: WqxRetainedFile;
+}
+
 export type WqxTableExportArgs = WqxScope & WqxDocumentSelection & { format: 'csv' | 'tsv' };
 export interface WqxTableImportArgs extends WqxScope { inputRef: WqxInputRef; format: 'csv' | 'tsv' }
 export type WqxDecisionsPreviewArgs = WqxScope & WqxDocumentSelection & { newPlanId: string };
@@ -152,6 +171,9 @@ export interface WqxCustomerExecuteRequest { intentId: string }
 export interface WqxCustomerReopenRequest { editionId: string; intentId: string }
 
 export interface WqxToolContract {
+  merchant_wqx_concentration_units: { args: WqxConcentrationUnitsArgs; result: WqxNativeResult };
+  merchant_wqx_concentration_prepare: { args: WqxConcentrationPrepareArgs; result: WqxConcentrationPreparation };
+  merchant_wqx_concentration_report: { args: WqxConcentrationReportArgs; result: WqxConcentrationReport };
   merchant_wqx_result: {args:WqxResultArgs;result:WqxNativeResult};
   merchant_wqx_files: {args:WqxPageArgs;result:WqxPage<WqxRetainedFile>};
   merchant_wqx_input_files: {args:Record<string, never>;result:WqxInputFiles};
@@ -254,6 +276,9 @@ export declare class WqxWorkspaceClient {
   inputAppend(args: WqxInputAppendArgs, options?: WqxRequestOptions): Promise<WqxInputState>;
   inputFinish(args: WqxInputFinishArgs, options?: WqxRequestOptions): Promise<WqxInputComplete>;
   inputStatus(args: { inputId: string }, options?: WqxRequestOptions): Promise<WqxInputState>;
+  concentrationUnits(args: WqxConcentrationUnitsArgs, options?: WqxRequestOptions): Promise<WqxNativeResult>;
+  concentrationPrepare(args: WqxConcentrationPrepareArgs, options?: WqxRequestOptions): Promise<WqxConcentrationPreparation>;
+  concentrationReport(args: WqxConcentrationReportArgs, options?: WqxRequestOptions): Promise<WqxConcentrationReport>;
   tableExport(args: WqxTableExportArgs, options?: WqxRequestOptions): Promise<WqxRetainedFile>;
   tableImport(args: WqxTableImportArgs, options?: WqxRequestOptions): Promise<WqxNativeResult>;
   decisionsPreview(args: WqxDecisionsPreviewArgs, options?: WqxRequestOptions): Promise<WqxNativeResult>;

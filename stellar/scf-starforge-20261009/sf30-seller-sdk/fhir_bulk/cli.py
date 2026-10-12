@@ -173,6 +173,10 @@ def parser():
     q.add_argument("--operation", required=True)
     q.add_argument("--status-url", required=True)
     q.add_argument("--reason", required=True)
+    q = command("receive-capture", "Join a complete retained source packet to its original accepted operation")
+    q.add_argument("--operation", required=True)
+    q.add_argument("--source", required=True, help="Original source ID returned by source-add")
+    q.add_argument("--reason", required=True)
     q = command("cancel", "Retain and send an explicit original provider cancellation")
     q.add_argument("--operation", required=True)
     q.add_argument("--request-id", required=True)
@@ -288,6 +292,8 @@ def execute(args, ws):
         return ws.operation(args.id)
     if name == "adopt-status":
         return ws.adopt_status(args.operation, {"statusUrl": args.status_url, "reason": args.reason})
+    if name == "receive-capture":
+        return ws.receive_capture(args.operation, {"sourceId": args.source, "reason": args.reason})
     if name == "cancel":
         return ws.cancel(args.operation, args.request_id)
     if name == "source-add":
@@ -347,8 +353,7 @@ def execute(args, ws):
             raise InputError("Choose a loopback port from 0 to 65535")
         from fhir_server import OperatorServer
         with OperatorServer(ws, args.port) as server:
-            emit({"schema": "stellar-forge.fhir-bulk-startup.v1", "url": server.url,
-                  "workspace": str(ws.root), "workspaceId": ws.workspace_id})
+            emit(server.startup())
             try:
                 server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:

@@ -11,13 +11,14 @@
   <link rel="stylesheet" href="/clinical-trials.css">
   <link rel="stylesheet" href="/source-bundles.css">
   <link rel="stylesheet" href="/citation-review.css">
+  <link rel="stylesheet" href="/eligibility.css">
   <script src="/app.js" type="module"></script>
 </head>
 <body>
   <a class="skip-link" href="#workspace">Skip to dossier</a>
   <header class="topbar">
     <div class="brand"><span class="brand-mark" aria-hidden="true">R</span><span>Research dossiers</span></div>
-    <div class="topbar-right"><span id="connection" role="status">Opening workspace</span><button id="open-portable" class="quiet" title="Reopen a portable dossier JSON or gzip file up to 256 MiB">Open dossier file</button></div>
+    <div class="topbar-right"><a href="/europe-pmc.html" class="quiet">Literature searches</a><span id="connection" role="status">Opening workspace</span><button id="open-portable" class="quiet" title="Reopen a portable dossier JSON or gzip file up to 256 MiB">Open dossier file</button></div>
   </header>
   <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
   <div class="shell">
@@ -53,6 +54,7 @@
           <button class="tab" data-tab="findings">Findings</button>
           <button class="tab" data-tab="revisions">Revisions</button>
           <button class="tab" data-tab="citation-review" id="citation-review-tab">Update review</button>
+          <button class="tab" data-tab="eligibility" id="eligibility-tab">Eligibility</button>
           <button class="tab" data-tab="crossref" id="crossref-tab" hidden>DOI metadata</button>
           <button class="tab" data-tab="documents" id="documents-tab">Documents</button>
           <button class="tab" data-tab="pipelines" id="pipelines-tab">Pipeline jobs</button>
@@ -84,6 +86,7 @@
           </div>
         </section>
         <section id="view-citation-review" hidden></section>
+        <section id="view-eligibility" hidden></section>
         <section id="view-crossref" hidden></section>
         <section id="view-documents" hidden></section>
         <section id="view-pipelines" hidden></section>

@@ -1,13 +1,17 @@
 // MIT. Private original SF88 HTTP/signing checkpoints; SF31/SF81 retain payment authority.
-import { lstat, open, readdir, rename } from 'node:fs/promises';
+import { lstat, open, readdir, rename } from './dataset-location.mjs';
 import { constants } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
+import { readNativeSigningDiagnostic } from '../sf103-native-buyer-signer/diagnostics.mjs';
 import {
-  BuyerError, digest, now, privateDirectory, readBytes, parseJson, writeBytes,
-  jsonBytes, exists, need, prepareWriteReservations, absolute, syncDirectory,
+  BuyerError, digest, now, parseJson, jsonBytes, need, absolute,
 } from './node/store.mjs';
+import {datasetPrivateStateDirectory as privateDirectory,datasetReadStateBytes as readBytes,
+  datasetWriteStateBytes as writeBytes,datasetStateExists as exists,
+  datasetPrepareWriteReservations as prepareWriteReservations,
+  datasetSyncStateDirectory as syncDirectory} from './dataset-location.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.attempt-wire.v1';
 const SOURCE_LIMIT = 2_000_000;
@@ -91,12 +95,14 @@ function stateOf(events) {
   return 'SOURCE_RETAINED';
 }
 function view(directory, source, events, writerActive = false) {
+  const nativeSigning=readNativeSigningDiagnostic(events['signing-error']?.value.nativeSigning);
   return {
     schema:SCHEMA, intentId:source.value.binding.intentId, directory, writerActive,
     sourceSha256:source.sha256, configValueSha256:source.value.binding.configValueSha256,
     state:stateOf(events), signingEntered:!!events['signing-input'],
     signedDispatchRecorded:!!events['signed-dispatch'],
     signedResponseRecorded:!!events['signed-response'],
+    ...(nativeSigning ? {nativeSigning} : {}),
     records:Object.fromEntries(Object.entries(events).map(([name, item]) =>
       [name, {path:join(directory, name + '.json'),sha256:item.sha256,bytes:item.bytes,
         recordedAt:item.value.recordedAt}])),
@@ -170,8 +176,10 @@ export async function createAttemptWireRecorder({cfg, body, fetchImpl, reserveFi
   }
   async function signingError(error) {
     if (!events['signing-input'] || events['signing-result'] || events['signing-error']) return;
+    let nativeSigning;
+    try { nativeSigning=readNativeSigningDiagnostic(error?.nativeSigning); } catch {}
     await publish('signing-error', {inputSha256:events['signing-input'].sha256,
-      code:code(error, 'ORIGINAL_SIGNER_ERROR')});
+      code:code(error, 'ORIGINAL_SIGNER_ERROR'), ...(nativeSigning ? {nativeSigning} : {})});
   }
   async function fetch(url, options = {}) {
     const href = new URL(url).href, method = options.method ?? 'GET';
@@ -274,8 +282,13 @@ async function checkpointWithLock({cfg, body, includeWire = false}, directory) {
   if (signed) need(input && signed.value.inputSha256 === input.sha256 &&
     digest(Buffer.from(JSON.stringify(signed.value.payload))) === signed.value.payloadSha256,
     'WIRE_SIGNATURE_RECORD_MISMATCH');
-  if (events['signing-error']) need(input && !signed &&
-    events['signing-error'].value.inputSha256 === input.sha256, 'WIRE_SIGNING_RECORD_MISMATCH');
+  if (events['signing-error']) {
+    const errorRecord=events['signing-error'].value;
+    need(input && !signed && errorRecord.inputSha256 === input.sha256, 'WIRE_SIGNING_RECORD_MISMATCH');
+    if (Object.hasOwn(errorRecord,'nativeSigning')) need(
+      readNativeSigningDiagnostic(errorRecord.nativeSigning) !== undefined,
+      'WIRE_SIGNING_DIAGNOSTIC_INVALID');
+  }
   if (signedRequest) need(signed && signedRequest.value.signingResultSha256 === signed.sha256 &&
     signedRequest.value.headers.find(([name]) => name === 'payment-signature')?.[1] ===
       Buffer.from(JSON.stringify(signed.value.payload)).toString('base64') &&

@@ -13,6 +13,12 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace attach --workspace DIRECTORY --runtime EXISTING_RUNTIME [--label NAME]
   runtime-workspace serve --workspace DIRECTORY [--port 8465]
   runtime-workspace status --workspace DIRECTORY [--runtime-id ID]
+  runtime-workspace source-builds --workspace DIRECTORY
+  runtime-workspace source-build-catalog --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
+  runtime-workspace source-build-review --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
+  runtime-workspace source-build-review-show --workspace DIRECTORY --review-id ID
+  runtime-workspace source-build-operation --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
+  runtime-workspace source-build-continue --workspace DIRECTORY --operation-id UUID
   runtime-workspace python-status --workspace DIRECTORY --runtime-id ID
   runtime-workspace python-review --workspace DIRECTORY --runtime-id ID --python ABS [--extras workbooks,agents|base]
   runtime-workspace python-operation --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
@@ -50,6 +56,10 @@ Install workers retain progress and continue across browser/server restarts.
 Linux, Node22.16+, Python3.11+, npm and flock are the original installer requirements.
 `;
 const allowed = {
+  'source-builds': ['--workspace'],
+  'source-build-catalog': ['--workspace', '--request'], 'source-build-review': ['--workspace', '--request'],
+  'source-build-review-show': ['--workspace', '--review-id'],
+  'source-build-operation': ['--workspace', '--request'], 'source-build-continue': ['--workspace', '--operation-id'],
   applications: ['--workspace', '--history-limit'],
   'application-history': ['--workspace', '--application-id', '--limit', '--cursor'],
   'application-review': ['--workspace', '--request'], 'application-save': ['--workspace', '--request'],
@@ -105,7 +115,17 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const model = await openRuntimeWorkspace({ directory });
   let result;
-  if (command === 'applications') result = await model.applicationsState({ historyLimit: options['--history-limit'] === undefined ? 1 : Number(options['--history-limit']) });
+  if (command === 'source-builds') result = await model.sourceBuildsState();
+  else if (command === 'source-build-review-show') result = await model.sourceBuildsReadReview(options['--review-id']);
+  else if (command === 'source-build-continue') result = await model.recoverSourceBuildOperation(options['--operation-id']);
+  else if (['source-build-catalog', 'source-build-review', 'source-build-operation'].includes(command)) {
+    if (!options['--request']) fail('SOURCE_BUILD_REQUEST_FILE_REQUIRED');
+    const input = await readJSON(resolve(options['--request']));
+    if (command === 'source-build-operation' && input?.operation !== 'source-build') fail('SOURCE_BUILD_OPERATION_REQUIRED');
+    const method = { 'source-build-catalog': 'sourceBuildsCatalog', 'source-build-review': 'sourceBuildsReview', 'source-build-operation': 'begin' }[command];
+    result = await model[method](input);
+  }
+  else if (command === 'applications') result = await model.applicationsState({ historyLimit: options['--history-limit'] === undefined ? 1 : Number(options['--history-limit']) });
   else if (command === 'application-history') {
     if (!options['--application-id']) fail('APPLICATION_ID_REQUIRED');
     result = await model.applicationsHistory({ applicationId: options['--application-id'],

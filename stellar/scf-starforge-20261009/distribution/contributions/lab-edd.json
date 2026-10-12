@@ -19,7 +19,13 @@
     "./seller/lab-edd/local": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/local.mjs",
     "./seller/lab-edd/workbook": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/workbook.mjs",
     "./seller/lab-edd/profiles/equis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/profiles/equis.mjs",
-    "./seller/lab-edd/profiles/dts8": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/profiles/dts8.mjs"
+    "./seller/lab-edd/profiles/dts8": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/profiles/dts8.mjs",
+    "./seller/lab-edd/reconciliation": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation.mjs",
+    "./seller/lab-edd/reconciliation/profile": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation-profile.mjs",
+    "./seller/lab-edd/reconciliation/table": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation-table.mjs",
+    "./seller/lab-edd/reconciliation/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation-report.mjs",
+    "./seller/lab-edd/merchant-configuration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/merchant-configuration.mjs",
+    "./seller/lab-edd/application-provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application-provider.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/README.md",
@@ -41,6 +47,18 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/McCampbell_Complete_EDD_Model_20261012.zip",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving-processes.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving-process.py",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.complete.example.json"
-  ]
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.complete.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/RECONCILIATION.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.cross-profile.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving-reconciliation.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/cross-profile-decisions.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/CROSS_PROFILE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/cross-profile-result.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/cross-profile-members.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/APPLICATIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/applications.example.json"
+  ],
+  "applicationProviders": {
+    "laboratory-edd": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application-provider.mjs"
+  }
 }

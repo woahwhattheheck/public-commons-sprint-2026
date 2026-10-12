@@ -7,6 +7,8 @@ const {createRequire}=require('node:module');
 const readyPath=process.argv[2];
 if(!readyPath)throw new Error('Pass the original private ready JSON.');
 const ready=JSON.parse(fs.readFileSync(readyPath,'utf8'));
+const csvPolicy=ready.csvPolicy;
+if(!['require-equivalent','canonical-json'].includes(csvPolicy))throw new Error('Select the explicit original JSON/CSV policy in the browser owner.');
 const requireRuntime=createRequire(__filename);
 const playwrightModule=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES ?
   path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'playwright') : 'playwright';
@@ -24,7 +26,9 @@ function write(p,value){const temp=p+'.pending';fs.writeFileSync(temp,JSON.strin
 const digest=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 const result=read(resultPath,{schema:'stellar-forge.erddap-browser-result.v1',completed:[],sources:[],builds:[],exports:[],receiving:[],errors:[],ssoStarts:undefined});
 delete result.ssoStarts;
-const saved=read(privatePath,{schema:'stellar-forge.erddap-browser-private.v1',inputManifestSha256:ready.inputManifestSha256,workspace:ready.workspace,receiver:ready.receiverWorkspace});
+const saved=read(privatePath,{schema:'stellar-forge.erddap-browser-private.v1',inputManifestSha256:ready.inputManifestSha256,workspace:ready.workspace,receiver:ready.receiverWorkspace,csvPolicy});
+if(saved.csvPolicy!==csvPolicy||(result.csvPolicy!==undefined&&result.csvPolicy!==csvPolicy))
+  throw new Error('The retained browser continuation belongs to another explicit JSON/CSV policy. Preserve its original choice.');
 if(saved.inputManifestSha256!==ready.inputManifestSha256 || saved.workspace!==ready.workspace || saved.receiver!==ready.receiverWorkspace)
   throw new Error('The retained browser continuation belongs to another original workspace/input selection.');
 if(saved.handoffManifestSha256&&saved.handoffManifestSha256!==ready.handoffManifestSha256)
@@ -82,9 +86,14 @@ async function proposeMapping(id){
   await readyButton('[data-action="review-mapping"]');
 }
 async function response(route,method,action){
-  const pending=page.waitForResponse(r=>new URL(r.url()).pathname===route&&r.request().method()===method,{timeout:180000});
-  await action();const r=await pending;const body=await r.json();
-  if(!r.ok())throw new Error(route+' returned '+r.status()+': '+String(body.error||JSON.stringify(body)).slice(0,1500));
+  // Drain the original response immediately; the click may outlive its page's response cache.
+  const pending=page.waitForResponse(r=>new URL(r.url()).pathname===route&&r.request().method()===method,{timeout:180000})
+    .then(async r=>{
+      const body=await r.json();
+      if(!r.ok())throw new Error(route+' returned '+r.status()+': '+String(body.error||JSON.stringify(body)).slice(0,1500));
+      return body;
+    });
+  const [body]=await Promise.all([pending,Promise.resolve().then(action)]);
   return body;
 }
 async function open(url){
@@ -198,6 +207,7 @@ function matchingHandoff(record,request){
 async function providerBrowser(){
   for(let i=0;i<(ready.handoffProfiles||[]).length;i++){
     const input=ready.handoffProfiles[i],memo=handoffContext(i),profile=input.profile;
+    if(!['require-equivalent','canonical-json'].includes(profile.dataEdition))throw new Error('The original provider profile has no explicit source edition policy.');
     if(digest(input.path)!==input.sha256)throw new Error('The supplied original provider profile file changed.');
     if(crypto.createHash('sha256').update(canonical(profile)+'\n').digest('hex')!==input.profileSha256)
       throw new Error('The exact provider profile differs from the original owner selection.');
@@ -214,6 +224,9 @@ async function providerBrowser(){
       await readyButton('[data-action="handoff-preview"]');
       await page.locator('#handoff-title').waitFor({state:'visible'});
       if(await page.locator('#handoff-title').inputValue()!==profile.title)throw new Error('The dataset title differs from the supplied provider profile.');
+      if(await page.locator('#handoff-dataEdition').inputValue()!==profile.dataEdition)
+        throw new Error('The visible provider source edition differs from the supplied profile.');
+      await page.locator('#handoff-dataEdition').selectOption(profile.dataEdition);
       await handoffTab('contacts');
       if(await page.locator('#handoff-contacts-technical-email').inputValue()!==profile.contacts.technical.email||
          await page.locator('#handoff-contacts-scientific-email').inputValue()!==profile.contacts.scientific.email)
@@ -248,7 +261,7 @@ async function providerBrowser(){
       await click('[data-action="handoff-refresh"]');
       await page.waitForFunction(expected=>document.querySelector('#handoff-notes')?.value===expected&&
         document.querySelector('#status').textContent==='Saved provider revisions refreshed. Editor draft retained.',memo.firstNotes,{timeout:120000});
-      result.handoffs[i]={sourceId:input.sourceId,inputSha256:input.sha256,profileSha256:input.profileSha256,
+      result.handoffs[i]={sourceId:input.sourceId,inputSha256:input.sha256,profileSha256:input.profileSha256,dataEdition:profile.dataEdition,
         rowCount:applied.review.rowCount,stationCount:applied.review.stationCount,initialReady:applied.review.ready,
         initialIssues:applied.review.issues.map(x=>({code:x.code,field:x.field,severity:x.severity,count:x.count}))};
       checkpoint();
@@ -265,6 +278,7 @@ async function providerBrowser(){
           try{
             const body=route.request().postDataJSON();
             if(body.source!==input.sourceId)throw new Error('The intercepted save belongs to another source.');
+            if(body.profile.dataEdition!==profile.dataEdition)throw new Error('The provider save changed its explicitly selected source edition.');
             memo.firstRequest=body;checkpoint();await preserveContext();
             const actual=await route.fetch();const record=await actual.json();
             if(!actual.ok())throw new Error('Original provider save returned '+actual.status()+': '+String(record.error||''));
@@ -323,6 +337,7 @@ async function providerBrowser(){
         if(memo.secondRequest&&canonical(requested)!==canonical(memo.secondRequest))
           throw new Error('The original second provider request differs from the retained editor; keep both for review.');
         if(preview.profile.notes!==memo.newerNotes)throw new Error('The next provider review lost the newer retained draft.');
+        if(preview.profile.dataEdition!==profile.dataEdition)throw new Error('The next provider review changed the original source edition choice.');
         memo.secondRequest=requested;checkpoint();
         memo.secondRevision=matchingHandoff(await response('/api/handoffs/reviews','POST',()=>click('[data-action="confirm-review"]')),memo.secondRequest);
         checkpoint();
@@ -422,10 +437,11 @@ async function providerReceiveBrowser(){
     page=await context.newPage();attach(page);await open(ready.original.url);
     const initial=await currentState(ready.original.url);
     if(initial.workspace.id!==ready.workspaceId)throw new Error('Original browser opened another workspace.');
-    result.inputManifestSha256=ready.inputManifestSha256;
+    result.inputManifestSha256=ready.inputManifestSha256;result.csvPolicy=csvPolicy;
     result.handoffManifestSha256=ready.handoffManifestSha256;result.playwrightVersion=playwrightVersion;
-    result.currentSourceRevision=crypto.createHash('sha256').update(JSON.stringify(ready.sourceFiles)).digest('hex');
-    result.sourceRevisions=result.sourceRevisions||{};result.sourceRevisions[result.currentSourceRevision]=ready.sourceFiles;
+    const sourceSelection={sourceFiles:ready.sourceFiles,csvPolicy};
+    result.currentSourceRevision=crypto.createHash('sha256').update(JSON.stringify(sourceSelection)).digest('hex');
+    result.sourceRevisions=result.sourceRevisions||{};result.sourceRevisions[result.currentSourceRevision]=sourceSelection;
     result.phaseSources=result.phaseSources||{};
     await phase('original_workspace',async()=>{
       result.initial={sources:initial.sources.length,builds:initial.builds.length,comparisons:initial.comparisons.length};
@@ -451,12 +467,21 @@ async function providerReceiveBrowser(){
         await selectedSource(result.sources[i].id);await proposeMapping(result.sources[i].id);
         const name=result.sources[i].datasetId+' — retained original selection';
         await page.locator('#mapping-name').fill(name);
-        const providerProfile=(ready.handoffProfiles||[]).find(x=>x.sourceId===result.sources[i].id);
-        if(providerProfile)await page.locator('#mapping-csv').selectOption(providerProfile.profile.dataEdition);
+        await page.locator('#mapping-csv').selectOption(csvPolicy);
+        if(await page.locator('#mapping-csv').inputValue()!==csvPolicy||
+           JSON.parse(await page.locator('#mapping-json').inputValue()).csvPolicy!==csvPolicy)
+          throw new Error('The visible native mapping did not retain the selected JSON/CSV policy.');
         await click('[data-action="review-mapping"]');
+        if(!(await page.locator('#review-body').innerText()).includes(csvPolicy))
+          throw new Error('The mapping review omitted the actual selected JSON/CSV policy.');
         const build=await response('/api/builds','POST',()=>click('[data-action="confirm-review"]'));
         if(build.source!==result.sources[i].id||build.rowCount!==result.sources[i].rowCount)throw new Error('Native build did not retain the complete selected source.');
-        result.builds[i]={id:build.id,source:build.source,plan:build.plan,rowCount:build.rowCount,snapshot:build.native.snapshot,
+        const planResponse=await context.request.get(new URL('/api/plans/'+encodeURIComponent(build.plan),ready.original.url).href,
+          {headers:{Authorization:'Bearer '+new URL(ready.original.url).hash.slice(1)}});
+        if(!planResponse.ok())throw new Error('The original saved mapping could not be reopened after the native build.');
+        const retainedPlan=await planResponse.json();
+        if(retainedPlan.csvPolicy!==csvPolicy)throw new Error('The saved original mapping changed the reviewed JSON/CSV policy.');
+        result.builds[i]={id:build.id,source:build.source,plan:build.plan,csvPolicy:retainedPlan.csvPolicy,rowCount:build.rowCount,snapshot:build.native.snapshot,
           keys:build.keys,files:build.files,name:build.native.name};
         result.currentBuild=build.id;checkpoint();
         await page.locator('#native-result').waitFor({state:'visible',timeout:120000});

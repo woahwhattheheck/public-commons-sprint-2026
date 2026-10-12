@@ -51,6 +51,8 @@ def short(value, length=16):
 
 def source_label(row):
     source = row["source"]
+    if source.get("sourceKind") == "postgis":
+        return "PostGIS · " + source["projectId"] + " · revision " + str(source["revision"])
     if source.get("sourceKind") == "vector":
         edition = source.get("sourceEdition", {})
         label = edition.get("editionId") or edition.get("id") or edition.get("version") or short(row["id"])
@@ -213,6 +215,9 @@ class ReceivingDock(QDockWidget):
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs)
         self._sources_tab()
+        from .postgis.operator import PostgisPane
+        self.postgis = PostgisPane(self)
+        self.tabs.addTab(self.postgis, "PostGIS receiving")
         self._layers_tab()
         self._review_tab()
         self._project_tab()
@@ -235,7 +240,7 @@ class ReceivingDock(QDockWidget):
 
     def _sources_tab(self):
         layout = self.page("Sources")
-        instructions = QLabel("Import the original qgis-receiving.json or vector-export.json. Each source edition, native layer and complete file bundle is retained.")
+        instructions = QLabel("Import the original qgis-receiving.json, vector-export.json or postgis-receiving.json. Each source edition, native layer and complete file bundle is retained.")
         instructions.setWordWrap(True)
         layout.addWidget(instructions)
         controls = QHBoxLayout()
@@ -485,8 +490,8 @@ class ReceivingDock(QDockWidget):
         fill(self.sources, [([source_label(x), x.get("summary", {}).get("scenes", ""),
                              x.get("summary", {}).get("assets", ""), x["id"], x["importedAt"]], x) for x in self.state["sources"]])
         vector = self.source is not None and self.source.sourceKind == "vector"
-        self.all_footprints.setEnabled(self.source is not None and not vector)
-        self.selected_footprints.setEnabled(self.source is not None and not vector)
+        self.all_footprints.setEnabled(self.source is not None and self.source.sourceKind == "stac")
+        self.selected_footprints.setEnabled(self.source is not None and self.source.sourceKind == "stac")
         if vector:
             self.scenes.setHorizontalHeaderLabels(["Source", "Source layer", "Formats", "Source features", "Native layers"])
             self.scene_metadata.setText("Original layer metadata")
@@ -518,6 +523,7 @@ class ReceivingDock(QDockWidget):
                 widget.setCurrentIndex(index)
         fill(self.history, [([x["revision"], x["at"], x["actor"], x["action"], x["requestId"]], x)
                             for x in reversed(self.workspace.history())])
+        self.postgis.refresh()
         self.field_panel.refresh(self.state)
         self.show_pending()
 
@@ -569,6 +575,12 @@ class ReceivingDock(QDockWidget):
             result = workspace.import_source(data["directory"], expected_manifest_sha256=data["sha256"], progress=self.progress, **common)
         elif action == "activate":
             result = workspace.activate_source(data["sourceId"], **common)
+        elif action == "postgis-check":
+            from .postgis.native import record_check
+            result = record_check(workspace, data["sourceId"], data["layerIds"], data["connection"], progress=self.progress, **common)
+        elif action == "postgis-layers":
+            from .postgis.native import save_selection
+            result = save_selection(workspace, data["layers"], **common)
         elif action == "layers":
             result = workspace.save_layers(data["layers"], **common)
         elif action == "review":
@@ -637,12 +649,12 @@ class ReceivingDock(QDockWidget):
 
     def import_source(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Select original receiving manifest", "",
-                                                 "Original receiving (qgis-receiving.json vector-export.json)")
+                                                 "Original receiving (qgis-receiving.json vector-export.json postgis-receiving.json)")
         if not filename:
             return
         def work():
-            require(Path(filename).name in ("qgis-receiving.json", "vector-export.json"),
-                    "RECEIVING_MANIFEST", "Select the original qgis-receiving.json or vector-export.json.")
+            require(Path(filename).name in ("qgis-receiving.json", "vector-export.json", "postgis-receiving.json"),
+                    "RECEIVING_MANIFEST", "Select the original qgis-receiving.json, vector-export.json or postgis-receiving.json.")
             measured = file_digest(filename)
             self.mutate("import", {"directory": str(Path(filename).parent), "sha256": measured["sha256"]})
         self.run("Import original receiving", work)
@@ -699,7 +711,12 @@ class ReceivingDock(QDockWidget):
     def edit_layer(self):
         def work():
             row = self.selected_one(self.layers, "map layer")
-            if row["kind"] == "footprints":
+            if row.get("postgis"):
+                from .postgis.operator import edit_layer
+                replacement = edit_layer(self, row)
+                if replacement is None:
+                    return
+            elif row["kind"] == "footprints":
                 label, ok = QInputDialog.getText(self, "Edit footprint layer", "Layer name", text=row["label"])
                 if not ok:
                     return
@@ -733,7 +750,8 @@ class ReceivingDock(QDockWidget):
                 if all(replacement.get(k) == row.get(k) for k in ("kind", "bands", "crsOverride", "vectorLayer")):
                     replacement["styleFile"] = row.get("styleFile")
                     replacement["styleDependencies"] = row.get("styleDependencies", [])
-            self.mutate("layers", {"layers": [replacement if x["id"] == row["id"] else x for x in self.state["layers"]]})
+            self.mutate("postgis-layers" if row.get("postgis") else "layers",
+                        {"layers": [replacement if x["id"] == row["id"] else x for x in self.state["layers"]]})
         self.run("Edit retained layer choices", work)
 
     def remove_layer(self):
@@ -784,10 +802,14 @@ class ReceivingDock(QDockWidget):
             self.review_summary.setText(pretty(result["counts"]) + "\n" + identity_note)
             assets = {x["key"]: x for x in result["assets"]}
             rows = [x for x in self.state["layers"] if x["sourceId"] == result["leftSourceId"]]
-            fill(self.review, [([x["label"], x.get("assetKey") or str(len(x["sceneKeys"])) + " original scenes",
+            fill(self.review, [([x["label"], x["postgis"]["layerId"] if x.get("postgis") else
+                                x.get("assetKey") or str(len(x["sceneKeys"])) + " original scenes",
                                 "", ""], x) for x in rows])
             for index, row in enumerate(rows):
-                if row["kind"] == "footprints":
+                if row.get("postgis"):
+                    from .postgis.operator import comparison_label
+                    _, availability = comparison_label(row, result)
+                elif row["kind"] == "footprints":
                     availability = "Original later footprint selection"
                 else:
                     key = json.dumps([row.get("collection"), row["itemId"], row["assetKey"]], ensure_ascii=False, separators=(",", ":"))

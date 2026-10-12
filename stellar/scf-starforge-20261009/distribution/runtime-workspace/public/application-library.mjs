@@ -79,7 +79,9 @@ export function createApplicationLibrary({
   catalog.append(catalogTitle,
     node('p', 'Choose a tool to configure a new application. Its saved runtime and source are checked by the existing application review.', 'note'),
     field('Find an application tool', catalogSearch), catalogList, catalogControls);
-  root.replaceChildren(saved, catalog);
+  const sourceProblems = node('section', undefined, 'panel'); sourceProblems.hidden = true;
+  sourceProblems.id = 'application-provider-problems';
+  root.replaceChildren(saved, sourceProblems, catalog);
 
   function persist() {
     if (!initialized) return;
@@ -124,6 +126,29 @@ export function createApplicationLibrary({
         'No applications have been saved. Choose an available tool below to prepare the first one.', 'empty'));
     }
     pager(previousSaved, nextSaved, savedSummary, rows.length, savedPage, 'applications');
+  }
+  function renderSourceProblems() {
+    const signature = JSON.stringify([data.catalogError ?? null, data.unavailableProviders ?? []]);
+    if (sourceProblems.dataset.signature === signature) return;
+    sourceProblems.dataset.signature = signature; sourceProblems.replaceChildren();
+    const missing = data.unavailableProviders ?? [];
+    sourceProblems.hidden = !data.catalogError && !missing.length;
+    if (sourceProblems.hidden) return;
+    sourceProblems.append(node('h3', data.catalogError ? 'Application catalog needs source recovery' : 'Some application tools need their source'));
+    if (data.catalogError) {
+      sourceProblems.append(node('p', data.catalogError.message, 'note'),
+        node('code', data.catalogError.code),
+        node('p', 'Saved application history and running application controls are available above. Restore the declared source before using this catalog.', 'note'));
+    } else {
+      sourceProblems.append(node('p', 'The available tools below can be used. These additional providers have a missing source file or dependency; receive their original source and reopen the Applications host.', 'note'));
+      for (const provider of missing) {
+        const details = node('details'), summary = node('summary', provider.id);
+        details.append(summary, node('p', provider.path, 'note'),
+          node('p', provider.error?.message ?? 'Original provider source is unavailable.', 'note'));
+        if (provider.error?.code) details.append(node('code', provider.error.code));
+        sourceProblems.append(details);
+      }
+    }
   }
   function renderCatalog() {
     const all = [...(data.catalog ?? [])].sort((a, b) =>
@@ -183,13 +208,14 @@ export function createApplicationLibrary({
       options(runtime, [...runtimeMap].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label)), 'All runtimes');
       options(phase, [...new Set((data.applications ?? []).map(app => app.phase).filter(Boolean))]
         .sort().map(id => ({ id, label: id })), 'All statuses');
-      renderSaved(); renderCatalog();
+      renderSaved(); renderSourceProblems(); renderCatalog();
     },
     select(id) { selectedId = id; renderSaved(); },
     reset() {
       initialized = false; workspaceId = null; data = { catalog: [], applications: [] }; selectedId = null;
       delete list.dataset.signature; delete catalogList.dataset.signature;
-      list.replaceChildren(); catalogList.replaceChildren();
+      list.replaceChildren(); catalogList.replaceChildren(); sourceProblems.replaceChildren();
+      sourceProblems.hidden = true; delete sourceProblems.dataset.signature;
     },
   };
 }
