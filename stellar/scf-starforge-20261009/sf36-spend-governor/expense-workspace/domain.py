@@ -124,17 +124,34 @@ def group_amounts(lines, dimensions=()):
     return [value | {"amount": str(value["amount"])} for _, value in sorted(groups.items())]
 
 
+def spending_reservation_identity(ledger, request_id, request_digest):
+    """One original physical ledger row, retained across its financial source views."""
+    if not isinstance(ledger, dict) or set(ledger) != {"device", "inode"} or not all(
+            isinstance(value, (str, int)) and str(value).isdigit() for value in ledger.values()):
+        return None
+    if not isinstance(request_id, str) or not request_id or not isinstance(request_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", request_digest):
+        return None
+    return {"ledger": {key: str(ledger[key]) for key in ("device", "inode")},
+            "request_id": request_id, "request_digest": request_digest}
+
+
 def period_view(period, items, sources, centers, dispositions, closed_transfers=None):
     """Dates are operator recognition dates; native days never become settlement dates."""
     start, through = period["from_day"], period["through_day"]
-    source_views = [{k: s.get(k) for k in ("id", "name", "kind", "path", "current_capture", "capture_time", "projection_sha256", "journal_events", "last_sequence", "record_kind", "source_basis", "date_basis", "data_context", "immutable_intake")}
+    source_views = [{**{k: s.get(k) for k in ("id", "name", "kind", "path", "current_capture", "capture_time", "projection_sha256", "journal_events", "last_sequence", "record_kind", "source_basis", "date_basis", "data_context", "immutable_intake")},
+                     **({k:s.get(k) for k in ("spending_owner","ledger_state","reservation_ledger_identity","unlinked_spending_exposures","source_issues","source_notes")} if s.get("kind") == "governed_mcp" else {})}
                     for s in sources]
     issues, candidates, exposures, native_outcomes = [], [], [], []
     disposition_by_key = {(d["item_id"], d["code"]): d for d in dispositions}
     closed_transfers = sorted(closed_transfers or [], key=lambda v:(v["period_id"], v["close_id"], v["item_id"]))
-    previously_issued = {}
+    previously_issued, previously_reserved = {}, {}
     for entry in closed_transfers:
-        previously_issued.setdefault(entry["transfer_identity"], []).append(entry)
+        if entry.get("transfer_identity"):
+            previously_issued.setdefault(entry["transfer_identity"], []).append(entry)
+        if entry.get("spending_reservation"):
+            previously_reserved.setdefault(digest(entry["spending_reservation"]), []).append(entry)
+        for historical in entry.get("spending_reservation_history", []):
+            previously_reserved.setdefault(digest(historical["identity"]), []).append(entry)
 
     def issue(code, item, description, *, group=None, kinds=None):
         item_id = item["id"] if item else ""
@@ -151,12 +168,83 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
         return result
 
     for source in sources:
+        if source.get("source_issues"):
+            issue("GOVERNED_SOURCE_" + source["id"], None,
+                  source["name"] + " retains original native bindings that need source recovery before financial attribution",
+                  group={"source_id":source["id"],"issues":source["source_issues"]}, kinds=[])
         if source.get("pending"):
             issue("SOURCE_REVIEW_" + source["id"], None, source["name"] + " has captured source awaiting acceptance or rejection",
                   group={"source_id": source["id"], "captures": source["pending"]}, kinds=[])
         elif not source.get("current_capture"):
             issue("SOURCE_CAPTURE_" + source["id"], None, source["name"] + " has no accepted native capture",
                   group={"source_id": source["id"]}, kinds=[])
+
+    governed_present = any(s.get("kind") == "governed_mcp" for s in sources)
+    source_by_id = {s["id"]:s for s in sources}
+    ledger_observations = {}
+    seen_reservation_issues = set()
+
+    def reservation_key(source, request_id, request_digest, missing=False):
+        if not governed_present or missing or not source:
+            return None
+        identity = source.get("reservation_ledger_identity")
+        if not isinstance(identity, dict) or set(identity) != {"device","inode"}:
+            return None
+        return (str(identity["device"]),str(identity["inode"]),request_id,request_digest)
+
+    def item_reservation_key(item):
+        source=source_by_id.get(item["source_id"])
+        if not source or source.get("current_capture") != item["capture_id"]:
+            return None
+        row=item["row"]
+        if row.get("source_kind") == "governed_mcp" and not row.get("native_detail", {}).get("spending_state"):
+            return None
+        if row.get("source_kind", "sf36_ledger") not in ("sf36_ledger","governed_mcp"):
+            return None
+        return reservation_key(source,row["request_id"],row["request_digest"],item["missing"])
+
+    def observe_ledger(key, entry):
+        if key is not None:
+            ledger_observations.setdefault(key, []).append(entry)
+
+    def original_contributions(key):
+        return sorted(ledger_observations.get(key, []), key=lambda entry:(entry["source_id"],entry["item_id"]))
+
+    for item in items:
+        row=item["row"];key=item_reservation_key(item)
+        if key is not None and row["day"] <= through:
+            detail=row.get("native_detail", {})
+            observe_ledger(key,{"item_id":item["id"],"source_id":item["source_id"],"source_name":item["source_name"],
+                "source_capture":item["capture_id"],"basis":item["basis"],"native_state":detail.get("spending_state",row["state"]),
+                "network":row["network"],"asset":row["asset"],"native_reservation_day":row["day"],
+                "maximum":row["amount"],"actual":row["actual"],"reserved_base_units":row["reserved_base_units"],
+                "request_id":row["request_id"],"request_digest":row["request_digest"]})
+
+    for source in sources:
+        for selected in source.get("unlinked_spending_exposures", []):
+            if selected["native_reservation_day"] > through:
+                continue
+            key=reservation_key(source,selected["request_id"],selected["request_digest"])
+            observe_ledger(key,{"item_id":"","source_id":source["id"],"source_name":source["name"],
+                "source_capture":source["current_capture"],"basis":digest(selected),"native_state":selected["state"],
+                "network":selected["network"],"asset":selected["asset"],
+                "native_reservation_day":selected["native_reservation_day"],"maximum":selected["maximum"],
+                "actual":selected["settled_actual"],"reserved_base_units":selected["amount"],
+                "request_id":selected["request_id"],"request_digest":selected["request_digest"]})
+            if int(selected["amount"]) > 0:
+                exposures.append({"item_id":"","request_id":selected["request_id"],"source_name":source["name"],
+                    "network":selected["network"],"asset":selected["asset"],"amount":selected["amount"],
+                    "native_reservation_day":selected["native_reservation_day"],"missing":False,
+                    "source_capture":source["current_capture"],"request_digest":selected["request_digest"],
+                    "attribution":"UNVERIFIED_NATIVE_LINK","_reservation_key":key})
+    for key, entries in ledger_observations.items():
+        projections={(e["network"],e["asset"],e["native_state"],e["maximum"],e["actual"],e["native_reservation_day"])
+                     for e in entries}
+        if len(projections) > 1:
+            issue("SPENDING_CAPTURE_DIVERGENCE_"+digest(key)[:16],None,
+                "Accepted views of the same original spending reservation disagree. Refresh and review the original source editions together.",
+                group={"ledger_identity":{"device":key[0],"inode":key[1]},"request_id":key[2],
+                       "request_digest":key[3],"sources":original_contributions(key)},kinds=[])
 
     def receipt_key(row):
         ref = row.get("receipt_ref", "")
@@ -167,7 +255,7 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             ref = row["network"] + "/" + ref.lower()
         return (row["network"], row["asset"], ref)
 
-    receipt_groups, exact_transfers = {}, {}
+    receipt_groups, exact_transfers, exact_spending = {}, {}, {}
     for item in items:
         row = item["row"]
         if row["state"] == "settled" and row.get("receipt_ref") and not item["missing"]:
@@ -176,6 +264,9 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             transfer = row.get("native_detail", {}).get("transfer_identity")
             if transfer:
                 exact_transfers.setdefault(transfer, []).append(item)
+            spending_key = item_reservation_key(item)
+            if spending_key is not None:
+                exact_spending.setdefault(spending_key, []).append(item)
 
     for item in items:
         row, coding = item["row"], item.get("coding")
@@ -183,9 +274,13 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
         if not relevant:
             continue
         detail = row.get("native_detail")
+        source = source_by_id.get(item["source_id"], {})
+        original_reservation = (spending_reservation_identity(source.get("reservation_ledger_identity"), row["request_id"], row["request_digest"])
+            if row.get("source_kind", "sf36_ledger") in ("sf36_ledger", "governed_mcp") and
+            source.get("current_capture") == item["capture_id"] and not item["missing"] else None)
         if isinstance(detail, dict):
             native_outcomes.append({"item_id":item["id"], "request_id":row["request_id"], "source_name":item["source_name"],
-                "source_capture":item["capture_id"], "quote_day":row["day"], "native_status":detail["native_status"],
+                "source_capture":item["capture_id"], "quote_day":detail.get("quote_created_day",row["day"]), "native_status":detail["native_status"],
                 "payment_classification":detail["classification"], "network":row["network"], "asset":row["asset"],
                 "quoted_amount":detail.get("quoted_amount"), "settled_actual":row["settled_base_units"],
                 "receipt_ref":row["receipt_ref"], "observation_sha256":detail.get("observation_sha256"),
@@ -199,17 +294,33 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 "result_preview_bytes":(detail.get("result_preview") or {}).get("bodyBytes"),
                 "missing":item["missing"], "source_kind":row.get("source_kind", "sf36_ledger"),
                 "data_context":detail.get("data_context", "operational"),
-                "store_currency":detail.get("store_currency"), "store_amount":detail.get("store_amount")})
-        if row["state"] == "reserved":
+                "store_currency":detail.get("store_currency"), "store_amount":detail.get("store_amount"),
+                **({key:detail.get(key) for key in ("spending_link","spending_state","spending_maximum","spending_actual",
+                    "spending_reserved_base_units","spending_reservation_day","spending_request_sha256",
+                    "spending_binding_sha256","spending_receipt_ref","spending_proof_sha256","finality_record_sha256",
+                    "observed_settled_actual","spending_problems","spending_notes","unverified_spending_exposure")} if row.get("source_kind") == "governed_mcp" else {})})
+        if row["state"] == "reserved" or (row.get("source_kind") == "governed_mcp" and int(row.get("reserved_base_units") or "0") > 0):
             exposures.append({"item_id": item["id"], "request_id": row["request_id"], "source_name": item["source_name"],
                               "network": row["network"], "asset": row["asset"], "amount": row["reserved_base_units"],
                               "native_reservation_day": row["day"], "missing": item["missing"],
-                              "source_capture": item["capture_id"], "request_digest": row["request_digest"]})
+                              "source_capture": item["capture_id"], "request_digest": row["request_digest"],
+                              **({"_reservation_key":item_reservation_key(item)} if governed_present else {})})
         if item["missing"]:
             issue("ABSENT_FROM_CURRENT_SOURCE", item, "This original row is absent from the accepted source capture; its previous bytes remain retained")
             continue
+        if row["state"] == "spending_review":
+            issue("GOVERNED_SPENDING_BINDING", item,
+                  "The retained quote, native approval or original ledger/finality disagree. Inspect the original buyer and refresh this source.",
+                  group={"problems":row.get("native_detail", {}).get("spending_problems", [])}, kinds=[])
+            continue
         if row["state"] == "reserved":
-            issue("UNRESOLVED_RESERVATION", item, "The original maximum remains reserved. Carry it for native finalization; it is not settled expense")
+            key=item_reservation_key(item)
+            if key is None or key not in seen_reservation_issues:
+                contributing=original_contributions(key) if key is not None else []
+                issue("UNRESOLVED_RESERVATION", item, "The original maximum remains reserved. Carry it for native finalization; it is not settled expense",
+                    group={"sources":contributing} if len(contributing)>1 else None)
+                if key is not None:
+                    seen_reservation_issues.add(key)
             continue
         if row["state"] == "not_dispatched":
             continue
@@ -238,9 +349,12 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             continue
         transfer_identity = row.get("native_detail", {}).get("transfer_identity")
         prior = previously_issued.get(transfer_identity, [])
+        if original_reservation:
+            prior = list({(value["period_id"], value["close_id"], value["item_id"]): value for value in
+                [*prior, *previously_reserved.get(digest(original_reservation), [])]}.values())
         if prior:
             issue("TRANSFER_ALREADY_ISSUED", item,
-                  "The same original transfer is included in another currently closed period. Exclude this representation, or reopen and correct the earlier period before recognising it here.",
+                  "The same original transfer or spending reservation is included in another currently closed period. Exclude this representation, or reopen and correct the earlier period before recognising it here.",
                   group={"issued_charges":prior}, kinds=["exclude_from_period"])
             continue
         selected_lines = []
@@ -250,21 +364,29 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 raise Problem("COST_CENTER_MISSING", "A retained allocation references a missing cost center", 409)
             selected_lines.append({"item_id": item["id"], "source_id": item["source_id"], "source_name": item["source_name"],
                                    "request_id": row["request_id"], "request_digest": row["request_digest"],
-                                   "native_reservation_day": row["day"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else None,
+                                   "native_reservation_day": row["day"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else row.get("native_detail", {}).get("spending_reservation_day"),
                                    "native_source_day":row["day"], "native_date_basis":row.get("native_date_basis", "SF36 reservation day"),
                                    "source_kind":row.get("source_kind", "sf36_ledger"), "recognition_date": coding["recognition_date"],
                                    "network": row["network"], "asset": row["asset"], "scheme": row["scheme"],
                                    "settled_actual": row["settled_base_units"],
-                                   "reserved_maximum":row["amount"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else None,
-                                   "quoted_amount":row["amount"] if row.get("source_kind") == "mcp_quote" else None,
+                                   "reserved_maximum":row["amount"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else row.get("native_detail", {}).get("spending_maximum"),
+                                   "quoted_amount":row.get("native_detail", {}).get("quoted_amount") if row.get("source_kind") in ("mcp_quote","governed_mcp") else None,
                                    "receipt_ref": row["receipt_ref"], "proof_sha256": row["proof_sha256"],
                                    "center_id": center["id"], "center_code": center["code"], "center_name": center["name"],
                                    "project": line["project"], "account_code": line["account_code"], "amount": line["amount"],
                                    "memo": line["memo"] or coding["memo"], "coding_id": coding["id"], "line": index + 1,
                                    "source_capture": item["capture_id"], "basis": item["basis"],
-                                   "native_payment": row.get("native_detail")})
+                                   "native_payment": row.get("native_detail"),
+                                   "original_spending_reservation": original_reservation})
         group = receipt_groups.get(receipt_key(row), [])
         exact = exact_transfers.get(row.get("native_detail", {}).get("transfer_identity"), [])
+        # The same original ledger row can be exposed directly and through its
+        # governed quote. Its physical ledger and complete request identity make
+        # this an exact duplicate even when the direct statement has no RPC object.
+        spending_key = item_reservation_key(item)
+        if spending_key is not None:
+            exact = list({entry["id"]: entry for entry in
+                [*exact, *exact_spending.get(spending_key, [])]}.values())
         exclude = False
         if len(group) > 1:
             same_transfer = len(exact) > 1
@@ -280,13 +402,37 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
 
     # Two source rows with the same original native event cannot both become expense.
     included = {line["item_id"] for line in candidates}
-    for values in exact_transfers.values():
+    for values in [*exact_transfers.values(), *exact_spending.values()]:
         selected = included.intersection(item["id"] for item in values)
         if len(selected) > 1:
             for shared in issues:
                 if shared["code"] == "SHARED_RECEIPT_REFERENCE" and shared["item_id"] in selected:
                     shared["resolved"] = False
                     shared["description"] = "The same original native transfer is still allocated more than once. Keep one included charge and exclude the duplicate source rows."
+    # A native ledger and a governed MCP capture can expose one physical
+    # reservation. Retain every source/capture reference and count its capacity
+    # once. Conflicting original observations remain an unresolved source issue.
+    merged_exposures={}
+    unique_exposures=[]
+    for exposure in exposures:
+        key=exposure.pop("_reservation_key",None)
+        if key is None:
+            unique_exposures.append(exposure)
+            continue
+        financial_key=(*key,exposure["network"],exposure["asset"])
+        if financial_key not in merged_exposures:
+            merged_exposures[financial_key]=exposure
+            unique_exposures.append(exposure)
+            contributions=original_contributions(key)
+            if len(contributions)>1:
+                exposure["contributing_sources"]=contributions
+                exposure["reservation_ledger_identity"]={"device":key[0],"inode":key[1]}
+        else:
+            saved=merged_exposures[financial_key]
+            saved["amount"]=str(max(int(saved["amount"]),int(exposure["amount"])))
+            if exposure.get("attribution")=="UNVERIFIED_NATIVE_LINK":
+                saved["attribution"]="UNVERIFIED_NATIVE_LINK"
+    exposures=unique_exposures
     unresolved = [x for x in issues if not x["resolved"]]
     context = {"period": {k: period[k] for k in ("id", "name", "from_day", "through_day", "generation")},
                "sources": source_views, "items": [{"id": i["id"], "basis": i["basis"], "coding": i.get("coding")} for i in items],

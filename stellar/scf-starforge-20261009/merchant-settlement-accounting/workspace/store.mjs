@@ -145,16 +145,28 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
 }
 
 class AccountingWorkspace{
-  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.tail=Promise.resolve();this.tasks=new Set();this.cache=new Map();this.recoveryControllers=new Map();this.pricing=new PricingWorkspace(this);this.periods=new PeriodWorkspace(this);this.adjustments=new AdjustmentWorkspace(this);this.closing=false;this.closed=false;}
-  async serial(work){check(!this.closed,'CLOSING','The workspace is closing.',503);const result=this.tail.then(async()=>{this.lease.assertHeld();const previous=structuredClone(this.state);try{return await work();}catch(error){this.state=previous;throw error;}});this.tail=result.catch(()=>{});return result;}
-  async commit(action,actor,details={}){this.state.revision++;this.state.history.push({at:now(),actor,action,...details});check(this.state.history.length<=100_000&&Buffer.byteLength(json(this.state))<=32_000_000,'HISTORY_LIMIT','Archive this workspace and start a new one before adding further operator history.');await durableJson(join(this.directory,'workspace.json'),this.state);}
+  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.tail=Promise.resolve();this.tasks=new Set();this.cache=new Map();this.recoveryControllers=new Map();this.pricing=new PricingWorkspace(this);this.periods=new PeriodWorkspace(this);this.adjustments=new AdjustmentWorkspace(this);this.closing=false;this.closed=false;this.commitUncertainty=null;}
+  uncertainCommitError(cause){return Object.assign(new WorkspaceError('WORKSPACE_COMMIT_UNKNOWN','The durable accounting save could not be confirmed. Close and reopen this original workspace before continuing any retained request; its saved edition may already contain the change.',409),{outcomeUnknown:true,reopenRequired:true,commitUncertainty:structuredClone(this.commitUncertainty),...(cause?{cause}:{})});}
+  assertWritable(){check(!this.closed,'CLOSING','The workspace is closing.',503);this.lease.assertHeld();if(this.commitUncertainty)throw this.uncertainCommitError();}
+  async serial(work){this.assertWritable();const result=this.tail.then(async()=>{this.assertWritable();const previous=structuredClone(this.state);try{return await work();}catch(error){this.state=previous;throw error;}});this.tail=result.catch(()=>{});return result;}
+  async commit(action,actor,details={}){
+    this.assertWritable();this.state.revision++;this.state.history.push({at:now(),actor,action,...details});
+    check(this.state.history.length<=100_000&&Buffer.byteLength(json(this.state))<=32_000_000,'HISTORY_LIMIT','Archive this workspace and start a new one before adding further operator history.');
+    try{await durableJson(join(this.directory,'workspace.json'),this.state);}
+    catch(error){
+      // A rename may already have published this edition before directory fsync
+      // failed. The in-memory rollback cannot authorize any later writer.
+      this.commitUncertainty??={at:now(),action,revision:this.state.revision,causeCode:typeof error?.code==='string'?error.code:'WORKSPACE_SAVE_FAILED'};
+      throw this.uncertainCommitError(error);
+    }
+  }
   expected(revision){check(Number.isSafeInteger(revision)&&revision===this.state.revision,'STALE_WORKSPACE','Saved workspace state changed. Refresh it before reapplying your retained draft.',409);}
   runRow(id){check(typeof id==='string'&&idPattern.test(id),'INVALID_RUN','Choose an existing reconciliation.');const run=this.state.runs.find(item=>item.id===id);check(run,'RUN_NOT_FOUND','This reconciliation was not found.',404);return run;}
   runPath(id){this.runRow(id);return join(this.directory,'runs',id);}
   async report(id){const run=this.runRow(id);check(run.status==='complete','RUN_NOT_COMPLETE','Wait for a completed reconciliation.',409);if(this.cache.has(id))return this.cache.get(id);const bytes=await readBytes(join(this.runPath(id),'report','report.json'),128_000_000);check(hash(bytes)===run.reportSha256,'REPORT_CHANGED','The retained reconciliation report changed.',409);const report=parse(bytes,'retained report');if(this.cache.size>=3)this.cache.delete(this.cache.keys().next().value);this.cache.set(id,report);return report;}
   view(){
     this.lease.assertHeld();
-    return structuredClone({schema:SCHEMA,revision:this.state.revision,sourceMode:accountingSourceMode(this.state),buyerStartup:buyerStartupView(this.directory,this.state),sources:this.state.sources,termsSelection:this.state.termsSelection,termsImports:this.state.termsImports,
+    return structuredClone({schema:SCHEMA,revision:this.state.revision,reopenRequired:Boolean(this.commitUncertainty),commitUncertainty:this.commitUncertainty,sourceMode:accountingSourceMode(this.state),buyerStartup:buyerStartupView(this.directory,this.state),sources:this.state.sources,termsSelection:this.state.termsSelection,termsImports:this.state.termsImports,
       proofs:this.state.proofs,runs:this.state.runs,exports:this.state.exports,history:this.state.history.slice(-100).reverse(),
       recovery:{directory:this.state.sources.recoveredDir??null,capturedAt:this.state.recoveryCapturedAt,entries:this.state.recoveredEntries},
       recoveryPreviews:this.state.recoveryPreviews,recoveryJobs:this.state.recoveryJobs,

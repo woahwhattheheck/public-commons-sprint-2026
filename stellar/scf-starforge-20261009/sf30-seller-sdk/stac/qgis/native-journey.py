@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Continue one original received STAC edition through actual QGIS and fresh receiving.
+"""Continue one original received STAC or vector edition through QGIS and fresh receiving.
 
 Run with QGIS's Python, or from QGIS --code with STARFORGE_QGIS_JOURNEY_CONFIG.
-The config points to complete original qgis-receiving.json directories.
+The config points to complete original qgis-receiving.json or vector-export.json directories.
 """
 from __future__ import annotations
 import json
@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from starforge_stac.model import (QgisWorkspace, ReceivingSource, receive_package, read_json, retain_bytes,
+from starforge_stac.model import (QgisWorkspace, open_receiving_source, receive_package, read_json, retain_bytes,
                                   file_digest, value_sha, require, json_bytes, utc_now)
 from starforge_stac.qgis_project import (native, native_version, inspect_asset, add_to_project,
                                          capture_styles, save_project, reopen_project, zoom_managed)
@@ -25,7 +25,6 @@ def perform(config_file):
     binding = {"schema": "starforge.stac-qgis-native-operation.v1", "config": config}
     retain_bytes(root, "operation-input.json", json_bytes(binding))
     actor = config.get("actor") or "Native receiving operator"
-    source = ReceivingSource(config["sourceDirectory"], config.get("sourceManifestSha256"))
     workspace = QgisWorkspace(root / "workspace", create=True, title=config.get("title", "Original STAC QGIS receiving"))
     events = []
     def keep(step, value):
@@ -52,6 +51,19 @@ def perform(config_file):
         retain_bytes(root, "actions/" + request + ".json", json_bytes(saved))
         return saved
 
+    def original_source(directory, manifest_sha256, request_id, step):
+        completed = previous(step) or workspace.operation(request_id)
+        if completed:
+            require(completed.get("event", {}).get("action") == "source.imported",
+                    "NATIVE_SOURCE_ACTION_CHANGED", "Continue the original source-import action.")
+            source_id = completed["source"]["id"]
+            require(manifest_sha256 is None or source_id == manifest_sha256,
+                    "RECEIVING_MANIFEST_CHANGED", "The retained source differs from this operation's original input.")
+            return workspace.source(source_id, verify=True)
+        return open_receiving_source(directory, manifest_sha256)
+
+    source = original_source(config["sourceDirectory"], config.get("sourceManifestSha256"),
+                             "native-source-import", "source-import")
     imported = previous("source-import")
     if imported is None:
         imported = keep("source-import", workspace.import_source(source.root, expected_manifest_sha256=source.id,
@@ -64,9 +76,11 @@ def perform(config_file):
                                              selection["itemId"], selection["assetKey"]))
         keep("native-assets", inspections)
     if previous("layer-selection") is None:
-        layers = [{"id": "original-footprints", "sourceId": source.id, "kind": "footprints",
-                   "label": "Original received scene footprints", "allScenes": True,
-                   "sceneKeys": list(source.scenes), "visible": True, "opacity": 1}]
+        layers = []
+        if source.sourceKind == "stac":
+            layers.append({"id": "original-footprints", "sourceId": source.id, "kind": "footprints",
+                           "label": "Original received scene footprints", "allScenes": True,
+                           "sceneKeys": list(source.scenes), "visible": True, "opacity": 1})
         for index, selection in enumerate(config.get("assetSelections", []), 1):
             row = dict(selection)
             row.update({"id": "original-asset-" + str(index), "sourceId": source.id})
@@ -94,7 +108,8 @@ def perform(config_file):
         keep("native-reopen", details)
 
     if config.get("successorDirectory"):
-        later = ReceivingSource(config["successorDirectory"], config.get("successorManifestSha256"))
+        later = original_source(config["successorDirectory"], config.get("successorManifestSha256"),
+                                "native-successor-import", "successor-import")
         if previous("successor-import") is None:
             keep("successor-import", workspace.import_source(later.root, expected_manifest_sha256=later.id,
                                                               **action_args("native-successor-import")))
@@ -162,6 +177,7 @@ def perform(config_file):
         pass
     result = {"schema": "starforge.stac-qgis-native-result.v1", "operationId": config["operationId"],
               "completedAt": utc_now(), "native": native_version(), "source": source.source,
+              "sourceKind": source.sourceKind, "manifestName": source.manifest_name,
               "sourceManifestSha256": source.id, "scenes": len(source.scenes), "originalAssets": len(source.assets),
               "selectedNativeAssets": inspections, "workspaceId": workspace.read()["id"],
               "revision": workspace.read()["revision"], "savedMaps": len(maps),

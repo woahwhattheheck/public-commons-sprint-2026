@@ -1,4 +1,5 @@
 import { supportTools, alias, digest, uuid, notificationStatuses, page, text, selected, metadataSchema, termsSchema, exportNames, object } from './catalog/support.mjs';
+import { MerchantSupportIncidentSources } from './support-incidents.mjs';
 export { supportTools } from './catalog/support.mjs';
 // MIT. Configured MCP access to the original incident, case and workorder lifecycle.
 import { createHash } from 'node:crypto';
@@ -13,7 +14,9 @@ import { openCaseStore, caseMetadata, CASE_STATUSES } from '../../stellar/scf-st
 import { parseWorkspace, serializeWorkspace, MAX_WORKSPACE_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs';
 import { importRuntimeHandoff, exportRuntimeHandoff, reviewRuntime, MAX_HANDOFF_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs';
 import { termsDraftFromDocument, termsDocumentFromDraft } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/terms-editor.mjs';
-import { workorderFromSources } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/server.mjs';
+import { workorderFromSources } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workorder-source.mjs';
+import {inspectCaseCommissioning,prepareCaseCommissioning,operateCaseCommissioning} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-commissioning.mjs';
+import {commissioningSummary,commissioningReport,commissioningTasksCsv} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs';
 import { failure, exact, identifier, writePrivate, privateSupportDirectory } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 
@@ -103,6 +106,7 @@ async function caseView(record) {
   return { ...summary, workorderSource: workspace.workorderSource ?? 'diagnostic', baselineOnly: workspace.baselineOnly,
     workspaceSha256: sha(workspaceText), supportSha256: supportText === null ? null : sha(supportText),
     terms, termsIssue, termsText: workspace.termsText,
+    ...(workspace.commissioning?{implementation:commissioningSummary(workspace.commissioning)}:{}),
     runtimeReview: supportText === null ? null : reviewRuntime(supportText, workspace.inputs) };
 }
 
@@ -131,19 +135,31 @@ export function parseSupportExportManifest(bytes, exportId) {
       manifest.files.find(file => file.name === 'merchant-workspace.json').sha256 !== manifest.case.workspaceSha256 ||
       ['merchant-support.json', 'support.html'].some(name => names.has(name) !== (manifest.case.supportSha256 !== null)) ||
       ['owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md'].some(name => names.has(name) !== manifest.workorderIncluded)) invalid();
+  const implementationFiles=['merchant-commissioning.json','merchant-implementation.html','merchant-implementation-tasks.csv'];
+  if(implementationFiles.some(name=>names.has(name))&&!implementationFiles.every(name=>names.has(name)))invalid();
   return manifest;
 }
 function exportFileType(name) {
-  return name.endsWith('.json') ? 'application/json' : name.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/markdown; charset=utf-8';
+  return name.endsWith('.json') ? 'application/json' : name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.csv') ? 'text/csv; charset=utf-8' : 'text/markdown; charset=utf-8';
 }
 
 export class MerchantSupport {
-  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close;
+  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
   #reads = new RetainedFileReads({ errorPrefix: 'SUPPORT' });
-  constructor(config) { this.#config = config; }
+  constructor(config, { environment = process.env } = {}) {
+    this.#config = config; this.#environment = environment;
+    this.#incidentSources = new MerchantSupportIncidentSources(config.support, {
+      profiles: () => this.summary.profiles,
+      profile: (alias, sourceDigest) => this.#profile(alias, sourceDigest),
+      configurationChanges,
+      template: (alias, sourceDigest) => this.#input('workspace', alias, sourceDigest),
+      cases: () => this.#cases()
+    }, { environment });
+  }
   get summary() {
     const value = this.#config.support;
-    return { configured: Boolean(value), incidentsConfigured: Boolean(value?.incidentsDirectory),
+    return { configured: Boolean(value), incidentsConfigured: Boolean(value?.incidentsDirectory || value?.incidentSourcesFile),
+      incidentSources: this.#incidentSources.summary,
       fileReads: this.#reads.summary,
       watcher: { ownedInstanceId: this.#watch?.instanceId ?? null, state: this.#watch?.state ?? 'NOT_OWNED', lastExit: this.#lastWatchExit },
       profiles: Object.entries(value?.profiles ?? {}).map(([profile, entry]) => ({ profile, label: entry.label })),
@@ -200,7 +216,7 @@ export class MerchantSupport {
     const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
     const handle = { controller: new AbortController(), instanceId: null, state: 'STARTING', startedConfiguration: null, done: null };
     this.#watch = handle;
-    handle.done = runIncidentWatch({ directory, signal: handle.controller.signal,
+    handle.done = runIncidentWatch({ directory, signal: handle.controller.signal, environment: this.#environment,
       expectedConfigRevision: args.expectedConfigRevision, expectedConfigHash: args.expectedConfigHash,
       onReady: value => {
         handle.instanceId = value.instanceId; handle.state = 'RUNNING';
@@ -264,7 +280,8 @@ export class MerchantSupport {
     const metadata = args.metadata === undefined ? record.metadata : caseMetadata({ ...record.metadata, ...args.metadata });
     if (args.metadata !== undefined) exact(args.metadata, Object.keys(metadataSchema.properties));
     const next = { name: workspace.name, inputs: workspace.inputs, sources: workspace.sources, termsText: workspace.termsText,
-      baselineOnly: args.baselineOnly ?? workspace.baselineOnly, workorderSource: args.workorderSource ?? workspace.workorderSource ?? 'diagnostic' };
+      baselineOnly: args.baselineOnly ?? workspace.baselineOnly, workorderSource: args.workorderSource ?? workspace.workorderSource ?? 'diagnostic',
+      ...(workspace.commissioning?{commissioning:workspace.commissioning}:{}) };
     if (args.terms !== undefined) next.termsText = ownerDraft(args.terms);
     // Keep the original save timestamp: metadata/terms updates do not change source observations,
     // and an identical request can use the original case writer's lost-response retry handling.
@@ -283,6 +300,9 @@ export class MerchantSupport {
       const handoff = await exportRuntimeHandoff({ workspaceText, supportText, metadata: record.metadata });
       files.push(['merchant-support.json', handoff.handoff], ['support.html', handoff.html]);
     }
+    if(workspace.commissioning)files.push(['merchant-commissioning.json',json(workspace.commissioning)],
+      ['merchant-implementation.html',commissioningReport(workspace.commissioning)],
+      ['merchant-implementation-tasks.csv',commissioningTasksCsv(workspace.commissioning)]);
     if (generated) files.push(['owner-terms.json', json(generated.terms)], ['packet.json', json(generated.packet)],
       ['seller-packet.html', generated.html], ['acceptance-checklist.md', generated.checklist]);
     const exportId = identifier(args.exportId, 'Export ID'), root = await privateSupportDirectory(this.#config.exportsDirectory), folder = join(root, exportId);
@@ -345,13 +365,16 @@ export class MerchantSupport {
     if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant support is closing.');
     try {
       return await (async () => {
+      if (this.#incidentSources.handles(name)) return this.#incidentSources.call(name, args);
+      if (args.incidentSource !== undefined)
+        throw failure('SUPPORT_INCIDENT_SOURCE_NOT_FOUND', 'This connection uses its original single incident store; omit incidentSource or select a host source file.');
       switch (name) {
         case 'merchant_support_profiles': return this.#profiles(args.profile);
         case 'merchant_support_configure': {
           configurationRevision(args.expectedConfigRevision); expected(args.expectedSourceSha256);
           const selected = await this.#profile(args.profile, args.expectedSourceSha256);
           const result = await configureIncidents({ directory: this.#incidents(), config: selected.configuration,
-            expectedConfigRevision: args.expectedConfigRevision });
+            expectedConfigRevision: args.expectedConfigRevision, environment: this.#environment });
           return { ...result, profile: selected.profile, sourceSha256: selected.sourceSha256,
             unchanged: result.configRevision === args.expectedConfigRevision };
         }
@@ -359,11 +382,15 @@ export class MerchantSupport {
         case 'merchant_support_watch_start': return this.#startWatch(args);
         case 'merchant_support_watch_stop': return this.#stopWatch(args.instanceId);
         case 'merchant_notifications': return this.#notifications(args);
-        case 'merchant_incident_notify': return remindIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: configurationRevision(args.expectedRevision) });
+        case 'merchant_incident_notify': {
+          if (args.expectedNotificationId !== undefined && args.expectedNotificationId !== null) caseId(args.expectedNotificationId);
+          return remindIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: configurationRevision(args.expectedRevision), environment: this.#environment,
+            ...(Object.hasOwn(args, 'expectedNotificationId') ? { expectedNotificationId: args.expectedNotificationId } : {}) });
+        }
         case 'merchant_notification_update': {
           if (!Number.isSafeInteger(args.expectedAttempts) || args.expectedAttempts < 0 || !['retry', 'cancel'].includes(args.action))
             throw failure('INVALID_PARAMS', 'Choose retry or cancel with the exact original notification attempt count.');
-          return operateNotification({ directory: this.#incidents(), id: caseId(args.id), expectedAttempts: args.expectedAttempts, action: args.action, by: args.by });
+          return operateNotification({ directory: this.#incidents(), id: caseId(args.id), expectedAttempts: args.expectedAttempts, action: args.action, by: args.by, environment: this.#environment });
         }
         case 'merchant_support_sources': {
           if (args.source === undefined && args.kind === undefined) return this.summary;
@@ -385,7 +412,7 @@ export class MerchantSupport {
             nextOffset: offset + limit < found.length ? offset + limit : null,
             notifications: value.notifications.filter(row => ids.has(row.incidentId)), captureStorage: value.captureStorage };
         }
-        case 'merchant_incident_ack': return acknowledgeIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: args.expectedRevision, by: args.by, notes: args.notes });
+        case 'merchant_incident_ack': return acknowledgeIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: args.expectedRevision, by: args.by, notes: args.notes, environment: this.#environment });
         case 'merchant_incident_case': {
           caseId(args.id); caseId(args.incidentId); expected(args.expectedTemplateSha256);
           if (typeof args.routeId !== 'string' || !args.routeId || args.routeId.length > 160) throw failure('INVALID_PARAMS', 'Choose an actual route ID from the original capture.');
@@ -423,6 +450,9 @@ export class MerchantSupport {
           const record = await this.#selected(args), workspace = await parseWorkspace(record.workspaceText);
           return { case: { id: record.id, revision: record.revision }, packet: sourcePacket(record, workspace).packet };
         }
+        case 'merchant_case_implementation': return inspectCaseCommissioning(await this.#cases(),args);
+        case 'merchant_case_implementation_prepare': return prepareCaseCommissioning(await this.#cases(),args);
+        case 'merchant_case_implementation_apply': return operateCaseCommissioning(await this.#cases(),args);
         case 'merchant_case_export': return this.#export(args);
         case 'merchant_support_export_status': return this.#exportStatus(args.exportId);
         case 'merchant_support_export_manifest': return this.#exportManifest(args.exportId);
@@ -445,10 +475,14 @@ export class MerchantSupport {
     this.#closing = true;
     this.#close = (async () => {
       const handle = this.#watch;
-      const readsClosing = this.#reads.close();
+      const readsClosing = this.#reads.close(), sourcesClosing = this.#incidentSources.close();
       try {
         if (handle) { handle.state = 'STOPPING'; handle.controller.abort(); await handle.done; }
-      } finally { await readsClosing; }
+      } finally {
+        const results = await Promise.allSettled([readsClosing, sourcesClosing]);
+        const errors = results.filter(value => value.status === 'rejected').map(value => value.reason);
+        if (errors.length) throw new AggregateError(errors, 'Original support readers and source watchers did not finish closing.');
+      }
     })();
     return this.#close;
   }

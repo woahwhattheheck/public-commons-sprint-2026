@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+<title id="title">Who carries this responsibility?</title><desc id="desc">A: Owns the information purpose and the service outcome. B: Receives the delegated DISO's accountability under the Directive. C: Advises on security risk and control effectiveness. D: Carries the relevant statutory information-officer responsibilities.</desc>
+<rect width="100%" height="100%" fill="#fff"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#111"><text x="16" y="20" font-size="17" font-weight="bold">Who carries this responsibility?</text><text x="16" y="39" font-size="12">Place the role label in each responsibility panel.</text>
+<rect x="16" y="48" width="296" height="138" fill="#fafafa" stroke="#555"/><text x="28" y="71" font-size="16" font-weight="bold">A</text>
+<text x="28" y="96" font-size="14">Owns the information purpose</text>
+<text x="28" y="116" font-size="14">and the service outcome.</text>
+<rect x="32" y="137" width="270" height="32" fill="#fff" stroke="#777" stroke-dasharray="4 3"/>
+<rect x="328" y="48" width="296" height="138" fill="#fafafa" stroke="#555"/><text x="340" y="71" font-size="16" font-weight="bold">B</text>
+<text x="340" y="96" font-size="14">Receives the delegated DISO's</text>
+<text x="340" y="116" font-size="14">accountability under the Directive.</text>
+<rect x="344" y="137" width="270" height="32" fill="#fff" stroke="#777" stroke-dasharray="4 3"/>
+<rect x="16" y="202" width="296" height="138" fill="#fafafa" stroke="#555"/><text x="28" y="225" font-size="16" font-weight="bold">C</text>
+<text x="28" y="250" font-size="14">Advises on security risk</text>
+<text x="28" y="270" font-size="14">and control effectiveness.</text>
+<rect x="32" y="291" width="270" height="32" fill="#fff" stroke="#777" stroke-dasharray="4 3"/>
+<rect x="328" y="202" width="296" height="138" fill="#fafafa" stroke="#555"/><text x="340" y="225" font-size="16" font-weight="bold">D</text>
+<text x="340" y="250" font-size="14">Carries the relevant statutory</text>
+<text x="340" y="270" font-size="14">information-officer responsibilities.</text>
+<rect x="344" y="291" width="270" height="32" fill="#fff" stroke="#777" stroke-dasharray="4 3"/>
+</g>
+</svg>

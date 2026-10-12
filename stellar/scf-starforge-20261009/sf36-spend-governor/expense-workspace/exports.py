@@ -12,12 +12,15 @@ import zipfile
 FIELDS = ("source_name", "source_kind", "request_id", "recognition_date", "native_source_day", "native_date_basis", "native_reservation_day", "network", "asset",
           "center_code", "center_name", "project", "account_code", "amount", "settled_actual",
           "reserved_maximum", "quoted_amount", "receipt_ref", "proof_sha256", "request_digest", "coding_id",
-          "source_capture", "memo")
-OUTSTANDING = ("source_name", "request_id", "native_reservation_day", "network", "asset", "amount", "missing", "source_capture", "request_digest")
+          "source_capture", "memo", "original_spending_reservation")
+OUTSTANDING = ("source_name", "request_id", "native_reservation_day", "network", "asset", "amount", "missing", "source_capture", "request_digest", "reservation_ledger_identity", "contributing_sources", "attribution")
 NATIVE_OUTCOMES = ("source_name", "request_id", "quote_day", "native_status", "payment_classification", "network", "asset",
                    "quoted_amount", "settled_actual", "receipt_ref", "observation_sha256", "payer", "recipient",
                    "result_file_status", "result_file_sha256", "result_file_bytes", "result_preview_sha256", "result_preview_bytes",
-                   "source_capture", "missing")
+                   "source_capture", "missing", "source_kind", "spending_link", "spending_state",
+                   "spending_maximum", "spending_actual", "spending_reserved_base_units", "spending_reservation_day",
+                   "spending_request_sha256", "spending_binding_sha256", "spending_receipt_ref", "spending_proof_sha256",
+                   "finality_record_sha256", "observed_settled_actual", "spending_problems", "spending_notes", "unverified_spending_exposure")
 CREDIT_FIELDS = ("credit_id", "item_id", "source_name", "source_capture", "packet_id", "manifest_sha256",
     "adjustment_id", "refund_id", "order_reference", "source_kind", "source_reference", "present_in_latest_receipt", "network", "asset", "original_transaction", "transaction",
     "transfer_identity", "observation_sha256", "native_return", "recognition_date", "native_transfer_at",
@@ -57,7 +60,8 @@ def csv_text(rows, fields):
     for row in rows:
         values = []
         for key in fields:
-            value = "" if row.get(key) is None else str(row[key])
+            selected = row.get(key)
+            value = "" if selected is None else json.dumps(selected, ensure_ascii=True, separators=(",",":")) if isinstance(selected, (dict,list)) else str(selected)
             if value.startswith(("\t", "\r", "\n")) or value.lstrip().startswith(("=", "+", "-", "@")):
                 value = "'" + value
             values.append(value)
@@ -102,20 +106,29 @@ def render_issued(doc):
           esc((r.get("disposition") or {}).get("operator") or "") + "<br>" + esc((r.get("disposition") or {}).get("reason") or "")]
          for r in doc["issues"]])
     outstanding = table(["Request / source", "Native reservation day", "Network / asset", "Outstanding maximum", "Capture status"],
-        [[esc(r["request_id"]) + "<br><small>" + esc(r["source_name"]) + "</small>", esc(r["native_reservation_day"]),
+        [[esc(r["request_id"]) + "<br><small>" + esc(r["source_name"]) + "</small>" +
+          ("<br><small>Same original reservation: " + esc(" · ".join(v["source_name"] + " [" + v["source_capture"] + "]" for v in r["contributing_sources"])) + "</small>"
+           if r.get("contributing_sources") else ""), esc(r["native_reservation_day"]),
           esc(r["network"]) + "<br><code>" + esc(r["asset"]) + "</code>", units(r["amount"], r, labels),
           "Absent from latest capture; original row retained" if r["missing"] else "Present in accepted capture"] for r in doc["outstanding_reservations"]])
-    native_payments = table(["Quote / source", "Original buyer / payment state", "Quote day / terms", "Matched transfer", "Recorded result"],
+    native_payments = table(["Quote / source", "Original buyer / payment state", "Quote day / terms", "Settled transfer", "Original spending", "Recorded result"],
         [[esc(r["request_id"]) + "<br><small>" + esc(r["source_name"]) + "</small>",
           esc(r["native_status"]) + "<br>" + esc(r["payment_classification"]) +
             ("<br><small>Absent from latest capture</small>" if r.get("missing") else ""),
           esc(r["quote_day"]) + "<br>" + units(r.get("quoted_amount"), r, labels),
           units(r.get("settled_actual"), r, labels) + "<br><code>" + esc(r.get("receipt_ref")) + "</code>",
+          (esc(r.get("spending_state") or "No original reservation") + "<br>Reserved: " +
+            units(r.get("spending_reserved_base_units"), r, labels) + "<br>Original actual: " +
+            units(r.get("spending_actual"), r, labels) + "<br>Quote observed: " +
+            units(r.get("observed_settled_actual"), r, labels) + "<br><code>" +
+            esc(r.get("spending_request_sha256")) + "</code>" +
+            ("<br>" + esc(" · ".join(r["spending_problems"])) if r.get("spending_problems") else "")
+            if r.get("source_kind") == "governed_mcp" else "Separate source"),
           esc((r.get("result_file") or {}).get("status", "No complete-file record")) + "<br><code>" +
             esc((r.get("result_file") or {}).get("sha256") or (r.get("result_preview") or {}).get("bodySha256")) + "</code>"]
          for r in doc.get("native_payment_outcomes", [])])
     native_section = ("<section><h2>Original native purchase outcomes</h2>" + native_payments +
-        "<p class='muted'>These original sources retain the purchase or quote identity, native payment observation and available result metadata. Store currency mappings and native spending reservations remain separate.</p></section>") if doc.get("native_payment_outcomes") else ""
+        "<p class='muted'>These original sources retain the purchase identity, payment observation and result metadata. Governed MCP rows also retain the original SF36 request, reserved maximum, settled actual and finality identity. A matched quote can remain reserved in the original spending ledger until its buyer completes reconciliation.</p></section>") if doc.get("native_payment_outcomes") else ""
     sources = table(["Source", "Accepted capture", "Captured at", "Projection"],
         [[esc(r["name"]), "<code>" + esc(r["current_capture"]) + "</code>", esc(r.get("capture_time")),
           "<code>" + esc(r.get("projection_sha256")) + "</code>"] for r in doc["source_captures"]])
@@ -184,7 +197,7 @@ def accountant_packet(doc, bookkeeping=None):
                "net-native-expense.csv": csv_text(doc.get("net_totals", doc["totals"]), ("network", "asset", "amount", "lines")).encode(),
                "native-mcp-payment-outcomes.csv": csv_text(doc.get("native_payment_outcomes", []), NATIVE_OUTCOMES).encode(),
                "exception-decisions.json": (json.dumps(doc["issues"], ensure_ascii=True, indent=2) + "\n").encode(),
-               "README.txt": b"Open issued.html for the reviewed period. JSON retains exact base-unit strings and source rows. Import every amount and identifier column as text in spreadsheet software. The capture basis remains the original SF36 statement projection and any explicitly retained MCP quote/payment observations. Each source keeps its own dates and classifications. This packet performs no wallet or finality action and applies no currency conversion. Keep this operator/accountant export private.\n"}
+               "README.txt": b"Open issued.html for the reviewed period. JSON retains exact base-unit strings and source rows. Import every amount and identifier column as text in spreadsheet software. The capture basis remains the original SF36 statement projection and retained MCP quote/payment observations. Governed MCP sources also include the complete shared-ledger snapshot and exact native request bindings; only the selected buyer rows enter its totals. Each source keeps its own dates and classifications. This packet performs no wallet or finality action and applies no currency conversion. Keep this operator/accountant export private.\n"}
     for source in doc["native_captures"]:
         entries["sources/" + source["id"] + ".json"] = (json.dumps(source, ensure_ascii=True, indent=2) + "\n").encode()
     for packet in doc.get("refund_packets", []):

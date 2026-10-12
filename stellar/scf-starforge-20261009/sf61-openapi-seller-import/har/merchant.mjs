@@ -3,7 +3,7 @@ import { openWorkspace, readRevision, readRegular } from './store.mjs';
 import { buildDocument } from './model.mjs';
 const json = bytes => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 /** All plans, payments, backend transport and package files stay in the native implementation. */
-export async function saveHarMerchant({ workspace: directory, revision, planFile, parent, name }) {
+export async function saveHarMerchant({ workspace: directory, revision, planFile, parent, name, operationPolicy }) {
   const workspace = await openWorkspace(directory), saved = await readRevision(workspace, revision);
   const document = buildDocument(workspace.inventory, saved.review);
   document['x-starforge-har'].reviewSha256 = revision;
@@ -23,5 +23,5 @@ export async function saveHarMerchant({ workspace: directory, revision, planFile
     }
   }
   const { savePackage } = await import('../workspace/model.mjs');
-  return savePackage({ specText: JSON.stringify(document, null, 2) + '\n', plan, parent, name });
+  return savePackage({ specText: JSON.stringify(document, null, 2) + '\n', plan, parent, name, operationPolicy });
 }

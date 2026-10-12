@@ -25,7 +25,7 @@ class Workbench:
     def __init__(self, workspace, port):
         self.root = Path(workspace).resolve()
         with a.connect(self.root) as db:
-            identity = a.meta(db, "identity")
+            self.identity = a.meta(db, "identity")
         self.port = port
         self.csrf = secrets.token_urlsafe(32)
         self.artifacts = self.root.parent / (self.root.name + "-deliveries")
@@ -133,6 +133,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def base_checks(self, mutation=False):
         host = self.headers.get("Host", "")
         expected = {f"127.0.0.1:{self.app.port}", f"localhost:{self.app.port}"}
+        if self.app.port == 80:
+            expected.update({"127.0.0.1", "localhost"})
         if host not in expected:
             raise a.Problem("HOST", "Use the local workbench address printed by the server.")
         origin = self.headers.get("Origin")
@@ -222,6 +224,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 content = (Path(__file__).resolve().parent / name).read_bytes()
                 self.send_content(200, content, "text/javascript; charset=utf-8" if name.endswith(".js")
                                   else "text/html; charset=utf-8")
+            elif path == "/api/launch":
+                startup = getattr(self.app, "startup", None)
+                if startup is None:
+                    raise a.Problem("LAUNCH_NOT_PUBLISHED", "Open the original operator through its native serve command.")
+                self.send_json(200, startup)
             elif path == "/api/state":
                 self.send_json(200, {"csrf": self.app.csrf, "status": a.show(self.app.root),
                                     "jobs": self.app.summaries(), "fields": a.FIELDS})
@@ -358,14 +365,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_json(500, {"error": type(error).__name__, "message": str(error)})
 
 
-def serve(workspace, port=8769):
-    if not 1 <= port <= 65535:
-        raise a.Problem("PORT", "Port must be from 1 to 65535.")
+def serve(workspace, port=8769, *, managed=None, expected_identity=None):
+    if not isinstance(port, int) or isinstance(port, bool) or not 0 <= port <= 65535:
+        raise a.Problem("PORT", "Port must be from 0 to 65535; zero selects a free local port.")
     app = Workbench(workspace, port)
+    if expected_identity is not None and a.digest(app.identity) != expected_identity:
+        raise a.Problem("MANAGED_BINDING_CHANGED", "The original workspace changed before its operator opened.")
     server = http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler)
     server.workbench = app
-    print(json.dumps({"url": f"http://127.0.0.1:{port}", "workspace": str(app.root),
-                      "label": a.meta_from_workspace(app.root, "identity")["label"]}), flush=True)
+    app.port = server.server_port
+    origin = "http://127.0.0.1" + (f":{app.port}" if app.port != 80 else "")
+    app.startup = {
+        **(managed or {}),
+        "url": origin,
+        "workspace": str(app.root),
+        "workspaceId": app.identity["id"],
+        "label": app.identity["label"],
+        "pid": os.getpid(),
+    }
+    print(json.dumps(app.startup, ensure_ascii=False, separators=(",", ":")), flush=True)
     try:
         server.serve_forever(poll_interval=0.25)
     except KeyboardInterrupt:

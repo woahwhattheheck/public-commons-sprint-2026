@@ -23,7 +23,7 @@ import { imageOperationFields, imageWorkspaceState, reviewWorkspaceImage, attach
 
 import { initializeApplications, applicationsState, applicationsHistory, reviewApplication, saveApplication, applicationBindingOperation,
   reviewApplicationStart, dispatchApplicationStart, cancelApplicationRun, applicationOperation, applicationOutput,
-  readApplicationTerminal, sendApplicationTerminal } from './applications.mjs';
+  readApplicationTerminal, sendApplicationTerminal } from './applications-core.mjs';
 import { transferOperationFields, initializeTransferWorkspace, runtimeTransferWorkspaceState,
   reviewWorkspaceRuntimeTransfer, attachWorkspaceRuntimeTransfer, prepareWorkspaceRuntimeTransferReceive,
   uploadWorkspaceRuntimeTransferPart, downloadWorkspaceRuntimeTransfer, normalizeRuntimeTransferOperation,

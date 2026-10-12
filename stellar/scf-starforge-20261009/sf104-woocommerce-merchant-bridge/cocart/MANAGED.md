@@ -52,7 +52,10 @@ The connection's parent must already be a real mode-0700 directory. First
 receiving uses an empty directory. The original receiver checks every object
 and the complete reachable closure before selecting the workspace; an
 interrupted receiving operation can resume the same input using its native
-marker. Original workspace bytes and revision survive receiving.
+marker. Original workspace bytes and revision survive first receiving. Repeating
+the same input validates that marker and returns the current original workspace,
+including customer changes made after import. The returned workspace.version is
+its current revision identity; it need not equal the input export's older version.
 
 The optional merchant directory is initialized through
 initializeCocartWorkspaceMerchant in the existing shared merchant provider.
@@ -87,9 +90,14 @@ names for its original inspect, receive and attach actions.
 Initial profile creation can also select
 --receiving-transport /private/inputs/receiving-transport.json. Its fields are
 store_url, checkout_url and reason. The original constructor validates the
-loopback transport and records its selection. Omit that creation-only option
-when reopening a saved profile; use the retained transport.rebind action for a
-later change. Reopening a created profile checks its exact original source bytes.
+loopback transport and records its selection. Repeating setup may supply that
+same creation declaration: its normalized URLs and reason must match the
+original transport.receiving_selected event. Setup retains it as connection
+metadata, preserving the original private connection bytes. It does not rewrite
+the current profile, cart or history, including any later transport.rebind.
+A different creation declaration reports MANAGED_TRANSPORT_REOPEN; use the
+retained transport.rebind action for a current transport change. Reopening a
+created profile checks its exact original source bytes.
 
 The emitted private file follows the existing provider contract:
 

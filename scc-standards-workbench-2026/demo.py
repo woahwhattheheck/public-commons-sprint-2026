@@ -211,6 +211,7 @@ def authored_seed():
     return state,files
 
 def seed_demo(workspace,kind="public"):
+    if kind=="review":return prepare_review_example(workspace)
     if kind not in ("public","authored"):raise ValueError("Choose public sources or the separate authored exercise.")
     state,files=public_seed() if kind=="public" else authored_seed()
     identity_state={k:v for k,v in state.items() if k not in engine.OPTIONAL_COLLECTIONS or v}
@@ -219,3 +220,50 @@ def seed_demo(workspace,kind="public"):
     result.update({"kind":kind,"source_files":len(files),"clauses":len(state["clauses"]),"cases":len(state["cases"]),
                    "reference_candidates":len(state["references"]),"procedure_profiles":len(state["procedures"])})
     return result
+
+
+def prepare_review_example(workspace):
+    """Create one durable public-source review example without fabricating returns."""
+    state, files = public_seed()
+    state["id"] = "scc-municipal-review-example-v1"
+    state["title"] = "Municipal reconciliation — bilingual review example"
+    identity_state = {k:v for k,v in state.items() if k not in engine.OPTIONAL_COLLECTIONS or v}
+    seed_hash = engine.digest({"state":identity_state,"sources":{
+        sid:{"filename":name,"sha256":hashlib.sha256(raw).hexdigest()}
+        for sid,(name,raw) in sorted(files.items())}})
+    result = workspace.adopt_seed(state, files, seed_hash)
+    project_id = result["id"]
+    edition_id = "review-example-edition-v1"
+    consultation_id = "review-example-consultation-v1"
+    packet_id = "review-example-packet-v1"
+    def apply_once(collection, record_id, operation, payload, request_id):
+        current = workspace.full_state(project_id)
+        if any(r["id"] == record_id for r in current.get(collection, [])):
+            return
+        workspace.apply(project_id, operation, payload, current["revision"], request_id,
+                        "Authored public-source example preparation")
+    apply_once("editions", edition_id, "edition.freeze",
+               {"id":edition_id,"label":"Municipal reconciliation — review edition 1",
+                "contributor_ids":[],"notes":"Authored review example from the retained public source package."},
+               "review-example-freeze-v1")
+    apply_once("consultations", consultation_id, "record.save", {
+        "collection":"consultations","record":{
+            "id":consultation_id,"title":"Authored bilingual consultation exercise",
+            "edition_id":edition_id,"procedure_id":state["scope"][0]["procedure_id"],"kind":"public",
+            "opens":None,"closes":None,"actual_closed":False,
+            "source_ids":[]}},
+        "review-example-consultation-v1")
+    apply_once("review_packets", packet_id, "review.packet", {
+        "id":packet_id,"consultation_id":consultation_id,
+        "title":"Municipal data reconciliation — reviewer example",
+        "instructions_en":"Read the paired clauses and actual source-linked cases. Consider the Amos two-to-one change, original row identity, missing values and the Census reference date. Write your own practice comments and mark an authored exercise response.",
+        "instructions_fr":"Lire les clauses bilingues et les cas liés aux sources originales. Examiner le changement de deux municipalités vers Amos, l'identité des lignes, les valeurs manquantes et la date de référence du recensement. Rédiger vos commentaires d'exercice et indiquer qu'il s'agit d'une réponse d'exercice.",
+        "reply_route_en":"Export the response JSON. Open Consultation receiving in this local workbench, choose this packet and retain that exported file.",
+        "reply_route_fr":"Exporter la réponse JSON. Ouvrir Consultation receiving dans cet outil local, sélectionner ce dossier et conserver le fichier exporté."},
+        "review-example-packet-v1")
+    current = workspace.full_state(project_id)
+    return {"id":project_id,"revision":current["revision"],"kind":"review",
+            "edition_id":edition_id,"consultation_id":consultation_id,"packet_id":packet_id,
+            "source_files":len(files),"clauses":len(state["clauses"]),"cases":len(state["cases"]),
+            "retained_returns":len(current.get("review_responses",[])),
+            "message":"Public source example prepared; reviewer responses and decisions are entered explicitly."}

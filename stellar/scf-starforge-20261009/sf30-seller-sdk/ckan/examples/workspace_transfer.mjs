@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. One real closed-project transfer and original merchant receiving continuation.
 import { mkdir, readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { openCkanWorkbench } from '../model.mjs';
@@ -99,11 +100,35 @@ export async function runWorkspaceTransfer({ project, received, out }) {
     }
     if (!record.versions) {
       const versions = await openDatasetVersions({ directory: join(received, 'datasets', selected.publicationId), collectOnOpen: false });
+      let listener;
       try {
-        const page = await versions.handle({ query: new URLSearchParams('limit=5') });
-        insist(page.status === 200 && versions.status().current === selected.snapshot, 'Original version store differs.');
-        record.versions = { status: versions.status(), preview: page.body };
-      } finally { await versions.close(); }
+        listener = createServer(versions.wrapRequest(async (request, response) => {
+          try {
+            const query = new URL(request.url, 'http://localhost').searchParams;
+            const page = await versions.handle({ query });
+            response.writeHead(page.status, { 'content-type': 'application/json', ...(page.headers ?? {}) });
+            response.end(JSON.stringify(page.body));
+          } catch (error) {
+            response.writeHead(500, { 'content-type': 'application/json' });
+            response.end(JSON.stringify({ error: error.code ?? 'DATASET_RECEIVING_FAILED', message: error.message }));
+          }
+        }));
+        await new Promise((done, reject) => {
+          listener.once('error', reject);
+          listener.listen(0, '127.0.0.1', () => { listener.removeListener('error', reject); done(); });
+        });
+        const response = await fetch('http://127.0.0.1:' + listener.address().port + '/?limit=5', {
+          signal: AbortSignal.timeout(15000) });
+        const page = await response.json();
+        insist(response.status === 200 && versions.status().current === selected.snapshot,
+          page.message ?? 'Original version store differs.');
+        insist(page.dataset.snapshot === selected.snapshot && page.rows.length === Math.min(5, selected.rows),
+          'Original version HTTP response differs.');
+        record.versions = { status: versions.status(), preview: page };
+      } finally {
+        if (listener?.listening) await new Promise((done, reject) => listener.close(error => error ? reject(error) : done()));
+        await versions.close();
+      }
       await note('original dataset versions reopened', { snapshot: record.versions.status.current, revision: record.versions.status.revision });
     }
     // Complete a new publication using the unchanged saved source at its new

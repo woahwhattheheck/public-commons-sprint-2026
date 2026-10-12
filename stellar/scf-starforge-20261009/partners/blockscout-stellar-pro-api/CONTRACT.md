@@ -1,6 +1,6 @@
 # Blockscout PRO token-information contract
 
-Source review: 11 October 2026. This is the provider contract used by the retained Stellar merchant and operator in this directory. Keep the original provider response bytes, selected data chain, token address, request time, status and available accounting headers with each result.
+Source review: 12 October 2026. This is the provider contract used by the retained Stellar merchant and operator in this directory. Keep the original provider response bytes, selected data chain, token address, request time, status and available accounting headers with each result.
 
 ## Token request and response
 
@@ -56,3 +56,28 @@ Source: [PRO error responses](https://docs.blockscout.com/devs/error-responses),
 Blockscout's terms distinguish the open-source components from the service licence (§3), place services under a separate Services Agreement (§4), and tie fees to that agreement and communicated pricing (§13). The proposed Stellar route is a provider-operated extension whose enabled chains, credentials, tariff, credit budget and operating responsibilities are configured for that engagement. Preserve the original proposal owner and service agreement context alongside the deployment handoff.
 
 Source: [Blockscout terms and conditions](https://eaas.blockscout.com/terms-and-conditions), retrieved 2026-10-11.
+
+## Explicit operator-controlled connections
+
+The current [API overview](https://docs.blockscout.com/devs/apis) directs hosted
+API users to PRO and deprecates the former per-instance hosted API/key model.
+The [Blockscout PRO migration announcement](https://www.blog.blockscout.com/switch-to-the-blockscout-pro-api/)
+describes that hosted-service migration. The [v12 release guidance](https://docs.blockscout.com/blockscout-v12-0-0-api-updates-and-breaking-changes)
+records the October release's route and pagination changes. This token-detail
+adapter continues to use the exact endpoint schema above.
+
+A separately operated instance can be selected explicitly with its actual
+HTTPS origin, one indexed chain, authentication mechanism, route documentation
+and review time. Its provider route is `/api/v2/tokens/{address}`; its original
+merchant route retains `/{chain}/api/v2/tokens/{address}`. The selected instance
+must provide the same token-detail contract. Its local budget counts one request
+per attempt. Instance responses contribute available rate observations; PRO
+credit balances belong to the PRO connection.
+
+The maintained [Blockscout API rate-limit implementation](https://github.com/blockscout/blockscout/blob/master/apps/block_scout_web/lib/block_scout_web/rate_limit.ex)
+and the selected installation's own API documentation establish its actual
+access configuration. Its [rate-limit plug](https://github.com/blockscout/blockscout/blob/master/apps/block_scout_web/lib/block_scout_web/plug/rate_limit.ex)
+emits relative reset times in milliseconds. The adapter supports explicit bearer, `x-api-key` and
+anonymous mechanisms; select the mechanism enabled by that installation. The
+[connection guide](CONNECTIONS.md) describes the reviewed package and receiving
+workflow. Sources reviewed 2026-10-12.

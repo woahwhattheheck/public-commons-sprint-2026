@@ -112,7 +112,9 @@ Before transport dispatch, the attempt is saved as **Sending**. The transport ru
 
 The [WordPress wp_mail contract](https://developer.wordpress.org/reference/functions/wp_mail/) defines its successful return as acceptance of the transport request. Recipient delivery is available from the installed provider's own result.
 
-Every mutation retains an operation UUID and exact request digest. Replaying an interrupted request returns its original operation. A different UUID is a new action. The staff browser retains unfinished requests in its current session and exposes **Retained actions → Resume** after reopening.
+Every mutation retains an operation UUID and exact request digest. Replaying an interrupted request returns its original operation. A different UUID is a new action. Reply preparation and message copying also retain the exact created message ID: Resume opens that same message with its current saved edits and send state, even after later work on the submission. The staff browser retains unfinished requests in its current session and exposes **Retained actions → Resume** after reopening.
+
+Submissions and confirmation or registration actions save the IDs of their automatic messages in the same native transaction. If scheduling is interrupted after the records commit, resume the exact request to finish scheduling the existing pending messages. Accepted, cancelled and imported messages keep their current state. New operations retain these result links; older journals remain readable and reopen their original record without guessing which later message belongs to them.
 
 An interrupted dispatch or transport exception leaves the attempt as **Sending**. An administrator can choose **Record transport outcome**, using the actual accepted/failed result and a note from that attempt. History preserves the original send and its reconciliation.
 

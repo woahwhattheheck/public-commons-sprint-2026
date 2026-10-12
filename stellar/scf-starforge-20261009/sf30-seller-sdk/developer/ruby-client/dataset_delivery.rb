@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 # MIT. Offline complete SF100 data-room receiving for Ruby and Rails.
 require_relative "seller_client"
+require "uri"
 
 module Starforge
   class DatasetDelivery
@@ -64,8 +65,12 @@ module Starforge
     def self.open(directory, expected_manifest_sha256:)
       Files.need(HASH.match?(expected_manifest_sha256.to_s), "RUBY_DATASET_MANIFEST_SHA256_REQUIRED")
       root = Files.directory(directory)
-      raw = Files.read(File.join(root,MANIFEST),262_144)
+      raw = Files.read(File.join(root,MANIFEST),4_194_304)
       Files.need(Files.hash(raw) == expected_manifest_sha256, "RUBY_DATASET_MANIFEST_CHANGED")
+      if self == DatasetDelivery && Files.parse(raw)["schema"] == "stellar-forge.ruby-native-dataset-delivery.v1"
+        require_relative "native_dataset"
+        return NativeDatasetDelivery.open(root,expected_manifest_sha256: expected_manifest_sha256)
+      end
       new(root,raw)
     end
 
@@ -119,6 +124,30 @@ module Starforge
     def source_sha256
       @manifest.fetch("sourceSha256")
     end
+    def source_format
+      "SF88_SESSION"
+    end
+    # Preserve the original Rails stream object byte-for-byte in meaning. A
+    # direct finalized room overrides this with its native logical provider.
+    def membership
+      @membership ||= begin
+        request = source["request"]
+        Files.need(request.is_a?(Hash) && request["method"] == "GET" &&
+          source["operationId"].is_a?(String) && !source["operationId"].empty?,
+          "RUBY_DATASET_SOURCE_OPERATION_REQUIRED")
+        endpoint = URI.parse(request.fetch("url"))
+        Files.need(%w[http https].include?(endpoint.scheme) && endpoint.host && !endpoint.userinfo,
+          "RUBY_DATASET_SOURCE_ENDPOINT_INVALID")
+        endpoint.query = nil
+        endpoint.fragment = nil
+        self.class.freeze_value({"source_sha256"=>source_sha256,
+          "operation_id"=>source["operationId"],"method"=>"GET","endpoint"=>endpoint.to_s,
+          "query_sha256"=>native_manifest.dig("dataset","originalQueryHash"),
+          "projected_fields"=>fields})
+      rescue URI::InvalidURIError, KeyError, TypeError
+        raise Error, "RUBY_DATASET_SOURCE_ENDPOINT_INVALID"
+      end
+    end
     def selection
       @selection
     end
@@ -135,8 +164,20 @@ module Starforge
       Files.need(@files.key?(name), "RUBY_DATASET_FILE_NAME_INVALID")
       @files.fetch(name)
     end
+    def self.parent_directory(root, name, create: false)
+      Files.need(name.is_a?(String) && name.split("/").all? { |part|
+        /\A[A-Za-z0-9][A-Za-z0-9_.-]*\z/.match?(part) && !%w[. ..].include?(part)
+      } && !name.start_with?("/") && !name.end_with?("/"), "RUBY_DATASET_FILE_NAME_INVALID")
+      parent = Files.directory(root)
+      name.split("/")[0...-1].each do |part|
+        parent = Files.directory(File.join(parent,part),create: create)
+      end
+      parent
+    end
     def with_snapshot(name, &block)
-      self.class.snapshot_file(File.join(@directory,name),descriptor(name),&block)
+      expected = descriptor(name)
+      self.class.parent_directory(@directory,name)
+      self.class.snapshot_file(File.join(@directory,name),expected,&block)
     end
     def file_bytes(name, limit: 8_388_608)
       Files.need(limit.is_a?(Integer) && limit.between?(0,MAX_FILE) && descriptor(name)["bytes"] <= limit,
@@ -198,12 +239,13 @@ module Starforge
         Files.once(File.join(target,"dataset-copy.json"),Files.json({
           "schema"=>"stellar-forge.ruby-dataset-copy.v1","manifestSha256"=>manifest_sha256}))
         @files.each do |name, expected|
-          path = File.join(target,name)
+          parent = self.class.parent_directory(target,name,create: true)
+          path = File.join(parent,File.basename(name))
           if File.exist?(path) || File.symlink?(path)
             self.class.snapshot_file(path,expected) { |_snapshot| }
             next
           end
-          temp = Tempfile.new([".dataset-copy-", ".pending"],target)
+          temp = Tempfile.new([".dataset-copy-", ".pending"],parent)
           begin
             temp.binmode
             with_snapshot(name) do |source|
@@ -221,7 +263,7 @@ module Starforge
             temp.close
             begin
               File.link(temp.path,path)
-              Files.sync(target)
+              Files.sync(parent)
             rescue Errno::EEXIST
               self.class.snapshot_file(path,expected) { |_snapshot| }
             end

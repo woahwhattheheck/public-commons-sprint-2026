@@ -4,6 +4,8 @@ import {createUnstructuredPanel} from './unstructured.js';
 import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
 import {createClinicalTrialsPanel} from './clinical-trials.js';
 import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.js';
+import {renderInspectedSource,renderOriginalRecordControl} from './source-inspection.js';
+import {createCitationReviewPanel} from './citation-review.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -11,7 +13,7 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
   const MAX_RESEARCH_FILE_BYTES = 16 * 1024 * 1024;
   const MAX_PORTABLE_FILE_BYTES = 256 * 1024 * 1024;
   const tokenKey = 'research-dossiers-session:' + location.origin;
-  const state = {token: '', dossiers: [], dossier: null, activeTab: new URLSearchParams(location.hash.slice(1)).get('view')==='pipelines'?'pipelines':'sources', sourceId: null, variantDigest: null,
+  const state = {token: '', dossiers: [], dossier: null, activeTab: ['pipelines','citation-review'].includes(new URLSearchParams(location.hash.slice(1)).get('view'))?new URLSearchParams(location.hash.slice(1)).get('view'):'sources', sourceId: null, variantDigest: null,
     page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map(), noteEditVersions: new Map()};
   const safeStorage = {
     get() { try { return sessionStorage.getItem(tokenKey) || ''; } catch { return ''; } },
@@ -95,9 +97,12 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     pipelinePanel.updateBusy();
     clinicalTrialsPanel.updateBusy();
     sourceBundlePanel.updateBusy();
+    citationReviewPanel.updateBusy();
   }
   async function api(path, {method = 'GET', body, file, download = false} = {}) {
-    const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
+    const requestUrl=new URL(path,location.origin);
+    if(!download&&requestUrl.pathname.startsWith('/api/'))requestUrl.searchParams.set('sourceProjection','inspection');
+    const response = await fetch(requestUrl, {method, headers: {Authorization: 'Bearer ' + state.token,
       ...(file ? {'Content-Type': 'application/octet-stream'} : body === undefined ? {} : {'Content-Type': 'application/json'})},
       ...(file ? {body: file} : body === undefined ? {} : {body: JSON.stringify(body)}), credentials: 'omit', cache: 'no-store'});
     if (!response.ok) {
@@ -159,12 +164,14 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     $('question-filter').value = '';
     $('selected-only').checked = false;
     const params = new URLSearchParams(); params.set('dossier', state.dossier.id);
+    if(state.activeTab==='citation-review')params.set('view','citation-review');
     history.replaceState(null, '', '#' + params.toString());
     render();
   }
   function applyDossier(view) {
     state.dossier = view; state.page = 0; state.sourceId = null;
     const params = new URLSearchParams(); params.set('dossier', view.id);
+    if(state.activeTab==='citation-review')params.set('view','citation-review');
     history.replaceState(null, '', '#' + params.toString());
     render();
   }
@@ -192,6 +199,7 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     pipelinePanel.setDossier(view);
     clinicalTrialsPanel.setDossier(view);
     sourceBundlePanel.setDossier(view);
+    citationReviewPanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -302,7 +310,8 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     $('detail-classification').value = source.classification || 'unreviewed';
     const variants = asArray(source.variants);
     $('detail-variant').hidden = variants.length < 2;
-    const newest = variants.find(variant => text(variant.content) === text(source.content)) || variants.at(-1);
+    const newest = variants.find(variant => source.inspection?
+      variant.contentDigest===source.inspection.contentDigest:text(variant.content)===text(source.content)) || variants.at(-1);
     const chosen = variants.find(variant => variant.contentDigest === state.variantDigest) || newest;
     state.variantDigest = chosen?.contentDigest || null;
     $('detail-variant').replaceChildren(...variants.map(variant => {
@@ -320,6 +329,7 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
       if (edition?.capturedAt || citation.capturedAt) item.append(node('div', date(edition?.capturedAt || citation.capturedAt, true)));
       if (citation.citation) item.append(node('div', text(citation.citation)));
       if (citation.references) item.append(node('div', 'Reference: ' + text(citation.references)));
+      renderOriginalRecordControl({root:item,citation,dossierId:state.dossier.id,revision:state.dossier.revision,api,task,notify});
       if (citation.original !== undefined && citation.original !== null) {
         const original = node('details', null, 'original-record');
         original.append(node('summary', 'Original result record'));
@@ -335,6 +345,8 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     renderNoteState();
   }
   function renderExcerpt(source, variant) {
+    if(renderInspectedSource({filesRoot:$('detail-bundle-files'),excerpt:$('detail-excerpt'),source,variant,
+      dossierId:state.dossier.id,revision:state.dossier.revision,api,task,notify}))return;
     const content = variant?.content ?? source.content ?? source.abstract ?? source.description ?? source.snippet;
     const bundle=renderSourceBundleFiles($('detail-bundle-files'),content);
     $('detail-excerpt').hidden=bundle;if(bundle)return;
@@ -556,7 +568,7 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     if (tab === 'crossref' && $('crossref-tab').hidden) tab = 'sources';
     if (tab === 'clinical-trials' && $('clinical-trials-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'citation-review', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
@@ -566,6 +578,12 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     documentPanel.show(tab === 'documents');
     pipelinePanel.show(tab === 'pipelines');
     clinicalTrialsPanel.show(tab === 'clinical-trials');
+    citationReviewPanel.show(tab === 'citation-review');
+    const params=new URLSearchParams(location.hash.slice(1));
+    if(tab==='citation-review')params.set('view',tab);
+    else if(params.get('view')==='citation-review')params.delete('view');
+    if(state.dossier)params.set('dossier',state.dossier.id);
+    history.replaceState(null,'',params.toString()?'#'+params.toString():location.pathname);
   }
   function clearFormError(form) { const box = form.querySelector('.form-error'); if (box) {box.textContent = ''; box.hidden = true;} }
   function showDossier(edit = false) {
@@ -691,6 +709,9 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   const sourceBundlePanel=createSourceBundlePanel({root:$('source-bundle-dialog'),openButton:$('source-bundle-open'),
+    api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const citationReviewPanel=createCitationReviewPanel({root:$('view-citation-review'),tab:$('citation-review-tab'),
     api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {
@@ -879,7 +900,7 @@ import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.
     }, form);
   });
   window.addEventListener('beforeunload', event => {
-    if (state.noteDrafts.size > 0) {event.preventDefault(); event.returnValue = '';}
+    if (state.noteDrafts.size > 0 || citationReviewPanel.hasUnsaved()) {event.preventDefault(); event.returnValue = '';}
   });
   async function start() {
     const params = new URLSearchParams(location.hash.slice(1));

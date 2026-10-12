@@ -8,17 +8,17 @@ from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs,unquote,urlsplit
 if __package__:
-    from . import engine,exports
+    from . import engine,exports,consultation
     from .workspace import Workspace,Conflict,json_read,SCHEMA
 else:
-    import engine,exports
+    import engine,exports,consultation
     from workspace import Workspace,Conflict,json_read,SCHEMA
 ROOT=Path(__file__).resolve().parent
 MAX_JSON_BYTES=48*1024*1024
 MAX_RESTORE_BYTES=512*1024*1024+4096
 OPERATIONS=["record.save","record.remove","project.rename","source.add","records.import","edition.freeze","language.record",
             "comment.carry","decision.record","ballot.open","ballot.close","procedure.review","phase.freeze","phase.response","invoice.prepare",
-            "invoice.response","payment.record","delivery.register"]
+            "invoice.response","payment.record","delivery.register",*consultation.OPERATIONS]
 
 def seed(workspace,kind):
     if __package__:from . import demo
@@ -26,15 +26,20 @@ def seed(workspace,kind):
     return demo.seed_demo(workspace,kind)
 
 def catalog():
-    return {**engine.schema(),"workspace_schema":SCHEMA,"operations":OPERATIONS,"audiences":["private_restore","edition","management"],
+    return {**engine.schema(),"workspace_schema":SCHEMA,"operations":OPERATIONS,"audiences":["private_restore","edition","management","consultation","review_response"],
             "limits":{"source_bytes":32*1024*1024,"original_bytes_per_project":192*1024*1024,
-                      "state_bytes":64*1024*1024,"records_per_collection":20000,"preview_records":200,"page_records":500},
+                      "state_bytes":64*1024*1024,"records_per_collection":20000,"preview_records":200,"page_records":500,"review_response_bytes":consultation.MAX_RESPONSE_BYTES,"review_comments_per_response":consultation.MAX_COMMENTS},
             "operation_payload":{"operation":"record.save","payload":{"collection":"clauses","record":{}},"expected_revision":1,"request_id":"request-unique","actor":"Operator"},
             "import_specification":{"source_id":"","parse_options":{},"collection":"","table_id":"","field_map":{},"constants":{},"row_indices":None},
             "parsing_options":{"csv":["format","encoding","delimiter","header_row"],
                                "json":["format","encoding","records_path"],"xlsx":["format","sheet","header_row","header_rows","data_start_row","data_end_row"],
                                "text":["encoding"],"docx":[]},
             "workflow_templates":{
+             "review.packet":{"consultation_id":"","title":"","instructions_en":"","instructions_fr":"","reply_route_en":"","reply_route_fr":""},
+             "review.receive":{"packet_id":"","filename":"","content_base64":"","supersedes_id":"","receipt_note":""},
+             "review.amend":{"comment_id":"","clause_id":"","expected_clause_sha256":"","changes":{},"rationale":""},
+             "review.resolve":{"comment_id":"","disposition":"open","rationale":"","resolution_edition_id":"","resolution_clause_id":"","amendment_ids":[],"response_visibility":"recipient_only","publication_basis":""},
+             "review.carry":{"response_id":"","predecessor_id":"","entry_ids":[],"rationale":""},
              "edition.freeze":{"label":"","contributor_ids":[],"notes":""},
              "ballot.open":{"title":"","edition_id":"","procedure_id":"","opens":"","closes":"","method":"letter_ballot","membership_ids":None,"consultation_ids":[],"sponsor_endorsement_source_ids":[],"notes":""},
              "ballot.close":{"ballot_id":"","authority":"","recorded_decision":"recorded_only","rationale":"","source_ids":[]},
@@ -51,7 +56,7 @@ def catalog():
 
 def handler_for(workspace):
     class Handler(BaseHTTPRequestHandler):
-        server_version="StandardsWorkbench/0.1";protocol_version="HTTP/1.1"
+        server_version="StandardsWorkbench/0.2";protocol_version="HTTP/1.1"
         def setup(self):
             super().setup();self.connection.settimeout(30)
         def log_message(self,fmt,*args):
@@ -88,7 +93,7 @@ def handler_for(workspace):
                 self.local_origin();url=urlsplit(self.path);bits=[unquote(x) for x in url.path.split("/") if x]
                 q={k:v[0] for k,v in parse_qs(url.query).items()}
                 if not bits or bits==["index.html"]:return self.send((ROOT/"web/index.html").read_bytes(),content_type="text/html; charset=utf-8")
-                if len(bits)==1 and bits[0] in ("app.js","style.css"):
+                if len(bits)==1 and bits[0] in ("app.js","style.css","consultation.js","consultation.css"):
                     return self.send((ROOT/"web"/bits[0]).read_bytes(),content_type="application/javascript; charset=utf-8" if bits[0].endswith(".js") else "text/css; charset=utf-8")
                 if bits==["api","status"]:return self.send({"workspace_schema":SCHEMA,"engine_schema":engine.SCHEMA,"mode":"local_operator","network_clients":0,"publisher_dependencies":["python-docx>=1.2,<2","reportlab>=4.4,<5"]})
                 if bits==["api","catalog"]:return self.send(catalog())
@@ -97,6 +102,14 @@ def handler_for(workspace):
                     pid=bits[2]
                     if len(bits)==3:return self.send(workspace.get(pid))
                     if bits[3:]==["analysis"]:return self.send(engine.analyze(workspace.full_state(pid)))
+                    if bits[3:]==["review","status"]:return self.send(consultation.analyze(workspace.full_state(pid)))
+                    if len(bits)==6 and bits[3:5]==["review","clauses"]:
+                        current=workspace.full_state(pid);clause=engine.record(current,"clauses",bits[5])
+                        return self.send({"revision":current["revision"],"clause":clause,"sha256":engine.digest(clause)})
+                    if len(bits)==6 and bits[3:5]==["review","responses"]:
+
+                        return self.send(consultation.response_detail(workspace.full_state(pid),bits[5]))
+
                     if bits[3:]==["history"]:return self.send(workspace.history(pid,q.get("offset",0),q.get("limit",100)))
                     if len(bits) in (5,6) and bits[3]=="records":
                         return self.send(workspace.record(pid,bits[4],bits[5]) if len(bits)==6 else workspace.records(pid,bits[4],q.get("offset",0),q.get("limit",100)))
@@ -110,7 +123,7 @@ def handler_for(workspace):
                     if bits[3:]==["export"]:
                         audience=q.get("audience","private_restore")
                         raw,manifest=exports.export_project(workspace,pid,audience,q.get("edition_id"),q.get("publication_id"),q.get("comparison_edition_id"),
-                                                          [x for x in q.get("include_source_ids","").split(",") if x])
+                                                          [x for x in q.get("include_source_ids","").split(",") if x],q.get("packet_id"),q.get("response_id"))
                         return self.send(raw,content_type="application/zip",filename=f"standards-{audience}-{pid}-r{manifest['revision']}.zip")
                 return self.send({"error":"Resource not found."},404)
             except Exception as exc:self.error(exc)
@@ -125,7 +138,15 @@ def handler_for(workspace):
                     return self.send(exports.import_project(workspace,raw))
                 if len(bits)==4 and bits[:2]==["api","projects"] and bits[3]=="operations":
                     return self.send(workspace.apply(bits[2],data.get("operation"),data.get("payload",{}),data.get("expected_revision"),data.get("request_id"),data.get("actor","Operator")))
+                if len(bits)==5 and bits[:2]==["api","projects"] and bits[3:]==["review","preview"]:
+                    encoded=data.get("content_base64","")
+                    if not isinstance(encoded,str) or len(encoded)>consultation.MAX_RESPONSE_BYTES*4//3+16:
+                        raise ValueError("Returned review exceeds 8 MiB.")
+                    raw=base64.b64decode(encoded,validate=True)
+                    state=workspace.full_state(bits[2])
+                    return self.send({"revision":state["revision"],**consultation.response_preview(state,raw,data.get("packet_id"),data.get("filename","returned-review.json"))})
                 if len(bits)==5 and bits[:2]==["api","projects"] and bits[3:]==["intake","preview"]:
+
                     return self.send(workspace.intake_preview(bits[2],data.get("specification"),data.get("offset",0),data.get("limit",100)))
                 return self.send({"error":"Endpoint not found."},404)
             except Exception as exc:self.error(exc)
@@ -145,11 +166,12 @@ def main(argv=None):
     parser.add_argument("--port",type=int,default=8773)
     parser.add_argument("--demo",action="store_true",help="Adopt the original public municipal-reconciliation source package once")
     parser.add_argument("--authored-demo",action="store_true",help="Adopt the separate explicitly authored committee/finance example once")
+    parser.add_argument("--review-demo",action="store_true",help="Prepare the separate public-source bilingual review packet once; preserve actual entered returns")
     parser.add_argument("--restore",type=Path)
     parser.add_argument("--list",action="store_true")
     parser.add_argument("--export",metavar="PROJECT_ID")
-    parser.add_argument("--audience",choices=("private_restore","edition","management"),default="private_restore")
-    parser.add_argument("--edition-id");parser.add_argument("--comparison-edition-id");parser.add_argument("--publication-id")
+    parser.add_argument("--audience",choices=("private_restore","edition","management","consultation","review_response"),default="private_restore")
+    parser.add_argument("--packet-id");parser.add_argument("--response-id");parser.add_argument("--edition-id");parser.add_argument("--comparison-edition-id");parser.add_argument("--publication-id")
     parser.add_argument("--include-source-id",action="append",default=[])
     parser.add_argument("--output",type=Path)
     parser.add_argument("--no-serve",action="store_true")
@@ -157,10 +179,11 @@ def main(argv=None):
     if args.restore:print(json.dumps(exports.import_project(workspace,args.restore.read_bytes())))
     if args.demo:print(json.dumps(seed(workspace,"public")))
     if args.authored_demo:print(json.dumps(seed(workspace,"authored")))
+    if args.review_demo:print(json.dumps(seed(workspace,"review")))
     if args.list:print(json.dumps(workspace.list_projects(),ensure_ascii=False))
     if args.export:
         if not args.output:parser.error("--export requires --output")
-        raw,manifest=exports.export_project(workspace,args.export,args.audience,args.edition_id,args.publication_id,args.comparison_edition_id,args.include_source_id)
+        raw,manifest=exports.export_project(workspace,args.export,args.audience,args.edition_id,args.publication_id,args.comparison_edition_id,args.include_source_id,args.packet_id,args.response_id)
         args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_bytes(raw)
         print(json.dumps({"path":str(args.output),"bytes":len(raw),"project_id":manifest["project_id"],"revision":manifest["revision"],"audience":manifest["audience"]}))
         return

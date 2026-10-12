@@ -1,0 +1,38 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "erddap",
+  "description": "Complete original ERDDAP grid/table scientific source review, retained native editions, provider intake handoffs, merchant/customer receiving and borrowed operator applications.",
+  "commands": {
+    "erddap": "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/cli.mjs",
+    "erddap-provider-handoff": "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/provider-handoff.mjs"
+  },
+  "commandDescriptions": {
+    "erddap": "Acquire/review original ERDDAP grids and station tables, prepare provider handoffs, publish native merchant editions and receive complete datasets.",
+    "erddap-provider-handoff": "Review complete original provider metadata, stations, time and quality definitions, retain source-bound intake bundles and receive them independently."
+  },
+  "exports": {
+    "./seller/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/merchant.mjs",
+    "./buyer/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/customer.mjs",
+    "./merchant/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/mcp.mjs",
+    "./client/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/mcp-client.mjs",
+    "./provider/erddap": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/provider-handoff-client.mjs"
+  },
+  "applicationProviders": {
+    "erddap": "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "erddap-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/merchant-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/PROVIDER_CLIENT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/PROVIDER_HANDOFF.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/provider_handoff.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/provider_handoff_workspace.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/provider_handoff_cli.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/delivery/native-receive.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/delivery/provider-native-receive.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/delivery/browser-owner.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/delivery/browser-phase.cjs"
+  ]
+}

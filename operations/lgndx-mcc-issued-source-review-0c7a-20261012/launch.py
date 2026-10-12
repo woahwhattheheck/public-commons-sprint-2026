@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Admit the one original MCC issued-source receiving operation."""
-import argparse,json,sys
+import argparse,json,sys,sysconfig
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
 selection=json.loads((ROOT/'selection.json').read_text())
@@ -19,7 +19,9 @@ argv=['peer0C7A','--operation-id',selection['operation'],'--project',str(ROOT),
 for field,flag in (('memory_reservations_root','--memory-reservations-root'),
                    ('disk_reservations_root','--disk-reservations-root'),('worker_root','--worker-root')):
  if selection.get(field):argv.extend([flag,selection[field]])
-for path in [str(HOST),sys.executable,str(ROOT/'run_native.py'),str(ROOT/'receive.mjs'),
+python_libraries=sorted({str(Path(path).resolve()) for key in ('stdlib','platstdlib')
+ for path in (sysconfig.get_path(key),) if path and Path(path).is_dir()})
+for path in python_libraries+[str(HOST),sys.executable,str(ROOT/'run_native.py'),str(ROOT/'receive.mjs'),
  str(ROOT/'source.zip'),str(ROOT/'selection.json'),selection['node'],
  selection['project_update']['path'],selection['baseline_handoff']['path']]:
  argv.extend(['--runtime-path',path])
