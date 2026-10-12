@@ -384,7 +384,8 @@
     "sdmx": "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/cli.mjs",
     "dataset-feeds": "stellar/scf-starforge-20261009/sf30-seller-sdk/feeds/cli.mjs",
     "atlas": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
-    "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs"
+    "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs",
+    "upstream-tls": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -876,7 +877,9 @@
     "./catalog/atlas/transfer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-transfer.mjs",
     "./catalog/explorer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
     "./seller/arcgis/workbench": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/model.mjs",
-    "./seller/arcgis/workbench/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/server.mjs"
+    "./seller/arcgis/workbench/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/workbench/server.mjs",
+    "./seller/upstream-tls": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/profile.mjs",
+    "./seller/upstream-tls/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/config.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -911,7 +914,8 @@
     "stellar/mercury-event-operations/native_journey.py",
     "stellar/mercury-event-operations/verification/README.md",
     "stellar/mercury-event-operations/verification/native-journey.json",
-    "stellar/mercury-event-operations/verification/sqlite-recovery.json"
+    "stellar/mercury-event-operations/verification/sqlite-recovery.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/journey.mjs"
   ],
   "featurePeers": {
     "postgres": {
