@@ -226,7 +226,7 @@ export async function restoreWebDavSourcePacket({
         || state.sourcePacket?.bytes !== selected.bytes)
       throw webDavError('WEBDAV_RECEIVING_CONFLICT', 'The saved receipt and receiving workspace belong to a different original packet.');
     webDavUuid(state.id);
-    return { ...receipt, revision: state.revision, replayed: true,
+    return { ...receipt, directory: target, revision: state.revision, replayed: true,
       originalReceivingId: inspected.manifest.exportId, originalWorkspaceId: inspected.manifest.workspaceId };
   }
   const restored = await importSourcePacket({ input, directory: target, python, signal });
