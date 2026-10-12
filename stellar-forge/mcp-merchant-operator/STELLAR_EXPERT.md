@@ -93,7 +93,7 @@ Use \`merchant_stellar_expert_editions\` to reach the full archive. The first pa
 
 Use \`merchant_stellar_expert_edition\` to inspect any immutable edition and every original response receipt. This read preserves the browser's current selection. \`merchant_stellar_expert_rows\` pages the same edition's normalized records using \`nextOffset\`; each row carries its original page hash, record position, observation time and URL.
 
-Dataset preparation returns the original \`datasetId\`, snapshot and column descriptors. Pass query parameter values as strings to \`dataset_query\`, including original field selection, filters, sorting, page limits and cursor. Exact native query responses and query outcomes remain in the same journal.
+Dataset preparation returns the original \`datasetId\`, snapshot and column descriptors. Pass the original URL-encoded query string to \`dataset_query\`, for example \`query: "limit=50"\`. Preserve the original string values for field selection, filters, sorting, page limits and cursor; construct later pages with \`URLSearchParams\`. Exact native query responses and query outcomes remain in the same journal.
 
 Merchant preparation requires explicitly reviewed origin, resource path and payment terms. Inspect the original publisher's active/previous selection and generation before activation, startup or rollback. Merchant startup uses the workspace's selected native payment runtime. Customer receiving selects the original ordered SF88 intent IDs from the host's inbox and passes them through the existing SF100 receiver. It returns the original dataset identity, page/row counts and five-file manifest.
 
