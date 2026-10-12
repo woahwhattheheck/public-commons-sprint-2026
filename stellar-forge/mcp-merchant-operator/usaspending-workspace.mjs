@@ -5,7 +5,7 @@ import { USASPENDING_TRANSACTION_SOURCE_KINDS, isUSASpendingTransactionTool, exe
 import { realpath, mkdir, open, link, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { exact, failure, identifier, line, plain } from './config.mjs';
+import { exact, failure, identifier, line, plain } from './host-files.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { readBytes, privateDirectory, parse, syncDirectory } from '../../stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/onboarding/files.mjs';
 import { canonical, sha, csv, publicRow, COLUMNS, integer } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/core.mjs';
