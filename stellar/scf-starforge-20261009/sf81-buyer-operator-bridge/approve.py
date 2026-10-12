@@ -15,6 +15,21 @@ import os
 from pathlib import Path
 import sys
 
+# Capability discovery runs before SF62 is imported. It consumes no intent or
+# operator arguments and never opens private keys, policy, ledger, TTY or socket.
+_CAPABILITIES = {
+    'schema': 'stellar-forge.sf81.capabilities.v1',
+    'review_channels': ['terminal', 'pipe'],
+    'review_schema': 'stellar-forge.sf81.review.v1',
+    'decision_schema': 'stellar-forge.sf81.decision.v1',
+    'approval_schema': 'stellar-forge.sf81.approval.v1',
+    'operator_review_schema': 'stellar-forge.sf62.operator-review.v1',
+}
+if __name__ == '__main__' and sys.argv[1:] == ['--capabilities']:
+    print(json.dumps(_CAPABILITIES, separators=(',', ':'), ensure_ascii=True),
+          flush=True)
+    raise SystemExit(0)
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'sf62-human-approval-cli'))
 from console import (Denied, ReservationApprovalDenied,  # noqa: E402
                      buyer_intent_to_governor_request, check_ledger_path,
@@ -31,7 +46,9 @@ def unique_object(pairs: list[tuple]) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, epilog=(
+        'Read-only helper capabilities: --capabilities alone. '
+        'This query opens no operator state.'))
     parser.add_argument('--actor', required=True)
     parser.add_argument('--service', required=True)
     parser.add_argument('--policy', type=Path, required=True)
