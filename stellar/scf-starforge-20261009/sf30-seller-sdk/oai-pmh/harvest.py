@@ -15,7 +15,7 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from bridge import xml, storage, InputError
-from protocol import base_url, request_url, parse_page, date
+from protocol import base_url, request_url, parse_page, date, same_request_url
 
 SCHEMA = "stellar-forge.oai-pmh-workspace.v1"
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
@@ -127,8 +127,11 @@ class HarvestWorkspace:
         request_url(repo["baseURL"], verb, arguments)
         if "resumptionToken" in arguments:
             raise InputError("Start with the original selection; tokens are continued from retained responses")
-        if baseline is not None and verb != "ListRecords":
-            raise InputError("A record edition baseline belongs to ListRecords")
+        if baseline is not None:
+            if verb != "ListRecords": raise InputError("A record edition baseline belongs to ListRecords")
+            prior=self._get("oai_editions",baseline)
+            if prior["repository"]["id"]!=repository_id or prior["selection"].get("metadataPrefix")!=arguments.get("metadataPrefix") or prior["selection"].get("set")!=arguments.get("set"):
+                raise InputError("Choose a baseline for the same repository, metadata format and set")
         if verb in {"ListRecords", "ListIdentifiers", "GetRecord"}:
             if not repo["identify"] or not repo["formatsComplete"]:
                 raise InputError("Complete Identify and ListMetadataFormats for this repository first")
@@ -176,6 +179,7 @@ class HarvestWorkspace:
             else: request["exchange"] = 1
             self.db.execute("INSERT INTO oai_requests VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body",
                             (request_id,operation_id,op["attempt"],ordinal,jbytes(request).decode()))
+            self._save_request(request)
             op.update(status="FETCHING",revision=op["revision"]+1,lastError=None)
             self._put("oai_operations",op)
             repo["nextRequestAt"] = time.time()+repo["interval"]
@@ -193,7 +197,8 @@ class HarvestWorkspace:
         """Import a real response from this host or an equipped source-acquisition host."""
         op, req = prepared if prepared is not None else self._begin(operation_id,already_captured=True)
         if req is None: raise InputError("This operation is complete or waiting for its recorded request time")
-        if requested_url != req["url"]: raise InputError("The captured response URL differs from this operation's next request")
+        if not same_request_url(requested_url,req["url"]): raise InputError("The captured response URL differs from this operation's next request")
+        req["plannedURL"],req["url"]=req["url"],requested_url
         path = Path(filename)
         if not path.is_file() or path.is_symlink() or path.stat().st_size > xml.MAX_SOURCE:
             raise InputError("Use a complete response file within 256 MiB")
@@ -297,6 +302,7 @@ class HarvestWorkspace:
         repo=self.repository(op["repositoryId"])
         if op["verb"]=="Identify" and "identify" in parsed:
             repo.update(identify=parsed["identify"],identifyRequestId=request["id"])
+        if op["verb"]=="ListMetadataFormats" and op["selection"].get("identifier"): return
         kind="formats" if op["verb"]=="ListMetadataFormats" else "sets" if op["verb"]=="ListSets" else None
         if kind:
             if request["ordinal"]==1:
