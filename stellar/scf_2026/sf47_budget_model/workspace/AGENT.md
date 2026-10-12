@@ -27,6 +27,8 @@ First call inspectGrantAgentBinding with directory and optional scenarioFile, py
 | portfolioSelection(caseId, expectedVersion, portfolioId, alternativeId) | Native selected dates returned as an original forecast input. |
 | supportPreview(caseId, expectedVersion, bytes, filename) | Original SF74 support reader and complete source/deployment preview, without saving. |
 | supportReceive(caseId, bytes, body) | Native support.receive, retaining the original file and rendered review with an existing or new deployment in the original case transaction. |
+| buyerPreview(caseId, expectedVersion, bytes, filename) | Original SF88 source reader, full job/purchase/deployment review and preview SHA, without saving. |
+| buyerReceive(caseId, bytes, body) | Native buyer.receive: explicitly selected original jobs remain associated with their original purchase and accountable buyer deployment. |
 | download(kind, selection) | Complete original plan, case, forecast or portfolio ZIP, source, scenario or CSV. |
 | importBundle(kind, bytes, body) | Original complete plan or case ZIP receiver. |
 | importScenario(bytes, body) | Original source JSON with native byte identity. |
@@ -99,6 +101,39 @@ Preview is read-only: native reader availability, size and busy errors retain th
 
 Source downloads and complete case export/import preserve the original file, retained report and deployment associations. The original operator, CLI, environment fields and native reader lifecycle are documented in [Merchant support in delivery operations](SUPPORT_DELIVERY.md).
 
+
+## Receive original buyer observations
+
+Use the complete original JSON exported by [Native buyer work in delivery Operations](BUYER_OPERATIONS.md). The file contains selected original SF88 Inbox sources and their native outcome/retained-output observations. Keep it private with the operating case. The client passes its nonempty original bytes, up to 8 MiB, to the installed native reader.
+
+```js
+const preview = await client.buyerPreview(caseId, version, handoffBytes, filename);
+// Present every preview.value.rows entry and its original source, issues,
+// receiving classification, matches and suggestedPurchaseId for review.
+// selections contains only the operator's explicit original job choices.
+const received = await client.buyerReceive(caseId, handoffBytes, {
+  expectedVersion: version,
+  filename,
+  expectedPreviewSha256: preview.value.previewSha256,
+  deploymentId,
+  selections,
+  actor,
+  requestId,
+  note: 'Receive the selected original buyer observations.'
+});
+```
+
+Each selection is exactly `{jobId, purchaseId}`. The jobId is the original 64-character SHA-256 identifier, and purchaseId is the explicit original `purchase-...` ID or null for a new original purchase. Select one through 100 distinct original jobs; the native preview determines whether each is receivable and which existing intent or transaction it matches. The same existing purchase cannot be selected for two different source jobs.
+
+Select an existing buyer or combined deployment by deploymentId, with no nonempty competing deployment object. A later observation retains its original purchase's deployment. For a new deployment use deploymentId:null or omit it, and provide deployment with its original name, operator and explicit role BUYER or BOTH. Other editable fields follow the existing deployment contract: participantClass, environment, state, original work-package costIds, tranche, source/reference details and actual handover fields. Generated identity, source associations, version and recordedBy remain native-owned.
+
+buyerPreview is read-only. buyerReceive preserves the exact filename, bytes, reviewed preview SHA, current case version and stable requestId. It invokes the original command transaction directly; it does not reconstruct or edit payment fields. The native source reader determines the original intent, attempt, amount, asset/network, settlement and output observations. A later recovery remains linked to the existing purchase.
+
+The returned value contains version, recordId (the deployment), sourceIds, sourceSha256, selectedJobIds, purchaseIds, totalSourceJobs, unselectedJobIds and unchanged. The whole source remains retained even for jobs left unselected; only selected native purchase records contribute to case metrics. An identical source association can return unchanged. Read the actual returned version and the current case.
+
+A definite version/preview/source-identity conflict requires a fresh review. After an interrupted receive response, preserve and resubmit the identical original requestId, filename, byte sequence and payload; the original transaction returns its committed result before applying a later case-version check. The client makes no automatic write retry.
+
+Download each sourceId through `download('source', ...)` and export the complete case with `download('case', ...)`. The normal case import retains exact buyer JSON and native HTML, job-to-purchase links, source metadata and original history alongside Completion, Support, forecasts and portfolios. Reopen the returned received case ID; do not assume an import replaces another operating case.
 
 ## Completion assignments, payment clocks and prepared forms
 

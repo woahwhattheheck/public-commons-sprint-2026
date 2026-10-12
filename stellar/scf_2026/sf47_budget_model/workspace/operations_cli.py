@@ -69,6 +69,17 @@ def register(subparsers, common):
     target.add_argument("--file", required=True)
     target.add_argument("--name", required=True)
     mutation(target)
+    target = command("buyer-preview", "Review selected original SF88 buyer jobs for this case", case=True, output=True)
+    target.add_argument("--file", required=True, help="Original private SF88 operations handoff")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("buyer-receive", "Receive exact buyer source and selected original purchase associations", case=True, output=True)
+    mutation(target, version=True)
+    target.add_argument("--file", required=True, help="Same original handoff used for preview")
+    target.add_argument("--expected-preview-sha256", required=True)
+    target.add_argument("--selections", required=True, help="JSON array of reviewed jobId/purchaseId selections")
+    deployment = target.add_mutually_exclusive_group(required=True)
+    deployment.add_argument("--deployment", help="Existing original buyer or combined deployment ID")
+    deployment.add_argument("--deployment-file", help="Explicit JSON fields for a new buyer deployment")
     target = command("support-preview", "Review an original merchant support handoff for this delivery case", case=True, output=True)
     target.add_argument("--file", required=True, help="Original SF74 portable support handoff")
     target.add_argument("--expected-version", type=int, required=True)
@@ -183,6 +194,23 @@ def operate(workspace, args):
         result = ops.forecast(args.case, args.forecast)
     elif action == "forecast-export":
         return {"forecastId": args.forecast, "output": publish(args.output, ops.export_forecast(args.case, args.forecast))}
+    elif action in ("buyer-preview", "buyer-receive"):
+        original = {"filename": Path(args.file).name,
+                    "contentBase64": base64.b64encode(read_bytes(args.file, MAX_SOURCE)).decode("ascii")}
+        if action == "buyer-preview":
+            result = ops.preview_buyer(args.case, {"expectedVersion": args.expected_version, **original})
+        else:
+            try:
+                selections = json.loads(read_bytes(args.selections, MAX_SOURCE))
+                deployment = json.loads(read_bytes(args.deployment_file, MAX_SOURCE)) if args.deployment_file else None
+            except (UnicodeError, ValueError) as exc:
+                raise Problem("Use the original UTF-8 JSON selection and deployment fields.", 422, "INVALID_JSON") from exc
+            data = {**original, "expectedPreviewSha256": args.expected_preview_sha256,
+                    "deploymentId": args.deployment, "selections": selections}
+            if deployment is not None:
+                data["deployment"] = deployment
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "buyer.receive", "data": data})
     elif action in ("support-preview", "support-receive"):
         original = {"filename": Path(args.file).name,
                     "contentBase64": base64.b64encode(read_bytes(args.file, MAX_SOURCE)).decode("ascii")}
