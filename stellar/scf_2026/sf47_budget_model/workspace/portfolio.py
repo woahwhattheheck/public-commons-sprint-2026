@@ -256,7 +256,8 @@ def seed(context, saved):
         effort = deepcopy(assigned.get(source["sourceId"], {})) if source["sourceKind"] == "package" else {}
         exact = all(role in {r["id"] for r in resources} for role in effort) and sum((Decimal(v) for v in effort.values()), ZERO) == Decimal(source["remainingHours"])
         tasks.append({"id": source["id"], "effortHours": effort if exact else {}, "dependsOn": [],
-            "releaseDate": source["startDate"], "dueDate": source["endDate"],
+            "releaseDate": source["timing"]["reviewedReleaseDate"] if "timing" in source else source["startDate"],
+            "dueDate": None if "timing" in source else source["endDate"],
             "minBusinessDays": 0, "priority": 100,
             "note": ("Original start condition: " + source["timing"]["startCondition"]) if "timing" in source
                 else ("Exact original pinned contributor assignments retained; their sum matches remaining hours." if exact and effort else "")})
@@ -286,11 +287,12 @@ def date_delta(new, old):
     return None if new is None or old is None else (date.fromisoformat(new) - date.fromisoformat(old)).days
 
 
-def date_inputs(saved, chosen, name):
+def date_inputs(saved, chosen, name, event_deadlines=()):
     inputs = deepcopy(saved["inputs"])
     inputs["name"] = text(saved["inputs"]["name"] + " / " + name, "Selected forecast name", 300, True)
     overrides = {row["costId"]: row for row in inputs["packageOverrides"]}
     quotes = {row["id"]: row for row in inputs["commercial"]}
+    reviewed_releases = {row["taskId"]: row["releaseDate"] for row in event_deadlines}
     for row in chosen:
         if row["sourceKind"] == "package":
             target = overrides.get(row["sourceId"])
@@ -301,6 +303,8 @@ def date_inputs(saved, chosen, name):
         else:
             target = quotes[row["sourceId"]]
             target["startDate"], target["endDate"] = row["startDate"], row["endDate"]
+            if "timing" in target:
+                target["timing"]["reviewedReleaseDate"] = reviewed_releases[row["taskId"]]
         addition = "Portfolio " + name + ": entered availability, effort, dependencies and priority determine this remaining-work window."
         target["note"] = text((target.get("note", "") + "\n" + addition).strip(), "Selected date basis", 12000, True)
     return inputs
@@ -316,9 +320,13 @@ def calculate(context, saved, sources, fields, ident, name, note):
     for task in fields["tasks"]:
         source = index[task["id"]]
         if "timing" in source:
-            if source["startDate"] is None and task["releaseDate"] is None:
+            retained_release = source["timing"]["reviewedReleaseDate"]
+            if retained_release is None and task["releaseDate"] is None:
                 findings.append(finding("EVENT_RELEASE_DATE_REQUIRED", "tasks." + task["id"] + ".releaseDate",
                     "Retain the original start condition and choose its reviewed release date before allocating this work: " + source["timing"]["startCondition"]))
+            elif retained_release and task["releaseDate"] and task["releaseDate"] < retained_release:
+                findings.append(finding("ORIGINAL_EVENT_RELEASE", "tasks." + task["id"] + ".releaseDate",
+                    "Work cannot be released before the retained original reviewed trigger on " + retained_release + "."))
         values = task["effortHours"]
         if any(value is None for value in values.values()):
             findings.append(finding("EFFORT_REQUIRED", "tasks." + task["id"], "Enter every selected resource's remaining effort."))
@@ -348,13 +356,17 @@ def calculate(context, saved, sources, fields, ident, name, note):
         if timed:
             # Use the same native calendar for the contract's working-day clock.
             # Include an observed release before the forecast horizon without moving any work date.
-            first = min([date.fromisoformat(calendar["startDate"])] + [date.fromisoformat(task["release_date"]) for task in timed])
+            entered = {row["id"]: row["releaseDate"] for row in fields["tasks"]}
+            releases = {task["id"]: index[task["id"]]["timing"]["reviewedReleaseDate"] or entered[task["id"]] for task in timed}
+            for task in timed:
+                task["release_date"] = entered[task["id"]] or releases[task["id"]]
+            first = min([date.fromisoformat(calendar["startDate"])] + [date.fromisoformat(releases[task["id"]]) for task in timed])
             last = date.fromisoformat(calendar["startDate"]) + timedelta(days=calendar["horizonDays"])
             working = allocation.calendar_dates(first.isoformat(), (last - first).days, pure["calendar"])["days"]
             deadlines = []
             for task in timed:
                 terms = index[task["id"]]["timing"]
-                available = [stamp for stamp in working if stamp >= date.fromisoformat(task["release_date"])]
+                available = [stamp for stamp in working if stamp >= date.fromisoformat(releases[task["id"]])]
                 duration = terms["deliveryBusinessDays"]
                 if len(available) < duration:
                     return {**common, "status": "HORIZON_EXCEEDED",
@@ -366,7 +378,7 @@ def calculate(context, saved, sources, fields, ident, name, note):
                         "findings": [finding("ORIGINAL_EVENT_DEADLINE", "tasks." + task["id"] + ".dueDate",
                             "The original " + str(duration) + "-working-day term ends on " + deadline + ". Retain that deadline or an earlier one.")]}
                 task["due_date"] = task["due_date"] or deadline
-                deadlines.append({"taskId": task["id"], "releaseDate": task["release_date"],
+                deadlines.append({"taskId": task["id"], "releaseDate": releases[task["id"]], "workReleaseDate": task["release_date"],
                     "deliveryBusinessDays": duration, "contractDueDate": deadline, "selectedDueDate": task["due_date"],
                     "startCondition": terms["startCondition"]})
             common["eventDeadlines"] = deadlines
@@ -419,7 +431,7 @@ def calculate(context, saved, sources, fields, ident, name, note):
         if grant["included"] and grant["forecastDate"] and Decimal(grant["remainingUsd"]) and ends and grant["forecastDate"] < max(ends):
             findings.append(finding("GRANT_COLLECTION_BEFORE_REPLANNED_FINISH", "grants." + str(grant["tranche"]),
                 "The conditional grant receipt remains on " + grant["forecastDate"] + "; this tranche's allocated work finishes on " + max(ends) + ". Review the original payout timing assumption."))
-    selected = forecasts.preview(context, date_inputs(saved, chosen, name))
+    selected = forecasts.preview(context, date_inputs(saved, chosen, name, common.get("eventDeadlines", ())))
     if selected["report"]["totals"] != saved["report"]["totals"]:
         fail("The date allocation changed original forecast totals.", "PORTFOLIO_CASH_SOURCE_CONFLICT", 409)
     return {**common, "status": "READY", "schedule": schedule, "chosenDates": chosen,
@@ -541,10 +553,11 @@ def report_html(value):
     if any("timing" in row for row in report["sourceTasks"]):
         timing_rows = [{"title": row["title"], "startCondition": row["timing"]["startCondition"],
             "deliveryBusinessDays": row["timing"]["deliveryBusinessDays"],
+            "reviewedReleaseDate": row["timing"]["reviewedReleaseDate"],
             "collectionConditions": "; ".join(item["receiptId"] + ": " + item["condition"] for item in row["timing"]["receiptConditions"])}
             for row in report["sourceTasks"] if "timing" in row]
         parts.append("<h2>Original event-dependent terms</h2>" + table([("title","Work"),("startCondition","Start condition"),
-            ("deliveryBusinessDays","Quoted delivery working days"),("collectionConditions","Original collections")], timing_rows))
+            ("reviewedReleaseDate","Original reviewed trigger"),("deliveryBusinessDays","Quoted delivery working days"),("collectionConditions","Original collections")], timing_rows))
         parts.append("<p>Undated work stays in the complete source scope. The original forecast lists its undated cash and hours separately until a reviewed release and work window are selected.</p>")
     parts.append("<h2>Original remaining scope</h2>" + table([("title","Work"),("sourceKind","Source"),("remainingHours","Hours"),("remainingCostUsd","Remaining cash USD"),("scope","Scope")], report["sourceTasks"]))
     parts.append("<p>Complete inputs, original forecast snapshot, dated cash calculations and source identities are in portfolio.json. Receive the complete original operations ZIP to reopen this allocation in the workspace.</p></body></html>")

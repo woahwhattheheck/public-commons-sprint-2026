@@ -165,6 +165,7 @@ This is an optional extension to the original commercial row:
   "endDate": null,
   "timing": {
     "mode": "EVENT_DEPENDENT",
+    "reviewedReleaseDate": null,
     "startCondition": "Original deposit received and all agreed source, access and reviewer prerequisites ready.",
     "deliveryBusinessDays": 12,
     "receiptConditions": [
@@ -174,6 +175,8 @@ This is an optional extension to the original commercial row:
   }
 }
 ```
+
+`reviewedReleaseDate` is optional and remains null until the original trigger has a reviewed date. It is separate from the remaining-work window: resource delays do not reset it. The complete forecast and Portfolio handoff retain it across selection, export and later re-planning. A work window cannot start before this date.
 
 The two milestone IDs must be the IDs already in that row's `receipts`. Every milestone needs exactly one condition; normalization keeps them in original milestone order. `deliveryBusinessDays` is an integer from 1 through 1,096. The original note, offer identity, source attachments, prices and observed-payment rules continue to apply.
 

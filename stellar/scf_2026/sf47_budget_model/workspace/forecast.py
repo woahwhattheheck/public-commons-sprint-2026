@@ -194,7 +194,7 @@ def normalize(context, raw):
         timing = None
         if "timing" in row:
             raw_timing = obj(row["timing"], "Event-dependent commercial timing",
-                             ("mode", "startCondition", "deliveryBusinessDays", "receiptConditions"))
+                             ("mode", "startCondition", "deliveryBusinessDays", "receiptConditions", "reviewedReleaseDate"))
             if raw_timing.get("mode") != "EVENT_DEPENDENT":
                 domain.fail("Use EVENT_DEPENDENT timing, or omit timing for an ordinary dated scenario.", "INVALID_FORECAST")
             conditions = []
@@ -206,6 +206,7 @@ def normalize(context, raw):
             if set(condition_index) != {receipt["id"] for receipt in receipts}:
                 domain.fail("Retain exactly one original collection condition for each quoted milestone.", "INVALID_FORECAST")
             timing = {"mode": "EVENT_DEPENDENT",
+                "reviewedReleaseDate": domain.calendar(raw_timing.get("reviewedReleaseDate"), "Original reviewed release date", True),
                 "startCondition": text(raw_timing.get("startCondition"), "Original start prerequisite", 4000, True),
                 "deliveryBusinessDays": domain.integer(raw_timing.get("deliveryBusinessDays"), "Quoted delivery working days", 1, MAX_DAYS),
                 "receiptConditions": [condition_index[receipt["id"]] for receipt in receipts]}
@@ -226,6 +227,8 @@ def normalize(context, raw):
             "note": text(row.get("note"), "Commercial cost and date assumption", 8000, True)}
         if timing is not None:
             normalized["timing"] = timing
+            if timing["reviewedReleaseDate"] and normalized["startDate"] and normalized["startDate"] < timing["reviewedReleaseDate"]:
+                domain.fail("The remaining-work window cannot start before the retained original reviewed release.", "INVALID_FORECAST")
         if (normalized["startDate"] is None) != (normalized["endDate"] is None):
             domain.fail("Retain both work dates, or leave both empty while the original start condition is unresolved.", "INVALID_FORECAST")
         if normalized["endDate"] is not None and normalized["endDate"] < normalized["startDate"]:
@@ -537,6 +540,7 @@ def event_timing(commercial):
             "selected": selected, "state": "AWAITING_WORK_DATES" if undated else "DATED",
             "startDate": row["startDate"], "endDate": row["endDate"],
             "startCondition": row["timing"]["startCondition"],
+            "reviewedReleaseDate": row["timing"]["reviewedReleaseDate"],
             "deliveryBusinessDays": row["timing"]["deliveryBusinessDays"],
             "undatedDeliveryCostUsd": row["remainingUninvoicedCostUsd"] if selected and undated else "0.00",
             "undatedHours": row["remainingHours"] if selected and undated else "0",
@@ -622,7 +626,7 @@ def export(value):
     if "eventTiming" in report:
         files["event-dependent-timing.json"] = (canonical(report["eventTiming"]) + "\n").encode()
         files["event-dependent-work.csv"] = csv_bytes(["id", "title", "caseRef", "selected", "state",
-            "startCondition", "deliveryBusinessDays", "startDate", "endDate", "undatedDeliveryCostUsd", "undatedHours"],
+            "startCondition", "reviewedReleaseDate", "deliveryBusinessDays", "startDate", "endDate", "undatedDeliveryCostUsd", "undatedHours"],
             report["eventTiming"]["projects"])
         files["event-dependent-receipts.csv"] = csv_bytes(["projectId", "id", "label", "condition", "amountUsd",
             "appliedObservedUsd", "remainingUsd", "date"], [{"projectId": row["id"], **receipt}
