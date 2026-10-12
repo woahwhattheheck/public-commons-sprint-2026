@@ -22,20 +22,20 @@ ACTIONS = frozenset((
     "source.inspect", "source.import", "source.select", "layers.save",
     "edition.review", "map.inspect", "map.save", "map.reopen",
     "map.render", "map.features", "project.export", "project.receive",
-    "field.command", "postgis.select", "postgis.check", "postgis.layers",
+    "field.command", "postgis.select", "postgis.check", "postgis.layers", "parcel.command",
 ))
 MUTATIONS = frozenset(("source.import", "source.select", "layers.save",
-                       "edition.review", "map.save", "field.command", "postgis.check", "postgis.layers"))
+                       "edition.review", "map.save", "field.command", "postgis.check", "postgis.layers", "parcel.command"))
 
 
 ANALYST_MODULES = (
     "__init__.py", "actions.py", "worker.py", "uploads.py", "binding.py", "server.py",
-    "public/index.html", "public/app.js", "public/style.css",
+    "public/index.html", "public/app.js", "public/parcels.js", "public/style.css",
 )
 ANALYST_ROOT_FILES = (
     "analyst.mjs", "application.mjs", "application-provider.mjs",
     "analyst-browser-assets.json", "ANALYST.md", "ANALYST_NATIVE.md",
-    "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs",
+    "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs", "PARCELS.md", "parcel-native-receiving.py", "parcel-native-browser.mjs",
 )
 
 
@@ -46,6 +46,8 @@ def analyst_source_paths(plugin_root):
     paths = {"starforge_stac/analyst_state.py": plugin_root / "analyst_state.py"}
     paths.update({"analyst/" + name: root / "analyst" / name for name in ANALYST_MODULES})
     paths.update({name: root / name for name in ANALYST_ROOT_FILES})
+    from .parcels.state import MODULES as PARCEL_MODULES
+    paths.update({"starforge_stac/parcels/" + name: plugin_root / "parcels" / name for name in PARCEL_MODULES})
     for name, path in paths.items():
         require(path.is_file() and not path.is_symlink() and path.stat().st_size <= 4 * 1024 * 1024,
                 "ANALYST_SOURCE_MISSING",
