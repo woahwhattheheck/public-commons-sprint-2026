@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import signal
 import threading
@@ -175,15 +176,18 @@ class Workspace:
             return self._import_source(provider, source, node=node, acquisition=acquisition)
 
     def _import_source(self, provider, source, *, node=None, acquisition=None):
-        if provider not in ("acs", "bls", "hud"):
+        if provider not in ("acs", "acs_api", "bls", "hud"):
             fail("SOURCE_PROVIDER_INVALID")
         executable = node or os.environ.get("CODEX_PRIMARY_RUNTIME_NODE", "node")
         staging_root = Path(tempfile.mkdtemp(prefix=".intake-", dir=self.directory))
         target = staging_root / "source"
         try:
             # The public source contract selects only these installed original readers.
-            child = subprocess.Popen([executable, str(ROOT / "provider-bridge.mjs"), provider,
-                                      str(Path(source).expanduser().resolve()), str(target)],
+            command = ([sys.executable, str(ROOT / "census_api.py"),
+                        str(Path(source).expanduser().resolve()), str(target)] if provider == "acs_api" else
+                       [executable, str(ROOT / "provider-bridge.mjs"), provider,
+                        str(Path(source).expanduser().resolve()), str(target)])
+            child = subprocess.Popen(command,
                                      stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      start_new_session=os.name == "posix",
                                      env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
@@ -222,7 +226,7 @@ class Workspace:
                 self.connection.execute("INSERT INTO sources VALUES(?,?,?)", (sid, encoded(body).decode(), now()))
                 inventory = {item["path"]: item for item in descriptor["files"]}
                 for projection in descriptor["projections"]:
-                    family = {"acs": "acs", "hud": "hud_income_limits"}.get(provider, projection["query"])
+                    family = {"acs": "acs", "acs_api": "acs", "hud": "hud_income_limits"}.get(provider, projection["query"])
                     count = 0
                     with (destination / projection["path"]).open("rb") as rows:
                         for line, raw in enumerate(rows, 1):

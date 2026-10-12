@@ -19,9 +19,10 @@
 <div class="panel"><h2>Recent operations</h2><div id="events"></div></div></section>
 
 <section id="view-sources" hidden><h1>Sources</h1><p>Import a retained provider release or receive a completed acquisition. The installed provider reads its original files and keeps the complete inventory.</p>
+<p class="muted">This product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau. <a href="https://www.census.gov/data/developers/about/terms-of-service.html" target="_blank" rel="noreferrer">Census data attribution</a>.</p>
 <div class="panel"><h2>Import a retained release</h2><form id="source-form" class="form-grid">
-<label>Provider<select name="provider"><option value="acs">Census ACS 5-year</option><option value="bls">BLS LAUS and QCEW</option><option value="hud">HUD income limits</option></select></label>
-<label class="wide">Original source configuration<input name="source" placeholder="/path/to/source.json" required></label>
+<label>Provider<select name="provider"><option value="acs">Census ACS 5-year Summary File</option><option value="acs_api">Census ACS county API capture</option><option value="bls">BLS LAUS and QCEW</option><option value="hud">HUD income limits</option></select></label>
+<label class="wide">Original source configuration or API SOURCE_MANIFEST.json<input name="source" placeholder="/path/to/source.json or SOURCE_MANIFEST.json" required></label>
 <div><button type="submit">Import source edition</button></div></form></div>
 <details class="panel"><summary>Receive an existing completed acquisition</summary>
 <form id="acquisition-form" class="form-grid">

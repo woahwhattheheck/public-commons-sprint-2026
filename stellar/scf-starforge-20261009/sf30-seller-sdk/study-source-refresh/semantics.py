@@ -14,7 +14,35 @@ def canonical(family, row, descriptor, projection, line):
         "row_sha256": row.get("source_row_sha256"),
         "url": row.get("source_url"), "retrieved_at": row.get("retrieved_at"),
     }
-    if family == "acs":
+    if family == "acs" and descriptor.get("provider") == "acs_api":
+        native, provenance = row["original"], row["source_provenance"]
+        year = native["period_end"]
+        period = {"kind": "rolling_multi_year", "start": str(native["period_start"]),
+                  "end": str(year), "label": str(year) + " ACS 5-year"}
+        # Exact state/county source cells form the county FIPS identifier.
+        geo = native["state"] + native["county"]
+        vintage = "ACS " + str(year) + " published geography"
+        basis = "census_published_geography"
+        dimensions = {"table_id": native["table"], "summary_level": "050"}
+        definition = {"concept": native["concept"], "label": native["label"],
+                      "source_type": "Census ACS county API", "period_years": 5}
+        status = {"estimate": native["estimate_status"], "moe": native["moe_status"],
+                  "estimate_annotation": native["estimate_annotation"],
+                  "moe_annotation": native["moe_annotation"]}
+        locator.update({"file": provenance["source_file"], "row": provenance["source_row"],
+                        "row_sha256": provenance["source_row_sha256"],
+                        "url": provenance["source_url"], "retrieved_at": provenance["retrieved_at"],
+                        **{key: provenance[key] for key in ("estimate_column", "moe_column",
+                            "estimate_annotation_column", "moe_annotation_column", "metadata_file",
+                            "metadata_sha256", "metadata_url", "metadata_variable", "capture_manifest_sha256")},
+                        "state": native["state"], "county": native["county"],
+                        "original_projection_geography": native["geography"], "original_unit": native["unit"]})
+        value, raw = native["estimate"], native["estimate_raw"]
+        moe, raw_moe = native["moe"], native["moe_raw"]
+        unit = native["unit"] + (" [period end " + str(year) + "]" if native["unit"].startswith("period-end dollars") else "")
+        measure, name, slot = native["variable"], native["name"], "ACS_5_YEAR"
+        source_hash = provenance["source_sha256"]
+    elif family == "acs":
         period = {"kind": "rolling_multi_year", "start": str(row["period_start"]),
                   "end": str(row["period_end"]), "label": str(row["release_year"]) + " ACS 5-year"}
         geo = row["geo_id"]

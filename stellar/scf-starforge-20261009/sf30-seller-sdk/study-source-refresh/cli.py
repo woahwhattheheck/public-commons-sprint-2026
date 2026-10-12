@@ -25,7 +25,7 @@ def main(argv=None):
     command.add_argument("--offset", type=int, default=0)
     command.add_argument("--limit", type=int, default=100)
     command = sub.add_parser("import-source")
-    command.add_argument("--provider", choices=("acs", "bls", "hud"), required=True)
+    command.add_argument("--provider", choices=("acs", "acs_api", "bls", "hud"), required=True)
     command.add_argument("--source", required=True)
     command.add_argument("--node")
     command = sub.add_parser("receive-source-files")
