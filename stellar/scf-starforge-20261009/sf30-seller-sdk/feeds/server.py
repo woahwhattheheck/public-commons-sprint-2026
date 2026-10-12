@@ -66,6 +66,9 @@ class OperatorServer(ThreadingHTTPServer):
             current = dict(self.job) if self.job else {"state": "IDLE"}
             if current.get("action") in ("capture", "resume") and current["state"] == "RUNNING":
                 current["capture"] = getattr(self.workspace, "capture_progress", None)
+            if current.get("action") in ("collection-capture", "collection-resume") and current["state"] == "RUNNING":
+                current["collection"] = self.workspace.subscriptions.progress
+                current["capture"] = getattr(self.workspace, "capture_progress", None)
             return current
 
     def start(self, body, callback=None, cleanup=None):
@@ -178,7 +181,10 @@ class Handler(BaseHTTPRequestHandler):
         target = self._gate(False)
         assets = {"/": ("index.html", "text/html; charset=utf-8"),
                   "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-                  "/style.css": ("style.css", "text/css; charset=utf-8")}
+                  "/style.css": ("style.css", "text/css; charset=utf-8"),
+                  "/subscriptions": ("subscriptions.html", "text/html; charset=utf-8"),
+                  "/subscriptions.js": ("subscriptions.js", "text/javascript; charset=utf-8"),
+                  "/subscriptions.css": ("subscriptions.css", "text/css; charset=utf-8")}
         if target.path in assets:
             name, media = assets[target.path]
             data = (HERE / "public" / name).read_bytes()
@@ -188,7 +194,25 @@ class Handler(BaseHTTPRequestHandler):
         if target.path == "/api/activity":
             self._json(self.server.activity()); return
         self.server.idle()
-        if target.path == "/api/state":
+        if target.path == "/api/subscriptions":
+            self._json(ws.subscriptions.state())
+        elif target.path == "/api/subscriptions/plan":
+            self._json(ws.subscriptions.plan(q["source"]))
+        elif target.path == "/api/subscriptions/collection":
+            self._json(ws.subscriptions.view(q["id"], int(q["revision"]) if q.get("revision") else None))
+        elif target.path == "/api/subscriptions/run":
+            self._json(ws.subscriptions.review(q["id"]))
+        elif target.path == "/api/subscriptions/original":
+            self._download(ws.subscriptions.source_path(q["source"]), q["source"] + ".opml", "text/x-opml")
+        elif target.path == "/api/subscriptions/opml":
+            data = ws.subscriptions.opml(q["collection"], int(q["revision"]) if q.get("revision") else None)
+            self._headers(200, "text/x-opml", len(data), "subscriptions.opml"); self.wfile.write(data)
+        elif target.path == "/api/subscriptions/project":
+            with ws.mutex, ws.scratch() as temp:
+                archive = temp / "feed-collection.zip"
+                ws.subscriptions.export(q["binding"], archive)
+                self._download(archive, archive.name, "application/zip")
+        elif target.path == "/api/state":
             self._json(ws.feed_state())
         elif target.path == "/api/captures":
             self._json(ws.captures(q["feed"], int(q.get("offset", 0)), int(q.get("limit", 50))))
@@ -247,7 +271,25 @@ class Handler(BaseHTTPRequestHandler):
                 raise InputError("Choose a feed action")
             self._json(self.server.start(body), 202); return
         self.server.idle()
-        if target.path == "/api/import":
+        if target.path == "/api/subscriptions/import":
+            from opml_source import MAX_OPML_BYTES
+            data = self._body(MAX_OPML_BYTES).read()
+            body = {"action": "opml-import", "operationId": q["operation"], "sha256": digest(data)}
+            self._json(self.server.start(body, lambda: ws.subscriptions.import_opml(data, q["operation"])), 202)
+        elif target.path == "/api/subscriptions/receive":
+            from subscriptions import MAX_PACKET
+            path = ws.root / "tmp" / ("collection-receive-" + uuid.uuid4().hex + ".zip")
+            try:
+                with path.open("xb") as output:
+                    path.chmod(0o600)
+                    shutil.copyfileobj(self._body(MAX_PACKET), output, 65536)
+                body = {"action": "collection-receive", "operationId": q["operation"], "sha256": file_digest(path, MAX_PACKET)}
+                job = self.server.start(body, lambda: ws.subscriptions.receive(path, q["operation"]),
+                                        lambda: path.unlink(missing_ok=True))
+            except Exception:
+                path.unlink(missing_ok=True); raise
+            self._json(job, 202)
+        elif target.path == "/api/import":
             data = self._body(MAX_FEED_BYTES).read()
             body = {"action": "import", "feedId": q["feed"], "operationId": q["operation"],
                     "sourceUrl": q.get("url"), "sha256": digest(data)}
@@ -259,9 +301,10 @@ class Handler(BaseHTTPRequestHandler):
                     path.chmod(0o600)
                     shutil.copyfileobj(self._body(1024 * 1024 * 1024), output, 65536)
                 body = {"action": "receive", "operationId": q["operation"], "sha256": file_digest(path, 1024 * 1024 * 1024)}
-                self._json(self.server.start(body, lambda: ws.receive_project(path, q["operation"]),
-                                            lambda: path.unlink(missing_ok=True)), 202)
+                job = self.server.start(body, lambda: ws.receive_project(path, q["operation"]),
+                                        lambda: path.unlink(missing_ok=True))
             except Exception:
                 path.unlink(missing_ok=True); raise
+            self._json(job, 202)
         else:
             self._json({"error": "Unknown local route"}, 404)

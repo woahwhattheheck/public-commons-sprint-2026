@@ -1,9 +1,10 @@
 # OData source and merchant workspace
 
 Connect an OData v4 service, inspect its original CSDL, choose a typed query, and
-retain a complete source edition. The same workspace supports import/resume,
-receiving decisions, keyed comparisons, SF30 dataset exports and original SF82
-merchant releases. The operator browser and CLI call the same application.
+retain source editions or operate a live paid query. The same workspace supports
+import/resume, receiving decisions, keyed comparisons, SF30 dataset exports,
+original SF82 merchant releases, live services and original SF88 customer
+handoffs. The operator browser and CLI call the same application.
 
 ## Open the operator workspace
 
@@ -16,7 +17,7 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs odata \
   --workspace /absolute/path/odata-work serve --port 8797
 ```
 
-Open the displayed local URL. The browser has five operating areas:
+Open the displayed local URL. The browser has six operating areas:
 
 1. **Sources & queries:** discover the service document and CSDL, inspect entity
    sets, select properties and typed conditions, save the query and record its
@@ -30,6 +31,9 @@ Open the displayed local URL. The browser has five operating areas:
    source package, preview the original dataset response, and download its files.
 5. **Merchant releases:** stage a configured dataset through the original SF82
    store, select or roll back a release, and reopen its foreground seller.
+6. **Live services:** prepare a reviewed source query as a merchant service,
+   start or stop its original seller and operations console, prepare customer
+   purchases, and receive the original paginated responses.
 
 The workspace is local to the displayed loopback listener. Give the directory a
 durable private location: it contains source records, original response bytes,
@@ -135,6 +139,122 @@ Release selection uses the displayed generation to preserve concurrent operator
 changes. `merchant rollback --expect GENERATION --reason TEXT` selects the
 original previous release; `--to RELEASE_ID` chooses a retained release.
 
+## Operate a live source service
+
+The **Live services** area starts from a reviewed saved query in this workspace.
+Its source filters, filter mode, projection, declared keys and ordering come from
+that query. Filter and ordering properties can remain separate from the output
+projection. A saved source row limit also caps the live service. The page ceiling
+controls the largest accepted provider response; the original requested page
+size remains a provider preference.
+
+Create `live-profile.json` with the reviewed plan ID and the merchant's actual
+public origin and payment terms. The strings beginning `YOUR_` below are
+configuration fields to replace with that merchant's values:
+
+```json
+{
+  "id": "orders-live",
+  "name": "Orders receiving service",
+  "planId": "orders",
+  "origin": "https://YOUR_MERCHANT_ORIGIN",
+  "payment": {
+    "network": "stellar:testnet",
+    "asset": "YOUR_STELLAR_ASSET_CONTRACT",
+    "payTo": "YOUR_MERCHANT_RECIPIENT",
+    "maxTimeoutSeconds": 60
+  },
+  "amount": "10000",
+  "path": "/odata/orders",
+  "maxPageRows": 1000,
+  "maxTotalRows": 100000,
+  "port": 0,
+  "operationsPort": 0,
+  "facilitator": "https://YOUR_CONFIGURED_FACILITATOR"
+}
+```
+
+`amount` is the atomic asset amount for each successful provider page. Choose
+the row ceilings for the reviewed source and customer scope; a plan with
+`top` requires `maxTotalRows` at or below that value. Port zero selects an
+available local port. Supplier authorization uses the saved connection's
+environment-variable reference and the existing live transport. The prepared
+profile retains public merchant terms and variable names in its private directory.
+
+```sh
+node cli.mjs --workspace /absolute/path/odata-work live prepare --input live-profile.json
+node cli.mjs --workspace /absolute/path/odata-work live detail --id orders-live
+node cli.mjs --workspace /absolute/path/odata-work serve --port 8797 --live-service orders-live
+```
+
+Preparation commits the original catalog, exact query, native seller
+configuration, offer, OpenAPI description and package manifest together with the
+profile. Repeating the same service ID and settings reopens that product; a
+changed source binding or runtime setting takes a new ID. The browser can also
+prepare and start the service after opening the workspace without
+`--live-service`.
+
+The original seller returns its local URL, operations URL and operating mode.
+The configured facilitator joins the existing native payment implementation.
+The original deployment exposes the configured public origin. Supplier requests,
+payment admission, settlement and the delivery journal remain in their existing
+SF30/SF98 implementations. The operations console links back to this operator
+workspace. Stop the service from its retained profile; closing the workspace also
+closes its owned merchant and operations listeners. Standalone foreground
+operation is available with `live run --id orders-live`; SIGINT or SIGTERM closes
+that original runtime.
+
+### Customer purchase and receiving
+
+Give each paid page its original stable purchase intent:
+
+```sh
+node cli.mjs --workspace /absolute/path/odata-work live buyer \
+  --id orders-live --intent orders-purchase-page-1
+```
+
+The command returns the committed buyer directory and its original
+`request.json`, `offers.json`, `buyer.json` and `handoff.json`. The SF88 draft
+pins the final request path, exact bytes and hash, selected offer, payment
+ceiling, intent and response destination. Files are staged before publication,
+and the pinned paths point to their committed directory.
+
+Review the returned draft through the original SF88 buyer:
+
+```sh
+node ../../sf88-operator-buyer-cli/cli.mjs --review --config /RETURNED_BUYER_DIRECTORY/buyer.json
+```
+
+Use the existing SF88 operator workspace with its configured signer, budget and
+transport to execute or resume the purchase under that intent. Receive the
+resulting original response through the browser file control or the same CLI:
+
+```sh
+node cli.mjs --workspace /absolute/path/odata-work live receive \
+  --id orders-live --response /RETURNED_BUYER_DIRECTORY/response.json
+node cli.mjs --workspace /absolute/path/odata-work live buyer \
+  --id orders-live --received RETURNED_RECEIVING_ID --intent orders-purchase-page-2
+```
+
+Receiving verifies the original live response against its selected query, keys,
+columns, numeric representation and cumulative limits. It retains the exact JSON
+response, rows, receiving manifest and original next-page request. When that
+response contains a continuation, the next buyer handoff uses that cursor and a
+new intent. Reopening an existing intent preserves its original request; changed
+requests require their own intent. Re-receiving the same original response
+returns the existing receiving record.
+
+### Managed application lifecycle
+
+The installed Applications workflow uses this same `serve` command and
+workspace. Startup checks `--expected-workspace-identity` and, when a service is
+selected, `--expected-live-identity` before opening listeners. It emits one
+compact `ODATA_WORKSPACE_READY` record with the actual workspace, process,
+operator URL and selected live runtime. The original managed worker consumes
+that record and checks `/api/application`. See
+[live/APPLICATIONS.md](live/APPLICATIONS.md) for the existing installed-runtime
+registration and complete launch, receive, stop and reopen operation.
+
 ## Transfer and reopen
 
 ```sh
@@ -145,29 +265,60 @@ node cli.mjs --workspace /absolute/path/receiving-work serve
 
 The complete transfer (`stellar-forge.odata-transfer.v1`) contains saved
 connections and catalogs, reviewed plans, all editions, original source and
-normalized page bytes, decisions and dataset exports. The receiving application
+normalized page bytes, decisions, dataset exports and prepared live profiles.
+Live products include their complete original package, committed customer
+handoffs and received responses, rows, manifests and next requests. Staging
+files and running process observations are excluded. The receiving application
 checks file hashes and required joins before restoring an empty workspace.
 An importing edition reopens paused with its exact saved continuation. Export
 paths are rebuilt for the receiving directory. Merchant process/release stores
 are machine-local; prepare and select the received configured export through
-the original SF82 lifecycle on the receiving host.
+the original SF82 lifecycle on the receiving host. A restored live profile
+reopens through the same Live services area and its original package compiler.
+The receiving operator supplies the configured source environment and merchant
+runtime for that host.
+
+A retained buyer handoff keeps its original absolute SF88 request and response
+paths. Continue an existing purchase through its original SF88 execution state;
+create a new intent when preparing a new purchase in the receiving workspace.
+The original merchant runtime retains its private cursor key and active
+continuations on its host. A saved next-page request continues against that same
+service and key. The complete transfer carries customer data and product
+configuration; process leases, private merchant keys and the buyer's signing and
+execution state retain their original host lifecycles.
 
 ## Application interfaces
 
 `openODataWorkspace({directory, fetchImpl})` returns `state`, `connect`,
 `refreshConnection`, `plan`, `reviewPlan`, `startCapture`, `capture`, `pause`,
 `edition`, `rows`, `reviewEdition`, `compare`, `exportEdition`, `queryExport`,
-`backup`, `restore`, `raw` and `close`. `state()` lists compact edition summaries;
+`backup`, `restore`, `raw`, `recordLiveProduct` and `close`. `state()` lists compact edition summaries;
 `edition(id)` returns its full catalog, compiled query and original page joins.
 `plan.query` is the compiled source result and `plan.query.plan` is its normalized
 declarative input. `raw(sha256)` returns a retained source's original bytes.
+`state().liveProducts` lists prepared products. `restore()` returns connection,
+edition, export and live-product counts after checking the complete transfer.
 
-`startODataServer({workspace,port})` exposes the same commands at `/api/`.
+`startODataServer({workspace,port,liveServiceId})` exposes the same commands at
+`/api/` and returns `{url,server,liveRuntime,close}`. Its optional live service
+starts before the server is returned; `close()` is idempotent.
 Capture and resume return202 while the original workspace imports. `GET
 /api/state` exposes currently running editions; `GET /api/edition?id=ID` and
 `/api/source?hash=SHA256` expose their page detail and original downloads.
 `openODataPublisher({workspace})` joins `prepare`, `status`, `activate`,
 `rollback` and `run` to the original SF82 release implementation.
+
+`openODataLiveOperations({workspace,nativeFactoryFor,env,navigationOrigin})`
+returns `status`, `prepare`, `start`, `stop`, `buyer`, `receive`, `file`, `detail`
+and `close`. The embedding operator supplies its actual navigation origin;
+an application with an existing native factory can supply `nativeFactoryFor`.
+`GET /api/live` lists retained services and current owned runtimes;
+`GET /api/live/detail?id=ID` includes original buyer and receiving history.
+`GET /api/live/file` takes `id`, `kind` (`package`, `buyer` or `receiving`),
+`recordId` for a customer record, and an original filename. JSON POST operations
+are `/api/live/prepare`, `/start`, `/stop`, `/buyer` and `/receive` under that
+prefix. The receive body carries the service `id` and complete original
+`bodyBase64`; the saved response limit is 16 MiB.
 
 The service protocol, supported CSDL types, typed literal handling, source
 boundary and response behavior are described in [PROVIDER.md](PROVIDER.md).
