@@ -6,6 +6,15 @@ whole source-owned contributions, component directories and explicit support
 files. The existing Git reader, source manifest, runtime profile, installer,
 Applications launcher and recovery commands remain the distribution workflow.
 
+## Build through the runtime workspace
+
+The private runtime workspace's **Build a product** view discovers the recipes
+at the chosen commit, reviews the complete selected product, builds its original
+package, and opens the resulting archive in **Source & profile**. It retains the
+same request and output through interruption and provides the original package
+download. Follow [the complete browser and CLI workflow](runtime-workspace/SOURCE_BUILDS.md)
+for source selection, adapter installation and recovery.
+
 ## Build a product
 
 Run the maintained builder from a repository that contains the selected commit:
