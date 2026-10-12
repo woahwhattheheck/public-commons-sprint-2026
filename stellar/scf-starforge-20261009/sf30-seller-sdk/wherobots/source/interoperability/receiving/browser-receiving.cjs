@@ -61,24 +61,58 @@ async function openEdition(page,id,dataset){
  if(dataset)await page.selectOption('#dataset-select',dataset);
  await page.waitForFunction(()=>!!document.querySelector('#row-position')?.textContent);
 }
+function displayedCell(value){
+ if(value===null)return'null';
+ if(typeof value!=='object')return String(value);
+ for(const key of ['$number','$decimal','$integer'])if(Object.hasOwn(value,key))return value[key];
+ if(Object.hasOwn(value,'$binary'))return'[binary · '+value.encoding+'] '+value.$binary;
+ if(Object.hasOwn(value,'$timestamp'))return value.$timestamp+' '+value.unit+(value.timezone?' · '+value.timezone:'');
+ return JSON.stringify(value);
+}
+async function rowsAfter(page,editionId,datasetId,offset,trigger){
+ const rowsPath='/api/editions/'+encodeURIComponent(editionId)+'/rows';
+ const [response]=await Promise.all([
+  page.waitForResponse(response=>{
+   const url=new URL(response.url());
+   return response.request().method()==='GET'&&url.origin===new URL(currentServer.address).origin&&url.pathname===rowsPath&&url.searchParams.get('dataset')===datasetId&&url.searchParams.get('offset')===String(offset)&&url.searchParams.get('limit')==='100';
+  }),
+  trigger()
+ ]);
+ assert.equal(response.status(),200,'Original dataset row response');
+ const body=await response.json();
+ assert.ok(Array.isArray(body.rows),'Original rows are an array');
+ const columns=(body.columns||[...new Set(body.rows.flatMap(row=>Object.keys(row)))]).map(column=>typeof column==='string'?column:column.name);
+ const matrix=body.rows.map(row=>columns.map(column=>Object.hasOwn(row,column)?displayedCell(row[column]):'missing'));
+ const position=body.total?(offset+1)+'–'+(offset+body.rows.length)+' of '+body.total:'0 rows';
+ await page.waitForFunction(expected=>{
+  if(document.querySelector('#dataset-select')?.value!==expected.datasetId||document.querySelector('#content .identity')?.textContent!==expected.editionId)return false;
+  if(document.querySelector('#row-position')?.textContent!==expected.position)return false;
+  const headers=Array.from(document.querySelectorAll('#rows thead th'),cell=>cell.textContent);
+  const rows=Array.from(document.querySelectorAll('#rows tbody tr'),row=>Array.from(row.cells,cell=>cell.textContent));
+  return JSON.stringify(headers)===JSON.stringify(expected.headers)&&JSON.stringify(rows)===JSON.stringify(expected.matrix)&&document.querySelector('[data-action="next-rows"]')?.disabled===expected.nextDisabled;
+ },{editionId,datasetId,position,headers:body.rows.length?columns:[],matrix,nextDisabled:body.next_offset===null});
+ return{body,position};
+}
 async function readAllRows(page,editionId,dataset){
- await page.selectOption('#dataset-select',dataset.id);
- const expected=await getJSON(page,'editions/'+encodeURIComponent(editionId)+'/rows?dataset='+encodeURIComponent(dataset.id)+'&offset=0&limit=100');
- await page.waitForFunction(total=>document.querySelector('#row-position')?.textContent.endsWith(' of '+total)||(total===0&&document.querySelector('#row-position')?.textContent==='0 rows'),expected.total);
- const rows=[],positions=[];
+ let offset=0;
+ let received=await rowsAfter(page,editionId,dataset.id,offset,()=>page.selectOption('#dataset-select',dataset.id));
+ const total=received.body.total,rows=[],positions=[],sourcePages=[];
  for(;;){
-  const position=await page.locator('#row-position').textContent();
-  positions.push(position);
+  assert.equal(received.body.total,total,'Dataset total remains bound to its edition');
+  positions.push(received.position);
+  sourcePages.push({offset,body:received.body});
   rows.push(...await page.locator('#rows tbody tr').evaluateAll(rs=>rs.map(row=>Array.from(row.cells,c=>c.textContent))));
-  if(await page.locator('[data-action="next-rows"]').isDisabled())break;
-  await page.locator('[data-action="next-rows"]').click();
-  await page.waitForFunction(previous=>document.querySelector('#row-position')?.textContent!==previous,position);
+  const next=received.body.next_offset;
+  if(next===null)break;
+  assert.ok(Number.isSafeInteger(next)&&next>offset,'Original row cursor advances');
+  offset=next;
+  received=await rowsAfter(page,editionId,dataset.id,offset,()=>page.locator('[data-action="next-rows"]').click());
  }
- assert.equal(rows.length,expected.total,'Every original row displayed for '+dataset.id);
+ assert.equal(rows.length,total,'Every original row displayed for '+dataset.id);
  const headers=await page.locator('#rows thead th').allTextContents();
- allRows.push({editionId,datasetId:dataset.id,total:expected.total,columns:headers,positions,rows});
+ allRows.push({editionId,datasetId:dataset.id,total,columns:headers,positions,rows,sourcePages});
  save('complete-browser-rows.json',allRows);
- return {datasetId:dataset.id,rows:rows.length,pages:positions.length,columns:headers.length,position:positions.at(-1)};
+ return{datasetId:dataset.id,rows:rows.length,pages:positions.length,columns:headers.length,position:positions.at(-1)};
 }
 async function main(){
  await startServer(path.join(out,'customer-workspace'));let page=await launch();
