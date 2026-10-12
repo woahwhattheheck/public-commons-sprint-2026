@@ -280,11 +280,23 @@ export class MerchantWorldBankWorkspaces {
     handle.closing=true;
     handle.close=(async()=>{
       await handle.tail.catch(()=>{});
-      if(handle.browser){await handle.browser.close();handle.browser=null;}
-      await this.#reads.closeScope(name);
-      await Promise.all([...handle.downloadScopes].map(scope=>this.#reads.closeScope(scope)));
-      await handle.operator.close();
+      const resources=[
+        async()=>{if(handle.browser)await handle.browser.close();},
+        ()=>this.#reads.closeScope(name),
+        ...[...handle.downloadScopes].map(scope=>()=>this.#reads.closeScope(scope))
+      ];
+      const outcomes=await Promise.allSettled(resources.map(close=>Promise.resolve().then(close)));
+      const native=await Promise.allSettled([Promise.resolve().then(()=>handle.operator.close())]);
+      handle.browser=null;
+      handle.downloadScopes.clear();
+      handle.manifests.clear();
       this.#handles.delete(name);
+      const errors=[...outcomes,...native].filter(result=>result.status==='rejected').map(result=>result.reason);
+      if(errors.length){
+        const error=new AggregateError(errors,'World Bank shutdown attempted every owned resource; one or more resources reported an error.');
+        error.code='WORLDBANK_CLOSE_FAILED';
+        throw error;
+      }
       return {workspace:name,instanceId:handle.instanceId,state:'CLOSED'};
     })();
     return handle.close;
@@ -489,8 +501,13 @@ export class MerchantWorldBankWorkspaces {
     this.#close=(async()=>{
       await Promise.allSettled([...this.#pending]);
       const outcomes=await Promise.allSettled([...this.#handles].map(async([name,opening])=>this.#stop(name,await opening)));
-      await this.#reads.close();
-      if(outcomes.some(result=>result.status==='rejected'))throw failure('WORLDBANK_CLOSE_FAILED','An original World Bank model reported incomplete shutdown.');
+      outcomes.push(...await Promise.allSettled([Promise.resolve().then(()=>this.#reads.close())]));
+      const errors=outcomes.filter(result=>result.status==='rejected').map(result=>result.reason);
+      if(errors.length){
+        const error=new AggregateError(errors,'World Bank shutdown attempted all models and file reads; one or more resources reported an error.');
+        error.code='WORLDBANK_CLOSE_FAILED';
+        throw error;
+      }
     })();
     return this.#close;
   }

@@ -4,6 +4,7 @@ import {mountWorkspaceFiles} from './workspace-files.mjs';
 import {decodeSource, sourceDigest} from './workspace-file.mjs';
 import {mountCaseDesk} from './case-desk.mjs';
 import {mountHandoffDesk} from './handoff-desk.mjs';
+import {mountIncidentDesk} from './incident-desk.mjs';
 import {mountRuntimeDesk} from './runtime-desk.mjs';
 
 let caseDesk = null;
@@ -486,13 +487,14 @@ const emptyTermsDraft = termsEditor.readDraft();
 const workspaceRoot = document.createElement('div');
 const caseRoot = document.createElement('div');
 const handoffRoot = document.createElement('section');
+const incidentRoot = document.createElement('section');
 const runtimeRoot = document.createElement('section');
 const portableFiles = document.createElement('details');
 portableFiles.className = 'portable-cases source-details';
 const portableSummary = document.createElement('summary');
 portableSummary.textContent = 'Portable workspace files · import or download';
 portableFiles.append(portableSummary,workspaceRoot);
-$('diagnose').before(caseRoot,handoffRoot,portableFiles);
+$('diagnose').before(caseRoot,incidentRoot,handoffRoot,portableFiles);
 $('review').before(runtimeRoot);
 const sourceText = value => new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(decodeSource(value));
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -621,8 +623,10 @@ caseDesk = mountCaseDesk({root:caseRoot,readState:readCase,
   onDraftChange:()=>{runtimeDesk.inputsChanged();invalidateWorkorder();},
   onNameChange:name=>portable.setName(name)});
 mountHandoffDesk({root:handoffRoot,onOpenCase:id=>caseDesk.openSavedCase(id)});
+mountIncidentDesk({root:incidentRoot,exportCase:()=>caseDesk.exportSnapshot(),
+  importCase:(state,files)=>caseDesk.importWorkspace(state,files)});
 for (const event of ['input','change']) document.querySelector('main').addEventListener(event,e=>{
-  if (caseRoot.contains(e.target) || handoffRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) ||
+  if (caseRoot.contains(e.target) || incidentRoot.contains(e.target) || handoffRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) ||
       ['permission','post-permission'].includes(e.target.id)) return;
   caseDesk.changed({user:true});
 });
