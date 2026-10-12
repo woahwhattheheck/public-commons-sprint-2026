@@ -1,7 +1,7 @@
-const previous=load("aviary-lean-v5-controller")||load("aviary-newhost-v4-controller");
-const journal={schema:"commons.aviary.native-controller.v1",operation:"AVIARY-COMPLETE-DELIVERY-6BA15-20261012",originalNativeSession:86320,originalCheckpointSha256:"c9980b4c9a7297512f221db8e23419eae983e53ba934e8e87bd82074271f1d1f",inputSha256:load("aviary-lean-v5-transport").decodedSha256,transportSha256:load("aviary-lean-v5-transport").wireSha256,sourceSha256:"ad828d5fd25c6db0488935580f8c41f52ee7b26cb16cb172ef870f1422152439",priorAdmission:previous?{startedAt:previous.startedAt,endedAt:previous.endedAt,error:previous.controllerError,session:previous.session??null}:null,calls:[],events:[],startedAt:new Date().toISOString()};
+const previous=load("aviary-lean-v6-controller")||load("aviary-newhost-v4-controller");
+const journal={schema:"commons.aviary.native-controller.v1",operation:"AVIARY-COMPLETE-DELIVERY-6BA15-20261012",originalNativeSession:86320,originalCheckpointSha256:"c9980b4c9a7297512f221db8e23419eae983e53ba934e8e87bd82074271f1d1f",inputSha256:load("aviary-lean-v6-transport").decodedSha256,transportSha256:load("aviary-lean-v6-transport").wireSha256,sourceSha256:"ad828d5fd25c6db0488935580f8c41f52ee7b26cb16cb172ef870f1422152439",priorAdmission:previous?{startedAt:previous.startedAt,endedAt:previous.endedAt,error:previous.controllerError,session:previous.session??null}:null,calls:[],events:[],startedAt:new Date().toISOString()};
 const need=(value,message)=>{if(!value)throw Error(message);};
-const wire=load("aviary-lean-v5-envelope-text"),command=load("aviary-lean-v5-command");
+const wire=load("aviary-lean-v6-envelope-text"),command=load("aviary-lean-v6-command");
 const hash=new Function(load("sha256-utf8-code")+";return sha256utf8;")();
 need(hash(wire)===journal.transportSha256,"The original complete input changed");
 const hashBinarySource=load("sha256-utf8-code").replace("function sha256utf8(text)","function sha256binary(text)").replace("const utf8=unescape(encodeURIComponent(text)), n=utf8.length;","const utf8=text, n=utf8.length;");
@@ -9,9 +9,9 @@ const hashBinary=new Function(hashBinarySource+";return sha256binary;")();
 const base64Decode=source=>{const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",clean=source;need(clean.length%4===0&&/^[A-Za-z0-9+/]*={0,2}$/.test(clean),"Invalid image base64");let bits=0,count=0,out="";for(const ch of clean){if(ch==="=")break;const v=alphabet.indexOf(ch);need(v>=0,"Invalid base64 digit");bits=(bits<<6)|v;count+=6;if(count>=8){count-=8;out+=String.fromCharCode((bits>>>count)&255);}}return out;};
 let session=null,buffer="",ended=false,ready=null,paused=null;const saves=[];
 const chunks=new Map();
-const transferUrls=load("aviary-lean-v5-envelope").runtimeArchives.flatMap(x=>x.transfer?.download_url?[x.transfer.download_url]:[]);
+const transferUrls=load("aviary-lean-v6-envelope").runtimeArchives.flatMap(x=>x.transfer?.download_url?[x.transfer.download_url]:[]);
 const safeOutput=value=>transferUrls.reduce((s,url)=>s.split(url).join("[original signed transfer URL]"),String(value));
-function retain(){store("aviary-lean-v5-controller",journal);if(session!==null)store("aviary-lean-v5-session",session);}
+function retain(){store("aviary-lean-v6-controller",journal);if(session!==null)store("aviary-lean-v6-session",session);}
 function accept(result,kind){
  journal.calls.push({kind,at:new Date().toISOString(),...result,output:safeOutput(result.output||"")});
  if(result.session_id!==undefined){session=result.session_id;journal.session=session;}
