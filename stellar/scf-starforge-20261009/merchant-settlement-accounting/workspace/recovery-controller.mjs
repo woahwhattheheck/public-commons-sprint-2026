@@ -54,9 +54,11 @@ export async function openAccountingMaintenance(options){
 }
 
 class AccountingMaintenance{
-  constructor({directory,stateRoot,backupRoot,passEnv='STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE',startPaused=false,openRuntime,closeRuntime}){
+  constructor({directory,stateRoot,backupRoot,passEnv='STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE',startPaused=false,openRuntime,closeRuntime,hostSources}){
     this.directory=absolute(directory);this.enabled=Boolean(stateRoot||backupRoot||startPaused);
     this.config={directory:this.directory,stateRoot,backupRoot,passEnv};this.startPaused=startPaused;
+    need(hostSources===undefined||typeof hostSources==='function','ACCOUNTING_MAINTENANCE_CONFIG','Use a trusted host source resolver.');
+    this.hostSources=hostSources;
     this.openRuntime=openRuntime;this.closeRuntime=closeRuntime;this.runtime=null;
     this.mode='PAUSED';this.review=null;this.recovery=null;this.active=null;this.activePromise=null;
     this.tail=Promise.resolve();this.commands=Promise.resolve();this.requests=0;this.drainWaiters=[];
@@ -112,7 +114,7 @@ class AccountingMaintenance{
     for(const entry of names){if(entry.name==='operations'||!entry.isDirectory()||!CHILD.test(entry.name))continue;
       const bundle=join(backupRoot,entry.name);if(!(await stat(join(bundle,'backup.json'))))continue;
       try{const found=await inspectAccountingBackup({bundle}),saved=prior.get(entry.name);
-        backups.push({id:entry.name,label:saved?.label??entry.name,createdAt:found.createdAt,manifestSha256:found.manifestSha256,files:found.files,bytes:found.bytes,
+        backups.push({id:entry.name,label:saved?.label??entry.name,createdAt:found.createdAt,manifestSha256:found.manifestSha256,files:found.files,bytes:found.bytes,...(found.hostSources?{hostSources:found.hostSources}:{}),
           ...(saved?.manifestSha256===found.manifestSha256&&saved.verifiedAt?{verifiedAt:saved.verifiedAt}:{})});
       }catch(error){backups.push({id:entry.name,label:prior.get(entry.name)?.label??entry.name,status:'UNREADABLE',error:detail(error)});}
     }
@@ -127,7 +129,7 @@ class AccountingMaintenance{
   view(){
     const value=process.env[this.config.passEnv],passphraseConfigured=typeof value==='string'&&Buffer.byteLength(value)>=16&&Buffer.byteLength(value)<=65536;
     return {schema:SCHEMA,configured:this.enabled,mode:this.closing?'CLOSING':this.mode,
-      config:{...this.config,passphraseConfigured},workspace:this.runtime?{revision:this.runtime.workspace.view().revision}:null,
+      config:{...this.config,passphraseConfigured,hostSourcesConfigured:Boolean(this.hostSources)},workspace:this.runtime?{revision:this.runtime.workspace.view().revision}:null,
       review:this.review,recovery:this.recovery,backups:this.state.backups,
       jobs:[...this.state.recent].reverse().slice(0,50).map(id=>this.recentJobs.get(id)).filter(Boolean),jobsTotal:this.state.jobsTotal,
       activeJobId:this.active?.job.id??null,error:this.lastError??null};
@@ -150,7 +152,7 @@ class AccountingMaintenance{
     const input={kind,actor:value.actor.trim()};
     if(kind==='backup'){
       need(SHA.test(value.expectedReviewId??''),'ACCOUNTING_MAINTENANCE_REVIEW','Review the paused source closure before capturing it.');
-      need(value.externalWritersStopped===true,'ACCOUNTING_MAINTENANCE_WRITERS','Confirm the original outbox, proof, terms and recovered-source writers have stopped.');
+      need(value.externalWritersStopped===true,'ACCOUNTING_MAINTENANCE_WRITERS','Confirm the original accounting input, OAuth connection and selected-company writers have stopped.');
       need(value.label===undefined||typeof value.label==='string'&&value.label.trim().length>0&&value.label.length<=160,'ACCOUNTING_MAINTENANCE_LABEL','Use a backup label of 1 to 160 characters.');
       Object.assign(input,{expectedReviewId:value.expectedReviewId,externalWritersStopped:true,label:value.label?.trim()??'Accounting backup'});
     }
@@ -219,18 +221,18 @@ class AccountingMaintenance{
     const {job,controller}=operation,{input}=job,signal=controller.signal;
     const phase=async value=>{job.status='RUNNING';job.phase=value;job.startedAt??=now();await this.persist(job);};
     try{
-      const base={directory:this.directory,stateRoot:this.config.stateRoot,quiesced:true,signal},password={passEnv:this.config.passEnv};
+      const base={directory:this.directory,stateRoot:this.config.stateRoot,quiesced:true,signal,hostSources:this.hostSources},password={passEnv:this.config.passEnv};
       if(job.kind==='pause'){
         await phase('DRAINING_ACCOUNTING');await this.stopRuntime();await this.refreshRecovery();this.mode=this.recovery.status==='NO_RESTORE_IN_PROGRESS'?'PAUSED':'RECOVERY_REQUIRED';this.review=null;
         job.result={status:'ACCOUNTING_PAUSED',recovery:this.recovery};
       }else if(job.kind==='review'){
         await phase('REVIEWING_ORIGINAL_SOURCES');this.review=await reviewAccountingWorkspace(base);
         job.result={status:this.review.status,reviewId:this.review.reviewId,revision:this.review.revision,
-          operatingFiles:this.review.operatingFiles,operatingBytes:this.review.operatingBytes};
+          operatingFiles:this.review.operatingFiles,operatingBytes:this.review.operatingBytes,...(this.review.hostSources?{hostSources:this.review.hostSources}:{})};
       }else if(job.kind==='backup'){
         await phase('CAPTURING_ENCRYPTED_BACKUP');const id='backup-'+job.id,output=join(this.config.backupRoot,id);
         job.result=await snapshotAccountingWorkspace({...base,...password,output,expectedReviewId:input.expectedReviewId});
-        this.state.backups.unshift({id,label:input.label,createdAt:job.result.createdAt,manifestSha256:job.result.manifestSha256,files:job.result.files,bytes:job.result.bytes});
+        this.state.backups.unshift({id,label:input.label,createdAt:job.result.createdAt,manifestSha256:job.result.manifestSha256,files:job.result.files,bytes:job.result.bytes,...(job.result.hostSources?{hostSources:job.result.hostSources}:{})});
       }else if(job.kind==='verify'){
         await phase('AUTHENTICATING_BACKUP');job.result=await verifyAccountingBackup({bundle:join(this.config.backupRoot,input.backupId),expectedSha256:input.expectedSha256,signal,...password});
         const backup=this.state.backups.find(item=>item.id===input.backupId);backup.verifiedAt=now();
