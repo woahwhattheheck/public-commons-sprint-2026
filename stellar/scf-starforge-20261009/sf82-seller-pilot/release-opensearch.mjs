@@ -194,7 +194,8 @@ export async function launch(args = process.argv.slice(2)) {
   const saved = parse(await bytes(join(directory, 'pilot-runtime.json'), 65536));
   if (saved.schema !== 'stellar-forge.seller-pilot-runtime.v1' ||
       saved.source?.offersSha256 !== snapshot.manifest.offersSha256 ||
-      saved.source?.serviceConfigSha256 !== snapshot.manifest.serviceConfigSha256)
+      saved.source?.serviceConfigSha256 !== snapshot.manifest.serviceConfigSha256 ||
+      saved.source?.executionSha256 !== snapshot.opensearch.executionSha256)
     fail('Runtime settings belong to another OpenSearch release.');
   const session = await startOpenSearchRelease(directory, { runtime: saved.options });
   try {
