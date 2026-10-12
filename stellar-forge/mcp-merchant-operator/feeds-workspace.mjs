@@ -691,6 +691,11 @@ export class MerchantFeedWorkspaces {
       await this.#reads.close();
       if (outcomes.some(row => row.status === 'rejected')) throw failure('FEEDS_PUBLISHER_CLOSE', 'An original native publisher reported incomplete shutdown.');
       this.#publishers.clear();
-    })(); return this.#close;
+    })();
+    const closing = this.#close;
+    // Keep original publisher and descriptor owners after an incomplete drain.
+    // New admission stays closed; a retry continues these same native objects.
+    void closing.catch(() => { if (this.#close === closing) this.#close = null; });
+    return closing;
   }
 }
