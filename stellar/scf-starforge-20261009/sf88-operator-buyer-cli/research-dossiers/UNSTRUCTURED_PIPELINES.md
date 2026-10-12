@@ -84,6 +84,11 @@ Applications opens the original authenticated Research listener after its startu
 announcement identifies the selected research directory and pipeline workspace.
 The existing **Pipeline jobs** view operates the original saved jobs.
 
+The same saved application can also select **Original document buyer source
+selection** to reopen retained self-hosted purchases in **Documents**. See the
+[document receiving guide](UNSTRUCTURED.md) for its original buyer and inbox
+selection. Each source retains its own workspace identity.
+
 Use **Stop** to close the managed listener. Reopen the same saved application and
 start it again to continue its retained jobs, outputs and dossier decisions. If
 the source selection or account configuration changes, review those current
