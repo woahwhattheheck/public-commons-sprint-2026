@@ -12,7 +12,9 @@ def register_static(static):
     static.update({"/operations.mjs": ("operations.mjs", "text/javascript; charset=utf-8"),
                    "/operations.css": ("operations.css", "text/css; charset=utf-8"),
                    "/forecast.mjs": ("forecast.mjs", "text/javascript; charset=utf-8"),
-                   "/forecast.css": ("forecast.css", "text/css; charset=utf-8")})
+                   "/forecast.css": ("forecast.css", "text/css; charset=utf-8"),
+                   "/portfolio.mjs": ("portfolio.mjs", "text/javascript; charset=utf-8"),
+                   "/portfolio.css": ("portfolio.css", "text/css; charset=utf-8")})
 
 
 def store(handler):
