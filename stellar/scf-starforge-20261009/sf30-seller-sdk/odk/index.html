@@ -114,8 +114,10 @@
 <p>Each new archive retains the publisher's native source. You can also save its selected generation before a transfer. Receiving reconstructs the original datasets and stages their local releases for selection on this host.</p>
 <div class="toolbar"><label>Expected source generation · optional<input id="publisher-expected-generation" type="number" min="0"></label><button id="publisher-capture">Retain current publisher source</button><button id="publisher-history">Open complete publisher records</button></div>
 <div id="publisher-snapshot-list"></div>
-<form id="publisher-receive-form" class="toolbar"><label>Original publisher snapshot<select id="publisher-snapshot" required></select></label><button>Receive this publisher on the current host</button></form>
+<form id="publisher-receive-form" class="grid-form"><label>Receiving work<select id="publisher-resume"></select></label><label>Original publisher snapshot<select id="publisher-snapshot" required></select></label><label>Host row budget<input id="publisher-row-budget" type="number" min="1" max="16000000" step="1" value="1000000" required></label><button>Receive or continue on this host</button></form>
+<p>The row budget applies to the next start or retry of the same receiving operation. Increase it when this host has capacity for a larger original dataset.</p>
 <div id="publisher-receiving-list"></div>
+<h3>Continue original release preparation</h3><div id="publisher-preparation-list"></div>
 <h3>Select a received release</h3>
 <form id="publisher-activation-form">
 <div class="toolbar"><label>Received release<select id="publisher-local-release" required></select></label><button id="publisher-generation-read" type="button">Read current release generation</button><label>Expected generation<input id="publisher-current-generation" type="number" min="0" required></label></div>

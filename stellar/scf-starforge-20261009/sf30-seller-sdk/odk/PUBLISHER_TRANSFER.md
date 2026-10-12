@@ -23,13 +23,13 @@ An absent publisher is recorded as an empty completed snapshot. Replaying that a
 
 A complete replay returns the same snapshot. An interrupted capture resumes its original resource scope and selected file inventory. If the source publisher has changed, the retained operation identifies that concrete difference so the new publisher selection can receive a separate snapshot ID.
 
-The archive creation path calls this function with the archive's fixed ID **before** its first `store.snapshot(id)`. Keep the existing completed-archive return and previous-host archive behavior. Serialize this call with the workspace's existing publisher preparation, activation and receiving actions; its original SF82 leases remain authoritative.
+The archive creation path calls this function with the archive's fixed ID **before** its first `store.snapshot(id)`. It keeps the existing completed-archive return and previous-host archive behavior. The workspace serializes this call with its original publisher preparation, activation and receiving actions; the original SF82 leases remain authoritative.
 
 The archive's source selection remains the existing `resources` table. The snapshot's metadata and original release history remain ordinary records in the same database.
 
 ## Receive on the destination
 
-`receivePublisherSnapshot(store, {id, snapshotId})` receives a completed snapshot on the current open Central store. Its receiving ID binds the snapshot manifest, destination directory and original received-archive identity. A saved `publisher-receiving` record retains progress and the original-to-local mapping after each native stage.
+`receivePublisherSnapshot(store, {id, snapshotId, maxResidentRows?})` receives a completed snapshot on the current open Central store. Its receiving ID binds the snapshot manifest, destination directory and original received-archive identity. A saved `publisher-receiving` record retains progress and the original-to-local mapping after each native stage.
 
 The operation:
 
@@ -41,6 +41,28 @@ The operation:
 6. Saves the full original/local release ID and digest mapping, original selection history, package bindings and the current local release generation.
 
 The historical dataset state remains preserved in the source graph even when the original native loader performs its supported v1-to-v2 state upgrade. The receiving procedure handles that completed upgrade on replay.
+
+## Interrupted native preparation
+
+A backup also retains unfinished native publisher source. For example, the original OData preparation writes its package and binding before creating the version-store state. A stopped preparation can therefore leave a complete package input beside a missing dataset state. The native release initializer can similarly leave its private directory before publishing its state.
+
+These conditions do not discard publisher files or prevent the rest of the Central workspace from being archived. The snapshot keeps every original regular file in the same source graph, and adds explicit component diagnostics in `selection.pending`. Each diagnostic identifies its component kind, original relative path, status, code and concrete missing source or native validation result. Complete stores, packages and releases are selected separately. A published release that cannot be verified remains visible with its original ID, digest and selection history; it is not replaced by a newly invented completed release.
+
+The snapshot also retains the original `publisher-preparation` records. A preparation record has its own producer identity and directory, and contains the native request `{exportId, releaseId, label, runtime}`. The destination uses the request's `releaseId` through the original `prepareRelease` API. The imported producer record ID remains history; the original workspace creates its correctly scoped destination record.
+
+Receiving validates each selected version store with the original loader and each package with the original package preparer. Incomplete source, or source that the original native validator rejects, stays explicitly pending. Capacity errors, ownership conflicts and I/O failures preserve the same receiving operation for ordinary recovery. The native parsed-data budget defaults to 1,000,000 rows with one cached version. A host with the required capacity can resume the same receiving ID with `maxResidentRows` up to the original loader's 16,000,000-row limit. This execution budget is recorded separately from the immutable source and receiving identity; a budget failure is never saved as invalid source.
+
+The receiving result is `COMPLETE` when all selected source components were received, or `COMPLETE_WITH_PENDING` when the receiving pass has closed with retained unfinished components. Both states are stable results of the same request. The latter includes:
+
+- `pending`: original component diagnostics, plus any concrete native receiving validation result.
+- `historicalSource`: exact pending files materialized under `publisher/received/<id>/historical-source/`, with the original relative paths, SHA-256 values, byte counts and complete manifest digest. Their original content-addressed source bodies remain in the archive.
+- `resumePreparations`: the original producer record ID, native request, producer status and action `prepareRelease`.
+- `activation.unavailableActive`: true when the producer selected an active release whose native source could not be received. `localActive` stays null for that selection.
+- `activation.originalStateAvailable`: whether the original release store had readable native state. A publisher that had not created any directory can return null activation and its retained preparation requests.
+
+Historical owner, run and staging files are never installed as live ownership. The receiver excludes its own `historical-source` subtree from future active component discovery, while later archives continue retaining those bytes.
+
+To resume an interrupted preparation, first receive the complete original workspace so its export and preparation request remain available. Then submit the retained native request through the same workspace `prepareRelease` operation. The original preparer reconstructs destination bindings from that saved export and uses its original dataset initialization, staging reconciliation and immutable-source checks. The copied historical partial files remain available for inspection. Preparation and activation remain separate original actions.
 
 ## Activation and later operation
 
@@ -75,7 +97,7 @@ receivePublisherSnapshot(store, { id, snapshotId })
 publisherTransferState(store)
 ~~~
 
-The original workspace exposes:
+Recommended original workspace joins:
 
 ~~~js
 capturePublisher: input => capturePublisherSnapshot(store, input),

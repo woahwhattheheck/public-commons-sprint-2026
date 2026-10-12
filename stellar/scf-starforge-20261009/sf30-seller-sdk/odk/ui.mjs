@@ -45,18 +45,37 @@ async function request(path,{method='GET',body}={}){
 }
 async function action(method,input={}){const envelope=await request('/api/actions/'+method,{method:'POST',body:input});return envelope.result;}
 function persistPending(){writeStorage('pending',JSON.stringify([...pending.values()]));renderPending();}
-function pendingCollection(method){return {connect:'connections',createPlan:'plans',capture:'captures',report:'reports',exportDataset:'exports',backup:'archives',capturePublisher:'publisherSnapshots',receivePublisher:'publisherReceiving'}[method];}
+function pendingCollection(method){return {connect:'connections',createPlan:'plans',capture:'captures',report:'reports',exportDataset:'exports',backup:'archives',capturePublisher:'publisherSnapshots',receivePublisher:'publisherReceiving',prepareRelease:'publisherPreparations'}[method];}
+function requestIdentity(method,input){
+  const value={...input};if(method==='receivePublisher')delete value.maxResidentRows;
+  return JSON.stringify(value,(_key,item)=>item&&typeof item==='object'&&!Array.isArray(item)?
+    Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
+}
 async function retainedAction(method,input){
-  const id=input.reportId??input.exportId??input.id;
+  const id=input.releaseId??input.reportId??input.exportId??input.id;
   if(!id)throw new Error('Retain this operation ID before starting.');
-  const operation=pending.get(id)||{id,method,input,startedAt:new Date().toISOString(),status:'Sending'};
+  const prior=pending.get(id);
+  if(prior&&(prior.method!==method||requestIdentity(method,prior.input)!==requestIdentity(method,input)))
+    throw new Error('This retained operation already has its original input. Reopen it before changing the selection.');
+  const operation=prior||{id,method,startedAt:new Date().toISOString()};
+  operation.input=structuredClone(input);operation.status='Sending';delete operation.error;
   pending.set(id,operation);persistPending();
   try{const result=await action(method,input);pending.delete(id);persistPending();return result;}
   catch(error){operation.status=error.uncertain?'Response unresolved':'Review the operation response';operation.error={code:error.code,message:error.message};persistPending();error.operationId=id;throw error;}
 }
-function reconcilePending(){if(!workspace)return;let changed=false;for(const [id,operation]of pending){const collection=pendingCollection(operation.method);if(collection&&workspace[collection]?.some(item=>item.id===id&&(!['capturePublisher','receivePublisher'].includes(operation.method)||item.status==='COMPLETE'))){pending.delete(id);changed=true;}}if(changed)persistPending();}
+function reconcilePending(){
+  if(!workspace)return;let changed=false;
+  for(const [id,operation]of pending){
+    const collection=pendingCollection(operation.method),prepared=operation.method==='prepareRelease';
+    if(collection&&workspace[collection]?.some(item=>(prepared?item.request.releaseId===id:item.id===id)&&
+      (!(prepared||['capturePublisher','receivePublisher'].includes(operation.method))||['COMPLETE','COMPLETE_WITH_PENDING'].includes(item.status)))){
+      pending.delete(id);changed=true;
+    }
+  }
+  if(changed)persistPending();
+}
 function renderPending(){const content=[];for(const operation of pending.values()){const item=node('div',null,'operation');item.append(node('strong',operation.method+' · '+operation.status),node('p','Operation '+operation.id+' · '+date(operation.startedAt)),node('p',operation.error?.message||'The same request remains available until its result is received.'));
-    item.append(button('Read workspace result',()=>refresh()),button('Retry original request',async()=>{await retainedAction(operation.method,operation.input);await refresh();notice('Original operation received.');}),button('View original input',()=>detail('Retained operation',node('pre',pretty(operation)))));
+    item.append(button('Read workspace result',()=>refresh()),button('Retry original request',async()=>{await retainedAction(operation.method,operation.method==='receivePublisher'?{...operation.input,maxResidentRows:publisherReceivingBudget()}:operation.input);await refresh();notice('Original operation received.');}),button('View original input',()=>detail('Retained operation',node('pre',pretty(operation)))));
     content.push(item);}replace('pending-operations',...content);
 }
 function descending(items){return [...items].sort((a,b)=>String(b.createdAt||b.startedAt).localeCompare(String(a.createdAt||a.startedAt)));}
@@ -217,24 +236,57 @@ function showOutput(record){const choice=document.createElement('select');for(co
 function renderOutputs(){replace('report-list',workspace.reports.length?table(['Report','Created','Edition / comparison','Files'],descending(workspace.reports).map(item=>[item.title,date(item.createdAt),item.captureId+(item.baselineId?' · baseline '+item.baselineId:''),outputFiles(item)])):empty('Create a report from a complete reporting edition.'));
   replace('dataset-list',workspace.exports.length?table(['Dataset','Created','Rows / publishing','Files'],descending(workspace.exports).map(item=>[item.dataset?.name||item.id,date(item.createdAt),(item.dataset?.rowCount??item.dataset?.rows??'')+(item.merchant?' · merchant package':''),outputFiles(item)])):empty('Export selected fields from an accepted reporting edition.'));
   options('release-export',workspace.exports.filter(item=>item.merchant),{label:item=>item.dataset?.name||item.id});}
-form('release-form',async data=>{const result=await action('prepareRelease',{exportId:chosen('release-export','a merchant dataset'),releaseId:data.get('releaseId'),label:data.get('label')});$('release-result').textContent=pretty(result);notice('Seller release prepared in the original release lifecycle.');});
+form('release-form',async data=>{const result=await retainedAction('prepareRelease',{exportId:chosen('release-export','a merchant dataset'),releaseId:data.get('releaseId'),label:data.get('label')});$('release-result').textContent=pretty(result);notice('Seller release prepared in the original release lifecycle.');});
 bind('release-status',async()=>{const result=await action('releaseStatus');$('release-result').textContent=pretty(result);if(Number.isSafeInteger(result.state?.generation))$('release-generation').value=result.state.generation;notice('Original seller release state received.');});
 bind('release-activate',async()=>{const expectedGeneration=Number($('release-generation').value);if($('release-generation').value===''||!Number.isSafeInteger(expectedGeneration))throw new Error('Read the current release generation first.');const id=$('release-form').elements.releaseId.value.trim();if(!id)throw new Error('Choose the prepared release ID.');
   const result=await action('activateRelease',{id,expectedGeneration,reason:$('release-reason').value});$('release-result').textContent=pretty(result);notice('Selected seller release activated.');});
+function publisherReceivingBudget(){
+  const raw=$('publisher-row-budget').value,value=Number(raw);
+  if(!/^\d+$/.test(raw)||!Number.isSafeInteger(value)||value<1||value>16000000)
+    throw new Error('Choose a receiving row budget from 1 to 16,000,000 for this host.');
+  return value;
+}
+function selectPublisherReceiving(){
+  const selected=(workspace?.publisherReceiving??[]).find(item=>item.id===$('publisher-resume').value);
+  if(selected){
+    $('publisher-snapshot').value=selected.snapshotId;
+    $('publisher-row-budget').value=String(selected.runtime?.maxResidentRows??1000000);
+  }
+  $('publisher-snapshot').disabled=Boolean(selected);
+}
 function renderPublisher(){
   const snapshots=workspace.publisherSnapshots??[],receiving=workspace.publisherReceiving??[];
   replace('publisher-snapshot-list',snapshots.length?table(['Snapshot','State','Original selection','Retained files'],descending(snapshots).map(item=>[
     item.id,item.status,item.selection?String(item.selection.generation??'unfinished')+' · '+(item.selection.active??'No selected release'):'No publisher',
     (item.fileCount??0)+' files · '+bytes(item.bytes)
   ])):empty('The next archive captures the publisher automatically. A separate source snapshot is optional.'));
-  options('publisher-snapshot',snapshots.filter(item=>item.status==='COMPLETE'),{label:item=>item.id+' · '+(item.fileCount??0)+' files'});
-  $('publisher-receive-form').querySelector('button').disabled=!snapshots.some(item=>item.status==='COMPLETE');
+  options('publisher-snapshot',snapshots.filter(item=>['COMPLETE','COMPLETE_WITH_PENDING'].includes(item.status)),{label:item=>item.id+' · '+(item.fileCount??0)+' files'});
+  options('publisher-resume',receiving.filter(item=>!['COMPLETE','COMPLETE_WITH_PENDING'].includes(item.status)),
+    {blank:'New receiving operation',label:item=>item.id+' · '+item.status});
+  const selectedReceiving=receiving.find(item=>item.id===$('publisher-resume').value);
+  if(selectedReceiving)$('publisher-snapshot').value=selectedReceiving.snapshotId;
+  $('publisher-snapshot').disabled=Boolean(selectedReceiving);
+  $('publisher-receive-form').querySelector('button').disabled=!snapshots.some(item=>['COMPLETE','COMPLETE_WITH_PENDING'].includes(item.status));
   replace('publisher-receiving-list',receiving.length?table(['Receiving operation','State','Original snapshot','Datasets / releases','Original to local'],descending(receiving).map(item=>[
     item.id,item.status,item.snapshotId,(item.datasetCount??0)+' datasets · '+(item.releaseCount??0)+' releases',
     button('Open source and local mapping',async()=>{const records=await action('publisherTransfers');detail('Original publisher receiving',node('pre',pretty(records.receiving.find(value=>value.id===item.id))));})
   ])):empty('Receive an original snapshot to prepare its publisher on this host.'));
+  const completed=new Set((workspace.publisherPreparations??[]).filter(item=>item.status==='COMPLETE').map(item=>item.request.releaseId));
+  const preparations=new Map();
+  for(const item of workspace.publisherPreparations??[])if(item.status!=='COMPLETE')
+    preparations.set(item.request.releaseId,{originalRecordId:item.id,request:item.request,originalStatus:item.status});
+  for(const item of receiving)for(const preparation of item.resumePreparations??[])
+    if(!completed.has(preparation.request.releaseId)&&!preparations.has(preparation.request.releaseId))
+      preparations.set(preparation.request.releaseId,preparation);
+  replace('publisher-preparation-list',preparations.size?table(['Release','Original dataset export','Preparation','Continue'],[...preparations.values()].map(item=>[
+    item.request.releaseId,item.request.exportId,item.originalStatus,
+    button('Resume original preparation',async()=>{
+      const result=await retainedAction('prepareRelease',item.request);$('publisher-result').textContent=pretty(result);
+      await refresh({quiet:true});notice('Original native release preparation completed on this host.');
+    })
+  ])):empty('All retained release preparations for this host are complete.'));
   const releases=[],seen=new Set();
-  for(const item of receiving)if(item.status==='COMPLETE')for(const release of item.releases??[])if(!seen.has(release.localId)){
+  for(const item of receiving)if(['COMPLETE','COMPLETE_WITH_PENDING'].includes(item.status))for(const release of item.releases??[])if(!seen.has(release.localId)){
     seen.add(release.localId);releases.push({...release,id:release.localId,selected:item.activation?.localActive===release.localId});
   }
   options('publisher-local-release',releases,{label:item=>item.originalId+' → '+item.localId+(item.selected?' · original selection':'')});
@@ -253,8 +305,10 @@ bind('publisher-capture',async()=>{
   await refresh({quiet:true});notice('Publisher source and original release history retained.');
 });
 bind('publisher-history',async()=>detail('Complete publisher source and receiving',node('pre',pretty(await action('publisherTransfers')))));
+$('publisher-resume').addEventListener('change',selectPublisherReceiving);
 form('publisher-receive-form',async()=>{
-  const result=await retainedAction('receivePublisher',{id:uuid(),snapshotId:chosen('publisher-snapshot','an original publisher snapshot')});
+  const result=await retainedAction('receivePublisher',{id:$('publisher-resume').value||uuid(),
+    snapshotId:chosen('publisher-snapshot','an original publisher snapshot'),maxResidentRows:publisherReceivingBudget()});
   $('publisher-result').textContent=pretty(result);await refresh({quiet:true});
   if(result.activation?.localActive)$('publisher-local-release').value=result.activation.localActive;
   if(Number.isSafeInteger(result.activation?.expectedGeneration))$('publisher-current-generation').value=result.activation.expectedGeneration;

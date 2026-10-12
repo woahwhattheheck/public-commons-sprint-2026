@@ -27,9 +27,9 @@ const keys=new Map([
   ['default-limit','defaultLimit'],['max-limit','maxLimit'],['release-id','releaseId'],['reason','reason'],
   ['expected-generation','expectedGeneration'],['to','to'],['hash','hash'],['archive','archive'],
   ['expected-sha256','expectedSha256'],['page-size','pageSize'],['submitted-from','submittedFrom'],
-  ['submitted-before','submittedBefore'],['updated-since','updatedSince'],['snapshot-id','snapshotId'],
+  ['submitted-before','submittedBefore'],['updated-since','updatedSince'],['snapshot-id','snapshotId'],['max-resident-rows','maxResidentRows'],
 ]);
-const numbers=new Set(['limit','expectedRevision','defaultLimit','maxLimit','expectedGeneration','pageSize']);
+const numbers=new Set(['limit','expectedRevision','defaultLimit','maxLimit','expectedGeneration','pageSize','maxResidentRows']);
 const collections=new Set(['forms','scope','findings','indicators','payment','runtime','fields']);
 export const CENTRAL_CLI_HELP = `ODK Central Field Data
 
@@ -63,7 +63,7 @@ Data commands:
   release-activate --id ID --expected-generation N --reason TEXT
   release-rollback --to ID --expected-generation N --reason TEXT
   publisher-capture --id ID [--expected-generation N]
-  publisher-receive --id ID --snapshot-id ORIGINAL_SNAPSHOT_ID
+  publisher-receive --id ID --snapshot-id ORIGINAL_SNAPSHOT_ID [--max-resident-rows N]
   publisher-transfers                 Read complete original publisher source and receiving records.
   commissioning <command>             Original source agreement, two periods and full customer handover.
 
@@ -163,7 +163,7 @@ async function waitForCapture(client,id,signal){
 function retainIdentity(method,input){
   const key=method==='report'?'reportId':method==='exportDataset'?'exportId':['connect','createPlan','capture','backup','capturePublisher','receivePublisher'].includes(method)?'id':null;
   if(key&&!input[key])input[key]=randomUUID();
-  return key?input[key]:input.id??null;
+  return key?input[key]:input.releaseId??input.id??null;
 }
 function receipt(value){process.stdout.write(JSON.stringify(value,null,2)+'\n');}
 /** argv excludes node and script. Managed.mjs owns all hosting options and delegates here. */

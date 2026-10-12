@@ -1,6 +1,8 @@
 // MIT. One original command map for portable and maintained-package installs.
+import { createHash } from 'node:crypto';
 import { relativePath, sha256 } from './release-core.mjs';
 import { composeDistribution, contributionPaths } from '../distribution/specification.mjs';
+import { validateSourceSelection, validateSourceSelectionRecord } from '../distribution/source-selection.mjs';
 
 const BASE = 'stellar/scf-starforge-20261009/';
 export const CATALOG_PATH = BASE + 'distribution/distribution.json';
@@ -13,7 +15,7 @@ const PORTABLE_ALIASES = {
   deploy: ['sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
 };
 
-export function compileCommandCatalog(catalogBytes, hasSource, { prefix = '', sourcePaths = [], readSource } = {}) {
+export function compileCommandCatalog(catalogBytes, hasSource, { prefix = '', sourcePaths = [], readSource, sourceSelection } = {}) {
   if (prefix && (!prefix.endsWith('/') || relativePath(prefix.slice(0, -1)) !== prefix.slice(0, -1)))
     throw new Error('Invalid command source prefix');
   // Both callers provide bytes already captured from the same Git tree or
@@ -28,8 +30,26 @@ export function compileCommandCatalog(catalogBytes, hasSource, { prefix = '', so
     inputs.push({ path, bytes });
     return { path, data: JSON.parse(typeof bytes === 'string' ? bytes : Buffer.from(bytes).toString('utf8')) };
   });
+  let selection;
+  if (sourceSelection !== undefined) {
+    validateSourceSelectionRecord(sourceSelection);
+    const path = sourceSelection.path;
+    if (!hasSource(path) || typeof readSource !== 'function')
+      throw new Error('Original source selection is required: ' + path);
+    const original = readSource(path);
+    if (typeof original !== 'string' && !Buffer.isBuffer(original) && !(original instanceof Uint8Array))
+      throw new Error('Original source selection bytes are required: ' + path);
+    const bytes = Buffer.from(original);
+    const blob = createHash('sha1').update('blob ' + bytes.length + '\0').update(bytes).digest('hex');
+    if (bytes.length !== sourceSelection.bytes || sha256(bytes) !== sourceSelection.sha256 ||
+        blob !== sourceSelection.gitBlob) throw new Error('Original source selection identity differs');
+    selection = validateSourceSelection(JSON.parse(bytes), path);
+    if (selection.id !== sourceSelection.id || selection.title !== sourceSelection.title)
+      throw new Error('Original source selection description differs');
+    inputs.push({ path, bytes });
+  }
   const base = JSON.parse(catalogBytes);
-  const catalog = contributions.length ? composeDistribution({ base, contributions }).spec : base;
+  const catalog = contributions.length || selection ? composeDistribution({ base, contributions, selection }).spec : base;
   if (catalog.schema !== 'stellar-forge.merchant-distribution.v1' || !catalog.commands ||
       typeof catalog.commands !== 'object' || Array.isArray(catalog.commands) || !Object.keys(catalog.commands).length)
     throw new Error('Invalid original command catalog');
@@ -50,9 +70,10 @@ export function compileCommandCatalog(catalogBytes, hasSource, { prefix = '', so
   }
   return { catalog, commands, commandCatalog: {
     path: prefix + CATALOG_PATH, sha256: sha256(catalogBytes),
-    ...(contributions.length ? { inputs: inputs.map(({ path, bytes }) => ({
+    ...(contributions.length || selection ? { inputs: inputs.map(({ path, bytes }) => ({
       path: prefix + path, bytes: Buffer.byteLength(bytes), sha256: sha256(bytes),
     })) } : {}),
+    ...(selection ? { sourceSelection: { ...sourceSelection } } : {}),
     commands: Object.keys(catalog.commands).length, aliases, preservedMappings,
   } };
 }

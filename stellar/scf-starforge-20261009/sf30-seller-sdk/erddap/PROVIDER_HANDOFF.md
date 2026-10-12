@@ -40,6 +40,10 @@ The original JSON response is the canonical data edition declared by the ERDDAP 
 
 When the provider's JSON and CSV editions differ, the default profile reports that difference. The reviewer can inspect both originals and explicitly select canonical-json. This choice is recorded in the profile and exported review.
 
+The native dataset mapping records the separate `csvPolicy` choice. The receiving entrypoints expose `--csv-policy require-equivalent|canonical-json`, with the strict default unchanged. Selecting JSON for a dataset does not modify a previously saved provider profile; set `dataEdition` in a successor profile and save it against its exact preceding revision. Both complete original responses stay in every provider bundle.
+
+The included NDBC 46042 one-day capture contains 144 rows. Full numeric comparison found 46 spelling differences such as `13` versus `13.0`, no numeric value changes, and 98 missing-value representations. Keeping the literal difference visible makes the reviewer’s JSON choice explicit. The missing separately appointed scientific contact remains an intake question after that choice.
+
 The handoff changes column order and explicitly selected column names. It renders the selected time column in UTC under the reviewed representation. It preserves station IDs, observation values, existing quality flags and every selected row. Blank output cells are accompanied by the missing-values sidecar so a source null can be distinguished from an empty string.
 
 No scale factor, offset, calibration, interpolation, row filtering or new scientific quality evaluation is applied by the exporter. Units and source attributes remain available in both the mapping and original capture.
@@ -160,6 +164,14 @@ This supports ordinary interrupted operations:
 - Inspect and re-download the complete received ZIP after reopening the receiving workspace.
 
 The original capture is preserved throughout. Correcting a mapping or disclosure creates a successor review. It does not rewrite an earlier delivered review.
+
+## Evaluation identity and historical receiving
+
+A saved review records both its source/profile/parent intent and the evaluator used to interpret it. New records bind `stellar-forge.erddap-provider-evaluation.v1`, readiness `1.0.0` and comparison `decimal-v1` into their revision identity, report and manifest. The maintained comparison uses exact decimal values, reports equivalent numeric spellings and keeps every original response byte. A genuinely changed value still fails equivalence.
+
+The older unversioned format is retained exactly. Its two known evaluator versions are `lexical-v1` and `decimal-v1`. A receiving engine tries only those implemented versions and requires the complete normalized profile, full review and regenerated bundle members to match. Unknown declared versions, altered reports, changed source bytes and inconsistent manifests are rejected even when a sender recomputes their hashes.
+
+Historical records and ZIPs omit the newer declaration, preserving their exact IDs and export bytes. An exact-save retry recovers the already accepted original request. A new assessment under current rules is an explicit successor whose parent is the current head. Reopening, historical export regeneration and recovery of an export that lost its receipt use the saved original version; they do not silently substitute a new comparison.
 
 ## Scope of a completed intake review
 

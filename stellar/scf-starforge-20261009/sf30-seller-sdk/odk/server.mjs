@@ -116,7 +116,7 @@ export async function createCentralServer({workspace,host='127.0.0.1',port=0,tok
       if(request.method==='POST'&&action&&actions.has(action[1])){
         const input=await body(request);
         if(!input||typeof input!=='object'||Array.isArray(input))throw fault('CENTRAL_REQUEST_OBJECT','Send a workspace action object.');
-        operationId=input.reportId??input.exportId??(['capture','backup','capturePublisher','receivePublisher'].includes(action[1])?input.id:null);
+        operationId=input.releaseId??input.reportId??input.exportId??(['capture','backup','capturePublisher','receivePublisher'].includes(action[1])?input.id:null);
         if(['capture','backup','capturePublisher','receivePublisher'].includes(action[1])&&!input.id)throw fault('CENTRAL_OPERATION_ID','Retain a caller-generated id before starting this operation.');
         const result=await workspace[action[1]](input);
         json(response,['capture','resume'].includes(action[1])?202:200,['capture','resume'].includes(action[1])?{ok:true,result,operationId:result.id}:{ok:true,result,operationId});return;
