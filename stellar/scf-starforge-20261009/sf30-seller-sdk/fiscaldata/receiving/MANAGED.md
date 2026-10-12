@@ -59,7 +59,7 @@ Invoke this file from the selected published source:
 node /absolute/source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/receiving/managed.mjs --input /absolute/private/receiving-input.json
 ```
 
-The module also exports `receiveFiscalApplication(input)` for an existing source-bound receiver. Keep one executor for the stable `operationId`; the Applications controller and portable source receiver retain their original operation locks. A caller retry uses the same input file and output directory.
+The module also exports `receiveFiscalApplication(input)` for an existing source-bound receiver. Keep one executor for the stable `operationId`; the Applications controller and portable source receiver retain their original operation locks. A caller retry uses the same input file and output directory. The command holds the original kernel lease on its private output directory while it operates, serializing its input, result, and connection publication. Fully written and fsynced temporary metadata become selected names by rename under that lease; interrupted partial attempts remain private.
 
 For admission, account for the complete Applications controller, original managed Fiscal child, browser, copied source checkpoint, installed-runtime adoption, and output growth. The checkpoint manifest reports the exact source bytes. Reuse an established managed home when it already owns the selected installed runtime. The command does not alter the scheduler declarations or add another launcher.
 

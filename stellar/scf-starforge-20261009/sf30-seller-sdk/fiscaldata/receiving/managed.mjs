@@ -1,6 +1,6 @@
 // MIT. Complete the original installed Fiscal application and its retained analyst workflow.
 import { constants } from 'node:fs';
-import { mkdir, open, readFile, rename, link, unlink, lstat, realpath } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, lstat, realpath } from 'node:fs/promises';
 import { dirname, join, resolve, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomUUID, createHash } from 'node:crypto';
@@ -8,6 +8,7 @@ import { createRequire } from 'node:module';
 import { createConnection } from 'node:net';
 import { setTimeout as pause } from 'node:timers/promises';
 import { inspectMerchantRuntime } from '../../../sf46-release/runtime-package.mjs';
+import { acquireWorkspace } from '../../postgres/publisher/files.mjs';
 
 export const FISCAL_APPLICATION_RECEIVING='stellar-forge.fiscaldata-application-receiving.v1';
 const INPUT='stellar-forge.fiscaldata-application-receiving-input.v1';
@@ -27,7 +28,8 @@ function absolute(value){
 }
 function actor(value){
  need(value&&/^[A-Za-z0-9][A-Za-z0-9_.:@-]{0,159}$/.test(value.id??'')&&
-  typeof value.label==='string'&&value.label.trim()&&value.label.length<=240,'Declare the original named receiving operator.');
+  typeof value.label==='string'&&value.label.trim()&&value.label.length<=200&&!/[\x00-\x1f\x7f]/.test(value.label),
+  'Declare the original named receiving operator.');
  return {id:value.id,label:value.label};
 }
 async function optional(path){
@@ -49,13 +51,11 @@ async function publish(path,value,{immutable=false}={}){
  const file=await open(temporary,constants.O_CREAT|constants.O_EXCL|constants.O_WRONLY,0o600);
  try{await file.writeFile(bytes);await file.sync();}finally{await file.close();}
  try{
-  if(immutable){
-   try{await link(temporary,path);}catch(error){
-    if(error.code!=='EEXIST')throw error;
-    need((await readFile(path)).equals(bytes),'A concurrent receiving input selected different bytes.');
-   }
-   await unlink(temporary);
-  }else await rename(temporary,path);
+  // The original output-directory kernel lease serializes this publisher.
+  // A partial attempt stays private; a selected name always owns complete bytes.
+  const current=immutable?await readFile(path).catch(error=>{if(error.code==='ENOENT')return null;throw error;}):null;
+  if(current)need(current.equals(bytes),'A concurrent receiving input selected different bytes.');
+  else await rename(temporary,path);
   const directory=await open(dirname(path),constants.O_RDONLY);
   try{await directory.sync();}finally{await directory.close();}
  }catch(error){error.retainedAttempt=temporary;throw error;}
@@ -118,7 +118,7 @@ async function fiscalSession(address){
  */
 export async function receiveFiscalApplication(input){
  need(Number(process.versions.node.split('.')[0])>=24,'Use the installed Node24 runtime.');
- need(input?.schema===INPUT&&/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(input.operationId??''),'Select a stable original receiving input.');
+ need(input?.schema===INPUT&&/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,151}$/.test(input.operationId??''),'Select a stable original receiving input with room for its receiving suffix.');
  const runtimeDirectory=absolute(input.runtimeDirectory),workspaceDirectory=absolute(input.workspaceDirectory);
  const outputDirectory=absolute(input.outputDirectory),packagePath=absolute(input.packagePath),operator=actor(input.operator);
  need(HASH.test(input.packageSha256??'')&&UUID.test(input.workspaceId??'')&&UUID.test(input.editionId??'')&&
@@ -131,6 +131,8 @@ export async function receiveFiscalApplication(input){
   need((await lstat(input.browser.chromium)).isFile(),'Use the existing actual Chromium executable.');
  }
  await privateDirectory(outputDirectory,{create:true});
+ const releaseOutput=await acquireWorkspace(outputDirectory);
+ try{
  const inputFile=join(outputDirectory,'input.json');
  await publish(inputFile,input,{immutable:true});
  const inputSha256=identity(input),resultFile=join(outputDirectory,'result.json');
@@ -247,7 +249,7 @@ export async function receiveFiscalApplication(input){
    need(!saved.connectionError,'The original runtime adoption needs its retained recovery: '+json(saved.connectionError));
    applicationId=report.applicationId=saved.applicationId;await save();
   }
-  await waitFor(current,item=>['READY','STOPPED','RUNNING'].includes(item?.phase),'Original reviewed runtime adoption');
+  await waitFor(current,item=>['READY','STOPPED','RUNNING','STARTING','INTERRUPTED'].includes(item?.phase),'Original reviewed runtime adoption');
   await mark('application-reviewed-and-saved',{applicationId,runtimeId:attached.runtimeId,workspaceAlias,
    workspaceIdentity:selection.workspace.sha256,connectionSha256:selection.connectionSha256,sourceSha256:source.sha256});
   const first=await start('first');
@@ -364,6 +366,7 @@ export async function receiveFiscalApplication(input){
   await model.close();
   if(report.cleanupError)await save().catch(()=>{});
  }
+ }finally{await releaseOutput();}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  const args=process.argv.slice(2);
