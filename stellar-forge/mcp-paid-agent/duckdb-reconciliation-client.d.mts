@@ -2,6 +2,38 @@
 /** Exact native comparison values and IDs are never coerced through JavaScript numbers. */
 export type NativeId = string;
 export type RequestId = string;
+export type NormalizationState =
+  | 'CONVERTED' | 'NULL_PRESERVED' | 'NOT_NUMERIC' | 'NON_FINITE' | 'OUT_OF_RANGE'
+  | 'PRECISION_LOSS' | 'INVALID_TIME' | 'OFFSET_REQUIRED' | 'OFFSET_CONFLICT'
+  | 'SUBMICROSECOND' | 'NUMERIC_LIMIT';
+export interface NumericAffineNormalization {
+  mode: 'numeric-affine';
+  /** BIGINT/HUGEINT or DECIMAL(p,s), p<=38 and s<=p. No rounding. */
+  canonical_type: 'BIGINT' | 'HUGEINT' | `DECIMAL(${number},${number})`;
+  canonical_unit: string;
+  source: {unit: string; scale: string; offset: string};
+  target: {unit: string; scale: string; offset: string};
+  basis: string;
+}
+export type TimeNormalizationSide =
+  | {format: 'native' | 'iso8601'; offset: 'embedded' | `+${string}` | `-${string}`}
+  | {format: 'unix-seconds' | 'unix-milliseconds' | 'unix-microseconds' | 'unix-nanoseconds'; offset: 'utc'};
+export interface TimeUTCNormalization {
+  mode: 'time-utc'; canonical_type: 'TIMESTAMPTZ';
+  source: TimeNormalizationSide; target: TimeNormalizationSide; basis: string;
+}
+export type SourceNormalization = NumericAffineNormalization | TimeUTCNormalization;
+export interface Normalizations {
+  schema: 'stellar-forge.duckdb-reconciliation.normalizations.v1';
+  columns: Array<{index: number; name: string; role: 'key' | 'value';
+    source_type: string; target_type: string; canonical_type: string; normalization: SourceNormalization}>;
+  arithmetic: string; time: string; failures: string;
+}
+export interface NormalizationAccounting {
+  values: number; converted: number; nulls: number; failed: number;
+  states: Array<{state: NormalizationState; values: number}>;
+}
+
 export type ComparisonState =
   | 'EXACT_EQUAL' | 'EXACT_DIFFERENT' | 'NULLS_EQUAL' | 'WITHIN_TOLERANCE'
   | 'OUTSIDE_TOLERANCE' | 'NULL_NOT_COMPARABLE' | 'NON_FINITE_NOT_COMPARABLE'
@@ -15,7 +47,7 @@ export interface NumericComparisonRule {
   absolute: string;
   /** Ratio in [0,1]; 0.005 is 0.5%, scaled by max(abs(source),abs(target)). */
   relative: string;
-  /** Approved native source unit. This statement performs no unit conversion. */
+  /** Approved source unit, or exact canonical_unit when explicit normalization is selected. */
   unit: string;
   nulls: 'equal' | 'uncomparable';
   basis: string;
@@ -26,6 +58,8 @@ export interface ComparisonColumn {
   meaning?: string; source_map?: LiteralValueMap[]; target_map?: LiteralValueMap[];
   /** Only native BIGINT/HUGEINT/DECIMAL/DOUBLE value columns; never keys. */
   comparison?: NumericComparisonRule;
+  /** Explicit lossless unit/time conversion. Original values are always retained. */
+  normalization?: SourceNormalization;
 }
 export interface ComparisonWindow { id: string; start: string; end: string; basis: 'native' | 'lexical'; }
 export interface ReconciliationDefinition {
@@ -47,9 +81,9 @@ export interface ReviewedEdition {
 export interface ReconciliationReview {
   schema: 'stellar-forge.duckdb-reconciliation.v1'; workspace_id: string;
   definition: ReconciliationDefinition; source: ReviewedEdition; target: ReviewedEdition;
-  comparison_columns: Array<{name: string; type: string; role: 'key' | 'value'}>;
+  comparison_columns: Array<{name: string; type: string; role: 'key' | 'value'; source_type?: string; target_type?: string}>;
   omitted: {source: string[]; target: string[]}; comparison_basis: string;
-  comparison_rules?: NumericRules; review_sha256: string;
+  comparison_rules?: NumericRules; normalizations?: Normalizations; review_sha256: string;
 }
 export interface ReconciliationPair {
   schema: string; pair_id: NativeId; name: string; label: string; revision: number;
@@ -67,19 +101,24 @@ export interface RunSummary {
   source: SideAccounting; target: SideAccounting;
   groups: Partial<Record<GroupCategory, number>> & {total: number; duplicate_groups: number};
   fields?: Record<ComparisonState, number> & {total: number};
+  normalizations?: {source: NormalizationAccounting; target: NormalizationAccounting};
   accounting_balanced: boolean; scope_note: string; decisions: DecisionProgress;
 }
 export interface ReconciliationRun {
   schema: string; run_id: NativeId; pair_id: NativeId; pair_revision: number;
   definition_sha256: string; review_revision: number; review: ReconciliationReview;
   summary: RunSummary; source_edition: NativeId; target_edition: NativeId;
-  created_at: string; comparison_basis: string; comparison_rules?: NumericRules;
+  created_at: string; comparison_basis: string; comparison_rules?: NumericRules; normalizations?: Normalizations;
 }
 export interface PageOptions { offset?: number; limit?: number; }
 export interface NativeGrid {
   columns: Array<{name: string; type: string}>;
   rows: unknown[][]; offset: number; limit: number; total: number; next_offset: number | null;
   run_id?: NativeId; review_revision?: number;
+}
+export interface NormalizationPreview extends NativeGrid {
+  schema: 'stellar-forge.duckdb-reconciliation.normalizations.v1.preview';
+  workspace_id: string; review_sha256: string; side: 'source' | 'target'; column_name: string;
 }
 export type Catalog<K extends string,T> =
   {offset: number; limit: number; total: number; next_offset: number | null} & Record<K,T[]>;
@@ -95,7 +134,7 @@ export interface ReconciliationReport {
   review: ReconciliationReview; summary: RunSummary;
   source_edition: NativeId; target_edition: NativeId; before_run_id: NativeId | null;
   scope_comparison: Record<string,unknown> | null;
-  queries: Array<{kind: 'rows' | 'groups' | 'fields' | 'decisions' | 'changes';
+  queries: Array<{kind: 'rows' | 'groups' | 'fields' | 'normalizations' | 'decisions' | 'changes';
     query_id: NativeId; revision: number; sql: string; parameters: unknown; parameters_text: string;
     [key: string]: unknown}>;
   views_at_creation: Array<{name: string; edition_id: NativeId; revision: number}>; created_at: string;
@@ -109,7 +148,7 @@ export interface ExportManifest {
   schema: 'stellar-forge.duckdb-reconciliation.v1.export';
   export_id: NativeId; report_id: NativeId; report_digest: string;
   request_id: RequestId; workspace_id: string; complete: true; state: 'COMPLETE';
-  comparison_rules?: NumericRules;
+  comparison_rules?: NumericRules; normalizations?: Normalizations;
   files: Array<{name: string; bytes: number; sha256: string; [key: string]: unknown}>;
   queries: Array<{kind: string; query_id: NativeId; revision: number; export_id: NativeId;
     directory: string; rows: number}>;
@@ -122,6 +161,8 @@ export interface ReconciliationClient {
   status(): Promise<{schema: string; workspace_id: string; feature_schema?: string;
     pair_count: number; run_count: number; report_count: number}>;
   review(definition: ReconciliationDefinition): Promise<ReconciliationReview>;
+  normalizationPreview(definition: ReconciliationDefinition, options: PageOptions & {
+    side: 'source' | 'target'; column_name: string}): Promise<NormalizationPreview>;
   pairs(options?: PageOptions): Promise<Catalog<'pairs',ReconciliationPair>>;
   pair(pairId: NativeId, revision?: number): Promise<ReconciliationPair>;
   savePair(request: {request_id: RequestId; expected_revision: number;
@@ -134,6 +175,8 @@ export interface ReconciliationClient {
   rows(runId: NativeId, options?: PageOptions & {side?: 'source' | 'target';
     status?: 'INCLUDED' | 'QUARANTINED' | 'EXCLUDED_WINDOW'; group_id?: number}): Promise<NativeGrid>;
   fields(runId: NativeId, options?: PageOptions & {group_id?: number; column_name?: string; state?: ComparisonState}): Promise<NativeGrid>;
+  normalizations(runId: NativeId, options?: PageOptions & {side?: 'source' | 'target';
+    group_id?: number; column_name?: string; state?: NormalizationState}): Promise<NativeGrid>;
   row(runId: NativeId, side: 'source' | 'target', row: number): Promise<{
     side: string; row: number; edition_id: NativeId; original: Record<string,unknown>; canonical: Record<string,unknown>}>;
   decisions(runId: NativeId, options?: PageOptions): Promise<Catalog<'decisions',ReconciliationDecision>>;

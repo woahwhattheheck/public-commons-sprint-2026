@@ -11,6 +11,7 @@ from ..duckdb_dataset import _hex, _json, _now, _qid, _wire
 from ..duckdb_agent import read_identity
 from .. import duckdb_semantics
 from ..storage import parse
+from . import normalization
 from .comparison_rules import FEATURE_SCHEMA, FIELD_STATES, materialize as materialize_rules
 from .contracts import (SCHEMA, OUTCOMES, CATEGORIES, STATUSES, bound_review, fail,
                         fields, integer, literal, page, pair_key, request_id, sha,
@@ -42,7 +43,7 @@ class Reconciliation:
     @staticmethod
     def _exists(db):
         row = db.execute("SELECT value FROM sf_workspace WHERE key='reconciliation_schema'").fetchone()
-        if row and row[0] not in {SCHEMA, FEATURE_SCHEMA}:
+        if row and row[0] not in {SCHEMA, FEATURE_SCHEMA, normalization.FEATURE_SCHEMA}:
             fail("SCHEMA_CHANGED")
         return row is not None
 
@@ -81,6 +82,40 @@ class Reconciliation:
             db.execute("BEGIN")
             try:
                 result = self._review_on(db, definition)
+                db.commit()
+                return result
+            except BaseException:
+                db.rollback()
+                raise
+
+    def normalization_preview(self, definition, *, side, column_name, offset=0, limit=25):
+        offset, limit = page(offset, limit)
+        if side not in {"source", "target"}:
+            fail("SIDE_INVALID")
+        with self.workspace._guard(), self.workspace._connection() as db:
+            db.execute("BEGIN")
+            try:
+                review = self._review_on(db, definition)
+                positions = [i for i, c in enumerate(review["definition"]["columns"])
+                             if c["name"] == column_name and "normalization" in c]
+                if len(positions) != 1:
+                    fail("NORMALIZATION_COLUMN_REQUIRED")
+                index = positions[0]
+                edition = self.workspace._record(db, "sf_editions", review[side]["edition_id"])
+                total = db.execute("SELECT count(*) FROM " + _qid(edition["table"])).fetchone()[0]
+                if total != edition["row_count"]:
+                    fail("NORMALIZATION_ORIGINAL_ROWS_CHANGED")
+                if offset > total:
+                    fail("PAGE_INVALID")
+                original = _qid(review["definition"]["columns"][index][side])
+                rows = db.execute("SELECT sf_row," + original + ",CAST(" + original + " AS VARCHAR) FROM " +
+                                  _qid(edition["table"]) + " ORDER BY sf_row LIMIT ? OFFSET ?", [limit, offset]).fetchall()
+                records = [normalization.detail(review, side, index, row, value, raw)[1] for row, value, raw in rows]
+                result = {"schema": normalization.SCHEMA + ".preview", "workspace_id": review["workspace_id"],
+                          "review_sha256": review["review_sha256"], "side": side, "column_name": column_name,
+                          "columns": [{"name": name, "type": kind} for name, kind in normalization.COLUMNS],
+                          "rows": _wire(records), "offset": offset, "limit": limit, "total": total,
+                          "next_offset": offset + len(records) if offset + len(records) < total else None}
                 db.commit()
                 return result
             except BaseException:
@@ -227,10 +262,12 @@ class Reconciliation:
             prior = decoded(row[1])
             if prior["definition_sha256"] == review["review_sha256"]:
                 return prior
-        if review.get("comparison_rules"):
-            # Older writers must not silently export a rule-aware run as exact.
-            # Promote only this feature, in the same original pair transaction.
-            db.execute("UPDATE sf_workspace SET value=? WHERE key='reconciliation_schema'", [FEATURE_SCHEMA])
+        if review.get("normalizations"):
+            db.execute("UPDATE sf_workspace SET value=? WHERE key='reconciliation_schema'", [normalization.FEATURE_SCHEMA])
+        elif review.get("comparison_rules"):
+            # Preserve a newer normalization marker when saving a rule-only pair.
+            db.execute("UPDATE sf_workspace SET value=? WHERE key='reconciliation_schema' AND value<>?",
+                       [FEATURE_SCHEMA, normalization.FEATURE_SCHEMA])
         record = {"schema": SCHEMA, "pair_id": identity, "name": review["definition"]["name"],
                   "label": review["definition"]["label"], "revision": revision + 1,
                   "definition_sha256": review["review_sha256"], "definition": review["definition"],
@@ -264,11 +301,12 @@ class Reconciliation:
         if prior:
             return self._run_on(db, identity)
         rows, values, groups = (_qid(table(k, identity)) for k in ("rows", "values", "groups"))
-        sql = []
-        for side in ("source", "target"):
-            edition = self.workspace._record(db, "sf_editions", review[side]["edition_id"])
-            sql.append(selected_rows(review, side, edition["table"]))
+        editions = {side: self.workspace._record(db, "sf_editions", review[side]["edition_id"])
+                    for side in ("source", "target")}
+        stages = normalization.materialize(db, identity, review, editions) if review.get("normalizations") else {}
+        sql = [selected_rows(review, side, editions[side]["table"], stages.get(side)) for side in ("source", "target")]
         db.execute("CREATE TABLE " + rows + " AS " + " UNION ALL ".join("(" + x + ")" for x in sql))
+        normalization.release(db, stages)
         all_columns = ["c" + str(i) for i in range(len(review["definition"]["columns"]))]
         keys = ["c" + str(i) for i in self._key_indices(review)]
         grouped = ",".join(["window_id"] + all_columns)
@@ -304,7 +342,7 @@ class Reconciliation:
         db.execute("ALTER TABLE " + rows + " ADD COLUMN group_id BIGINT")
         db.execute("UPDATE " + rows + " r SET group_id=g.group_id FROM " + groups +
                    " g WHERE " + self._key_equal(review, "r", "g"))
-        if review.get("comparison_rules"):
+        if review.get("comparison_rules") or review.get("normalizations"):
             materialize_rules(db, identity, review)
         summary = self._summary_on(db, identity, review)
         record = {"schema": SCHEMA, "run_id": identity, "pair_id": pair["pair_id"],
@@ -314,6 +352,8 @@ class Reconciliation:
                   "created_at": _now(), "comparison_basis": review["comparison_basis"]}
         if review.get("comparison_rules"):
             record["comparison_rules"] = deepcopy(review["comparison_rules"])
+        if review.get("normalizations"):
+            record["normalizations"] = deepcopy(review["normalizations"])
         db.execute("INSERT INTO sf_reconciliation_runs VALUES(?,?,?,?,?)",
                    [identity, pair["pair_id"], pair["revision"], 0, _json(record)])
         return self._run_on(db, identity)
@@ -339,7 +379,7 @@ class Reconciliation:
         result["groups"] = {name: counts.get(name, 0) for name in categories}
         result["groups"]["total"] = sum(counts.values())
         result["groups"]["duplicate_groups"] = db.execute("SELECT count(*) FROM " + groups + " WHERE duplicate_key").fetchone()[0]
-        if review.get("comparison_rules"):
+        if review.get("comparison_rules") or review.get("normalizations"):
             counts_ = db.execute("SELECT coalesce(sum(canonical_matched_count),0)::BIGINT,"
                                  "coalesce(sum(exact_matched_count),0)::BIGINT,"
                                  "coalesce(sum(tolerance_matched_count),0)::BIGINT FROM " + groups).fetchone()
@@ -351,6 +391,8 @@ class Reconciliation:
                                            " GROUP BY state").fetchall())
             result["fields"] = {state: field_counts.get(state, 0) for state in FIELD_STATES}
             result["fields"]["total"] = sum(field_counts.values())
+        if review.get("normalizations"):
+            result["normalizations"] = normalization.summary(db, identity)
         result["accounting_balanced"] = True
         result["scope_note"] = ("SOURCE_ONLY and TARGET_ONLY describe known canonical keys within the selected windows. "
                                 "Rows with unresolved keys remain separately quarantined; their correspondence is not inferred. "
@@ -360,6 +402,9 @@ class Reconciliation:
                                      "Only exact or policy-matched unique pairs contribute to matched; both counts are separate. "
                                      "Nonexact tolerance matches remain in the engineer decision queue. "
                                      "Every original value and calculated difference remains in fields/rows and full exports.")
+        if review.get("normalizations"):
+            result["scope_note"] += (" Explicit normalization defines the canonical type, unit and time basis. "
+                                     "Original values and every successful/failed conversion remain in normalizations and source editions.")
         return result
 
     @staticmethod
@@ -458,7 +503,7 @@ class Reconciliation:
         projection = ["r.group_id", "r.category", "r.duplicate_key", "r.window_id"] + self._projected(run["review"], True)
         projection += ["r." + x for x in ("source_count", "target_count", "source_quarantined", "target_quarantined",
                                           "matched_count", "source_unmatched", "target_unmatched")]
-        if run.get("comparison_rules"):
+        if run.get("comparison_rules") or run.get("normalizations"):
             projection += ["r." + x for x in ("canonical_matched_count", "exact_matched_count", "tolerance_matched_count")]
         sql = "SELECT " + ",".join(projection) + " FROM " + _qid(table("groups", run["run_id"])) + " r"
         if revision is not None:
@@ -469,9 +514,17 @@ class Reconciliation:
 
     @staticmethod
     def _fields_sql(run):
-        if not run.get("comparison_rules"):
+        if not (run.get("comparison_rules") or run.get("normalizations")):
             fail("FIELDS_NOT_RECORDED")
         return "SELECT * FROM " + _qid(table("fields", run["run_id"]))
+
+    @staticmethod
+    def _normalizations_sql(run):
+        if not run.get("normalizations"):
+            fail("NORMALIZATIONS_NOT_RECORDED")
+        return ("SELECT n.*,r.group_id,r.status AS row_status,r.window_id FROM " +
+                _qid(normalization.detail_table(run["run_id"])) + " n JOIN " + _qid(table("rows", run["run_id"])) +
+                ' r ON n.side=r.side AND n."row"=r.row_id')
 
     def grid(self, identity, kind, *, offset=0, limit=25, side=None, status=None, group_id=None,
              category=None, duplicates=None, column_name=None, state=None):
@@ -483,7 +536,7 @@ class Reconciliation:
             try:
                 run = self._run_on(db, identity)
                 where, parameters = [], []
-                if kind != "fields" and (column_name is not None or state is not None):
+                if kind not in {"fields", "normalizations"} and (column_name is not None or state is not None):
                     fail("FIELD_FILTER_INVALID")
                 if kind == "groups":
                     if side is not None or status is not None or group_id is not None:
@@ -518,6 +571,29 @@ class Reconciliation:
                         parameters.append(integer(group_id, minimum=1))
                     sql = self._rows_sql(run, run["review_revision"])
                     order = 'side,"row"'
+                elif kind == "normalizations":
+                    if status is not None or category is not None or duplicates is not None:
+                        fail("NORMALIZATION_FILTER_INVALID")
+                    if side is not None:
+                        if side not in {"source", "target"}:
+                            fail("SIDE_INVALID")
+                        where.append("side=?")
+                        parameters.append(side)
+                    if group_id is not None:
+                        where.append("group_id=?")
+                        parameters.append(integer(group_id, minimum=1))
+                    if column_name is not None:
+                        if column_name not in {c["name"] for c in run["review"]["definition"]["columns"] if "normalization" in c}:
+                            fail("NORMALIZATION_COLUMN_REQUIRED")
+                        where.append("column_name=?")
+                        parameters.append(column_name)
+                    if state is not None:
+                        if state not in normalization.STATES:
+                            fail("NORMALIZATION_STATE_INVALID")
+                        where.append("state=?")
+                        parameters.append(state)
+                    sql = self._normalizations_sql(run)
+                    order = 'side,"row",column_index'
                 elif kind == "fields":
                     if side is not None or status is not None or category is not None or duplicates is not None:
                         fail("FIELD_FILTER_INVALID")
@@ -633,7 +709,8 @@ class Reconciliation:
             changed_content = "NULL::BOOLEAN"
             change = "true"
         rules_equal = a.get("comparison_rules") == b.get("comparison_rules")
-        if not rules_equal:
+        normalizations_equal = a.get("normalizations") == b.get("normalizations")
+        if not rules_equal or not normalizations_equal:
             # A policy revision can change the meaning even if every observed
             # value happens to retain the same classification and counts.
             change = "(" + change + ") OR true"
@@ -643,17 +720,18 @@ class Reconciliation:
                      ("true" if comparable else "false") + " AS canonical_schema_equal",
                      changed_content + " AS canonical_content_changed",
                      changed_counts + " AS classification_or_counts_changed",
-                     ("true" if rules_equal else "false") + " AS comparison_rules_equal"] + projected
+                     ("true" if rules_equal else "false") + " AS comparison_rules_equal",
+                     ("true" if normalizations_equal else "false") + " AS normalizations_equal"] + projected
         projected += [side + "." + x + " AS " + side_name + "_" + x
                       for x in compared for side, side_name in (("a", "before"), ("b", "after"))]
         sql = (prefix + "SELECT " + ",".join(projected) + " FROM " + _qid(table("groups", before["run_id"])) +
                " a FULL OUTER JOIN " + _qid(table("groups", after["run_id"])) + " b ON " + " AND ".join(joins) + content_join)
         counts = dict(db.execute("SELECT change,count(*) FROM (" + sql + ") GROUP BY change").fetchall())
-        if before.get("comparison_rules") or after.get("comparison_rules"):
+        if any(run.get("comparison_rules") or run.get("normalizations") for run in (before, after)):
             for item, fallback in (("canonical_matched_count", "matched_count"),
                                    ("exact_matched_count", "matched_count"), ("tolerance_matched_count", None)):
                 for alias, label, run in (("a", "before", before), ("b", "after", after)):
-                    value = alias + "." + item if run.get("comparison_rules") else alias + "." + fallback if fallback else "0::BIGINT"
+                    value = alias + "." + item if (run.get("comparison_rules") or run.get("normalizations")) else alias + "." + fallback if fallback else "0::BIGINT"
                     projected.append(value + " AS " + label + "_" + item)
             sql = (prefix + "SELECT " + ",".join(projected) + " FROM " + _qid(table("groups", before["run_id"])) +
                    " a FULL OUTER JOIN " + _qid(table("groups", after["run_id"])) + " b ON " + " AND ".join(joins) + content_join)
@@ -662,6 +740,7 @@ class Reconciliation:
             "mapping_equal": [{k: v for k, v in c.items() if k != "comparison"} for c in a["definition"]["columns"]] ==
                              [{k: v for k, v in c.items() if k != "comparison"} for c in b["definition"]["columns"]],
             "comparison_rules_equal": rules_equal,
+            "normalizations_equal": normalizations_equal,
             "canonical_schema_equal": comparable,
             "content_basis": "Exact native typed canonical value/side/status/reason multiplicities for every known-key group.",
             "windows_equal": (a["definition"]["windows"], a["definition"]["window_column"]) ==
@@ -695,8 +774,10 @@ class Reconciliation:
                           "record AS decision_json FROM sf_reconciliation_decisions WHERE run_id=" + literal(run["run_id"]) +
                           " AND sequence<=" + str(revision) + " ORDER BY sequence"),
         }
-        if run.get("comparison_rules"):
+        if run.get("comparison_rules") or run.get("normalizations"):
             statements["fields"] = self._fields_sql(run) + " ORDER BY group_id,column_index"
+        if run.get("normalizations"):
+            statements["normalizations"] = self._normalizations_sql(run) + ' ORDER BY side,"row",column_index'
         comparison = None
         if before_id:
             before = self._run_on(db, before_id)
