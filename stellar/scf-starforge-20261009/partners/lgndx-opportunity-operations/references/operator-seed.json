@@ -1,0 +1,904 @@
+{
+  "schema": "tjlabs.lgndx.operator-seed.v1",
+  "title": "LGNDX community opportunity and proposal operations",
+  "description": "A source-linked working case using current MCC RFI requirements and LGNDX's published company context.",
+  "company": {
+    "name": "LGNDX INC.",
+    "website": "https://lgndx.com/",
+    "uei": "PZGRB9Q1S7A3",
+    "cage": "108J4",
+    "description": "Company-published digital delivery and ecosystem integration practice; source review remains explicit."
+  },
+  "opportunity": {
+    "title": "MCC Software Development Recompete",
+    "buyer": "Millennium Challenge Corporation",
+    "reference": "95332427K0001",
+    "url": "https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view",
+    "documentKind": "rfi",
+    "stage": "research",
+    "dueAt": "2026-10-29T22:00:00Z",
+    "timeZone": "America/New_York",
+    "notes": "SAM states October29 at18:00EDT. This is an RFI/Sources Sought working opportunity; the company has not supplied a pursuit decision. Original event notice EST and COB wording remains in the source review."
+  },
+  "sources": [
+    {
+      "key": "mcc-rfi",
+      "file": "references/mcc-rfi-government-text.txt",
+      "sha256": "a056f3412429ae69c389def65021d15eac4bed29df962cfdb91c91b9bdd2aa73",
+      "bytes": 11184,
+      "payload": {
+        "role": "solicitation",
+        "title": "MCC Software Development Services RFI questions",
+        "url": "https://govtribe.com/file/government-file/request-for-information-rfi-final-dot-docx",
+        "capturedAt": "2026-10-12T01:38:56Z",
+        "filename": "mcc-rfi-government-text.txt",
+        "mediaType": "text/plain; charset=utf-8",
+        "contentText": "L50: UNCLASSIFIED\nL51: \nL52: MCC Software Development Services Request for Information (RFI) Package\nL53: \nL54: RFI Questions\nL55: \nL56: The Millennium Challenge Corporation (MCC) seeks responses to the questions below. While desired, respondents are not required to provide answers to all questions. If you choose not to answer a question, please respond with “N/A” to the corresponding question number.\nL57: Responses to this RFI should not exceed twenty (20) pages in total, excluding the cover page and table of contents. Respondents may allocate the available pages among the RFI questions as they deem appropriate and are encouraged to provide sufficient detail to fully address the questions and provide information that will assist the Government in conducting meaningful market research and refining the requirement and acquisition strategy.\nL58: Responses should be clear, concise, and directly relevant to the information requested. Respondents are discouraged from including generic corporate marketing materials, promotional literature, or other information that does not directly address the Government's requirements or RFI questions.\nL59: Respondents may also provide relevant recommendations, alternative approaches, lessons learned, or other information not specifically requested in this RFI if they believe such information would assist the Government in defining the requirement or acquisition strategy.\nL60: 1. Please provide your company name, address, telephone number, point of contact name (including contact information), and company size. What NAICS code do you recommend for this procurement and what is your company size standard under this NAICS code?\nL61: 2. Please share any questions or feedback on the draft performance work statement or MCC’s IT Environment. This feedback will be utilized to refine and enhance the final Request for Proposal (RFP). Is there any additional information that your company would require in order to submit a competitive proposal in response to the eventual solicitation?\nL62: 3. Please provide a list of the government-wide acquisition contract vehicles that your company holds, and/or contracting vehicles that you would recommend for an IT acquisition of this scope.\nL63: \nL64: 4. Please provide a brief (not to exceed 1 page) capabilities statement detailing your company’s expertise and prior experience in providing IT support services similar in scope to MCC’s requirements to other Federal and/or multilateral clients.\nL65: \nL66: 5. Contract Management\nL67: a. MCC is evaluating opportunities to increase the use of firm-fixed-price (FFP) contracting for software development in alignment with recent Administration policy emphasizing greater use of fixed-price contracting where appropriate. Describe how your organization would recommend structuring a software development effort to maximize the appropriate use of FFP while maintaining the flexibility necessary to accommodate evolving requirements, technical uncertainty, and changing priorities.\nL68: This can include hybrid FFP/T&M approaches.\nL69: b. Do you have any experience working with SLAs for contracts similar in scope? Please provide examples.\nL70: \nL71: c. The current deliverables are listed in the PWS (Section 5.0). What additional deliverables or changes to the current deliverables would you recommend, particularly in the context of FFP components of the contract?”\nL72: \nL73: d. Can you list the key personnel labor categories you would recommend for a contract of this size and scope?\nL74: 6. MCC is interested in understanding industry capabilities and proven approaches for developing and implementing artificial intelligence (AI) solutions to support Federal agency missions. Respondents shall describe their experience successfully delivering and implementing AI capabilities. Experience with any organization is relevant, but we are especially interested in any experience with Federal agencies with similar size and scope.\nL75: Do not include proposed solutions, pilots, or proofs of concept that have not been deployed in an operational environment.\nL76: a. Do you have any formal or dedicated AI organization or program within your own corporate structure? If so, is it focused on internal use, customer use, both, or another purpose?\nL77: \nL78: b. What approach do you propose to leverage AI to responsibly and securely accelerate and improve application development? Accountability for the results and code must remain with people and not delegated to AI.\nL79: \nL80: 7. Staffing\nL81: a. Please provide an overview of your capability and methodology for staffing projects to provide for evolving requirements and technologies, including right-sizing staffing levels to fluctuating workloads to support software engineering projects or other initiatives over the life of the contract.\nL82: b. Describe the strategies, practices, and management approaches your organization uses to attract and retain highly skilled personnel supporting Federal contracts and to minimize the loss of institutional knowledge, productivity, and mission continuity resulting from employee turnover.\nL83: c. MCC may periodically need to rapidly increase capacity or obtain specialized expertise in response to emerging mission requirements, new technology priorities, cybersecurity needs, or other areas of strategic interest. These needs may be temporary and may not justify maintaining a full-time dedicated team for the duration of the contract. Describe your organization's approach to providing rapid, temporary surge capacity to support emerging or unanticipated MCC requirements.\nL84: If possible, include anticipated timelines for surge staff – in other words, if a new requirement emerged, how long do you anticipate it would take to identify, onboard, and deploy personnel with the relevant expertise?\nL85: 8. MCC seeks to obtain high-quality software development services while ensuring that contractor resources are used efficiently and that costs remain commensurate with the value and complexity of the work. MCC is interested in industry approaches that avoid unnecessary staffing, excessive management overhead, duplicative effort, or other resource-intensive practices that may increase the cost of software development without a corresponding improvement in outcomes.\nL86: Describe the cost control measures and delivery practices your organization would employ to provide efficient and cost-effective software development services.\nL87: 9. Cybersecurity\nL88: \nL89: a. How is cybersecurity integrated into requirements, design, development, testing, deployment, and maintenance?\nL90: \nL91: b. How are third-party libraries, open-source components, and packages identified and managed?\nL92: \nL93: c. How do you continuously monitor 3rd party and open-source components for newly discovered vulnerabilities?\nL94: \nL95: d. How do you incorporate Zero Trust principles into software development efforts?\nL96: \nL97: 10. DevSecOps\nL98: a. Describe any experience that your company has had with hosting and maintaining an entire DevSecOps pipeline for a client. Please specify if the work was done for a Federal client. Does this include hosting the production environment? If not, describe your approach for interacting with the infrastructure provider/team.\nL99: \nL100: 11. Application Operations and Maintenance\nL101: a. Please review MCC’s list of applications and outline your company’s proposed Operations and Maintenance (O&M) approach. What do you recommend in size and structure of an O&M team to ensure coverage without overstaffing or understaffing? Include how the requirements will be adjusted over time to address evolving needs as applications move out of the development phase into O&M and eventually retire.\nL102: \nL103: 12. MCC Environment\nL104: a. Please outline your company’s experience and approach to developing and maintaining solutions on established platforms such as .NET, PowerApps, SharePoint Online, Box.com and ServiceNow.\nL105: \nL106: 13. Software Development Practices\nL107: a. Describe the software development methodology your organization would recommend for MCC's software development environment. Explain how your approach would support the delivery of high-quality software while maintaining flexibility to respond to changing mission priorities, requirements, technology, and user needs. Include -\nL108: \nL109: i. How you translate Government priorities and user needs into requirements, a prioritized backlog, development increments, and measurable outcomes;\nL110: ii. How you estimate and plan development work, including your approach to managing uncertainty in requirements and estimates;\nL111: \nL112: iii. How you manage changing priorities and requirements without creating unnecessary rework, cost, or schedule impacts;\nL113: \nL114: iv. How you balance development velocity with software quality, cybersecurity, testing, documentation, and maintainability;\nL115: v. How you measure team performance and software delivery, including metrics you recommend using to assess progress, quality, productivity, and value delivered;\nL116: \nL117: vi. Examples of comparable Federal software development efforts where your methodology resulted in successful delivery of mission capabilities; and\nL118: vii. Describe any aspects of the MCC’s organizational structure, decision-making processes, staffing model, or contract structure that you believe are particularly important to successfully implementing your proposed development methodology.\nL119: \nL120: b. Please describe your experience creating and executing automated test scripts.\nL121: \nL122: c. Please describe your approach to, and experience in, developing applications to reside in a cloud hosted environment.\nL123: 14. Our current custom-developed applications are hosted primarily using traditional server and database architectures within cloud IaaS environments. We are interested in evolving toward a more modern, cloud-native application development and hosting model that reduces reliance on individually managed servers and makes greater use of managed platform services, serverless technologies, automated CI/CD pipelines, and repeatable deployment practices.\nL124: a. What approach would you recommend for transitioning our application portfolio to this model? Please describe the proposed target architecture and application delivery approach, including how applications would be developed, tested, deployed, operated, and maintained. Please also identify the expected benefits, key implementation considerations and tradeoffs, and the primary cost drivers and opportunities for cost optimization.\nL125: 15. MCC is considering establishing a single-award Blanket Purchase Agreement (BPA), with individual orders issued by service area. Please provide feedback on this contemplated structure, including any advantages, disadvantages, pricing considerations, performance risks, or alternative approaches that MCC should consider.\nL126: \nL127: Appendix A –Performance Work Statement (PWS) Requirements (provided under separate cover)\nL128: \nL129: Authorized Use Only Authorized Use Only Authorized Use Only\n",
+        "sourceTerms": "Original public U.S. Government attachment text, retained from the carrier's Text version with its line locators. Original issue notice: https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view"
+      }
+    },
+    {
+      "key": "mcc-pws",
+      "file": "references/mcc-pws-government-text.txt",
+      "sha256": "c517b8df490e686da248c751b094fae9083bd46722e2f6fbb5484ccbe8cb908e",
+      "bytes": 52325,
+      "payload": {
+        "role": "solicitation",
+        "title": "MCC Performance Work Statement attachment supporting the RFI",
+        "url": "https://govtribe.com/file/government-file/performance-work-statement-pws-final-dot-docx",
+        "capturedAt": "2026-10-12T01:38:56Z",
+        "filename": "mcc-pws-government-text.txt",
+        "mediaType": "text/plain; charset=utf-8",
+        "contentText": "L52: UNCLASSIFIED\nL53: \nL54: Development and Enterprise Applications - OM&E\nL55: \nL56: Performance Work Statement Application Development – Operations, Maintenance & Enhancements (OM&E)\nL57: \nL58: Contracting and Grants Management Division and Office of the Chief Information Officer\nL59: \nL60: Contents\nL61: 1.0  | Scope  | 2\nL62: 2.0  | Background, Current Environment, and Objectives  | 3\nL63: 2.1  | Background  | 3\nL64: 2.2  | Current Environment  | 4\nL65: 2.3  | Objectives  | 4\nL66: 3.0  | Place of Performance  | 5\nL67: 4.0  | Tasks  | 6\nL68: 4.1  | Contract Program Management  | 6\nL69: 4.1.1  | Program Management  | 6\nL70: 4.1.2  | Phase-In/Phase-Out  | 7\nL71: 4.1.3  | Policy and Governance Implementation  | 8\nL72: 4.1.4  | Solutions Architecture Support  | 8\nL73: 4.1.5  | Technical Product Evaluation Support  | 9\nL74: 4.2  | Operations, Maintenance, and Enhancements  | 9\nL75: 4.2.1  | Background  | 9\nL76: 4.2.2  | Functional Areas of Service  | 10\nL77: 4.2.3  | DevSecOps Objectives  | 17\nL78: 4.2.4  | Technical Training  | 17\nL79: 4.3  | Surge Support and New Product Development  | 18\nL80: 4.3.1  | Scope of Future Work  | 18\nL81: 4.3.2  | Surge Support Services  | 19\nL82: 4.4  | Application Administration  | 19\nL83: 4.4.1  | Application Administration  | 19\nL84: 4.5  | ODCs  | 19\nL85: 5.0  | Labor Requirements  | 20\nL86: 5.1  | Key Personnel  | 20\nL87: 5.2  | Clearance Requirements  | 20\nL88: 5.3  | Personal Identity Verification of Contractor Personnel  | 20\nL89: 1.0 Scope\nL90: The scope of this Performance Work Statement (PWS) is intended to cover Contractor support of all services required to provide application engineering, operations and maintenance (O&M) support, platform customization and configuration, and Tier 3 user support across all enterprise applications to support the information technology requirements of Millennium Challenge Corporation (MCC) Office of the Chief Information Officer (OCIO) Digital Services Team.\nL91: The services to be acquired also include program management and administrative support necessary for the administration of this award. The following categories of activities are within the total scope of this Contract, and the contractor must have proven experience providing support for these activities within a federal agency:\nL92: · Application/Solution requirements, development, testing, maintenance, enhancement, and support\nL93: \nL94: · Data management systems and tools requirements, development, testing, maintenance, enhancement and support\nL95: \nL96: · Artificial Intelligence (AI)/Machine Learning (ML) strategy, governance and program management\nL97: \nL98: · AI-related data readiness support and engineering\nL99: \nL100: · AI model development and experimentation\nL101: \nL102: · Website development, testing, maintenance, enhancement, and support\nL103: · Data analytics, enterprise reporting and business intelligence\nL104: \nL105: · Continuous Integration/Continuous Delivery (CI/CD) integration support, including pipeline enhancements and maintenance\nL106: \nL107: · Customization and configuration of low-code platforms\nL108: \nL109: · Process automation (e.g., Testing)\nL110: \nL111: · Data governance establishment and implementation support\nL112: \nL113: · Technical and end-user training, including the production of training materials\nL114: \nL115: · Business analysis and consulting\nL116: \nL117: · Technical analysis and consulting\nL118: · Portfolio and project management\nL119: \nL120: · Product evaluation support\nL121: \nL122: · User Interface/User Experience (UI/UX) design\nL123: \nL124: · Application security support\nL125: \nL126: · Enterprise and solutions architecture support\nL127: \nL128: · Identity lifecycle management support\nL129: \nL130: · Agile coaching\nL131: \nL132: · Open Data standardization and reporting\nL133: \nL134: · Other general support tasks as requested\nL135: See Section 4.1 for specific tasks related to Contract Program Management, Architecture, and Security; Section 4.2 for Operations, Maintenance, and Enhancements (OME); Section 4.3 for Surge Support and New Development; and Section 4.4 for Infrastructure.\nL136: \nL137: 2.0 Background, Current Environment, and Objectives\nL138: \nL139: 2.1 Background\nL140: The Millennium Challenge Corporation (MCC) is an innovative and independent U.S. foreign assistance agency that is helping to lead the fight against global poverty. Created by the U.S. Congress in January 2004 with strong bipartisan support, MCC has changed the conversation on how best to deliver smart U.S. foreign assistance by focusing on good policies, country ownership, and results. MCC provides time-limited grants promoting economic growth, reducing poverty, and strengthening institutions.\nL141: These investments not only support stability and prosperity in partner countries but also enhance American interests.\nL142: The agency’s Office of the Chief Information Officer (OCIO) designs, deploys, protects, and supports information technology that allows MCC’s staff to maximize their productivity and effectiveness in executing the agency’s core mission of reducing poverty through economic growth. OCIO is organized into several branches, including Cybersecurity, Digital Services, Production Operations (including Infrastructure Services), and Enterprise Support Services.\nL143: The OCIO’s vision is to empower their MCC colleagues, Accountable Entity (AE) partners, and open data consumers to successfully collaborate on complex programs, often in challenging environments, supported by appropriate technology that “just works.”\nL144: 2.2 Current Environment\nL145: \nL146: The MCC network supports approximately 550 users, consisting of 250 Full-Time Employees (FTEs), and around 300 non-employees. Approximately 95 percent (95%) of MCC staff are located at its facility in Washington D.C. (Franklin Court, 1099 14th St N.W).\nL147: Approximately 75 percent (75%) of MCC’s employees travel internationally on a regular basis. Those staff who are directly supporting MCC’s relationship with the compact recipients are located in developing countries around the world or working at other remote locations.\nL148: MCC is currently standardized on Microsoft solutions wherever applicable, and the agency is 95% Cloud based. OCIO continues to prioritize the enhanced utilization of Cloud technologies and investments to further utilize its AWS and Office 365 (O365) Cloud capabilities.\nL149: \nL150: An inventory of MCC’s current technical environment as related to the contract scope is available in Appendix B.\nL151: \nL152: 2.3 Objectives\nL153: The purpose of the procurement is to cover all services and support required to provide application engineering services for the MCC information technology environment, operate and maintain MCC’s databases in a secure manner, develop solutions, and provide Tier 3 support across all enterprise applications.\nL154: It is important to note that MCC requires flexibility to adjust to the agile IT environment and to support any new technologies or processes in line with evolving industry offerings, fluctuating budgetary availability, federal IT guidance, and new MCC business requirements. As a result, this award will allow the partnership between MCC and the Contractor to evolve over time, enabling continuous improvement and responsiveness to changes in the agency’s environment.\nL155: To support this effort, the Contractor shall provide personnel with proven experience working on mature, highly agile product teams with deep expertise in application engineering services including development, testing, business analysis, user interface design, and end-user support. This includes teams that work on .NET/C# custom software development and configuration and customization of low-code platforms.\nL156: The agency is seeking to optimize its existing technology capabilities while advancing modernization to its IT tools and processes. Accordingly, the agency requires a Contractor who demonstrates the following attributes:\nL157: Agile Software Development: One of MCC’s primary goals for this procurement is to enhance the agency’s IT platforms and applications with the delivery of frequent, high-quality releases. MCC requires contractors to demonstrate they utilize modern, agile scrum teams and culture in their current development work across the federal government and their approach to bringing this capability to MCC.\nL158: Flexible and Dynamic: The Contractor must demonstrate the ability to draw from a deep pool of highly skilled personnel with diverse expertise and technical capabilities. MCC expects the contractor to provide subject matter experts with proven experience in advanced platform and application development. The Contractor must show clear evidence of its established pool of qualified engineers and specialists – resources that can be deployed quickly to meet evolving agency needs.\nL159: Experienced and Innovative: The Contractor selected should have experience in delivering innovative solutions to increase the effectiveness and efficiency of IT platforms within the federal government.\nL160: DevSecOps: To enhance delivery of services and operations, MCC wants to further extend its DevSecOps practices to seamlessly develop and deploy software in an automated fashion. The incoming contractor should demonstrate substantial experience both exceling in a DevSecOps working model as well as maintaining and enhancing a CI/CD pipeline. Additionally, MCC will require professionals with substantial expertise creating and executing automated test scripts and code reviews that adhere to security protocol.\nL161: Cost Effective: MCC requires an award structure that allows flexible adjustment of service levels and support based upon changes in the federal budget and evolving agency priorities. The Contractor must be able to tailor service levels, provide modular options that can scale up or down as needed, and maintain a flexible environment that accommodates emerging technologies and shifting business needs.\nL162: MCC also seeks a partner capable of building and sustaining cloud-based applications while efficiently managing both operations and maintenance (O&M) and new feature development to achieve cost savings.\nL163: 3.0 Place of Performance\nL164: Work shall be primarily performed at the Contractor’s office or telework site. Key personnel are expected to be in the Washington, D.C. Metro area. Core hours are generally 9:00 a.m. through 3:00 p.m. Eastern time, Monday through Friday. Contractor personnel are expected to conform to customer Agency normal operating hours for meetings and response times.\nL165: Government space may be assigned for this support, but the Contractor site or telework site is the anticipated primary place of performance for work under this agreement. If the work being conducted must be completed at MCC or with direct access to the MCC network, equipment will be issued and desk space identified if applicable. Contractor meetings shall be conducted at MCC headquarters located in Washington, D.C., the Contractor’s location, or virtually at the discretion of the Government.\nL166: The Contractor will be provided access to the MCC network as well as any testing, staging, development, and production environments as needed to complete the work outlined in the PWS.\nL167: 4.0 Tasks\nL168: \nL169: 4.1 Contract Program Management\nL170: \nL171: 4.1.1 Program Management\nL172: The Contractor shall provide an Program Manager (PM) who will be responsible for the technical and functional activities required for the effective management of the entirety of this contract, including productivity and management tasks such as Project Management, Quality Assurance, and program level Change Management. An ideal PM is one who will focus on technical quality management, delivery and metric accountability, and act as a partner to MCC working collaboratively to achieve the contract goals.\nL173: The Contractor shall be responsible for program control and management for this effort including, but not limited to:\nL174: \nL175: · Managing personnel (including development, training, and evaluation)\nL176: \nL177: · Allocating and scheduling resources/staffing, including after-hours support as needed\nL178: \nL179: · Developing and maintaining cost, schedule, and performance\nL180: \nL181: · Coordinating and communicating with Government management and other OCIO Contractors\nL182: \nL183: · Communicating timelines for high-level objectives and project completion\nL184: · Ensuring physical security of Contractor-operated facilities, including security of networks, equipment, and other infrastructure components used in support of this contract\nL185: \nL186: · Providing assistance to the Government in establishing priorities and meeting the needs of the MCC user community\nL187: \nL188: · Managing customer relationships\nL189: \nL190: · Meeting appropriate Government standards\nL191: \nL192: · Establishing management structures and organization\nL193: · Institute and maintain an effective, efficient, and responsive management organization that shall oversee all contractor personnel and subcontractor resources used in the performance of this contract, and engage regularly (at least quarterly) with Contractor leadership for performance updates and pulse checks\nL194: · Responsible for ensuring that all Government-authorized projects, tasks and work activities are performed in a timely and cost-effective manner while maintaining the highest quality of performance\nL195: \nL196: · Management structure and organization shall be capable of ensuring, at a minimum, that the following functional and personnel requirements are met:\nL197: \nL198: · A technically proficient and professionally capable staff is established and maintained throughout the life of the contract\nL199: · Personnel turnover is minimized, and individuals are motivated to achieve excellent performance\nL200: \nL201: · A plan for addressing a surge in staff when needed by the Government is developed and implemented\nL202: \nL203: · A plan for utilizing highly skilled or SME staff as needed for special projects when needed by the Government is developed and implemented\nL204: \nL205: · A plan for staffing for new technical skills deemed necessary by MCC is developed\nL206: · A plan for accommodating staff under this contract at Contractor facilities, if deemed necessary by the Government during the course of the contract, is provided\nL207: \nL208: · Contractor personnel are phased in without interruption\nL209: \nL210: · Contractor personnel are effectively managed to ensure adequate staffing at all times\nL211: \nL212: · Reporting of performance to the Government is consistent and accurate\nL213: \nL214: · Problem resolution is conducted with minimal disruption to the activities being performed under the contract\nL215: · Continuous feedback on performance is provided to MCC personnel on all areas of contract performance\nL216: \nL217: · Process improvements are made on a continuous basis to improve both the timeliness and quality of work products\nL218: \nL219: · Risks are identified, assessed, and mitigated\nL220: \nL221: · All contractual requirements are met\nL222: \nL223: · Adequate implementation and management of subcontractor(s) is ensured\nL224: \nL225: · Effective quality management is conducted in accordance with the Contractor’s Quality Control Plan (QCP)\nL226: · A cooperative and collaborative working relationship is developed with contractors from other companies supporting MCC and MCC FTE staff Additionally, it is the sole responsibility of the Contractor to manage both offsite and onsite staff as specified:\nL227: \nL228: · Oversee and manage Contractor staff and work assignments.\nL229: \nL230: · Provide input and feedback on MCC management data and information calls.\nL231: \nL232: · Attend OCIO meetings as needed.\nL233: · Participate as a key staff member of Digital Services regarding business operations, planning, and mitigating risks/issues.\nL234: \nL235: · Maintain responsibility for all deliverables.\nL236: \nL237: · Notify Government Contracting Officer’s Representative (COR) of staff vacation, sick, and telework schedules.\nL238: \nL239: 4.1.2 Phase-In/Phase-Out\nL240: \nL241: The Phase-In/Phase-Out process is defined as a smooth transition from one Contractor to another, in order to maintain the program’s integrity required under this, previous, and future agreements.\nL242: The Contractor shall take all actions necessary to achieve a successful transition from any incumbent Contractor/MCC Staff to the Contractor/MCC Staff.\nL243: \nL244: 4.1.2.1 Phase-In\nL245: The Phase-In Process shall be limited to sixty (60) calendar days. The overlap between old and new contractors allows for a smooth transition from one contract to another and prevents a lapse in service for the Government.\nL246: The Contractor shall submit to the Government a phase-in plan as a part of their proposal and shall specifically address their proposed approach to, in coordination with existing contractors, planning and implementing a transition designed to mitigate any disruption or degradation of services.\nL247: 4.1.2.2 Phase-Out\nL248: \nL249: The Contractor shall remain functional and operational up until the point of expiration or cancelation/termination. The Contractor shall submit to the Government a phase-out plan sixty (60) calendar days before the contract’s completion or cancelation/termination. The phase-out plan shall address not less than the following:\nL250: \nL251: · Procedure for retaining the staffing levels necessary to maintain required contract services through the day of the contract expiration or termination.\nL252: · Procedure and responsibility for performing physical inventory and reconciliation of Government Furnished Equipment (GFE) and Government Furnished Information (GFI).\nL253: \nL254: · Procedure and responsibility for reconciling and certifying material and equipment on-hand levels and accuracy.\nL255: \nL256: · Procedure for transferring knowledge and documentation.\nL257: \nL258: · List of all ongoing tasks and activities of the current staff, including a summary description of the work.\nL259: · For each task/activity, a Phase-Out Plan shall include upcoming milestones and their individual status, the level of effort being applied, and current or anticipated risks associated with task completion.\nL260: The Contractor shall coordinate its phase-out activities with any future Contractor/Contractors and MCC Staff to ensure a smooth and orderly transition at the end of the contract’s period of performance. The Contractor shall remove all Contractor-owned property from the Government spaces or facilities by close of business on the last day of the contract.\nL261: \nL262: 4.1.3 Policy and Governance Implementation\nL263: The Contractor shall provide MCC with assistance for establishing federal data and IT policies. The Contractor may be required to support the implementation and adoption of technical governance activities.\nL264: \nL265: 4.1.4 Solutions Architecture Support\nL266: \nL267: The Contractor shall provide Enterprise and AI Architects, or other appropriate labor categories, for the following support:\nL268: \nL269: · Identify the future state of Enterprise Applications\nL270: \nL271: · Architectural reviews of AI solutions\nL272: \nL273: · Design of secure AI pipelines\nL274: · Provide an analysis of alternatives when required\nL275: \nL276: · Support OCIO with developing and enforcing architectural standards to include the review of current and proposed MCC applications\nL277: \nL278: · Support prototyping/piloting solutions\nL279: \nL280: · Support the integration of external data with existing MCC solutions\nL281: \nL282: 4.1.5 Technical Product Evaluation Support\nL283: The purpose of technical evaluation support is to provide MCC with the ability to effectively evaluate the functional and technical merits of various hardware and software programs, including programming languages and IT systems. As required, the Contractor shall provide technical evaluation on any product, ensure compliance with security protocols, and provide recommendations in the form of reports or presentations.\nL284: In addition, this support service shall give MCC a means of obtaining cost/benefit analysis information on analysis, software life-cycle modeling, findings, and recommendations in reports, briefing, and/or presentations.\nL285: The software evaluation services in this task area include not only evaluation of commercial off-the-shelf (COTS) software packages, but also the characteristic evaluation of third-party designed, customized software, third-party Contractor enhancements to existing software, and programming languages. The hardware and software evaluation services in this task area include an analysis of new, existing, and upcoming technologies.\nL286: The Contractor shall provide a written technical analysis report upon completion of the evaluation.\nL287: At a minimum, the Contractor shall be required to document the problem definition, provide analysis of available technologies, detail the pros/cons of any alternatives, and define technical features and functionality aspects of the topic or technology under review.\nL288: \nL289: Technical production evaluation support shall include, but is not limited to, the following:\nL290: \nL291: · Evaluate products for best technical fit to the requirement.\nL292: · Fit shall be determined by the products' quality, functionality, reliability, compatibility with other major office automation products, expendability, usability, availability, and cost\nL293: \nL294: · Evaluations requiring actual demonstration of a product or a variety of vendor products, the Contractor shall be responsible for the performance or coordination of the vendor performance of the demonstration(s)\nL295: \nL296: · Cost-benefit analysis for AI adoption\nL297: \nL298: · AI security & data protection assessments\nL299: · Quick-turn evaluations of emerging AI technologies\nL300: \nL301: 4.2 Operations, Maintenance, and Enhancements\nL302: \nL303: 4.2.1 Background\nL304: Digital Services is responsible for some Tier 2 and all Tier 3 support of their portfolio of applications and systems. This includes operational support, maintenance assistance (data loading, testing in support of patches, etc.), user support, and enhancements on an ad-hoc basis as defined later in this section. Additionally, the Contractor shall work with MCC’s existing operations and security vendors to improve DevSecOps practices and tools throughout our teams.\nL305: \nL306: 4.2.1.1 Current Operational Applications\nL307: A complete listing of MCC’s applications and their supporting technologies can be found in Appendix B. MCC has several applications, most of which are written in C# with a .NET framework or are Power Platform-based applications. A smaller number of applications are written in PHP, Python, or are customized on platforms such as ServiceNow and Box.com.\nL308: \nL309: 4.2.1.2 Current Support Activities\nL310: \nL311: There are three distinct areas where support is provided today:\nL312: · Application Support/Enhancement – Provides support for applications, including but not limited to those listed Appendix B. Delivers cutting-edge solutions for custom (.NET/C#), and Microsoft 365 solutions , such as the Power Platform, Power BI, SharePoint Online, Copilot Agents, and Forms, that are available in the Government Commercial Cloud. Monitors, manages, and executes requests in queue for new SharePoint workflows, sites, and pages.\nL313: Creates reports and analytical data products using charts, visualizations, and other innovative techniques. Supports other miscellaneous solutions on an ad-hoc basis. Helps to establish governance for the data and content stored within the solutions.\nL314: · Data Support –Creates solutions for auto data loading, mappings, and integrations between internal and external systems. Proposes and implements performance and process improvements to application databases when needed.\nL315: · Application Administrator Support – Provides support for low-code platforms such as ServiceNow, Box.com, SharePoint and Power Platform. Monitors application performance and ensures security and efficiency. Responds to security or usability concerns and troubleshooting issues. Assists with establishing and enforcing governance of content and data stored in the platforms.\nL316: \nL317: 4.2.2 Functional Areas of Service\nL318: The Contractor shall provide support services for all applications and services within the Digital Services portfolio. Access to environments will be provided, but changes to production go through a change control process and are executed by another vendor or through OCIO’s CI/CD pipeline.\nL319: SharePoint, ServiceNow and Box.com are exceptions, with elevated permissions provided to the Contractor/ The Contractor shall perform the tasks and requirements specified below to provide support services to Digital Services. The Contractor shall provide at a minimum the indicated products or services, in the stated specifications or higher.\nL320: 4.2.2.1 Operations\nL321: \nL322: The Contractor shall provide application and information system management, database administration, and Tier 3 support for applications within the Digital Services portfolio.\nL323: MCC has an IT Service Desk that provides support for MCC's Business Applications by creating a central point of contact for MCC users. The IT Service Desk provides all Tier 1 and most Tier 2 support for all MCC Business Applications to all MCC users globally and provides best effort support for Tier 3. Tier 1 issues are typically related to access, and Tier 2 issues deal with known problems that tend to be more complex.\nL324: The Contractor will not be expected to manage the IT Service Desk; MCC has contracted with another vendor for this purpose.\nL325: The Contractor shall be expected to provide Tier 3 support for applications for MCC and AE users. This may include VIP desk side support and support for applications, software, and related services in cases where the issue is not a known issue.\nL326: \nL327: The Contractor shall document all requests for service using the MCC approved service ticketing system and shall serve as a liaison between MCC users and the IT Service Desk when needed.\nL328: For work that requires Tier 3 services, the Contractor shall be provided information and requirements regarding use of existing systems for tracking activities and communicating with MCC users, which is currently ServiceNow.\nL329: The Contractor shall also take an active part in implementing solutions by working with the MCC vendor(s) and other MCC contractors to aide them in getting the server/application connected to the MCC Network and on GFE. The Contractor shall work as the liaison between vendors and other MCC IT support groups to ensure the server and applications are performing efficiently.\nL330: The Contractor shall coordinate and cooperate with other MCC Contractors responsible for system and network administration, but actual administration is not required under this Contract. This will apply to all production, development and test staging environments within the scope of the Digital Services portfolio.\nL331: The Contractor shall provide emergency software development support as required for Continuity of Operations/Disaster Support. This will be covered within proposed staffing levels and does not constitute dedicated staffing.\nL332: \nL333: Specific activities may include:\nL334: \nL335: · Troubleshooting reported issues\nL336: \nL337: · Developing workarounds and documentation if a fix is needed\nL338: \nL339: · Developing troubleshooting scripts for the Service Desk for commonly reported issues\nL340: \nL341: · Developing desk guides for frequently asked questions\nL342: · Receiving Tier 3 support tickets and documenting all actions provided in appropriate ticketing system (ServiceNow, SharePoint list)\nL343: \nL344: · Coordinating with business representatives to communicate high level status of requests from that business\nL345: \nL346: · Identifying an issue as a bug or enhancement\nL347: \nL348: · Data Management\nL349: \nL350: · Manual importing and exporting of data, as needed\nL351: \nL352: · Developing automated data exports and imports\nL353: · Supporting Open Data initiatives and management of the Open Data catalogs on mcc.gov/data and data.mcc.gov/evaluations\nL354: \nL355: · Running tests to:\nL356: \nL357: · Identify errors in application operations\nL358: \nL359: · Ensure applications are tested under 'real world' loads and scenarios\nL360: \nL361: · Establish and test cybersecurity practices\nL362: \nL363: · Periodically check major program applications for errors\nL364: \nL365: · Test and validate applications that have been modified to correct operational problems\nL366: \nL367: · MCC FISMA Compliance\nL368: · Providing security compliance advice and support in areas of Operations, to include Database and Applications\nL369: \nL370: · Reviewing application and security audit logs\nL371: \nL372: · Application Troubleshooting\nL373: \nL374: · Supporting Application developers with application issues not related to core responsibilities\nL375: \nL376: · Supporting O&M Contractors with issues relating to installation and/or configuration of applications/network\nL377: \nL378: 4.2.2.2 Maintenance\nL379: Maintenance of applications and systems including COTS products, custom built solutions, and databases.\nL380: \nL381: The Contractor shall provide maintenance support for patches and updates executed by MCC’s operations vendor when the patches or updates may have an impact on an application or system within the Digital Services Portfolio. This includes testing to validate the application or system is still functioning as anticipated after the change.\nL382: The Contractor is expected to provide O&M support responsible for providing Tier 3 level support to existing application and software features. This includes proposing a strategy for how required fixes will be prioritized as well as providing a schedule for addressing said fixes.\nL383: \nL384: 4.2.2.2.1 Custom Applications/Systems\nL385: The Contractor shall conduct maintenance of applications, platforms and systems managed or developed by the Digital Services branch. The following maintenance activities apply to all offerings within the Digital Services portfolio:\nL386: \nL387: · Provide testing support for patching of operating systems, servers, cloud-based platforms and tools, and other changes that may impact existing applications within the development, testing, staging, and production environments\nL388: · Develop fixes for reported issues for all technologies and applications within the Digital Services Portfolio (i.e. MCC MIS, Selection, etc.).\nL389: \nL390: · Pre-emptively evaluate applications, suggest improvements (security/performance), and make approved changes\nL391: \nL392: · Modify applications to eliminate operational errors ('bugs') and/or correct system performance\nL393: \nL394: · Enhance code and make necessary configuration updates to improve the efficiency of the custom and platform-based applications\nL395: · Provide enhancement suggestions based on analysis of data collected through the Service Desk\nL396: \nL397: · Report on system/application usage statistics\nL398: \nL399: · Regularly track and report on status of critical issues identified; communicate to impacted users/stakeholders as statuses change\nL400: \nL401: · Actively monitor and maintain Service Desk tickets assigned to Digital Services for resolution\nL402: · Certify compatibility with existing applications in their operational environment prior to having them deployed to the production environment by the OCIO Infrastructure Team\nL403: \nL404: · Ensure compliance with MCC software licensing agreements\nL405: \nL406: · Continue implementation of automated testing tools and utilities for all existing and new applications\nL407: \nL408: · Performance testing tools are not used at this time. However, they may be considered and/or implemented at some point in the future\nL409: \nL410: · Maintain mcc.gov web pages\nL411: · Identify issues that can be handled by Tier 1 and 2 Service Desk Support for transition to those staff as applicable\nL412: \nL413: · Write Knowledge Base (KB) articles addressing repeatable processes\nL414: \nL415: · Provide KB articles and training to Service Desk staff\nL416: \nL417: 4.2.2.2.2 Database and Data Maintenance\nL418: The MCC Data & Analytics program has been consistently recognized for its transparency and the quality of the data provided. The Contractor shall provide maintenance services for both the data and the databases, to include:\nL419: \nL420: · Maintain Data Warehouse, Enterprise Data Mart (EDM), and Databus\nL421: \nL422: · Maintain relevant datasets including accompanying assets including dictionaries, data models and class diagrams\nL423: \nL424: · Continue expansion of above to support ongoing data consolidation and reporting.\nL425: · Make any necessary fixes supporting the transport of data to the Data Warehouse, EDM, and/or Databus\nL426: \nL427: · Maintain data applications and Analytic products\nL428: \nL429: · Reports, dashboards, and data visualizations, built using PowerBI, JavaScript D3 libraries, SSRS, native or compatible cloud.gov functionality, and other charting and visualization tools\nL430: \nL431: · Maintain current Web Service API for serving datasets\nL432: \nL433: · Maintain data dictionaries, data models and class diagrams\nL434: · Maintain and enhance MCC’s Open Data platform\nL435: \nL436: · Produce regular open data reports to share with external entities\nL437: \nL438: · Publish all MCC’s public data assets to data.gov\nL439: \nL440: · Troubleshoot any compatibility issues that may prevent MCC from publishing to data.gov\nL441: \nL442: · International Aid Transparency Initiative (IATI) Maintenance & Enhancements\nL443: · Provide support to a monthly and quarterly open data publication process by managing the data collection processes, validating data loaded correctly, and loading data into a MySQL database for publication.\nL444: \nL445: · Provide support to monthly and quarterly MCC reporting cycles\nL446: \nL447: · Support the automation of the data publication process\nL448: \nL449: · Ad-hoc scripting of data exports\nL450: \nL451: · Develop scripts to support data migration needs and make data corrections\nL452: · Develop solutions to share and consume data between internal and external systems\nL453: \nL454: 4.2.2.3 Enhancements\nL455: \nL456: The Contractor shall support enhancements of all applications within the Digital Services portfolio as needed. Enhancement tasks, may include, but are not limited to, the following:\nL457: \nL458: · Development of application functional and/or technical enhancements in close coordination with Product Owners\nL459: · Work directly with business stakeholders and end users to understand their needs and document them in the user story hierarchy with support of the relevant Product Owner\nL460: \nL461: · Develop functional test plans in concert with development\nL462: \nL463: · Study existing system operations, documentation, input/output data, reports, maintenance records, and any other system related documentation and technical or performance commentary\nL464: \nL465: · Document recommendations for new solution requirements and specifications\nL466: · Ensure enhancements are free from security defects\nL467: \nL468: · Test new system or application/system enhancements\nL469: \nL470: · Develop technical approach recommendations\nL471: \nL472: · Develop project plans including milestones for technical enhancements or new applications\nL473: \nL474: · Perform quality assurance and systems acceptance testing\nL475: \nL476: · Conduct presentations to management on new systems or application enhancements\nL477: \nL478: · Analyze any existing information, make recommendations, and conduct data cleanup, as necessary\nL479: · Use a rapid, repetitive development process in a joint team environment with MCC to review visual design, demonstrate capabilities, review progress, and gain acceptance of the product through its development cycleUpon delivery of a release to the Government for testing, the Contractor shall coordinate the installation of the release into the testing environment, including but not limited to, refreshing the testing environment with data from the production environment, stripped of all Privacy Act information, if necessary.\nL480: · Upon acceptance of a release, the Contractor shall support the installation of the release into the production environment\nL481: \nL482: · Prepare and conduct user training for all new systems developed or system enhancements\nL483: \nL484: · Prepare ad-hoc reports pulling from existing databases or creating new reports within applications\nL485: \nL486: · Creation of business models to support ad-hoc requirements\nL487: The Contractor shall provide knowledge, technical proficiency, and experience with enterprise Data Warehousing and reporting solutions. Tasks associated with this activity include, but may not be limited to:\nL488: \nL489: · Continued enhancements to the analysis layer, publication store, and the creation of additional API endpoints. It would include:\nL490: \nL491: · Migration of existing databases into the warehouse and integrated into the analysis layer\nL492: \nL493: · Implementation of an ad-hoc reporting tool that queries the data warehouse\nL494: · Development of additional data feeds from MCC systems\nL495: \nL496: · Development of data dictionaries, data models, and class diagrams\nL497: Additionally, the Contractor shall develop new applications that support MCC business requirements and operate within MCC's infrastructure specifications, policies, and guidance. Any commercial database packages utilized to develop data sets shall comply with MCC standards.\nL498: The Contractor shall develop normalized data sets, apply maintenance of data sets (for creation, change, or deletion of records), and provide the necessary interfaces to link these data sets into an Intranet/Internet capable environment. The Contractor may use 'middleware' commercial packages consistent with MCC standards to integrate data sets for the purposes of collecting data, integrating with web pages, or providing data set files or services.\nL499: Middleware must be proposed and agreed to by the Government to ensure that it meets information security standards and that out year maintenance and support are budgeted.\nL500: 4.2.2.3.1 Custom Application Development and Support\nL501: The Contractor shall develop customized applications utilizing the programming languages identified in Appendix B of this document or other programming languages (as necessary). All solutions must be responsive for desktops and mobile devices. The Contractor shall have experience with mobile application development and mobile security, utilizing industry standard protocols and practices. The mobile applications will support multiple mobile OS platforms including Android and Apple.\nL502: The Contractor may also be tasked with migrating data from MCC’s databases to cloud-hosted solutions. COTS products can be proposed as solutions for customer requirements. Specifics will be included in each new development task.\nL503: The Contractor shall be familiar with federal information security standards and have experience with incorporating multiple authentication methods, allowing for secure, phishing-resistant authentication into MCC systems, where necessary.\nL504: The Contractor may be asked to develop a work plan and methodology for the development of technical requirements, propose a programming language(s) platform, software assurance methodology, and means to present draft and final presentations of application functionality to the Government for application approval and use consistent with MCC standards.\nL505: System security updates, test plans and results, database schema, data dictionary modifications, interface design document, and a functional design document may be required with each release of new software and with any major modifications.\nL506: The Contractor shall actively develop and maintain scripts and code used to generate internal and external datasets, as well as support the creation and enhancement of Web Services and APIs that enable users to access or query these datasets. In addition, the Contractor may be responsible for creating user interfaces and data visualizations, leveraging data accessed through the API for both internal and external stakeholders.\nL507: Although an another contract provides general infrastructure support, the Contractor shall provide database administration expertise in connection with the applications they develop and support.\nL508: This includes, but is not limited to, database architecture design and implementation, dataset normalization, data migration support, data management application creation, troubleshooting data and structure issues, data recovery, building indexes, load balancing, backup and restore services, database and application tuning, and assisting with the infrastructure DBAs (Database Administrators) as needed as an expert. Current database standards are MS SQL Server (enterprise) and MySQL.\nL509: Additional database platforms may be required to support cloud application development.\nL510: 4.2.2.3.2 Content Development, Usability, and Graphic Design Support The Contractor shall be required to engage in user-centered design employing usability and user experience (UX) techniques such as personas, task analysis, card sorts, interviews, analysis of search and website metrics, wireframes, and recorded usability tests for specific features. This includes conducting necessary research to validate that any proposed designs produce a positive benefit to end users.\nL511: The Contractor shall be expected to develop and maintain documentation of design decisions. The Contractor may be required to develop, configure, analyze, and present reports on web site use and search engine metrics utilizing tools such as Google Analytics.\nL512: The Contractor may be required to configure and maintain search engine software or appliances. The Contractor shall maintain and support Intranet and Internet web sites, as needed. The deployment of website content shall be developed and deployed using MCC standard tools and formats and adhere to MCC policy and guidance. The Contractor shall develop web-capable graphics, video, and text content; as well as, graphics suitable for a variety of print media, including both raster and vector graphics.\nL513: To perform these tasks, the Contractor shall be required to use graphics packages, such as Adobe Systems Creative Cloud, Figma, PowerPoint, and others as they become available.\nL514: Graphics shall be developed and deployed using MCC standard tools and formats. The Contractor shall ensure that all content developed for electronic media are appropriately formatted and sized for the target media, which shall include mobile devices. All graphics deployed electronically should be optimized to a reasonable scale for fast loading by the target audience.\nL515: \nL516: 4.2.3 DevSecOps Objectives\nL517: The Contractor shall be required to work jointly with MCC’s operations and security vendors to maintain a DevSecOps culture that removes silos between teams, incorporates security throughout the development process, and promotes continuous improvement and automation. MCC has a CI/CD pipeline that automates deployments. MCC expects to continue enhance the pipeline by incorporating automated unit testing, and adding robust, automated system monitoring.\nL518: Additionally, the Contractor shall jointly with MCC’s operations and security vendors, be responsible for the iterative configuration of the CI/CD pipeline and its on-going maintenance.\nL519: 4.2.4 Technical Training\nL520: \nL521: The Contractor may be required to provide training on a variety of areas, including, but not limited to, software (COTS, Government off-the-shelf (GOTS), and custom-built), application usage, best practices, and related topics. Training shall be provided at the Contractor's site or at agreed upon MCC location(s).\nL522: Presentation of training may take the form of formally structured classroom presentation, ad-hoc training, on-demand webcast training to a number of users in a workplace setting, short instructional videos, one-on-one desk-side training, or other forms as specified by the individual Contract. The Contractor shall troubleshoot and provide customers with knowledgeable 'how to' assistance, which requires a thorough understanding of applications and the supported business process.\nL523: This includes the development of training materials to facilitate self-support, including technical system guides, application user guides, and knowledge base articles. This may require communication with application database/development teams. The Contractor shall also provide user assistance for applications and/or referral to appropriate level for handling.\nL524: All technical training curriculum created shall be the property of the Government and shall not be utilized for another purpose for use without written permission of the Contracting Officer (CO).\nL525: \nL526: 4.3 Surge Support and New Product Development\nL527: \nL528: 4.3.1 Scope of Future Work\nL529: The Contractor shall be expected to support a variety of new development initiatives that have not yet been identified and are not listed in Appendix B. The initiatives will follow the requirements outlined above in Operations, Maintenance, and Enhancements.\nL530: New development work tasks issued by MCC are expected to be performed in accordance with industry best practices, NIST, OMB, and MCC policy and guidance in a consistent manner. Each new development task issued will include a SOW with a defined scope of work that is within the overall scope of the base contract. The Contractor shall provide a proposal with pricing that will be evaluated by MCC.\nL531: \nL532: The Contractor shall be expected to propose the roles needed to support the development team.\nL533: All application development activities shall be formally documented. Information System Operation and Maintenance procedures shall likewise be documented. For new applications, deliverables, assumptions, risks, and requirement documentation shall be established and are expected to include, but are not limited to:\nL534: \nL535: · System Design\nL536: \nL537: · Test Plan, Determination, Cases, Files/Data, and Problem Support\nL538: \nL539: · Development, Data Migration, Integration, and Implementation Plans\nL540: · Operations and Maintenance, Administrative, and Training Documentation\nL541: \nL542: · Certification and Accreditation\nL543: \nL544: · System Documentation\nL545: \nL546: · Configuration Requests\nL547: \nL548: · Version Control Document\nL549: \nL550: · Authorization to Operate\nL551: \nL552: · Lessons Learned/Retrospective Notes\nL553: \nL554: · Bug/Enhancement Requests\nL555: \nL556: · Disposition Plan for any legacy systems being replaced\nL557: \nL558: · Staffing Plan\nL559: Required documents shall be identified in the new development task based on project tailoring to ensure a minimum set of documentation is produced that assists with maintenance, governance, and operations.\nL560: \nL561: Documentation shall be delivered in electronic form (MCC current standards include both Microsoft Word and Excel), as specified.\nL562: Documentation that has changed shall be delivered in electronic form (MCC current standards include both Microsoft Word and Excel), as specified through new development tasks, with every major and minor release. User Manuals for an application shall be written with clarity that enables a brand-new user, without a programming or computer background, to understand the details contained therein.\nL563: MCC encourages Contractors to propose development methodologies along with their technical approach. MCC supports multiple methodologies, including agile, test-driven, and other industry accepted methodologies.\nL564: \nL565: MCC shall provide relevant details in the SOW of a given new development task as it is available but shall continue to work with the Contractor as needed if the task results in new infrastructure that needs to be implemented within MCC’s network.\nL566: \nL567: 4.3.2 Surge Support Services\nL568: The Contractor shall provide surge support services, which are within the scope of the existing contract. These support services may cross all task and subtask areas within the contract. The Contractor shall account for surge activities and provide the resources necessary to accommodate them without burdening the Government and Contractor’s operational staff. During the life of the contract, the workload in any one area may grow significantly for a period of time.\nL569: Each surge task shall be requested to the Contractor in writing by MCC, with specific requirements. The Contractor shall be required to, within fourteen (14) calendar days, propose corresponding schedules, deliverables, labor requirements, ODC requirements, and budgets. MCC shall formally approve the Contractor’s plans for tasking and schedule before surge resources begin work.\nL570: \nL571: 4.4 Application Administration\nL572: \nL573: 4.4.1 Application Administration\nL574: The Contractor shall monitor and be responsible for the performance and operation of cloud-based applications to manage the response times of the application and closely monitor the performance of Digital Services products. Tasks associated with this work include, but are not limited to:\nL575: \nL576: · The Contractor shall track and inventory applications, monitor, measure and assure the performance of applications and implement an effective monitoring solution\nL577: · The Contractor shall coordinate triage response to performance faults and degradations\nL578: \nL579: · The Contractor shall analyze and report application performance to MCC management\nL580: \nL581: 4.5 ODCs\nL582: \nL583: The Contractor shall provide other than labor services, including procurement of equipment, travel, licenses, software, etc., as directed by the Government. The Contractor will provide procurement support as needed by the Government related to activities in this acquisition.\nL584: This requirement is optional and shall be utilized if deemed necessary during the life of the contract. The Contractor shall provide the total costs of non-labor tools per year to the Government.\nL585: \nL586: 5.0 Labor Requirements\nL587: \nL588: 5.1 Key Personnel\nL589: Critical to performance of this Contract are the positions identified as key and the experience of the people in those positions. The proposed key positions as well as proposed staff shall show experience in the different skill sets necessary and the different functions to be performed. Key personnel required for this contract can be found in Section H of this solicitation.\nL590: \nL591: 5.2 Clearance Requirements\nL592: At a minimum, the background investigation will consist of a National Agency Checks with Law and Credit (NACLC) for a Moderate Risk Public Trust (MRPT) position and fingerprint imaging to be reported to FBI national databases and reported to MCC Security. Certain specific positions may require a higher level of background investigation.\nL593: \nL594: 5.3 Personal Identity Verification of Contractor Personnel\nL595: The Contractor shall comply with agency personal identity verification procedures identified in the contract that implement Homeland Security Presidential Directive 12 (HSPD-12), Office of Management and Budget (OMB) guidance M-05-24, and Federal Information Processing Standards Publication (FIPS PUB) Number 201.\nL596: The Contractor shall insert this clause in all subcontracts when the subcontractor is required to have physical access to a federally controlled facility or access to a Federal information system.\nL597: \nL598: Page 4 of 23MCC PWS DRAFT image1.png\n",
+        "sourceTerms": "Original public U.S. Government attachment text, retained from the carrier's Text version. Preserve draft references in the RFI and PWS footer; original issue notice: https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view"
+      }
+    },
+    {
+      "key": "mcc-event",
+      "file": "references/mcc-industry-day-excerpt.txt",
+      "sha256": "79d600d186d7c45d9941af6d02470ec014903c292533039fc3df23d7603fdca9",
+      "bytes": 2016,
+      "payload": {
+        "role": "solicitation",
+        "title": "MCC Industry Day participation and deadline instructions",
+        "url": "https://govtribe.com/file/government-file/rfi-notice-of-intent-dot-docx",
+        "capturedAt": "2026-10-12T01:38:56Z",
+        "filename": "mcc-industry-day-excerpt.txt",
+        "mediaType": "text/plain; charset=utf-8",
+        "contentText": "L54: Notice of Intent to Host a Virtual Industry Day\nL55: The Millennium Challenge Corporation (MCC) intends to release a Request for Information (RFI) to support a provision requirement for all services required to provide applications engineering support, operate and maintain MCC’s database in a secure manner, develop solutions, and provide Tier 3 support across all enterprise applications to support the information technology requirements of Millennium Challenge Corporation (MCC) Office of the Chief Information Officer (OCIO).\nL56: The services to be acquired also include program management and administrative support necessary for the administration of this award. As background, the MCC network supports approximately 550 users, consisting of 250 Full-Time Employees (FTEs), and just under 300 non-employees. Approximately 95 percent (95%) of MCC staff are located at its facility in Washington D.C.\nL57: MCC will host a Virtual Industry Day on October 15, 2026 from 10:00 AM to 12:00 PM EST.\nL58: \nL59: If you are interested in attending the Virtual Industry Day, please indicate your intent to attend by 6 PM EST, October 14, 2026 by sending an email to softwaredev@mcc.gov.\nL60: \nL61: Your registration must include the names of the attendees from your company, job titles, and email addresses. If there are any issues, please send an email to softwaredev@mcc.gov.\nL62: Vendors who are interested in attending our Virtual Industry Day are required to call in to Webex address shown below.\nL63: \nL64: ADDITIONAL INSTRUCTIONS\nL65: \nL66: · MCC requests that vendors thoroughly review the requirement prior to Industry Day and come prepared to participate in discussions, share ideas, and provide meaningful feedback during our question-and-answer session.\nL67: \nL68: · Responses to the questions contained in the RFI are due by COB October 29, 2026.\nL69: · In your response, please indicate whether you are a small, medium-sized or large business, and name the contract vehicles you currently have.\n",
+        "sourceTerms": "Public government notice excerpt, original carrier line54 through69. The source file contains the registration and response instructions."
+      }
+    },
+    {
+      "key": "mcc-notice",
+      "file": "references/mcc-notice-record.json",
+      "sha256": "600c4082662047a72bb83dfd48ddf6478f11f5d31eef8894adbb6a11653b9b14",
+      "bytes": 2196,
+      "payload": {
+        "role": "solicitation",
+        "title": "MCC official SAM notice fields",
+        "url": "https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view",
+        "capturedAt": "2026-10-12T01:38:56Z",
+        "filename": "mcc-notice-record.json",
+        "mediaType": "application/json",
+        "contentText": "{\n  \"schema\": \"tjlabs.source-field-record.v1\",\n  \"sourceId\": \"mcc-notice\",\n  \"sourceUrl\": \"https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view\",\n  \"sourceType\": \"official SAM.gov notice fields observed through web search\",\n  \"capturedAt\": \"2026-10-12T01:38:56Z\",\n  \"noticeId\": \"95332427K0001\",\n  \"noticeUuid\": \"ec4254f4fdf24f8998bd4e10d5b58050\",\n  \"title\": \"MCC Software Development Recompete\",\n  \"status\": \"Active\",\n  \"contractOpportunityType\": \"Sources Sought\",\n  \"publishedDateText\": \"Oct 06, 2026 5:17 PM EDT\",\n  \"responseDateText\": \"Oct 29, 2026 6:00 PM EDT\",\n  \"inactiveDateText\": \"Nov 13, 2026\",\n  \"inactivePolicy\": \"15 days after response date\",\n  \"agency\": \"MILLENNIUM CHALLENGE CORPORATION\",\n  \"originalSetAside\": \"No Set aside used\",\n  \"psc\": \"DD01\",\n  \"naics\": \"541512\",\n  \"transcription\": \"SAM.gov (https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view)\\n【turn119search0】 [wordlim: 200] Published: 6 days ago; Crawled: 5 days ago; ##### 95332427K0001 ... RFI_Notice of Intent.docx  | 40.27 KB  | Public  | Oct 6, 2026\\n\\n  * Pre-Award\\n    * Solicitation Details\\n      * Classification\\n      * Description\\n      * Contact Information\\n      * Attachments/Links\\n\\n# MCC Software Development Recompete\\n\\nActive\\n\\nOpportunity\\n\\n# MCC Software Development Recompete\\n\\nActive\\n\\nNotice ID\\n\\n##### 95332427K0001\\n\\nRelated Notice\\n\\n##### (blank)\\n\\nContract Opportunity Type\\n\\n##### Sources Sought\\n\\nContract Line Item Number\\n\\n##### (blank)\\n\\nInactive Dates\\n\\n##### Nov 13, 2026\\n\\nInactive Policy\\n\\n##### 15 days after response date\\n\\nResponse Date\\n\\n##### Oct 29, 2026 6:00 PM EDT\\n\\nPublished Date\\n\\n##### Oct 06, 2026 5:17 PM EDT\\n\\nDepartment/Ind. Agency\\n\\n##### MILLENNIUM CHALLENGE CORPORATION\\n\\nSub-tier\\n\\n##### MILLENNIUM CHALLENGE CORPORATION\\n\\nOffice\\n\\n##### MILLENNIUM CHALLENGE CORPORATION\\n\\n## Classification\\n\\n* * *\\n\\nOriginal Set Aside\\n\\n##### No Set aside used\\n\\nProduct Service Code\\n\\n##### DD01 - IT AND TELECOM - SERVICE DELIVERY SUPPORT SERVICES: ITSM, OPERATIONS CENTER, PROJECT/PM (LABOR)\\n\\nNAICS Code\\n\\n##### 541512 - Computer Systems Design Services\\n\\nPlace of Performance\\n\"\n}\n",
+        "sourceTerms": "Recorded official SAM.gov notice fields, with the observed source transcription."
+      }
+    },
+    {
+      "key": "lgndx-company",
+      "file": "references/lgndx-company-evidence.json",
+      "sha256": "bdbb1ce9861b04395d43e00b4ceba23252a45b36933ddbd379ad2221f5a40092",
+      "bytes": 4313,
+      "payload": {
+        "role": "company",
+        "title": "LGNDX published company and integration sources",
+        "url": "https://lgndx.com/product/apollo-evo",
+        "capturedAt": "2026-10-12T01:38:56Z",
+        "filename": "lgndx-company-evidence.json",
+        "mediaType": "application/json",
+        "contentText": "{\n  \"schema\": \"tjlabs.lgndx.company-evidence.v1\",\n  \"retrievedAt\": \"2026-10-12T01:38:56Z\",\n  \"companyName\": \"LGNDX INC.\",\n  \"website\": \"https://lgndx.com/\",\n  \"contact\": {\n    \"email\": \"hello@lgndx.com\",\n    \"sourceUrl\": \"https://lgndx.com/contact\",\n    \"sourceLocator\": \"Email our team\",\n    \"role\": \"Published general business recipient; route to IX/EVO ecosystem integration owner\"\n  },\n  \"identities\": [\n    {\n      \"type\": \"UEI\",\n      \"value\": \"PZGRB9Q1S7A3\",\n      \"sourceId\": \"funded-prime-response\",\n      \"sourceLocator\": \"results: generated_internal_id CONT_AWD_47QACA26C0069_4732_-NONE-_-NONE- / Recipient UEI\"\n    },\n    {\n      \"type\": \"CAGE\",\n      \"value\": \"108J4\",\n      \"sourceUrl\": \"https://lgndx.com/contact\",\n      \"basis\": \"Company-published footer\"\n    }\n  ],\n  \"location\": {\n    \"city\": \"Washington, D.C.\",\n    \"sourceUrl\": \"https://lgndx.com/contact\",\n    \"basis\": \"Company-published headquarters\"\n  },\n  \"claims\": [\n    {\n      \"id\": \"company-evo-community\",\n      \"sourceUrl\": \"https://lgndx.com/product/apollo-evo\",\n      \"locator\": \"Ecosystem Integration\",\n      \"claim\": \"EVO is designed to connect existing community tools, pipelines and vendor lists, supporting curated problem sets, teaming and progression while communities retain their operating rules.\",\n      \"status\": \"company_published\"\n    },\n    {\n      \"id\": \"company-ix-workflow\",\n      \"sourceUrl\": \"https://ix.lgndx.com/\",\n      \"locator\": \"For innovative companies / For program teams\",\n      \"claim\": \"IX describes opportunity and Q&A deadlines, capability and past-performance records, partner comparison, and preparation of requirements packages.\",\n      \"status\": \"company_published\"\n    },\n    {\n      \"id\": \"company-ix-access\",\n      \"sourceUrl\": \"https://ix.lgndx.com/\",\n      \"locator\": \"Get early access\",\n      \"claim\": \"The current page offers early-access instructions when IX.MIL launches.\",\n      \"status\": \"company_published\"\n    },\n    {\n      \"id\": \"company-applied-rd\",\n      \"sourceUrl\": \"https://lgndx.com/vertical/applied-rd\",\n      \"locator\": \"SBIR, R&D & Federal Delivery\",\n      \"claim\": \"LGNDX describes taking research and government briefs into operational software, integrating existing environments, and preparing systems for federal evaluation and sustainment.\",\n      \"status\": \"company_published\"\n    }\n  ],\n  \"pastPerformanceContext\": {\n    \"internal_id\": 363067991,\n    \"Award ID\": \"47QACA26C0069\",\n    \"Recipient Name\": \"LGNDX INC.\",\n    \"Recipient UEI\": \"PZGRB9Q1S7A3\",\n    \"Start Date\": \"2026-09-25\",\n    \"End Date\": \"2026-10-30\",\n    \"Base Obligation Date\": \"2026-09-25\",\n    \"Last Modified Date\": \"2026-09-29 10:42:59\",\n    \"Award Amount\": 285000,\n    \"Awarding Agency\": \"General Services Administration\",\n    \"Awarding Sub Agency\": \"Federal Acquisition Service\",\n    \"Funding Agency\": \"Department of Commerce\",\n    \"Funding Sub Agency\": \"International Trade Administration\",\n    \"Description\": \"NATIONAL ARTIFICIAL INTELLIGENCE CENTER\",\n    \"NAICS\": {\n      \"code\": \"541511\",\n      \"description\": \"CUSTOM COMPUTER PROGRAMMING SERVICES\"\n    },\n    \"PSC\": {\n      \"code\": \"DA01\",\n      \"description\": \"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)\"\n    },\n    \"generated_internal_id\": \"CONT_AWD_47QACA26C0069_4732_-NONE-_-NONE-\",\n    \"recipient_id\": \"ee9ce429-0924-8dc6-cb29-fc39c03457d0-C\",\n    \"awarding_agency_id\": 614,\n    \"agency_slug\": \"general-services-administration\",\n    \"sourceId\": \"funded-prime-response\",\n    \"sourceCaptureId\": \"funded-prime-capture\",\n    \"interpretation\": \"An original federal award record and its reported value and period. The record is background for qualification; company response and performance assertions need their own source review.\"\n  },\n  \"receivingContract\": {\n    \"publishedApi\": null,\n    \"selectedWorkshare\": \"One agreed native export/import mapping between an existing community pipeline and the source/decision/proposal package.\",\n    \"customerInputs\": [\n      \"Selected existing pipeline and receiving owner\",\n      \"Actual export/import field specification and a representative export\",\n      \"Authorized community, company and opportunity sources\",\n      \"Required response package format and review roles\",\n      \"Existing host/access arrangements and acceptance workflow\"\n    ]\n  }\n}\n",
+        "sourceTerms": "TokenJunkieLabs source-linked qualification record; company statements retain their original publishers and URLs."
+      }
+    },
+    {
+      "key": "funded-prime-capture",
+      "file": "references/funded-prime-capture.json",
+      "sha256": "c07abc56456e888407e561ac8b50906ce1f7884bcc6835fdfdb05fffb949f045",
+      "bytes": 1453,
+      "payload": {
+        "role": "award_background",
+        "title": "Original funded-prime cohort acquisition record",
+        "url": "https://api.usaspending.gov/api/v2/search/spending_by_award/",
+        "capturedAt": "2026-10-11T23:02:37.522553+00:00",
+        "filename": "funded-prime-capture.json",
+        "mediaType": "application/json",
+        "contentText": "{\n  \"schema\": \"funded-prime.award-capture/v1\",\n  \"endpoint\": \"https://api.usaspending.gov/api/v2/search/spending_by_award/\",\n  \"request\": {\n    \"fields\": [\n      \"Award ID\",\n      \"Recipient Name\",\n      \"Recipient UEI\",\n      \"Start Date\",\n      \"End Date\",\n      \"Base Obligation Date\",\n      \"Last Modified Date\",\n      \"Award Amount\",\n      \"Awarding Agency\",\n      \"Awarding Sub Agency\",\n      \"Funding Agency\",\n      \"Funding Sub Agency\",\n      \"Description\",\n      \"NAICS\",\n      \"PSC\",\n      \"generated_internal_id\",\n      \"recipient_id\"\n    ],\n    \"filters\": {\n      \"award_amounts\": [\n        {\n          \"lower_bound\": 250000,\n          \"upper_bound\": 20000000\n        }\n      ],\n      \"award_type_codes\": [\n        \"A\",\n        \"B\",\n        \"C\",\n        \"D\"\n      ],\n      \"keywords\": [\n        \"artificial intelligence\"\n      ],\n      \"time_period\": [\n        {\n          \"date_type\": \"new_awards_only\",\n          \"end_date\": \"2026-10-11\",\n          \"start_date\": \"2026-09-01\"\n        }\n      ]\n    },\n    \"limit\": 100,\n    \"order\": \"desc\",\n    \"page\": 1,\n    \"sort\": \"Base Obligation Date\",\n    \"subawards\": false\n  },\n  \"retrieved_at\": \"2026-10-11T23:02:37.522553+00:00\",\n  \"response_bytes\": 30030,\n  \"response_sha256\": \"c0c74c897b95db8657cfe9bd3c1b76526f5ff057ad2966d6f4a0f98c06cd9319\",\n  \"rows\": 28,\n  \"page_metadata\": {\n    \"page\": 1,\n    \"hasNext\": false,\n    \"last_record_unique_id\": null,\n    \"last_record_sort_value\": \"None\"\n  }\n}\n",
+        "sourceTerms": "Original public USAspending acquisition record retained by C79F; original Commons source merge2e8cd9d2c6dac61ad76efc6e22300b002325279e."
+      }
+    },
+    {
+      "key": "funded-prime-response",
+      "file": "references/funded-prime-response.json",
+      "sha256": "c0c74c897b95db8657cfe9bd3c1b76526f5ff057ad2966d6f4a0f98c06cd9319",
+      "bytes": 30030,
+      "payload": {
+        "role": "award_background",
+        "title": "Original 28-row USAspending funded-prime response",
+        "url": "https://api.usaspending.gov/api/v2/search/spending_by_award/",
+        "capturedAt": "2026-10-11T23:02:37.522553+00:00",
+        "filename": "funded-prime-response.json",
+        "mediaType": "application/json",
+        "contentText": "{\"spending_level\":\"awards\",\"limit\":100,\"results\":[{\"internal_id\":363156509,\"Award ID\":\"7571MN26F80153\",\"Recipient Name\":\"ICF INCORPORATED, L.L.C.\",\"Recipient UEI\":\"QHBLBNKKV4U3\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-30\",\"Last Modified Date\":\"2026-09-30 09:23:38\",\"Award Amount\":4518289.18,\"Awarding Agency\":\"Department of Health and Human Services\",\"Awarding Sub Agency\":\"Office of the Assistant Secretary for Financial Resources\",\"Funding Agency\":\"Department of Health and Human Services\",\"Funding Sub Agency\":\"Office of the Assistant Secretary for Financial Resources\",\"Description\":\"MAINTAIN CONTINUITY, COMPLIANCE, & OPERATIONAL INTEGRITY OF EXECUTIVE ORDER & OPM MEMOS; FACILITATE DATA ENGAGEMENT & ARTIFICIAL INTELLIGENCE (AI) DISCOVERABILITY IMPROVEMENT FOR BOTH HIV.GOV AND THE AMERICA HIV EPIDEMIC ANALYSIS DASHBOAR\",\"NAICS\":{\"code\":\"541512\",\"description\":\"COMPUTER SYSTEMS DESIGN SERVICES\"},\"PSC\":{\"code\":\"R408\",\"description\":\"SUPPORT- PROFESSIONAL: PROGRAM MANAGEMENT/SUPPORT\"},\"generated_internal_id\":\"CONT_AWD_7571MN26F80153_7571_47QTCB26D0019_4732\",\"recipient_id\":\"f7268051-dfb6-e5cf-ab3d-11235ea4137f-C\",\"awarding_agency_id\":806,\"agency_slug\":\"department-of-health-and-human-services\"},{\"internal_id\":363156363,\"Award ID\":\"70VT1526F00043\",\"Recipient Name\":\"SIMPLE TECHNOLOGY SOLUTIONS INC.\",\"Recipient UEI\":\"R4G3B4GVMF79\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-30\",\"Last Modified Date\":\"2026-09-30 18:55:08\",\"Award Amount\":461220.0,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"Office of the Inspector General\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"Office of the Inspector General\",\"Description\":\"CLOUD-BASED, ARTIFICIAL INTELLIGENCE-ENABLED CALL CENTER SEC. 4(A).\",\"NAICS\":{\"code\":\"541511\",\"description\":\"CUSTOM COMPUTER PROGRAMMING SERVICES\"},\"PSC\":{\"code\":\"DA10\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SOFTWARE AS A SERVICE\"},\"generated_internal_id\":\"CONT_AWD_70VT1526F00043_7004_GS35F271GA_4732\",\"recipient_id\":\"79085240-f9ef-8b47-d352-4a72132c2981-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":363156314,\"Award ID\":\"70T04026C7573N007\",\"Recipient Name\":\"ANALYTICAL AI, INC.\",\"Recipient UEI\":\"KXN5HP5L8DP3\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-30\",\"Last Modified Date\":\"2026-09-30 14:39:01\",\"Award Amount\":511380.8,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"Transportation Security Administration\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"Transportation Security Administration\",\"Description\":\"THE PURPOSE OF THIS CONTRACT IS TO SUPPORT ANALYTICAL AI DEVELOPMENT OF THE SECURSAIL SOLUTION, INCLUDING ARTIFICIAL INTELLIGENCE AND AUTOMATIC TARGET RECOGNITION ALGORITHMS TO IMPROVE SCREENING OF PASSENGERS WITH LIMITED MOBILITY\",\"NAICS\":{\"code\":\"541715\",\"description\":\"RESEARCH AND DEVELOPMENT IN THE PHYSICAL, ENGINEERING, AND LIFE SCIENCES (EXCEPT NANOTECHNOLOGY AND BIOTECHNOLOGY)\"},\"PSC\":{\"code\":\"R425\",\"description\":\"SUPPORT- PROFESSIONAL: ENGINEERING/TECHNICAL\"},\"generated_internal_id\":\"CONT_AWD_70T04026C7573N007_7013_-NONE-_-NONE-\",\"recipient_id\":\"a8ee4f61-266c-632e-9404-451039560337-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":363155943,\"Award ID\":\"70B06C26F00001261\",\"Recipient Name\":\"SCIENCE APPLICATIONS INTERNATIONAL CORPORATION\",\"Recipient UEI\":\"MMLKPW9JLX64\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-30\",\"Last Modified Date\":\"2026-09-30 12:35:51\",\"Award Amount\":349883.35,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"U.S. Customs and Border Protection\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"U.S. Customs and Border Protection\",\"Description\":\"TECHNICAL SUPPORT FOR ONTOLOGY, KNOWLEDGE GRAPH, MISSION ARCHITECTURE, AND MULTI-DOMAIN ARTIFICIAL INTELLIGENCE SUPPORT\",\"NAICS\":{\"code\":\"541512\",\"description\":\"COMPUTER SYSTEMS DESIGN SERVICES\"},\"PSC\":{\"code\":\"R425\",\"description\":\"SUPPORT- PROFESSIONAL: ENGINEERING/TECHNICAL\"},\"generated_internal_id\":\"CONT_AWD_70B06C26F00001261_7014_47QTCK18D0001_4732\",\"recipient_id\":\"20af0683-f17d-1f8f-38ee-2f11bd124559-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":363155917,\"Award ID\":\"70B04C26F00001201\",\"Recipient Name\":\"BOOZ ALLEN HAMILTON INC\",\"Recipient UEI\":\"JCBMLGPE6Z71\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-30\",\"Last Modified Date\":\"2026-09-30 17:45:11\",\"Award Amount\":14175438.63,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"U.S. Customs and Border Protection\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"U.S. Customs and Border Protection\",\"Description\":\"70B04C26F00001201 CTO/TECHNOLOGY ROADMAP FOR ARTIFICIAL INTELLIGENCE AND NEXT-GENERATION COMPUTING (TRAIN-C) AND CSPD/TRADE IT MODERNIZATION PROJECTS.\",\"NAICS\":{\"code\":\"541612\",\"description\":\"HUMAN RESOURCES CONSULTING SERVICES (2007), HUMAN RESOURCES AND EXECUTIVE SEARCH CONSULTING SERVICES (2002)\"},\"PSC\":{\"code\":\"DA01\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_70B04C26F00001201_7014_47QREA21D0001_4732\",\"recipient_id\":\"ffca72e5-fba2-798a-6969-2a6c45e9f985-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":363129133,\"Award ID\":\"2099AC26F00078\",\"Recipient Name\":\"CARAHSOFT TECHNOLOGY CORP\",\"Recipient UEI\":\"DT8KJHZXVJH5\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-30\",\"Last Modified Date\":\"2026-09-30 12:21:37\",\"Award Amount\":2159681.0,\"Awarding Agency\":\"Department of the Treasury\",\"Awarding Sub Agency\":\"Treasury Common Services Center\",\"Funding Agency\":\"Department of the Treasury\",\"Funding Sub Agency\":\"Departmental Offices\",\"Description\":\"TO#1 OF THE TREASURY ENTERPRISE ARTIFICIAL INTELLIGENCE MODELS (TEAM) BPA WILL ESTABLISH TREASURY'S CHATGPT LICENSE FOOTPRINT AS WELL AS PURCHASE TOKENS FOR CONSUMPTION USE.\",\"NAICS\":{\"code\":\"511210\",\"description\":\"SOFTWARE PUBLISHERS\"},\"PSC\":{\"code\":\"DA10\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SOFTWARE AS A SERVICE\"},\"generated_internal_id\":\"CONT_AWD_2099AC26F00078_2099_2099AC26A00001_2099\",\"recipient_id\":\"4e74aeb5-dd21-20a7-63bd-e9f934d69583-C\",\"awarding_agency_id\":456,\"agency_slug\":\"department-of-the-treasury\"},{\"internal_id\":363129132,\"Award ID\":\"2099AC26F00077\",\"Recipient Name\":\"ALVAREZ LLC\",\"Recipient UEI\":\"Y928UVG75CT6\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-30\",\"Last Modified Date\":\"2026-10-02 12:11:08\",\"Award Amount\":5092326.11,\"Awarding Agency\":\"Department of the Treasury\",\"Awarding Sub Agency\":\"Treasury Common Services Center\",\"Funding Agency\":\"Department of the Treasury\",\"Funding Sub Agency\":\"Treasury Common Services Center\",\"Description\":\"ARTIFICIAL INTELLIGENCE (AI) COMPUTE INFRASTRUCTURE HARDWARE & SUPPORT\",\"NAICS\":{\"code\":\"541519\",\"description\":\"OTHER COMPUTER RELATED SERVICES\"},\"PSC\":{\"code\":\"7B20\",\"description\":\"IT AND TELECOM - HIGH PERFORMANCE COMPUTE (HARDWARE AND PERPETUAL LICENSE SOFTWARE)\"},\"generated_internal_id\":\"CONT_AWD_2099AC26F00077_2099_NNG15SD19B_8000\",\"recipient_id\":\"d55dabdb-0c89-b6e8-e4f5-5817d2be7b63-C\",\"awarding_agency_id\":456,\"agency_slug\":\"department-of-the-treasury\"},{\"internal_id\":363076390,\"Award ID\":\"9531BM26F0060\",\"Recipient Name\":\"DELOITTE CONSULTING LLP\",\"Recipient UEI\":\"CKV2L9GZKJK3\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-06\",\"Base Obligation Date\":\"2026-09-29\",\"Last Modified Date\":\"2026-09-29 15:31:54\",\"Award Amount\":262652.26,\"Awarding Agency\":\"National Transportation Safety Board\",\"Awarding Sub Agency\":\"National Transportation Safety Board\",\"Funding Agency\":\"National Transportation Safety Board\",\"Funding Sub Agency\":\"National Transportation Safety Board\",\"Description\":\"BPA ORDER #2: ARTIFICIAL INTELLIGENCE (AI) ENTERPRISE APPLICATIONS PROFESSIONAL SERVICES\",\"NAICS\":{\"code\":\"541611\",\"description\":\"ADMINISTRATIVE MANAGEMENT AND GENERAL MANAGEMENT CONSULTING SERVICES\"},\"PSC\":{\"code\":\"R499\",\"description\":\"SUPPORT- PROFESSIONAL: OTHER\"},\"generated_internal_id\":\"CONT_AWD_9531BM26F0060_9508_9531BM26A0013_9508\",\"recipient_id\":\"92663aec-4451-0476-502b-d8c6919e98e0-C\",\"awarding_agency_id\":1130,\"agency_slug\":\"national-transportation-safety-board\"},{\"internal_id\":363075331,\"Award ID\":\"70FA3126F00000065\",\"Recipient Name\":\"NEEVSYS INC.\",\"Recipient UEI\":\"Q4LLTZ956H64\",\"Start Date\":\"2026-09-28\",\"End Date\":\"2031-09-27\",\"Base Obligation Date\":\"2026-09-29\",\"Last Modified Date\":\"2026-09-29 11:14:06\",\"Award Amount\":3451680.0,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"Federal Emergency Management Agency\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"Federal Emergency Management Agency\",\"Description\":\"THE PURPOSE OF THIS FIRM-FIXED-PRICE ORDER IS TO PROVIDE ROBOTIC PROCESS AUTOMATION (RPA), ARTIFICIAL INTELLIGENCE (AI)/MACHINE LEARNING AND RELATED AUTOMATION SOFTWARE AND SERVICES TO IMPROVE FEDERAL EMERGENCY MANAGEMENT AGENCY.\",\"NAICS\":{\"code\":\"541512\",\"description\":\"COMPUTER SYSTEMS DESIGN SERVICES\"},\"PSC\":{\"code\":\"DA01\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_70FA3126F00000065_7022_47QTCB21D0332_4732\",\"recipient_id\":\"1b8f559b-daec-b4eb-c2c7-cdbc4cda88d8-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":363067249,\"Award ID\":\"36C10B26N0060\",\"Recipient Name\":\"THE MITRE CORPORATION\",\"Recipient UEI\":\"DMHDNDCPWUD1\",\"Start Date\":\"2026-09-29\",\"End Date\":\"2027-09-28\",\"Base Obligation Date\":\"2026-09-29\",\"Last Modified Date\":\"2026-09-29 13:36:24\",\"Award Amount\":3996951.18,\"Awarding Agency\":\"Department of Veterans Affairs\",\"Awarding Sub Agency\":\"Department of Veterans Affairs\",\"Funding Agency\":\"Department of Veterans Affairs\",\"Funding Sub Agency\":\"Department of Veterans Affairs\",\"Description\":\"FEDERALLY FUNDED RESEARCH AND DEVELOPMENT CENTER SERVICES TO THE VETERANS HEALTH ADMINISTRATION, CENTER FOR DATA AND COMPUTATIONAL SCIENCES FOR ARTIFICIAL INTELLIGENCE-ENABLED SECURE SYSTEMS FOR UNIVERSAL RESEARCH ECOSYSTEM\",\"NAICS\":{\"code\":\"541990\",\"description\":\"ALL OTHER PROFESSIONAL, SCIENTIFIC, AND TECHNICAL SERVICES\"},\"PSC\":{\"code\":\"R799\",\"description\":\"SUPPORT- MANAGEMENT: OTHER\"},\"generated_internal_id\":\"CONT_AWD_36C10B26N0060_3600_36C10B25D0015_3600\",\"recipient_id\":\"3903ae3c-2661-60bb-cdd3-1f26ad214167-C\",\"awarding_agency_id\":561,\"agency_slug\":\"department-of-veterans-affairs\"},{\"internal_id\":363066446,\"Award ID\":\"16PBGC26T0014\",\"Recipient Name\":\"DELOITTE CONSULTING LLP\",\"Recipient UEI\":\"CKV2L9GZKJK3\",\"Start Date\":\"2026-09-29\",\"End Date\":\"2027-09-28\",\"Base Obligation Date\":\"2026-09-29\",\"Last Modified Date\":\"2026-09-29 08:50:07\",\"Award Amount\":779241.54,\"Awarding Agency\":\"Pension Benefit Guaranty Corporation\",\"Awarding Sub Agency\":\"Pension Benefit Guaranty Corporation\",\"Funding Agency\":\"Pension Benefit Guaranty Corporation\",\"Funding Sub Agency\":\"Pension Benefit Guaranty Corporation\",\"Description\":\"THE PURPOSE OF THIS TASK ORDER (TO) IS TO PROVIDE CLMS TRIAGE PROCESS AUTOMATION AND ARTIFICIAL INTELLIGENCE (AI) ENHANCEMENTS\",\"NAICS\":{\"code\":\"541611\",\"description\":\"ADMINISTRATIVE MANAGEMENT AND GENERAL MANAGEMENT CONSULTING SERVICES\"},\"PSC\":{\"code\":\"DF01\",\"description\":\"IT AND TELECOM - IT MANAGEMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_16PBGC26T0014_1665_16PBGC19D0021_1665\",\"recipient_id\":\"92663aec-4451-0476-502b-d8c6919e98e0-C\",\"awarding_agency_id\":308,\"agency_slug\":\"pension-benefit-guaranty-corporation\"},{\"internal_id\":363019778,\"Award ID\":\"7571MN26C00041\",\"Recipient Name\":\"CHICKASAW FEDERAL HEALTH, LLC\",\"Recipient UEI\":\"CAMXRD5CHVN6\",\"Start Date\":\"2026-09-29\",\"End Date\":\"2028-09-28\",\"Base Obligation Date\":\"2026-09-28\",\"Last Modified Date\":\"2026-09-28 15:31:07\",\"Award Amount\":1999717.4,\"Awarding Agency\":\"Department of Health and Human Services\",\"Awarding Sub Agency\":\"Office of the Assistant Secretary for Financial Resources\",\"Funding Agency\":\"Department of Health and Human Services\",\"Funding Sub Agency\":\"Office of the Assistant Secretary for Financial Resources\",\"Description\":\"ACCELERATE ARTIFICIAL INTELLIGENCE (AI) ADOPTION IN HEALTHCARE\",\"NAICS\":{\"code\":\"541611\",\"description\":\"ADMINISTRATIVE MANAGEMENT AND GENERAL MANAGEMENT CONSULTING SERVICES\"},\"PSC\":{\"code\":\"R499\",\"description\":\"SUPPORT- PROFESSIONAL: OTHER\"},\"generated_internal_id\":\"CONT_AWD_7571MN26C00041_7571_-NONE-_-NONE-\",\"recipient_id\":\"06c55ed7-0315-1ece-693f-8d0aeaad1263-C\",\"awarding_agency_id\":806,\"agency_slug\":\"department-of-health-and-human-services\"},{\"internal_id\":363067991,\"Award ID\":\"47QACA26C0069\",\"Recipient Name\":\"LGNDX INC.\",\"Recipient UEI\":\"PZGRB9Q1S7A3\",\"Start Date\":\"2026-09-25\",\"End Date\":\"2026-10-30\",\"Base Obligation Date\":\"2026-09-25\",\"Last Modified Date\":\"2026-09-29 10:42:59\",\"Award Amount\":285000.0,\"Awarding Agency\":\"General Services Administration\",\"Awarding Sub Agency\":\"Federal Acquisition Service\",\"Funding Agency\":\"Department of Commerce\",\"Funding Sub Agency\":\"International Trade Administration\",\"Description\":\"NATIONAL ARTIFICIAL INTELLIGENCE CENTER\",\"NAICS\":{\"code\":\"541511\",\"description\":\"CUSTOM COMPUTER PROGRAMMING SERVICES\"},\"PSC\":{\"code\":\"DA01\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_47QACA26C0069_4732_-NONE-_-NONE-\",\"recipient_id\":\"ee9ce429-0924-8dc6-cb29-fc39c03457d0-C\",\"awarding_agency_id\":614,\"agency_slug\":\"general-services-administration\"},{\"internal_id\":362786388,\"Award ID\":\"693JJ326F00159N\",\"Recipient Name\":\"SYNTEK TECHNOLOGIES, INC.\",\"Recipient UEI\":\"DGKHQAGH9CF5\",\"Start Date\":\"2026-09-29\",\"End Date\":\"2028-09-28\",\"Base Obligation Date\":\"2026-09-25\",\"Last Modified Date\":\"2026-09-25 14:26:36\",\"Award Amount\":299877.0,\"Awarding Agency\":\"Department of Transportation\",\"Awarding Sub Agency\":\"Federal Highway Administration\",\"Funding Agency\":\"Department of Transportation\",\"Funding Sub Agency\":\"Federal Highway Administration\",\"Description\":\"THIS IS A FIRM-FIXED PRICE TASK ORDER ISSUED FOR THE PROJECT TITLE ARTIFICIAL INTELLIGENCE (AI) SYSTEMS AND AUTOMATED VEHICLE BEHAVIOR USING FHWA'S HIGHWAY DRIVING SIMULATOR.\",\"NAICS\":{\"code\":\"541715\",\"description\":\"RESEARCH AND DEVELOPMENT IN THE PHYSICAL, ENGINEERING, AND LIFE SCIENCES (EXCEPT NANOTECHNOLOGY AND BIOTECHNOLOGY)\"},\"PSC\":{\"code\":\"AS12\",\"description\":\"TRANSPORTATION R&D SERVICES; SURFACE TRANSPORTATION, PUBLIC TRANSIT, AND RAIL; APPLIED RESEARCH\"},\"generated_internal_id\":\"CONT_AWD_693JJ326F00159N_6925_693JJ323D000034_6925\",\"recipient_id\":\"9048fed8-2c14-13e4-93e6-7905571d56ad-C\",\"awarding_agency_id\":731,\"agency_slug\":\"department-of-transportation\"},{\"internal_id\":362762534,\"Award ID\":\"70FA3126F00000078\",\"Recipient Name\":\"WINTRIO LLC\",\"Recipient UEI\":\"E9GWUWJTVME7\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-24\",\"Last Modified Date\":\"2026-09-24 09:58:54\",\"Award Amount\":493058.57,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"Federal Emergency Management Agency\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"Federal Emergency Management Agency\",\"Description\":\"THIS TASK ORDER IS TO PROVIDE ARTIFICIAL INTELLIGENCE SUPPORT SERVICES TO THE OFFICE OF THE CHIEF INFORMATION OFFICER.\",\"NAICS\":{\"code\":\"541512\",\"description\":\"COMPUTER SYSTEMS DESIGN SERVICES\"},\"PSC\":{\"code\":\"DA01\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_70FA3126F00000078_7022_47QTCB21D0194_4732\",\"recipient_id\":\"bd4ee6f0-daf0-4879-fd2e-542280e696f7-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":362762323,\"Award ID\":\"693JJ326F00151N\",\"Recipient Name\":\"LEIDOS, INC.\",\"Recipient UEI\":\"QLNMVC12KWY3\",\"Start Date\":\"2026-09-25\",\"End Date\":\"2028-01-21\",\"Base Obligation Date\":\"2026-09-24\",\"Last Modified Date\":\"2026-09-24 13:52:41\",\"Award Amount\":300000.0,\"Awarding Agency\":\"Department of Transportation\",\"Awarding Sub Agency\":\"Federal Highway Administration\",\"Funding Agency\":\"Department of Transportation\",\"Funding Sub Agency\":\"Federal Highway Administration\",\"Description\":\"TECHNICAL SERVICES FOR ARTIFICIAL INTELLIGENCE DEPLOYMENT CENTER OF EXCELLENCE\",\"NAICS\":{\"code\":\"541715\",\"description\":\"RESEARCH AND DEVELOPMENT IN THE PHYSICAL, ENGINEERING, AND LIFE SCIENCES (EXCEPT NANOTECHNOLOGY AND BIOTECHNOLOGY)\"},\"PSC\":{\"code\":\"AS12\",\"description\":\"TRANSPORTATION R&D SERVICES; SURFACE TRANSPORTATION, PUBLIC TRANSIT, AND RAIL; APPLIED RESEARCH\"},\"generated_internal_id\":\"CONT_AWD_693JJ326F00151N_6925_693JJ321D000010_6925\",\"recipient_id\":\"b37ddcf2-0924-f6e0-0fee-c40823f5789b-C\",\"awarding_agency_id\":731,\"agency_slug\":\"department-of-transportation\"},{\"internal_id\":362753031,\"Award ID\":\"1605C326F00072\",\"Recipient Name\":\"PRECISEPOINT JV LLC\",\"Recipient UEI\":\"N7CEFMPJZ9K1\",\"Start Date\":\"2026-09-28\",\"End Date\":\"2027-09-27\",\"Base Obligation Date\":\"2026-09-24\",\"Last Modified Date\":\"2026-09-24 17:18:27\",\"Award Amount\":3018563.52,\"Awarding Agency\":\"Department of Labor\",\"Awarding Sub Agency\":\"Office of the Assistant Secretary for Administration and Management\",\"Funding Agency\":\"Department of Labor\",\"Funding Sub Agency\":\"Office of the Assistant Secretary for Administration and Management\",\"Description\":\"TASK ORDER FOR ENTERPRISE WIDE ARTIFICIAL INTELLIGENCE ENGINEERING SERVICES\",\"NAICS\":{\"code\":\"517312\",\"description\":\"WIRELESS TELECOMMUNICATIONS CARRIERS (EXCEPT SATELLITE)\"},\"PSC\":{\"code\":\"DA01\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_1605C326F00072_1605_47QTCA22D00BE_4732\",\"recipient_id\":\"ccf66dc6-53e4-77dd-8684-258901e9497f-C\",\"awarding_agency_id\":267,\"agency_slug\":\"department-of-labor\"},{\"internal_id\":362650910,\"Award ID\":\"36C24126P0730\",\"Recipient Name\":\"V3GATE, LLC\",\"Recipient UEI\":\"J4KHM5JY79E3\",\"Start Date\":\"2026-09-30\",\"End Date\":\"2027-09-29\",\"Base Obligation Date\":\"2026-09-23\",\"Last Modified Date\":\"2026-09-30 13:58:12\",\"Award Amount\":745500.0,\"Awarding Agency\":\"Department of Veterans Affairs\",\"Awarding Sub Agency\":\"Department of Veterans Affairs\",\"Funding Agency\":\"Department of Veterans Affairs\",\"Funding Sub Agency\":\"Department of Veterans Affairs\",\"Description\":\"VISN 1 RADIOLOGY ARTIFICIAL INTELLIGENCE PLATFORM\",\"NAICS\":{\"code\":\"513210\",\"description\":\"SOFTWARE PUBLISHERS\"},\"PSC\":{\"code\":\"7A21\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION SOFTWARE (PERPETUAL LICENSE SOFTWARE)\"},\"generated_internal_id\":\"CONT_AWD_36C24126P0730_3600_-NONE-_-NONE-\",\"recipient_id\":\"d46ad2a7-ed19-9535-4f24-787705845610-C\",\"awarding_agency_id\":561,\"agency_slug\":\"department-of-veterans-affairs\"},{\"internal_id\":362604470,\"Award ID\":\"53987126FC012\",\"Recipient Name\":\"CAPITAL MEETING PLANNING, INC.\",\"Recipient UEI\":\"QH3GE55S6PA6\",\"Start Date\":\"2026-09-22\",\"End Date\":\"2027-09-21\",\"Base Obligation Date\":\"2026-09-22\",\"Last Modified Date\":\"2026-09-22 15:56:16\",\"Award Amount\":851461.25,\"Awarding Agency\":\"Institute of Museum and Library Services\",\"Awarding Sub Agency\":\"Institute of Museum and Library Services\",\"Funding Agency\":\"Institute of Museum and Library Services\",\"Funding Sub Agency\":\"Institute of Museum and Library Services\",\"Description\":\"ARTIFICIAL INTELLIGENCE AND MUSEUMS LITERACY CONFERENCE SERVICES EVENT PLANNING SUPPORT TO ENCOURAGE AND ADVANCE LEADERSHIP AND INNOVATION WITHIN MUSEUM COMMUNITIES PURSUANT TO 20 U.S.C. 9171(3).\",\"NAICS\":{\"code\":\"561920\",\"description\":\"CONVENTION AND TRADE SHOW ORGANIZERS\"},\"PSC\":{\"code\":\"M1AB\",\"description\":\"OPERATION OF CONFERENCE SPACE AND FACILITIES\"},\"generated_internal_id\":\"CONT_AWD_53987126FC012_5300_53987124A0001_5300\",\"recipient_id\":\"66484281-0485-0ea5-dc72-3fa0c1883f6b-C\",\"awarding_agency_id\":1474,\"agency_slug\":\"institute-of-museum-and-library-services\"},{\"internal_id\":362598917,\"Award ID\":\"1305M326F0273\",\"Recipient Name\":\"THE MITRE CORPORATION\",\"Recipient UEI\":\"DMHDNDCPWUD1\",\"Start Date\":\"2026-09-28\",\"End Date\":\"2028-03-27\",\"Base Obligation Date\":\"2026-09-22\",\"Last Modified Date\":\"2026-10-06 11:43:10\",\"Award Amount\":838594.0,\"Awarding Agency\":\"Department of Commerce\",\"Awarding Sub Agency\":\"National Oceanic and Atmospheric Administration\",\"Funding Agency\":\"Department of Commerce\",\"Funding Sub Agency\":\"National Oceanic and Atmospheric Administration\",\"Description\":\"ARTIFICIAL INTELLIGENCE FOR NUMERICAL WEATHER PREDICTION (AI4NWP): FROM TRAINING DATA/REANALYSIS TO MODEL DESIGN IN ACCORDANCE WITH THE PERFORMANCE WORK STATEMENT (PWS).\",\"NAICS\":{\"code\":\"541990\",\"description\":\"ALL OTHER PROFESSIONAL, SCIENTIFIC, AND TECHNICAL SERVICES\"},\"PSC\":{\"code\":\"R425\",\"description\":\"SUPPORT- PROFESSIONAL: ENGINEERING/TECHNICAL\"},\"generated_internal_id\":\"CONT_AWD_1305M326F0273_1330_1331L523D13OS0003_1301\",\"recipient_id\":\"3903ae3c-2661-60bb-cdd3-1f26ad214167-C\",\"awarding_agency_id\":183,\"agency_slug\":\"department-of-commerce\"},{\"internal_id\":362579469,\"Award ID\":\"36C10B26F0372\",\"Recipient Name\":\"WILCORE TECHNOLOGIES INC\",\"Recipient UEI\":\"KA6QJ7CECP13\",\"Start Date\":\"2026-09-22\",\"End Date\":\"2026-09-29\",\"Base Obligation Date\":\"2026-09-21\",\"Last Modified Date\":\"2026-09-29 11:32:06\",\"Award Amount\":2926310.46,\"Awarding Agency\":\"Department of Veterans Affairs\",\"Awarding Sub Agency\":\"Department of Veterans Affairs\",\"Funding Agency\":\"Department of Veterans Affairs\",\"Funding Sub Agency\":\"Department of Veterans Affairs\",\"Description\":\"ARTIFICIAL INTELLIGENCE VETERAN-CENTERED SUBMISSION ECOSYSTEM SUPPORT FOR THE DESIGN, DEVELOPMENT, AND DEPLOYMENT OF SECURE, ACCESSIBLE, AND INTEROPERABLE DIGITAL WORKFLOW SOLUTIONS THAT MODERNIZE VAS FORMS ECOSYSTEM.\",\"NAICS\":{\"code\":\"541519\",\"description\":\"OTHER COMPUTER RELATED SERVICES\"},\"PSC\":{\"code\":\"DA01\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_36C10B26F0372_3600_47QTCA25D00AX_4732\",\"recipient_id\":\"2bc61013-b600-ff84-cec0-815864b0d6de-C\",\"awarding_agency_id\":561,\"agency_slug\":\"department-of-veterans-affairs\"},{\"internal_id\":362579344,\"Award ID\":\"2031ZB26F00050\",\"Recipient Name\":\"STERLING COMPUTERS CORPORATION\",\"Recipient UEI\":\"YZTLALWM4UC7\",\"Start Date\":\"2026-09-21\",\"End Date\":\"2026-10-21\",\"Base Obligation Date\":\"2026-09-21\",\"Last Modified Date\":\"2026-09-24 10:24:44\",\"Award Amount\":7692933.33,\"Awarding Agency\":\"Department of the Treasury\",\"Awarding Sub Agency\":\"Bureau of Engraving and Printing\",\"Funding Agency\":\"Department of the Treasury\",\"Funding Sub Agency\":\"Bureau of Engraving and Printing\",\"Description\":\"TO PURCHASE ENTERPRISE SERVERS, HYPERCONVERGED INFRASTRUCTURE, NETWORK SWITCHES AND ARTIFICIAL INTELLIGENCE COMPUTING HARDWARE.\",\"NAICS\":{\"code\":\"334111\",\"description\":\"ELECTRONIC COMPUTER MANUFACTURING\"},\"PSC\":{\"code\":\"7B22\",\"description\":\"IT AND TELECOM - COMPUTE: SERVERS (HARDWARE AND PERPETUAL LICENSE SOFTWARE)\"},\"generated_internal_id\":\"CONT_AWD_2031ZB26F00050_2041_NNG15SC20B_8000\",\"recipient_id\":\"456a17c9-3bd9-f107-77ee-816e474d173e-C\",\"awarding_agency_id\":456,\"agency_slug\":\"department-of-the-treasury\"},{\"internal_id\":362400426,\"Award ID\":\"70B04C26F00000114\",\"Recipient Name\":\"CENTRIFUGE, LLC\",\"Recipient UEI\":\"W4TNAZRK27D7\",\"Start Date\":\"2026-09-18\",\"End Date\":\"2027-09-17\",\"Base Obligation Date\":\"2026-09-17\",\"Last Modified Date\":\"2026-09-24 09:50:48\",\"Award Amount\":2500000.0,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"U.S. Customs and Border Protection\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"U.S. Customs and Border Protection\",\"Description\":\"THIS IS FOR THE DESIGN AND DEVELOPMENT OF AN ARTIFICIAL INTELLIGENCE (AI) ENHANCED SURVEILLANCE DATA PLATFORM (AI-ESDP).\",\"NAICS\":{\"code\":\"541511\",\"description\":\"CUSTOM COMPUTER PROGRAMMING SERVICES\"},\"PSC\":{\"code\":\"DA01\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_70B04C26F00000114_7014_47QTCA18D003J_4732\",\"recipient_id\":\"a9ceeae8-598d-3816-1653-b28bb4a9df8d-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":362259673,\"Award ID\":\"70CMSD26FR0000156\",\"Recipient Name\":\"ENTERPRISE TECHNOLOGY SOLUTIONS, INC.\",\"Recipient UEI\":\"FBRMCGPMN963\",\"Start Date\":\"2026-09-15\",\"End Date\":\"2026-12-15\",\"Base Obligation Date\":\"2026-09-15\",\"Last Modified Date\":\"2026-09-15 17:54:03\",\"Award Amount\":274202.6,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"U.S. Immigration and Customs Enforcement\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"U.S. Immigration and Customs Enforcement\",\"Description\":\"THIS AWARD PROVIDES COMPUTING INFRASTRUCTURE TO DEVELOP, TEST, AND DEPLOY ARTIFICIAL INTELLIGENCE TOOLS THAT HELP ANALYZE DIGITAL EVIDENCE AND SUPPORT CYBER CRIME INVESTIGATIONS.\",\"NAICS\":{\"code\":\"541519\",\"description\":\"OTHER COMPUTER RELATED SERVICES\"},\"PSC\":{\"code\":\"7B21\",\"description\":\"IT AND TELECOM - COMPUTE: MAINFRAME (HARDWARE AND PERPETUAL LICENSE SOFTWARE)\"},\"generated_internal_id\":\"CONT_AWD_70CMSD26FR0000156_7012_NNG15SD76B_8000\",\"recipient_id\":\"b3bf0045-a393-0c84-7e1c-41efc4b25c9e-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":362231608,\"Award ID\":\"70Z02326FDCMS0006\",\"Recipient Name\":\"CHEVO LLC\",\"Recipient UEI\":\"H3UEVKGGU2A4\",\"Start Date\":\"2026-09-15\",\"End Date\":\"2027-09-14\",\"Base Obligation Date\":\"2026-09-14\",\"Last Modified Date\":\"2026-09-14 09:45:11\",\"Award Amount\":567738.33,\"Awarding Agency\":\"Department of Homeland Security\",\"Awarding Sub Agency\":\"U.S. Coast Guard\",\"Funding Agency\":\"Department of Homeland Security\",\"Funding Sub Agency\":\"U.S. Coast Guard\",\"Description\":\"BUSINESS INTELLIGENCE (BI) SYSTEMS PROGRAM SUPPORT & OUTREACH OFFICE OF DATA & ARTIFICIAL INTELLIGENCE SERVICES                                                                   (CG-TECH-ODA)\",\"NAICS\":{\"code\":\"336611\",\"description\":\"SHIP BUILDING AND REPAIRING\"},\"PSC\":{\"code\":\"R499\",\"description\":\"SUPPORT- PROFESSIONAL: OTHER\"},\"generated_internal_id\":\"CONT_AWD_70Z02326FDCMS0006_7008_47QRCA24DW187_4732\",\"recipient_id\":\"fda50a12-be87-48f0-6f47-08b65d66776a-C\",\"awarding_agency_id\":766,\"agency_slug\":\"department-of-homeland-security\"},{\"internal_id\":362230517,\"Award ID\":\"47QACA26F0383\",\"Recipient Name\":\"CARAHSOFT TECHNOLOGY CORP\",\"Recipient UEI\":\"DT8KJHZXVJH5\",\"Start Date\":\"2026-09-14\",\"End Date\":\"2027-09-13\",\"Base Obligation Date\":\"2026-09-11\",\"Last Modified Date\":\"2026-09-28 10:28:02\",\"Award Amount\":2104799.96,\"Awarding Agency\":\"General Services Administration\",\"Awarding Sub Agency\":\"Federal Acquisition Service\",\"Funding Agency\":\"Office of Personnel Management\",\"Funding Sub Agency\":\"Office of Personnel Management\",\"Description\":\"AGENTIC ARTIFICIAL INTELLIGENCE IMPLEMENTATION AI AGENT\",\"NAICS\":{\"code\":\"541519\",\"description\":\"OTHER COMPUTER RELATED SERVICES\"},\"PSC\":{\"code\":\"DA10\",\"description\":\"IT AND TELECOM - BUSINESS APPLICATION/APPLICATION DEVELOPMENT SOFTWARE AS A SERVICE\"},\"generated_internal_id\":\"CONT_AWD_47QACA26F0383_4732_NNG15SC27B_8000\",\"recipient_id\":\"4e74aeb5-dd21-20a7-63bd-e9f934d69583-C\",\"awarding_agency_id\":614,\"agency_slug\":\"general-services-administration\"},{\"internal_id\":362192688,\"Award ID\":\"2032H526F00087\",\"Recipient Name\":\"THE MITRE CORPORATION\",\"Recipient UEI\":\"DMHDNDCPWUD1\",\"Start Date\":\"2026-09-09\",\"End Date\":\"2027-09-16\",\"Base Obligation Date\":\"2026-09-09\",\"Last Modified Date\":\"2026-09-11 14:09:07\",\"Award Amount\":1734979.0,\"Awarding Agency\":\"Department of the Treasury\",\"Awarding Sub Agency\":\"Internal Revenue Service\",\"Funding Agency\":\"Department of the Treasury\",\"Funding Sub Agency\":\"Internal Revenue Service\",\"Description\":\"IRS RESEARCH, APPLIED ANALYTICS, AND STATISTICS (RAAS) LEVERAGING ARTIFICIAL INTELLIGENCE TO IMPROVE CASE SELECTION AND RESOURCE ALLOCATION. BASE CONTRACT\",\"NAICS\":{\"code\":\"541618\",\"description\":\"OTHER MANAGEMENT CONSULTING SERVICES\"},\"PSC\":{\"code\":\"R408\",\"description\":\"SUPPORT- PROFESSIONAL: PROGRAM MANAGEMENT/SUPPORT\"},\"generated_internal_id\":\"CONT_AWD_2032H526F00087_2050_TIRNO99D00005_2050\",\"recipient_id\":\"3903ae3c-2661-60bb-cdd3-1f26ad214167-C\",\"awarding_agency_id\":456,\"agency_slug\":\"department-of-the-treasury\"},{\"internal_id\":363134080,\"Award ID\":\"47QFCA26F0033\",\"Recipient Name\":\"NAVITAS BUSINESS CONSULTING, INC.\",\"Recipient UEI\":\"RRMNXHDCWJN3\",\"Start Date\":\"2026-09-08\",\"End Date\":\"2027-09-07\",\"Base Obligation Date\":\"2026-09-08\",\"Last Modified Date\":\"2026-10-01 13:10:29\",\"Award Amount\":6431676.8,\"Awarding Agency\":\"General Services Administration\",\"Awarding Sub Agency\":\"Federal Acquisition Service\",\"Funding Agency\":\"Department of Defense\",\"Funding Sub Agency\":\"Washington Headquarters Services\",\"Description\":\"CHIEF DIGITAL ARTIFICIAL INTELLIGENCE OFFICE ENTERPRISE ARCHITECTURE (CDAO EA) TASK ORDER AWARD\",\"NAICS\":{\"code\":\"541511\",\"description\":\"CUSTOM COMPUTER PROGRAMMING SERVICES\"},\"PSC\":{\"code\":\"DF01\",\"description\":\"IT AND TELECOM - IT MANAGEMENT SUPPORT SERVICES (LABOR)\"},\"generated_internal_id\":\"CONT_AWD_47QFCA26F0033_4732_47QTCA20D00EN_4732\",\"recipient_id\":\"aab1b59d-b1a4-e9fa-45a0-d2a4cf6e5148-C\",\"awarding_agency_id\":614,\"agency_slug\":\"general-services-administration\"}],\"page_metadata\":{\"page\":1,\"hasNext\":false,\"last_record_unique_id\":null,\"last_record_sort_value\":\"None\"},\"messages\":[\"For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. \"]}",
+        "sourceTerms": "Original public USAspending response, unchanged bytes from its retained source. LGNDX row is the exact award CONT_AWD_47QACA26C0069_4732_-NONE-_-NONE-."
+      }
+    }
+  ],
+  "requirements": [
+    {
+      "number": "1",
+      "title": "Company identity, NAICS and size",
+      "text": "1. Please provide your company name, address, telephone number, point of contact name (including contact information), and company size. What NAICS code do you recommend for this procurement and what is your company size standard under this NAICS code?",
+      "category": "RFI question 1",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L60–L60; question 1",
+          "excerpt": "1. Please provide your company name, address, telephone number, point of contact name (including contact information), and company size. What NAICS code do you recommend for this procurement and what is your company size standard under this NAICS code?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "2",
+      "title": "PWS/environment feedback and information needed",
+      "text": "2. Please share any questions or feedback on the draft performance work statement or MCC’s IT Environment. This feedback will be utilized to refine and enhance the final Request for Proposal (RFP). Is there any additional information that your company would require in order to submit a competitive proposal in response to the eventual solicitation?",
+      "category": "RFI question 2",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L61–L61; question 2",
+          "excerpt": "2. Please share any questions or feedback on the draft performance work statement or MCC’s IT Environment. This feedback will be utilized to refine and enhance the final Request for Proposal (RFP). Is there any additional information that your company would require in order to submit a competitive proposal in response to the eventual solicitation?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "3",
+      "title": "Held or recommended acquisition vehicles",
+      "text": "3. Please provide a list of the government-wide acquisition contract vehicles that your company holds, and/or contracting vehicles that you would recommend for an IT acquisition of this scope.",
+      "category": "RFI question 3",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L62–L62; question 3",
+          "excerpt": "3. Please provide a list of the government-wide acquisition contract vehicles that your company holds, and/or contracting vehicles that you would recommend for an IT acquisition of this scope."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "4",
+      "title": "One-page comparable capability statement",
+      "text": "4. Please provide a brief (not to exceed 1 page) capabilities statement detailing your company’s expertise and prior experience in providing IT support services similar in scope to MCC’s requirements to other Federal and/or multilateral clients.",
+      "category": "RFI question 4",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L64–L64; question 4",
+          "excerpt": "4. Please provide a brief (not to exceed 1 page) capabilities statement detailing your company’s expertise and prior experience in providing IT support services similar in scope to MCC’s requirements to other Federal and/or multilateral clients."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "5.a",
+      "title": "FFP structure and flexibility",
+      "text": "a. MCC is evaluating opportunities to increase the use of firm-fixed-price (FFP) contracting for software development in alignment with recent Administration policy emphasizing greater use of fixed-price contracting where appropriate. Describe how your organization would recommend structuring a software development effort to maximize the appropriate use of FFP while maintaining the flexibility necessary to accommodate evolving requirements, technical uncertainty, and changing priorities.\nThis can include hybrid FFP/T&M approaches.",
+      "category": "RFI question 5",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L67–L68; question 5.a",
+          "excerpt": "a. MCC is evaluating opportunities to increase the use of firm-fixed-price (FFP) contracting for software development in alignment with recent Administration policy emphasizing greater use of fixed-price contracting where appropriate. Describe how your organization would recommend structuring a software development effort to maximize the appropriate use of FFP while maintaining the flexibility necessary to accommodate evolving requirements, technical uncertainty, and changing priorities.\nThis can include hybrid FFP/T&M approaches."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "5.b",
+      "title": "Comparable SLA experience",
+      "text": "b. Do you have any experience working with SLAs for contracts similar in scope? Please provide examples.",
+      "category": "RFI question 5",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L69–L69; question 5.b",
+          "excerpt": "b. Do you have any experience working with SLAs for contracts similar in scope? Please provide examples."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "5.c",
+      "title": "Deliverable recommendations",
+      "text": "c. The current deliverables are listed in the PWS (Section 5.0). What additional deliverables or changes to the current deliverables would you recommend, particularly in the context of FFP components of the contract?”",
+      "category": "RFI question 5",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L71–L71; question 5.c",
+          "excerpt": "c. The current deliverables are listed in the PWS (Section 5.0). What additional deliverables or changes to the current deliverables would you recommend, particularly in the context of FFP components of the contract?”"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "5.d",
+      "title": "Recommended key personnel categories",
+      "text": "d. Can you list the key personnel labor categories you would recommend for a contract of this size and scope?",
+      "category": "RFI question 5",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L73–L73; question 5.d",
+          "excerpt": "d. Can you list the key personnel labor categories you would recommend for a contract of this size and scope?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "6",
+      "title": "Deployed AI delivery experience",
+      "text": "6. MCC is interested in understanding industry capabilities and proven approaches for developing and implementing artificial intelligence (AI) solutions to support Federal agency missions. Respondents shall describe their experience successfully delivering and implementing AI capabilities. Experience with any organization is relevant, but we are especially interested in any experience with Federal agencies with similar size and scope.\nDo not include proposed solutions, pilots, or proofs of concept that have not been deployed in an operational environment.",
+      "category": "RFI question 6",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L74–L75; question 6",
+          "excerpt": "6. MCC is interested in understanding industry capabilities and proven approaches for developing and implementing artificial intelligence (AI) solutions to support Federal agency missions. Respondents shall describe their experience successfully delivering and implementing AI capabilities. Experience with any organization is relevant, but we are especially interested in any experience with Federal agencies with similar size and scope.\nDo not include proposed solutions, pilots, or proofs of concept that have not been deployed in an operational environment."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "deployed_only"
+    },
+    {
+      "number": "6.a",
+      "title": "Corporate AI organization and focus",
+      "text": "a. Do you have any formal or dedicated AI organization or program within your own corporate structure? If so, is it focused on internal use, customer use, both, or another purpose?",
+      "category": "RFI question 6",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L76–L76; question 6.a",
+          "excerpt": "a. Do you have any formal or dedicated AI organization or program within your own corporate structure? If so, is it focused on internal use, customer use, both, or another purpose?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "6.b",
+      "title": "Responsible AI use with human accountability",
+      "text": "b. What approach do you propose to leverage AI to responsibly and securely accelerate and improve application development? Accountability for the results and code must remain with people and not delegated to AI.",
+      "category": "RFI question 6",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L78–L78; question 6.b",
+          "excerpt": "b. What approach do you propose to leverage AI to responsibly and securely accelerate and improve application development? Accountability for the results and code must remain with people and not delegated to AI."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "7.a",
+      "title": "Staffing for evolving workloads and technologies",
+      "text": "a. Please provide an overview of your capability and methodology for staffing projects to provide for evolving requirements and technologies, including right-sizing staffing levels to fluctuating workloads to support software engineering projects or other initiatives over the life of the contract.",
+      "category": "RFI question 7",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L81–L81; question 7.a",
+          "excerpt": "a. Please provide an overview of your capability and methodology for staffing projects to provide for evolving requirements and technologies, including right-sizing staffing levels to fluctuating workloads to support software engineering projects or other initiatives over the life of the contract."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "7.b",
+      "title": "Retention and continuity",
+      "text": "b. Describe the strategies, practices, and management approaches your organization uses to attract and retain highly skilled personnel supporting Federal contracts and to minimize the loss of institutional knowledge, productivity, and mission continuity resulting from employee turnover.",
+      "category": "RFI question 7",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L82–L82; question 7.b",
+          "excerpt": "b. Describe the strategies, practices, and management approaches your organization uses to attract and retain highly skilled personnel supporting Federal contracts and to minimize the loss of institutional knowledge, productivity, and mission continuity resulting from employee turnover."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "7.c",
+      "title": "Temporary surge capacity and deployment timing",
+      "text": "c. MCC may periodically need to rapidly increase capacity or obtain specialized expertise in response to emerging mission requirements, new technology priorities, cybersecurity needs, or other areas of strategic interest. These needs may be temporary and may not justify maintaining a full-time dedicated team for the duration of the contract. Describe your organization's approach to providing rapid, temporary surge capacity to support emerging or unanticipated MCC requirements.\nIf possible, include anticipated timelines for surge staff – in other words, if a new requirement emerged, how long do you anticipate it would take to identify, onboard, and deploy personnel with the relevant expertise?",
+      "category": "RFI question 7",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L83–L84; question 7.c",
+          "excerpt": "c. MCC may periodically need to rapidly increase capacity or obtain specialized expertise in response to emerging mission requirements, new technology priorities, cybersecurity needs, or other areas of strategic interest. These needs may be temporary and may not justify maintaining a full-time dedicated team for the duration of the contract. Describe your organization's approach to providing rapid, temporary surge capacity to support emerging or unanticipated MCC requirements.\nIf possible, include anticipated timelines for surge staff – in other words, if a new requirement emerged, how long do you anticipate it would take to identify, onboard, and deploy personnel with the relevant expertise?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "8",
+      "title": "Cost control and efficient delivery",
+      "text": "8. MCC seeks to obtain high-quality software development services while ensuring that contractor resources are used efficiently and that costs remain commensurate with the value and complexity of the work. MCC is interested in industry approaches that avoid unnecessary staffing, excessive management overhead, duplicative effort, or other resource-intensive practices that may increase the cost of software development without a corresponding improvement in outcomes.\nDescribe the cost control measures and delivery practices your organization would employ to provide efficient and cost-effective software development services.",
+      "category": "RFI question 8",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L85–L86; question 8",
+          "excerpt": "8. MCC seeks to obtain high-quality software development services while ensuring that contractor resources are used efficiently and that costs remain commensurate with the value and complexity of the work. MCC is interested in industry approaches that avoid unnecessary staffing, excessive management overhead, duplicative effort, or other resource-intensive practices that may increase the cost of software development without a corresponding improvement in outcomes.\nDescribe the cost control measures and delivery practices your organization would employ to provide efficient and cost-effective software development services."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "9.a",
+      "title": "Security through the full lifecycle",
+      "text": "a. How is cybersecurity integrated into requirements, design, development, testing, deployment, and maintenance?",
+      "category": "RFI question 9",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L89–L89; question 9.a",
+          "excerpt": "a. How is cybersecurity integrated into requirements, design, development, testing, deployment, and maintenance?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "9.b",
+      "title": "Third-party and open-source management",
+      "text": "b. How are third-party libraries, open-source components, and packages identified and managed?",
+      "category": "RFI question 9",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L91–L91; question 9.b",
+          "excerpt": "b. How are third-party libraries, open-source components, and packages identified and managed?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "9.c",
+      "title": "Continual component vulnerability monitoring",
+      "text": "c. How do you continuously monitor 3rd party and open-source components for newly discovered vulnerabilities?",
+      "category": "RFI question 9",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L93–L93; question 9.c",
+          "excerpt": "c. How do you continuously monitor 3rd party and open-source components for newly discovered vulnerabilities?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "9.d",
+      "title": "Zero Trust in development",
+      "text": "d. How do you incorporate Zero Trust principles into software development efforts?",
+      "category": "RFI question 9",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L95–L95; question 9.d",
+          "excerpt": "d. How do you incorporate Zero Trust principles into software development efforts?"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "10.a",
+      "title": "Client DevSecOps pipeline and hosting responsibility",
+      "text": "a. Describe any experience that your company has had with hosting and maintaining an entire DevSecOps pipeline for a client. Please specify if the work was done for a Federal client. Does this include hosting the production environment? If not, describe your approach for interacting with the infrastructure provider/team.",
+      "category": "RFI question 10",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L98–L98; question 10.a",
+          "excerpt": "a. Describe any experience that your company has had with hosting and maintaining an entire DevSecOps pipeline for a client. Please specify if the work was done for a Federal client. Does this include hosting the production environment? If not, describe your approach for interacting with the infrastructure provider/team."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "11.a",
+      "title": "Application O&M team and lifecycle coverage",
+      "text": "a. Please review MCC’s list of applications and outline your company’s proposed Operations and Maintenance (O&M) approach. What do you recommend in size and structure of an O&M team to ensure coverage without overstaffing or understaffing? Include how the requirements will be adjusted over time to address evolving needs as applications move out of the development phase into O&M and eventually retire.",
+      "category": "RFI question 11",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L101–L101; question 11.a",
+          "excerpt": "a. Please review MCC’s list of applications and outline your company’s proposed Operations and Maintenance (O&M) approach. What do you recommend in size and structure of an O&M team to ensure coverage without overstaffing or understaffing? Include how the requirements will be adjusted over time to address evolving needs as applications move out of the development phase into O&M and eventually retire."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "12.a",
+      "title": "Established platform experience and approach",
+      "text": "a. Please outline your company’s experience and approach to developing and maintaining solutions on established platforms such as .NET, PowerApps, SharePoint Online, Box.com and ServiceNow.",
+      "category": "RFI question 12",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L104–L104; question 12.a",
+          "excerpt": "a. Please outline your company’s experience and approach to developing and maintaining solutions on established platforms such as .NET, PowerApps, SharePoint Online, Box.com and ServiceNow."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.a",
+      "title": "Recommended development methodology",
+      "text": "a. Describe the software development methodology your organization would recommend for MCC's software development environment. Explain how your approach would support the delivery of high-quality software while maintaining flexibility to respond to changing mission priorities, requirements, technology, and user needs. Include -\n",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L107–L108; question 13.a",
+          "excerpt": "a. Describe the software development methodology your organization would recommend for MCC's software development environment. Explain how your approach would support the delivery of high-quality software while maintaining flexibility to respond to changing mission priorities, requirements, technology, and user needs. Include -\n"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.a.i",
+      "title": "Priorities to backlog and measurable outcomes",
+      "text": "i. How you translate Government priorities and user needs into requirements, a prioritized backlog, development increments, and measurable outcomes;",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L109–L109; question 13.a.i",
+          "excerpt": "i. How you translate Government priorities and user needs into requirements, a prioritized backlog, development increments, and measurable outcomes;"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.a.ii",
+      "title": "Estimation, planning and uncertainty",
+      "text": "ii. How you estimate and plan development work, including your approach to managing uncertainty in requirements and estimates;",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L110–L110; question 13.a.ii",
+          "excerpt": "ii. How you estimate and plan development work, including your approach to managing uncertainty in requirements and estimates;"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.a.iii",
+      "title": "Changing priorities without avoidable rework",
+      "text": "iii. How you manage changing priorities and requirements without creating unnecessary rework, cost, or schedule impacts;",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L112–L112; question 13.a.iii",
+          "excerpt": "iii. How you manage changing priorities and requirements without creating unnecessary rework, cost, or schedule impacts;"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.a.iv",
+      "title": "Delivery, quality, security and maintenance tradeoffs",
+      "text": "iv. How you balance development velocity with software quality, cybersecurity, testing, documentation, and maintainability;",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L114–L114; question 13.a.iv",
+          "excerpt": "iv. How you balance development velocity with software quality, cybersecurity, testing, documentation, and maintainability;"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.a.v",
+      "title": "Delivery metrics and value",
+      "text": "v. How you measure team performance and software delivery, including metrics you recommend using to assess progress, quality, productivity, and value delivered;",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L115–L115; question 13.a.v",
+          "excerpt": "v. How you measure team performance and software delivery, including metrics you recommend using to assess progress, quality, productivity, and value delivered;"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.a.vi",
+      "title": "Comparable federal delivery examples",
+      "text": "vi. Examples of comparable Federal software development efforts where your methodology resulted in successful delivery of mission capabilities; and",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L117–L117; question 13.a.vi",
+          "excerpt": "vi. Examples of comparable Federal software development efforts where your methodology resulted in successful delivery of mission capabilities; and"
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.a.vii",
+      "title": "Enabling organizational and contract structure",
+      "text": "vii. Describe any aspects of the MCC’s organizational structure, decision-making processes, staffing model, or contract structure that you believe are particularly important to successfully implementing your proposed development methodology.",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L118–L118; question 13.a.vii",
+          "excerpt": "vii. Describe any aspects of the MCC’s organizational structure, decision-making processes, staffing model, or contract structure that you believe are particularly important to successfully implementing your proposed development methodology."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.b",
+      "title": "Automated test experience",
+      "text": "b. Please describe your experience creating and executing automated test scripts.",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L120–L120; question 13.b",
+          "excerpt": "b. Please describe your experience creating and executing automated test scripts."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "13.c",
+      "title": "Cloud-hosted application development",
+      "text": "c. Please describe your approach to, and experience in, developing applications to reside in a cloud hosted environment.",
+      "category": "RFI question 13",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L122–L122; question 13.c",
+          "excerpt": "c. Please describe your approach to, and experience in, developing applications to reside in a cloud hosted environment."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "14.a",
+      "title": "Modernization to a cloud-native operating model",
+      "text": "14. Our current custom-developed applications are hosted primarily using traditional server and database architectures within cloud IaaS environments. We are interested in evolving toward a more modern, cloud-native application development and hosting model that reduces reliance on individually managed servers and makes greater use of managed platform services, serverless technologies, automated CI/CD pipelines, and repeatable deployment practices.\na. What approach would you recommend for transitioning our application portfolio to this model? Please describe the proposed target architecture and application delivery approach, including how applications would be developed, tested, deployed, operated, and maintained. Please also identify the expected benefits, key implementation considerations and tradeoffs, and the primary cost drivers and opportunities for cost optimization.",
+      "category": "RFI question 14",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L123–L124; question 14.a",
+          "excerpt": "14. Our current custom-developed applications are hosted primarily using traditional server and database architectures within cloud IaaS environments. We are interested in evolving toward a more modern, cloud-native application development and hosting model that reduces reliance on individually managed servers and makes greater use of managed platform services, serverless technologies, automated CI/CD pipelines, and repeatable deployment practices.\na. What approach would you recommend for transitioning our application portfolio to this model? Please describe the proposed target architecture and application delivery approach, including how applications would be developed, tested, deployed, operated, and maintained. Please also identify the expected benefits, key implementation considerations and tradeoffs, and the primary cost drivers and opportunities for cost optimization."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    },
+    {
+      "number": "15",
+      "title": "Single-award BPA structure feedback",
+      "text": "15. MCC is considering establishing a single-award Blanket Purchase Agreement (BPA), with individual orders issued by service area. Please provide feedback on this contemplated structure, including any advantages, disadvantages, pricing considerations, performance risks, or alternative approaches that MCC should consider.",
+      "category": "RFI question 15",
+      "mandatory": true,
+      "responseDisposition": "unanswered",
+      "owner": "",
+      "status": "open",
+      "evidence": [
+        {
+          "sourceKey": "mcc-rfi",
+          "locator": "Government text L125–L125; question 15",
+          "excerpt": "15. MCC is considering establishing a single-award Blanket Purchase Agreement (BPA), with individual orders issued by service area. Please provide feedback on this contemplated structure, including any advantages, disadvantages, pricing considerations, performance risks, or alternative approaches that MCC should consider."
+        }
+      ],
+      "notes": "The issued RFI permits answering or explicitly marking the corresponding question N/A.",
+      "evidenceRule": "any"
+    }
+  ],
+  "capabilities": [
+    {
+      "title": "Community pipeline and teaming integration",
+      "kind": "capability",
+      "description": "EVO is designed to connect existing community tools, pipelines and vendor lists, supporting curated problem sets, teaming and progression while communities retain their operating rules.",
+      "owner": "",
+      "status": "draft",
+      "tags": [
+        "community",
+        "teaming",
+        "pipeline"
+      ],
+      "evidence": [
+        {
+          "sourceKey": "lgndx-company",
+          "locator": "claims[company-evo-community]; original Apollo EVO Ecosystem Integration section",
+          "excerpt": "EVO is designed to connect existing community tools, pipelines and vendor lists, supporting curated problem sets, teaming and progression while communities retain their operating rules."
+        }
+      ],
+      "deliveryStatus": "unspecified"
+    },
+    {
+      "title": "Federal software delivery practice",
+      "kind": "capability",
+      "description": "LGNDX describes taking research and government briefs into operational software, integrating existing environments, and preparing systems for federal evaluation and sustainment.",
+      "owner": "",
+      "status": "draft",
+      "tags": [
+        "software",
+        "federal",
+        "integration"
+      ],
+      "evidence": [
+        {
+          "sourceKey": "lgndx-company",
+          "locator": "claims[company-applied-rd]; original Applied R&D section",
+          "excerpt": "LGNDX describes taking research and government briefs into operational software, integrating existing environments, and preparing systems for federal evaluation and sustainment."
+        }
+      ],
+      "deliveryStatus": "unspecified"
+    },
+    {
+      "title": "LGNDX award47QACA26C0069",
+      "kind": "past_performance",
+      "description": "USAspending records LGNDX INC., UEI PZGRB9Q1S7A3, award47QACA26C0069 with Award Amount USD285000, performance dates2026-09-25 to2026-10-30, funded by Commerce/International Trade Administration and awarded by GSA/FAS, description NATIONAL ARTIFICIAL INTELLIGENCE CENTER. These are the recorded award fields for reviewer qualification.",
+      "owner": "",
+      "status": "draft",
+      "tags": [
+        "award_background",
+        "software"
+      ],
+      "evidence": [
+        {
+          "sourceKey": "funded-prime-response",
+          "locator": "results row generated_internal_id=CONT_AWD_47QACA26C0069_4732_-NONE-_-NONE-"
+        }
+      ],
+      "deliveryStatus": "unspecified"
+    }
+  ],
+  "responseRules": {
+    "maxPages": 20,
+    "capabilityMaxPages": 1,
+    "excludedSections": [
+      "cover page",
+      "table of contents"
+    ],
+    "notes": "Answer each selected question directly. If declining to answer, mark N/A against its original number. Capability statement maximum one page. Question6 permits deployed operational AI experience only. Company pursuit, answers and teaming require explicit operator decisions.",
+    "evidence": [
+      {
+        "sourceKey": "mcc-rfi",
+        "locator": "Government text L56",
+        "excerpt": "The Millennium Challenge Corporation (MCC) seeks responses to the questions below. While desired, respondents are not required to provide answers to all questions. If you choose not to answer a question, please respond with “N/A” to the corresponding question number."
+      },
+      {
+        "sourceKey": "mcc-rfi",
+        "locator": "Government text L57",
+        "excerpt": "Responses to this RFI should not exceed twenty (20) pages in total, excluding the cover page and table of contents. Respondents may allocate the available pages among the RFI questions as they deem appropriate and are encouraged to provide sufficient detail to fully address the questions and provide information that will assist the Government in conducting meaningful market research and refining the requirement and acquisition strategy."
+      },
+      {
+        "sourceKey": "mcc-rfi",
+        "locator": "Government text L58–L59",
+        "excerpt": "Responses should be clear, concise, and directly relevant to the information requested. Respondents are discouraged from including generic corporate marketing materials, promotional literature, or other information that does not directly address the Government's requirements or RFI questions.\nRespondents may also provide relevant recommendations, alternative approaches, lessons learned, or other information not specifically requested in this RFI if they believe such information would assist the Government in defining the requirement or acquisition strategy."
+      },
+      {
+        "sourceKey": "mcc-rfi",
+        "locator": "Government text L64",
+        "excerpt": "4. Please provide a brief (not to exceed 1 page) capabilities statement detailing your company’s expertise and prior experience in providing IT support services similar in scope to MCC’s requirements to other Federal and/or multilateral clients."
+      },
+      {
+        "sourceKey": "mcc-rfi",
+        "locator": "Government text L74–L75",
+        "excerpt": "6. MCC is interested in understanding industry capabilities and proven approaches for developing and implementing artificial intelligence (AI) solutions to support Federal agency missions. Respondents shall describe their experience successfully delivering and implementing AI capabilities. Experience with any organization is relevant, but we are especially interested in any experience with Federal agencies with similar size and scope.\nDo not include proposed solutions, pilots, or proofs of concept that have not been deployed in an operational environment."
+      }
+    ]
+  },
+  "questions": [
+    {
+      "topic": "Deadline timezone",
+      "text": "The SAM response field says October 29 at 6:00 PM EDT. The event notice says COB October 29 and uses EST for October 14/15 event times. Keep both strings; record the authorized interpretation before an actual event registration or submission.",
+      "sources": [
+        "mcc-event",
+        "mcc-notice"
+      ]
+    },
+    {
+      "topic": "Referenced attachments",
+      "text": "RFI 5.c calls Section 5.0 deliverables; the PWS table of contents calls Section 5.0 Labor Requirements. PWS also refers to Appendix B and Section H. Record these as precise Q&A items when the responding company selects this opportunity.",
+      "sources": [
+        "mcc-rfi",
+        "mcc-pws"
+      ]
+    }
+  ],
+  "sourceNotes": [
+    "Document timestamps and source roles stay separate from operator decisions.",
+    "Existing AwardWorkspace/dossier import binds source editions through their original APIs.",
+    "The portable receiving package uses an agreed customer mapping; the public IX/EVO site does not publish an API."
+  ]
+}

@@ -1,0 +1,16 @@
+L54: Notice of Intent to Host a Virtual Industry Day
+L55: The Millennium Challenge Corporation (MCC) intends to release a Request for Information (RFI) to support a provision requirement for all services required to provide applications engineering support, operate and maintain MCC’s database in a secure manner, develop solutions, and provide Tier 3 support across all enterprise applications to support the information technology requirements of Millennium Challenge Corporation (MCC) Office of the Chief Information Officer (OCIO).
+L56: The services to be acquired also include program management and administrative support necessary for the administration of this award. As background, the MCC network supports approximately 550 users, consisting of 250 Full-Time Employees (FTEs), and just under 300 non-employees. Approximately 95 percent (95%) of MCC staff are located at its facility in Washington D.C.
+L57: MCC will host a Virtual Industry Day on October 15, 2026 from 10:00 AM to 12:00 PM EST.
+L58: 
+L59: If you are interested in attending the Virtual Industry Day, please indicate your intent to attend by 6 PM EST, October 14, 2026 by sending an email to softwaredev@mcc.gov.
+L60: 
+L61: Your registration must include the names of the attendees from your company, job titles, and email addresses. If there are any issues, please send an email to softwaredev@mcc.gov.
+L62: Vendors who are interested in attending our Virtual Industry Day are required to call in to Webex address shown below.
+L63: 
+L64: ADDITIONAL INSTRUCTIONS
+L65: 
+L66: · MCC requests that vendors thoroughly review the requirement prior to Industry Day and come prepared to participate in discussions, share ideas, and provide meaningful feedback during our question-and-answer session.
+L67: 
+L68: · Responses to the questions contained in the RFI are due by COB October 29, 2026.
+L69: · In your response, please indicate whether you are a small, medium-sized or large business, and name the contract vehicles you currently have.

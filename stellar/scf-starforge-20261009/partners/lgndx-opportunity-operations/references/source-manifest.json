@@ -1,0 +1,145 @@
+{
+  "schema": "tjlabs.lgndx.source-packet.v1",
+  "createdAt": "2026-10-12T01:38:56Z",
+  "component": "stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations",
+  "originalResearchRef": "026815ec63aa998aac8de8106c58e414ee82a927",
+  "noticeId": "95332427K0001",
+  "sources": [
+    {
+      "key": "mcc-rfi",
+      "path": "references/mcc-rfi-government-text.txt",
+      "role": "solicitation",
+      "title": "MCC Software Development Services RFI questions",
+      "url": "https://govtribe.com/file/government-file/request-for-information-rfi-final-dot-docx",
+      "mediaType": "text/plain; charset=utf-8",
+      "terms": "Original public U.S. Government attachment text, retained from the carrier's Text version with its line locators. Original issue notice: https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view",
+      "bytes": 11184,
+      "sha256": "a056f3412429ae69c389def65021d15eac4bed29df962cfdb91c91b9bdd2aa73"
+    },
+    {
+      "key": "mcc-pws",
+      "path": "references/mcc-pws-government-text.txt",
+      "role": "solicitation",
+      "title": "MCC Performance Work Statement attachment supporting the RFI",
+      "url": "https://govtribe.com/file/government-file/performance-work-statement-pws-final-dot-docx",
+      "mediaType": "text/plain; charset=utf-8",
+      "terms": "Original public U.S. Government attachment text, retained from the carrier's Text version. Preserve draft references in the RFI and PWS footer; original issue notice: https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view",
+      "bytes": 52325,
+      "sha256": "c517b8df490e686da248c751b094fae9083bd46722e2f6fbb5484ccbe8cb908e"
+    },
+    {
+      "key": "mcc-event",
+      "path": "references/mcc-industry-day-excerpt.txt",
+      "role": "solicitation",
+      "title": "MCC Industry Day participation and deadline instructions",
+      "url": "https://govtribe.com/file/government-file/rfi-notice-of-intent-dot-docx",
+      "mediaType": "text/plain; charset=utf-8",
+      "terms": "Public government notice excerpt, original carrier line54 through69. The source file contains the registration and response instructions.",
+      "bytes": 2016,
+      "sha256": "79d600d186d7c45d9941af6d02470ec014903c292533039fc3df23d7603fdca9"
+    },
+    {
+      "key": "mcc-notice",
+      "path": "references/mcc-notice-record.json",
+      "role": "solicitation",
+      "title": "MCC official SAM notice fields",
+      "url": "https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view",
+      "mediaType": "application/json",
+      "terms": "Recorded official SAM.gov notice fields, with the observed source transcription.",
+      "bytes": 2196,
+      "sha256": "600c4082662047a72bb83dfd48ddf6478f11f5d31eef8894adbb6a11653b9b14"
+    },
+    {
+      "key": "lgndx-company",
+      "path": "references/lgndx-company-evidence.json",
+      "role": "company",
+      "title": "LGNDX published company and integration sources",
+      "url": "https://lgndx.com/product/apollo-evo",
+      "mediaType": "application/json",
+      "terms": "TokenJunkieLabs source-linked qualification record; company statements retain their original publishers and URLs.",
+      "bytes": 4313,
+      "sha256": "bdbb1ce9861b04395d43e00b4ceba23252a45b36933ddbd379ad2221f5a40092"
+    },
+    {
+      "key": "funded-prime-capture",
+      "path": "references/funded-prime-capture.json",
+      "role": "award_background",
+      "title": "Original funded-prime cohort acquisition record",
+      "url": "https://api.usaspending.gov/api/v2/search/spending_by_award/",
+      "mediaType": "application/json",
+      "terms": "Original public USAspending acquisition record retained by C79F; original Commons source merge2e8cd9d2c6dac61ad76efc6e22300b002325279e.",
+      "bytes": 1453,
+      "sha256": "c07abc56456e888407e561ac8b50906ce1f7884bcc6835fdfdb05fffb949f045",
+      "capturedAt": "2026-10-11T23:02:37.522553+00:00"
+    },
+    {
+      "key": "funded-prime-response",
+      "path": "references/funded-prime-response.json",
+      "role": "award_background",
+      "title": "Original 28-row USAspending funded-prime response",
+      "url": "https://api.usaspending.gov/api/v2/search/spending_by_award/",
+      "mediaType": "application/json",
+      "terms": "Original public USAspending response, unchanged bytes from its retained source. LGNDX row is the exact award CONT_AWD_47QACA26C0069_4732_-NONE-_-NONE-.",
+      "bytes": 30030,
+      "sha256": "c0c74c897b95db8657cfe9bd3c1b76526f5ff057ad2966d6f4a0f98c06cd9319",
+      "capturedAt": "2026-10-11T23:02:37.522553+00:00"
+    }
+  ],
+  "files": [
+    {
+      "path": "references/mcc-rfi-government-text.txt",
+      "bytes": 11184,
+      "sha256": "a056f3412429ae69c389def65021d15eac4bed29df962cfdb91c91b9bdd2aa73"
+    },
+    {
+      "path": "references/mcc-pws-government-text.txt",
+      "bytes": 52325,
+      "sha256": "c517b8df490e686da248c751b094fae9083bd46722e2f6fbb5484ccbe8cb908e"
+    },
+    {
+      "path": "references/mcc-industry-day-excerpt.txt",
+      "bytes": 2016,
+      "sha256": "79d600d186d7c45d9941af6d02470ec014903c292533039fc3df23d7603fdca9"
+    },
+    {
+      "path": "references/funded-prime-capture.json",
+      "bytes": 1453,
+      "sha256": "c07abc56456e888407e561ac8b50906ce1f7884bcc6835fdfdb05fffb949f045"
+    },
+    {
+      "path": "references/funded-prime-response.json",
+      "bytes": 30030,
+      "sha256": "c0c74c897b95db8657cfe9bd3c1b76526f5ff057ad2966d6f4a0f98c06cd9319"
+    },
+    {
+      "path": "references/mcc-requirements.json",
+      "bytes": 32235,
+      "sha256": "c232285b7750881169951aaa97c6f8308abb6ada1c3dc5a6753e02938b897efd"
+    },
+    {
+      "path": "references/mcc-requirements.csv",
+      "bytes": 4636,
+      "sha256": "79891ef833058ae0c86eeec41d8119b1f94975b1ce9e1bde63b288e7c7f0c0da"
+    },
+    {
+      "path": "references/mcc-notice-record.json",
+      "bytes": 2196,
+      "sha256": "600c4082662047a72bb83dfd48ddf6478f11f5d31eef8894adbb6a11653b9b14"
+    },
+    {
+      "path": "references/lgndx-company-evidence.json",
+      "bytes": 4313,
+      "sha256": "bdbb1ce9861b04395d43e00b4ceba23252a45b36933ddbd379ad2221f5a40092"
+    },
+    {
+      "path": "references/operator-seed.json",
+      "bytes": 157828,
+      "sha256": "d5bcae2868ab7220a2c822bbf065786dba6862dea0bbb83732e19bd75f22b49e"
+    },
+    {
+      "path": "references/README.md",
+      "bytes": 8261,
+      "sha256": "61f7573d277bd702f9e4b0743d76bdc45e869e6badee7efc66b16f72043fe8a6"
+    }
+  ]
+}

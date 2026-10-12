@@ -1,0 +1,64 @@
+{
+  "schema": "funded-prime.award-capture/v1",
+  "endpoint": "https://api.usaspending.gov/api/v2/search/spending_by_award/",
+  "request": {
+    "fields": [
+      "Award ID",
+      "Recipient Name",
+      "Recipient UEI",
+      "Start Date",
+      "End Date",
+      "Base Obligation Date",
+      "Last Modified Date",
+      "Award Amount",
+      "Awarding Agency",
+      "Awarding Sub Agency",
+      "Funding Agency",
+      "Funding Sub Agency",
+      "Description",
+      "NAICS",
+      "PSC",
+      "generated_internal_id",
+      "recipient_id"
+    ],
+    "filters": {
+      "award_amounts": [
+        {
+          "lower_bound": 250000,
+          "upper_bound": 20000000
+        }
+      ],
+      "award_type_codes": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "keywords": [
+        "artificial intelligence"
+      ],
+      "time_period": [
+        {
+          "date_type": "new_awards_only",
+          "end_date": "2026-10-11",
+          "start_date": "2026-09-01"
+        }
+      ]
+    },
+    "limit": 100,
+    "order": "desc",
+    "page": 1,
+    "sort": "Base Obligation Date",
+    "subawards": false
+  },
+  "retrieved_at": "2026-10-11T23:02:37.522553+00:00",
+  "response_bytes": 30030,
+  "response_sha256": "c0c74c897b95db8657cfe9bd3c1b76526f5ff057ad2966d6f4a0f98c06cd9319",
+  "rows": 28,
+  "page_metadata": {
+    "page": 1,
+    "hasNext": false,
+    "last_record_unique_id": null,
+    "last_record_sort_value": "None"
+  }
+}
