@@ -77,6 +77,17 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
       pending = Object.fromEntries(Object.entries(saved).filter(([, entry]) =>
         entry && typeof entry.path === 'string' && entry.path.startsWith('/api/cloud/') && entry.payload && typeof entry.kind === 'string'));
     } catch { pending = {}; }
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(name + ':archive') ?? 'null');
+      if (saved && (saved.id || saved.intakeId) && Array.isArray(saved.uploads)) ui.receiveIntake = saved;
+    } catch {}
+  }
+  function rememberArchiveIntake() {
+    if (!storageName) return;
+    try {
+      if (ui.receiveIntake) sessionStorage.setItem(storageName + ':archive', JSON.stringify(ui.receiveIntake));
+      else sessionStorage.removeItem(storageName + ':archive');
+    } catch { notice('The archive is retained on the host. Reopen its intake from the receiving list after a browser reload.', true); }
   }
   function acceptState(next) {
     const incoming = next?.cloud ?? next;
@@ -126,7 +137,7 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
       await applyResult(entry, result);
       return result;
     } catch (error) {
-      if (Number.isInteger(error.status) && error.status >= 400 && error.status < 500) {
+      if (Number.isInteger(error.status) && error.status >= 400 && error.status < 500 && ![408, 429].includes(error.status)) {
         delete pending[entry.kind]; rememberPending();
       }
       try { await refreshCloud({ selected: false }); } catch {}
@@ -154,10 +165,10 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     } else if (entry.kind === 'export') {
       ui.lastDelivery = result.delivery ?? result; ui.tab = 'handover';
     } else if (entry.kind === 'receive-intake') {
-      ui.receiveIntake = result.intake ?? result;
+      ui.receiveIntake = result.intake ?? result; rememberArchiveIntake();
     } else if (entry.kind === 'receive') {
       ui.lastDelivery = result.delivery ?? result;
-      ui.receiveIntake = null; ui.tab = 'handover';
+      ui.receiveIntake = null; rememberArchiveIntake(); ui.tab = 'handover';
     }
     await refreshCloud();
   }
@@ -447,10 +458,13 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
       '</section><section class="cloud-panel"><h3>Receive a handover</h3><p>Reopen the original source identities, comparisons and review history in this workspace. Choose the merchant source after inspecting the received edition.</p>' +
       '<details open><summary>Upload a complete handover</summary><label>Private handover archive<input type="file" data-cloud-file="archive" accept=".zip,.tar,.gz,.tgz,application/zip,application/gzip"></label>' +
       (ui.archiveFile ? '<p class="cloud-mono">' + esc(ui.archiveFile.name) + '<br>' + esc(byteLabel(ui.archiveFile.size)) + '</p>' : '') +
-      (ui.receiveIntake ? detail('Retained archive intake', ui.receiveIntake) : '') +
+      (ui.receiveIntake ? detail('Retained archive intake', ui.receiveIntake) + action('clear-archive', 'Close this archive intake view') : '') +
       '<div class="cloud-toolbar">' + action('receive-upload', ui.receiveIntake ? 'Resume receiving' : 'Upload and receive', {}, !ui.archiveFile, true) + '</div></details>' +
       '<details><summary>Receive an archive on this host</summary>' + textField('receivePath', 'Archive path', ui.receivePath, ' placeholder="/path/to/cloud-handover.zip"') +
-      '<div class="cloud-toolbar">' + action('receive-local', 'Receive local archive', {}, !ui.receivePath.trim()) + '</div></details></section></div>' +
+      '<div class="cloud-toolbar">' + action('receive-local', 'Receive local archive', {}, !ui.receivePath.trim()) + '</div></details>' +
+      (list(state.archiveIntakes).length ? '<details><summary>Retained archive intakes</summary>' + list(state.archiveIntakes).map(item =>
+        '<div class="cloud-delivery-row"><div><strong>' + esc(item.name ?? item.archive?.name ?? item.id) + '</strong><small>' + esc(item.state ?? 'Retained') + '</small></div>' +
+        action('resume-archive', 'Resume intake', { id: item.id }) + '</div>').join('') + '</details>' : '') + '</section></div>' +
       (ui.lastDelivery ? '<section class="cloud-panel"><h3>Latest handover operation</h3>' + deliveryView(ui.lastDelivery) + '</section>' : '') +
       '<section class="cloud-panel"><h3>Retained handovers</h3>' +
       (list(state.deliveries).length ? list(state.deliveries).map(item => '<div class="cloud-delivery-row"><div><strong>' + esc(item.filename ?? item.id) +
@@ -551,10 +565,10 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     const file = ui.archiveFile;
     if (!file) throw new Error('Select the actual complete handover archive.');
     if (!ui.receiveIntake) {
-      notice('Reading the selected archive digest…'); paint();
-      const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer()))).map(value => value.toString(16).padStart(2, '0')).join('');
-      await submit('receive-intake', '/api/cloud/intake', operationPayload({ archive: { name: file.name, bytes: String(file.size), sha256: hash } }));
+      await submit('receive-intake', '/api/cloud/intake', operationPayload({ archive: { name: file.name, bytes: String(file.size) } }));
     }
+    const retained = await api('/api/cloud/intake?id=' + encodeURIComponent(ui.receiveIntake.id ?? ui.receiveIntake.intakeId));
+    ui.receiveIntake = retained.intake ?? retained; rememberArchiveIntake();
     const intake = ui.receiveIntake;
     const upload = list(intake.uploads)[0] ?? intake.upload;
     if (!upload?.url) throw new Error('The archive intake did not return its original upload URL.');
@@ -632,6 +646,15 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     },
     'receive-local': async () => { await submit('receive', '/api/cloud/receive', operationPayload({ archivePath: ui.receivePath.trim() })); notice('Received source editions and review lineage. Inspect them before choosing the merchant source.'); },
     'receive-upload': receiveUpload,
+    'resume-archive': async node => {
+      const result = await api('/api/cloud/intake?id=' + encodeURIComponent(node.dataset.cloudId));
+      ui.receiveIntake = result.intake ?? result; ui.archiveFile = null; rememberArchiveIntake();
+      notice('The original archive intake is open. Select the same archive to continue from its retained upload.');
+    },
+    'clear-archive': async () => {
+      ui.receiveIntake = null; ui.archiveFile = null; rememberArchiveIntake();
+      notice('Archive intake view closed. The retained intake remains available in this workspace.');
+    },
     'open-delivery': async node => { const result = await api('/api/cloud/delivery?id=' + encodeURIComponent(node.dataset.cloudId) + '&kind=summary'); ui.lastDelivery = result.delivery ?? result; },
     retry: async node => {
       const entry = pending[node.dataset.cloudKind];
