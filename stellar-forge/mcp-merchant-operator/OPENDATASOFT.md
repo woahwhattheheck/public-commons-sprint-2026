@@ -50,7 +50,7 @@ Private portals can declare authTokenEnv as the name of their existing portal cr
 
 ## Operate the original application
 
-The host advertises 32 merchant_opendatasoft tools only when this connection is configured.
+The host advertises 44 merchant_opendatasoft tools only when this connection is configured.
 
 | Workflow | Operations | Original state |
 | --- | --- | --- |
@@ -187,3 +187,13 @@ node stellar-forge/mcp-merchant-operator/examples/opendatasoft-receiving.mjs \
 To receive an existing original project, add --project /srv/starforge/huwise-workbench. This selects its completed native edition and any associated original source declaration, merchant archive, receiving guide and buyer request. The existing project's analyst notes are preserved. A new example project records its completed row and file review in its own analyst notes and confirms that the earlier immutable export still replays after that later edit.
 
 The default source is https://public.opendatasoft.com and dataset open-data-sources. Use --origin and --dataset for another authorized public portal and dataset. The supplied directory retains the original project, merchant connection, export request, full customer files and native-receiving.json. Repeat the same command and directory after interruption. A completed operation reopens and verifies its original delivery locally.
+
+## Native tenant ingestion
+
+The same workbench now carries a retained source through native Huwise Automation configuration, complete upload, reviewed publication and full Explore receiving. Add a private automationConnection file path to its named workspace entry. Open Tenant ingestion in the existing browser, or use the tenant commands and the twelve tenant_* actions.
+
+Use tenant_prepare with exactly one of plan or planJson; the complete planJson string preserves native numeric literals. tenant_plan returns compact control state plus complete specificationJson, nativePlanJson and remoteJson strings. A saved review binds the original source and complete tenant configuration before applying. Interrupted native work adopts its original response or verified tenant readback, and interrupted receiving continues the same capture while the publication is unchanged.
+
+tenant_export freezes all original plan, source, configuration, request/response and receiving files. Select that result with tenantExportId in the existing export request to receive tenant.tar.gz and TENANT-INGESTION.md alongside the original analyst, merchant and buyer files. Its capture and notes identity must match the selected analyst edition. Download continuation and offline reopen use the same original file descriptors.
+
+The complete [tenant ingestion operating guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/TENANT-INGESTION.md) contains host configuration, a complete plan shape, native endpoint behavior, all CLI commands, the typed client workflow and receiving criteria. The [Automation client reference](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/API.md) describes the complete current native API contract.
