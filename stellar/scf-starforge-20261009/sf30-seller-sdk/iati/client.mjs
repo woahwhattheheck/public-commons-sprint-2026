@@ -17,7 +17,9 @@ export class IatiWorkspaceClient{
  #origin;#token;#controller=new AbortController();#pending=new Set();#closed=false;#timeout;
  constructor(consoleUrl,{timeoutMs=240000}={}){
   let selected;try{selected=new URL(consoleUrl);}catch{throw problem('CONNECTION','Use the original private console URL.');}
-  if(selected.protocol!=='http:'||selected.hostname!=='127.0.0.1'||!selected.port||
+  const port=selected.port===''?80:Number(selected.port);
+  if(selected.protocol!=='http:'||selected.hostname!=='127.0.0.1'||
+    !Number.isInteger(port)||port<1||port>65535||
     selected.pathname!=='/'||selected.username||selected.password||selected.search||
     !/^[A-Za-z0-9_-]{32,256}$/.test(selected.hash.slice(1)))
     throw problem('CONNECTION','Use the complete loopback console URL without altering its private fragment.');
