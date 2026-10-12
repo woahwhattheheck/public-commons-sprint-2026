@@ -114,6 +114,21 @@
       "path": "README.md",
       "bytes": 12099,
       "sha256": "74a2898aaa12c26794350809850ea34dfc82e893fbacdff47eea67d93174c27f"
+    },
+    {
+      "path": "cashiering/public/index.html",
+      "bytes": 818,
+      "sha256": "9f6a83825f09039c4386b0c20085192a8a6056c43e5ed1b1ed70d4e75b6a6a0d"
+    },
+    {
+      "path": "cashiering/public/app.mjs",
+      "bytes": 107691,
+      "sha256": "20a77accf91e3885ede5f447c7764b72189de7c4fdc49307db2d29c2be7d605a"
+    },
+    {
+      "path": "cashiering/public/style.css",
+      "bytes": 12743,
+      "sha256": "b39e4aed1f025e89ab46dc4504d2b45eb36e81483853b9e9a47da1b464d4d72c"
     }
   ],
   "component_revision": "cashiering-native-continuation-20261012",
@@ -124,9 +139,9 @@
     "operation_id": "berkeley-daily-cashiering-native-82e4-20261012",
     "source_closure": "Complete curated permitting comparator and cashiering operator, including both browser surfaces and the original audit bridge; immutable packet bytes are captured from the actual installed source.",
     "ui_component": {
-      "commit": "1310a94279ec0ffa2ee5360920bae591482ae4a6",
-      "app_blob": "319f6488a51740bbdde3243d06bf8302c7dad606",
-      "app_sha256": "be76f3f60b4985234817f774864a1ea49eb76f02bd84a493aabeb0091e4641bf"
+      "commit": "cb6dbc387282b9388cd31c31fe7d5430b14933c4",
+      "app_blob": "65808270079c2c16e58e6522689d6c852e01b25d",
+      "app_sha256": "20a77accf91e3885ede5f447c7764b72189de7c4fdc49307db2d29c2be7d605a"
     }
   }
 }
