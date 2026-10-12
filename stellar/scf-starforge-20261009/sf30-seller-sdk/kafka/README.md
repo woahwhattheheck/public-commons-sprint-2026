@@ -114,7 +114,9 @@ Review and Save retain the selected source, Python and workspace binding. Start 
 
 Kafka and NDJSON Applications share a resource family for the same private source directory. The original writer exclusion therefore covers both views of that database.
 
-The managed binding covers all 26 executable/browser source paths, the original workspace and Kafka markers, database inode identity and selected Python. Mutable database contents and broker availability stay outside the reviewed source digest.
+Kafka wire history is retained in its private kafka.sqlite database alongside the original NDJSON workspace.sqlite, under the same original workspace writer. This keeps large captures separate from the dataset engine's original database size contract.
+
+The managed binding covers all 26 executable/browser source paths, the original workspace and Kafka markers, both database inode identities and selected Python. Mutable database contents and broker availability stay outside the reviewed source digest.
 
 ## Original source interfaces
 

@@ -102,6 +102,11 @@ export async function prepareKafkaApplication(settings, {
     String(database.dev) === observed.workspaceIdentity.databaseDevice &&
     String(database.ino) === observed.workspaceIdentity.databaseInode,
   'APPLICATION_KAFKA_WORKSPACE_CHANGED');
+  const kafkaDatabase = await lstat(join(workspace.path, 'kafka.sqlite'));
+  need(kafkaDatabase.isFile() && !kafkaDatabase.isSymbolicLink() &&
+    String(kafkaDatabase.dev) === observed.workspaceIdentity.kafkaDatabaseDevice &&
+    String(kafkaDatabase.ino) === observed.workspaceIdentity.kafkaDatabaseInode,
+  'APPLICATION_KAFKA_WORKSPACE_CHANGED');
   const args = ['--python', python.executable, '--workspace', workspace.path, 'serve',
     '--expected-binding', sha256, '--startup-format', 'json'];
   if (settings.connectionFile) {

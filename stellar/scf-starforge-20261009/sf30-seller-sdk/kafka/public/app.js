@@ -217,7 +217,8 @@ function renderCapture() {
   details("kafka-capture-detail", [
     ["Topic", capture.topic], ["Capture", capture.id], ["Revision", capture.revision],
     ["Connection revision", capture.connection + " / " + capture.connectionRevision],
-    ["Records", fmt(capture.records)], ["Original bytes", fmt(capture.bytes)], ["Updated", capture.updatedAt],
+    ["Records", fmt(capture.records)], ["Selected wire record bytes", fmt(capture.bytes)],
+    ["Boundary observations", fmt(capture.boundaryRecords ?? 0)], ["Total retained wire bytes", fmt(capture.retainedBytes ?? capture.bytes)], ["Updated", capture.updatedAt],
     ["Topic UUID", capture.topicId], ["Source cluster", capture.clusterId], ...(capture.error ? [["Last result", capture.error]] : []),
   ]);
   table("kafka-capture-ranges", ["Partition", "Start", "Selected end", "Next offset", "Status", "Records", "Bytes"],
