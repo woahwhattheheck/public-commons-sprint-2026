@@ -53,13 +53,20 @@ def extract_member(archive, root, entry, source):
     if info.is_dir() or kind not in (0, stat.S_IFREG) or info.file_size != entry["bytes"]:
         raise ValueError("The original archive member is not its declared regular file: " + name)
     target = destination(root, name, source)
+    partial = target.with_name(target.name + ".receiving-partial")
     mode = 0o600 | (0o100 if entry.get("executable") else 0)
     if target.exists() or target.is_symlink():
         verify(target, entry)
-        if bool(target.lstat().st_mode & 0o111) != bool(entry.get("executable")):
+        completed = target.lstat()
+        if bool(completed.st_mode & 0o111) != bool(entry.get("executable")):
             raise ValueError("The original receiving executable mode changed: " + name)
+        if partial.exists() or partial.is_symlink():
+            retained = partial.lstat()
+            if not stat.S_ISREG(retained.st_mode) or (retained.st_dev, retained.st_ino) != (completed.st_dev, completed.st_ino):
+                raise ValueError("Preserve the unrelated original partial member for recovery: " + name)
+            partial.unlink()
+            source.sync_directory(target.parent)
         return
-    partial = target.with_name(target.name + ".receiving-partial")
     offset = 0
     if partial.exists() or partial.is_symlink():
         selected = partial.lstat()
