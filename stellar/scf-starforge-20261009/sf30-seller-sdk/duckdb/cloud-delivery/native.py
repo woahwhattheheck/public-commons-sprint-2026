@@ -22,6 +22,7 @@ import sys
 import uuid
 import zipfile
 from urllib.parse import urlsplit, parse_qs
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 MAX_ROWS = 1_000_000
 MAX_JSON = 32 * 1024 * 1024
@@ -290,6 +291,67 @@ def row_iterator(edition, file, conn, supplied_columns=None):
         yield index, {key: original_cell(value, declared.get(key)) for key, value in row.items()}
 
 
+def api_window_ns(value, zone_name):
+    """The native timezone parameter interprets the request's wall-clock fields."""
+    value = str(value)
+    if re.fullmatch(r"\d{8}", value):
+        value = value[:4] + "-" + value[4:6] + "-" + value[6:]
+    match = re.fullmatch(r"(\d{4}-\d\d-\d\d)(?:T(\d\d):(\d\d):(\d\d)(?:\.(\d{1,9}))?)?Z?", value)
+    if not match:
+        raise Fault("CLOUD_API_WINDOW_FORMAT_UNSUPPORTED")
+    day = dt.date.fromisoformat(match[1])
+    wall = dt.datetime(day.year, day.month, day.day, *(int(match[index] or 0) for index in (2, 3, 4)))
+    zone = dt.timezone.utc if zone_name == "UTC" else ZoneInfo(zone_name)
+    moments = set()
+    for fold in (0, 1):
+        aware = wall.replace(tzinfo=zone, fold=fold).astimezone(dt.timezone.utc)
+        if aware.astimezone(zone).replace(tzinfo=None) == wall:
+            elapsed = aware - dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+            moments.add((elapsed.days * 86400 + elapsed.seconds) * 1000000000 +
+                        int((match[5] or "").ljust(9, "0") or "0"))
+    if len(moments) != 1:
+        raise Fault("CLOUD_API_WINDOW_ZONE_AMBIGUOUS_OR_INVALID")
+    return str(next(iter(moments)))
+
+
+def api_scope_issues(family, parsed, parameters, scope):
+    routes = {"market_candles": "/v4/timeseries/market-candles",
+              "reference_rates": "/v4/timeseries/asset-metrics"}
+    if family not in routes:
+        return []
+    issues = []
+    if parsed.path != routes[family]:
+        issues.append("api-family-endpoint-mismatch")
+    pairs = [("frequency", "frequency"), ("start", "start_time"), ("end", "end_time")]
+    pairs += [("market", "markets")] if family == "market_candles" else [("asset", "assets"), ("metric", "metrics")]
+    zones = parameters.get("timezone", ["UTC"])
+    native_zone = zones[0] if len(zones) == 1 else None
+    if native_zone is None or "timezone" in scope and native_zone != scope["timezone"]:
+        issues.append("api-declared-scope-mismatch:timezone")
+    for local, native in pairs:
+        if local not in scope:
+            continue
+        values = parameters.get(native, [])
+        if local in ("start", "end"):
+            try:
+                matches = native_zone is not None and len(values) == 1 and api_window_ns(values[0], native_zone) == timestamp_ns(scope[local])
+            except (ValueError, OverflowError, Fault, ZoneInfoNotFoundError):
+                matches = False
+        else:
+            # A single declared asset/market/metric cannot represent an extra requested population.
+            matches = len(values) == 1 and values[0] == str(scope[local])
+        if not matches:
+            issues.append("api-declared-scope-mismatch:" + local)
+    for boundary, default in (("start", True), ("end", False)):
+        if boundary not in scope:
+            continue
+        values = parameters.get(boundary + "_inclusive", ["true"])
+        desired = scope.get(boundary + "Inclusive", default)
+        if len(values) != 1 or values[0] not in ("true", "false") or (values[0] == "true") is not desired:
+            issues.append("api-declared-scope-mismatch:" + boundary + "Inclusive")
+    return issues
+
+
 def coverage(edition, inspections):
     manifest = edition["manifest"]
     config = manifest["coverage"]
@@ -389,19 +451,7 @@ def coverage(edition, inspections):
             if parameters.get("next_page_token") or pages[0][0]["origin"].get("pageToken"):
                 problems.append("api-initial-page-not-retained")
             scope = manifest.get("scope", {})
-            if group["family"] == "market_candles":
-                for local, native in (("market", "markets"), ("frequency", "frequency"), ("start", "start_time"), ("end", "end_time")):
-                    if local in scope:
-                        values = parameters.get(native, [])
-                        if local in ("start", "end"):
-                            try:
-                                matches = len(values) == 1 and timestamp_ns(values[0], utc=True) == timestamp_ns(scope[local])
-                            except (ValueError, Fault):
-                                matches = False
-                        else:
-                            matches = len(values) == 1 and str(scope[local]) in values[0].split(",")
-                        if not matches:
-                            problems.append("api-declared-scope-mismatch:" + local)
+            problems.extend(api_scope_issues(group["family"], parsed, parameters, scope))
             for index, (file, raw) in enumerate(pages):
                 if index and token is not None and file["origin"].get("pageToken") != token:
                     problems.append("api-token-chain-mismatch")
@@ -641,7 +691,7 @@ def compare(input):
                         facts["examinedRows"] += 1
                         facts["observedMinNs"] = str(moment if facts["observedMinNs"] is None else min(moment, int(facts["observedMinNs"])))
                         facts["observedMaxNs"] = str(moment if facts["observedMaxNs"] is None else max(moment, int(facts["observedMaxNs"])))
-                        if lower is not None and moment < lower or upper is not None and (moment > upper if scope.get("endInclusive") else moment >= upper):
+                        if lower is not None and (moment < lower if scope.get("startInclusive", True) else moment <= lower) or upper is not None and (moment > upper if scope.get("endInclusive") else moment >= upper):
                             facts["outsideWindow"] += 1
                         db.execute("INSERT INTO times VALUES(?,?,?)", (side, encoded([value for index, value in enumerate(key) if index != time_index]), str(moment)))
                     db.execute("INSERT INTO rows VALUES(?,?,?,?,?)", (side, encoded(key), ordinal, encoded(row), invalid))
@@ -782,7 +832,7 @@ def materialize(input):
     import duckdb
     conn = duckdb.connect(str(temporary), config={"allow_unsigned_extensions": "false", "autoinstall_known_extensions": "false",
         "autoload_known_extensions": "false", "allow_community_extensions": "false", "allow_persistent_secrets": "false",
-        "memory_limit": "256MB", "threads": "1"})
+        "memory_limit": "256MB", "threads": "1", "preserve_insertion_order": "true"})
     approved = [str(source_path(root, file)) for file in edition["manifest"]["files"] if file["format"] == "parquet"]
     conn.execute("SET allowed_paths = [" + ",".join("'" + item.replace("'", "''") + "'" for item in approved) + "]")
     conn.execute("SET enable_external_access = false")
@@ -804,8 +854,22 @@ def materialize(input):
                 name += "_" + relation_id[:8]
             names.add(name)
             if relation["format"] == "parquet":
-                paths = [str(source_path(root, files[file_id])) for file_id in relation["files"]]
-                conn.execute("CREATE TABLE " + quote(name) + " AS SELECT * FROM read_parquet(?, hive_partitioning=false, union_by_name=false)", [paths])
+                # Keep native Parquet types in DuckDB, not Python-converted values.
+                # File order is explicit; the native reader preserves each file's row order.
+                first_path = str(source_path(root, files[relation["files"][0]]))
+                conn.execute("CREATE TABLE " + quote(name) + " AS SELECT * FROM read_parquet(?, hive_partitioning=false) LIMIT 0", [first_path])
+                inspected = {item["fileId"]: item for item in edition["inspection"]["files"]}
+                present = encoded(sorted(column["name"] for column in relation["columns"]))
+                materialized_row = 0
+                for file_id in relation["files"]:
+                    path = str(source_path(root, files[file_id]))
+                    count = int(conn.execute("SELECT count(*) FROM read_parquet(?, hive_partitioning=false)", [path]).fetchone()[0])
+                    if str(count) != inspected[file_id]["rows"]:
+                        raise Fault("CLOUD_MATERIALIZATION_ROW_MISMATCH")
+                    conn.execute("INSERT INTO " + quote(name) + " SELECT * FROM read_parquet(?, hive_partitioning=false)", [path])
+                    conn.execute("INSERT INTO __cloud_row_lineage SELECT ?, ? + row_index, ?, row_index + 1, ?::JSON FROM range(?) AS native_rows(row_index)",
+                                 [name, materialized_row, file_id, present, count])
+                    materialized_row += count
             else:
                 columns = relation["columns"]
                 conn.execute("CREATE TABLE " + quote(name) + " (" + ",".join(quote(column["name"]) + " " + sql_type(column) for column in columns) + ")")
@@ -829,7 +893,12 @@ def materialize(input):
             row_count = int(conn.execute("SELECT count(*) FROM " + quote(name)).fetchone()[0])
             if str(row_count) != relation["rows"]:
                 raise Fault("CLOUD_MATERIALIZATION_ROW_MISMATCH")
-            tables.append({"name": name, "relationId": relation_id, "family": relation["family"], "rows": str(row_count), "sourceFiles": relation["files"]})
+            lineage_count = int(conn.execute("SELECT count(*) FROM __cloud_row_lineage WHERE table_name=?", [name]).fetchone()[0])
+            if lineage_count != row_count:
+                raise Fault("CLOUD_MATERIALIZATION_LINEAGE_MISMATCH")
+            tables.append({"name": name, "relationId": relation_id, "family": relation["family"], "rows": str(row_count),
+                           "sourceFiles": relation["files"], "lineageRows": str(lineage_count),
+                           "lineageOrdinalExpression": "row_number() OVER () - 1"})
         conn.execute("COMMIT")
         conn.execute("CHECKPOINT")
         conn.close()
@@ -843,7 +912,8 @@ def materialize(input):
             os.close(handle)
         result = {"schema": "stellar-forge.coinmetrics-cloud-materialization.v1", "engineVersion": version,
                   "relationIds": input["relationIds"], "tables": tables, "database": file_hash(temporary),
-                  "lineageTable": "__cloud_row_lineage", "lineageKey": "table_name + materialized_row (native rowid)",
+                  "lineageTable": "__cloud_row_lineage", "lineageKey": "table_name + materialized_row (zero-based insertion ordinal)",
+                  "lineageOrder": "manifest relation file order, then native row order within each original file",
                   "originalManifestSha256": digest(edition["manifest"])}
         atomic(pending_manifest, result)
         os.link(temporary, output)

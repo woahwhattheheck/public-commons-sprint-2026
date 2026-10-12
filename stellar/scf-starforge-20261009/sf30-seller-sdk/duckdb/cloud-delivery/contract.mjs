@@ -66,10 +66,20 @@ export function relativePath(value) {
       /^[A-Za-z]:/.test(value)) throw issue('CLOUD_RELATIVE_PATH_REQUIRED');
   return value;
 }
-export function timestamp(value) {
+function timestampNanos(value) {
   text(value, 80, 'timezone-aware timestamp');
-  if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?(?:Z|[+-]\d\d:\d\d)$/.test(value) ||
-      !Number.isFinite(Date.parse(value))) throw issue('CLOUD_AWARE_TIMESTAMP_REQUIRED');
+  const match = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?(Z|([+-])(\d\d):(\d\d))$/.exec(value);
+  if (!match || Number(value.slice(0, 4)) < 1) throw issue('CLOUD_AWARE_TIMESTAMP_REQUIRED');
+  const wall = Date.parse(match[1] + 'Z');
+  if (!Number.isFinite(wall) || new Date(wall).toISOString().slice(0, 19) !== match[1] ||
+      match[3] !== 'Z' && (Number(match[5]) > 23 || Number(match[6]) > 59))
+    throw issue('CLOUD_AWARE_TIMESTAMP_REQUIRED');
+  const offset = match[3] === 'Z' ? 0 :
+    (Number(match[5]) * 3600 + Number(match[6]) * 60) * (match[4] === '-' ? -1 : 1);
+  return BigInt(wall) * 1000000n - BigInt(offset) * 1000000000n + BigInt((match[2] ?? '').padEnd(9, '0'));
+}
+export function timestamp(value) {
+  timestampNanos(value);
   return value;
 }
 function safeMetadata(value, name) {
@@ -140,8 +150,14 @@ export function manifest(input) {
   if (scope.start !== undefined) timestamp(scope.start);
   if (scope.end !== undefined) timestamp(scope.end);
   if ((scope.start === undefined) !== (scope.end === undefined)) throw issue('CLOUD_WINDOW_PAIR_REQUIRED');
-  if (scope.start && Date.parse(scope.end) <= Date.parse(scope.start)) throw issue('CLOUD_WINDOW_ORDER_INVALID');
-  for (const key of ['market', 'frequency', 'marketType', 'partitionExchange'])
+  for (const key of ['startInclusive', 'endInclusive'])
+    if (scope[key] !== undefined && typeof scope[key] !== 'boolean') throw issue('CLOUD_WINDOW_INCLUSIVE_INVALID');
+  if (scope.start) {
+    const start = timestampNanos(scope.start), end = timestampNanos(scope.end);
+    if (end < start || end === start && !(scope.startInclusive !== false && scope.endInclusive === true))
+      throw issue('CLOUD_WINDOW_ORDER_INVALID');
+  }
+  for (const key of ['market', 'asset', 'metric', 'frequency', 'marketType', 'partitionExchange', 'timezone'])
     if (scope[key] !== undefined) text(scope[key], 512, key);
   const coverage = safeMetadata(input.coverage ?? { kind: 'selected-files' }, 'coverage');
   if (!['selected-files', 's3-listing', 'snowflake-query', 'api-pages'].includes(coverage.kind)) throw issue('CLOUD_COVERAGE_INVALID');
