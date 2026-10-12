@@ -352,7 +352,8 @@
     "crossref": "stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/cli.mjs",
     "crossref-dossier": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-cli.mjs",
     "fiscaldata": "stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/cli.mjs",
-    "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs"
+    "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs",
+    "webdav": "stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -811,7 +812,14 @@
     "./partners/coingecko": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/provider.mjs",
     "./partners/coingecko/contracts": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/contracts.mjs",
     "./partners/coingecko/market": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/market.mjs",
-    "./partners/coingecko/workspace": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/workspace/server.mjs"
+    "./partners/coingecko/workspace": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/workspace/server.mjs",
+    "./merchant/mcp/webdav": "./source/stellar-forge/mcp-merchant-operator/webdav-tools.mjs",
+    "./seller/webdav/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/source.mjs",
+    "./seller/webdav/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/config.mjs",
+    "./seller/webdav/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/capture.mjs",
+    "./seller/webdav/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/workspace.mjs",
+    "./seller/webdav/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/server.mjs",
+    "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs"
   },
   "nativePeers": {
     "@x402/core": {
