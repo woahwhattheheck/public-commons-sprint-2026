@@ -10,7 +10,7 @@ export interface SamQueryDefinition {
 export interface SamQuery {id:string;name:string;revision:number;definition:SamQueryDefinition;createdAt:string;updatedAt:string}
 export interface SamSource {
   id:string;kind:'search_page'|'description'|'attachment';url:string;filename:string;mediaType:string;
-  bytes:number;sha256:string;capturedAt:string;status:number;request:{method:'GET';url:string};
+  bytes:number;sha256:string;capturedAt:string;status:number|'received_file';request:{method:'GET';url:string}|null;
   headers:Record<string,string>;originalSha256:string;
   redactions:Array<{kind:string;replacements:number}>;redirects:Array<{status:number;from:string;to:string}>;
   representation:'original'|'credential_redacted';originalPrivateAtCapture:boolean;noticeId?:string;
@@ -18,7 +18,7 @@ export interface SamSource {
 export interface SamSourceRead extends SamSource {contentBase64:string;contentText?:string}
 export interface SamResource {
   sourceId:string|null;kind:'description'|'attachment';url:string;filename:string;
-  mediaType:string|null;bytes:number;sha256:string|null;capturedAt:string;status:number|'unavailable';
+  mediaType:string|null;bytes:number;sha256:string|null;capturedAt:string;status:number|'received_file'|'unavailable';
   originalSha256?:string;redactions?:SamSource['redactions'];error?:SamFailure;
 }
 export interface SamNotice {
@@ -140,7 +140,8 @@ export interface SamActionPayloads {
   capture_resources:SamMutationEnvelope & {editionId:string;noticeIds:string[];descriptions?:boolean;
     attachments?:boolean;resourceUrls?:string[]};
   retain_resource:SamMutationEnvelope & {editionId:string;noticeId:string;kind:'description'|'attachment';
-    url:string;filename:string;mediaType:string;capturedAt:string;contentBase64:string};
+    url:string;filename:string;mediaType:string;capturedAt:string;contentBase64:string;
+    response?:{request:{method:'GET';url:string};status:number;headers?:Record<string,string>}};
   prepare_merchant:SamMutationEnvelope & {selectionId:string;payment?:Record<string,SamJson>;origin?:string;
     path?:string;defaultLimit?:number;maxLimit?:number};
   buyer_review:SamMutationEnvelope & {publicationId:string;seller:string;query?:Record<string,string|number>|string};

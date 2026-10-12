@@ -36,7 +36,7 @@ export async function prepareSamOpportunity({
     requireThat(!availableSources.has(source.id),'OPPORTUNITY_SOURCE_DUPLICATE');
     availableSources.set(source.id,source);
   }
-  const requestedIds=[notice.source.sourceId,...notice.resources.filter(resource=>resource.sourceId && resource.status===200)
+  const requestedIds=[notice.source.sourceId,...notice.resources.filter(resource=>resource.sourceId && (resource.status===200 || resource.status==='received_file'))
     .map(resource=>resource.sourceId)];
   requireThat(new Set(requestedIds).size===availableSources.size &&
     requestedIds.every(id=>availableSources.has(id)),'OPPORTUNITY_SOURCE_SET_CHANGED');

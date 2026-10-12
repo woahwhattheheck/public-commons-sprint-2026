@@ -111,7 +111,7 @@ This is a query definition. Its actual source acquisition is retained by the cap
 
 To receive original API pages acquired elsewhere, use action import_capture with the saved definition and complete pages. Each page supplies its actual GET request URL, HTTP status, capture time, selected response headers, and exact response bytes as contentBase64. Secret query values must remain in private custody. The importer validates the complete page sequence and source records using the same acquisition contract.
 
-To receive an original selected attachment or description body, use action retain_resource with editionId, noticeId, kind, the issued url, filename, mediaType, capturedAt, and contentBase64. The original issued URL must belong to that selected notice.
+To receive an original selected attachment or description body, use action retain_resource with editionId, noticeId, kind, the issued url, filename, mediaType, capturedAt, and contentBase64. The original issued URL must belong to that selected notice. A received file retains status `received_file` and a null request. If the original acquisition includes an HTTP receipt, supply its actual metadata as `response: {request: {method: 'GET', url}, status, headers?}`; its status is retained exactly. Both successfully acquired HTTP resources and original received files carry their bytes into the opportunity handoff. The source index identifies how each source was received.
 
 ## Reviews, selections, and change handling
 
