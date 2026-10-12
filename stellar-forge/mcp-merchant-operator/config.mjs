@@ -5,7 +5,7 @@ import { MERCHANT_PROVIDER_REGISTRY, configureMerchantProviders, merchantPrivate
 // MIT. Host configuration; MCP arguments never select files or executable modules.
 import { failure, identifier, privateSupportDirectory, writePrivate, plain, exact, line, fileBytes } from './host-files.mjs';
 export { failure, identifier, privateSupportDirectory, writePrivate, plain, exact, line, fileBytes } from './host-files.mjs';
-import { readFile, lstat, mkdir, open, realpath } from 'node:fs/promises';
+import { readFile, lstat, mkdir, open, realpath, readdir } from 'node:fs/promises';
 import { dirname, basename, resolve, isAbsolute, join, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -1406,17 +1406,54 @@ export async function initializeStacWorkspaceMerchant({ directory, connection, n
 }
 
 /** Attach the original Census source, publisher and customer workspace. */
-export async function initializeCensusGeocoderWorkspaceMerchant({ directory, connection, name = 'Starforge Census address operations' }) {
+export async function initializeCensusGeocoderWorkspaceMerchant({ directory, connection, name = 'Starforge Census address operations', resume = false }) {
+  if (typeof resume !== 'boolean') throw failure('INVALID_PARAMS', 'Census initialization resume must be boolean.');
   const root = resolve(directory), censusGeocoderWorkspaceConnection = hostPath(connection, process.cwd());
   name = line(name, 'Merchant name');
   const selected = await (await import('./census-geocoder-workspace.mjs')).readCensusGeocoderWorkspaceConfiguration(censusGeocoderWorkspaceConnection);
-  await mkdir(root, { mode: 0o700 });
-  await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).initReleaseStore(join(root, 'releases'));
-  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
   const configuration = join(root, 'merchant-mcp.json');
-  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
-    exportsDirectory: './customer-exports', sources: {}, censusGeocoderWorkspaceConnection });
-  await readMerchantConfig(configuration);
+  const value = { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, censusGeocoderWorkspaceConnection };
+  const releases = await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs');
+  if (resume) {
+    // Keep one original directory and initialization binding across interruption.
+    const files = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs');
+    const { writeExact } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/edition.mjs');
+    try { await mkdir(root, { mode: 0o700 }); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+    await files.privateDirectory(root);
+    const release = await files.acquireWorkspace(root);
+    try {
+      let exists = true;
+      try { await lstat(configuration); }
+      catch (error) { if (error.code !== 'ENOENT') throw error; exists = false; }
+      if (!exists) {
+        const allowed = new Set(['publisher.lock', 'releases', 'customer-exports',
+          '.census-publish-' + files.identity({ name: 'merchant-mcp.json' })]);
+        if ((await readdir(root)).some(entry => !allowed.has(entry)))
+          throw failure('CONFIGURATION_ERROR', 'Preserve the interrupted merchant directory and its unknown entries.');
+        // An older initializer could complete its empty store before its config.
+        // Never bind a different already-used release store to a new connection.
+        try {
+          const saved = await releases.readReleaseState(join(root, 'releases'));
+          if (saved.generation !== 0 || saved.active !== null || saved.previous !== null || saved.history.length)
+            throw failure('CONFIGURATION_ERROR', 'The existing release store requires its original merchant configuration.');
+        } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      }
+      // Bind the exact original config before store creation. The accepted native
+      // immutable writer recovers its own incomplete stage and two-name alias.
+      await writeExact(configuration, files.bytes(value));
+      await releases.initReleaseStore(join(root, 'releases'), { resume: true });
+      await files.privateDirectory(join(root, 'customer-exports'), true);
+      await readMerchantConfig(configuration);
+    } finally { await release(); }
+  } else {
+    await mkdir(root, { mode: 0o700 });
+    await releases.initReleaseStore(join(root, 'releases'));
+    await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+    await writePrivate(configuration, value);
+    await readMerchantConfig(configuration);
+  }
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', censusGeocoderWorkspacesConfigured: true,
     workspaces: Object.entries(selected.workspaces).map(([workspace, item]) => ({ workspace, label: item.label })),
     authoring: 'OPENED_BY_MERCHANT_CENSUS_GEOCODER_OPEN' };
