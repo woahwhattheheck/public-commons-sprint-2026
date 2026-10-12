@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "opensearch",
+  "description": "OpenSearch search products",
+  "commands": {
+    "opensearch": "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/start.mjs",
+    "opensearch-prepare": "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/prepare.mjs",
+    "opensearch-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/server.mjs"
+  },
+  "commandDescriptions": {
+    "opensearch": "Preflight and run a native OpenSearch merchant",
+    "opensearch-prepare": "Prepare named search routes and the original customer client",
+    "opensearch-workspace": "Save drafts, capture and compare search editions, and prepare merchants"
+  },
+  "exports": {
+    "./seller/opensearch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/source.mjs",
+    "./seller/opensearch/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/declaration.mjs",
+    "./seller/opensearch/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/prepare.mjs",
+    "./seller/opensearch/start": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/start.mjs",
+    "./seller/opensearch/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/server.mjs",
+    "./seller/opensearch/workspace/service": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/service.mjs",
+    "./seller/opensearch/workspace/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/store.mjs",
+    "./seller/opensearch/relevance": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/native.mjs",
+    "./seller/opensearch/relevance/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/workspace.mjs"
+  }
+}
