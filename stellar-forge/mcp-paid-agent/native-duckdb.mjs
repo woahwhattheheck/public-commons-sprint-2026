@@ -11,6 +11,7 @@ import {need,InputError} from '../../stellar/scf-starforge-20261009/sf88-operato
 import {createSavedFileReader} from './native-file.mjs';
 import {nativeDuckDBOperations,nativeDuckDBActions,nativeDuckDBSchema} from './native-duckdb-schema.mjs';
 export {nativeDuckDBActions,nativeDuckDBSchema};
+import {dispatchDuckDBReconciliation} from './native-duckdb-reconciliation.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-duckdb.v1';
 const CUSTOMER='stellar-forge.sf100.duckdb-workspace.v1';
@@ -278,7 +279,8 @@ export function createNativeDuckDB({manifest,isClosed=()=>false}={}){
   const get=route=>request(connection,route,undefined,context.signal);
   const post=(route,value,options)=>request(connection,route,value,context.signal,options);
   let value;
-  if(op==='state'){
+  if(op.startsWith('reconcile-'))value=publicRecord(await dispatchDuckDBReconciliation({operation:op,body,get,post,workspaceId:record.workspaceId}));
+  else if(op==='state'){
    const views=await get('/api/catalog/views?offset=0&limit=100');
    value={workspaceId:record.workspaceId,engine:'DuckDB',schema:CUSTOMER,views:views.views,
     viewsTotal:views.total,nextViewOffset:views.next_offset,sourceCount:record.sources.length,
