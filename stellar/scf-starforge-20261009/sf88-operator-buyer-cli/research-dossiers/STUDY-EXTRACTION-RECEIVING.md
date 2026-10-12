@@ -66,6 +66,12 @@ Finally, the continued dossier exports again and opens in another fresh receivin
 
 Use the existing source installation and the original receiving operation. The maintained runtime supplies Node, Python 3, Linux `flock`, the original Playwright module and Chromium, and the installed original Merchant/Python closure. The application owns and closes its listener and browser/transport children.
 
+SIGINT and SIGTERM abort the programme's original browser, Merchant and Python customer calls and close its application listeners. Store operations check cancellation between the maintained transactions; the original Decimal source reader also receives the same signal. Streaming exports stop through their owned reader. An interrupted committed operation is recovered through its unchanged saved request on resumption.
+
+The Python customer child is launched through `study-extraction-owned-child.py`. This is the exact existing 521-byte Linux parent-death wrapper from Commons commit `408fe378d693678c25bc2e2b4227bdefea80ce1e`, original path `integrations/native_wordpress/php-child.py`, Git blob `da6716e88cd5da76d754a969b84dda601e0e063d`, SHA-256 `0c5950245e3138dc929dfc8d1a0529a68e692c69c0f8233c3249303bcb29b544`. Its original source text is retained unchanged. The wrapper executes the selected Python receiver in its owned process group. If the Node owner ends, Linux delivers SIGTERM; the Python handler raises into the original runtime's cancellation and context cleanup. It does not call the workspace's joining close method from inside the signal handler. The outer caller escalates only that owned group after fifteen seconds if shutdown has not completed.
+
+A JavaScript caller supplies an optional standard `AbortSignal` as `options.signal`. The same signal reaches both browser phases, both Merchant phases and the original customer archive receiver. Phase checkpoints and exact request files remain available for the next invocation.
+
 The programme directory stores the input binding, original seed, exact canonical request files, selected phase results and completed output manifest. Each mutation is saved before the original store is called. On resumption, the same request ID and body recover the original result before new work continues. A complete result is reused after its retained output files are checked.
 
 Connection descriptors and browser profiles remain inside the private programme workspace. The customer output consists of the named source, complete report/table/portable files and the selected browser screenshots. The original `8 MiB` state, `64 MiB` response and `256 MiB` portable limits remain enforced by the maintained engine.
@@ -106,6 +112,7 @@ the corresponding camel-case option keys. The default original drivers are:
 | study-extraction-browser.mjs | Complete browser authoring and received-workspace inspection |
 | study-extraction-merchant-receiving.mjs | Complete original Merchant pages, source, exact operation recovery and eleven exports |
 | study-extraction-eligibility.mjs / .py | Original Python eligibility delivery, customer ZIP and both receiving readers |
+| study-extraction-owned-child.py | Maintained Linux parent-death binding for the owned customer runtime |
 
 The returned `state: COMPLETE` manifest is produced only after the full
 programme has completed. It carries both publication selections, original

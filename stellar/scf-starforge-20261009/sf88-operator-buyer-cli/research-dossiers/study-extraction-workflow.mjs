@@ -25,6 +25,34 @@ const absolute=value=>typeof value==='string'&&isAbsolute(value)&&resolve(value)
 const exists=async file=>{try{const value=await lstat(file);need(value.isFile()&&!value.isSymbolicLink(),'STUDY_WORKFLOW_FILE_INVALID');return true;}
   catch(error){if(error.code==='ENOENT')return false;throw error;}};
 const optionalJson=async file=>await exists(file)?readJson(file,MAX_SOURCE):null;
+async function* abortableBody(body,signal){
+  const abort=()=>body.destroy?.();
+  signal.addEventListener('abort',abort,{once:true});
+  try{
+    if(signal.aborted)abort();
+    signal.throwIfAborted();
+    for await(const chunk of body){signal.throwIfAborted();yield chunk;}
+    signal.throwIfAborted();
+  }finally{
+    signal.removeEventListener('abort',abort);
+    if(signal.aborted)body.destroy?.();
+  }
+}
+/** Keep the original Store transactions and stop between their operations.
+ * Committed canonical requests retain their normal same-request recovery.
+ */
+function signalStore(store,signal){
+  if(!signal)return store;
+  return Object.freeze(Object.fromEntries(Object.entries(store).map(([name,value])=>[
+    name,typeof value!=='function'?value:async(...args)=>{
+      signal.throwIfAborted();
+      const result=await Reflect.apply(value,store,args);
+      if(signal.aborted&&name==='exportStream')result.body?.destroy?.();
+      signal.throwIfAborted();
+      return name==='exportStream'?{...result,body:abortableBody(result.body,signal)}:result;
+    }
+  ])));
+}
 async function immutable(file,body){
   const bytes=Buffer.isBuffer(body)?body:Buffer.from(body);
   if(await exists(file)){const saved=await readBytes(file,MAX_PORTABLE);
@@ -397,14 +425,25 @@ async function verifyReceiving({original,received,id,revision,sourceCase,selecti
     resultSetIds:selections.map(value=>value.resultSetId),publicationIds:selections.map(value=>value.publicationId),
     originalStudySha256:ORIGINAL_STUDY.sha256,sourcePointers:pointers.length};
 }
-async function openApp(directory,connectionFile){
+async function openApp(directory,connectionFile,signal){
+  signal?.throwIfAborted();
   const previous=await optionalJson(connectionFile);
   if(previous)need(previous.directory===directory,'STUDY_WORKFLOW_CONNECTION_DIRECTORY_CHANGED');
   const app=await startDossierWorkspace({directory,port:previous?Number(new URL(previous.url).port):0});
-  try{await writeJson(connectionFile,{schema:'stellar-forge.research-workspace-connection.v1',
-    mode:'RESEARCH_DOSSIER_WORKSPACE',directory,url:app.url,workspaceId:app.workspaceId,instanceId:app.instanceId});
-    return app;
-  }catch(error){await app.close();throw error;}
+  let closing;
+  const close=()=>closing??=(async()=>{
+    signal?.removeEventListener('abort',abort);
+    await app.close();
+  })();
+  const abort=()=>{void close().catch(()=>{});};
+  signal?.addEventListener('abort',abort,{once:true});
+  try{
+    signal?.throwIfAborted();
+    await writeJson(connectionFile,{schema:'stellar-forge.research-workspace-connection.v1',
+      mode:'RESEARCH_DOSSIER_WORKSPACE',directory,url:app.url,workspaceId:app.workspaceId,instanceId:app.instanceId});
+    signal?.throwIfAborted();
+    return {...app,close};
+  }catch(error){await close();throw error;}
 }
 function safeArtifactPath(root,file){
   need(typeof file==='string'&&file.length>0,'STUDY_WORKFLOW_ARTIFACT_PATH_REQUIRED');
@@ -541,8 +580,10 @@ function merchantSource(sourceCase){
     sha256:ORIGINAL_STUDY.sha256,bytes:ORIGINAL_STUDY.bytes};
 }
 async function runHeld(options,drivers){
-  const {operation,runDirectory,playwrightModule,chromiumExecutable}=options;
+  const {operation,runDirectory,playwrightModule,chromiumExecutable,signal}=options;
+  signal?.throwIfAborted();
   const inputs=await loadStudyExtractionInputs(options);
+  signal?.throwIfAborted();
   const binding={schema:STUDY_WORKFLOW_SCHEMA,operation,source:clone(ORIGINAL_STUDY),
     sourceBundleSha256:inputs.bundle.preview.bundleSha256};
   const inputFile=join(runDirectory,'input.json'),existingBinding=await optionalJson(inputFile);
@@ -563,9 +604,13 @@ async function runHeld(options,drivers){
   const eligibilityDriver=drivers.eligibility??(await import('./study-extraction-eligibility.mjs')).runStudyExtractionEligibility;
   need([browserDriver,merchantDriver,eligibilityDriver].every(value=>typeof value==='function'),
     'STUDY_WORKFLOW_ORIGINAL_DRIVERS_REQUIRED');
-  const storeOptions={};
+  const storeOptions={extractionOptions:{signal}};
+  const openStore=async directory=>{
+    signal?.throwIfAborted();
+    return signalStore(await openDossierStore(directory,storeOptions),signal);
+  };
   const workspaceDirectory=await privateDirectory(join(runDirectory,'workspace'));
-  const original=await openDossierStore(workspaceDirectory,storeOptions);
+  const original=await openStore(workspaceDirectory);
   const originalSeed=await seed({store:original,operation,runDirectory,inputs}),id=originalSeed.dossierId;
   const sourceCase=await bindStudyExtractionCase({
     store:original,dossierId:id,questionId:originalSeed.questionId,occurrenceId:originalSeed.occurrenceId,
@@ -581,13 +626,13 @@ async function runHeld(options,drivers){
   }
   const requestDirectory=await privateDirectory(join(runDirectory,'requests','sender'));
   const step=steps({store:original,dossierId:id,operation:operation+'-sender',directory:requestDirectory});
-  const senderConnection=join(runDirectory,'connection.json'),app=await openApp(workspaceDirectory,senderConnection);
+  const senderConnection=join(runDirectory,'connection.json'),app=await openApp(workspaceDirectory,senderConnection,signal);
   let senderBrowser,selection,formEdition,merchant,eligibility;
   try{
     senderBrowser=await checkpoint(join(runDirectory,'sender-browser.json'),async()=>{
       const result=await browserDriver({url:app.url,dossierId:id,questionId:originalSeed.questionId,
         studyId:originalSeed.studyId,studyVersion:originalSeed.studyVersion,sourceCase,
-        runDirectory:await privateDirectory(join(runDirectory,'sender-browser')),playwrightModule,chromiumExecutable,mode:'author'});
+        runDirectory:await privateDirectory(join(runDirectory,'sender-browser')),playwrightModule,chromiumExecutable,mode:'author',signal});
       need(object(result)&&typeof result.formId==='string'&&typeof result.formEditionId==='string'&&
         typeof result.resultSetId==='string'&&Number.isSafeInteger(result.reviewedRevision)&&
         Number.isSafeInteger(result.currentRevision)&&typeof result.reviewRequestFile==='string',
@@ -616,12 +661,12 @@ async function runHeld(options,drivers){
       connectionFile:senderConnection,workspaceDirectory,expectedWorkspaceId:app.workspaceId,
       dossierId:id,revision:selection.currentRevision,formId:selection.formId,resultSetId:selection.resultSetId,
       tableId:selection.tableId,publicationId:selection.publicationId,source:merchantSource(sourceCase),
-      replayRequests,runDirectory:merchantDirectory}));
+      replayRequests,runDirectory:merchantDirectory,signal}));
     eligibility=await checkpoint(join(runDirectory,'sender-eligibility.json'),async()=>eligibilityDriver({
       connectionFile:senderConnection,expectedWorkspaceId:app.workspaceId,dossierId:id,revision:selection.currentRevision,
       reviewId:originalSeed.reviewId,workSetId:originalSeed.workSetId,
       reviewRequestFile:join(runDirectory,'requests','seed','link-original-study.request.json'),
-      runDirectory:await privateDirectory(join(runDirectory,'sender-eligibility')),python:options.python??'python3'}));
+      runDirectory:await privateDirectory(join(runDirectory,'sender-eligibility')),python:options.python??'python3',signal}));
     need((await original.getMetadata(id)).revision===selection.currentRevision,'STUDY_WORKFLOW_SENDER_REPLAY_CHANGED_HEAD');
     need(same(await siblingState(original,id,originalSeed.siblingQuestionId,selection.currentRevision),originalSeed.sibling),
       'STUDY_WORKFLOW_SIBLING_CHANGED');
@@ -638,11 +683,11 @@ async function runHeld(options,drivers){
   need(absolute(eligibility.jsonDirectory)&&absolute(eligibility.streamDirectory)&&
     eligibility.jsonDirectory.startsWith(runDirectory+sep)&&eligibility.streamDirectory.startsWith(runDirectory+sep),
     'STUDY_WORKFLOW_CUSTOMER_RECEIVING_REQUIRED');
-  const jsonStore=await openDossierStore(eligibility.jsonDirectory,storeOptions);
+  const jsonStore=await openStore(eligibility.jsonDirectory);
   const jsonReceiving=await checkpoint(join(runDirectory,'json-receiving.json'),()=>verifyReceiving({
     original,received:jsonStore,id,revision:selection.currentRevision,sourceCase,selections:[selection],sibling:originalSeed.sibling}));
   const receivingDirectory=await privateDirectory(eligibility.streamDirectory);
-  const receiving=await openDossierStore(receivingDirectory,storeOptions);
+  const receiving=await openStore(receivingDirectory);
   const gzipReceiving=await checkpoint(join(runDirectory,'gzip-receiving.json'),()=>verifyReceiving({
     original,received:receiving,id,revision:selection.currentRevision,sourceCase,selections:[selection],sibling:originalSeed.sibling}));
   const receivedStep=steps({store:receiving,dossierId:id,operation:operation+'-received',
@@ -655,13 +700,13 @@ async function runHeld(options,drivers){
     reason:'The complete new publication uses the received form-v2 result set; the original publication remains available as the baseline.'});
   const current=await checkpoint(join(runDirectory,'received-revision.json'),async()=>({revision:(await receiving.getMetadata(id)).revision}));
   receivedSelection={...receivedSelection,currentRevision:current.revision};
-  const receivedConnection=join(runDirectory,'received-connection.json'),receivedApp=await openApp(receivingDirectory,receivedConnection);
+  const receivedConnection=join(runDirectory,'received-connection.json'),receivedApp=await openApp(receivingDirectory,receivedConnection,signal);
   let receivedBrowser,receivedMerchant;
   try{
     receivedBrowser=await checkpoint(join(runDirectory,'received-browser.json'),async()=>browserDriver({
       url:receivedApp.url,dossierId:id,questionId:originalSeed.questionId,studyId:originalSeed.studyId,
       studyVersion:originalSeed.studyVersion,sourceCase,selection:receivedSelection,
-      runDirectory:await privateDirectory(join(runDirectory,'received-browser')),playwrightModule,chromiumExecutable,mode:'inspect'}));
+      runDirectory:await privateDirectory(join(runDirectory,'received-browser')),playwrightModule,chromiumExecutable,mode:'inspect',signal}));
     need(receivedBrowser.resultSetId===receivedSelection.resultSetId&&receivedBrowser.formId===receivedSelection.formId,
       'STUDY_WORKFLOW_RECEIVED_BROWSER_SELECTION_CHANGED');
     const replayRequests=[
@@ -672,7 +717,7 @@ async function runHeld(options,drivers){
       connectionFile:receivedConnection,workspaceDirectory:receivingDirectory,expectedWorkspaceId:receivedApp.workspaceId,
       dossierId:id,revision:receivedSelection.currentRevision,formId:receivedSelection.formId,
       resultSetId:receivedSelection.resultSetId,tableId:receivedSelection.tableId,publicationId:receivedSelection.publicationId,
-      againstPublicationId:selection.publicationId,source:merchantSource(sourceCase),replayRequests,runDirectory:await privateDirectory(join(runDirectory,'received-merchant'))}));
+      againstPublicationId:selection.publicationId,source:merchantSource(sourceCase),replayRequests,runDirectory:await privateDirectory(join(runDirectory,'received-merchant')),signal}));
     need((await receiving.getMetadata(id)).revision===receivedSelection.currentRevision,'STUDY_WORKFLOW_RECEIVED_REPLAY_CHANGED_HEAD');
     need((await original.getMetadata(id)).revision===selection.currentRevision,'STUDY_WORKFLOW_SENDER_CHANGED_AFTER_RECEIVING');
     need(same(await siblingState(receiving,id,originalSeed.siblingQuestionId,receivedSelection.currentRevision),originalSeed.sibling),
@@ -688,7 +733,7 @@ async function runHeld(options,drivers){
   const continuedJson=join(outputDirectory,'continued.research.json'),continuedGzip=continuedJson+'.gz';
   artifacts.push(await savePortable({store:receiving,id,revision:receivedSelection.currentRevision,file:continuedJson,compression:'none'}));
   artifacts.push(await savePortable({store:receiving,id,revision:receivedSelection.currentRevision,file:continuedGzip,compression:'gzip'}));
-  const finalStore=await openDossierStore(join(runDirectory,'final-received-workspace'),storeOptions);
+  const finalStore=await openStore(join(runDirectory,'final-received-workspace'));
   await reopen({store:finalStore,file:continuedJson,format:'json'});
   await reopen({store:finalStore,file:continuedGzip,format:'json.gz'});
   const continuedReceiving=await checkpoint(join(runDirectory,'continued-receiving.json'),()=>verifyReceiving({
@@ -703,17 +748,37 @@ export async function runStudyExtractionWorkflow(options,drivers={}){
   for(const key of ['runDirectory','studyFile','provenanceFile','projectionFile','playwrightModule','chromiumExecutable'])
     need(absolute(options[key]),'STUDY_WORKFLOW_ABSOLUTE_PATH_REQUIRED');
   need(object(drivers),'STUDY_WORKFLOW_DRIVERS_INVALID');
+  need(options.signal===undefined||typeof options.signal?.throwIfAborted==='function'&&
+    typeof options.signal?.addEventListener==='function'&&typeof options.signal?.removeEventListener==='function',
+    'STUDY_WORKFLOW_ABORT_SIGNAL_REQUIRED');
+  options.signal?.throwIfAborted();
   const runDirectory=await privateDirectory(options.runDirectory);
-  return withPrivateLock(runDirectory,'study-extraction.lock',()=>runHeld({...options,runDirectory},drivers));
+  return withPrivateLock(runDirectory,'study-extraction.lock',()=>{
+    options.signal?.throwIfAborted();
+    return runHeld({...options,runDirectory},drivers);
+  });
 }
 async function main(){
   const {values}=parseArgs({strict:true,options:Object.fromEntries([
     'operation','run-directory','study-file','provenance-file','projection-file','playwright-module','chromium','python'
   ].map(name=>[name,{type:'string'}]))});
-  const result=await runStudyExtractionWorkflow({operation:values.operation,runDirectory:values['run-directory'],
-    studyFile:values['study-file'],provenanceFile:values['provenance-file'],projectionFile:values['projection-file'],
-    playwrightModule:values['playwright-module'],chromiumExecutable:values.chromium,python:values.python??'python3'});
-  process.stdout.write(JSON.stringify(result,null,2)+'\n');
+  const controller=new AbortController();
+  const stop=signal=>{
+    if(!controller.signal.aborted)controller.abort(Object.assign(new Error('Study extraction programme cancelled.'),{
+      code:'STUDY_EXTRACTION_WORKFLOW_CANCELLED',signal}));
+  };
+  const interrupt=()=>stop('SIGINT'),terminate=()=>stop('SIGTERM');
+  process.on('SIGINT',interrupt);process.on('SIGTERM',terminate);
+  try{
+    const result=await runStudyExtractionWorkflow({operation:values.operation,runDirectory:values['run-directory'],
+      studyFile:values['study-file'],provenanceFile:values['provenance-file'],projectionFile:values['projection-file'],
+      playwrightModule:values['playwright-module'],chromiumExecutable:values.chromium,python:values.python??'python3',
+      signal:controller.signal});
+    controller.signal.throwIfAborted();
+    process.stdout.write(JSON.stringify(result,null,2)+'\n');
+  }finally{
+    process.removeListener('SIGINT',interrupt);process.removeListener('SIGTERM',terminate);
+  }
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
   main().catch(error=>{process.stderr.write(JSON.stringify({error:error.code??'STUDY_EXTRACTION_WORKFLOW_FAILED',
