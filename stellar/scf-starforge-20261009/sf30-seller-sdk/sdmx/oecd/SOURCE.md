@@ -27,3 +27,7 @@ The official item endpoint accepts the provider’s plus-separated item selectio
 - [OECD Terms and Conditions](https://www.oecd.org/en/about/terms-conditions.html): original provider terms. Report attribution distinguishes original data from this application’s selection, index-point calculations and presentation.
 
 The original methodology description also remains inside the dataflow XML. Its link and prose are source metadata; the application uses the current official indicator/FAQ pages for its short report explanation. It preserves original observations and their acquisition scope when comparing later source revisions.
+
+## Customer source acknowledgment
+
+[The source-rights and distribution guide](SOURCE_RIGHTS.md) gives the exact dataset citation, original acquisition date and downstream acknowledgment requirement. New report editions carry that same source-bound citation in HTML, JSON, CSV and their complete customer exports. Retained older editions reopen in their original format.

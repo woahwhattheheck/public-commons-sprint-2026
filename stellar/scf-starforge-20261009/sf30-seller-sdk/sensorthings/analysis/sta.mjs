@@ -4,6 +4,7 @@
 import {entityOccurrences,graphIndex} from '../domain.mjs';
 import {JsonNumber,entityId,numericId,sourceDocument,stable,timeCell,identity,plain,pointer,fault} from '../contract.mjs';
 import {selectedRows,numericEligibility,nativeEntityCompatibility,ANALYSIS_MEANING} from './model.mjs';
+import {retainedComponentGraph} from './component-sta.mjs';
 
 const TYPES=['Things','Locations','HistoricalLocations','Datastreams','Sensors','ObservedProperties','Observations','FeaturesOfInterest'];
 const RELATIONS={
@@ -56,6 +57,8 @@ function link(node,name,other){
 }
 export async function retainedGraph(store,edition,selection,{mode='map'}={}){
   if(!['map','numeric'].includes(mode))throw fault('STA_MODE','Choose the retained map or numeric projection.');
+  if(Array.isArray(selection.componentSelections)&&selection.componentSelections.length)
+    return retainedComponentGraph(store,edition,selection,{mode,helpers:{types:TYPES,relations:RELATIONS,makeNode,addVariant,link,key}});
   const nodes=new Map(),byKind=new Map(TYPES.map(t=>[t,[]])),native=await graphIndex(store,edition);
   function add(item,kind=item.kind){
     if(!TYPES.includes(kind)||!plain(item.record))return null;

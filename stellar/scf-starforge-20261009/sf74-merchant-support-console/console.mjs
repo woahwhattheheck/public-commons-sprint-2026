@@ -695,3 +695,21 @@ for (const event of ['input','change']) document.querySelector('main').addEventL
       ['permission','post-permission'].includes(e.target.id)) return;
   caseDesk.changed({user:true});
 });
+
+async function openLinkedCase() {
+  const url = new URL(location.href);
+  const selected = url.searchParams.getAll('case');
+  if (selected.length === 0) return;
+  if (selected.length !== 1 ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(selected[0]))
+    throw new TypeError('The case link must name one saved case UUID.');
+  const id = selected[0];
+  const opened = await caseDesk.openSavedCase(id);
+  if (!opened || caseDesk.currentCase()?.id !== id) return;
+  const destination = url.hash === '#implementation' ? commissioningRoot :
+    url.hash === '#case-packages' ? casePackageRoot : null;
+  if (destination) destination.scrollIntoView({block: 'start'});
+}
+void openLinkedCase().catch(error => {
+  message('status', 'The linked case could not be opened: ' + String(error?.message ?? error).slice(0, 280), 'error');
+});

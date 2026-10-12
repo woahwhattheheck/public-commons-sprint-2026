@@ -2,7 +2,9 @@
 import {isAbsolute,resolve} from 'node:path';
 import {Readable} from 'node:stream';
 import {createEuropePmcClient} from './europe-pmc-client.mjs';
+import {createCustomerUpdatesClient} from './customer-updates/client.mjs';
 import {createClinicalTrialsClient} from './clinical-trials-client.mjs';
+import {createStudyExtractionClient} from './study-extraction-client.mjs';
 import {createDocumentWorkspaceClient,createPipelineWorkspaceClient,sendPipelineFiles} from './document-workspace-client.mjs';
 import {BuyerError,need,object,parseJson,safeCode} from '../node/store.mjs';
 import {writePortableFile,PORTABLE_LIMIT} from './portable.mjs';
@@ -111,12 +113,12 @@ export class ResearchWorkspaceClient{
   #json(route,body,options={}){
     return this.#run(async()=>{
       const bytes=body===undefined?undefined:JSON.stringify(body);
-      const maximum=/^\/api\/dossiers\/[^/]+\/(?:citation-updates|eligibility)\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
+      const maximum=/^\/api\/dossiers\/[^/]+\/(?:citation-updates|eligibility|extraction(?:\/publications)?|risk-of-bias|customer-updates)\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
         /^\/api\/dossiers\/[^/]+\/source-bundles\/(?:preview|receive)(?:\?projection=metadata)?$/.test(route)
         ?128*1024*1024+65536:96*1024*1024+65536;
       need(bytes===undefined||Buffer.byteLength(bytes)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
       return this.#request(route,{...options,body:bytes,headers:{...(options.headers??{}),
-        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,route.startsWith('/api/europe-pmc')?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
+        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,(route.startsWith('/api/europe-pmc')||/^\/api\/dossiers\/[^/]+\/customer-updates(?:\/|\?|$)/.test(route))?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
     });
   }
   async status(options={}){
@@ -196,6 +198,12 @@ export class ResearchWorkspaceClient{
       },id,input,options)),
     });
   }
+  customerUpdates(){
+    return createCustomerUpdatesClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      download:(route,file,options)=>this.#download(route,file,options),
+    });
+  }
   europePmc(){
     return createEuropePmcClient({
       request:(route,body,options)=>this.#json(route,body,options),
@@ -226,6 +234,25 @@ export class ResearchWorkspaceClient{
   startCrossref(id,operationId,{expectedPlanSha256}={}){return this.#json(operationPath(id,operationId)+'/start',{expectedPlanSha256});}
   stopCrossref(id,operationId){return this.#json(operationPath(id,operationId)+'/stop',{});}
   receiveCrossref(id,operationId,input){return this.#json(operationPath(id,operationId)+'/receive?projection=metadata',input);}
+  studyExtraction(){return createStudyExtractionClient({request:(route,body,options)=>this.#json(route,body,options),
+    download:(route,file,options)=>this.#download(route,file,options)});}
+  extraction(id,options={}){return this.studyExtraction().extraction(id,options);}
+  extractionSourceValues(id,options={}){return this.studyExtraction().extractionSourceValues(id,options);}
+  reviewExtraction(id,input,options={}){return this.studyExtraction().reviewExtraction(id,input,options);}
+  exportExtraction(id,options={}){return this.studyExtraction().exportExtraction(id,options);}
+  extractionPublications(id,options={}){return this.studyExtraction().extractionPublications(id,options);}
+  reviewExtractionPublication(id,input,options={}){return this.studyExtraction().reviewExtractionPublication(id,input,options);}
+  exportExtractionPublication(id,options={}){return this.studyExtraction().exportExtractionPublication(id,options);}
+  zoteroStatus(options={}){return this.#json('/api/zotero',undefined,options);}
+  openZotero(options={}){return this.#json('/api/zotero/open',{},options);}
+  riskOfBias(id,options={}){return this.#json(dossierPath(id)+'/risk-of-bias'+parameters(options));}
+  reviewRiskOfBias(id,input){return this.#json(dossierPath(id)+'/risk-of-bias/reviews?projection=metadata',input);}
+  exportRiskOfBias(id,{file,reviewId,assessmentId,assessmentEditionId,actorId,revision,
+    format='json',section='overview',...options}={}){
+    need(['json','csv','md','html'].includes(format),'RISK_OF_BIAS_EXPORT_FORMAT_INVALID');
+    return this.#download(dossierPath(id)+'/risk-of-bias/export'+parameters({
+      reviewId,assessmentId,assessmentEditionId,actorId,revision,format,section}),file,options);
+  }
   eligibility(id,options={}){return this.#json(dossierPath(id)+'/eligibility'+parameters(options));}
   reviewEligibility(id,input){return this.#json(dossierPath(id)+'/eligibility/reviews?projection=metadata',input);}
   exportEligibility(id,{file,reviewId,workSetId,revision,format='json',section='queue',...options}={}){

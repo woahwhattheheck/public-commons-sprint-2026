@@ -45,7 +45,7 @@ try{
     reopened=await customer.client.importProject(packet.body);
     if(reopened.id!==saved.id||reopened.project_revision!==saved.project_revision||
       reopened.catalog_edition_id!==saved.catalog_edition_id)throw new Error('Revised original project did not reopen as its saved edition');
-    for(const name of ['briefing.html','briefing.json','observations.csv']){
+    for(const name of Object.keys(saved.report.files)){
       if(!(await original.client.reportFile(saved.id,name)).body.equals((await customer.client.reportFile(reopened.id,name)).body))throw new Error('Reopened original report differs: '+name);
     }
     const expected=await original.client.sourceRows(saved.id),actual=await customer.client.sourceRows(reopened.id);

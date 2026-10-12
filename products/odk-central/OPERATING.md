@@ -22,6 +22,7 @@ the service and the editable source workspace to another operator.
 | Receive a selected field source | starforge odk-central-receive source | Original rows, repeat relationships, versions/media, source review, exports, archive and comparison after reopen |
 | Receive the released forms on that service | starforge odk-central-receive released | Actual native project/form/submission IDs, complete field receiving and both commissioned periods |
 | Continue those original periods | starforge odk-central-receive periods | Accepted full-source capture, exact native period boundaries, saved commissioning IDs and independent archive reopening |
+| Complete the approved SQL handover | starforge odk-central-receive warehouse | All approved datasets, immutable PostgreSQL editions, full period reports and restored source/warehouse reopen |
 | Attach an agent | starforge merchant-providers init odk-workspaces | Original merchant configuration, declared source/runtime profiles and complete retained-file access |
 | Continue on another host | Restore the complete workspace, then receive its publisher | The same workspace UUID, source history, original-to-local release mapping and continued authoring |
 
@@ -31,6 +32,7 @@ The complete source interfaces are documented in
 [commissioning](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/COMMISSIONING.md),
 [publisher receiving](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/PUBLISHER_TRANSFER.md),
 [approved-period warehousing](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/README.md)
+[complete SQL receiving](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/RECEIVING.md)
 and [service operation](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/central-host/HOST.md).
 The installed commands below invoke those same implementations.
 
@@ -990,6 +992,70 @@ actual database, schema, warehouse identity and installed Python interpreter.
 
 The full native source and continuation contract are in
 [RELEASED_PERIODS.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RELEASED_PERIODS.md).
+
+### Complete the original approved-period SQL receiving
+
+After the source and commissioning programme closes its workspace, continue
+the generated warehouse selection with the installed receiver:
+
+~~~sh
+starforge odk-central-receive warehouse \
+  --request /srv/central-receiving/field-product/receiving/commissioning/warehouse-selections.json \
+  --profiles /srv/starforge/private/warehouse-profiles.json \
+  --profile ORIGINAL_PROFILE \
+  --reviewer "Original receiving operator" \
+  --note "Receive all approved value/state columns with their original row keys." \
+  --output /srv/central-receiving/warehouse-receiving \
+  --restore-directory /srv/central-receiving/warehouse-reopened
+~~~
+
+Select the actual profile already prepared under **Receive the approved
+periods in PostgreSQL**. Preserve its installed Python executable, original
+database environment reference, warehouse UUID and schema. Replace
+ORIGINAL_PROFILE with its saved profile ID. The receiver reads the original
+source directory from the generated selection and uses the existing host
+environment for its database connection.
+
+This entry invokes the original warehouse/receiving.mjs. It opens the
+original authenticated warehouse listener, verifies the complete original
+commissioning definition and exact emitted datasets, and resumes each saved
+approval, mapping review, import and period-report request. Each inspected
+mapping retains all approved value/state columns and original source keys.
+
+The full programme receives each approval and complete source projection,
+the original period report ZIP, and the full Central archive. It closes the
+first listener, restores the same archive in the separate recipient
+directory, reconnects to the original PostgreSQL warehouse, reinspects the
+relocated source, recovers its immutable editions and downloads the same
+complete reports. Its result is written after both listeners close.
+
+| Receiving path | Original completed work |
+| --- | --- |
+| operation.json; requests/; responses/ | Complete selection, exact request bodies, saved actions and receiving stages |
+| downloads/dataset-APPROVAL_ID/ | Approved export JSON, full CSV, semantics, source descriptor and table schema |
+| downloads/reports/ | Complete original comparison ZIP for every approved table |
+| central-workspace.tar.gz | Complete source, reviews, commissioning and warehouse state |
+| received-reports/ | Original full reports received again after source relocation |
+| original-warehouse-state.json; received-warehouse-state.json | Original operations and their receiving continuation |
+| result.json | Dataset and warehouse edition IDs, file identities, restored workspace and listener closure |
+
+Repeat that same command after an interruption. Its saved specification,
+private directories, profiles and original IDs identify the continuation.
+The receiver verifies completed file bodies before reuse. A completed result
+remains the original output of the same operation.
+
+For another complete two-period customer delivery, the original general
+request supports every approved root or repeat table. Follow the full
+[receiving guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/RECEIVING.md)
+for its definition digest, table expectations and original mapping policy.
+Use the same installed warehouse entry with its request and explicit
+--directory.
+
+A host programme can import the typed nativeReceivingSelection and
+receiveApprovedCentralPeriods functions from
+@tokenjunkielabs/starforge-merchant/seller/odk/warehouse/receiving. The SDK
+retains the original commissioning dataset types, private profile type,
+full result and asynchronous stage callback.
 
 ## Receiving handover
 

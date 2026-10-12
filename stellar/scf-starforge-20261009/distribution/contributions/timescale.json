@@ -18,7 +18,7 @@
     "timescale-native-demo": "Continue one explicitly isolated native Timescale2.30.2 full product demonstration with retained original inputs.",
     "timescale-native-receiving": "Continue the completed native Timescale project through its same merchant/browser, paused full-file transfer and portable customer reopening.",
     "timescale-client": "Use the original Timescale MCP owner for native operations, complete commissioning, assigned work, frozen reports and full resumable customer packages.",
-    "timescale-remediation-receiving": "Continue the original native project through assigned work, later current-state review, reopened full-report transfer and complete portable history."
+    "timescale-remediation-receiving": "Continue the original native project through assigned work, later current-state review, complete commissioning, resumed full reports and portable customer reopening."
   },
   "exports": {
     "./seller/timescale": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/model.mjs",
@@ -37,7 +37,8 @@
     "./seller/timescale/commissioning": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/commissioning.mjs",
     "./seller/timescale/commissioning-tables": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/commissioning-tables.mjs",
     "./merchant/mcp/timescale/commissioning": "./source/stellar-forge/mcp-merchant-operator/timescale-commissioning.mjs",
-    "./merchant/mcp/timescale/commissioning-contract": "./source/stellar-forge/mcp-merchant-operator/timescale-commissioning-contract.mjs"
+    "./merchant/mcp/timescale/commissioning-contract": "./source/stellar-forge/mcp-merchant-operator/timescale-commissioning-contract.mjs",
+    "./merchant/mcp/timescale/commissioning-receiving": "./source/stellar-forge/mcp-merchant-operator/timescale-commissioning-receiving.mjs"
   },
   "runtimePackageManifests": {
     "timescale": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json"
@@ -55,7 +56,9 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/ubuntu-native-demo.py",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/UBUNTU_NATIVE.md",
     "products/timescale/OPERATING.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/COMMISSIONING.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/COMMISSIONING.md",
+    "stellar-forge/mcp-merchant-operator/timescale-commissioning-receiving.mjs",
+    "stellar-forge/mcp-merchant-operator/TIMESCALE_COMMISSIONING_RECEIVING.md"
   ],
   "browserAssets": [
     {

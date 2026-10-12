@@ -373,3 +373,9 @@ The product preserves the original database, publisher, schedule, payment and
 receiving implementations and the applicable dependency licenses. Select the
 customer's actual source, access and vendor deployment terms when adapting the
 worked example.
+
+## Continue commissioning through the installed receiver
+
+The existing `timescale-remediation-receiving` command now accepts `--commissioning-source-commit` and `--commissioning-directory`. Run it with the original native result, merchant configuration, workspace and remediation receiving directory; supplied private inputs use both `--commissioning-intake-file` and `--commissioning-adoption-file`. The source argument is the final merged 40-character commissioning commit. A completed original receiving is reopened and its earlier phases are reused. The continuation keeps the same owner and source, retains the complete technical intake and native tables, maps every criterion, reopens the handover, resumes its frozen report after the original owner restarts, and receives the complete portable project.
+
+The complete invocation, supplied-input mapping, recovery behavior and file layout are documented in `stellar-forge/mcp-merchant-operator/TIMESCALE_COMMISSIONING_RECEIVING.md`. The original pinned native operation completes before this explicit source adoption. Company inputs and commercial decisions stay with the original private case.

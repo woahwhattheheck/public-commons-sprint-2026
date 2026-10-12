@@ -1,9 +1,10 @@
-// MIT. Source-bound scalar analysis in the original SensorThings workspace.
+// MIT. Source-bound scalar and explicitly selected component analysis in the original workspace.
 import {OBSERVATION_COLUMNS,graphIndex,observationRows} from '../domain.mjs';
 import {JsonNumber,entityId,numericId,fields,plain,identity,stable,sourceDocument,pointer,timeCell,instant,text,integer,fault} from '../contract.mjs';
 
 export {ANALYSIS_SCHEMA,ANALYSIS_LIMITS,ANALYSIS_ACTIONS,ANALYSIS_MEANING} from './schema.mjs';
 import {ANALYSIS_SCHEMA,ANALYSIS_LIMITS,ANALYSIS_MEANING,NUMERIC_OBSERVATION_TYPES} from './schema.mjs';
+import {normalizeComponentSelection,selectedComponentRows,componentNumericEligibility,describeComponentSelection,componentRowsPage,compareComponentSelection,componentCSV,COMPONENT_MEANING} from './components.mjs';
 const HASH=/^[a-f0-9]{64}$/;
 export function hash(value,label='identity'){if(!HASH.test(value??''))throw fault('ANALYSIS_ID','Select an exact '+label+'.');return value;}
 export function actor(value){return text(value,'the operator name',200);}
@@ -18,6 +19,7 @@ export async function readVersion(store,id){
   return value;
 }
 export function normalizeSelection(input,edition){
+  if(plain(input)&&Object.hasOwn(input,'componentSelections'))return normalizeComponentSelection(input,edition);
   fields(input,['streamKeys','period','view','timeBasis','viewerId'],['streamKeys','period','view']);
   if(!Array.isArray(input.streamKeys)||input.streamKeys.length<1||input.streamKeys.length>ANALYSIS_LIMITS.streams||
      new Set(input.streamKeys).size!==input.streamKeys.length)throw fault('ANALYSIS_STREAMS','Choose one to twenty distinct original scalar streams.');
@@ -48,6 +50,7 @@ export function rowSelected(row,selection,edition){
   return row.phenomenon_time_kind==='explicit_interval'?t<b&&e>a:t>=a&&t<b;
 }
 export async function* selectedRows(store,edition,selection){
+  if(Array.isArray(selection.componentSelections)){yield* selectedComponentRows(store,edition,selection);return;}
   let count=0;
   for await(const value of observationRows(store,edition)){
     if(!rowSelected(value.row,selection,edition))continue;
@@ -56,6 +59,7 @@ export async function* selectedRows(store,edition,selection){
   }
 }
 export function numericEligibility(row){
+  if(Object.hasOwn(row,'component_interpretation'))return componentNumericEligibility(row);
   if(!NUMERIC_OBSERVATION_TYPES.includes(row.observation_type))return {eligible:false,reason:'observation_type_not_declared_numeric'};
   if(row.result_state!=='value'||row.result_type!=='number')return {eligible:false,reason:'not_an_original_json_number'};
   if(row.phenomenon_time_kind!=='explicit_instant')return {eligible:false,reason:'phenomenon_time_not_an_explicit_instant'};
@@ -101,9 +105,42 @@ function nativeStreamProfile(item,graph){
   if(!plain(item.record.unitOfMeasurement))issues.push({code:'native_expanded_view_requires_unit_object',sourceRef:item.sourceRef});
   return {metadataCompatible:issues.length===0,identities,issues,firstLocationPolicy:'Native expanded view uses the first original Thing Location; it is not inferred as an observation location.'};
 }
+
+function componentViewerProfile(stream){
+  const issues=[],identities=[],seen=new Map(),
+    groups=[['Thing',stream.things??[],true],['Sensor',stream.sensors??[],true],
+      ['ObservedProperty',stream.observedProperties??[],true],['Thing/Locations',stream.locations??[],false]];
+  for(const [role,entities,singular]of groups){
+    if((singular&&entities.length!==1)||(!singular&&!entities.length))
+      issues.push({code:singular?'native_singular_relation_unavailable_or_ambiguous':'native_expanded_view_requires_a_thing_location',role,count:entities.length,sourceRef:stream.sourceRef});
+    for(const item of entities){
+      let original;try{original=sourceDocument(Buffer.from(item.sourceJson,'utf8'));}catch{original=item.entity;}
+      const compatibility=nativeEntityCompatibility(original?.['@iot.id']);
+      identities.push({role,...compatibility,sourceRef:item.sourceRef});
+      if(!compatibility.compatible)issues.push({code:compatibility.reason,role,sourceRef:item.sourceRef,id:compatibility.id??null});
+      if(compatibility.id){
+        const key=role+':'+compatibility.id.key,body=identity(original),prior=seen.get(key);
+        if(prior&&prior!==body)issues.push({code:'native_related_id_has_conflicting_original_variants',role,sourceRef:item.sourceRef,id:compatibility.id});
+        seen.set(key,body);
+      }
+    }
+  }
+  if(!plain(stream.unit))issues.push({code:'native_expanded_view_requires_unit_object',sourceRef:stream.sourceRef});
+  return {metadataCompatible:issues.length===0,identities,issues,derivedComponent:true,
+    numericAvailable:issues.length===0&&stream.numericEligibleRows>0,
+    firstLocationPolicy:'Native expanded view uses the first original Thing Location; it is not an observation location.',
+    graphConflictCheck:'The original retained STA graph also rejects conflicting native identities at read time.',
+    meaning:'The viewer receives explicitly derived scalar-shaped component entities. Their safe string IDs are analysis identities; original vector, declarations, typed IDs and exact source pointers remain in analysis@component. Numeric JSON interpretation does not assert OGC measurement conformance.'};
+}
+
 function objectJSON(value){try{return JSON.parse(value);}catch{return null;}}
 function count(map,key){map[key]=(map[key]??0)+1;}
 export async function describeSelection(store,edition,selection){
+  if(Array.isArray(selection.componentSelections)){
+    const described=await describeComponentSelection(store,edition,selection);
+    for(const stream of described.streams)stream.nativeViewer=componentViewerProfile(stream);
+    return described;
+  }
   const graph=await graphIndex(store,edition),streams=selection.streamKeys.map(key=>{
     const chosen=edition.plan.streams.find(x=>x.key===key),item=graph.streams.get(key);
     if(!item)throw fault('ANALYSIS_STREAM_SOURCE','Beginning stream metadata is unavailable.',409);
@@ -132,6 +169,7 @@ export async function describeSelection(store,edition,selection){
     streams,meaning:ANALYSIS_MEANING};
 }
 export async function rowsPage(store,edition,selection,{offset=0,limit=100}={}){
+  if(Array.isArray(selection.componentSelections))return componentRowsPage(store,edition,selection,{offset,limit});
   integer(offset,'row offset',0,Number.MAX_SAFE_INTEGER);integer(limit,'page rows',1,ANALYSIS_LIMITS.pageRows);
   const rows=[];let total=0;
   for await(const v of selectedRows(store,edition,selection)){if(total>=offset&&rows.length<limit)rows.push({...v.row,stream_key:v.streamKey,source:v.original.sourceRef,numeric:numericEligibility(v.row)});total++;}
@@ -193,6 +231,25 @@ function comparisonSourceContext(left,right,streamKeys){
   };
 }
 export async function compareSelection(store,left,right,selection){
+  if(Array.isArray(selection.componentSelections)){
+    const original=await compareComponentSelection(store,left,right,selection),
+      occurrence=value=>({occurrenceId:value.row.occurrence_id,semanticHash:null,
+        componentOccurrenceId:value.row.component_occurrence_id,
+        sourceRef:value.sourceRef,componentSourceRef:value.componentSourceRef,
+        streamKey:value.row.component_series_key,componentIndex:Number(value.row.component_index),
+        result:{state:value.row.result_state,type:value.row.result_type,value:value.row.result},
+        phenomenonTime:value.row.phenomenon_time,resultTime:value.row.result_time,
+        quality:value.row.result_quality,issues:objectJSON(value.row.issues),row:value.row,
+        meaning:'Component comparison occurrence. The original full observation and selected source pointer are retained; its internal comparison hash is not exported as a provider identity.'});
+    return {...original,missingStreamKeys:[],
+      sourceQueryCompatible:stable(left.plan.observationQuery)===stable(right.plan.observationQuery)&&left.source.serviceUrl===right.source.serviceUrl,
+      changes:original.changes.map(change=>({...change,state:change.kind,left:change.left.map(occurrence),right:change.right.map(occurrence)})),
+      unkeyed:{left:original.unkeyed.filter(x=>x.side==='left'),right:original.unkeyed.filter(x=>x.side==='right')},
+      componentSourceContext:original.sourceContext,
+      sourceContext:comparisonSourceContext(left,right,selection.streamKeys),
+      componentMeaning:COMPONENT_MEANING,
+      meaning:ANALYSIS_MEANING.comparison+' Selected-component differences are separate from full-parent context changes and positional metadata changes.'};
+  }
   const rightSelection={...selection,streamKeys:selection.streamKeys.filter(k=>right.plan.streams.some(s=>s.key===k))},
     missingStreamKeys=selection.streamKeys.filter(k=>!rightSelection.streamKeys.includes(k));
   async function collect(edition,selected){
@@ -219,6 +276,7 @@ export async function compareSelection(store,left,right,selection){
 }
 export function csvCell(value){const s=value===null||value===undefined?'':typeof value==='string'?value:JSON.stringify(value);return /[",\r\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}
 export async function* selectedCSV(store,edition,selection){
+  if(Array.isArray(selection.componentSelections)){for await(const chunk of componentCSV(store,edition,selection))yield Buffer.from(chunk);return;}
   const columns=[...OBSERVATION_COLUMNS,'stream_key'];yield Buffer.from(columns.join(',')+'\r\n');
   for await(const {row,streamKey}of selectedRows(store,edition,selection))yield Buffer.from(columns.map(k=>csvCell(k==='stream_key'?streamKey:row[k])).join(',')+'\r\n');
 }

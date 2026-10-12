@@ -294,6 +294,25 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
     if (body.expectedSnapshot !== undefined && body.expectedSnapshot !== snapshot) fail('GRPC_HEALTH_SNAPSHOT_CHANGED', 409);
     return createGrpcHealthSnapshot(entry.operation, entry.events.slice(0, through));
   }
+
+  async function captureSnapshots(accept, throughAt, maximumBytes) {
+    assertHeld();
+    // The original workspace serializes starts/resumes while this captures the
+    // fixed operation inventory. Existing Watches retain their own append owner.
+    const ids = [...index.values()].filter(accept).map(row => row.id).sort();
+    const result = []; let bytes = 0;
+    for (const id of ids) {
+      const entry = await load(id); await settled(entry);
+      const firstLater = throughAt ? entry.events.findIndex(event => event.observedAt > throughAt) : -1;
+      const events = entry.events.slice(0, firstLater < 0 ? entry.events.length : firstLater);
+      const snapshot = createGrpcHealthSnapshot(entry.operation, events);
+      bytes += Buffer.byteLength(JSON.stringify(snapshot));
+      if (bytes > maximumBytes) fail('GRPC_OPERATIONS_CAPTURE_TOO_LARGE', 413);
+      result.push(snapshot);
+    }
+    return result;
+  }
+
   function latest(revision) {
     return [...index.values()].filter(row => row.revision === revision)
       .sort((a, b) => (b.lastObservedAt ?? b.createdAt).localeCompare(a.lastObservedAt ?? a.createdAt)).slice(0, 10).map(visible);
@@ -310,6 +329,6 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
     })();
     return closed;
   }
-  return { initialize, start, resume, cancel, read, list, exportSnapshot, latest, close,
+  return { initialize, start, resume, cancel, read, list, exportSnapshot, captureSnapshots, latest, close,
     runtime: () => [...jobs.keys()], count: () => index.size };
 }

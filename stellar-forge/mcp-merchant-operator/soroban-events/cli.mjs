@@ -6,7 +6,7 @@ import {fileBytes} from '../host-files.mjs';
 import {openSorobanEventsMerchantClient,initializeSorobanEventsMerchant,
   downloadSorobanEventsExport,inspectSorobanEventsExport,reopenSorobanEventsExport,
   readSorobanEventsJson,receiveSorobanEventsExport,sorobanEventsDefinitions} from './client.mjs';
-import {MAX_REQUEST_BYTES,need,plain,exact,decode} from './contracts.mjs';
+import {MAX_REQUEST_BYTES,WATCH_MANIFEST_SCHEMA,need,plain,exact,decode} from './contracts.mjs';
 
 const remoteFlags=['url','token-env'],selectedFlags=['workspace','export-id','manifest-sha256'],
   changeFlags=['request-id','expected-revision'];
@@ -17,13 +17,24 @@ const commands={
   open:[...remoteFlags,'workspace'],close:[...remoteFlags,'workspace'],state:[...remoteFlags,'workspace'],
   plan:[...remoteFlags,'workspace',...changeFlags,'args'],
   capture:[...remoteFlags,'workspace',...changeFlags,'plan-id'],
-  resume:[...remoteFlags,'workspace',...changeFlags,'capture-id'],
+  resume:[...remoteFlags,'workspace',...changeFlags,'capture-id','connection-alias'],
   status:[...remoteFlags,'workspace','capture-id'],
   events:[...remoteFlags,'workspace','capture-id','after','limit','contract-id','type'],
   edition:[...remoteFlags,'workspace',...changeFlags,'capture-id','name'],
   'show-edition':[...remoteFlags,'workspace','edition-id'],
   export:[...remoteFlags,'workspace',...changeFlags,'edition-id'],
   'publisher-source':[...remoteFlags,'workspace','edition-id'],
+  'watch-state':[...remoteFlags,'workspace'],
+  'watch-status':[...remoteFlags,'workspace','watch-id'],
+  'watch-save':[...remoteFlags,'workspace',...changeFlags,'args'],
+  'watch-configure':[...remoteFlags,'workspace','watch-id',...changeFlags,'args'],
+  'watch-start':[...remoteFlags,'workspace','watch-id',...changeFlags],
+  'watch-pause':[...remoteFlags,'workspace','watch-id',...changeFlags],
+  'watch-catch-up':[...remoteFlags,'workspace','watch-id','max-windows'],
+  'watch-repair':[...remoteFlags,'workspace','watch-id',...changeFlags,'args'],
+  'watch-export':[...remoteFlags,'workspace','watch-id',...changeFlags],
+  'watch-receive':[...remoteFlags,...selectedFlags,'receiver',...changeFlags,
+    'connection-alias','recovery-connection-alias','publication'],
   inspect:[...remoteFlags,...selectedFlags],
   json:[...remoteFlags,...selectedFlags,'file','pointer','offset','limit'],
   value:[...remoteFlags,...selectedFlags,'file'],
@@ -38,12 +49,19 @@ const help=[
   'starforge-merchant merchant-soroban-events open|close|state --url MCP_URL --workspace ALIAS',
   'starforge-merchant merchant-soroban-events plan --url MCP_URL --workspace ALIAS --request-id ID --expected-revision N --args PLAN_JSON',
   'starforge-merchant merchant-soroban-events capture --url MCP_URL --workspace ALIAS --request-id ID --expected-revision N --plan-id UUID',
-  'starforge-merchant merchant-soroban-events resume --url MCP_URL --workspace ALIAS --request-id ID --expected-revision N --capture-id UUID',
+  'starforge-merchant merchant-soroban-events resume --url MCP_URL --workspace ALIAS --request-id ID --expected-revision N --capture-id UUID [--connection-alias ALIAS]',
   'starforge-merchant merchant-soroban-events status --url MCP_URL --workspace ALIAS --capture-id UUID',
   'starforge-merchant merchant-soroban-events events --url MCP_URL --workspace ALIAS --capture-id UUID [--after CURSOR] [--limit N] [--contract-id ID] [--type TYPE]',
   'starforge-merchant merchant-soroban-events edition --url MCP_URL --workspace ALIAS --request-id ID --expected-revision N --capture-id UUID --name NAME',
   'starforge-merchant merchant-soroban-events show-edition|publisher-source --url MCP_URL --workspace ALIAS --edition-id UUID',
   'starforge-merchant merchant-soroban-events export --url MCP_URL --workspace ALIAS --request-id ID --expected-revision N --edition-id UUID',
+  'starforge-merchant merchant-soroban-events watch-state --url MCP_URL --workspace ALIAS',
+  'starforge-merchant merchant-soroban-events watch-status --url MCP_URL --workspace ALIAS --watch-id UUID',
+  'starforge-merchant merchant-soroban-events watch-save --url MCP_URL --workspace ALIAS --request-id ID --expected-revision N --args WATCH_JSON',
+  'starforge-merchant merchant-soroban-events watch-configure|watch-repair --url MCP_URL --workspace ALIAS --watch-id UUID --request-id ID --expected-revision N --args JSON',
+  'starforge-merchant merchant-soroban-events watch-start|watch-pause|watch-export --url MCP_URL --workspace ALIAS --watch-id UUID --request-id ID --expected-revision N',
+  'starforge-merchant merchant-soroban-events watch-catch-up --url MCP_URL --workspace ALIAS --watch-id UUID [--max-windows N]',
+  'starforge-merchant merchant-soroban-events watch-receive --url MCP_URL --workspace ALIAS --export-id SHA --receiver ALIAS --request-id ID --expected-revision N [--manifest-sha256 SHA] [--connection-alias ALIAS] [--recovery-connection-alias ALIAS] [--publication ALIAS]',
   'starforge-merchant merchant-soroban-events inspect --url MCP_URL --workspace ALIAS --export-id SHA [--manifest-sha256 SHA]',
   'starforge-merchant merchant-soroban-events json --url MCP_URL --workspace ALIAS --export-id SHA --file PATH [--pointer POINTER] [--offset N] [--limit N] [--manifest-sha256 SHA]',
   'starforge-merchant merchant-soroban-events value --url MCP_URL --workspace ALIAS --export-id SHA --file PATH [--manifest-sha256 SHA]',
@@ -57,6 +75,11 @@ const help=[
   'Retain the same mutation request ID, expected revision and arguments after a lost reply.',
   'Resume uses the original capture ID and retained cursor. Read state for the current revision.',
   'receive expected-revision belongs to the configured receiving workspace.',
+  'watch mutations use the separate watch-state revision, including on the receiver.',
+  'watch-start runs on the maintained Merchant host; watch-pause drains its active native window.',
+  'watch-catch-up returns busy when this same original watch already owns its source lease.',
+  'Watch JSON selects connectionAlias, recoveryConnectionAlias and publication by host alias.',
+  'Whole watch exports use the same inspect/json/value/download/reopen commands as editions.',
   'json browses a value; value reads every original JSON byte up to 128 MiB.',
   'download retains all native files and resumes in the same private directory.',
   'reopen verifies the complete local export without a remote connection.',
@@ -114,7 +137,8 @@ export async function main(argv=process.argv.slice(2),
     exact(input,['planId','name','startLedger','endLedger','filters','pageSize'],['name']);
     result=await invoke('plan_save',{...input,...workspace(),...change()});
   }else if(command==='capture')result=await invoke('capture_start',{...workspace(),...change(),planId:required('plan-id')});
-  else if(command==='resume')result=await invoke('capture_resume',{...workspace(),...change(),captureId:required('capture-id')});
+  else if(command==='resume')result=await invoke('capture_resume',{...workspace(),...change(),captureId:required('capture-id'),
+    ...optional('connection-alias','connectionAlias')});
   else if(command==='status')result=await invoke('capture_status',{...workspace(),captureId:required('capture-id')});
   else if(command==='events')result=await invoke('events',{...workspace(),captureId:required('capture-id'),
     ...optional('after'),...optional('contract-id','contractId'),...optional('type'),
@@ -124,7 +148,30 @@ export async function main(argv=process.argv.slice(2),
   else if(command==='show-edition'||command==='publisher-source')result=await invoke(
     command==='show-edition'?'edition':'publisher_source',{...workspace(),editionId:required('edition-id')});
   else if(command==='export')result=await invoke('source_export',{...workspace(),...change(),editionId:required('edition-id')});
-  else if(command==='inspect')result=await inspectSorobanEventsExport({...remote(),...selected()});
+  else if(command==='watch-state')result=await invoke('watch_state',workspace());
+  else if(command==='watch-status')result=await invoke('watch_status',{...workspace(),watchId:required('watch-id')});
+  else if(command==='watch-save'||command==='watch-configure'||command==='watch-repair'){
+    const input=await argsFile();
+    const settings=['name','planVersion','endLedger','windowLedgers','pollIntervalMs',
+      'connectionAlias','recoveryConnectionAlias','publication'];
+    exact(input,command==='watch-save'?[...settings,'planId','startLedger']:
+      command==='watch-repair'?['editionIds','recoveryConnectionAlias']:settings,
+      command==='watch-save'?['name','planId']:[]);
+    result=await invoke(command.replaceAll('-','_'),{...input,...workspace(),...change(),
+      ...(command==='watch-save'?{}:{watchId:required('watch-id')})});
+  }else if(['watch-start','watch-pause','watch-export'].includes(command))
+    result=await invoke(command.replaceAll('-','_'),{...workspace(),...change(),watchId:required('watch-id')});
+  else if(command==='watch-catch-up')result=await invoke('watch_run',{...workspace(),watchId:required('watch-id'),
+    ...(flags['--max-windows']===undefined?{}:{maxWindows:integer('max-windows',1)})});
+  else if(command==='watch-receive'){
+    const client=await openSorobanEventsMerchantClient(remote()),selection=selected(),
+      manifest=await client.inspectExport(selection);
+    need(manifest.manifest.schema===WATCH_MANIFEST_SCHEMA,'SOROBAN_EVENTS_EXPORT_KIND','Select an original watch export.');
+    result=await client.watchReceive({...selection,...change(),receiver:required('receiver'),
+      expectedManifestSha256:manifest.manifestSha256,
+      ...optional('connection-alias','connectionAlias'),...optional('recovery-connection-alias','recoveryConnectionAlias'),
+      ...optional('publication')});
+  }else if(command==='inspect')result=await inspectSorobanEventsExport({...remote(),...selected()});
   else if(command==='value')result=await readSorobanEventsJson({...remote(),...selected(),file:required('file')});
   else if(command==='json'){
     const client=await openSorobanEventsMerchantClient(remote()),selection=selected(),

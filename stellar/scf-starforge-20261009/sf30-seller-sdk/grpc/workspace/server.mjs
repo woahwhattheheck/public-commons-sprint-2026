@@ -8,6 +8,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createGrpcWorkspace } from './model.mjs';
 import { nativeFactoryFor } from '../start.mjs';
+import { OPERATIONS_MAX_BYTES } from '../operations/domain.mjs';
 import { parseGrpcManagedSelection, validateGrpcManagedSelection, assertGrpcManagedSource,
   createGrpcManagedLaunch } from './managed-launch.mjs';
 import { readBrowserAssets } from '../../../distribution/browser-assets.mjs';
@@ -17,12 +18,12 @@ const response = (res, status, value) => {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': bytes.length,
     'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }); res.end(bytes);
 };
-async function body(req) {
+async function body(req, maximum = 17825792) {
   if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? ''))
     throw Object.assign(new Error('GRPC_WORKSPACE_JSON_REQUIRED'), { status: 415 });
   const chunks = []; let size = 0;
   for await (const chunk of req) {
-    if ((size += chunk.length) > 17825792) throw Object.assign(new Error('GRPC_WORKSPACE_BODY_TOO_LARGE'), { status: 413 });
+    if ((size += chunk.length) > maximum) throw Object.assign(new Error('GRPC_WORKSPACE_BODY_TOO_LARGE'), { status: 413 });
     chunks.push(chunk);
   }
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks, size))); }
@@ -59,7 +60,10 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
     return typeof token === 'string' && Buffer.byteLength(token) === capability.length &&
       timingSafeEqual(Buffer.from(token), Buffer.from(capability));
   };
-  const actions = { 'health-start': 'healthStart', 'health-read': 'healthRead', 'health-list': 'healthList',
+  const actions = { 'operations-capture': 'operationsCapture', 'operations-captures': 'operationsCaptures',
+    'operations-read': 'operationsRead', 'operations-save': 'operationsSave', 'operations-case': 'operationsCase',
+    'operations-cases': 'operationsCases', 'operations-export': 'operationsExport', 'operations-download': 'operationsDownload',
+    'operations-receive': 'operationsReceive', 'health-start': 'healthStart', 'health-read': 'healthRead', 'health-list': 'healthList',
     'health-resume': 'healthResume', 'health-cancel': 'healthCancel', 'health-export': 'healthExport', save: 'save', capture: 'capture', open: 'open', checkout: 'checkout',
     'reflection-inventory': 'reflectionInventory', 'reflection-capture': 'reflectionCapture',
     'reflection-open': 'reflectionOpen', 'reflection-save': 'reflectionSave',
@@ -131,8 +135,8 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
       if (req.method === 'GET' && url.pathname === '/api/example') return response(res, 200, example);
       const action = url.pathname.startsWith('/api/') ? actions[url.pathname.slice(5)] : null;
       if (req.method === 'POST' && action) {
-        const value = await model[action](await body(req), { signal: controller.signal });
-        if (['download', 'archive'].includes(action)) {
+        const value = await model[action](await body(req, action === 'operationsReceive' ? OPERATIONS_MAX_BYTES + 1048576 : 17825792), { signal: controller.signal });
+        if (['download', 'archive', 'operationsDownload'].includes(action)) {
           downloads.add(req.socket); res.once('close', () => downloads.delete(req.socket));
           res.writeHead(200, { 'content-type': value.contentType, 'content-length': value.bytes.length,
             'content-disposition': 'attachment; filename="' + value.filename + '"', 'x-content-sha256': value.sha256,
