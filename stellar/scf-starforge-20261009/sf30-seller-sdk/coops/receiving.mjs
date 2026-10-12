@@ -150,17 +150,44 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
  function compactResponse(value,status=200){return{operationId:value.operationId,reused:value.reused===true,state:value.state??null,result:value.result??null,status};}
  async function settleIssued(key,{fresh=false}={}){
   const entry=cp.issued[key];assert(entry?.request,'The original UI request must remain retained for '+key);
-  const record=await waitUntil(async()=>{const r=await nativeOperation(entry);if(r.state==='FAILED'||r.state==='NOT_RESERVED')throw new Error('Original '+entry.request.action+' is '+r.state+': '+(r.error?.message??'inspect the saved browser request before retrying'));return r.state==='COMPLETE'?r:null;},'Waiting for original '+entry.request.action);
-  if(fresh)await waitUntil(async()=>{const p=(await browserState())?.pending;return !p||['uncertain','rejected','running'].includes(p.state);},'Completing the visible native reply');
-  const journal=await browserState(),pending=journal?.pending;
-  if(pending){
-   assert(pending.request.operationId===entry.request.operationId&&stable(pending.request)===stable(entry.request),'A different original browser request is pending.');
+  const same=p=>p?.request?.operationId===entry.request.operationId&&stable(p.request)===stable(entry.request);
+  const visibleReply=()=>waitUntil(async()=>{const p=(await browserState())?.pending;return !p||['uncertain','rejected','running'].includes(p.state);},'Completing the visible native reply');
+  const current=async()=>{
+   const r=await nativeOperation(entry);assert(r.operationId===entry.request.operationId,'The inspected native operation changed its original identity.');
+   if(r.state==='FAILED'&&!r.error?.retryable)throw new Error('Original '+entry.request.action+' failed: '+(r.error?.message??'inspect its retained native error before changing any inputs'));
+   assert(['NOT_RESERVED','RUNNING','FAILED','COMPLETE'].includes(r.state),'Inspect the actual original operation state before continuing.');
+   return r;
+  };
+  async function retry(before){
+   const pending=(await browserState())?.pending;
+   assert(same(pending),'The original pending browser request is required; preserve any different request or later draft.');
    await closeDialog();
    const responsePromise=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname==='/api/action'&&response.request().postDataJSON()?.operationId===entry.request.operationId,{timeout:operationTimeout});
    await page.locator('[data-cmd="retry"]').click();const response=await responsePromise,value=await response.json();
-   assert(response.ok()&&value.operationId===entry.request.operationId&&value.reused===true,'Exact retry must return the original saved operation.');
-   entry.replay=compactResponse(value,response.status());persist();
-   await waitUntil(async()=>!(await browserState())?.pending,'Completing the original browser request journal');
+   assert(response.ok()&&value.operationId===entry.request.operationId&&value.view?.workspaceId===cp.workspaceId,'The original retry must retain its exact operation and workspace.');
+   if(before.state!=='NOT_RESERVED')assert(value.reused===true,'The reserved request must return its original native operation.');
+   const receipt=compactResponse(value,response.status());entry.replay=receipt;entry.replays??=[];entry.replays.push({...receipt,priorState:before.state});persist();
+   await visibleReply();return value;
+  }
+  if(fresh)await visibleReply();
+  let record=await current(),pending=(await browserState())?.pending;
+  if(pending)assert(same(pending),'A different original browser request is pending; preserve it before continuing this phase.');
+  if(record.state!=='COMPLETE'){
+   // An interrupted request may never have reached reservation, or may retain
+   // unfinished native work. Only the same saved UI request can resume it.
+   assert(pending,'The incomplete original operation has no matching pending browser request. Keep its native identity and restore its original browser journal.');
+   await retry(record);
+   record=await waitUntil(async()=>{
+    const r=await current();
+    if(r.state==='FAILED'||r.state==='NOT_RESERVED')throw new Error('The original retry remains '+r.state+': '+(r.error?.message??'inspect its actual retained result'));
+    return r.state==='COMPLETE'?r:null;
+   },'Waiting for the resumed original '+entry.request.action);
+  }
+  pending=(await browserState())?.pending;
+  if(pending){
+   assert(same(pending),'A different original request must not be replaced after completion.');
+   await retry(record);
+   await waitUntil(async()=>!(await browserState())?.pending,'Retaining the completed original browser reply');
   }
   entry.result=clone(record.result);entry.native={operationId:record.operationId,state:record.state,resultSha256:record.resultSha256??null,completedAt:record.completedAt??null};entry.state='COMPLETE';persist();return entry.result;
  }
@@ -808,7 +835,21 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
   });
   if(study)await phase('retain_original_study_return_and_record_receiving',async()=>{
    const released=cp.phases.independent_study_review_and_immutable_delivery.result,original=released.files.jsonl;
-   const upload=await retainStudyReturn(released.release,original);
+   const laterKeys=['study-original-return-comparison','study-file-receiving-decision'],laterIssued=laterKeys.some(key=>cp.issued[key]?.request);
+   let pending=(await browserState())?.pending;
+   if(laterIssued&&pending){
+    const key=laterKeys.find(key=>cp.issued[key]?.request?.operationId===pending.request.operationId&&stable(cp.issued[key].request)===stable(pending.request));
+    assert(key,'Preserve the unrelated original request or later receiving draft before resuming this completed file intake.');
+    await settleIssued(key);pending=(await browserState())?.pending;
+    assert(!pending,'The original later study action must be reconciled before continuing its phase.');
+   }
+   let upload;
+   if(laterIssued){
+    upload=cp.studyCompleteUpload;assert(upload&&upload.id===cp.ids.studyUpload,'Keep the retained complete-upload receipt behind the original comparison.');
+    const retained=(await api('/api/view')).studyUploads.find(u=>u.id===upload.id);
+    assert(retained&&retained.releaseId===released.release.id&&retained.filename===basename(original.path)&&retained.bytes===original.bytes&&retained.format==='jsonl'&&retained.receivedBytes===retained.bytes&&stable(retained.chunks)===stable(upload.chunks),'The exact retained complete file differs from its original comparison input.');
+    if(retained.finishingOperationId)assert(retained.finishingOperationId===cp.issued['study-original-return-comparison']?.request?.operationId,'A different comparison owns this original returned file.');
+   }else upload=await retainStudyReturn(released.release,original);
    cp.ids.studyUpload=upload.id;cp.studyCompleteUpload??=clone(upload);persist();await saveJSON('study-return-upload','Study_Original_Return_Upload.json',cp.studyCompleteUpload);
    await navigate('studies');
    const returned=await action('study-original-return-comparison','study.return.finish',async()=>{
