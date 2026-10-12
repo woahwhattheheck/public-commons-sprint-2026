@@ -37,6 +37,13 @@ class Handler(RetainedHandler):
 
     def _get(self):
         target=urlsplit(self.path)
+        if target.path=="/api/launch":
+            self._gate()
+            if target.query:raise InputError("The original launch endpoint has no query parameters")
+            if self.server.launch is None:
+                self._json({"error":"The managed ClinicalTrials console is not available"},503)
+            else:self._json(self.server.launch)
+            return
         if target.path=="/publisher.mjs":
             self._gate(api=False)
             path=HERE.parent/"socrata"/"public"/"publisher.mjs"
@@ -143,3 +150,4 @@ class OperatorServer(RetainedServer):
     """The caller owns workspace.close(); this server owns only its listener."""
     def __init__(self,workspace:Workspace,port:int=0):
         super().__init__(workspace,port,assets_directory=HERE/"public",handler_class=Handler)
+        self.launch=None
