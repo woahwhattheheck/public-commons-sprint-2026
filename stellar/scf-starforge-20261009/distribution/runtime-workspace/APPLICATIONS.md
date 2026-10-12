@@ -7,6 +7,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
+| n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
@@ -452,3 +453,11 @@ The existing **Merchant recovery** selection also retains each declared capture-
 ## Economic data editions
 
 Choose **Economic data editions** to reopen the initialized FRED project, retained public tables or explicit API vintages, saved reviews and merchant editions, and the original configured buyer. The standard managed terminal carries customer approval; the same application stops and reopens its project and buyer journal. Select the original merchant port already routed by the publication HTTPS origin separately from the private UI port. The complete input, source, customer, export and receiving workflow is in [FRED Applications](FRED_APPLICATIONS.md).
+
+## n8n automation merchant
+
+Choose **n8n automation merchant** and select the private merchant directory. For a new merchant or an interrupted preparation, select its original configuration file. Review reads the selected installed source and original configuration; Start initializes or resumes that same preparation before opening the merchant. Existing merchants reopen with their original configuration, application, paid jobs and dispatch history.
+
+The installed command verifies its selected source against the managed execution copy, then opens the original seller, customer, operations and automation consoles. Applications binds Open to the actual managed child, private launch record and authenticated original listener. The private environment file supplies the configuration’s n8n API and webhook reference names. Stop drains the original services and job worker before another start reopens the same state.
+
+The [complete n8n Applications guide](N8N_APPLICATIONS.md) covers first-run preparation, installed source selection, native workflow setup, credentials, ports, original job execution, customer delivery, unresolved execution recovery and stop/reopen.
