@@ -144,11 +144,26 @@ The original Workbench documentation describes [configuration and authentication
 6. Read the actual process history, exit code, and saved log. Receive the original identifier map and current target after native changes.
 7. Prepare again from the current saved state to obtain the remaining file, parent, metadata, or read-target work.
 
-Creation batches are grouped by media type. Metadata updates are grouped by field and operation. File additions and parent relationships use received target node IDs. The desk retains the original CSV, configuration, map, and native logs for each operated job.
+Creation batches are grouped by media type. Metadata updates are grouped by field and operation. File additions and parent relationships use received target node IDs. Before operating a saved batch, the desk receives any new IDs in that job's native SQLite map and compares preparation with the current record state and workspace location. It regenerates changed preparation while keeping the saved source, target identities, field choices, and review. If receiving makes the selected batch obsolete, choose the remaining batch shown in Workbench.
+
+Every invocation, including the automatic native check, gets its own directory under `runs/RUN_ID/`. The process reads that invocation's saved input and configuration. Its outputs and rollback files stay in the same directory, so later preparation cannot overwrite an earlier run or make a previous output appear to be the new result.
+
+| Retained member | Purpose |
+| --- | --- |
+| `input.csv` | The complete CSV read by this native process. |
+| `config.yml` | The exact configuration passed to Workbench, with this run's input and output paths. |
+| `prepared.yml` | The complete batch configuration immediately before binding it to this invocation. |
+| `invocation.json` | The command, saved review, input hashes, and original node-map snapshot reference. |
+| `native.log`, `workbench.log` | The captured process output and Workbench's own log, when produced. |
+| `created-nodes.csv`, `current-target.csv` | This invocation's native create or metadata export result, when produced. |
+| `rollback.yml`, `rollback.csv` | This invocation's native rollback files, when produced. |
+| `result.json` | The saved process result and the resulting node-map snapshot reference. |
+
+The active ID map remains in `batches/native-node-map.sqlite` for subsequent batches. Coherent copies from before and after native execution are retained in `native-maps/`; runs that have identical map contents share one saved copy. The complete migration package and workspace backup include these files.
 
 **Stop native work** requests cancellation of the active worker. Wait for its process result, then inspect the current target and continue from the retained state. The CLI also stops its attached native worker when interrupted.
 
-Native logs are displayed in byte pages, with a separate download for the complete original file. A nonzero exit remains visible with that run's log.
+Native execution history includes downloads of each run's complete CSV, executed configuration, and original prepared configuration. Native logs are displayed in byte pages, with a separate download for the complete original file. A nonzero exit remains visible with that run's log.
 
 ## 6. Finish and reopen
 
@@ -163,7 +178,13 @@ python3 cli.py --workspace /absolute/path/to/restored-workspace restore --archiv
 python3 cli.py --workspace /absolute/path/to/restored-workspace serve
 ```
 
-The migration package is the handover of a particular job. The complete workspace backup is the reopening artifact. Keep both with the installed application source. Native Workbench paths belong to the receiving machine; re-enter them when operating on a different host.
+The migration package is the handover of a particular job. The complete workspace backup is the reopening artifact. Keep both with the installed application source.
+
+Open the restored migration and enter the receiving machine's actual Workbench script and Python executable. **Prepare**, **Check**, and **Run** bind the current batches to the restored workspace. Input files, copied originals, inherited originals from baseline jobs, native maps, read-target exports, and rollback paths then resolve inside the receiving workspace. Original file names, hashes, roles, source identifiers, native IDs, and saved field choices are retained.
+
+A native writer may have saved node IDs before its console ended. On the next operation, those IDs are received from the restored map before preparing the remaining batches. The desk retains the same migration; use its current Records and Workbench views to continue.
+
+Historical run inputs keep the exact paths used for their original execution. Use the restored job's current **Prepare**, **Check**, or **Run** command to continue. If operating Workbench directly outside the desk, prepare and download the current batch configuration on the receiving machine first.
 
 ## Native command line
 
