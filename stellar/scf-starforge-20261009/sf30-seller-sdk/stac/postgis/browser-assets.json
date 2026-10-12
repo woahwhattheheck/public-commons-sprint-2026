@@ -1,0 +1,34 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/",
+      [
+        "operator.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/operator.js",
+      [
+        "operator-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operator.css",
+      [
+        "operator.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/exact-json.js",
+      [
+        "../vector/json.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ]
+  ]
+}

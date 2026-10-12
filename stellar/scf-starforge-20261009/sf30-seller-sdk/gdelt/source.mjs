@@ -6,7 +6,7 @@ import { constants } from 'node:fs';
 import { runGdeltPython } from './python.mjs';
 import { privateDirectory, atomicJson, readPrivateJson, withPrivateLock } from '../routescan/quota.mjs';
 import { readBytes, writeBytes } from '../../sf88-operator-buyer-cli/node/store.mjs';
-import { CAPTURE, LIMITS, MANIFEST_URL, ATTRIBUTION, CODEBOOK_URL, need, plain, clone,
+import { CAPTURE, GKG_CAPTURE, GKG_CODEBOOK_URL, LIMITS, MANIFEST_URL, ATTRIBUTION, CODEBOOK_URL, need, plain, clone,
   canonical, hash, digest, jsonBytes, isHash, batchId, parseManifest, parseTable } from './model.mjs';
 
 export async function syncDirectory(path) {
@@ -40,19 +40,27 @@ export async function exactFile(directory, name, bytes) {
   await syncDirectory(directory);
 }
 function md5(bytes) { return createHash('md5').update(bytes).digest('hex'); }
+export function gdeltCaptureFormat(value) {
+  need(value?.schema===CAPTURE||value?.schema===GKG_CAPTURE,'Select an original Events/Mentions or GKG capture.');
+  return value.schema===GKG_CAPTURE?'gkg':'events-mentions';
+}
+export function gdeltCaptureCodebook(value) {
+  return gdeltCaptureFormat(value)==='gkg'?GKG_CODEBOOK_URL:CODEBOOK_URL;
+}
 function sourceIdentity(value) {
-  return { schema: CAPTURE, batch:value.batch, manifest:value.manifest, sources:value.sources,
-    attribution:ATTRIBUTION, codebookUrl:CODEBOOK_URL };
+  return { schema:value.schema, batch:value.batch, manifest:value.manifest, sources:value.sources,
+    attribution:ATTRIBUTION, codebookUrl:gdeltCaptureCodebook(value) };
 }
 export function inspectGdeltCapture(capture) {
-  need(capture?.schema === CAPTURE && capture.attribution === ATTRIBUTION && capture.codebookUrl === CODEBOOK_URL && isHash(capture.captureId) &&
+  const format=gdeltCaptureFormat(capture),kinds=format==='gkg'?['gkg']:['events','mentions'];
+  need(capture.attribution === ATTRIBUTION && capture.codebookUrl === gdeltCaptureCodebook(capture) && isHash(capture.captureId) &&
     capture.captureId === digest(sourceIdentity(capture)), 'The retained GDELT capture identity changed.');
-  const batch=batchId(capture.batch), manifest=validateManifestRecord(capture.manifest,batch);
-  need(Array.isArray(capture.sources) && capture.sources.length===2,'A complete source capture contains Event and Mentions tables.');
+  const batch=batchId(capture.batch), manifest=validateManifestRecord(capture.manifest,batch,format);
+  need(Array.isArray(capture.sources) && capture.sources.length===kinds.length,'A complete source capture retains its exact declared source family.');
   const models={};
   for (const descriptor of manifest.selected) {
     const choices=capture.sources.filter(item=>item.kind===descriptor.kind);
-    need(choices.length===1,'The retained Event/Mentions source inventory changed.');
+    need(choices.length===1,'The retained original source inventory changed.');
     const source=choices[0], bytes=sourceBytes(source);
     need(canonical(source.request)===canonical(descriptor) && source.url===descriptor.url && source.status===200 &&
       bytes.length===descriptor.bytes && md5(bytes)===descriptor.md5,'Original ZIP differs from its published GDELT manifest.');
@@ -61,8 +69,9 @@ export function inspectGdeltCapture(capture) {
       /^[a-f0-9]{8}$/.test(source.table.crc32 ?? ''),'The original decoded GDELT table changed.');
     models[source.kind]=parseTable(source.table.text,source.kind,batch);
   }
-  return { captureId:capture.captureId,batch,events:models.events,mentions:models.mentions,
-    counts:{events:models.events.length,mentions:models.mentions.length},attribution:ATTRIBUTION,
+  return { captureId:capture.captureId,batch,
+    ...(format==='gkg'?{format,articles:models.gkg,events:[],mentions:[],counts:{articles:models.gkg.length}}:
+      {events:models.events,mentions:models.mentions,counts:{events:models.events.length,mentions:models.mentions.length}}),attribution:ATTRIBUTION,
     sources:capture.sources.map(source=>({kind:source.kind,url:source.request.advertisedUrl,
       zipBytes:source.bytes,zipSha256:source.sha256,md5:source.request.md5,tableSha256:source.table.sha256,
       tableBytes:source.table.bytes,receivedAt:source.receivedAt})) };
@@ -75,7 +84,7 @@ export function sourceBytes(source) {
     bytes.length===source.bytes && hash(bytes)===source.sha256,'Retained GDELT ZIP encoding or hash changed.');
   return bytes;
 }
-export function validateManifestRecord(record,selectedBatch) {
+export function validateManifestRecord(record,selectedBatch,format='events-mentions') {
   need(plain(record) && [MANIFEST_URL,'https://data.gdeltproject.org/gdeltv2/masterfilelist.txt'].includes(record.url) &&
     [200,206].includes(record.status) && typeof record.body==='string' &&
     Buffer.byteLength(record.body)===record.bytes && hash(Buffer.from(record.body))===record.sha256 &&
@@ -95,7 +104,7 @@ export function validateManifestRecord(record,selectedBatch) {
     if (start>0) text=text.slice(text.indexOf('\n')+1);
     if (!text.endsWith('\n')) text=text.slice(0,text.lastIndexOf('\n')+1);
   }
-  return parseManifest(text,{selectedBatch});
+  return parseManifest(text,{selectedBatch,format});
 }
 async function responseBytes(response,limit,signal) {
   const length=response.headers.get('content-length');
@@ -127,7 +136,7 @@ function cooldown(response) {
 async function originalGet(url,{limit,signal,fetchImpl=globalThis.fetch,headers={}}={}) {
   const parsed=new URL(url);
   need(parsed.origin==='https://data.gdeltproject.org' && !parsed.username && !parsed.password &&
-    !parsed.hash && !parsed.search && /^\/gdeltv2\/(?:lastupdate\.txt|masterfilelist\.txt|\d{14}\.(?:export|mentions)\.CSV\.zip)$/.test(parsed.pathname),
+    !parsed.hash && !parsed.search && /^\/gdeltv2\/(?:lastupdate\.txt|masterfilelist\.txt|\d{14}\.(?:(?:export|mentions)\.CSV|gkg\.csv)\.zip)$/.test(parsed.pathname),
     'Use the selected official GDELT source URL.');
   const abort=AbortSignal.any([AbortSignal.timeout(60000),...(signal?[signal]:[])]);
   const response=await fetchImpl(url,{method:'GET',redirect:'error',signal:abort,
@@ -156,14 +165,15 @@ async function originalGet(url,{limit,signal,fetchImpl=globalThis.fetch,headers=
   return {url,status:response.status,headers:retainedHeaders,receivedAt:new Date().toISOString(),
     bytes:bytes.length,sha256:hash(bytes),bodyBytes:bytes};
 }
-export async function discoverGdelt({signal,fetchImpl,history=false}={}) {
+export async function discoverGdelt({signal,fetchImpl,history=false,format='events-mentions'}={}) {
   need(typeof history==='boolean','history must be boolean.');
+  need(['events-mentions','gkg'].includes(format),'Choose the original source family before source discovery.');
   const url=history?'https://data.gdeltproject.org/gdeltv2/masterfilelist.txt':MANIFEST_URL;
   const record=await originalGet(url,{limit:LIMITS.manifestBytes,signal,fetchImpl,
     headers:history?{range:'bytes=-262144'}:{}});
   const {bodyBytes,...metadata}=record;
   const manifest={...metadata,body:new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bodyBytes)};
-  const selected=validateManifestRecord(manifest);
+  const selected=validateManifestRecord(manifest,undefined,format);
   return {manifest,...selected};
 }
 export async function decodeGdeltZip(bytes,member,{python,signal}={}) {
@@ -191,17 +201,18 @@ export async function storeGdeltCapture(directory,capture,{verified=false,...opt
   await withPrivateLock(directory,'capture.lock',()=>exactFile(directory,'capture.json',jsonBytes(capture)));
   return {directory,captureId:capture.captureId,model};
 }
-export async function captureGdelt({directory,batch,manifest:suppliedManifest,signal,fetchImpl,python,onProgress}={}) {
+export async function captureGdelt({directory,batch,manifest:suppliedManifest,format='events-mentions',signal,fetchImpl,python,onProgress}={}) {
+  need(['events-mentions','gkg'].includes(format),'Choose the original source family.');
   directory=await durableDirectory(directory);
   if(batch!==undefined)batchId(batch);
-  const selection={batch:batch??null,manifestSha256:suppliedManifest?.sha256??null};
+  const selection={batch:batch??null,manifestSha256:suppliedManifest?.sha256??null,...(format==='gkg'?{format}:{})};
   return withPrivateLock(directory,'capture.lock',async()=>{
     const complete=await optionalJson(join(directory,'capture.json'));
     const current=await optionalJson(join(directory,'progress.json'));
     if(current)need(canonical(current.selection)===canonical(selection),'This acquisition ID belongs to another source selection.','GDELT_OPERATION_CONFLICT',409);
     if(complete) {
       const model=inspectGdeltCapture(complete);
-      need(batch===undefined||model.batch===batch,'Completed capture belongs to another update.');
+      need((batch===undefined||model.batch===batch)&&gdeltCaptureFormat(complete)===format,'Completed capture belongs to another update or source family.');
       return {directory,capture:complete,model,reused:true};
     }
     const progress=current??{schema:'stellar-forge.gdelt-acquisition.v1',selection,state:'CAPTURING',
@@ -213,11 +224,11 @@ export async function captureGdelt({directory,batch,manifest:suppliedManifest,si
     await atomicJson(directory,'progress.json',progress);
     try {
       if(!progress.manifest) {
-        progress.manifest=suppliedManifest??(await discoverGdelt({signal,fetchImpl})).manifest;
-        validateManifestRecord(progress.manifest,batch);
+        progress.manifest=suppliedManifest??(await discoverGdelt({signal,fetchImpl,format})).manifest;
+        validateManifestRecord(progress.manifest,batch,format);
         await atomicJson(directory,'progress.json',progress);
       }
-      const selected=validateManifestRecord(progress.manifest,batch);
+      const selected=validateManifestRecord(progress.manifest,batch,format);
       for(const request of selected.selected) {
         signal?.throwIfAborted();
         let source=progress.sources.find(item=>item.kind===request.kind);
@@ -237,8 +248,8 @@ export async function captureGdelt({directory,batch,manifest:suppliedManifest,si
           await atomicJson(directory,'progress.json',progress);
         }
       }
-      const capture={schema:CAPTURE,batch:selected.batch,manifest:progress.manifest,
-        sources:progress.sources,attribution:ATTRIBUTION,codebookUrl:CODEBOOK_URL};
+      const capture={schema:format==='gkg'?GKG_CAPTURE:CAPTURE,batch:selected.batch,manifest:progress.manifest,
+        sources:progress.sources,attribution:ATTRIBUTION,codebookUrl:format==='gkg'?GKG_CODEBOOK_URL:CODEBOOK_URL};
       capture.captureId=digest(sourceIdentity(capture));
       const model=inspectGdeltCapture(capture);
       need(jsonBytes(capture).length<=LIMITS.captureBytes,'Complete source capture exceeds192 MiB.','GDELT_SOURCE_TOO_LARGE',413);

@@ -246,7 +246,7 @@ class ResearchWorkspace:
             identity = {"schema": _CALL, "requestId": request_id, "action": action,
                         "input": value, "workspaceId": self.workspace_id, "replaySafe": bool(replay_safe)}
             if path.exists():
-                saved = parse(read(path, 1024 * 1024))
+                saved = parse(read(path, 32 * 1024 * 1024))
                 if _json({k: saved[k] for k in identity}) != _json(identity):
                     raise StateError("RESEARCH_REQUEST_ID_REUSED")
             else:
@@ -283,7 +283,7 @@ class ResearchWorkspace:
 
     def call_record(self, request_id):
         selected = self._directory_for_call(request_id)
-        request = parse(read(selected / "request.json", 1024 * 1024))
+        request = parse(read(selected / "request.json", 32 * 1024 * 1024))
         attempts = sorted(p for p in (selected / "attempts").iterdir() if p.is_dir()) if (selected / "attempts").exists() else []
         last = attempts[-1] / "result.json" if attempts else None
         return {"request": request, "attempts": len(attempts),
@@ -295,7 +295,7 @@ class ResearchWorkspace:
         records = []
         for selected in (self.directory / "calls").iterdir():
             if selected.is_dir() and (selected / "request.json").is_file():
-                request = parse(read(selected / "request.json", 1024 * 1024))
+                request = parse(read(selected / "request.json", 32 * 1024 * 1024))
                 records.append({key: request[key] for key in
                                 ("requestId", "action", "createdAt", "workspaceId", "replaySafe")})
         records.sort(key=lambda item: (item["createdAt"], item["requestId"]))
@@ -336,6 +336,10 @@ class ResearchWorkspace:
                 value[key] = item
         return self._write(action, value, request_id=request_id, replay_safe=False)
 
+    def citations(self, dossier_id):
+        from .research_citations import ResearchCitations
+        return ResearchCitations(self, dossier_id)
+
     def documents(self, dossier_id):
         from .research_documents import ResearchDocuments
         return ResearchDocuments(self, dossier_id)
@@ -369,8 +373,11 @@ class ResearchWorkspace:
             pass
         return delivery
 
-    def export_dossier(self, dossier_id, file, *, format="json.gz", expected_sha256=None):
-        return self._download("export-dossier", {"dossierId": dossier_id, "options": {"format": format}},
+    def export_dossier(self, dossier_id, file, *, format="json.gz", revision=None, expected_sha256=None):
+        options = {"format": format}
+        if revision is not None:
+            options["revision"] = revision
+        return self._download("export-dossier", {"dossierId": dossier_id, "options": options},
                               file=file, expected_sha256=expected_sha256)
 
     def export_edition(self, dossier_id, edition_id, file, *, expected_sha256=None):

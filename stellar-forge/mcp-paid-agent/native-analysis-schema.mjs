@@ -3,6 +3,7 @@
 import {nativeWorkbookOperations} from './native-analysis-workbooks-schema.mjs';
 import {nativeSourceOperations} from './native-analysis-sources-schema.mjs';
 import {nativeArchiveOperations} from './native-analysis-archives-schema.mjs';
+import {nativeResearchOperations} from './native-analysis-research-schema.mjs';
 const name={type:'string',pattern:'^[A-Za-z][A-Za-z0-9_-]{0,63}$'};
 const id={type:'string',pattern:'^[a-f0-9]{32}$'};
 const hash={type:'string',pattern:'^[a-f0-9]{64}$'};
@@ -108,6 +109,7 @@ export const nativeAnalysisOperations=Object.freeze({
   ...nativeSourceOperations,
   ...nativeWorkbookOperations,
   ...nativeArchiveOperations,
+  ...nativeResearchOperations,
 
 });
 export const nativeAnalysisActions=Object.freeze(['analysis']);

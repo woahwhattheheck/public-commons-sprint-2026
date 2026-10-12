@@ -14,6 +14,10 @@ The installed plugin now includes **WooCommerce → Order ERP delivery** for ori
 
 See [ERP.md](ERP.md) for connection registration, exact decimal and tax behavior, the complete operator flow, correction semantics, and second-engineer handoff. Start from [erp-map.example.json](erp-map.example.json) and run `node merchant-erp-cli.mjs help`. The existing Woo payment, settlement and refund flows remain in their original records.
 
+## Connector source and mapping workspace
+
+**Order ERP delivery → Connector sources** retains exact installed configuration/schema JSON and CSV, reviewed source editions, explicit field and country/state substitutions, complete scope-aware comparisons, related original order editions, and private source/order recovery. It applies a reviewed recipe through the existing ERP map store; source refreshes do not deliver orders. The integrated browser, original merchant client and `kcf-*` commands share the same retained workspace. See [KCF.md](KCF.md) for the complete intake, mapping, comparison and handoff flow.
+
 ## Original merchant order bridge
 
 The manual order bridge remains available for existing merchant workflows and all original HTTP methods. A buyer uses the merchant's *existing compatible x402 client* against the original SF30 paid API, sending `X-SF98-Order-ID: <Woo order id>` on the paid request. A merchant must agree how to associate that order and paid resource. The header is buyer-controlled and **not proof** of the order; the receiver accepts only a store-admin-approved exact order+payment binding. The signed webhook is a server endpoint; buyers must never know its secret.

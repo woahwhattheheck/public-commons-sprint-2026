@@ -5,6 +5,8 @@ import {readResearchHostFile} from '../research-dossiers/workspace-files.mjs';
 import {ResearchWorkspaceClient} from '../research-dossiers/workspace-client.mjs';
 import {need,object,parseJson} from '../node/store.mjs';
 import {createResearchDocumentSource} from './research-document-source.mjs';
+import {citationReviewInput,citationDigest} from '../research-dossiers/citation-updates.mjs';
+import {exportCitationFile,receiveCitationFile} from './research-citation-delivery.mjs';
 
 const MODE='RESEARCH_WORKSPACE_BRIDGE',SCHEMA='stellar-forge.research-python-call.v1';
 const safeCode=value=>typeof value==='string'&&/^[A-Z0-9_]{1,120}$/.test(value)?value:'RESEARCH_NATIVE_CALL_FAILED';
@@ -32,6 +34,9 @@ async function dispatch(client,action,input,signal){
     case 'select-evidence':return client.selectEvidence(dossierId,body);
     case 'update-selection':return client.updateSelection(dossierId,body);
     case 'compare':return client.compare(dossierId,options);
+    case 'citation-updates':return client.citationUpdates(dossierId,options);
+    case 'citation-review':return client.reviewCitationUpdate(dossierId,body);
+    case 'citation-export':return exportCitationFile(client,input);
     case 'export-dossier':return client.exportDossier(dossierId,requestOptions);
     case 'export-edition':return client.exportRetainedEdition(dossierId,input.editionId,requestOptions);
     case 'export-comparison':return client.exportComparison(dossierId,requestOptions);
@@ -63,6 +68,13 @@ async function dispatch(client,action,input,signal){
 export async function runResearchCall(request,{signal}={}){
   need(object(request)&&request.schema===SCHEMA&&typeof request.action==='string'&&object(request.input),
     'RESEARCH_PYTHON_REQUEST_INVALID');
+  if(request.action==='citation-review-input'){
+    need(Buffer.byteLength(JSON.stringify(request.input.request))<=16*1024*1024,'CITATION_REVIEW_INPUT_TOO_LARGE');
+    const value=citationReviewInput(request.input.request);
+    return {mode:MODE,ok:true,workspaceId:null,result:{request:value,sha256:citationDigest(value)}};
+  }
+  if(request.action==='citation-receive')
+    return {mode:MODE,ok:true,workspaceId:null,result:await receiveCitationFile(request.input)};
   if(request.action==='analysis-source'){
     return {mode:MODE,ok:true,workspaceId:null,
       result:await createResearchDocumentSource(request.input)};
@@ -97,7 +109,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   process.once('SIGTERM',cancel);process.once('SIGINT',cancel);
   try{
     need(process.argv.length===4&&process.argv[2]==='--request','RESEARCH_PYTHON_REQUEST_FILE_REQUIRED');
-    const request=parseJson(await readResearchHostFile(resolve(process.argv[3]),1024*1024,{privateFile:true}));
+    const request=parseJson(await readResearchHostFile(resolve(process.argv[3]),32*1024*1024,{privateFile:true}));
     result=await runResearchCall(request,{signal:controller.signal});
   }catch(error){result={mode:MODE,ok:false,...errorRecord(error)};}
   finally{process.removeListener('SIGTERM',cancel);process.removeListener('SIGINT',cancel);}

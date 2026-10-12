@@ -96,18 +96,32 @@ const paged = new Set(['merchant_recovery_inventory', 'merchant_recovery_request
 const writes = new Set(['merchant_recovery_start', 'merchant_recovery_resume', 'merchant_recovery_cancel']);
 function validateSelection(value) {
   exact(value, ['profileId', 'action', 'id', 'bundleId', 'snapshotId', 'destinationName',
-    'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId'], ['profileId', 'action', 'id']);
+    'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId', 'fleetRestoreId', 'fleetTargetId'],
+    ['profileId', 'action', 'id']);
   checked(value.profileId, ID, 'profile ID'); checked(value.id, ID, 'operation ID');
-  if (!['snapshot', 'verify', 'publisher-prepare', 'push', 'pull', 'restore', 'resume'].includes(value.action))
+  if (!['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare', 'push', 'pull', 'restore', 'resume'].includes(value.action))
     throw failure('INVALID_PARAMS', 'Choose an original recovery action.');
-  for (const key of ['destinationName', 'capturePlanId', 'restoreId', 'publisherRestoreId'])
+  for (const key of ['destinationName', 'capturePlanId', 'restoreId', 'publisherRestoreId', 'fleetRestoreId', 'fleetTargetId'])
     if (value[key] !== undefined) checked(value[key], ID, key);
   if (value.snapshotId !== undefined) checked(value.snapshotId, SHA, 'snapshot SHA256');
   if (value.bundleId !== undefined && (typeof value.bundleId !== 'string' || value.bundleId.length > 1024 ||
       !value.bundleId.includes('/') || /[\0\r\n\\]/.test(value.bundleId)))
     throw failure('INVALID_PARAMS', 'Use the exact bundleId returned by this original workspace.');
   if (value.quiesced !== undefined && value.quiesced !== true)
-    throw failure('INVALID_PARAMS', 'Fresh capture requires the explicit actual producer-quiescence acknowledgment.');
+    throw failure('INVALID_PARAMS', 'Capture and fleet preparation require the explicit actual producer-quiescence acknowledgment.');
+  if (value.action === 'fleet-prepare') {
+    exact(value, ['profileId', 'action', 'id', 'restoreId', 'fleetRestoreId', 'fleetTargetId', 'quiesced'],
+      ['profileId', 'action', 'id', 'fleetTargetId', 'quiesced']);
+    const restored = Object.hasOwn(value, 'restoreId'), declared = Object.hasOwn(value, 'fleetRestoreId');
+    if (restored === declared)
+      throw failure('INVALID_PARAMS', 'Select exactly one original restoreId or host-declared fleetRestoreId.');
+    checked(value[restored ? 'restoreId' : 'fleetRestoreId'], ID, 'fleet source selector');
+    checked(value.fleetTargetId, ID, 'host-declared fleet target ID');
+    if (value.quiesced !== true)
+      throw failure('INVALID_PARAMS', 'Confirm the original fleet producers and selected receiving paths are quiesced.');
+  } else if (Object.hasOwn(value, 'fleetRestoreId') || Object.hasOwn(value, 'fleetTargetId')) {
+    throw failure('INVALID_PARAMS', 'Fleet source and target selectors belong to action fleet-prepare.');
+  }
 }
 function validate(name, input) {
   if (input.profileId !== undefined) checked(input.profileId, ID, 'profile ID');

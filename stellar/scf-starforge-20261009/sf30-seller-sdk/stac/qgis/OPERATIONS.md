@@ -345,3 +345,8 @@ Acceptance binds that exact review and office base edition, runs the original of
 
 Finally use `project-export` and `project-receive` from this guide. Their existing complete archive now includes all field campaigns, native office editions, exports, retained returns, attachment bytes, accepted maps, history, saved requests and complete field software. Open `field.state` in the independently received workspace, reopen its accepted project and continue from its retained current office edition.
 
+
+
+## Accepted PostGIS database projects
+
+The same workspace now receives complete `postgis-receiving.json` exports through the native PostgreSQL provider. Use the **PostGIS receiving** tab for the actual local service/authentication reference, selected-role verification and complete accepted relation checks. Keep the existing layer/style/project/history and receiving controls. Read the complete PostGIS operator workflow for installation, successor review, editing, saved project recovery and complete receiving. It is `stac/postgis/qgis/OPERATIONS.md` in the source checkout and `postgis/OPERATIONS.md` beside this guide in the installed plugin.

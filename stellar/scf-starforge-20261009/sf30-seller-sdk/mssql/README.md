@@ -242,6 +242,20 @@ retained outcome. Another browser tab cannot replace that pending request.
 Reviews retain their original expiry, source profile, schema and choices.
 Preparing an already committed matching package reopens that original package.
 
+## Reopen the same operator after interruption
+
+Start the saved Application again, or restart `mssql-workspace` with the same
+`--source` and `--state` paths. The owner acquires the existing workspace lease
+before reopening its retained identity and work records. If the process stopped
+between publishing a record and removing that record's staging link, the owner
+completes that publication with the original bytes.
+
+Workspace identity, review IDs, operation UUIDs and completed export records stay
+the same. The browser and merchant tools can replay the original operation ID
+and exact request body; an existing completed result reopens through the same
+owner. Private input-file validation continues to apply to source files and
+incoming packages.
+
 ## Attach merchant tools to the original owner
 
 The source contribution registers both the SQL Server Application and the

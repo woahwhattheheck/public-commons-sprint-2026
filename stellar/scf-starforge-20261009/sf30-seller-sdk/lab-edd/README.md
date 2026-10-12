@@ -257,3 +257,11 @@ whole native file verification and desktop/mobile editor operation. Its
 private operation. The examples select the two published McCampbell families or
 one original DTS workbook. Each completed receiving edition retains its exact
 original source, selected format and full operator choices.
+
+## Complete cross-profile receiving
+
+[RECONCILIATION.md](RECONCILIATION.md) describes the full EQuIS3/EQuIS4 source comparison, explicit correspondence, independent source-field editors, both native outputs, installed CLI/SDK and the complete original-file receiving configuration. Use `baselineProfile`, the `baseline_decisions` slot and the `reconciliation` slot with the original `laboratoryReview` job. The source-bound result reopens both original families and every corresponding native member.
+
+## Installed Laboratory application
+
+Use [Laboratory EDD in Applications](APPLICATIONS.md) for complete configuration, original paid-job service, sealed inputs, customer results and Stop/reopen. The `laboratory-edd` source selection packages this product through the original Merchant Workspace installer. `starforge lab-edd merchant-config` prepares the actual selected merchant configuration; the `laboratory-edd` Applications catalog uses the existing paid-job process and source ownership.

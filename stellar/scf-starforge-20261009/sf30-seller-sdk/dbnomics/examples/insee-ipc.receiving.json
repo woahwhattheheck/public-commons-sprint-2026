@@ -1,0 +1,81 @@
+{
+  "schema": "stellar-forge.dbnomics-receiving.v1",
+  "id": "dbnomics-insee-ipc-20261012",
+  "source": {
+    "kind": "example"
+  },
+  "expectedRows": 468,
+  "reviewer": "FD06 economic source operations",
+  "reviewNote": "Reviewed the complete original DBnomics INSEE/IPC-2015 annual and monthly series: France, all households, overall including imputed rents, base 2015, unadjusted. Preserve annual/monthly frequency and source attributes separately. Source: Insee; dataset update 2026-01-29; DBnomics original complete responses received 2026-10-12.",
+  "notes": [
+    {
+      "id": "measure-scope",
+      "author": "FD06",
+      "tag": "measurement",
+      "text": "These original series describe the overall index including imputed rents. Keep that scope, the 2015 base and annual/monthly frequency in every customer label."
+    },
+    {
+      "id": "monthly-endpoint",
+      "seriesId": "INSEE/IPC-2015/M.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE",
+      "period": "2025-12",
+      "author": "FD06",
+      "tag": "source endpoint",
+      "text": "This is the last monthly period in the retained original response. Its publication/retrieval dates and provider observation status remain source metadata; no later period has been inferred."
+    }
+  ],
+  "reports": [
+    {
+      "name": "original-levels",
+      "spec": {
+        "title": "Insee France index including imputed rents — original annual and monthly levels",
+        "method": "level",
+        "note": "36 annual and 432 monthly observations. Frequency labels distinguish both populations."
+      }
+    },
+    {
+      "name": "monthly-year-change",
+      "spec": {
+        "title": "Insee France index including imputed rents — monthly twelve-month change",
+        "seriesIds": [
+          "INSEE/IPC-2015/M.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE"
+        ],
+        "method": "percent-change",
+        "lag": 12,
+        "note": "Percent change uses the exact same monthly series twelve calendar months earlier. The first twelve periods have no retained base."
+      }
+    },
+    {
+      "name": "annual-year-change",
+      "spec": {
+        "title": "Insee France index including imputed rents — annual one-year change",
+        "seriesIds": [
+          "INSEE/IPC-2015/A.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE"
+        ],
+        "method": "percent-change",
+        "lag": 1,
+        "note": "Percent change compares annual observations; it is separate from monthly December-to-December change."
+      }
+    },
+    {
+      "name": "monthly-index-100",
+      "spec": {
+        "title": "Insee France index including imputed rents — January 2015 equals 100",
+        "seriesIds": [
+          "INSEE/IPC-2015/M.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE"
+        ],
+        "method": "index-100",
+        "basePeriod": "2015-01",
+        "note": "A clearly labeled analyst rebase of the original monthly series. Original provider numbers remain alongside calculated values."
+      }
+    }
+  ],
+  "query": {
+    "name": "insee_ipc",
+    "seriesIds": [
+      "INSEE/IPC-2015/A.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE",
+      "INSEE/IPC-2015/M.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE"
+    ],
+    "includeMissing": true
+  },
+  "waitMs": 120000
+}

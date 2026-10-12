@@ -192,3 +192,7 @@ This is an explicit generated-format process-lifetime exercise. It uses the
 application's original worker, native bridge and process manager. Its retained
 probe and shorter deadline belong to the receiving configuration; the ordinary
 merchant application keeps its declared environment and execution policy.
+
+## Complete EQuIS3 / EQuIS4 receiving continuation
+
+Use `receiving.cross-profile.example.json` for the complete two-source cross-profile operation. It selects both retained 2508877 public originals and the full source-bound `examples/mccampbell/cross-profile-decisions.json`. The same maintained receiver performs original sealed-file execution and same-job replay, both native field/file checks, complete correspondence CSV/TSV reopening, every visible cross-profile download, exact baseline-row navigation, draft import/export and immutable reload. See [RECONCILIATION.md](RECONCILIATION.md) for the complete application contract and source-derived totals. Keep an already accepted earlier receiving edition with its original configuration; this named continuation retains its own exact source pair and review operation.

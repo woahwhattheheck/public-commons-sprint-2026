@@ -76,7 +76,7 @@ The wrapper reads the preview's immutable saved revision, reconstructs its exact
 
 `customer/` contains the selected full CSV/NDJSON, AP reconciliation, inventory/transition, configured monthly output, supplied requirement/catalog references, changes, readable report and field interpretation. Customer summary/report files use the same projection whether the outer delivery is customer-only or a complete operator package.
 
-`operator/` additionally contains original normalized input, calculation, mapped/source/error records, private reviews/corrections, fee basis, native preview and the unchanged full portable workspace. `operator/application/` carries nineteen application, engine, browser, managed-launch and operating-guide files. `operator/install/records-operator.json` carries the original distribution declaration. Every included source/output file has its exact byte count and digest in the handoff manifests.
+`operator/` additionally contains original normalized input, calculation, mapped/source/error records, private reviews/corrections, fee basis, native preview and the unchanged full portable workspace. `operator/application/` carries the complete application, engine, browser, managed-launch and operating-guide files. `operator/install/records-operator.json` carries the original distribution declaration. Every included source/output file has its exact byte count and digest in the handoff manifests.
 
 From the handoff directory, the receiving operator uses the included application:
 
@@ -92,3 +92,7 @@ The maintained runtime is an explicit existing dependency. `operator/REOPEN.md` 
 [CORE_CONTRACT.md](CORE_CONTRACT.md) gives the complete saved schema and original API. [INPUT_HANDOFF.md](INPUT_HANDOFF.md) describes actual source fields and mappings. [OPERATIONS.md](OPERATIONS.md) covers corrections, review, transition, reporting, delivery and receiving. [UI.md](UI.md) describes the browser controls. [INSTALL.md](INSTALL.md) covers the installed Applications lifecycle.
 
 Keep original source data, procurement materials and company-specific terms in their authorized project destination. This generic application distribution contains no issuer packet, company ledger, customer quote, account credential or private receiving operation.
+
+## Original workbook receiving
+
+The Workbooks view adds original XLSX inspection, explicit sheet/range/field mapping, all-row review, retained custody documents and complete original-workbook handoff to this same application. The fourth private function, `inspect_workbook`, retains formulas, cached values, merged ranges and blank physical rows without inventing custody events. An existing saved workspace adopts it explicitly with `records-workspace adopt-workbooks`; all original source/history remains. [WORKBOOKS.md](WORKBOOKS.md) gives the complete schema, reviewed promotion, CLI, full export and portable receiving sequence. Workbook-capable operator handoffs carry 22 application source/guide files; their exact source basis is recorded in the manifest.

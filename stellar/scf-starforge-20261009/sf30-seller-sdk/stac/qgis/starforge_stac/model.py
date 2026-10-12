@@ -351,11 +351,14 @@ def open_receiving_source(root, expected_manifest_sha256=None, progress=None, ve
     """Select the complete original manifest without changing either source kind."""
     root = directory(root)
     vector_name = "vector-export.json"
-    selected = [name for name in (MANIFEST_NAME, vector_name)
+    selected = [name for name in (MANIFEST_NAME, vector_name, "postgis-receiving.json")
                 if (root / name).exists() or (root / name).is_symlink()]
     require(len(selected) == 1, "RECEIVING_MANIFEST_SELECTION",
-            "Select one complete original qgis-receiving.json or vector-export.json directory.",
+            "Select one complete original STAC, vector or PostGIS receiving directory.",
             manifests=selected)
+    if selected[0] == "postgis-receiving.json":
+        from .postgis.source import PostgisReceivingSource
+        return PostgisReceivingSource(root, expected_manifest_sha256, progress=progress, verify=verify)
     if selected[0] == vector_name:
         from .vector_source import VectorReceivingSource
         return VectorReceivingSource(root, expected_manifest_sha256, progress=progress, verify=verify)
@@ -363,6 +366,9 @@ def open_receiving_source(root, expected_manifest_sha256=None, progress=None, ve
 
 
 def compare_sources(left, right):
+    if left.sourceKind == "postgis" or right.sourceKind == "postgis":
+        from .postgis.source import compare_sources as compare_postgis_sources
+        return compare_postgis_sources(left, right)
     scenes = []
     for key in sorted(set(left.scenes) | set(right.scenes)):
         old, new = left.scenes.get(key), right.scenes.get(key)
@@ -648,7 +654,10 @@ class QgisWorkspace:
             row.setdefault("opacity", 1.0)
             require(type(row["visible"]) is bool and type(row["opacity"]) in (int, float) and 0 <= row["opacity"] <= 1,
                     "LAYER_DISPLAY", "Choose visible or hidden and opacity from 0 to 1.")
-            if row["kind"] == "footprints":
+            if source.sourceKind == "postgis":
+                from .postgis.source import normalize_layer as normalize_postgis_layer
+                row = normalize_postgis_layer(source, row)
+            elif row["kind"] == "footprints":
                 row.setdefault("allScenes", True)
                 require(type(row["allScenes"]) is bool, "SCENE_SCOPE", "Choose all scenes or an explicit scene list.")
                 keys = list(source.scenes) if row["allScenes"] else row.get("sceneKeys")
@@ -745,7 +754,10 @@ class QgisWorkspace:
             elif choice == "update":
                 row = copy.deepcopy(old)
                 row["sourceId"] = right_id
-                if row["kind"] == "footprints":
+                if old.get("postgis"):
+                    from .postgis.source import successor_layer
+                    row = successor_layer(left, right, old, decision.get("connection"))
+                elif row["kind"] == "footprints":
                     row["sceneKeys"] = list(right.scenes) if row.get("allScenes") else [k for k in row["sceneKeys"] if k in right.scenes]
                 else:
                     key = asset_key(row.get("collection"), row["itemId"], row["assetKey"])
@@ -865,6 +877,9 @@ class QgisWorkspace:
                 path = plugin_root.parent / name
             require(path.is_file(), "PLUGIN_GUIDE_MISSING", "Keep the operator guide and license with the plugin.", path=name)
             software["software/starforge_stac/" + name] = path.read_bytes()
+        from .postgis import software_files
+        for name, body in software_files().items():
+            software["software/starforge_stac/postgis/" + name] = body
         for name, body in software.items():
             records.append({"path": name, "bytes": len(body), "sha256": sha_bytes(body)})
         records.sort(key=lambda x: x["path"])

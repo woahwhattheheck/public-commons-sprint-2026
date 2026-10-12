@@ -1,6 +1,7 @@
 import { grpcWorkspaceTools, read, selection, page, revision, alias, baseRevision, digest, methodName, uuid, generation, reason, instance, ALIAS, SHA, UUID } from './catalog/grpc-workspace.mjs';
 export { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
 import { executeGrpcUpgrade } from './grpc-upgrades.mjs';
+import { executeGrpcHealth } from './grpc-health.mjs';
 import { GRPC_UPGRADE_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/upgrade-receiving.mjs';
 // MIT. Agent operation and complete delivery over the original private gRPC workspace.
 import { constants } from 'node:fs';
@@ -204,7 +205,8 @@ export class MerchantGrpcWorkspaces {
       }
       return await consume(response);
     } catch (error) {
-      if (error.status || error.code?.startsWith('GRPC_') || error.code === 'INVALID_PARAMS') throw error;
+      // AbortError/TimeoutError can carry a numeric DOMException code.
+      if (error.status || (typeof error.code === 'string' && error.code.startsWith('GRPC_')) || error.code === 'INVALID_PARAMS') throw error;
       if (['ENOSPC', 'EDQUOT', 'EROFS', 'EACCES'].includes(error.code)) throw fail('GRPC_EXPORT_STORAGE_UNAVAILABLE', 'Restore the private export directory capacity or access and continue the original saved operation.');
       throw fail('GRPC_OPERATION_INTERRUPTED', 'The original operator reply was interrupted. Read status and the same retained operationId before retrying an action.');
     } finally { this.#controllers.delete(controller); }
@@ -404,6 +406,11 @@ export class MerchantGrpcWorkspaces {
       return { exportId: args.exportId, manifestSha256: retained.sha256, ...result };
     }
     const workspace = args.workspace, definition = this.#definition(workspace);
+    if (name.startsWith('merchant_grpc_health_')) return executeGrpcHealth(name, args, {
+      request: (route, body) => this.#json(definition, route, body),
+      bounded: (value, original) => this.#bounded(workspace, value, original),
+      retain: (kind, original, sources) => this.#retain(workspace, kind, original, sources),
+    });
     if (name.startsWith('merchant_grpc_upgrade_')) return executeGrpcUpgrade(name, args, {
       request: (route, body) => this.#json(definition, route, body), state: () => this.#state(definition),
       revision: id => this.#revision(definition, id), paged, revisionSummary,
@@ -413,7 +420,7 @@ export class MerchantGrpcWorkspaces {
     if (name === 'merchant_grpc_status') {
       const state = await this.#state(definition);
       return { schema: state.schema, workspace, currentRevision: state.currentRevision, generation: state.generation,
-        counts: { revisions: state.revisions.length, prepared: state.prepared.length, intents: state.intents.length, attempts: state.attemptCount, reflections: state.reflections?.length ?? 0, upgrades: state.upgrades?.length ?? 0 },
+        counts: { revisions: state.revisions.length, prepared: state.prepared.length, intents: state.intents.length, attempts: state.attemptCount, reflections: state.reflections?.length ?? 0, upgrades: state.upgrades?.length ?? 0, health: state.healthCount ?? 0 },
         runtime: state.runtime };
     }
     if (name === 'merchant_grpc_inventory') {

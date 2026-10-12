@@ -1,6 +1,7 @@
 // MIT. Borrow the original Research HTTP workspace without taking its listener lifecycle.
 import {isAbsolute,resolve} from 'node:path';
 import {Readable} from 'node:stream';
+import {createEuropePmcClient} from './europe-pmc-client.mjs';
 import {createClinicalTrialsClient} from './clinical-trials-client.mjs';
 import {createDocumentWorkspaceClient,createPipelineWorkspaceClient,sendPipelineFiles} from './document-workspace-client.mjs';
 import {BuyerError,need,object,parseJson,safeCode} from '../node/store.mjs';
@@ -110,12 +111,12 @@ export class ResearchWorkspaceClient{
   #json(route,body,options={}){
     return this.#run(async()=>{
       const bytes=body===undefined?undefined:JSON.stringify(body);
-      const maximum=/^\/api\/dossiers\/[^/]+\/citation-updates\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
+      const maximum=/^\/api\/dossiers\/[^/]+\/(?:citation-updates|eligibility)\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
         /^\/api\/dossiers\/[^/]+\/source-bundles\/(?:preview|receive)(?:\?projection=metadata)?$/.test(route)
         ?128*1024*1024+65536:96*1024*1024+65536;
       need(bytes===undefined||Buffer.byteLength(bytes)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
       return this.#request(route,{...options,body:bytes,headers:{...(options.headers??{}),
-        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response)));
+        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,route.startsWith('/api/europe-pmc')?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
     });
   }
   async status(options={}){
@@ -195,6 +196,15 @@ export class ResearchWorkspaceClient{
       },id,input,options)),
     });
   }
+  europePmc(){
+    return createEuropePmcClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      download:(route,file,options)=>this.#download(route,file,options),
+      upload:(route,source,options)=>this.#run(()=>this.#request(route,{...options,method:'POST',body:source.stream,
+        headers:{...(options?.headers??{}),'Content-Type':'application/octet-stream'}},
+        async response=>parseJson(await readResponse(response)))),
+    });
+  }
   clinicalTrials(){
     return createClinicalTrialsClient({
       request:(route,body,options)=>this.#json(route,body,options),
@@ -216,6 +226,12 @@ export class ResearchWorkspaceClient{
   startCrossref(id,operationId,{expectedPlanSha256}={}){return this.#json(operationPath(id,operationId)+'/start',{expectedPlanSha256});}
   stopCrossref(id,operationId){return this.#json(operationPath(id,operationId)+'/stop',{});}
   receiveCrossref(id,operationId,input){return this.#json(operationPath(id,operationId)+'/receive?projection=metadata',input);}
+  eligibility(id,options={}){return this.#json(dossierPath(id)+'/eligibility'+parameters(options));}
+  reviewEligibility(id,input){return this.#json(dossierPath(id)+'/eligibility/reviews?projection=metadata',input);}
+  exportEligibility(id,{file,reviewId,workSetId,revision,format='json',section='queue',...options}={}){
+    need(['json','csv'].includes(format),'ELIGIBILITY_EXPORT_FORMAT_INVALID');
+    return this.#download(dossierPath(id)+'/eligibility/export'+parameters({reviewId,workSetId,revision,format,section}),file,options);
+  }
   citationUpdates(id,options={}){return this.#json(dossierPath(id)+'/citation-updates'+parameters(options));}
   reviewCitationUpdate(id,input){return this.#json(dossierPath(id)+'/citation-updates/reviews?projection=metadata',input);}
 
@@ -238,11 +254,11 @@ export class ResearchWorkspaceClient{
     return this.#json(dossierPath(id)+'/pipelines/operations/'+pathId(operationId),undefined,options);
   }
 
-  async #download(route,file,{signal,expectedSha256,request}={}){
+  async #download(route,file,{signal,expectedSha256,request,headers={}}={}){
     const body=request===undefined?undefined:JSON.stringify(request);
     need(body===undefined||Buffer.byteLength(body)<=RESEARCH_CONTROL_LIMIT,'RESEARCH_REQUEST_TOO_LARGE');
-    return this.#run(()=>this.#request(route,{signal,readOnly:true,...(body===undefined?{}:{
-      body,method:'POST',headers:{'Content-Type':'application/json'}
+    return this.#run(()=>this.#request(route,{signal,readOnly:true,headers,...(body===undefined?{}:{
+      body,method:'POST',headers:{...headers,'Content-Type':'application/json'}
     })},async response=>{
       const disposition=response.headers.get('content-disposition')??'';
       const filename=disposition.match(/^attachment; filename="([A-Za-z0-9][A-Za-z0-9._-]{0,179})"$/)?.[1]??'research.json';

@@ -212,3 +212,9 @@ Each original export may carry several adjustments. The source review accepts or
 The original API `POST /api/adjustment-packets` accepts `{expected_revision, payload:{name, provenance, data_context, source_file, source_sha256, event_id, expected_job?}}`. Its optional durable `request_id` envelope behaves like every existing mutation. Review, credit coding, period review/close/reopen and export reuse the same original routes. Accountant editions add `original-merchant-adjustments.csv` and preserve the exact source export plus buyer selection. Store-currency fields remain absent when the original source does not supply them.
 
 Complete project version `original-native-refund-v2` includes the new native source adapter, unchanged accounting compiler/reconciler and the full existing Woo reader closure. The trusted receiver also accepts previously issued `original-woo-refund-v1` projects with their original source member set. Receiving opens the retained state without reimporting any original source or starting a payment.
+
+## Governed native MCP purchases
+
+The original source workflow can join an MCP quote directory to the actual native spending owner through a private `stellar-forge.governed-mcp-expense-input.v1` descriptor. It retains original request bindings, the complete shared SF36 ledger snapshot, actual reserved capacity, settled expense and saved native result metadata. The existing browser, source review, allocation, period, accountant export and complete-project receiver handle this source end to end.
+
+Follow [GOVERNED_MCP.md](GOVERNED_MCP.md) to select the actual owner, register and review it, reconcile through the original buyer, count a shared reservation once across source views, issue expense and reopen or reattach a portable project.
