@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job resolutions</title><link rel="stylesheet" href="/resolutions/style.css"></head>
+<body><header><h1>Job resolutions</h1><nav><a id="jobs-link" href="/">Jobs</a><button id="reload">Refresh list</button></nav></header>
+<main><p id="notice" class="status" role="status" aria-live="polite"></p>
+<details class="panel"><summary>Accounting workspace</summary><p>Connect the original running merchant accounting workspace. Its retained reconciliations and adjustment jobs remain the accounting source.</p>
+<form id="connect-form" class="toolbar"><label>Local workspace URL<input id="accounting-url" type="url" value="http://127.0.0.1:8446" required></label><button>Connect</button></form><p id="connection" class="help"></p></details>
+<section><h2>Paid jobs</h2><div class="scroll"><table><thead><tr><th>Job</th><th>Execution</th><th>Case</th><th>Issues</th><th>Returned</th><th>Remaining</th><th></th></tr></thead><tbody id="jobs"></tbody></table></div></section>
+<div id="case" hidden>
+<section><div class="toolbar"><h2 id="job-title"></h2><button id="refresh-case">Read original accounting</button><button id="export">Export private case</button><button id="accounting-export">Download original accountant packet</button></div>
+<p id="job-state"></p><code id="payment"></code><div id="totals" class="numbers"></div>
+<details><summary>Original payment and accounting binding</summary><pre id="binding"></pre></details>
+<form id="bind-form"><div class="toolbar"><label>Retained reconciliation run<select id="run-select"><option value="">Enter a run below</option></select></label><button id="load-runs" type="button">Read available runs</button></div>
+<label>Original run UUID<input id="run-id" required></label><button>Bind this job’s original payment</button></form></section>
+<section><h2>Customer conversation</h2><div id="conversation"></div>
+<form id="reply-form"><label>Customer-visible reply<textarea id="reply" maxlength="4000" required></textarea></label><button class="primary">Save reply</button></form></section>
+<section><h2>Merchant decision</h2><p class="help">Retry and cancel act on this original job and its current revision. Record an accounting adjustment below when the decision also changes the merchant’s books.</p>
+<form id="decision-form"><div class="grid"><label>Decision<select id="decision-kind"><option value="RETRY_JOB">Retry existing paid job</option><option value="CANCEL_JOB">Cancel existing job</option><option value="CLOSE_CASE">Close case</option><option value="REOPEN_CASE">Reopen case</option></select></label><label>Operator<input id="actor" maxlength="200" required></label></div>
+<label>Customer-visible decision message<textarea id="decision-message" maxlength="400" required></textarea></label><button>Record decision</button></form><div id="decisions"></div></section>
+<section><h2>Accounting adjustment</h2><p>Amounts use the original asset’s atomic units. A recorded cancellation and a verified returned transfer appear separately in the customer’s balance.</p>
+<form id="preview-form"><div class="grid"><label>Kind<select id="kind"><option value="REFUND">Refund request</option><option value="CANCELLATION">Recorded cancellation</option></select></label><label>Atomic amount<input id="amount" inputmode="numeric" pattern="[1-9][0-9]*" required></label><label>Effective date in UTC<input id="effective-at" required></label></div>
+<label>Accounting reason<textarea id="reason" maxlength="4000" required></textarea></label><label>Merchant reference<input id="reference" maxlength="1000"></label><button>Preview exact adjustment</button></form>
+<div id="previews"></div><h3>Retained adjustments</h3><div id="adjustments"></div>
+<form id="verify-form"><div class="grid"><label>Retained refund<select id="refund-id" required></select></label><label>Original returned-transfer transaction<input id="transaction" pattern="[a-f0-9]{64}" maxlength="64" required></label></div>
+<p class="help">Supply the transaction hash of the return already submitted through the original payment operation. The existing accounting verifier checks its native transfer and retains the result.</p><button>Verify original return</button></form>
+<form id="withdraw-form"><label>Withdrawal reason<input id="withdraw-reason" maxlength="4000" required></label><button>Withdraw selected unverified request</button></form></section>
+<section><h2>Original operations</h2><p class="help">Recover reads the retained original job or adjustment. Resume explicitly submits the same saved request to its original owner.</p><div id="operations"></div></section>
+<details class="panel"><summary>Customer receipt</summary><pre id="customer-receipt"></pre></details>
+</div></main><script type="module" src="/resolutions/app.mjs"></script></body></html>
