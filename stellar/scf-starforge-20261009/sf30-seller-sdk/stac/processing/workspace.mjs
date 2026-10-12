@@ -9,13 +9,14 @@ import { sha256, canonicalJson } from '../provider.mjs';
 import { normalizeDeployment, readProcessingContract, routeRequest, nextProcessingRequest,
   processingUrl, createProcessingProvider, readProcessingCapture } from './provider.mjs';
 import { proposeProcessingAssociations, validateProcessingAssociation } from './associations.mjs';
-import { exportProcessingHandover, importProcessingHandover } from './portable.mjs';
+import { exportProcessingHandover, importProcessingHandover, packProcessingHandover, unpackProcessingHandover } from './portable.mjs';
 
 const SCHEMA = 'scf-stac-processing-workspace/v1';
 const active = new Map();
 const stamp = () => new Date().toISOString();
 const identity = prefix => prefix + '-' + randomUUID().replaceAll('-', '').slice(0, 24);
 const digest = value => sha256(canonicalJson(value));
+const nativeEdition = value => { const { receivedFrom, ...edition } = value; return edition; };
 const clone = value => structuredClone(value);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const relative = value => { need(typeof value === 'string' && value.split('/').every(p => /^[A-Za-z0-9._-]+$/.test(p) && !['.', '..'].includes(p)), 'PROCESSING_PATH_INVALID'); return value; };
@@ -147,7 +148,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     return rows;
   }
   async function reviewCapture({ inventoryId, workflowIds, since, stacEditionId = null,
-    details = ['events', 'input_payload', 'output_payload'], logs = true, actor, note = '' } = {}) {
+    details = ['events', 'input_payload', 'output_payload'], logs = true, actor, note = '', operationId } = {}) {
     const { edition: inventory } = await getEdition(inventoryId);
     const instances = inventory.tasks.find(v => v.kind === 'instances');
     need(instances?.state === 'COMPLETE', 'PROCESSING_COMPLETE_INSTANCE_CHAIN_REQUIRED');
@@ -164,13 +165,21 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       const native = await stacWorkspace.getEdition(stacEditionId), stacState = await stacWorkspace.getState();
       need(native.edition.state === 'COMPLETE' || native.edition.status === 'COMPLETE', 'PROCESSING_STAC_EDITION_INCOMPLETE');
       stacBinding = { workspaceId: stacState.id, endpoint: stacState.endpoint, editionId: stacEditionId,
-        editionHash: digest(native.edition), itemCount: native.items.length };
+        editionHash: digest(nativeEdition(native.edition)), itemCount: native.items.length };
     }
     const selection = { kind: 'RUN_HISTORY', deploymentKey: inventory.deploymentKey, inventoryId,
       workflowIds: [...new Set(workflowIds)], since, details: [...new Set(details)], logs: Boolean(logs), stac: stacBinding };
     const review = { id: identity('processing-review'), fingerprint: digest(selection), selection,
       actor: actor.trim().slice(0, 160), note: String(note).slice(0, 4000), reviewedAt: stamp() };
-    return mutate(s => { s.reviews.push(review); return review; });
+    if (operationId !== undefined) operationId = intent(operationId);
+    return mutate(s => {
+      const key = operationId ? 'review:' + operationId : null, old = key ? s.operations[key] : null;
+      const fingerprint = digest({ selection, actor: review.actor, note: review.note });
+      if (old) { need(old.fingerprint === fingerprint, 'PROCESSING_REVIEW_OPERATION_CHANGED'); return s.reviews.find(v => v.id === old.reviewId); }
+      s.reviews.push(review);
+      if (key) s.operations[key] = { fingerprint, reviewId: review.id };
+      return review;
+    });
   }
   async function prepareCapture({ reviewId, operationId } = {}) {
     operationId = intent(operationId); const review = (await getState()).reviews.find(v => v.id === reviewId);
@@ -383,18 +392,34 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     const { edition, associations: accepted } = await getEdition(editionId);
     need(edition.selection.stac && stacWorkspace, 'PROCESSING_STAC_BINDING_REQUIRED');
     const native = await stacWorkspace.getEdition(edition.selection.stac.editionId), current = await stacWorkspace.getState();
-    need(current.id === edition.selection.stac.workspaceId && digest(native.edition) === edition.selection.stac.editionHash,
+    need(current.endpoint === edition.selection.stac.endpoint && digest(nativeEdition(native.edition)) === edition.selection.stac.editionHash,
       'PROCESSING_STAC_EDITION_CHANGED');
     const processingRuns = await Promise.all((await runs(editionId)).map(v => getRun({ editionId, runKey: v.key })));
     return { binding: edition.selection.stac, proposals: proposeProcessingAssociations({ processingRuns, stacEdition: native }), accepted };
   }
-  async function recordAssociation({ editionId, runKey, itemId, assetKey = null, actor, note, expectedRevision } = {}) {
+  async function recordAssociation({ editionId, runKey, itemId, assetKey = null, actor, note, expectedRevision, operationId } = {}) {
     const model = await associations({ editionId });
     const selected = validateProcessingAssociation({ model, runKey, itemId, assetKey, actor, note });
-    return mutate(s => { const record = { id: identity('association'), editionId, ...selected, at: stamp() };
-      s.associations.push(record); return record; }, expectedRevision);
+    if (operationId !== undefined) operationId = intent(operationId);
+    return mutate(s => {
+      const key = operationId ? 'association:' + operationId : null, fingerprint = digest({ editionId, ...selected });
+      const old = key ? s.operations[key] : null;
+      if (old) { need(old.fingerprint === fingerprint, 'PROCESSING_ASSOCIATION_OPERATION_CHANGED'); return s.associations.find(v => v.id === old.associationId); }
+      const record = { id: identity('association'), editionId, ...selected, at: stamp() };
+      s.associations.push(record);
+      if (key) s.operations[key] = { fingerprint, associationId: record.id };
+      return record;
+    }, expectedRevision);
   }
   const workspace = { directory, stacWorkspace, getState, configure, sourceFor, getEdition, runs, getRun, prepareInventory, prepareCapture,
+    inventory: async editionId => {
+      const { edition, deployment } = await getEdition(editionId);
+      need(edition.selection.kind === 'INVENTORY', 'PROCESSING_INVENTORY_EDITION_REQUIRED');
+      const chains = [];
+      for (const task of edition.tasks) chains.push({ kind: task.kind, state: task.state, error: task.error,
+        terminal: task.terminal, pages: task.pages.length, records: await readTaskRows(task) });
+      return { editionId, state: edition.state, deploymentKey: deployment.key, chains };
+    },
     discover: async input => { const e = await prepareInventory(input); return runEdition(e.id); },
     reviewCapture, capture: async input => { const e = await prepareCapture(input); return runEdition(e.id); },
     resume, cancel, importPage, associations, recordAssociation,
@@ -416,4 +441,86 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       for (const value of ownedRuns) value.controller.abort(); await Promise.allSettled(ownedRuns.map(v => v.promise)); await queue; }
   };
   return Object.freeze(workspace);
+}
+
+
+// The original STAC server owns sessions, Host/Origin/CSRF and its local job list.
+// This explicit adapter adds processing actions to that server; it opens no port.
+export async function createProcessingController({ stacWorkspace, directory, config = {} } = {}) {
+  need(stacWorkspace && typeof stacWorkspace.getEdition === 'function', 'PROCESSING_ORIGINAL_STAC_WORKSPACE_REQUIRED');
+  need(object(config), 'PROCESSING_CONFIG_INVALID');
+  const workspace = await openProcessingWorkspace({ directory, stacWorkspace,
+    transport: config.transport, environment: config.environment ?? process.env });
+  const handovers = resolve(config.handoverDirectory ?? (directory + '-handover'));
+  const receiving = resolve(config.receivingDirectory ?? (directory + '-receiving'));
+  const body = (value, limit = 64 * 1024 * 1024) => {
+    need(typeof value === 'string' && value.length <= Math.ceil(limit / 3) * 4, 'PROCESSING_SOURCE_BYTES_REQUIRED');
+    const bytes = Buffer.from(value, 'base64');
+    need(bytes.length <= limit && bytes.toString('base64') === value, 'PROCESSING_SOURCE_BASE64_INVALID');
+    return bytes;
+  };
+  if (config.deployment) {
+    const source = config.source ?? {};
+    need(typeof source.path === 'string' || typeof source.bodyBase64 === 'string', 'PROCESSING_SOURCE_REQUIRED');
+    const bytes = source.path ? await readBytes(resolve(source.path), 64 * 1024 * 1024) : body(source.bodyBase64);
+    await workspace.configure({ deployment: config.deployment, source: { body: bytes, metadata: source.metadata ?? {} } });
+  }
+  const summarize = edition => ({ id: edition.id, operationId: edition.operationId, state: edition.state,
+    deploymentKey: edition.deploymentKey, sourceSha256: edition.sourceSha256, selection: edition.selection,
+    createdAt: edition.createdAt, updatedAt: edition.updatedAt, retryAt: edition.retryAt,
+    error: edition.error ?? null, cancelled: edition.cancelled, history: edition.history,
+    tasks: edition.tasks.map(task => ({ id: task.id, kind: task.kind, state: task.state, scope: task.scope,
+      pages: task.pages.length, attempts: task.attempts.length, error: task.error, terminal: task.terminal,
+      next: task.next, pending: task.pending ? { directory: task.pending.directory, requestHash: task.pending.requestHash } : null })) });
+  const getState = async () => {
+    const state = await workspace.getState();
+    return { schema: state.schema, id: state.id, revision: state.revision, updatedAt: state.updatedAt,
+      deployments: state.deployments.map(entry => ({ key: entry.key, fingerprint: entry.fingerprint,
+        deployment: entry.deployment, source: entry.source, routes: Object.keys(entry.contract.routes),
+        workflowFilter: entry.contract.workflowFilter, configuredAt: entry.configuredAt })),
+      editions: state.editions.map(summarize), reviews: state.reviews, associations: state.associations,
+      imports: state.imports, operations: state.operations };
+  };
+  const selected = value => { need(typeof value === 'string' && value.length > 0 && value.length <= 2048,
+    'PROCESSING_SAVED_IDENTIFIER_REQUIRED'); return value; };
+  const reads = {
+    inventory: async ({ query = {} } = {}) => workspace.inventory(selected(query.editionId)),
+    edition: async ({ query = {} } = {}) => workspace.getEdition(selected(query.editionId)),
+    runs: async ({ query = {} } = {}) => ({ editionId: selected(query.editionId), runs: await workspace.runs(query.editionId) }),
+    run: async ({ query = {} } = {}) => workspace.getRun({ editionId: selected(query.editionId), runKey: selected(query.runKey) }),
+    associations: async ({ query = {} } = {}) => workspace.associations({ editionId: selected(query.editionId) }),
+    handover: async ({ query = {} } = {}) => {
+      const id = intent(query.exportId), packed = await packProcessingHandover({ directory: join(handovers, id),
+        maxBytes: config.browserExportMaxBytes ?? 64 * 1024 * 1024 });
+      return { filename: packed.filename, mime: packed.mime, bytes: packed.bytes.length, sha256: packed.sha256,
+        contentBase64: packed.bytes.toString('base64'), manifest: packed.manifest };
+    }
+  };
+  const actions = {
+    configure: async ({ input = {} } = {}) => workspace.configure({ deployment: input.deployment,
+      source: { body: body(input.sourceBase64), metadata: input.sourceMetadata ?? {} }, expectedRevision: input.expectedRevision }),
+    discover: async ({ input = {}, operationId } = {}) => workspace.discover({ deploymentKey: selected(input.deploymentKey),
+      operationId: intent(operationId), ...(input.kinds ? { kinds: input.kinds } : {}) }),
+    'prepare-inventory': async ({ input = {}, operationId } = {}) => workspace.prepareInventory({
+      deploymentKey: selected(input.deploymentKey), operationId: intent(operationId), ...(input.kinds ? { kinds: input.kinds } : {}) }),
+    review: async ({ input = {}, operationId } = {}) => workspace.reviewCapture({ ...input, operationId: intent(operationId) }),
+    capture: async ({ input = {}, operationId } = {}) => workspace.capture({ reviewId: selected(input.reviewId), operationId: intent(operationId) }),
+    'prepare-capture': async ({ input = {}, operationId } = {}) => workspace.prepareCapture({ reviewId: selected(input.reviewId), operationId: intent(operationId) }),
+    resume: async ({ input = {} } = {}) => workspace.resume({ editionId: selected(input.editionId), retryFailed: input.retryFailed === true }),
+    cancel: async ({ input = {} } = {}) => workspace.cancel({ editionId: selected(input.editionId) }),
+    'import-page': async ({ input = {} } = {}) => workspace.importPage({ editionId: selected(input.editionId),
+      taskId: selected(input.taskId), body: body(input.bodyBase64), metadata: input.metadata }),
+    'associate': async ({ input = {}, operationId } = {}) => workspace.recordAssociation({ ...input, operationId: intent(operationId) }),
+    'export-handover': async ({ input = {}, operationId } = {}) => {
+      const exportId = intent(operationId), result = await workspace.exportHandover({ editionIds: input.editionIds,
+        includeStacAssets: input.includeStacAssets === true, operationId: exportId, directory: join(handovers, exportId) });
+      return { exportId, manifest: result.manifest, completeDirectory: result.directory };
+    },
+    'import-handover': async ({ input = {}, operationId } = {}) => {
+      const id = intent(operationId), opened = await unpackProcessingHandover({ body: body(input.bodyBase64, 128 * 1024 * 1024),
+        directory: join(receiving, id) });
+      return workspace.importHandover({ directory: opened.directory, operationId: id });
+    }
+  };
+  return Object.freeze({ getState, reads: Object.freeze(reads), actions: Object.freeze(actions), close: workspace.close });
 }
