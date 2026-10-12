@@ -4,7 +4,7 @@ This package carries the original GeoSolutions WFS customer operation from a com
 
 Operation: `SCF-WFS-GEOSOLUTIONS-CUSTOMER-7DE2-20261012`.
 
-The product combines the original WFS implementation from PR1978 with its merged native-vector operator in PR2054 and the complete customer continuation in PR2087. The exact product source is `e7fe49243dad58a0082743165e3c7f6888d04c6b`. Its 53-file overlay includes the 18 original native vector engine and browser files, the complete WFS application, and the source-bound customer journey. The original customer packet at `cda45844721098bff39aa9317337edf191b8be2a` and both original product merges remain recorded in the enclosing packet. The captured source belongs to the existing `OGC-WFS2-GEOSOLUTIONS-20261012-7DE2` operation. Its original capabilities, schema, hits, pages, response records and interrupted-attempt history remain together.
+The product combines the original WFS implementation from PR1978 with its merged native-vector operator in PR2054 and the complete customer continuation in PR2087. The exact product source is `b7225cd0a84d554ba1973a0d2734433033178d11`. Its 53-file overlay includes the 18 original native vector engine and browser files, the complete WFS application, and the source-bound customer journey. The original customer packet at `cda45844721098bff39aa9317337edf191b8be2a` and both original product merges remain recorded in the enclosing packet. The captured source belongs to the existing `OGC-WFS2-GEOSOLUTIONS-20261012-7DE2` operation. Its original capabilities, schema, hits, pages, response records and interrupted-attempt history remain together.
 
 ## Receive the complete source package
 
@@ -123,7 +123,7 @@ Native deliverables in the existing outputs directory include:
 - merchant-vector-mapping.png and merchant-vector-native.png: actual mapping and reopened output.
 - customer-vector-native.png: native layers in the original received customer workspace.
 
-The existing result.json includes the complete vectors result, both original source order IDs, native request/receipt identities, actual comparison counts, the profile and archive hashes, and the interrupted-reply record. A same-operation continuation retains its original source profile and IDs. Select this cumulative launcher before the customer native input is first prepared; an already prepared input continues from its exact retained source selection.
+The existing result.json includes the complete vectors result, both original source order IDs, native request/receipt identities, actual comparison counts, the profile and archive hashes, and the interrupted-reply record. A same-operation continuation retains its original source profile and IDs. Reopening also recovers an interrupted request-journal commit before resuming the same saved body. Select this cumulative launcher before the customer native input is first prepared; an already prepared input continues from its exact retained source selection.
 
 ## Completed output and recovery
 
