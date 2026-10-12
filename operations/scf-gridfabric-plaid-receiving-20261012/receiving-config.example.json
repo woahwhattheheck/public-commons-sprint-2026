@@ -1,0 +1,5 @@
+{
+  "sourceRoot": "/retained/gridfabric/source",
+  "outputDirectory": "/private/gridfabric-native-receiving",
+  "sourceCommit": "FULL_JOINED_SOURCE_COMMIT"
+}
