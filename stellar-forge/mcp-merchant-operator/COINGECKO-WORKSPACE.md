@@ -299,3 +299,34 @@ An original error code is returned without dumping private host configuration. U
 | ARCHIVE_PAYLOAD_UNAVAILABLE | Create a new complete handover from the retained project. |
 
 Source documentation: [original CoinGecko product](../../stellar/scf-starforge-20261009/partners/coingecko-stellar-market/README.md), [merchant host](README.md), [shared retained file reader](retained-file-reads.mjs), and [native buyer queue](../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs).
+
+## Complete native MCP receiving command
+
+The installed source includes [acceptance/coingecko-receive.mjs](acceptance/coingecko-receive.mjs). It drives the existing authenticated merchant HTTP host through a complete original-source research and receiving operation. It creates a separate project, imports the selected original response files, retains the provider's own examples, reads all market rows and linked records, compares complete snapshots, saves the original provider deployment, delivers exact files, restores the full archive into a second declared workspace and reopens both projects.
+
+Run it with an original private input manifest and a private output directory:
+
+~~~sh
+node acceptance/coingecko-receive.mjs \
+  --manifest /absolute/private/receiving-manifest.json \
+  --out /absolute/private/coingecko-receiving
+~~~
+
+The manifest schema is stellar-forge.coingecko-mcp-receiving.v1. Paths resolve relative to that manifest. Supply:
+
+| Field | Original input |
+| --- | --- |
+| sourceRoot | Complete installed source directory containing stellar-forge and stellar. |
+| connection | The existing private CoinGecko workspace connection file. |
+| workspace / receivingWorkspace | Two distinct declared private workspace aliases. |
+| operationPrefix | One stable identifier for this receiving operation. |
+| projectName / projectConfig | The new research project name and original merchant configuration; the receiving research does not need a buyer profile. |
+| requests | The complete original collection, with at least two distinct request entries. Each has key, definition and capture. |
+| requests[].definition | Original name, endpoint, path, query, notes and enabled fields. |
+| requests[].capture | sourceInput plus optional bodyInput and headersInput aliases; exact original httpStatus, sourceUrl and observedAt. Each alias selects its full host-declared source file. |
+| providerPlan | The complete original provider plan accepted by the native compiler. |
+| sourceCommit / runtimeBaseCommit | Optional source and installed-runtime identifiers carried into the result. |
+
+The command keeps its original manifest hash, write arguments, operation IDs and completed stages in receiving-checkpoint.json. Continue with that same manifest and output directory after an interruption. It recovers unchanged native writes and reads the original source bytes; it does not create a probe or purchase job. The original native buyer receiving operation remains responsible for paid execution.
+
+The final directory contains the full collection, snapshot, comparison, provider deployment, portable project archive and NATIVE_MCP_RECEIVING_RESULT.json. Its archive and source-file checks compare complete delivered bytes and restored native ID mappings. The separate native jobs recovery exercise remains responsible for actual worker interruption and already-saved buyer response recovery.
