@@ -70,6 +70,44 @@ The workspace uses the existing `/drafts.mjs` and the same application/source-in
 
 The HTML reader and downloadable Markdown have different relative locations. The composer adjusts companion and source-index links only in the rendered HTML. Markdown sibling links remain relative to `grant-data/`.
 
+
+## Preserve the complete authoring package
+
+The original **grant-reviewer** contribution selects the whole
+**stellar-forge/developer-site** component, its browser manifest, the application
+server and composer command/export. A selected package therefore contains the
+complete authoring source used by the existing command:
+
+| Source | Role in the same composition |
+| --- | --- |
+| grant-compose.mjs | Receives the accepted nine-answer front, complete companion and original source index; writes the four reader files. |
+| grant-financial-operations.mjs | Receives the financial chapter and records the selected settlement, receivables, wallet collection, payment-plan and Xero source. |
+| grant-customers.mjs | Receives complete accepted customer sections and publishes their source-linked prose. |
+| grant-datasette.mjs | Keeps the paired original publisher and customer Analysis selections together. |
+| grant-entry.mjs | Joins the current product opening and original installed/source commands. |
+| grant-submission.mjs | Binds issuer preparation to the exact composed application. |
+| grant-review-round.mjs | Attaches the original named review, author revision and complete handover to that same application identity. |
+
+Keep these original modules, their guides, **browser-assets.json** and its full
+declared files together when receiving a source edition. The manifest includes
+the existing guided opening, complete submission editor, native planning
+receiver and shared draft store. The financial helper is a native composition
+dependency; it does not require a new browser route.
+
+Build the selected product from one actual full commit through the existing
+distribution builder and install its returned archive through the original
+runtime installer. The [complete grant-reviewer installation](../../stellar/scf-starforge-20261009/distribution/selections/GRANT_REVIEWER.md)
+covers the saved Applications operation, native purchase and complete customer
+receiving. Its source manifest identifies the current application edition and
+all authoring modules.
+
+For a manuscript refresh, point **--directory** at the complete working reader
+source that the publisher will receive. Its four outputs are the publication
+input. The currently open Site or installed reader changes when its existing
+publisher receives those actual files. Preserve the resulting source pins
+with that edition and use the current submission workspace's source comparison
+to receive it into an operator's saved draft.
+
 ## Use the existing local command and Site
 
 The selected source checkout opens through:
