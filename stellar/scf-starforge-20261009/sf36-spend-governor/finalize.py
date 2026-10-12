@@ -232,6 +232,7 @@ def main(argv=None):
     sources.add_argument('--records-dir', type=Path, help='Private existing original evidence directory')
     sources.add_argument('--manual-source', type=Path, help='Private original SF88 missing-receipt selection descriptor')
     sources.add_argument('--lost-output-source', type=Path, help='Private original SF88 lost-output selection and exact approved-request preimage')
+    sources.add_argument('--lost-output-dataset-source', type=Path, help='Private original SF88 Dataset page lost-output selection and exact approved request')
     parser.add_argument('--verify-only', action='store_true', help='Authenticate existing selected recovery without provider IO or writes')
     parser.add_argument('--ledger', type=Path, required=True)
     parser.add_argument('--policy', type=Path, required=True)
@@ -254,13 +255,13 @@ def main(argv=None):
             raise Denied('TRUSTED_ABSOLUTE_NODE_EXECUTABLE_REQUIRED')
         if not re.fullmatch(r'G[A-Z2-7]{55}', args.payer):
             raise Denied('TRUSTED_CLASSIC_PAYER_REQUIRED')
-        if args.expected_request_sha is not None and (not (args.record or args.manual_source or args.lost_output_source) or
+        if args.expected_request_sha is not None and (not (args.record or args.manual_source or args.lost_output_source or args.lost_output_dataset_source) or
                 not HASH.fullmatch(args.expected_request_sha)):
             raise Denied('EXPECTED_DIGEST_REQUIRES_ONE_ORIGINAL_RECORD')
-        selected_recovery = args.manual_source or args.lost_output_source
+        selected_recovery = args.manual_source or args.lost_output_source or args.lost_output_dataset_source
         if args.verify_only and not selected_recovery or selected_recovery and (
                 not args.expected_request_sha or args.watch_seconds or args.outbox or args.merchant_route):
-            raise Denied('LOST_OUTPUT_RECOVERY_REQUIRES_ONE_EXPLICIT_SELECTION' if args.lost_output_source
+            raise Denied('LOST_OUTPUT_RECOVERY_REQUIRES_ONE_EXPLICIT_SELECTION' if (args.lost_output_source or args.lost_output_dataset_source)
                          else 'MANUAL_RECOVERY_REQUIRES_ONE_EXPLICIT_SELECTION')
         if args.watch_seconds and args.watch_seconds < 30:
             raise Denied('WATCH_INTERVAL_MUST_BE_AT_LEAST_30_SECONDS')
@@ -302,7 +303,7 @@ def main(argv=None):
         signal.signal(signal.SIGINT, lambda *_: stop.set())
         try:
             while not stop.is_set():
-                selected_source = args.lost_output_source or args.manual_source or args.record
+                selected_source = args.lost_output_dataset_source or args.lost_output_source or args.manual_source or args.record
                 paths = [selected_source] if selected_source else sorted(args.records_dir.glob('*.json'))
                 failed = 0
                 for path in paths:
@@ -310,7 +311,13 @@ def main(argv=None):
                         break
                     try:
                         source = read_source(path)
-                        if args.lost_output_source:
+                        if args.lost_output_dataset_source:
+                            from lost_dataset_finality import finalize_dataset_lost_output
+                            result = finalize_dataset_lost_output(governor, path, source, args.payer, node=args.node,
+                                ledger=args.ledger, policy=args.policy, rpc_endpoint=args.rpc_endpoint,
+                                expected_request_sha=args.expected_request_sha, rpc_proxy_url=rpc_proxy_url,
+                                verify_only=args.verify_only, use_system_ca=args.node_use_system_ca)
+                        elif args.lost_output_source:
                             from lost_output_finality import finalize_lost_output
                             result = finalize_lost_output(governor, path, source, args.payer, node=args.node,
                                 ledger=args.ledger, policy=args.policy, rpc_endpoint=args.rpc_endpoint,
@@ -356,4 +363,9 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    # console.py may add the real source tree to sys.path while this worker is
+    # running from an explicit source overlay. Recovery companions must import
+    # this executing worker and its fixed observer, rather than another copy.
+    sys.path.insert(0, str(Path(__file__).parent))
+    sys.modules['finalize'] = sys.modules[__name__]
     raise SystemExit(main())

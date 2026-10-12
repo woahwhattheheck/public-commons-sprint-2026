@@ -22,6 +22,8 @@ Choose a private directory that persists across separate native invocations. Rep
 
 Four loopback ports are retained in the operation input: receiver 43110, application 43111, customer API 43112, and operator console 43113. Select different ports before the first run with `--receiver-port`, `--worker-port`, `--api-port`, and `--console-port`. Use `--python` for an explicit Python executable.
 
+The entitled file download uses `retrieveFile({trustedProxy: ...})`, which keeps the original explicit CONNECT/TLS transport and injects the claim token only at the approved delivery path. Select either this original transport configuration or a trusted `fetchImpl` embedding.
+
 ## Exact purchase and application input
 
 | Input | Retained value |

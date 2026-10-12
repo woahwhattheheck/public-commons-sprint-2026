@@ -267,9 +267,19 @@ def check_completion(payload, binding, row, observed, terms):
 
 def finalize_lost_output(governor, source_path, source, payer, *, node, ledger, policy,
                          rpc_endpoint=None, expected_request_sha=None, rpc_proxy_url=None,
-                         verify_only=False, use_system_ca=False):
+                         verify_only=False, use_system_ca=False, context_reader=None):
     require(expected_request_sha == source.get('requestSha256'), 'LOST_OUTPUT_SELECTED_DIGEST_MISMATCH')
-    binding, terms, row, directory = source_context(source_path, source, governor, payer, ledger, policy)
+    # Fixed native entrypoints select their own original-source reader. The
+    # public descriptor cannot choose a module or bypass the original ledger.
+    if context_reader is None and source.get('sourceKind') == 'dataset':
+        from lost_dataset_finality import dataset_source_context
+        def context(path, value, original_governor, original_payer, original_ledger, original_policy):
+            return dataset_source_context(
+                path, value, original_governor, original_payer, original_ledger, original_policy,
+                node=node, use_system_ca=use_system_ca)
+    else:
+        context = source_context if context_reader is None else context_reader
+    binding, terms, row, directory = context(source_path, source, governor, payer, ledger, policy)
     proof_path = directory / (binding['transaction'] + '.proof.json')
     completion_path = directory / 'recovery.json'
     if completion_path.exists():
@@ -297,7 +307,7 @@ def finalize_lost_output(governor, source_path, source, payer, *, node, ledger, 
     facts = check_observation(observed, binding, terms)
     # Every frozen byte and the HMAC reservation are checked again after network
     # observation. Original reconcile audits its own immediate transaction.
-    current, current_terms, row, _ = source_context(
+    current, current_terms, row, _ = context(
         source_path, read_source(source_path), governor, payer, ledger, policy)
     require(current == binding and current_terms == terms, 'LOST_OUTPUT_SOURCE_CHANGED_DURING_OBSERVATION')
     proof_sha = hashlib.sha256(canonical(facts)).hexdigest()
