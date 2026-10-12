@@ -2,6 +2,9 @@
 import { readDistributionSpecification } from '../specification.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { coingeckoApplication, prepareCoingeckoApplication } from './application-coingecko.mjs';
+import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
+import { fiscalDataApplication, prepareFiscalDataApplication } from './application-fiscaldata.mjs';
+import { databentoApplication, prepareDatabentoApplication } from './application-databento.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -28,6 +31,8 @@ import { pricingApplication, validatePricingSelection, preparePricingApplication
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { dspaceApplication, prepareDspaceApplication } from './application-dspace.mjs';
+import { grantsgovApplication, prepareGrantsgovApplication } from './application-grantsgov.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
 import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
@@ -62,6 +67,9 @@ const common = [
 ];
 export const APPLICATION_CATALOG = Object.freeze([
   coingeckoApplication(common),
+  oaiApplication(common),
+  fiscalDataApplication(common),
+  databentoApplication(common),
   grpcApplication(common),
   atlasApplication(common),
   n8nApplication(common),
@@ -87,6 +95,8 @@ export const APPLICATION_CATALOG = Object.freeze([
   collectionsApplication(common),
   baserowApplication(common),
   grantApplication(common),
+  dspaceApplication(common),
+  grantsgovApplication(common),
   fredApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
@@ -259,6 +269,14 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'databento-migration') {
+    const original = await prepareDatabentoApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
+  } else if (type.id === 'fiscaldata') {
+    const original = await prepareFiscalDataApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
   } else if (type.id === 'fred') {
     const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
@@ -322,6 +340,14 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
     createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'grantsgov') {
+    const prepared = await prepareGrantsgovApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'dspace-workspace') {
+    const prepared = await prepareDspaceApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories); selectedResourceKey = prepared.resourceKey;
   } else if (type.id === 'grant-workspace') {
     const prepared = await prepareGrantApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
@@ -343,6 +369,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'n8n-merchant') {
     const original = await prepareN8nApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'oai-repository') {
+    const original = await prepareOaiApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'rss-atom') {
     const original = await prepareRssAtomApplication(settings, {
@@ -506,8 +537,8 @@ function resourceKey(type, settings) {
   if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
-  // Feeds and XML retain the same original SQLite workspace and writer.
-  const family = type.id === 'rss-atom' ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
+  // Feeds, repository metadata and XML retain the same original SQLite workspace and writer.
+  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
   return hash({ family, directory: value });
 }
 async function application(root, id) {

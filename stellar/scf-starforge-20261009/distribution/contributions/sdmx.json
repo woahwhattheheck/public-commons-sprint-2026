@@ -1,0 +1,15 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "sdmx",
+  "description": "SDMX statistical data",
+  "commands": {
+    "sdmx": "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/cli.mjs"
+  },
+  "commandDescriptions": {
+    "sdmx": "Retain SDMX sources, publish exact editions and receive original buyer pages"
+  },
+  "exports": {
+    "./seller/sdmx": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/merchant.mjs",
+    "./buyer/sdmx": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/customer.mjs"
+  }
+}
