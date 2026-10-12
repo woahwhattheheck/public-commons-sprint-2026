@@ -260,9 +260,10 @@ download descriptor. The source receipt is committed before the original file,
 so a continuation can reuse completed bytes or verify an interrupted download
 against its original digest.
 
-The native layer identity derives from the original project, service, schema,
-feature type and literal CRS. Successor orders of that source keep the same
-layer identity while retaining their distinct order, query and capture IDs.
+The native layer identity derives from the original project, endpoint and
+feature type. Successor orders keep that logical identity through service/schema
+metadata refreshes and CRS changes while retaining their distinct service,
+schema, query, order, capture and coordinate identities in the source edition.
 Every feature and original numeric token stays in the downloaded source.
 Explicit identity/profile choices remain part of the original retained request.
 

@@ -86,8 +86,11 @@ export async function retainWfsVectorSource(application, orderId, sourceDirector
   need(typeof sourceDirectory === "string" && sourceDirectory, "VECTOR_WFS_SOURCE_DIRECTORY_REQUIRED");
   const before = await application.query("order", { orderId });
   const binding = orderBinding(application, before, orderId);
-  const layerIdentity = { projectId: binding.projectId, serviceId: binding.order.sourceId,
-    schemaId: binding.order.schemaId, typeName: binding.selection.typeName, srsName: binding.selection.srsName };
+  const layerIdentity = { projectId: binding.projectId, endpoint: binding.collection.endpoint,
+    typeName: binding.selection.typeName };
+  need(typeof layerIdentity.endpoint === "string" && layerIdentity.endpoint &&
+    typeof layerIdentity.typeName === "string" && layerIdentity.typeName,
+    "VECTOR_WFS_LOGICAL_SOURCE_REQUIRED");
   const sourceId = options.sourceId || "wfs-features-" + hash(canonical(layerIdentity)).slice(0, 24);
   const selectionId = options.selectionId || "wfs-order-" + orderId.slice(0, 32);
   for (const id of [sourceId, selectionId]) need(/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(id), "VECTOR_WFS_SOURCE_ID_INVALID");
