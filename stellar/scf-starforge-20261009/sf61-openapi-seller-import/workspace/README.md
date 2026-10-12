@@ -1,5 +1,10 @@
 # API merchant workspace
 
+The [route inventory and pricing worksheet](ROUTE_WORKSHEET.md) adds complete
+source filtering, route selection, exact batch prices, source-bound import/export
+and retained draft reconciliation to the original merchant configuration and
+native package/release workflow.
+
 The [complete package transfer workflow](PACKAGE_TRANSFER.md) exports the original
 source, plan, generated merchant and compiled files as a resumable package,
 receives it through this workspace's original publisher, and stages initial or

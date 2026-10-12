@@ -1,5 +1,5 @@
 // MIT — Research project state beside the original SF88 buyer.
-import { readdir } from 'node:fs/promises';
+import { readdir, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
@@ -8,6 +8,7 @@ import {
 } from '../node/store.mjs';
 import { normalizeResponse, normalizeProjection, sourceView, compareViews } from './normalize.mjs';
 import { markdownReport, htmlReport } from './report.mjs';
+import { portableEntries, encodePortable } from './portable.mjs';
 
 const DOCUMENT = 'sf88-research-dossier-v1';
 const PORTABLE = 'sf88-research-dossier-portable-v1';
@@ -380,33 +381,11 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       body: format === 'md' ? markdownReport(report) : htmlReport(report) };
   }
 
-  async function reopen(portable) {
-    need(object(portable) && portable.schema === PORTABLE && validId(portable.id) &&
-      Array.isArray(portable.versions) && portable.versions.length > 0 && Array.isArray(portable.blobs), 'PORTABLE_INVALID');
-    need(jsonBytes(portable).length <= MAX_PORTABLE, 'PORTABLE_SIZE_LIMIT');
-    const id = portable.id, incoming = portable.versions, content = new Map();
-    let previous = null, total = 0;
-    for (let index = 0; index < incoming.length; index++) {
-      const envelope = validateEnvelope(incoming[index], id, index + 1);
-      need(jsonBytes(envelope).length <= MAX_STATE, 'DOSSIER_STATE_TOO_LARGE');
-      need(envelope.state.previous === previous, 'PORTABLE_HISTORY_CHANGED');
-      previous = envelope.sha256;
-    }
-    for (const entry of portable.blobs) {
-      need(object(entry) && typeof entry.bodyBase64 === 'string' && /^[a-f0-9]{64}$/.test(entry.sha256), 'PORTABLE_BLOB_INVALID');
-      const bytes = Buffer.from(entry.bodyBase64, 'base64');
-      need(bytes.toString('base64') === entry.bodyBase64 && bytes.length === entry.bytes &&
-        bytes.length <= MAX_RESPONSE && digest(bytes) === entry.sha256, 'PORTABLE_BLOB_CHANGED');
-      total += bytes.length; need(total <= MAX_PORTABLE, 'PORTABLE_SIZE_LIMIT');
-      if (content.has(entry.sha256)) need(content.get(entry.sha256).equals(bytes), 'PORTABLE_BLOB_CONFLICT');
-      content.set(entry.sha256, bytes);
-    }
+  async function validatePortableState(state, readContent, occurrenceCache) {
     const validText = (value, max, empty = false) => typeof value === 'string' &&
       value.length <= max && (empty || value.trim().length > 0);
     const validTime = value => typeof value === 'string' && Number.isFinite(Date.parse(value));
     const occurrenceId = value => typeof value === 'string' && /^o_[a-f0-9]{64}$/.test(value);
-    for (const envelope of incoming) {
-      const state = envelope.state;
       need(validText(state.title, 240) && validText(state.description, 20000, true) &&
         validText(state.change, 1000) && validTime(state.createdAt) && validTime(state.updatedAt), 'PORTABLE_STATE_INVALID');
       need(state.questions.every(question => object(question) &&
@@ -428,12 +407,16 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
             Number.isSafeInteger(edition.raw.bytes) && edition.raw.bytes >= 0 && edition.raw.bytes <= MAX_RESPONSE &&
             validText(edition.sourceReference, 4000, true) && validText(edition.sourceTerms, MAX_RESPONSE) &&
             (edition.origin === undefined || edition.origin === null || object(edition.origin)), 'PORTABLE_EDITION_INVALID');
-          need(content.has(edition.raw.sha256), 'PORTABLE_BLOB_MISSING');
-          const raw = content.get(edition.raw.sha256);
-          need(raw.length === edition.raw.bytes, 'PORTABLE_BLOB_CHANGED');
-          const normalized = normalizeResponse(raw, edition.provider);
-          for (const row of normalized.items) knownOccurrences.set(
-            'o_' + digest(Buffer.from(edition.id + '\n' + row.key)), edition.questionId);
+          const binding = edition.id + '\n' + edition.provider + '\n' + edition.raw.sha256 + '\n' + edition.raw.bytes;
+          let occurrences = occurrenceCache.get(binding);
+          if (!occurrences) {
+            const raw = await readContent(edition.raw);
+            need(Buffer.isBuffer(raw) && raw.length === edition.raw.bytes, 'PORTABLE_BLOB_CHANGED');
+            const normalized = normalizeResponse(raw, edition.provider);
+            occurrences = normalized.items.map(row => 'o_' + digest(Buffer.from(edition.id + '\n' + row.key)));
+            occurrenceCache.set(binding, occurrences);
+          }
+          for (const occurrence of occurrences) knownOccurrences.set(occurrence, edition.questionId);
         } else {
           need(edition.mode === 'reference' && /^[a-z0-9-]+$/.test(edition.provider), 'EDITION_MODE_INVALID');
           referenceValue(edition.reference);
@@ -472,7 +455,34 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
             'PORTABLE_FINDING_REFERENCE_INVALID');
         }
       }
+  }
+
+  async function reopen(portable) {
+    need(object(portable) && portable.schema === PORTABLE && validId(portable.id) &&
+      Array.isArray(portable.versions) && portable.versions.length > 0 && Array.isArray(portable.blobs), 'PORTABLE_INVALID');
+    need(jsonBytes(portable).length <= MAX_PORTABLE, 'PORTABLE_SIZE_LIMIT');
+    const id = portable.id, incoming = portable.versions, content = new Map();
+    let previous = null, total = 0;
+    for (let index = 0; index < incoming.length; index++) {
+      const envelope = validateEnvelope(incoming[index], id, index + 1);
+      need(jsonBytes(envelope).length <= MAX_STATE, 'DOSSIER_STATE_TOO_LARGE');
+      need(envelope.state.previous === previous, 'PORTABLE_HISTORY_CHANGED');
+      previous = envelope.sha256;
     }
+    for (const entry of portable.blobs) {
+      need(object(entry) && typeof entry.bodyBase64 === 'string' && /^[a-f0-9]{64}$/.test(entry.sha256), 'PORTABLE_BLOB_INVALID');
+      const bytes = Buffer.from(entry.bodyBase64, 'base64');
+      need(bytes.toString('base64') === entry.bodyBase64 && bytes.length === entry.bytes &&
+        bytes.length <= MAX_RESPONSE && digest(bytes) === entry.sha256, 'PORTABLE_BLOB_CHANGED');
+      total += bytes.length; need(total <= MAX_PORTABLE, 'PORTABLE_SIZE_LIMIT');
+      if (content.has(entry.sha256)) need(content.get(entry.sha256).equals(bytes), 'PORTABLE_BLOB_CONFLICT');
+      content.set(entry.sha256, bytes);
+    }
+    const occurrenceCache = new Map();
+    for (const envelope of incoming) await validatePortableState(envelope.state, async metadata => {
+      need(content.has(metadata.sha256), 'PORTABLE_BLOB_MISSING');
+      return content.get(metadata.sha256);
+    }, occurrenceCache);
     let existing = [];
     try { existing = await history(id); }
     catch (error) { if (error.code !== 'DOSSIER_NOT_FOUND') throw error; }
@@ -491,6 +501,121 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     return get(id);
   }
 
+  async function exportStream(id, {compression = 'none'} = {}) {
+    need(['none', 'gzip'].includes(compression), 'PORTABLE_COMPRESSION_INVALID');
+    const all = await numbers(id);
+    need(all.length > 0, 'DOSSIER_NOT_FOUND');
+    const exportedAt = timestamp();
+    async function* chunks() {
+      const contents = new Map();
+      let previous = null, total = 0;
+      yield Buffer.from('{"schema":' + JSON.stringify(PORTABLE) + ',"id":' + JSON.stringify(id) +
+        ',"exportedAt":' + JSON.stringify(exportedAt) + ',"versions":[\n');
+      for (const revision of all) {
+        const envelope = await readRevision(id, revision);
+        need(envelope.state.previous === previous, 'DOSSIER_HISTORY_CHANGED');
+        previous = envelope.sha256;
+        for (const edition of envelope.state.editions) {
+          if (edition.mode !== 'retained') continue;
+          const existing = contents.get(edition.raw.sha256);
+          need(!existing || existing.bytes === edition.raw.bytes, 'RESEARCH_BLOB_CHANGED');
+          contents.set(edition.raw.sha256, edition.raw);
+        }
+        if (revision > 1) yield Buffer.from(',\n');
+        yield jsonBytes(envelope);
+      }
+      yield Buffer.from('],"blobs":[\n');
+      let index = 0;
+      for (const metadata of contents.values()) {
+        const bytes = await blob(metadata);
+        total += bytes.length; need(total <= MAX_PORTABLE, 'PORTABLE_SIZE_LIMIT');
+        if (index++) yield Buffer.from(',\n');
+        yield jsonBytes({...metadata, bodyBase64: bytes.toString('base64')});
+      }
+      yield Buffer.from(']}\n');
+    }
+    return {filename: id + '.research.json' + (compression === 'gzip' ? '.gz' : ''),
+      contentType: compression === 'gzip' ? 'application/gzip' : 'application/json; charset=utf-8',
+      body: encodePortable(chunks(), {compression}), revision: all.at(-1)};
+  }
+
+  async function reopenStream(input, {projection = 'full'} = {}) {
+    need(['full', 'metadata'].includes(projection), 'RESEARCH_PROJECTION_INVALID');
+    const staging = await mkdtemp(join(directory, '.portable-'));
+    const fields = {}, content = new Map();
+    let revisionCount = 0, blobCount = 0, total = 0;
+    try {
+      for await (const record of portableEntries(input)) {
+        if (record.kind === 'field') {
+          if (['schema', 'id', 'exportedAt'].includes(record.key)) fields[record.key] = record.value;
+        } else if (record.kind === 'array') {
+          if (record.key === 'versions') fields.versions = record.count;
+          else fields.blobs = record.count;
+        } else if (record.kind === 'versions') {
+          const envelope = record.value;
+          need(object(envelope) && validId(envelope.state?.id), 'PORTABLE_INVALID');
+          validateEnvelope(envelope, envelope.state.id, record.index + 1);
+          need(jsonBytes(envelope).length <= MAX_STATE, 'DOSSIER_STATE_TOO_LARGE');
+          await writeJson(join(staging, filename(record.index + 1)), envelope, {exclusive: true});
+          revisionCount++;
+        } else if (record.kind === 'blobs') {
+          const entry = record.value;
+          need(object(entry) && typeof entry.bodyBase64 === 'string' &&
+            /^[a-f0-9]{64}$/.test(entry.sha256), 'PORTABLE_BLOB_INVALID');
+          const bytes = Buffer.from(entry.bodyBase64, 'base64');
+          need(bytes.toString('base64') === entry.bodyBase64 && bytes.length === entry.bytes &&
+            bytes.length <= MAX_RESPONSE && digest(bytes) === entry.sha256, 'PORTABLE_BLOB_CHANGED');
+          total += bytes.length; need(total <= MAX_PORTABLE, 'PORTABLE_SIZE_LIMIT');
+          const previous = content.get(entry.sha256);
+          need(!previous || previous.bytes === bytes.length, 'PORTABLE_BLOB_CONFLICT');
+          if (!previous) {
+            await writeBytes(join(staging, entry.sha256), bytes, {exclusive: true});
+            content.set(entry.sha256, {sha256: entry.sha256, bytes: bytes.length});
+          }
+          blobCount++;
+        }
+      }
+      need(fields.schema === PORTABLE && validId(fields.id) && fields.versions === revisionCount &&
+        revisionCount > 0 && fields.blobs === blobCount, 'PORTABLE_INVALID');
+      const id = fields.id;
+      const readContent = async metadata => {
+        const entry = content.get(metadata.sha256);
+        need(entry, 'PORTABLE_BLOB_MISSING');
+        need(entry.bytes === metadata.bytes, 'PORTABLE_BLOB_CHANGED');
+        const bytes = await readBytes(join(staging, entry.sha256), MAX_RESPONSE);
+        need(bytes.length === entry.bytes && digest(bytes) === entry.sha256, 'PORTABLE_BLOB_CHANGED');
+        return bytes;
+      };
+      let previous = null;
+      const occurrenceCache = new Map();
+      let existing = [];
+      try { existing = await numbers(id); }
+      catch (error) { if (error.code !== 'DOSSIER_NOT_FOUND') throw error; }
+      for (let revision = 1; revision <= revisionCount; revision++) {
+        const envelope = validateEnvelope(await readJson(join(staging, filename(revision)), MAX_STATE), id, revision);
+        need(envelope.state.previous === previous, 'PORTABLE_HISTORY_CHANGED');
+        previous = envelope.sha256;
+        await validatePortableState(envelope.state, readContent, occurrenceCache);
+        if (revision <= existing.length)
+          need((await readRevision(id, revision)).sha256 === envelope.sha256, 'PORTABLE_HISTORY_CONFLICT');
+      }
+      // All source and history validation completes before changing the saved
+      // project. The original content-addressed blob and exclusive revision
+      // writers preserve replay and concurrent-extension behavior.
+      for (const metadata of content.values()) await putBlob(await readContent(metadata));
+      const target = await revisionsDirectory(id, true);
+      for (let revision = existing.length + 1; revision <= revisionCount; revision++) {
+        const envelope = await readJson(join(staging, filename(revision)), MAX_STATE);
+        try { await writeJson(join(target, filename(revision)), envelope, {exclusive: true}); }
+        catch (error) {
+          if (error.code !== 'EEXIST') throw error;
+          need((await readRevision(id, revision)).sha256 === envelope.sha256, 'REVISION_CONFLICT');
+        }
+      }
+      return projection === 'metadata' ? getMetadata(id) : get(id);
+    } finally { await rm(staging, {recursive: true, force: true}); }
+  }
+
   return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, update, addQuestion, updateQuestion,
-    receive, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding, compare, exportDossier, reopen });
+    receive, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding, compare, exportDossier, exportStream, reopen, reopenStream });
 }

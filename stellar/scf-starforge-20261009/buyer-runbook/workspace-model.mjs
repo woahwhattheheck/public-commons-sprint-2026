@@ -74,8 +74,8 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
   try { meta = await json(join(directory, 'workspace.json')); }
   catch (error) {
     if (error.code !== 'ENOENT') throw error;
-    check(configsDirectory, 'CONFIG_DIRECTORY_REQUIRED');
-    meta = {schema:SCHEMA, directory, configsDirectory:await privateDirectory(configsDirectory), createdAt:now()};
+    const sourceDirectory=configsDirectory??join(directory,'configs');
+    meta = {schema:SCHEMA, directory, configsDirectory:await privateDirectory(sourceDirectory,configsDirectory===undefined), createdAt:now()};
     try { await publish(join(directory, 'workspace.json'), meta); }
     catch (failure) { if (failure.code !== 'EEXIST') throw failure; meta = await json(join(directory, 'workspace.json')); }
   }
@@ -83,9 +83,9 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
   configsDirectory = await privateDirectory(configsDirectory ?? meta.configsDirectory);
   check(meta.configsDirectory === configsDirectory, 'WORKSPACE_CONFIG_DIRECTORY_MISMATCH');
   const requestIntake = await openHandoffIntake({directory:join(directory,'handoffs'), configsDirectory, operatorSettings});
-  const settingsFile = (await requestIntake.state()).settingsFile;
   const paidFiles = await openPaidFileIntake({directory:join(directory,'handoffs','paid-files'), configsDirectory,
-    settingsFile:async()=>settingsFile, claimEnvs:paidFileClaimEnvs});
+    settingsFile:requestIntake.operatorSetup.currentFile,operatorPreset:requestIntake.operatorSetup.read,
+    claimEnvs:paidFileClaimEnvs});
   // The original recovery collector and executor use one combined receiving
   // interface. Every native operator stays under its existing retained source.
   const intake = {...requestIntake,
@@ -399,6 +399,32 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
       return result;
     } finally { await file.close(); }
   }
+  async function operatorImpact(settingsSha256) {
+    const [requests,files]=await Promise.all([requestIntake.state(),paidFiles.state()]);
+    const rows=[];
+    for(const [kind,state] of [['REQUEST',requests],['PAID_FILE',files]])for(const item of state.requests)
+      rows.push({kind,id:item.id,label:item.summary.orderReference??((item.summary.method??'POST')+' '+item.summary.url),
+        phase:item.prepared?'PREPARED':item.preparing?'PREPARING':item.reviewSettingsSha256?'REVIEWED':'UNREVIEWED',
+        reviewRevision:item.reviewRevision,settingsSha256:item.reviewSettingsSha256,
+        needsReview:!item.prepared&&!item.preparing&&Boolean(item.reviewSettingsSha256)&&item.reviewSettingsSha256!==settingsSha256});
+    return {rows,prepared:rows.filter(row=>row.phase==='PREPARED').length,
+      preparing:rows.filter(row=>row.phase==='PREPARING').length,
+      reviewed:rows.filter(row=>row.phase==='REVIEWED').length,unreviewed:rows.filter(row=>row.phase==='UNREVIEWED').length,
+      needsReview:rows.filter(row=>row.needsReview).length,
+      errors:[...requests.errors.map(error=>({...error,kind:'REQUEST'})),...files.errors.map(error=>({...error,kind:'PAID_FILE'}))]};
+  }
+  async function operatorState() {
+    const value=await requestIntake.operatorSetup.state();
+    return {...value,impact:await operatorImpact(value.settingsSha256)};
+  }
+  async function reviewOperatorSettings(input) {
+    const value=await requestIntake.operatorSetup.review(input);
+    return {...value,impact:await operatorImpact(value.settingsSha256)};
+  }
+  async function saveOperatorSettings(input) {
+    const value=await requestIntake.operatorSetup.save(input);
+    return {...value,impact:await operatorImpact(value.settingsSha256)};
+  }
   async function launchRecovery({kind,...input}) {
     check(['SNAPSHOT','VERIFY'].includes(kind),'RUNBOOK_RECOVERY_ACTION_REQUIRED');
     check(!recoveryActive||recoveryActive.finishedAt,'WORKSPACE_RECOVERY_BUSY',409);
@@ -428,6 +454,10 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
       const old = await json(importPath(id)); check(old.path === canonical && old.planId === plan.id, 'IMPORTED_RUN_MISMATCH'); }
   }
   return {directory, state:list, draft:latestDraft, run:getRun, export:exportRun, download, previewResource,
+    operatorState:()=>serial(operatorState),operatorRevision:id=>serial(()=>requestIntake.operatorSetup.revision(id)),
+    operatorAttachment:requestIntake.operatorSetup.attachment,
+    reviewOperatorSettings:input=>mutate(()=>reviewOperatorSettings(input)),
+    saveOperatorSettings:input=>mutate(()=>saveOperatorSettings(input)),
     request:requestIntake.get, requestAttachment:requestIntake.attachment,
     client:requestIntake.clients.get,clientAttachment:requestIntake.clients.attachment,
     receiveClient:input=>mutate(()=>requestIntake.clients.receive(input)),

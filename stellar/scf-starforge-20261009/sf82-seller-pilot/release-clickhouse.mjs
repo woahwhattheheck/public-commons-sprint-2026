@@ -12,7 +12,8 @@ import { compileSellerOpenApi } from '../sf30-seller-sdk/developer-portal.mjs';
 import { generateSellerClient } from '../sf30-seller-sdk/developer/client-generator.mjs';
 import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
 
-export const CLICKHOUSE_SOURCE_SCHEMA = 'stellar-forge.clickhouse-seller-release-manifest.v1';
+import { CLICKHOUSE_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { CLICKHOUSE_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'clickhouse/package';
 const CAPS = {
   'source.json': 262144, 'merchant-plan.json': 262144, 'bindings.json': 262144,

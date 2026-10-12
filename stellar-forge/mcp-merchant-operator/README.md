@@ -1,5 +1,20 @@
 # Starforge merchant operations through MCP
 
+The host advertises its configured tools and loads each original provider when it is needed. Release-state reads use the small native release layer; workspace, seller and customer operations retain their existing ownership and recovery paths. See [Configured providers and startup](CONFIGURED_PROVIDERS.md) for setup, capability status, request limits, lifecycle and provider integration.
+
+Operate a complete Baserow source and merchant through the same browser workspace. Capture native rows and files, review source versions, run the original publisher and refresh schedule, stage the merchant, and deliver the complete original source to a customer. Manifest-pinned downloads resume after MCP restart, and the recipient reopens the same native import offline. See [Baserow source, merchant and customer operations](BASEROW_WORKSPACE.md) for all 20 tools, host setup and the original-source continuation.
+
+Federal grant opportunity research uses this same host's 36 original-workspace
+tools. Open retained source captures, qualify full notices, save immutable
+editions and workshares, prepare and publish the native dataset, complete
+original customer sessions, and download/reopen every source byte after
+interruption. The installed **Grants.gov opportunities** application opens the
+same research model. See [Grants.gov research, publication and complete
+receiving](GRANTSGOV_WORKSPACE.md) for host setup, Applications, all tools and
+the original receiving commands.
+
+Native Stellar MPP customer operations use the existing private console and original payment records. The [MPP guide](./MPP.md) covers host connections, retained customer reviews, native jobs, recovery, and complete resumable response or customer-package downloads through this same operator.
+
 Create and revise OpenAPI merchants through this same operator. Attach the host's
 existing API consoles, review original source and payment terms, save or reopen
 retained drafts, apply cache changes, and save those policies into a revised
@@ -48,6 +63,13 @@ the same compiled source through the original release controls. The complete
 review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
+
+## ArcGIS merchant workspace
+
+The same interface now operates the original ArcGIS source workbench: source-file intake and live capture, reviewed field mappings, immutable editions, deployment exports and staging, release controls and complete customer file delivery. The existing publisher tools share that workbench’s original publisher, saved plans, publication history and scheduler.
+
+Use `starforge arcgis-agent serve` to open the browser and MCP service together, or select **ArcGIS merchant workspace** in the installed runtime’s Applications screen. Both surfaces use one merchant owner and the original release store. Full host configuration, native request recovery and source-to-delivery commands are in [ARCGIS_WORKSPACE.md](ARCGIS_WORKSPACE.md).
+
 
 ## Operate native OpenSearch merchants and relevance
 
@@ -146,6 +168,41 @@ revision; and stop or reopen the saved fleet. The original gateway, release
 stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
 host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
+
+
+### Deliver customer SDKs from fleet merchants
+
+The original fleet owner now includes a retained customer handover desk for every
+declared tenant and slot. Generate from the exact owned instance, inspect the
+original receipt and offers, complete an inspected legacy export, and retrieve
+its original manifest and SHA-pinned file chunks. Retained exports remain usable
+after slot retirement and provider reopening.
+
+Use `merchant_fleet_client_list`, `merchant_fleet_client_status`,
+`merchant_fleet_client_generate`, `merchant_fleet_client_adopt`,
+`merchant_fleet_client_manifest`, `merchant_fleet_client_file`, and
+`merchant_fleet_client_file_release` with the selected `tenant` and `slot`.
+The managed fleet workspace exposes the same original customer controls, and
+`fleet-release` supplies a resumable `client-download` command. See
+[the fleet customer handover guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/CLIENT_HANDOVER.md)
+for the complete browser, foreground CLI, and authenticated MCP workflow.
+
+### Publish tenant discovery and serve the original buyer explorer
+
+The same fleet owner now operates each tenant's original seller enrollment,
+signed catalogue and native buyer explorer across release slots. Review the
+current serving source and exact payment choices, apply the original signed
+publication, inspect retained resource history, and withdraw a route from an
+older retained release. Interrupted enrollment can be inspected, preserved and
+completed through the original setup workflow.
+
+Use the `merchant_fleet_discovery_*` tools for enrollment, start/stop,
+retained-source inspection, publication review/apply, original history and
+native discovery pages. The managed browser and foreground CLI expose the
+complete workflow over the same lifecycle owner. See
+[the tenant discovery guide](../../stellar/scf-starforge-20261009/merchant-fleet-gateway/DISCOVERY.md)
+for exact inputs, recovery, slot changes and the original buyer preparation
+workflow.
 
 ## Operate a Tenderly simulation merchant
 
@@ -589,8 +646,12 @@ contains multiple projects. Initialization binds the original project's
 `seller-releases` to this merchant operator. Agents use the same capture, typed
 projection, edition comparison, original publisher and portable merchant model as
 the CKAN workbench, then activate and run its release with the normal merchant
-tools. Each change returns the original operation identity for status and
-lost-response recovery. The original buyer configuration and merchant archives
+tools. The 28 CKAN tools include read-only `merchant_ckan_semantics_preview`
+for a proposed field projection and `merchant_ckan_source_semantics` for the
+saved reviewed dictionary, including after project reopen. A live capture can
+select its original CSVW document with `schemaUrl`; source meaning stays bound
+through publication, merchant packaging and customer pages. Each change returns
+the original operation identity for status and lost-response recovery. The original buyer configuration and merchant archives
 are available through SHA-pinned file reads. Both HTTP and stdio expose the same
 source tools and release lifecycle. The [complete CKAN agent and operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/MCP_WORKFLOW.md)
 covers host configuration, the joined source-to-customer workflow and reopening.
@@ -679,4 +740,32 @@ complete authoring-to-release flow, exact tool arguments and customer receiving.
 ## CoinGecko market research and native purchase workspaces
 
 [COINGECKO-WORKSPACE.md](COINGECKO-WORKSPACE.md) connects the original CoinGecko browser and research model to this same merchant MCP. Its 32 tools cover complete request collections, exact source imports, paged market rows and linked entities, snapshots and comparisons, versioned research notes, original provider compilation, native SF88 purchase preparation/action recovery, and full retained handover downloads/restoration. The host declares private directory, input and buyer-profile aliases; browser and agents share the original project revision and operation IDs. Start with `starforge merchant-mcp init-coingecko-workspaces --dir NEW_PRIVATE_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json`. Opening the CoinGecko native SQLite workspace requires Node.js 24 or later.
+
+
+## Managed dataset editions and customer restoration
+
+Initialize the original managed dataset lifecycle with `--dataset-package`.
+The same merchant operator stages the complete source package, initializes its
+original version store, starts the seller, publishes later editions and restores
+retained snapshots. Original cursors continue across publication and the current
+data selection survives seller and MCP restart. The [dataset lifecycle guide](DATASET_LIFECYCLE.md)
+connects all five tools to the existing release controls and original NDJSON
+customer receiving, source reconstruction and project handoff.
+
+
+## World Bank indicator workspaces
+
+The original World Bank model is available through this same authenticated HTTP
+and stdio host. Agents and the industrial browser share source selections,
+retained capture jobs, exact observation values, reviewed native editions,
+publisher drafts, SF82 releases and SF88 customer sessions.
+
+Use `init-worldbank-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `worldbankWorkspaceConnection` to an existing merchant configuration.
+The `merchant_worldbank_*` tools use host-declared imports, merchant terms and
+buyer workspace aliases. `download-worldbank` resumes complete original handovers
+and dataset files through the host's existing durable file receiver.
+
+[World Bank setup, source operation, release and customer receiving](WORLDBANK-WORKSPACES.md)
+documents the complete workflow and its original IDs, revisions and file hashes.
 

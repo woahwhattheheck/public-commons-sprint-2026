@@ -8,7 +8,8 @@ import { prepareReview } from '../prepare.mjs';
 import { selectObjectDescriptionBytes } from '../object-description.mjs';
 import { initializeWorkspace, openWorkspace } from '../workspace.mjs';
 import { validateNativeSignerConfiguration } from '../native-signer.mjs';
-import { readBuyerOperatorPreset } from '../../buyer-runbook/handoff-intake.mjs';
+import { readBuyerOperatorPreset, validateBuyerOperatorPreset } from '../../buyer-runbook/handoff-intake.mjs';
+import { openBuyerOperatorSetup } from '../../buyer-runbook/operator-preset.mjs';
 import { acquireRunbookMetadataLease } from '../../buyer-runbook/runbook.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.object-receiving.v1';
@@ -143,9 +144,16 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
   for (const path of [sources, reviews, products]) await privateDirectory(path, true);
   const settingsPath = join(directory, 'operator-settings.json');
   if (operatorSettings !== undefined) await publish(settingsPath, { path: canonical(operatorSettings) });
-  const savedSettings = await optional(settingsPath), settingsFile = savedSettings?.path ?? null;
-  if (settingsFile !== null) canonical(settingsFile);
-  const preset = () => readBuyerOperatorPreset(settingsFile, { directory });
+  const savedSettings = await optional(settingsPath), declaredSettingsFile = savedSettings?.path ?? null;
+  if (declaredSettingsFile !== null) canonical(declaredSettingsFile);
+  const operatorSetup = await openBuyerOperatorSetup({
+    directory, declaredSettingsFile,
+    readPreset: file => readBuyerOperatorPreset(file, { directory }),
+    validatePreset: value => validateBuyerOperatorPreset(value, { directory }),
+    storage: { privateDirectory, bytes: read, json: async path => parse(await read(path)),
+      optional, readdir, lease, publish: (path, value, { raw = false } = {}) => publish(path, value, raw) },
+  });
+  const preset = operatorSetup.read;
   const sourcePath = id => { check(HASH.test(id ?? ''), 'OBJECT_RECEIVING_SOURCE_INVALID'); return join(sources, id); };
   const planPath = id => { check(HASH.test(id ?? ''), 'OBJECT_RECEIVING_REVIEW_INVALID'); return join(products, id); };
   async function lease(action) {
@@ -216,11 +224,16 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
       sessionName, maxTotalAtomic, dailyAtomic, settingsSha256: operator.sha256,
       descriptionSha256: received.record.descriptionSha256, catalogSha256: received.record.catalogSha256,
       configSha256: prepared.configSha256, selected, terms: op.expect, sourceUrl: op.url, operator: operator.view };
-    return { proof, prepared, public: { ...proof, filename: selected.selection.filename, bytes: selected.bytes,
-      deliveryMode: selected.deliveryMode ?? 'chunks',
-      chunkCount: count, plannedMaxAtomic: (single * BigInt(count)).toString(),
+    return { proof, prepared, public: publicReview(proof) };
+  }
+  function publicReview(proof) {
+    const selected = proof.selected, whole = selected.deliveryMode === 'whole';
+    const count = whole ? 1 : Math.ceil(selected.bytes / selected.chunkBytes);
+    return { ...proof, filename: selected.selection.filename, bytes: selected.bytes,
+      deliveryMode: selected.deliveryMode ?? 'chunks', chunkCount: count,
+      plannedMaxAtomic: (BigInt(proof.terms.maxAtomic) * BigInt(count)).toString(),
       firstRange: whole ? null : { offset: 0, length: Math.min(selected.chunkBytes, selected.bytes) },
-      lastRange: whole ? null : { offset: (count - 1) * selected.chunkBytes, length: selected.bytes - (count - 1) * selected.chunkBytes } } };
+      lastRange: whole ? null : { offset: (count - 1) * selected.chunkBytes, length: selected.bytes - (count - 1) * selected.chunkBytes } };
   }
   async function review(input) {
     const built = await build(input, await preset()), reviewId = hash(encode(built.proof));
@@ -247,34 +260,64 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
       descriptionFile: join(sourcePath(review.id), 'objects.json'), objectId: review.objectId,
       configFile: join(workspace, 'operator.json'), workspace, receivedReview: reviewId };
   }
+  async function retainedAttempt(reviewId) {
+    const path = planPath(reviewId); let names;
+    try { names = await readdir(path); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+    const generations = names.filter(name => /^attempt-[1-9][0-9]*\.json$/.test(name))
+      .map(name => Number(name.slice(8,-5))).sort((a,b) => b-a);
+    let latest = null;
+    for (const generation of generations) {
+      check(Number.isSafeInteger(generation) && generation > 0 && generation <= 64,
+        'OBJECT_RECEIVING_ATTEMPT_CHANGED', 409);
+      const attempt = await optional(join(path, 'attempt-' + generation + '.json'));
+      check(attempt?.reviewId === reviewId && attempt.generation === generation,
+        'OBJECT_RECEIVING_ATTEMPT_CHANGED', 409);
+      const value = { reviewId, generation, workspace: join(path, 'operator-' + generation) };
+      latest ??= value;
+      // Older intake versions could retain more than one incomplete attempt.
+      // Preserve their selected completed generation when one already exists.
+      if (await optional(join(value.workspace, 'workspace.json'))) return value;
+    }
+    return latest;
+  }
+  async function attemptPreset(attempt, proof) {
+    const file = join(planPath(attempt.reviewId), 'attempt-' + attempt.generation + '.settings.json');
+    const verified = value => {
+      check(value.sha256 === proof.settingsSha256 && JSON.stringify(value.view) === JSON.stringify(proof.operator),
+        'OBJECT_RECEIVING_ATTEMPT_SETTINGS_CHANGED', 409); return value;
+    };
+    try { return verified(await readBuyerOperatorPreset(file, { directory })); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    // A legacy attempt can adopt only its original bytes retained by the
+    // selected preset or a previous host revision. Never substitute new limits.
+    const value = verified(await operatorSetup.readMatching(proof.settingsSha256));
+    await publish(file, value.raw, true); return value;
+  }
   async function provision({ reviewId } = {}) {
     const proof = await reviewed(reviewId), existing = await product(reviewId);
     if (existing) return { product: existing, review: proof, reopened: true };
-    const operator = await preset();
+    let attempt = await retainedAttempt(reviewId);
+    const operator = attempt ? await attemptPreset(attempt, proof) : await preset();
     check(operator.sha256 === proof.settingsSha256, 'OBJECT_RECEIVING_PRESET_CHANGED', 409);
     const built = await build(proof, operator);
     check(hash(encode(built.proof)) === reviewId, 'OBJECT_RECEIVING_REVIEW_CHANGED', 409);
     const path = planPath(reviewId); await privateDirectory(path, true);
     const input = join(path, 'review.json'); await publish(input, built.prepared.data, true);
-    const generations = (await readdir(path)).filter(name => /^attempt-[1-9][0-9]*\.json$/.test(name))
-      .map(name => Number(name.slice(8,-5))).sort((a,b) => b-a);
-    let generation, workspace;
-    for (const value of generations) {
-      const attempt = await optional(join(path, 'attempt-' + value + '.json'));
-      check(attempt?.reviewId === reviewId && attempt.generation === value, 'OBJECT_RECEIVING_ATTEMPT_CHANGED', 409);
-      const candidate = join(path, 'operator-' + value);
-      if (await optional(join(candidate, 'workspace.json'))) { generation = value; workspace = candidate; break; }
+    if (!attempt) {
+      attempt = { reviewId, generation: 1, workspace: join(path, 'operator-1') };
+      // Publish the exact host before the attempt becomes recoverable. The
+      // original native initializer retains its keys and ledger on interruption.
+      await publish(join(path, 'attempt-1.settings.json'), operator.raw, true);
+      await publish(join(path, 'attempt-1.json'), { reviewId, generation: 1 });
     }
-    if (!workspace) {
-      generation = (generations[0] ?? 0) + 1; check(generation <= 64, 'OBJECT_RECEIVING_ATTEMPT_LIMIT');
-      workspace = join(path, 'operator-' + generation);
-      await publish(join(path, 'attempt-' + generation + '.json'), { reviewId, generation });
+    const { generation, workspace } = attempt;
+    if (!await optional(join(workspace, 'workspace.json'))) {
       const value = operator.value;
       const args = ['--config', input, '--dir', workspace, '--actor', value.actor, '--service', value.service,
         '--payer', value.payer, '--python', value.python, '--total-atomic', proof.maxTotalAtomic, '--daily-atomic', proof.dailyAtomic];
       for (const [key, flag] of [['secretEnv','--secret-env'],['signerProvider','--signer-provider'],['rpc','--rpc'],['httpsProxyEnv','--https-proxy-env']])
         if (value[key] !== undefined) args.push(flag, value[key]);
-      await initializeWorkspace(args);
+      await initializeWorkspace(args, { resume: true });
     }
     const native = await openWorkspace(['--dir', workspace]), files = {};
     const op = native.config.operation, settings = operator.value;
@@ -301,15 +344,46 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
     await publish(join(path, 'ready.json'), { schema: SCHEMA, reviewId, generation, files });
     return { product: await product(reviewId), review: proof, reopened: false };
   }
+  async function operatorImpact(settingsSha256) {
+    const rows = [], errors = [];
+    for (const name of (await readdir(reviews)).filter(name => /^[a-f0-9]{64}\.json$/.test(name))) {
+      const id = name.slice(0,-5);
+      try {
+        const proof = await reviewed(id), prepared = await product(id);
+        const attempt = prepared ? null : await retainedAttempt(id);
+        const phase = prepared ? 'PREPARED' : attempt ? 'PREPARING' : 'REVIEWED';
+        rows.push({ id, label: proof.selected.selection.filename, kind: 'OBJECT', phase,
+          sessionName: proof.sessionName, objectId: proof.objectId, sourceId: proof.id,
+          settingsSha256: proof.settingsSha256, operator: proof.operator,
+          generation: prepared ? Number(basename(prepared.workspace).slice(9)) : attempt?.generation ?? null,
+          needsReview: phase === 'REVIEWED' && proof.settingsSha256 !== settingsSha256 });
+      } catch (error) { errors.push({ id, code: code(error) }); }
+    }
+    rows.sort((a,b) => a.sessionName.localeCompare(b.sessionName) || a.id.localeCompare(b.id));
+    return { prepared: rows.filter(row => row.phase === 'PREPARED').length,
+      preparing: rows.filter(row => row.phase === 'PREPARING').length,
+      needsReview: rows.filter(row => row.needsReview).length, rows, errors };
+  }
+  async function operatorState() {
+    const selected = await operatorSetup.state();
+    return { ...selected, impact: await operatorImpact(selected.settingsSha256) };
+  }
+  async function reviewOperatorSettings(input) {
+    const result = await operatorSetup.review(input);
+    return { ...result, impact: await operatorImpact(result.settingsSha256) };
+  }
+  async function saveOperatorSettings(input) {
+    const result = await operatorSetup.save(input);
+    return { ...result, impact: await operatorImpact(result.settingsSha256) };
+  }
   async function state() {
-    let operator = null, presetError = null;
-    if (settingsFile !== null) { try { operator = (await preset()).view; } catch (error) { presetError = code(error); } }
-    const records = [];
+    const selected = await operatorState(), records = [];
     for (const id of (await readdir(sources)).filter(name => HASH.test(name))) {
       try { const value = await source(id); records.push({ ...value.record, objects: objects(value.description) }); }
       catch (error) { records.push({ id, error: code(error) }); }
     }
-    return { operator, presetError, settingsFile,
+    return { operator: selected.operator, presetError: selected.error, settingsFile: selected.settingsFile,
+      operatorSetup: selected,
       sources: records.sort((a,b) => (b.receivedAt ?? '').localeCompare(a.receivedAt ?? '')) };
   }
   async function preparedProducts() {
@@ -320,7 +394,10 @@ export async function openObjectReceiving({ directory, operatorSettings } = {}) 
     }
     return result;
   }
-  return { state, options, products: preparedProducts,
+  return { state, options, products: preparedProducts, operatorState, reviewOperatorSettings, saveOperatorSettings,
+    operatorRevision: operatorSetup.revision, operatorAttachment: operatorSetup.attachment,
+    reviewed: async id => ({ ...publicReview(await reviewed(id)), reviewId: id }),
     receive: value => lease(() => receive(value)), review: value => lease(() => review(value)),
     provision: value => lease(() => provision(value)) };
 }
+

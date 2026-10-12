@@ -1,129 +1,24 @@
-import { MerchantCoinGeckoWorkspaces, coingeckoWorkspaceTools } from './coingecko-workspace.mjs';
+import { merchantToolCatalog, merchantToolFamilies, merchantToolFamily } from './catalog.mjs';
+export { MERCHANT_TOOLS } from './catalog.mjs';
+import { MERCHANT_PROVIDERS, merchantProviderConfigured } from './providers.mjs';
+
+
 // MIT. MCP merchant operations over the original SF82 release lifecycle and SF30 SDK.
 import { createHash } from 'node:crypto';
-import { stageRelease, inspectRelease, compareReleases, activateRelease, rollbackRelease,
-  readReleaseState, releaseStatus, runActiveRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
-import { CLIENT_EXPORT_FILES, CLIENT_EXPORT_MANIFEST } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
-import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
-import { MerchantClientExports, readOwnedSellerCatalog } from './client-exports.mjs';
+
+
 import { exact, failure, identifier, line, readMerchantConfig, inspectMerchantSource, pythonSourceView, duckdbSourceView } from './config.mjs';
-import { MerchantDiscovery, discoveryTools } from './discovery.mjs';
-import { cacheControlTools, merchantCacheStatus, merchantCacheInvalidate, merchantCacheInspect,
-  merchantCacheConfigure, merchantCachePurge, merchantCacheOperation } from './controls.mjs';
-import { MerchantFleet, fleetControlTools } from './fleet.mjs';
-import { MerchantAccounting, accountingTools } from './accounting.mjs';
-import { MerchantSupport, supportTools } from './support.mjs';
-import { MerchantReceiving, receivingTools } from './receiving.mjs';
-import { MerchantPythonWorkspaces, pythonWorkspaceTools } from './python-workspace.mjs';
-import { MerchantGraphqlWorkspaces, graphqlWorkspaceTools } from './graphql-workspace.mjs';
-import { MerchantS3Workspaces, s3WorkspaceTools } from './s3-workspace.mjs';
-import { MerchantOpenSearchWorkspaces, openSearchWorkspaceTools } from './opensearch-workspace.mjs';
-import { MerchantSocrataWorkspaces, socrataWorkspaceTools } from './socrata-workspace.mjs';
-import { MerchantGeocodioWorkspaces, geocodioWorkspaceTools } from './geocodio-workspace.mjs';
-import { MerchantWebDavWorkspaces, webDavWorkspaceTools } from './webdav-tools.mjs';
-import { MerchantEdgarWorkspaces, edgarWorkspaceTools } from './sec-edgar-tools.mjs';
-import { MerchantSheetsWorkspaces, sheetsWorkspaceTools } from './sheets-workspace.mjs';
-import { MerchantCkanWorkspaces, ckanWorkspaceTools } from './ckan-workspace.mjs';
-import { MerchantTenderlyWorkspaces, tenderlyWorkspaceTools } from './tenderly-workspace.mjs';
-import { MerchantRedisWorkspaces, redisWorkspaceTools } from './redis-workspace.mjs';
-import { MerchantUSASpendingWorkspaces, usaSpendingWorkspaceTools } from './usaspending-workspace.mjs';
-import { MerchantSourceWorkspaces, sourceWorkspaceTools } from './source-workspace.mjs';
-import { MerchantOpenApiWorkspaces, openapiWorkspaceTools } from './openapi-workspace.mjs';
-import { MerchantHarWorkspaces, harWorkspaceTools } from './har-workspace.mjs';
-import { MerchantPublisher, publisherTools } from './publisher.mjs';
-import { createReleaseFacilitatorControl } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs';
-import { MerchantPricing, pricingTools } from './pricing.mjs';
-import { MerchantWooCommerce, woocommerceTools } from './woocommerce.mjs';
-import { MerchantBuyerExpenses, buyerExpenseTools } from './buyer-expenses.mjs';
+
+
+import { datasetReleaseView } from './catalog/dataset-lifecycle.mjs';
+
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-const idSchema = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
-const generationSchema = { type: 'integer', minimum: 0 };
-const digestSchema = { type: 'string', pattern: '^[0-9a-f]{64}$' };
-const textSchema = { type: 'string', minLength: 1, maxLength: 240 };
-const instanceSchema = { type: 'string', minLength: 1, maxLength: 64 };
-function tool(name, description, properties = {}, required = [], { readOnly = false, destructive = false, idempotent = false, openWorld = false } = {}) {
-  return { name, description, annotations: { readOnlyHint: readOnly, destructiveHint: destructive,
-    idempotentHint: idempotent, openWorldHint: openWorld },
-    inputSchema: { type: 'object', properties, required, additionalProperties: false } };
-}
-export const MERCHANT_TOOLS = [
-  tool('merchant_status', 'Inspect original release selection, retained history, seller readiness and this MCP process ownership. Makes only original loopback health/offer reads.', {}, [], { readOnly: true, idempotent: true }),
-  tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files, Python merchant, SQLite workbench, prepared DuckDB, S3, Stellar RPC, PostgreSQL, MySQL or ClickHouse package: exact source identities, public routes, payment choices and worker configuration. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
-  tool('merchant_stage', 'Retain a configured source alias as a new immutable original SF82 release: saved API workspace, upstream snapshot, Python application, original DuckDB datasets, S3 objects, Stellar RPC products, one native SQLite database snapshot, or original PostgreSQL/MySQL/ClickHouse named-query merchant. PostgreSQL and ClickHouse configuration is retained while database contents remain live. Does not activate, import application code, start a listener or make a payment.',
-    { source: idSchema, id: idSchema, label: textSchema }, ['source', 'id']),
-  tool('merchant_inspect', 'Inspect and verify one retained original release including complete terms, application hashes and native/challenge mode.', { id: idSchema }, ['id'], { readOnly: true, idempotent: true }),
-  tool('merchant_facilitators', 'List host-configured facilitator aliases for the retained merchant release. Reads the current host configuration without network requests.',
-    {}, [], { readOnly: true, idempotent: true }),
-  tool('merchant_facilitator_review', 'Review a configured provider against one retained release through the original native SDK. Returns actual supported capabilities and generated payment requirements, including fee sponsorship changes. Retain the review ID before staging.',
-    { provider: idSchema, releaseId: idSchema, id: idSchema, label: textSchema }, ['provider', 'releaseId', 'id'], { readOnly: true, openWorld: true }),
-  tool('merchant_facilitator_stage', 'Stage the reviewed facilitator with the same original compiled merchant source. Rechecks current capabilities and selection generation. A repeated completed review returns its same retained release; use existing compare, activate and restart afterward.',
-    { reviewId: digestSchema }, ['reviewId'], { idempotent: true, openWorld: true }),
-  tool('merchant_compare', 'Compare a staged release against the active release or a named retained version. Returns exact payment, route and application changes with the selection generation.',
-    { to: idSchema, from: { anyOf: [idSchema, { type: 'null' }] } }, ['to'], { readOnly: true, idempotent: true }),
-  tool('merchant_activate', 'Select an inspected immutable release using its exact digest and current selection generation. A running seller keeps its existing version until explicitly restarted.',
-    { id: idSchema, expectedDigest: digestSchema, expectedGeneration: generationSchema, reason: textSchema }, ['id', 'expectedDigest', 'expectedGeneration', 'reason']),
-  tool('merchant_rollback', 'Select a specific retained release through the original rollback history. Requires its exact digest and current generation; does not restart the seller.',
-    { to: idSchema, expectedDigest: digestSchema, expectedGeneration: generationSchema, reason: textSchema }, ['to', 'expectedDigest', 'expectedGeneration', 'reason']),
-  tool('merchant_start', 'Start the original SF82/SF30 seller for the selected release on this host, with its host-configured trusted handlers and facilitator. No paid resource is requested.',
-    { expectedGeneration: generationSchema, expectedDigest: digestSchema }, ['expectedGeneration', 'expectedDigest'], { openWorld: true }),
-  tool('merchant_stop', 'Gracefully stop only the original seller instance owned by this MCP process. Pass the instanceId from merchant_status.',
-    { instanceId: instanceSchema }, ['instanceId'], { destructive: true }),
-  tool('merchant_restart', 'Gracefully stop this process-owned seller and start the currently selected original release. Checks instance, generation and digest before stopping.',
-    { instanceId: instanceSchema, expectedGeneration: generationSchema, expectedDigest: digestSchema }, ['instanceId', 'expectedGeneration', 'expectedDigest'], { destructive: true, openWorld: true }),
-  tool('merchant_catalog', 'Read the actual original seller health, complete offers and OpenAPI document for this process-owned instance. Does not request any paid endpoint.',
-    { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
-  tool('merchant_client_export', 'Export the original JavaScript client, TypeScript declarations and OpenAPI for this running seller into a new named directory under the host-configured customer export root.',
-    { instanceId: instanceSchema, id: idSchema }, ['instanceId', 'id']),
-  tool('merchant_client_export_list', 'List retained customer exports in the original host-selected directory. Reads completion receipts, with explicit legacy/incomplete entries; full payload inspection remains available through status.',
-    { after: idSchema, limit: { type: 'integer', minimum: 1, maximum: 50 } }, [], { readOnly: true, idempotent: true }),
-  tool('merchant_client_export_status', 'Inspect the complete original customer export after a lost response or seller shutdown. Verifies saved files and reports a completion receipt, retained legacy files or an incomplete export without running the seller or generated code.',
-    { exportId: idSchema, includeOffers: { type: 'boolean' } }, ['exportId'], { readOnly: true, idempotent: true }),
-  tool('merchant_client_export_adopt', 'Record the exact inspected five legacy customer files as retained today. Requires their complete files digest, preserves all payloads, and does not invent a historical export time or release identity.',
-    { exportId: idSchema, expectedFilesSha256: digestSchema }, ['exportId', 'expectedFilesSha256'], { idempotent: true }),
-  tool('merchant_client_export_manifest', 'Read the saved original customer completion receipt and its exact file identity without rereading all payloads. Available after seller or MCP process restart.',
-    { exportId: idSchema }, ['exportId'], { readOnly: true, idempotent: true }),
-  tool('merchant_client_export_file', 'Read bounded SHA-pinned bytes from one original customer file or its completion receipt. Continue with readId and expectedSha256; after expiry, reopen the same digest and byte offset. Never regenerates or executes the client.',
-    { exportId: idSchema, file: { type: 'string', enum: [CLIENT_EXPORT_MANIFEST, ...CLIENT_EXPORT_FILES] }, expectedManifestSha256: digestSchema,
-      expectedSha256: digestSchema, readId: { type: 'string' }, offset: { type: 'integer', minimum: 0 },
-      limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES } },
-    ['exportId', 'file', 'expectedManifestSha256'], { readOnly: true, idempotent: true }),
-  tool('merchant_client_export_file_release', 'Release this original export’s temporary file snapshot. The retained customer payloads and completion receipt remain available.',
-    { exportId: idSchema, readId: { type: 'string' } }, ['exportId', 'readId'], { readOnly: true, idempotent: true }),
-  tool('merchant_operations', 'Open the original merchant operations, retained history and private availability controls for this process-owned running instance. The control link grants availability changes; keep it in the operator session.',
-    { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
-  ...discoveryTools(tool),
-  ...cacheControlTools(tool),
-  ...fleetControlTools(tool),
-  ...accountingTools(tool),
-  ...supportTools(tool),
-  ...receivingTools(tool),
-  ...pythonWorkspaceTools(tool),
-  ...graphqlWorkspaceTools(tool),
-  ...s3WorkspaceTools(tool),
-  ...openSearchWorkspaceTools(tool),
-  ...socrataWorkspaceTools(tool),
-  ...geocodioWorkspaceTools(tool),
-  ...webDavWorkspaceTools(tool),
-  ...edgarWorkspaceTools(tool),
-  ...sheetsWorkspaceTools(tool),
-  ...ckanWorkspaceTools(tool),
-  ...tenderlyWorkspaceTools(tool),
-  ...coingeckoWorkspaceTools(tool),
-  ...redisWorkspaceTools(tool),
-  ...usaSpendingWorkspaceTools(tool),
-  ...sourceWorkspaceTools(tool),
-  ...openapiWorkspaceTools(tool),
-  ...harWorkspaceTools(tool),
-  ...publisherTools(tool),
-  ...pricingTools(tool),
-  ...woocommerceTools(tool),
-  ...buyerExpenseTools(tool),
-];
-const definitions = new Map(MERCHANT_TOOLS.map(value => [value.name, value]));
+
+
 // SEC owns per-workspace mutation serialization so source cancellation and close
 // can reach a running acquisition while unrelated original workspaces keep operating.
-const mutations = new Set(MERCHANT_TOOLS.filter(value => !value.annotations.readOnlyHint && !value.name.startsWith('merchant_edgar_')).map(value => value.name));
+
 
 // The original release return values contain local handler/store paths. The MCP
 // interface needs their hashes and process identities, not executable locations.
@@ -133,7 +28,8 @@ function releaseView(release) {
   const { handlers, ...options } = runtime;
   return { ...rest, ...(rest.python ? { python: pythonSourceView(rest.python) } : {}),
     ...(rest.duckdb ? { duckdb: duckdbSourceView(rest.duckdb) } : {}),
-    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse || rest.redis) },
+    ...(rest.dataset ? { dataset: datasetReleaseView(rest.dataset) } : {}),
+    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse || rest.redis || rest.dataset || rest.opensearch || rest.mssql || rest.grpc) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
@@ -153,39 +49,86 @@ function expectedDigest(value) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #graphqlWorkspaces; #s3Workspaces; #opensearchWorkspaces; #socrataWorkspaces; #geocodioWorkspaces; #webdavWorkspaces; #edgarWorkspaces; #sheetsWorkspaces; #ckanWorkspaces; #tenderlyWorkspaces; #coingeckoWorkspaces; #redisWorkspaces; #usaSpendingWorkspaces; #sourceWorkspaces; #openapiWorkspaces; #harWorkspaces; #publishers; #pricing;
-  #clientExports; #facilitators; #woocommerce; #buyerExpenses;
-  constructor(config, { woocommerce, opensearch, openapi, accounting } = {}) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config, accounting); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#graphqlWorkspaces = new MerchantGraphqlWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#opensearchWorkspaces = new MerchantOpenSearchWorkspaces(config, opensearch); this.#socrataWorkspaces = new MerchantSocrataWorkspaces(config); this.#geocodioWorkspaces = new MerchantGeocodioWorkspaces(config); this.#webdavWorkspaces = new MerchantWebDavWorkspaces(config); this.#edgarWorkspaces = new MerchantEdgarWorkspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#ckanWorkspaces = new MerchantCkanWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#coingeckoWorkspaces = new MerchantCoinGeckoWorkspaces(config); this.#redisWorkspaces = new MerchantRedisWorkspaces(config); this.#usaSpendingWorkspaces = new MerchantUSASpendingWorkspaces(config); this.#sourceWorkspaces = new MerchantSourceWorkspaces(config); this.#openapiWorkspaces = new MerchantOpenApiWorkspaces(config, openapi); this.#harWorkspaces = new MerchantHarWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); this.#woocommerce = new MerchantWooCommerce(config, woocommerce); this.#buyerExpenses = new MerchantBuyerExpenses(config); }
-  get tools() { return structuredClone(MERCHANT_TOOLS); }
-  get maxRequestBytes() {
-    if (this.#config.graphqlWorkspaces) return 8 * 1024 * 1024;
-    return this.#config.opensearchWorkspaces ? 2 * 1024 * 1024 : 128 * 1024;
+  #tools; #definitions; #mutations; #options;
+  #providers = new Map(); #loaded = new Map(); #loadStates = new Map();
+  async #provider(key, dependency = false) {
+    if (!dependency && !merchantProviderConfigured(key, this.#config))
+      throw failure('TOOL_NOT_FOUND', 'Choose a tool advertised by this configured merchant.');
+    let loading = this.#providers.get(key);
+    if (!loading) {
+      const definition = MERCHANT_PROVIDERS[key], started = performance.now();
+      this.#loadStates.set(key, { state: 'LOADING', durationMs: null });
+      loading = (async () => {
+        try {
+          const [module, entries] = await Promise.all([
+            definition.load(),
+            Promise.all(definition.dependencies.map(async name => [name, await this.#provider(name, true)])),
+          ]);
+          const provider = await definition.create(module, this.#config, this.#options, Object.fromEntries(entries));
+          this.#loaded.set(key, provider);
+          this.#loadStates.set(key, { state: 'READY', durationMs: Math.round((performance.now() - started) * 1000) / 1000 });
+          return provider;
+        } catch (error) {
+          this.#providers.delete(key);
+          this.#loadStates.set(key, { state: 'ERROR', durationMs: Math.round((performance.now() - started) * 1000) / 1000,
+            error: { code: error.code ?? 'PROVIDER_LOAD_FAILED', message: error.message } });
+          throw error;
+        }
+      })();
+      this.#providers.set(key, loading);
+    }
+    return loading;
   }
-  async status() {
-    const result = await releaseStatus(this.#config.releaseStore);
+
+  #config; #managed = null; #busy = false; #closing = false; #active = new Set(); #close; #lastFailure = null;                                  
+       
+  
+  constructor(config, { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage } = {}) {
+    this.#config = config;
+    this.#options = { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage };
+    this.#tools = structuredClone(merchantToolCatalog(config));
+    this.#definitions = new Map(this.#tools.map(value => [value.name, value]));
+    this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
+  }
+  get tools() { return structuredClone(this.#tools); }
+  get maxRequestBytes() {
+    const configuredMaximum = (() => {
+      if (this.#config.graphqlWorkspaces) return 8 * 1024 * 1024;
+      return this.#config.mpp ? 3 * 1024 * 1024 : (this.#config.opensearchWorkspaces || this.#config.grpcWorkspaces || this.#config.usgsWorkspaces) ? 2 * 1024 * 1024 : this.#config.grantsWorkspaces ? 512 * 1024 : 128 * 1024;
+    })();
+    return Math.max(configuredMaximum, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0);
+  }
+  async #status() {
+    const result = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).releaseStatus(this.#config.releaseStore);
+    const summaries = Object.fromEntries(await Promise.all(Object.entries(MERCHANT_PROVIDERS)
+      .filter(([key, value]) => value.summary && merchantProviderConfigured(key, this.#config))
+      .map(async ([key]) => [key, (await this.#provider(key)).summary])));
     return { schema: 'stellar-forge.merchant-mcp-status.v1', merchant: this.#config.name,
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, graphqlWorkspaces: this.#graphqlWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, opensearchWorkspaces: this.#opensearchWorkspaces.summary, socrataWorkspaces: this.#socrataWorkspaces.summary, geocodioWorkspaces: this.#geocodioWorkspaces.summary, webdavWorkspaces: this.#webdavWorkspaces.summary, edgarWorkspaces: this.#edgarWorkspaces.summary, sheetsWorkspaces: this.#sheetsWorkspaces.summary, ckanWorkspaces: this.#ckanWorkspaces.summary, tenderlyWorkspaces: this.#tenderlyWorkspaces.summary, coingeckoWorkspaces: this.#coingeckoWorkspaces.summary, redisWorkspaces: this.#redisWorkspaces.summary, usaSpendingWorkspaces: this.#usaSpendingWorkspaces.summary, sourceWorkspaces: this.#sourceWorkspaces.summary, openapiWorkspaces: this.#openapiWorkspaces.summary, harWorkspaces: this.#harWorkspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, woocommerce: this.#woocommerce.summary, buyerExpenses: this.#buyerExpenses.summary, clientExports: this.#clientExports.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, ...summaries,
+        capabilities: { tools: this.#tools.length, families: merchantToolFamilies(this.#config) },
+        providers: [...this.#loadStates].map(([name, state]) => ({ name, ...state })) } };
   }
+  status() { return this.call('merchant_status'); }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
       throw failure('INSTANCE_CONFLICT', 'This MCP process does not own that seller instance. Read merchant_status.');
     return this.#managed;
   }
   async #selected(args) {
-    const state = await readReleaseState(this.#config.releaseStore);
+    const state = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).readReleaseState(this.#config.releaseStore);
     if (state.generation !== generation(args.expectedGeneration)) throw failure('RELEASE_CONFLICT', 'Selection changed. Read merchant_status and compare the current release.');
     if (!state.active) throw failure('RELEASE_NOT_SELECTED', 'Activate a staged release before starting.');
-    const release = await inspectRelease(this.#config.releaseStore, state.active);
+    const release = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).inspectRelease(this.#config.releaseStore, state.active);
     if (release.digest !== expectedDigest(args.expectedDigest)) throw failure('RELEASE_CONFLICT', 'Selected release differs from the inspected digest.');
     return { state, release };
   }
   async #start(args) {
     await this.#selected(args);
     if (this.#managed) throw failure('RELEASE_BUSY', 'This MCP process already owns a seller. Use merchant_restart or merchant_stop.');
-    const session = await runActiveRelease(this.#config.releaseStore, { expectedGeneration: args.expectedGeneration });
+    const session = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).runActiveRelease(this.#config.releaseStore, { expectedGeneration: args.expectedGeneration });
     this.#managed = session;
     session.completion.then(() => { if (this.#managed === session) this.#managed = null; }, error => {
       this.#lastFailure = { code: error.code ?? 'SELLER_EXIT', message: error.message };
@@ -200,7 +143,7 @@ export class MerchantReleaseOperator {
   }
   async #catalog(instanceId) {
     const session = this.#owned(instanceId);
-    return readOwnedSellerCatalog({ session, isCurrent: candidate => this.#managed === candidate });
+    return (await import('./client-exports.mjs')).readOwnedSellerCatalog({ session, isCurrent: candidate => this.#managed === candidate });
   }
   async #sources(source) {
     const aliases = Object.keys(this.#config.sources);
@@ -211,41 +154,56 @@ export class MerchantReleaseOperator {
     return inspectMerchantSource(candidate);
   }
   async #execute(name, args) {
-    if (name.startsWith('merchant_client_export_')) return this.#clientExports.call(name, args);
-    if (name.startsWith('merchant_buyer_expense_')) return this.#buyerExpenses.call(name, args);
-    if (name.startsWith('merchant_accounting_')) return this.#accounting.call(name, args);
-    if (name.startsWith('merchant_woo_')) return this.#woocommerce.call(name, args);
-    if (name.startsWith('merchant_pricing_')) return this.#pricing.call(name, args);
-    if (name.startsWith('merchant_receiving_')) return this.#receiving.call(name, args);
-    if (name.startsWith('merchant_graphql_')) return this.#graphqlWorkspaces.call(name, args);
-    if (name.startsWith('merchant_python_')) return this.#pythonWorkspaces.call(name, args);
-    if (name.startsWith('merchant_s3_')) return this.#s3Workspaces.call(name, args);
-    if (name.startsWith('merchant_opensearch_')) return this.#opensearchWorkspaces.call(name, args);
-    if (name.startsWith('merchant_socrata_')) return this.#socrataWorkspaces.call(name, args);
-    if (name.startsWith('merchant_geocodio_')) return this.#geocodioWorkspaces.call(name, args);
-    if (name.startsWith('merchant_webdav_')) return this.#webdavWorkspaces.call(name, args);
-    if (name.startsWith('merchant_edgar_')) return this.#edgarWorkspaces.call(name, args);
-    if (name.startsWith('merchant_sheets_')) return this.#sheetsWorkspaces.call(name, args);
-    if (name.startsWith('merchant_ckan_')) return this.#ckanWorkspaces.call(name, args);
-    if (name.startsWith('merchant_coingecko_')) return this.#coingeckoWorkspaces.call(name, args);
-    if (name.startsWith('merchant_tenderly_')) return this.#tenderlyWorkspaces.call(name, args);
-    if (name.startsWith('merchant_redis_')) return this.#redisWorkspaces.call(name, args);
-    if (name.startsWith('merchant_usaspending_')) return this.#usaSpendingWorkspaces.call(name, args);
-    if (name.startsWith('merchant_source_')) return this.#sourceWorkspaces.call(name, args);
-    if (name.startsWith('merchant_openapi_')) return this.#openapiWorkspaces.call(name, args);
-    if (name.startsWith('merchant_har_')) return this.#harWorkspaces.call(name, args);
-    if (name === 'merchant_publishers' || name.startsWith('merchant_publisher_')) return this.#publishers.call(name, args);
-    if (name.startsWith('merchant_fleet_')) return this.#fleet.call(name, args);
+    if (name.startsWith('merchant_client_export_')) return (await this.#provider('clientExports')).call(name, args);
+    const family = merchantToolFamily(name);
+    if (family && !['cache', 'dataset', 'discovery', 'facilitators'].includes(family)) return (await this.#provider(family)).call(name, args);
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     const root = this.#config.releaseStore;
-    if (name.startsWith('merchant_case') || name.startsWith('merchant_incident') || name.startsWith('merchant_notification') || name.startsWith('merchant_support_'))
-      return this.#support.call(name, args);
+    if (name.startsWith('merchant_dataset_')) return (await this.#provider('dataset')).merchantDatasetOperation(root, name, args);
+    
     switch (name) {
-      case 'merchant_status': return this.status();
+      case 'merchant_status': return this.#status();
       case 'merchant_sources': return this.#sources(args.source);
-      case 'merchant_facilitators': return this.#facilitators.status();
-      case 'merchant_facilitator_review': return this.#facilitators.review(args);
+      case 'merchant_facilitators': return (await this.#provider('facilitators')).status();
+      case 'merchant_facilitator_review': return (await this.#provider('facilitators')).review(args);
       case 'merchant_facilitator_stage': {
-        const result = await this.#facilitators.stage(args);
+        const result = await (await this.#provider('facilitators')).stage(args);
         return { ...result, release: releaseView(result.release) };
       }
       case 'merchant_operations': {
@@ -253,46 +211,47 @@ export class MerchantReleaseOperator {
         return { instanceId: session.observation.instanceId, releaseId: session.release.id,
           available: Boolean(session.operations), operations: session.operations ? { ...session.operations } : null };
       }
-      case 'merchant_discovery_status': return this.#discovery.status(args);
-      case 'merchant_discovery_review': return this.#discovery.review(args);
-      case 'merchant_discovery_apply': return this.#discovery.apply(args);
-      case 'merchant_cache_status': return merchantCacheStatus(root);
-      case 'merchant_cache_invalidate': this.#owned(args.instanceId); return merchantCacheInvalidate(root, args);
-      case 'merchant_cache_inspect': this.#owned(args.instanceId); return merchantCacheInspect(root, args);
-      case 'merchant_cache_configure': this.#owned(args.instanceId); return merchantCacheConfigure(root, args);
-      case 'merchant_cache_purge': this.#owned(args.instanceId); return merchantCachePurge(root, args);
-      case 'merchant_cache_operation': this.#owned(args.instanceId); return merchantCacheOperation(root, args);
-      case 'merchant_inspect': return releaseView(await inspectRelease(root, identifier(args.id)));
+      case 'merchant_discovery_status': return (await this.#provider('discovery')).status(args);
+      case 'merchant_discovery_review': return (await this.#provider('discovery')).review(args);
+      case 'merchant_discovery_apply': return (await this.#provider('discovery')).apply(args);
+      case 'merchant_cache_status': return (await this.#provider('cache')).merchantCacheStatus(root);
+      case 'merchant_cache_invalidate': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCacheInvalidate(root, args);
+      case 'merchant_cache_inspect': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCacheInspect(root, args);
+      case 'merchant_cache_configure': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCacheConfigure(root, args);
+      case 'merchant_cache_purge': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCachePurge(root, args);
+      case 'merchant_cache_operation': this.#owned(args.instanceId); return (await this.#provider('cache')).merchantCacheOperation(root, args);
+      case 'merchant_inspect': return releaseView(await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).inspectRelease(root, identifier(args.id)));
       case 'merchant_stage': {
         const alias = identifier(args.source, 'Source alias'), source = this.#config.sources[alias];
         if (!source) throw failure('SOURCE_NOT_FOUND', 'Choose one of the host-configured source aliases.');
-        const release = await stageRelease(root, { ...source, id: identifier(args.id), label: line(args.label ?? args.id, 'Release label') });
+        const release = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).stageRelease(root, { ...source, id: identifier(args.id), label: line(args.label ?? args.id, 'Release label') });
         return { source: alias, release: releaseView(release) };
       }
       case 'merchant_compare': {
-        const state = await readReleaseState(root), from = args.from === undefined ? state.active : args.from;
-        const comparison = await compareReleases(root, from === null ? null : identifier(from), identifier(args.to));
+        const state = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).readReleaseState(root), from = args.from === undefined ? state.active : args.from;
+        const comparison = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).compareReleases(root, from === null ? null : identifier(from), identifier(args.to));
         return { ...comparison, generation: state.generation, before: releaseView(comparison.before), after: releaseView(comparison.after),
           runtimeChanges: comparison.runtimeChanges.map(change => change.field === 'handlers'
             ? { field: 'applicationConfigured', before: Boolean(change.before), after: Boolean(change.after) }
             : change.field === 'python' ? { ...change, before: pythonSourceView(change.before), after: pythonSourceView(change.after) }
-            : change.field === 'duckdb' ? { ...change, before: duckdbSourceView(change.before), after: duckdbSourceView(change.after) } : change) };
+            : change.field === 'duckdb' ? { ...change, before: duckdbSourceView(change.before), after: duckdbSourceView(change.after) }
+            : change.field === 'dataset' ? { ...change, before: datasetReleaseView(change.before), after: datasetReleaseView(change.after) } : change) };
       }
       case 'merchant_activate': case 'merchant_rollback': {
         const target = identifier(name === 'merchant_activate' ? args.id : args.to);
-        const release = await inspectRelease(root, target);
+        const release = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).inspectRelease(root, target);
         if (release.digest !== expectedDigest(args.expectedDigest)) throw failure('RELEASE_CONFLICT', 'Release differs from the inspected digest.');
         const options = { expectedGeneration: generation(args.expectedGeneration), reason: line(args.reason, 'Change reason') };
-        const result = name === 'merchant_activate' ? await activateRelease(root, target, options) : await rollbackRelease(root, { ...options, to: target });
-        return { ...result, status: await this.status() };
+        const result = name === 'merchant_activate' ? await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).activateRelease(root, target, options) : await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).rollbackRelease(root, { ...options, to: target });
+        return { ...result, status: await this.#status() };
       }
-      case 'merchant_start': await this.#start(args); return this.status();
-      case 'merchant_stop': return { stopped: await this.#stop(args.instanceId), status: await this.status() };
+      case 'merchant_start': await this.#start(args); return this.#status();
+      case 'merchant_stop': return { stopped: await this.#stop(args.instanceId), status: await this.#status() };
       case 'merchant_restart': {
         this.#owned(args.instanceId); await this.#selected(args);
         const stopped = await this.#stop(args.instanceId);
         await this.#start(args);
-        return { stopped, status: await this.status() };
+        return { stopped, status: await this.#status() };
       }
       case 'merchant_catalog': {
         const { session, health, offers, openapi } = await this.#catalog(args.instanceId);
@@ -302,39 +261,51 @@ export class MerchantReleaseOperator {
       case 'merchant_client_export': {
         const exportId = identifier(args.id, 'Export ID');
         const { session, openapi } = await this.#catalog(args.instanceId);
-        return this.#clientExports.generate({ exportId, session, openapi });
+        return (await this.#provider('clientExports')).generate({ exportId, session, openapi });
       }
       default: throw failure('TOOL_NOT_FOUND', 'Unknown merchant operation.');
     }
   }
   async call(name, args = {}) {
     if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant operator is closing.');
-    const definition = definitions.get(name);
-    if (!definition) throw failure('TOOL_NOT_FOUND', 'Unknown merchant operation.');
+    const definition = this.#definitions.get(name);
+    if (!definition) throw failure('TOOL_NOT_FOUND', 'Choose a tool advertised by this configured merchant.');
     exact(args, Object.keys(definition.inputSchema.properties), definition.inputSchema.required);
-    if (!mutations.has(name)) return this.#execute(name, args);
-    if (this.#busy) throw failure('OPERATOR_BUSY', 'Another merchant change is running. Read merchant_status before continuing.');
-    this.#busy = true; this.#lastFailure = null;
-    let done; this.#active = new Promise(resolve => { done = resolve; });
+    const changing = this.#mutations.has(name);
+    if (changing && this.#busy) throw failure('OPERATOR_BUSY', 'Another merchant change is running. Read merchant_status before continuing.');
+    if (changing) { this.#busy = true; this.#lastFailure = null; }
+    let done;
+    const active = new Promise(resolve => { done = resolve; });
+    this.#active.add(active);
     try {
       const result = await this.#execute(name, args);
-      this.#busy = false;
-      if (result?.operator) result.operator.busy = false;
-      if (result?.status?.operator) result.status.operator.busy = false;
+      if (changing) {
+        this.#busy = false;
+        if (result?.operator) result.operator.busy = false;
+        if (result?.status?.operator) result.status.operator.busy = false;
+      }
       return result;
+    } catch (error) {
+      if (changing) this.#lastFailure = { code: error.code ?? 'OPERATOR_ERROR', message: error.message };
+      throw error;
+    } finally {
+      if (changing) this.#busy = false;
+      this.#active.delete(active);
+      done();
     }
-    catch (error) { this.#lastFailure = { code: error.code ?? 'OPERATOR_ERROR', message: error.message }; throw error; }
-    finally { this.#busy = false; done(); }
   }
   close() {
     if (this.#close) return this.#close;
     this.#closing = true;
-    this.#graphqlWorkspaces.beginClose();
-    this.#fleet.cancelStaging();
+    this.#loaded.get('fleet')?.cancelStaging();
     this.#close = (async () => {
-      await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#graphqlWorkspaces.close(), this.#s3Workspaces.close(), this.#opensearchWorkspaces.close(), this.#socrataWorkspaces.close(), this.#geocodioWorkspaces.close(), this.#webdavWorkspaces.close(), this.#edgarWorkspaces.close(), this.#sheetsWorkspaces.close(), this.#ckanWorkspaces.close(), this.#tenderlyWorkspaces.close(), this.#coingeckoWorkspaces.close(), this.#redisWorkspaces.close(), this.#usaSpendingWorkspaces.close(), this.#sourceWorkspaces.close(), this.#openapiWorkspaces.close(), this.#harWorkspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#woocommerce.close(), this.#buyerExpenses.close(), this.#clientExports.close(),
-        this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
+      // Reads can own files and native model handles too. Drain every accepted call,
+      // including an in-flight provider import, before closing the loaded owners.
+      await Promise.allSettled([...this.#active]);
+      const outcomes = await Promise.allSettled([
+        ...[...this.#loaded.values()].map(provider => Promise.resolve().then(() => provider.close?.())),
+        this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve(),
+      ]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');
     })();
