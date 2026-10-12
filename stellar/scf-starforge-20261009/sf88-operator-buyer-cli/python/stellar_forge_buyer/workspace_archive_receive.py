@@ -54,12 +54,23 @@ def _private_folder(path, *, create=True):
     while create and not os.path.lexists(current):
         missing.append(current)
         current = current.parent
-    folder = private_directory(Path(path), create=create)
+    # pathlib's parents=True does not apply mode to intermediate directories.
+    # Create each original receiving directory explicitly so a caller's ordinary
+    # umask cannot leave a 0755 parent inside this private payload tree.
+    for created in reversed(missing):
+        try:
+            created.mkdir(mode=0o700)
+        except FileExistsError:
+            pass
+        checked = private_directory(created, create=False)
+        if hasattr(os, "getuid") and checked.lstat().st_uid != os.getuid():
+            _error("PRIVATE_DIRECTORY_REQUIRED")
+        sync_directory(checked)
+        sync_directory(checked.parent)
+    folder = private_directory(Path(path), create=False)
     info = folder.lstat()
     if hasattr(os, "getuid") and info.st_uid != os.getuid():
         _error("PRIVATE_DIRECTORY_REQUIRED")
-    for created in missing:
-        sync_directory(created.parent)
     return folder
 
 

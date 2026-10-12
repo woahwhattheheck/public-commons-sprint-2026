@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse, hashlib, json, os
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
-import signal, sqlite3, stat, sys, threading, time, urllib.request, urllib.parse
+import signal, sqlite3, stat, sys, threading, time, urllib.request, urllib.parse, zipfile
 
 OPERATION = "SCF-ANALYSIS-PROJECT-OPENING-7DE2-20261012"
 ORIGINAL_SHA = "41030ce3c6538c21cb9088e839839b889ffd0fb99fff57f417f62cbbd390c53c"
@@ -33,12 +33,31 @@ def identity(path):
     return {"bytes":before.st_size,"sha256":sha}
 
 
-def original_sources(archive):
-    import zipfile
-    with zipfile.ZipFile(archive) as z:
-        raw=z.read("workspace/datasets.sqlite3")
-    with sqlite3.connect(":memory:") as db:
-        db.deserialize(raw)
+def original_sources(archive, expected, directory):
+    # Keep the exact archived database separate from the received workspace:
+    # later native jobs may legitimately advance that workspace on a retry.
+    path=Path(directory)/"original-source-database.sqlite3"
+    selected={key:expected[key] for key in ("bytes","sha256")}
+    if not os.path.lexists(path):
+        with zipfile.ZipFile(archive) as package:
+            raw=package.read("workspace/datasets.sqlite3")
+        if {"bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest()}!=selected:
+            raise ValueError("The original archived source database differs")
+        partial=path.with_name("."+path.name+".partial")
+        descriptor=os.open(partial,os.O_WRONLY|os.O_CREAT|os.O_NOFOLLOW,0o600)
+        with os.fdopen(descriptor,"wb") as stream:
+            info=os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_uid!=os.geteuid():
+                raise ValueError("Keep the original source database staging file")
+            os.ftruncate(stream.fileno(),0)
+            stream.write(raw);stream.flush();os.fsync(stream.fileno())
+        os.replace(partial,path)
+    if identity(path)!=selected:
+        raise ValueError("The original source database changed before source selection")
+    descriptor=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(descriptor)
+    finally:os.close(descriptor)
+    with sqlite3.connect(path.as_uri()+"?mode=ro&immutable=1",uri=True) as db:
         db.execute("PRAGMA trusted_schema=OFF")
         db.execute("PRAGMA query_only=ON")
         return [json.loads(x[0]) for x in db.execute(
@@ -156,7 +175,7 @@ def run(args):
         source=private_directory(root/"source",create=True)
         working=source/"analysis"
         received=restore_archive(archive,working,operation=RECEIVE_ORIGINAL,expected_sha256=ORIGINAL_SHA)
-        original_records=original_sources(archive)
+        original_records=original_sources(archive,original["manifest"]["database"],root)
         workspace=AnalysisWorkspace(working,checkout=checkout,node=str(node))
         retained=[]
         try:
