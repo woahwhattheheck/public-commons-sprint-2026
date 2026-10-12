@@ -1,4 +1,5 @@
 import { merchantProviderConfigured } from './providers.mjs';
+import { stacWorkspaceTools } from './catalog/stac-workspace.mjs';
 import { apiPassWorkspaceTools } from './api-pass-protocol.mjs';
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { CLIENT_EXPORT_MANIFEST, CLIENT_EXPORT_FILES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export-contracts.mjs';
@@ -68,6 +69,7 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 
 const familyTools = {
+  stacWorkspaces: stacWorkspaceTools(tool),
   apiPassWorkspaces: apiPassWorkspaceTools(tool),
   discovery: discoveryTools(tool),
   cache: cacheControlTools(tool),
@@ -163,6 +165,7 @@ const MERCHANT_TOOLS = [
     { exportId: idSchema, readId: { type: 'string' } }, ['exportId', 'readId'], { readOnly: true, idempotent: true }),
   tool('merchant_operations', 'Open the original merchant operations, retained history and private availability controls for this process-owned running instance. The control link grants availability changes; keep it in the operator session.',
     { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
+  ...familyTools.stacWorkspaces,
   ...familyTools.apiPassWorkspaces,
   ...familyTools.discovery,
   ...familyTools.cache,
