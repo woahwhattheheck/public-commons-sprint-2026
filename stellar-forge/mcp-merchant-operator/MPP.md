@@ -24,7 +24,8 @@ starforge mpp runtime-receive /srv/mpp/native-runtime --inspect
 ~~~
 
 It preserves the locked package locations and SHA512 archive integrity, reuses
-completed packages after interruption, and supports an explicit --cache directory
+completed packages after interruption, retries transient original registry requests
+inside the same process, and supports an explicit --cache directory
 for following offline receivers. The native MPP guide describes the complete
 runtime receiving workflow.
 
