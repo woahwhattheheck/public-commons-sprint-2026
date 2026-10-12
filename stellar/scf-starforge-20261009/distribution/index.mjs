@@ -36,3 +36,6 @@ export { openS3MerchantWorkspace, validateS3MerchantDraft } from '../sf30-seller
 export { startS3MerchantWorkspace } from '../sf30-seller-sdk/s3/workspace/server.mjs';
 export * as mpp from '../mpp-charge/index.mjs';
 export { main as startGoldRushWorkspace, openWorkbench as openGoldRushWorkbench } from '../sf30-seller-sdk/examples/goldrush-stellar-pilot/workbench.mjs';
+export { SDMX_MERCHANT_RELEASE_SCHEMA, prepareSdmxMerchant, readSdmxMerchant,
+  startSdmxMerchant, publishSdmxMerchant } from '../sf30-seller-sdk/sdmx/merchant.mjs';
+export { reviewSdmxBuyer, prepareSdmxBuyer } from '../sf30-seller-sdk/sdmx/customer.mjs';
