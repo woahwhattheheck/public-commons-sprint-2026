@@ -24,8 +24,8 @@ CONTROLLER_ARCHIVE = ROOT / "inbox/native-controller.tar.gz"
 CONTROLLER_SHA256 = "9ab83b543b260efc13ebabb7e0a6c1474373e3af79ef00a194d6da84d41a55cb"
 CONTROLLER_MANIFEST_SHA256 = "76ea745e526e8c73d1198867a7636ca7e0c1134cf2ae32d355c722e582a63b89"
 SOURCE_ARCHIVE = "NDJSON_File_Jobs_Original_Source_20261012.zip"
-SOURCE_BYTES = 3116487
-SOURCE_SHA256 = "8931d2e2eaac9c91f08f9c8e4058c15e56373dfe321f8eff05647059533337c3"
+SOURCE_BYTES = 3301268
+SOURCE_SHA256 = "91659e8eaae0ed734041c7264bc48f675ec224fd2d8a5d4b0e447da38d04a74c"
 PRODUCT_COMMIT = "1d01fe16eb66d06a18a61e59f7a66d859cc5caa3"
 PUBLISHER_COMMIT = "b670ee2c460f2821b3af0cec9bcd70c5be365e3c"
 REPOSITORY = "woahwhattheheck/public-commons-sprint-2026"
@@ -144,7 +144,7 @@ def install_source():
     with zipfile.ZipFile(io.BytesIO(raw)) as carrier:
         members = carrier.infolist()
         names = [member.filename for member in members]
-        if len(names) != 292 or len(names) != len(set(names)):
+        if len(names) != 309 or len(names) != len(set(names)):
             raise RuntimeError("complete source member selection differs")
         manifest = json.loads(carrier.read("source-manifest.json"))
         if (manifest.get("schema") != "scf.ndjson-file-jobs-native-source.v1"
@@ -152,7 +152,7 @@ def install_source():
             raise RuntimeError("original source operation differs")
         groups = manifest.get("groups", [])
         if [(g.get("name"), g.get("commit"), len(g.get("files", []))) for g in groups] != [
-                ("product", PRODUCT_COMMIT, 270), ("publisher", PUBLISHER_COMMIT, 21)]:
+                ("product", PRODUCT_COMMIT, 287), ("publisher", PUBLISHER_COMMIT, 21)]:
             raise RuntimeError("original independent source commits differ")
         selected = {}
         for group in groups:
@@ -222,7 +222,7 @@ def prepare(shared_state_root):
         path = Path("/sys/fs/cgroup") / name
         if path.is_file():
             memory[name] = path.read_text().strip()
-    print(json.dumps({"operationId": NATIVE_OPERATION, "sourceFiles": 291,
+    print(json.dumps({"operationId": NATIVE_OPERATION, "sourceFiles": 308,
                       "receiptSha256": hashlib.sha256(encoded).hexdigest(),
                       "runtime": receipt["runtime"], "memory": memory,
                       "diskAvailableBytes": disk.f_bavail * disk.f_frsize}), flush=True)
