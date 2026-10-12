@@ -6,7 +6,17 @@ One customer call runs one point-in-time search and gathers its pages before the
 
 Agent hosts can use [merchant MCP](../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md) to author queries, maintain relevance judgments, operate managed releases and deliver original customer files. Its 44 OpenSearch tools use the existing source, plan, workspace and per-alias deployment store. After preparing a query, stage and compare its retained release, select and run it, generate the customer client from the actual seller, then use the same lifecycle for upgrades and rollback. Intact customer exports can recover their original completion manifest through the same alias. Original request recovery and SHA-pinned result, report, client and archive reads continue from the saved records.
 
-## Requirements
+## Publish a captured edition
+
+The [captured-edition dataset operator](CAPTURED-DATASETS.md) turns an edition already saved in the search workspace into an independent dataset product. It retains the original query, input, result bytes, document identities, exact-integer metadata and capture date alongside the typed CSV projection. Customers query the saved rows through the original versioned dataset engine.
+
+Run `node dataset-cli.mjs opensearch-captured --help` from the seller SDK directory. Its complete workflow prepares an immutable package, serves the original query and rollback workspace, publishes a later saved edition with the current snapshot and revision, exports the generated customer SDK, and reopens the same release and version store. The `rebind` command prepares a new receiver package with an explicit destination for its version store.
+
+Choose the original public payment terms and HTTPS origin during preparation. Add `serve --facilitator HTTPS_URL` to use the original seller's configured verification and settlement path. The default serves its HTTP402 challenge and operator workspace. A customer's snapshot selector and continuation cursor identify the retained version being queried.
+
+This mode reads the selected workspace's saved editions. Its preparation, publication and operator queries need the existing Node runtime and dataset dependencies; a new OpenSearch connection is unnecessary.
+
+## Live source requirements
 
 Use Node.js **22.16 or newer** with JSON.parse source-context support, and an existing **OpenSearch 3.3 or newer** cluster. The adapter uses native HTTP and Node TLS; it needs no OpenSearch client package. Paid delivery uses the original installed x402 packages and configured facilitator.
 
