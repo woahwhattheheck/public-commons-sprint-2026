@@ -85,13 +85,13 @@ export async function readGrpcWorkspaceConfiguration(path) {
   const workspaces = Object.create(null);
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     checked(alias, ALIAS, 'workspace alias');
-    exact(input, ['label', 'consoleUrlEnv', 'consoleUrlFile', 'captures', 'files']);
+    exact(input, ['label', 'consoleUrlEnv', 'consoleUrlFile', 'captures', 'files', 'reflections']);
     if ((input.consoleUrlEnv === undefined) === (input.consoleUrlFile === undefined))
       throw fail('CONFIGURATION_ERROR', 'Declare exactly one original console URL environment name or private file.');
-    const captures = Object.create(null), files = Object.create(null);
-    for (const name of ['captures', 'files']) if (input[name] !== undefined &&
+    const captures = Object.create(null), files = Object.create(null), reflections = Object.create(null);
+    for (const name of ['captures', 'files', 'reflections']) if (input[name] !== undefined &&
       (!plain(input[name]) || Object.keys(input[name]).length > 128))
-      throw fail('CONFIGURATION_ERROR', 'Declare up to 128 original capture or receiving file handles.');
+      throw fail('CONFIGURATION_ERROR', 'Declare up to 128 original capture, reflection or receiving file handles.');
     for (const [handle, source] of Object.entries(input.captures ?? {})) {
       checked(handle, ALIAS, 'capture handle');
       exact(source, ['label', 'directory', 'entrypoints', 'sourceFile', 'planFile'], ['directory', 'entrypoints', 'sourceFile', 'planFile']);
@@ -101,6 +101,14 @@ export async function readGrpcWorkspaceConfiguration(path) {
       captures[handle] = { label: printable(source.label ?? handle, 'capture label', 120), directory: hostPath(source.directory, base),
         entrypoints: [...source.entrypoints], sourceFile: hostPath(source.sourceFile, base), planFile: hostPath(source.planFile, base) };
     }
+    for (const [handle, profile] of Object.entries(input.reflections ?? {})) {
+      checked(handle, ALIAS, 'reflection profile');
+      exact(profile, ['label', 'sourceFile', 'protocol'], ['sourceFile']);
+      if (profile.protocol !== undefined && !['auto', 'v1', 'v1alpha'].includes(profile.protocol))
+        throw fail('CONFIGURATION_ERROR', 'Select auto, v1 or v1alpha reflection.');
+      reflections[handle] = { label: printable(profile.label ?? handle, 'reflection label', 120),
+        sourceFile: hostPath(profile.sourceFile, base), protocol: profile.protocol ?? 'auto' };
+    }
     for (const [handle, source] of Object.entries(input.files ?? {})) {
       checked(handle, ALIAS, 'receiving file handle');
       exact(source, ['label', 'path', 'kind', 'sha256'], ['path', 'kind']);
@@ -108,7 +116,7 @@ export async function readGrpcWorkspaceConfiguration(path) {
       files[handle] = { label: printable(source.label ?? handle, 'file label'), path: hostPath(source.path, base), kind: source.kind,
         ...(source.sha256 === undefined ? {} : { sha256: checked(source.sha256, SHA, 'file SHA256') }) };
     }
-    workspaces[alias] = { label: printable(input.label ?? alias, 'workspace label'), captures, files,
+    workspaces[alias] = { label: printable(input.label ?? alias, 'workspace label'), captures, files, reflections,
       ...(input.consoleUrlFile === undefined
         ? { consoleUrlEnv: checked(input.consoleUrlEnv, /^[A-Za-z_][A-Za-z0-9_]*$/, 'console URL environment name') }
         : { consoleUrlFile: hostPath(input.consoleUrlFile, base) }) };
@@ -125,13 +133,23 @@ const methodName = { type: 'string', minLength: 1, maxLength: 1024 };
 const reason = { type: 'string', minLength: 1, maxLength: 240 };
 const instance = { type: 'string', minLength: 1, maxLength: 160 };
 const read = { readOnly: true, idempotent: true };
+const reflectionSource = { ...selection, profile: alias, revision: digest,
+  protocol: { type: 'string', enum: ['auto', 'v1', 'v1alpha'] } };
 export function grpcWorkspaceTools(tool) {
   return [
-    tool('merchant_grpc_workspaces', 'List original gRPC workspaces and host-declared capture/request/receiving handles.', {}, [], read),
+    tool('merchant_grpc_workspaces', 'List original gRPC workspaces and host-declared protobuf capture, reflection, request and receiving handles.', {}, [], read),
     tool('merchant_grpc_status', 'Read the original current revision, generation, native runtime and complete inventory counts. Recover here after an interrupted action.', selection, ['workspace'], read),
-    tool('merchant_grpc_inventory', 'Page every original revision, preparation, intent or retained call, or complete delivery exports. Continue with the returned snapshot and nextOffset.', { ...selection, kind: { type: 'string', enum: ['revisions', 'prepared', 'intents', 'attempts', 'exports'] }, ...page }, ['workspace', 'kind'], read),
+    tool('merchant_grpc_inventory', 'Page every original revision, preparation, intent or retained call, or complete delivery exports. Continue with the returned snapshot and nextOffset.', { ...selection, kind: { type: 'string', enum: ['revisions', 'prepared', 'intents', 'attempts', 'reflections', 'exports'] }, ...page }, ['workspace', 'kind'], read),
     tool('merchant_grpc_revision', 'Inspect an exact saved revision. Source and plan preserve complete values; methods and routes are paged. The complete captured protobuf closure is available through revision export.', { ...revision, section: { type: 'string', enum: ['summary', 'source', 'plan', 'methods', 'routes'] }, ...page }, ['workspace', 'revision'], read),
     tool('merchant_grpc_capture', 'Capture a host-declared proto/import closure, connection and merchant plan through the original operator. baseRevision is the currently selected revision, or null for a new workspace.', { ...selection, capture: alias, baseRevision, title: { type: 'string', minLength: 1, maxLength: 120 } }, ['workspace', 'capture', 'baseRevision'], {}),
+    tool('merchant_grpc_reflection_inventory', 'Read native server-reflection services using exactly one host reflection profile or saved source revision. Returns the complete inventory and SHA256 for explicit descriptor selection. No application method is called.', reflectionSource, ['workspace'], { ...read, openWorld: true }),
+    tool('merchant_grpc_reflection_capture', 'Capture the selected services and exact descriptor/import bytes through one native reflection stream. Keep operationId for recovery; the reviewed inventory hash and current baseRevision bind this retained preview. Inspect the returned source/type diff before saving.', { ...reflectionSource, operationId: uuid,
+      services: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 512 }, minItems: 1, maxItems: 256, uniqueItems: true },
+      expectedInventorySha256: digest, baseRevision }, ['workspace', 'operationId', 'services', 'expectedInventorySha256', 'baseRevision'], { idempotent: true, openWorld: true }),
+    tool('merchant_grpc_reflection_open', 'Open an immutable descriptor capture by its original ID without querying the endpoint. Supply baseRevision to compare the same bytes with another saved revision before applying them. Large complete captures remain downloadable.', { ...selection, captureId: uuid, baseRevision }, ['workspace', 'captureId'], read),
+    tool('merchant_grpc_reflection_save', 'Approve the exact retained descriptor capture and complete merchant plan through the original CAS revision workflow. This saves captured bytes without another reflection request. Set routes to [] to select new methods before preparing.', { ...selection, captureId: uuid, expectedCaptureSha256: digest,
+      baseRevision, title: { type: 'string', minLength: 1, maxLength: 120 }, plan: { type: 'object' } },
+      ['workspace', 'captureId', 'expectedCaptureSha256', 'baseRevision', 'plan'], {}),
     tool('merchant_grpc_save', 'Save edited connection, exact payment terms or typed requests while preserving the specified revision’s original protobuf closure. Supply the current baseRevision; omitted fields retain the source revision’s values.', { ...revision, baseRevision, source: { type: 'object' }, plan: { type: 'object' }, title: { type: 'string', minLength: 1, maxLength: 120 } }, ['workspace', 'revision', 'baseRevision'], {}),
     tool('merchant_grpc_import', 'Receive a complete original revision from one host file handle or retained revision export into this native workspace. Native validation and baseRevision apply to the imported closure and plan.', { ...selection, file: alias, exportId: digest, baseRevision, title: { type: 'string', minLength: 1, maxLength: 120 } }, ['workspace', 'baseRevision'], {}),
     tool('merchant_grpc_checkout', 'Select an existing saved revision using the original current-revision check. This preserves its original source and history.', { ...revision, baseRevision }, ['workspace', 'revision', 'baseRevision'], {}),
@@ -199,6 +217,7 @@ export class MerchantGrpcWorkspaces {
       workspaces: Object.entries(this.#config.grpcWorkspaces?.workspaces ?? {}).map(([workspace, entry]) => ({
         workspace, label: entry.label, ownership: 'ORIGINAL_GRPC_WORKSPACE',
         captures: Object.entries(entry.captures).map(([capture, source]) => ({ capture, label: source.label, entrypoints: source.entrypoints })),
+        reflections: Object.entries(entry.reflections ?? {}).map(([profile, source]) => ({ profile, label: source.label, protocol: source.protocol })),
         files: Object.entries(entry.files).map(([file, source]) => ({ file, label: source.label, kind: source.kind, sha256: source.sha256 ?? null })),
       })) };
   }
@@ -412,7 +431,7 @@ export class MerchantGrpcWorkspaces {
         if (result.schema !== 'stellar-forge.grpc-workspace-attempt-page.v1') throw fail('GRPC_ATTEMPTS_PAGE_INVALID', 'Use the original complete retained-attempt page route.');
         return { workspace, kind: args.kind, ...result };
       }
-      if (!['revisions', 'prepared', 'intents'].includes(args.kind)) throw fail('INVALID_PARAMS', 'Choose a declared complete inventory.');
+      if (!['revisions', 'prepared', 'intents', 'reflections'].includes(args.kind)) throw fail('INVALID_PARAMS', 'Choose a declared complete inventory.');
       return { workspace, kind: args.kind, ...paged((await this.#state(definition))[args.kind], args) };
     }
     if (name === 'merchant_grpc_revision') {
@@ -428,6 +447,32 @@ export class MerchantGrpcWorkspaces {
       const source = await jsonFile(capture.sourceFile, 65536), plan = await jsonFile(capture.planFile, 262144);
       return revisionSummary(await this.#json(definition, '/api/capture', { directory: capture.directory, entrypoints: capture.entrypoints,
         source, plan, baseRevision: args.baseRevision, title: args.title ?? capture.label }));
+    }
+    if (name === 'merchant_grpc_reflection_inventory' || name === 'merchant_grpc_reflection_capture') {
+      if ((args.profile === undefined) === (args.revision === undefined))
+        throw fail('INVALID_PARAMS', 'Choose exactly one host reflection profile or original saved source revision.');
+      let source, protocol = args.protocol;
+      if (args.profile !== undefined) {
+        const profile = definition.reflections?.[checked(args.profile, ALIAS, 'reflection profile')];
+        if (!profile) throw fail('GRPC_REFLECTION_NOT_CONFIGURED', 'Choose an original host reflection profile.');
+        source = await jsonFile(profile.sourceFile, 65536); protocol ??= profile.protocol;
+      } else source = (await this.#revision(definition, args.revision)).source;
+      const capture = name === 'merchant_grpc_reflection_capture';
+      const body = { source, protocol: protocol ?? 'auto', ...(capture ? { id: args.operationId,
+        services: args.services, expectedInventorySha256: args.expectedInventorySha256, baseRevision: args.baseRevision } : {}) };
+      const value = await this.#json(definition, capture ? '/api/reflection-capture' : '/api/reflection-inventory', body);
+      return this.#bounded(workspace, value, { topic: capture ? 'reflection-capture' : 'reflection-inventory',
+        ...(capture ? { operationId: value.id } : {}) });
+    }
+    if (name === 'merchant_grpc_reflection_open') {
+      const value = await this.#json(definition, '/api/reflection-open', { id: args.captureId,
+        ...(args.baseRevision === undefined ? {} : { baseRevision: args.baseRevision }) });
+      return this.#bounded(workspace, value, { operationId: value.id, topic: 'reflection-capture' });
+    }
+    if (name === 'merchant_grpc_reflection_save') {
+      return revisionSummary(await this.#json(definition, '/api/reflection-save', { id: args.captureId,
+        expectedCaptureSha256: args.expectedCaptureSha256, baseRevision: args.baseRevision, plan: args.plan,
+        title: args.title ?? 'Reflected gRPC merchant' }));
     }
     if (name === 'merchant_grpc_save') {
       const value = await this.#revision(definition, args.revision);
