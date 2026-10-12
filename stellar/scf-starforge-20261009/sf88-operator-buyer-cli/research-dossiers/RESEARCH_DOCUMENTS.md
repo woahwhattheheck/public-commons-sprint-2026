@@ -297,6 +297,10 @@ merchant_research_export accepts these additional kinds:
 | pipeline-received-output, pipeline-edition | operationId/outputId or editionId; expectedEditionSha256 |
 
 All exports also take workspace and dossierId; expectedSha256 is optional.
+If the complete file differs from that reviewed digest, the merchant retains
+the actual bytes and returns RETAINED_DIGEST_MISMATCH with the original exportId
+and receipt. Its saved verification records both expected and actual SHA256.
+The same file remains available through exports and chunk reads for inspection.
 The original merchant export ledger retains the complete downloaded file and
 its content-addressed exportId. Read it with merchant_research_file_read,
 continuing the returned readId and nextOffset. After restart, select the same

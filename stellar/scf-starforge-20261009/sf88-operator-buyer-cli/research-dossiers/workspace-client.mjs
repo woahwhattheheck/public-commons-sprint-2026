@@ -260,15 +260,15 @@ export class ResearchWorkspaceClient{
           await response.body.cancel().catch(()=>{});
         else if(typeof response.body?.destroy==='function')response.body.destroy();
       }
-      // A caller supplying a reviewed digest receives the retained file identity
-      // even when it changed, so it can inspect that exact complete export.
-      if(expectedSha256!==undefined&&result.sha256!==expectedSha256)
-        throw new BuyerError('RESEARCH_EXPORTED_FILE_CHANGED',{file:result,destinationPublished:true});
       const revision=response.headers.get('x-research-dossier-revision');
       const editionId=response.headers.get('x-research-edition-id'),occurrenceId=response.headers.get('x-research-occurrence-id');
-      return {...result,...(revision&&/^[0-9]+$/.test(revision)?{revision:Number(revision)}:{}),
+      const saved={...result,...(revision&&/^[0-9]+$/.test(revision)?{revision:Number(revision)}:{}),
         ...(editionId&&/^e_[a-f0-9]{64}$/.test(editionId)?{editionId}:{}),
         ...(occurrenceId&&/^o_[a-f0-9]{64}$/.test(occurrenceId)?{occurrenceId}:{})};
+      // Preserve complete file and original source identity on a checksum error.
+      if(expectedSha256!==undefined&&saved.sha256!==expectedSha256)
+        throw new BuyerError('RESEARCH_EXPORTED_FILE_CHANGED',{file:saved,destinationPublished:true});
+      return saved;
     }));
   }
   exportDossier(id,{format='json.gz',file,...options}={}){
