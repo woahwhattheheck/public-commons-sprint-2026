@@ -14,11 +14,13 @@ const safeCompare=(a,b)=>{
  * The transport is meant for an operator-controlled 127.0.0.1 listener.
  * It offers JSON-only responses, no SSE stream, tasks, roots or server push.
  */
-export function createMcpToolHandler(provider,{bearerToken,allowedClientOrigins=[],
+export function createMcpToolHandler(provider,{bearerToken,allowedClientOrigins=[],maximumRequestBytes=128*1024,
   serverName='stellar-bazaar-paid-bridge',serverVersion='0.1.0',
   instructions='Search, describe and preview are read-only. Describe a search handle to inspect declared inputs before preview. Calls need out-of-band operator approval and an external x402 signer.'}={}){
   if(!provider || typeof provider.call!=='function' || !Array.isArray(provider.tools) || !provider.tools.length)
     throw new TypeError('A fixed tool catalog and call function are required');
+  if(!Number.isSafeInteger(maximumRequestBytes)||maximumRequestBytes<1024||maximumRequestBytes>8*1024*1024)
+    throw new TypeError('Choose a bounded MCP request body limit from 1 KiB to 8 MiB');
   const tools=structuredClone(provider.tools),names=new Set();
   for(const tool of tools){
     if(!plain(tool)||!/^[-A-Za-z0-9_.]{1,128}$/.test(tool.name)||names.has(tool.name)||!plain(tool.inputSchema))
@@ -40,12 +42,12 @@ export function createMcpToolHandler(provider,{bearerToken,allowedClientOrigins=
     const accept=String(req.headers.accept??'');
     if(!accept.includes('application/json')||!accept.includes('text/event-stream'))return send(406,jsonErr(-32600,'Accept must include application/json and text/event-stream'));
     // HTTP stream chunks are byte boundaries, not UTF-8 character boundaries.
-    // Enforce the 128 KiB limit on raw bytes before decoding the whole body.
+    // The host may select a larger bounded envelope for its declared native document intake.
     const chunks=[];let byteCount=0;
     try {
       for await(const c of req){
         byteCount+=c.byteLength;
-        if(byteCount>128*1024)throw new Error('Too large');
+        if(byteCount>maximumRequestBytes)throw new Error('Too large');
         chunks.push(c);
       }
     }catch{return send(413,jsonErr(-32700,'Invalid or oversized body'));}
