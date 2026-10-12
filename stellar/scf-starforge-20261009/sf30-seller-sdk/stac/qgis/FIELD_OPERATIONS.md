@@ -261,3 +261,17 @@ The native implementation was composed from these original interfaces:
 - [QGIS native relation Python interface](https://github.com/qgis/QGIS/blob/release-3_40/python/core/auto_generated/qgsrelation.sip.in).
 
 Selected runtime versions are retained with each actual native result. QGIS, QField and QFieldSync/libqfieldsync retain their own licenses and original documentation; this source composes their public interfaces.
+
+## Run both commissioned field rounds
+
+The complete source includes `field-native-receiving.py`. Run it with the same installed QGIS Python and libqfieldsync as the field application:
+
+```sh
+/absolute/existing/qgis-python field-native-receiving.py --input /absolute/retained/field-receiving.json --directory /absolute/owned/field-receiving
+```
+
+Use `--help` for the complete input contract. The input binds an actual donor workspace ID/revision and saved project SHA, its authored commissioning configuration, and two explicit rounds with their selected profile, operator, office decision, original feature selectors, expected attribute/geometry values, replacement values and exact attachment files. The original donor remains separate from the received office.
+
+The helper makes the field edits through the native QGIS edit buffer with its original offline logger, then uses the application's retained export, receive, review and acceptance commands. It reopens each accepted map, recovers the same accepted request, exports the complete resulting project and independently receives and reopens it.
+
+Keep the original input and receiving directory together for continuation. A failed device-edit attempt stays retained, and the next attempt starts from the same original export. A completed device or accepted office request reopens from its original result. The receiving result identifies the actual native engine, inputs, edits and project identities. Customer devices, field observations and any QFieldCloud account keep their own explicitly selected provenance.
