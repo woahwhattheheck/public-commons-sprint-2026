@@ -1,0 +1,39 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-acquisition.v1",
+  "role": "bgs-multi-observation-availability",
+  "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams?%24select=id%2Cname&%24expand=Observations(%24top%3D1%3B%24select%3Did%2CphenomenonTime%2Cresult)&%24top=64&%24count=true",
+  "requestedFilename": "bgs-multi-observation-availability.json",
+  "requestedAt": "2026-10-12T12:50:42.009Z",
+  "uploadCompletedAt": "2026-10-12T12:50:48.381Z",
+  "downloadRequestedAt": null,
+  "downloadCompletedAt": "2026-10-12T12:50:55.889Z",
+  "originalHttp": {
+    "method": null,
+    "status": null,
+    "headers": null
+  },
+  "originalBody": {
+    "path": "originals/bgs-multi-observation-availability.json",
+    "bytes": 2779,
+    "sha256": "721d11f697d06b79d153110fe1a455cc3a5b3b70fdd29759729e63a9612dc599",
+    "gitSha": "92b1e9f78e5a27d4acf0e99056d6b49fc0eea888"
+  },
+  "uploadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-818e-aaad-00b27ea35df3\",\"filename\":\"bgs-multi-observation-availability.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":2779,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-818e-aaad-00b27ea35df3\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-818e-aaad-00b27ea35df3\\\"></file>\"}"
+      }
+    ],
+    "isError": false
+  },
+  "downloadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-818e-aaad-00b27ea35df3\",\"filename\":\"bgs-multi-observation-availability.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":2779,\"content\":\"{\\\"@iot.count\\\":42,\\\"value\\\":[{\\\"@iot.id\\\":90,\\\"name\\\":\\\"DTC Cable in TH0422 Tremie\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":91,\\\"name\\\":\\\"DTC Cable in TH0423 Tremie\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":92,\\\"name\\\":\\\"DTC Cable in TH0417 Tremie\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":93,\\\"name\\\":\\\"DTC Cable in TH0416 Return\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":94,\\\"name\\\":\\\"DTC Cable in TH0422 Flow\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":95,\\\"name\\\":\\\"DTC Cable in TH0417 Flow\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":96,\\\"name\\\":\\\"DTC Cable in TH0416 Flow\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":97,\\\"name\\\":\\\"DTC Cable in TH0417 Return\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":98,\\\"name\\\":\\\"DTC Cable in TH0423 Flow\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":99,\\\"name\\\":\\\"DTC Cable in TH0423 Return\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":100,\\\"name\\\":\\\"DTC Cable in TH0416 Tremie\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":101,\\\"name\\\":\\\"DTC Cable in TH0422 Return\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":102,\\\"name\\\":\\\"DTS Profile TH0423 (Passive)\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":103,\\\"name\\\":\\\"DTS Profile TH0422 (Passive)\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":104,\\\"name\\\":\\\"DTS Profile TH0417 (Passive)\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":105,\\\"name\\\":\\\"DTS Profile TH0416 (Active)\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":106,\\\"name\\\":\\\"DTS Profile TH0420\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":107,\\\"name\\\":\\\"DTS Profile TH0411\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":108,\\\"name\\\":\\\"DTS Profile TH0407\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":109,\\\"name\\\":\\\"DTS Profile TH0406\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":110,\\\"name\\\":\\\"DTS Profile TH0419\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":111,\\\"name\\\":\\\"DTS Profile TH0421\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":112,\\\"name\\\":\\\"DTS Profile TH0409\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":113,\\\"name\\\":\\\"DTS Profile TH0405\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":114,\\\"name\\\":\\\"DTS Profile TH0422 (Active)\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":115,\\\"name\\\":\\\"DTS Profile TH0414\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":116,\\\"name\\\":\\\"DTS Profile TH0415\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":117,\\\"name\\\":\\\"DTS Profile TH0423 (Active)\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":118,\\\"name\\\":\\\"DTS Profile TH0418\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":119,\\\"name\\\":\\\"DTS Profile TH0404\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":120,\\\"name\\\":\\\"DTS Profile TH0417 (Active)\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":121,\\\"name\\\":\\\"DTS Profile TH0412\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":122,\\\"name\\\":\\\"DTS Profile TH0408\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":123,\\\"name\\\":\\\"DTS Profile TH0413\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":124,\\\"name\\\":\\\"DTS Profile TH0410\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":125,\\\"name\\\":\\\"DTS Profile TH0416 (Passive)\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":126,\\\"name\\\":\\\"DTS Profile GGA01\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":127,\\\"name\\\":\\\"DTS Profile GGA07\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":128,\\\"name\\\":\\\"DTS Profile GGA08\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":129,\\\"name\\\":\\\"DTS Profile GGA04\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":130,\\\"name\\\":\\\"DTS Profile GGA02\\\",\\\"Observations\\\":[]},{\\\"@iot.id\\\":131,\\\"name\\\":\\\"DTS Profile GGA05\\\",\\\"Observations\\\":[]}]}\"}"
+      }
+    ],
+    "isError": false
+  }
+}
