@@ -5,6 +5,8 @@ import {createEuropePmcClient} from './europe-pmc-client.mjs';
 import {createRisSourceClient} from './ris-source/client.mjs';
 import {createCustomerUpdatesClient} from './customer-updates/client.mjs';
 import {createResearchCommerceClient} from './customer-commerce/client.mjs';
+import {createResearchQuotesClient} from './customer-quotes/client.mjs';
+import {QUOTE_REQUEST_LIMIT} from './customer-quotes/contracts.mjs';
 import {createClinicalTrialsClient} from './clinical-trials-client.mjs';
 import {createStudyExtractionClient} from './study-extraction-client.mjs';
 import {createStudyProtocolClient} from './study-protocol-client.mjs';
@@ -129,17 +131,16 @@ export class ResearchWorkspaceClient{
       lifetime.abort();
     }
   }
-  #json(route,body,options={}){
-    return this.#run(async()=>{
+  #json(route,body,options={}){return this.#run(()=>this.#jsonAccepted(route,body,options));}
+  async #jsonAccepted(route,body,options={}){
       const bytes=body===undefined?undefined:JSON.stringify(body);
       const templateRoute=/^\/api\/research\/dossiers\/[^/]+\/template-exchange(?:\/|\?|$)/.test(route);
-      const maximum=route.startsWith('/api/customer-commerce/')?2*1024*1024:templateRoute?48*1024*1024:/^\/api\/dossiers\/[^/]+\/(?:citation-updates|eligibility|extraction(?:\/publications)?|risk-of-bias|customer-updates)\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
+      const maximum=route.startsWith('/api/customer-quotes/')?QUOTE_REQUEST_LIMIT:route.startsWith('/api/customer-commerce/')?2*1024*1024:templateRoute?48*1024*1024:/^\/api\/dossiers\/[^/]+\/(?:citation-updates|eligibility|extraction(?:\/publications)?|risk-of-bias|customer-updates)\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
         /^\/api\/dossiers\/[^/]+\/source-bundles\/(?:preview|receive)(?:\?projection=metadata)?$/.test(route)
         ?128*1024*1024+65536:96*1024*1024+65536;
       need(bytes===undefined||Buffer.byteLength(bytes)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
       return this.#request(route,{...options,body:bytes,headers:{...(options.headers??{}),
-        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,templateRoute?PORTABLE_LIMIT:(route.startsWith('/api/europe-pmc')||route.startsWith('/api/customer-commerce/')||/^\/api\/dossiers\/[^/]+\/(?:customer-updates|ris-sources)(?:\/|\?|$)/.test(route))?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
-    });
+        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,templateRoute?PORTABLE_LIMIT:(route.startsWith('/api/europe-pmc')||route.startsWith('/api/customer-commerce/')||route.startsWith('/api/customer-quotes/')||/^\/api\/dossiers\/[^/]+\/(?:customer-updates|ris-sources)(?:\/|\?|$)/.test(route))?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
   }
   async status(options={}){
     const status=await this.#json('/api/status',undefined,options);
@@ -220,6 +221,11 @@ export class ResearchWorkspaceClient{
   }
   risSources(){return createRisSourceClient({request:(route,body,options)=>this.#json(route,body,options),
     download:(route,file,options)=>this.#download(route,file,options)});}
+  customerQuotes(){
+    return createResearchQuotesClient({run:work=>this.#run(work),
+      request:(route,body,options)=>this.#jsonAccepted(route,body,options),
+      download:(route,file,options)=>this.#downloadAccepted(route,file,options)});
+  }
   customerCommerce(){
     return createResearchCommerceClient({
       request:(route,body,options)=>this.#json(route,body,options),
@@ -319,10 +325,12 @@ export class ResearchWorkspaceClient{
     return this.#json(dossierPath(id)+'/pipelines/operations/'+pathId(operationId),undefined,options);
   }
 
-  async #download(route,file,{signal,expectedSha256,request,headers={}}={}){
+  #download(route,file,options={}){return this.#run(()=>this.#downloadAccepted(route,file,options));}
+  async #downloadAccepted(route,file,{signal,expectedSha256,request,headers={}}={}){
     const body=request===undefined?undefined:JSON.stringify(request);
-    need(body===undefined||Buffer.byteLength(body)<=RESEARCH_CONTROL_LIMIT,'RESEARCH_REQUEST_TOO_LARGE');
-    return this.#run(()=>this.#request(route,{signal,readOnly:true,headers,...(body===undefined?{}:{
+    const maximum=route.startsWith('/api/customer-quotes/')?QUOTE_REQUEST_LIMIT:RESEARCH_CONTROL_LIMIT;
+    need(body===undefined||Buffer.byteLength(body)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
+    return this.#request(route,{signal,readOnly:true,headers,...(body===undefined?{}:{
       body,method:'POST',headers:{...headers,'Content-Type':'application/json'}
     })},async response=>{
       const disposition=response.headers.get('content-disposition')??'';
@@ -353,7 +361,7 @@ export class ResearchWorkspaceClient{
       if(expectedSha256!==undefined&&saved.sha256!==expectedSha256)
         throw new BuyerError('RESEARCH_EXPORTED_FILE_CHANGED',{file:saved,destinationPublished:true});
       return saved;
-    }));
+    });
   }
   exportDossier(id,{format='json.gz',file,revision,...options}={}){
     need(['json','json.gz','md','html'].includes(format),'EXPORT_FORMAT_INVALID');
