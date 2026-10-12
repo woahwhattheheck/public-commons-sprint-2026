@@ -170,6 +170,7 @@ export async function openJobStore(directory, source) {
   } catch (error) { closed = true; await lease.close(); throw error; }
 
   return Object.freeze({ directory, recordDirectory, resultDirectory, source,
+    assertHeld() { assertOpen(); },
     get fault() { return fault; },
     rows() { assertOpen(); return [...rows.values()].map(row => structuredClone(row)); },
     get(id) { assertOpen(); const row = rows.get(id); if (!row) fail('JOB_NOT_FOUND', 404); return structuredClone(row); },

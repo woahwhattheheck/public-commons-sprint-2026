@@ -159,12 +159,14 @@ function captureForm(dataset, resource) {
   return element('details', {}, element('summary', {}, 'Capture this resource'),
     form(data => act('capture', { packageId: dataset.id, resourceId: resource.id,
       pageSize: Number(data.get('pageSize')), maxRows: Number(data.get('maxRows')),
-      pagination: data.get('pagination'), filters: parse(data, 'filters', {}), q: data.get('q') ?? '' }),
+      pagination: data.get('pagination'), filters: parse(data, 'filters', {}), q: data.get('q') ?? '',
+      ...(data.get('schemaUrl')?.trim() ? { schemaUrl: data.get('schemaUrl').trim() } : {}) }),
       row(label('Rows per request', input('pageSize', '1000', 'number', { min: '1', max: '32000' })),
         label('Edition row capacity', input('maxRows', '250000', 'number', { min: '1', max: '5000000' })),
         label('Pagination', choose('pagination', [['offset', 'Offset'], ['keyset', 'Keyset (CKAN 2.12)']], 'offset')),
         label('Source query', input('q', ''), true)),
       label('Source filters (JSON)', element('textarea', { name: 'filters', rows: '2' }, '{}')),
+      label('CSVW schema URL (optional)', input('schemaUrl', '', 'url', { placeholder: state.catalogOrigin + '/dataset/…/resource/…/schema' }), true),
       element('div', { class: 'actions' }, submit('Capture edition'))));
 }
 async function renderEditions(generation) {
@@ -185,10 +187,17 @@ async function renderEditions(generation) {
     element('div', { class: 'meta' }, current.rowCount + ' rows', current.pageCount + ' provider pages', current.consistency),
     muted('Resource: ' + current.resourceId), muted('License: ' + (current.license?.title ?? current.license?.id ?? 'unspecified')),
     detail('Source identity and original response receipts', current.source), table(current.sample)));
+  if (current.semantics?.hasDefinitions) view.append(card(element('h3', {}, 'Source field meanings'),
+    muted('Definitions and code lists come from this retained provider edition. The selected aliases carry these meanings into the merchant data dictionary.'),
+    muted('Source key: ' + (current.semantics.primaryKey.join(', ') || 'not declared')),
+    current.semanticConsistency ? pill(current.semanticConsistency) : null,
+    detail('Original schema, units and observation identity', current.semantics)));
   const fields = current.suggestions.map(spec => {
     const tr = element('tr', { 'data-field': spec.field },
       element('td', {}, input('selected', '', 'checkbox', { checked: true })),
-      element('td', {}, spec.field, element('div', { class: 'muted' }, spec.providerType ?? '')),
+      element('td', {}, spec.field, element('div', { class: 'muted' }, spec.providerType ?? ''),
+        spec.sourceDefinition ? detail('Provider definition', spec.sourceDefinition) :
+          spec.providerInfo ? detail('Provider dictionary', spec.providerInfo) : null),
       element('td', {}, input('alias', spec.alias)),
       element('td', {}, choose('type', ['string', 'integer', 'number', 'boolean'], spec.type)),
       element('td', {}, choose('encoding', [['native', 'Native'], ['text', 'Text'], ['json', 'JSON text']], spec.encoding)),
@@ -196,24 +205,38 @@ async function renderEditions(generation) {
       element('td', {}, spec.nulls + ' null · ' + spec.empty + ' empty', element('div', { class: 'muted' }, JSON.stringify(spec.sample))));
     tr._field = spec.field; return tr;
   });
+  const selectedProjection = () => {
+    const projection = Object.create(null);
+    for (const tr of fields) {
+      if (!tr.querySelector('[name=selected]').checked) continue;
+      const alias = tr.querySelector('[name=alias]').value.trim();
+      if (Object.hasOwn(projection, alias)) throw new Error('Each field needs a unique alias.');
+      projection[alias] = { field: tr._field, type: tr.querySelector('[name=type]').value,
+        encoding: tr.querySelector('[name=encoding]').value, nullable: tr.querySelector('[name=nullable]').checked };
+    }
+    return projection;
+  };
+  const semanticPreview = element('div');
   view.append(card(element('h3', {}, 'Choose the product fields'),
     muted('Aliases define the customer query contract. Field types and nullability come from the retained rows; review the selections before saving.'),
-    form(async (data, node) => {
-      const projection = {};
-      for (const tr of node.querySelectorAll('tbody tr')) {
-        if (!tr.querySelector('[name=selected]').checked) continue;
-        const alias = tr.querySelector('[name=alias]').value.trim();
-        if (Object.hasOwn(projection, alias)) throw new Error('Each field needs a unique alias.');
-        projection[alias] = { field: tr._field, type: tr.querySelector('[name=type]').value,
-          encoding: tr.querySelector('[name=encoding]').value, nullable: tr.querySelector('[name=nullable]').checked };
-      }
+    form(async data => {
+      const projection = selectedProjection();
       tab = 'products';
       await act('editions/' + current.id + '/sources', { expectedCaptureSha256: current.manifestSha256, title: data.get('title'), projection });
     }, label('Product title', input('title', current.packageTitle, 'text', { maxlength: '128', required: '' })),
     element('div', { class: 'table-wrap field-list' }, element('table', {},
       element('thead', {}, element('tr', {}, ['Use', 'Source field', 'Alias', 'Type', 'Encoding', 'Nullable', 'Values'].map(value => element('th', {}, value)))),
       element('tbody', {}, fields))),
-    submit('Save field selection'))));
+    element('div', { class: 'actions' }, submit('Save field selection'),
+      current.semantics?.hasDefinitions ? button('Preview field meanings', async () => {
+        const semantics = await api('editions/' + current.id + '/semantics', { projection: selectedProjection() });
+        semanticPreview.replaceChildren(element('h4', {}, 'Meaning of the selected fields'),
+          table(semantics.columns.map(column => ({ alias: column.name, source: column.sourceField,
+            property: column.projectedDefinition.propertyUrl ?? '', value: column.projectedDefinition.valueUrl ?? '' }))),
+          muted('Retained observation key: ' + (semantics.primaryKey.complete ? semantics.primaryKey.projected.join(', ') : 'incomplete selection')),
+          semantics.issues.length ? detail('Source-only definitions to review', semantics.issues) : muted('All selected source references carry into this schema.'),
+          detail('Projected data dictionary', semantics.csvw));
+      }) : null), semanticPreview)));
   const peers = state.editions.filter(item => item.state === 'COMPLETE' && item.id !== current.id && item.resourceId === current.resourceId);
   if (peers.length) {
     const output = element('div');
@@ -221,7 +244,9 @@ async function renderEditions(generation) {
       const result = await api('compare?' + new URLSearchParams({ before: data.get('before'), after: current.id, key: data.get('key') }));
       output.replaceChildren(element('div', { class: 'stats' }, ['added', 'removed', 'changed', 'unchanged'].map(key =>
         element('div', {}, element('div', { class: 'stat' }, result[key]), element('div', { class: 'muted' }, key)))),
-        detail('Changed rows (up to 100)', result.changes));
+        detail('Changed rows (up to 100)', result.changes),
+        muted(result.semanticChanges?.changed ? 'Source definitions changed in this edition.' : 'Source definitions are unchanged.'),
+        detail('Field, unit, key and attribution changes', result.semanticChanges));
     }, row(label('Earlier edition', choose('before', peers.map(item => [item.id, item.completedAt])), true),
       label('Unique source key', input('key', '_id')), submit('Compare'))), output));
   }
@@ -233,6 +258,8 @@ async function renderProducts(generation) {
     const columns = Object.keys(source.projection);
     view.append(card(element('h3', {}, source.title), element('div', { class: 'meta' }, columns.length + ' selected fields', 'Saved ' + source.createdAt.slice(0, 19)),
       detail('Reviewed field mapping', source.projection),
+      source.semanticReview ? detail('Reviewed source meaning', { ...source.semanticReview, issues: source.semanticIssues }) : null,
+      source.semanticReview ? button('Download data dictionary', () => download('sources/' + source.id + '/semantics', 'ckan-semantics.json')) : null,
       form(data => act('sources/' + source.id + '/publications', { filters: list(data.get('filters')), sorts: list(data.get('sorts')),
         ranges: list(data.get('ranges')), order: [{ column: data.get('order'), direction: 'asc' }],
         defaultLimit: Number(data.get('defaultLimit')), maxLimit: Number(data.get('maxLimit')) }),

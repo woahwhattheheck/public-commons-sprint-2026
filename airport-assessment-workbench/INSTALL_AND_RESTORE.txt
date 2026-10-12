@@ -1,0 +1,95 @@
+AIRPORT ASSESSMENT WORKBENCH 0.1.0
+Direct installation and recovery
+Token Junkie Labs | brycembusiness2@gmail.com
+
+Save the supplied wheel and these instructions in a folder you control.
+Use Python 3.10 or later with its standard venv and pip components.
+The application needs no other Python package downloads, source checkout,
+database server, cloud account or model credential.
+
+Wheel:
+airport_assessment_workbench-0.1.0-py3-none-any.whl
+772,648 bytes
+SHA-256:
+38c9fbdbaf76b51dc0e91c1625ff8624f98241017466d99160b70ea4d633ce30
+
+WINDOWS - COMMAND PROMPT
+
+Open Command Prompt in that folder. Run:
+
+py -3 --version
+py -3 -m venv airport-env
+airport-env\Scripts\python.exe -m pip install --no-index --no-deps airport_assessment_workbench-0.1.0-py3-none-any.whl
+airport-env\Scripts\python.exe -m airport_operator --workspace .\airport-workspace --demo --port 8771
+
+MACOS / LINUX / POSIX
+
+Open a terminal in that folder. Run:
+
+python3 --version
+python3 -m venv airport-env
+./airport-env/bin/python -m pip install --no-index --no-deps ./airport_assessment_workbench-0.1.0-py3-none-any.whl
+./airport-env/bin/python -m airport_operator --workspace ./airport-workspace --demo --port 8771
+
+OPEN AND REOPEN
+
+Open http://127.0.0.1:8771 in a current browser. Leave the server terminal open
+while using the application. Press Ctrl+C in that terminal to stop.
+Repeat the final start command with the same workspace to reopen saved work.
+
+The default example supplies public FAA/airport context for DEN, SYR and HPN.
+To load the separately named authored calculator/workflow example, stop the
+server and replace --demo with --authored-demo in the start command.
+Existing saved example edits are preserved. Use New project for your own work.
+
+RECIPIENT HANDOVER
+
+Use Export & history for project, airport or use-case reports and editable
+workpapers. Original attachments are excluded unless explicitly selected.
+A scoped handover does not filter rows inside a selected original workbook.
+
+The CLI example below selects DEN from the included public project.
+Use your own project's actual ID for your own work; /api/projects lists IDs.
+
+Windows:
+airport-env\Scripts\python.exe -m airport_operator --workspace .\airport-workspace --export acrp-public-example --audience airport --airport-id faa-DEN --output .\den-assessment.zip
+
+POSIX:
+./airport-env/bin/python -m airport_operator --workspace ./airport-workspace --export acrp-public-example --audience airport --airport-id faa-DEN --output ./den-assessment.zip
+
+SAVE A COMPLETE PRIVATE CONTINUATION
+
+This preserves one project's original source bytes, state and revision history.
+A recipient report ZIP cannot substitute for this private_restore archive.
+Export each project you want to preserve and retain a separate backup copy.
+
+Windows:
+airport-env\Scripts\python.exe -m airport_operator --workspace .\airport-workspace --export acrp-authored-planning-example --audience private_restore --output .\airport-continuation.zip
+
+POSIX:
+./airport-env/bin/python -m airport_operator --workspace ./airport-workspace --export acrp-authored-planning-example --audience private_restore --output ./airport-continuation.zip
+
+RESTORE INTO A NEW WORKSPACE
+
+Install the same wheel on the receiving computer and put the private
+continuation ZIP beside it. Stop any server already using port 8771.
+Use a new workspace path to preserve any different current work.
+
+Windows:
+airport-env\Scripts\python.exe -m airport_operator --workspace .\recovered-airport-workspace --restore .\airport-continuation.zip --port 8771
+
+POSIX:
+./airport-env/bin/python -m airport_operator --workspace ./recovered-airport-workspace --restore ./airport-continuation.zip --port 8771
+
+The command restores the archive and then opens the server. For later starts,
+keep the recovered workspace path and omit --restore and its ZIP filename.
+
+FULL GUIDE AND SUPPORT
+
+OPERATOR_GUIDE.md contains the complete workflow, source mapping,
+calculation interpretation, local limits, troubleshooting and API. Application code and publication notices retain their original
+LICENSE and SOURCE-NOTICES.md; both are also included inside the wheel.
+
+Contact Bryce at brycembusiness2@gmail.com for software support.
+Provide the version, operating system, command and exact error message.
+Keep private airport records within your agreed support exchange.

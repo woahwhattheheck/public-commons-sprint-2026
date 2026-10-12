@@ -1,7 +1,8 @@
 // MIT. Dependency-free operator UI; downloaded result bytes come from the retained server edition.
 import { createRelevanceController } from '/relevance.mjs';
 import { createDeploymentController } from '/deployment.mjs';
-let relevance = null, deployment = null;
+import { createCatalogController } from '/catalog.mjs';
+let relevance = null, deployment = null, catalog = null;
 const $ = id => document.getElementById(id);
 const state = { token: null, workspaceId: null, data: null, draft: null, dirty: false, busy: false,
   pending: null, edition: null, hitPage: 0 };
@@ -20,26 +21,33 @@ function retainPending(value) {
   try { value ? localStorage.setItem(currentKey(), JSON.stringify(value)) : localStorage.removeItem(currentKey()); } catch {}
   renderPending(); buttons();
 }
-async function api(path, payload, retried = false) {
+function metadataHeader(value) {
+  const raw = JSON.stringify(value).replace(/[^\x20-\x7e]/g,
+    character => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0'));
+  if (new TextEncoder().encode(raw).length > 12288) throw new Error('File metadata exceeds 12 KiB. Shorten the source description.');
+  return raw;
+}
+async function api(path, payload, retried = false, file) {
   const response = await fetch(path, payload === undefined ? { cache: 'no-store' } : {
-    method: 'POST', cache: 'no-store', headers: { 'content-type': 'application/json', 'x-workspace-token': state.token },
-    body: JSON.stringify(payload) });
+    method: 'POST', cache: 'no-store', headers: { 'content-type': file ? 'application/octet-stream' : 'application/json',
+      'x-workspace-token': state.token, ...(file ? { 'x-catalog-metadata': metadataHeader(payload) } : {}) },
+    body: file ?? JSON.stringify(payload) });
   const data = await response.json();
   if (response.status === 403 && data.error === 'WORKSPACE_TOKEN_REQUIRED' && payload !== undefined && !retried) {
     const session = await (await fetch('/api/session', { cache: 'no-store' })).json();
     if (session.workspaceId !== state.workspaceId) throw new Error('A different workspace is open at this address. Reload to select it.');
     state.token = session.token;
-    return api(path, payload, true);
+    return api(path, payload, true, file);
   }
   if (!response.ok) { const error = new Error(data.message ?? data.error); error.code = data.error; error.status = response.status; error.requestRecorded = data.requestRecorded; throw error; }
   return data;
 }
 function view(name) {
-  for (const id of ['draft', 'editions', 'relevance', 'packages', 'operations', 'deployment']) $('view-' + id).hidden = id !== name;
+  for (const id of ['draft', 'editions', 'relevance', 'packages', 'operations', 'deployment', 'catalog']) $('view-' + id).hidden = id !== name;
   for (const button of document.querySelectorAll('[data-view]')) button.setAttribute('aria-selected', String(button.dataset.view === name));
 }
 function buttons() {
-  relevance?.buttons(); deployment?.buttons();
+  relevance?.buttons(); deployment?.buttons(); catalog?.buttons();
   const hasDraft = Boolean(state.draft?.id), held = state.busy || Boolean(state.pending);
   $('save').disabled = held || !state.dirty;
   for (const id of ['validate', 'inspect', 'capture', 'prepare']) $(id).disabled = held || !hasDraft || state.dirty;
@@ -139,10 +147,11 @@ async function acceptOperation(operation) {
   }
   retainPending(null);
   if (operation.state === 'FAILED' || operation.state === 'INTERRUPTED') notice(errorMessage(operation.error), true);
+  else if (await catalog.acceptOperation(operation)) return;
   else if (await relevance.acceptOperation(operation)) return;
   else if (await deployment.acceptOperation(operation)) return;
   else if (operation.result?.draft) {
-    fill(operation.result.draft); notice('Saved ' + operation.result.draft.title + ' at revision ' + operation.result.revision + '.');
+    fill(operation.result.draft); view('draft'); notice('Saved ' + operation.result.draft.title + ' at revision ' + operation.result.revision + '.');
   } else if (operation.result?.editionId) {
     await openEdition(operation.result.editionId);
     notice('Captured and retained edition ' + operation.result.editionId + '.');
@@ -155,11 +164,13 @@ async function transmitPending() {
   if (!state.pending) return;
   state.busy = true; buttons();
   try {
-    const result = await api('/api/' + (state.pending.kind === 'save-draft' ? 'drafts' : state.pending.kind), state.pending.payload);
+    const result = ['catalog-upload', 'catalog-import'].includes(state.pending.kind)
+      ? await catalog.transmitFile(state.pending)
+      : await api('/api/' + (state.pending.kind === 'save-draft' ? 'drafts' : state.pending.kind), state.pending.payload);
     await acceptOperation(result); await refresh();
   } catch (error) {
     if (error.requestRecorded === false) {
-      const selectedView = state.pending?.kind === 'deployment' ? 'deployment' : state.pending?.kind.startsWith('relevance-') ? 'relevance' : 'draft';
+      const selectedView = state.pending?.kind.startsWith('catalog') ? 'catalog' : state.pending?.kind === 'deployment' ? 'deployment' : state.pending?.kind.startsWith('relevance-') ? 'relevance' : 'draft';
       retainPending(null); view(selectedView);
       notice(errorMessage(error) + ' The editor contents are retained; correct the saved definition and try again.', true);
     } else { notice(errorMessage(error) + ' The original request is retained for recovery.', true); view('operations'); }
@@ -316,7 +327,7 @@ async function refresh() {
   $('source-query').replaceChildren();
   for (const name of Object.keys(state.data.source.queries)) $('source-query').append(element('option', name, { value: name }));
   if (Object.hasOwn(state.data.source.queries, selection)) $('source-query').value = selection;
-  renderDrafts(); renderEditions(); relevance.sync(); deployment.sync();
+  renderDrafts(); renderEditions(); relevance.sync(); deployment.sync(); await catalog.sync();
   recordList($('package-list'), state.data.packages, item => ({ title: item.title,
     detail: 'Revision ' + item.draftRevision + ' · ' + item.createdAt + ' · ' + item.files.length + ' files' }), openPackage);
   recordList($('operation-list'), state.data.operations, item => ({ title: item.kind + ' · ' + item.state,
@@ -326,6 +337,7 @@ async function refresh() {
 async function attempt(action) { try { await action(); } catch (error) { notice(errorMessage(error), true); } }
 relevance = createRelevanceController({ host: state, api, perform, refresh, notice, view, element, attempt });
 deployment = createDeploymentController({ host: state, api, perform, recover, notice, view, element, attempt });
+catalog = createCatalogController({ host: state, api, perform, refresh, recover, retry: transmitPending, notice, view, element, attempt });
 for (const button of document.querySelectorAll('[data-view]')) button.addEventListener('click', () => { view(button.dataset.view); if (button.dataset.view === 'deployment') attempt(() => deployment.refresh()); });
 for (const id of ['draft-title', 'query-name', 'query-json', 'input-json', 'plan-json']) $(id).addEventListener('input', () => { state.dirty = true; summary(); buttons(); });
 $('draft-filter').addEventListener('input', renderDrafts);
@@ -352,7 +364,7 @@ $('open-history').addEventListener('click', () => attempt(async () => {
   }
   $('history').open = true;
 }));
-window.addEventListener('beforeunload', event => { if (state.dirty || relevance.hasUnsaved()) { event.preventDefault(); event.returnValue = ''; } });
+window.addEventListener('beforeunload', event => { if (state.dirty || relevance.hasUnsaved() || catalog.hasUnsaved()) { event.preventDefault(); event.returnValue = ''; } });
 await attempt(async () => {
   const session = await api('/api/session'); state.token = session.token; state.workspaceId = session.workspaceId;
   await refresh();
@@ -361,7 +373,7 @@ await attempt(async () => {
     revision: state.pending.payload.expectedRevision }, false);
   else if (state.data.drafts.length) fill(await api('/api/drafts/' + encodeURIComponent(state.data.drafts[0].id)));
   else newDraft();
-  relevance.restorePending(state.pending); deployment.restorePending();
+  relevance.restorePending(state.pending); deployment.restorePending(); catalog.restorePending(state.pending);
   renderPending(); buttons();
   if (state.pending) { view('operations'); notice('The previous browser request is retained. Read its original result or retry its same ID.'); }
   else notice('Workspace reopened. Saved drafts, native result editions and merchant packages are available.');
