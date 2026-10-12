@@ -304,6 +304,22 @@ function renderView(state, history, at = Date.now()) {
   return result;
 }
 
+
+function validateRenderedView(view, state, history, at, code, {variableClock = false} = {}) {
+  check(object(view) && Number.isFinite(at), code);
+  const actual = clone(view), expected = renderView(state, history, at);
+  // An unnamed export renders just before its envelope records createdAt.
+  // Only the live overdue indicators may cross a deadline in that interval.
+  if (variableClock) {
+    for (const value of [actual, expected]) {
+      if (Array.isArray(value.milestones))
+        for (const row of value.milestones) if (object(row)) delete row.overdue;
+      if (object(value.summary)) delete value.summary.overdueMilestones;
+    }
+  }
+  check(JSON.stringify(actual) === JSON.stringify(expected), code);
+}
+
 export async function openOpportunityStore({directory, operator, dossierDirectory, awardDirectory} = {}) {
   operator = text(operator, 'OPERATOR_REQUIRED', 240);
   directory = await privateDirectory(resolve(text(directory, 'WORKSPACE_DIRECTORY_REQUIRED', 4000)));
@@ -685,21 +701,27 @@ export async function openOpportunityStore({directory, operator, dossierDirector
       }
       const final = incoming.at(-1).state;
       check(final.dossier.revision === packet.dossier.versions.length, 'PORTABLE_DOSSIER_REVISION_CHANGED');
-      for (const key of ['title', 'description', 'company', 'opportunity'])
-        check(JSON.stringify(packet.project[key]) === JSON.stringify(final[key]), 'PORTABLE_PROJECT_VIEW_CHANGED');
+      const selectedSnapshot = packet.selectedPackageId ?
+        packet.sealedPackages.find(row => row.id === packet.selectedPackageId) : null;
+      validateRenderedView(packet.project, final, incoming,
+        Date.parse(selectedSnapshot ? selectedSnapshot.createdAt : packet.createdAt),
+        'PORTABLE_PROJECT_VIEW_CHANGED', {variableClock: !selectedSnapshot});
       const snapshots = new Map(packet.sealedPackages.map(row => [row.id, row]));
       for (const record of final.packages) {
         const snapshot = snapshots.get(record.id);
         check(snapshot && snapshot.sha256 === record.sha256 &&
           snapshot.sourceStateSha256 === incoming[record.sourceRevision - 1]?.sha256 &&
+          snapshot.sourceStateSha256 === record.sourceStateSha256 &&
           snapshot.sourceRevision === record.sourceRevision && record.revision <= incoming.length,
           'PORTABLE_HANDOFF_REFERENCE_CHANGED');
         for (const key of ['title', 'status', 'note', 'createdAt'])
           check(snapshot[key] === record[key], 'PORTABLE_HANDOFF_RECORD_CHANGED');
         check(snapshot.operator === record.createdBy, 'PORTABLE_HANDOFF_RECORD_CHANGED');
         const bound = incoming[record.sourceRevision - 1].state;
-        for (const key of ['title', 'description', 'company', 'opportunity'])
-          check(JSON.stringify(snapshot.project[key]) === JSON.stringify(bound[key]), 'PORTABLE_HANDOFF_PROJECT_CHANGED');
+        validateRenderedView(snapshot.project, bound, incoming.slice(0, record.sourceRevision),
+          Date.parse(snapshot.createdAt), 'PORTABLE_HANDOFF_PROJECT_CHANGED');
+        check(JSON.stringify(snapshot.readiness) === JSON.stringify(snapshot.project.readiness),
+          'PORTABLE_HANDOFF_READINESS_CHANGED');
       }
       check(snapshots.size === final.packages.length, 'PORTABLE_HANDOFF_SET_CHANGED');
       const existing = await maybeHistory(id);

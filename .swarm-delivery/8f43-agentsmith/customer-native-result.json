@@ -1,0 +1,243 @@
+{
+  "schema": "stellar-forge.agentsmith.customer-receiving-journey.v1",
+  "operationId": "AGENTSMITH-BROWSER-MERCHANT-ADOPTION-20261012-8F43",
+  "status": "ORIGINAL_CUSTOMER_ZIP_RECEIVING_COMPLETED",
+  "completedAt": "2026-10-12T02:25:33.031683+00:00",
+  "siteProject": "appgprj_6acc430d195c8191a124909673496433",
+  "sourcePin": "421570d3f388543e918b76e61414b5af2da470f4",
+  "generatedPacket": {
+    "schema": "stellar-forge.agentsmith.generated-packet-result.v1",
+    "zipBytes": 66463,
+    "zipSha256": "5ef5e3ca46eb70cf00b0c449e012a3e0434baf3c5ebcd8f091f76d194bb1a6ad",
+    "draftReopen": "IDENTICAL_ORIGINAL_ZIP",
+    "files": [
+      {
+        "path": "agentsmith-receiving/setup-input.json",
+        "bytes": 9856,
+        "sha256": "4525f21c49f90bb89c4c2bae540af601da78dadd64446f5713a8673e514b5bcd"
+      },
+      {
+        "path": "agentsmith-receiving/packet.json",
+        "bytes": 640,
+        "sha256": "cdbf42dd9df538cef93a08a67ad2be95b8deae32f1a872c0596bd4665e42e705"
+      },
+      {
+        "path": "agentsmith-receiving/source-http.json",
+        "bytes": 9082,
+        "sha256": "18d45f986bc0f53292086f715f8dbafc5cbf92a59f5fb599c0034285d97103a8"
+      },
+      {
+        "path": "agentsmith-receiving/request.json",
+        "bytes": 21,
+        "sha256": "48b7f29c8f78676a1a8cf2a1bebe83a01bf970ffe584ff70a9cdb7d694fecd93"
+      },
+      {
+        "path": "agentsmith-receiving/capture.py",
+        "bytes": 19874,
+        "sha256": "93214bc738c9ad92c70aadddb07655d86ea7e304ea7ed1afda0e5c6b4a940098"
+      },
+      {
+        "path": "agentsmith-receiving/buyer.mjs",
+        "bytes": 17554,
+        "sha256": "d8005e9293a6afc0704f70025d0a5708b272d8aea37bd79d11fcb3c1cf34c2ca"
+      },
+      {
+        "path": "agentsmith-receiving/INSTALL.json",
+        "bytes": 2005,
+        "sha256": "bf7415a28417f3ea1aaf548764cb7be9c0042fde92523fc9a60e70f970b0f097"
+      },
+      {
+        "path": "agentsmith-receiving/README.md",
+        "bytes": 5052,
+        "sha256": "26f5e2ffac7453e7a44c955424b9750a2e6f396b982dce22519f6a5346e73dd3"
+      },
+      {
+        "path": "agentsmith-receiving/LICENSE",
+        "bytes": 1091,
+        "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8"
+      }
+    ],
+    "config": {
+      "schema": "stellar-forge.frontdoor-agentsmith-packet.v1",
+      "privateDirectory": "/dev/commons-8f43-agentsmith-customer/operation",
+      "intentId": "agentsmith-metar-native-20261012-8f43",
+      "actor": "agentsmith-receiver-8f43",
+      "payer": "",
+      "sourceBundleSha256": "18d45f986bc0f53292086f715f8dbafc5cbf92a59f5fb599c0034285d97103a8",
+      "captureSha256": "93214bc738c9ad92c70aadddb07655d86ea7e304ea7ed1afda0e5c6b4a940098",
+      "runnerSha256": "d8005e9293a6afc0704f70025d0a5708b272d8aea37bd79d11fcb3c1cf34c2ca",
+      "sourceCommit": "aea13f36c6bddf09fcc16cc3825094d1d30cfbb9",
+      "walletSourceCommit": "c3f1f9a930e1a4b08a6d60f5643b98ba2f4a0e1d"
+    },
+    "selected": {
+      "scheme": "exact",
+      "network": "stellar:testnet",
+      "amount": "40000",
+      "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "payTo": "GBW2N6DQ5QQVVUFBMH7KORTUB55JMVJCRAXEAUONUHUGB4ETE5KZ7FNI",
+      "maxTimeoutSeconds": 300,
+      "extra": {
+        "areFeesSponsored": true
+      }
+    }
+  },
+  "retainedNativeFiles": {
+    "receiving.json": "e66dd0b7736cc18bdc85a2acb66d21aa4e4fac94f704464596e7f458b9204f36",
+    "request/native-prepare.json": "2e2854da3af029c98faa5821e3e78ae0d624132ef3cd3955938aa8c1d41425e0",
+    "request/native-review.json": "bddef11e1859776e953a4b64e94db3bfe337785d0d31c4190c587ec3b8f95081",
+    "request/preparation.json": "29695a22b6917749d74ea284d958df3511107ae86c5b89cd7bd552c2e0daf4c2",
+    "request/request.json": "48b7f29c8f78676a1a8cf2a1bebe83a01bf970ffe584ff70a9cdb7d694fecd93",
+    "request/review.json": "d89cce4c717b1b0f0fdbb4ae44e72f4e8d82946725a43fe2fca4bcd58367fc9b",
+    "source/capture.json": "756190749fd49ab0bd996d88c94369bf632292e4193b57d42216fd759ba0d7c0",
+    "source/challenge.http.json": "9b8726ff110d36f87f201e96c03d19e6e06f3c530475f25844d36f92365967b4",
+    "source/offers.json": "a1601a2cf425f94b59e8364cda57612292238f243b8007b9f9fa14de8e02b69b",
+    "source/payment-required.json": "3da919dbe204b06837c12f176981bd12ae18023e868337536a6cc72506d4e280",
+    "source/request.json": "48b7f29c8f78676a1a8cf2a1bebe83a01bf970ffe584ff70a9cdb7d694fecd93",
+    "source/supported.http.json": "9a546dead61b5a958a434bdef3e66b7312aa1b00274e8b821b76d5403274bccb"
+  },
+  "nativeSourceGitBlobs": {
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/config.mjs": "55c0bcf95c6c42d9a49656590fcea46f0d6dbf42",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs": "50633fd39051da2e16caf3c1da42c5812434ea50",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/prepare.mjs": "c1ccdb4cb8a5aaee726a4d89633047abb35b07ca",
+    "stellar/scf-starforge-20261009/sf31-buyer-client/public-transport.mjs": "aa6950dd95652eadd30cf33347a8bd3114d15f5d",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/operation-ticket.mjs": "5c702be112360e5d671cad7375cb3d970630b928",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/request-body.mjs": "12830ce2b65dca2a1cee2437b4eb22242b81a206",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/request-headers.mjs": "05340718cefcd6f547a43fa6e1e2c775301617b7",
+    "stellar/scf-starforge-20261009/sf31-buyer-client/response-file.mjs": "a7aafe7ff96bb60575bc41e12c2d3209673df76a",
+    "stellar/scf-starforge-20261009/sf31-buyer-client/response-stream.mjs": "d84fcd3adbf5a3f262d39ba23b641d56754050ea",
+    "stellar/scf-starforge-20261009/sf43-agent-commerce/verify.mjs": "7945605d20415a9778207f76a619aaab7f815697",
+    "stellar/scf-starforge-20261009/sf31-buyer-client/request-body.mjs": "9505955700d595d3fc69aef41dcac48da1570d72",
+    "stellar/scf-starforge-20261009/sf85-live-402-capture/proxy-connect.mjs": "e8d669d584ee4767afd1fd21eddd44bfc99c3732",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/multipart.mjs": "c19284dc59e2f648f691233b3a31988936b22e41",
+    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/terms.mjs": "e7de12283d30a475ca4a265258f8c403a96e90a9",
+    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/networks.json": "2f92b8e3f8498fd07136c7f9b741c9e8fe3c3aa8"
+  },
+  "pageAssetLinks": "COMPLETE",
+  "setupModuleSyntax": "PASS",
+  "originalRecovery": {
+    "schema": "commons.agentsmith.native-recovery-result.v1",
+    "operationId": "SCF-AGENTSMITH-NATIVE-RECOVERY-8F43-20261012",
+    "status": "ORIGINAL_NATIVE_INTERRUPTION_RESUME_COMPLETED",
+    "completedAt": "2026-10-12T02:25:31.299939+00:00",
+    "python": "3.12.14",
+    "node": "v24.19.0",
+    "receivingHead": "421570d3f388543e918b76e61414b5af2da470f4",
+    "captureCommit": "aea13f36c6bddf09fcc16cc3825094d1d30cfbb9",
+    "captureSha256": "93214bc738c9ad92c70aadddb07655d86ea7e304ea7ed1afda0e5c6b4a940098",
+    "sourceBundleSha256": "18d45f986bc0f53292086f715f8dbafc5cbf92a59f5fb599c0034285d97103a8",
+    "nativeSourceCommit": "3f055d51322329768f487557b689803be07b5247",
+    "nativeSourceFiles": 15,
+    "sourceInterruption": {
+      "afterCommittedFile": "payment-required.json",
+      "retainedFiles": {
+        "challenge.http.json": "9b8726ff110d36f87f201e96c03d19e6e06f3c530475f25844d36f92365967b4",
+        "payment-required.json": "3da919dbe204b06837c12f176981bd12ae18023e868337536a6cc72506d4e280",
+        "request.json": "48b7f29c8f78676a1a8cf2a1bebe83a01bf970ffe584ff70a9cdb7d694fecd93",
+        "supported.http.json": "9a546dead61b5a958a434bdef3e66b7312aa1b00274e8b821b76d5403274bccb"
+      },
+      "resume": "ORIGINAL_HTTP_SOURCE_CAPTURED",
+      "reopen": "UNCHANGED"
+    },
+    "nativeInterruption": {
+      "afterCommittedFile": "review.json",
+      "beforeFile": "native-prepare.json",
+      "resume": "NATIVE_BUYER_REVIEW_PREPARED",
+      "nativeMode": "OFFLINE_CONFIG_REOPENED",
+      "reopen": "NATIVE_BUYER_REVIEW_REOPENED",
+      "retainedFiles": {
+        "native-prepare.json": "3a4f4d77110587a0ab80b711a52787b60beac0fd01b6ac2002f03ed7a2ebd5de",
+        "native-review.json": "761e3267f10f2cad85d943f0afb7005481d9a57b6a30103977bb9480a7243145",
+        "preparation.json": "6d5562dfcf5df86dcda9329df980f194cceaa5854c8ff2e33e907f289356ece1",
+        "request.json": "48b7f29c8f78676a1a8cf2a1bebe83a01bf970ffe584ff70a9cdb7d694fecd93",
+        "review.json": "98e359b82c45e550a00934bf8369e1a4ae09d9b409458d33835a437b95695513"
+      }
+    },
+    "intentId": "agentsmith-metar-recovery-20261012-8f43",
+    "requestSha256": "48b7f29c8f78676a1a8cf2a1bebe83a01bf970ffe584ff70a9cdb7d694fecd93",
+    "reviewConfigSha256": "98e359b82c45e550a00934bf8369e1a4ae09d9b409458d33835a437b95695513",
+    "responseDestination": "/dev/commons-8f43-agentsmith-recovery/operation-request/metar-result.json",
+    "changedIntent": "REJECTED_WITH_ORIGINAL_WORK_UNCHANGED",
+    "source": "/dev/commons-8f43-agentsmith-recovery/source",
+    "directory": "/dev/commons-8f43-agentsmith-recovery",
+    "acceptedTerms": {
+      "scheme": "exact",
+      "network": "stellar:testnet",
+      "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "payTo": "GBW2N6DQ5QQVVUFBMH7KORTUB55JMVJCRAXEAUONUHUGB4ETE5KZ7FNI",
+      "maxAtomic": "40000",
+      "maxTimeoutSeconds": 300
+    }
+  },
+  "nativeJournal": [
+    {
+      "action": "prepare",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/dev/commons-8f43-agentsmith-customer/agentsmith-receiving/buyer.mjs",
+        "prepare",
+        "--toolkit",
+        "/dev/commons-8f43-agentsmith-recovery/source",
+        "--python",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+      ],
+      "returncode": 0,
+      "stdoutBytes": 27465,
+      "stdoutSha256": "3e8659a5c4d7b6d26b242de9283205b303a08680ade2810cb89cff27d246ee96",
+      "stderr": ""
+    },
+    {
+      "action": "review",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/dev/commons-8f43-agentsmith-customer/agentsmith-receiving/buyer.mjs",
+        "review",
+        "--toolkit",
+        "/dev/commons-8f43-agentsmith-recovery/source",
+        "--python",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+      ],
+      "returncode": 0,
+      "stdoutBytes": 13573,
+      "stdoutSha256": "133d3ed613941544161f11c395bb79e058fb7c320bd67a67839c4890a59352fb",
+      "stderr": ""
+    },
+    {
+      "action": "prepare",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/dev/commons-8f43-agentsmith-customer/agentsmith-receiving/buyer.mjs",
+        "prepare",
+        "--toolkit",
+        "/dev/commons-8f43-agentsmith-recovery/source",
+        "--python",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+      ],
+      "returncode": 0,
+      "stdoutBytes": 27465,
+      "stdoutSha256": "ae3aa65eabecba1ea1db2dc2caeb496e64cfa4183f8e00d65cf4b7299be4a258",
+      "stderr": ""
+    },
+    {
+      "action": "inspect",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/dev/commons-8f43-agentsmith-customer/agentsmith-receiving/buyer.mjs",
+        "inspect",
+        "--toolkit",
+        "/dev/commons-8f43-agentsmith-recovery/source",
+        "--python",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+      ],
+      "returncode": 0,
+      "stdoutBytes": 13836,
+      "stdoutSha256": "c138f0ee5e8fb20184b8d2585a2f2fa6b49c17a763b1e4f9d5d173d425fab4b3",
+      "stderr": ""
+    }
+  ],
+  "completeRecord": {
+    "format": "gzip-json",
+    "gitBlob": "825e18c9ce44619542c395656ad7d26e5785bb13",
+    "sha256": "68c1112944719b8735ba7fc68d51e38e86a0f4de4de2424250b12eb2f2238f74",
+    "bytes": 9278
+  }
+}

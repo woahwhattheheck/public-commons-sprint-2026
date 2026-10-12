@@ -161,8 +161,10 @@ export async function startWalletServer({directory, port = 0, verifier, vendor, 
     }
     if (req.method === 'POST' && url.pathname === '/api/connect')
       return reply(res,200,await store.connect(await body(req)));
+    if (req.method === 'POST' && url.pathname === '/api/heartbeat')
+      return reply(res,200,await store.heartbeat(await body(req)));
     if (req.method === 'POST' && url.pathname === '/api/disconnect') {
-      const value = await body(req); return reply(res,200,await store.disconnect(value.connectionId));
+      const value = await body(req); return reply(res,200,await store.disconnect(value.connectionId,value.clientId));
     }
     const action = /^\/api\/requests\/([a-f0-9]{64})\/(claim|complete|reject)$/.exec(url.pathname);
     if (req.method === 'POST' && action) {

@@ -1,9 +1,11 @@
 // MIT. Original OData authoring, live merchant and receiving in managed Applications.
 import { join } from 'node:path';
 import { inspectMerchantRuntime } from '../../../sf46-release/runtime-package.mjs';
-import { absolute, plain, need, canonical, digest, json } from '../../../distribution/runtime-workspace/storage.mjs';
+import { absolute, plain, need, canonical, digest, json, processIdentity } from '../../../distribution/runtime-workspace/storage.mjs';
+import { namespaceProcessIdentity } from '../../../distribution/runtime-workspace/process-identity.mjs';
+const originalIdentity = async pid => await processIdentity(pid) ?? await namespaceProcessIdentity(pid);
 import { ODATA_STARTUP, ODATA_PROBE, ODATA_LAUNCH_FILE, odataWorkspaceIdentity,
-  odataLiveIdentity, odataPrivateJson, odataProcessIdentity, odataLoopback } from './startup.mjs';
+  odataLiveIdentity, odataPrivateJson, odataLoopback } from './startup.mjs';
 
 const SOURCE = 'stellar/scf-starforge-20261009/sf30-seller-sdk/odata/';
 const same = (left, right) => digest(json(canonical(left))) === digest(json(canonical(right)));
@@ -91,10 +93,11 @@ export async function odataStartup(request, operationDirectory, text, context = 
   'APPLICATION_ODATA_LIVE_CHANGED');
   need(Number.isSafeInteger(context.pid) && context.pid > 0 && plain(value.process),
     'APPLICATION_ODATA_CHILD_REQUIRED');
-  const original = await odataProcessIdentity(value.process.pid);
-  need(same(original, value.process) && (original.pid === context.pid || original.ppid === context.pid),
-    'APPLICATION_ODATA_CHILD_CHANGED');
-  await odataProcessIdentity(context.pid);
+  const original = value.process;
+  need(Number.isSafeInteger(original.pid) && Number.isSafeInteger(original.ppid) &&
+    (original.pid === context.pid || original.ppid === context.pid) &&
+    typeof original.start === 'string' && original.start === await originalIdentity(original.pid) &&
+    await originalIdentity(context.pid), 'APPLICATION_ODATA_CHILD_CHANGED');
   const selectedPort = Number(selected(request, '--port', true) ?? 0);
   need(Number.isInteger(selectedPort) && selectedPort >= 0 && selectedPort <= 65535, 'APPLICATION_PORT_INVALID');
   const url = odataLoopback(value.url, selectedPort), observed = await listener(url);

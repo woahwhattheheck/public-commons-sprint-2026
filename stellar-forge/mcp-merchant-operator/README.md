@@ -1,5 +1,14 @@
 # Starforge merchant operations through MCP
 
+Create and revise OpenAPI merchants through this same operator. Attach the host's
+existing API consoles, review original source and payment terms, save or reopen
+retained drafts, apply cache changes, and save those policies into a revised
+package. Complete package exports resume after either service restarts, preserve
+original source and compiled files, and receive into another console for SF82
+release staging. The browser and MCP client share the original package and
+runtime state. See [OpenAPI merchant authoring and receiving](OPENAPI_WORKSPACES.md)
+for setup, all 31 tools and the complete receiving workflow.
+
 Federal award research is available through the same merchant interface. Open
 host-declared USAspending workspaces, operate the original provider capture jobs,
 review award and recipient data, prepare the native merchant dataset, receive
@@ -617,3 +626,40 @@ or add `geocodioWorkspaceConnection` to the existing merchant configuration.
 The 16 `merchant_geocodio_*` tools retain the original address revision, provider
 request body and customer session. Browser listeners borrow that same instance;
 source, prepared-request and customer files use the maintained chunk reader.
+
+
+
+## Captured API workspaces
+
+Attach the original SF61 HAR console with
+`init-har-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`
+or ordinary `init --har-workspaces CONNECTION_JSON`. The existing merchant
+host supplies 24 `merchant_har_*` tools for complete retained capture
+intake, observations and immutable review, later capture editions, native
+merchant plan carry/preview/save, whole receiving copy/adoption and resumable
+original files. Browser and agent share the original source library and merchant
+compiler. `inspect-har` and `download-har` use the maintained checkpointed
+file transport. See the [complete HAR operating guide](HAR_WORKSPACE.md).
+
+
+## Saved GraphQL authoring, native releases and customer handover
+
+The same merchant MCP now connects the original SF105 GraphQL workspaces with
+`init-graphql-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`, or
+`graphqlWorkspaceConnection` in an existing merchant configuration. Host aliases
+select the original private workspace, source endpoint and launch settings.
+
+`merchant_graphql_*` tools capture and save the actual schema, author bounded
+field/argument/variable operations, preserve raw drafts and revision conflicts,
+run and recover stable-ID native previews, prepare merchant/schema-evolution
+packets, and operate the original deployment/SF82 release console. The person
+using the returned native browser and the agent share the same store and IDs.
+
+`merchant_graphql_export_prepare` retains a selected original file set.
+`inspect-graphql` and `download-graphql` deliver its exact source, preview,
+merchant/buyer, revision, deployment or host files through the shared resumable
+downloader, including nested paths and process-reopen continuation. It does not
+create another workspace or transfer engine.
+
+See [GRAPHQL_WORKSPACES.md](GRAPHQL_WORKSPACES.md) for host configuration, the
+complete authoring-to-release flow, exact tool arguments and customer receiving.
