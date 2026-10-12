@@ -96,7 +96,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/application.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstreams.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/managed-workbench.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/MANAGED_WORKBENCH.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/MANAGED_WORKBENCH.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/browser-workbench.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/local-runtime.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/LOCAL_RUNTIME.md"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
