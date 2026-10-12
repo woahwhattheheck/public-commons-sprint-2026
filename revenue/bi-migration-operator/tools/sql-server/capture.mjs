@@ -123,7 +123,7 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
       event('original_read_response_not_retained',{original_pending:state.pending,disposition:'Explicit continuation reads the same cursor in a new observed statement.'});
       state.pending=null;
     }
-    state.generation++;state.status='running';state.native_process=await processIdentity();state.complete=false;
+    state.generation++;state.status='running';state.native_process=await processIdentity();state.complete=false;delete state.error;
     event('native_continuation_started',{generation:state.generation,mode});
     await save();
     const cancelPath=path.join(root,'cancel.json');
