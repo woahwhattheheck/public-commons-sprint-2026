@@ -90,7 +90,7 @@ function parseChoice(decision) {
   return {value, reason: reason.slice(0, index), choiceSha256: openWatersHash(value)};
 }
 export function concentrationSourceGroups(input) {
-  const plan = verifyOpenWatersPlan(input), groups = new Map(), limitOnlyIds = [], limitUnits = new Map();
+  const plan = verifyOpenWatersPlan(input), groups = new Map(), limitOnlyIds = [], supportedLimitOnlyIds = [], preservedLimitOnly = [], limitUnits = new Map();
   for (const row of plan.results) {
     const unit = text(row.fields.RESULT_MSR_UNIT), group = groups.get(unit) ?? {unit, supported: Boolean(concentrationUnit(unit)), resultIds: []};
     group.resultIds.push(row.sourceRecordId); groups.set(unit, group);
@@ -99,11 +99,19 @@ export function concentrationSourceGroups(input) {
     if (resultMissing && (quantities.length || OPEN_WATERS_LIMIT_FIELDS.some(field => text(row.fields[field]).trim()))) {
       limitOnlyIds.push(row.sourceRecordId);
       for (const limit of quantities) limitUnits.set(text(limit.unit), (limitUnits.get(text(limit.unit)) ?? 0) + 1);
+      const nativePopulated = OPEN_WATERS_LIMIT_FIELDS.some(field => text(row.fields[field]).trim());
+      const unsupported = [...new Set([...quantities.filter(limit => !concentrationUnit(limit.unit)).map(limit => text(limit.unit)),
+        ...(nativePopulated && !concentrationUnit(row.fields.DETECTION_LIMIT_UNIT) ? [text(row.fields.DETECTION_LIMIT_UNIT)] : [])])];
+      if (!unsupported.length) supportedLimitOnlyIds.push(row.sourceRecordId);
+      else preservedLimitOnly.push({sourceRecordId:row.sourceRecordId,nativeResultId:row.nativeResultId,
+        characteristic:row.fields.CHAR_NAME ?? '',units:unsupported,reportedLimits:quantities.length,
+        reason:'This result uses units outside the selected mass-per-volume profile. Keep its original quantities or choose its own documented profile.'});
     }
   }
   return {profile: CONCENTRATION_UNIT_PROFILE, sourcePlanId: plan.planId, sourcePlanSha256: plan.planSha256,
     sourceResults: plan.results.length, groups: [...groups.values()].map(row => ({...row, count: row.resultIds.length})).sort((a, b) => a.unit.localeCompare(b.unit)),
-    limitOnly: {resultIds:limitOnlyIds, count:limitOnlyIds.length,
+    limitOnly: {resultIds:limitOnlyIds, count:limitOnlyIds.length, supportedResultIds:supportedLimitOnlyIds,
+      supportedCount:supportedLimitOnlyIds.length, preserved:preservedLimitOnly,
       sourceUnits:[...limitUnits].map(([unit,count]) => ({unit,count,supported:Boolean(concentrationUnit(unit))})).sort((a,b) => a.unit.localeCompare(b.unit))}};
 }
 /**
