@@ -3,6 +3,7 @@
 import { createServer } from 'node:http';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { boundedBodyBytes, BodyReadError } from './body-read.mjs';
+import { validatedExtensionResponsesHeader } from '../sf54-cataloging-sidechannel/header.mjs';
 
 export const NETWORKS = Object.freeze(['stellar:testnet', 'stellar:pubnet']);
 const DEFAULT_MAX_BODY = 1024 * 1024;
@@ -148,17 +149,28 @@ export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp
     });
     if (response.status >= 300 && response.status < 400) throw new HttpError(502, 'UPSTREAM_REDIRECT_DENIED');
     const result = await readLimited(response, maxBodyBytes * 2);
-    return {status: response.status, ...result};
+    // A malformed optional header cannot turn a genuine settlement response into
+    // a retryable 502. Keep only valid original facilitator extension JSON.
+    const extensionResponses = raw
+      ? validatedExtensionResponsesHeader(response.headers.get('extension-responses')) : null;
+    return {status: response.status, ...result, extensionResponses};
   };
   return createServer(async (req, res) => {
-    const pathname = (() => { try { const url = new URL(req.url, 'http://localhost'); return url.search ? null : url.pathname; } catch { return null; } })();
+    const url = (() => {
+      if (typeof req.url !== 'string' || req.url.length > 4096 ||
+          !req.url.startsWith('/') || req.url.startsWith('//')) return null;
+      try { return new URL(req.url,'http://localhost'); } catch { return null; }
+    })();
+    const discovery = req.method === 'GET' &&
+      ['/discovery/resources','/discovery/search'].includes(url?.pathname);
+    const pathname = url && !url.hash && (!url.search || discovery) ? url.pathname : null;
     if (req.method === 'GET' && pathname === '/healthz') {
       json(res, 200, {status: 'configured', networks: NETWORKS}); return;
     }
     if (!authorized(req.headers.authorization, inboundToken)) {
       json(res, 401, {error: 'UNAUTHORIZED'}); return;
     }
-    if (!((req.method === 'GET' && ['/supported', '/readyz'].includes(pathname)) ||
+    if (!((req.method === 'GET' && ['/supported', '/readyz','/discovery/resources','/discovery/search'].includes(pathname)) ||
           (req.method === 'POST' && ['/verify', '/settle'].includes(pathname)))) {
       json(res, 404, {error: 'ROUTE_NOT_FOUND'}); return;
     }
@@ -168,6 +180,19 @@ export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp
     }
     inflight++;
     try {
+      if (discovery) {
+        if (req.headers['transfer-encoding'] || (req.headers['content-length'] && req.headers['content-length'] !== '0'))
+          throw new HttpError(400,'DISCOVERY_BODY_NOT_ACCEPTED');
+        const networks = url.searchParams.getAll('network');
+        if (networks.length !== 1 || !NETWORKS.includes(networks[0]))
+          throw new HttpError(400,'DISCOVERY_NETWORK_REQUIRED');
+        // Route one original query and its cursor to the same network's journal.
+        const peer = await queryPeer(networks[0],pathname+url.search);
+        res.writeHead(peer.status,{'content-type':'application/json; charset=utf-8',
+          'cache-control':'no-store','x-content-type-options':'nosniff'});
+        res.end(peer.raw);
+        return;
+      }
       if (pathname === '/supported' || pathname === '/readyz') {
         // Read both original facilitator capabilities on EVERY readiness request.
         // Reuse the same CAIP-family, network, scheme and signer validation as
@@ -195,7 +220,8 @@ export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp
       }
       // The response is validated as JSON, then forwarded BYTE-FOR-BYTE and with the native status.
       res.writeHead(peer.status, {'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'no-store', 'x-content-type-options': 'nosniff'});
+        'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
+        ...(peer.extensionResponses ? {'EXTENSION-RESPONSES':peer.extensionResponses} : {})});
       res.end(peer.raw);
     } catch (err) {
       const isTimeout = err?.name === 'TimeoutError' || err?.name === 'AbortError';

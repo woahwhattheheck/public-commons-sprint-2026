@@ -13,6 +13,7 @@ const server = makeFrontdoor({
   },
   inboundToken,
   bodyTimeoutMs: Number(process.env.SF58_BODY_TIMEOUT_MS || '8000'),
+  timeoutMs: Number(process.env.SF58_UPSTREAM_TIMEOUT_MS || '12000'),
   // Local self-hosted backend sockets only. Never allows arbitrary external HTTP.
   allowLoopbackHttp: true
 });

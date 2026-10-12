@@ -51,6 +51,14 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
       (feeBumpSigner ? c.limits.inclusionFeeStroops : 0),
     inclusionFeeStroops:c.limits.inclusionFeeStroops, ...(feeBumpSigner ? {feeBumpSigner} : {}) });
   const native = new x402Facilitator().register(c.network, scheme);
+  const catalog = c.catalog
+    ? await (await import('./catalog.mjs')).openNativeSettlementCatalog(c) : null;
+  const outcomes = new WeakMap();
+  let released;
+  const releaseResources = () => released ??= (async () => {
+    slots.close();
+    try { await catalog?.close(); } finally { await ownership.release(); }
+  })();
   let closing = false, verifying = 0, settling = 0;
   const active = new Set();
   const counters = { verifyCalls:0, settleCalls:0, verifyRefusals:0, settlementRefusals:0, nativeErrors:0 };
@@ -88,7 +96,16 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
     kind === 'settle' ? settling++ : verifying++;
     counters[kind === 'settle' ? 'settleCalls' : 'verifyCalls']++;
     const invoke = () => native[kind](originalPayload, originalRequirements);
-    const work = Promise.resolve().then(() => slot ? slots.run(slot,invoke) : invoke());
+    const work = Promise.resolve().then(() => slot ? slots.run(slot,invoke) : invoke()).then(async result => {
+      if (kind === 'settle' && catalog) {
+        const outcome = await catalog.process(originalPayload,originalRequirements,result);
+        if (outcome.headerValue) outcomes.set(result,{
+          headers:{[outcome.headerName]:outcome.headerValue},
+          extensionResponses:outcome.extensionResponses,
+        });
+      }
+      return result;
+    });
     active.add(work);
     try {
       const result = await work;
@@ -104,11 +121,12 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
       kind === 'settle' ? settling-- : verifying--;
       if (slot) slots.release(slot);
       // A timed-out drain retains signer ownership until the accepted SDK work ends.
-      if (closing && active.size === 0) { slots.close(); await ownership.release(); }
+      if (closing && active.size === 0) await releaseResources().catch(() => {});
     }
   }
   const getSupported = async () => {
     const supported = structuredClone(native.getSupported());
+    if (catalog) supported.extensions = [...new Set([...(supported.extensions ?? []),'bazaar'])];
     // Advisory operator policy alongside the original SDK kind. Native payment
     // requirements still select one extra.paymentFlow; the SDK owns settlement.
     for (const kind of supported.kinds) if (kind.x402Version === 2 &&
@@ -123,7 +141,8 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
     settlementConcurrency:c.limits.maxSettleInFlight,
     availableSettlementSlots:closing ? 0 : c.limits.maxSettleInFlight - settling,
     settlementAccounts:slots.status(),
-    counters:{...counters},chainReadiness:readiness.status().state,
+    counters:{...counters},catalog:catalog ? catalog.status() : {enabled:false},
+    chainReadiness:readiness.status().state,
     readiness:readiness.status(),ownership:ownership.status() });
   const drain = async () => {
     closing = true;
@@ -133,19 +152,25 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
       const complete = Promise.allSettled([...active]).then(() => true);
       const deadline = new Promise(resolve => { timer = setTimeout(() => resolve(false), c.limits.drainGraceMs); });
       const drained = await Promise.race([complete, deadline]);
-      if (drained) { slots.close(); await ownership.release(); }
+      if (drained) await releaseResources();
       return {drained,...status()};
     } finally { clearTimeout(timer); }
   };
   const waitForIdle = async () => {
     requireValue(closing,'DRAIN_REQUIRED');
     await Promise.allSettled([...active]);
-    slots.close();
-    await ownership.release();
+    await releaseResources();
     return {drained:true,...status()};
   };
   return Object.freeze({ network:c.network, getSupported, verify:(p,r) => call('verify',p,r),
-    settle:(p,r) => call('settle',p,r), status, drain,probeReadiness:readiness.probe,
+    settle:(p,r) => call('settle',p,r),
+    settleWithExtensions:async (p,r) => {
+      const result = await call('settle',p,r);
+      return {result,headers:structuredClone(outcomes.get(result)?.headers ?? {}),
+        extensionResponses:structuredClone(outcomes.get(result)?.extensionResponses ?? {})};
+    },
+    catalog:catalog ? Object.freeze({list:catalog.list,search:catalog.search,status:catalog.status}) : null,
+    status, drain,probeReadiness:readiness.probe,
     waitForIdle,drainGraceMs:c.limits.drainGraceMs });
 }
 
