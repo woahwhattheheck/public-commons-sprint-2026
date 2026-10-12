@@ -82,16 +82,27 @@ def inspect_asset(workspace, source_id, collection, item_id, asset_name, *, prog
     core = native()
     source = workspace.source(source_id)
     asset = source.assets.get(asset_key(collection, item_id, asset_name))
-    require(asset is not None, "ASSET_NOT_FOUND", "Select an original scene asset.")
+    require(asset is not None, "ASSET_NOT_FOUND", "Select an original received native output.")
     result = {"sourceId": source.id, "collection": collection, "itemId": item_id, "assetKey": asset_name,
               "original": copy.deepcopy(asset["original"]), "outcome": asset.get("outcome"),
               "file": copy.deepcopy(asset.get("file")), "receipt": copy.deepcopy(asset.get("receipt")),
-              "native": native_version(), "layers": []}
+              "native": native_version(), "sourceKind": source.sourceKind,
+              "nativeIdentity": copy.deepcopy(asset.get("nativeIdentity")), "nativeLayer": asset.get("nativeLayer"),
+              "layers": []}
     if asset.get("file") is None:
         result["availability"] = "METADATA_ONLY"
         return result
     path = source.path(asset["file"]["path"], verify=True, progress=progress)
     sublayers = core.QgsProviderRegistry.instance().querySublayers(str(path))
+    if asset.get("nativeLayer") is not None:
+        original_names = [detail.name() for detail in sublayers
+                          if detail.providerKey() == "ogr" and detail.type() == core.Qgis.LayerType.Vector]
+        sublayers = [detail for detail in sublayers
+                     if detail.providerKey() == "ogr" and detail.type() == core.Qgis.LayerType.Vector and
+                     detail.name() == asset["nativeLayer"]]
+        require(len(sublayers) == 1, "VECTOR_ORIGINAL_LAYER_SELECTION",
+                "QGIS could not resolve the exact native layer retained in this vector output.",
+                nativeLayer=asset["nativeLayer"], choices=original_names)
     for detail in sublayers:
         if detail.providerKey() not in ("gdal", "ogr"):
             continue
@@ -107,6 +118,10 @@ def inspect_asset(workspace, source_id, collection, item_id, asset_name, *, prog
             facts = describe_layer(layer)
             facts.update({"sublayer": detail.name(), "driver": detail.driverName()})
             result["layers"].append(facts)
+    if asset.get("nativeLayer") is not None:
+        require(len(result["layers"]) == 1 and result["layers"][0]["kind"] == "vector",
+                "VECTOR_NATIVE_LAYER_INVALID", "QGIS could not open the original native vector output.",
+                nativeLayer=asset["nativeLayer"])
     if not result["layers"]:
         layer = core.QgsRasterLayer(str(path), asset_name, "gdal")
         if layer.isValid():
@@ -176,6 +191,8 @@ def _verify_native_selection(layer, path, definition, *, subset=True):
 def expected_layer_path(workspace, definition, *, progress=None):
     source = workspace.source(definition["sourceId"])
     if definition["kind"] == "footprints":
+        require(source.sourceKind == "stac", "VECTOR_LAYER_KIND",
+                "The vector source retains its original native layers.")
         selected = [source.scenes[key] for key in definition["sceneKeys"]]
         body = json_bytes({"type": "FeatureCollection", "features": selected})
         record = retain_bytes(workspace.root, "derived/" + sha_bytes(body) + ".geojson", body)
@@ -183,6 +200,11 @@ def expected_layer_path(workspace, definition, *, progress=None):
     asset = source.assets.get(asset_key(definition.get("collection"), definition["itemId"], definition["assetKey"]))
     require(asset and asset.get("file") and asset["file"] == definition["file"], "LAYER_ASSET_CHANGED",
             "The selected map layer differs from its retained original asset.")
+    if asset.get("nativeLayer") is not None:
+        require(definition["kind"] == "vector" and definition.get("vectorLayer") == asset["nativeLayer"],
+                "VECTOR_ORIGINAL_LAYER_SELECTION",
+                "The saved map must use the exact native layer bound to its original output.",
+                nativeLayer=asset["nativeLayer"])
     return source.path(asset["file"]["path"], verify=True, progress=progress), []
 
 
