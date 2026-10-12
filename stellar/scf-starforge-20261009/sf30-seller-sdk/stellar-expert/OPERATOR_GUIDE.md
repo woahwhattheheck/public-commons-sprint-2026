@@ -240,3 +240,13 @@ directory with verified partial-file checkpoints, and `reopen` verifies those
 bytes offline. The five customer files retain their original names and hashes.
 The local `stellar-transfer.json` records receiving names, original workspace
 identity and selections; it accompanies the original customer manifest.
+
+After the MCP host restarts on a different port, repeat `download` with its new
+`--url` and current bearer token while keeping the same workspace alias,
+original selection, reviewed manifest SHA256 and private output directory.
+Receiving checkpoints use the authenticated workspace UUID, so the listener
+address can change without losing verified partial bytes. If an older
+checkpoint contains the previous listener URL, the receiver holds the original
+directory lock and checks the complete saved manifest, workspace identity and
+file selections before adopting the stable workspace label. Each retained
+partial-file prefix is checked before the original download continues.
