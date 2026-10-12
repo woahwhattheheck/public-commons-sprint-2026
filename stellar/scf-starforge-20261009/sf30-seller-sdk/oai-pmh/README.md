@@ -167,3 +167,18 @@ python sf30-seller-sdk/oai-pmh/examples/zenodo_20261011.py --archive /absolute/a
 A new workspace receives the exact captured response bodies and observed transport; an existing matching workspace reuses its retained pages, edition and build. The script prints the same edition ID, build ID and native dataset snapshot, followed by the console URL. Add `--export /absolute/new-source-directory` or `--backup /absolute/new-backup.zip` to produce complete receiving artifacts before opening the console. A newly imported workspace records its actual current review time; the complete original saved backup preserves the earlier operator history.
 
 This case uses all 231 actual DataCite records from 2026-10-11T00:00:00Z through 2026-10-11T01:00:00Z. The five record pages are complete, and the separately retained first set-catalog page keeps its actual continuation.
+
+## Complete CIIM OpenAlex source and receiving case
+
+The maintained OpenAlex OAI feed can be operated with this same receiving console:
+
+~~~sh
+python examples/ciim_openalex.py --case /private/ciim-case \\
+  --archive /private/OpenAlex_CIIM_Source_Example_20261012.zip --serve
+~~~
+
+The launcher uses the original feed implementation in `sf88-operator-buyer-cli/research/oai/oai_feed.py` and the unchanged published 169-record source example. It discovers the actual local repository, follows all four source-feed pages, reviews and projects the baseline, continues an already-started harvest across an explicit withdrawal, receives the deletion against the baseline, preserves it through ordinary source replay, then receives an explicit restoration. All repeated Dublin Core fields and the original source provenance are compared with the original prepared source through the native dataset engine.
+
+For this feed's actual provenance namespace, the editable Dublin Core preset adds ten typed source columns to the three OAI fields and fifteen repeated Dublin Core fields: source edition, query/manifest/page/request/record hashes, page number, source URL, retrieval time and metadata licence. Original work rights remain in `dc_rights`. Other Dublin Core repositories continue to use their existing preset.
+
+The completed case keeps both original stores, the withdrawal and restored publisher sources, the feed backup and the complete receiving backup. Reopen the same directory with `--open-only --serve`; when opening a delivered case containing the saved backups, the launcher restores the original feed and receiving databases before serving them. A fresh full native case received 169 records, retained one explicit withdrawal, restored all 169, and compared all 28 projected columns against the original source.
