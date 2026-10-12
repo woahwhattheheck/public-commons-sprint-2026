@@ -136,6 +136,8 @@ Browser changes run through the same alias queue and original revision guards. T
 
 Closing the browser leaves the native model available to MCP. Closing the exact model instance drains accepted operations, closes its browser and retained read snapshots, then releases the original lease.
 
+Checkpoint, browser close and workspace close reserve the alias before their first asynchronous drain. Calls already admitted to the native queue finish; new queued actions and browser opens receive `FISCALDATA_WORKSPACE_DRAINING` until that transition finishes. Status exposes the original lifecycle and start time. Receiving reserves a closed destination alias before opening its package, so another open or receive cannot race that same destination.
+
 ## Checkpoint and receive the source/review workspace
 
 `merchant_fiscaldata_checkpoint` takes the original alias and a stable `operationId`. It first drains the owned browser, stops the original capture worker at its retained page checkpoint, closes the model, and acquires the same kernel lease for a stable source inventory. It then reopens the source model. Unfinished captures are paused; resume the actual capture explicitly when ready.
@@ -148,7 +150,7 @@ The immutable package contains:
 - Complete capture/edition/comparison/merchant/acquisition deliveries.
 - Retained source-copy recovery files, prior receiving originals and operator history.
 
-The package is a gzip stream of bounded JSON records. Its manifest identifies each original path, exact size and SHA-256; each file is streamed in ordered48KiB chunks. Receiving verifies the whole compressed digest and every decoded file before publication. Capacity is20,000 files,512MiB original source bytes,256MiB per original file and256,000,000 compressed bytes.
+The package is a gzip stream of bounded JSON records. Its manifest identifies each original path, exact size and SHA-256; each file is streamed in ordered 48KiB chunks. Receiving verifies the whole compressed digest and every decoded file before publication. Capacity is20,000 files,512MiB original source bytes,256MiB per original file and256,000,000 compressed bytes.
 
 Private publisher process controls, browser sessions, buyer credentials and external buyer directories are host authority. Rebind them through the original configured publisher/buyer on the receiving host. Merchant export and acquired-delivery bytes remain in the portable source history, with their original lineage.
 
@@ -167,6 +169,8 @@ To receive a package produced in this host:
 Pass that payload to `merchant_fiscaldata_restore`. The receiving alias must be CLOSED and its directory empty. For a transferred package, select a host-pinned `sourceImport` instead of `sourceWorkspace/packageId`.
 
 Receiving preserves every original record in the package. A capture with unfinished RUNNING intent receives an explicit PAUSED local revision; its exact pre-receiving record is retained under the receiving lineage. The workspace header is published last, after complete source files and the immutable receiving receipt. A process interruption reuses the same receiving operation, manifest and staging records. A completed same-operation retry returns its original receipt.
+
+Each new intent, manifest, promotion list, receipt and seal is first written completely to a private attempt file and synced under the original kernel lease. Only then is its selected metadata name published atomically. Interrupted attempt files remain retained, completed metadata stays immutable, and retries reuse the committed original intent and its creation time.
 
 Open the receiving alias, inspect the original editions and comparisons, query the saved CSV, and read its source/receiving history. Resume only the original captures chosen for additional public observations.
 
@@ -191,7 +195,7 @@ starforge fiscaldata receive --dir /private/received-fiscal-data \
 
 ## Complete file receiving
 
-Use `merchant_fiscaldata_file` with an original `kind,id,filename`. Kinds are `capture`, `edition`, `comparison`, `export`, `publisher` and `package`. A package ID is the checkpoint's full64-character identity; choose `workspace.fiscal.gz` or `manifest.json`.
+Use `merchant_fiscaldata_file` with an original `kind,id,filename`. Kinds are `capture`, `edition`, `comparison`, `export`, `publisher` and `package`. A package ID is the checkpoint's full 64-character identity; choose `workspace.fiscal.gz` or `manifest.json`.
 
 The maintained retained reader returns `readId,file,offset,bytesRead,nextOffset,encoding,data`. Decode base64 bytes exactly, append at the returned offset, and carry the original file SHA for each continuation. Stop when `nextOffset` is null, then verify the complete size and SHA. Do not treat a single bounded chunk as the complete artifact.
 
