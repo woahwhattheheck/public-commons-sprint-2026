@@ -22,6 +22,27 @@ def safe_member(value):
     return value
 
 
+MAX_DELIVERY_MEMBERS = 6000
+MAX_DELIVERY_EXPANDED_BYTES = 256 * 1024 * 1024
+MAX_MANIFEST_BYTES = 2 * 1024 * 1024
+
+
+def validate_delivery_members(members):
+    """The exporter and receiving inspector share one complete member envelope."""
+    names = [safe_member(name) for name, _ in members]
+    if len(names) != len(set(names)) or len(names) > MAX_DELIVERY_MEMBERS:
+        raise ValueError("The complete package must contain unique members and at most 6,000 files; narrow the review source scope.")
+    if any(not isinstance(size, int) or isinstance(size, bool) or size < 0 or size > MAX_BYTES
+           for _, size in members) or sum(size for _, size in members) > MAX_DELIVERY_EXPANDED_BYTES:
+        raise ValueError("The complete package supports 64 MiB per file and 256 MiB expanded; narrow the review source scope.")
+    lengths = dict(members)
+    if "manifest.json" not in lengths:
+        raise ValueError("This ZIP has no original load-review manifest.")
+    if lengths["manifest.json"] > MAX_MANIFEST_BYTES:
+        raise ValueError("The complete member manifest supports 2 MiB; narrow the review source scope.")
+    return names
+
+
 def reference(record, kind):
     if not isinstance(record, dict) or record.get("kind") != kind:
         raise ValueError("A retained record has the wrong kind.")
@@ -40,16 +61,9 @@ def inspect_delivery(data):
         raise ValueError("Select the complete load-forecast export ZIP.") from None
     with package:
         members = package.infolist()
-        names = [safe_member(m.filename) for m in members]
-        if len(names) != len(set(names)) or len(names) > 6000:
-            raise ValueError("The package has ambiguous or excessive members.")
-        if sum(m.file_size for m in members) > 256 * 1024 * 1024 or any(
-                m.file_size > MAX_BYTES or m.flag_bits & 1 or m.is_dir() for m in members):
-            raise ValueError("The package contains oversized, encrypted, or directory members.")
-        if "manifest.json" not in names:
-            raise ValueError("This ZIP has no original load-review manifest.")
-        if package.getinfo("manifest.json").file_size > 2 * 1024 * 1024:
-            raise ValueError("The member manifest is too large.")
+        names = validate_delivery_members([(m.filename, m.file_size) for m in members])
+        if any(m.flag_bits & 1 or m.is_dir() for m in members):
+            raise ValueError("The package contains encrypted or directory members.")
         manifest = strict_json(package.read("manifest.json"))
         if not isinstance(manifest, dict) or manifest.get("schema") != "commons.load-forecast-export.v1":
             raise ValueError("Select an original commons.load-forecast-export.v1 package.")
@@ -174,8 +188,7 @@ def adopt_delivery(model, received, request):
                 raise ValueError("Native receiving changed the original normalized source.")
         received_source = child("load.source.accept", encoded(old_ref), {
             "id": received_source["id"], "expected": received_source["revision"], "acknowledge_missing": True,
-            "note": "Received original accepted source " + source["id"] + " r" + str(source["revision"]) +
-                    ". Original review: " + sp["review"]["note"]})
+            "note": sp["review"]["note"]})
         mapping[encoded(old_ref)] = model.ref(received_source)
     plan = copy.deepcopy(report["plan"]["payload"])
     plan.pop("_operation_id", None)

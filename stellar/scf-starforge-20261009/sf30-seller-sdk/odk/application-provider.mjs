@@ -19,6 +19,10 @@ export default {
           'Choose the original private workspace or a new private directory.'),
         field('operator','Recording operator','text',true,
           'The accountable operator for this retained field-data workspace.'),
+        field('commissioningConnection','Central host connection','path',false,
+          'Optional original private connection or bootstrap file for the customer commissioning editor.'),
+        field('commissioningEnvironment','Central authorization file','path',false,
+          'Optional private host file containing the selected connection authorization alias.'),
         field('restoreArchive','Original workspace archive','path',false,
           'Optional exact original archive received into a new or empty workspace before opening.'),
         field('restoreSha256','Original archive SHA-256','text',false,
@@ -29,6 +33,8 @@ export default {
   },
   validateSettings(_type,settings){
     const args=['--workspace',settings.workspaceDirectory,'--operator',settings.operator];
+    if(settings.commissioningConnection)args.push('--commissioning-connection',settings.commissioningConnection);
+    if(settings.commissioningEnvironment)args.push('--commissioning-environment',settings.commissioningEnvironment);
     if(settings.restoreArchive)args.push('--restore-archive',settings.restoreArchive);
     if(settings.restoreSha256)args.push('--restore-sha256',settings.restoreSha256);
     centralManagedOptions(args);
@@ -38,6 +44,10 @@ export default {
     const workspace=await path('workspaceDirectory','directory',true,true);
     if(!workspace.exists)createDirectories.push(workspace.path);
     option('--workspace',workspace.path);option('--operator',settings.operator);
+    const commissioning=await path('commissioningConnection','file',false,true);
+    if(commissioning)option('--commissioning-connection',commissioning.path);
+    const authorization=await path('commissioningEnvironment','file',false,true);
+    if(authorization)option('--commissioning-environment',authorization.path);
     const archive=await path('restoreArchive','file',false,true);
     if(archive){
       const retained=await odkInspectPrivateFile(archive.path);

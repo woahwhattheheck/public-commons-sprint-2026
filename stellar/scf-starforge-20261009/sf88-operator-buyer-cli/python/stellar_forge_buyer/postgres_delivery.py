@@ -260,6 +260,9 @@ class _Input:
 
 
 def _input(delivery, mapping):
+    from .postgres_central import CentralAcceptedDelivery
+    if isinstance(delivery, CentralAcceptedDelivery):
+        return delivery.receiving_input(mapping)
     if not isinstance(delivery, DatasetDelivery) or not isinstance(mapping, DatasetMapping):
         raise WarehouseError("DATASET_PG_ORIGINAL_DELIVERY_AND_MAPPING_REQUIRED")
     native = delivery.native
@@ -388,6 +391,9 @@ def load_delivery_report(report_path):
     """Open an unchanged SF88 report or the original finalized SF100 scan."""
     path = Path(os.path.abspath(Path(report_path).expanduser()))
     record = parse(read(path, 8 * 1024 * 1024))
+    if isinstance(record, dict) and record.get("schema") == "stellar-forge.postgres-central-delivery.v1":
+        from .postgres_central import CentralAcceptedDelivery
+        return CentralAcceptedDelivery(path)
     if isinstance(record, dict) and isinstance(record.get("report"), dict):
         record = record["report"]
     if (isinstance(record, dict) and isinstance(record.get("session"), dict)

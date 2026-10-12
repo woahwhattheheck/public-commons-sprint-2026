@@ -1,4 +1,4 @@
-# Research preservation transfers for Archivematica
+# Research preservation transfers
 
 This operator workflow turns a completed native research edition into a reviewed
 BagIt transfer. It keeps the original provider pages, query, coverage and
@@ -10,6 +10,33 @@ the metadata table is `data/metadata/metadata.csv`. The original
 research/OAI intake module performs the source query, cursor, record and
 manifest checks. This module adds review revisions, complete transfer packaging,
 receiving, and comparisons between transfers.
+
+## Browser workbench and repository destinations
+
+The [research preservation workbench](WORKBENCH.md) provides the complete
+browser workflow: source intake, record review, saved revision selection,
+destination preparation, original transfer progress, native package downloads,
+and portable application/workspace receiving.
+
+```sh
+python3 -B research/preservation/workbench.py serve \
+  --workspace /absolute/preservation/project --port 8785
+```
+
+The workbench reuses this original source/review application. Each saved
+destination receives a frozen copy of the selected published review, so a
+later catalogue revision can advance independently.
+
+| Destination | Native package and continuation |
+| --- | --- |
+| Archivematica | This guide: reviewed BagIt transfer with the original source closure |
+| RODA | [Package and submission agreement](RODA.md), [REST upload and ingest continuation](RODA_REST.md) |
+| Preservica | [OPEX producer and operator workflow](PRESERVICA.md), [deployed provider contract](PRESERVICA_PROVIDER_CONTRACT.md) |
+
+The optional Node wrapper routes the same applications through
+`cli.mjs workbench`, `cli.mjs roda`, `cli.mjs roda-client`,
+`cli.mjs preservica` and `cli.mjs preservica-client`.
+Existing preservation commands remain directly available through the wrapper.
 
 ## Start with an existing edition
 

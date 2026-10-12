@@ -34,7 +34,7 @@ The source screen pages through original workbook cells and shows their original
 
 Do not select chart labels, totals and their components as though they were one additive series. Each canonical geography/metric/period/definition/signal must be unique within a source edition; overlapping mapped tables are rejected.
 
-Power values normalize to MW and energy values to MWh with decimal arithmetic. Energy and power stay separate. The XLSX reader consumes the numeric value actually retained in the workbook, including cached formula results. It does not calculate workbook formulas or run external workbook links. A selected formula without a cached numeric result must be resolved in the original workbook before that field can be mapped. The complete file stays retained throughout.
+Power values normalize to MW and energy values to MWh with decimal arithmetic. Source quantities support up to 60 coefficient digits and 60 fractional places, with absolute magnitude at most 1e18 in their original unit. JSON fractional numbers are parsed directly as Decimal; decimal-text fields preserve the same digits. Conversion, differences and accumulated adjustments use a shared 128-digit context sufficient for the supported source bounds and row count. Ratios, WAPE and CAGR use 40 significant digits with half-even rounding. Computed fixed-point output is bounded to 2,048 characters before formatting. Energy and power stay separate. The XLSX reader consumes the numeric value actually retained in the workbook, including cached formula results. It does not calculate workbook formulas or run external workbook links. A selected formula without a cached numeric result must be resolved in the original workbook before that field can be mapped. The complete file stays retained throughout.
 
 Blank, dash and the configured missing markers stay in **Missing original cells**. They do not become zero. Review the missing-cell count before accepting an edition. The accepted review binds both the original file and normalized observations.
 
@@ -118,3 +118,9 @@ Use **Handoff & recovery → Encrypted recovery** to back up the complete curren
     python BI_OPERATOR.py --workspace ./restored-load-workspace serve
 
 The original backup retains all source bytes, revisions, operation outcomes, adopted plans and delivered packages. Restoring renews the private browser access token while retaining the original business identities.
+
+### Saved edits and receiving size
+
+The Source view shows mapped observations and missing cells for structured source packets as well as workbooks. Save a changed source description before mapping edited tables; the table edits remain in the editor. Accept is available after the description and mappings match their saved edition. Finalize likewise uses the saved conclusion and row decisions. Revision checks still reject a stale editor when another operator has saved the same record.
+
+A complete receiving package supports at most 64 MiB compressed, 6,000 files, 64 MiB per member, 256 MiB expanded and a 2 MiB member manifest. Export and receiving share the member envelope. If a review exceeds it, narrow the selected original source scope and produce separate complete reviews. Editable receiving preserves the source's original acceptance note and binds its provenance through the retained package and source map.

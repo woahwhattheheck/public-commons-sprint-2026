@@ -1,5 +1,5 @@
 // MIT. Approved Directus editions through the original SF30/SF82 publisher.
-import {join,resolve,dirname} from 'node:path';
+import {join,resolve,dirname,relative,sep} from 'node:path';
 import {rename,rm} from 'node:fs/promises';
 import {loadDatasetConfig} from '../dataset-handler.mjs';
 import {buildDatasetSellerConfig} from '../dataset-cli.mjs';
@@ -44,11 +44,15 @@ function publicResult(prepared){
 /** Preserve the exact approved source closure beside the native five-file package.
  * Repeating preparation at the same path fills only identical original files. */
 export async function prepareDirectusMerchant({workspace,editionId,editionSha256,reviewId,
-  directory,versionDirectory,payment,origin,path='/directus-data'}={}){
+  directory,versionDirectory,payment,origin,path='/directus-data',retain=true}={}){
   const {edition,review}=exactReview(workspace,editionId,editionSha256,reviewId);
   directory=absolute(directory,'prepared package directory');
   versionDirectory=absolute(versionDirectory,'original dataset version directory');
-  separated(directory,workspace.directory);separated(directory,versionDirectory);separated(versionDirectory,workspace.directory);
+  if(typeof retain!=='boolean')throw new TypeError('retain must be a boolean.');
+  const ownedRuntime=join(resolve(workspace.directory),'project-runtime');
+  const inRuntime=value=>{const part=relative(ownedRuntime,value);return part&&part!=='..'&&!part.startsWith('..'+sep)&&!part.startsWith(sep);};
+  if(!(inRuntime(directory)&&inRuntime(versionDirectory))){separated(directory,workspace.directory);separated(versionDirectory,workspace.directory);}
+  separated(directory,versionDirectory);
   await privateDirectory(directory,true);
   const release=await acquireWorkspace(directory);
   try{
@@ -110,7 +114,9 @@ export async function prepareDirectusMerchant({workspace,editionId,editionSha256
     await saveExact(join(directory,'seller.json'),seller);
     await saveExact(join(directory,'source.json'),sourceBytes);
     await saveExact(join(directory,'binding.json'),binding);
-    return publicResult(await readDirectusMerchant(directory));
+    const result=publicResult(await readDirectusMerchant(directory));
+    if(retain){const record=await workspace.retainMerchant({directory});result.projectMerchantId=record.id;}
+    return result;
   }finally{await release();}
 }
 

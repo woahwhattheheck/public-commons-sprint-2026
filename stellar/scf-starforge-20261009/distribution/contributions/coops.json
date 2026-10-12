@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "coops",
-  "description": "Original NOAA coastal sources, multi-year capture, reviewed multi-station model-input deliveries, exact returned-file receiving and native merchant/customer publication",
+  "description": "Original NOAA coastal sources, reviewed multi-station deliveries and exact returned-file receiving, with immutable study CSVs in the original native dataset/query and merchant/customer publication",
   "commands": {
     "coops-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/workspace.mjs",
     "coops": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/cli.mjs",
@@ -38,7 +38,8 @@
     "./seller/coops/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving.mjs",
     "./seller/coops/receiving-host": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving-host.mjs",
     "./seller/coops/study": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/study.mjs",
-    "./seller/coops/study-exchange": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/study-exchange.mjs"
+    "./seller/coops/study-exchange": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/study-exchange.mjs",
+    "./seller/coops/study-dataset": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/study-dataset.mjs"
   },
   "browserAssets": [
     {
