@@ -2,11 +2,6 @@
 import { lstat } from 'node:fs/promises';
 import { resolve,join } from 'node:path';
 import { privateDirectory,writeBytes,writeJson,readBytes,readJson,jsonBytes } from '../../sf88-operator-buyer-cli/node/store.mjs';
-import { loadDatasetConfig } from '../dataset-handler.mjs';
-import { buildDatasetSellerConfig } from '../dataset-cli.mjs';
-import { openDatasetVersions,DATASET_SNAPSHOT_PARAMETER } from '../dataset-refresh/versions.mjs';
-import { startVersionedDatasetSeller } from '../dataset-refresh/service.mjs';
-import { readDatasetBuyerOffer,prepareDatasetBuyer } from '../dataset-refresh/buyer-handoff.mjs';
 import { COLUMNS,MAX_SOURCE_BYTES,MAX_PACKET_BYTES,SOURCE_BASIS,sha,canonical,copy,
   plain,text,integer,identifier,requireThat,SamError,now,csv,noticeDatasetRow } from './core.mjs';
 
@@ -71,6 +66,7 @@ export async function prepareSamMerchant({
     defaultLimit,maxLimit,maxRows:Math.max(1,rows.length),maxBytes:MAX_SOURCE_BYTES,maxCellChars:1024*1024};
   await put(join(directory,'notices.csv'),data);
   await put(join(directory,'dataset.json'),jsonBytes(config));
+  const {loadDatasetConfig}=await import('../dataset-handler.mjs');
   const dataset=await loadDatasetConfig(join(directory,'dataset.json')),description=dataset.describe();
   const provenance={schema:'stellar-forge.samgov-merchant-source.v1',workspaceId,sourceRevision,
     selection:copy(selection),edition:copy(edition),noticeIds:rows.map(row=>row.noticeId),
@@ -81,6 +77,8 @@ export async function prepareSamMerchant({
   await put(join(directory,'source-manifest.json'),jsonBytes(provenance));
   let seller=null;
   if(payment!==undefined){
+    const [{buildDatasetSellerConfig},{DATASET_SNAPSHOT_PARAMETER}]=await Promise.all([
+      import('../dataset-cli.mjs'),import('../dataset-refresh/versions.mjs')]);
     seller=await buildDatasetSellerConfig(dataset,{payment,origin,path});
     for(const route of seller.routes)if(route.handler==='queryDataset'){
       requireThat(route.definition.queryParameters.length<32,'DATASET_QUERY_CAPACITY');
@@ -124,6 +122,7 @@ export async function loadSamMerchant(directory){
   }
   const config=await readJson(join(directory,'dataset.json'),65536);
   requireThat(config.file==='notices.csv','MERCHANT_SOURCE_PATH_CHANGED');
+  const {loadDatasetConfig}=await import('../dataset-handler.mjs');
   const dataset=await loadDatasetConfig(join(directory,'dataset.json'));
   requireThat(dataset.describe().snapshot===bundle.dataset.snapshot &&
     canonical(dataset.describe())===canonical(bundle.dataset),'MERCHANT_SNAPSHOT_CHANGED');
@@ -143,6 +142,8 @@ export async function serveSamMerchant(directory,{port=0,nativeFactory=null,cont
   requireThat(merchant.bundle.seller,'MERCHANT_PAYMENT_CONFIG_REQUIRED',
     'Prepare this selection with the original public payment terms and resource origin.',409);
   integer(port,'Original seller port',0,65535);
+  const [{openDatasetVersions},{startVersionedDatasetSeller}]=await Promise.all([
+    import('../dataset-refresh/versions.mjs'),import('../dataset-refresh/service.mjs')]);
   const versionsDirectory=await privateDirectory(join(merchant.directory,'runtime','versions'));
   let initialized=false;
   try{await lstat(join(versionsDirectory,'state.json'));initialized=true;}
@@ -166,6 +167,7 @@ export async function reviewSamBuyer({directory,seller,query={}}={}){
   const merchant=await loadSamMerchant(directory);
   requireThat(merchant.bundle.seller,'MERCHANT_PAYMENT_CONFIG_REQUIRED');
   const inputQuery=queryText(query);
+  const {readDatasetBuyerOffer}=await import('../dataset-refresh/buyer-handoff.mjs');
   const review=await readDatasetBuyerOffer({seller,resource:merchant.bundle.seller.resource,
     snapshot:merchant.bundle.dataset.snapshot,query:inputQuery});
   return {...review,inputQuery,publicationId:merchant.bundle.id,editionId:merchant.bundle.editionId};
@@ -176,6 +178,7 @@ export async function prepareSamBuyer({directory,review,intentId,acceptIndex,off
   requireThat(fresh.publicationId===review.publicationId && fresh.snapshot===review.snapshot &&
     fresh.offerSha256===review.offerSha256,'SELLER_OFFER_CHANGED',
     'The original seller offer or selected source changed; review its current terms.',409);
+  const {prepareDatasetBuyer}=await import('../dataset-refresh/buyer-handoff.mjs');
   return prepareDatasetBuyer(fresh,{intentId,acceptIndex,offerSha256});
 }
 
