@@ -43,15 +43,18 @@ function validateRequest(row){
 }
 export async function mountCatalogueView({root,api,context}={}){
   if(!(root instanceof Element)||typeof api!=='function'||!context?.workspace?.id)throw new TypeError('The original STAC application context is required.');
-  const owner=context.workspace.id,storageKey='stac-catalogue:'+owner+':requests';
+  const owner=context.workspace.id;
+  let catalogueId=null,storageKey=null,identityChanged=false;
   let disposed=false,timer=null,refreshing=null,requests=[],selectedSource=null,source=null,sourceLoading=null;
   let state=null,jobs=[],inspection=null,recordsResult=null,selectedRecord=null,activeTab='connection',notice=null;
   let connectionDraft=null,connectionDirty=false,deliveryDirectory='',sourceTitle='Catalogue receiving',sourceUrls='{}';
+  let deliveryGeneration=0,inspectionRequest=0;
   let chosenCollections=new Set(),planDraft=null,planSource=null,selectedPlan=null,recordDraft=null;
-  let exportDirectory='',importSource='',importDirectory='',working=0,observedRevision=null;
+  let exportDirectory='',importSource='',importDirectory='',working=0,observedRevision=null,observedJobs=null;
   const network=new Set(),openDetails=new Set();
-  try{const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(saved))requests=saved.filter(validateRequest);}catch{}
+  // The older owner-only key stays untouched: it cannot establish which catalogue a request belongs to.
   function persist(){
+    if(!storageKey||identityChanged)throw new Error('Reopen the original catalogue workspace before saving an operation.');
     const native=state?.operations??{};
     const pending=requests.filter(row=>native[row.id]?.status!=='COMPLETE');
     const complete=requests.filter(row=>native[row.id]?.status==='COMPLETE').slice(-30);
@@ -61,6 +64,7 @@ export async function mountCatalogueView({root,api,context}={}){
   }
   async function request(path,options={}){
     if(disposed)throw new Error('This catalogue view is closed.');
+    if(identityChanged)throw new Error('The active catalogue identity changed. Reopen the original saved catalogue before continuing.');
     const controller=new AbortController();network.add(controller);
     try{return await api(path,{...options,signal:controller.signal});}
     finally{network.delete(controller);}
@@ -112,7 +116,14 @@ export async function mountCatalogueView({root,api,context}={}){
     return null;
   }
   async function dispatch(row,reconcile=false){
-    working++;row.delivery='DISPATCHING';row.updatedAt=new Date().toISOString();persist();render();
+    const previous={delivery:row.delivery,updatedAt:row.updatedAt};
+    row.delivery='DISPATCHING';row.updatedAt=new Date().toISOString();
+    try{persist();}catch(error){
+      row.delivery=previous.delivery;
+      if(previous.updatedAt===undefined)delete row.updatedAt;else row.updatedAt=previous.updatedAt;
+      throw new Error('The original request was not sent because its operation identity could not be saved. '+(error.message||String(error)));
+    }
+    working++;render();
     try{
       const job=await request('/api/catalogue/actions/'+row.action,{method:'POST',body:{operationId:row.id,input:row.input,reconcile}});
       row.delivery='ACKNOWLEDGED';row.updatedAt=new Date().toISOString();persist();
@@ -125,6 +136,7 @@ export async function mountCatalogueView({root,api,context}={}){
     }finally{working--;render();schedule();}
   }
   async function perform(action,input){
+    if(identityChanged||!catalogueId)throw new Error('Open the original catalogue workspace before preparing an operation.');
     const row={id:'catalogue-'+crypto.randomUUID(),action,input:clone(input),createdAt:new Date().toISOString(),delivery:'PREPARED'};
     if(!validateRequest(row))throw new Error('This catalogue request is invalid.');
     requests.push(row);try{persist();}catch(error){requests.pop();throw new Error('Save the original operation identity before dispatch. '+error.message);}
@@ -155,14 +167,22 @@ export async function mountCatalogueView({root,api,context}={}){
     sourceLoading={sha,promise};return promise;
   }
   function schedule(){
-    if(disposed)return;clearTimeout(timer);
+    if(disposed||identityChanged)return;clearTimeout(timer);
     timer=setTimeout(()=>{if(root.isConnected&&document.visibilityState==='visible')void safe(()=>refresh());else schedule();},working||jobs.some(job=>job.status==='RUNNING')?1500:5000);
   }
   async function refresh(force=false){
     if(disposed)return;if(refreshing)return refreshing;
     refreshing=(async()=>{
       const [current,recent]=await Promise.all([request('/api/catalogue/state'),request('/api/jobs')]);
-      if(current.schema!=='starforge.stac-geonetwork.v1'||current.stacWorkspaceId&&current.stacWorkspaceId!==owner)throw new Error('The active catalogue belongs to a different imagery workspace.');
+      if(current.schema!=='starforge.stac-geonetwork.v1'||!/^catalogue-[a-f0-9]{24}$/.test(current.id??'')||current.stacWorkspaceId&&current.stacWorkspaceId!==owner)throw new Error('The active catalogue belongs to a different imagery workspace.');
+      if(catalogueId!==null&&current.id!==catalogueId){
+        identityChanged=true;clearTimeout(timer);
+        throw new Error('The active catalogue identity changed. Reopen the original saved catalogue before continuing.');
+      }
+      if(catalogueId===null){
+        catalogueId=current.id;storageKey='stac-catalogue:'+owner+':'+catalogueId+':requests';
+        try{const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(saved))requests=saved.filter(validateRequest);}catch{}
+      }
       state=current;jobs=list(recent.jobs).filter(row=>String(row.kind).startsWith('catalogue-'));
       snapshotRequestBodies();
       if(!selectedSource||!state.sources.some(row=>row.sourceSha256===selectedSource)){selectedSource=state.sources.at(-1)?.sourceSha256??null;source=null;}
@@ -172,8 +192,9 @@ export async function mountCatalogueView({root,api,context}={}){
       if(!selectedRecord||!list(recordsResult?.records??state.records).some(row=>row.uuid===selectedRecord)){selectedRecord=list(recordsResult?.records??state.records)[0]?.uuid??null;recordDraft=null;}
       if(!connectionDraft)connectionDraft=clone(state.connection??{baseUrl:'',portal:'srv',language:'eng',expectedVersion:'',
         auth:{usernameEnv:'GEONETWORK_USERNAME',passwordEnv:'GEONETWORK_PASSWORD'},allowHttp:false,timeoutMs:30000,maxResponseBytes:8388608,maxMefBytes:67108864});
-      if(force||observedRevision!==state.revision||jobs.some(row=>row.status==='RUNNING'))render();
-      observedRevision=state.revision;
+      const jobSignature=JSON.stringify(jobs.map(({id,status,finishedAt})=>({id,status,finishedAt})));
+      if(force||observedRevision!==state.revision||observedJobs!==jobSignature)render();
+      observedRevision=state.revision;observedJobs=jobSignature;
       if(selectedSource&&!source)await loadSource(selectedSource);
     })().finally(()=>{refreshing=null;schedule();});
     return refreshing;
@@ -223,11 +244,18 @@ export async function mountCatalogueView({root,api,context}={}){
     return [
       section('Original customer delivery','Inspect a completed StacDelivery and choose the complete set of collections for this native harvester.',
         element('div',{class:'catalogue-grid'},
-          input('Received delivery directory',deliveryDirectory,v=>{deliveryDirectory=v;},{name:'delivery-directory',required:true}),
+          input('Received delivery directory',deliveryDirectory,v=>{
+            if(v===deliveryDirectory)return;deliveryDirectory=v;deliveryGeneration++;inspection=null;chosenCollections=new Set();render();
+          },{name:'delivery-directory',required:true}),
           input('Source title',sourceTitle,v=>{sourceTitle=v;},{name:'source-title'})),
         button('Inspect original delivery',async()=>{
-          inspection=await request('/api/catalogue/inspect-delivery',{method:'POST',body:{deliveryDirectory:absolutePath(deliveryDirectory,'received delivery directory')}});
-          chosenCollections=new Set();render();
+          const selectedDirectory=absolutePath(deliveryDirectory,'received delivery directory');
+          const generation=deliveryGeneration,attempt=++inspectionRequest;
+          inspection=null;chosenCollections=new Set();render();
+          const received=await request('/api/catalogue/inspect-delivery',{method:'POST',body:{deliveryDirectory:selectedDirectory}});
+          if(disposed||identityChanged||generation!==deliveryGeneration||attempt!==inspectionRequest||deliveryDirectory!==selectedDirectory)return;
+          if(received.directory!==selectedDirectory)throw new Error('The inspected delivery does not match the selected directory. Select and inspect the original delivery again.');
+          inspection=received;chosenCollections=new Set();render();
         },{disabled:working>0}),
         inspection?element('div',{},details('delivery-manifest','Verified delivery manifest',inspection.manifest),
           table(['Select','Collection','Title and rights'],incoming.map(collection=>element('tr',{},
@@ -236,6 +264,7 @@ export async function mountCatalogueView({root,api,context}={}){
               element('p',{},collection.license??'No licence supplied'),details('collection-'+collection.id,'Original collection metadata',collection))))),
           area('Original document URL overrides',sourceUrls,v=>{sourceUrls=v;},{name:'source-urls',help:'Only needed when original relative links lack an absolute source document URL. Map collection ID to its actual original URL.'}),
           button('Receive selected collections',()=>{
+            if(!inspection||inspection.directory!==deliveryDirectory)throw new Error('Inspect the selected original delivery before receiving collections.');
             if(!chosenCollections.size)throw new Error('Select at least one original collection.');
             return perform('receive',{deliveryDirectory:inspection.directory,collectionIds:[...chosenCollections],sourceUrls:jsonObject(sourceUrls,'Source URL map'),sourceTitle});
           },{disabled:working>0})):null),
@@ -406,6 +435,7 @@ export async function mountCatalogueView({root,api,context}={}){
   }
   function render(){
     if(disposed)return;
+    if(identityChanged){root.replaceChildren(element('p',{class:'catalogue-notice error',role:'alert'},'The active catalogue identity changed. Reopen the original saved catalogue before continuing. Its retained requests have not been moved or sent.'));return;}
     const active=root.contains(document.activeElement)?document.activeElement:null;
     const focus=active?.dataset?.focus,selection=active&&typeof active.selectionStart==='number'?{start:active.selectionStart,end:active.selectionEnd}:null;
     if(!state){root.replaceChildren(element('p',{class:'catalogue-note'},notice?.message??'Reading the saved catalogue workspace…'));return;}
