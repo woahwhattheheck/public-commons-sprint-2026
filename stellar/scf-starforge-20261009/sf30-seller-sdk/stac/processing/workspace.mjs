@@ -68,7 +68,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
   if (!(await readdir(versions)).some(v => /^\d{12}\.json$/.test(v))) {
     need(create, 'PROCESSING_WORKSPACE_NOT_FOUND');
     try { await writeJson(versionPath(0), { schema: SCHEMA, id: identity('processing'), revision: 0,
-      createdAt: stamp(), updatedAt: stamp(), deployments: [], reviews: [], editions: [], associations: [], imports: [], operations: {} }, { exclusive: true }); }
+      createdAt: stamp(), updatedAt: stamp(), deployments: [], configuredLocally: [], reviews: [], editions: [], associations: [], imports: [], operations: {} }, { exclusive: true }); }
     catch (error) { if (error.code !== 'EEXIST') throw error; }
   }
   async function mutate(change, expectedRevision) {
@@ -89,12 +89,13 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     queue = action.catch(() => {}); return action;
   }
   async function sourceFor(deploymentKey) {
-    const entry = (await getState()).deployments.find(v => v.key === deploymentKey); need(entry, 'PROCESSING_DEPLOYMENT_NOT_CONFIGURED');
+    const state = await getState(), entry = state.deployments.find(v => v.key === deploymentKey); need(entry, 'PROCESSING_DEPLOYMENT_NOT_CONFIGURED');
     const raw = await readBytes(join(directory, relative(entry.source.path)), 64 * 1024 * 1024);
     need(raw.length === entry.source.bytes && sha256(raw) === entry.source.sha256, 'PROCESSING_RETAINED_SOURCE_CHANGED');
     const contract = readProcessingContract(raw, entry.deployment, entry.source);
     need(digest({ deployment: entry.deployment, contract }) === entry.fingerprint, 'PROCESSING_DEPLOYMENT_BINDING_CHANGED');
-    return { entry, contract, provider: createProcessingProvider({ deployment: entry.deployment, transport, environment }) };
+    return { entry, contract, provider: createProcessingProvider({ deployment: entry.deployment, transport, environment,
+      credentialsAuthorized: (state.configuredLocally ?? []).includes(deploymentKey) }) };
   }
   async function configure({ deployment: input, source, expectedRevision } = {}) {
     const deployment = normalizeDeployment(input); need(source && Buffer.isBuffer(source.body), 'PROCESSING_SOURCE_BYTES_REQUIRED');
@@ -105,7 +106,11 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     const fingerprint = digest({ deployment, contract }), entry = { key: deployment.id + ':' + fingerprint, fingerprint, deployment,
       source: { path, bytes: source.body.length, sha256: contract.sourceSha256, url: contract.sourceUrl,
         status: contract.sourceStatus, capturedAt: contract.sourceCapturedAt }, contract, configuredAt: stamp() };
-    return mutate(s => { const old = s.deployments.find(v => v.key === entry.key); if (old) return old; s.deployments.push(entry); return entry; }, expectedRevision);
+    return mutate(s => {
+      s.configuredLocally ??= [];
+      if (!s.configuredLocally.includes(entry.key)) s.configuredLocally.push(entry.key);
+      const old = s.deployments.find(v => v.key === entry.key); if (old) return old; s.deployments.push(entry); return entry;
+    }, expectedRevision);
   }
   const makeTask = ({ id, kind, request, rowsKey = null, immutableQuery = {}, scope = {} }) => ({ id, kind, request,
     initialRequest: request, requestHash: digest(request), rowsKey, immutableQuery, scope, state: 'PENDING', pages: [], attempts: [],
@@ -295,8 +300,10 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     const owner = await claim(id); if (!owner) return getEdition(id);
     const controller = new AbortController();
     const promise = (async () => {
+      let provider;
       try {
-        const { edition: original } = await getEdition(id), { entry, contract, provider } = await sourceFor(original.deploymentKey);
+        const { edition: original } = await getEdition(id), source = await sourceFor(original.deploymentKey);
+        const { entry, contract } = source; provider = source.provider;
         need(original.sourceSha256 === entry.source.sha256, 'PROCESSING_EDITION_SOURCE_CHANGED');
         while (true) {
           const { edition } = await getEdition(id);
@@ -328,7 +335,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
         await owned(id, owner.token, e => { e.state = e.cancelled || controller.signal.aborted ? 'CANCELLED' : 'PAUSED';
           e.error = errorCode(error); e.lease = null; e.history.push({ at: stamp(), kind: 'INTERRUPTED', code: e.error }); }).catch(() => {});
         throw error;
-      } finally { active.delete(key); }
+      } finally { provider?.close(); active.delete(key); }
       return getEdition(id);
     })();
     active.set(key, { controller, promise }); return promise;
@@ -352,10 +359,11 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
   }
   async function importPage({ editionId, taskId, body, metadata } = {}) {
     const owner = await claim(editionId); need(owner, 'PROCESSING_EDITION_ALREADY_FINISHED');
+    let provider;
     try {
       const { edition } = await getEdition(editionId), task = edition.tasks.find(v => v.id === taskId);
       need(task && ['PENDING', 'RUNNING', 'PAUSED'].includes(task.state), 'PROCESSING_IMPORT_TASK_NOT_PENDING');
-      const { provider, contract } = await sourceFor(edition.deploymentKey);
+      const source = await sourceFor(edition.deploymentKey), { contract } = source; provider = source.provider;
       let attempt = task.pending;
       if (!attempt) attempt = await pendingAttempt(editionId, owner.token, taskId);
       const captured = await provider.importResponse(attempt.request, { directory: join(directory, attempt.directory), body, metadata });
@@ -367,7 +375,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       }); return getEdition(editionId);
     } catch (error) {
       await owned(editionId, owner.token, e => { e.state = 'PAUSED'; e.error = errorCode(error); e.lease = null; }).catch(() => {}); throw error;
-    }
+    } finally { provider?.close(); }
   }
   async function runs(editionId) {
     const { edition } = await getEdition(editionId), byKey = new Map();
@@ -477,7 +485,8 @@ export async function createProcessingController({ stacWorkspace, directory, con
     return { schema: state.schema, id: state.id, revision: state.revision, updatedAt: state.updatedAt,
       deployments: state.deployments.map(entry => ({ key: entry.key, fingerprint: entry.fingerprint,
         deployment: entry.deployment, source: entry.source, routes: Object.keys(entry.contract.routes),
-        workflowFilter: entry.contract.workflowFilter, configuredAt: entry.configuredAt })),
+        workflowFilter: entry.contract.workflowFilter, configuredAt: entry.configuredAt,
+        credentialsConfiguredHere: (state.configuredLocally ?? []).includes(entry.key) })),
       editions: state.editions.map(summarize), reviews: state.reviews, associations: state.associations,
       imports: state.imports, operations: state.operations, exports: await (async () => {
         if (!await exists(handovers)) return [];
