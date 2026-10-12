@@ -101,7 +101,7 @@ export async function openPrescientConfiguration({directory,create=true}={}){
   if(!(await snapshots()).length){
     need(create,'PRESCIENT_OPERATOR_NOT_FOUND');
     const initial={schema:STORE_SCHEMA,id:id('prescient'),revision:0,createdAt:time(),updatedAt:time(),
-      profiles:[],reviews:[],approvals:[],approvedProfileSha256:null,operations:{},deliveries:[]};
+      profiles:[],reviews:[],approvals:[],approvedProfileSha256:null,operations:{},deliveryReviews:[],deliveries:[]};
     try{await writeJson(file(0),initial,{exclusive:true});}catch(e){if(e.code!=='EEXIST')throw e;}
   }
   async function read(){
