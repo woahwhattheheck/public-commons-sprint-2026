@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.sf49.source-edition-attachments.v1",
+  "files": [
+    {
+      "id": "source-handover",
+      "role": "original-provider-handover",
+      "name": "replace-with-original-handover.zip",
+      "path": "./replace-with-original-handover.zip",
+      "bytes": 0,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "id": "source-receiving",
+      "role": "original-customer-receiving-result",
+      "name": "replace-with-original-receiving.json",
+      "path": "./replace-with-original-receiving.json",
+      "bytes": 0,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
