@@ -6,9 +6,11 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openJobStore } from '../../sf30-seller-sdk/jobs/store.mjs';
 import { canonical, digest, jobError } from '../../sf30-seller-sdk/jobs/config.mjs';
-import { configureApplication, readApplication, KEY_HEADER, KEY_ENV, OPERATION } from './configuration.mjs';
+import { configureApplication, KEY_HEADER, KEY_ENV, OPERATION } from './configuration.mjs';
 import { startApplication, executionView, executionExport, validateExecution, cancelUnstartedExecution, CONTROL_PATH } from './worker.mjs';
 import { allowance } from './allowance-client.mjs';
+import { readApplicationRuntime, snapshotApplication, inspectApplicationSnapshot, restoreApplication,
+  encryptApplicationSnapshot, restoreEncryptedApplication } from './recovery.mjs';
 
 const help = String.raw`Purchased API application operations
 
@@ -21,6 +23,12 @@ const help = String.raw`Purchased API application operations
   api-application inspect --config APPLICATION_JSON --order ORDER --request-id REQUEST [--offline]
   api-application recover|release --config APPLICATION_JSON --order ORDER --request-id REQUEST
       --revision CALL_REVISION --operation-id OPERATOR_OPERATION --actor ACTOR --reason REASON [--offline]
+  api-application snapshot --config APPLICATION_JSON --application-root CLOSED_SOURCE_ROOT
+      --out NEW_IMAGE [--data NAME DIRECTORY ...] [--path-env ENV NAME RELATIVE_PATH ...]
+  api-application inspect-snapshot --snapshot IMAGE
+  api-application encrypt --snapshot IMAGE --out NEW_ENCRYPTED_BUNDLE --pass-env ENV
+  api-application restore --snapshot IMAGE --out NEW_PRIVATE_RUNTIME
+  api-application restore --bundle ENCRYPTED_BUNDLE --out NEW_PRIVATE_RUNTIME --pass-env ENV
   api-application backup-inputs --config APPLICATION_JSON
 
 configure retains the original application and input schema. --bind-routes writes
@@ -35,14 +43,24 @@ Use the same revision, operation ID, actor and reason when replaying recovery.
 An interrupted or failed execution with an attempt remains available for original
 operator review; issuing a new customer request uses a new paid operation.
 
+snapshot acquires the original job writer lease. Stop the application service and
+writers to selected source/data roots first. It captures original merchant state,
+native rows/results, source dependencies and explicit allowlisted data-path maps.
+Use a source root containing the application's complete relative import tree.
+A restored runtime retains these root mappings for its next snapshot.
+
+encrypt and restore --bundle call the existing merchant-recovery engine. Supply
+its private passphrase through the named environment variable. Restored profiles
+work with every existing serve, inspect, recover and release command.
 Customer purchase and API calls use api-purchase and api-pass-client.
 `;
 const fail = (code, status = 400) => { throw jobError(code, status); };
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function parse(argv) {
-  const command = argv.shift() || 'help', options = { routes: [] };
+  const command = argv.shift() || 'help', options = { routes: [], dataRoots: [], environmentBindings: [] };
   const values = new Set(['merchant', 'gateway', 'out', 'worker-port', 'config', 'api-port', 'console-port',
-    'after', 'limit', 'operation', 'order', 'request-id', 'revision', 'operation-id', 'actor', 'reason', 'python']);
+    'after', 'limit', 'operation', 'order', 'request-id', 'revision', 'operation-id', 'actor', 'reason', 'python',
+    'application-root', 'snapshot', 'bundle', 'pass-env']);
   const flags = new Set(['bind-routes', 'offline']);
   while (argv.length) {
     const item = argv.shift();
@@ -52,6 +70,14 @@ function parse(argv) {
       const id = argv.shift(), functionId = argv.shift();
       if (!id || !functionId || id.startsWith('--') || functionId.startsWith('--')) fail('APP_ROUTE_MAPPING_REQUIRED');
       options.routes.push({ id, functionId }); continue;
+    }
+    if (name === 'data') {
+      if (argv.length < 2) fail('APP_RECOVERY_DATA_ROOT_INVALID');
+      options.dataRoots.push({ name: argv.shift(), path: argv.shift() }); continue;
+    }
+    if (name === 'path-env') {
+      if (argv.length < 3) fail('APP_RECOVERY_ENVIRONMENT_BINDING_INVALID');
+      options.environmentBindings.push({ environment: argv.shift(), dataRoot: argv.shift(), path: argv.shift() }); continue;
     }
     if (flags.has(name)) {
       if (options[name] !== undefined) fail('APP_DUPLICATE_OPTION');
@@ -208,20 +234,48 @@ export async function main(argv = process.argv.slice(2)) {
       mappings: options.routes, bindRoutes: Boolean(options['bind-routes']) }));
     return;
   }
-  if (!['serve', 'worker', 'status', 'list', 'inspect', 'recover', 'release', 'backup-inputs'].includes(command))
+  if (command === 'inspect-snapshot') {
+    required(options, 'snapshot');
+    print(await inspectApplicationSnapshot(options.snapshot, { python: options.python })); return;
+  }
+  if (command === 'encrypt') {
+    required(options, 'snapshot', 'out', 'pass-env');
+    print(await encryptApplicationSnapshot(options.snapshot, options.out, options['pass-env'], { python: options.python })); return;
+  }
+  if (command === 'restore') {
+    required(options, 'out');
+    if (Boolean(options.snapshot) === Boolean(options.bundle)) fail('APP_RECOVERY_ONE_SOURCE_REQUIRED');
+    if (options.bundle) {
+      required(options, 'pass-env');
+      print(await restoreEncryptedApplication(options.bundle, options.out, options['pass-env'], { python: options.python }));
+    } else print(await restoreApplication(options.snapshot, options.out, { python: options.python }));
+    return;
+  }
+  if (!['serve', 'worker', 'status', 'list', 'inspect', 'recover', 'release', 'backup-inputs', 'snapshot'].includes(command))
     fail('APP_COMMAND_REQUIRED');
   required(options, 'config');
-  const runtime = await readApplication(options.config);
+  const runtime = await readApplicationRuntime(options.config);
+  if (command === 'snapshot') {
+    required(options, 'out');
+    print(await snapshotApplication(runtime, { directory: options.out, applicationRoot: options['application-root'],
+      dataRoots: options.dataRoots.length ? options.dataRoots : undefined,
+      environmentBindings: options.environmentBindings.length ? options.environmentBindings : undefined, python: options.python }));
+    return;
+  }
   if (command === 'serve' || command === 'worker') { await runService(runtime, options, command === 'serve'); return; }
   if (command === 'status' || command === 'list') { print(await nativeSummary(runtime, command, options)); return; }
   if (command === 'backup-inputs') {
     print({ schema: 'stellar-forge.sf101.api-application-backup-inputs.v1',
       merchantState: runtime.gateway.state, applicationDirectory: dirname(runtime.profilePath),
-      executionDirectory: runtime.profile.store,
-      files: [runtime.profilePath, runtime.profile.gateway, runtime.profile.key, runtime.profile.merchant, runtime.source.identity.application],
-      source: runtime.source.identity, profileSha256: runtime.profileSha256,
+      executionDirectory: runtime.profile.store, source: runtime.source.identity, profileSha256: runtime.profileSha256,
+      applicationEntry: runtime.executionSource?.identity.application ?? runtime.source.identity.application,
+      retainedApplicationRoot: runtime.recoveryApplicationRoot ?? null,
+      retainedDataRoots: runtime.recoveryDataRoots ?? [],
       environmentNames: runtime.source.compiled.environment,
-      restore: 'Stop both services, retain the complete execution directory and all listed private files with the original merchant snapshot, and restore their original absolute paths.' });
+      environmentBindings: runtime.recoveryEnvironmentBindings ?? [],
+      snapshot: 'Use snapshot with a complete application root and any application-owned data roots after stopping their writers.',
+      encrypt: 'Use encrypt with the resulting image and the existing private recovery passphrase environment.',
+      restore: 'Use restore into a new directory, then pass its application.json to the existing service and recovery commands.' });
     return;
   }
   const id = selectedOperation(options);
