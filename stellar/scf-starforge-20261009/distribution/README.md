@@ -12,6 +12,10 @@ The [installed SEC EDGAR workflow](SEC_EDGAR.md) covers original JSON capture,
 source review, operator drafts, native serving, complete export and receiving,
 plus the six installed JavaScript interfaces.
 
+Intrinio statements and filing review open with `starforge intrinio`.
+The [installed Intrinio workflow](INTRINIO.md) connects the original source
+collector, exact fact review, customer exports and complete workspace receiving.
+
 The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
