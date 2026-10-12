@@ -1,6 +1,6 @@
 {
   "schema": "stellar-forge.utility-receiving-source.v1",
-  "sourceCommit": "a590f72c3444b67d74ee98a27e85288085535bb0",
+  "sourceCommit": "f08eaf52703cf1f69811c9a0c9eb611fa3a8a901",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "toolNames": [
     "merchant_utility_workspaces",
@@ -101,9 +101,9 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/distribution/contributions/utility-energy.json",
-      "bytes": 6259,
-      "sha256": "8a980f2e65f12ff6c5616833dc774bdd80eb145f09b60d294f659a29a6ef3363",
-      "gitBlob": "1b7e61f1895e95d0847015cf49b50df2c3d96632"
+      "bytes": 6263,
+      "sha256": "8a1737e7acdb6d42c554915e7dd8f4f65796d5003a9684d1c6c9bb3899666fe6",
+      "gitBlob": "2c63b835f94e0fe81ef52e0311c3d306f8b80fc8"
     },
     {
       "path": "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
@@ -208,7 +208,7 @@
       "gitBlob": "4846013003b693db9bbbe94cfec6ed6bfa0a1a2f"
     },
     {
-      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/GreenButtonAlliance-LICENSE",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/GreenButtonAlliance-LICENSE.txt",
       "bytes": 11357,
       "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
       "gitBlob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
@@ -221,9 +221,9 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/source-contracts.json",
-      "bytes": 3894,
-      "sha256": "45ba85b0851c39d1dc79b03f2f987ecd875742f7b3f159f3a8e04a3401e1c90b",
-      "gitBlob": "92e2e42ff147d8549d5de7128aa16e21e42dcd50"
+      "bytes": 3898,
+      "sha256": "4d2f7709c8db8fe046c648776d811bb7b284a1c7d7f566a0c8594b76eadb4193",
+      "gitBlob": "b342f5f7e5a112d234eebf073ad61e70e6835022"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/utilityapi-examples.json",
@@ -238,13 +238,13 @@
       "gitBlob": "d31cafb1fbd9e5cbaac4c014455897c2a11d18fd"
     },
     {
-      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/fixtures/test_usage_data_01.xml",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/examples/test_usage_data_01.xml",
       "bytes": 30748,
       "sha256": "26e085e16fc39115c6e12bfd5d38cac24ebda895d9ed9b1ff23299e57c61a75d",
       "gitBlob": "e415a3b942ac4a4b49c5fc45a7f385c2fc7d3e17"
     },
     {
-      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/fixtures/test_usage_data.xml",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/examples/test_usage_data.xml",
       "bytes": 324226,
       "sha256": "42aaaa5edee61663a32a9376c642410f7d40c5f0cf202935a8e767abd6ef0623",
       "gitBlob": "e63c31a61d130e121ca9d369893e92139c9ec358"
@@ -276,8 +276,8 @@
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/operate-example.py",
       "bytes": 10639,
-      "sha256": "690ed7f6d443d2e295195f942139e92528419be36cf6ca5e3d7c617dfe7a5a8a",
-      "gitBlob": "9c2c8b0a94399e3adfdbdbd0a6375f74c278a9ad"
+      "sha256": "1f3938e1f91ec170487add66c3eb658eb6bbed3e53ddc3a619deb9eb17b81d99",
+      "gitBlob": "5a167e615d5cea702e27a3b95cbe81836b543a36"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/public/app.js",
@@ -299,9 +299,9 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/README.md",
-      "bytes": 12625,
-      "sha256": "05332e1c4e2e812d22500608d3b71063b081b0fcf4ce24a8b9668806bebf79ee",
-      "gitBlob": "92c89fb5eff1ce821b5a38e1d2765444179aa937"
+      "bytes": 12774,
+      "sha256": "fd263bd279ced23c102137267a596247fb5a8fff8ee6b793be1473e7f11b0fc6",
+      "gitBlob": "990ed13627e166ba2cf15eb8281475cfcac9bb05"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/requirements.txt",
