@@ -76,6 +76,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -284,6 +288,7 @@
     "woo-buyer": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/buyer.mjs",
     "woo-operator": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-operator-cli.mjs",
     "mcp-native": "stellar-forge/mcp-paid-agent/native-workspace-cli.mjs",
+    "mcp-spending": "stellar-forge/mcp-paid-agent/native-spend-workspace.mjs",
     "mcp-stdio": "stellar-forge/mcp-paid-agent/stdio.mjs",
     "mcp-client-config": "stellar-forge/mcp-paid-agent/client-config.mjs",
     "merchant-mcp-stdio": "stellar-forge/mcp-merchant-operator/stdio.mjs",
@@ -354,7 +359,7 @@
     "fiscaldata": "stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/cli.mjs",
     "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs",
     "webdav": "stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/cli.mjs",
-    "mcp-spending": "stellar-forge/mcp-paid-agent/native-spend-workspace.mjs"
+    "cache-operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -637,6 +642,8 @@
     "./seller/duckdb/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/model.mjs",
     "./buyer/mcp/remote": "./source/stellar-forge/mcp-paid-agent/remote-mcp.mjs",
     "./buyer/mcp/native-operator": "./source/stellar-forge/mcp-paid-agent/native-mcp-operator.mjs",
+    "./buyer/mcp/governed-native-operator": "./source/stellar-forge/mcp-paid-agent/native-spend-governor.mjs",
+    "./buyer/mcp/spending-workspace": "./source/stellar-forge/mcp-paid-agent/native-spend-workspace.mjs",
     "./merchant/mcp/paid-tools": "./source/stellar-forge/mcp-paid-agent/paid-tool-server.mjs",
     "./buyer/mcp/server": "./source/stellar-forge/mcp-paid-agent/serve.mjs",
     "./buyer/mcp/result-store": "./source/stellar-forge/mcp-paid-agent/result-store.mjs",
@@ -823,8 +830,9 @@
     "./seller/webdav/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/workspace.mjs",
     "./seller/webdav/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/server.mjs",
     "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs",
-    "./buyer/mcp/governed-native-operator": "./source/stellar-forge/mcp-paid-agent/native-spend-governor.mjs",
-    "./buyer/mcp/spending-workspace": "./source/stellar-forge/mcp-paid-agent/native-spend-workspace.mjs"
+    "./seller/response-cache/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/model.mjs",
+    "./seller/response-cache/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/server.mjs",
+    "./seller/response-cache/workspace/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/reports.mjs"
   },
   "nativePeers": {
     "@x402/core": {
