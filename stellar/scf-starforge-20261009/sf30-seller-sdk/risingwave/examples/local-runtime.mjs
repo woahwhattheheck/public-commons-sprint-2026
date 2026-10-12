@@ -39,10 +39,20 @@ async function regular(path,{executable=false,privateFile=false}={}){
   return st;
 }
 async function writeOnce(path,value){
-  const body=bytes(value);
-  try{await createFile(path,body);await syncDirectory(dirname(path));}
-  catch(issue){if(issue.code!=='EEXIST')throw issue;
-    need((await readBytes(path,8388608,true)).equals(body),'RUNTIME_RETAINED_FILE_CHANGED','Keep the original retained file.',{path});}
+  const body=bytes(value),same=async()=>{
+    need((await readBytes(path,8388608,true)).equals(body),'RUNTIME_RETAINED_FILE_CHANGED','Keep the original retained file.',{path});
+  };
+  try{await same();await syncDirectory(dirname(path));return;}catch(issue){if(issue.code!=='ENOENT')throw issue;}
+  const temporary=path+'.publish-'+randomUUID();
+  try{
+    // Only complete, synced bytes acquire the immutable final name.
+    await createFile(temporary,body);
+    try{await link(temporary,path);}catch(issue){if(issue.code!=='EEXIST')throw issue;await same();}
+    await syncDirectory(dirname(path));
+  }finally{
+    try{await unlink(temporary);await syncDirectory(dirname(path));}
+    catch(issue){if(issue.code!=='ENOENT')throw issue;}
+  }
 }
 function absolutePath(value){
   need(typeof value==='string'&&value===resolve(value)&&!value.includes('\0'),'RUNTIME_ABSOLUTE_PATH_REQUIRED');return value;
@@ -143,7 +153,8 @@ export async function inspectLocalRuntimeCapacity(directory){
     avx2:/^flags\s*:.*\bavx2\b/m.test(cpuText),node:process.version,
     memory:{systemAvailable:String(systemAvailable),available:String(memoryHeadroom),cgroups:memory},
     cpu:{affinity,capacity:cpuCapacity,cgroups:cpu},
-    filesystem:{directory,available:String(fs.bavail*fs.bsize),blockSize:String(fs.bsize),type:String(fs.type)}};
+    filesystem:{directory,available:String(fs.bavail*fs.bsize),blockSize:String(fs.bsize),type:String(fs.type),
+      memoryBacked:[0x01021994n,0x858458f6n].includes(BigInt.asUintN(32,fs.type))}};
 }
 export function localRuntimeAdmission(profile,capacity){
   const issues=[];
@@ -178,7 +189,7 @@ async function privateEnvironment(path,name,listen,environment){
     if(issue.code!=='ENOENT')throw issue;
     need(typeof environment[name]==='string'&&environment[name],'RUNTIME_CONNECTION_ENVIRONMENT_REQUIRED',
       'Provide the original private environment file or set its named connection value.',{environment:name});
-    await privateDirectory(dirname(path),false);await createFile(path,bytes({[name]:environment[name]}));await syncDirectory(dirname(path));
+    await privateDirectory(dirname(path),false);await writeOnce(path,{[name]:environment[name]});
     raw=await readBytes(path,1048576,true);
   }
   let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
@@ -212,12 +223,15 @@ async function publishOwnedFile(part,target){
   }
   await unlink(part);await syncDirectory(dirname(part));
 }
-async function downloadArchive(directory,onEvent,signal,retry=0){
+async function downloadArchive(directory,onEvent,signal,memoryReserveBytes,retry=0){
   const target=join(directory,'risingwave-'+VERSION+'.tar.gz'),part=target+'.partial';
   try{return await verifyArchive(target);}catch(issue){if(issue.code!=='ENOENT')throw issue;}
   const retained=await ownedPartial(part);need(retained<=RELEASE.bytes,'RUNTIME_DOWNLOAD_LENGTH_INVALID');
   const capacity=await inspectLocalRuntimeCapacity(directory);
   need(BigInt(capacity.filesystem.available)>=BigInt(RELEASE.bytes-retained),'RUNTIME_ARCHIVE_SPACE_REQUIRED');
+  need(!capacity.filesystem.memoryBacked||BigInt(capacity.memory.available)>=BigInt(RELEASE.bytes-retained)+BigInt(memoryReserveBytes),
+    'RUNTIME_ARCHIVE_MEMORY_REQUIRED','The archive on this memory-backed filesystem must fit with the receiving reserve.',
+    {additionalBytes:RELEASE.bytes-retained,memoryReserveBytes,available:capacity.memory.available});
   if(retained<RELEASE.bytes){
     const response=await fetch(RELEASE.url,{headers:retained?{Range:'bytes='+retained+'-'}:{},
       signal:signal??AbortSignal.timeout(900000)});
@@ -252,14 +266,14 @@ async function downloadArchive(directory,onEvent,signal,retry=0){
     const rejected=await fileInfo(part),quarantine=target+'.rejected-'+rejected.sha256;
     await publishOwnedFile(part,quarantine);
     await onEvent({event:'archive-partial-recovered',path:quarantine,bytes:rejected.bytes,sha256:rejected.sha256});
-    if(retry===0)return downloadArchive(directory,onEvent,signal,1);
+    if(retry===0)return downloadArchive(directory,onEvent,signal,memoryReserveBytes,1);
     throw issue;
   }
   await publishOwnedFile(part,target);
   await onEvent({event:'archive-retained',path:target,bytes:RELEASE.bytes,sha256:RELEASE.sha256});
   return verifyArchive(target);
 }
-async function extractBinary(directory,archive,onEvent,minimumFreeBytes){
+async function extractBinary(directory,archive,onEvent,minimumFreeBytes,memoryReserveBytes){
   const target=join(directory,'risingwave-'+VERSION),provenance=jsonPath(directory,'binary');
   const saved=await optionalJson(provenance);
   if(saved){
@@ -284,6 +298,10 @@ async function extractBinary(directory,archive,onEvent,minimumFreeBytes){
   need(retained||BigInt(capacity.filesystem.available)+BigInt(priorPartial)>=BigInt(expectedBytes)+BigInt(minimumFreeBytes),
     'RUNTIME_BINARY_SPACE_REQUIRED','The original executable and selected free-byte reserve must fit together.',
     {expectedBytes,minimumFreeBytes,available:capacity.filesystem.available,reusablePartialBytes:priorPartial});
+  need(retained||!capacity.filesystem.memoryBacked||
+    BigInt(capacity.memory.available)>=BigInt(Math.max(0,expectedBytes-priorPartial))+BigInt(memoryReserveBytes),
+    'RUNTIME_BINARY_MEMORY_REQUIRED','The executable on this memory-backed filesystem must fit with the receiving reserve.',
+    {expectedBytes,reusablePartialBytes:priorPartial,memoryReserveBytes,available:capacity.memory.available});
   let handle=null,child=null,exit=null,binary;
   try{
     if(!retained){
@@ -341,24 +359,29 @@ export async function prepareLocalRisingWaveRuntime(options={}){
   need([!!binaryPath,!!archivePath,download===true].filter(Boolean).length===1,'RUNTIME_ONE_EXECUTABLE_SOURCE_REQUIRED');
   const request={directory,operationId,storeDirectory,listenAddress:listen,memoryBytes,reserveBytes,parallelism,compactionThreads,minimumFreeBytes};
   localRuntimeArguments(request);safeInteger(minimumFreeBytes,0,Number.MAX_SAFE_INTEGER,'RUNTIME_DISK_RESERVE_REQUIRED');
-  await privateDirectory(directory,true);await privateDirectory(storeDirectory,true);
-  const current=await optionalJson(jsonPath(directory,'runtime'));
-  if(current){
+  await privateDirectory(directory,true);
+  const reuse=async current=>{
+    if(!current)return null;
     validateProfile(current,directory);
     need(current.operationId===operationId&&current.storeDirectory===storeDirectory,'RUNTIME_ORIGINAL_OPERATION_REQUIRED');
     const live=await liveInstance(current);
-    if(live){
-      need(Object.entries(request).every(([key,value])=>current[key]===value)&&current.environment.path===environmentFile&&
-        current.environment.name===connectionEnv&&
-        (binaryPath?current.binary.path===binaryPath&&current.binary.sha256===binarySha256:current.archive?.sha256===RELEASE.sha256),
-        'RUNTIME_ACTIVE_CONFIGURATION_CHANGED','Continue with the original live instance and its current configuration.');
-      const result={event:'runtime-existing',directory,operationId,configurationSha256:identity(current),process:live.process,
-        binary:current.binary,storeDirectory,environmentFile,listenAddress:listen};
-      await onEvent(result);return result;
-    }
-  }
+    if(!live)return null;
+    need(Object.entries(request).every(([key,value])=>current[key]===value)&&current.environment.path===environmentFile&&
+      current.environment.name===connectionEnv&&
+      (binaryPath?current.binary.path===binaryPath&&current.binary.sha256===binarySha256:current.archive?.sha256===RELEASE.sha256),
+      'RUNTIME_ACTIVE_CONFIGURATION_CHANGED','Continue with the original live instance and its current configuration.');
+    const result={event:'runtime-existing',directory,operationId,configurationSha256:identity(current),process:live.process,
+      binary:current.binary,storeDirectory,environmentFile,listenAddress:listen};
+    await onEvent(result);return result;
+  };
+  const existing=await reuse(await optionalJson(jsonPath(directory,'runtime')));
+  if(existing)return existing;
   const held=await lock(directory);
   try{
+    // A concurrent preparation may have published while this caller obtained its lock.
+    const reconciled=await reuse(await optionalJson(jsonPath(directory,'runtime')));
+    if(reconciled)return reconciled;
+    await privateDirectory(storeDirectory,true);
     const capacity=await inspectLocalRuntimeCapacity(directory);
     need(capacity.architecture==='x64'&&capacity.avx2,'RUNTIME_PINNED_ARCHITECTURE_REQUIRED');
     const env=await privateEnvironment(environmentFile,connectionEnv,listen,environment);
@@ -368,8 +391,8 @@ export async function prepareLocalRisingWaveRuntime(options={}){
       await regular(binaryPath,{executable:true});binary=await fileInfo(binaryPath);
       need(binary.sha256===binarySha256,'RUNTIME_SELECTED_BINARY_MISMATCH');
     }else{
-      archive=archivePath?await verifyArchive(absolutePath(archivePath)):await downloadArchive(directory,onEvent,signal);
-      binary=await extractBinary(directory,archive,onEvent,minimumFreeBytes);
+      archive=archivePath?await verifyArchive(absolutePath(archivePath)):await downloadArchive(directory,onEvent,signal,reserveBytes);
+      binary=await extractBinary(directory,archive,onEvent,minimumFreeBytes,reserveBytes);
     }
     const inspected=await inspectBinary(binary,environment);
     const profile={schema:PROFILE,...request,release:RELEASE,binary,archive,inspected,
@@ -472,7 +495,7 @@ export async function inspectLocalRisingWaveRuntime({directory,connect=false,env
 }
 export async function serveLocalRisingWaveRuntime({directory,environment=process.env,onEvent=()=>{},signal,startupTimeoutMs=180000}={}){
   absolutePath(directory);safeInteger(startupTimeoutMs,1000,900000,'RUNTIME_STARTUP_TIMEOUT_INVALID');
-  const profile=await readProfile(directory),existing=await liveInstance(profile);
+  let profile=await readProfile(directory);const existing=await liveInstance(profile);
   if(existing){
     const result={event:'runtime-existing',operationId:profile.operationId,directory,process:existing.process,
       listening:await connects(listenAddress(profile.listenAddress).port),storeDirectory:profile.storeDirectory};
@@ -481,7 +504,8 @@ export async function serveLocalRisingWaveRuntime({directory,environment=process
   const held=await lock(directory);
   let child=null,closed=null,record=null;
   try{
-    // Check again after owning the original kernel lock.
+    // Use the configuration committed before this caller obtained the original lock.
+    profile=await readProfile(directory);
     const afterLock=await liveInstance(profile);
     if(afterLock){const result={event:'runtime-existing',process:afterLock.process,directory,operationId:profile.operationId};await onEvent(result);return result;}
     const env=await privateEnvironment(profile.environment.path,profile.environment.name,profile.listenAddress,environment);
@@ -512,6 +536,7 @@ export async function serveLocalRisingWaveRuntime({directory,environment=process
     await atomicJson(jsonPath(directory,'process'),record);
     const forward=()=>{if(child&&child.exitCode===null&&child.signalCode===null)child.kill('SIGTERM');};
     process.once('SIGTERM',forward);process.once('SIGINT',forward);signal?.addEventListener('abort',forward,{once:true});
+    if(signal?.aborted)forward();
     try{
       const deadline=Date.now()+startupTimeoutMs,port=listenAddress(profile.listenAddress).port;
       while(child.exitCode===null&&child.signalCode===null){

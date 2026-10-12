@@ -52,7 +52,9 @@ If that file has not yet been written, prepare reads the named connection
 value from its process environment and creates the file inside an already
 private parent directory. A connection string is supplied through that
 environment reference, without placing credentials in command arguments.
-Additional existing JSON entries are preserved.
+Additional existing JSON entries are preserved. New environment and immutable
+metadata files acquire their final names only after the complete bytes are
+written and synced, so an interrupted write can be retried.
 
 ## Prepare the executable
 
@@ -95,7 +97,10 @@ retried once. Already published files are compared before reuse.
 Extraction selects the single regular executable named risingwave from
 that archive. Its actual declared unpacked size is checked against
 available disk and the chosen free-byte reserve. Only the executable is
-materialized; the original archive stays available. If publication
+materialized; the original archive stays available. On tmpfs or ramfs,
+archive and executable writes also need current memory headroom for their
+additional bytes and the selected receiving reserve. Filesystem free space
+alone cannot provide that memory. If publication
 finished just before the provenance write was interrupted, the next
 prepare compares the existing executable with the archive stream and
 finishes the same provenance file.
@@ -109,7 +114,9 @@ private state and environment digest. Each complete configuration also
 has an immutable file in `configurations/`. Repeating prepare with the
 same running configuration returns that existing process. Resource
 settings can be revised after that original instance exits, while its
-database state and prior configurations remain available.
+database state and prior configurations remain available. Prepare checks the
+original operation again after acquiring its lock; serve reads the committed
+configuration under that same lock.
 
 ## Inspect the host and start the instance
 
@@ -212,5 +219,7 @@ state, environment, native case and managed case paths.
 - [Pinned RisingWave single-node arguments and storage layout](https://github.com/risingwavelabs/risingwave/blob/45baf6460ea942e4ff57a5aa057d5b8db7f3b563/src/cmd_all/src/single_node.rs).
 - [Pinned compute memory split and reserve implementation](https://github.com/risingwavelabs/risingwave/blob/45baf6460ea942e4ff57a5aa057d5b8db7f3b563/src/compute/src/memory/config.rs).
 - [Linux cgroup v2 memory and CPU interfaces](https://www.kernel.org/doc/html/v6.6/admin-guide/cgroup-v2.html).
+- [Linux memory-backed filesystem behavior](https://www.kernel.org/doc/html/v6.12/filesystems/tmpfs.html).
+- [Linux filesystem identifiers](https://github.com/torvalds/linux/blob/master/include/uapi/linux/magic.h).
 - [Linux flock lifetime and inherited open file descriptions](https://man7.org/linux/man-pages/man2/flock.2.html).
 - [Linux process start-time identity](https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html).
