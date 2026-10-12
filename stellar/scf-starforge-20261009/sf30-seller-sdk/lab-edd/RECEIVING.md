@@ -66,7 +66,10 @@ hosts. Account for the complete Node worker, Python workbook reader, receiver,
 source expansion and Chromium when selecting its actual memory/disk declaration.
 The merchant's worker heap allowance is 768 MiB; a full receiving operation needs
 additional receiver and browser headroom. The driver uses the selected private
-scratch and optional browser `tempDirectory`; it starts no detached watcher.
+scratch for both `LAB_EDD_TEMP_ROOT` and the original broker's `SF30_JOB_TEMP`.
+It supplies the required `LAB_EDD_PYTHON` worker value from the selected host
+interpreter, defaulting to `python3`. Browser receiving uses the configured
+`tempDirectory`.
 
 ## What the operation completes
 

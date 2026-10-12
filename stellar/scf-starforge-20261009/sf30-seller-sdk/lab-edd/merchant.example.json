@@ -5,7 +5,8 @@
   "serviceName": "Laboratory EDD Receiving",
   "environment": [
     "LAB_EDD_TEMP_ROOT",
-    "LAB_EDD_PYTHON"
+    "LAB_EDD_PYTHON",
+    "SF30_JOB_TEMP"
   ],
   "workerCount": 1,
   "maxPending": 8,

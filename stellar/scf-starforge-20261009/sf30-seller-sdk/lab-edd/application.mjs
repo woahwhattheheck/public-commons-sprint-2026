@@ -106,13 +106,13 @@ export async function laboratoryReview(input,context){
       await archive.add(name,context.files.stream(slot),{contentType:meta.mediaType??meta.contentType??'application/octet-stream',expected:meta});
     }
     const sourceBytes=await context.files.read('source',{maxBytes:SOURCE_LIMIT});
-    const delivery=await inspectDelivery(sourceMembers(sourceBytes,metadata('source'),{signal}),profile,{encoding:input.encoding??'utf-8',signal});
+    const delivery=await inspectDelivery(sourceMembers(sourceBytes,metadata('source'),{signal}),profile,{encoding:input.encoding??'utf-8',signal,processes:context.processes});
     if(input.expectedSourceSha256&&input.expectedSourceSha256!==delivery.source.sourceSha256)
       labError('SOURCE_CHANGED','The selected originals do not match the requested source edition.');
     let comparison=null;
     if(has('baseline')){
       const bytes=await context.files.read('baseline',{maxBytes:SOURCE_LIMIT});
-      const baseline=await inspectDelivery(sourceMembers(bytes,metadata('baseline'),{signal}),profile,{encoding:input.encoding??'utf-8',signal});
+      const baseline=await inspectDelivery(sourceMembers(bytes,metadata('baseline'),{signal}),profile,{encoding:input.encoding??'utf-8',signal,processes:context.processes});
       comparison=compareDeliveries(delivery,baseline);
     }
     let document;
@@ -123,7 +123,7 @@ export async function laboratoryReview(input,context){
     const review=previewDelivery(delivery,document);
     let prepared=[],nativeZip=null,nativePreparation;
     try{
-      prepared=await renderPreparedFiles(delivery,review,{signal});
+      prepared=await renderPreparedFiles(delivery,review,{signal,processes:context.processes});
       nativeZip=writeLabZip(prepared,{signal});
       nativePreparation={status:'PREPARED',files:prepared.length};
     }catch(error){

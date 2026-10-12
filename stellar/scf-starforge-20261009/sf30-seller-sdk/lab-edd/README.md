@@ -92,6 +92,14 @@ system temporary directory is unsuitable. The application creates and removes
 only its own temporary subdirectory. Set `LAB_EDD_PYTHON` to the installed
 Python executable when it is not available as `python3` on PATH.
 
+The supplied paid-job merchant declares `LAB_EDD_TEMP_ROOT`, `SF30_JOB_TEMP`
+and `LAB_EDD_PYTHON` as its required worker environment. Set both temporary
+roots to the selected writable private scratch directory and select an actual
+Python executable (`python3` or its absolute installed path). The maintained
+receiving driver supplies these values from its scratch and interpreter choices.
+The original native-process broker owns workbook subprocess retirement and its
+private scratch when the application runs as a file job.
+
 ## Review and change exact fields
 
 Extract the complete result archive and open `report.html`. The report includes
@@ -235,7 +243,10 @@ const nativeFiles = await renderPreparedFiles(delivery, preview);
 
 `originalFiles` contains exact `{filename, bytes: Uint8Array}` members.
 `laboratoryReview(input, context)` receives the maintained worker's
-`context.files`, signal and job ID. It produces the complete portable result;
+`context.files`, signal, job ID and original native-process client. Native
+profile hooks receive that optional `processes` client through
+`inspectDelivery(..., {processes})` and
+`renderPreparedFiles(..., {processes})`. It produces the complete portable result;
 the lower-level rendering API reports its native format refusal directly.
 
 ## Complete maintained receiving operation
@@ -244,4 +255,5 @@ the lower-level rendering API reports its native format refusal directly.
 whole native file verification and desktop/mobile editor operation. Its
 `receiving.mjs` accepts the actual retained supplier files and resumes one
 private operation. The examples select the two published McCampbell families or
-one original DTS workbook. They supply no invented laboratory rows.
+one original DTS workbook. Each completed receiving edition retains its exact
+original source, selected format and full operator choices.
