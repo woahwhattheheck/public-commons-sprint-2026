@@ -104,11 +104,12 @@ export async function createHarReviewDesk({container,page,selection,sourceSha256
         ' reviewed routes · '+value.createdAt+' · '+(value.selection.revision?'based on '+value.selection.revision.slice(0,12):'original draft')+
         (value.useSource?' · use in merchant':' · retain review'));
       const controls=make(document,'div',undefined,'toolbar'),resume=make(document,'button','Resume saved request'),
-        exportRequest=make(document,'button','Download original decisions');
-      resume.type=exportRequest.type='button';
+        exportRequest=make(document,'button','Download original decisions'),remove=make(document,'button','Remove pending request');
+      resume.type=exportRequest.type=remove.type='button';
       resume.addEventListener('click',()=>commit(value,{key}));
       exportRequest.addEventListener('click',()=>download('har-pending-decisions.json',value.review));
-      controls.append(resume,exportRequest);row.append(summary,controls);pendingList.append(row);
+      remove.addEventListener('click',()=>{storageRemove(key);presentRequests();});
+      controls.append(resume,exportRequest,remove);row.append(summary,controls);pendingList.append(row);
     }
     available();
   }
@@ -151,6 +152,8 @@ export async function createHarReviewDesk({container,page,selection,sourceSha256
         updatedAt:new Date().toISOString(),review});
     },
     onSave(review,{useSource}){
+      if(new Blob([JSON.stringify(review)]).size>4*1024*1024)
+        throw new Error('Reviewed decisions exceed the original 4 MiB save limit. Reduce the authored contract before saving.');
       if(useSource&&review.operations.filter(operation=>operation.enabled).length>64)
         throw new Error('Select at most 64 reviewed operations for the original merchant package. Save the full review separately if needed.');
       return commit({schema:'stellar.har.pending-review.v1',selection:copy(selected),sourceSha256,
