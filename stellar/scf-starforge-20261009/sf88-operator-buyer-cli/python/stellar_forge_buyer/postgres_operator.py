@@ -22,7 +22,7 @@ from .storage import digest, dump, parse, private_directory, read, unique_object
 SCHEMA = "stellar-forge.postgres-operator.v1"
 _ID = re.compile(r"[a-f0-9]{32}")
 _MAX_REPORT = 8 * 1024 * 1024
-_MAX_RECORD = 2 * 1024 * 1024
+_MAX_RECORD = 8 * 1024 * 1024  # Reviewed dictionaries plus original edition/request metadata.
 
 
 def wire(value):
@@ -216,9 +216,9 @@ class PostgresOperator:
                     Column(name, sql_name, kind)
                 except WarehouseError:
                     sql_name = "field_" + str(index + 1)
-                while sql_name in used:
+                while sql_name.casefold() in used:
                     sql_name += "_"
-                used.add(sql_name)
+                used.add(sql_name.casefold())
                 columns.append(Column(name, sql_name, kind, nulls[name] > 0 or not kinds))
             mapping = DatasetMapping(tuple(columns))
             native = review_delivery(delivery, mapping)
@@ -226,7 +226,9 @@ class PostgresOperator:
                     "dataset": native["dataset"], "row_count": native["row_count"],
                     "source_pages": native["source_pages"],
                     "payment_status": native["originalPaymentStatus"],
-                    "mapping": mapping.record(), "columns": native["columns"], "preview": preview}
+                    "mapping": mapping.record(), "columns": native["columns"], "preview": preview,
+                    "semantics": native["semantics"], "semantics_status": native["semantics_status"],
+                    "semantic_dictionary": native["semantic_dictionary"]}
 
     def review(self, body):
         fields(body, ("report_path", "mapping", "reviewer", "note", "expected_report_sha256"))
@@ -266,7 +268,11 @@ class PostgresOperator:
             if error.code != "DATASET_PG_VERSION_NOT_FOUND":
                 raise
         else:
-            return {**version, "import_status": "UNCHANGED", "recovered_existing_version": True}
+            if version["semantics_status"] != "SOURCE_REQUIRED":
+                return {**version, "import_status": "UNCHANGED", "recovered_existing_version": True}
+            # A warehouse created before dictionary receiving may already have
+            # this exact edition. Attach its original meaning file through the
+            # same import transaction, without copying rows or moving a view.
         return self.warehouse.import_delivery(
             self._review_delivery(review), DatasetMapping.from_record(review["mapping"]),
             expected_version=review["version_id"])

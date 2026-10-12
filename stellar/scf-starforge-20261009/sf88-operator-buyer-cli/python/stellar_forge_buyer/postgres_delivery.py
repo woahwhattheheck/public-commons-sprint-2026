@@ -19,6 +19,10 @@ import re
 import uuid
 
 from .datasets import DatasetDelivery
+from .dataset_semantics import (
+    identity as semantic_identity, read_delivery_semantics, same_json,
+    sql_context, sql_descriptor,
+)
 from .errors import StateError
 from .storage import digest, parse, private_directory, read, unique_object
 
@@ -27,6 +31,7 @@ MAPPING_SCHEMA = "stellar-forge.postgres-dataset-mapping.v1"
 REVIEW_SCHEMA = "stellar-forge.postgres-dataset-review.v1"
 _FORMAT = "_sf_receiving_format"
 _VERSIONS = "_sf_dataset_versions"
+_SEMANTICS = "_sf_dataset_semantics"
 _VIEWS = "_sf_dataset_views"
 _HISTORY = "_sf_dataset_activations"
 _ORDINAL = "_sf_row_number"
@@ -236,6 +241,8 @@ class _Input:
     identity: dict
     version_id: str
     row_source: dict
+    semantic_source: dict | None
+    semantic_descriptor: dict | None
 
     @property
     def row_count(self):
@@ -247,7 +254,9 @@ class _Input:
                 "source_pages": len(self.manifest["sourcePages"]),
                 "originalPaymentStatus": self.manifest["paymentStatus"],
                 "jsonl": {k: self.row_source[k] for k in ("bytes", "sha256")},
-                "row_order_column": _ORDINAL, "original_row_column": _ORIGINAL}
+                "row_order_column": _ORDINAL, "original_row_column": _ORIGINAL,
+                "semantics": self.semantic_descriptor,
+                "semantics_status": "AVAILABLE" if self.semantic_source is not None else "NONE"}
 
 
 def _input(delivery, mapping):
@@ -285,8 +294,46 @@ def _input(delivery, mapping):
         raise WarehouseError("DATASET_PG_ROW_BINDING_INVALID")
     identity = {"schema": SCHEMA, "manifestSha256": manifest_sha,
                 "sourceBindingSha256": binding, "mapping": mapping.record()}
+    meanings = read_delivery_semantics(delivery, manifest=manifest)
+    descriptor = _semantic_descriptor(meanings, mapping) if meanings is not None else None
+    if meanings is not None:
+        sql_context(meanings["bytes"], descriptor, digest(_json(identity).encode()))
     return _Input(delivery, manifest_bytes, manifest, mapping, identity,
-                  digest(_json(identity).encode()), source)
+                  digest(_json(identity).encode()), source, meanings, descriptor)
+
+
+def _semantic_descriptor(receiving, mapping, *, enforced=False):
+    descriptor = sql_descriptor(receiving, [c.source for c in mapping.columns],
+                                [c.column for c in mapping.columns])
+    primary = descriptor["primary_key"]
+    # An independently selected receiving key is not evidence that the
+    # dictionary's source primary key was enforced by PostgreSQL.
+    primary["enforced"] = bool(enforced and primary["complete"] and primary["source"]
+                               and set(primary["source"]) == set(mapping.keys))
+    return descriptor
+
+
+def _bound_semantics(raw, descriptor, manifest, mapping, version_id):
+    context = sql_context(raw, descriptor, version_id)
+    document = context["document"]
+    binding = semantic_identity(document)
+    declared = manifest.get("semantics")
+    selected = manifest.get("dataset", {}).get("projectedFields")
+    exact = {"bytes": len(raw), "sha256": digest(raw)}
+    if (not isinstance(declared, dict) or declared.get("file") != "semantics.json"
+            or declared.get("typedRowsFile") != "dataset.jsonl"
+            or declared.get("scope") != "PUBLISHED_DATASET"
+            or not same_json(declared.get("selectedFields"), selected)
+            or not isinstance(selected, list)
+            or set(selected) != {c.source for c in mapping.columns}
+            or not all(declared.get(key) == value for key, value in binding.items())
+            or not same_json(manifest.get("outputs", {}).get("semantics.json"), exact)):
+        raise WarehouseError("DATASET_PG_SEMANTIC_MANIFEST_CHANGED")
+    expected = _semantic_descriptor({"identity": binding, "document": document,
+        "file": {"name": "semantics.json", **exact}}, mapping, enforced=True)
+    if not same_json(descriptor, expected):
+        raise WarehouseError("DATASET_PG_SEMANTIC_MAPPING_CHANGED")
+    return context
 
 
 def _rows(source, stream):
@@ -331,7 +378,8 @@ def review_delivery(delivery: DatasetDelivery, mapping: DatasetMapping):
     return {**source.record(), "schema": REVIEW_SCHEMA, "status": "READY",
             "columns": [{**column.record(), "json_types": sorted(observed[index]), "nulls": nulls[index]}
                         for index, column in enumerate(mapping.columns)],
-            "key_validation": "POSTGRESQL_TRANSACTION" if mapping.keys else "ROW_ORDINAL_ONLY"}
+            "key_validation": "POSTGRESQL_TRANSACTION" if mapping.keys else "ROW_ORDINAL_ONLY",
+            "semantic_dictionary": source.semantic_source["document"] if source.semantic_source else None}
 
 
 
@@ -464,7 +512,7 @@ class PostgresWarehouse:
                 raise WarehouseError("DATASET_PG_WAREHOUSE_IDENTITY_CHANGED")
             self.warehouse_id = row[1]
 
-    def _version(self, cursor, version_id):
+    def _version(self, cursor, version_id, *, include_semantics=False):
         _version_id(version_id)
         cursor.execute(f"SELECT sequence, record FROM {self._table(_VERSIONS)} WHERE version_id=%s", (version_id,))
         row = cursor.fetchone()
@@ -477,7 +525,70 @@ class PostgresWarehouse:
                 or record.get("table") != "_sf_data_" + version_id[:48]
                 or digest(_json(identity).encode()) != version_id):
             raise WarehouseError("DATASET_PG_EDITION_METADATA_CHANGED")
-        return {**record, "sequence": row[0]}
+        version = {**record, "sequence": row[0]}
+        return self._edition_semantics(cursor, version) if include_semantics else version
+
+    def _retained_manifest(self, cursor, version):
+        cursor.execute(f"SELECT manifest FROM {self._table(_VERSIONS)} WHERE version_id=%s",
+                       (version["version_id"],))
+        row = cursor.fetchone()
+        if row is None:
+            raise WarehouseError("DATASET_PG_VERSION_NOT_FOUND")
+        raw = bytes(row[0])
+        if digest(raw) != version["manifestSha256"]:
+            raise WarehouseError("DATASET_PG_MANIFEST_CHANGED")
+        return raw
+
+    def _edition_semantics(self, cursor, version):
+        manifest = parse(self._retained_manifest(cursor, version))
+        declared = manifest.get("semantics")
+        output = manifest.get("outputs", {}).get("semantics.json")
+        if declared is None:
+            if output is not None or version.get("semantics") is not None:
+                raise WarehouseError("DATASET_PG_SEMANTIC_MANIFEST_CHANGED")
+            return {**version, "semantics": None, "semantic_dictionary": None,
+                    "semantics_status": "NONE"}
+        if not isinstance(declared, dict) or not isinstance(output, dict):
+            raise WarehouseError("DATASET_PG_SEMANTIC_MANIFEST_CHANGED")
+        cursor.execute("SELECT to_regclass(%s)", (self._table(_SEMANTICS),))
+        row = None
+        if cursor.fetchone()[0] is not None:
+            cursor.execute(f"SELECT record,document FROM {self._table(_SEMANTICS)} WHERE version_id=%s",
+                           (version["version_id"],))
+            row = cursor.fetchone()
+        if row is None:
+            # Earlier receivers retained the bound manifest without this optional
+            # output. Reimporting its original reviewed delivery attaches it to
+            # the SAME edition; existing rows/views remain available meanwhile.
+            return {**version, "semantics": None, "semantic_dictionary": None,
+                    "semantics_status": "SOURCE_REQUIRED",
+                    "semantic_source": {"definition": declared, "file": output}}
+        descriptor, raw = parse(row[0].encode()), bytes(row[1])
+        context = _bound_semantics(raw, descriptor, manifest,
+                                  DatasetMapping.from_record(version["mapping"]), version["version_id"])
+        return {**version, "semantics": descriptor,
+                "semantic_dictionary": context["document"], "semantics_status": "RETAINED"}
+
+    def _retain_semantics(self, cursor, source):
+        if source.semantic_source is None:
+            return False
+        self._lock(cursor, "semantics")
+        cursor.execute(f"CREATE TABLE IF NOT EXISTS {self._table(_SEMANTICS)}"
+                       f"(version_id text PRIMARY KEY REFERENCES {self._table(_VERSIONS)}(version_id), "
+                       "record text NOT NULL, document bytea NOT NULL)")
+        cursor.execute(f"SELECT record,document FROM {self._table(_SEMANTICS)} WHERE version_id=%s",
+                       (source.version_id,))
+        row = cursor.fetchone()
+        raw = source.semantic_source["bytes"]
+        descriptor = _semantic_descriptor(source.semantic_source, source.mapping, enforced=True)
+        _bound_semantics(raw, descriptor, source.manifest, source.mapping, source.version_id)
+        if row is not None:
+            if bytes(row[1]) != raw or not same_json(parse(row[0].encode()), descriptor):
+                raise WarehouseError("DATASET_PG_RETAINED_SEMANTICS_CHANGED")
+            return False
+        cursor.execute(f"INSERT INTO {self._table(_SEMANTICS)}(version_id,record,document) VALUES(%s,%s,%s)",
+                       (source.version_id, _json(descriptor), raw))
+        return True
 
     def import_delivery(self, delivery: DatasetDelivery, mapping: DatasetMapping, *, expected_version=None):
         """Load every verified row and all source metadata in one transaction."""
@@ -490,7 +601,9 @@ class PostgresWarehouse:
             self._lock(cursor, "edition", source.version_id)
             cursor.execute(f"SELECT version_id FROM {self._table(_VERSIONS)} WHERE version_id=%s", (source.version_id,))
             if cursor.fetchone():
-                return {**self._version(cursor, source.version_id), "import_status": "UNCHANGED"}
+                received = self._retain_semantics(cursor, source)
+                return {**self._version(cursor, source.version_id, include_semantics=True),
+                        "import_status": "UNCHANGED", "semantics_received": received}
             columns = [f"{_identifier(_ORDINAL)} bigint NOT NULL UNIQUE", f"{_identifier(_ORIGINAL)} json NOT NULL"]
             columns += [f"{_identifier(c.column)} {c.type}" + (' COLLATE pg_catalog."C"' if c.type == "text" else "") + (" NOT NULL" if not c.nullable else "") for c in mapping.columns]
             keys = [c.column for c in mapping.columns if c.source in mapping.keys] or [_ORDINAL]
@@ -504,13 +617,19 @@ class PostgresWarehouse:
                         observed[index].add(kind)
             cursor.execute("SELECT transaction_timestamp()")
             created = cursor.fetchone()[0].isoformat()
-            record = {**source.record(), "warehouse_id": self.warehouse_id, "warehouse_schema": self.schema,
+            record = {**source.record(),
+                      "semantics": _semantic_descriptor(source.semantic_source, mapping, enforced=True)
+                                   if source.semantic_source is not None else None,
+                      "semantics_status": "RETAINED" if source.semantic_source is not None else "NONE",
+                      "warehouse_id": self.warehouse_id, "warehouse_schema": self.schema,
                       "table": table, "qualified_table": self._table(table), "created_at": created,
                       "column_types": [{**c.record(), "json_types": sorted(observed[i])} for i, c in enumerate(mapping.columns)]}
             cursor.execute(f"INSERT INTO {self._table(_VERSIONS)}(version_id,record,manifest) VALUES(%s,%s,%s)",
                            (source.version_id, _json(record), source.manifest_bytes))
-            record = self._version(cursor, source.version_id)
-        return {**record, "import_status": "IMPORTED"}
+            self._retain_semantics(cursor, source)
+            record = self._version(cursor, source.version_id, include_semantics=True)
+        return {**record, "import_status": "IMPORTED",
+                "semantics_received": source.semantic_source is not None}
 
     def status(self):
         with self._transaction(readonly=True) as cursor:
@@ -524,20 +643,66 @@ class PostgresWarehouse:
 
     def version(self, version_id):
         with self._transaction(readonly=True) as cursor:
-            return self._version(cursor, version_id)
+            return self._version(cursor, version_id, include_semantics=True)
 
     def manifest_bytes(self, version_id):
         _version_id(version_id)
         with self._transaction(readonly=True) as cursor:
             version = self._version(cursor, version_id)
-            cursor.execute(f"SELECT manifest FROM {self._table(_VERSIONS)} WHERE version_id=%s", (version_id,))
-            row = cursor.fetchone()
-            if row is None:
-                raise WarehouseError("DATASET_PG_VERSION_NOT_FOUND")
-            original = bytes(row[0])
-            if digest(original) != version["manifestSha256"]:
-                raise WarehouseError("DATASET_PG_MANIFEST_CHANGED")
-            return original
+            return self._retained_manifest(cursor, version)
+
+    def semantics(self, version_id):
+        """Open original source meanings and their reviewed SQL aliases."""
+        with self._transaction(readonly=True) as cursor:
+            version = self._version(cursor, version_id, include_semantics=True)
+            if version["semantics_status"] == "SOURCE_REQUIRED":
+                raise WarehouseError("DATASET_PG_REIMPORT_ORIGINAL_DICTIONARY_REQUIRED")
+            if version["semantics"] is None:
+                return None
+            return {**version["semantics"], "version_id": version_id,
+                    "document": version["semantic_dictionary"]}
+
+    def semantics_bytes(self, version_id):
+        """Export the exact original dictionary; None denotes a legacy edition."""
+        with self._transaction(readonly=True) as cursor:
+            version = self._version(cursor, version_id, include_semantics=True)
+            if version["semantics_status"] == "SOURCE_REQUIRED":
+                raise WarehouseError("DATASET_PG_REIMPORT_ORIGINAL_DICTIONARY_REQUIRED")
+            if version["semantics"] is None:
+                return None
+            cursor.execute(f"SELECT document FROM {self._table(_SEMANTICS)} WHERE version_id=%s",
+                           (version_id,))
+            return bytes(cursor.fetchone()[0])
+
+    def compare_semantics(self, before_id, after_id):
+        """Compare dictionary definitions, capture and aliases independently of rows."""
+        with self._transaction(readonly=True) as cursor:
+            before = self._version(cursor, before_id, include_semantics=True)
+            after = self._version(cursor, after_id, include_semantics=True)
+            if any(v["semantics_status"] == "SOURCE_REQUIRED" for v in (before, after)):
+                raise WarehouseError("DATASET_PG_REIMPORT_ORIGINAL_DICTIONARY_REQUIRED")
+        first, second = before.get("semantics"), after.get("semantics")
+
+        def columns(version):
+            document = version.get("semantic_dictionary") or {}
+            meanings = {column["name"]: column for column in document.get("columns", [])}
+            return {column["source"]: {"sql_column": column["column"],
+                     "sql_type": column["type"], "nullable": column["nullable"],
+                     "meaning": meanings.get(column["source"])}
+                    for column in version["mapping"]["columns"]}
+
+        left, right = columns(before), columns(after)
+        changes = [{"source": name, "before": left.get(name), "after": right.get(name)}
+                   for name in sorted(set(left) | set(right))
+                   if not same_json(left.get(name), right.get(name))]
+        return {"schema": "stellar-forge.python-semantic-comparison.v1",
+                "before_version": before_id, "after_version": after_id,
+                "before": first, "after": second,
+                "definition_changed": (first or {}).get("definition_sha256") != (second or {}).get("definition_sha256"),
+                "capture_changed": (first or {}).get("capture_manifest_sha256") != (second or {}).get("capture_manifest_sha256"),
+                "mapping_changed": not same_json(before["mapping"], after["mapping"]),
+                "columns": changes, "before_document": before.get("semantic_dictionary"),
+                "after_document": after.get("semantic_dictionary")}
 
     def versions(self, *, before=None, limit=100):
         _page(before, limit)
@@ -555,7 +720,7 @@ class PostgresWarehouse:
             cursor.execute(f"SELECT version_id,revision FROM {self._table(_VIEWS)} WHERE name=%s", (name,))
             row = cursor.fetchone()
             return {"name": name, "qualified_view": self._table(name), "revision": row[1] if row else 0,
-                    "version": self._version(cursor, row[0]) if row else None}
+                    "version": self._version(cursor, row[0], include_semantics=True) if row else None}
 
     def activate(self, name, version_id, *, expected_revision):
         """Atomically select a version while retaining grants/dependent views."""
@@ -564,7 +729,7 @@ class PostgresWarehouse:
             raise WarehouseError("DATASET_PG_VIEW_REVISION_INVALID")
         with self._transaction() as cursor:
             self._lock(cursor, "view", name)
-            version = self._version(cursor, version_id)
+            version = self._version(cursor, version_id, include_semantics=True)
             cursor.execute(f"SELECT version_id,revision FROM {self._table(_VIEWS)} WHERE name=%s FOR UPDATE", (name,))
             current = cursor.fetchone()
             revision = current[1] if current else 0
