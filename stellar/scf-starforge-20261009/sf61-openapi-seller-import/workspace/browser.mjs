@@ -402,6 +402,11 @@ else act(async()=>{
     const retained=await api('migrations/source?project='+encodeURIComponent(migration)+'&ref='+encodeURIComponent(source));
     await loadSource(retained.content);
     notice('Loaded '+retained.metadata.name+' from migration '+migration+'. Select its routes and enter your merchant terms.');
+  } else if(selected.get('package')) {
+    const name=selected.get('package'),loaded=await api('load?name='+encodeURIComponent(name));
+    await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name,loaded);
+    $('package-name').value=loaded.name;
+    notice('Reopened '+loaded.name+'. Start its saved policy with the original seller controls.');
   } else notice('Ready. Load an OpenAPI description or reopen a saved project.');
 });
 setInterval(()=>{if(!busy&&token)api('status').then(runtime).catch(()=>{});},10000);
