@@ -10,7 +10,8 @@ if _merchant_standalone:
     parser.add_argument("--source-packet", required=True)
     parser.add_argument("--work-dir")
     parser.add_argument("--directory")
-    parser.add_argument("--restore-archive", help="Restore a delivered complete native archive at its original recorded paths")
+    parser.add_argument("--restore-archive", help="Restore a delivered native archive at its original recorded paths")
+    parser.add_argument("--restore-source-commit", help="Exact prior product source recorded by the restored archive")
     parser.add_argument("--node")
     parser.add_argument("--node-modules")
     parser.add_argument("--chromium")
@@ -22,7 +23,8 @@ if _merchant_standalone:
     args = parser.parse_args()
     payload = json.loads(Path(args.source_packet).read_bytes())
     names = {"work_dir": "workDir", "directory": "directory", "node": "node", "node_modules": "nodeModules",
-             "chromium": "chromiumPath", "playwright_module": "playwrightModule", "restore_archive": "restoreArchive"}
+             "chromium": "chromiumPath", "playwright_module": "playwrightModule", "restore_archive": "restoreArchive",
+             "restore_source_commit": "restoreSourceCommit"}
     payload.setdefault("runtime", {}).update({names[key]: value for key, value in vars(args).items() if key in names and value})
     if args.dependency_transfers:
         payload.pop("dependencyArchives", None)
@@ -36,11 +38,15 @@ if _merchant_standalone:
             ("library_upload.py", "library_hosted_apps.py", "library_file_transfer.py")}
 operation = "ASTRA-24EA-MERCHANT-WORKFLOW-20261012"
 assert payload["operationId"] == operation
-assert payload["sourceCommit"] == "3d3876cb960f24ae2d796103c8003416b3008b51"
-assert len(payload["file_blobs"]) == 693
+assert payload["sourceCommit"] == "6f9623f61d42aabe238d997061366b5dac24a24a"
+assert len(payload["file_blobs"]) == 698
 provided_files = payload.get("files", {})
 assert not provided_files or set(provided_files) == set(payload["file_blobs"])
 runtime = payload.get("runtime", {})
+restore_source_commit = runtime.get("restoreSourceCommit", payload["sourceCommit"])
+if len(restore_source_commit) != 40 or any(character not in "0123456789abcdef" for character in restore_source_commit):
+    raise RuntimeError("Select the exact source commit recorded by the original archive.")
+allowed_archive_sources = {payload["sourceCommit"], restore_source_commit}
 root = Path(runtime.get("workDir", "/dev/commons-scf-series-814b")).resolve()
 source = root / ("source-" + payload["sourceCommit"][:12])
 native = Path(runtime.get("directory", str(root / "native"))).resolve()
@@ -317,7 +323,7 @@ def source_path(name):
     return path
 
 def build_archive(require_completed=False):
-    names = set()
+    names, directories = set(), set()
     required_path = native / "native-required-artifacts.json"
     if require_completed and not required_path.is_file():
         raise RuntimeError("Retain the complete native artifact selection before delivering a completed case.")
@@ -345,15 +351,24 @@ def build_archive(require_completed=False):
     for role in ("source-console", "receiver-console", "merchant", "merchant-inputs", "series-source-editions"):
         directory = native / role
         if directory.is_dir():
+            directories.add(directory.relative_to(native).as_posix())
             for path in directory.rglob("*"):
                 if path.is_symlink():
                     raise RuntimeError("Retain the complete owned native file, not a symlink: " + str(path))
                 if path.is_file():
                     names.add(path.relative_to(native).as_posix())
+                elif path.is_dir():
+                    directories.add(path.relative_to(native).as_posix())
     execution = native / "native-execution"
     execution.mkdir(parents=True, exist_ok=True, mode=0o700)
+    for path in execution.rglob("*"):
+        if path.is_symlink():
+            raise RuntimeError("Retain the original ordinary native execution output.")
+        if path.is_file():
+            names.add(path.relative_to(native).as_posix())
     for original, retained in (("native-active.json", "completed-native-process.json"),
-                               ("workflow-series-native-output.log", "original-native-output.log")):
+                               ("workflow-series-native-output.log", "original-native-output.log"),
+                               ("workflow-series-archive-reopen-output.log", "archive-continuation-output.log")):
         path = native / original
         if path.is_file():
             destination = execution / retained
@@ -396,7 +411,7 @@ def build_archive(require_completed=False):
         files.append({"name": name, "bytes": path.stat().st_size, "sha256": sha_file(path)})
     manifest = {"schema": "stellar-forge.native-workspace-archive.v1", "operationId": operation,
         "directory": str(native), "workDirectory": str(root), "sourceCommit": payload["sourceCommit"],
-        "files": files, "sourceInputs": external_inputs}
+        "files": files, "directories": sorted(directories), "sourceInputs": external_inputs}
     atomic(native / "native-delivery-manifest.json", (json.dumps(manifest, indent=2) + "\n").encode())
     bundle = root / "merchant-original-native-artifacts.tar.gz"
     pending_bundle = bundle.with_name(bundle.name + ".814b-pending")
@@ -414,8 +429,8 @@ def restore_archive(bundle):
             raise RuntimeError("Restore the original complete native workspace archive.")
         if manifest.get("directory") != str(native) or manifest.get("workDirectory") != str(root):
             raise RuntimeError("Restore at the original recorded receiving and work directories.")
-        if manifest.get("sourceCommit") != payload["sourceCommit"]:
-            raise RuntimeError("Select the complete source packet recorded by this native archive.")
+        if manifest.get("sourceCommit") not in allowed_archive_sources:
+            raise RuntimeError("Select the exact original archive source with --restore-source-commit.")
         expected = {item["name"]: item for item in manifest["files"]}
         if len(expected) != len(manifest["files"]):
             raise RuntimeError("Use one complete original archive entry per file.")
@@ -458,6 +473,26 @@ def restore_archive(bundle):
             destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             with original.open("rb") as incoming, destination.open("xb") as outgoing:
                 os.chmod(destination, 0o600); shutil.copyfileobj(incoming, outgoing, 65536)
+    # Preserve empty application directories, including first-time customer receiving storage.
+    directories = manifest.get("directories", [])
+    if not isinstance(directories, list) or len(set(directories)) != len(directories):
+        raise RuntimeError("Restore each original application directory once.")
+    for name in directories:
+        path = source_path(name)
+        if path.is_symlink() or path.exists() and not path.is_dir():
+            raise RuntimeError("Preserve a different existing application path: " + name)
+        path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if "directories" not in manifest:
+        # Earlier source archives retained ordinary files only. This configured empty directory
+        # was required by readMerchantConfig when the original workspace was created.
+        configuration = native / "merchant" / "merchant-mcp.json"
+        if configuration.is_file():
+            raw = json.loads(configuration.read_text())
+            if "exportsDirectory" in raw:
+                exports = (configuration.parent / raw["exportsDirectory"]).resolve()
+                if not exports.is_relative_to(native) or exports == native:
+                    raise RuntimeError("Restore customer exports inside the original merchant workspace.")
+                exports.mkdir(parents=True, exist_ok=True, mode=0o700)
     return manifest
 
 reopen_path = root / "native-archive-reopen.json"
@@ -466,22 +501,44 @@ bundle = root / "merchant-original-native-artifacts.tar.gz"
 manifest = None
 code = 0
 
-def prepare_archive_state(selected_bundle, imported=False):
+def retain_archive(selected_bundle):
     digest = sha_file(selected_bundle)
+    history = root / "retained-native-archives"
+    history.mkdir(parents=True, exist_ok=True, mode=0o700)
+    retained = history / (digest + ".tar.gz")
+    if retained.exists():
+        if retained.is_symlink() or retained.stat().st_size != selected_bundle.stat().st_size or sha_file(retained) != digest:
+            raise RuntimeError("Preserve the original complete retained archive.")
+    else:
+        # All receiving archives are on this owned filesystem. The hard link preserves bytes
+        # without copying another archive into constrained native memory.
+        os.link(selected_bundle, retained)
+    return retained
+
+def prepare_archive_state(selected_bundle, imported=False, origin_sha256=None):
+    selected_bundle = retain_archive(selected_bundle)
+    digest = sha_file(selected_bundle)
+    with tarfile.open(selected_bundle, "r:gz") as archive:
+        selected_manifest = json.load(archive.extractfile("native-delivery-manifest.json"))
+        try:
+            completed = json.load(archive.extractfile("workflow-series-native-run.json"))
+        except KeyError:
+            completed = None
     backup = native.with_name(native.name + "-before-archive-reopen-" + digest[:12])
     if backup.exists() or backup.is_symlink():
         raise RuntimeError("Preserve the different existing workspace backup: " + str(backup))
     original_directory = native.stat()
     state = {"operationId": operation, "phase": "PREPARED", "directory": str(native),
-        "sourceCommit": payload["sourceCommit"], "bundle": str(selected_bundle),
-        "bytes": selected_bundle.stat().st_size, "sha256": digest, "backup": str(backup),
-        "backupDevice": original_directory.st_dev, "backupInode": original_directory.st_ino,
-        "importedArchive": imported}
+        "sourceCommit": payload["sourceCommit"], "archiveSourceCommit": selected_manifest["sourceCommit"],
+        "bundle": str(selected_bundle), "bytes": selected_bundle.stat().st_size, "sha256": digest,
+        "backup": str(backup), "backupDevice": original_directory.st_dev, "backupInode": original_directory.st_ino,
+        "importedArchive": imported, "completeAtSelection": bool(completed and completed.get("result") == "PASS"),
+        "originArchiveSha256": origin_sha256 or digest}
     atomic(reopen_path, (json.dumps(state, indent=2) + "\n").encode())
     return state
 
-# Import a previously delivered archive through the same original operation and directories.
-# The existing directory is preserved before extraction, exactly as for the first native completion.
+# Restore the original archive, then continue its saved programme. An incomplete delivery
+# becomes a new complete archive before the same customer's cold reopening is attempted.
 if runtime.get("restoreArchive"):
     incoming_bundle = Path(runtime["restoreArchive"]).resolve(strict=True)
     with tarfile.open(incoming_bundle, "r:gz") as archive:
@@ -489,36 +546,57 @@ if runtime.get("restoreArchive"):
     if incoming_manifest.get("schema") != "stellar-forge.native-workspace-archive.v1" or incoming_manifest.get("operationId") != operation:
         raise RuntimeError("Select the original complete merchant workspace archive.")
     if (incoming_manifest.get("directory") != str(native) or incoming_manifest.get("workDirectory") != str(root)
-            or incoming_manifest.get("sourceCommit") != payload["sourceCommit"]):
-        raise RuntimeError("Select the original receiving path, work directory and complete source packet from the archive.")
+            or incoming_manifest.get("sourceCommit") not in allowed_archive_sources):
+        raise RuntimeError("Select the original receiving paths and exact prior source commit from the archive.")
     incoming_digest = sha_file(incoming_bundle)
     if archive_state:
-        if archive_state.get("sha256") != incoming_digest or archive_state.get("bytes") != incoming_bundle.stat().st_size:
+        if incoming_digest not in (archive_state["sha256"], archive_state.get("originArchiveSha256")):
             raise RuntimeError("Continue the original selected archive restoration.")
     else:
         if bundle.exists():
             if bundle.stat().st_size != incoming_bundle.stat().st_size or sha_file(bundle) != incoming_digest:
                 raise RuntimeError("Preserve a different existing original output archive.")
         elif incoming_bundle != bundle:
-            temporary = bundle.with_name(bundle.name + ".814b-import-pending")
-            with incoming_bundle.open("rb") as incoming, temporary.open("wb") as outgoing:
-                os.chmod(temporary, 0o600); shutil.copyfileobj(incoming, outgoing, 65536)
-                outgoing.flush(); os.fsync(outgoing.fileno())
-            if sha_file(temporary) != incoming_digest:
-                raise RuntimeError("Receive the complete original archive bytes before restoration.")
-            os.replace(temporary, bundle)
+            try:
+                os.link(incoming_bundle, bundle)
+            except OSError as error:
+                import errno
+                if error.errno != errno.EXDEV:
+                    raise
+                temporary = bundle.with_name(bundle.name + ".814b-import-pending")
+                with incoming_bundle.open("rb") as incoming, temporary.open("wb") as outgoing:
+                    os.chmod(temporary, 0o600); shutil.copyfileobj(incoming, outgoing, 65536)
+                    outgoing.flush(); os.fsync(outgoing.fileno())
+                if sha_file(temporary) != incoming_digest:
+                    raise RuntimeError("Receive the complete original archive bytes before restoration.")
+                os.replace(temporary, bundle)
         archive_state = prepare_archive_state(bundle, imported=True)
 if archive_state is None:
     code = run_native("merchant-and-recurring-customer", "workflow-series-native-output.log")
     bundle, manifest = build_archive(require_completed=code == 0)
     if code == 0:
         archive_state = prepare_archive_state(bundle)
-if archive_state:
+while archive_state:
     try:
-        if str(bundle) != archive_state.get("bundle") or bundle.stat().st_size != archive_state["bytes"] or sha_file(bundle) != archive_state["sha256"]:
+        selected_bundle = Path(archive_state["bundle"])
+        if (selected_bundle.is_symlink() or not selected_bundle.resolve().is_relative_to(root)
+                or selected_bundle.stat().st_size != archive_state["bytes"] or sha_file(selected_bundle) != archive_state["sha256"]):
             raise RuntimeError("Continue from the original complete shipped archive bytes.")
-        if archive_state.get("directory") != str(native) or archive_state.get("sourceCommit") != payload["sourceCommit"]:
-            raise RuntimeError("Continue the selected original workspace and source edition.")
+        if archive_state.get("directory") != str(native) or archive_state.get("sourceCommit") not in allowed_archive_sources:
+            raise RuntimeError("Continue the selected original workspace and explicit source edition.")
+        if "completeAtSelection" not in archive_state:
+            with tarfile.open(selected_bundle, "r:gz") as archive:
+                selected_manifest = json.load(archive.extractfile("native-delivery-manifest.json"))
+                try:
+                    completed = json.load(archive.extractfile("workflow-series-native-run.json"))
+                except KeyError:
+                    completed = None
+            archive_state["completeAtSelection"] = bool(completed and completed.get("result") == "PASS")
+            archive_state["archiveSourceCommit"] = selected_manifest["sourceCommit"]
+        # Older receiver journals pointed at the mutable output name.
+        selected_bundle = retain_archive(selected_bundle)
+        archive_state["bundle"] = str(selected_bundle)
+        atomic(reopen_path, (json.dumps(archive_state, indent=2) + "\n").encode())
         backup = Path(archive_state["backup"])
         if backup.parent != native.parent or backup == native or backup.is_symlink():
             raise RuntimeError("Keep the original private workspace backup.")
@@ -539,7 +617,9 @@ if archive_state:
                 os.link(backup / "native-receiving.lock", lock_path)
             archive_state["phase"] = "RESTORING"
             atomic(reopen_path, (json.dumps(archive_state, indent=2) + "\n").encode())
-            manifest = restore_archive(bundle)
+            manifest = restore_archive(selected_bundle)
+            if manifest["sourceCommit"] != archive_state["archiveSourceCommit"]:
+                raise RuntimeError("Continue the recorded original archive source.")
             if (native / "native-access-token").exists() or (native / "native-inspections").exists() or (native / "browser").exists():
                 raise RuntimeError("The shipped workspace must restore independently of transient access and browser files.")
             archive_state["phase"] = "RESTORED"
@@ -548,7 +628,8 @@ if archive_state:
             archive_state.pop("error", None)
             archive_state["phase"] = "REOPEN_RUNNING"
             atomic(reopen_path, (json.dumps(archive_state, indent=2) + "\n").encode())
-            code = run_native("shipped-workspace-reopen", "workflow-series-archive-reopen-output.log")
+            stage = "shipped-workspace-reopen" if archive_state["completeAtSelection"] else "saved-workspace-continuation"
+            code = run_native(stage, "workflow-series-archive-reopen-output.log")
             archive_state["phase"] = "REOPENED" if code == 0 else "REOPEN_FAILED"
             archive_state["exitCode"] = code
             archive_state["finishedAt"] = datetime.now(timezone.utc).isoformat()
@@ -557,6 +638,21 @@ if archive_state:
             code = archive_state.get("exitCode", 0)
         else:
             raise RuntimeError("Continue the original archive restoration phase: " + archive_state["phase"])
+        if not archive_state["completeAtSelection"]:
+            # Save all progress from this actual continuation, including another native failure.
+            previous_archive = archive_state
+            bundle, manifest = build_archive(require_completed=code == 0)
+            previous_archive["continuedArchive"] = {"path": str(bundle), "bytes": bundle.stat().st_size,
+                "sha256": sha_file(bundle), "exitCode": code}
+            atomic(root / ("native-continuation-" + previous_archive["sha256"] + ".json"),
+                (json.dumps(previous_archive, indent=2) + "\n").encode())
+            archive_state = prepare_archive_state(bundle, imported=True,
+                origin_sha256=previous_archive.get("originArchiveSha256", previous_archive["sha256"]))
+            emit({"event": "ORIGINAL_NATIVE_CONTINUATION_SAVED", "operationId": operation,
+                "originalArchiveSha256": previous_archive["sha256"], **previous_archive["continuedArchive"]})
+            if code == 0:
+                continue
+            break
         if code == 0:
             archive_state.pop("error", None)
             reopened = original_record(native / "workflow-series-reopened.json")
@@ -564,11 +660,16 @@ if archive_state:
                 raise RuntimeError("Read the actual reopened original customer workspace result.")
             emit({"event": "ORIGINAL_NATIVE_ARCHIVE_REOPENED", "operationId": operation,
                   "bundleSha256": archive_state["sha256"], "result": reopened})
+        else:
+            # Preserve the complete failed cold-read output while keeping its selected archive immutable.
+            bundle, manifest = build_archive(require_completed=False)
+        break
     except Exception as error:
         code = 1
         archive_state["error"] = {"type": type(error).__name__, "message": str(error)}
         atomic(reopen_path, (json.dumps(archive_state, indent=2) + "\n").encode())
         emit({"event": "ORIGINAL_NATIVE_ARCHIVE_REOPEN_FAILED", "operationId": operation, "error": archive_state["error"]})
+        break
 if manifest is None:
     with tarfile.open(bundle, "r:gz") as archive:
         manifest = json.load(archive.extractfile("native-delivery-manifest.json"))

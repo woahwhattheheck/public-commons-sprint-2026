@@ -1,6 +1,6 @@
 # Merchant workflow, recipes and recurring native receiving
 
-Use the [recurring merchant continuation](#recurring-merchant-continuation) for the complete original programme: the seven-call baseline, eight-call recipe, two eight-call customer periods, complete customer receiving and restoration of the delivered archive. Its `run-series-native.py` and `series-source-map.json` carry the full 693-file source selection and the two original public dependency archives. The original 501-file source and first-phase commands are retained below for continuation of earlier prepared work.
+Use the [recurring merchant continuation](#recurring-merchant-continuation) for the complete original programme: the seven-call baseline, eight-call recipe, two eight-call customer periods, complete customer receiving and restoration of the delivered archive. Its `run-series-native.py` and `series-source-map.json` carry the full 698-file source selection and the two original public dependency archives. The original 501-file source and first-phase commands are retained below for continuation of earlier prepared work.
 
 This source selection runs the complete original two-workspace merchant workflow and reusable recipe receiving operation merged in PR 1998.
 
@@ -81,7 +81,7 @@ It runs the merged recurring merchant product from
 `woahwhattheheck/tjlabs-stellar-merchant-workspace` at
 `264a1022ce890f2356a2e3e5501a95b6ce121bdd`, with the native receiving entry and
 operating chapter selected from commit
-`3d3876cb960f24ae2d796103c8003416b3008b51`. PR 240 integrated the original native
+`6f9623f61d42aabe238d997061366b5dac24a24a`. PR 240 integrated the original native
 continuation at `1316a5cebdfbcdfc3b23a2d39881d4a58abd07d0`; the selected source adds
 the complete workspace archive and customer restoration path in PR 306.
 The selection also carries the Grist and SeaTable authoring registration
@@ -89,8 +89,19 @@ correction merged in PR 431, keeping their original workspace/receiving commands
 and exports compatible with the maintained distribution contract. This lets the
 same complete native merchant programme load every selected provider.
 
+The carried source includes the original Gravity referral JSON schema read when its merchant catalogue loads, plus the complete single-merchant delivery module, release-delivery console and destination server needed when merchant status is returned. All dependencies remain selected from the original product tree.
+
+The selection joins the native activation recovery in PR 487 to its original
+`3d3876cb960f24ae2d796103c8003416b3008b51` source. If an original activation selected
+the release before an omitted module prevented its status response, the receiving
+programme reads the saved native call, release digest, generation and activation
+history. It saves one linked recovery request, requires an unchanged native
+selection, and resolves the original workflow through the existing Console API.
+The failed call and successful recovery both travel with the complete customer
+profile; the original seven workflow steps retain their identities.
+
 Keep `run-series-native.py` and `series-source-map.json` together. The packet
-contains the full bodies and Git blob identities of all 693 selected source
+contains the full bodies and Git blob identities of all 698 selected source
 files, including the existing merchant programmes, current provider and
 distribution declarations, browser assets and complete customer receivers.
 Each source file is checked against its original Git blob before execution.
@@ -149,7 +160,7 @@ SHA-256 and Git blob identity. Its optional `--transfers` input accepts fresh
 download URLs for the already-retained original files. The complete returned
 capsule belongs with this source selection.
 
-A held receiver may omit `payload.files` when all 693 selected source files
+A held receiver may omit `payload.files` when all 698 selected source files
 already exist on that same worker. The runner verifies each existing file
 against the complete `file_blobs` selection. After materializing or reading the
 source, it releases the full source-body packet before starting the native
@@ -192,8 +203,9 @@ After the native child exits, the runner creates
 required reports, original frozen requests, complete customer files and profile
 exports, both Console stores, merchant configuration, merchant release and
 customer-export stores, and the original configured source inputs. The native
-artifact selection and archive manifest record each complete file. Archive
-creation, transfer and hashing stream file bodies.
+artifact selection and archive manifest record each complete file and application
+directory, including an empty customer-export directory. Archive creation,
+transfer and hashing stream file bodies.
 
 Browser inspection images have their own transient selection. Completed legacy
 reports retain their bytes; only their exact named QA inspection images become
@@ -210,19 +222,30 @@ merchant launchers on fresh loopback ports. A fresh private local token is
 created when the restored directory has no token.
 
 The restored operation reads all 31 original merchant, recipe and recurring
-calls, the same two completed periods and installation editions, all four
-six-file customer deliveries and the thirteen-file recurring handover. The
+calls and every linked native recovery. It checks the effective results of all
+original steps, the same two completed periods and installation editions, all
+four six-file customer deliveries and the thirteen-file recurring handover. The
 original completed reports remain unchanged. The separate
 `workflow-series-reopened.json` and full reopen output are retained in the readable
 customer delivery summary beside the exact archive that was reopened.
 
+An incomplete delivered workspace continues its original saved run before the
+complete archive is reopened. Each actual continuation saves its current reports,
+customer state and original execution output, including when a native step still
+needs repair. Earlier archives remain available under their original digest;
+their bytes stay unchanged. File-only archives from the earlier receiver recover
+the configured empty customer-export directory from their original configuration.
+
 To receive a previously delivered archive on an equipped worker, select the
-source packet and original paths recorded by its manifest:
+complete current source packet and the original paths recorded by its manifest.
+When continuing an earlier product source, supply its exact recorded commit with
+`--restore-source-commit`:
 
 ```sh
 python3 run-series-native.py \
   --source-packet series-source-map.json \
   --restore-archive merchant-original-native-artifacts.tar.gz \
+  --restore-source-commit SOURCE_COMMIT_RECORDED_BY_ARCHIVE \
   --directory ORIGINAL_RECEIVING_DIRECTORY \
   --work-dir ORIGINAL_WORK_DIRECTORY \
   --node ACTUAL_NODE --node-modules ACTUAL_INSTALLED_NODE_MODULES \
