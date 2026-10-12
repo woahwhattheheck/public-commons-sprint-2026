@@ -1,6 +1,6 @@
 # VIP Gateway pipeline manager
 
-A retained local operator for HubSpot deals, manager decisions and approved native tasks and notes. The workspace calls the original [triage engine](../triage.mjs); its scoring and cohort calculations remain unchanged. The browser and CLI use the same SQLite project, immutable source files, definitions, reviews and provider receipts.
+A retained local operator for HubSpot deals, continuous capture, daily and weekly manager digests, named decisions and approved native tasks and notes. The workspace calls the original [triage engine](../triage.mjs); its scoring and cohort calculations remain unchanged. The browser and CLI use the same SQLite project, immutable source files, definitions, reviews and provider receipts.
 
 ## Obtain this product
 
@@ -61,7 +61,55 @@ Manager decisions are open, confirmed, dismissed, resolved or deferred. A non-op
 
 Run comparison shows both original summaries and cohort values, the definitions/scope/as-of compatibility, and the exact added, absent or changed source records. An alert described as resolved is no longer emitted by the selected run; changes in scope, caps or definitions may explain it. A record absent from a later capture is not automatically a deleted or lost deal.
 
-The operator can retain daily and weekly reviews as named runs. Capture and run commands are explicit; this product does not install a scheduler or send manager digests automatically.
+The operator retains explicit analyses as named runs and can enable continuous capture with frozen daily and weekly manager digests in the same project.
+
+## Continuous monitoring and manager digests
+
+Open **Continuous monitoring** after saving the project's source definitions. The operator host runs the schedule while the `serve` process is open, including when every browser tab is closed. Reopen the same private directory to continue its saved cadence.
+
+Save the capture interval, IANA time zone, daily report time and weekly weekday/time. The initial capture time is explicit; leaving it at the displayed current time starts the first due capture. Capture intervals range from one minute to seven days. Daily and weekly reporting can be enabled independently. The default is an hourly capture with daily and Monday reports at 09:00 in Europe/London.
+
+Each scheduled cycle retains its scheduled boundary, actual start, original configuration, source-operation ID, snapshot and analysis ID. **Capture now** and a simultaneous timer wake join the same active cycle. A delayed host coalesces missed capture slots into one current capture and records how many slots were missed. It does not create observations for the time the host was absent.
+
+The schedule uses the existing paginated source collector and original triage analysis. Completed provider pages and opaque cursors remain with their original job after interruption. Restart resumes that same source and its original definitions. An interrupted analysis continues under its original run ID, retaining a distinct continuation request for every interruption. Scheduled source reads respect provider retry timing; after repeated failures the cycle is retained for named operator review.
+
+### Recovery and operating changes
+
+| Control or condition | Result |
+| --- | --- |
+| Pause monitoring | Stops future capture advancement and scheduled reports. An original provider read already in progress can finish and retain its result. |
+| Capture failure or changed definitions/provider | Stops new captures for review. Scheduled daily and weekly status reports continue to show the pending source, failure and current retained coverage. |
+| Retry original cycle | Records the named reason and resumes its original job/run against the original provider binding. Prior attempts and request receipts remain in history. |
+| Abandon original cycle | Retains that cycle and its source history, requests cancellation of an active original capture, and pauses the schedule. |
+| Resume an unchanged schedule | Continues the saved cadence and accounts for missed boundaries. |
+| Bind current provider and definitions | Explicitly adopts the current host/account configuration. Finish or abandon an active old capture before changing its binding. |
+| Receive a project on another host | Keeps schedules paused and incomplete captures historical. The receiving operator inspects its current provider and definitions, then explicitly binds and enables the received schedule. |
+
+The browser keeps the exact submitted monitoring request in session storage until it receives a saved result or a definite request rejection. If a response is lost, **Retrieve same request** resends that same request identifier and payload. This also works after a page reload in the same browser session. A different monitoring operation cannot replace the unresolved request. A current revision/version conflict keeps the operator's draft for inspection and a newly submitted decision.
+
+### Daily and weekly report contents
+
+A scheduled report first retains its exact local calendar boundary and UTC cutoff. Daily boundaries follow the selected time zone; weekly boundaries use the selected local weekday. During a repeated local time at the autumn clock change, the first occurrence is selected. A nonexistent spring time moves forward by the actual time-zone gap. The retained boundary records that adjustment.
+
+If the host misses several report boundaries, it creates one report for the latest due boundary and records the coalesced earlier windows. A pending report keeps its original request and cutoff across rendering failures and process restarts.
+
+A report selects the latest completed original analysis that was available by its cutoff. Both the snapshot's actual observation-end/capture time and the analysis completion time must be at or before that cutoff. Its analysis as-of time is retained separately. Late-captured or late-completed runs with an earlier as-of value are listed as unavailable at that cutoff and cannot enter the frozen earlier report.
+
+Each report contains:
+
+- The exact original run, source, configuration and report hashes, source observation interval and age at the cutoff.
+- Original attention counts, emitted/suppressed budgets and the first 25 actionable items, with links to the full saved attention list.
+- Original cohort figures, sample suppression and a comparison with the retained prior/first-period analysis where available.
+- Named manager decisions observed when the digest was actually prepared. Their observation time is explicit and separate from the reporting cutoff.
+- Completed source/analysis coverage, missed capture/report boundaries, and incomplete or failed source/run/cycle sections.
+
+The report's original attention and cohort definitions are those of the selected run. Its reporting window does not redefine the engine's lookback, sample denominator or lead-source semantics.
+
+Open a saved digest to inspect its source and availability, compare original cohorts or return to the exact emitted deal for a manager decision. JSON and readable Markdown downloads preserve the frozen report. A named **Acknowledged** or **Follow-up** decision is stored separately against that exact report hash, so the digest remains unchanged.
+
+**Prepare daily digest** and **Prepare weekly digest** create an explicit operator report with a selected cutoff at or before the current time. These reports may cover an in-progress calendar period. They do not consume or replace a scheduled boundary.
+
+The delivered reporting destination is this retained manager workspace and its downloadable files. An external email, Slack or customer-facing notification route can consume these exact reports through the customer's chosen delivery integration. Scheduling these reports does not create CRM tasks, notes or customer messages; those remain in the existing explicit proposal, preparation, approval and execution workflow.
 
 ## Approved tasks, reminders, escalations and notes
 
@@ -83,9 +131,9 @@ Unexecuted proposals can be revoked. Native task/note deletion or undo is not im
 
 ## Private handover and recovery
 
-Export writes a compressed project file containing the selected project's source files, saved runs, exact original reports, definitions, manager decisions, native action requests/responses and history. It contains CRM data and manager content. Handle it under the same access arrangements as the original account export.
+Export writes a compressed project file containing the selected project's source files, source jobs, saved runs, exact original reports, definitions, manager decisions, native action requests/responses, monitoring schedules and cycles, frozen digests and named digest reviews, and history. It contains CRM data and manager content. Handle it under the same access arrangements as the original account export.
 
-Repeated exports exclude earlier export payloads, so handovers do not recursively embed old backups. Incomplete source-sync jobs remain historical events and are not restarted by restore. All retained source and receipt files remain available.
+Repeated exports exclude earlier export payloads, so handovers do not recursively embed old backups. Incomplete source-sync jobs and cycles are restored as historical records. Received monitoring schedules remain paused until explicitly rebound to the receiving provider and definitions. All retained source and receipt files remain available.
 
 Restore checks the whole archive and each original file/record hash, then creates a separate project with fresh internal IDs. It preserves original byte content and provenance. Unexecuted proposals need preparation against the restored operator host before another approval. Actual uncertain native attempts remain uncertain and reconcile-only; restored projects never resend them. Completed task/note receipts retain their native identity.
 
@@ -112,6 +160,56 @@ node workspace/cli.mjs restore --state /private/vip --file /private/new-handover
 
 The CLI also exposes original JSON import/schema capture, named review, action proposal, preparation, approval, execution, reconciliation and revocation. Supply `--actor` and `--request-id` for named idempotent writes. Reusing an ID with the identical request returns its original result; changing that request under the same ID is rejected. Sync, run and native action commands await their retained operation. Output files are create-only.
 
+### Saved monitoring requests
+
+Monitoring commands use the same local SQLite operation as the browser. Stop `serve` before opening that directory through a CLI command; restart it afterward for continuous capture and report cadence.
+
+Read the current project revision and schedule version:
+
+```sh
+node workspace/cli.mjs status --state /private/vip --project PROJECT
+node workspace/cli.mjs monitor-status --state /private/vip --project PROJECT
+```
+
+Save a complete configure request as a private JSON file. Replace the example revision with the current project revision. Use version 0 for the first schedule or its actual current version when editing. Choose a fresh request ID for a new decision, and retain the original file to retrieve its committed result:
+
+```json
+{
+  "actor": "Pipeline manager",
+  "requestId": "leasing-monitor-configure-20261012-01",
+  "revision": 4,
+  "version": 0,
+  "enabled": true,
+  "settings": {
+    "captureEveryMinutes": 60,
+    "timeZone": "Europe/London",
+    "daily": {"enabled": true, "time": "09:00"},
+    "weekly": {"enabled": true, "weekday": 1, "time": "09:00"}
+  },
+  "note": "Hourly source observation and named morning manager review"
+}
+```
+
+```sh
+node workspace/cli.mjs monitor-configure --state /private/vip --project PROJECT \
+  --request-file /private/configure-monitor.json --token-env VIP_HUBSPOT_TOKEN
+node workspace/cli.mjs serve --state /private/vip --token-env VIP_HUBSPOT_TOKEN
+```
+
+All monitoring mutations require a saved request object containing `actor` and `requestId`. The command selects the project, cycle or digest; the following table lists its other request fields.
+
+| Command | Target and saved request fields |
+| --- | --- |
+| `monitor-configure` | `--project`; `revision`, `version`, `enabled`, `settings`; optional `firstCaptureAt` and `note`. |
+| `monitor-pause` | `--project`; schedule `version` and named `note`. |
+| `monitor-resume` | `--project`; `revision`, schedule `version`, named `note`; `bindCurrentProviderAndDefinitions: true` when rebinding. |
+| `monitor-trigger` | `--project`; schedule `version`. Reserves or joins the cycle; `serve` advances it. |
+| `monitor-retry` / `monitor-abandon` | `--cycle`; current schedule `version` and named `note`. |
+| `digest-create` | `--project`; `kind: "daily"` or `"weekly"`; optional `name` and ISO `cutoff`. |
+| `digest-review` | `--digest`; digest-review `version` (0 initially), exact `sha256`, `status: "acknowledged"` or `"follow_up"`, and named `note`. |
+
+`monitor-cycle --cycle ID` reads the original cycle, job, run and history. `digest-status --digest ID` reads the exact report, current named decision and received-source bindings. `digest-download --digest ID --format json|markdown --out NEW_FILE` writes the saved report bytes to a new file. These reads do not run captures.
+
 ## Composition and implementation map
 
 | File | Responsibility |
@@ -121,8 +219,9 @@ The CLI also exposes original JSON import/schema capture, named review, action p
 | `store.mjs` | SQLite custody, immutable source blobs, transactions, request IDs and process ownership. |
 | `model.mjs` | Capture checkpoints, original runs, named reviews, comparison and portable recovery. |
 | `actions.mjs` | Concrete native requests, approvals, one-attempt execution and receipt reconciliation. |
+| `automation.mjs` | Saved capture cadence, original-cycle recovery, calendar report boundaries, immutable digests and received schedule binding. |
 | `server.mjs` / `cli.mjs` | The same retained workflow over local HTTP and terminal commands. |
-| `public/` | Industrial operator interface, source inspection, draft recovery and mobile navigation. |
+| `public/` | Industrial operator interface, continuous-operation controls, source inspection, same-request recovery and mobile navigation. |
 | `example.mjs` | Explicitly generated development starter for learning the complete workflow. |
 
 Implemented capacities are 100,000 unique deals per source; 128 MiB source/import or compressed export; 16 MiB per provider/schema response; and up to 100 rows per API page. A capacity or source-shape error preserves already retained work. The current source capture is a full permitted account listing, not incremental modified-since synchronization.
@@ -131,7 +230,7 @@ Implemented capacities are 100,000 unique deals per source; 128 MiB source/impor
 
 The original 64-record development source was exercised through the real local HTTP provider adapter, durable SQLite model and CLI. A stopped second page resumed after process reopen; the source produced the same 24-alert original report. Named review conflicts and carryover, exact `9007199254740993.07` amount text, native reminder/note requests, a lost create response recovered with one task POST, changed-record/cohort comparison, nonrecursive export/restore and byte-identical CLI report reopening all completed. The joined browser workflow reopened this same state and completed eight operator areas: two-operator definition conflict/reapplication, source pagination and exact original import, saved original runs/cohort comparisons, named manager decisions, a distinct approved native task created once, inspection of the original recovered task, full handover/restart/restore, and all eight sections at a 390-pixel viewport. Its restored project retained four source versions, four runs, four actions and six schema captures.
 
-This is a runnable engineering product. These development records establish implementation behavior, not a customer's account deployment, production uptime or conversion improvement.
+The retained acceptance case uses the product's explicitly generated development records and its real local provider adapter. Account-specific commissioning uses the customer's permitted exports, original schemas and named review decisions.
 
 ## Original provider references
 

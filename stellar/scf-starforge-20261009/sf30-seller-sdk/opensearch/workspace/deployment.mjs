@@ -3,9 +3,9 @@ import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { initReleaseStore, inspectRelease, stageRelease, compareReleases, releaseStatus } from '../../../sf82-seller-pilot/releases.mjs';
-import { prepareOpenSearchRelease } from '../../../sf82-seller-pilot/release-opensearch.mjs';
-import { startReleaseConsole } from '../../../sf82-seller-pilot/release-console.mjs';
+
+
+
 import { WorkspaceError, digest } from './store.mjs';
 
 const ACTIONS = {
@@ -43,8 +43,8 @@ export class OpenSearchDeploymentWorkspace {
     if (this.console) return this.console;
     if (this.closing || this.workspace.closed) throw failure('WORKSPACE_CLOSING', 'Workspace is closing.', 503);
     if (!this.opening) this.opening = (async () => {
-      if (!await this.exists()) await initReleaseStore(this.root);
-      const session = await startReleaseConsole(this.root, { port: 0, env: this.workspace.env });
+      if (!await this.exists()) await (await import("../../../sf82-seller-pilot/releases.mjs")).initReleaseStore(this.root);
+      const session = await (await import("../../../sf82-seller-pilot/release-console.mjs")).startReleaseConsole(this.root, { port: 0, env: this.workspace.env });
       this.console = session;
       session.closed.finally(() => { if (this.console === session) this.console = null; }).catch(() => {});
       return session;
@@ -68,7 +68,7 @@ export class OpenSearchDeploymentWorkspace {
   }
   async status() {
     const exists = await this.exists();
-    const value = this.console ? await this.request('/api/status') : exists ? await releaseStatus(this.root) : {
+    const value = this.console ? await this.request('/api/status') : exists ? await (await import("../../../sf82-seller-pilot/releases.mjs")).releaseStatus(this.root) : {
       schema: 'stellar-forge.seller-release-status.v1', root: this.root,
       state: { generation: 0, active: null, previous: null, history: [] },
       releases: [], invalid: [], runtime: { state: 'STOPPED', observed: null },
@@ -80,13 +80,13 @@ export class OpenSearchDeploymentWorkspace {
   async compare(input) {
     fields(input, ['from', 'to'], ['to']);
     if (!await this.exists()) throw failure('WORKSPACE_RELEASE_REQUIRED', 'Stage a merchant package first.');
-    const status = await releaseStatus(this.root);
+    const status = await (await import("../../../sf82-seller-pilot/releases.mjs")).releaseStatus(this.root);
     return { generation: status.state.generation,
-      ...await compareReleases(this.root, input.from || status.state.active, input.to) };
+      ...await (await import("../../../sf82-seller-pilot/releases.mjs")).compareReleases(this.root, input.from || status.state.active, input.to) };
   }
   async stage(input) {
     const item = this.workspace.package(input.packageId);
-    const prepared = await prepareOpenSearchRelease(item.directory);
+    const prepared = await (await import("../../../sf82-seller-pilot/release-opensearch.mjs")).prepareOpenSearchRelease(item.directory);
     const expected = item.files.map(({ name, bytes, sha256 }) => ({ name, bytes, sha256 })).sort((a, b) => a.name.localeCompare(b.name));
     const actual = prepared.files.map(({ file, bytes, sha256 }) => ({ name: file.slice('opensearch/package/'.length), bytes, sha256 }))
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -98,7 +98,7 @@ export class OpenSearchDeploymentWorkspace {
         digest(prepared.source) !== digest({ ...config, bindings: declaredBindings }))
       throw failure('WORKSPACE_PACKAGE_CHANGED', 'The prepared package differs from its original saved workspace edition.');
     await this.open();
-    const release = await stageRelease(this.root, { id: input.id, ...(input.label === undefined ? {} : { label: input.label }),
+    const release = await (await import("../../../sf82-seller-pilot/releases.mjs")).stageRelease(this.root, { id: input.id, ...(input.label === undefined ? {} : { label: input.label }),
       opensearchPackage: item.directory, runtime: input.runtime ?? { port: 0 } });
     return { release, preparedPackage: { id: item.id, draftId: item.draftId, draftRevision: item.draftRevision,
       sourceSha256: item.sourceSha256, planSha256: item.planSha256 }, status: await this.status() };
@@ -152,7 +152,7 @@ export class OpenSearchDeploymentWorkspace {
     await pipeline(Readable.fromWeb(response.body), res);
   }
   async handover(releaseId) {
-    const release = await inspectRelease(this.root, releaseId);
+    const release = await (await import("../../../sf82-seller-pilot/releases.mjs")).inspectRelease(this.root, releaseId);
     const selected = release.release ?? release;
     if (!selected.opensearch) throw failure('WORKSPACE_RELEASE_KIND', 'Select an OpenSearch release from this workspace.');
     const status = await this.status();
@@ -193,14 +193,18 @@ export class OpenSearchDeploymentWorkspace {
     ];
     return { type: 'text/markdown; charset=utf-8', filename: selected.id + '-deployment.md', body: lines.join('\n') };
   }
-  async close() {
-    if (this.closing) return this.closed;
+  close() {
+    if (this.closed) return this.closed;
     this.closing = true;
     this.closed = (async () => {
       await Promise.allSettled([...this.tasks.values()]);
       if (this.opening) await this.opening;
-      await this.console?.close();
-    })();
+      const owned = this.console;
+      if (owned) {
+        await owned.close();
+        if (this.console === owned) this.console = null;
+      }
+    })().catch(error => { this.closed = null; throw error; });
     return this.closed;
   }
 }

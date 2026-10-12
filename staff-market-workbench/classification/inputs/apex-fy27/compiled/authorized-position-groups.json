@@ -1,0 +1,1054 @@
+{
+  "basis": "One row per original authorized group. Combined grade buckets retain one FTE total.",
+  "rows": [
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "SL303"
+      ],
+      "id": "apex-authorized-fire-rescue-fire-chief",
+      "mapping_note": "",
+      "original_line": "Fire Chief                                                        1         1          SL303",
+      "published_grade_list": "SL303",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-fire-rescue-fire-chief"
+      ],
+      "source_line": 35,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Fire Chief"
+    },
+    {
+      "authorized_ft": "3",
+      "authorized_fte": "3",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "M14"
+      ],
+      "id": "apex-authorized-fire-rescue-assistant-fire-chief",
+      "mapping_note": "",
+      "original_line": "Assistant Fire Chief                                              3         3           M14",
+      "published_grade_list": "M14",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-assistant-fire-chief"
+      ],
+      "source_line": 36,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Assistant Fire Chief"
+    },
+    {
+      "authorized_ft": "6",
+      "authorized_fte": "6",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F109"
+      ],
+      "id": "apex-authorized-fire-rescue-fire-battalion-chief",
+      "mapping_note": "",
+      "original_line": "Fire Battalion Chief                                              6         6           F109",
+      "published_grade_list": "F109",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-fire-battalion-chief"
+      ],
+      "source_line": 37,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Fire Battalion Chief"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F109"
+      ],
+      "id": "apex-authorized-fire-rescue-fire-marshal",
+      "mapping_note": "",
+      "original_line": "Fire Marshal                                                      1         1           F109",
+      "published_grade_list": "F109",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-fire-marshal"
+      ],
+      "source_line": 38,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Fire Marshal"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F107"
+      ],
+      "id": "apex-authorized-fire-rescue-deputy-fire-marshal-i-ii",
+      "mapping_note": "",
+      "original_line": "Deputy Fire Marshal I/II                                          1         1        F107/F107",
+      "published_grade_list": "F107/F107",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-deputy-fire-marshal-i-ii"
+      ],
+      "source_line": 39,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Deputy Fire Marshal I/II"
+    },
+    {
+      "authorized_ft": "2",
+      "authorized_fte": "2",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F107"
+      ],
+      "id": "apex-authorized-fire-rescue-fire-training-coordinator-i-ii",
+      "mapping_note": "",
+      "original_line": "Fire Training Coordinator I/II                                    2         2        F107/F107",
+      "published_grade_list": "F107/F107",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-fire-training-coordinator-i-ii"
+      ],
+      "source_line": 40,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Fire Training Coordinator I/II"
+    },
+    {
+      "authorized_ft": "24",
+      "authorized_fte": "24",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F107",
+        "F108"
+      ],
+      "id": "apex-authorized-fire-rescue-fire-captain-i-captain-ii",
+      "mapping_note": "",
+      "original_line": "Fire Captain I/Captain II                                        24        24        F107/F108",
+      "published_grade_list": "F107/F108",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-fire-captain-i",
+        "apex-fire-rescue-fire-captain-ii"
+      ],
+      "source_line": 41,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Fire Captain I/Captain II"
+    },
+    {
+      "authorized_ft": "2",
+      "authorized_fte": "2",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F104"
+      ],
+      "id": "apex-authorized-fire-rescue-fire-inspector-i-ii-iii",
+      "mapping_note": "",
+      "original_line": "Fire Inspector I/II/III                                           2         2      F104/F104/F104",
+      "published_grade_list": "F104/F104/F104",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-fire-inspector-i-ii-iii"
+      ],
+      "source_line": 42,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Fire Inspector I/II/III"
+    },
+    {
+      "authorized_ft": "24",
+      "authorized_fte": "24",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F104"
+      ],
+      "id": "apex-authorized-fire-rescue-fire-engineer-i-ii",
+      "mapping_note": "",
+      "original_line": "Fire Engineer I/II                                               24        24        F104/F104",
+      "published_grade_list": "F104/F104",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-fire-engineer-i-ii"
+      ],
+      "source_line": 43,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Fire Engineer I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F102"
+      ],
+      "id": "apex-authorized-fire-rescue-community-risk-reduction-coordinator-i-ii",
+      "mapping_note": "",
+      "original_line": "Community Risk Reduction Coordinator I/II                         1         1        F102/F102",
+      "published_grade_list": "F102/F102",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-community-risk-reduction-coordinator-i-ii"
+      ],
+      "source_line": 44,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Community Risk Reduction Coordinator I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F102"
+      ],
+      "id": "apex-authorized-fire-rescue-fire-accreditation-specialist-i-ii",
+      "mapping_note": "",
+      "original_line": "Fire Accreditation Specialist I/II                                1         1        F102/F102",
+      "published_grade_list": "F102/F102",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-fire-rescue-fire-accreditation-specialist-i-ii"
+      ],
+      "source_line": 45,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Fire Accreditation Specialist I/II"
+    },
+    {
+      "authorized_ft": "54",
+      "authorized_fte": "54",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "F100",
+        "F102",
+        "F103"
+      ],
+      "id": "apex-authorized-fire-rescue-cadet-firefighter-senior-firefighter",
+      "mapping_note": "",
+      "original_line": "Cadet/Firefighter/Senior Firefighter                             54        54      F100/F102/F103",
+      "published_grade_list": "F100/F102/F103",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-fire-rescue-firefighter-cadet",
+        "apex-fire-rescue-firefighter",
+        "apex-fire-rescue-senior-firefighter"
+      ],
+      "source_line": 46,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Cadet/Firefighter/Senior Firefighter"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "M07"
+      ],
+      "id": "apex-authorized-fire-rescue-admin-logistics-coordinator-i-ii",
+      "mapping_note": "",
+      "original_line": "Admin Logistics Coordinator I/II                                  1         1         M07/M07",
+      "published_grade_list": "M07/M07",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-fire-rescue-admin-logistics-coordinator-i-ii"
+      ],
+      "source_line": 47,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Admin Logistics Coordinator I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Fire & Rescue",
+      "grade_ids": [
+        "M08"
+      ],
+      "id": "apex-authorized-fire-rescue-executive-assistant-i-ii",
+      "mapping_note": "",
+      "original_line": "Executive Assistant I/II                                          1         1         M08/M08",
+      "published_grade_list": "M08/M08",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-fire-rescue-executive-assistant-i-ii"
+      ],
+      "source_line": 48,
+      "source_page": 2,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "2",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Executive Assistant I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "SL303"
+      ],
+      "id": "apex-authorized-police-police-chief",
+      "mapping_note": "",
+      "original_line": "Police Chief                                                            1         1          SL303",
+      "published_grade_list": "SL303",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-police-chief"
+      ],
+      "source_line": 27,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Chief"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M16"
+      ],
+      "id": "apex-authorized-police-deputy-police-chief",
+      "mapping_note": "",
+      "original_line": "Deputy Police Chief                                                     1         1           M16",
+      "published_grade_list": "M16",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-deputy-police-chief"
+      ],
+      "source_line": 28,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Deputy Police Chief"
+    },
+    {
+      "authorized_ft": "4",
+      "authorized_fte": "4",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "P207"
+      ],
+      "id": "apex-authorized-police-police-captain",
+      "mapping_note": "",
+      "original_line": "Police Captain                                                          4         4          P207",
+      "published_grade_list": "P207",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-police-captain"
+      ],
+      "source_line": 29,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Captain"
+    },
+    {
+      "authorized_ft": "7",
+      "authorized_fte": "7",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "P206"
+      ],
+      "id": "apex-authorized-police-police-lieutenant",
+      "mapping_note": "",
+      "original_line": "Police Lieutenant                                                       7         7          P206",
+      "published_grade_list": "P206",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-police-lieutenant"
+      ],
+      "source_line": 30,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Lieutenant"
+    },
+    {
+      "authorized_ft": "16",
+      "authorized_fte": "16",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "P205"
+      ],
+      "id": "apex-authorized-police-police-sergeant",
+      "mapping_note": "",
+      "original_line": "Police Sergeant                                                        16        16           P205",
+      "published_grade_list": "P205",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-police-sergeant"
+      ],
+      "source_line": 31,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Sergeant"
+    },
+    {
+      "authorized_ft": "6",
+      "authorized_fte": "6",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "P204"
+      ],
+      "id": "apex-authorized-police-police-corporal",
+      "mapping_note": "",
+      "original_line": "Police Corporal                                                         6         6           P204",
+      "published_grade_list": "P204",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-police-corporal"
+      ],
+      "source_line": 32,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Corporal"
+    },
+    {
+      "authorized_ft": "86",
+      "authorized_fte": "86",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "P200",
+        "P201",
+        "P202",
+        "P203"
+      ],
+      "id": "apex-authorized-police-police-officers-i-ii-iii-senior",
+      "mapping_note": "",
+      "original_line": "Police Officers (I/II/III/Senior)                                      86        86    P200/P201/P202/P203",
+      "published_grade_list": "P200/P201/P202/P203",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-police-officer-i",
+        "apex-police-police-officer-ii",
+        "apex-police-police-officer-iii",
+        "apex-police-senior-police-officer"
+      ],
+      "source_line": 33,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Officers (I/II/III/Senior)"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M12"
+      ],
+      "id": "apex-authorized-police-compliance-manager",
+      "mapping_note": "",
+      "original_line": "Compliance Manager                                                      1         1            M12",
+      "published_grade_list": "M12",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-compliance-manager"
+      ],
+      "source_line": 34,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Compliance Manager"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M12"
+      ],
+      "id": "apex-authorized-police-communications-center-manager",
+      "mapping_note": "",
+      "original_line": "Communications Center Manager                                           1         1            M12",
+      "published_grade_list": "M12",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-communications-center-manager"
+      ],
+      "source_line": 35,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Communications Center Manager"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M10"
+      ],
+      "id": "apex-authorized-police-compliance-specialist-i-ii",
+      "mapping_note": "",
+      "original_line": "Compliance Specialist I/II                                              1         1         M10/M10",
+      "published_grade_list": "M10/M10",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-compliance-specialist-i-ii"
+      ],
+      "source_line": 36,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Compliance Specialist I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M09"
+      ],
+      "id": "apex-authorized-police-crime-scene-technician-i-ii",
+      "mapping_note": "",
+      "original_line": "Crime Scene Technician I/II                                             1         1         M09/M09",
+      "published_grade_list": "M09/M09",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-crime-scene-technician-i-ii"
+      ],
+      "source_line": 37,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Crime Scene Technician I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M09"
+      ],
+      "id": "apex-authorized-police-police-crisis-counselor-i-ii",
+      "mapping_note": "",
+      "original_line": "Police Crisis Counselor I/II                                            1         1         M09/M09",
+      "published_grade_list": "M09/M09",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-police-crisis-counselor-i-ii"
+      ],
+      "source_line": 38,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Crisis Counselor I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M09"
+      ],
+      "id": "apex-authorized-police-victim-advocate-i-ii",
+      "mapping_note": "",
+      "original_line": "Victim Advocate I/II                                                    1         1         M09/M09",
+      "published_grade_list": "M09/M09",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-victim-advocate-i-ii"
+      ],
+      "source_line": 39,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Victim Advocate I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M09"
+      ],
+      "id": "apex-authorized-police-civilian-traffice-crash-investigator",
+      "mapping_note": "Original authorization spelling 'Traffice' maps to published pay-title 'Traffic'.",
+      "original_line": "Civilian Traffice Crash Investigator                                    1         1            M09",
+      "published_grade_list": "M09",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-civilian-traffic-crash-investigator"
+      ],
+      "source_line": 40,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Civilian Traffice Crash Investigator"
+    },
+    {
+      "authorized_ft": "4",
+      "authorized_fte": "4",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M09"
+      ],
+      "id": "apex-authorized-police-communications-shift-supervisor",
+      "mapping_note": "",
+      "original_line": "Communications Shift Supervisor                                         4         4            M09",
+      "published_grade_list": "M09",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-communications-shift-supervisor"
+      ],
+      "source_line": 41,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Communications Shift Supervisor"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M08"
+      ],
+      "id": "apex-authorized-police-accreditation-specialist-i-ii",
+      "mapping_note": "",
+      "original_line": "Accreditation Specialist I/II                                           1         1         M08/M08",
+      "published_grade_list": "M08/M08",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-accreditation-specialist-i-ii"
+      ],
+      "source_line": 42,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Accreditation Specialist I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M08"
+      ],
+      "id": "apex-authorized-police-police-records-supervisor",
+      "mapping_note": "",
+      "original_line": "Police Records Supervisor                                               1         1            M08",
+      "published_grade_list": "M08",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-police-records-supervisor"
+      ],
+      "source_line": 43,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Records Supervisor"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M08"
+      ],
+      "id": "apex-authorized-police-crime-analyst-i-ii",
+      "mapping_note": "",
+      "original_line": "Crime Analyst I/II                                                      1         1         M08/M08",
+      "published_grade_list": "M08/M08",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-crime-analyst-i-ii"
+      ],
+      "source_line": 44,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Crime Analyst I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M08"
+      ],
+      "id": "apex-authorized-police-criminal-intelligence-analyst",
+      "mapping_note": "",
+      "original_line": "Criminal Intelligence Analyst                                           1         1         M08/M08",
+      "published_grade_list": "M08/M08",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-criminal-intelligence-analyst"
+      ],
+      "source_line": 45,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Criminal Intelligence Analyst"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M08"
+      ],
+      "id": "apex-authorized-police-executive-assistant-i-ii",
+      "mapping_note": "",
+      "original_line": "Executive Assistant I/II                                                1         1         M08/M08",
+      "published_grade_list": "M08/M08",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-executive-assistant-i-ii"
+      ],
+      "source_line": 46,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Executive Assistant I/II"
+    },
+    {
+      "authorized_ft": "1",
+      "authorized_fte": "1",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M07"
+      ],
+      "id": "apex-authorized-police-senior-program-support-specialist-i-ii",
+      "mapping_note": "Authorization lists 1 FT / 1 FTE; the pay title says PT 30. Public envelope uses the authorization's FTE and the pay table's published full-time range. Town confirmation is required before using this mapping for an employee's position.",
+      "original_line": "Senior Program Support Specialist I/II                                  1         1         M07/M07",
+      "published_grade_list": "M07/M07",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-senior-program-support-specialist-pt-30"
+      ],
+      "source_line": 47,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Senior Program Support Specialist I/II"
+    },
+    {
+      "authorized_ft": "10",
+      "authorized_fte": "10",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M06",
+        "M07"
+      ],
+      "id": "apex-authorized-police-telecommunicator-i-ii-senior",
+      "mapping_note": "",
+      "original_line": "Telecommunicator I/II/Senior                                           10        10       M06/M06/M07",
+      "published_grade_list": "M06/M06/M07",
+      "rfp_listed": true,
+      "role_ids": [
+        "apex-police-telecommunicator-i-ii-5-increase",
+        "apex-police-senior-telecommunicator"
+      ],
+      "source_line": 48,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Telecommunicator I/II/Senior"
+    },
+    {
+      "authorized_ft": "2",
+      "authorized_fte": "2",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M06"
+      ],
+      "id": "apex-authorized-police-evidence-tech-quartermaster-i-ii",
+      "mapping_note": "",
+      "original_line": "Evidence Tech/Quartermaster I/II                                        2         2         M06/M06",
+      "published_grade_list": "M06/M06",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-evidence-tech-quartermaster-i-ii"
+      ],
+      "source_line": 49,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Evidence Tech/Quartermaster I/II"
+    },
+    {
+      "authorized_ft": "3",
+      "authorized_fte": "3",
+      "authorized_pt": "",
+      "department": "Police",
+      "grade_ids": [
+        "M05"
+      ],
+      "id": "apex-authorized-police-police-records-technician-i-ii",
+      "mapping_note": "",
+      "original_line": "Police Records Technician I/II                                          3         3         M05/M05",
+      "published_grade_list": "M05/M05",
+      "rfp_listed": false,
+      "role_ids": [
+        "apex-police-police-records-technician-i-ii"
+      ],
+      "source_line": 50,
+      "source_page": 4,
+      "source_ref": {
+        "as_of": "2026-10-12",
+        "label": "CN20-A1 FY27 Position Authorization by Department",
+        "page": "4",
+        "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+        "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+      },
+      "title": "Police Records Technician I/II"
+    }
+  ],
+  "schema": "apex.public-safety-inputs/v1",
+  "source_refs": [
+    {
+      "as_of": "2026-10-12",
+      "label": "CN20-A1 FY27 Position Authorization by Department",
+      "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+    }
+  ]
+}

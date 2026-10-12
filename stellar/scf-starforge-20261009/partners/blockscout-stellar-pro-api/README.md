@@ -484,3 +484,33 @@ redirect flag. The runtime snapshot records that source selection.
 All browser tables and JSON views use text rendering. Provider credentials
 and controller capabilities stay out of buyer routes, response bytes,
 published source and account-usage summaries.
+
+
+## Recover a customer interrupted before approval
+
+The customer's original Node operation can continue the same intent after its native process ended before any payment reservation. First use `customer.mjs recover` to look for the already saved result. The explicit recovery commands then reuse the original workspace, configuration, request body and authenticated ledger.
+
+```sh
+node customer.mjs recovery-inspect --state /private/blockscout-customer --intent original-token-request --native-record /private/original-native-record-selection.json
+node customer.mjs recovery-prepare --state /private/blockscout-customer --intent original-token-request --attempt-sha256 EXACT_INSPECTED_ATTEMPT_SHA256 --reason "Original terminal ended while waiting for approval." --native-record /private/original-native-record-selection.json
+```
+
+The optional private native-record selection is required for an older attempt that has only a PID. It identifies the original native worker, exact command, driver, request, process and final preapproval output hashes. New attempts record their actual process birth, namespace, boot and procfs scope. The [original SDK guide](../../sf88-operator-buyer-cli/node/PREAPPROVAL_RECOVERY.md) documents the selection fields and process/ledger checks.
+
+Inspect the returned plan and original offline review. Execute exactly that plan:
+
+```sh
+node customer.mjs recovery-execute --workspace /private/original-buyer-workspace --state /private/blockscout-customer --intent original-token-request --plan-sha256 EXACT_REVIEWED_PLAN_SHA256
+```
+
+The original SF81 broker or terminal requests fresh approval for the exact Stellar payment. The token remains identified by its original EVM chain and address. Execution records one linked child attempt under the existing operation and retains the original failed attempt and empty output reservation.
+
+`recovery-history` reopens the saved plan and attempt lineage. The ordinary `recover` and `save` commands read the selected child's original verified response after a lost return or process restart:
+
+```sh
+node customer.mjs recovery-history --state /private/blockscout-customer --intent original-token-request
+node customer.mjs recover --state /private/blockscout-customer --intent original-token-request
+node customer.mjs save --state /private/blockscout-customer --intent original-token-request --out /private/token-result.json
+```
+
+The programmatic equivalents are `inspectCustomerPreapproval`, `prepareCustomerPreapproval`, `executeCustomerPreapproval` and `readCustomerPreapproval` from `customer.mjs`. They delegate to the same original Node operation and preserve the merchant’s route and payment selection.

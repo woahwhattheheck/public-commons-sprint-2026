@@ -1,0 +1,53 @@
+{
+  "name": "operational_orders",
+  "expected_revision": 0,
+  "title": "Selected operational orders",
+  "notes": "Complete captured Orders selection with declared keys, exact Decimal text and original value-state labels.",
+  "sheets": [
+    {
+      "name": "Orders",
+      "source": {
+        "kind": "query-export",
+        "id": "ORIGINAL_COMPLETE_QUERY_EXPORT_ID",
+        "sha256": "ORIGINAL_SOURCE_MANIFEST_SHA256"
+      },
+      "columns": [
+        {
+          "source": "OrderID",
+          "header": "Order ID",
+          "type": "text",
+          "null": "text",
+          "null_text": "NULL"
+        },
+        {
+          "source": "CustomerID",
+          "header": "Customer ID",
+          "type": "text",
+          "null": "text",
+          "null_text": "NULL"
+        },
+        {
+          "source": "OrderDate",
+          "header": "Order date",
+          "type": "text",
+          "null": "text",
+          "null_text": "NULL"
+        },
+        {
+          "source": "Freight",
+          "header": "Freight",
+          "type": "decimal-text",
+          "null": "text",
+          "null_text": "NULL"
+        },
+        {
+          "source": "Freight_state",
+          "header": "Freight state",
+          "type": "text",
+          "null": "text",
+          "null_text": "NULL"
+        }
+      ]
+    }
+  ]
+}
