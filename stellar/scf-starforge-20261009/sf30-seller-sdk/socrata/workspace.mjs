@@ -12,6 +12,8 @@ import { buildDatasetSellerConfig, datasetQueryParameters } from '../dataset-cli
 import { createSocrataClient, normalizeSource, metadataSummary, parseRows, sourceJSON, isSourceNumber,
   sameRevision, sha256, stable, json, plain, fail, integer } from './source.mjs';
 
+import {createPropertyOperations,propertyRetainedFiles,validatePropertyPackage} from '../property-operations/workspace.mjs';
+
 const SCHEMA = 'stellar-forge.socrata-workspace.v1';
 const CAPTURE = 'stellar-forge.socrata-capture.v1';
 const PACKAGE = 'stellar-forge.socrata-package.v1';
@@ -151,7 +153,7 @@ function compareIndex(previous, current, keyed) {
   return { added, removed, changed, unchanged };
 }
 
-export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}) {
+export async function openSocrataWorkspace({ directory, appToken, fetcher, propertyHost = {} } = {}) {
   if (typeof directory !== 'string' || !directory) throw fail('SOCRATA_DIRECTORY', 'Choose a private workspace directory.');
   directory = resolve(directory);
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -190,13 +192,18 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
     source: state.source, metadata: state.metadata, capture: capture(), mapping: state.mapping,
     captures: state.captures.map(({ pages, ...item }) => item), editions: state.editions,
     activeEditionId: state.activeEditionId, merchant: state.merchants[state.activeEditionId] ?? null,
-    exports: state.exports, lastQuery: state.queries[state.activeEditionId] ?? null, busy, error: state.error });
+    exports: state.exports, lastQuery: state.queries[state.activeEditionId] ?? null, property: property.view(), busy, error: state.error });
   const serial = operation => {
     if (closing) return Promise.reject(fail('SOCRATA_CLOSED', 'The workspace is closing.', 409));
     const job = tail.then(async () => { busy = true; try { return await operation(); } finally { busy = false; } });
     tail = job.catch(() => {});
     return job;
   };
+  let property;
+  try {
+    property = createPropertyOperations({directory,getState:()=>state,save,immutable,bytesAt,host:propertyHost});
+    propertyRetainedFiles(state);
+  } catch (error) { lease.exec('ROLLBACK'); lease.close(); throw error; }
   async function storeReceipt(c, label, receipt) {
     const path = 'captures/' + c.id + '/' + label + '-' + receipt.sha256 + '.json';
     return { ...receiptOnly(receipt), ...await immutable(directory, path, receipt.bytes) };
@@ -371,6 +378,7 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
       preview: native.handle({ query: { limit: String(Math.min(5, mapping.maxPageSize)) } }).body, reused: false };
   }
   async function dispatch(action, input) {
+    if (action.startsWith('property.')) return property.act(action,input);
     switch (action) {
       case 'source.configure': {
         const source = normalizeSource(input);
@@ -498,9 +506,11 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
       paths.add('editions/' + e.id + '/dataset.csv'); paths.add('editions/' + e.id + '/source.json');
     }
     for (const merchant of Object.values(snapshot.merchants)) paths.add(safeRelative(merchant.configFile));
+    for (const descriptor of propertyRetainedFiles(snapshot)) paths.add(descriptor.file);
     return [...paths].sort();
   }
   async function exportPackage() {
+    await property.beforeExport();
     const active = edition();
     if (!active) throw fail('SOCRATA_EDITION_REQUIRED', 'Activate a complete dataset edition before exporting.', 409);
     const native = await nativeDataset(), snapshot = structuredClone(state);
@@ -514,6 +524,7 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
       if (c.importManifestSha256) expectedHashes.set('captures/' + c.id + '/import-manifest.json', c.importManifestSha256);
     }
     for (const e of snapshot.editions) expectedHashes.set('editions/' + e.id + '/dataset.csv', e.sha256);
+    for (const descriptor of propertyRetainedFiles(snapshot)) expectedHashes.set(descriptor.file,descriptor.sha256);
     const exportId = id('export'), dir = 'exports/' + exportId;
     await mkdir(inside(directory, dir), { recursive: true, mode: 0o700 });
     const packageName = 'starforge-socrata.json.gz', temporary = inside(directory, dir + '/' + packageName + '.tmp');
@@ -607,7 +618,7 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
   }
   async function importPackage(packagePath) {
     if (typeof packagePath !== 'string' || !packagePath) throw fail('SOCRATA_PACKAGE', 'Choose a portable Socrata package file.');
-    if (state.captures.length || state.editions.length || state.source)
+    if (state.captures.length || state.editions.length || state.source || state.property)
       throw fail('SOCRATA_IMPORT_EMPTY', 'Restore into an empty Socrata workspace directory.', 409);
     const full = resolve(packagePath), raw = await bytesAt(dirname(full), basename(full), 512 * 1024 * 1024);
     let decoded = raw;
@@ -632,7 +643,7 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
     let total = 0;
     for (const file of imported.files) {
       const path = safeRelative(file.path);
-      if (!expected.has(path) || supplied.has(path) || !/^(captures|editions)\//.test(path) ||
+      if (!expected.has(path) || supplied.has(path) || !/^(captures|editions|property)\//.test(path) ||
           file.encoding !== 'base64' || typeof file.content !== 'string' || !HASH.test(file.sha256 ?? '') ||
           !Number.isSafeInteger(file.bytes) || file.bytes < 0 || file.bytes > 256 * 1024 * 1024)
         throw fail('SOCRATA_PACKAGE_FILE', 'The portable package contains an unexpected or duplicate retained file.');
@@ -644,6 +655,7 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
       supplied.set(path, bytes);
     }
     if (expected.size !== supplied.size) throw fail('SOCRATA_PACKAGE_INCOMPLETE', 'The portable package is missing retained source files.');
+    await validatePropertyPackage(snapshot,supplied);
     const captureIds = new Set(), editionIds = new Set();
     for (const c of snapshot.captures) {
       if (captureIds.has(c.id) || !Array.isArray(c.pages)) throw fail('SOCRATA_PACKAGE_CAPTURE', 'The package contains duplicate or invalid captures.');
@@ -704,6 +716,7 @@ export async function openSocrataWorkspace({ directory, appToken, fetcher } = {}
         throw error;
       }
     }),
+    readPropertyFile: file => serial(() => property.readFile(file)),
     readExport: (exportId, filename) => serial(async () => {
       const saved = state.exports.find(item => item.id === exportId);
       const descriptor = saved?.files.find(file => file.name === filename);

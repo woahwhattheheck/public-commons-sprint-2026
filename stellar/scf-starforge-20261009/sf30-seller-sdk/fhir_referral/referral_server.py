@@ -88,7 +88,7 @@ class Handler(BaseHandler):
                 "files": [{k: v for k, v in row.items() if k != "content"} for row in packet["files"]]})
         elif parts == ["api", "referrals", "guidance", "packet"]:
             self._query(target, ())
-            self._file(HERE / "gravity-source.json", "Gravity_Complete_Original_Source.json", "application/json")
+            self._download(HERE / "gravity-source.json", "Gravity_Complete_Original_Source.json", "application/json")
         elif parts == ["api", "referrals", "guidance", "file"]:
             q = self._query(target, ("name",))
             packet = source.json_value((HERE / "gravity-source.json").read_bytes())
@@ -113,7 +113,7 @@ class Handler(BaseHandler):
             if parts[4] == "file":
                 self._query(target, ())
                 record = ws.referral_record("assessments", parts[3])
-                self._file(ws._file_path(record["reportFile"]), "Gravity_Complete_Assessment.json", "application/json")
+                self._download(ws._file_path(record["reportFile"]), "Gravity_Complete_Assessment.json", "application/json")
             elif parts[4] in {"tasks", "findings", "cells", "decisions"}:
                 q = self._query(target, ("offset", "limit", "query", "taskId"))
                 self._json(ws.referral_assessment_page(parts[3], parts[4],
@@ -130,7 +130,7 @@ class Handler(BaseHandler):
             elif parts[4] == "file":
                 self._query(target, ())
                 record = ws.referral_record("comparisons", parts[3])
-                self._file(ws._file_path(record["changesFile"]), "Gravity_Complete_Edition_Changes.json", "application/json")
+                self._download(ws._file_path(record["changesFile"]), "Gravity_Complete_Edition_Changes.json", "application/json")
             else:
                 self._json({"error": "Unknown original edition comparison member"}, 404)
         elif len(parts) in {4, 5} and parts[:3] == ["api", "referrals", "exchange-operations"]:
@@ -139,7 +139,7 @@ class Handler(BaseHandler):
             if len(parts) == 4:
                 self._json(operation)
             elif parts[4] == "file":
-                self._file(ws._exchange_directory(parts[3]) / "operation.json",
+                self._download(ws._exchange_directory(parts[3]) / "operation.json",
                     "Gravity_Original_Exchange_Operation.json", "application/json")
             elif parts[4] == "packet":
                 with ws.mutex, ws.scratch() as temp:
@@ -154,7 +154,7 @@ class Handler(BaseHandler):
                             members[path.relative_to(directory).as_posix()] = path
                     archive = Path(temp) / "Gravity_Original_Exchange.zip"
                     write_zip(archive, members)
-                    self._file(archive, archive.name, "application/zip")
+                    self._download(archive, archive.name, "application/zip")
             else:
                 self._json({"error": "Unknown original exchange file"}, 404)
         elif len(parts) == 5 and parts[:3] == ["api", "referrals", "handoffs"] and parts[4] == "packet":
@@ -162,13 +162,13 @@ class Handler(BaseHandler):
             with ws.mutex, ws.scratch() as temp:
                 path = Path(temp) / "Gravity_Complete_Referral_Handoff.zip"
                 ws.export_referral_handoff(parts[3], path)
-                self._file(path, path.name, "application/zip")
+                self._download(path, path.name, "application/zip")
         elif parts == ["api", "referrals", "workspace", "packet"]:
             self._query(target, ())
             with ws.mutex, ws.scratch() as temp:
                 path = Path(temp) / "Gravity_Complete_Editable_Workspace.zip"
                 ws.export_workspace(path)
-                self._file(path, path.name, "application/zip")
+                self._download(path, path.name, "application/zip")
         else:
             self._json({"error": "Unknown Gravity operator route"}, 404)
 

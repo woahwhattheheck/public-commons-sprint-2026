@@ -163,3 +163,70 @@ The commissioning customer is the internal Commons research programme. Request o
 The complete customer result is `customer-updates.json`; its full operating directory is `customer-updates/`. The whole programme result includes the project, all three delivery identities, both original table identities, actual source-change counts and both exact handover identities. Its artifact list includes the closed handover files, complete source selection, authored commissioning case and original-request replay output. Credentials remain in the original private connection files.
 
 Recovery first reuses the original received-review completion and frozen revision. Subsequent customer operations can extend that same received workspace without causing an already completed extraction phase to execute again. Interrupted customer requests are reconciled by their original saved request ID and revision. The same signal reaches the customer clients through the existing fetch transport, and both owned application listeners join normal or interrupted closure. Run the same existing `study-extraction-workflow.mjs` command and operation directory to complete the programme.
+
+
+## Full client template exchange
+
+The same receiving programme continues the completed second publication through
+the original template-exchange product before producing its continued dossier
+exports. It uses the existing received store and application listener. The
+selected publication and its fourteen original rows remain pinned to the saved
+review revision while subsequent template reviews extend the same dossier.
+
+The complete native continuation authors a commissioning workbook, maps every
+original field by its stable result identity, releases the frozen table, receives
+a reordered client workbook with one explicitly labelled proposed value and an
+unmapped note, and reviews that complete return. The actual assigned reviewer
+receives a complete uncertain draft through the existing extraction engine. The
+original accepted request is recovered under its original request ID. A later
+client template edition retains the notes and row order and receives its own
+reviewed mapping and released workbook.
+
+The original template product exports and receives the full extended dossier,
+including its actual workbook, mapping, comparison, request and review blobs.
+The existing Research browser then opens the selected return, review and draft,
+downloads the released workbook, and records desktop and mobile screens. It uses
+the current application's original fragment token; saved delivery records carry
+only the public application path. The same configured Python interpreter is
+passed to the original stores and application listeners.
+
+The full continuing result is template-exchange.json, with the complete
+operating files under template-continuation/. Its native and browser phases
+reuse their original files and selected IDs after interruption. The main dossier
+reports and both continued portable formats use the actual revision after this
+template work. The original frozen extraction publication remains the selected
+customer deliverable, and the subsequent customer handover carries the complete
+template history in that same original dossier.
+
+Inspect the emitted workbook previews and browser images when the native
+programme finishes. The programme retains those exact files for the receiving
+owner's visual review.
+
+
+## Appraisal in this original programme
+
+The complete Appraisal product is part of this same study workflow. Its full operator/source guide is [risk-of-bias/RISK_OF_BIAS.md](./risk-of-bias/RISK_OF_BIAS.md), with the browser controls in [risk-of-bias/BROWSER.md](./risk-of-bias/BROWSER.md) and exact native fields in [risk-of-bias/API.md](./risk-of-bias/API.md).
+
+The original sender first completes its fourteen-row extraction and first evidence publication. The appraisal binder then selects the actual resolved primary PFS result from that original result set and the existing study/version. It binds the full independent A/B and resolver packet to the retained registry file: 99,951 bytes, SHA-256 1e8f401843a30673b2d653ceb2682ad8f6d038af268a185c3333028d339d14c1. All 301 passage occurrences use the original typed source resolver and 53 actual pointers.
+
+The existing Appraisal browser authors the protocol/review, assessment, two complete drafts, two immutable submissions and source-based adjudication. The same authenticated listener then receives the typed client, actual CLI and Merchant reads, replays one already-committed request, and compares all four complete report formats. The sender's final revision and complete dossier exports include that original review.
+
+Both original JSON and gzip receiving workspaces are compared at the same selected revision. Their complete appraisal views retain the exact protocol, study/result/source binding, all independent submissions, original adjudication and native operations. The received browser opens that saved review in its own actual workspace context.
+
+The received continuation makes one explicit source clarification: A's baseline answer names the original MEDIAN statistic while preserving the reported 54.5 and 54.2 values. The new draft supersedes A's original draft; the new submission supersedes A's original submission; the new adjudication resolves the complete new A plus original B set and retains the earlier adjudication. This adds three original mutations and leaves B's independent submission unchanged. The existing full final export/reopen carries that corrected review before the maintained recurring customer programme continues.
+
+The parent retains the earlier extraction revision checkpoint and uses the actual later appraisal revision for the received report/export and native head comparison. Its original operation ID, workspace, listeners, child wrapper, Python selection, cancellation signal, source input and canonical request recovery remain the same. Appraisal adds no other native controller.
+
+The full result includes:
+
+| Field | Retained output |
+|---|---|
+| appraisal.sender | Actual seven-action browser review, exact source selection, native transport receiving, reports and screenshots |
+| appraisal.jsonReceiving | Complete original appraisal equality in the existing JSON receiver |
+| appraisal.gzipReceiving | Complete original appraisal equality in the existing gzip receiver |
+| appraisal.received | Actual received browser inspection, source-linked A correction, new submission and superseding adjudication |
+| appraisal.continuedReceiving | Complete corrected appraisal equality after the original final fresh reopen |
+
+The declared artifacts include each original browser request body, workspace-bound recovery envelope, accepted response, receiving state/result, source case, report, screenshot and typed/CLI/Merchant file. Private listener connections remain with the original application owner. The customer receives the complete editable dossier and its selected reports through the existing delivery paths.
+
+The workbook exchange follows the complete received appraisal correction. Final report, portable dossier, and appraisal receiving use the actual final template revision. All original Research hosts receive the same programme cancellation signal and selected Python interpreter.

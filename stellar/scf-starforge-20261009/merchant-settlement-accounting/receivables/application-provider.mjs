@@ -51,7 +51,8 @@ export default {
         url.search || url.hash || (port !== 0 && Number(url.port || 80) !== port)) return null;
       return {url: url.href, workspaceId: ready.workspaceId,
         original: {directory: ready.directory, sourcesSha256: ready.sourcesSha256},
-        links: [{label: 'Customers and statements', url: new URL('/customer-statements/', url).href}]};
+        links: [{label: 'Customers and statements', url: new URL('/customer-statements/', url).href},
+          {label: 'Payment plans', url: new URL('/payment-plans/', url).href}]};
     });
   },
 };

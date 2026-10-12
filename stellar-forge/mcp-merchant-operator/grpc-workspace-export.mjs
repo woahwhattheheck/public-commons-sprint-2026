@@ -6,6 +6,9 @@ export { grpcCanonical };
 import { OPERATIONS_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/operations/domain.mjs';
 import { OPERATIONS_FILES, OPERATIONS_EXPORT_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/operations/report.mjs';
 
+import { GRPC_TRANSFER_MANIFEST, GRPC_TRANSFER_ARCHIVE, GRPC_TRANSFER_MANIFEST_BYTES,
+  GRPC_TRANSFER_ARCHIVE_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/transfer/manifest.mjs';
+export const GRPC_TRANSFER_EXPORT_MAX_BYTES = GRPC_TRANSFER_ARCHIVE_BYTES + GRPC_TRANSFER_MANIFEST_BYTES;
 export const GRPC_EXPORT_SCHEMA = 'stellar-forge.grpc-workspace-export.v1';
 export const GRPC_EXPORT_MANIFEST = 'grpc-workspace-export.json';
 export const GRPC_STREAM_EXPORT_MAX_BYTES = 1024 * 1024 * 1024;
@@ -36,7 +39,7 @@ export function parseGrpcExportManifest(bytes, exportId) {
   if (!plain(manifest) || Object.keys(manifest).some(key => !['schema', 'exportId', 'workspace', 'kind', 'original', 'files'].includes(key)) ||
       manifest.schema !== GRPC_EXPORT_SCHEMA || !SHA.test(manifest.exportId ?? '') ||
       exportId !== undefined && manifest.exportId !== exportId || !ALIAS.test(manifest.workspace ?? '') ||
-      !['customer', 'revision', 'attempt', 'stream', 'result', 'upgrade', 'health', 'operations'].includes(manifest.kind) || !plain(manifest.original) ||
+      !['customer', 'revision', 'attempt', 'stream', 'result', 'upgrade', 'health', 'operations', 'workspace-transfer'].includes(manifest.kind) || !plain(manifest.original) ||
       !Array.isArray(manifest.files) || manifest.files.length < 1 || manifest.files.length > 7 ||
       grpcExportIdentity(manifest) !== manifest.exportId) invalid();
   const original = manifest.original;
@@ -50,11 +53,15 @@ export function parseGrpcExportManifest(bytes, exportId) {
   if (manifest.kind === 'customer' && (!original.preparation || !original.revision) ||
       manifest.kind === 'revision' && !original.revision ||
       manifest.kind === 'health' && (!original.operationId || !original.revision || !original.snapshotSha256) ||
+      manifest.kind === 'workspace-transfer' && (!original.operationId || !original.snapshotSha256 || original.topic !== 'workspace-transfer') ||
       manifest.kind === 'operations' && (!original.operationId || !original.reviewSha256 || !original.snapshotSha256 || !/^operations:[a-f0-9]{64}$/.test(original.topic ?? '')) ||
       manifest.kind === 'upgrade' && (!original.operationId || !original.revision || !original.reviewSha256) ||
       ['attempt', 'stream'].includes(manifest.kind) && (!original.operationId || !original.revision)) invalid();
   const stream = manifest.kind === 'stream' || manifest.kind === 'attempt' && manifest.files.length === 2;
-  const expected = manifest.kind === 'operations' ? OPERATIONS_FILES : manifest.kind === 'health' ? [{ path: 'grpc-health.json', maximum: 40 * 1024 * 1024 }] : manifest.kind === 'upgrade' ? GRPC_UPGRADE_FILES : manifest.kind === 'customer' ? GRPC_CUSTOMER_FILES
+  const expected = manifest.kind === 'workspace-transfer' ? [
+    { path: GRPC_TRANSFER_MANIFEST, maximum: GRPC_TRANSFER_MANIFEST_BYTES },
+    { path: GRPC_TRANSFER_ARCHIVE, maximum: GRPC_TRANSFER_ARCHIVE_BYTES }]
+    : manifest.kind === 'operations' ? OPERATIONS_FILES : manifest.kind === 'health' ? [{ path: 'grpc-health.json', maximum: 40 * 1024 * 1024 }] : manifest.kind === 'upgrade' ? GRPC_UPGRADE_FILES : manifest.kind === 'customer' ? GRPC_CUSTOMER_FILES
     : stream ? [{ path: 'grpc-attempt.json', maximum: 40 * 1024 * 1024 },
       { path: 'grpc-stream.ndjson', maximum: GRPC_STREAM_EXPORT_MAX_BYTES }]
     : [{ path: manifest.kind === 'revision' ? 'grpc-revision.json' : manifest.kind === 'attempt' ? 'grpc-attempt.json' : 'grpc-result.json', maximum: manifest.kind === 'result' && original.topic === 'operations-incident' ? OPERATIONS_MAX_BYTES : 40 * 1024 * 1024 }];
@@ -69,6 +76,6 @@ export function parseGrpcExportManifest(bytes, exportId) {
         !/^[a-z][a-z0-9.+-]*\/[a-z0-9.+-]+(?:; charset=utf-8)?$/.test(file.contentType)) invalid();
     total += file.bytes;
   }
-  if (total > (manifest.kind === 'result' && original.topic === 'operations-incident' ? OPERATIONS_MAX_BYTES : manifest.kind === 'operations' ? OPERATIONS_EXPORT_MAX_BYTES : manifest.kind === 'upgrade' ? GRPC_UPGRADE_MAX_BYTES : stream ? GRPC_EXPORT_MAX_BYTES : ORDINARY_EXPORT_MAX_BYTES)) invalid();
+  if (total > (manifest.kind === 'workspace-transfer' ? GRPC_TRANSFER_EXPORT_MAX_BYTES : manifest.kind === 'result' && original.topic === 'operations-incident' ? OPERATIONS_MAX_BYTES : manifest.kind === 'operations' ? OPERATIONS_EXPORT_MAX_BYTES : manifest.kind === 'upgrade' ? GRPC_UPGRADE_MAX_BYTES : stream ? GRPC_EXPORT_MAX_BYTES : ORDINARY_EXPORT_MAX_BYTES)) invalid();
   return manifest;
 }

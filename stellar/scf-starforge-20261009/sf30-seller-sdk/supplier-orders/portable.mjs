@@ -9,6 +9,8 @@ import { clone, now } from '../opensearch/workspace/store.mjs';
 import { PROFILE_ID, normalizedDocument, sourceDocumentId, businessKey, data, fail, canonical, digest } from './core.mjs';
 import { TABLES, TABLE_KEYS, MAX_PACKAGE_BYTES } from './workspace.mjs';
 import { parseOpenTransDocument } from './opentrans.mjs';
+import { validateSupplierOrderTransmission, TRANSMISSION_SCHEMA } from './transport.mjs';
+import { SUPPLIER_ORDER_PROFILE_SELECTION_SCHEMA, supplierOrderDocumentProfile, supplierOrderProfileSha256, supplierOrderProfilesEqual } from './profiles.mjs';
 
 export const PACKAGE_SCHEMA='stellar-forge.supplier-orders-package.v1';
 const SNAPSHOT_SCHEMA='stellar-forge.supplier-orders-snapshot.v1';
@@ -73,6 +75,10 @@ function completeRow(table,row){
     if(record.kind!==row.kind||record.kind!==record.document.kind||record.documentId!==record.document.documentId||record.businessKey!==row.business_key||record.businessKey!==businessKey(record.document)||record.id!==sourceDocumentId(record.document,record.source?.sha256))fail('ORDER_PACKAGE_DOCUMENT_DIFFERS','The indexed document identity differs from its original source record.');
   }
   if(table==='supplier_order_selections'&&(record.orderId!==row.order_id||record.documentId!==row.document_id))fail('ORDER_PACKAGE_SELECTION_DIFFERS','The indexed selection differs from the original record.');
+  if(table==='supplier_order_transmissions'&&record.schema===TRANSMISSION_SCHEMA){
+    validateSupplierOrderTransmission(record);
+    if(record.state!==row.state||(record.documentId??'')!==row.document_id)fail('ORDER_PACKAGE_TRANSMISSION_DIFFERS','The indexed transport receipt differs from its original record.');
+  }
   if(table==='supplier_order_files'&&(!/^[a-f0-9]{64}$/.test(record.id)||record.id!==record.sha256||!Number.isSafeInteger(record.bytes)||record.bytes<0||record.kind!==row.kind))fail('ORDER_PACKAGE_FILE_INVALID','Invalid immutable complete file record.');
   if(table==='supplier_order_heads'||table==='supplier_order_history'){
     if(!Array.isArray(record.selectionIds)||record.selectionIds.some(id=>typeof id!=='string'))fail('ORDER_PACKAGE_CURRENT_SELECTION_INVALID','Retain the exact original current document-selection IDs.');
@@ -95,7 +101,7 @@ async function bindOriginalDocument(record,existing,directory,incomingFiles){
   }
   const selected=record.document.source;
   const reparsed=await parseOpenTransDocument(await readFile(join(directory,entry.path)),{
-    name:selected.name??source.name,provenance:own.call(selected,'provenance')?selected.provenance:source.provenance??null
+    name:selected.name??source.name,profile:supplierOrderDocumentProfile(record.document),provenance:own.call(selected,'provenance')?selected.provenance:source.provenance??null
   });
   if(immutableSourceProjection(reparsed)!==projection)
     fail('ORDER_PACKAGE_SOURCE_PROJECTION_DIFFERS','The retained business document differs from its complete original XML. Recreate the package from the original source workspace.',422,{documentId:record.id,sourceSha256:source.sha256});
@@ -138,7 +144,9 @@ export async function writeSupplierOrderPackage(workspace,output){
   const fd=openSync(snapshot,constants.O_CREAT|constants.O_EXCL|constants.O_WRONLY|constants.O_NOFOLLOW,0o600);
   try{
     workspace.store.transaction(()=>{
-      header={schema:SNAPSHOT_SCHEMA,profileId:PROFILE_ID,workspaceId:workspace.store.id,supplierIdentity:workspace.supplierIdentity(),createdAt:now(),tables:TABLES,keys:TABLE_KEYS};
+      const {canSelect,workspaceId,...profileSelection}=workspace.profile(),profile=profileSelection.profile;
+      const profileFields=profile.id===PROFILE_ID?{}:{profile,profileSha256:profileSelection.profileSha256};
+      header={schema:SNAPSHOT_SCHEMA,profileId:profile.id,...profileFields,...(!profileSelection.implicit?{profileSelection}:{}),workspaceId:workspace.store.id,supplierIdentity:workspace.supplierIdentity(),createdAt:now(),tables:TABLES,keys:TABLE_KEYS};
       const append=value=>{const chunk=Buffer.from(JSON.stringify(value)+'\n');if(chunk.length>MAX_LINE_BYTES)fail('ORDER_PACKAGE_ROW_TOO_LARGE','A complete normalized workspace row exceeds 256 MiB.');bytes+=chunk.length;if(bytes>MAX_PACKAGE_BYTES)fail('ORDER_PACKAGE_TOO_LARGE','The complete workspace exceeds 8 GiB.');hash.update(chunk);writeAll(fd,chunk);};
       append({header});
       for(const [table,columns] of Object.entries(TABLES)){
@@ -163,7 +171,7 @@ export async function writeSupplierOrderPackage(workspace,output){
       entries.push({path:'files/'+record.sha256+'.bin',bytes:record.bytes,sha256:record.sha256});
     }
     const totalBytes=entries.reduce((sum,entry)=>sum+entry.bytes,0);if(totalBytes>MAX_PACKAGE_BYTES)fail('ORDER_PACKAGE_TOO_LARGE','The complete workspace exceeds 8 GiB.');
-    const manifest={schema:PACKAGE_SCHEMA,profileId:PROFILE_ID,workspaceId:header.workspaceId,supplierIdentity:header.supplierIdentity,createdAt:header.createdAt,tableCounts:counts,totalBytes,entries,
+    const manifest={schema:PACKAGE_SCHEMA,profileId:header.profileId,...(header.profile?{profile:header.profile,profileSha256:header.profileSha256}:{}),...(header.profileSelection?{profileSelection:header.profileSelection}:{}),workspaceId:header.workspaceId,supplierIdentity:header.supplierIdentity,createdAt:header.createdAt,tableCounts:counts,totalBytes,entries,
       retention:{originalSources:'complete',documents:'all revisions',drafts:'all revisions',currentSelections:'exact ordered IDs',foreignHistory:'complete',generatedPackageFiles:'regenerated; archive files are not nested'}};
     const descriptor=join(temporary,'descriptor.json');await writeFile(descriptor,JSON.stringify({manifest,sources:{'workspace.jsonl':snapshot,...fileSources}}),{flag:'wx',mode:0o600});
     return await nativeArchive('pack',descriptor,output);
@@ -179,20 +187,27 @@ function retainForeign(workspace,{table,row,sourceWorkspaceId,packageSha256,reas
   const record={id,...original,packageSha256,reason,receivedAt:now()};
   insert(workspace.db,'supplier_order_foreign_records',{id,source_workspace:sourceWorkspaceId,source_table:table,record_json:JSON.stringify(record)});return id;
 }
-export async function readSupplierOrderPackage(workspace,path,{mode='merge',requestId,packageSha256}={}){
+export async function readSupplierOrderPackage(workspace,path,{mode='merge',requestId,packageSha256,adoptProfile=false,expectedProfileSha256,expectedSelectionRevision}={}){
   if(!['merge','inspect'].includes(mode))fail('ORDER_PACKAGE_MODE_INVALID','Choose merge or inspect.');
   const directory=await mkdtemp(join(workspace.root,'incoming','receive-'));
   try{
     const {manifest}=await nativeArchive('unpack',path,directory),snapshot=join(directory,'workspace.jsonl');
     const incomingFiles=new Map(manifest.entries.filter(entry=>entry.path.startsWith('files/')).map(entry=>[entry.sha256,entry]));
-    const seen=new Set(),counts={},documents=new Set(),selections=new Map(),heads=[],sources=[],drafts=[];
-    let header=null,ended=false,totalRows=0,operationCount=0;
+    const seen=new Set(),counts={},documents=new Set(),selections=new Map(),heads=[],sources=[],drafts=[],transmissions=[];
+    let header=null,incomingProfile=null,ended=false,totalRows=0,operationCount=0;
     const plan={mode,sourceWorkspaceId:manifest.workspaceId,workspaceId:workspace.store.id,packageSha256,added:{},preserved:{},foreign:{},operations:0,canMerge:true};
     for await(const line of lines(snapshot)){
       let value;try{value=JSON.parse(line);}catch{fail('ORDER_PACKAGE_SNAPSHOT_INVALID','The complete workspace snapshot contains invalid JSON.');}
       if(!header){
-        header=value.header;if(!header||header.schema!==SNAPSHOT_SCHEMA||header.profileId!==PROFILE_ID||header.workspaceId!==manifest.workspaceId||canonical(header.tables)!==canonical(TABLES)||canonical(header.keys)!==canonical(TABLE_KEYS)||canonical(header.supplierIdentity)!==canonical(manifest.supplierIdentity))fail('ORDER_PACKAGE_HEADER_INVALID','The complete snapshot does not match the package manifest.');
-        plan.canMerge=supplierMatches(workspace,header.supplierIdentity);continue;
+        header=value.header;if(!header||header.schema!==SNAPSHOT_SCHEMA||header.profileId!==manifest.profileId||header.workspaceId!==manifest.workspaceId||canonical(header.tables)!==canonical(TABLES)||canonical(header.keys)!==canonical(TABLE_KEYS)||canonical(header.supplierIdentity)!==canonical(manifest.supplierIdentity))fail('ORDER_PACKAGE_HEADER_INVALID','The complete snapshot does not match the package manifest.');
+        incomingProfile=supplierOrderDocumentProfile(header);
+        const manifestProfile=supplierOrderDocumentProfile(manifest);
+        if(!supplierOrderProfilesEqual(incomingProfile,manifestProfile)||canonical(header.profileSelection??null)!==canonical(manifest.profileSelection??null))fail('ORDER_PACKAGE_PROFILE_DIFFERS','The complete profile declaration differs between snapshot and manifest.');
+        if(header.profileSelection){const {sha256,...selection}=header.profileSelection;if(selection.schema!==SUPPLIER_ORDER_PROFILE_SELECTION_SCHEMA||digest(selection)!==sha256||selection.profileSha256!==supplierOrderProfileSha256(incomingProfile)||!supplierOrderProfilesEqual(selection.profile,incomingProfile))fail('ORDER_PACKAGE_PROFILE_SELECTION_CHANGED','The retained original profile selection differs from its seal or declaration.');}
+        const current=workspace.profile(),matches=supplierOrderProfilesEqual(current.profile,incomingProfile);
+        plan.profile={incoming:incomingProfile,incomingSha256:supplierOrderProfileSha256(incomingProfile),current:current.profile,currentSha256:current.profileSha256,currentSelectionRevision:current.revision,matches,adoptionRequired:!matches,canAdopt:workspace.profileBusinessEmpty(),sourceSelection:header.profileSelection??null};
+        plan.supplierMatches=supplierMatches(workspace,header.supplierIdentity);
+        plan.canMerge=plan.supplierMatches&&(matches||adoptProfile&&plan.profile.canAdopt&&expectedProfileSha256===current.profileSha256&&expectedSelectionRevision===current.revision);continue;
       }
       if(ended)fail('ORDER_PACKAGE_SNAPSHOT_TRAILING','Unexpected data after the complete snapshot end.');
       if(value.end){ended=true;if(value.end.workspaceId!==header.workspaceId||canonical(value.end.tableCounts)!==canonical(manifest.tableCounts))fail('ORDER_PACKAGE_COUNTS_DIFFER','The complete snapshot and manifest disagree.');continue;}
@@ -205,14 +220,19 @@ export async function readSupplierOrderPackage(workspace,path,{mode='merge',requ
       else if(canonical(existing)===canonical(row))plan.preserved[table]=(plan.preserved[table]??0)+1;
       else plan.foreign[table]=(plan.foreign[table]??0)+1;
       if(table==='supplier_order_documents'){
+        if(!supplierOrderProfilesEqual(incomingProfile,supplierOrderDocumentProfile(record.document)))fail('ORDER_PACKAGE_DOCUMENT_PROFILE_DIFFERS','A complete source document has a different retained profile from this package.');
         await bindOriginalDocument(record,existing,directory,incomingFiles);
         documents.add(record.id);sources.push(record.source);
         const issuer=record.document.header.supplierId;if(issuer&&issuer!==header.supplierIdentity?.value)fail('ORDER_PACKAGE_SUPPLIER_DIFFERS','A document issuer differs from the original package supplier.');
       }
       if(table==='supplier_order_sources')sources.push(record);
+      if(table==='supplier_order_transmissions'&&record.schema===TRANSMISSION_SCHEMA)transmissions.push(record);
       if(table==='supplier_order_selections')selections.set(record.id,{orderId:record.orderId,documentId:record.documentId});
       if(table==='supplier_order_heads'||table==='supplier_order_history')heads.push({orderId:record.orderId,documentId:record.documentId,selectionIds:record.selectionIds});
-      if(table==='supplier_order_drafts'||table==='supplier_order_draft_history')drafts.push({orderIds:record.orderIds,sourceOrderDocuments:record.sourceOrderDocuments});
+      if(table==='supplier_order_drafts'||table==='supplier_order_draft_history'){
+        if(!supplierOrderProfilesEqual(incomingProfile,supplierOrderDocumentProfile(record.document)))fail('ORDER_PACKAGE_DRAFT_PROFILE_DIFFERS','A retained draft has a different profile from this package.');
+        drafts.push({orderIds:record.orderIds,sourceOrderDocuments:record.sourceOrderDocuments});
+      }
       if(table==='supplier_order_files'){
         const entry=incomingFiles.get(record.sha256);if(record.kind==='package'||!entry||entry.bytes!==record.bytes)fail('ORDER_PACKAGE_FILE_MISSING','The complete original file record has no matching archive member.');
       }
@@ -225,9 +245,11 @@ export async function readSupplierOrderPackage(workspace,path,{mode='merge',requ
       for(const id of head.selectionIds){const selection=selections.get(id);if(!selection||selection.orderId!==head.orderId||!documents.has(selection.documentId))fail('ORDER_PACKAGE_SELECTION_MISSING','A retained order selection is missing its complete original document.');}}
     for(const selection of selections.values())if(!documents.has(selection.documentId))fail('ORDER_PACKAGE_DOCUMENT_MISSING','A retained selection document is absent.');
     for(const draft of drafts)for(const original of draft.sourceOrderDocuments??[])if(!documents.has(original.id))fail('ORDER_PACKAGE_DRAFT_SOURCE_MISSING','A saved draft is missing an original source order.');
+    for(const record of transmissions)validateSupplierOrderTransmission(record,{fileExists:file=>incomingFiles.get(file.sha256)?.bytes===file.bytes,documentExists:id=>documents.has(id),profileSha256:supplierOrderProfileSha256(incomingProfile)});
     plan.rows=totalRows;plan.files=incomingFiles.size;plan.tableCounts=counts;
     if(mode==='inspect')return{schema:'stellar-forge.supplier-orders-receiving.v1',...plan};
-    if(!plan.canMerge)fail('ORDER_PACKAGE_SUPPLIER_DIFFERS','This package belongs to a different original supplier. Receive it into that supplier’s workspace.',409,{workspaceSupplier:workspace.supplierIdentity(),incomingSupplier:header.supplierIdentity});
+    if(!plan.profile.matches&&(!adoptProfile||!plan.profile.canAdopt||expectedProfileSha256!==plan.profile.currentSha256||expectedSelectionRevision!==plan.profile.currentSelectionRevision))fail('ORDER_PACKAGE_PROFILE_DIFFERS','Inspect the complete incoming profile and explicitly adopt it with the current profile SHA and selection revision into an empty workspace.',409,{profile:plan.profile});
+    if(!plan.supplierMatches)fail('ORDER_PACKAGE_SUPPLIER_DIFFERS','This package belongs to a different original supplier. Receive it into that supplier’s workspace.',409,{workspaceSupplier:workspace.supplierIdentity(),incomingSupplier:header.supplierIdentity});
     for(const [sha,entry] of incomingFiles){
       const original=join(directory,entry.path),destination=join(workspace.root,'files',sha+'.bin');
       try{await link(original,destination);}catch(error){if(error.code!=='EEXIST')throw error;const current=await lstat(destination);if(!current.isFile()||current.isSymbolicLink())fail('ORDER_PACKAGE_FILE_CONFLICT','A retained file path is not an original regular file.',409);const check=await hashFile(destination);if(check.bytes!==entry.bytes||check.sha256!==sha)fail('ORDER_PACKAGE_FILE_CONFLICT','A retained complete file differs from its original identity.',409);}
@@ -236,6 +258,7 @@ export async function readSupplierOrderPackage(workspace,path,{mode='merge',requ
     // Merge the already validated original stream in one transaction without a second SQLite copy.
     return workspace.store.transaction(()=>{
         if(!supplierMatches(workspace,header.supplierIdentity))fail('ORDER_PACKAGE_SUPPLIER_DIFFERS','The workspace supplier changed while this complete package was being received.',409);
+        workspace.adoptPackageProfile(incomingProfile,{requestId,sourceWorkspaceId:header.workspaceId,adoptProfile,expectedProfileSha256,expectedSelectionRevision,sourceSelection:header.profileSelection??null});
         if(!workspace.supplierIdentity()&&header.supplierIdentity)workspace.db.prepare('INSERT INTO meta(key,value) VALUES(?,?)').run('supplier_order_issuer',JSON.stringify(header.supplierIdentity));
         const result={schema:'stellar-forge.supplier-orders-receiving.v1',...plan,added:{},preserved:{},foreign:{},foreignRecordIds:[],receivedAt:now(),currentState:'Existing current order selections and drafts preserved; absent records imported.'};
         const touchedOrders=new Set(),touchedDocuments=new Set();

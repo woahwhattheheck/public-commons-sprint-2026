@@ -207,7 +207,7 @@ form('upload-form', async () => {
   const selected = manifests[0];
   if (selected.size > 2097152) throw new Error('The receiving manifest exceeds 2 MiB.');
   const manifest = JSON.parse(await selected.text()), fullPath = selected.webkitRelativePath || selected.name;
-  const prefix = fullPath.slice(0, fullPath.length - selected.name);
+  const prefix = fullPath.slice(0, fullPath.length - selected.name.length);
   const available = new Map(chosen.map(file => [file.webkitRelativePath || file.name, file]));
   let transfer = await api('/api/transfers', { method: 'POST', value: { manifest } });
   for (const part of transfer.partitions) {

@@ -17,6 +17,12 @@ function preciseJson(text){
   return JSON.parse(text,(_key,value,context)=>typeof value==='number'?JSON.rawJSON(context.source):value);
 }
 function encoded(value){return JSON.stringify(value,null,2)+'\n';}
+function configCore(value){
+  const {scope:ignoredScope,dashboard:ignoredDashboard,...core}=value;
+  const canonical=input=>Array.isArray(input)?input.map(canonical):input&&typeof input==='object'?
+    Object.fromEntries(Object.keys(input).sort().map(key=>[key,canonical(input[key])])):input;
+  return JSON.stringify(canonical(core));
+}
 async function hashFile(path){
   const hash=createHash('sha256');let bytes=0;
   for await(const part of createReadStream(path)){hash.update(part);bytes+=part.length;}
@@ -59,23 +65,38 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
   const configBytes=await readFile(resolve(configPath)),config=JSON.parse(configBytes);
   need(config.schema===SCHEMA&&typeof config.operation==='string'&&config.operation.length>=8&&config.operation.length<=128,
     'Use a complete named native journey configuration.');
-  need(config.gateway&&config.dashboard,'Declare both the original Gateway and licensed Dashboard targets.');
-  const declarations=['gateway','dashboard'].map(kind=>{
+  const scope=config.scope??'all';
+  need(['gateway','all'].includes(scope),'Native journey scope must be gateway or all.');
+  need(config.gateway&&(scope==='gateway'||config.dashboard),'Declare every selected original native target.');
+  const selectedKinds=scope==='gateway'?['gateway']:['gateway','dashboard'];
+  const declarations=selectedKinds.map(kind=>{
     const selected=config[kind];need(selected.connection?.kind===kind&&typeof selected.classicSeedApiId==='string',
       'Declare the original '+kind+' connection and selected Classic seed API ID.');
     need(typeof selected.installedVersion==='string'&&selected.installedVersion.trim(),'Retain the actual installed '+kind+' version.');
     publicUrl(selected.upstreamUrl);
     return normalizeTykConnection(selected.connection);
   });
-  need(declarations[0].id!==declarations[1].id,'Use distinct native target aliases.');
+  need(new Set(declarations.map(item=>item.id)).size===declarations.length,'Use distinct native target aliases.');
   publicUrl(config.gateway.publicBaseUrl);
   const root=resolve(outputDirectory);await privateDirectory(root);await privateDirectory(join(root,'downloads'));
   const statePath=join(root,'journey.json'),inputSha256=sha(configBytes);
   let state;
-  try{state=JSON.parse(await readFile(statePath,'utf8'));need(state.schema===SCHEMA&&state.inputSha256===inputSha256,
-    'This original journey directory belongs to another exact configuration.');}
-  catch(error){if(error.code!=='ENOENT')throw error;state={schema:SCHEMA,operation:config.operation,inputSha256,
+  try{
+    state=JSON.parse(await readFile(statePath,'utf8'));
+    need(state.schema===SCHEMA&&state.operation===config.operation,'This directory belongs to another original native operation.');
+    if(state.inputSha256!==inputSha256){
+      need(state.configuration?.scope==='gateway'&&scope==='all'&&state.completedScopes?.gateway&&
+        configCore(state.configuration)===configCore(config),
+        'Keep the same exact configuration; a completed Gateway operation permits only its explicit Dashboard addition.');
+      state.configurationHistory??=[];
+      state.configurationHistory.push({sha256:state.inputSha256,configuration:state.configuration,completedAt:state.completedScopes.gateway.completedAt});
+      state.inputSha256=inputSha256;
+    }
+  }catch(error){if(error.code!=='ENOENT')throw error;state={schema:SCHEMA,operation:config.operation,inputSha256,
     startedAt:new Date().toISOString(),steps:{},inputs:{},nativeRequests:[],lostResponse:null};}
+  state.configuration={...config,scope};state.scope=scope;
+  const receivingKey=label=>scope==='gateway'?'gateway:'+label:label;
+  const receivingName=label=>scope==='gateway'?'gateway-'+label:label;
   let persistTail=Promise.resolve();
   const persist=()=>{const snapshot=JSON.parse(JSON.stringify(state));persistTail=persistTail.then(()=>atomicJson(statePath,snapshot));return persistTail;};
   const requestId=label=>{const s=sha(config.operation+'\n'+label).slice(0,32);return s.slice(0,8)+'-'+s.slice(8,12)+'-'+s.slice(12,16)+'-'+s.slice(16,20)+'-'+s.slice(20);};
@@ -194,11 +215,16 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
   try{
     await persist();sender=await openHost('sender');
     const view=await call('view'),targets=Object.fromEntries(view.connections.map(item=>[item.connection.kind,item]));
-    need(targets.gateway?.credentialAvailable&&targets.dashboard?.credentialAvailable,'The original target credential environment references must be available.');
-    const initial=await step('complete-native-portfolios',async()=>{
-      const gateway=await capture('initial-gateway',targets.gateway.id),dashboard=await capture('initial-dashboard',targets.dashboard.id);
-      const seeds={gateway:await definition(gateway.record,config.gateway.classicSeedApiId),dashboard:await definition(dashboard.record,config.dashboard.classicSeedApiId)};
-      need(seeds.gateway.kind==='classic'&&seeds.dashboard.kind==='classic','Select original Classic seed APIs on both native targets.');
+    need(selectedKinds.every(kind=>targets[kind]?.credentialAvailable),'The selected native target credential environment references must be available.');
+    const initial=await step(scope==='gateway'?'complete-native-gateway-portfolio':'complete-native-portfolios',async()=>{
+      const completedGateway=state.steps['complete-native-gateway-portfolio']?.value;
+      const gateway=completedGateway?.gateway??await capture('initial-gateway',targets.gateway.id);
+      const seeds={gateway:completedGateway?.seeds.gateway??await definition(gateway.record,config.gateway.classicSeedApiId)};
+      need(seeds.gateway.kind==='classic','Select an original Classic Gateway seed API.');
+      if(scope==='gateway')return {gateway,seeds};
+      const dashboard=await capture('initial-dashboard',targets.dashboard.id);
+      seeds.dashboard=await definition(dashboard.record,config.dashboard.classicSeedApiId);
+      need(seeds.dashboard.kind==='classic','Select an original Classic Dashboard seed API.');
       return {gateway,dashboard,seeds};
     });
     const gatewayCreate=await step('gateway-native-create-and-explicit-reload',async()=>{
@@ -263,8 +289,10 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
         'Reopening the original dispatched request repeated its native mutation.');
       if(!state.inputs['gateway-loss-before-reload']){
         const pending=await reconcile('gateway-lost-before-reload',updated.record);
-        need(pending.value.state!=='CONFIRMED','An inactive new definition must not be confirmed before explicit Gateway reload.');
-        await freeze('gateway-loss-before-reload',ref(pending));
+        if(pending.value.state==='CONFIRMED')need(pending.reconciliation.evidence.confirmation==='CURRENT_NATIVE_CONFIGURATION_MATCH'&&
+          pending.reconciliation.evidence.nativeAcknowledged===false,
+          'A restarted Gateway can establish current native configuration only from full readback and the retained lost receipt.');
+        await freeze('gateway-loss-before-reload',{...ref(pending),activationObservedBeforeExplicitReload:pending.value.state==='CONFIRMED'});
       }
       await reload('gateway-lost-update-reload',targets.gateway.id);
       record=await reconcile('gateway-lost-after-reload',updated.record);
@@ -284,7 +312,13 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
       need(prior.value.state!=='CONFIRMED','A different later edit falsely confirmed the earlier native configuration.');
       return {later:ref(now),earlier:ref(prior),comparison:prior.reconciliation.items};
     });
-    await step('dashboard-original-dryrun-stage-override-promote-direct',async()=>{
+    const gatewaySelection=await step('gateway-saved-cohort-and-full-review',async()=>{
+      const portfolio=await capture('gateway-complete-selected-portfolio',targets.gateway.id);
+      const selected=await cohort('native-gateway-cohort',portfolio,[lossId,imported.generatedId]);
+      await retainReview(await current(imported.update.record));
+      return {portfolio,cohort:selected,apiIds:[lossId,imported.generatedId]};
+    });
+    if(scope==='all')await step('dashboard-original-dryrun-stage-override-promote-direct',async()=>{
       for(const label of ['dashboard-stage','dashboard-direct']){
         const body=cloneClassic(initial.seeds.dashboard,{apiId:apiId(label),name:config.operation+' '+label,
           listenPath:prefix+label+'/',upstreamUrl:config.dashboard.upstreamUrl});
@@ -312,16 +346,16 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
       need(replay.id===promoted.record.id&&state.nativeRequests.length===writes,'Saved migration replay contacted the native target again.');
       return {cohort:saved,dryRun,staged,overridden,promoted,direct,final};
     });
-    await step('complete-native-history-export-and-cold-receiving',async()=>{
-      const firstInput=await freeze('first-export',{requestId:requestId('first-export'),label:'Complete native Tyk receiving'});
+    await step(receivingName('complete-native-history-export-and-cold-receiving'),async()=>{
+      const firstInput=await freeze(receivingKey('first-export'),{requestId:requestId(receivingKey('first-export')),label:'Complete native Tyk receiving'});
       const first=await call('exportWorkspace',firstInput);
       need(first.value.state==='EXPORTED','The first complete history was not exported.');
-      const local=await sender.client.downloadDelivery(first.id,join(root,'downloads','first.ndjson'),
+      const local=await sender.client.downloadDelivery(first.id,join(root,'downloads',receivingName('first.ndjson')),
         {expectedSha256:first.value.file.sha256,expectedBytes:first.value.file.bytes});
       const nativeBefore=state.nativeRequests.length;receiver=await openHost('receiver');
-      const receiveInput={requestId:requestId('first-inspect'),label:'Complete original Tyk history',expectedSha256:local.sha256};
+      const receiveInput={requestId:requestId(receivingKey('first-inspect')),label:'Complete original Tyk history',expectedSha256:local.sha256};
       const inspected=await receiver.client.inspectFile(local.path,receiveInput);
-      const adopt=await freeze('first-adopt',{requestId:requestId('first-adopt'),id:inspected.id,
+      const adopt=await freeze(receivingKey('first-adopt'),{requestId:requestId(receivingKey('first-adopt')),id:inspected.id,
         expectedRevision:inspected.revision,manifestSha256:inspected.value.manifestSha256});
       const adopted=await receiver.client.action('adoptDelivery',adopt);
       need(adopted.value.state==='ADOPTED','The original complete history was not adopted.');
@@ -336,13 +370,13 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
       const reconstructed=await sender.host.workspace.deliveryFile({id:first.id});
       const reconstruction=await hashFile(reconstructed.path);
       need(reconstruction.sha256===local.sha256&&reconstruction.bytes===local.bytes,'The original missing archive reconstructed different bytes.');
-      await capture('later-native-portfolio-before-second-export',targets.gateway.id);
-      const second=await call('exportWorkspace',await freeze('second-export',{requestId:requestId('second-export'),label:'Later complete native Tyk edition'}));
-      const laterFile=await sender.client.downloadDelivery(second.id,join(root,'downloads','second.ndjson'),
+      await capture(receivingKey('later-native-portfolio-before-second-export'),targets.gateway.id);
+      const second=await call('exportWorkspace',await freeze(receivingKey('second-export'),{requestId:requestId(receivingKey('second-export')),label:'Later complete native Tyk edition'}));
+      const laterFile=await sender.client.downloadDelivery(second.id,join(root,'downloads',receivingName('second.ndjson')),
         {expectedSha256:second.value.file.sha256,expectedBytes:second.value.file.bytes});
-      const inspectedLater=await receiver.client.inspectFile(laterFile.path,{requestId:requestId('second-inspect'),
+      const inspectedLater=await receiver.client.inspectFile(laterFile.path,{requestId:requestId(receivingKey('second-inspect')),
         label:'Later complete original Tyk history',expectedSha256:laterFile.sha256});
-      const laterAdopt=await freeze('second-adopt',{requestId:requestId('second-adopt'),id:inspectedLater.id,
+      const laterAdopt=await freeze(receivingKey('second-adopt'),{requestId:requestId(receivingKey('second-adopt')),id:inspectedLater.id,
         expectedRevision:inspectedLater.revision,manifestSha256:inspectedLater.value.manifestSha256});
       const laterReceived=await receiver.client.action('adoptDelivery',laterAdopt);
       need(laterReceived.value.state==='ADOPTED','The later original history failed to receive over its earlier edition.');
@@ -359,8 +393,9 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
         laterReceiving:ref(laterReceived),coldOriginalArchive:receivedBytes,firstReplay:ref(firstReplay)};
     });
     if(config.chromiumExecutablePath){
-      await step('current-customer-browser-receiving',async()=>{
-        const {chromium}=await import('playwright'),pageErrors=[],nativeBefore=state.nativeRequests.length;
+      await step(receivingName('current-customer-browser-receiving'),async()=>{
+        const {chromium}=await import(config.playwrightModulePath?pathToFileURL(resolve(config.playwrightModulePath)).href:'playwright');
+        const pageErrors=[],nativeBefore=state.nativeRequests.length;
         browser=await chromium.launch({headless:true,executablePath:resolve(config.chromiumExecutablePath),
           args:['--no-sandbox','--disable-dev-shm-usage']});
         const page=await browser.newPage({viewport:{width:1440,height:1080},acceptDownloads:true});
@@ -377,42 +412,44 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
         }
         await page.goto(sender.host.url,{waitUntil:'networkidle'});await idle();
         need((await page.locator('#notice').textContent()).includes('Workspace ready'),'The original customer workspace did not open.');
-        const dashboardRun=state.steps['dashboard-original-dryrun-stage-override-promote-direct'].value;
+        const dashboardRun=scope==='all'?state.steps['dashboard-original-dryrun-stage-override-promote-direct'].value:null;
+        const selectedPortfolio=dashboardRun?.final.record??gatewaySelection.portfolio.record;
+        const selectedApiId=dashboardRun?apiId('dashboard-direct'):imported.generatedId;
         await page.locator('[data-tab="portfolio"]').click();
-        await page.selectOption('#capture-select',dashboardRun.final.record.id);await idle();
-        const api=await rowInPages('api-table','api-pages',apiId('dashboard-direct'));
+        await page.selectOption('#capture-select',selectedPortfolio.id);await idle();
+        const api=await rowInPages('api-table','api-pages',selectedApiId);
         await api.getByRole('button',{name:'Definition',exact:true}).click();await idle();
-        need((await page.locator('#definition-text').inputValue()).includes(apiId('dashboard-direct')),
+        need((await page.locator('#definition-text').inputValue()).includes(selectedApiId),
           'The customer original-definition view lost its selected native API identity.');
         await page.locator('[data-tab="cohorts"]').click();
-        const selectedCohort=await rowInPages('cohort-list','cohort-pages','native-stage-cohort');
+        const selectedCohort=await rowInPages('cohort-list','cohort-pages',dashboardRun?'native-stage-cohort':'native-gateway-cohort');
         await selectedCohort.getByRole('button',{name:'Open',exact:true}).click();await idle();
-        need((await page.locator('#cohort-details').textContent()).includes(apiId('dashboard-stage')),
+        need((await page.locator('#cohort-details').textContent()).includes(dashboardRun?apiId('dashboard-stage'):lossId),
           'The original saved cohort browser view lost its selected API.');
         await page.locator('[data-tab="rollouts"]').click();
-        const selectedRollout=await rowInPages('rollout-list','rollout-pages',config.operation+' dashboard-dryrun');
+        const selectedRollout=await rowInPages('rollout-list','rollout-pages',config.operation+(dashboardRun?' dashboard-dryrun':' gateway-oas-update'));
         await selectedRollout.getByRole('button',{name:'Open',exact:true}).click();await idle();
-        await page.locator('.definition-review').getByRole('heading',{name:'Native conversion review',exact:true}).waitFor();
+        await page.locator('.definition-review').getByRole('heading',{name:dashboardRun?'Native conversion review':'Current native definition review',exact:true}).waitFor();
         const nextFields=page.locator('.definition-review').getByRole('button',{name:'Next fields',exact:true});
         let paged=false;
         if(await nextFields.isEnabled()){
           await nextFields.click();await idle();paged=true;
           await page.locator('.definition-review').getByRole('button',{name:'Previous fields',exact:true}).click();await idle();
         }
-        const actualRollout=await current(dashboardRun.dryRun.record);
+        const actualRollout=await current(dashboardRun?.dryRun.record??imported.update.record);
         const review=await call('readReview',{id:actualRollout.id,revision:actualRollout.revision,limit:17});
         const selectedSource=review.sources.find(item=>item.after.state==='PRESENT');
-        need(selectedSource,'The original native conversion report omitted its complete OAS output.');
+        need(selectedSource,'The original native review omitted its complete OAS output.');
         await page.locator('.definition-review select').selectOption(selectedSource.apiId);
         const downloadEvent=page.waitForEvent('download');
         await page.locator('.definition-review').getByRole('link',{name:/^After · complete original/}).click();
         const download=await downloadEvent;
-        const uiSourcePath=join(root,'downloads','browser-native-conversion.json');await download.saveAs(uiSourcePath);
+        const uiSourcePath=join(root,'downloads',receivingName('browser-native-review.json'));await download.saveAs(uiSourcePath);
         const uiSource=await hashFile(uiSourcePath);
         need(uiSource.sha256===selectedSource.after.reference.sha256&&uiSource.bytes===selectedSource.after.reference.bytes,
-          'The actual browser original-source download changed native conversion bytes.');
+          'The actual browser original-source download changed native definition bytes.');
         await page.locator('.definition-review').scrollIntoViewIfNeeded();
-        const reviewScreenshot=join(root,'customer-native-conversion.png');await page.screenshot({path:reviewScreenshot});
+        const reviewScreenshot=join(root,receivingName('customer-native-review.png'));await page.screenshot({path:reviewScreenshot});
         await page.locator('[data-tab="handover"]').click();
         need(await page.locator('#delivery-list').getByRole('link',{name:'Download',exact:true}).count(),
           'The original customer handover view omitted complete saved delivery links.');
@@ -423,7 +460,7 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
         await receivedRow.getByRole('button',{name:'Open',exact:true}).click();await idle();
         need((await page.locator('#receiving-review').textContent()).includes('Received'),
           'The cold customer workspace did not show its original adopted history.');
-        const receivingScreenshot=join(root,'customer-received-history.png');await page.screenshot({path:receivingScreenshot});
+        const receivingScreenshot=join(root,receivingName('customer-received-history.png'));await page.screenshot({path:receivingScreenshot});
         need(!pageErrors.length,'The actual customer browser raised a runtime error: '+pageErrors.join('; '));
         need(state.nativeRequests.length===nativeBefore,'Opening saved customer reviews contacted the native target.');
         const title=await page.title();await browser.close();browser=null;
@@ -443,12 +480,15 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
       await closeHost(sender);sender=undefined;drained.push({...identity,state:'CLOSED'});}
     state.ownerDrain={completedAt:new Date().toISOString(),owners:drained};
     state.state='PASSED';state.completedAt=new Date().toISOString();state.source=source;
-    state.summary={gatewayVersion:config.gateway.installedVersion,dashboardVersion:config.dashboard.installedVersion,
-      gatewayApiId:lossId,generatedOpenApiId:imported.generatedId,dashboardApiIds:[apiId('dashboard-stage'),apiId('dashboard-direct')],
+    state.completedScopes??={};state.completedScopes[scope]={completedAt:state.completedAt,inputSha256};
+    state.summary={scope,executedTargets:selectedKinds,gatewayVersion:config.gateway.installedVersion,
+      ...(scope==='all'?{dashboardVersion:config.dashboard.installedVersion,dashboardApiIds:[apiId('dashboard-stage'),apiId('dashboard-direct')]}:{}),
+      gatewayApiId:lossId,generatedOpenApiId:imported.generatedId,
       originalWorkspaceId:final.workspaceId,records:final.counts,nativeRequests:state.nativeRequests.length,
       phases:Object.keys(state.steps),completeFieldReviews:Object.keys(state.reviews??{}).length,originalResponseLoss:state.lostResponse?.actualResponse};
     await persist();const result={schema:SCHEMA,operation:state.operation,state:state.state,completedAt:state.completedAt,
       summary:state.summary,ownerDrain:state.ownerDrain,source,stateFile:await hashFile(statePath)};
+    await atomicJson(join(root,'result-'+scope+'.json'),result);
     await atomicJson(join(root,'result.json'),result);process.stdout.write(JSON.stringify(result)+'\n');return result;
   }catch(error){
     terminalError=error;state.state='INTERRUPTED';state.failure={phase:state.currentPhase,code:error.code??'NATIVE_JOURNEY_FAILED',

@@ -76,9 +76,10 @@ async function writeAll(handle,bytes){
   }
 }
 export async function responseFile(response,root,maximum=MAX_PACKET_BYTES){
-  const path=join(await directory(root),'.native-'+randomUUID()),handle=await open(path,'wx',0o600),
-    hash=createHash('sha256');let size=0,complete=false;
+  const hash=createHash('sha256');let path,handle,size=0,complete=false;
   try{
+    path=join(await directory(root),'.native-'+randomUUID());
+    handle=await open(path,'wx',0o600);
     for await(const block of response.body??[]){
       size+=block.length;need(size<=maximum,'ELTSS_RESPONSE_LIMIT','The complete original file exceeds its native byte limit.');
       await writeAll(handle,block);hash.update(block);
@@ -88,8 +89,9 @@ export async function responseFile(response,root,maximum=MAX_PACKET_BYTES){
     await handle.sync();complete=true;
     return {path,bytes:size,sha256:hash.digest('hex')};
   }finally{
-    await handle.close();
-    if(!complete){await response.body?.cancel().catch(()=>{});await unlink(path).catch(()=>{});}
+    if(!complete)await response.body?.cancel().catch(()=>{});
+    try{await handle?.close();}
+    finally{if(!complete && handle && path)await unlink(path).catch(()=>{});}
   }
 }
 export async function responseBytes(response,maximum){

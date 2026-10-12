@@ -7,6 +7,7 @@ import { readBrowserAssets } from "./browser-assets-loader.mjs";
 import { LineageWorkspace, WorkspaceError } from "./store.mjs";
 import { sha256 } from "./model.mjs";
 import { handleRpc } from "./protocol.mjs";
+import { ProducerIntake, producerRevision } from "./producer.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const LOOPBACK = new Set(["127.0.0.1", "::1", "localhost"]);
@@ -38,12 +39,17 @@ function attachment(response, data, mediaType, name, status = 200, headers = {})
   response.writeHead(status, { "Content-Type": mediaType, "Content-Length": data.length, "Content-Disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(name), "Cache-Control": "no-store", ...headers });
   response.end(data);
 }
-export async function startServer({ directory, title, host = "127.0.0.1", port = 8767, token = null, maxBodyBytes = 64 * 1024 * 1024, expectedWorkspaceId = null } = {}) {
+export async function startServer({ directory, title, host = "127.0.0.1", port = 8767, token = null, maxBodyBytes = 64 * 1024 * 1024, expectedWorkspaceId = null, producerToken = null, producerLimits = {} } = {}) {
   if (!LOOPBACK.has(host) && (!token || token.length < 24)) throw new WorkspaceError("A token of at least 24 characters is required when serving beyond this computer");
   if (!Number.isSafeInteger(port) || port < 0 || port > 65535) throw new WorkspaceError("Invalid port");
+  if (producerToken !== null && (typeof producerToken !== "string" || producerToken.length < 24 || /[\r\n\u0000]/.test(producerToken)))
+    throw new WorkspaceError("Producer token must contain at least 24 characters on one line");
+  if (producerToken && (typeof token !== "string" || token.length < 24 || equal(producerToken, token)))
+    throw new WorkspaceError("Configure a separate operator token of at least 24 characters when using a producer token");
   const workspace = new LineageWorkspace(directory);
   if (expectedWorkspaceId && (await workspace.read()).workspaceId !== expectedWorkspaceId) throw new WorkspaceError("Selected workspace identity changed", 409);
   const initial = await workspace.initialize(title);
+  const producer = new ProducerIntake(workspace, { maxBodyBytes, ...producerLimits });
   const instanceId = randomUUID(), startedAt = new Date().toISOString();
   const staticAssets = await readBrowserAssets(new URL("./browser-assets.json", import.meta.url));
   let expectedOrigin;
@@ -61,20 +67,38 @@ export async function startServer({ directory, title, host = "127.0.0.1", port =
         const { url, type } = staticAssets.get(requestUrl.pathname), data = await fs.readFile(url);
         response.writeHead(200, { "Content-Type": type, "Content-Length": data.length, "Cache-Control": "no-store" }); response.end(data); return;
       }
-      if (token && !equal(String(request.headers.authorization ?? ""), "Bearer " + token)) throw new WorkspaceError("Workspace access token required", 401);
+      const producerRequest = request.method === "POST" && requestUrl.pathname === "/api/v1/lineage";
+      const authorization = String(request.headers.authorization ?? "");
+      if (producerRequest && producerToken) {
+        if (!equal(authorization, "Bearer " + producerToken) && !(token && equal(authorization, "Bearer " + token)))
+          throw new WorkspaceError("Producer access token required", 401);
+      } else if (token && !equal(authorization, "Bearer " + token)) throw new WorkspaceError("Workspace access token required", 401);
       if (request.headers["x-openlineage-workspace"] && request.headers["x-openlineage-workspace"] !== initial.workspaceId) throw new WorkspaceError("Connected workspace identity changed", 409);
       if (request.headers["x-openlineage-instance"] && request.headers["x-openlineage-instance"] !== instanceId) throw new WorkspaceError("Connected application instance changed", 409);
       if (request.method === "GET" && requestUrl.pathname === "/api/identity") { json(response, 200, identity()); return; }
       if (request.method === "GET" && requestUrl.pathname === "/api/workspace") {
         json(response, 200, await workspace.view({ edition: requestUrl.searchParams.get("edition") || null })); return;
       }
-      if (request.method === "POST" && ["/api/v1/lineage", "/api/sources"].includes(requestUrl.pathname)) {
+      if (request.method === "GET" && requestUrl.pathname === "/api/producer") {
+        json(response, 200, { ...producer.describe(), workspaceId: initial.workspaceId, instanceId, url: expectedOrigin,
+          authentication: producerToken ? "producer-token" : token ? "workspace-token" : "local" }); return;
+      }
+      if (producerRequest) {
+        const result = await producer.receive(request, {
+          name: requestUrl.searchParams.get("name") || "http-event.json",
+          sourceUrl: requestUrl.searchParams.get("source") ?? "",
+          revision: producerRevision(request.headers["if-match"])
+        });
+        response.setHeader("Location", "/api/objects/" + result.source.id);
+        json(response, 200, result); return;
+      }
+      if (request.method === "POST" && requestUrl.pathname === "/api/sources") {
         const bytes = await body(request, maxBodyBytes);
         const state = await workspace.read();
         const name = requestUrl.searchParams.get("name") || (requestUrl.pathname.endsWith("lineage") ? "http-event.json" : "events.json");
         const operationId = request.headers["idempotency-key"] ?? "intake-" + sha256(bytes);
         const revision = request.headers["if-match"] === undefined ? state.revision : Number(String(request.headers["if-match"]).replaceAll('"', ""));
-        const result = await workspace.importSource({ bytes, name, sourceUrl: requestUrl.searchParams.get("source") ?? "", operationId: String(operationId), expectedRevision: revision });
+        const result = await workspace.importSource({ bytes, name, sourceUrl: requestUrl.searchParams.get("source") ?? "", operationId: String(operationId), expectedRevision: revision, contentEncoding: request.headers["content-encoding"] ?? "identity" });
         json(response, 200, result); return;
       }
       if (request.method === "POST" && requestUrl.pathname === "/api/action") {
@@ -93,7 +117,7 @@ export async function startServer({ directory, title, host = "127.0.0.1", port =
         const state = await workspace.read(), id = objectMatch[1];
         const source = state.sources.find(item => item.id === id), result = state.results.find(item => item.objectId === id);
         if (!source && !result) throw new WorkspaceError("Unknown original object", 404);
-        attachment(response, await workspace.readObject(id), result?.mediaType ?? "application/json", result?.name ?? source.name); return;
+        attachment(response, await workspace.readObject(id), result?.mediaType ?? (source?.contentEncoding === "gzip" ? "application/gzip" : "application/json"), result?.name ?? source.name); return;
       }
       const exportMatch = /^\/api\/exports\/([0-9a-f]{64})$/.exec(requestUrl.pathname);
       if (request.method === "GET" && exportMatch) {
@@ -114,6 +138,7 @@ export async function startServer({ directory, title, host = "127.0.0.1", port =
       }
       throw new WorkspaceError("Not found", 404);
     } catch (error) {
+      if (!response.headersSent && error.details?.retryAfterSeconds) response.setHeader("Retry-After", String(error.details.retryAfterSeconds));
       if (!response.headersSent) json(response, error instanceof WorkspaceError ? error.status : 500, { error: error.message, ...(error.details ? { details: error.details } : {}) });
       else response.destroy();
     }
@@ -130,5 +155,16 @@ export async function startServer({ directory, title, host = "127.0.0.1", port =
     await fs.unlink(pendingConnection).catch(() => {});
     throw error;
   }
-  return { server, workspace, identity: identity(), url: expectedOrigin, close: () => new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())) };
+  let closing;
+  const close = () => {
+    if (!closing) {
+      producer.stop();
+      closing = Promise.all([
+        producer.drain(),
+        new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
+      ]).then(() => undefined);
+    }
+    return closing;
+  };
+  return { server, workspace, producer, identity: identity(), url: expectedOrigin, close };
 }

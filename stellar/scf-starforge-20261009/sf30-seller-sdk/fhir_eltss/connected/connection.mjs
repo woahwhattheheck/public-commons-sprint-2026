@@ -3,6 +3,7 @@ import {join,dirname,resolve,isAbsolute,basename} from 'node:path';
 import {realpath,unlink} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
+import {request as httpRequest} from 'node:http';
 import {privateSupportDirectory} from '../../../../../stellar-forge/mcp-merchant-operator/host-files.mjs';
 import {readSourceFile,fileIdentity,responseBytes,responseFile,inputSnapshot,streamFile} from './files.mjs';
 import {CONNECTION_SCHEMA,OPERATOR_SCHEMA,WORKSPACE_SCHEMA,MAX_RESPONSE_BYTES,MAX_PACKET_BYTES,MAX_JSON_INPUT,
@@ -15,6 +16,20 @@ async function optional(path){
   try{return decode(await readSourceFile(path,{privateFile:true,maxBytes:65536}));}
   catch(error){if(error.code==='ENOENT')return null;throw error;}
 }
+// Native CLI errors are one JSON line on stdout. Preserve that response after
+// child stdio closes; successful startup records can contain private URLs.
+function nativeStartupError(stdout){
+  for(const line of stdout.split(/\r?\n/).reverse()){
+    try{
+      const value=JSON.parse(line);
+      if(plain(value) && typeof value.error==='string' && value.error.length<=8192 &&
+          (value.kind===undefined || typeof value.kind==='string' && value.kind.length<=128))
+        return {error:value.error,...(value.kind===undefined?{}:{kind:value.kind})};
+    }catch{}
+  }
+  return null;
+}
+
 async function identity(directory){
   await privateSupportDirectory(directory);await privateSupportDirectory(join(directory,'eltss'));
   need(await realpath(directory)===directory,'ELTSS_DIRECTORY_ALIAS');
@@ -23,6 +38,73 @@ async function identity(directory){
     'Initialize the original eLTSS workspace or receive its complete archive before connecting it.');
   return checked(id.workspaceId,UUID,'native workspace ID');
 }
+
+/**
+ * Use Node's native HTTP stream for the authenticated loopback operator.
+ * A closing native response may finish while a private-file write applies
+ * backpressure. Bundled fetch versions affected by nodejs/undici#5360 abort
+ * the process in that case; IncomingMessage retains normal stream errors.
+ * The caller still enforces the original response/file byte and hash limits.
+ */
+function operatorHttpResponse(url,{method='GET',headers={},body,signal}={}){
+  need(url instanceof URL && url.protocol==='http:' && url.hostname==='127.0.0.1' &&
+    !url.username && !url.password && !url.hash,'ELTSS_ROUTE_INVALID');
+  return new Promise((resolve,reject)=>{
+    let incoming,uploadError,settleUpload;
+    const streaming=body!==undefined && body!==null && typeof body.pipe==='function',
+      uploaded=streaming?new Promise(done=>{settleUpload=done;}):null;
+    const request=httpRequest(url,{method,agent:false,signal,
+      headers:{'accept-encoding':'identity',...headers}},message=>{
+      incoming=message;
+      // An error can arrive before the consumer opens its file. The async
+      // iterator subsequently observes the same stream's errored state.
+      message.on('error',()=>{});
+      const status=message.statusCode??0,ok=status>=200 && status<300;
+      if(!ok && streaming && !request.writableEnded){
+        // The native guard may reject before reading an upload (401/413).
+        // Stop sending it, but retain the original received error body.
+        body.unpipe(request);body.pause();request.end();
+      }
+      if(status>=300 && status<400){
+        const error=failure('ELTSS_REDIRECT_REFUSED','The original private operator must not redirect a request.');
+        message.destroy();request.destroy(error);reject(error);return;
+      }
+      const observedHeaders=new Headers();
+      for(let i=0;i<message.rawHeaders.length;i+=2)
+        observedHeaders.append(message.rawHeaders[i],message.rawHeaders[i+1]);
+      const stream={
+        async *[Symbol.asyncIterator](){
+          try{
+            for await(const chunk of message)yield chunk;
+            need(message.complete,'ELTSS_RESPONSE_INCOMPLETE','The original HTTP response ended before completion.');
+          }finally{if(!message.complete)message.destroy();}
+        },
+        async cancel(){message.destroy();request.destroy();}
+      };
+      resolve({ok,status,headers:observedHeaders,body:stream,uploaded});
+    });
+    request.once('error',error=>{
+      uploadError=error;settleUpload?.({complete:false,error});
+      // IncomingMessage owns response-body errors. In particular, a write
+      // failure after a native rejection must not discard that original reply.
+      if(!incoming)reject(error);
+    });
+    if(streaming){
+      request.once('finish',()=>settleUpload({complete:body.readableEnded && !uploadError,error:uploadError}));
+      request.once('close',()=>settleUpload({complete:false,error:uploadError}));
+      const onError=error=>{
+        uploadError=error;settleUpload({complete:false,error});
+        if(incoming && (incoming.statusCode<200 || incoming.statusCode>=300)){
+          body.unpipe(request);body.pause();if(!request.writableEnded)request.end();
+        }else request.destroy(error);
+      };
+      body.once('error',onError);
+      body.once('close',()=>body.off('error',onError));
+      body.pipe(request);
+    }else request.end(body);
+  });
+}
+
 /** All filesystem paths and launch permissions are private host configuration. */
 export async function readEltssConfiguration(filename,{schema=CONNECTION_SCHEMA}={}){
   filename=resolve(filename);
@@ -84,7 +166,7 @@ export class EltssConnection {
       // The native state read waits for the original import mutex. A lost POST
       // reply therefore reconciles the selected complete archive before an ID
       // change can be adopted, even when the descriptor was refreshed meanwhile.
-      const observed=await fetch(new URL('/api/state',url),{redirect:'error',signal:AbortSignal.timeout(600000),
+      const observed=await operatorHttpResponse(new URL('/api/state',url),{signal:AbortSignal.timeout(600000),
         headers:{authorization:'Bearer '+saved.accessToken,accept:'application/json'}});
       const state=decode(await responseBytes(observed,MAX_RESPONSE_BYTES));
       const receives=this.#options.receivingRecords(state);
@@ -103,7 +185,7 @@ export class EltssConnection {
     need(current===saved.workspaceId && (adoptIdentity || current===this.#knownId),'ELTSS_WORKSPACE_CHANGED',
       'The connected directory now contains another workspace. Reopen its private host configuration.');
     let response;
-    try{response=await fetch(new URL('/api/operator',url),{redirect:'error',signal:AbortSignal.timeout(5000),
+    try{response=await operatorHttpResponse(new URL('/api/operator',url),{signal:AbortSignal.timeout(5000),
       headers:{authorization:'Bearer '+saved.accessToken,accept:'application/json'}});}
     catch{return null;}
     const actual=decode(await responseBytes(response,65536));
@@ -129,7 +211,8 @@ export class EltssConnection {
       const owned={child,exited:false,exit:null,stderr:'',stdout:''};this.#owned=owned;
       owned.done=new Promise(resolve=>{
         child.once('error',error=>{owned.exited=true;owned.exit={error:error.code??error.name};resolve();});
-        child.once('exit',(code,signal)=>{owned.exited=true;owned.exit={code,signal};resolve();});
+        child.once('exit',(code,signal)=>{owned.exited=true;owned.exit={code,signal};});
+        child.once('close',()=>resolve());
       });
       child.stdout.on('data',chunk=>{owned.stdout=(owned.stdout+chunk.toString('utf8')).slice(-16384);});
       child.stderr.on('data',chunk=>{owned.stderr=(owned.stderr+chunk.toString('utf8')).slice(-8192);});
@@ -138,8 +221,14 @@ export class EltssConnection {
       try{
         const until=Date.now()+30000;
         while(Date.now()<until){
-          need(!owned.exited,'ELTSS_START_FAILED','The original native serve process exited.',
-            {exit:owned.exit,diagnostic:owned.stderr});
+          if(owned.exited){
+            await owned.done;
+            const nativeError=nativeStartupError(owned.stdout);
+            throw failure('ELTSS_START_FAILED',nativeError?
+              'The original native serve process exited: '+nativeError.error:
+              'The original native serve process exited.',
+              {exit:owned.exit,diagnostic:owned.stderr,...(nativeError?{nativeError}:{})});
+          }
           const current=await this.#live();
           if(current){
             need(current.processId===child.pid,'ELTSS_START_CONFLICT',
@@ -197,18 +286,19 @@ export class EltssConnection {
     }
     let response;
     try{
-      response=await fetch(new URL(path,original.url),{method,redirect:'error',signal:AbortSignal.timeout(600000),
+      response=await operatorHttpResponse(new URL(path,original.url),{method,signal:AbortSignal.timeout(600000),
         headers:{authorization:'Bearer '+original.accessToken,accept:'application/json',...headers,
           ...(body===undefined?{}:{'content-type':upload&&!jsonUpload?'application/octet-stream':'application/json',
-            ...(upload?{'content-length':String(upload.bytes)}:{})})},
-        ...(body===undefined?{}:{body,...(upload?{duplex:'half'}:{})})});
+            'content-length':String(upload?upload.bytes:Buffer.byteLength(body))})},
+        ...(body===undefined?{}:{body})});
     }catch(error){
+      if(stream){stream.body.destroy();await stream.close();}
       throw failure(mutates?'ELTSS_REQUEST_UNCERTAIN':'ELTSS_CONNECTION_UNAVAILABLE',
         mutates?'Read the original saved operation or content identity before continuing this request.':
           'Reopen the original operator before reading.',
         {workspaceId:original.workspaceId,instanceId:original.instanceId,method,path,
           ...(operationId?{operationId}:{}),cause:error.code??error.name});
-    }finally{if(stream){stream.body.destroy();await stream.close();}}
+    }
     const contentType=response.headers.get('content-type')??'application/octet-stream',
       json=/^application\/json(?:;|$)/i.test(contentType),meta={ok:response.ok,status:response.status,
         contentType,workspaceId:original.workspaceId,instanceId:original.instanceId,headers:Object.fromEntries(
@@ -219,6 +309,11 @@ export class EltssConnection {
       else{
         const bytes=await responseBytes(response,MAX_RESPONSE_BYTES);result={...meta,bytes};
         if(json)result.value=decode(bytes);
+      }
+      if(response.ok && response.uploaded){
+        const sent=await response.uploaded;
+        need(sent.complete,'ELTSS_UPLOAD_INCOMPLETE','The original upload did not finish before its native response.',
+          {cause:sent.error?.code??sent.error?.name});
       }
       if(adoptWorkspace){
         const current=await this.#live({adoptIdentity:true});
@@ -231,7 +326,7 @@ export class EltssConnection {
         mutates?'The original mutation returned or is retained. Read its saved operation before a new action.':error.message,
         {workspaceId:original.workspaceId,instanceId:original.instanceId,method,path,
           ...(operationId?{operationId}:{}),cause:error.code??error.name});
-    }
+    }finally{if(stream){stream.body.destroy();await stream.close();}}
   }
   async close(){
     if(this.#closed)return;

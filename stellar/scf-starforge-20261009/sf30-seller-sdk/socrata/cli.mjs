@@ -32,6 +32,8 @@ const HELP = [
   'SOCRATA_APP_TOKEN is the default optional provider credential environment variable.',
   'Only the browser session URL carries its private local session token.',
   'publisher.release.start keeps its original release process alive until Ctrl+C.',
+  'Property actions and --property-host FILE are documented in ../property-operations/OPERATING.md.',
+  'Property vendor access is disabled unless that host explicitly enables the exact credential references.',
   'See README.md and PUBLISHING.md for source, publication, buyer and recovery workflows.'
 ].join('\n');
 
@@ -44,7 +46,7 @@ function parse(args) {
   const values = {};
   while (args.length) {
     const key = args.shift(), value = args.shift();
-    if (!['--directory', '--port', '--input', '--json', '--app-token-env'].includes(key) ||
+    if (!['--directory', '--port', '--input', '--json', '--app-token-env', '--property-host'].includes(key) ||
         Object.hasOwn(values, key) || value === undefined || value.startsWith('--'))
       throw new TypeError('Invalid or repeated option; use --help.');
     values[key] = value;
@@ -63,15 +65,17 @@ function parse(args) {
     throw new TypeError('The selected credential environment variable is empty.');
   return {command, action, directory: resolve(values['--directory']),
     port: portValue === undefined ? 0 : Number(portValue),
-    appToken: process.env[tokenEnvironment], input: values['--input'], json: values['--json']};
+    appToken: process.env[tokenEnvironment], input: values['--input'], json: values['--json'], propertyHostFile:values['--property-host']};
 }
 
 export async function main(args = process.argv.slice(2)) {
   const options = parse([...args]);
   if (options.help) { console.log(HELP); return; }
   const {directory, appToken} = options;
+  const propertyHost=options.propertyHostFile?JSON.parse(await readFile(resolve(options.propertyHostFile),'utf8')):{};
+  if(!propertyHost||typeof propertyHost!=='object'||Array.isArray(propertyHost))throw new TypeError('The property host selection must be an object.');
   if (options.command === 'workspace') {
-    const app = await startSocrataWorkspace({directory, appToken, port: options.port});
+    const app = await startSocrataWorkspace({directory, appToken, propertyHost, port: options.port});
     console.log('Socrata workspace\n' + app.url + '\nKeep this session URL private. Stop with Ctrl+C.');
     let stopping = false;
     const stop = () => {
@@ -89,12 +93,12 @@ export async function main(args = process.argv.slice(2)) {
     payload = JSON.parse(text);
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new TypeError('The action payload must be a JSON object.');
   }
-  const workspace = await openSocrataOperator({directory, appToken});
+  const workspace = await openSocrataOperator({directory, appToken, propertyHost});
   let result, originalError;
   try {
     result = options.command === 'status' ? await workspace.state() : await workspace.act(options.action, payload);
   } catch (error) { originalError = error; }
-  if (!originalError && options.action === 'publisher.release.start') {
+  if (!originalError && ['publisher.release.start','property.publisher.release.start'].includes(options.action)) {
     let app;
     try { app = await startSocrataWorkspace({directory,operator:workspace}); }
     catch (error) { try { await workspace.close(); } catch {} throw error; }

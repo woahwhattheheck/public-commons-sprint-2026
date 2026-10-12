@@ -7,6 +7,7 @@ import { openWaterQualityProject, operationId } from '../project.mjs';
 import { normalizeAnalysisOptions } from '../analysis.mjs';
 import { normalizeOpenWatersOptions, openWatersPlanSummary } from '../openwaters.mjs';
 import { createScientificArchive } from './archive.mjs';
+import { appendPairedScientificJob, WQX_PAIRED_SOURCE_LIMIT } from './scientific.mjs';
 
 export const WQX_JOB_CHOICES_SCHEMA = 'starforge.wqx-job-choices.v1';
 export const WQX_JOB_RESULT_SCHEMA = 'starforge.wqx-scientific-job-result.v1';
@@ -107,10 +108,13 @@ function resultGuide(manifest) {
  * Result: standard ZIP containing the exact inputs and complete native scientific outputs.
  */
 export async function waterQualityReview(input, context) {
-  exact(input, ['reviewId', 'planId', 'expectedCaptureSha256', 'expectedReviewSha256', '$files'], 'JOB_INPUT_WQX_REQUEST_INVALID');
+  exact(input, ['reviewId', 'planId', 'expectedCaptureSha256', 'expectedReviewSha256', 'expectedScientificReviewSha256', 'mode', '$files'], 'JOB_INPUT_WQX_REQUEST_INVALID');
+  const mode = input.mode === undefined ? 'review' : input.mode;
+  if (!['review', 'scientific'].includes(mode)) fail('JOB_INPUT_WQX_MODE_INVALID');
+  if (mode === 'review' && input.expectedScientificReviewSha256 !== undefined) fail('JOB_INPUT_WQX_SCIENTIFIC_MODE_REQUIRED');
   operationId(input.reviewId);
   if (input.planId !== undefined) operationId(input.planId);
-  for (const name of ['expectedCaptureSha256', 'expectedReviewSha256'])
+  for (const name of ['expectedCaptureSha256', 'expectedReviewSha256', 'expectedScientificReviewSha256'])
     if (input[name] !== undefined && !HASH.test(input[name])) fail('JOB_INPUT_WQX_EXPECTED_IDENTITY_INVALID');
   if (!context?.files || !context.signal || typeof context.jobId !== 'string') fail('JOB_INPUT_RECEIVER_REQUIRED');
   context.signal.throwIfAborted();
@@ -118,6 +122,8 @@ export async function waterQualityReview(input, context) {
   if (!sourceFiles.some(file => file.slot === 'source') || sourceFiles.some(file => !['source', 'choices'].includes(file.slot)))
     fail('JOB_INPUT_WQX_FILE_SLOT_INVALID');
   const hasChoices = sourceFiles.some(file => file.slot === 'choices');
+  if (mode === 'scientific' && (hasChoices || input.planId !== undefined || !HASH.test(input.expectedScientificReviewSha256 ?? '')))
+    fail('JOB_INPUT_WQX_COMPLETE_SCIENTIFIC_SELECTION_REQUIRED');
   const parent = resolve(process.env.WQX_JOB_TEMP_ROOT || tmpdir());
   await mkdir(parent, { recursive: true, mode: 0o700 });
   const canonicalParent = await realpath(parent);
@@ -132,10 +138,18 @@ export async function waterQualityReview(input, context) {
     if (hasChoices) await archive.add('original/choices.json', context.files.stream('choices'), {
       contentType: 'application/json', expected: context.files.metadata('choices'),
     });
-    let bundle = await readJson(context.files, 'source', SOURCE_LIMIT);
-    if (!object(bundle) || ![BUNDLE, OPEN_WATERS].includes(bundle.schema)) fail('JOB_INPUT_WQX_BUNDLE_REQUIRED');
+    let bundle = await readJson(context.files, 'source', mode === 'scientific' ? WQX_PAIRED_SOURCE_LIMIT : SOURCE_LIMIT);
+    if (!object(bundle)) fail('JOB_INPUT_WQX_BUNDLE_REQUIRED');
     const sourceSchema = bundle.schema;
     project = await openWaterQualityProject(join(directory, 'project'));
+    if (mode === 'scientific') {
+      const delivery = appendPairedScientificJob({ project, bundle, archive, context, input, sourceFiles });
+      bundle = null;
+      await delivery;
+      context.signal.throwIfAborted();
+      return await readFile(archivePath);
+    }
+    if (![BUNDLE, OPEN_WATERS].includes(sourceSchema)) fail('JOB_INPUT_WQX_BUNDLE_REQUIRED');
     let retainedReview, originalPlan = null;
     context.signal.throwIfAborted();
     if (sourceSchema === OPEN_WATERS) {

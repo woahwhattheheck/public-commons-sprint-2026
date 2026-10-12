@@ -12,6 +12,8 @@ import {handleEligibilityRoute,ELIGIBILITY_REVIEW_LIMIT} from './eligibility-rou
 import {handleCustomerUpdateRoute} from './customer-updates/routes.mjs';
 import {handleRiskOfBiasRoute,readRiskOfBiasAsset,RISK_OF_BIAS_REQUEST_LIMIT} from './risk-of-bias/routes.mjs';
 import {handleStudyExtractionRoute,STUDY_EXTRACTION_REVIEW_LIMIT} from './study-extraction-routes.mjs';
+import {createTemplateExchangeDispatcher,TEMPLATE_POST_ACTIONS} from './template-exchange/http.mjs';
+import {MAX_WORKBOOK_BYTES} from './template-exchange/workbook.mjs';
 import {openZoteroResearchBridge} from './zotero-workspace.mjs';
 import {inspectResearchResponse,inspectRetainedSource,readRetainedSourceFile} from './source-inspection.mjs';
 import { openClinicalTrialsWorkspace } from './clinical-trials-workspace.mjs';
@@ -55,6 +57,15 @@ const TYPES = Object.freeze({
   'eligibility.css': 'text/css; charset=utf-8',
   'source-bundles.css': 'text/css; charset=utf-8',
 });
+const TEMPLATE_ROOT=fileURLToPath(new URL('./template-exchange/',import.meta.url));
+const TEMPLATE_ASSETS=Object.freeze({
+  '/template-exchange.html':{file:'public/template-exchange.html',type:'text/html; charset=utf-8'},
+  '/template-exchange.css':{file:'public/template-exchange.css',type:'text/css; charset=utf-8'},
+  '/template-exchange.js':{file:'public/template-exchange.js',type:'text/javascript; charset=utf-8'},
+  '/template-exchange-client.mjs':{file:'client.mjs',type:'text/javascript; charset=utf-8'},
+});
+const MAX_TEMPLATE_UPLOAD_BODY=Math.ceil(MAX_WORKBOOK_BYTES/3)*4+65536;
+const MAX_TEMPLATE_REVIEW_BODY=4*1024*1024+65536;
 const MAX_SOURCE_BUNDLE_BODY = 128 * 1024 * 1024 + 65536; // A 64 MiB bundle inside the rawText JSON string.
 const MAX_RESEARCH_BODY = 96 * 1024 * 1024 + 65536; // 16 MiB raw UTF-8, worst-case JSON escaping plus envelope.
 const MAX_PORTABLE_BODY = 256 * 1024 * 1024 + 65536; // Engine caps the serialized portable record at 256 MiB.
@@ -132,7 +143,7 @@ export async function loadEditionAdapters(modulePath) {
 
 /** Reuses the existing SF88 loopback / fragment-token operator convention. */
 export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null,
-  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null, objectStateDirectory = null, clinicalTrialsInputs = null, clinicalTrialsPython = 'python3', europePmcRateDirectory = null, extractionPython = clinicalTrialsPython, zoteroStateDirectory = null} = {}) {
+  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null, objectStateDirectory = null, clinicalTrialsInputs = null, clinicalTrialsPython = 'python3', europePmcRateDirectory = null, extractionPython = clinicalTrialsPython, extractionSignal, zoteroStateDirectory = null} = {}) {
   requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory,
     'WORKSPACE_ABSOLUTE_PATH_REQUIRED');
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535, 'WORKSPACE_PORT_INVALID');
@@ -143,12 +154,18 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     typeof openalexWorkspace?.exportFiles === 'function', 'OPENALEX_WORKSPACE_API_REQUIRED');
   requireValue(zoteroStateDirectory===null||typeof zoteroStateDirectory==='string'&&isAbsolute(zoteroStateDirectory)&&resolve(zoteroStateDirectory)===zoteroStateDirectory,'ZOTERO_ABSOLUTE_DIRECTORY_REQUIRED');
   requireValue(typeof extractionPython==='string'&&extractionPython.length>0,'EXTRACTION_PYTHON_REQUIRED');
-  const store = await openDossierStore(directory, {providers,extractionOptions:{python:extractionPython}});
+  requireValue(extractionSignal===undefined||extractionSignal!==null&&typeof extractionSignal.aborted==='boolean'&&
+    typeof extractionSignal.throwIfAborted==='function'&&typeof extractionSignal.addEventListener==='function'&&
+    typeof extractionSignal.removeEventListener==='function','EXTRACTION_SIGNAL_REQUIRED');
+  extractionSignal?.throwIfAborted();
+  const store = await openDossierStore(directory, {providers,extractionOptions:{python:extractionPython,signal:extractionSignal}});
+  const templateExchange=createTemplateExchangeDispatcher({templateExchange:store.templateExchange});
   const zotero=zoteroStateDirectory===null?null:openZoteroResearchBridge({directory:zoteroStateDirectory,dossierStore:store});
   const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
   const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,sourceInspection:true,
     studyExtraction:true,studyExtractionRequestLimit:STUDY_EXTRACTION_REVIEW_LIMIT,extractionPublications:true,zoteroBridge:zotero!==null,
     customerUpdates:true,customerUpdateRequestLimit:16*1024*1024,
+    templateExchange:true,templateExchangeRequestLimit:MAX_TEMPLATE_REVIEW_BODY,templateWorkbookBytesLimit:MAX_WORKBOOK_BYTES,
     europePmcWorkspaces:true,citationUpdateReview:true,citationReviewRequestLimit:MAX_CITATION_REVIEW_BODY,
     eligibilityReview:true,eligibilityReviewRequestLimit:ELIGIBILITY_REVIEW_LIMIT,
     riskOfBiasReview:true,riskOfBiasRequestLimit:RISK_OF_BIAS_REQUEST_LIMIT,revisionReports:true,savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
@@ -212,6 +229,13 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         } else send(200, content, TYPES[name]);
         return;
       }
+      if((req.method==='GET'||req.method==='HEAD')&&Object.hasOwn(TEMPLATE_ASSETS,path)){
+        const asset=TEMPLATE_ASSETS[path],content=await readFile(join(TEMPLATE_ROOT,asset.file));
+        if(req.method==='HEAD'){
+          res.writeHead(200,{...headers,'Content-Type':asset.type,'Content-Length':content.length});res.end();
+        }else send(200,content,asset.type);
+        return;
+      }
       if(req.method==='GET'||req.method==='HEAD'){
         const asset=await readRiskOfBiasAsset(path);
         if(asset){
@@ -228,6 +252,26 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         'RESEARCH_WORKSPACE_CHANGED');
       requireValue(!req.headers['x-research-instance-id']||req.headers['x-research-instance-id']===instanceId,
         'RESEARCH_INSTANCE_CHANGED');
+      const templateMatch=path.match(/^\/api\/research\/dossiers\/([^/]+)\/template-exchange(?:\/(.*))?$/);
+      if(templateMatch){
+        const dossierId=pathId(templateMatch[1]),action=templateMatch[2]||'';
+        if(!['GET','POST'].includes(req.method)){send(405,{error:'TEMPLATE_METHOD_NOT_ALLOWED'});return;}
+        if(req.method==='POST'&&!TEMPLATE_POST_ACTIONS.includes(action)){send(404,{error:'TEMPLATE_ROUTE_NOT_FOUND'});return;}
+        const query={};
+        for(const [name,value]of url.searchParams){
+          requireValue(!Object.hasOwn(query,name),'TEMPLATE_QUERY_REPEATED');query[name]=value;
+        }
+        const fileUpload=action==='stage-template'||action==='stage-return';
+        const result=await templateExchange({dossierId,method:req.method,action,query,
+          ...(req.method==='POST'?{body:await readJson(req,fileUpload?MAX_TEMPLATE_UPLOAD_BODY:MAX_TEMPLATE_REVIEW_BODY)}:{})});
+        const revision=result.revision??result.body?.revision??result.body?.dossier?.revision;
+        if(Number.isSafeInteger(revision))res.setHeader('X-Research-Dossier-Revision',String(revision));
+        if(result.kind==='file'){
+          res.setHeader('X-Content-SHA256',result.sha256);
+          send(200,result.body,result.contentType,result.filename);
+        }else send(200,result.body);
+        return;
+      }
       if (await handleCustomerUpdateRoute({req,res,url,send,readJson,store,europePmc})) return;
       if (await handleEuropePmcRoute({req,res,url,send,readJson,controller:europePmc})) return;
       if(req.method==='GET'&&path==='/api/zotero'){
@@ -576,6 +620,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       if (res.headersSent) {res.destroy(); return;}
       const code = safeCode(error);
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
+        code.startsWith('TEMPLATE_')&&Number.isInteger(error.status)&&error.status>=400&&error.status<=599 ? error.status :
         (code.startsWith('EUROPE_PMC_')&&/(?:CHANGED|CONFLICT|REUSED|RUNNING_ELSEWHERE|COOLDOWN)$/.test(code)) ? 409 :
         ['REVISION_CONFLICT','CITATION_REVIEW_CHANGED','CITATION_REVIEW_REQUEST_CHANGED','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','CLINICALTRIALS_REVIEW_CHANGED','CLINICALTRIALS_PLAN_CHANGED','CLINICALTRIALS_QUESTION_CHANGED','CLINICALTRIALS_SOURCE_CONFIGURATION_CHANGED','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
           'PIPELINE_PREPARATION_REQUEST_CHANGED','PIPELINE_RECEIVING_REQUEST_CHANGED','PIPELINE_REVIEWED_PLAN_CHANGED',
@@ -590,6 +635,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
   server.headersTimeout = 15000;
   server.keepAliveTimeout = 5000;
   try {
+    extractionSignal?.throwIfAborted();
     await new Promise((accept, reject) => {
       server.once('error', reject);
       server.listen(port, '127.0.0.1', accept);
