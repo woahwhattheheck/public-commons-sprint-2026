@@ -1125,7 +1125,10 @@
     "./seller/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/workspace.mjs",
     "./seller/stac/processing/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/provider.mjs",
     "./buyer/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/portable.mjs",
-    "./seller/stac/processing/cirrus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/cirrus.mjs"
+    "./seller/stac/processing/cirrus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/cirrus.mjs",
+    "./partners/stellar-application/project": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/project.mjs",
+    "./partners/stellar-application/project-receive": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/project-receive.mjs",
+    "./partners/stellar-application/project-cli": "./source/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/project-cli.mjs"
   },
   "nativePeers": {
     "@x402/core": {
