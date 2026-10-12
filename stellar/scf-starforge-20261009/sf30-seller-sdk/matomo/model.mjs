@@ -6,15 +6,25 @@ import {createMatomoEditions} from './editions.mjs';
 import {createMatomoComparisons} from './comparison.mjs';
 import {createMatomoMerchant} from './merchant.mjs';
 import {createMatomoHandover} from './operator-handover.mjs';
-import {identifier,safeError} from './contract.mjs';
+import {identifier,safeError,only} from './contract.mjs';
+import {createMatomoProductOrigin} from './workspace-transfer.mjs';
 import {digest,fault} from '../postgres/publisher/files.mjs';
 import {join} from 'node:path';
-export async function openMatomoWorkspace({directory,create=false,source,sourceFile,environment=process.env,allowLoopback=false,python=environment.MATOMO_PYTHON??'python3',node=process.execPath}={}) {
+export async function openMatomoWorkspace({directory,create=false,source,sourceFile,environment=process.env,allowLoopback=false,python=environment.MATOMO_PYTHON??'python3',node=process.execPath,receivingOperationId}={}) {
   if(sourceFile){if(source)throw fault('MATOMO_ONE_SOURCE_REQUIRED');source=JSON.parse(await readFile(sourceFile,'utf8'));}
-  const store=await openMatomoStore({directory,create,source,environment,allowLoopback});
+  const store=await openMatomoStore({directory,create,source,environment,allowLoopback,receivingOperationId});
   try{
     const captures=createMatomoCaptures(store),editions=createMatomoEditions(store,captures),comparisons=createMatomoComparisons(store,editions),merchant=createMatomoMerchant(store,editions,{environment}),handover=createMatomoHandover(store,merchant,editions,{environment,python,node});
+    const origin=await createMatomoProductOrigin(store,{python,environment});
+    async function adoptOriginalMerchant(input){
+      only(input,['operationId','expectedRevision','originalMerchantId']);
+      if(!origin)throw fault('MATOMO_PRODUCT_ORIGINAL_REQUIRED');
+      const saved=await origin.merchant(identifier(input.originalMerchantId));
+      return merchant.configure({operationId:input.operationId,expectedRevision:input.expectedRevision,
+        editionId:saved.editionId,configuration:saved.configuration,draft:saved.draft},{receivedFrom:saved.provenance});
+    }
     const operations=Object.freeze({
+      'adopt-original-merchant':adoptOriginalMerchant,
       discover:captures.discover,'resume-catalog':captures.resumeCatalog,capture:captures.captureReport,'resume-capture':captures.resumeCapture,
       edition:editions.prepare,'resume-edition':editions.resume,'review-edition':editions.review,
       compare:comparisons.compare,'resume-comparison':comparisons.resume,'review-comparison':comparisons.review,
@@ -24,7 +34,7 @@ export async function openMatomoWorkspace({directory,create=false,source,sourceF
       'prepare-delivery':merchant.prepareDelivery,'recover-delivery':merchant.recoverDelivery,'review-delivery':merchant.reviewDelivery,'publish-delivery':merchant.publishDelivery,
       'prepare-handover':handover.prepare,'resume-handover':handover.resume,'receive-handover':handover.receive,'resume-receiving':handover.resumeReceiving,'reopen-receiving':handover.reopen,
     });
-    const state=()=>({...store.state(),merchant:merchant.list(),...handover.list()});
+    const state=()=>({...store.state(),merchant:merchant.list(),...handover.list(),receivedSource:origin?.summary()??null});
     async function perform(name,input){if(!Object.hasOwn(operations,name))throw fault('MATOMO_OPERATION_NOT_FOUND',undefined,404);return operations[name](input);}
     async function sourceRead(id) {
       const row=store.db.prepare('SELECT * FROM requests WHERE id=?').get(identifier(id));
@@ -33,6 +43,9 @@ export async function openMatomoWorkspace({directory,create=false,source,sourceF
       return {id,kind:row.kind,owner:row.owner,input:JSON.parse(row.input),state:row.state,acceptedAttempt:row.accepted_attempt,attempts};
     }
     async function artifact(kind,id,options={}) {
+      if(kind==='workspace-origin'){if(!origin)throw fault('MATOMO_PRODUCT_ORIGINAL_REQUIRED');return origin.manifest();}
+      if(kind==='workspace-archive'){if(!origin)throw fault('MATOMO_PRODUCT_ORIGINAL_REQUIRED');return origin.archiveFile();}
+      if(kind==='workspace-original'){if(!origin)throw fault('MATOMO_PRODUCT_ORIGINAL_REQUIRED');return origin.file(id);}
       if(kind==='capture'){const value=await captures.manifest(id);return {content:value.raw,name:id+'-capture.json',mediaType:'application/json'};}
       if(kind==='edition'){const value=await editions.manifest(id);return {content:value.raw,name:id+'-edition.json',mediaType:'application/json'};}
       if(kind==='database'){const value=await editions.manifest(id,{database:true});return {path:value.database,name:id+'-edition.sqlite',mediaType:'application/vnd.sqlite3',sha256:value.value.database.sha256};}
@@ -53,9 +66,9 @@ export async function openMatomoWorkspace({directory,create=false,source,sourceF
     let closing;
     const close=()=>{
       if(closing)return closing;
-      const pending=store.close({beforeRelease:()=>merchant.close()});
+      const pending=store.close({beforeRelease:async()=>{await merchant.close();await origin?.close();}});
       closing=pending;void pending.catch(()=>{if(closing===pending)closing=null;});return pending;
     };
-    return Object.freeze({store,captures,editions,comparisons,merchant,handover,state,perform,sourceRead,artifact,close,operationNames:Object.keys(operations)});
+    return Object.freeze({store,captures,editions,comparisons,merchant,handover,origin,state,perform,sourceRead,artifact,close,operationNames:Object.keys(operations)});
   }catch(error){await store.close();throw error;}
 }
