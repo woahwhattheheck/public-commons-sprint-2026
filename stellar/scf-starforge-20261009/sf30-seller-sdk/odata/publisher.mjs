@@ -34,7 +34,11 @@ export async function openODataPublisher({ workspace }) {
       try{await writeNew(join(packageDirectory,name),body);}catch(error){if(error.code!=='EEXIST')throw error;
         if(digest(await readFile(join(packageDirectory,name)))!==digest(body))throw fault('ODATA_PACKAGE_CHANGED','A retained merchant package differs.',409);}
     }
-    const versions=await openDatasetVersions({directory:datasetDirectory,initialConfig:join(packageDirectory,'dataset.json')});
+    let initialConfig;
+    try{await readFile(join(datasetDirectory,'state.json'));}catch(error){
+      if(error.code!=='ENOENT')throw error;initialConfig=join(packageDirectory,'dataset.json');
+    }
+    const versions=await openDatasetVersions({directory:datasetDirectory,...(initialConfig?{initialConfig}:{})});
     try{if(versions.describe().snapshot!==description.snapshot)throw fault('ODATA_VERSION_CHANGED','The retained dataset version differs from this edition.',409);}finally{await versions.close();}
     const prepared=await prepareDatasetRelease(packageDirectory);
     const staged=await stageRelease(releases,{id:releaseId,label:label||description.name,datasetPackage:packageDirectory,runtime});

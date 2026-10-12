@@ -198,3 +198,9 @@ mapping. Preserve its original IDs when continuing an interrupted operation.
 
 The complete original CSDL is retained with the selected projection for
 additional source annotations and provider-specific interpretation.
+
+## Operator review
+
+In Dataset exports, choose the accepted edition and optional property paths, then select **Preview field meanings**. The existing screen shows each receiving value/state column, the original CSDL type and declared facets, the exact source key, nullability, and storage encoding. **Download dictionary** saves the complete source-bound dictionary. Creating the export after a preview sends that dictionary's exact SHA256; changing the edition or property selection clears the preview. Every completed export retains its dictionary and original capture files. An earlier export remains downloadable with its original identity.
+
+Release preparation reopens an existing initialized dataset store with its original settings, so the same retained export can continue through the original merchant preparation after an interrupted operation.
