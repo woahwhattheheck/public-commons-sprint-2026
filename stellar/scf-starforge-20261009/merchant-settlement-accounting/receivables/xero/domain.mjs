@@ -1,6 +1,6 @@
 // MIT. Template-based Xero sales documents from original merchant receivables.
 import {json, sha, need, plain, field, identifier, dateValue, currencyOf, currencyKey,
-  minor, money, csv, INVOICE_SCHEMA, CREDIT_SCHEMA} from '../core.mjs';
+  minor, money, csv, receiptSummary, refundAccountSummary, INVOICE_SCHEMA, CREDIT_SCHEMA} from '../core.mjs';
 import {cwDecode, readCryptoworthCsv, writeCryptoworthCsv} from '../../accountant/cryptoworth-csv.mjs';
 
 export const XERO_SCHEMA = 'stellar-forge.merchant-receivables-xero.v1';
@@ -215,14 +215,30 @@ export function compileXeroPackage(profile,originals,snapshot,selection,addition
       ...correspondence]),'source-line-correspondence'),
     file('profile.json',json(publicXeroProfile(profile)),'selected-profile'),
     file('document-register.json',json({schema:XERO_PACKAGE_SCHEMA,selection:normalizedSelection,documents}),'document-register')];
+  const accountData={receipts:snapshot.receipts??[],allocations:snapshot.allocations??[],refunds:snapshot.refunds??[]};
   if(Array.isArray(snapshot.receipts))files.push(file('receipt-schedule.csv',csv([
-    ['receipt_id','customer_id','reference','received_date','currency','amount','void_date','method','source_kind'],
-    ...snapshot.receipts.map(row=>[row.id,row.customerId,row.reference,row.receivedDate,row.currency.code,row.amount,
-      row.voidDate??'',row.method,row.source?.kind??''])]),'payment-reconciliation'));
+    ['receipt_id','customer_id','reference','received_date','accounting_date','currency','amount','void_date','method','source_kind',
+      'allocated','refunded','reserved','net_amount','available'],
+    ...snapshot.receipts.map(original=>{const row=receiptSummary(original,accountData,selection.asOf);
+      return [row.id,row.customerId,row.reference,row.receivedDate,row.accountingDate??row.receivedDate,row.currency.code,row.amount,
+        row.voidDate??'',row.method,row.source?.kind??'',row.allocated,row.refunded,row.reserved,row.netAmount,row.available];})]),'payment-reconciliation'));
   if(Array.isArray(snapshot.allocations))files.push(file('allocation-schedule.csv',csv([
-    ['allocation_id','receipt_id','invoice_id','allocated_date','released_date','currency','amount','active_on_account_date'],
+    ['allocation_id','receipt_id','invoice_id','allocated_date','released_date','currency','amount','active_on_account_date',
+      'replaces_allocation_id','disposition_id'],
     ...snapshot.allocations.map(row=>[row.id,row.receiptId,row.invoiceId,row.allocatedDate,row.releasedDate??'',
-      row.currency.code,row.amount,String(row.allocatedDate<=selection.asOf&&(!row.releasedDate||row.releasedDate>selection.asOf))])]),
+      row.currency.code,row.amount,String(row.allocatedDate<=selection.asOf&&(!row.releasedDate||row.releasedDate>selection.asOf)),
+      row.replacesAllocationId??'',row.dispositionId??''])]),'payment-reconciliation'));
+  if(Array.isArray(snapshot.refunds))files.push(file('refund-schedule.csv',csv([
+    ['refund_id','receipt_id','customer_id','currency','amount','kind','accounting_scope','status','effective_date','refund_date',
+      'accounting_date','replaces_refund_id','cancelled_date','reversed_date','reserved','refunded','reference','transaction','original_adjustment_id'],
+    ...snapshot.refunds.map(original=>{const row=refundAccountSummary(original,selection.asOf);
+      return [row.id,row.receiptId,row.customerId,row.currency.code,row.amount,row.kind,row.accountingScope,row.effectiveStatus,
+        row.effectiveDate,row.refundDate,row.accountingDate,row.replacesRefundId,row.cancelledDate,row.reversedDate,row.reserved,row.refunded,row.reference,row.transaction,
+        original.proposal.payout.adjustmentId??''];})]),'payment-reconciliation'));
+  if(Array.isArray(snapshot.creditDispositions))files.push(file('credit-disposition-schedule.csv',csv([
+    ['disposition_id','receipt_id','customer_id','currency','effective_date','released','allocated','allocation_ids','invoice_ids'],
+    ...snapshot.creditDispositions.map(row=>[row.id,row.proposal.receiptId,row.proposal.customerId,row.proposal.currency.code,
+      row.proposal.effectiveDate,row.proposal.released,row.proposal.allocated,row.allocationIds.join(' '),row.invoiceIds.join(' ')])]),
     'payment-reconciliation'));
   review.files=files.map(xeroFileDescriptor);
   review.previewSha256=sha(json(review));
@@ -247,7 +263,7 @@ export function renderXeroReview(review) {
     '<li>Compare original net, tax and total values. Each import line uses one unit at its original net value; the original quantity, rate and discount remain in its description and complete source correspondence.</li>'+
     '<li>Retain Xero’s returned document IDs, statuses, totals and errors in their original CSV. Record that complete file against this package.</li>'+
     '<li>Use a corrected profile and the original package to prepare unresolved documents. The saved source and all earlier outcomes remain available.</li>'+
-    '<li>Use the separate receipt and allocation schedules to reconcile collections with the imported sales documents.</li></ol>'+
+    '<li>Use the separate receipt, allocation, refund and credit disposition schedules to reconcile customer funds with the imported sales documents.</li></ol>'+
     '<footer>Profile and original source <code>'+e(review.sourceFingerprint)+'</code><br>Review <code>'+e(review.previewSha256)+'</code></footer></body></html>\n';
 }
 function externalMoney(value,currency,format,credit) {

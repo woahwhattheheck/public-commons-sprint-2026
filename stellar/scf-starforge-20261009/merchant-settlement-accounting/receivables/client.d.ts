@@ -1,3 +1,66 @@
+import type {
+  BankFormat, BankAccountStatus, BankImportStatus, BankDirection, BankRowStatus, BankDateBasis, BankCsvColumns, BankCsvLayout, BankCsvInspectionLayout, BankCsvNormalizedLayout, BankStatementOptions, BankAccountInput, BankAccount, BankAccountsQuery, BankAccountsPage, BankAccountsInventory, BankSourceFile, BankSourceInspectionInput, BankSourceImportInput, BankSourceIdentity, BankSourceIssue, BankSourceSection, BankRawRow, BankSourceSample, BankSourceInspection, BankSourceRow, BankSourceMatch, BankRowDecision, BankRow, BankImportSummary, BankImportsQuery, BankImportsPage, BankImportsInventory, BankImportView, BankImportQuery, BankFileMetadata, BankFileName, BankDownload, BankImportRows, BankImportDetail, BankImportInventory, BankAllocationInput, BankPostingSplitInput, BankPostingSelectionInput, BankPostingPreviewInput, BankReviewedAllocation, BankReleasedAllocation, BankReceiptSourceBinding, BankSourceCoverage, BankResidualReceipt, BankOriginalReceipt, BankPostingSplit, BankPostingSelection, BankPostingProposal, BankReceiptBalance, BankInvoiceBalance, BankBalancePeriod, BankBalanceEffect, BankPostingTotals, BankPostingBalanceEffects, BankPostingPreview, PostBankReceiptsInput, IgnoreBankRowsInput, RestoreBankRowsInput, CloseBankImportInput, BankPostingSummary, BankMutationResult, BankAccountMutationResult, BankImportMutationResult, BankPostingMutationResult
+} from "./bank-client-types.d.ts";
+export type {
+  BankFormat, BankAccountStatus, BankImportStatus, BankDirection, BankRowStatus, BankDateBasis, BankCsvColumns, BankCsvLayout, BankCsvInspectionLayout, BankCsvNormalizedLayout, BankStatementOptions, BankAccountInput, BankAccount, BankAccountsQuery, BankAccountsPage, BankAccountsInventory, BankSourceFile, BankSourceInspectionInput, BankSourceImportInput, BankSourceIdentity, BankSourceIssue, BankSourceSection, BankRawRow, BankSourceSample, BankSourceInspection, BankSourceRow, BankSourceMatch, BankRowDecision, BankRow, BankImportSummary, BankImportsQuery, BankImportsPage, BankImportsInventory, BankImportView, BankImportQuery, BankFileMetadata, BankFileName, BankDownload, BankImportRows, BankImportDetail, BankImportInventory, BankAllocationInput, BankPostingSplitInput, BankPostingSelectionInput, BankPostingPreviewInput, BankReviewedAllocation, BankReleasedAllocation, BankReceiptSourceBinding, BankSourceCoverage, BankResidualReceipt, BankOriginalReceipt, BankPostingSplit, BankPostingSelection, BankPostingProposal, BankReceiptBalance, BankInvoiceBalance, BankBalancePeriod, BankBalanceEffect, BankPostingTotals, BankPostingBalanceEffects, BankPostingPreview, PostBankReceiptsInput, IgnoreBankRowsInput, RestoreBankRowsInput, CloseBankImportInput, BankPostingSummary, BankMutationResult, BankAccountMutationResult, BankImportMutationResult, BankPostingMutationResult
+} from "./bank-client-types.d.ts";
+
+import type {
+  CreditControlQuery,CreditControlReport,CreditPolicyDetail,SaveCreditPolicyInput,
+  CreditPolicyMutationResult,CreditAssessmentPreview,SaveCreditDecisionInput,CreditDecisionMutationResult,
+  CreditDecisionDetail,WithdrawCreditDecisionInput,CreditDecisionFileName,CreditControlOperationResult,
+  CreditPreviewMetadata,CreditRelease,CreditIssueResult
+} from './credit-control-types.d.ts';
+export type {
+  CreditTerms,CreditPolicy,CreditPolicyEdition,CreditHistory,CreditPolicyDetail,SaveCreditPolicyInput,
+  CreditExposure,CreditDispute,CreditDraftSummary,CreditExposureInvoice,CreditTrigger,CreditSource,CreditAssessment,
+  CreditInvoicePreview,CreditPreviewMetadata,CreditAssessmentPreview,CreditDecisionOutcome,CreditDecisionStatus,
+  CreditDecision,CreditDecisionSummary,CreditControlQuery,CreditControlReport,SaveCreditDecisionInput,
+  WithdrawCreditDecisionInput,CreditDecisionDetail,CreditRelease,CreditPolicyMutationResult,
+  CreditDecisionMutationResult,CreditIssueResult,CreditDecisionFileName,CreditDecisionDownload,
+  CreditDecisionManifest,CreditControlOperationResult
+} from './credit-control-types.d.ts';
+
+import type {
+  CustomerFundsQuery, CustomerFunds, RefundPreviewInput, RefundPreview,
+  CommitRefundInput, RefundQuery, RefundPage, RefundDetail,
+  CancelRefundInput, ReverseRefundInput, ReportRefundReturnInput, ReceiveRefundInput,
+  RefundMutationResult, RefundReturnMutationResult, RefundFileName, RefundDownload,
+  CreditDispositionPreviewInput, CreditDispositionPreview, ApplyCreditDispositionInput, CreditDispositionMutationResult
+} from './refund-client-types.d.ts';
+export type {
+  RefundReceiptSnapshot,
+  RefundStatus, RefundEffectiveStatus, RefundAccountingScope, CustomerFundsQuery,
+  RefundFundingInput, RefundFundingProposal, RefundOperatorPayoutInput, RefundStellarPayoutInput,
+  RefundAdoptedStellarPayoutInput, RefundAdjustmentPayoutInput, RefundPayoutInput, RefundPreviewInput,
+  CreditDispositionAllocationInput, CreditDispositionPreviewInput, RefundBalanceEffects, CustomerAdjustmentProposal,
+  RefundOperatorPayout, RefundStellarPayout, RefundAdjustmentPayout, RefundPayout,
+  RefundProposal, CreditDispositionAllocation, CreditDispositionProposal, RefundPreview,
+  CreditDispositionPreview, CommitRefundInput, ApplyCreditDispositionInput, CancelRefundInput,
+  ReverseRefundInput, ReportRefundReturnInput, ReceiveRefundInput, RefundSummary,
+  RefundQuery, RefundPage, RefundInventory, RefundObservationStatus,
+  RefundObservation, RefundReturn, RefundFileName, RefundFileMetadata,
+  RefundDownload, RefundDetail, RefundMutationResult, RefundReturnMutationResult,
+  CreditDispositionRecord, CreditDispositionMutationResult, CustomerFundsCurrency, CustomerFundsReceipt,
+  CustomerFundsFunding, CustomerFundsAdjustment, CustomerFundsRefundReturn, CustomerFunds
+} from './refund-client-types.d.ts';
+
+import type {CollectionsQuery, CollectionsReport, CollectionDetail, SaveCollectionCase, CollectionActivityInput,
+  CollectionTransitionInput, CollectionMutationResult, CollectionReminder, CollectionFileName, CollectionOperationResult} from './collections-types.d.ts';
+export type {CollectionPriority, CollectionStatus, CollectionActivityKind, CollectionTerms, CollectionEvent, CollectionRecord,
+  CollectionSummary, CollectionsQuery, CollectionsReport, CollectionDetail, CollectionContext, SaveCollectionCase, CollectionActivityInput,
+  CollectionTransitionInput, CollectionMutationResult, CollectionReminder, CollectionFileName, CollectionOperationResult} from './collections-types.d.ts';
+
+import type {CashPlanListQuery,CashPlanList,CashPlanPreviewInput,CashPlanPreview,CashPlanDetail,SaveCashPlanInput,
+  CashPlanStatusInput,CashPlanMutationResult,CashPlanFileName,CashPlanCompareQuery,CashPlanComparison,CashPlanOperationResult} from './cash-planning-types.d.ts';
+export type {
+  CashPlanOverride, CashPlanInput, CashPlanTerms, CashPlanSourceIssue, CashPlanLine,
+  CashPlanCurrency, CashPlanInvoice, CashPlanProjection, CashPlanPreviewInput, CashPlanPreview,
+  CashPlanEdition, CashPlanSummary, CashPlanListQuery, CashPlanList, CashPlanDetail,
+  SaveCashPlanInput, CashPlanStatusInput, CashPlanMutationResult, CashPlanCompareQuery, CashPlanDifference,
+  CashPlanComparison, CashPlanFileName, CashPlanOperationResult
+} from './cash-planning-types.d.ts';
+
 export type Money = string;
 export type DateOnly = string;
 export type Revision = number;
@@ -55,8 +118,12 @@ export interface CreditRecord {
 export type Credit = CreditSummary;
 export interface Receipt {
   id: string; customerId: string; customer: Customer; currency: Currency; amount: Money; allocated: Money; available: Money;
-  receivedDate: DateOnly; method: string; reference: string; note: string; status: 'RECORDED' | 'VOID';
+  receivedDate: DateOnly; accountingDate: DateOnly; replacesReceiptId?: string | null; replacedByReceiptId?: string | null;
+  replacementReceiptIds?: string[]; replacementRole?: 'CORRECTION' | 'RESIDUAL';
+  bankSources?: BankReceiptSourceBinding[]; method: string; reference: string; note: string; status: 'RECORDED' | 'VOID';
   voidDate?: DateOnly | null; sourceKey: string; source: {kind: string; runId?: string; eventId?: string; [key: string]: unknown};
+  refunded: Money; reserved: Money; netAmount: Money; availableBeforeUnreconciledRefunds: Money;
+  unreconciledRefunds: Array<Record<string, unknown>>; unreconciledRefundAmount: Money; refundDeficit: Money;
   createdAt: string; actor: string; history: HistoryEntry[]; asOf?: DateOnly; [key: string]: unknown;
 }
 export interface Allocation {
@@ -77,7 +144,7 @@ export interface AgingReport { asOf: DateOnly; currencies: AgingCurrency[]; invo
 export interface ReceivablesState {
   schema: string; revision: Revision; asOf: DateOnly; issuer: Issuer; customers: Customer[]; runs: SettlementRun[];
   invoices: InvoiceSummary[]; receipts: Receipt[]; credits: CreditSummary[]; allocations: Allocation[];
-  aging: AgingReport; history: HistoryEntry[];
+  aging: AgingReport; history: HistoryEntry[]; paymentRequests: PaymentRequestSummary[];
 }
 export interface SourceQuote {
   customerId: string; directoryId: string; files: DocumentFiles; sourceSha256: string;
@@ -93,10 +160,13 @@ export type QuoteImportInput = MutationContext & {
 } & ({scope: 'IMPLEMENTATION'; periodCount?: 1; periodLabel?: string} | {scope: 'RECURRING'; periodCount: number; periodLabel: string});
 export interface Operation {
   id: string; action: string; actor: string; at: string; intentSha256: string; replayed: boolean;
-  result: {invoiceId?: string; receiptId?: string; creditId?: string; allocationId?: string; settings?: boolean};
+  result: {invoiceId?: string; receiptId?: string; creditId?: string; allocationId?: string; paymentRequestId?: string; paymentReturnId?: string; refundId?: string; refundReturnId?: string; creditDispositionId?: string;
+    bankAccountId?: string; bankImportId?: string; bankPostingId?: string; receiptIds?: string[];
+    invoiceIds?: string[]; allocationIds?: string[]; sourceRefundId?: string; sourceRefundReturnId?: string; resolvedRefundId?: string; settings?: boolean;
+    creditPolicyId?:string;creditPolicyVersion?:number;creditDecisionId?:string;creditRelease?:CreditRelease};
 }
 export interface MutationResult { revision: Revision; operation: Operation }
-export interface Preview { document: InvoiceDocument; previewSha256: string; expectedVersion: number; revision: Revision }
+export interface Preview extends CreditPreviewMetadata { document: InvoiceDocument; previewSha256: string; expectedVersion: number; revision: Revision }
 export interface CreditInput extends MutationContext {
   creditDate: DateOnly; reason: string; lines: Array<{invoiceLineId: string; netAmount: Money; taxAmount: Money}>;
 }
@@ -121,20 +191,212 @@ export interface CustomerExport {
   schema: string; customer: Customer; currencies: AgingCurrency[]; invoices: InvoiceSummary[];
   credits: CreditSummary[]; receipts: Receipt[]; allocations: Allocation[]; asOf: DateOnly; [key: string]: unknown;
 }
-export interface ClientOptions { baseUrl?: string; fetch?: typeof fetch }
+
+export type StellarPaymentNetwork = 'stellar:pubnet' | 'stellar:testnet';
+export type StellarPaymentAssetInput = {kind: 'native'; code?: 'XLM'; issuer?: null}
+  | {kind: 'credit'; code: string; issuer: string};
+export type StellarPaymentAsset = {kind: 'native'; code: 'XLM'; issuer: null}
+  | {kind: 'credit'; code: string; issuer: string};
+export interface StellarPaymentMemo {
+  type: 'MEMO_TEXT' | 'MEMO_ID' | 'MEMO_HASH' | 'MEMO_RETURN';
+  /** Text, unsigned decimal ID, or canonical base64 of 32 bytes. */
+  value: string;
+}
+export interface PaymentRequestInput {
+  id?: string; invoiceAmount?: Money; network: StellarPaymentNetwork;
+  destination: string; asset: StellarPaymentAssetInput; stellarAmount: string;
+  memo?: StellarPaymentMemo; msg?: string; expiresAt?: string | null;
+  /** Required except native XLM at the exact invoice face amount. */
+  valuationNote?: string;
+}
+export interface PaymentInvoiceSnapshot {
+  id: string; number: string; sha256: string; version: number; currency: Currency;
+  total: Money; amountDue: Money; asOf: DateOnly; customer: Customer; issuer: Issuer;
+}
+export interface PaymentRequestProposal {
+  schema: 'stellar-forge.invoice-payment-proposal.v1'; id: string;
+  invoice: PaymentInvoiceSnapshot; invoiceAmount: Money; network: StellarPaymentNetwork;
+  networkPassphrase: string; destination: string; asset: StellarPaymentAsset;
+  stellarAmount: string; amountAtomic: string; memo: StellarPaymentMemo; msg: string;
+  expiresAt: string | null; valuationNote: string; uri: string;
+}
+export interface PaymentRequestPreview {
+  proposal: PaymentRequestProposal; reviewSha256: string; invoice: InvoiceSummary; revision: Revision;
+}
+export interface CreatePaymentRequestInput extends MutationContext {
+  proposal: PaymentRequestProposal; reviewSha256: string;
+}
+export interface ReturnedPaymentInput extends MutationContext {
+  /** Exact 64-character lowercase hexadecimal wallet transaction hash. */
+  transaction: string;
+  /**
+   * Optional operation sender. For an existing transaction, omission preserves its current
+   * sender constraint. Before verification, an explicit account changes the constraint;
+   * explicit null clears it so the verifier derives the payer from the matching transfer.
+   * A changed or cleared constraint requires note.
+   */
+  payer?: string | null;
+  /** Operator note; required when correcting the sender of an existing unverified reference. */
+  note?: string;
+}
+export interface ReceivePaymentRequestInput extends MutationContext {
+  returnId: string;
+  /** Defaults to the received value that fits every retained invoice balance. */
+  allocate?: boolean; allocationAmount?: Money; allocatedDate?: DateOnly; note?: string;
+}
+export interface CancelPaymentRequestInput extends MutationContext { reason: string }
+export type PaymentObservationStatus = 'RECORDED' | 'TESTNET_VERIFIED' | 'NOT_FOUND' | 'FAILED'
+  | 'VERIFICATION_UNAVAILABLE' | 'TRANSFER_PRECEDES_REQUEST' | 'TRANSFER_AFTER_EXPIRY' | 'TRANSFER_AFTER_CANCELLATION';
+export type PaymentRequestStatus = 'OPEN' | 'AWAITING_VERIFICATION' | 'SATISFIED' | 'PARTIALLY_APPLIED'
+  | 'RECEIVED_UNAPPLIED' | 'CANCELLED' | 'EXPIRED' | 'RECEIPT_REVERSED' | Exclude<PaymentObservationStatus, 'RECORDED'>;
+export interface PaymentProofReference {
+  directoryId: string; name: 'transfer-proof.json'; bytes: number; sha256: string;
+}
+export interface StellarTransferProof {
+  rpcEndpoint: string; networkResponse?: Record<string, unknown>;
+  transactionResponse?: Record<string, unknown>; proofArtifact?: PaymentProofReference; [key: string]: unknown;
+}
+export interface PaymentTransferVerification {
+  schema?: 'stellar-forge.invoice-stellar-transfer.v1';
+  status: 'VERIFIED' | 'NOT_FOUND' | 'FAILED'; network: StellarPaymentNetwork;
+  transaction: string; observedAt: string; networkPassphrase?: string;
+  payer?: string; recipient?: string; amountAtomic?: string; asset?: StellarPaymentAsset;
+  memo?: StellarPaymentMemo; ledger?: number; closedAt?: string;
+  transactionFingerprint?: string; transactionFingerprints?: string[];
+  verificationScope?: 'OFFICIAL_PUBNET_RPC' | 'OFFICIAL_TESTNET_RPC';
+  proof: StellarTransferProof; proofArtifact?: PaymentProofReference; [key: string]: unknown;
+}
+export interface PaymentObservation {
+  id: string; recordedAt: string; actor: string; status: PaymentObservationStatus;
+  verification: PaymentTransferVerification; proofArtifact?: PaymentProofReference; [key: string]: unknown;
+}
+export interface PaymentReturn {
+  id: string; transaction: string; payer: string | null; note: string; reportedAt: string; actor: string;
+  observations: PaymentObservation[]; receiptId: string | null; allocationId: string | null;
+}
+export interface PaymentRequestSummary {
+  id: string; invoiceId: string; invoiceNumber: string; customerId: string; customerName: string;
+  status: PaymentRequestStatus; issuedAt: string; expiresAt: string | null; cancelledAt: string | null;
+  currency: Currency; invoiceAmount: Money; currentAmountDue: Money; balanceChanged: boolean;
+  received: Money; applied: Money; unapplied: Money; payable: boolean;
+  network: StellarPaymentNetwork; asset: StellarPaymentAsset; stellarAmount: string;
+  destination: string; memo: StellarPaymentMemo; uri: string; valuationNote: string; documentSha256: string;
+  returnCount: number; receiptIds: string[];
+  lastObservation: {status: PaymentObservationStatus; recordedAt: string; transaction: string} | null;
+  asOf: DateOnly; observedAt: string;
+}
+export interface PaymentRequestDocument {
+  schema: 'stellar-forge.invoice-payment-request.v1'; id: string; issuedAt: string;
+  proposal: PaymentRequestProposal; reviewSha256: string;
+}
+export interface PaymentRequestDetail {
+  paymentRequest: PaymentRequestSummary; proposal: PaymentRequestProposal; issuedAt: string;
+  reviewSha256: string; documentSha256: string; returns: PaymentReturn[];
+  receipts: Receipt[]; allocations: Allocation[]; cancelledAt: string | null;
+  cancellationReason: string | null; history: HistoryEntry[]; revision: Revision;
+}
+export interface PaymentRequestQuery {
+  invoiceId?: string; customerId?: string; status?: PaymentRequestStatus; asOf?: DateOnly; offset?: number; limit?: number;
+}
+export interface PaymentRequestPage {
+  items: PaymentRequestSummary[]; total: number; offset: number; limit: number; revision: Revision;
+}
+export interface PaymentRequestMutationResult extends MutationResult {
+  paymentRequest: PaymentRequestSummary; invoice: InvoiceSummary;
+  paymentReturn?: PaymentReturn; receipt?: Receipt; allocation?: Allocation;
+}
+export type PaymentRequestFileName = 'payment-request.json' | 'payment-request.html' | 'payment-request.uri'
+  | 'status.json' | 'receiving.json' | `proof-${string}.json`;
+export interface PaymentRequestDownload { name: PaymentRequestFileName; type: string; bytes: Uint8Array }
+export interface RequestOptions { signal?: AbortSignal }
+
+export interface ClientOptions {
+  baseUrl?: string;
+  fetch?: typeof fetch;
+  expectedWorkspaceId?: string;
+  expectedSourcesSha256?: string;
+}
 export class ReceivablesApiError extends Error {
   status: number; code: string; details: unknown; requestId: string | null; response: unknown;
 }
 export class ReceivablesClient {
   constructor(options?: ClientOptions);
+  identity(): Promise<{schema: string; workspaceId: string; sourcesSha256: string}>;
   state(query?: {asOf?: DateOnly}): Promise<ReceivablesState>;
+  creditControl(query?:CreditControlQuery,options?:RequestOptions):Promise<CreditControlReport>;
+  creditPolicy(id:string,options?:RequestOptions):Promise<CreditPolicyDetail>;
+  saveCreditPolicy(value:SaveCreditPolicyInput,options?:RequestOptions):Promise<CreditPolicyMutationResult>;
+  previewCreditAssessment(invoiceId:string,value:{workspaceId:string},options?:RequestOptions):Promise<CreditAssessmentPreview>;
+  saveCreditDecision(invoiceId:string,value:SaveCreditDecisionInput,options?:RequestOptions):Promise<CreditDecisionMutationResult>;
+  creditDecision(id:string,options?:RequestOptions):Promise<CreditDecisionDetail>;
+  withdrawCreditDecision(id:string,value:WithdrawCreditDecisionInput,options?:RequestOptions):Promise<CreditDecisionMutationResult>;
+  creditDecisionFile(id:string,name:CreditDecisionFileName,options?:RequestOptions):Promise<Response>;
+  creditControlOperation(requestId:string,options?:RequestOptions):Promise<CreditControlOperationResult>;
+  cashPlans(query?:CashPlanListQuery, options?:RequestOptions):Promise<CashPlanList>;
+  previewCashPlan(value:CashPlanPreviewInput, options?:RequestOptions):Promise<CashPlanPreview>;
+  cashPlan(id:string, query?:{editionId?:string}, options?:RequestOptions):Promise<CashPlanDetail>;
+  saveCashPlan(value:SaveCashPlanInput, options?:RequestOptions):Promise<CashPlanMutationResult>;
+  archiveCashPlan(id:string, value:CashPlanStatusInput, options?:RequestOptions):Promise<CashPlanMutationResult>;
+  reopenCashPlan(id:string, value:CashPlanStatusInput, options?:RequestOptions):Promise<CashPlanMutationResult>;
+  cashPlanFile(id:string, name:CashPlanFileName, query?:{editionId?:string}, options?:RequestOptions):Promise<Response>;
+  compareCashPlans(query:CashPlanCompareQuery, options?:RequestOptions):Promise<CashPlanComparison>;
+  cashPlanComparisonFile(name:'comparison.json'|'comparison.csv', query:CashPlanCompareQuery, options?:RequestOptions):Promise<Response>;
+  cashPlanOperation(requestId:string, options?:RequestOptions):Promise<CashPlanOperationResult>;
+  collectionCases(query?: CollectionsQuery, options?: RequestOptions): Promise<CollectionsReport>;
+  collectionCase(id:string, query?:{asOf?:DateOnly}, options?:RequestOptions):Promise<CollectionDetail>;
+  saveCollectionCase(value:SaveCollectionCase, options?:RequestOptions):Promise<CollectionMutationResult>;
+  recordCollectionActivity(id:string, value:CollectionActivityInput, options?:RequestOptions):Promise<CollectionMutationResult>;
+  closeCollectionCase(id:string, value:CollectionTransitionInput, options?:RequestOptions):Promise<CollectionMutationResult>;
+  reopenCollectionCase(id:string, value:CollectionTransitionInput, options?:RequestOptions):Promise<CollectionMutationResult>;
+  collectionReminder(id:string, query?:{asOf?:DateOnly}, options?:RequestOptions):Promise<CollectionReminder>;
+  collectionFile(id:string, name:CollectionFileName, query?:{asOf?:DateOnly}, options?:RequestOptions):Promise<Response>;
+  collectionsFile(name:'collections.json'|'collections.csv', query?:CollectionsQuery, options?:RequestOptions):Promise<Response>;
+  collectionOperation(requestId:string, options?:RequestOptions):Promise<CollectionOperationResult>;
   settings(value: Issuer & MutationContext): Promise<MutationResult & {issuer: Issuer}>;
   saveDraft(value: SaveDraft): Promise<MutationResult & {invoice: InvoiceSummary}>;
   importQuote(value: QuoteImportInput): Promise<MutationResult & {invoice: InvoiceSummary}>;
   quoteFile(id: string, name: 'quote.json' | 'response.json' | 'source.json' | 'review.json'): Promise<Response>;
   detail(id: string, query?: {asOf?: DateOnly}): Promise<InvoiceDetail>;
   preview(id: string): Promise<Preview>;
-  issue(id: string, value: MutationContext & {expectedVersion: number; previewSha256: string}): Promise<MutationResult & {invoice: InvoiceSummary}>;
+
+  previewPaymentRequest(invoiceId: string, value: PaymentRequestInput, options?: RequestOptions): Promise<PaymentRequestPreview>;
+  createPaymentRequest(invoiceId: string, value: CreatePaymentRequestInput, options?: RequestOptions): Promise<PaymentRequestMutationResult>;
+  paymentRequests(query?: PaymentRequestQuery, options?: RequestOptions): Promise<PaymentRequestPage>;
+  paymentRequest(id: string, query?: {asOf?: DateOnly}, options?: RequestOptions): Promise<PaymentRequestDetail>;
+  cancelPaymentRequest(id: string, value: CancelPaymentRequestInput, options?: RequestOptions): Promise<PaymentRequestMutationResult>;
+  reportPaymentReturn(id: string, value: ReturnedPaymentInput, options?: RequestOptions): Promise<PaymentRequestMutationResult & {paymentReturn: PaymentReturn}>;
+  receivePaymentRequest(id: string, value: ReceivePaymentRequestInput, options?: RequestOptions): Promise<PaymentRequestMutationResult & {paymentReturn: PaymentReturn}>;
+  paymentRequestFile(id: string, name: PaymentRequestFileName, options?: RequestOptions): Promise<Response>;
+  paymentRequestBytes(id: string, name: PaymentRequestFileName, options?: RequestOptions): Promise<PaymentRequestDownload>;
+
+  customerFunds(query?: CustomerFundsQuery, options?: RequestOptions): Promise<CustomerFunds>;
+  previewRefund(value: RefundPreviewInput, options?: RequestOptions): Promise<RefundPreview>;
+  commitRefund(value: CommitRefundInput, options?: RequestOptions): Promise<RefundMutationResult>;
+  refunds(query?: RefundQuery, options?: RequestOptions): Promise<RefundPage>;
+  refund(id: string, query?: {asOf?: DateOnly}, options?: RequestOptions): Promise<RefundDetail>;
+  cancelRefund(id: string, value: CancelRefundInput, options?: RequestOptions): Promise<RefundMutationResult>;
+  reverseRefund(id: string, value: ReverseRefundInput, options?: RequestOptions): Promise<RefundMutationResult>;
+  reportRefundReturn(id: string, value: ReportRefundReturnInput, options?: RequestOptions): Promise<RefundReturnMutationResult>;
+  receiveRefund(id: string, value: ReceiveRefundInput, options?: RequestOptions): Promise<RefundReturnMutationResult>;
+  refundFile(id: string, name: RefundFileName, options?: RequestOptions): Promise<Response>;
+  refundBytes(id: string, name: RefundFileName, options?: RequestOptions): Promise<RefundDownload>;
+  previewCreditDisposition(value: CreditDispositionPreviewInput, options?: RequestOptions): Promise<CreditDispositionPreview>;
+  applyCreditDisposition(value: ApplyCreditDispositionInput, options?: RequestOptions): Promise<CreditDispositionMutationResult>;
+  bankAccounts(query?: BankAccountsQuery, options?: RequestOptions): Promise<BankAccountsPage>;
+  saveBankAccount(value: BankAccountInput, options?: RequestOptions): Promise<BankAccountMutationResult>;
+  inspectBankSource(value: BankSourceInspectionInput, options?: RequestOptions): Promise<BankSourceInspection>;
+  importBankSource(value: BankSourceImportInput, options?: RequestOptions): Promise<BankImportMutationResult>;
+  bankImports(query?: BankImportsQuery, options?: RequestOptions): Promise<BankImportsPage>;
+  bankImport<V extends BankImportView = BankImportView>(id: string, query?: BankImportQuery & {view?: V},
+    options?: RequestOptions): Promise<BankImportDetail<V>>;
+  previewBankPosting(id: string, value: BankPostingPreviewInput, options?: RequestOptions): Promise<BankPostingPreview>;
+  postBankReceipts(id: string, value: PostBankReceiptsInput, options?: RequestOptions): Promise<BankPostingMutationResult>;
+  ignoreBankRows(id: string, value: IgnoreBankRowsInput, options?: RequestOptions): Promise<BankImportMutationResult>;
+  restoreBankRows(id: string, value: RestoreBankRowsInput, options?: RequestOptions): Promise<BankImportMutationResult>;
+  closeBankImport(id: string, value: CloseBankImportInput, options?: RequestOptions): Promise<BankImportMutationResult>;
+  bankImportFile(id: string, name: BankFileName, options?: RequestOptions): Promise<Response>;
+  bankImportBytes(id: string, name: BankFileName, options?: RequestOptions): Promise<BankDownload>;
+  issue(id: string, value: MutationContext & {expectedVersion: number; previewSha256: string; creditDecisionId?:string}): Promise<CreditIssueResult>;
   voidInvoice(id: string, value: MutationContext & {voidDate: DateOnly; reason: string}): Promise<MutationResult & {invoice: InvoiceSummary}>;
   credit(id: string, value: CreditInput): Promise<MutationResult & {credit: CreditRecord; invoice: InvoiceSummary}>;
   receipt(value: ReceiptInput): Promise<MutationResult & {receipt: Receipt}>;

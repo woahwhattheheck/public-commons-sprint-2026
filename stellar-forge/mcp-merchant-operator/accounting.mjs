@@ -13,6 +13,7 @@ import { MerchantRunbooks, runbookFileSelectors } from './accounting-runbooks.mj
 import { MerchantPortfolio, portfolioFileSelectors } from './accounting-portfolio.mjs';
 import { adjustmentDefinitions, MerchantAdjustments } from './accounting-adjustments.mjs';
 import { statementDefinitions, statementFileNames, statementFileSelectors, MerchantCustomerStatements } from './accounting-statements.mjs';
+import { MerchantReceivables, receivablesFileSelectors } from './accounting-receivables.mjs';
 import { platformDefinitions, platformFileNames, normalizePlatformConfig, platformSourceView, platformPathReferences, MerchantPlatforms } from './accounting-platforms.mjs';
 import { bitwaveDefinitions, normalizeBitwaveConfig, bitwaveSourceView, bitwavePathReferences, MerchantBitwave } from './bitwave.mjs';
 import { accountingWorkspaceBinding } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/binding.mjs';
@@ -46,11 +47,11 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 
 
-const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'buyerSources', 'platformInputs', 'statementUsageInputs', 'cryptoworthInputs', 'runbookInputs', 'portfolioInputs'];
+const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'buyerSources', 'platformInputs', 'statementUsageInputs', 'receivablesInputs', 'cryptoworthInputs', 'runbookInputs', 'portfolioInputs'];
 
 
 
-const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', ...statementFileSelectors, ...cryptoworthFileSelectors, ...runbookFileSelectors, ...portfolioFileSelectors];
+const fileSelections = [...new Set(['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', ...statementFileSelectors, ...receivablesFileSelectors, ...cryptoworthFileSelectors, ...runbookFileSelectors, ...portfolioFileSelectors])];
 
 
 
@@ -268,7 +269,7 @@ export class MerchantAccounting {
   #result(key, value, operation) {
     // These providers project host metadata themselves. Reviewed operator text
     // and hash-bound native requests must cross the wire without substitutions.
-    if (operation === 'merchant_accounting_file' || operation.startsWith('merchant_accounting_cryptoworth_') || operation.startsWith('merchant_accounting_runbooks_') || operation.startsWith('merchant_accounting_portfolio_')) return value;
+    if (operation === 'merchant_accounting_file' || operation.startsWith('merchant_accounting_cryptoworth_') || operation.startsWith('merchant_accounting_runbooks_') || operation.startsWith('merchant_accounting_portfolio_') || operation.startsWith('merchant_accounting_receivables_')) return value;
     if (value?.record?.revisions) value = { ...value, record: handoffBrief(value.record) };
     if (value?.definition?.versions) value = { ...value, definition: periodBrief(value.definition) };
     const result = value?.state ? { ...value, state: this.#state(key, value.state) } : value;
@@ -319,7 +320,7 @@ export class MerchantAccounting {
     const buyerOnly = configuredAccountingMode(definition) === 'buyer';
     const settings = buyerOnly ? await buyerAccountingOpenSettings(definition) : { directory, outboxDir, proofDir, termsFile };
     const workspace = await openAccountingWorkspace(settings);
-    const runtime = { workspace, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: new Set() };
+    const runtime = { workspace, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, receivables: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: new Set() };
     try {
       runtime.accountant = new AccountantWorkspace(workspace);
       if (!buyerOnly) {
@@ -337,6 +338,8 @@ export class MerchantAccounting {
       runtime.adjustments = new MerchantAdjustments(workspace, { httpsProxyEnv: definition.adjustmentHttpsProxyEnv });
       runtime.statements = new MerchantCustomerStatements(workspace, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'statementUsageInputs', source), maximum) });
       await runtime.statements.init();
+      runtime.receivables = new MerchantReceivables(workspace, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'receivablesInputs', source), maximum) });
+      await runtime.receivables.init();
       }
       runtime.platforms = new MerchantPlatforms(workspace, runtime.accountant, { ...this.#platformOptions, definition: definition.platforms, buyerOnly,
         readSource: (source, maximum) => sourceBytes(this.#source(key, 'platformInputs', source), maximum) });
@@ -393,7 +396,7 @@ export class MerchantAccounting {
       finally { if (owner.tasks) await Promise.allSettled([...owner.tasks]); }
     }
     if (problem) throw problem;
-    if (record.workspace === runtime.workspace) Object.assign(record, { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: null });
+    if (record.workspace === runtime.workspace) Object.assign(record, { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, receivables: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: null });
   }
   async #open(key, initialization = null, { borrower } = {}) {
     const selectedDefinition = this.#definition(key);
@@ -413,7 +416,7 @@ export class MerchantAccounting {
       else existing.explicitOpened = true;
       return this.#openResult(key, existing, recovered);
     }
-    const definition = selectedDefinition, record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: null, maintenance: null, closing: false, explicitOpened: !borrower, borrowers: new Set(), calls: new Set() };
+    const definition = selectedDefinition, record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, receivables: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: null, maintenance: null, closing: false, explicitOpened: !borrower, borrowers: new Set(), calls: new Set() };
     this.#sessions.set(key, record);
     record.opening = (async () => {
       if (initialization) record.initialized = await initializeBuyerAccounting(definition, this.#source(key, 'buyerSources', initialization.source), initialization);
@@ -461,10 +464,18 @@ export class MerchantAccounting {
     const selectors = { 'buyer-source': [], response: ['recoveryId', 'runId'], report: ['runId', 'file'], export: ['exportId'], collection: ['collectionId', 'sourceId'],
       pricing: ['reviewId', 'runId', 'file'], period: ['closeId', 'file'], accountant: ['handoffId', 'revisionId', 'file'], adjustment: ['adjustmentId', 'jobId', 'file'], qbo: ['planId', 'responseId', 'nativePost', 'attemptId', 'file'], xero: ['planId', 'file'],
       'customer-statement': ['statementId', 'file'],
+      'receivables-document': ['documentId', 'file'],
+      'receivables-quote': ['invoiceId', 'file'],
+      'receivables-preview': ['invoiceId', 'file'],
+      'receivables-payment': ['paymentRequestId', 'returnId', 'file'],
+      'receivables-refund': ['refundId', 'file'],
+      'receivables-bank': ['bankImportId', 'file'],
+      'receivables-customer': ['customerId', 'asOf', 'file'],
       cryptoworth: ['profileId', 'planId', 'captureId', 'returnId', 'rollbackId', 'scope', 'file'],
       runbooks: ['cycleId', 'fileId', 'file'],
       portfolio: ['captureId', 'receivedId', 'clientId', 'cycleId', 'planId', 'file'],
-      'customer-statement-preview': ['customerId', 'runId', 'usageId', 'replacesId', 'from', 'until', 'file'] }[kind];
+      'customer-statement-preview': ['customerId', 'runId', 'usageId', 'replacesId', 'from', 'until', 'usageOpeningId', 'file'],
+      'customer-usage-period-preview': ['usageOpeningId', 'usageId', 'file'] }[kind];
     if (fileSelections.some(key => args[key] !== undefined && !selectors.includes(key))) throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Use only the original source selectors for this file kind.');
     const session = this.#sessions.get(args.workspace);
     if (kind === 'buyer-source') return session.accountant.startupFile();
@@ -472,7 +483,11 @@ export class MerchantAccounting {
     if (kind === 'runbooks') return session.runbooks.file(args);
     if (kind === 'portfolio') return session.portfolio.file(args);
     if (kind === 'qbo' || kind === 'xero') return session.platforms.file(args);
-    if (kind === 'customer-statement' || kind === 'customer-statement-preview') return session.statements.file(args);
+    if (['customer-statement', 'customer-statement-preview', 'customer-usage-period-preview'].includes(kind)) return session.statements.file(args);
+    if (kind.startsWith('receivables-')) {
+      if (!session.receivables) throw fail('ACCOUNTING_MERCHANT_SOURCE_REQUIRED', 'Open the original merchant accounting workspace for receivables files.');
+      return session.receivables.file(args);
+    }
     if (kind === 'response') {
       if (!recoveryId) throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Response retrieval requires recoveryId and optionally a captured runId.');
       return workspace.recoveredResponse(recoveryId, runId);
@@ -520,6 +535,10 @@ export class MerchantAccounting {
     if (operation.startsWith('merchant_accounting_portfolio_')) return session.portfolio.call(operation, args);
     if (operation.startsWith('merchant_accounting_qbo_') || operation.startsWith('merchant_accounting_xero_')) return session.platforms.call(operation, args);
     if (operation.startsWith('merchant_accounting_customer_')) return session.statements.call(operation, args);
+    if (operation.startsWith('merchant_accounting_receivables_')) {
+      if (!session.receivables) throw fail('ACCOUNTING_MERCHANT_SOURCE_REQUIRED', 'Open the original merchant accounting workspace for invoice collection.');
+      return session.receivables.call(operation, args);
+    }
     if (operation === 'merchant_accounting_adjustment' || operation.startsWith('merchant_accounting_adjustment_'))
       return session.adjustments.call(operation, args);
     if (operation.startsWith('merchant_accounting_bitwave_')) {
@@ -676,6 +695,24 @@ export class MerchantAccounting {
     try { return await pending; }
     finally { record.calls.delete(pending); admission.release(); }
   }
+  /** Borrow the original accounting workspace for its service-agreement controller. */
+  async withServiceAgreementsWorkspace(key, operation) {
+    this.#definition(key);
+    if (typeof operation !== 'function') throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Use the original service-agreement operation.');
+    if (this.#closing) throw fail('ACCOUNTING_CLOSING', 'Merchant accounting is closing.');
+    const record = this.#sessions.get(key);
+    if (!record?.maintenance || record.closing)
+      throw fail('ACCOUNTING_NOT_OPEN', 'Open the selected accounting workspace before operating on service agreements.');
+    const admission = record.maintenance.enter();
+    const pending = Promise.resolve().then(() => {
+      if (admission.workspace !== record.workspace)
+        throw fail('ACCOUNTING_WORKSPACE_UNAVAILABLE', 'Select the original open accounting workspace.');
+      return operation(admission.workspace);
+    });
+    record.calls.add(pending);
+    try { return await pending; }
+    finally { record.calls.delete(pending); admission.release(); }
+  }
   async call(operation, args = {}) {
     const definition = byName.get(operation);
     if (!definition) throw fail('ACCOUNTING_UNKNOWN_TOOL', 'Unknown merchant accounting operation.');
@@ -708,6 +745,18 @@ export class MerchantAccounting {
         : this.#safe(String(error.message ?? error));
       const exposed = fail(error.code ?? 'ACCOUNTING_ERROR', message);
       if (error.applied === false) exposed.applied = false;
+      // Preserve the original public save outcome so callers recover the same request.
+      const recovery = {};
+      for (const field of ['outcomeUnknown', 'reopenRequired']) if (typeof error[field] === 'boolean') recovery[field] = error[field];
+      if (plain(error.commitUncertainty)) {
+        const selected = {};
+        for (const field of ['at', 'action', 'causeCode']) if (typeof error.commitUncertainty[field] === 'string') selected[field] = error.commitUncertainty[field];
+        if (Number.isSafeInteger(error.commitUncertainty.revision)) selected.revision = error.commitUncertainty.revision;
+        recovery.commitUncertainty = selected;
+      }
+      if (Object.keys(recovery).length) { Object.assign(exposed, recovery); exposed.details = recovery; }
+      else if (plain(error.details)) exposed.details = this.#safe(error.details);
+      if (Number.isInteger(error.status) && error.status >= 400 && error.status <= 599) exposed.status = error.status;
       throw exposed;
     }
   }
