@@ -112,3 +112,67 @@ The existing output observer invokes collectionsStartup only for buyer-collectio
 The native collection server imports collectionsWorkspaceLaunch from its sibling launch.mjs. With --startup-format json it emits that record from the ready listener and actual controller directory/inbox. With the default text format it keeps its existing human-readable startup output. Its optional --approval-mode retains the original browser/terminal selection.
 
 The same maintained distribution component already includes the runtime-workspace helper and collection source. The original installed command and browser-assets registration carry the product into the next ordinary source edition.
+
+## Receive a complete original workspace
+
+The **Receive an encrypted original workspace** choice opens the existing native
+backup receiver from this same Applications entry. Use it on a receiving host
+before its original inbox or collection directory exists.
+
+| Setting | Receiving selection |
+| --- | --- |
+| Receive an encrypted original workspace | Selected. |
+| Private collection workspace | A separate private receiver journal, existing or one new directory within a private parent. |
+| Original buyer inbox | Empty. The verified backup retains the exact original inbox path. |
+| Private environment JSON | The existing private environment containing the original archive passphrase under the selected environment-variable name. |
+| Local port | 0 for an available port, or the explicitly selected loopback port. |
+
+The receiver journal is distinct from both the encrypted backup directory and
+the original state root inside that backup. Review/save may create only the
+selected receiver journal. It does not initialize an inbox, create a restore
+target or open any queued request. Selecting an existing collection store in
+receiving mode is rejected with guidance to use its ordinary collection mode.
+
+Use **Review application → Save application → Review start → Start reviewed
+application → Open application**. The selected installation must contain the
+complete original recovery and browser modules. The maintained command is:
+
+~~~sh
+starforge buyer-collections-workspace \
+  --receiving-directory /ABS/PRIVATE/RECEIVER \
+  --approval-mode browser \
+  --startup-format json \
+  --port 0
+~~~
+
+Applications binds the native ready announcement to that exact receiver
+journal, positive process ID and selected loopback port before exposing its
+private URL. A normal collection announcement cannot be substituted for a
+receiver announcement, or the other way around.
+
+In **Backup and receiving**, choose the retained encrypted backup and verify it
+with its original passphrase environment. Inspect the original source root,
+collection manifests, inbox attempts, saved files and required runtime paths.
+A verification by itself does not create or open the target. **Restore original
+state** uses the existing SF88/SF101 receiving operation and requires that exact
+original target to be absent or empty. Restore never overwrites an occupied
+workspace.
+
+After the original restore completes and its native controller reopens, choose
+**Open restored collections**. The same managed server then presents the
+original requests, attempt history, immutable result indexes and available
+delivery bodies. It does not dispatch a request. The original payment and
+request execution controls remain explicit operations in that collection UI.
+
+Stop this application through the existing Applications stop operation. The
+server drains its original archive work, file readers and owned collection
+controller. Starting the same saved receiving application again reopens its
+retained receiver history; select the completed original restore to open the
+same collection. Interrupted archive operations recover their original request
+ID through the native journal. A later intentional backup or restore receives
+its own retained operation.
+
+The complete capture, cancellation, archive download and same-ID CLI workflow
+is described in [the recovery guide](../../sf88-operator-buyer-cli/collections/RECOVERY.md).
+The original Request collections setting remains unchanged when receiving mode
+is off, including its earlier terminal-only runtime compatibility.

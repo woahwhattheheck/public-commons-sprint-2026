@@ -10,6 +10,7 @@ import { receiveOpenAlexEdition } from './openalex.mjs';
 import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 
 const usage = 'Research dossiers\n\n' +
+  '  remote COMMAND --connection-file FILE --directory ORIGINAL_STORE [OPTIONS]\n' +
   '  create --store DIR --title TEXT [--description TEXT]\n' +
   '  list|get --store DIR [--id ID] [--revision N]\n' +
   '  question --store DIR --id ID --text TEXT --revision N\n' +
@@ -25,6 +26,7 @@ const usage = 'Research dossiers\n\n' +
 
 export async function main(argv = process.argv.slice(2)) {
   const command = argv[0];
+  if(command==='remote')return (await import('./workspace-cli.mjs')).main(argv.slice(1));
   if (!command || ['help', '--help', '-h'].includes(command)) { process.stdout.write(usage); return; }
   const keys = ['store', 'id', 'title', 'description', 'text', 'revision', 'question', 'file',
     'provider', 'label', 'source-reference', 'source', 'selected', 'note', 'classification',

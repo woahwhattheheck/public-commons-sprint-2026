@@ -1,0 +1,64 @@
+{
+  "schema": "stellar-forge.sf104.erp-map.v1",
+  "name": "Main store sales orders",
+  "storeNamespace": "STORE1",
+  "reviewOwner": "Commerce operations",
+  "currency": "USD",
+  "currencyDecimals": 2,
+  "unitPriceDecimals": 4,
+  "admittedStatuses": [
+    "processing",
+    "completed"
+  ],
+  "addressMode": "order_override",
+  "target": {
+    "baseUrl": "https://erp.example.com",
+    "endpoint": "Default",
+    "version": "25.200.001",
+    "orderType": "SO",
+    "tokenEnv": "SF104_ERP_ACUMATICA_TOKEN",
+    "branch": "MAIN",
+    "taxZone": "",
+    "hold": true,
+    "contractReference": "https://erp.example.com/entity/Default/25.200.001/swagger.json",
+    "allowLocal": false
+  },
+  "customerBindings": [
+    {
+      "sourceKey": "customer:42",
+      "customerId": "CUSTOMER42",
+      "locationId": "MAIN"
+    }
+  ],
+  "productBindings": [
+    {
+      "sourceKey": "product:101",
+      "inventoryId": "WIDGET-A",
+      "uom": "EA",
+      "taxCategory": "TAXABLE",
+      "warehouseId": "MAIN"
+    },
+    {
+      "sourceKey": "sku:WIDGET-B",
+      "inventoryId": "WIDGET-B",
+      "uom": "EA",
+      "taxCategory": "TAXABLE",
+      "warehouseId": "MAIN"
+    }
+  ],
+  "feeBindings": [
+    {
+      "sourceKey": "fee:Handling",
+      "inventoryId": "HANDLING",
+      "uom": "EA",
+      "taxCategory": "",
+      "warehouseId": ""
+    }
+  ],
+  "shippingBinding": {
+    "inventoryId": "SHIPPING",
+    "uom": "EA",
+    "taxCategory": "",
+    "warehouseId": ""
+  }
+}

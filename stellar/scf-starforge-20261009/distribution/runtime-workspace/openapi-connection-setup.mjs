@@ -5,13 +5,14 @@ import { pathToFileURL } from 'node:url';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { privateDirectory, readJSON } from './storage.mjs';
 import { applicationEnvironment } from './application-command.mjs';
-import { oauthSetupAction } from '../../sf30-seller-sdk/oauth-connections/setup/workspace.mjs';
+import { oauthSetupAction, resolveOAuthSetupEdition } from '../../sf30-seller-sdk/oauth-connections/setup/workspace.mjs';
+import { loadOAuthSetupProviders } from '../../sf30-seller-sdk/oauth-connections/setup/providers.mjs';
 import { MAX_SOURCE_BYTES, limits, fields, need, plain, identity, setupError } from '../../sf30-seller-sdk/oauth-connections/setup/model.mjs';
 
 const PREFIX='stellar/scf-starforge-20261009/';
 const CATALOG='stellar-forge.oauth-setup-catalog.v1';
 export const OPENAPI_SETUP_ROUTES=Object.freeze({
-  catalog:'catalog','import-source':'source.import','inspect-source':'source.inspect',
+  catalog:'catalog','import-source':'source.import','import-provider':'source.provider','inspect-source':'source.inspect',
   review:'review',commit:'commit',status:'status',activate:'activate',download:'download',recover:'recover',
 });
 export function openApiSetupBodyLimit(action) {
@@ -32,12 +33,13 @@ function configuredPath(value,label) {
   return value;
 }
 function policyValues(policy) {
-  fields(policy,['directory','grantRoot','allowLoopbackOAuth'],'host connection setup policy');
+  fields(policy,['directory','grantRoot','selectionRoot','allowLoopbackOAuth'],'host connection setup policy');
   need(policy.allowLoopbackOAuth===undefined || typeof policy.allowLoopbackOAuth==='boolean',
     'INPUT_INVALID','Use an explicit receiving-host local-provider policy.');
   return {
     ...(policy.directory===undefined?{}:{directory:configuredPath(policy.directory,'setup directory')}),
     ...(policy.grantRoot===undefined?{}:{grantRoot:configuredPath(policy.grantRoot,'grant directory')}),
+    ...(policy.selectionRoot===undefined?{}:{selectionRoot:configuredPath(policy.selectionRoot,'accounting selection directory')}),
     allowLoopbackOAuth:policy.allowLoopbackOAuth===true,
   };
 }
@@ -92,35 +94,22 @@ async function capability(directory,runtimeId) {
       ['initializeOAuthConnection','oauthConnectionStatus'].every(name=>typeof store[name]==='function') &&
       typeof managed.inspectOpenApiLaunch==='function','RUNTIME_UNAVAILABLE',
       'The selected runtime needs its original managed OpenAPI and OAuth interfaces.',409);
-    return {enabled:true,binding,profile,managed};
+    const providers=await loadOAuthSetupProviders({sourceRoot:runtime.sourceRoot,profileAuthority:profile});
+    return {enabled:true,binding,profile,managed,providers};
   } catch {
     return {enabled:false,runtimeBinding:binding,
       reason:'This READY runtime does not expose the original managed OpenAPI/OAuth setup contract. Select a compatible installed edition; existing plain OpenAPI applications retain their original launch path.'};
   }
 }
 
-/**
- * runtimeDirectory is supplied only by the original model's entry lookup, then
- * independently cross-checked here. policy is receiving-host configuration and
- * must never be read from an HTTP request.
- */
-export async function openApiConnectionSetupAction(root,{
-  action,runtimeId,runtimeDirectory,context={},input={},
-}={}, {policy={}}={}) {
-  try {
-    need(Object.hasOwn(OPENAPI_SETUP_ROUTES,action),'INPUT_INVALID','Choose a supported connection setup action.');
-    need(plain(input),'INPUT_INVALID','Use an object for this setup action.');
-    const selected=await originalSelection(root,{runtimeId,runtimeDirectory}),hostPolicy=policyValues(policy);
-    const installed=await capability(selected.entry.directory,runtimeId);
-    if(!installed.enabled) {
-      if(action==='catalog')return {schema:CATALOG,enabled:false,reason:installed.reason,
-        runtimeBinding:installed.runtimeBinding??null,limits,
-        policy:{allowLoopbackOAuth:hostPolicy.allowLoopbackOAuth}};
-      need(false,'RUNTIME_UNAVAILABLE',installed.reason,409);
-    }
+async function selectedSetup(root,{runtimeId,runtimeDirectory},policy) {
+  const selected=await originalSelection(root,{runtimeId,runtimeDirectory}),hostPolicy=policyValues(policy);
+  const installed=await capability(selected.entry.directory,runtimeId);
+  if(!installed.enabled)return {enabled:false,installed,hostPolicy};
     const directory=hostPolicy.directory??join(root,'oauth-setup');
     const grantRoot=hostPolicy.grantRoot??join(root,'oauth-grants');
-    for(const path of [directory,grantRoot])need(!within(installed.binding.directory,path) &&
+    const selectionRoot=hostPolicy.selectionRoot??join(root,'oauth-accounting');
+    for(const path of [directory,grantRoot,selectionRoot])need(!within(installed.binding.directory,path) &&
       !within(path,installed.binding.directory),'DIRECTORY_CHANGED',
       'Keep setup and grant data separate from the selected installed runtime.',409);
     const validateReview=async({entries,context:reviewed})=>{
@@ -167,10 +156,68 @@ export async function openApiConnectionSetupAction(root,{
         need(false,'RUNTIME_UNAVAILABLE','The selected runtime could not inspect this prepared registry and private environment. Restore its original runtime/profile inputs before recovery.',409);
       }
     };
-    return await oauthSetupAction({
-      directory,grantRoot,ownerDirectory:root,ownerWorkspaceId:selected.workspace.workspaceId,
+    need(!within(installed.binding.sourceRoot,selectionRoot) &&
+      !within(selectionRoot,installed.binding.sourceRoot),'DIRECTORY_CHANGED',
+      'Keep native accounting selections separate from installed source.',409);
+    return {enabled:true,installed,hostPolicy,options:{
+      directory,grantRoot,selectionRoot,ownerDirectory:root,ownerWorkspaceId:selected.workspace.workspaceId,
       runtimeBinding:installed.binding,policy:{allowLoopbackOAuth:hostPolicy.allowLoopbackOAuth},
-      validateReview,validatePrepared,
-    },{action:OPENAPI_SETUP_ROUTES[action],context,input});
+      providers:installed.providers,validateReview,validatePrepared,
+    }};
+}
+
+/**
+ * runtimeDirectory is supplied only by the original model's entry lookup, then
+ * independently cross-checked here. policy is receiving-host configuration and
+ * must never be read from an HTTP request.
+ */
+export async function openApiConnectionSetupAction(root,{
+  action,runtimeId,runtimeDirectory,context={},input={},
+}={}, {policy={}}={}) {
+  try {
+    need(Object.hasOwn(OPENAPI_SETUP_ROUTES,action),'INPUT_INVALID','Choose a supported connection setup action.');
+    need(plain(input),'INPUT_INVALID','Use an object for this setup action.');
+    const selected=await selectedSetup(root,{runtimeId,runtimeDirectory},policy);
+    if(!selected.enabled) {
+      if(action==='catalog')return {schema:CATALOG,enabled:false,reason:selected.installed.reason,
+        runtimeBinding:selected.installed.runtimeBinding??null,limits,providers:[],
+        policy:{allowLoopbackOAuth:selected.hostPolicy.allowLoopbackOAuth}};
+      need(false,'RUNTIME_UNAVAILABLE',selected.installed.reason,409);
+    }
+    return await oauthSetupAction(selected.options,{action:OPENAPI_SETUP_ROUTES[action],context,input});
   } catch(error) { throw setupError(error); }
+}
+
+/**
+ * Trusted native company/tenant facade only. This result includes the effective
+ * PRIVATE environment. Never expose it as an HTTP action or serialize it to a
+ * normal download/log. The original provider helpers still check the current
+ * reviewed grant and native company/tenant on every acquisition and save.
+ */
+export async function resolveOpenApiSetupEdition(root,{
+  runtimeId,runtimeDirectory,editionId,alias,expectedProfileSha256,
+}={}, {policy={}}={}) {
+  try {
+    const selected=await selectedSetup(root,{runtimeId,runtimeDirectory},policy);
+    need(selected.enabled,'RUNTIME_UNAVAILABLE',selected.installed.reason??
+      'Select a compatible original READY runtime.',409);
+    return await resolveOAuthSetupEdition(selected.options,{editionId,alias,expectedProfileSha256});
+  } catch(error) { throw setupError(error); }
+}
+
+/** Explicit safe projection for command output and authenticated operator views. */
+export function openApiSetupEditionSummary(binding) {
+  need(plain(binding) && binding.schema==='stellar-forge.oauth-setup-host-edition.v1' &&
+    plain(binding.entry) && plain(binding.selection) && plain(binding.status),
+    'INPUT_INVALID','Use the original resolved host edition.');
+  return {
+    schema:'stellar-forge.oauth-setup-accounting-binding.v1',edition:binding.edition,
+    provider:binding.provider,prepared:binding.prepared,alias:binding.entry.alias,
+    directoryEnv:binding.entry.directoryEnv,profileSha256:binding.entry.profileSha256,
+    source:binding.entry.profile.source,callbackUri:binding.entry.callbackUri,
+    grant:{id:binding.status.grant.id,state:binding.status.grant.state,
+      scopes:[...binding.status.grant.scopes]},
+    selection:{directory:binding.selection.directory,key:binding.selection.key,
+      owner:{...binding.selection.owner}},
+  };
 }

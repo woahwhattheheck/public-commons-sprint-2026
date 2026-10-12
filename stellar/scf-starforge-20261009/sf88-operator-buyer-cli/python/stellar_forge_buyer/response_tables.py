@@ -134,6 +134,10 @@ def _read_source(input_kind, paths, format, checkout, node, cache_dir):
         inputs.append(item)
         return parse(raw), raw
 
+    if input_kind == "document":
+        from .response_documents import read_document_source
+        return read_document_source(paths, format)
+
     if input_kind == "native":
         from .analysis_native_sources import read_native_source
         return read_native_source(paths, format, checkout, node, cache_dir, _read_source)
@@ -560,6 +564,15 @@ class AnalysisResponses:
                 path.unlink()
 
     def _open(self, source):
+        if source.get("input_kind") == "document":
+            from .response_documents import document_path
+            document_id = source.get("document_id")
+            if source.get("paths") != {"document_id": document_id}:
+                raise StateError("ANALYSIS_DOCUMENT_REGISTERED_PATH_INVALID")
+            # The original DB history stores a content address. The receiving
+            # directory supplies location after a complete workspace restore.
+            source = {**source, "paths": {"document_id": document_id,
+                "manifest": str(document_path(self.database.directory, document_id))}}
         return open_source(source, checkout=self.checkout, node=self.node, cache_dir=self.database.directory / "response-cache")
 
     def register(self, name, input_kind, *, config=None, result=None, stream=None, manifest=None,
@@ -569,7 +582,13 @@ class AnalysisResponses:
             raise StateError("ANALYSIS_NAME_INVALID")
         if type(expected_revision) is not int or expected_revision < 0:
             raise StateError("ANALYSIS_SOURCE_REVISION_REQUIRED")
-        if input_kind == "native":
+        if input_kind == "document":
+            from .response_documents import retain_document
+            if not manifest:
+                raise StateError("ANALYSIS_DOCUMENT_MANIFEST_REQUIRED")
+            retained = retain_document(manifest, self.database.directory)
+            paths = {"document_id": retained["document_id"]}
+        elif input_kind == "native":
             from .analysis_native_sources import native_source_paths
             if not isinstance(expected_native, str) or not _HASH.fullmatch(expected_native):
                 raise StateError("ANALYSIS_NATIVE_SOURCE_REVIEW_REQUIRED")
@@ -594,6 +613,8 @@ class AnalysisResponses:
             paths = {"config": str(Path(config).expanduser().absolute()), "result": str(Path(result).expanduser().absolute())}
         source = {"schema": _SOURCE, "kind": "response", "name": name, "input_kind": input_kind,
                   "format": format, "paths": paths}
+        if input_kind == "document":
+            source["document_id"] = paths["document_id"]
         opened = self._open(source)
         # The original same-descriptor reader verifies the retained file now.
         with opened.file.open():
