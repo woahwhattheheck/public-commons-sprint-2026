@@ -168,7 +168,7 @@ export async function startDspaceOperator({directory,workspaceDirectory,sourceDi
       }
     });
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve);});
-    const address=server.address();origin='http://'+(address.address.includes(':')?'['+address.address+']':address.address)+':'+address.port;
+    const address=server.address();origin=new URL('http://'+(address.address.includes(':')?'['+address.address+']':address.address)+':'+address.port).origin;
     launch={schema:DSPACE_OPERATOR_LAUNCH_SCHEMA,state:'running',operatorId:registry.id,instanceId,pid:process.pid,
       directory:root,workspaceDirectory:selectedSource.selection.workspaceDirectory,url:origin,
       serverFile:path.join(selectedSource.executionSourceDirectory,'server.mjs'),serverSha256:selectedSource.serverSha256,

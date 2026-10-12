@@ -88,6 +88,6 @@ export async function dspaceStartup(request,text) {
     selectionSha256:selected.selectionSha256,announcement,
   });
   const url=new URL(connected.url);
-  need(!selected.port||Number(url.port)===selected.port,'APPLICATION_DSPACE_PORT_CHANGED');
+  need(!selected.port||Number(url.port||80)===selected.port,'APPLICATION_DSPACE_PORT_CHANGED');
   return {url:connected.url,original:connected.launch};
 }
