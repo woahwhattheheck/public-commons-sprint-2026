@@ -262,6 +262,36 @@ The complete journey operates the native record through the browser, retains an 
 
 The complete case is frozen after buyer/accountant results have reached its original commissioning journal. The receiving workspace therefore carries the full operation and all original delivery files.
 
+
+### Complete maintained entry
+
+`service-adjustment-native.mjs` assembles the original owners and receiving callbacks into one runnable operation. It receives the completed original 7737 development producer, its order 18 payment and partial return, complete outbox, proof/terms files and exact native RPC transcript. The selected original payment is 2,500,000 native atomic units and the selected returned transfer is 1,000,000 native atomic units; the original network and asset remain in the retained selection and result.
+
+Run the installed full source with the host's existing Node, Python, Playwright and Chromium:
+
+```bash
+node stellar/scf-starforge-20261009/sf74-merchant-support-console/service-adjustment-native.mjs \
+  --directory /absolute/private/service-adjustment \
+  --service-directory /absolute/private/original-service-operation \
+  --fixture-packet /absolute/private/service-adjustment/original-7737-inputs.json \
+  --original-directory /absolute/private/original-7737-producer \
+  --outbox-directory /absolute/private/original-7737-outbox \
+  --source-commit COMPLETE_SOURCE_COMMIT \
+  --chromium /absolute/existing/chrome-headless-shell \
+  --playwright-module /absolute/existing/playwright/index.js \
+  --python /absolute/existing/python3
+```
+
+When the packet is absent, the entry reads the selected original files, compares the producer, proof, order, terms and RPC result hashes, and retains their complete private packet before opening the receiving operation. An existing packet is reopened with its exact bytes. The same packet can be delivered to an equipped receiving host; its original source directories are then unnecessary for continuation.
+
+The entry reopens a completed original Service receiving result or continues that original Service directory first. It then uses one original Accounting workspace and one original buyer workspace, the official event decoder and the exact retained native read results. Source and receiving Support servers share those admitted owners. The full buyer callback receives the original adjustment, codes the purchase and returned units, issues the period, completes the accountant return, exports the complete buyer project, and reopens that project's own application source and retained SQLite state. Finally, the same-owner CLI receives and reopens every file at its retained case revision.
+
+Keep the operation directory, original Service directory, input packet and operator selection on restart. `service-adjustment-operation.json` retains the original input identity, source selections, case/report, original capture attempts, native read files and completed phases. `service-adjustment-native-result.json` records the complete operation result and all original file identities. The nested adjustment receiver and buyer receiver keep their original checkpoints and request IDs in that same operation.
+
+A verification response remains the exact original observation. The receiver inspects the original job for its current status and retains a distinct observation request. If the original engine marks a lost process `INTERRUPTED`, continuation reviews an explicit retry intent naming that original job and preserves the preceding job history. A proof that completes during that review is received from its original completed job.
+
+The optional `--selection-file` supplies the explicit operator, configured accounting/buyer aliases and buyer receiving choices. Its complete bytes are bound to this operation; the default choices are derived from the selected original development producer. For a separate source transfer, `--capture-original-fixture` with the original directory, outbox and packet arguments prepares the same complete input packet.
+
 ## Source ownership
 
 | Module | Responsibility |
@@ -275,3 +305,5 @@ The complete case is frozen after buyer/accountant results have reached its orig
 | `service-adjustments-cli.mjs` | Same-owner command-line operation and complete file receiving |
 | Operator Support catalog/provider | Existing MCP tool declarations and original dependency ownership |
 | `service-adjustment-journey.mjs` | Full original native/browser/buyer/accountant receiving operation |
+| `service-buyer-receiving.mjs` | Original buyer period, accountant return and complete project receiving |
+| `service-adjustment-native.mjs` | Complete original producer capture, owner assembly and receiving continuation |

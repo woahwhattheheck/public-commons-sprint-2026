@@ -396,8 +396,8 @@ export async function receiveServiceAdjustments({
       return {case:compactCase(current.record),marker};
     });
 
-    async function savedIntent(action,idKey,requestKey,prepareInput){
-      const body=await request(action+'-intent',async()=>{
+    async function savedIntent(action,idKey,requestKey,prepareInput,retainedName=action+'-intent'){
+      const body=await request(retainedName,async()=>{
         const before=await api.read({id:caseId}),specific=await prepareInput();
         const prepared=await api.prepareIntent({id:caseId,expectedRevision:before.case.revision,
           input:{id:saved.ids[idKey],proposalId:proposal.id,action,actor:input.actor,input:specific}});
@@ -430,27 +430,69 @@ export async function receiveServiceAdjustments({
       return {id:intent.id,sha256:intent.sha256,transaction:intent.request.transaction,rpcEndpoint:intent.request.rpcEndpoint};
     });
     await phase('original-returned-transfer-received',async()=>{
-      const body=await request('verify-execute',async()=>({id:caseId,intentId:saved.ids.verifyIntent,requestId:saved.ids.verifyExecute}));
-      let observed=await api.execute(body);
-      if(['QUEUED','RUNNING'].includes(observed.material.result.job.status)){
-        await accounting.withServiceAdjustments(accountingId,async controller=>{
-          requireValue(typeof controller.waitForJob==='function','Continue this original saved verification job when its owner returns a completed observation.');
-          return controller.waitForJob(observed.material.result.job.id);
+      let body=await request('verify-execute',async()=>({id:caseId,intentId:saved.ids.verifyIntent,requestId:saved.ids.verifyExecute}));
+      let observed=await api.execute(body),value;
+      const attempts=[],visited=new Set();
+      while(true){
+        const intentId=body.intentId,jobId=observed.material.result.job.id;
+        // An accepted case response is immutable. Read the actual original job
+        // before deciding whether that earlier observation still needs a wait.
+        const job=await accounting.withServiceAdjustments(accountingId,async controller=>{
+          requireValue(typeof controller.savedJob==='function','Read the original retained verification job.');
+          let retained=await controller.savedJob(jobId);
+          if(['QUEUED','RUNNING'].includes(retained.status)){
+            requireValue(typeof controller.waitForJob==='function','Continue the original saved verification job.');
+            await controller.waitForJob(jobId);retained=await controller.savedJob(jobId);
+          }
+          return retained;
         });
-        const refresh=await request('verify-observe',async()=>({id:caseId,intentId:saved.ids.verifyIntent,requestId:randomUUID()}));
-        observed=await api.execute(refresh);
+        assert.equal(job.id,jobId);assert.equal(job.transaction,input.verification.transaction);
+        // Retain a distinct exact observation request for this actual native
+        // state. Replaying the first execute must keep its earlier response.
+        const refresh=await request('verify-observe-'+intentId+'-'+sha(json(job)).slice(0,24),
+          async()=>({id:caseId,intentId,requestId:randomUUID()}));
+        const current=await api.execute(refresh);value=current.material;
+        assert.equal(value.result.job.id,jobId);
+        attempts.push({intentId,jobId,status:value.result.job.status,observationRequestId:refresh.requestId});
+        // The native owner may recover a completed proof between review and an
+        // explicit retry. That same completed job is the accepted original.
+        if(value.result.job.status==='COMPLETED')break;
+        requireValue(!visited.has(jobId),'The original interrupted verification returned a repeated unfinished job in its recovery chain.');
+        visited.add(jobId);
+        requireValue(value.result.job.status==='INTERRUPTED',
+          'Original returned-transfer verification ended '+value.result.job.status+': '+JSON.stringify(value.result.job.error));
+        // The original engine explicitly marks a process-lost read INTERRUPTED.
+        // Its retry is a new reviewed intent naming that original job; it never
+        // creates another adjustment or changes the selected reverse transfer.
+        const key='verifyRetry-'+jobId;
+        for(const suffix of ['Intent','IntentRequest','Execute'])
+          saved.ids[key+suffix]??=randomUUID();
+        await persist();
+        const intent=await savedIntent('verify',key+'Intent',key+'IntentRequest',async()=>{
+          const state=await accounting.withServiceAdjustments(accountingId,controller=>controller.view());
+          return {revision:state.revision,transaction:input.verification.transaction,
+            rpcEndpoint:input.verification.rpcEndpoint,retryJobId:jobId};
+        },key+'-intent');
+        body=await request(key+'-execute',async()=>({id:caseId,intentId:intent.id,requestId:saved.ids[key+'Execute']}));
+        observed=await api.execute(body);
       }
-      const value=observed.material;
-      requireValue(value.result.job.status==='COMPLETED','Original returned-transfer verification ended '+value.result.job.status+': '+JSON.stringify(value.result.job.error));
-      requireValue(value.result.adjustment.status==='VERIFIED','The original native verification did not produce a verified returned transfer: '+value.result.adjustment.status);
+      requireValue(value.result.adjustment.status==='VERIFIED',
+        'The original native verification did not produce a verified returned transfer: '+value.result.adjustment.status);
       assert.equal(value.result.job.transaction,input.verification.transaction);
       await reopen();
-      const replay=await api.execute(body);
-      assert.equal(replay.replayed,true);
+      const original=await request('verify-execute',async()=>{throw new Error('Original verification request is missing.');});
+      const replay=await api.execute(original);assert.equal(replay.replayed,true);
+      const retained=(await viewContext(store,caseId)).adjustments;
+      for(const attempt of attempts){
+        const jobs=new Set(retained.outcomes.filter(row=>row.intentId===attempt.intentId).map(row=>row.result.job.id));
+        assert.deepEqual([...jobs],[attempt.jobId],'Each exact native intent must retain its one original job.');
+      }
       const native=await accounting.withServiceAdjustments(accountingId,controller=>controller.detail(proposal.id));
       const jobs=native.adjustment.history.filter(row=>row.action==='VERIFICATION_REQUESTED'&&row.transaction===input.verification.transaction);
-      assert.equal(jobs.length,1,'The same original intent must retain one native verification job.');
-      return {...compactOutcome(value),sameOriginalJob:true,originalRequestReplay:replay.material.id};
+      const nativeJobIds=new Set(attempts.map(row=>row.jobId));
+      assert.equal(jobs.length,nativeJobIds.size,'Only the original verification and explicit interrupted-job recoveries may dispatch.');
+      return {...compactOutcome(value),sameOriginalJob:true,originalRequestReplay:replay.material.id,
+        nativeJobs:nativeJobIds.size,interruptedJobsRecovered:new Set(attempts.filter(row=>row.status==='INTERRUPTED').map(row=>row.jobId)).size,attempts};
     });
 
     await phase('buyer-capture-intent-retained',async()=>{
