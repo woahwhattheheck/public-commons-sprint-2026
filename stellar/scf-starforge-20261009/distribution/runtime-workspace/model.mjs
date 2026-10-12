@@ -21,7 +21,7 @@ import { imageOperationFields, imageWorkspaceState, reviewWorkspaceImage, attach
   openWorkspaceImageDownload, reviewWorkspaceImageContainer, normalizeImageOperation,
   executeImageOperation } from './image-workspace.mjs';
 
-import { initializeApplications, applicationsState, reviewApplication, saveApplication, applicationBindingOperation,
+import { initializeApplications, applicationsState, applicationsHistory, reviewApplication, saveApplication, applicationBindingOperation,
   reviewApplicationStart, dispatchApplicationStart, cancelApplicationRun, applicationOperation, applicationOutput,
   readApplicationTerminal, sendApplicationTerminal } from './applications.mjs';
 import { transferOperationFields, initializeTransferWorkspace, runtimeTransferWorkspaceState,
@@ -402,7 +402,8 @@ export async function openRuntimeWorkspace({ directory } = {}) {
         'RUNTIME_WORKSPACE_INSTALL_LOG_UNAVAILABLE', 'This runtime has no npm attempt log yet');
       return { name: state.logFile, ...await tailFile(join(selected.directory, state.logFile)) };
     },
-    async applicationsState() { return applicationsState(root); },
+    async applicationsState(options) { return applicationsState(root, options); },
+    async applicationsHistory(options) { return applicationsHistory(root, options); },
     async applicationsReview(input) {
       const selected = await entry(root, recordId(input.runtimeId));
       return reviewApplication(root, { ...input, runtimeDirectory: selected.directory });
@@ -418,7 +419,18 @@ export async function openRuntimeWorkspace({ directory } = {}) {
     },
     async applicationsConnect({ applicationId }) {
       const request = await applicationBindingOperation(root, applicationId);
-      return request ? { applicationId, ...await model.begin(request) } : { applicationId, connected: true, reopened: true };
+      if (!request) return { applicationId, connected: true, reopened: true };
+      const begun = await model.begin(request);
+      if (!begun.reopened) return { applicationId, ...begun };
+      const current = await jobView(root, begun.operationId);
+      if (current.workerActive || current.commandActive ||
+        await operationRunning(join(jobPath(root, begun.operationId), 'worker.lock')))
+        return { applicationId, ...begun, running: true };
+      if (current.phase === 'QUEUED')
+        return { applicationId, ...begun, ...await model.resumeQueued(begun.operationId) };
+      if (current.displayPhase === 'INTERRUPTED' || current.phase === 'FAILED')
+        return { applicationId, ...begun, ...await model.recoverManagedOperation(begun.operationId) };
+      return { applicationId, ...begun };
     },
     async applicationsStartReview({ applicationId }) { return reviewApplicationStart(root, applicationId); },
     async applicationsStart(input) { return dispatchApplicationStart(root, input, request => model.begin(request)); },
