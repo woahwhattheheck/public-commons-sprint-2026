@@ -128,3 +128,66 @@ An error leaves `status: "INCOMPLETE"` in the checkpoint, the exact phase and or
 The result demonstrates only its completed native operations. The independent review status and actual missing/quality coverage remain visible. No client model acceptance, project design certification, payment or buyer transaction is implied.
 
 Original public contracts: [NOAA Data API](https://api.tidesandcurrents.noaa.gov/api/prod/), [response definitions](https://api.tidesandcurrents.noaa.gov/api/prod/responseHelp.html), [station metadata](https://api.tidesandcurrents.noaa.gov/mdapi/prod/).
+
+
+## Original receiving host command
+
+When the selected native runtime has admitted the one receiving operation, the
+same source also supplies `receiving-host.mjs`. It binds the existing console
+and `runCoopsOperatorJourney` to one persistent browser profile. Use the actual
+Node, Playwright module file and Chrome executable already selected by the
+runtime owner; the command installs no dependency and substitutes no provider.
+
+```sh
+node coops/receiving-host.mjs \
+  --operation-id ORIGINAL_NATIVE_RECEIVING_ID \
+  --workspace /selected/coastal-workspace \
+  --output /selected/coastal-operator \
+  --browser-profile /selected/coastal-browser \
+  --playwright-module /selected/runtime/playwright/index.mjs \
+  --chrome /selected/runtime/chrome \
+  --operator "Responsible receiving team"
+```
+
+These runtime paths are placeholders for the owner's actual selected files.
+Keep the three state directories separate and outside application source.
+The original native admission remains responsible for measured memory/storage,
+one controller and the complete imported source/dependency closure. This command
+is not a replacement admission or a second browser queue.
+
+The first actual listener port is retained in
+`coops-receiving-host.json`. Every normal or interrupted continuation reopens
+the original UUID and that same port, with the same persistent browser profile.
+Native private-session renewal supplies the browser's legitimate current token;
+it does not move or reset IndexedDB drafts. Restart phases retain their own
+original intents, and a completed prior restart is reconciled from the current
+same-origin listener.
+
+When the actual source is ready, the host writes
+`independent-source-review-request.json` and reports its path. The independent
+reviewer reads that exact packet and original files, then atomically writes
+`independent-source-review.json` using the response fields above. Both
+`reviewed` and `follow_up` are explicit decisions; no response is generated
+automatically. `--review-response` can select another original response path.
+A timeout leaves the packet and operation available for the same continuation.
+
+The default source selection remains the seven-day reference and declared
+two-year hourly study. To select another supported window before the first run,
+pass `--selection /selected/source-selection.json` with only `capture` and
+`historical` keys (`historical: null` omits that leg). The normalized selection
+and exact original mapping file remain pinned in the native journey. The
+optional `--mapping-file` selects another real JSON convention.
+
+A concrete source correction during an incomplete run requires
+`--continuation-note`. The existing host record retains the earlier source
+hashes, action identities, browser profile and restart history. It never
+deletes application data or discards uncertain requests. A finished host returns
+its original hash-verified result without repeating business operations.
+
+On normal completion or an error, the host closes its own browser and original
+console. The result and runtime-closure disposition are separate records:
+a retained business result does not conceal a later closure/write failure.
+`private/coops-session.json` is temporary, mode0600, and is removed only by
+the run that wrote it. Do not include that private directory in a shared source
+or receiving package. Complete public source, mapping, export and review
+artifacts are identified by the original operator result.
