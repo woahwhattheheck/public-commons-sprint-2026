@@ -121,15 +121,50 @@ export function datasetteDatasetSemantics(selected,columns) {
       projectedDefinition:{name,datatype:spec.type,required:!(spec.nullable??false)},issues:[]};
   });
   const projectedKey=review.key.columns.map(column=>Object.entries(review.projection).find(([alias,spec])=>spec.column===column&&Object.hasOwn(columns,alias))?.[0]).filter(Boolean);
+  // The retained source key and the values actually published by the chosen
+  // projection have separate identities. A label or string projection can merge
+  // different original values, even when the source review found a unique key.
+  const keyValues=new Set();let missingRows=0,blankRows=0,duplicateRows=0,invalidRows=0;
+  const allKeyColumns=projectedKey.length>0&&projectedKey.length===review.key.columns.length;
+  if(allKeyColumns)for(const originalRow of selected.rows){
+    const projected=projectDatasetteRow(originalRow,selected.columns,review.projection);
+    const raw=projectedKey.map(name=>projected[name]);
+    if(raw.some(value=>value===null||value===undefined)){missingRows++;continue;}
+    if(raw.some(value=>value==='')){blankRows++;continue;}
+    let invalid=false;
+    const values=raw.map((value,index)=>{
+      const spec=columns[projectedKey[index]],type=typeof spec==='string'?spec:spec.type;
+      if(typeof value!=='string'){invalid=true;return null;}
+      if(type==='integer'||type==='number'){
+        if(type==='integer'&&(!/^-?(0|[1-9][0-9]*)$/.test(value)||!isSafeIntegerToken(value))||
+          type==='number'&&!hasLosslessNumberRoundtrip(value)){invalid=true;return null;}
+        return [type,Number(value)];
+      }
+      if(type==='boolean'){if(!['true','false'].includes(value)){invalid=true;return null;}return [type,value==='true'];}
+      return ['string',value];
+    });
+    if(invalid){invalidRows++;continue;}
+    const key=JSON.stringify(values);
+    if(keyValues.has(key))duplicateRows++;else keyValues.add(key);
+  }
+  const projectedReview={columns:projectedKey,rowCount:selected.rows.length,
+    unique:allKeyColumns&&!missingRows&&!blankRows&&!duplicateRows&&!invalidRows,
+    missingRows,blankRows,duplicateRows,invalidRows,distinctValues:keyValues.size,
+    valueIdentity:'actual-published-native-dataset-values'};
+  const sourceKeyReview={columns:review.key.columns,unique:review.key.unique,
+    missingRows:review.key.missingRows,blankRows:review.key.blankRows,
+    duplicateRows:review.key.duplicateRows,distinctValues:review.key.distinctValues,
+    stability:review.key.stability,reviewDigest:review.digest};
   const payload={schema:'stellar-forge.datasette-semantics.v1',
     source:{provider:'datasette',captureManifestSha256:selected.captureSha256,schemaSha256:identity({columns:selected.columns,columnSource:selected.capture.columnSource??null}),
       url:selection.url,kind:selection.kind,database:selection.database??null,table:selection.table??null,query:selection.query??null,
       metadata:structuredClone(selection.metadata??null),sourceVersion:structuredClone(selected.capture.sourceVersion??null),
       consistency:structuredClone(selected.capture.consistency),editionSha256:selected.editionSha256,reviewDigest:review.digest},
     columns:physical,primaryKey:{source:review.key.columns,projected:projectedKey,
-      complete:review.key.unique&&projectedKey.length===review.key.columns.length,
-      stability:review.key.stability},aboutUrl:{source:selection.metadata?.aboutUrl??selection.url},
-    virtualColumns:[],issues:[],csvw:{tableSchema:{columns:physical.map(field=>field.projectedDefinition)}}};
+      complete:review.key.unique&&projectedReview.unique,
+      stability:review.key.stability,sourceReview:sourceKeyReview,projectedReview},aboutUrl:{source:selection.metadata?.aboutUrl??selection.url},
+    virtualColumns:[],issues:review.key.unique&&!projectedReview.unique?[{code:'DATASETTE_PROJECTED_KEY_INCOMPLETE',
+      message:'The chosen published key projection does not preserve a complete unique key; the original source key review is retained separately.'}]:[],csvw:{tableSchema:{columns:physical.map(field=>field.projectedDefinition)}}};
   const {captureManifestSha256,schemaSha256,...meaning}=payload.source;
   const definitionSha256=identity({...payload,source:meaning});
   return {...payload,definitionSha256,sha256:identity({...payload,definitionSha256})};

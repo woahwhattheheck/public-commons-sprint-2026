@@ -217,7 +217,16 @@ export async function runDatasetteCLI(argv = process.argv.slice(2), {
         const stop = () => {
           if (stopping) return; stopping = true;
           process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop);
-          Promise.resolve(server.close()).then(done, reject);
+          // The CLI owns both the listener and its borrowed workspace. Close
+          // them together so an active capture or idle upload is cancelled and
+          // cannot keep the managed application's shutdown waiting forever.
+          const closing = [Promise.resolve().then(() => server.close()),
+            Promise.resolve().then(() => workspace.close())];
+          Promise.allSettled(closing).then(results => {
+            const failure = results.find(result => result.status === 'rejected');
+            if (failure) reject(failure.reason);
+            else done();
+          });
         };
         process.once('SIGINT', stop); process.once('SIGTERM', stop);
       });
