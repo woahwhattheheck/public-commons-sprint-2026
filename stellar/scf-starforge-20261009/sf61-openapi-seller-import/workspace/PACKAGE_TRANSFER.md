@@ -199,7 +199,10 @@ the original SF61 consoles and the actual merchant MCP server, authors and
 reopens a saved source revision, exports the retained policy package, interrupts
 and resumes its nested download across restarts, receives it, starts its original
 merchant, checks its native cache policy, and stages the initial and received
-packages in the original release store.
+packages in the original release store. It then compares and activates the
+received release using its exact digest and current generation, starts the
+original release merchant, checks its HTTP 402 response, and stops that owned
+instance.
 
 ~~~sh
 node sf61-openapi-seller-import/workspace/package-transfer-journey.mjs \
@@ -216,8 +219,10 @@ result to a new private output directory.
 The complete eight-stage receiving journey passed on Node v24.19.0 on 12 October
 2026. It carried 13 original files (53,668 bytes), recovered the interrupted nested
 download after both hosts restarted and the source package moved, received the
-same complete merchant, and staged both initial and received packages. The received
-runtime returned HTTP 402 and retained its original saved cache policy. The scoped
+same complete merchant, and staged both initial and received packages. The final
+composition also compared, activated and started the received original SF82
+release, checked its HTTP 402 response, and completed owned shutdown. The received
+runtime retained its original saved cache policy. The scoped
 reader served 47 chunk reads from 12 original file loads after restart.
 
 The original integration outcome is retained in the
