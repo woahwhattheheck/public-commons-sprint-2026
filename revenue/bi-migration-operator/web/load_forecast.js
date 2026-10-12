@@ -219,7 +219,19 @@ async function loadForecastView(){
  const body=await builder(context);
  return {html:'<div class="lf-workspace"><div class="lf-nav">'+lfPanes.map(p=>lfButton("pane",({sources:"Sources",plans:"Review plans",reviews:"Analyst reviews",receiving:"Receiving"})[p],'data-pane="'+p+'" '+(p===lfSelection.pane?'class="active"':""))).join("")+'</div>'+body+'</div>',context};
 }
-function loadForecastCommitView(view){lfCurrent=view.context;lfSaveSelection();lfUpdateTerminalButtons();}
+function loadForecastSetBusy(active){
+ const panel=document.querySelector(".lf-workspace");
+ if(panel){panel.inert=Boolean(active);panel.setAttribute("aria-busy",String(Boolean(active)));}
+}
+function loadForecastCommitView(view){lfCurrent=view.context;lfSaveSelection();lfUpdateTerminalButtons();loadForecastSetBusy(busy);}
+async function lfImportOriginal(action,file,fields={}){
+ if(busy)throw new Error("The current original operation is still running.");
+ const body=lfClone(fields);let attachment;
+ busy=true;document.body.dataset.busy="true";$("connection").textContent="Reading original file…";loadForecastSetBusy(true);
+ try{attachment=await filePayload(file);}
+ finally{busy=false;document.body.dataset.busy="false";$("connection").textContent="Workspace connected";loadForecastSetBusy(false);}
+ return act(action,{...body,...attachment});
+}
 function loadForecastOperationSaved(action,record){
  lfDraftRevisions.delete(record.kind+":"+record.id);
  if(record.kind==="load_source"){lfSelection.source=record.id;lfSelection.pane="sources";if(action!=="load.source.describe")lfMappingDrafts.delete(record.id);lfSourceDrafts.delete(record.id);if(action==="load.source.describe")lfDraftRevisions.set("load_source:"+record.id,record.revision);if(action==="load.source.upload"||action==="load.source.revise"){lfSelection.offset=0;lfSelection.columnOffset=0;lfSelection.sheet="";lfSelection.sourceTable="sheet";}}
@@ -258,7 +270,8 @@ function lfPlanBody(){
  return {...(r?{id:r.id,expected:lfDraftRevision("load_plan",r)}:{}),plan:p};
 }
 async function loadForecastAction(action,button){
- action=action.slice(3);
+  if(busy)throw new Error("The current original operation is still running.");
+  action=action.slice(3);
  const r=lfCurrent.source,review=lfCurrent.review,received=lfCurrent.received,index=Number(button.dataset.index);
  if(action==="pane"){lfSelection.pane=button.dataset.pane;lfSelection.offset=0;lfSelection.search="";return render();}
  if(action==="sources"){lfSelection.pane="sources";return render();}
@@ -267,7 +280,7 @@ async function loadForecastAction(action,button){
  if(action==="reload-source"){lfSourceDrafts.delete(r.id);lfMappingDrafts.delete(r.id);lfDraftRevisions.delete("load_source:"+r.id);return render();}
  if(action==="reload-plan"){lfPlanDrafts.delete(lfCurrent.plan.id);lfDraftRevisions.delete("load_plan:"+lfCurrent.plan.id);return render();}
  if(action==="reload-review"){lfReviewDrafts.delete(review.id);lfDraftRevisions.delete("load_review:"+review.id);return render();}
- if(action==="upload")return act("load.source.upload",{...lfUploadDraft,...await filePayload($("lf-upload-file").files[0])});
+  if(action==="upload")return lfImportOriginal("load.source.upload",$("lf-upload-file").files[0],lfUploadDraft);
  if(action==="describe"){const body=Object.fromEntries(["label","publisher","vintage","published","status","source_url"].map(k=>[k,value("lf-meta-"+k)]));return act("load.source.describe",{id:r.id,expected:lfDraftRevision("load_source",r),...body});}
  if(action==="original")return download("/api/object/"+r.payload.original.digest,r.payload.original.name);
  if(action==="add-mapping"){lfMappingDraft(r).push(lfNewMapping(r));return render();}
@@ -303,12 +316,13 @@ async function loadForecastAction(action,button){
  if(action==="reopen")return act("load.review.reopen",{id:review.id,expected:review.revision,note:value("lf-reopen-note")});
  if(action==="export")return act("load.review.export",{review:ref(review)});
  if(action==="download-export"){const e=lfRecords("load_export").find(e=>e.id===button.dataset.id),file=e.payload[button.dataset.file];return download("/api/object/"+file.digest,file.name);}
- if(action==="receive")return act("load.delivery.receive",{...await filePayload($("lf-receive-file").files[0])});
+  if(action==="receive")return lfImportOriginal("load.delivery.receive",$("lf-receive-file").files[0]);
  if(action==="adopt")return act("load.delivery.adopt",{received:ref(received)});
  if(action==="download-received")return download("/api/object/"+received.payload.package.digest,received.payload.package.name);
  if(action==="open-adopted"){lfSelection.plan=received.payload.editable_plan.id;lfSelection.pane="plans";return render();}
 }
 function lfCaptureInput(target){
+  if(busy)return;
  if(target.dataset.lfUpload!==undefined&&target.dataset.lfMeta)lfUploadDraft[target.dataset.lfMeta]=target.value;
  if(target.dataset.lfSourceMeta!==undefined&&target.dataset.lfMeta&&lfCurrent.source)lfSourceDraft(lfCurrent.source)[target.dataset.lfMeta]=target.value;
  if(target.dataset.lfMap!==undefined&&lfCurrent.source){
@@ -334,7 +348,7 @@ function lfCaptureInput(target){
 }
 document.addEventListener("input",event=>{if(typeof tab!=="undefined"&&tab==="load")lfCaptureInput(event.target);});
 document.addEventListener("change",event=>{
- if(typeof tab==="undefined"||tab!=="load")return;
+  if(typeof tab==="undefined"||tab!=="load"||busy)return;
  const t=event.target;lfCaptureInput(t);
  run(async()=>{
   const selects={"lf-source-select":["source","sources"],"lf-plan-select":["plan","plans"],"lf-review-select":["review","reviews"],"lf-received-select":["received","receiving"]};

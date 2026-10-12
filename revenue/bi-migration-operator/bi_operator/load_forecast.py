@@ -18,6 +18,9 @@ from .load_forecast_sources import (
 KINDS = ("load_source", "load_plan", "load_review", "load_export", "load_received")
 MODES = ("forecast_revision", "forecast_accuracy")
 TABLES = ("comparison", "growth", "explanations", "issues")
+LOCAL_RECEIVING_ACTIONS = frozenset((
+    "load.source.upload", "load.source.map", "load.source.accept", "load.plan.save",
+))
 
 
 def selected(row, selection):
@@ -95,9 +98,9 @@ def _compare_rows(plan, baseline, current, explanations):
         used.add(identity)
         if observation["canonical_unit"] != target["canonical_unit"]:
             raise ValueError("An explanation must use the same power or energy dimension as its comparison.")
-        for field in ("area", "geography", "metric", "season", "period_start", "period_end", "period_basis", "coincidence"):
+        for field in ("area", "geography", "metric", "season", "period_start", "period_end", "period_basis", "coincidence", "basis"):
             if observation[field] != target[field]:
-                raise ValueError("An adjustment must identify the same geography, metric, season, year and coincidence as its target.")
+                raise ValueError("An adjustment must identify the same geography, metric, season, period, coincidence and comparable basis as its target.")
         amount = Decimal(observation["canonical_value"]) * link["direction"]
         target["explained_change"] = number(Decimal(target["explained_change"]) + amount)
         target["unexplained_change"] = number(Decimal(target["difference"]) - Decimal(target["explained_change"]))
@@ -185,6 +188,9 @@ def assemble_review(plan_record, sources, source_rows):
 
 
 class LoadForecast:
+    # These receiving children have only content-addressed inputs and one native record commit.
+    local_receiving_actions = LOCAL_RECEIVING_ACTIONS
+
     def __init__(self, service):
         self.service, self.store = service, service.store
         self.actions = {

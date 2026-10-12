@@ -167,7 +167,9 @@ def adopt_delivery(model, received, request):
     report = strict_json(model.store.bytes(p["report"]["digest"]))
     def child(action, suffix, body):
         operation = "load-receive-" + digest(encoded([received["id"], received["revision"], action, suffix]).encode())[:32]
-        return model.service.dispatch(action, {**body, "operation_id": operation, "actor": received["actor"]})["record"]
+        return model.service.dispatch(action,
+            {**body, "operation_id": operation, "actor": received["actor"]},
+            resume_local=True)["record"]
     mapping = {}
     for source in report["sources"]:
         sp = source["payload"]

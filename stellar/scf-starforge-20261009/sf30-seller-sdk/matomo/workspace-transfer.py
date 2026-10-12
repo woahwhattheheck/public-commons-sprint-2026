@@ -19,7 +19,7 @@ import stat
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from source_bundle_archive import ArchiveFault, ArchivePolicy, archive, extract, inspect, file_hash, encoded
+from source_bundle_archive import ArchiveFault, ArchivePolicy, archive, extract, inspect, file_hash, encoded, private_directories
 
 SCHEMA = "stellar-forge.matomo-authoring-workspace.v1"
 POLICY = ArchivePolicy(SCHEMA, max_expanded_bytes=16 * 1024**3,
@@ -314,8 +314,8 @@ def inspect_archive(input):
             "receivingBudget": receiving_budget(result)}
 
 
-def copy_pinned(source, target, pin):
-    target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+def copy_pinned(source, target, pin, *, root):
+    private_directories(root, target.parent, policy=POLICY)
     canonical(str(target.parent), directory=True)
     reconcile_link(target)
     if target.exists():
@@ -357,11 +357,15 @@ def receive_files(input):
     value = inspect_archive(input)
     if value["archive"] != input["archivePin"]:
         fail("ARCHIVE_CHANGED")
+    pending = read_json(root / "product-receiving.json", 65536)
+    if (pending.get("schema") != "stellar-forge.matomo-product-receiving.v1" or
+            pending.get("archive") != input["archivePin"]):
+        fail("RECEIVING_IDENTITY_CONFLICT")
     received = root / "received" / input["archivePin"]["sha256"]
-    received.mkdir(mode=0o700, parents=True, exist_ok=True)
+    private_directories(root, received, policy=POLICY)
     canonical(str(received), directory=True)
     retained_archive = received / "source.zip"
-    copy_pinned(Path(input["archive"]), retained_archive, input["archivePin"])
+    copy_pinned(Path(input["archive"]), retained_archive, input["archivePin"], root=root)
     original = received / "original"
     original.mkdir(mode=0o700, exist_ok=True)
     result = extract({"archive": str(retained_archive), "destination": str(original)}, policy=POLICY)
@@ -376,7 +380,7 @@ def receive_files(input):
     # stays byte-exact in original/ and is inspected or adopted explicitly.
     for item in result["manifest"]["files"]:
         if item["path"].split("/")[0] in ROOTS:
-            copy_pinned(original / item["path"], root / item["path"], item)
+            copy_pinned(original / item["path"], root / item["path"], item, root=root)
     return {"archive": value["archive"], "manifest": result["manifest"], "manifestSha256": value["manifestSha256"],
             "original": "received/" + value["archive"]["sha256"] + "/original"}
 

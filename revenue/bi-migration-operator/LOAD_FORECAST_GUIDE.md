@@ -61,7 +61,7 @@ Growth uses the first and last **common** selected periods of each compatible se
 
 A published adjustment is a separate input with signal **Signed adjustment**. Retain, map and accept that original file. On a prepared comparison choose **Explain** beside an actual matched observation. Select the exact adjustment source edition and original cell, choose addition or subtraction, and explain the relationship.
 
-The adjustment must match the comparison's area, geography, metric, season, period, peak definition and physical dimension. Each selected source cell is applied at most once. The report retains its original signed amount, chosen direction, explained amount and remaining difference. Published baseline and current forecasts are unchanged.
+The adjustment must match the comparison's area, geography, metric, season, period, peak definition, comparable basis and physical dimension. Each selected source cell is applied at most once. The report retains its original signed amount, chosen direction, explained amount and remaining difference. Published baseline and current forecasts are unchanged.
 
 Supporting PDFs and other accepted source editions can accompany the plan as documentation. They stay in the selected source closure and final delivery.
 
@@ -70,6 +70,8 @@ Supporting PDFs and other accepted source editions can accompany the plan as doc
 **Save plan and prepare comparison** creates a retained calculation. The analyst screen pages through the complete comparison, common-period growth, sourced explanations and issues. Search applies to the complete selected table.
 
 Record a conclusion and acknowledge the listed source and coverage issues. Individual observations can be marked Reviewed, Follow up or Exclude from interpretation with a reason. Those decisions remain visible; they do not rewrite or remove source observations. Save the decisions, then finalize the exact reviewed report.
+
+While a save or complete original-file read is running, the load editor and its selected source remain read-only. The host continues that exact submitted request; completion reopens the committed edition before the editor is available again. A failed request keeps the existing draft for the original retry.
 
 Editors retain the revision from which their local fields were opened. If another change appears, the view offers **Discard local edits and reload**. Saving against the retained older revision receives the original conflict response. Refreshing the screen cannot silently apply old fields to a newer record.
 
@@ -99,7 +101,7 @@ In a second ordinary workspace open **Receiving** and select the complete origin
 
 The received package can be inspected and downloaded immediately. **Continue as an editable plan** imports its sources through the original source-upload, mapping and acceptance actions, then saves an ordinary local review plan. It preserves original source identity and links the editable plan to the received package. The delivered finalized review remains retained.
 
-Adoption uses stable child operation IDs for the exact received record. Reopening a completed adoption returns the same editable plan. If an operation loses its response, use the application's **Retry original request** first. The original action journal and saved record decide whether it has completed; a failed operation with no committed root record can be reopened with a new explicit operation while its already completed child actions retain their identities.
+Adoption uses stable child operation IDs for the exact received record. Reopening a completed adoption returns the same editable plan. If an operation loses its response, use the application's **Retry original request**. The original journal first checks the exact action and request digest, then reopens any already committed root or child record. An interrupted adoption or its local source-upload, mapping, acceptance or plan child can resume that same operation when its exact request has no committed record. Existing original source objects are reused by digest, and the journal retains the original operation ID and a resumption event.
 
 ## Native automation and recovery
 

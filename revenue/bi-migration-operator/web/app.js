@@ -23,6 +23,7 @@ async function refresh(){workspace=await request("/api/state");$("workspace-id")
 async function act(action,body,original=false){
   if(busy)throw new Error("The current operation is still running.");
   busy=true;document.body.dataset.busy="true";$("connection").textContent="Working…";
+  if(typeof loadForecastSetBusy==="function")loadForecastSetBusy(true);
   const payload=original?body:{...body,operation_id:crypto.randomUUID()};
   lastRequest={action,body:payload};sessionStorage.setItem("commons-bi-last-operation",JSON.stringify({action,operation_id:payload.operation_id}));
   try{
@@ -34,7 +35,7 @@ async function act(action,body,original=false){
     if(action.startsWith("load.") && typeof loadForecastOperationSaved==="function")loadForecastOperationSaved(action,result.record,payload);
     await refresh();return result.record;
   }catch(error){notify(error.message+" The operation ID is "+payload.operation_id+".");error.operatorHandled=true;throw error;}
-  finally{busy=false;document.body.dataset.busy="false";$("connection").textContent="Workspace connected";if(lastRequest){const retry=document.createElement("button");retry.textContent="Retry original request";retry.addEventListener("click",()=>run(()=>act(lastRequest.action,lastRequest.body,true)));$("notice").append(retry);}}
+  finally{busy=false;document.body.dataset.busy="false";$("connection").textContent="Workspace connected";if(typeof loadForecastSetBusy==="function")loadForecastSetBusy(false);if(lastRequest){const retry=document.createElement("button");retry.textContent="Retry original request";retry.addEventListener("click",()=>run(()=>act(lastRequest.action,lastRequest.body,true)));$("notice").append(retry);}}
 }
 async function entity(kind,id,revision){return request("/api/entity?"+new URLSearchParams({kind,id,...(revision?{revision}: {})}));}
 async function filePayload(file){if(!file)throw new Error("Choose a file.");if(file.size>64*1024*1024)throw new Error("One file may contain at most 64 MiB.");const bytes=new Uint8Array(await file.arrayBuffer());let binary="";for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));return {filename:file.name,base64:btoa(binary)};}
