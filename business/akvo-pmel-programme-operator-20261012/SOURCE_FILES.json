@@ -1,0 +1,35 @@
+{
+  "schema": "tjlabs.pmel.programme-source.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "component": "business/akvo-pmel-programme-operator-20261012",
+  "authoredFiles": 4,
+  "authoredBytes": 84157,
+  "files": [
+    {
+      "path": "programme.py",
+      "bytes": 51927,
+      "sha256": "8c48c3712e00cf72fe4c128693fc24cab61c4973d5718654785ca767d0f7fe21"
+    },
+    {
+      "path": "START.py",
+      "bytes": 11546,
+      "sha256": "a373b73fcce2edaf5658af3ca0bd5c912c44c7b600f1a1e34abd03a6811bf45e"
+    },
+    {
+      "path": "GUIDE.md",
+      "bytes": 19524,
+      "sha256": "fff73fbf67ea4ba049dae246b12c9890183792cc94e9ebd89e3db29bcc5195d6"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1160,
+      "sha256": "c5639d21072d459498934723d353c55a6fa9b69e8face0a2fe3528923767a502"
+    }
+  ],
+  "entrypoints": {
+    "programme": "programme.py",
+    "start": "START.py",
+    "guide": "GUIDE.md"
+  },
+  "nativeRuntime": "Selected separately by a complete original runtime-selection.json; no original runtime files are replaced by this component."
+}
