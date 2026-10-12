@@ -435,7 +435,8 @@
     "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
     "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs",
     "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
-    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
+    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
+    "dataset-ndjson-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/consumer/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1071,7 +1072,9 @@
     "./merchant/mcp/mpp-download": {
       "types": "./source/stellar-forge/mcp-merchant-operator/mpp-download.d.mts",
       "import": "./source/stellar-forge/mcp-merchant-operator/mpp-download.mjs"
-    }
+    },
+    "./seller/ndjson/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/release.mjs",
+    "./merchant/mcp/dataset-lifecycle": "./source/stellar-forge/mcp-merchant-operator/dataset-lifecycle.mjs"
   },
   "nativePeers": {
     "@x402/core": {
