@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, readdir, link, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 
 export function digest(value) {
   const text = typeof value === 'string' ? value : JSON.stringify(value);
@@ -23,17 +23,30 @@ async function syncDirectory(path) {
   try { await file.sync(); }
   finally { await file.close(); }
 }
+async function durableDirectory(path, stopAt = null) {
+  path=resolve(path);stopAt=stopAt?resolve(stopAt):null;
+  await mkdir(path,{recursive:true,mode:0o700});
+  // The first retained scope can create several ancestors at once. Sync their
+  // directory entries too; syncing the new leaf alone does not persist its name.
+  let current=path;
+  for (;;) {
+    await syncDirectory(current);
+    if(current===stopAt || dirname(current)===current)break;
+    current=dirname(current);
+  }
+}
 // Immutable objects are fully written and synced before their names become visible.
 // A journal ordinal is published with link(), which atomically refuses replacement.
 // Concurrent writers of the same case revision therefore have exactly one winner.
 export class CaseStore {
   constructor(root, scope) {
-    this.root = join(root, key(scope.id)); this.scope = structuredClone(scope);
+    this.root = resolve(root, key(scope.id)); this.scope = structuredClone(scope);
     this.ready = this.initialize();
   }
   async initialize() {
-    await mkdir(join(this.root, 'objects'), {recursive:true, mode:0o700});
-    await mkdir(join(this.root, 'journals'), {recursive:true, mode:0o700});
+    await durableDirectory(join(this.root, 'objects'));
+    await durableDirectory(join(this.root, 'journals'), this.root);
+    for(const kind of KINDS)await durableDirectory(join(this.root,'journals',kind),this.root);
     const scopeSha = await this.put(this.scope, true);
     try {
       await link(this.objectPath(scopeSha), join(this.root, 'scope.json'));
@@ -98,6 +111,8 @@ export class CaseStore {
     const name = String(version).padStart(12, '0') + '.json';
     const bytes = await readFile(join(this.journalPath(kind, id), name), 'utf8');
     const entry = JSON.parse(bytes);
+    const objectBytes = await readFile(this.objectPath(digest(bytes)), 'utf8');
+    if (objectBytes !== bytes) throw new CaseError('journal_mismatch', 'Retained journal object changed', 500);
     if (entry.schema !== 'renewalguard-journal-v1' || entry.kind !== kind ||
         entry.id !== id || entry.version !== version || entry.scope_id !== this.scope.id)
       throw new CaseError('journal_mismatch', 'Retained journal identity changed', 500);
@@ -122,7 +137,7 @@ export class CaseStore {
       previous_sha:expectedSha, operation_id:operationId, at, value,
     };
     const sha = await this.put(entry), path = this.journalPath(kind, id);
-    await mkdir(path, {recursive:true, mode:0o700});
+    if (!current) await durableDirectory(path, this.root);
     try {
       await link(this.objectPath(sha), join(path, String(version).padStart(12, '0') + '.json'));
     } catch (error) {

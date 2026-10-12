@@ -185,6 +185,37 @@ object. review adds the current plan_id, reviewer and summary. resolve adds the
 current review_id. reopen adds a reason. intake uses the original portfolio_sha
 and distinct subscription_ids. restore uses the complete handover envelope.
 
+## Retained complete operating journey
+
+The reusable operator caller drives the same installed HTTP application:
+
+~~~sh
+node examples/merchant-journey.mjs --base http://127.0.0.1:8787 --mode demo --operation renewalguard-merchant-case-e9b2-20261012 --output /your/retained/renewalguard-operation
+~~~
+
+For the configured sandbox receiving operation, choose the original test
+subscription from the actual merchant list and add:
+
+~~~sh
+--mode sandbox --subscription ORIGINAL_TEST_SUBSCRIPTION_ID
+~~~
+
+The caller retains every complete original command input and receipt before
+advancing. It operates portfolio read, original subscription intake, assigned
+work, support-note preparation, saved resolution review, resolution, complete
+version-bound handover export and reopening. Re-running it with the same
+operation and output directory resumes original requests. Its result records
+the actual note kind and source scope.
+
+To inspect the sandbox portfolio first, save an empty object to an input JSON
+file and invoke the CLI command action refresh_portfolio with a stable request
+ID. The workspace response contains the original IDs and coverage. Keep all
+credentials in the existing server environment.
+
+The export API also accepts an optional revision parameter. This retrieves the
+exact complete handover for that saved case revision even after later work or
+reopening. The CLI exposes the same option as --revision NUMBER.
+
 ## PayPal portfolio coverage and source fields
 
 The original list adapter reads consecutive pages of at most 20 records, up to

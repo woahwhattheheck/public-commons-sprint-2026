@@ -11,13 +11,13 @@ const HELP = 'RenewalGuard CLI\n\n' +
   'node src/cli.mjs resume --request-id REQUEST_ID\n' +
   'node src/cli.mjs document --case CASE_ID --sha SHA256 --output original.json\n' +
   'node src/cli.mjs export --case CASE_ID --output handover.json\n\n' +
-  'Options: --mode demo|sandbox, --base http://127.0.0.1:8787, --output FILE.\n' +
+  'Options: --mode demo|sandbox, --base http://127.0.0.1:8787, --output FILE, --revision NUMBER (export).\n' +
   'Commands retain the supplied request ID before doing provider or case work.\n';
 function argumentsFor(args) {
   const operation=args.shift();
   if(!operation || ['help','--help','-h'].includes(operation))return {help:true};
   const result={operation,mode:'demo',base:'http://127.0.0.1:8787'};
-  const names=new Set(['mode','base','output','case','sha','request-id','action','input']);
+  const names=new Set(['mode','base','output','case','sha','request-id','action','input','revision']);
   for(let i=0;i<args.length;i+=2){
     const key=args[i]?.replace(/^--/,'');
     if(!args[i]?.startsWith('--')||!names.has(key)||!args[i+1]||args[i+1].startsWith('--')||Object.hasOwn(result,key)&&!['base','mode'].includes(key))
@@ -51,7 +51,7 @@ async function main() {
   const query=new URLSearchParams({mode:options.mode});let path,body;
   if(options.operation==='workspace')path='/api/workspace';
   else if(options.operation==='case'||options.operation==='export'){
-    path='/api/'+options.operation;query.set('case_id',required(options,'case'));
+    path='/api/'+options.operation;query.set('case_id',required(options,'case'));if(options.operation==='export'&&options.revision)query.set('revision',options.revision);
   }else if(options.operation==='document'){
     path='/api/document';query.set('case_id',required(options,'case'));query.set('sha',required(options,'sha'));
   }else if(options.operation==='operation'){
