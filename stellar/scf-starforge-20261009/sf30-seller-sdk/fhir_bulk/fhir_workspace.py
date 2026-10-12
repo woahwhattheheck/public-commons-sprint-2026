@@ -138,7 +138,7 @@ class Workspace(original_workspace.Workspace):
                 result["operations"].append(item)
             result["compositions"] = self._list("compositions")
             result["receives"] = [{key: row.get(key) for key in
-                ["id", "state", "archiveSha256", "createdAt", "updatedAt"]} for row in self._list("receives")]
+                ["id", "state", "archiveSha256", "workspaceId", "createdAt", "updatedAt"]} for row in self._list("receives")]
             return result
 
     def save_connection(self, body):
@@ -197,6 +197,9 @@ class Workspace(original_workspace.Workspace):
 
     def adopt_status(self, operation_id, body):
         return self.acquisition.adopt_status(operation_id, body)
+
+    def receive_capture(self, operation_id, body):
+        return self.acquisition.receive_capture(operation_id, body)
 
     def cancel(self, operation_id, request_id):
         return self.acquisition.cancel(operation_id, request_id)
