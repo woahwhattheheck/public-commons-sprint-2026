@@ -1,4 +1,5 @@
 import {resolve} from 'node:path';
+import {publicationSnapshot,requirePublicationSnapshot} from './publication-snapshot.mjs';
 import {createHash} from 'node:crypto';
 import {META, REVIEW, RECEIVING, need, normalizeProfile, canonical, digest, sha256, id, hash, integer,
   qi, physicalName, fieldParameter, parseExactJSON} from './contract.mjs';
@@ -353,16 +354,18 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     });
   }
 
-  async function exportReceiving({operationId, directory: destination}) {
+  async function exportReceiving({operationId, directory: destination, expectedPublication}) {
     id(operationId);
     need(typeof destination === 'string' && destination.length, 'POSTGIS_RECEIVING_DESTINATION_REQUIRED');
     const request = {schema: 'starforge.postgis-receiving-request.v1', operationId,
-      projectId: profile.projectId, directory: resolve(destination)};
+      projectId: profile.projectId, directory: resolve(destination),
+      ...(expectedPublication===undefined?{}:{expectedPublication:publicationSnapshot(expectedPublication)})};
     async function verifiedResult(result) {
       const artifact = await inspectCommittedOutput({kind: 'receiving', projectId: profile.projectId,
         operationId, requestSha256: result.requestSha256, directory: request.directory,
         manifestFile: result.manifestFile}, openReceiving);
       requireAvailableOutput(artifact, operationId);
+      requirePublicationSnapshot(result.manifest,request.expectedPublication);
       return {...result, artifact};
     }
     const committed = await db.transaction(async client => {
@@ -378,7 +381,8 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       existing.manifest.projectId === profile.projectId && existing.manifest.requestSha256 === digest(request),
       'POSTGIS_EXISTING_RECEIVING_OPERATION_CHANGED');
     const result = await db.mutate(operationId, 'export-receiving', request, async (client, current, requestSha256) => {
-      if (existing) return {...existing, recoveredCompletedFile: true};
+      if (existing) {requirePublicationSnapshot(existing.manifest,request.expectedPublication);
+        return {...existing, recoveredCompletedFile: true};}
       let observation;
       try { observation = await readJSON(member(output, 'database-observation.json')); }
       catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -394,6 +398,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
             schema: db.environment.schema, postgresVersion: db.environment.postgresVersion,
             postgisVersion: db.environment.postgisVersion, metadataRelation: META.projects},
           source: selected.source, profile: selected.profile, layers: await db.describeLayers(client, selected)};
+        requirePublicationSnapshot(observation,request.expectedPublication);
         // Freeze the actual complete native observation before any source copies.
         // A retry completes this original historical receipt even if later edits
         // or a successor exist. Each consumer independently checks currentness.
@@ -402,6 +407,7 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
       need(observation.schema === 'starforge.postgis-receiving-observation.v1' &&
         observation.projectId === profile.projectId && observation.operationId === operationId &&
         observation.requestSha256 === requestSha256, 'POSTGIS_ORIGINAL_NATIVE_OBSERVATION_CHANGED');
+      requirePublicationSnapshot(observation,request.expectedPublication);
       const retained = await db.edition(client, observation.editionId);
       need(canonical(retained.source) === canonical(observation.source) &&
         canonical(retained.profile) === canonical(observation.profile),
@@ -430,8 +436,8 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     return verifiedResult(result);
   }
 
-  async function exportBackup({operationId, directory: destination}) {
-    return exportDatabaseBackup({db, profile, root, sourceOptions, operationId, directory: destination});
+  async function exportBackup({operationId, directory: destination, expectedPublication}) {
+    return exportDatabaseBackup({db, profile, root, sourceOptions, operationId, directory: destination, expectedPublication});
   }
   async function restoreBackup({operationId, directory: source, expectedManifestSha256}) {
     return restoreDatabaseBackup({db, profile, root, sourceOptions, operationId,

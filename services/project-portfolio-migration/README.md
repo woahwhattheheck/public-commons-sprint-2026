@@ -115,6 +115,35 @@ Each capture contains source row keys and original column keys. A mapping
 selects those keys, the exact native family, and a native `key`, `uid` or `guid`
 identity. No source number, locale or duration unit is inferred from a label.
 
+
+### Select a particular companion capture
+
+One original file can supply several captured views: for example, different
+roles or JSON pointers within an enterprise export. Read the selected edition's
+`companion_captures` array to select its exact view. Each descriptor includes
+`capture_id`, its original ordinal, source ID, label, role, format, full input
+profile, profile hash, original column keys and row count.
+
+A companion mapping may include the returned `capture_id` alongside its
+`source_id`:
+
+~~~json
+{
+  "source_id": "ORIGINAL_SOURCE_SHA256",
+  "capture_id": "CAPTURE_ID_FROM_THIS_EDITION",
+  "family": "tasks",
+  "identity": {"kind": "uid", "column": "column:0"},
+  "columns": [{"column": "column:1", "field": "TEXT1", "type": "string"}]
+}
+~~~
+
+A source ID alone continues to select a file with one capture. When several
+captures share its bytes, the mapping response supplies their descriptors for
+an explicit choice. Source-cell links retain the chosen capture ID, ordinal
+and profile hash. These selectors are derived beside the captured model;
+reading an older edition preserves its original model and content hash.
+
+
 ## What a captured edition contains
 
 | Content | Retained representation |
@@ -418,3 +447,12 @@ package metadata says LGPL-2.0-or-later. Both original declarations are
 preserved. MPXJ and JPype are installed as the named upstream distributions;
 the application owns its workspace/operator layer and calls the maintained
 native engine.
+
+
+## Portfolio archive and reporting
+
+The migration desk includes an Archive tab for retaining a reviewed cohort of complete project editions. Each business project has one selected edition and an explicit project key. The [archive operating guide](archive/README.md) covers cohort selection, native field columns, companion data, reporting measures, SQL, publishing and receiving into a fresh workspace.
+
+A publication includes the complete native source closure, relational SQLite database, all table CSVs, data dictionary, exact measure contributions and totals, Power Query, Azure SQL script, printable report and portable archive. Cost measures retain their native currency or an explicit project declaration. Work measures retain their original units and elapsed-time flag. Select project properties, leaf tasks or assignments as the measure grain so the report does not add summary and detail values together.
+
+The saved review identifies the complete projected rows before publication. A receiving desk restores the source editions and recomputes the same relational rows and measure totals before committing the received cohort. Query exports use the original completed database and preserve all returned rows. The [native archive receiving phase](archive/native/README.md) continues the existing equipped Portfolio operation through the actual browser, full delivery, fresh receiving and cold reopen.

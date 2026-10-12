@@ -265,10 +265,12 @@ export async function openZoteroWorkspace({directory,researchDirectory=null,doss
         const errors=[];
         const stopCaptures=capturer.close();
         const settled=await Promise.allSettled([...pending,stopCaptures]);errors.push(...settled.filter(r=>r.status==='rejected').map(r=>r.reason));
-        try{store.close();}catch(e){errors.push(e);}
-        // Borrowed original Dossier stores have no owned listener/process to stop.
+        // Preserve the original store and writer if admitted work did not finish cleanly.
         if(errors.length)throw new AggregateError(errors,'ZOTERO_WORKSPACE_CLOSE_FAILED');
-      })();return closePromise;
+        store.close();
+        // Borrowed original Dossier stores have no owned listener/process to stop.
+      })();
+      closePromise.catch(()=>{closePromise=null;});return closePromise;
     }
     return {directory,get identity(){return store.identity;},
       invoke:publicCall(invoke),snapshot:publicCall(snapshot),saveProfile:publicCall(saveProfile),

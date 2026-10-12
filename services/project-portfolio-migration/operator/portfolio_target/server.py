@@ -20,8 +20,10 @@ from .target import TargetError, canonical, digest, public_profile, utcnow
 from .workspace import TargetWorkspace
 
 ASSETS = Path(__file__).resolve().parent / "web"
+ARCHIVE_ASSETS = Path(__file__).resolve().parents[2] / "archive" / "web"
 MAX_JSON = 8 * 1024 * 1024
 MAX_SOURCE = 256 * 1024 * 1024
+MAX_ARCHIVE = 8 * 1024 ** 3
 
 
 class Desk:
@@ -174,14 +176,15 @@ class Desk:
                     if selected.fragment:
                         raise TargetError("HTTP_PATH", "Invalid local path.")
                     path = selected.path
-                    if path in ("/", "/assets/app.js", "/assets/style.css"):
+                    if path in ("/", "/assets/app.js", "/assets/style.css", "/assets/archive.js", "/assets/companions.js"):
                         if self.headers.get("Host") != desk.allowed_host:
                             raise TargetError("HTTP_HOST", "Open the exact local operator address.")
                         filename = {"/": "index.html", "/assets/app.js": "app.js",
-                                    "/assets/style.css": "style.css"}[path]
-                        raw = (ASSETS / filename).read_bytes()
+                                    "/assets/style.css": "style.css", "/assets/archive.js": "archive.js",
+                                    "/assets/companions.js": "companions.js"}[path]
+                        raw = ((ARCHIVE_ASSETS if filename in ("archive.js", "companions.js") else ASSETS) / filename).read_bytes()
                         media = {"index.html": "text/html", "app.js": "text/javascript",
-                                 "style.css": "text/css"}[filename] + "; charset=utf-8"
+                                 "style.css": "text/css", "archive.js": "text/javascript", "companions.js": "text/javascript"}[filename] + "; charset=utf-8"
                         self._headers(200, len(raw), media)
                         self.wfile.write(raw)
                         return
@@ -197,6 +200,44 @@ class Desk:
                     elif path.startswith("/api/source-reviews/"):
                         identity = checked_id(path.removeprefix("/api/source-reviews/"))
                         self._json(200, desk.workspace.portfolio.read_review(identity))
+                    elif path == "/api/cohorts":
+                        self._json(200, desk.workspace.archives.list(cursor=one("cursor"), limit=int(one("limit", "25"))))
+                    elif path.startswith("/api/cohorts/"):
+                        self._json(200, desk.workspace.archives.read(checked_id(path.removeprefix("/api/cohorts/"))))
+                    elif path == "/api/archive-fields":
+                        self._json(200, desk.workspace.archives.fields(one("editions").split(",")))
+                    elif path == "/api/archive-table":
+                        self._json(200, desk.workspace.archives.table(
+                            checked_id(one("cohort_id")), checked_id(one("publication_id")), one("table"),
+                            offset=int(one("offset", "0")), limit=int(one("limit", "50")),
+                            filter_column=one("filter_column") or None, filter_text=one("filter_text")))
+                    elif path == "/api/companion-sources":
+                        edition = desk.workspace.portfolio.read_edition(checked_id(one("edition_id")))
+                        captures = edition["model"].get("companions", [])
+                        self._json(200, {"edition_id": edition["id"], "items": edition.get("companion_captures", [
+                            {"ordinal": ordinal, **{key: capture.get(key) for key in
+                                ("source_id", "label", "role", "format", "profile", "columns", "row_count", "findings")}}
+                            for ordinal, capture in enumerate(captures)])})
+                    elif path == "/api/companion-capture":
+                        edition = desk.workspace.portfolio.read_edition(checked_id(one("edition_id")))
+                        captures = edition["model"].get("companions", [])
+                        ordinal, offset, limit = int(one("ordinal", "0")), int(one("offset", "0")), int(one("limit", "25"))
+                        if not 0 <= ordinal < len(captures) or offset < 0 or not 1 <= limit <= 250:
+                            raise TargetError("COMPANION_PAGE", "Choose one captured companion and its actual row page.")
+                        capture = captures[ordinal]
+                        selector = next((item for item in edition.get("companion_captures", []) if item["ordinal"] == ordinal), {})
+                        self._json(200, {"edition_id": edition["id"], "ordinal": ordinal,
+                            **{key: selector[key] for key in ("capture_id", "profile_sha256") if key in selector},
+                            **{key: value for key, value in capture.items() if key != "rows"},
+                            "rows": capture["rows"][offset:offset + limit], "offset": offset,
+                            "next_offset": offset + limit if offset + limit < len(capture["rows"]) else None})
+                    elif path == "/api/source-field-catalogue":
+                        edition = desk.workspace.portfolio.read_edition(checked_id(one("edition_id")))
+                        family = one("family", "tasks")
+                        if family not in ("project", "tasks", "resources", "assignments"):
+                            raise TargetError("SOURCE_FAMILY", "Select the original native field family.")
+                        self._json(200, {"edition_id": edition["id"], "family": family,
+                            "fields": edition["model"].get("field_catalogue", {}).get(family, {})})
                     elif path == "/api/editions":
                         self._json(200, desk.workspace.portfolio.list_editions(
                             cursor=one("cursor"), limit=int(one("limit", "25"))))
@@ -256,10 +297,20 @@ class Desk:
                         filename = one("filename", "portfolio-artifact.bin")
                         if not filename or len(filename) > 240 or any(c in filename for c in ("/", "\\", "\0", "\r", "\n")):
                             raise TargetError("DOWNLOAD_FILENAME", "Choose the saved artifact's base filename.")
-                        raw = desk.workspace.store.read_bytes(identity)
-                        self._headers(200, len(raw), "application/octet-stream",
-                            extra={"Content-Disposition": "attachment; filename*=UTF-8''" + quote(filename, safe="")})
-                        self.wfile.write(raw)
+                        from portfolio.storage import open_regular
+                        selected = desk.workspace.store.root / "objects" / identity
+                        with open_regular(selected) as original:
+                            hasher, count = hashlib.sha256(), 0
+                            for chunk in iter(lambda: original.read(1024 * 1024), b""):
+                                hasher.update(chunk)
+                                count += len(chunk)
+                            if hasher.hexdigest() != identity:
+                                raise TargetError("OBJECT_HASH", "The original complete artifact changed.")
+                            original.seek(0)
+                            self._headers(200, count, "application/octet-stream",
+                                extra={"Content-Disposition": "attachment; filename*=UTF-8''" + quote(filename, safe="")})
+                            for chunk in iter(lambda: original.read(1024 * 1024), b""):
+                                self.wfile.write(chunk)
                     else:
                         raise TargetError("HTTP_NOT_FOUND", "The selected local item does not exist.")
                 except Exception as exc:
@@ -270,13 +321,18 @@ class Desk:
                     self.connection.settimeout(120)
                     self._auth(mutate=True)
                     path = urlsplit(self.path).path
-                    if path == "/api/upload":
+                    if path in ("/api/upload", "/api/archive-upload"):
                         filename = unquote(self.headers.get("X-Source-Name", ""))
-                        result = desk.workspace.store.upload_stream(self.rfile, self._length(MAX_SOURCE), filename)
+                        result = desk.workspace.store.upload_stream(self.rfile, self._length(MAX_ARCHIVE if path == "/api/archive-upload" else MAX_SOURCE), filename)
                         self._json(201, result)
                         return
                     body = self._body()
-                    if path == "/api/actions":
+                    if path == "/api/archive-query":
+                        if set(body) - {"cohort_id", "publication_id", "sql", "parameters", "limit"}:
+                            raise TargetError("ARCHIVE_QUERY", "Use the selected publication and original read-only SQL.")
+                        self._json(200, desk.workspace.archives.query(body["cohort_id"], body["publication_id"],
+                            body["sql"], body.get("parameters"), limit=body.get("limit", 100)))
+                    elif path == "/api/actions":
                         if set(body) != {"request_id", "kind", "arguments"}:
                             raise TargetError("HTTP_ACTION", "Send the exact saved action ID, kind and arguments.")
                         self._json(202, desk.submit(body["request_id"], body["kind"], body["arguments"]))

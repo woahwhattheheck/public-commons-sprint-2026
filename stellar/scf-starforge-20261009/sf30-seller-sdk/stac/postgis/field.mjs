@@ -1,6 +1,7 @@
 // Accepted QField office evidence and reviewed publication, using the original PostGIS transaction.
 import {spawn} from 'node:child_process';
 import {createReadStream} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {createInterface} from 'node:readline';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -95,7 +96,6 @@ export async function* fieldChanges(source) {
       need(row.sequence>sequence&&!seen.has(row.changeId)&&
         digest(parseExactJSON(row.originalBody))===digest(row.change),'POSTGIS_FIELD_CHANGE_IDENTITY_INVALID');
       // Python derives this ID from the original review bytes and native sequence.
-      const {createHash}=await import('node:crypto');
       need(row.changeId===createHash('sha256').update(source.manifest.reviewSha256+':'+row.sequence).digest('hex'),
         'POSTGIS_FIELD_ORIGINAL_SEQUENCE_CHANGED');
       seen.add(row.changeId);sequence=row.sequence;count++;yield row;
@@ -165,9 +165,9 @@ export function createFieldWorkflow({db,profile,root,sourceOptions}) {
       const edition=await db.edition(client,current.activeEditionId), native=edition.layers.find(x=>x.id===layerId);
       await db.assertView(client,layer,native.liveTable);
       return asRole(client,role,async()=>{
-        const where=search?' WHERE sf_key ILIKE $1 OR sf_id::text=$1':'';
+        const where=search?" WHERE strpos(lower(sf_key),lower($1))>0 OR sf_id::text=$1 OR strpos(lower((to_jsonb(t)-'geom')::text),lower($1))>0":'';
         const args=search?[search]:[];
-        const total=(await client.query('SELECT count(*)::text AS total FROM '+db.q(layer.relation)+where,args)).rows[0].total;
+        const total=(await client.query('SELECT count(*)::text AS total FROM '+db.q(layer.relation)+' t'+where,args)).rows[0].total;
         const rows=(await client.query("SELECT sf_id::text,sf_key,(to_jsonb(t)-'geom')::text AS attributes_json,"+
           db.rowHashSQL('t')+' AS row_hash FROM '+db.q(layer.relation)+' t'+where+
           ' ORDER BY sf_key COLLATE "C" LIMIT $'+(args.length+1)+' OFFSET $'+(args.length+2),[...args,limit,offset])).rows;
@@ -248,7 +248,9 @@ export function createFieldWorkflow({db,profile,root,sourceOptions}) {
     for(const row of (await client.query("SELECT result_json::text FROM "+db.q(META.operations)+
       " WHERE project_id=$1 AND kind='promote'",[profile.projectId])).rows){
       const result=parseExactJSON(row.result_json);
-      if(result.fieldCorrection?.sourceManifestSha256===source.manifestFile.sha256)
+      if(result.fieldCorrection?.sourceWorkspaceId===source.manifest.workspaceId&&
+        result.fieldCorrection.fieldEditionSha256===source.manifest.fieldEditionSha256&&
+        result.fieldCorrection.acceptanceRequestId===source.manifest.acceptanceRequestId)
         for(const item of result.fieldCorrection.changes||[])if(item.disposition==='apply')applied.add(item.changeId);
     }
     for await(const original of fieldChanges(source)){
@@ -326,7 +328,7 @@ export function createFieldWorkflow({db,profile,root,sourceOptions}) {
     need(!chosen.size,'POSTGIS_FIELD_UNKNOWN_CHANGE_BINDING');
     const body={schema:'starforge.postgis-field-review.v1',projectId:profile.projectId,profileSha256,
       sourceOperationId,sourceRequestSha256:operation.requestSha256,sourceManifestSha256:source.manifestFile.sha256,
-      fieldEditionSha256:source.manifest.fieldEditionSha256,acceptanceRequestId:source.manifest.acceptanceRequestId,
+      sourceWorkspaceId:source.manifest.workspaceId,fieldEditionSha256:source.manifest.fieldEditionSha256,acceptanceRequestId:source.manifest.acceptanceRequestId,
       expectedRevision,activeEditionId:current.activeEditionId,sourceManifest:edition.source.manifest,
       actor,note:reason,records,crsObservations:[...crs.values()]};
     return {...body,reviewSha256:digest(body),counts:{total:records.length,
@@ -411,7 +413,7 @@ export function createFieldWorkflow({db,profile,root,sourceOptions}) {
     }
     return {reviewOperationId:selected.operation.operationId,reviewRequestSha256:selected.operation.requestSha256,
       sourceOperationId:selected.review.sourceOperationId,sourceManifestSha256:selected.review.sourceManifestSha256,
-      fieldEditionSha256:selected.review.fieldEditionSha256,acceptanceRequestId:selected.review.acceptanceRequestId,
+      sourceWorkspaceId:selected.review.sourceWorkspaceId,fieldEditionSha256:selected.review.fieldEditionSha256,acceptanceRequestId:selected.review.acceptanceRequestId,
       actor:selected.review.actor,note:selected.review.note,changes};
   }
   async function receivingEvidence(client,selected,output){

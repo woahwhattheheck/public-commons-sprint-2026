@@ -11,6 +11,8 @@ const help = [
   '',
   'Read the complete reviewed application, product and financing companion,',
   'six-package budget, source index and retained economic briefing.',
+  'Prepare the same nine answers and retain complete working drafts at',
+  '/grant-submission.html on this same source-selected reader.',
   'The source-selected grant-reviewer package contains these original files.',
   'The published film and editable presentation open at their original release URLs.',
   '',
@@ -52,6 +54,10 @@ export async function main(argv = process.argv.slice(2)) {
     url: listener.url, host: '127.0.0.1', port: listener.port,
     source: 'stellar-forge/developer-site/dist/grant.html',
     assetManifest: 'stellar-forge/developer-site/browser-assets.json',
+    submissionWorkspace: {
+      url: new URL('/grant-submission.html', listener.url).href,
+      draftSchema: 'stellar-forge.grant-submission-draft.v1',
+    },
     downloads: [
       '/grant-data/application.md', '/grant-data/product-and-finance.md',
       '/grant-data/budget.csv', '/grant-data/source-index.json',

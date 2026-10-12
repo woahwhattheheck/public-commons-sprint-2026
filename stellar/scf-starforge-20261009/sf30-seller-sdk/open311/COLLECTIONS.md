@@ -1,12 +1,12 @@
 # Source collections and municipal operations
 
-A source collection runs one saved, explicit creation-time selection through all of its original Open311 windows. It keeps each returned body, subdivides capped windows, consolidates repeated request identities, preserves changed original versions, and carries the full operation into another private workspace.
+A source collection runs one saved, explicit selection by creation time or a provider's declared update time. It traverses date windows or the provider's numbered pages, keeps every returned body, consolidates repeated request identities, preserves changed source versions, and carries the full operation into another private workspace.
 
 Use the same browser desk, CLI, merchant provider and SQLite workspace as single-capture operations. An existing single-capture desk reopens directly. A saved collection binds its original endpoint and jurisdiction before the first network request.
 
 ## Operate a complete collection
 
-In the browser, open **Source collections**, select a saved civic connection, and enter a name and explicit start and end. Choose the provider's documented filters and the boundary policy, save the plan, inspect the generated windows, and run it.
+In the browser, open **Source collections**, select a saved civic connection, and enter a name and explicit start and end. Choose **Date basis** and **Source traversal**, then the provider's filters and interval policy. Save the plan, inspect its original members, and run it. An updated-time collection can keep an additional fixed creation-date filter; the form shows both ranges before submission.
 
 The queue shows consolidated requests from every retained window, including the capped parents. Selecting a case exposes its original capture, distinct source versions, every occurrence and current internal review. A review binds to the exact source hash and capture displayed when it was prepared. The source status remains the provider's original value.
 
@@ -14,7 +14,7 @@ Use the member window view to inspect cap hits, refined children, source errors,
 
 ## Provider semantics and chosen policy
 
-The [GeoReport v2 specification](https://wiki.open311.org/GeoReport_v2/#get-service-requests) defines request selection by requested_datetime, a maximum span of 90 days per query and a default response ceiling of 1,000. A service_request_id selection overrides the other query parameters. Collection planning therefore requires explicit start_date and end_date and rejects request IDs and paging selectors.
+The [GeoReport v2 specification](https://wiki.open311.org/GeoReport_v2/#get-service-requests) defines request selection by requested_datetime, a maximum span of 90 days per query and a default response ceiling of 1,000. A service_request_id selection overrides the other query parameters. The default created-time plan requires explicit start_date and end_date. Updated-time plans require the provider's declared updated_after and updated_before fields. A collection rejects request-ID selectors; the collector owns page numbering from the first page.
 
 Provider implementations differ:
 
@@ -41,6 +41,33 @@ For a documented inclusive-start/exclusive-end source, choose boundaryOverlapMs:
 
 Every child is smaller than its parent and remains inside the provider's maximum query span. The original outside endpoints retain their exact input strings; generated boundaries use UTC ISO timestamps for their exact instants. The planner chooses representable interior boundaries and retains the chosen policy with the collection.
 
+## Created or updated periods and numbered source pages
+
+A saved policy may select `timeBasis: "created"` or `"updated"`, and `strategy: "windows"` or `"pages"`. Missing values mean created time and window refinement. The normalizer leaves those default fields absent from legacy plans and summaries, so receiving and reopening an unchanged earlier workspace preserves its original identity.
+
+Created-time traversal uses `start_date` and `end_date`. Updated-time traversal uses `updated_after` and `updated_before`; an additional creation range remains a fixed filter on every source request. In the browser, **Additional source-date filter** shows that second range. Both timestamps must be present together. Copying a saved plan restores its exact basis, strategy, filters, response-size field and timestamp precision.
+
+The [BOS:311 API addendum](https://311.boston.gov/open311/docs) declares numbered `page` and `per_page` requests, with at most 300 rows per page. Its creation and update date ranges are each limited to 90 days. The default rate is ten calls per minute; its profile spaces requests by 6000 milliseconds and follows source retry instructions. A configured key can use the Bearer header. Boston's optional public notes carry their own source timestamps and descriptions.
+
+Use the complete connection and query selections in [BOSTON.md](./BOSTON.md). In a page plan, the collector creates an original member with `page: 1` for each initial interval. A full response becomes `PAGED`, retains its original capture, and names one child with the same date bounds and next page number. A short response becomes `CAPTURED` and finishes that sequence. A repeated identical full response is retained as `LIMITED` with `REPEATED_SOURCE_PAGE`; its original body, query, attempt and preceding pages remain inspectable.
+
+The source-member table shows the page number, exact date bounds, returned count and cap, attempts, continuation, and source problem. The collection's `counts.pagedWindows` records full pages with a saved successor and is present only for page traversal. The consolidated worklist still groups exact request identities while keeping distinct changed source editions. Page order is acquisition order; it does not replace each record's original requested and updated timestamps.
+
+For an explicit updated-time page plan, its policy has this form:
+
+```json
+{
+  "timeBasis": "updated",
+  "strategy": "pages",
+  "maxWindowDays": 90,
+  "queryQuantumMs": 1000,
+  "minimumWindowMs": 1000,
+  "boundaryOverlapMs": 1000
+}
+```
+
+The accompanying query supplies the fixed `updated_after` and `updated_before` values and the provider-native response size. **Save and run** retains that complete original selection before the first source call. Pause, exact-command recovery, source-version-linked review, collection export and full workspace receiving use the same operations as a window collection.
+
 ## Cap refinement and complete originals
 
 A response with at least the effective declared response ceiling is potentially truncated. The collection retains that complete original response first, then subdivides its interval. Its parent remains visible in both the member inventory and consolidated observation history.
@@ -49,7 +76,7 @@ For an interval [a, b], the planner selects a representable m and requests left 
 
 The runner does not advance from the last returned record. Multiple requests can share its timestamp, and a cap can hide other records with that same time. If a capped interval cannot split further at the selected precision and minimum, its state becomes LIMITED with problem RESPONSE_CAP_AT_SELECTED_PRECISION. The complete original body and exact unresolved interval remain available.
 
-A provider-specific response-limit parameter can be declared in connection.responseLimitParameter, for example max_requests. The same parameter must appear in queryExtensions. The effective limit is the smaller of the configured responseLimit and any explicitly selected, positive provider limit. Request collections reject page and page_size; automatic pagination is not inferred from an endpoint name.
+A provider-specific response-limit parameter can be declared in connection.responseLimitParameter, for example max_requests. The same parameter must appear in queryExtensions. The effective limit is the smaller of the configured responseLimit and any explicitly selected, positive provider limit. Window traversal refines a response at that limit. Page traversal requires an explicitly paginating connection and starts at page 1; every full page is retained with its successor. The original response-size parameter stays part of each query.
 
 A below-cap leaf completes the traversal of that query. Source publication rules, filtering and capture time still determine the population observed. The summary records out-of-window occurrences and missing or invalid requested timestamps. Those original rows remain in review. The collection comparison permits absence differences only for equal fixed scopes with resolved caps and no such date anomalies.
 

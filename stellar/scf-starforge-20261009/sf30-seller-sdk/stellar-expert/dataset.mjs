@@ -56,8 +56,9 @@ export async function queryNativeDataset(store,dataset,query) {
   return result.body;
 }
 export function nativePublishers(store) {
-  const opened=new Map();
+  const opened=new Map();let closing=false,closePromise=null;
   async function get(dataset){
+    if(closing)throw fault('STELLAR_PUBLISHER_CLOSING','The original publisher owner is closing its retained children.',503);
     const relative=dataset.relativePublisherDirectory??dataset.relativeDirectory+'/publisher';
     if(!/^datasets\/dataset-[a-f0-9]{24}\/publisher$/.test(relative))
       throw fault('STELLAR_PUBLISHER_IDENTITY','The original publisher path changed.',409);
@@ -76,8 +77,21 @@ export function nativePublishers(store) {
     return get(dataset);
   }
   return {get,forRelease,state:async release=>(await forRelease(release)).state(),
-    async close(){const results=await Promise.allSettled([...opened.values()].map(async pending=>(await pending).close()));
-      opened.clear();const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;}};
+    close(){
+      if(!closePromise){
+        closing=true;
+        const selected=[...opened.entries()];
+        closePromise=(async()=>{
+          const results=await Promise.allSettled(selected.map(async([key,pending])=>{
+            await (await pending).close();
+            if(opened.get(key)===pending)opened.delete(key);
+          }));
+          const failed=results.find(result=>result.status==='rejected');
+          if(failed)throw failed.reason;
+        })().catch(error=>{closePromise=null;throw error;});
+      }
+      return closePromise;
+    }};
 }
 export async function prepareNativeRelease(store,{dataset,origin,path,payment,id,runtime={port:0},publishers}) {
   const {loadDatasetConfig}=await import('../dataset-handler.mjs');
