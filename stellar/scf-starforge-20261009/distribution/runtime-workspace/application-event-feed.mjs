@@ -2,12 +2,8 @@
 import { constants } from 'node:fs';
 import { access, lstat, realpath } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readBundle, bundlePath } from '../../../mercury-event-operations/starforge-feed/plan.mjs';
-import { mercuryConfiguration } from '../../../mercury-event-operations/starforge-feed/native.mjs';
-import { DELIVERY_PATH } from '../../../mercury-event-operations/starforge-feed/bridge.mjs';
 import { absolute, canonical, digest, json, need, plain, privateDirectory, readJSON,
   recordId, regular } from './storage.mjs';
 
@@ -119,7 +115,9 @@ async function sqliteInput(value) {
 }
 
 /** Read selected original configuration in one readonly snapshot, excluding live event state. */
-function feedConfiguration(bundle) {
+async function feedConfiguration(bundle) {
+  const { DatabaseSync } = await import('node:sqlite');
+  const { bundlePath } = await import('../../../mercury-event-operations/starforge-feed/plan.mjs');
   const database = bundlePath(bundle.directory, bundle.config.stateDirectory) + '/events.sqlite';
   const db = new DatabaseSync(database, { readOnly: true });
   try {
@@ -167,7 +165,8 @@ function feedConfiguration(bundle) {
 }
 
 /** Read the original immutable subscription definition without changing its WAL or cursor. */
-function subscriptionDefinition(directory) {
+async function subscriptionDefinition(directory) {
+  const { DatabaseSync } = await import('node:sqlite');
   const db = new DatabaseSync(join(directory, 'subscription.sqlite'), { readOnly: true });
   try {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(row => row.name);
@@ -197,7 +196,7 @@ export async function prepareEventFeedApplication(kind, settings, {
   if (kind === BUYER) {
     const database = join(directory, 'subscription.sqlite');
     inputs.push(await sqliteInput(database));
-    const { definition, sha256 } = subscriptionDefinition(directory);
+    const { definition, sha256 } = await subscriptionDefinition(directory);
     inputs.push(await inputPath(definition.runtimeDirectory, 'directory'));
     inputs.push(await inputPath(definition.buyerStateDirectory, 'directory', true, true));
     return {
@@ -209,6 +208,8 @@ export async function prepareEventFeedApplication(kind, settings, {
         buyerStateDirectory: definition.buyerStateDirectory, port: settings.port ?? 0 },
     };
   }
+  const { readBundle, bundlePath } = await import('../../../mercury-event-operations/starforge-feed/plan.mjs');
+  const { mercuryConfiguration } = await import('../../../mercury-event-operations/starforge-feed/native.mjs');
   const bundle = await readBundle(directory);
   const mercury = await mercuryConfiguration(bundle);
   const feed = bundlePath(directory, bundle.config.stateDirectory);
@@ -219,7 +220,7 @@ export async function prepareEventFeedApplication(kind, settings, {
   inputs.push(await inputPath(environment, 'file'));
   inputs.push(await inputPath(feed, 'directory', false, true));
   inputs.push(await sqliteInput(join(feed, 'events.sqlite')));
-  const configuration = feedConfiguration(bundle);
+  const configuration = await feedConfiguration(bundle);
   const python = await pythonSelection(settings, context, selectedExecutable);
   inputs.push(...python.inputs);
   const selectedFacilitator = facilitator(settings.facilitator, settings.allowLocalFacilitator);
@@ -297,13 +298,15 @@ export async function verifyEventFeedLaunch(request, operationDirectory) {
   for (const item of selected.reviewed.command.inputs) await recheckInput(item);
   await privateDirectory(selected.identity.directory);
   if (selected.identity.kind === MERCURY) {
+    const { readBundle } = await import('../../../mercury-event-operations/starforge-feed/plan.mjs');
+    const { mercuryConfiguration } = await import('../../../mercury-event-operations/starforge-feed/native.mjs');
     const current = await readBundle(selected.identity.directory);
     const mercury = await mercuryConfiguration(current);
     need(current.descriptorSha256 === selected.identity.bridgeSha256 &&
       mercury.path === selected.identity.mercuryConfig &&
       digest(await regular(mercury.path, 262144)) === selected.identity.mercuryConfigSha256,
     'EVENT_APPLICATION_MERCURY_SOURCE_CHANGED');
-    need(same(feedConfiguration(current), selected.identity.configuration),
+    need(same(await feedConfiguration(current), selected.identity.configuration),
       'EVENT_APPLICATION_FEED_CONFIGURATION_CHANGED');
     await privateFile(selected.identity.environmentFile);
     const python = selected.identity.python;
@@ -320,7 +323,7 @@ export async function verifyEventFeedLaunch(request, operationDirectory) {
         observed.installation.lockSha256 === previous.lockSha256, 'EVENT_APPLICATION_PYTHON_CHANGED');
     }
   } else {
-    const current = subscriptionDefinition(selected.identity.directory);
+    const current = await subscriptionDefinition(selected.identity.directory);
     need(current.sha256 === selected.identity.definitionSha256 &&
       current.definition.subscriptionKey === selected.identity.subscriptionKey,
     'EVENT_APPLICATION_SUBSCRIPTION_DEFINITION_CHANGED');
@@ -357,6 +360,7 @@ export async function eventFeedStartup(request, operationDirectory, value) {
   }
   if (value.storeId !== identity.storeId || !Array.isArray(value.feedIds) || !same(value.feedIds, identity.feedIds) ||
       value.mercury?.managed !== true) return null;
+  const { DELIVERY_PATH } = await import('../../../mercury-event-operations/starforge-feed/bridge.mjs');
   const url = loopback(value.feedWorkspace, identity.ports.workspace, 'feed');
   const mercury = loopback(value.mercury.url, identity.ports.mercury, 'origin');
   let bridge;

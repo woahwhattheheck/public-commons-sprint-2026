@@ -234,3 +234,7 @@ The maintained merchant MCP attaches using a host-configured private console URL
 The launcher selects Python using SF30_NDJSON_PYTHON when supplied, otherwise the original Python discovery. Python 3.11+ and Node 20+ are required. It passes the selected Node executable to the unchanged original native query pipe.
 
 NDJSON parsing has no new package dependencies. It uses Python's standard JSON, decimal, CSV and SQLite facilities through the existing workspace. Merchant generation and launch require the original seller dependency closure delivered by the maintained distribution. The source adapter never fetches external datasets or decides which fields should be published; the selected local export and explicit mapping define the dataset.
+
+## Managed releases and customer receiving
+
+The original retained merchant can now prepare an SF82 dataset release with the complete source, mapping, lineage and matching versioned customer SDK. The original version controller owns initialization, later edition publication, historical activation and restart recovery. Customers receive their original SF88 acquisition and restore the same reviewed source edition into the original NDJSON workspace, with native queries, keyed comparison and original project export. See [release and receiving guide](consumer/README.md) for the complete workflow, APIs and commands.

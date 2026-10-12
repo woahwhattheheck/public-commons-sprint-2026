@@ -1,7 +1,8 @@
 // MIT. Original SF82 dataset releases and the running SF30 version controller.
 import { join, resolve } from 'node:path';
+import { lstat } from 'node:fs/promises';
 import { inspectRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
-import { inspectDatasetRelease, datasetContractSha256 } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-dataset.mjs';
+import { datasetContractSha256 } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-dataset.mjs';
 import { openDatasetVersions } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/versions.mjs';
 import { datasetControl } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/service.mjs';
 
@@ -61,18 +62,17 @@ async function selectedRelease(root, args) {
   if (args.expectedDigest !== undefined && release.digest !== args.expectedDigest)
     throw fail('RELEASE_CONFLICT', 'The retained release differs from its inspected digest.');
   const directory = join(root, 'releases', args.releaseId);
-  const prepared = await inspectDatasetRelease(directory);
-  if (prepared.dataset.executionSha256 !== release.dataset.executionSha256)
-    throw fail('DATASET_RELEASE_CHANGED', 'The retained dataset no longer matches its original release.');
-  return { release, prepared, configPath: join(directory, 'dataset', 'dataset.json'),
-    directory: prepared.dataset.datasetDirectory };
+  // inspectRelease already verifies the complete source and dataset against the
+  // retained release digest. Reuse that result instead of parsing the CSV twice.
+  return { release, dataset: release.dataset, configPath: join(directory, 'dataset', 'dataset.json'),
+    directory: release.dataset.datasetDirectory };
 }
 function view(selected, values) {
   return { releaseId: selected.release.id, releaseDigest: selected.release.digest,
-    dataset: datasetReleaseView(selected.prepared.dataset), ...values };
+    dataset: datasetReleaseView(selected.dataset), ...values };
 }
 function sameContract(selected, description) {
-  if (datasetContractSha256(description) !== selected.prepared.dataset.contractSha256)
+  if (datasetContractSha256(description) !== selected.dataset.contractSha256)
     throw fail('DATASET_CONTRACT_CHANGED', 'The target has a different original query contract. Select the matching dataset release and version store.');
 }
 async function running(selected) {
@@ -90,8 +90,12 @@ export async function merchantDatasetOperation(root, name, args = {}) {
       const live = await running(selected);
       return view(selected, { state: 'RUNNING', versions: live.versions, resources: live.resources });
     } catch (error) { if (!unavailable(error)) throw error; }
+    const existing = await lstat(join(selected.directory, 'state.json')).then(() => true, error => {
+      if (error.code === 'ENOENT') return false;
+      throw error;
+    });
     const versions = await openDatasetVersions({ directory: selected.directory,
-      initialConfig: selected.configPath, collectOnOpen: false });
+      ...(existing ? {} : { initialConfig: selected.configPath }), collectOnOpen: false });
     try {
       sameContract(selected, versions.describe());
       return view(selected, { state: 'READY', versions: versions.status() });
@@ -112,7 +116,7 @@ export async function merchantDatasetOperation(root, name, args = {}) {
   const guard = { expectedSnapshot: args.expectedSnapshot, expectedRevision: args.expectedRevision };
   if (name === 'merchant_dataset_publish') {
     const versions = await datasetControl(selected.directory, 'refresh', { configPath: selected.configPath, ...guard });
-    if (versions.current !== selected.prepared.dataset.baselineSnapshot)
+    if (versions.current !== selected.dataset.baselineSnapshot)
       throw fail('DATASET_PUBLICATION_UNCERTAIN', 'Read the original dataset status and retained release before another publication.');
     return view(selected, { state: 'PUBLISHED', versions });
   }

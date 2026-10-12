@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Result delivery · Starforge</title>
+  <link rel="stylesheet" href="/job-result-delivery.css">
+  <script type="module" src="/job-result-delivery.mjs"></script>
+</head>
+<body>
+  <header class="page-header">
+    <div><p class="eyebrow">STARFORGE / MERCHANT OPERATIONS</p><h1>Result delivery</h1>
+      <p class="subheading">Completed paid-job results, destination receipts and retry control.</p></div>
+    <nav aria-label="Workspace navigation"><a id="jobs-link" href="/">Paid jobs</a><button id="refresh" type="button">Refresh</button><button id="export" type="button">Export ledger</button></nav>
+  </header>
+  <main>
+    <p id="message" class="notice" role="status" aria-live="polite">Loading the private delivery workspace…</p>
+    <section class="panel" aria-labelledby="dispatcher-title">
+      <div class="section-head">
+        <div><h2 id="dispatcher-title">Dispatcher</h2><p id="dispatcher-state">Connecting…</p></div>
+        <div class="controls"><button type="button" data-command="scan">Collect completed</button><button type="button" data-command="drain">Send due</button><button type="button" data-command="start">Start automatic</button><button type="button" data-command="stop">Stop</button></div>
+      </div>
+      <dl class="metrics">
+        <div><dt>Queued</dt><dd id="metric-queued">—</dd></div>
+        <div><dt>Sending</dt><dd id="metric-sending">—</dd></div>
+        <div><dt>Retry scheduled</dt><dd id="metric-retry">—</dd></div>
+        <div><dt>Delivered</dt><dd id="metric-delivered">—</dd></div>
+        <div><dt>Exhausted</dt><dd id="metric-exhausted">—</dd></div>
+        <div><dt>Paused by configuration</dt><dd id="metric-paused">—</dd></div>
+      </dl>
+      <p id="last-run" class="footnote">No dispatch run in this process.</p>
+    </section>
+    <section class="panel" aria-labelledby="destinations-title">
+      <div class="section-head"><div><h2 id="destinations-title">Destinations</h2><p>Declared HTTPS recipients and their environment configuration.</p></div></div>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Destination</th><th scope="col">Endpoint</th><th scope="col">Functions</th><th scope="col">Readiness</th></tr></thead><tbody id="destinations"></tbody></table></div>
+    </section>
+    <section class="panel" aria-labelledby="deliveries-title">
+      <div class="section-head"><div><h2 id="deliveries-title">Retained deliveries</h2><p id="delivery-count">Loading…</p></div>
+        <label class="filter">Filter deliveries<input id="filter" type="search" placeholder="Job, function, destination or state" autocomplete="off"></label></div>
+      <div class="table-wrap"><table class="delivery-table"><thead><tr><th scope="col">Job / delivery</th><th scope="col">Destination</th><th scope="col">State</th><th scope="col">Result</th><th scope="col">Attempts</th><th scope="col">Next attempt</th></tr></thead><tbody id="deliveries"></tbody></table></div>
+      <div class="pagination"><p id="page-label"></p><div><button id="previous" type="button">Previous</button><button id="next" type="button">Next</button></div></div>
+    </section>
+    <section id="detail" class="panel" aria-labelledby="detail-title" hidden>
+      <div class="section-head"><div><h2 id="detail-title">Delivery detail</h2><p id="detail-id" class="mono wrap"></p></div><button id="close-detail" type="button">Close detail</button></div>
+      <dl id="detail-facts" class="facts"></dl>
+      <div id="requeue-panel" class="requeue" hidden>
+        <h3>Retry this delivery</h3><p>Use the retained result and delivery identity with a new attempt budget.</p>
+        <form id="requeue-form"><label for="reason">Operator reason</label><div class="reason-row"><input id="reason" name="reason" required maxlength="500" autocomplete="off" placeholder="For example: destination service is available again"><button id="requeue" type="submit">Requeue</button></div></form>
+      </div>
+      <h3>Recent attempts</h3>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Attempt</th><th scope="col">Started</th><th scope="col">Finished</th><th scope="col">Outcome</th><th scope="col">HTTP</th><th scope="col">Code</th></tr></thead><tbody id="attempts"></tbody></table></div>
+      <details><summary>Signed manifest and receiver acknowledgment</summary><pre id="manifest"></pre></details>
+    </section>
+  </main>
+  <footer><p>Private merchant workspace · Result bytes remain attached to the original completed job.</p><p id="updated">Waiting for state</p></footer>
+</body>
+</html>

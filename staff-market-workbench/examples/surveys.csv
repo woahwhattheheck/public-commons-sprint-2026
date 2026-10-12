@@ -1,0 +1,4 @@
+id,job_title,description,publisher,survey_name,effective_date,currency,period,amount_scale,p25,p50,p75,source_url
+fsu-example-survey-1,Financial Aid Counselor,"Published worked-example pairing on printed page 22; the source does not identify this illustrative survey publisher or effective date.",Unspecified in the worked example,Survey 1,,USD,annual,1000,34.2,37.5,42.3,https://hr.fsu.edu/sites/default/files/PDF/Staff%20Pay%20Administration%20Guidelines.pdf
+fsu-example-survey-2,Financial Aid Specialist,"Published worked-example pairing on printed page 22; the source does not identify this illustrative survey publisher or effective date.",Unspecified in the worked example,Survey 2,,USD,annual,1000,36.2,38.4,45.6,https://hr.fsu.edu/sites/default/files/PDF/Staff%20Pay%20Administration%20Guidelines.pdf
+
