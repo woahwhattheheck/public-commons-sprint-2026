@@ -7,7 +7,7 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 
 // A logical connection owns all native sockets used by its topology. Destruction
 // is terminal, idempotent and includes an in-flight discovery/connect operation.
-function ownedConnection(native, topology) {
+function ownedConnection(native, topology, socketAbort) {
   let disposed = false, opening, destruction;
   const commands = new Set();
   // A failed Cluster/Sentinel seed emits an error before the driver tries the
@@ -59,7 +59,12 @@ function ownedConnection(native, topology) {
     destroy() {
       disposed = true;
       if (!destruction) destruction = (async () => {
-        await destroyNative();
+        // Set the native terminal latch before aborting its current and future
+        // sockets. Sentinel otherwise keeps observing each remaining seed while
+        // destroy() waits for that discovery promise to finish.
+        const stopping = destroyNative();
+        socketAbort?.abort();
+        await stopping;
         // Cluster discovery and Sentinel destruction can finish asynchronously.
         // Do not make connect() await this promise: that would form a cycle.
         if (opening) await opening.catch(() => {});
@@ -108,7 +113,7 @@ export async function createRedisConnectionFactory(connection, { connectTimeoutM
   // socket deadline bounds stalled native cleanup and leaves the query 100ms
   // to report its own timeout before socket inactivity can preempt it.
   const dataInactivityMs = Math.max(connectTimeoutMs, maxQueryTimeoutMs + 100);
-  const optionsFor = (options = {}, { control = false, discovery = false } = {}) => ({
+  const optionsFor = (options = {}, { control = false, discovery = false, signal } = {}) => ({
     ...options,
     RESP: 2,
     disableClientInfo: true,
@@ -123,22 +128,27 @@ export async function createRedisConnectionFactory(connection, { connectTimeoutM
       ...options.socket,
       connectTimeout: connectTimeoutMs,
       reconnectStrategy: false,
+      ...(signal ? { signal } : {}),
       ...(discovery ? { socketTimeout: control ? connectTimeoutMs : dataInactivityMs } : {}),
     },
   });
 
   const create = () => {
+    // Node's public TCP/TLS socket signal also reaches transient discovery
+    // clients and future rediscovery sockets created from these same options.
+    const socketAbort = topology === 'standalone' ? undefined : new AbortController();
+    const signal = socketAbort?.signal;
     let native;
     if (topology === 'standalone') {
       const { topology: _topology, ...options } = connection;
       native = createClient(optionsFor(options));
     } else if (topology === 'cluster') {
-      const defaults = optionsFor({ ...connection.defaults, database: 0 }, { discovery: true });
+      const defaults = optionsFor({ ...connection.defaults, database: 0 }, { discovery: true, signal });
       // Explicit seed options share the same authentication and TLS as every
       // discovered node. The only per-seed settings are its socket endpoint.
       const rootNodes = connection.rootNodes.map(node => optionsFor({
         ...defaults, socket: { ...defaults.socket, ...node.socket },
-      }, { control: true, discovery: true }));
+      }, { control: true, discovery: true, signal }));
       native = createCluster({
         RESP: 2, rootNodes, defaults, commandOptions,
         useReplicas: false, minimizeConnections: true,
@@ -148,8 +158,8 @@ export async function createRedisConnectionFactory(connection, { connectTimeoutM
       native = createSentinel({
         RESP: 2, name: connection.name,
         sentinelRootNodes: connection.sentinelRootNodes.map(node => ({ ...node })),
-        nodeClientOptions: optionsFor(connection.nodeClientOptions, { discovery: true }),
-        sentinelClientOptions: optionsFor(connection.sentinelClientOptions, { control: true, discovery: true }),
+        nodeClientOptions: optionsFor(connection.nodeClientOptions, { discovery: true, signal }),
+        sentinelClientOptions: optionsFor(connection.sentinelClientOptions, { control: true, discovery: true, signal }),
         commandOptions,
         masterPoolSize: 1, replicaPoolSize: 0, reserveClient: false,
         // 6.2.1 defaults this to zero. Poll as well as listening to the native
@@ -158,7 +168,7 @@ export async function createRedisConnectionFactory(connection, { connectTimeoutM
         ...(connection.nodeAddressMap !== undefined ? { nodeAddressMap: connection.nodeAddressMap } : {}),
       });
     }
-    return ownedConnection(native, topology);
+    return ownedConnection(native, topology, socketAbort);
   };
   return Object.freeze({ create, topology, transport: 'resp', driver: '@redis/client@6.2.1' });
 }
