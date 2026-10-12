@@ -6,6 +6,7 @@ import { prepare, inspectWorkspace, saveReview, exportReview, copyWorkspace, wri
 import { renderReview } from './review.mjs';
 const help = `Stellar Forge · HAR merchant source onboarding
 
+  starforge openapi har refresh --help
   starforge openapi har prepare --har CAPTURE.har --out NEW_PRIVATE_WORKSPACE
   starforge openapi har inspect --workspace PRIVATE_WORKSPACE
   starforge openapi har review --workspace PRIVATE_WORKSPACE --out NEW_REVIEW.html [--revision SHA256]
@@ -23,6 +24,7 @@ The package command delegates an explicit native merchant plan to the SAME saveP
 Capture-derived shapes are observations; review the provider contract before live deployment.
 `;
 export async function runHarCLI(args = process.argv.slice(2)) {
+  if (args[0] === 'refresh') return (await import('./refresh-cli.mjs')).runRefreshCLI(args.slice(1));
   if (!args.length || args[0] === '--help' || args[0] === 'help') { process.stdout.write(help); return; }
   const [command, ...rest] = args;
   const allowed = {

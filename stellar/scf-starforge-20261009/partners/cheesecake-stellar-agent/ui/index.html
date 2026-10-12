@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Stellar application operator</title>
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div><p class="eyebrow">APPLICATION OPERATIONS</p><h1>Stellar request workspace</h1></div>
+  <div id="connection" class="connection"><span>Disconnected</span></div>
+</header>
+<main id="workspace">
+  <section id="access" class="access panel" aria-labelledby="access-title">
+    <p class="eyebrow">RECEIVING OPERATOR</p>
+    <h2 id="access-title">Open the retained handoff</h2>
+    <p>The receiving host selects the merchant requests, operator profile, and current application authority. Enter its access token to open this workspace.</p>
+    <form id="access-form">
+      <label for="access-token">Operator access token</label>
+      <input id="access-token" name="token" type="password" autocomplete="off" spellcheck="false" required minlength="24">
+      <button type="submit" class="primary">Connect</button>
+    </form>
+    <p class="muted">The token stays in this page's memory for the current connection.</p>
+  </section>
+  <div id="application" hidden>
+    <section id="identity" class="identity panel" aria-label="Application identity"></section>
+    <div class="workspace-grid">
+      <aside class="request-panel panel" aria-labelledby="requests-title">
+        <div class="section-title"><h2 id="requests-title">Requests</h2><button id="refresh" type="button">Refresh</button></div>
+        <label for="request-search">Find a request</label>
+        <input id="request-search" type="search" placeholder="Intent, method or state" autocomplete="off">
+        <p id="request-count" class="muted"></p>
+        <div id="request-list" class="request-list"></div>
+      </aside>
+      <section id="detail" class="detail panel" aria-live="polite"></section>
+    </div>
+    <section id="integration" class="integration panel" aria-label="Application integration"></section>
+  </div>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+</main>
+<dialog id="execute-dialog" aria-labelledby="execute-title"></dialog>
+</body>
+</html>
