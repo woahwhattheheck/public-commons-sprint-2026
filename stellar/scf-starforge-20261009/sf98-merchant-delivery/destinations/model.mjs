@@ -334,7 +334,7 @@ export async function openDestinationWorkspace({ directory, sourceDirectory, env
       return current.promise;
     },
     async waitForWorker() { return worker ? worker.promise : null; },
-    async handoff() {
+    async handoff({ portableTarget } = {}) {
       // Acquire the registration lease and each native destination lease in stable
       // order. Concurrent sends finish before exact receiver journals are exported.
       return withDeliveryLease(directory, async () => {
@@ -352,9 +352,14 @@ export async function openDestinationWorkspace({ directory, sourceDirectory, env
             }
             destinations.push({ destination, cursor, files, status: await (await openOutbox(lease.directory)).status() });
           }
-          return { schema: 'stellar-forge.sf98.destinations-handoff.v1', exportedAt: instant(), workspace: config,
+          const snapshot = { schema: 'stellar-forge.sf98.destinations-handoff.v1', exportedAt: instant(), workspace: config,
             source: { events: events.length, fingerprint: eventPrefix(events) }, destinations,
             reopen: 'Retain the original source outbox and this private workspace directory. Use the same directory with the destinations CLI or workspace; signing secrets are supplied through the named environment references.' };
+          if (portableTarget !== undefined) {
+            const { exportDestinationSnapshot } = await import('./exchange.mjs');
+            return await exportDestinationSnapshot(snapshot, directory, portableTarget);
+          }
+          return snapshot;
         } finally { for (const lease of leases.reverse()) await lease.release(); }
       });
     },

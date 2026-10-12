@@ -1,6 +1,5 @@
 // MIT. Same-origin adapter around the original trusted host connection registry.
-import { merchantOAuthSelection } from './model.mjs';
-import { normalizeOAuthProfile, oauthProfileIdentity, compileOAuthConnection } from '../../sf30-seller-sdk/oauth-connections/profile.mjs';
+import { normalizeOAuthProfile, oauthProfileIdentity, compileOAuthConnection, oauthRedirectOrigin } from '../../sf30-seller-sdk/oauth-connections/profile.mjs';
 
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const fail=message=>{const error=new TypeError(message);error.code='OAUTH_WORKSPACE_SELECTION_INVALID';throw error;};
@@ -51,6 +50,7 @@ export function createOAuthWorkspaceAdapter({registry,origin,allowLoopback=false
   }
   async function select(alias,specText,row) {
     if(typeof alias!=='string'||!alias||alias.length>128)fail('Select one configured connection alias.');
+    const {merchantOAuthSelection}=await import('./model.mjs');
     const selection=merchantOAuthSelection(specText,row),status=await call('status',alias);
     const profile=assertProfile(status.profile,selection,{allowLoopback});
     const binding=await call('binding',alias,{sourceSha256:selection.sourceSha256,scheme:selection.scheme,
@@ -91,18 +91,33 @@ export function createOAuthWorkspaceAdapter({registry,origin,allowLoopback=false
         const requestKey=JSON.stringify([body.alias,body.args.requestId]);
         if(callbacks.size>=128&&!begins.has(requestKey))fail('Finish or let existing authorization flows expire before starting another.');
         const status=await call('status',body.alias);
-        const result=await call('begin',body.alias,{...body.args,redirectUri:origin()+status.callbackPath});
+        const callbackOrigin=oauthRedirectOrigin(status.profile,origin());
+        const result=await call('begin',body.alias,{...body.args,redirectUri:callbackOrigin+status.callbackPath});
         const authorization=new URL(result.authorizationUrl),states=authorization.searchParams.getAll('state');
         if(states.length!==1||!states[0]||result.callbackPath!==status.callbackPath)
           fail('The connection did not return its source-bound authorization route.');
         const retained=callbacks.get(states[0]);
         if(retained&&(retained.alias!==body.alias||retained.flowId!==result.flowId))fail('Authorization flow identity conflicts with another retained flow.');
-        callbacks.set(states[0],{alias:body.alias,flowId:result.flowId,path:status.callbackPath,requestKey,retainUntil:Date.now()+12*60*1000});
+        callbacks.set(states[0],{alias:body.alias,flowId:result.flowId,path:status.callbackPath,callbackOrigin,requestKey,retainUntil:Date.now()+12*60*1000});
         begins.set(requestKey,states[0]);
         return result;
       }
       return call(body.action,body.alias,body.args);
     });},
+    // Only an active, source-bound authorization may use its separately
+    // registered callback host. Workspace APIs keep the original local origin.
+    acceptCallbackRequest(req,url) {
+      if(req.method!=='GET')return false;
+      prune();
+      const permitted=record=>req.headers.host===new URL(record.callbackOrigin).host &&
+        (!req.headers.origin||req.headers.origin===record.callbackOrigin);
+      if(url.pathname.startsWith('/oauth/callback/')){
+        const states=url.searchParams.getAll('state'),record=states.length===1?callbacks.get(states[0]):null;
+        return Boolean(record&&record.path===url.pathname&&permitted(record));
+      }
+      if(!['/oauth-return','/style.css'].includes(url.pathname))return false;
+      return [...callbacks.values()].some(permitted);
+    },
     async callback(req,res,url) {
       if(!url.pathname.startsWith('/oauth/callback/'))return false;
       // Even failed callbacks leave a URL with no code or state. The private
