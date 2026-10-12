@@ -360,7 +360,17 @@ export function createBatchWorkbench({api,download,readBytes,notify,action,perfo
   async function rowDownload(kind){
     const value=currentRow();if(!value)throw Error('Choose a retained provider result.');
     if(S.mode==='delivery'){
-      const hash=kind==='response'?value.responseSha256:S.row.row.captureManifestObject;
+      let hash=value.responseSha256;
+      if(kind==='capture'){
+        const manifestHash=S.row.row.captureManifestObject;
+        if(!manifestHash)throw Error('This row has no retained capture record.');
+        const bytes=await readBytes('/api/batch-delivery-file?'+qs({exportId:S.exportId,name:'objects/'+manifestHash}));
+        const manifest=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+        const files=manifest.files?.filter(file=>file.name==='capture.json')??[];
+        if(manifest.identity!==value.captureIdentity||files.length!==1||!/^[a-f0-9]{64}$/.test(files[0].sha256))
+          throw Error('The saved capture record does not match this row.');
+        hash=files[0].sha256;
+      }
       if(!hash)throw Error('This row has no retained '+kind+' file.');
       await download('/api/batch-delivery-file?'+qs({exportId:S.exportId,name:'objects/'+hash}),kind==='response'?'response.json':'capture.json');
     }else await download('/api/capture-file?'+qs({id:value.request.id,name:kind==='response'?'response.json':'capture.json'}),kind==='response'?'response.json':'capture.json');
