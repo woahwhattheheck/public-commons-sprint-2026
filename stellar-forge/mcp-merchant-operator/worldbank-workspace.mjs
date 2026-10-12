@@ -338,6 +338,7 @@ export class MerchantWorldBankWorkspaces {
           const file=await handle.operator.readExport(args.exportId,args.file);
           return {bytes:file.bytes,name:args.file,type:file.contentType};
         })()});
+    if(result.nextOffset===null && !this.#reads.status(scope).sessions.length)handle.downloadScopes.delete(scope);
     return {exportId:args.exportId,manifestSha256:manifest.sha256,...result};
   }
   async #execute(name,handle,args) {
@@ -448,9 +449,12 @@ export class MerchantWorldBankWorkspaces {
           sourceManifestSha256:manifest.value.sourceManifestSha256};
       }
       case 'merchant_worldbank_download_file':return this.#downloadFile(handle,args);
-      case 'merchant_worldbank_download_file_release':
-        worldbankId(args.exportId);await this.#reads.release(args.workspace+':download:'+args.exportId,args.readId);
+      case 'merchant_worldbank_download_file_release': {
+        worldbankId(args.exportId);const scope=args.workspace+':download:'+args.exportId;
+        await this.#reads.release(scope,args.readId);
+        if(!this.#reads.status(scope).sessions.length)handle.downloadScopes.delete(scope);
         return {workspace:args.workspace,exportId:args.exportId,readId:args.readId,released:true};
+      }
       default:throw failure('TOOL_NOT_FOUND','Unknown World Bank workspace operation.');
     }
   }

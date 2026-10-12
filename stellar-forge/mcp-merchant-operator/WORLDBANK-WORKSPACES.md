@@ -176,3 +176,29 @@ Closing that browser leaves the model open. Closing the selected model requires 
 - Original stdio transport: [STDIO](./STDIO.md)
 - Shared retained chunk implementation: `retained-file-reads.mjs`
 - Shared durable customer receiver: `retained-download.mjs`
+
+
+## Run the original receiving example
+
+The [native receiving example](examples/worldbank-native-receiving.mjs) operates
+this actual HTTP and stdio host using the retained World Bank acquisition in
+[worldbank-reference-capture.json](examples/worldbank-reference-capture.json).
+The reference contains the complete original handover: three countries, GDP and
+population, 2018–2024, 42 observations and eight retained source responses.
+Its original ZIP is 14,458 bytes, SHA256
+`7cd67229c08fdb4e6c6ec3b536036bd48b493c1b7709613c014f2f32f042727f`.
+
+~~~sh
+node stellar-forge/mcp-merchant-operator/examples/worldbank-native-receiving.mjs \
+  --workdir /absolute/worldbank-native-receiving --python /absolute/python3
+~~~
+
+The command imports the original source, operates the shared browser/model,
+prepares the maintained local example merchant, serves its actual HTTP 402
+challenge, previews the exact GDP value, prepares and reads the customer
+configuration, interrupts and resumes the original downloader, imports the
+completed handover into a receiving workspace, and reopens the same source
+through stdio. It uses the existing `examples/service.json` testnet
+CHALLENGE_ONLY terms. The output is one `journey.json` in the selected
+directory, alongside the original native workspaces and completed customer
+files. Repeat the same command and directory to continue retained work.
