@@ -228,8 +228,9 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
   let closing;
   const close = () => {
     if (closing) return closing;
-    closing = (async () => {
-      const stopped = new Promise((done, reject) => server.close(error => error ? reject(error) : done()));
+    const disposing = (async () => {
+      const stopped = new Promise((done, reject) => server.close(error =>
+        error && error.code !== 'ERR_SERVER_NOT_RUNNING' ? reject(error) : done()));
       // Finish an accepted change before draining the owned original seller.
       // New calls now receive OPERATOR_CLOSING, and new sockets are refused.
       try { await access.close(); }
@@ -238,7 +239,9 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
         finally { server.closeAllConnections(); await stopped; }
       }
     })();
-    return closing;
+    closing = disposing;
+    void disposing.catch(() => { if (closing === disposing) closing = null; });
+    return disposing;
   };
   return { operator, server, url: 'http://127.0.0.1:' + server.address().port, maxRequestBytes: operator.maxRequestBytes, authorization:access.describe(), close };
 }
