@@ -216,7 +216,16 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
   }
   async function cancel(body) {
     held(); fields(body, ['id'], 'GRPC_HEALTH_CANCEL_FIELDS_INVALID');
-    const id = grpcHealthId(body.id), job = jobs.get(id);
+    const id = grpcHealthId(body.id);
+    let job = jobs.get(id);
+    if (!job) {
+      const entry = await load(id), summary = await settled(entry);
+      // Publication and the RUNNING append precede native registration. Never
+      // acknowledge a stop while that same original launch can still open.
+      job = jobs.get(id);
+      if (!job && ['PREPARED', 'RUNNING'].includes(summary.phase))
+        fail('GRPC_HEALTH_START_IN_PROGRESS', 409);
+    }
     if (job) await stopJob(job, 'operator_cancelled');
     return read({ id });
   }
