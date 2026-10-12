@@ -9,6 +9,13 @@ source content, compare revisions, export a readable report and reopen the same
 portable project elsewhere. Identical sources are grouped by DOI or URL while
 each original edition occurrence and content variant remains available.
 
+## Use the same workspace from clients and merchant tools
+
+The [Research client guide](RESEARCH_CLIENT.md) covers the authenticated SDK,
+`research-client` CLI, original saved Crossref lifecycle and merchant attachment.
+It includes revision-pinned section reads, complete retained source exports,
+streamed portable reopen and managed Applications startup records.
+
 ## Open the operator
 
 Use the complete sprint source checkout and its existing Node 22+ runtime.
@@ -276,6 +283,67 @@ for the complete portable document. The operator's individual source-upload
 control accepts 16 MiB; use the CLI or Node API for a larger allowed original
 response. Typed source content is not shortened by report or portable export.
 
+### Stream a complete dossier archive
+
+Choose **Export → Portable archive** to download a gzip-compressed file with
+the same complete v1 portable JSON, original source bytes and revision chain.
+**Open dossier file** accepts either that archive or an existing uncompressed
+portable JSON file. The browser uploads the selected file directly, without
+parsing and serializing another complete copy.
+
+The CLI streams both JSON and gzip exports. The output is published atomically
+as a new file after the complete stream is written and synchronized:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs export \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --format json.gz --out /private/dossier.research.json.gz
+
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs reopen \
+  --store /private/receiving-workspace --file /private/dossier.research.json.gz \
+  --projection metadata
+```
+
+Omit the projection option for the existing complete source view. Metadata
+returns the saved questions, editions, selections, findings and revision without
+loading every rendered source. Gzip detection uses the input bytes, so renamed
+original archives remain readable.
+
+The receiver stages one original revision or source blob at a time. It validates
+the complete archive, revision chain, source hashes and references before
+extending the saved project. Repeated source editions reuse their normalized
+occurrence index during history validation. Existing matching revisions are
+preserved; a matching continuation appends through the original exclusive
+revision writer. Interrupted reading removes only its temporary staging
+directory, and the complete input can be reopened again.
+
+The original `exportDossier` and object-based `reopen` APIs remain available.
+SDK consumers can use the streaming file helpers through the same index:
+
+```js
+import {
+  openDossierStore, openPortableFile, writePortableFile,
+} from './research-dossiers/index.mjs';
+
+const original = await openDossierStore('/private/research-workspace');
+const download = await original.exportStream(existingDossierId, {compression: 'gzip'});
+const saved = await writePortableFile('/private/dossier.research.json.gz', download);
+
+const receiving = await openDossierStore('/private/receiving-workspace');
+const reopened = await receiving.reopenStream(await openPortableFile(saved.file), {
+  projection: 'metadata',
+});
+```
+
+`exportStream` also supplies an asynchronous readable body for an existing
+HTTP or object-store writer. The local operator streams JSON/gzip downloads on
+its original export route and accepts raw JSON/gzip bytes at
+`POST /api/reopen-stream`, using the same operator session. The original
+`POST /api/reopen` object envelope remains supported. The 256 MiB portable
+limit applies to the complete uncompressed document, with the existing 8 MiB
+revision and 64 MiB source limits. The archive contains every original permitted
+retained source and provider reference under the existing source terms.
+
 ## Native operation
 
 The application was operated through its real Node HTTP server on
@@ -319,3 +387,15 @@ An OpenAlex workspace must already contain its original queries and editions. Wi
 During receiving, the importer keeps saved dossier metadata and commits each original edition using `projection: 'metadata'`. It builds the full deduplicated source view once when the last page has been committed. The page callback, expected-revision checks, original source fingerprint, retained first metadata snapshot and interrupted-import replay all keep their existing behavior. Generated report contents do not enter retry identity.
 
 For other SDK consumers, `store.getMetadata(id, {revision})` returns the saved revision summary, questions, edition records, selections and findings without reading response bodies. `store.receive(id, {...input, projection: 'metadata'})` validates and retains the original response normally and returns that metadata shape. The default `projection: 'full'` returns the existing complete dossier view. Metadata selections/findings carry their saved occurrence references; use `store.get(id)` for resolved source groups and rendered reports. A completed import returns a full dossier projected at its recorded completion revision.
+
+## Managed Unstructured Pipeline jobs
+
+The **Pipeline jobs** tab manages original Unstructured on-demand jobs from the same saved research dossier. It keeps the selected profile and original input bytes, reviews a prepared request before submission, refreshes the provider’s job state, and retains selected file/node outputs. A lost create response can be reconciled to the existing provider job without issuing another create. Cancellation is requested separately from the provider’s eventual stopped state.
+
+Select an output to inspect its elements, filter by page or type, download the exact provider bytes, or receive a saved research edition into the dossier. Saved editions include their original output body and digest, input and profile references, and job/file/node identifiers. Portable dossier export and cold reopen preserve review, download, report, and finding workflows when the provider configuration is absent.
+
+Start the existing research command with `--pipeline-source /absolute/private/pipeline-source.json`, or pass `pipelineSource` to `startDossierWorkspace`. The source file selects a private operations directory and provider configuration; the provider key is read from the configured environment variable. The [complete Pipeline jobs guide](UNSTRUCTURED_PIPELINES.md) covers configuration, input limits, submission, reconciliation, cancellation, receiving, and recovery. The [provider API module](unstructured-pipelines/README.md) documents direct SDK use. The [manual native journey](unstructured-pipelines/native/NATIVE_JOURNEY.md) runs the original application and browser with retained HTTP job responses, including lost replies and a provider-absent portable reopen.
+
+## Acquired Object Buyer files
+
+[OBJECT_INPUTS.md](./OBJECT_INPUTS.md) joins a completed original whole or assembled Object Buyer file to this same Research workspace. Launch Research with `--object-state`, review the exact delivered file in Pipelines, then prepare and submit its original managed operation. Captured reviews and portable editions retain the native session, snapshot, configuration and content identity. The original Object workspace can connect through `--research-connection-file` and `--research-directory`; no second Research listener is started.

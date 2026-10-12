@@ -1,6 +1,11 @@
 # SF62 | Human approval and budget reservation at the agent-to-wallet boundary
 
-This is an **operator-terminal product**, not another Stellar payment transport, browser catalog, web API, or mock governor. It composes four existing first-party Python/Node contracts without changing their sources:
+SF62 supplies the original operator review and durable budget reservation. Its
+standalone console uses a controlling terminal. The
+[SF81 browser approval broker](../sf81-buyer-operator-bridge/README.md) exposes the
+same native review and explicit decision through a trusted operator host, as used
+by the [commerce workspace](../sf66-demo-launcher/COMMERCE_CONSOLE.md). Both human
+interfaces compose the same four first-party Python/Node contracts:
 
 - **SF31:** caller-supplied immutable `approve(intent)` JSON for an actual x402 v2 HTTP 402 challenge, bound to the exact resource, HTTP method/body, selected payment requirement, and buyer cap.
 - **SF54:** actual `buyer_intent_to_governor_request()` validates and maps the whole SF31 request into the canonical SF36 budget-intent shape.

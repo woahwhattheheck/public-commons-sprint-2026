@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "tomorrow",
+  "description": "Tomorrow weather products",
+  "commands": {
+    "tomorrow": "stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/cli.mjs"
+  },
+  "commandDescriptions": {
+    "tomorrow": "Plan weather work, review forecasts, recover resources and deliver licensed files"
+  },
+  "exports": {
+    "./seller/tomorrow": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/workspace.mjs",
+    "./seller/tomorrow/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/server.mjs",
+    "./seller/tomorrow/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/source.mjs",
+    "./seller/tomorrow/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/merchant.mjs",
+    "./seller/tomorrow/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/customer.mjs",
+    "./seller/tomorrow/austin": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/austin-intake.mjs",
+    "./seller/tomorrow/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/operations-analysis.mjs",
+    "./seller/tomorrow/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/tomorrow/operations-report.mjs"
+  }
+}

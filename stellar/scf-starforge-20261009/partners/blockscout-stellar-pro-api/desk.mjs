@@ -21,7 +21,7 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
     ['/', 'index.html', 'text/html; charset=utf-8'], ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL('./public/' + file, import.meta.url)) }])));
-  let origin, authority, closed = false, closing;
+  let origin, authorities, origins, closed = false, closing;
   const allowed = req => {
     const raw = req.headers[TOKEN_HEADER];
     return typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw) && timingSafeEqual(Buffer.from(raw), expected);
@@ -47,16 +47,16 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
     const abort = () => { if (!res.writableEnded) cancel.abort(); };
     req.once('aborted', abort); res.once('close', abort);
     try {
-      if (closed || req.headers.host !== authority && req.headers.host !== 'localhost:' + server.address()?.port)
+      if (closed || !authorities.has(req.headers.host))
         return respond(res, 403, { error: 'BLOCKSCOUT_LOCAL_OPERATOR_REQUIRED' });
-      if (req.headers.origin !== undefined && req.headers.origin !== origin && req.headers.origin !== 'http://localhost:' + server.address().port)
+      if (req.headers.origin !== undefined && !origins.has(req.headers.origin))
         return respond(res, 403, { error: 'BLOCKSCOUT_ORIGIN_REJECTED' });
       const url = new URL(req.url, origin);
       if (req.method === 'GET' && !url.search && assets.has(url.pathname)) {
         const asset = assets.get(url.pathname); return respond(res, 200, asset.bytes, { 'content-type': asset.type });
       }
       if (!url.pathname.startsWith('/api/') || !allowed(req)) return respond(res, 403, { error: 'BLOCKSCOUT_OPERATOR_TOKEN_REQUIRED' });
-      if (req.method === 'POST' && req.headers.origin !== origin && req.headers.origin !== 'http://localhost:' + server.address().port)
+      if (req.method === 'POST' && !origins.has(req.headers.origin))
         return respond(res, 403, { error: 'BLOCKSCOUT_ORIGIN_REQUIRED' });
       if (req.method === 'GET' && url.pathname === '/api/status' && !url.search)
         return respond(res, 200, { ...application.snapshot(), originalMerchant: { seller: seller.url,
@@ -133,7 +133,11 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
   });
   server.requestTimeout = 70000; server.headersTimeout = 8000; server.keepAliveTimeout = 2000;
   await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
-  authority = HOST + ':' + server.address().port; origin = 'http://' + authority;
+  const listenerPort = server.address().port;
+  authorities = new Set([HOST, 'localhost'].flatMap(host =>
+    listenerPort === 80 ? [host, host + ':80'] : [host + ':' + listenerPort]));
+  origins = new Set([...authorities].map(authority => 'http://' + authority));
+  origin = new URL('http://' + HOST + ':' + listenerPort).origin;
   return { server, url: origin, controlUrl: origin + '/#' + token,
     close() {
       if (!closing) { closed = true; closing = new Promise((done, fail) => {
@@ -142,3 +146,4 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
       return closing;
     } };
 }
+

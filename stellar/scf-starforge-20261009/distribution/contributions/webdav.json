@@ -1,0 +1,22 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "webdav",
+  "description": "WebDAV file data products",
+  "commands": {
+    "webdav": "stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/cli.mjs"
+  },
+  "commandDescriptions": {
+    "webdav": "Capture selected WebDAV or Nextcloud files, review dataset projections, and operate seller delivery."
+  },
+  "exports": {
+    "./seller/webdav/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/source.mjs",
+    "./seller/webdav/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/config.mjs",
+    "./seller/webdav/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/capture.mjs",
+    "./seller/webdav/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/workspace.mjs",
+    "./seller/webdav/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/server.mjs",
+    "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs"
+  },
+  "applicationProviders": {
+    "webdav": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/webdav.mjs"
+  }
+}

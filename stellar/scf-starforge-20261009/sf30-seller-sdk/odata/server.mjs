@@ -7,9 +7,13 @@ import { fault } from './state.mjs';
 
 const assets=fileURLToPath(new URL('./public/',import.meta.url));
 const files=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
-export async function startODataServer({workspace,port=8797,liveServiceId}={}){
+export async function startODataServer({workspace,port=8797,liveServiceId,liveOperations,closeWorkspace=true}={}){
   if(!Number.isInteger(port)||port<0||port>65535)throw new TypeError('Choose a local TCP port.');
-  let publisher,live,closing;
+  if(typeof closeWorkspace!=='boolean')throw new TypeError('closeWorkspace must be a Boolean.');
+  if(liveOperations!==undefined&&(!liveOperations||typeof liveOperations.status!=='function'||typeof liveOperations.start!=='function'))
+    throw new TypeError('Pass the original open live operations object.');
+  let publisher,live=liveOperations,closing;
+  const ownsLive=liveOperations===undefined;
   const getPublisher=async()=>publisher||=(await import('./publisher.mjs')).openODataPublisher({workspace});
   const getLive=async()=>{
     if(!live)live=import('./live-operations.mjs').then(module=>module.openODataLiveOperations({
@@ -72,6 +76,7 @@ export async function startODataServer({workspace,port=8797,liveServiceId}={}){
           void workspace.capture(input.id,{pageBudget:input.pageBudget||10000}).catch(()=>{});return send(res,202,{id:input.id,status:'IMPORTING'});}
         case '/api/pause':result=await workspace.pause(input.id);break;
         case '/api/review':result=await workspace.reviewEdition(input);break;
+        case '/api/semantics':result=await workspace.semantics(input);break;
         case '/api/export':result=await workspace.exportEdition(input);break;
         case '/api/query':result=await workspace.queryExport(input);break;
         case '/api/restore':result=await workspace.restore(input);break;
@@ -91,8 +96,10 @@ export async function startODataServer({workspace,port=8797,liveServiceId}={}){
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
   const service={url:'http://127.0.0.1:'+server.address().port,server,liveRuntime:null,
     close:()=>closing??=(async()=>{
-      try{if(live)await(await live).close();}
-      finally{try{await workspace.close();}finally{await new Promise(resolve=>server.close(resolve));}}
+      // Stop accepting browser operations before releasing any owned runtime.
+      await new Promise(resolve=>server.close(resolve));
+      try{if(ownsLive&&live)await(await live).close();}
+      finally{if(closeWorkspace)await workspace.close();}
     })()};
   try{if(liveServiceId)service.liveRuntime=await(await getLive()).start({id:liveServiceId});return service;}
   catch(error){await service.close();throw error;}

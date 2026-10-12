@@ -11,6 +11,7 @@ starforge sdmx --help
 starforge dataset sdmx --help
 starforge sdmx merchant --help
 starforge sdmx buyer --help
+starforge sdmx macrobond --help
 ~~~
 
 Both SDMX entrypoints dispatch the same implementation. In a source checkout, use:
@@ -49,6 +50,17 @@ python3 -B "$SDMX_SOURCE/delivery/browser-owner.py" \
 ~~~
 
 The owner reopens an existing operation when present. It starts the original operator and its browser child together, retains useful receiving results, then drains and closes its owned processes. Use the receiver's installed Playwright/Chromium; SDMX_CHROMIUM_EXECUTABLE selects an existing browser executable.
+
+## Publish a customer Macrobond catalog
+
+The [Macrobond catalog workspace](macrobond/README.md) takes these retained SDMX project editions into a customer series collection. Select exact project revisions and series, inspect original values and source compatibility, save an edition, compare the customer selection, and publish or roll back through the same operator console. An authenticated Macrobond Web API Series Provider serves the selected publication with its original decimal values, period anchors and source metadata.
+
+~~~
+starforge sdmx macrobond --help
+starforge dataset sdmx macrobond --help
+~~~
+
+The complete [ECB Macrobond example](macrobond/examples/ecb-reference-rates.macrobond.zip) contains eight original series and 544 observations, a four-series USD customer selection, and the full publication/rollback history. Import it into a new catalog to inspect both saved editions and operate the published provider immediately. The Macrobond guide covers the receiving command, private console, installed client connection, complete native operation and browser continuation.
 
 ## Official ECB input used by this product
 

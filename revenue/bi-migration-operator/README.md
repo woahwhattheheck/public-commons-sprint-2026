@@ -2,7 +2,7 @@
 
 A complete local workspace for Cognos migration and ongoing report support: import the original specification, review and map the model, build native paginated reports and editable Power BI projects, compare complete report outputs, manage deployment and rollback, and hand the work to its receiving team.
 
-The application has ten operating views: inventory, migration plans, data and corrections, output comparison, on-premises Report Server, Power BI capture, cloud rollout and rollback, support, handoff and recovery, and activity. The interface uses a restrained grayscale industrial layout.
+The operating views cover inventory, migration plans, data and corrections, output comparison, on-premises Report Server, Power BI capture, cloud rollout and rollback, support, agency billing, handoff and recovery, and activity. The interface uses a restrained grayscale industrial layout.
 
 ## Start
 
@@ -46,7 +46,19 @@ Power BI Desktop optimized for Report Server does not open PBIP projects. Use th
 | Existing-item deployment | Captures current Fabric semantic model/report definitions before updating either item. Retains Microsoft operation IDs and resumes the original asynchronous operation. |
 | Reconciliation and rollback | Reads native state after an uncertain response and prepares restoration from captured definitions, including a settled partial deployment. |
 | Support and handoff | Tracks owners, severity, state, due dates, reproduction and resolution against source/artifact revisions. Exports a complete selected implementation handoff. |
+| Agency billing | Retains original Azure cost/usage files; applies versioned agency/resource policies; reconciles shared charges, refunds and currency rounding; reviews/finalizes monthly statements; exports agency CSV/HTML and a complete accounting workbook; retains corrections and prior statements. |
 | Recovery | Encrypts SQLite state and immutable objects with AES-256-GCM. Restores into a new directory, checks the complete database/object closure, and rotates browser access while preserving business/provider IDs. |
+
+## Agency cost allocation and bill-back
+
+Open **Agency billing** for the complete monthly operating workflow. [BILLING_GUIDE.md](BILLING_GUIDE.md) covers input mapping, direct/fixed/usage policies, review, corrections, statements, accounting exports and recovery. It implements the original SANDAG Task 4 agency cost-allocation work in the existing versioned workspace.
+
+To load the separate Commons-authored 12-agency operating example, use:
+
+    python BI_OPERATOR.py --workspace ./billing-example billing-example
+    python BI_OPERATOR.py --workspace ./billing-example serve
+
+The example includes 83 native-format cost rows, 36 agency usage records, 16 resource rules, a prior-usage refund, invoice-scope rounding, small charges and provider internal allocation rows. It opens as a draft for the receiving operator to review and finalize. The example agency IDs belong to this authored billing case; the public crime-report jurisdictions keep their separate geographic meaning.
 
 ## Public SANDAG example
 
@@ -112,3 +124,16 @@ The original public-data source is attributed separately. The working example do
 ## Complete operating example
 
 See [DEMONSTRATION.md](DEMONSTRATION.md) for the supplied public native files, complete browser workflow, full-data correction and encrypted recovery. The Report Server runner and original job/result packages travel with the release. Use [examples/sandag/SOLICITATION_SCOPE.md](examples/sandag/SOLICITATION_SCOPE.md) for the source-grounded ARJIS delivery scope.
+
+
+## SQL Server operations
+
+The SQL Server workspace adds private connection/catalog inspection, typed and reviewed keyset queries, durable multi-page capture/cancellation/continuation, original native result receiving, model field mapping, full comparisons and portable workstream receiving. Original record histories and exact native job inputs remain together through conflict resolution and encrypted recovery.
+
+Start with [the complete SQL Server operating guide](tools/sql-server/GUIDE.md). The existing host additionally uses Node22.16+ and mssql12.7.4 for actual SQL Server reads. One existing driver installation is reused across immutable jobs; portable job/result packages support a separately equipped host. Password values remain in that selected host's environment.
+
+## Azure monthly source acquisition
+
+The **Azure exports** workspace completes native export discovery, an existing export's monthly execution and original run history, manifest selection, resumable ETag-pinned partition transfer, staff header review, original Agency billing import and portable receiving. It retains original CSV/Gzip/Parquet files and freezes the selected source/review/partition identities into finalized statement downloads. Ordinary file imports retain their existing identities. See [AZURE_EXPORTS_GUIDE.md](AZURE_EXPORTS_GUIDE.md) for the complete operator flow, connection fields, structured operations, receiving and recovery.
+
+Run `python examples/AZURE_EXPORTS_JOURNEY.py --output ./azure-example` for the complete authored operating journey over the original 12-agency billing inputs, then reopen `./azure-example/workspace` with the ordinary launcher. CSV/Gzip uses the existing runtime; native Parquet additionally uses `requirements-azure.txt`.

@@ -15,9 +15,12 @@ from . import archive, native
 from .compare import compare_outputs, read_csv, csv_bytes
 from .providers import Rollouts, capture_results
 from .report_server import ReportServer
+from .sql_server import SqlServer, SQL_KINDS
+from .billback import Billing, KINDS as BILLING_KINDS
+from .azure_exports import AzureExports, KINDS as AZURE_KINDS
 from .store import Store, Conflict, digest, encoded, identifier, now
 
-KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result")
+KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS + AZURE_KINDS
 
 
 def decoded_file(request):
@@ -54,6 +57,8 @@ class Service:
         self.actor = "operator"
         self.rollouts = Rollouts(self)
         self.report_server = ReportServer(self)
+        self.billing = Billing(self)
+        self.azure = AzureExports(self)
         self.actions = {
             "source.import": self.source_import, "source.assign": self.source_assign,
             "dataset.import": self.dataset_import, "dataset.correct": self.dataset_correct,
@@ -71,8 +76,13 @@ class Service:
             "server.result.import": self.report_server.import_result,
             "server.handoff": self.report_server.handoff,
         }
+        self.sql = SqlServer(self)
+        self.actions.update(self.sql.actions())
+        self.actions.update(self.billing.actions)
+        self.actions.update(self.azure.actions)
 
     def close(self):
+        self.sql.close()
         self.store.close()
 
     @staticmethod
@@ -110,18 +120,38 @@ class Service:
 
     def state(self):
         result = {"workspace_id": self.store.setting("workspace_id"), "version": "1.0.0", "time": now()}
-        for kind in KINDS:
+        for kind in (*KINDS, *SQL_KINDS):
             records = self.store.list(kind)
             for record in records:
                 payload = record["payload"]
                 for bulky in ("project", "source_project", "mapping", "unmatched", "details"):
                     payload.pop(bulky, None)
+                if kind == "azure_discovery":
+                    payload["item_count"] = len(payload.get("items", []))
+                    for field in ("items", "pages", "seen"):
+                        payload.pop(field, None)
+                if kind == "azure_run":
+                    for field in ("candidates", "history_pages", "definition"):
+                        payload.pop(field, None)
+                if kind == "azure_source":
+                    for part in payload.get("parts", []):
+                        part.pop("chunks", None)
+                    payload.pop("received_review", None)
+                if kind == "azure_review":
+                    for field in ("parts", "batches"):
+                        payload.pop(field, None)
+                if kind == "azure_delivery":
+                    payload["volume_count"] = len(payload.get("groups", []))
+                    for field in ("groups", "segments"):
+                        payload.pop(field, None)
                 if kind == "comparison":
                     payload["result"].pop("differences", None)
                 if kind == "artifact":
                     payload["build"]["file_count"] = len(payload["build"].get("files", []))
                     payload.get("build", {}).pop("files", None)
             result[kind] = records
+        result["sql_runtime"] = self.sql.runtime()
+        result["sql_detached_jobs"] = json.loads(self.store.setting("sql_detached_jobs") or "[]")
         result["operations"] = self.store.operations()
         return result
 
@@ -250,7 +280,11 @@ class Service:
         previous = self.store.get("comparison", request["previous_id"]) if request.get("previous_id") else None
         if previous and previous["payload"]["left_file"]["digest"] != lfile["digest"]:
             raise ValueError("A correction comparison retains its original baseline. Create a separate comparison for a changed baseline.")
-        result = compare_outputs(self.store.bytes(lfile["digest"]), self.store.bytes(rfile["digest"]), request.get("spec", {}))
+        spec = copy.deepcopy(request.get("spec", {}))
+        if "null_token" not in spec:
+            spec.setdefault("left_null_token", left["payload"].get("null_token"))
+            spec.setdefault("right_null_token", right["payload"].get("null_token"))
+        result = compare_outputs(self.store.bytes(lfile["digest"]), self.store.bytes(rfile["digest"]), spec)
         return self.write("comparison", {"label": text(request.get("label", "Output comparison"), 300),
             "left": self.reference(left), "right": self.reference(right), "left_file": lfile, "right_file": rfile,
             "result": result, "parameters": request.get("parameters", {}), "scope": text(request.get("scope")),
@@ -346,6 +380,7 @@ class Service:
 
     def backup_create(self, request):
         # Export files are outside the immutable object set, so backups never embed prior backups.
+        self.sql.prepare_backup()
         exports = self.store.root / "exports"
         exports.mkdir(exist_ok=True, mode=0o700)
         filename = "workspace-" + self.operation_id + ".bi-backup"

@@ -47,7 +47,7 @@ export class XeroWorkspace{
     handoffs:(state.accountantHandoffs??[]).map(row=>({id:row.id,name:row.name,rowCount:row.rowCount,createdAt:row.createdAt,source:clone(row.source),accountantRevisionId:row.revisions.at(-1)?.id??null})),
     contexts:clone(state.xeroContexts??[]).map(({files,...row})=>row),
     plans:(state.xeroPlans??[]).map(row=>({id:row.id,name:row.name,actor:row.actor,createdAt:row.createdAt,handoffId:row.handoffId,tenantId:row.tenantId,planSha256:row.planSha256,cancelledAt:row.cancelledAt,summary:clone(row.summary),operations:row.operations.length,returns:row.returns.length})),
-    connection:{available:this.client.available(),tokenEnv:this.client.tokenEnv??null},docs:XERO_DOCS};}
+    connection:this.client.info?.()??{available:this.client.available(),tokenEnv:this.client.tokenEnv??null},docs:XERO_DOCS};}
   contextRow(id){xeroId(id);const row=(this.workspace.state.xeroContexts??[]).find(row=>row.id===id);need(row,'XERO_CONTEXT_NOT_FOUND','Choose a retained Xero organization.',404);return row;}
   row(id){xeroId(id);const row=(this.workspace.state.xeroPlans??[]).find(row=>row.id===id);need(row,'XERO_PLAN_NOT_FOUND','Choose a retained Xero journal plan.',404);return row;}
   path(id){return join(this.root,'plans',xeroId(id));}
@@ -82,12 +82,20 @@ export class XeroWorkspace{
   async source(handoffId,contextId){
     const original=await this.originals(handoffId),context=await this.context(contextId),components=xeroSourceComponents(original.handoff,original.adjustmentsBytes);
     return {handoff:original.handoff,handoffId,context,contextId,accountantRevisionId:original.revision?.id??null,components,
-      reserved:(this.workspace.state.xeroPlans??[]).filter(row=>!row.cancelledAt&&row.tenantId===context.tenantId).map(row=>({planId:row.id,name:row.name,componentIds:clone(row.componentIds)}))};
+      reserved:(this.workspace.state.xeroPlans??[]).filter(row=>!row.cancelledAt&&row.tenantId===context.tenantId).map(row=>({planId:row.id,name:row.name,componentIds:clone(row.componentIds),buyerSource:clone(row.buyerSource??null),buyerEconomicIds:clone(row.buyerEconomicIds??[])}))};
   }
   async preview(value){
     const request={id:xeroId(value.id??randomUUID()),name:xeroText(value.name,'Journal plan name',160),actor:xeroText(value.actor,'Operator',1000),createdAt:value.createdAt??now(),handoffId:xeroId(value.handoffId),contextId:xeroId(value.contextId),accountantRevisionId:value.accountantRevisionId??'initial',entries:clone(value.entries),purpose:value.purpose,valuationBasis:value.valuationBasis,showOnCashBasisReports:value.showOnCashBasisReports??false};
     const original=await this.originals(request.handoffId,request.accountantRevisionId),context=await this.context(request.contextId),plan=createXeroPlan({...request,...original,context}),ids=new Set(plan.entries.map(entry=>entry.id));
     const conflicts=(this.workspace.state.xeroPlans??[]).filter(row=>!row.cancelledAt&&row.tenantId===context.tenantId).flatMap(row=>row.componentIds.filter(id=>ids.has(id)).map(componentId=>({componentId,planId:row.id,name:row.name})));
+    if(plan.source.buyer){
+      const economic=new Set(plan.entries.map(entry=>entry.economicId));
+      for(const row of this.workspace.state.xeroPlans??[]){
+        if(row.cancelledAt||row.tenantId!==context.tenantId||!row.buyerSource||row.buyerSource.workspaceId!==plan.source.buyer.workspaceId||row.buyerSource.closeId===plan.source.buyer.closeId)continue;
+        const overlap=(row.buyerEconomicIds??[]).filter(id=>economic.has(id));
+        if(overlap.length)conflicts.push({code:'BUYER_ECONOMIC_SOURCE_IN_PRIOR_PLAN',planId:row.id,name:row.name,sourceCloseId:row.buyerSource.closeId,economicIds:overlap,message:'These original buyer economic events already belong to another issued edition in an active plan. Reopen the original journal plan and its returned references before preparing a correction.'});
+      }
+    }
     return {request,plan,conflicts,previewSha256:plan.sha256,workspaceRevision:this.workspace.state.revision};
   }
   async create(value){
@@ -99,13 +107,13 @@ export class XeroWorkspace{
       try{
         for(const name of ['captures','operations','returns'])await mkdir(join(path,name),{mode:0o700});
         const files={'plan.json':json(preview.plan),'plan-request.json':json(preview.request),'review.html':renderXeroReview(preview.plan)};
-        for(const filename of ['handoff.json','accountant.csv','original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json','adjustments.json','adjustments.csv','adjustments.html']){
+        for(const filename of ['handoff.json','accountant.csv','original-buyer-source.json','original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json','adjustments.json','adjustments.csv','adjustments.html']){
           const selected=original.record.files.find(file=>file.name===filename);if(selected)files[filename]=(await this.accountant.file(value.handoffId,filename,{revisionId:'initial'})).bytes;
         }
         if(original.revision)files['accountant-baseline-return.json']=json(original.revision);
         for(const file of contextRow.files)files['xero-'+file.name]=await exact(this.contextPath(value.contextId),file);
         for(const journal of preview.plan.journals)files['manual-journal-'+String(journal.index).padStart(4,'0')+'.json']=json(xeroCreateRequest(preview.plan,journal.index).body);
-        const saved=await writeFiles(path,files),row={id,name:preview.plan.name,actor:preview.plan.actor,createdAt:preview.plan.createdAt,handoffId:preview.plan.source.handoffId,contextId:value.contextId,tenantId:preview.plan.context.tenantId,planSha256:preview.plan.sha256,requestSha256:hash(xeroCanonical(preview.request)),summary:clone(preview.plan.summary),componentIds:preview.plan.entries.map(entry=>entry.id),files:saved,cancelledAt:null,cancellationReason:null,journals:preview.plan.journals.map(journal=>({index:journal.index,status:'READY',attempted:false,journalId:null,sourceFiles:[]})),operations:[],captures:[],returnIntents:[],returns:[]};
+        const saved=await writeFiles(path,files),row={id,name:preview.plan.name,actor:preview.plan.actor,createdAt:preview.plan.createdAt,handoffId:preview.plan.source.handoffId,contextId:value.contextId,tenantId:preview.plan.context.tenantId,planSha256:preview.plan.sha256,requestSha256:hash(xeroCanonical(preview.request)),summary:clone(preview.plan.summary),componentIds:preview.plan.entries.map(entry=>entry.id),...(preview.plan.source.buyer?{buyerSource:clone(preview.plan.source.buyer),buyerEconomicIds:[...new Set(preview.plan.entries.map(entry=>entry.economicId))]}:{}),files:saved,cancelledAt:null,cancellationReason:null,journals:preview.plan.journals.map(journal=>({index:journal.index,status:'READY',attempted:false,journalId:null,sourceFiles:[]})),operations:[],captures:[],returnIntents:[],returns:[]};
         this.workspace.state.xeroPlans??=[];this.workspace.state.xeroPlans.push(row);await syncDir(join(this.root,'plans'));await this.workspace.commit('xero_plan_created',row.actor,{planId:id,handoffId:row.handoffId,planSha256:row.planSha256,components:row.componentIds.length});committed=true;return {record:clone(row),plan:preview.plan,duplicate:false,state:this.view()};
       }finally{if(!committed)await rm(path,{recursive:true,force:true});}
     });

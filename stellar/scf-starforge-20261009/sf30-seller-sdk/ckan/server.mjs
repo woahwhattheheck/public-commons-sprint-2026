@@ -3,7 +3,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { readPrivate, fault } from '../postgres/publisher/files.mjs';
 
@@ -39,8 +39,9 @@ function lookup(workbench, collection, id) {
   if (!item) throw fault('CKAN_ITEM_NOT_FOUND', 'Choose an existing project item.', 404);
   return item;
 }
-export async function startCkanServer({ workbench, port = 0, token = randomBytes(32).toString('base64url') } = {}) {
-  if (!workbench || !Number.isInteger(port) || port < 0 || port > 65535 || typeof token !== 'string' || token.length < 32)
+export async function startCkanServer({ workbench, port = 0, token = randomBytes(32).toString('base64url'), instanceId = randomUUID() } = {}) {
+  if (!workbench || !Number.isInteger(port) || port < 0 || port > 65535 || typeof token !== 'string' || token.length < 32 ||
+      !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(instanceId))
     throw fault('CKAN_SERVER_OPTIONS');
   let origin, closing;
   const server = http.createServer(async (request, response) => {
@@ -63,6 +64,14 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
         throw fault('CKAN_PROJECT_ACCESS_REQUIRED', 'Open the project link printed by the command.', 401);
       const parts = pathname.slice(5).split('/').map(decodeURIComponent);
       if (request.method === 'GET') {
+        if (parts[0] === 'launch' && parts.length === 1) {
+          const state = workbench.status();
+          return json(response, { schema: 'stellar-forge.ckan-workbench-listener.v1', instanceId,
+            pid: process.pid, directory: workbench.directory, project: {
+              schema: state.schema, createdAt: state.createdAt, catalogOrigin: state.catalogOrigin,
+              ...(state.authTokenEnv ? { authTokenEnv: state.authTokenEnv } : {}),
+            } });
+        }
         if (parts[0] === 'status' && parts.length === 1) return json(response, workbench.status());
         if (parts[0] === 'search' && parts.length === 1)
           return json(response, await workbench.search({ q: url.searchParams.get('q') ?? '',
@@ -73,6 +82,12 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
           return json(response, await workbench.compare(url.searchParams.get('before'), url.searchParams.get('after'), url.searchParams.get('key') ?? '_id'));
         if (parts[0] === 'publications' && parts.length === 2)
           return json(response, await workbench.publication(parts[1], url.searchParams.get('query') ?? ''));
+        if (parts[0] === 'sources' && parts[2] === 'semantics' && parts.length === 3) {
+          const semantics = await workbench.sourceSemantics(parts[1]);
+          if (!semantics) throw fault('CKAN_SEMANTICS_NOT_REVIEWED', 'This saved source has no reviewed semantic schema.', 404);
+          response.setHeader('content-disposition', 'attachment; filename="ckan-semantics.json"');
+          return json(response, semantics);
+        }
         if (parts[0] === 'sources' && parts[2] === 'download' && parts.length === 3) {
           const entry = lookup(workbench, 'sources', parts[1]);
           response.setHeader('content-disposition', 'attachment; filename="ckan-source-' + entry.id + '.json"');
@@ -110,6 +125,8 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
       }
       if (request.method === 'POST') {
         const input = await body(request);
+        if (parts[0] === 'editions' && parts[2] === 'semantics' && parts.length === 3)
+          return json(response, await workbench.previewSemantics(parts[1], input.projection));
         let result;
         if (parts[0] === 'capture' && parts.length === 1) result = workbench.startCapture(input);
         else if (parts[0] === 'editions' && parts[2] === 'resume' && parts.length === 3) result = workbench.resumeCapture(parts[1], input);
@@ -137,7 +154,7 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
   server.requestTimeout = 30000; server.headersTimeout = 15000; server.keepAliveTimeout = 5000;
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
   origin = 'http://127.0.0.1:' + server.address().port;
-  return { server, origin, token, url: origin + '/#' + token,
+  return { server, origin, token, instanceId, url: origin + '/#' + token,
     close() { return closing ??= new Promise(resolve => { server.close(resolve); server.closeIdleConnections?.(); }); } };
 }
 

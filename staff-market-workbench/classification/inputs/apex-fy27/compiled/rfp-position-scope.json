@@ -1,0 +1,246 @@
+{
+  "items": [
+    {
+      "department": "Police",
+      "id": "P1",
+      "printed_title": "Deputy Police Chief",
+      "published_titles": [
+        "Deputy Police Chief"
+      ],
+      "role_ids": [
+        "apex-police-deputy-police-chief"
+      ]
+    },
+    {
+      "department": "Police",
+      "id": "P2",
+      "printed_title": "Police Captain",
+      "published_titles": [
+        "Police Captain"
+      ],
+      "role_ids": [
+        "apex-police-police-captain"
+      ]
+    },
+    {
+      "department": "Police",
+      "id": "P3",
+      "printed_title": "Police Lieutenant",
+      "published_titles": [
+        "Police Lieutenant"
+      ],
+      "role_ids": [
+        "apex-police-police-lieutenant"
+      ]
+    },
+    {
+      "department": "Police",
+      "id": "P4",
+      "printed_title": "Police Corporal",
+      "published_titles": [
+        "Police Corporal"
+      ],
+      "role_ids": [
+        "apex-police-police-corporal"
+      ]
+    },
+    {
+      "department": "Police",
+      "id": "P5",
+      "printed_title": "Police Officers (I, II, III, Senior)",
+      "published_titles": [
+        "Police Officer I",
+        "Police Officer II",
+        "Police Officer III",
+        "Senior Police Officer"
+      ],
+      "role_ids": [
+        "apex-police-police-officer-i",
+        "apex-police-police-officer-ii",
+        "apex-police-police-officer-iii",
+        "apex-police-senior-police-officer"
+      ]
+    },
+    {
+      "department": "Police",
+      "id": "P6",
+      "mapping_note": "RFP omits Center; mapped to the published Communications Center Manager, grade M12.",
+      "printed_title": "Communications Manager",
+      "published_titles": [
+        "Communications Center Manager"
+      ],
+      "role_ids": [
+        "apex-police-communications-center-manager"
+      ]
+    },
+    {
+      "department": "Police",
+      "id": "P7",
+      "printed_title": "Communications Shift Supervisor",
+      "published_titles": [
+        "Communications Shift Supervisor"
+      ],
+      "role_ids": [
+        "apex-police-communications-shift-supervisor"
+      ]
+    },
+    {
+      "department": "Police",
+      "id": "P8",
+      "mapping_note": "The printed 5% increase note remains part of the original pay title; no additional 5% is applied to the published rates.",
+      "printed_title": "Telecommunicator (I, II, Senior)",
+      "published_titles": [
+        "Telecommunicator I, II (5% increase)",
+        "Senior Telecommunicator"
+      ],
+      "role_ids": [
+        "apex-police-telecommunicator-i-ii-5-increase",
+        "apex-police-senior-telecommunicator"
+      ]
+    },
+    {
+      "department": "Police",
+      "id": "P9",
+      "mapping_note": "Position authorization spells Traffice; original spelling remains in that source record.",
+      "printed_title": "Civilian Traffic Crash Investigator",
+      "published_titles": [
+        "Civilian Traffic Crash Investigator"
+      ],
+      "role_ids": [
+        "apex-police-civilian-traffic-crash-investigator"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F1",
+      "printed_title": "Assistant Fire Chief",
+      "published_titles": [
+        "Assistant Fire Chief"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-assistant-fire-chief"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F2",
+      "printed_title": "Fire Battalion Chief",
+      "published_titles": [
+        "Fire Battalion Chief"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-fire-battalion-chief"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F3",
+      "printed_title": "Fire Captain (I, II)",
+      "published_titles": [
+        "Fire Captain I",
+        "Fire Captain II"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-fire-captain-i",
+        "apex-fire-rescue-fire-captain-ii"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F4",
+      "printed_title": "Fire Engineer (I, II)",
+      "published_titles": [
+        "Fire Engineer I, II"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-fire-engineer-i-ii"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F5",
+      "printed_title": "Firefighter (Cadet, FF, Senior FF)",
+      "published_titles": [
+        "Firefighter Cadet",
+        "Firefighter",
+        "Senior Firefighter"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-firefighter-cadet",
+        "apex-fire-rescue-firefighter",
+        "apex-fire-rescue-senior-firefighter"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F6",
+      "mapping_note": "RFP spells Marshall; published pay and authorization title is Fire Marshal.",
+      "printed_title": "Fire Marshall",
+      "published_titles": [
+        "Fire Marshal"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-fire-marshal"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F7",
+      "mapping_note": "RFP spells Marshall; published pay and authorization title uses Marshal.",
+      "printed_title": "Deputy Fire Marshall (I, II)",
+      "published_titles": [
+        "Deputy Fire Marshal I, II"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-deputy-fire-marshal-i-ii"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F8",
+      "printed_title": "Fire Inspector (I, II, III)",
+      "published_titles": [
+        "Fire Inspector I, II, III"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-fire-inspector-i-ii-iii"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F9",
+      "mapping_note": "Published source combines levels I and II at F102; confirm the covered job-content editions during study intake.",
+      "printed_title": "Community Risk Reduction Coordinator",
+      "published_titles": [
+        "Community Risk Reduction Coordinator I, II"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-community-risk-reduction-coordinator-i-ii"
+      ]
+    },
+    {
+      "department": "Fire & Rescue",
+      "id": "F10",
+      "mapping_note": "RFP parenthetical Captain is mapped to the published Fire Training Coordinator I, II, grade F107. Retain this title clarification in the consultant's scope census.",
+      "printed_title": "Fire Training Coordinator (Captain)",
+      "published_titles": [
+        "Fire Training Coordinator I, II"
+      ],
+      "role_ids": [
+        "apex-fire-rescue-fire-training-coordinator-i-ii"
+      ]
+    }
+  ],
+  "schema": "apex.public-safety-inputs/v1",
+  "scope_notes": [
+    "The RFP's 19 printed position-list bullets map to 26 pay-table rows. Several pay-table rows contain multiple career levels sharing one published grade.",
+    "The FY27 authorization identifies 122 Fire & Rescue and 153 Police FTE. The RFP narrative separately states 112 fire personnel and 121 sworn police officers; its printed position list also includes communications and a civilian investigator.",
+    "Police Chief and Police Sergeant appear in the published authorization but are absent from the RFP's printed covered-position list. Preserve them as context and clarify study coverage through the prime's single Town inquiry.",
+    "The Fire & Rescue pay table includes Emergency Management Coordinator I, II, while the authorization places this position under Administration. It is retained as pay-table context and excluded from the Fire & Rescue authorized-position cohort.",
+    "Police Senior Program Support Specialist has a PT 30 pay-title annotation but 1 FT / 1 FTE in the authorization. The original conflict remains visible in its mapping note.",
+    "The 86-officer, 54-firefighter, 24-captain and 10-telecommunicator buckets do not disclose their allocation among grades. Editable allocations must sum to the original group total before they can become a planning cohort."
+  ],
+  "source": "Town of Apex Public Safety Classification and Compensation Plan RFP, issued October 5, 2026, physical page 6",
+  "source_sha256": "f8f7680b7d771e4f766856a74bb4f58ff0e327b74ce48b4c75118209d38c33a5",
+  "source_url": "https://apexnc.org/DocumentCenter/View/56664"
+}

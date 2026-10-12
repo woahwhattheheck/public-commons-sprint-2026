@@ -89,6 +89,10 @@ export async function startEdgarWorkspace({ directory, storeDirectory, workspace
       if (!authenticated(req)) throw failure(401, 'EDGAR_SESSION_REQUIRED', 'Open the authorized workspace link.');
       if (path === '/api/session' && req.method === 'DELETE')
         return reply(req, res, 200, { connected: false }, undefined, { 'set-cookie': cookieName + '=; Max-Age=0; HttpOnly; SameSite=Strict; Path=/' });
+      if (path === '/api/application' && req.method === 'GET') {
+        const { secEdgarWorkspaceProbe } = await import('./managed-launch.mjs');
+        return reply(req, res, 200, await secEdgarWorkspaceProbe(workspace));
+      }
       if (path === '/api/state' && req.method === 'GET') return reply(req, res, 200, await workspace.snapshot());
       if (path === '/api/draft' && req.method === 'PUT') return reply(req, res, 200, await workspace.saveDraft(await body(req)));
       if (path === '/api/revisions' && req.method === 'GET') return reply(req, res, 200, await workspace.listRevisions());

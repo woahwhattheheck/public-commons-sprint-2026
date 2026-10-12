@@ -26,6 +26,13 @@ reconciliation, accountant return recovery and exact files. The
 [shared customer SDK and durable CLI](./ACCOUNTING-PLATFORMS-CLIENT.md) preserve
 reviewed commands and original identities across an uncertain connection.
 
+The same [QuickBooks host workflow](./ACCOUNTING-PLATFORMS.md#use-a-reviewed-quickbooks-oauth-company)
+also accepts the original reviewed OAuth company selection. It reuses the native
+connection registry and provider inside this accounting lifetime. Retained plans,
+accountant returns and files remain available after a grant is revoked; explicit
+provider operations require the selected current authorization. Existing token
+environment configuration remains supported.
+
 The host selects files and directories. MCP arguments use declared aliases,
 retained object identities and current revisions. Payment signing and settlement
 remain in the original buyer, seller and facilitator.
@@ -202,6 +209,50 @@ their original IDs and digest. Start a new owned file read after pause.
 Status summaries show 25 backups, 10 jobs and 25 sources per kind with exact counts.
 Use `view:backups|jobs|sources`, `offset` and `limit` for pages. Jobs lists cover
 the original latest 50; older retained IDs remain readable with `job`.
+
+### Preserve the configured OAuth sources in the same backup
+
+When this workspace declares `platforms.qbo.oauth`, maintenance also captures the
+original connections file, complete reviewed selection directory and every native
+OAuth store referenced by that registry. Keep these operating inputs beneath the
+same private `recovery.stateRoot`. The original registry opens all configured
+aliases, so recovery retains the selected grant and the other configured stores,
+including their empty directories. Sources already inside the accounting or
+another captured root are retained once.
+
+The paused source review includes `hostSources.kind:"quickbooks-oauth"`, the
+profile SHA256, root/file/byte counts and required environment-variable names.
+It exposes logical accounting source aliases. No token or environment secret
+value is returned. The review ID binds the complete host profile, exact source
+paths, configured selection pin and original file inventory. Stop the original
+OAuth connection and company-selection writers before the existing
+`externalWritersStopped:true` approval.
+
+Use the same nine maintenance tools and prepared customer operations. A cold host
+with `startPaused:true` can open maintenance when the live workspace, connections
+file, selected company and native stores are absent. Restore reads those sources
+only from authenticated staging, checks the current configured paths,
+environment-directory references and selection pin, and compares the complete
+host profile before creating original destinations. A changed pin returns
+`ACCOUNTING_QBO_SELECTION_CHANGED`; a changed profile returns
+`ACCOUNTING_RECOVERY_HOST_PROFILE_CHANGED`. Review any intentional configuration
+change and restart the whole merchant host with the original reviewed recovery
+configuration before continuing the same backup with a new request ID.
+
+A successful current backup restore reports `hostSourcesRestored:true` with its
+profile summary. Earlier backups remain compatible and report
+`hostSourcesRestored:false`; they do not contain this additional OAuth source
+closure. Provision any missing connection sources through the original OAuth
+workflow before reopening their provider operations.
+
+The encrypted snapshot preserves opaque native credential and consent records.
+It does not supply external environment secret values or renew a grant. Keep
+those values in the host's existing secret configuration. After restore, resume
+the original workspace and inspect its current connection status: historical
+records and exact files remain readable, while provider operations still require
+the original current authorization. The
+[complete customer recovery chapter](./ACCOUNTING-MAINTENANCE-CLIENT.md#recover-the-configured-quickbooks-oauth-host-sources)
+uses the existing CLI and stable backup/job identities.
 
 ## Complete a recovered-purchase workflow
 

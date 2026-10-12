@@ -55,6 +55,41 @@ export async function recoverCustomer({ intentId, ...options }) {
   const operation = client(options).operation(intentId);
   return { operation, result: await operation.recover(), inspection: await operation.inspect() };
 }
+async function selectedCustomer(intentId, options) {
+  const operation = client(options).operation(intentId);
+  const selection = tokenSelection(await configuration(operation.configPath));
+  required(selection.intentId === intentId, 'BLOCKSCOUT_BUYER_INTENT_CHANGED');
+  return { operation, selection };
+}
+export async function inspectCustomerPreapproval({ intentId, nativeRecord, signal, ...options }) {
+  const selected = await selectedCustomer(intentId, options);
+  return { ...selected, recovery: await selected.operation.inspectPreapprovalRecovery({ nativeRecord, signal }) };
+}
+export async function prepareCustomerPreapproval({
+  intentId, expectedAttemptSha256, nativeRecord, reason, signal, ...options
+}) {
+  const selected = await selectedCustomer(intentId, options);
+  return { ...selected, recovery: await selected.operation.preparePreapprovalRecovery({
+    expectedAttemptSha256, nativeRecord, reason, signal,
+  }) };
+}
+export async function executeCustomerPreapproval({
+  intentId, workspaceDirectory, expectedPlanSha256, signal, ...options
+}) {
+  required(/^[a-f0-9]{64}$/.test(expectedPlanSha256 ?? ''), 'BLOCKSCOUT_RECOVERY_PLAN_SHA_REQUIRED');
+  const selected = await selectedCustomer(intentId, options);
+  const history = await selected.operation.readPreapprovalRecovery(), prepared = history.pending;
+  required(prepared && prepared.planSha256 === expectedPlanSha256, 'BLOCKSCOUT_RECOVERY_PLAN_CHANGED');
+  required(prepared.review.nativeWorkspace === workspaceDirectory, 'BLOCKSCOUT_BUYER_WORKSPACE_BINDING_CHANGED');
+  const result = await selected.operation.executePreapprovalRecovery({
+    expectedPlanSha256, review: prepared.review, signal,
+  });
+  return { ...selected, result };
+}
+export async function readCustomerPreapproval({ intentId, ...options }) {
+  const selected = await selectedCustomer(intentId, options);
+  return { ...selected, history: await selected.operation.readPreapprovalRecovery() };
+}
 function resultView(operation, result) {
   return { intentId: operation.intentId, directory: operation.directory, status: result.status,
     httpStatus: result.native.httpStatus ?? null, ok: result.ok, delivery: result.delivery };
@@ -67,6 +102,12 @@ export const HELP = [
   '          --config-sha256 REVIEWED_CONFIG_SHA256 [--node ABS_NODE]',
   '  recover --state PRIVATE_NODE_STATE --intent STABLE_ID [--node ABS_NODE]',
   '  save --state PRIVATE_NODE_STATE --intent STABLE_ID --out NEW_FILE [--node ABS_NODE]',
+  '  recovery-inspect --state PRIVATE_NODE_STATE --intent STABLE_ID [--native-record PRIVATE_JSON]',
+  '  recovery-prepare --state PRIVATE_NODE_STATE --intent STABLE_ID --attempt-sha256 SHA',
+  '                   --reason TEXT [--native-record PRIVATE_JSON]',
+  '  recovery-execute --workspace PRIVATE_OPERATOR --state PRIVATE_NODE_STATE --intent STABLE_ID',
+  '                   --plan-sha256 REVIEWED_PLAN_SHA256 [--node ABS_NODE]',
+  '  recovery-history --state PRIVATE_NODE_STATE --intent STABLE_ID [--node ABS_NODE]',
   '',
   'Prepare and review retain the original operation. Execute uses its exact reviewed',
   'configuration and original operator approval. Recover and save reopen the existing',
@@ -76,11 +117,18 @@ export async function main(argv = process.argv.slice(2)) {
   if (!argv.length || argv.length === 1 && argv[0] === '--help') { process.stdout.write(HELP + '\n'); return; }
   const [command, ...args] = argv, o = {};
   const specs = { prepare: ['workspace', 'state'], review: ['state', 'intent'],
-    execute: ['workspace', 'state', 'intent', 'config-sha256'], recover: ['state', 'intent'], save: ['state', 'intent', 'out'] };
+    execute: ['workspace', 'state', 'intent', 'config-sha256'], recover: ['state', 'intent'], save: ['state', 'intent', 'out'],
+    'recovery-inspect': ['state', 'intent'],
+    'recovery-prepare': ['state', 'intent', 'attempt-sha256', 'reason'],
+    'recovery-execute': ['workspace', 'state', 'intent', 'plan-sha256'],
+    'recovery-history': ['state', 'intent'],
+  };
+  const optional = ['recovery-inspect', 'recovery-prepare'].includes(command)
+    ? ['node', 'native-record'] : ['node'];
   required(Object.hasOwn(specs, command) && args.length % 2 === 0, 'BLOCKSCOUT_CUSTOMER_OPTIONS_INVALID');
   for (let i = 0; i < args.length; i += 2) {
     const name = args[i].slice(2);
-    required(args[i].startsWith('--') && [...specs[command], 'node'].includes(name) && !Object.hasOwn(o, name) &&
+    required(args[i].startsWith('--') && [...specs[command], ...optional].includes(name) && !Object.hasOwn(o, name) &&
       args[i + 1] && !args[i + 1].startsWith('--'), 'BLOCKSCOUT_CUSTOMER_OPTIONS_INVALID');
     o[name] = args[i + 1];
   }
@@ -91,6 +139,21 @@ export async function main(argv = process.argv.slice(2)) {
     const result = command === 'prepare' ? await prepareCustomer({ ...options, workspaceDirectory: o.workspace }) :
       await reviewCustomer({ ...options, intentId: o.intent });
     value = { selection: result.selection, directory: result.operation.directory, review: result.review };
+  } else if (command === 'recovery-inspect' || command === 'recovery-prepare') {
+    const input = { ...options, intentId: o.intent,
+      ...(o['native-record'] ? { nativeRecord: await configuration(o['native-record']) } : {}) };
+    const result = command === 'recovery-inspect'
+      ? await inspectCustomerPreapproval(input)
+      : await prepareCustomerPreapproval({ ...input, expectedAttemptSha256: o['attempt-sha256'], reason: o.reason });
+    value = { selection: result.selection, directory: result.operation.directory, recovery: result.recovery };
+  } else if (command === 'recovery-history') {
+    const result = await readCustomerPreapproval({ ...options, intentId: o.intent });
+    value = { selection: result.selection, directory: result.operation.directory, history: result.history };
+  } else if (command === 'recovery-execute') {
+    const result = await executeCustomerPreapproval({ ...options, intentId: o.intent,
+      workspaceDirectory: o.workspace, expectedPlanSha256: o['plan-sha256'] });
+    value = resultView(result.operation, result.result);
+    if (!result.result.ok) process.exitCode = 1;
   } else if (command === 'execute') {
     const result = await executeCustomer({ ...options, workspaceDirectory: o.workspace, intentId: o.intent, configSha256: o['config-sha256'] });
     value = resultView(result.operation, result.result);

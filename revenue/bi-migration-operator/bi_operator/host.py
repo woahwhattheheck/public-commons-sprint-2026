@@ -138,7 +138,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlsplit(self.path)
-        public = parsed.path in {"/", "/index.html", "/app.js", "/report-server.js", "/style.css", "/favicon.ico"}
+        public = parsed.path in {"/", "/index.html", "/app.js", "/report-server.js", "/sql-server.js", "/billing.js", "/billing.css", "/azure-exports.js", "/azure-exports.css", "/style.css", "/favicon.ico"}
         if not self.allowed(authenticate=not public):
             return
         try:
@@ -160,6 +160,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, service.store.history(params["kind"], params["id"]))
             elif parsed.path == "/api/events":
                 self.send(200, service.store.events())
+            elif parsed.path == "/api/azure/preview":
+                self.send(200, service.azure.preview(params))
             elif parsed.path == "/api/preview":
                 self.send(200, service.preview(params["kind"], params["id"], params.get("revision"), params.get("offset", 0), params.get("limit", 100), params.get("search", "")))
             elif parsed.path.startswith("/api/object/"):

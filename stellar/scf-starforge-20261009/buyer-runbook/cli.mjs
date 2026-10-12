@@ -23,7 +23,15 @@ const USAGE = `Buyer runbook — compose original SF88 operations
                             [--pass-env NAME] [--python /absolute/current-python]
   node cli.mjs backup-restore --bundle /absolute/backup [--expect RECORD_SHA256]
                              [--pass-env NAME] [--python /absolute/current-python]
-  node cli.mjs workspace --state /absolute/private-workspace --configs /absolute/buyer-configs
+  node cli.mjs operator status --state /absolute/private-workspace
+  node cli.mjs operator review --state /absolute/private-workspace [--file /absolute/draft.json]
+                              [--from-revision PRESET_ID] [--note REASON] [--expect STATE_SHA256]
+  node cli.mjs operator save --state /absolute/private-workspace [--file /absolute/draft.json]
+                            [--from-revision PRESET_ID] [--note REASON]
+                            --expect STATE_SHA256 --review REVIEW_SHA256
+  node cli.mjs operator revision --state /absolute/private-workspace --id PRESET_ID
+  node cli.mjs operator export --state /absolute/private-workspace --id PRESET_ID
+  node cli.mjs workspace --state /absolute/private-workspace [--configs /absolute/buyer-configs]
                         [--operator-settings /absolute/private-operator.json]
                         [--claim-envs SF101_CLAIM_TOKEN,OTHER_ORDER_TOKEN]
                         [--run /absolute/existing-run] [--port 8460]
@@ -39,19 +47,30 @@ accounting-workspace binds one operation to its existing original operator; late
 finalize calls reuse that selection. Optional outbox arguments require --only.
 status rewrites only derived status.json/report.html, not plans or attempts.
 unlock releases an exact dead local process lease; it preserves every attempt.
-workspace opens the private browser planner and original run controls. Start it
-in the same controlling terminal used for SF81 approval. Existing workspaces can
-omit --configs to reuse their saved source directory.
+workspace opens the private browser planner and original run controls. Terminal
+mode uses the same controlling terminal as original SF81 approval. Browser mode
+presents each original live-term decision at the printed workspace URL.
+Existing workspaces can omit --configs to reuse their saved source directory.
+New workspaces can omit it
+to create a private configs directory inside their state directory.
 backup-review resolves every original operator and retained acquisition under one
 private state root. backup requires the exact reviewed selection and stopped
 external writers. Its encrypted archive checkpoints every native ledger.
 backup-verify authenticates all files and original journals. backup-restore uses
 the original absent-or-empty state root and reopens saved acquisitions without
 executing purchases. Set the passphrase environment variable before launching.
+operator status/review/save manage the same private host settings as the console.
+Review compares exact selected state; save requires both returned hashes. Omit
+--file/--from-revision to adopt the current declared settings; use --from-revision
+to restore original retained bytes. operator export writes one original-format
+preset to stdout. Signing and proxy environment values are never returned.
 --operator-settings declares this machine's payer, signer source and maximum
 budgets for receiving private merchant requests. Its path is retained for reopen.
 --claim-envs declares existing environment names available for paid-file delivery.
 Only names enter the browser; values stay in this process's existing environment.
+
+Workspace approval: --approval-mode terminal|browser (default terminal).
+Managed launch binding: --expected-selection-sha256 SHA256.
 `;
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function options(args, names) {
@@ -111,22 +130,77 @@ export async function main(args = process.argv.slice(2)) {
     }
     return;
   }
+  if(command==='operator') {
+    const [action,...rest]=tail;
+    if(!action||action==='--help'||action==='help'){process.stdout.write(USAGE);return;}
+    need(['status','review','save','revision','export'].includes(action),'UNKNOWN_OPERATOR_COMMAND');
+    const common=['--state','--configs','--operator-settings'];
+    const opts=options(rest,[...common,...(action==='review'||action==='save'?
+      ['--file','--from-revision','--note','--expect',...(action==='save'?['--review']:[])]:
+      action==='revision'||action==='export'?['--id']:[])]);
+    need(opts['--state'],'WORKSPACE_STATE_DIRECTORY_REQUIRED');
+    need(!(opts['--file']&&opts['--from-revision']),'OPERATOR_ONE_DRAFT_SOURCE_REQUIRED');
+    if(action==='save')need(opts['--expect']&&opts['--review'],'OPERATOR_EXACT_REVIEW_REQUIRED');
+    if(action==='revision'||action==='export')need(opts['--id'],'OPERATOR_REVISION_REQUIRED');
+    const {openRunbookWorkspace}=await import('./workspace-model.mjs');
+    const model=await openRunbookWorkspace({directory:opts['--state'],configsDirectory:opts['--configs'],
+      operatorSettings:opts['--operator-settings']});
+    try {
+      if(action==='status')print(await model.operatorState());
+      else if(action==='revision')print(await model.operatorRevision(opts['--id']));
+      else if(action==='export')process.stdout.write((await model.operatorAttachment(opts['--id'])).bytes);
+      else {
+        const current=await model.operatorState();let settings=current.settings;
+        if(opts['--file']) {
+          const {readBuyerOperatorPreset}=await import('./handoff-intake.mjs');
+          const {join}=await import('node:path');
+          settings=(await readBuyerOperatorPreset(opts['--file'],{directory:join(model.directory,'handoffs')})).value;
+        } else if(opts['--from-revision'])settings=(await model.operatorRevision(opts['--from-revision'])).settings;
+        need(settings,'REQUEST_OPERATOR_PRESET_REQUIRED');
+        const input={settings,expectedStateSha256:opts['--expect']??current.stateSha256,note:opts['--note']??'',
+          ...(opts['--from-revision']?{sourceRevision:opts['--from-revision']}:{})};
+        print(action==='review'?await model.reviewOperatorSettings(input):
+          await model.saveOperatorSettings({...input,expectedReviewSha256:opts['--review']}));
+      }
+    } finally {await model.close();}
+    return;
+  }
   if (command === 'workspace') {
-    const opts = options(tail, ['--state','--configs','--operator-settings','--claim-envs','--run','--port']);
+    const opts = options(tail, ['--state','--configs','--operator-settings','--claim-envs','--run','--port',
+      '--approval-mode','--expected-selection-sha256']);
     need(opts['--state'], 'WORKSPACE_STATE_DIRECTORY_REQUIRED');
-    const {startRunbookWorkspace} = await import('./workspace.mjs');
-    const service = await startRunbookWorkspace({directory:opts['--state'], configsDirectory:opts['--configs'],
-      operatorSettings:opts['--operator-settings'],
-      paidFileClaimEnvs:opts['--claim-envs']===undefined?undefined:opts['--claim-envs'].split(','),
-      runs:opts['--run'] ? [opts['--run']] : [], port:Number(opts['--port'] ?? 8460)});
-    const state = await service.model.state();
-    print({mode:'BUYER_RUNBOOK_WORKSPACE', url:service.url, directory:service.model.directory,
-      terminalAvailable:state.terminalAvailable});
-    let stopping;
-    const stop = code => { stopping ??= service.close().then(() => {process.exitCode = code;}, error => {
-      process.stderr.write(JSON.stringify({error:error.code ?? 'WORKSPACE_SHUTDOWN_FAILED'}) + '\n'); process.exitCode = 1;
-    }); };
-    process.once('SIGINT',() => stop(130)); process.once('SIGTERM',() => stop(143));
+    const controller = new AbortController();
+    let service, stopping, stopCode;
+    const removeSignals = () => { process.off('SIGINT',interrupt); process.off('SIGTERM',terminate); };
+    const stop = code => {
+      stopCode ??= code; controller.abort();
+      if (!service) return;
+      return stopping ??= service.close().then(() => { process.exitCode = stopCode; }, error => {
+        process.stderr.write(JSON.stringify({error:error.code ?? 'WORKSPACE_SHUTDOWN_FAILED'}) + '\n');
+        process.exitCode = 1;
+      }).finally(removeSignals);
+    };
+    const interrupt = () => stop(130), terminate = () => stop(143);
+    process.once('SIGINT',interrupt); process.once('SIGTERM',terminate);
+    try {
+      const {startRunbookWorkspace} = await import('./workspace.mjs');
+      service = await startRunbookWorkspace({directory:opts['--state'], configsDirectory:opts['--configs'],
+        operatorSettings:opts['--operator-settings'],
+        paidFileClaimEnvs:opts['--claim-envs']===undefined?undefined:opts['--claim-envs'].split(','),
+        runs:opts['--run'] ? [opts['--run']] : [], port:Number(opts['--port'] ?? 8460),
+        approvalMode:opts['--approval-mode'] ?? 'terminal',
+        expectedSelectionSha256:opts['--expected-selection-sha256'],signal:controller.signal});
+      if (controller.signal.aborted) { await stop(stopCode ?? 143); return; }
+      // Managed Applications consumes the one complete native announcement line.
+      process.stdout.write(JSON.stringify(service.launch) + '\n');
+    } catch (error) {
+      removeSignals();
+      if (service) await service.close();
+      if (stopCode !== undefined && error.code === 'WORKSPACE_START_INTERRUPTED') {
+        process.exitCode = stopCode; return;
+      }
+      throw error;
+    }
     return;
   }
   if (command === 'init') {

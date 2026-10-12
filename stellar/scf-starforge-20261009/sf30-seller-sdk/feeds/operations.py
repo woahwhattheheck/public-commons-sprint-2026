@@ -6,6 +6,10 @@ def execute(ws, body):
         raise InputError("Choose a feed action")
     action = body.get("action")
     options = {
+        "collection-save": {"collectionId", "title", "members", "newFeeds", "expectedRevision", "operationId"},
+        "collection-capture": {"collectionId", "expectedRevision", "expectedRevisions", "operationId", "pageLimit", "force"},
+        "collection-resume": {"runId"},
+        "collection-edition": {"runId", "name", "fields", "expectedRevisions", "operationId"},
         "register": {"feedId", "config", "expectedRevision", "operationId"},
         "capture": {"feedId", "operationId", "followPages", "pageLimit", "force", "fromCapture"},
         "resume": {"captureId"},
@@ -17,6 +21,14 @@ def execute(ws, body):
     }
     if action not in options or set(body) - options[action] - {"action"}:
         raise InputError("Unknown action or action option")
+    if action == "collection-save":
+        return ws.subscriptions.save(body["collectionId"], body["title"], body["members"], body.get("newFeeds", {}), body["expectedRevision"], body["operationId"])
+    if action == "collection-capture":
+        return ws.subscriptions.capture(body["collectionId"], body["expectedRevision"], body["expectedRevisions"], body["operationId"], body.get("pageLimit", 100), body.get("force", False))
+    if action == "collection-resume":
+        return ws.subscriptions.resume(body["runId"])
+    if action == "collection-edition":
+        return ws.subscriptions.edition(body["runId"], body["name"], body["fields"], body["expectedRevisions"], body["operationId"])
     if action == "register":
         return ws.register(body["feedId"], body["config"], body["expectedRevision"], body["operationId"])
     if action == "capture":

@@ -12,6 +12,7 @@ dependencies = []
 readme = "README.md"
 
 [project.optional-dependencies]
+duckdb = ["duckdb==1.5.6"]
 postgres = ["psycopg[binary]==3.3.6"]
 workbooks = ["openpyxl==3.1.5"]
 agents = [
@@ -22,6 +23,7 @@ agents = [
 ]
 
 [project.scripts]
+stellar-forge-duckdb = "stellar_forge_buyer.duckdb_cli:main"
 stellar-forge-postgres = "stellar_forge_buyer.postgres_cli:main"
 stellar-forge-buyer = "stellar_forge_buyer.__main__:main"
 stellar-forge-agent = "stellar_forge_buyer.agent_workflow:main"

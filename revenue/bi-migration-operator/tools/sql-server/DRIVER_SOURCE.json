@@ -1,0 +1,55 @@
+{
+  "schema": "commons-bi-sql-driver-source/1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "source_ref": "f18c68077478e1cf7063e5c38be86f0edab39d7a",
+  "release_merge": "2e8001207eb85f9bc8121eefa5b355ed34d938b8",
+  "upstream_prefix": "stellar/scf-starforge-20261009/sf30-seller-sdk/",
+  "license": "MIT (unchanged original source declarations)",
+  "native_dependency": {
+    "node": ">=22.16",
+    "package": "mssql",
+    "version": "12.7.4"
+  },
+  "files": [
+    {
+      "path": "core/mssql/config.mjs",
+      "original_path": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/config.mjs",
+      "git_blob_sha": "8e746aaf53572665b20f3186104df9f9fe52bf95"
+    },
+    {
+      "path": "core/mssql/source.mjs",
+      "original_path": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/source.mjs",
+      "git_blob_sha": "187510b876cefacd0c15be04ec706f443e099299"
+    },
+    {
+      "path": "core/mssql/catalog.mjs",
+      "original_path": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/catalog.mjs",
+      "git_blob_sha": "b421e7b4779c8079b0a18d6974e8074f12248e29"
+    },
+    {
+      "path": "core/mssql/declaration.mjs",
+      "original_path": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/declaration.mjs",
+      "git_blob_sha": "907bc37ac0c92dd869ad9195589d03ef6ebf80c6"
+    },
+    {
+      "path": "core/mssql/package.json",
+      "original_path": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/package.json",
+      "git_blob_sha": "96ded18e72690dc77c94e1313032f2da53836b6b"
+    },
+    {
+      "path": "core/postgres/declaration.mjs",
+      "original_path": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/declaration.mjs",
+      "git_blob_sha": "bd2865bb6ea61a64c42eb2a4b1f3952265c740f6"
+    },
+    {
+      "path": "core/postgres/decimal.mjs",
+      "original_path": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/decimal.mjs",
+      "git_blob_sha": "f13cb8a452b17153cdf66a837bb194e717153e1b"
+    },
+    {
+      "path": "core/sqlite/parameters.mjs",
+      "original_path": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/parameters.mjs",
+      "git_blob_sha": "a8099e6d50978c8c9d12427bf03da65c110bbf3a"
+    }
+  ]
+}

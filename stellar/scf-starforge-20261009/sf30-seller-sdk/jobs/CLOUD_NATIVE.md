@@ -15,11 +15,114 @@ removed its temporary merchant directory. The CKQrif state supplies the
 retained application needed for the customer and checkout continuation.
 Keep the earlier accepted result attached to its original run.
 
+## Adopt an already completed core
+
+When the original receiving owner has completed the merchant journey, use the
+[completed-core capture and continuation](COMPLETED_CORE.md). The runner accepts
+--input-mode completed-core, restores the captured actual application paths and
+adopts the exact earlier result before customer/checkout. Select --approval browser
+to exercise Request through the original browser approval and result workflow.
+
+The remaining instructions describe the original prepared-capsule mode. Preserve
+its existing operation when using that mode.
+
+## Run the complete installed merchant release
+
+The current release can carry the same completed merchant through input-file
+intake, browser checkout, resolution, the real merchant MCP endpoint and complete
+receiving, then build and install the release and reopen that merchant through
+Applications. Select all of these stages in the same existing foreground:
+
+~~~sh
+python3 /absolute/worker/cloud-native.py \
+  --workspace /absolute/worker/scf-release-receiving \
+  --out /absolute/worker/scf-release-receiving/results \
+  --source-commit COMPLETE_MERGED_SOURCE_COMMIT \
+  --capsule /absolute/inbox/CKQrif-completed-core.tar.gz \
+  --sha256 9fb48baeeb071bb680399bb8a0d6fa4668a8e6fccb96dda339134d2453c1228c \
+  --input-mode completed-core --approval browser --input-files --applications \
+  --validation-operation SCF-RELEASE-RECEIVING-0B8D-20261012-32F59 \
+  --node /absolute/node24/bin/node \
+  --npm /absolute/node24/bin/npm
+~~~
+
+Use `--node-version 24.20.0` with an existing Node 24.20.0 installation, or keep
+the original default 24.19.0. The exact selected version and executable must match;
+the original runtime inspector still checks every selected package on that host.
+
+The completed-core capsule is the existing 11,088-byte capture `F0C899G7ZUK`.
+Its original report and recovery jobs, original application paths and source
+identities remain attached to that capture. The validation operation identifies
+this release run; `operation` continues to identify the original paid-job family.
+Use the actual current native operator's project, executable and input paths.
+
+Select a source commit containing this runner and the complete merged merchant,
+Applications, agent and receiving changes from PR1800. The operator runs this
+whole command in an available equipped Linux VM. Collection of an earlier
+accepted source run can continue independently through its own worker record.
+Keep each live operation with its original native controller.
+
+`--input-files` requires browser approval. The checkout driver uses the original
+6,000-row invoice ledger and supplier pricebook, continues the original input
+desk and retained upload chunks, then receives the resulting resolution and
+accounting through the real MCP endpoint. The runner requires all three
+completed results before it enters installed Applications.
+
+`--applications` builds the selected Git commit through the maintained
+`distribution/build.mjs`, installs that exact original archive through
+`runtime-install`, inspects all original package files and loads the selected
+dependencies. It shares the existing npm cache with the source-native stages.
+The selected profile retains native payment dependencies, the schema feature,
+Linux operator support and the compatible Stellar SDK 16.3.1 pin.
+
+The installed command initializes its private runtime workspace and attaches the
+actual READY installation. The returned runtime ID goes into the original
+`jobs-merchant-receive` input. That installed receiving command reviews and saves
+the completed invoice merchant, starts it, reads the original job/result and all
+configured operator desks, stops and drains the service, then reopens the same
+application for a second lifetime. The source, paid job and result remain the
+same across those starts.
+
+The foreground retains the native build, prepare/recovery, installation,
+inspection, attach and receiving commands with their actual results. It resumes
+an interrupted build in its original output, resumes the original installation
+or uses the installer's fresh-directory recovery for an interrupted preparation.
+The Applications receiver retains its original reviews, saved application,
+request IDs and observed service lifetimes. Immutable retained inputs publish
+from fully flushed temporary files; interruption cannot leave a partial final
+archive or receiving input. Completed-core restoration uses the same atomic
+publication. A partial installation plan is recovered through the original
+installer using its matching retained preparation record. The installed receiving step has 90 seconds to finish
+its original stop/drain path when the native controller forwards shutdown.
+
+An existing validation run reopens only with the same source commit, input
+capsule, approval selection and selected stages. A completed browser-only
+checkout cannot satisfy an input-file run. A new source selection gets its own
+native validation operation and private project.
+
+The same three outer artifact selections return the complete result. Additional
+files inside `native-return.tar.gz` include:
+
+| Retained file or directory | Content |
+| --- | --- |
+| `applications.json` | Complete installed receiving result and actual source/runtime identities. |
+| `applications/source.tgz` | The exact merchant archive built and installed on this worker. |
+| `applications/distribution.json` | Original package builder result. |
+| `applications/runtime-files/` | Original installation plans, selected profile, lock and npm logs. |
+| `applications/runtime-inspection.json` | Complete original source and dependency inspection. |
+| `applications/workspace/` | Original Applications selections and native operation records. |
+| `applications/receiving/` | The two service lifetimes, original job/result bytes, ledger and final receiving. |
+
+The `continuation.json` in that directory names the actual selected workspace
+if an interrupted initialization used a later private directory. The installed
+dependency tree remains at its recorded runtime path on the VM. Its original
+archive, profile and lock are included for subsequent installation and transfer.
+
 ## Worker input
 
 Use a private project directory owned by the worker. The output directory must
 be a child of that project so the original native artifact transport can select
-it. The worker needs Linux, Python 3.11 or later, Node **24.19.0**, npm, git,
+it. The worker needs Linux, Python 3.11 or later, Node **24.19.0 or a newer explicitly selected Node 24 release**, npm, git,
 OpenSSL and util-linux flock. Reserve at least **768 MiB** for the third
 phase's two Node processes, Python, native modules and application worker.
 Provision these components through the existing worker controls.
@@ -121,13 +224,14 @@ profile gets its own directory and the stopped payload switches only its own
 dependency link. The earlier profile and lock remain in the project. The
 native phase records retain their actual source commit and profile ID.
 
-## Three sequential application phases
+## Source-native phases and installed Applications
 
 | Phase | Original driver | Retained output |
 | --- | --- | --- |
 | Merchant and purchased jobs | sf30-seller-sdk/jobs/native-journey.mjs | results/baseline.json |
 | Customer library continuation | sf88-operator-buyer-cli/job-workspace/continuation.mjs | results/customer.json |
-| Original SDK checkout | sf88-operator-buyer-cli/job-workspace/checkout/native-continuation.py | results/checkout.json |
+| Original SDK checkout, optionally input files / resolution / agent | sf88-operator-buyer-cli/job-workspace/checkout/native-continuation.py | results/checkout.json |
+| Complete installed merchant, when selected | Original build/runtime-install commands and installed jobs-merchant-receive | results/applications.json |
 
 The first driver resumes the original prepared report with
 SF_JOBS_JOURNEY_RESUME and keeps its merchant directory. It uses the original

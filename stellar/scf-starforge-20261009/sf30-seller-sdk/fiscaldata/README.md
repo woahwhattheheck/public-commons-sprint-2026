@@ -88,6 +88,16 @@ Each measure also records exact sums over the participating numeric rows, the re
 
 The comparison retains both source contexts and immutable edition identities. JSON preserves whether a field was absent versus present with null. changes.csv uses blank cells for absent values, while rows.jsonl retains the full distinction and every unchanged pair.
 
+## Create a customer briefing
+
+Open a saved comparison and expand **Customer briefing**. Select its complete comparison delivery, or use **Create comparison delivery** to retain one. Enter a report title, audience and analyst notes, then choose **Create complete briefing**. The selected comparison, exact source export and authored context remain attached to that request.
+
+Download **briefing.tar.gz** from the completed card. Extract it and open index.html to read the offline report, exact first/last dated observations, every row-detail page, original field meanings and the complete comparison source archive. Markdown, JSON, the dated-measure CSV and both manifests are also available through the same workspace downloads. The report presents the original model's results; decimal values stay strings and daily debt stock sums retain their original interpretation.
+
+Report drafts stay with their selected comparison during polling and navigation. A failed creation retains its exact input for **Retry**. Completed reports remain in the workspace's exports and its portable source checkpoint, so the managed Application can reopen them with the original operator and source identity.
+
+The original standalone `starforge fiscaldata-briefing` command remains available when the workspace is closed. Existing servers and MCP hosts create the same report through `briefings.create`; the named MCP tool is `merchant_fiscaldata_briefing`. See [the complete briefing guide](BRIEFING.md) for the offline file inventory, interpretation and receiving steps.
+
 ## Complete delivery and merchant publication
 
 Every complete export contains a manifest, readable DELIVERY.md and delivery.tar.gz. An edition export includes its actual dataset files and original Treasury responses. A comparison export includes both editions and their original captures. A partial capture export explicitly retains its partial state and never claims completion.
@@ -208,3 +218,8 @@ The original official Treasury frontend provides the implementation and document
 - Debt to the Penny source description: https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/
 
 Original row/source definitions remain the authority for interpreting a dataset. Native response bodies, retrieval times, metadata, links and hashes are retained in the workspace so a later capture can be compared against its actual original inputs.
+
+## Managed Applications
+
+The installed **Fiscal Data operations** application reopens this same named-operator workspace through the original Applications Review, Save, Start, Open, Stop and retained-reopen workflow. It verifies selected and executed source, the private connection and the original workspace identity, then borrows the existing MCP model and browser. The [complete Applications guide](../../distribution/runtime-workspace/FISCALDATA_APPLICATIONS.md) covers private setup, reviewed startup, source checkpoint receiving, original publisher/buyer controls and recovery.
+

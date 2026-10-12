@@ -1,0 +1,38 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "opensearch",
+  "description": "OpenSearch search products",
+  "commands": {
+    "opensearch": "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/start.mjs",
+    "opensearch-prepare": "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/prepare.mjs",
+    "opensearch-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/server.mjs",
+    "opensearch-catalog": "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/cli.mjs"
+  },
+  "commandDescriptions": {
+    "opensearch": "Preflight and run a native OpenSearch merchant",
+    "opensearch-prepare": "Prepare named search routes and the original customer client",
+    "opensearch-workspace": "Save drafts, capture and compare search editions, and prepare merchants",
+    "opensearch-catalog": "Retain material catalogs, correct supplier submissions, create BMEcat deliveries and reopen complete handovers"
+  },
+  "exports": {
+    "./seller/opensearch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/source.mjs",
+    "./seller/opensearch/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/declaration.mjs",
+    "./seller/opensearch/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/prepare.mjs",
+    "./seller/opensearch/start": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/start.mjs",
+    "./seller/opensearch/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/server.mjs",
+    "./seller/opensearch/workspace/service": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/service.mjs",
+    "./seller/opensearch/workspace/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/store.mjs",
+    "./seller/opensearch/relevance": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/native.mjs",
+    "./seller/opensearch/relevance/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/workspace.mjs",
+    "./seller/opensearch/catalog/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/cli.mjs",
+    "./seller/opensearch/catalog/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/workspace.mjs",
+    "./seller/opensearch/catalog/mapping": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/mapping.mjs",
+    "./seller/opensearch/catalog/input": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/input.mjs",
+    "./seller/opensearch/catalog/exports": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/exports.mjs",
+    "./seller/opensearch/catalog/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/transfer.mjs",
+    "./seller/opensearch/catalog/supplier/profile": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/profile.mjs",
+    "./seller/opensearch/catalog/supplier/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/model.mjs",
+    "./seller/opensearch/catalog/supplier/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/workspace.mjs",
+    "./seller/opensearch/catalog/supplier/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/transfer.mjs"
+  }
+}

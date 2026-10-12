@@ -1,12 +1,12 @@
 # Original buyer expense operation from MCP and customer code
 
-The merchant MCP host can operate the original SF36 expense workspace through its existing Python HTTP application. This is an accounting continuation of an already retained buyer ledger. It does not create a buyer, make a payment, read a signer, change a reservation, or introduce another ledger.
+The merchant MCP host can operate the original SF36 expense workspace through its existing Python HTTP application. This is an accounting continuation of already retained SF36 ledgers or original MCP quote/payment observations. It does not create a buyer, make a payment, read a signer, change a reservation, or introduce another ledger.
 
-The same source captures, exact atomic allocation lines, outstanding reservations, named period reviews, immutable closes and reopen history are available to the browser and customer tools. All financial rules remain in `sf36-spend-governor/expense-workspace/{store,domain,native}.py`; the source reader remains the original `statement.py`.
+The same source captures, exact atomic allocation lines, outstanding reservations, named period reviews, immutable closes and reopen history are available to the browser and customer tools. All financial rules remain in `sf36-spend-governor/expense-workspace/{store,domain,native}.py`; SF36 source reading remains in original `statement.py`, and MCP reading uses original `SqliteQuoteStore.readSnapshot` plus its saved SF86 observations.
 
 ## Declare the original host inputs
 
-Create an owned mode-0600 JSON file. Paths in this file are operator configuration, not MCP arguments. The workspace can be an existing original expense workspace or a new private workspace. Each original ledger needs its own explicit alias and truthful provenance.
+Create an owned mode-0600 JSON file. Paths in this file are operator configuration, not MCP arguments. The workspace can be an existing original expense workspace or a new private workspace. Each original ledger or MCP quote directory needs its own explicit alias and truthful provenance.
 
 ```json
 {
@@ -21,13 +21,20 @@ Create an owned mode-0600 JSON file. Paths in this file are operator configurati
           "name": "Original buyer ledger",
           "provenance": "Operator-owned original SF36 buyer; retain its actual source and purchase references here."
         }
+      },
+      "quoteSources": {
+        "remote_tools": {
+          "path": "/srv/starforge/original-mcp-buyer",
+          "name": "Original native MCP purchases",
+          "provenance": "Operator-owned original quote store; retain the actual purchase and saved reconciliation references."
+        }
       }
     }
   }
 }
 ```
 
-Use Python 3.11 or newer on POSIX. A declared absolute Python executable is also supported. Relative file paths resolve against the private connection file. Distinct workspace aliases must have distinct directories. The configuration reader opens no ledger and starts no application.
+Use Python 3.11 or newer on POSIX. A declared absolute Python executable is also supported. Relative file paths resolve against the private connection file. Distinct workspace aliases must have distinct directories. The configuration reader opens no buyer source and starts no application. New MCP captures use the same Node executable that owns this MCP host; callers cannot select executables or arbitrary source paths.
 
 Initialize the existing MCP host without a seller:
 
@@ -56,7 +63,7 @@ All tool names below begin `merchant_buyer_expense_`. `expenses tools` and `buye
 | Step | Tools | Original behavior |
 | --- | --- | --- |
 | Select and open | `workspaces`, `open`, `state` | Explicitly open one declared original workspace. Read its current revision, sources, centers, labels and periods. |
-| Register or refresh | `ledger_register`, `capture`, `source_rebind` | Use only a declared original ledger. Registration captures once; later capture retains a pending edition. Rebind keeps the original request-continuity checks. |
+| Register or refresh | `ledger_register`, `mcp_register`, `capture`, `source_rebind` | Use a declared original source of the matching type. Registration captures once; later captures are pending editions. Rebind keeps original native identity continuity. |
 | Review source changes | `captures`, `capture_status`, `capture_review` | Page actual native deltas and retain the named accept/reject decision. Complete original captures remain downloadable. |
 | Allocate actual expense | `items`, `item`, `center_save`, `labels_save`, `coding_save` | Exact string amounts must sum to the original settled actual. Recognition date, project and account code are operator decisions. Network and asset remain separate. |
 | Resolve the period | `period_save`, `period_report`, `disposition` | Preserve outstanding reservations and missing-source indications. Resolve only the actual displayed issue with its current basis and allowed disposition. |
@@ -65,7 +72,15 @@ All tool names below begin `merchant_buyer_expense_`. `expenses tools` and `buye
 | Receive the whole project | `export`, `exports`, `export_status`, `manifest`, `file`, `file_release` | Retain native files under a stable export ID. Download their pinned bytes and receive the included original application. |
 | Finish | `close` | Close the exact instance owned by this host, drain its accepted requests and release the original workspace lease. |
 
-State/history/report tools accept `offset` and `limit` (1–200). Report views expose the original allocations, outstanding reservations, issues, totals, cost-center/project groups, outstanding totals and source-capture references. They never add unlike assets or label reservations as settled expense.
+State/history/report tools accept `offset` and `limit` (1–200). Report views expose the original allocations, outstanding reservations, issues, totals, cost-center/project groups, outstanding totals, source-capture references and `native_payment_outcomes`. They never add unlike assets, label reservations as settled expense, or turn MCP quote prices into reservations.
+
+## Original MCP purchase to accountant
+
+`mcp_register` selects a `quoteSource` alias and the same `requestId` / `expectedRevision` contract as ledger registration. Its SDK name is `mcpRegister`. A later `capture` uses the registered source kind and must still match a host-declared locator. `source_rebind` takes exactly one `ledger` or `quoteSource` alias, which must match the retained source type.
+
+The native reader opens original `quotes.sqlite` read-only and preserves each quote's accepted terms, dispatch state, buyer result and saved original payment observation. Only an exact-bound saved native SF86 `TRANSFER_MATCHED` observation supplies settled actual for allocation. Seller-confirmed results and unresolved or failed payment observations remain visible in the same period workflow. The fixed reader performs no network request, reconciliation, signing or payment. Use the original buyer recovery operation first when its report is absent, then explicitly capture and review that source.
+
+MCP quote creation day is a source date, not a settlement date. Recognition remains the operator's explicit decision. The same exact matched transfer cannot close as two included charges through duplicated source captures or another currently closed period. Raw original observation/result metadata is available in capture exports, and `native_payment_outcomes` is a paged report/review/issued view. Purchased result bodies remain with the original buyer.
 
 ## Transactional request recovery
 
@@ -172,7 +187,7 @@ A stable export ID retains its original request before preparation. A completed 
 
 The trusted `receive.py` checks the reviewed whole-archive SHA256, complete member set, every retained file hash/byte count, known native SQLite tables/columns, workspace identity, revision and successful-request count. It extracts only known original project members into a new private destination, with exact-archive continuation after an interrupted receive. It executes no archive code or SQL. Old version-1 projects without request history are identified as legacy and acquire the additive table on normal original opening.
 
-The received package includes the original Python application, source statement reader, public UI, instructions and consistent workspace database. Opening it needs no repository checkout. It retains captured statement snapshots and accountant history; the original buyer ledger, wallet and signing material remain outside it. No source capture or payment is replayed during receiving. Existing local ledger locators can be rebound through the original source workflow if a later deliberate refresh is required.
+The received package includes the original Python application, source statement reader, complete native MCP quote-reader files, public UI, instructions and consistent workspace database. Opening it needs no repository checkout. It retains captured statement snapshots and accountant history; the original buyer ledgers, quote databases, purchased output bodies, wallet and signing material remain outside it. No source capture or payment is replayed during receiving. Existing local source locators can be rebound through the original source workflow if a later deliberate refresh is required. Saved state opens with Python alone; only a new MCP source capture needs the host's Node 22.13+ or Node 24 runtime. Receiving verifies the advertised native reader feature, required files and original source kinds.
 
 ## Completed original operating continuation
 
@@ -183,3 +198,77 @@ The capture and period-close responses were deliberately discarded after success
 The trusted receiver reopened all 14 native tables and 18 project members with the included Python application. It recovered the same capture and close without changing revision 22, adding a capture, or creating a payment. This was an internal continuation of the existing purchase and operator review.
 
 The retained complete project is 87,394 bytes, SHA256 `9156505408514205f52caa6dcd2b5c57a1b20f79a321b3ff7bdd7a43cd3018bb`. The native workflow ran the reviewed expense source at `dccba68845a93420f409d76ce7f28cb40e02717a`; subsequent shared-host composition preserves the current Redis and source-workspace integrations. All owned services closed on completion.
+
+### Original remote-MCP source joined to the same case
+
+The subsequent original-purchase continuation reached revision 29 through `mcp_register`, source acceptance, allocation, period review/close and retained export. Four existing MySQL HPD quotes produced one exact-bound 50,000-atomic-unit expense, one separately carried unresolved signed quote and two unsigned rejections. The original D173 allocation and 10,000-unit unsent reservation remained intact; the new issued expense total was 60,000 atomic units in the same original testnet asset.
+
+The complete receiving project retained both native source kinds, all 14 tables, 14 committed requests and 24 project members, including the read-only quote-reader closure. The same case and issued edition reopened with no new source capture or payment. The original buyer's native reconciliation reused its existing optional Stellar SDK runtime; the expense capture itself required only Node's standard library. Desktop and mobile inspection of the included source completed with no page errors, and all owned processes closed.
+
+## Original buyer credits and refund receiving
+
+The same customer host exposes `refund_capture`, `refund_packets`, `refund_packet`, `refund_review`, `credits`, `credit` and `credit_coding_save` under the original `merchant_buyer_expense_` prefix. The JavaScript client derives `refundCapture`, `refundReview`, `creditCodingSave` and the corresponding read methods from the same contract. Successful mutations use the original Store transaction/request recovery and the same per-workspace child lifetime.
+
+Declare the original customer packets on the host, preserving exact source identities:
+
+```json
+{
+  "schema": "stellar-forge.buyer-expense-connection.v1",
+  "workspaces": {
+    "buyer": {
+      "directory": "/operator/buyer-expenses",
+      "refundSources": {
+        "original-return": {
+          "directory": "/received/original-refund",
+          "manifestSha256": "EXACT_ORIGINAL_MANIFEST_SHA256",
+          "siteUrl": "https://original-store.example",
+          "name": "Original customer refund",
+          "provenance": "The original operator, operation and retained source references",
+          "dataContext": "operational"
+        }
+      }
+    }
+  }
+}
+```
+
+The strings above are configuration placeholders. Supply the actual original packet/hash/store and use `development` for a retained development operation. Operational and development records stay in separate native workspaces. Existing `ledgers` and `quoteSources` may also declare `dataContext`, defaulting to `operational`.
+
+Capture the declared alias, inspect its source, then accept/reject the packet with a named reason and either the exact matching purchase item or explicit `register_original_purchase: true`. Read and code the original purchase before its returns. `credit_coding_save` uses the original exact native allocation shape and current return basis. It enforces original purchase dimensions, cumulative capacity and unique native return identity. Original store-currency credit and native returned units are never converted into one another.
+
+The existing `period_report`, `review` and `issued` views now include `credit_allocations`, `credit_totals`, `net_totals`, `credit_by_cost_center`, `net_by_cost_center` and `merchant_credit_outcomes`. Their immutable reports retain the original packet and source context. Reopen before changing a closed period. Use `export` kind `refund-packet` with the original packet ID for the unchanged customer source, or the existing accountant/project forms for a complete handoff. The maintained resumable downloader and trusted included-source receiver handle those original exports.
+
+No merchant mutation, new payment, signer or on-chain observation is initiated by the buyer-credit surface.
+
+### Completed original refund operation
+
+The original 7737/B41A order-18 redelivery completed through this customer interface in a separate development workspace at revision 19: two accepted original packets, one bound purchase, two exact return allocations and three issued editions. Native net progressed from 2500000 to 1500000 to 0 while the separate USD 2.50 purchase and USD 1.00 / USD 1.50 store credits stayed unchanged. Capture/final-close request recovery, host restart, original source/accountant exports and included-source receiving completed without a new payment or merchant call. The earlier operational 60000-unit buyer case was not changed. All 39 tools continue to use the same maintained contract; the added refund controls are part of the existing provider and SDK.
+
+## Native accounting export and paid-job receipt intake
+
+The same customer surface exposes `adjustment_capture` (SDK `adjustmentCapture`) alongside the existing `refund_capture`. Add an `adjustmentSources` object to the existing workspace declaration:
+
+```json
+{
+  "adjustmentSources": {
+    "job_resolution": {
+      "sourceFile": "/srv/starforge/original-merchant/adjustments-export.json",
+      "sourceSha256": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+      "eventId": "REPLACE_WITH_ORIGINAL_ACCOUNTING_EVENT_ID",
+      "name": "Original merchant adjustment decisions",
+      "provenance": "Record the actual source owner, job and original operation here.",
+      "dataContext": "operational"
+    }
+  }
+}
+```
+
+Replace both placeholders with the exact 64-character lowercase hexadecimal source identities before reading this connection. The host fixes the source path; a customer selects only the `adjustmentSource` alias. For a paid job, optionally declare `expectedJob:{job_id,settlement}` using the original job ID and a selection of the original accounting row's ten fields: `id, receiptFingerprint, transactionFingerprint, network, assetDigest, recipientDigest, amountAtomic, routeId, method, orderReferenceDigest`. Here `id` is the selected row's `eventId`. This binding is separate from the complete native SF98 job record, whose original `orderReference` remains retained by its owner. The native reader checks every selected field and SHA-256 of the original job ID.
+
+`adjustment_capture` retains the unchanged original `stellar-forge.merchant-adjustment-export.v1` JSON and all decisions for the selected event. Its reviewed SHA and selected job/event are retained separately in a buyer-selection manifest. The source remains the original accounting export; this is not a new merchant receipt format.
+
+Use `refund_packet` to inspect nullable `purchase`, plural `credits`, original `adjustments`, `source_sha256`, `source_reference`, original payment status and matching existing payments. Then `refund_review` accepts or rejects the retained selection. A reference-only export needs only the named decision; do not set purchase registration when no independent original payment proof is carried. With a proved purchase, select its existing item or explicitly register it. Every eligible native return gets an individual `credit_id`; `credit_ids` retains the whole selected set. If the same native reverse event is already allocated through another retained source, inspect that original credit and preserve its coding. The additional representation can be retained with an explicit `exclude_from_period` decision; attempting to allocate the same transfer again returns `RETURN_ALREADY_ALLOCATED`. Reopen and issue the affected period to retain the new source decision without rewriting earlier editions.
+
+The existing `credit`, `credit_coding_save`, period review/close/reopen and export operations complete the workflow. The report, review and issued tools add the paged `merchant_adjustment_outcomes` view. Pending returns, cancellations, withdrawn requests and unavailable original-payment proofs remain visible as source decisions without entering returned-unit totals. Optional Woo/store fields are null when not supplied; no exchange rate, currency amount or Woo order is manufactured.
+
+Stable request IDs recover the exact completed intake or period mutation. Stable export IDs recover the same source receipt, accountant edition or complete included-source project. `refund-packet` export retains the original JSON and explicitly named `buyer-selection.json` for generic intake. All other financial, source-context, lifecycle and resumable transfer semantics are unchanged.

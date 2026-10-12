@@ -2,7 +2,7 @@
 // MIT. One foreground owner for the original merchant, worker and workspaces.
 import { readFile, mkdir, mkdtemp, open, link, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 const help = [
@@ -10,8 +10,11 @@ const help = [
   'All operations use the same private merchant state and original settlement outbox.', '',
   '  jobs serve --config FILE --state DIR [--seller-port N] [--customer-port N]',
   '       [--operator-port N] [--operations-port N] [--native-factory MODULE]',
-  '       [--start-worker] [--delivery-config FILE] [--start-delivery]',
+  '       [--intake-config FILE] [--start-worker] [--delivery-config FILE]',
+  '       [--delivery-state DIR] [--start-delivery] [--landing PAGE]',
+  '  jobs inspect-service --config FILE --state DIR [the same service options]',
   '  jobs status --config FILE --state DIR',
+  '  jobs intake-catalog --config FILE --state DIR [--intake-config FILE]',
   '  jobs show --config FILE --state DIR --id JOB',
   '  jobs create --config FILE --state DIR --function ID --input FILE',
   '       [--label TEXT] [--reference TEXT] [--out NEW_TICKET_FILE]',
@@ -22,12 +25,20 @@ const help = [
   '  jobs retry --config FILE --state DIR --id JOB --revision N --reason TEXT',
   '  jobs cancel --config FILE --state DIR --id JOB --revision N --reason TEXT',
   '  jobs result --config FILE --state DIR --id JOB --out NEW_RESULT_FILE',
+  '  jobs inputs --help',
   '  jobs delivery --help',
-  '  jobs receiver --help', '',
+  '  jobs receiver --help',
+  '  jobs recovery --help', '',
   'The foreground serve command owns the original merchant, customer listener and',
   'private operator workspace. It prints the complete local operator address.',
   'Use that workspace while the service holds its original state lease.',
+  '--landing opens jobs (default), inputs, resolutions or configured deliveries.',
+  'inspect-service reads the original configuration, retained source binding,',
+  'worker limits and selected files without opening the merchant writer.',
+  'Applications runs this same service after its normal Review and Start.',
   '--delivery-config adds the private completed-result delivery workspace.',
+  '--delivery-state selects its existing custom queue; by default the queue is',
+  'result-delivery inside the merchant state directory.',
   '--start-delivery starts its signed result dispatcher with the same merchant.',
   'The default service advertises the configured challenge. For native payments,',
   '--native-factory supplies the merchant’s existing compiled => SDK factory as',
@@ -42,9 +53,13 @@ const help = [
 const problem = message => Object.assign(new Error(message), { code: 'JOBS_COMMAND_INVALID' });
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const delay = milliseconds => new Promise(done => setTimeout(done, milliseconds));
+const serviceFlags = ['--seller-port', '--customer-port', '--operator-port', '--operations-port',
+  '--native-factory', '--intake-config', '--start-worker', '--delivery-config', '--delivery-state',
+  '--start-delivery', '--landing'];
 const allowed = {
-  serve: ['--seller-port', '--customer-port', '--operator-port', '--operations-port', '--native-factory', '--start-worker', '--delivery-config', '--start-delivery'],
-  status: [], show: ['--id'], create: ['--function', '--input', '--label', '--reference', '--out'],
+  serve: [...serviceFlags, '--expected-selection', '--managed-runtime', '--managed-launch'],
+  'inspect-service': serviceFlags,
+  status: [], 'intake-catalog': ['--intake-config'], show: ['--id'], create: ['--function', '--input', '--label', '--reference', '--out'],
   reconcile: [], work: ['--once'], retry: ['--id', '--revision', '--reason'],
   cancel: ['--id', '--revision', '--reason'], result: ['--id', '--out'],
   'renew-claim': ['--id', '--revision', '--reason', '--out'],
@@ -95,6 +110,10 @@ async function publishNew(destination, bytes) {
 /** Maintained distribution entrypoint. */
 export async function runJobCommand(argv = process.argv.slice(2), { print = value => console.log(value) } = {}) {
   if (!argv.length || argv.length === 1 && ['--help', '-h', 'help'].includes(argv[0])) { print(help); return; }
+  if (argv[0] === 'inputs') {
+    const { runJobInputCommand } = await import('./inputs/cli.mjs');
+    return runJobInputCommand(argv.slice(1), { print });
+  }
   if (argv[0] === 'delivery') {
     const { runDeliveryCommand } = await import('./result-delivery/cli.mjs');
     return runDeliveryCommand(argv.slice(1), { print });
@@ -105,19 +124,49 @@ export async function runJobCommand(argv = process.argv.slice(2), { print = valu
       print(String(value).replace(/\n$/, '')); return true;
     } } });
   }
+  if (argv[0] === 'recovery') {
+    const { runPaidJobRecoveryCommand } = await import('../../sf101-merchant-recovery/paid-jobs-cli.mjs');
+    return runPaidJobRecoveryCommand(argv.slice(1), { print });
+  }
   const { command, out } = options(argv);
   if (out.has('--start-delivery') && !out.has('--delivery-config')) throw problem('--start-delivery requires --delivery-config.');
+  if (out.has('--delivery-state') && !out.has('--delivery-config')) throw problem('--delivery-state requires --delivery-config.');
+  if (command === 'serve' || command === 'inspect-service') {
+    const selected = {
+      configPath: resolve(out.get('--config')), directory: resolve(out.get('--state')),
+      sellerPort: integer(out, '--seller-port', 0, 65535),
+      customerPort: integer(out, '--customer-port', 0, 65535),
+      operatorPort: integer(out, '--operator-port', 0, 65535),
+      operationsPort: integer(out, '--operations-port', 0, 65535),
+      startWorker: out.has('--start-worker'), startDelivery: out.has('--start-delivery'),
+      landing: out.get('--landing') ?? 'jobs',
+      ...Object.fromEntries([
+        ['nativeFactoryPath', '--native-factory'], ['intakeConfigPath', '--intake-config'],
+        ['deliveryConfigPath', '--delivery-config'], ['deliveryDirectory', '--delivery-state'],
+      ].filter(([, flag]) => out.has(flag)).map(([name, flag]) => [name, resolve(out.get(flag))])),
+    };
+    if (command === 'inspect-service') {
+      const { readJobServiceSelection } = await import('./managed/selection.mjs');
+      return print(JSON.stringify(await readJobServiceSelection(selected), null, 2));
+    }
+    const { runJobServiceCommand } = await import('./managed/service.mjs');
+    return runJobServiceCommand(selected, { print,
+      expectedSelection: out.get('--expected-selection'), expectedRuntime: out.get('--managed-runtime'),
+      launchFile: out.has('--managed-launch') ? resolve(out.get('--managed-launch')) : null });
+  }
   if (['retry', 'cancel', 'renew-claim'].includes(command)) required(out, '--revision');
+  let intakeConfig;
+  if (out.has('--intake-config')) {
+    const bytes = await readFile(resolve(out.get('--intake-config')));
+    if (bytes.length > 65536) throw problem('The intake configuration exceeds 64 KiB.');
+    intakeConfig = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  }
   // Customer receiving uses only its selected original source and Node built-ins.
   const { openJobMerchant } = await import('./model.mjs');
   const model = await openJobMerchant({ configPath: resolve(out.get('--config')), directory: resolve(out.get('--state')) });
-  const sessions = []; let stopped = false, shutdownPromise, delivery;
+  let stopped = false, shutdownPromise;
   const close = () => shutdownPromise ??= (async () => {
     stopped = true; const errors = [];
-    try { await delivery?.close(); } catch (error) { errors.push(error); }
-    for (const session of [...sessions].reverse()) {
-      try { await session.close(); } catch (error) { errors.push(error); }
-    }
     try { await model.close(); } catch (error) { errors.push(error); }
     if (errors.length) throw new AggregateError(errors, 'Job merchant shutdown did not fully complete.');
   })();
@@ -130,37 +179,12 @@ export async function runJobCommand(argv = process.argv.slice(2), { print = valu
   }
   const emit = value => print(JSON.stringify(value, null, 2));
   try {
-    if (command === 'serve') {
-      const [{ startJobSeller }, { startCustomerServer }, { startJobsWorkspace },
-        { readDeliveryConfig }, { openResultDelivery }] = await Promise.all([
-        import('./merchant.mjs'), import('./customer.mjs'), import('./workspace/server.mjs'),
-        import('./result-delivery/config.mjs'), import('./result-delivery/dispatcher.mjs'),
-      ]);
-      let nativeFactory = null;
-      if (out.has('--native-factory')) {
-        const configured = await import(pathToFileURL(resolve(out.get('--native-factory'))).href);
-        nativeFactory = configured.nativeFactory ?? configured.default;
-        if (typeof nativeFactory !== 'function') throw problem('The native factory module must export nativeFactory or default.');
-      }
-      const seller = await startJobSeller(model, { port: integer(out, '--seller-port', 0, 65535), nativeFactory,
-        operationsPort: integer(out, '--operations-port', 0, 65535) });
-      sessions.push(seller);
-      const customer = await startCustomerServer({ model, port: integer(out, '--customer-port', 0, 65535) });
-      sessions.push(customer);
-      if (out.has('--delivery-config')) delivery = await openResultDelivery({
-        model, config: await readDeliveryConfig(out.get('--delivery-config')) });
-      const workspace = await startJobsWorkspace({ model, delivery, port: integer(out, '--operator-port', 0, 65535) });
-      sessions.push(workspace);
-      if (out.has('--start-worker')) await model.startWorker();
-      if (out.has('--start-delivery')) delivery.start();
-      process.once('SIGINT', onSignal); process.once('SIGTERM', onSignal);
-      emit({ service: 'starforge-paid-jobs', seller: seller.url ?? seller.seller?.url,
-        customer: customer.url ?? customer.origin, operator: workspace.url,
-        operations: seller.operations?.url, mode: (await model.snapshot()).mode,
-        ...(delivery ? { deliveries: workspace.origin + '/deliveries#' + workspace.token } : {}) });
-      await hold(); return;
-    }
     if (command === 'status') return emit(await model.snapshot());
+    if (command === 'intake-catalog') {
+      const { createJobIntake } = await import('./intake/service.mjs');
+      const intake = createJobIntake({ model, intakeConfig });
+      return emit(intake ? intake.catalog() : { enabled: false });
+    }
     if (command === 'show') return emit(await model.get(required(out, '--id')));
     if (command === 'create') {
       const ticket = await model.createJob({ functionId: required(out, '--function'),

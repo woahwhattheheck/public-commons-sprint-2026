@@ -11,7 +11,7 @@ DIRECTORIES = ("bi_operator", "web", "vendor", "schemas", "examples", "tools")
 TOP_LEVEL = (
     "BI_OPERATOR.py", "prepare_project.py", "OPEN_POWER_BI.ps1",
     "build_release.py", "requirements.txt", "README.md", "OPERATOR_GUIDE.md",
-    "THIRD_PARTY_LICENSES.txt", "VENDOR_SOURCE.json", "DEMONSTRATION.md",
+    "THIRD_PARTY_LICENSES.txt", "VENDOR_SOURCE.json", "DEMONSTRATION.md", "BILLING_GUIDE.md", "AZURE_EXPORTS_GUIDE.md", "requirements-azure.txt",
 )
 
 
@@ -19,11 +19,12 @@ def included_files():
     files = [ROOT / name for name in TOP_LEVEL]
     for directory in DIRECTORIES:
         files += [path for path in (ROOT / directory).rglob("*") if path.is_file()
-                  and "__pycache__" not in path.parts and path.suffix != ".pyc"
+                  and not set(path.relative_to(ROOT).parts) & {"__pycache__", "node_modules", ".venv", ".git", "operation", "operations", "private", "sql-jobs"}
+                  and not path.is_symlink() and path.suffix != ".pyc"
                   and not path.name.endswith(".bi-backup")]
     # The six complete CSV files are already contained in examples/sandag/data.zip.
     return sorted({p for p in files if p.is_file()
-                   and not (p.suffix == ".csv" and "examples" in p.parts)})
+                   and not (p.suffix == ".csv" and (ROOT / "examples" / "sandag") in p.parents)})
 
 
 def main():
@@ -36,6 +37,7 @@ def main():
         raise SystemExit("Choose a new output filename; an existing delivery is not overwritten.")
     files = included_files()
     required = [ROOT / p for p in TOP_LEVEL] + [ROOT / "examples/sandag/data.zip"]
+    required += [ROOT / "examples/billing" / name for name in ("agencies.json", "policy.json", "costs.csv", "usage.csv")]
     missing = [str(p.relative_to(ROOT)) for p in required if not p.is_file()]
     if missing:
         raise SystemExit("Missing source files: " + ", ".join(missing))
@@ -54,7 +56,10 @@ def main():
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             package.writestr(info, path.read_bytes())
-        package.writestr("Commons-BI-Operator/RELEASE.json",
+        release_info = zipfile.ZipInfo("Commons-BI-Operator/RELEASE.json", date_time=(2026, 1, 1, 0, 0, 0))
+        release_info.compress_type = zipfile.ZIP_DEFLATED
+        release_info.external_attr = 0o100644 << 16
+        package.writestr(release_info,
                          json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
     with zipfile.ZipFile(output) as package:
         for item in manifest["files"]:

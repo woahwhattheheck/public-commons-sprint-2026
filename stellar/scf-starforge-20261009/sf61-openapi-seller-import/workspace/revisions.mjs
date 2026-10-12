@@ -95,6 +95,8 @@ function view(ctx,shared) {
     sourceSha256:shared.candidate.sourceSha256,sourceChanged:shared.baseline.sourceSha256!==shared.candidate.sourceSha256,
     routes,operations:[...catalog.values()].map(row=>({...routeOf(row.key),supported:row.supported,summary:row.summary})),
     additions:structuredClone(shared.decisions.additions),plan:shared.plan,preview:shared.preview,
+    ...(ctx.base.plan.transports===undefined?{}:{transportProfiles:structuredClone(ctx.base.plan.transports),
+      transportChanges:displayedChanges(shared.transportChanges??[])}),
     compilationError:shared.issues.length?shared.issues.map(row=>row.message).join('; '):null,
     pending,ready:shared.ready&&pending.length===0,unchangedSelected:routes.filter(row=>!row.changed).length,
     unselectedOperations:shared.unselected.length,sourceChanges:displayedChanges(shared.sourceChanges),

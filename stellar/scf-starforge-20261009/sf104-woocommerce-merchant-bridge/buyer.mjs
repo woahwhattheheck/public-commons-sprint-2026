@@ -7,6 +7,7 @@ import {isAbsolute, resolve} from 'node:path';
 import {isIP} from 'node:net';
 import {fileURLToPath} from 'node:url';
 import {operation, execution, need} from '../sf88-operator-buyer-cli/config.mjs';
+import {BASKET_SCHEMA, validateBasketHandoff} from './basket.mjs';
 
 export const HANDOFF_SCHEMA = 'stellar-forge.sf104.checkout-handoff.v1';
 export const sha256 = value => createHash('sha256').update(value).digest('hex');
@@ -41,9 +42,11 @@ function money(value) {
 /** Downloaded merchant data is never allowed to choose a signer, wallet,
  * operator, filesystem path, arbitrary request header or payment intent ID. */
 export function validateHandoff(raw) {
-  const h = fields(raw, ['schema','storeOrigin','orderReference','attemptGeneration','productId','routeId',
-    'createdAt','storefront','operation'], 'WOO_HANDOFF_FIELDS_INVALID');
-  need(h.schema === HANDOFF_SCHEMA && reference(h.orderReference) && generation(h.attemptGeneration) && reference(h.productId) &&
+  const basket = raw?.schema === BASKET_SCHEMA;
+  const h = fields(raw, ['schema','storeOrigin','orderReference','attemptGeneration','routeId',
+    'createdAt','storefront','operation', ...(basket ? ['catalogDigest','basketDigest','items'] : ['productId'])], 'WOO_HANDOFF_FIELDS_INVALID');
+  need((h.schema === HANDOFF_SCHEMA || basket) && reference(h.orderReference) && generation(h.attemptGeneration) &&
+    (basket || reference(h.productId)) &&
     typeof h.routeId === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(h.routeId), 'WOO_HANDOFF_IDENTITY_INVALID');
   const store = publicUrl(h.storeOrigin, 'WOO_STORE_ORIGIN_INVALID');
   need(store.pathname === '/' && !store.search &&
@@ -56,7 +59,7 @@ export function validateHandoff(raw) {
   const request = fields(h.operation, ['url','method','expect','orderReference'], 'WOO_OPERATION_FIELDS_INVALID');
   const url = publicUrl(request.url, 'WOO_RESOURCE_INVALID');
   need(['GET','HEAD'].includes(request.method) && request.orderReference === h.orderReference &&
-    [...url.searchParams.keys()].length === 2 && url.searchParams.get('sf98_order') === h.orderReference &&
+    [...url.searchParams.keys()].length === (basket ? 3 : 2) && url.searchParams.get('sf98_order') === h.orderReference &&
     url.searchParams.get('sf104_attempt') === String(h.attemptGeneration),
     'WOO_ORDER_RESOURCE_MISMATCH');
   const expect = fields(request.expect, ['scheme','network','asset','payTo','maxAtomic','maxTimeoutSeconds'],
@@ -66,6 +69,10 @@ export function validateHandoff(raw) {
     expect.maxTimeoutSeconds <= 86400 &&
     ['asset','payTo'].every(key => typeof expect[key] === 'string' && expect[key].length <= 128 &&
       expect[key].length >= 3 && !/[\x00-\x20\x7f]/.test(expect[key])), 'WOO_PAYMENT_FIELDS_INVALID');
+  if (basket) {
+    need(h.storeOrigin === store.origin, 'WOO_STORE_ORIGIN_INVALID');
+    validateBasketHandoff(h);
+  }
   const intentId = 'woo:' + sha256(store.origin).slice(0, 24) + ':' + h.orderReference + ':g' + h.attemptGeneration;
   // This is the SAME original order-reference/approved-URL/header contract.
   operation({...request, intentId});
@@ -171,7 +178,8 @@ export async function main(args = process.argv.slice(2)) {
   const result = {status:output ? 'ORIGINAL_SF88_REVIEW_PREPARED' : 'WOO_ORDER_REVIEW',
     storeOrigin:prepared.handoff.storeOrigin, orderReference:prepared.handoff.orderReference,
     attemptGeneration:prepared.handoff.attemptGeneration,
-    productId:prepared.handoff.productId, routeId:prepared.handoff.routeId,
+    ...(prepared.handoff.items ? {items:prepared.handoff.items, catalogDigest:prepared.handoff.catalogDigest,
+      basketDigest:prepared.handoff.basketDigest} : {productId:prepared.handoff.productId}), routeId:prepared.handoff.routeId,
     storefront:prepared.handoff.storefront, operation:prepared.config.operation,
     handoffSha256:prepared.handoffSha256, ...(output ? {output, disposition} : {}),
     ...(prepared.workspace ? {workspace:prepared.workspace} : {}),
@@ -183,3 +191,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.error(JSON.stringify({error:/^[A-Z0-9_]+$/.test(error.code ?? '') ? error.code : 'WOO_BUYER_COMMAND_FAILED',
       automaticPaymentRetry:false})); process.exitCode = 1;
   });
+

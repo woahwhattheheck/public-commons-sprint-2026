@@ -1,0 +1,20 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "fiscaldata",
+  "description": "Treasury Fiscal Data products",
+  "commands": {
+    "fiscaldata": "stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/cli.mjs"
+  },
+  "commandDescriptions": {
+    "fiscaldata": "Capture, compare and publish Treasury datasets; checkpoint and receive complete workspaces."
+  },
+  "exports": {
+    "./seller/fiscaldata": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-model.mjs",
+    "./seller/fiscaldata/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-server.mjs",
+    "./seller/fiscaldata/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/capture.mjs",
+    "./seller/fiscaldata/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/portable.mjs"
+  },
+  "applicationProviders": {
+    "fiscaldata": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/fiscaldata.mjs"
+  }
+}

@@ -1,3 +1,4 @@
+import { createBuyerOperatorUI } from '/operator.mjs';
 const $ = id => document.getElementById(id);
 const tokenKey = 'starforge-object-workspace-capability';
 let token = location.hash.slice(1);
@@ -45,7 +46,10 @@ const messages = {
   OBJECT_RECEIVING_BUDGET_OUTSIDE_OPERATOR_LIMITS: 'The daily and whole-download caps must fit this host’s operator ceilings. Each request must also fit the daily cap.',
   OBJECT_RECEIVING_SOURCE_CHANGED: 'The retained merchant files changed. Receive the original files again before preparing this object.',
   OBJECT_WHOLE_FILE_SIZE_FIXED: 'This merchant sells the complete file in one request. Its byte count is fixed by the original descriptor.',
-  REQUEST_OPERATOR_PRESET_REQUIRED: 'Launch this workspace with its private --operator-settings preset to prepare a new buyer.',
+  REQUEST_OPERATOR_PRESET_REQUIRED: 'Open Local buyer setup to review and save this host before preparing a new buyer.',
+  OPERATOR_RETAINED_SETTINGS_REQUIRED: 'This interrupted preparation requires its original host preset bytes. Restore or select that retained preset before resuming the same generation.',
+  OPERATOR_SETTINGS_CHANGED_REVIEW_AGAIN: 'The selected host settings changed. Review the current host revision before saving your draft.',
+  OBJECT_RECEIVING_ATTEMPT_SETTINGS_CHANGED: 'The saved preparation no longer matches its original host settings. Restore the original retained inputs before continuing.',
   OBJECT_RECOVERY_REVIEW_CHANGED: 'The selected backup contents changed. Review the current state before creating the backup.',
   OBJECT_RECOVERY_DEPENDENCY_OUTSIDE_ROOT: 'Choose the common private state root that contains this workspace, its operator preset and every selected native buyer.',
   OBJECT_RECOVERY_ORIGINAL_OPERATOR_REQUIRED: 'Workspace backup requires the original prepared buyer and its committed spending journal. Prepare the received product with your local preset first, or select its existing native operator.',
@@ -109,6 +113,7 @@ async function action(work) {
   finally { pending = false; await load().catch(showError); controls(); }
 }
 function selectSession(id) {
+  $('operator-panel').hidden = true;
   selected = id; page = 0; query = ''; filter = 'all'; review = null;
   $('chunk-query').value = ''; $('chunk-filter').value = 'all'; $('setup').hidden = true;
   $('selection-review').hidden = true; load().catch(showError);
@@ -144,11 +149,21 @@ function explanation(row) {
   if (row.completeChunks) return 'Continue from the next unattempted part. ' + integer(row.completeChunks) + ' completed parts remain in the original session.';
   return 'The reviewed byte plan is saved. Start the download when you are ready to approve its original requests.';
 }
+let researchLink=null;
+function renderResearch() {
+  const row=state?.selected;
+  const current=researchLink&&row?.id===researchLink.session&&row.revision===researchLink.expectedRevision;
+  $('research-workspace-link').hidden=!current;
+  if(current)$('research-workspace-link').href=researchLink.url;
+  else {$('research-workspace-link').removeAttribute('href');researchLink=null;}
+  $('research-connection-note').hidden=!current;
+  $('research-connection-note').textContent=current?'Continue in the existing Research Pipelines tab to review the original delivered file.':'';
+}
 function render() {
   renderSessions(); const row = state.selected;
-  renderAnalysis();
-  $('empty').hidden = Boolean(row) || !$('setup').hidden || !$('recovery-panel').hidden || !$('analysis-panel').hidden;
-  $('session').hidden = !row || !$('setup').hidden || !$('recovery-panel').hidden || !$('analysis-panel').hidden;
+  renderAnalysis();renderResearch();
+  $('empty').hidden = Boolean(row) || !$('setup').hidden || !$('recovery-panel').hidden || !$('analysis-panel').hidden || !$('operator-panel').hidden;
+  $('session').hidden = !row || !$('setup').hidden || !$('recovery-panel').hidden || !$('analysis-panel').hidden || !$('operator-panel').hidden;
   if (!row) { controls(); return; }
   $('session-id').textContent = 'SAVED DOWNLOAD / ' + row.id;
   $('session-title').textContent = row.name;
@@ -283,6 +298,8 @@ function controls() {
   $('receive-review').disabled = receivingBusy || !receiving.operator || !receivedChoices.some(choice =>
     !choice.error && choice.rowIndex + ':' + choice.acceptIndex === $('receive-offer').value);
   $('receive-create').disabled = receivingBusy || !receivedReview;
+  for (const button of $('received-preparations').querySelectorAll('button')) button.disabled = receivingBusy;
+  for (const id of ['open-operator','welcome-operator','close-operator']) $(id).disabled = pending;
   $('open-recovery').disabled = pending; $('close-recovery').disabled = pending;
   $('backup-review').disabled = receivingBusy;
   $('backup-create').disabled = receivingBusy || !backupReview || !$('backup-quiesced').checked;
@@ -292,6 +309,8 @@ function controls() {
   $('open-analysis').disabled = pending; $('close-analysis').disabled = pending;
   const usableObject = row?.section === 'delivery' && row.status === 'COMPLETE' && row.assembly;
   $('analyze-file').disabled = receivingBusy || !usableObject;
+  $('research-file').disabled = receivingBusy || !usableObject || !state?.research?.configured;
+  $('research-file').title=state?.research?.configured?'':'Connect the original Research workspace in this buyer launch.';
   $('analysis-review').disabled = receivingBusy || !usableObject;
   $('analysis-name').disabled = receivingBusy || !usableObject; $('analysis-format').disabled = receivingBusy || !usableObject;
   $('analysis-register').disabled = receivingBusy || !analysisReview;
@@ -326,6 +345,7 @@ function renderAnalysis() {
     'No source has been handed to analysis from this workspace yet.';
 }
 function openAnalysis() {
+  $('operator-panel').hidden = true;
   $('setup').hidden = true; $('recovery-panel').hidden = true; $('analysis-panel').hidden = false;
   analysisReview = null; analysisAction = null; $('analysis-source-review').hidden = true;
   const row = state?.selected;
@@ -336,6 +356,13 @@ function openAnalysis() {
   }
   render(); schedulePoll();
 }
+$('research-file').onclick=()=>action(async()=>{
+  const row=state?.selected;if(!row)return;
+  const result=await request('/api/research/open',{session:row.id,expectedRevision:row.revision});
+  if(state?.selected?.id!==row.id||state.selected.revision!==row.revision)return;
+  researchLink={...result,expectedRevision:row.revision};renderResearch();
+  notice('The original Research workspace is ready. Open the link to review this completed file.');
+});
 $('open-analysis').onclick = openAnalysis; $('analyze-file').onclick = openAnalysis;
 $('close-analysis').onclick = () => { $('analysis-panel').hidden = true; render(); schedulePoll(); };
 for (const id of ['analysis-name','analysis-format']) $(id).addEventListener('input', () => {
@@ -384,6 +411,7 @@ function productChanged() {
 }
 async function newDownload() {
   await action(async () => {
+    $('operator-panel').hidden = true;
     $('recovery-panel').hidden = true;
     $('analysis-panel').hidden = true;
     products = (await request('/api/products')).products;
@@ -435,6 +463,7 @@ async function loadRecovery() {
   controls();
 }
 $('open-recovery').onclick = () => action(async () => {
+  $('operator-panel').hidden = true;
   $('analysis-panel').hidden = true;
   $('setup').hidden = true; $('recovery-panel').hidden = false; await loadRecovery();
 });
@@ -490,14 +519,95 @@ function clearReceivedReview() {
 }
 function receivedSource() { return receiving.sources.find(item => item.id === $('receive-source').value); }
 function receivedObject() { return receivedSource()?.objects?.find(item => item.id === $('receive-object').value); }
+const operatorUI = createBuyerOperatorUI({
+  request, notice: (message, failed) => notice(message, failed),
+  openPanel: () => {
+    $('setup').hidden = true; $('recovery-panel').hidden = true; $('analysis-panel').hidden = true;
+    $('operator-panel').hidden = false; if (state) render();
+  },
+  refreshState: async () => {
+    clearReceivedReview(); backupReview = null; $('backup-selection').hidden = true;
+    await loadReceiving(); await load();
+  },
+});
+$('close-operator').onclick = () => { $('operator-panel').hidden = true; if (state) render(); };
+// The shared host view supplies native attachment links. This application uses
+// a header capability, so fetch that small exact preset through its own auth.
+$('operator-history').addEventListener('click', event => {
+  const link = event.target.closest('a[href^="/files/operator/"]'); if (!link) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  action(async () => {
+    const response = await request(link.getAttribute('href'), undefined, true);
+    const blob = await response.blob(), url = URL.createObjectURL(blob), saved = element('a');
+    saved.href = url; saved.download = link.getAttribute('href').split('/')[3] + '.settings.json';
+    document.body.append(saved); saved.click(); saved.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+    notice('The original private settings file was downloaded.');
+  });
+}, true);
+function showReceivedReview(result, phase = 'REVIEWED') {
+    receivedReview = result;
+    details($('received-review-terms'), [['Session',result.sessionName],['File',result.filename],['Resource',result.sourceUrl],
+      ...requestPlan(result),
+      ['Payer',result.operator.payer],['Network',result.terms.network],['Scheme',result.terms.scheme],['Asset',result.terms.asset],
+      ['Recipient',result.terms.payTo],['Maximum per request',result.terms.maxAtomic + ' atomic units'],
+      ['Planned maximum',result.plannedMaxAtomic + ' atomic units'],['Whole-download cap',result.maxTotalAtomic + ' atomic units'],
+      ['Daily cap',result.dailyAtomic + ' atomic units'],['Content type',result.selected.expectedContentType],
+      ['Object snapshot',result.selected.expectedSnapshot],['Expected file SHA-256',result.selected.expectedSha256 ?? 'Not supplied'],
+      ['Description SHA-256',result.descriptionSha256],['Original offers SHA-256',result.catalogSha256]]);
+    $('received-review').hidden = false;
+  $('receive-create').textContent = phase === 'PREPARING' ? 'Resume original preparation' :
+    phase === 'PREPARED' ? 'Open saved buyer and download' : 'Create buyer and download';
+  $('received-review-status').textContent = phase === 'PREPARING' ?
+    'This resumes the same native generation with its retained host identity, keys, limits and ledger.' :
+    phase === 'PREPARED' ? 'This opens the existing prepared buyer and original download plan.' :
+    'The host revision and complete object plan are saved together. Creating the buyer does not start a purchase.';
+}
+function renderPreparations() {
+  const target = $('received-preparations'); target.replaceChildren();
+  const impact = receiving.operatorSetup?.impact;
+  for (const row of impact?.rows ?? []) {
+    const article = element('article', undefined, 'operator-preparation');
+    article.dataset.review = row.id;
+    article.append(element('h4', row.label + ' · ' + row.sessionName),
+      element('p', readable(row.phase) + (row.generation ? ' · native generation ' + row.generation : '') +
+        ' · ' + row.operator.actor + ' / ' + row.operator.service),
+      element('p', row.needsReview ? 'Host settings changed. Review this original object plan against the current settings.' :
+        row.phase === 'PREPARING' ? 'Continue the original preparation with its saved host settings.' :
+        row.phase === 'PREPARED' ? 'The prepared buyer retains its own identity and spending journal.' : 'This review matches the selected host settings.'));
+    const button = element('button', row.needsReview ? 'Review with current host' :
+      row.phase === 'PREPARING' ? 'Review original preparation' : row.phase === 'PREPARED' ? 'Open saved preparation' : 'Open saved review');
+    button.type = 'button'; button.dataset.receivedReview = row.id;
+    button.onclick = () => action(async () => {
+      const plan = await request('/api/receiving/review?' + new URLSearchParams({ reviewId: row.id }));
+      $('receiving-panel').open = true;
+      if (row.needsReview) {
+        await loadReceiving(plan.id); $('receive-object').value = plan.objectId;
+        await receivedObjectChanged(); $('receive-offer').value = plan.rowIndex + ':' + plan.acceptIndex;
+        receivedOfferChanged(); $('receive-session').value = plan.sessionName;
+        $('receive-chunk').value = String(plan.chunkBytes); $('receive-total').value = plan.maxTotalAtomic;
+        $('receive-daily').value = plan.dailyAtomic; clearReceivedReview();
+        notice('The original object selection and limits are loaded. Review them against the current host settings.');
+        $('receive-plan-form').scrollIntoView({ block: 'start' });
+      } else {
+        showReceivedReview(plan, row.phase); $('received-review').scrollIntoView({ block: 'start' });
+      }
+    });
+    article.append(button); target.append(article);
+  }
+  for (const row of impact?.errors ?? []) target.append(element('p', 'Saved review ' + row.id.slice(0,12) +
+    ': ' + errorMessage({ code: row.code }), 'note'));
+  if (!impact?.rows.length && !impact?.errors.length)
+    target.append(element('p', 'Reviewed object plans and interrupted preparations appear here.', 'note'));
+}
 async function loadReceiving(sourceId = $('receive-source').value) {
   receiving = await request('/api/receiving');
+  operatorUI.update(receiving.operatorSetup); renderPreparations();
   const operator = receiving.operator;
   $('receiving-operator').textContent = operator ? operator.actor + ' / ' + operator.service +
     ' · payer ' + operator.payer + ' · maximum ' + integer(operator.maxTotalAtomic) +
     ' total / ' + integer(operator.maxDailyAtomic) + ' per UTC day' :
     receiving.presetError ? 'Local operator setup: ' + readable(receiving.presetError) :
-    'To create a buyer, launch with a private --operator-settings preset. Saved downloads and already prepared products remain available.';
+    'Open Local buyer setup to save this host’s identity and limits. Existing prepared buyers and saved downloads remain available.';
   const select = $('receive-source'); select.replaceChildren();
   for (const source of receiving.sources) {
     const option = element('option', source.error ? 'Received files · ' + readable(source.error) :
@@ -585,16 +695,7 @@ $('receive-plan-form').onsubmit = event => {
       rowIndex: choice.rowIndex, acceptIndex: choice.acceptIndex, chunkBytes: Number($('receive-chunk').value),
       sessionName: $('receive-session').value, maxTotalAtomic: $('receive-total').value, dailyAtomic: $('receive-daily').value });
     if (current !== receivingGeneration) return;
-    receivedReview = result;
-    details($('received-review-terms'), [['Session',result.sessionName],['File',result.filename],['Resource',result.sourceUrl],
-      ...requestPlan(result),
-      ['Payer',result.operator.payer],['Network',result.terms.network],['Scheme',result.terms.scheme],['Asset',result.terms.asset],
-      ['Recipient',result.terms.payTo],['Maximum per request',result.terms.maxAtomic + ' atomic units'],
-      ['Planned maximum',result.plannedMaxAtomic + ' atomic units'],['Whole-download cap',result.maxTotalAtomic + ' atomic units'],
-      ['Daily cap',result.dailyAtomic + ' atomic units'],['Content type',result.selected.expectedContentType],
-      ['Object snapshot',result.selected.expectedSnapshot],['Expected file SHA-256',result.selected.expectedSha256 ?? 'Not supplied'],
-      ['Description SHA-256',result.descriptionSha256],['Original offers SHA-256',result.catalogSha256]]);
-    $('received-review').hidden = false;
+    showReceivedReview(result);
   });
 };
 $('receive-create').onclick = () => action(async () => {
@@ -703,4 +804,5 @@ $('next').onclick = () => {page++;load().catch(showError);};
 $('chunk-filter').onchange = () => {filter = $('chunk-filter').value;page = 0;load().catch(showError);};
 $('chunk-query').oninput = () => {clearTimeout(queryTimer);queryTimer = setTimeout(()=>{query=$('chunk-query').value;page=0;load().catch(showError);},180);};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(pollTimer);else load().catch(showError);});
-load().catch(showError);
+load().then(() => operatorUI.refresh()).catch(showError);
+
