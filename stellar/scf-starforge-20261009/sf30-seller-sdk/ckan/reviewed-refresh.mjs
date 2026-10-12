@@ -143,7 +143,9 @@ export function createCkanReviewedRefreshes({ directory, state, find, selectedCa
         const intentSha256 = identity(selection);
         let entry = state.refreshes.find(item => item.intentSha256 === intentSha256);
         if (entry?.comparisonSha256 && ['READY', ...FINAL].includes(entry.state)) {
-          await comparison(entry); return structuredClone(entry);
+          await comparison(entry);
+          const decision = await retainedDecision(entry, true);
+          return decision ? applyDecision(entry, decision) : structuredClone(entry);
         }
         if (!entry) {
           entry = { id: randomUUID(), schema: 'stellar-forge.ckan-reviewed-refresh.v1',
@@ -225,6 +227,18 @@ export function createCkanReviewedRefreshes({ directory, state, find, selectedCa
       });
     },
     async assertRefreshPublicationSource(source) {
+      // A withdrawal is durable when decision.json is saved, even if the
+      // process ends before its source/workbench projection is persisted.
+      if (!source.withdrawal) {
+        for (const entry of state.refreshes) {
+          if (entry.sourceId !== source.id || !entry.comparisonSha256) continue;
+          const decision = await retainedDecision(entry, true);
+          if (decision?.intent.decision !== 'withdraw-source') continue;
+          await comparison(entry);
+          await applyDecision(entry, decision);
+          break;
+        }
+      }
       if (source.withdrawal) throw fault('CKAN_SOURCE_WITHDRAWN',
         'This selection was withdrawn from future publication. Review a refresh to select its successor.', 409);
       if (!source.refreshId) return;
