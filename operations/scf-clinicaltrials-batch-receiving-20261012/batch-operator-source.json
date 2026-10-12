@@ -1,0 +1,370 @@
+{
+  "schema": "stellar-forge.clinicaltrials-batch-operator-source.v1",
+  "sourceCommit": "a1700f90b92fd7879a5ede18f11f9bfe1b24b92d",
+  "files": [
+    {
+      "path": "stellar-forge/mcp-merchant-operator/catalog/clinicaltrials-workspace.mjs",
+      "gitBlob": "97b2712623554fb74b87f6c177e4442536ad691b",
+      "bytes": 10396
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/catalog/source-workspace.mjs",
+      "gitBlob": "1ebf7ac691ef463e1ec4f51b0e219d2789672c9e",
+      "bytes": 5709
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/clinicaltrials-client.mjs",
+      "gitBlob": "255c9d6d651634a3d7a5a26843b5193f85c4d07c",
+      "bytes": 4280
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/clinicaltrials-workspace.mjs",
+      "gitBlob": "5f06ab79c82c8a592e51f1032fe211ef54b6f925",
+      "bytes": 41695
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/host-files.mjs",
+      "gitBlob": "a366cc4aa3e3ee3dfb7cb88320b84fcb00ab2fad",
+      "bytes": 2195
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/retained-download.mjs",
+      "gitBlob": "60d671158175d8d23e6e889069443d01c7c12ea2",
+      "bytes": 24911
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs",
+      "gitBlob": "16dbce5411cddc372ac93cbe4813c373b9d81457",
+      "bytes": 156
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/retained-file-reads.mjs",
+      "gitBlob": "546e4db6fe832b70adf13733b0bea3f96e64cdfa",
+      "bytes": 22746
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/source-workspace.mjs",
+      "gitBlob": "35e1d8aed2afc456e7227c58fc73861f1b48581a",
+      "bytes": 24670
+    },
+    {
+      "path": "stellar-forge/mcp-paid-agent/http-tools.mjs",
+      "gitBlob": "0d47bcb0b78de072870381247786a20ca86fdd24",
+      "bytes": 7148
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
+      "gitBlob": "1c2a8f3a3488bc1c687ad9fdfb2fba7964baaedc",
+      "bytes": 1776
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/BATCH_RECEIVING.md",
+      "gitBlob": "91d7cee4101e7e76bafe45bee2a3ed42f317f168",
+      "bytes": 12647
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs",
+      "gitBlob": "75f2c75325fc47b198937b9d1acd9f17a4ccc6df",
+      "bytes": 1553
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.py",
+      "gitBlob": "72302838d9331243e2739d390574a7b22e4ad6dc",
+      "bytes": 11531
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_batch.py",
+      "gitBlob": "93a1bc37297b198f0af1f4bbcbc35bbe7c5d5924",
+      "bytes": 30454
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_package.py",
+      "gitBlob": "cd6895bbc6320308c7fcc36ca5c82676f9ff450a",
+      "bytes": 25187
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_prs.py",
+      "gitBlob": "6a790b1ded7764da275a64a35118063061d54cd7",
+      "bytes": 1586
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_server.py",
+      "gitBlob": "5d6b10cfc5fc908c2502fecc2ce0656cbbc22044",
+      "bytes": 9776
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_shared.py",
+      "gitBlob": "4a63d4dddae010caf6fbae376d80b4545695db48",
+      "bytes": 514
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_source.py",
+      "gitBlob": "658635dd780f524688904b54713ec688bd2a6e9f",
+      "bytes": 14251
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_workspace.py",
+      "gitBlob": "da66a9332b17f28fc9f8363c02ab454540ae7aeb",
+      "bytes": 43025
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/api-contract.json",
+      "gitBlob": "7706dc2b136fb2092dbbd9f07ef65392c66d81e7",
+      "bytes": 12700
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/clinicaltrials-openapi.yaml",
+      "gitBlob": "7bc3572d7a86bfc1efbeb318ad84606b4c4b80a0",
+      "bytes": 80983
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/ProtocolRecordSchema.xsd",
+      "gitBlob": "a73d175b4aacb181f6a20b324de7bcce42756db7",
+      "bytes": 35223
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/RRSUploadSchema.xsd",
+      "gitBlob": "48793070afad716d1414181f4721780effad2698",
+      "bytes": 32403
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/source-contracts.json",
+      "gitBlob": "3245a4f116ce987a0dd7c211f24850271ef634a8",
+      "bytes": 2166
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/MANAGED_APPLICATION.md",
+      "gitBlob": "5d939852a10238be60516eee6cc044fe89372d13",
+      "bytes": 15625
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed-application.mjs",
+      "gitBlob": "b87e6da6944cbeac8dc6806c6488bc5dc52b5029",
+      "bytes": 13812
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed.py",
+      "gitBlob": "38442095107ecc2a3f221195856311706fd683f7",
+      "bytes": 6088
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/__init__.py",
+      "gitBlob": "9e7298877b4a8bfa08de90449a21d96132c9b305",
+      "bytes": 613,
+      "sha256": "524010efee4fa0bd66ea0aecf4647c19678beb9942493cc3c0de420763a71bb0"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/__main__.py",
+      "gitBlob": "a0ba133ead2ce29ad3aa92c866e06556d854b805",
+      "bytes": 7245,
+      "sha256": "df49528f4036570fda32b8fe1439b02b56854f54a226478800283d38159683da"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/API.md",
+      "gitBlob": "49bd66d20991ec41036733d4c98c6196ddafa7df",
+      "bytes": 17723,
+      "sha256": "079aa077f13ee9e40426c73f1ecd1c4b4480cc70d16cbb1dbe1ae6c17369b1a6"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/errors.py",
+      "gitBlob": "af45a099e71460029393019b52ee77ce04b0e716",
+      "bytes": 364,
+      "sha256": "dc34dd295a55320400fca1c048253126276d7ff29bfafe4450a381ace24fb19a"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/1234.xml",
+      "gitBlob": "5386d86bab47c3ccf26f56e1f70ce47fb6a903ac",
+      "bytes": 7853,
+      "sha256": "b0718215c40d0056bfd0b80ee0aabbeabfd963e40e6e61ec00bc90d095bc7bc0"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/COPYING",
+      "gitBlob": "d159169d1050894d3ea3b98e1c965c4058208fe1",
+      "bytes": 18092,
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/ct_safety_upload.xml",
+      "gitBlob": "96d8d01fd14c11c3ec2f2bb3913a7ddf109c764d",
+      "bytes": 58198,
+      "sha256": "354580e032c5121df3a4f338f84fd3d80a942b85d7dd8297cd9ebe839c91faf7"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/DESCRIPTION",
+      "gitBlob": "5b812f6eaa490141cfb826d84bb34692dc05e40b",
+      "bytes": 1971,
+      "sha256": "39a7f2115e16d1cd02a664024396948894a0d834e689cd86719b20577311e317"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/source.json",
+      "gitBlob": "d216e0b22bcc1c031002ce3b933f2b27414ad3c5",
+      "bytes": 2152,
+      "sha256": "89c8608559e8ea94588edd514cc67954d3c63bd1b8f9dff50283d3fa6aecf870"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/study_file.xml",
+      "gitBlob": "73bb6c55eee59633583d6f4c9f4355f3b96da685",
+      "bytes": 87762,
+      "sha256": "5865b6713f0c810bd930d2eb37470886596011ace82f073ad524066059828059"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/modernization.py",
+      "gitBlob": "3464812010ae21ab230eb9fe996c610f478a4f17",
+      "bytes": 10729,
+      "sha256": "42198d51a369d2eb436442ad03976212e9cf812e367235da724e52393d7789e4"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/profiles/nlm-20261012.json",
+      "gitBlob": "0a2c2d16b20ff6822726738646c1faaa98c480e0",
+      "bytes": 161262,
+      "sha256": "96f455abbb18c9bca22cbce6d9f1040918b8b085b6744cc5ad872557bc1e6760"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/README.md",
+      "gitBlob": "28fbe7510609316c4ab6bc5bf5b45e3bba02e979",
+      "bytes": 5428,
+      "sha256": "bbead606d3a5f16646eea275103782b0f218ef7026b627bcdbe9cc2d46b62082"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/reconcile.py",
+      "gitBlob": "10986aa703057ae328711dfcef7c993be9a8e0df",
+      "bytes": 31801,
+      "sha256": "c50b26ac334ae84c5fe6b47bc40be9e8eba95b8d43e76710c7902a481bce79f9"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/requirements.txt",
+      "gitBlob": "aa867df6f526b4bbf1d43e674ca3b4ab57530348",
+      "bytes": 13,
+      "sha256": "23c4524335abae0cd36bc276bd29e53b1571cd9167a76eb17713cd961d7e182b"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schema.py",
+      "gitBlob": "e0efd1dca092d445fa318e3bbcec2d5099a5880b",
+      "bytes": 24938,
+      "sha256": "3aacd7da15c24f377e0f5287abea8ebbfb93e801e3fb3f0f75c910994e5f3100"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/clinicaltrials-openapi.yaml",
+      "gitBlob": "7bc3572d7a86bfc1efbeb318ad84606b4c4b80a0",
+      "bytes": 80983,
+      "sha256": "ba31adaea67e6bb09ff77af5c0c11daf36d5aff7f5d6cbed89f0aab04b297aea"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/ProtocolRecordSchema.xsd",
+      "gitBlob": "a73d175b4aacb181f6a20b324de7bcce42756db7",
+      "bytes": 35223,
+      "sha256": "cb4f2036b811146a98f30ee48741e513d569af3193fd7ee2fb143e918c2ab066"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/RRSUploadSchema.xsd",
+      "gitBlob": "48793070afad716d1414181f4721780effad2698",
+      "bytes": 32403,
+      "sha256": "2382a9eeb00ccabfab87a0c3b02c0b62586a2ecaf73d8ad7e39379228d28abda"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/source-contracts.json",
+      "gitBlob": "3245a4f116ce987a0dd7c211f24850271ef634a8",
+      "bytes": 2166,
+      "sha256": "9c8fdfa92734765e6507e1e81298687120fe746676af210db107cce8f051dd80"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/SOURCES.md",
+      "gitBlob": "00a1a01d346a1c34d0767bba8092c8d12fa5179d",
+      "bytes": 5411,
+      "sha256": "dfaf33799fcc29987e422c594b8c4fa09e55064c64c2bd52c9f78ee330c06d0b"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/upload.py",
+      "gitBlob": "1288a46b7bb8b87042c518ee703c6195c0d1c1a6",
+      "bytes": 12561,
+      "sha256": "81e725369901a3ecbf7b61b25a6b86ef3fa6284ecc2105e2c00b3f7273b7a330"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/app.js",
+      "gitBlob": "5dd6bb71f6e97e3ac68e1d7aee11e5c470162670",
+      "bytes": 39911
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/batch.js",
+      "gitBlob": "f4ae48912ddf0603156e4bc47380edd0437a2148",
+      "bytes": 32264
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/index.html",
+      "gitBlob": "8f29aa45dc080115528a77727ba508aa5b785c4e",
+      "bytes": 38806
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/style.css",
+      "gitBlob": "2577fb091cfe4d1467a4977fef3a3b68cab2d0d8",
+      "bytes": 7579
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/publisher-bridge.mjs",
+      "gitBlob": "6953c4c940b2dab31fff110707306e9c5248710f",
+      "bytes": 6247
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/README.md",
+      "gitBlob": "476cf10262192f28f9f9d0abd2d83a71f878c57f",
+      "bytes": 17898
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/application.py",
+      "gitBlob": "61efda1abe1624087ad3e2ededec350d17063dc0",
+      "bytes": 4771
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/ndjson_source.py",
+      "gitBlob": "7a9f68391f0c7ea2196606ffe0743924214266eb",
+      "bytes": 15810
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/public/publisher.mjs",
+      "gitBlob": "9dc07bd16a3f5d596bdcf80fba1557e5e2f788c7",
+      "bytes": 30465
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/server.py",
+      "gitBlob": "ebc353d198ea0772cea0400c7b523a8d4d51ee39",
+      "bytes": 9434
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/workspace.py",
+      "gitBlob": "24c4fb7ccf08f6d350bcfb4eae6accc251a60a4e",
+      "bytes": 36232
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/xml_source.py",
+      "gitBlob": "8f02d9545ae2959f354cff555ddb0e8595f1b8e0",
+      "bytes": 17648
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs",
+      "gitBlob": "715729bd4f404a677630342291da99755acce154",
+      "bytes": 7575
+    }
+  ],
+  "examplesDirectory": "prs/examples/eudract_pkg",
+  "provenanceDirectory": "examples/eudract_pkg",
+  "examples": [
+    {
+      "name": "1234.xml",
+      "bytes": 7853,
+      "sha256": "b0718215c40d0056bfd0b80ee0aabbeabfd963e40e6e61ec00bc90d095bc7bc0"
+    },
+    {
+      "name": "ct_safety_upload.xml",
+      "bytes": 58198,
+      "sha256": "354580e032c5121df3a4f338f84fd3d80a942b85d7dd8297cd9ebe839c91faf7"
+    },
+    {
+      "name": "study_file.xml",
+      "bytes": 87762,
+      "sha256": "5865b6713f0c810bd930d2eb37470886596011ace82f073ad524066059828059"
+    }
+  ],
+  "originalInputCount": 3,
+  "clientReferences": 4,
+  "providerRequests": 0
+}
