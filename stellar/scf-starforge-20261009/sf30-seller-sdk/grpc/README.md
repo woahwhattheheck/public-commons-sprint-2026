@@ -128,6 +128,28 @@ The server serializes writes under the original merchant state lease.
 A captured contract is immutable for that revision. Editing the former .proto
 files does not change a saved merchant. Capture again to propose a new revision.
 
+## Review a contract upgrade
+
+Open **Contract upgrades** to compare the current saved merchant with a retained
+candidate revision or a saved reflection capture. The original compiler supplies
+both contracts. The review shows exact field numbers and names, presence, oneofs,
+enum changes and separate request/response reachability for every method.
+
+Edit the candidate plan in that same review. Each route retains its original and
+proposed public path, complete ordered payment options, original example against
+both contracts, corrected candidate example and public schema identities. Native
+example validation serializes locally; it sends no application RPC.
+
+**Save reviewed upgrade** uses the original workspace revision and selection
+generation. A retained adoption intent recovers the exact saved revision after a
+lost response. An intervening edit or checkout produces a conflict. Reopening a
+completed review reads its result without changing the current selection.
+
+Continue through the existing **Review → Prepare → customer downloads → SF82**
+workflow. The comparison describes observed changes; it does not authorize a
+payment or make a universal compatibility claim. The full operating, recovery
+and installed API instructions are in [Contract upgrades](UPGRADES.md).
+
 ## Native value contract
 
 | Protobuf field | Public JSON |

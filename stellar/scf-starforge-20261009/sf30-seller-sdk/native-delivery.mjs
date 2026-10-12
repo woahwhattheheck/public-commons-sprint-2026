@@ -134,11 +134,17 @@ export async function withNativeSettlementDelivery(options, launch) {
     await save();
     const originalClose = session.close.bind(session);
     let closing;
-    session.close = () => closing ??= (async () => {
-      try { return await originalClose(); } finally {
+    session.close = () => {
+      if (closing) return closing;
+      const attempt = (async () => {
+        const result = await originalClose();
         await finish(); for (const detach of active.detach) detach();
-      }
-    })();
+        return result;
+      })();
+      closing = attempt;
+      attempt.catch(() => { if (closing === attempt) closing = undefined; });
+      return attempt;
+    };
     session.server?.once('close', () => { void finish(); });
     session.settlementDelivery = Object.freeze({ schema: NATIVE_DELIVERY_SCHEMA,
       instanceId, releaseId, releaseDigest, sourceDirectory,

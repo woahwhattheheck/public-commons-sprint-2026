@@ -197,6 +197,8 @@ class AzureExports:
         record, payload = self.current("azure_run", request)
         if payload["state"] != "prepared":
             raise ValueError("This run already has an execution attempt. Refresh its original execution history.")
+        if time.time() < payload.get("retry_at", 0):
+            raise ValueError("Wait for the provider's retained retry time before executing this selected export.")
         profile = self.get("azure_profile", payload["profile"]["id"], payload["profile"]["revision"])
         # Persist the uncertain boundary before the provider POST. An interrupted response
         # reopens this same record and proceeds through run history, never a second POST.
@@ -219,26 +221,36 @@ class AzureExports:
         profile = self.get("azure_profile", payload["profile"]["id"], payload["profile"]["revision"])
         api = Azure(profile["payload"])
         cursor = payload.get("history_next") or payload["export_id"] + "/runHistory"
-        result = api.json(cursor)
-        items = result["data"].get("value", [])
-        if not isinstance(items, list):
-            raise ValueError("The provider run history is not a collection.")
+        try:
+            result = api.json(cursor)
+            items = result["data"].get("value", [])
+            if not isinstance(items, list):
+                raise ValueError("The provider run history is not a collection.")
+            following = result["data"].get("nextLink", "")
+            if following:
+                api.arm_url(following)
+        except (AzureError, ValueError) as error:
+            execution_state = payload["state"]
+            self.failure(payload, error)
+            payload["history_state"], payload["state"] = payload["state"], execution_state
+            return self.write("azure_run", payload, record["id"], record["revision"])
         candidates = {item["id"]: item for item in payload.get("candidates", []) if item.get("id")}
         for item in items:
             if isinstance(item, dict) and item.get("id"):
                 candidates[item["id"]] = item
         payload["candidates"] = list(candidates.values())[-1000:]
         payload["history_pages"].append(self.metadata(result, "azure-run-history-" + str(len(payload["history_pages"]) + 1) + ".json"))
-        payload["history_next"] = result["data"].get("nextLink", "")
-        if payload["history_next"]:
-            api.arm_url(payload["history_next"])
+        payload["history_next"] = following
+        payload["history_state"] = "ready" if following else "complete"
+        payload["state"] = "submitted" if payload.get("submission") else (
+            "uncertain" if payload.get("submitted") else "prepared")
         if payload.get("selected_run"):
-            selected = candidates.get(payload["selected_run"]["id"])
-            if selected:
-                payload["selected_run"] = selected
-                payload["native_status"] = selected.get("properties", {}).get("status", "")
-                payload["state"] = "completed" if payload["native_status"] == "Completed" else "observed"
-        payload["refreshed"] = now()
+            selected = candidates.get(payload["selected_run"]["id"], payload["selected_run"])
+            payload["selected_run"] = selected
+            payload["native_status"] = selected.get("properties", {}).get("status", "")
+            payload["state"] = "completed" if payload["native_status"] == "Completed" else "observed"
+        payload.update({"refreshed": now(), "error": "", "retry_at": 0})
+        payload.pop("provider_error", None)
         return self.write("azure_run", payload, record["id"], record["revision"])
 
     def run_select(self, request):
@@ -298,6 +310,18 @@ class AzureExports:
         result = api.request("GET", api.blob_url(name), "storage", maximum=MAX_MANIFEST)
         if not result["headers"].get("etag"):
             raise ValueError("The original manifest response needs an ETag for a coherent retained edition.")
+        if run_ref:
+            manifest = parse_manifest(result["raw"])
+            native_run = run["payload"]["selected_run"]
+            manifest_export = str(manifest["export_config"].get("resourceId") or "")
+            native_export = str(run["payload"]["export_id"])
+            manifest_run = manifest["run"]
+            if (manifest_export.rstrip("/").casefold() != native_export.rstrip("/").casefold()
+                    or not isinstance(manifest_run, dict)
+                    or str(manifest_run.get("runId") or "").casefold()
+                    != str(native_run["id"]).rstrip("/").rsplit("/", 1)[-1].casefold()):
+                raise ValueError("The current manifest belongs to a different native export or run. "
+                    "Refresh the original execution history and select the run whose manifest is available.")
         return self.create_source(result["raw"], name, profile,
             {"mode": "local-protocol" if config.get("local_endpoint") else "azure-blob",
              "container_url": config["container_url"], "run": run_ref},
@@ -513,9 +537,9 @@ class AzureExports:
             raise ValueError("Choose one cost basis and provider-allocation view.")
         if settings["invoice_status"] not in {"provisional", "closed"} or settings["date_format"] not in {"iso", "month_first", "day_first"}:
             raise ValueError("Choose a supported supplier status and billing-period date format.")
-        native_basis = {"actualcost": "actual", "amortizedcost": "amortized"}.get(payload["dataset_type"].lower())
+        native_basis = {"actualcost": "actual", "usage": "actual", "amortizedcost": "amortized"}.get(payload["dataset_type"].lower())
         if native_basis is None:
-            raise ValueError("Select the original ActualCost or AmortizedCost export for this billing engine; retained " + payload["dataset_type"] + " uses a different dataset contract.")
+            raise ValueError("Select the original ActualCost, legacy Usage or AmortizedCost export for this billing engine; retained " + payload["dataset_type"] + " uses a different dataset contract.")
         if native_basis != settings["basis"]:
             raise ValueError("The selected basis differs from the native export's " + payload["dataset_type"] + " declaration.")
         if not isinstance(settings["columns"], dict):

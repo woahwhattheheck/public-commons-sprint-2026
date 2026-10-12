@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-research-workspaces",
+  "description": "Original research workspaces MCP provider",
+  "merchantProviders": {
+    "research-workspaces": "stellar-forge/mcp-merchant-operator/providers/research-workspaces.mjs"
+  }
+}

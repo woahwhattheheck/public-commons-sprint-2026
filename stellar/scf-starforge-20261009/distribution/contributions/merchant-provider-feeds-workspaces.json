@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-feeds-workspaces",
+  "description": "Original feeds workspaces MCP provider",
+  "merchantProviders": {
+    "feeds-workspaces": "stellar-forge/mcp-merchant-operator/providers/feeds-workspaces.mjs"
+  }
+}

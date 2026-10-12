@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // MIT. Complete public geocoding operator/customer workflow over the maintained engines.
-import {resolve} from 'node:path';
+import {resolve,basename} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {Buyer} from '../../sf88-operator-buyer-cli/node/client.mjs';
 import {examplePlan,compileGeocodePlan,fail} from './config.mjs';
 import {exampleTerms,packageGeocodeMerchant,inspectGeocodePackage} from './merchant.mjs';
 import {GeocodeWorkspace} from './workspace.mjs';
 import {GeocodeDelivery} from './customer.mjs';
+import {GeocodeBatchDelivery} from './batch-delivery.mjs';
+import {inspectCsvSource,MAX_CSV_BYTES} from './batch.mjs';
 import {createGeocodeServer} from './server.mjs';
 import {openGeocodeManagedWorkspace} from './launch.mjs';
 import {privateDirectory,readJson,readBytes,writeJson} from '../twelvedata/files.mjs';
@@ -18,7 +20,7 @@ serve --workspace DIR [--port 0] [--managed-selection SAVED_REVIEW_JSON]
 serve --delivery DELIVERY_DIR [--port 0]
 capture --workspace DIR --id ID --product ID --query JSON
 import-response --workspace DIR --id ID --product ID --query JSON --observation FILE --response FILE
-list --workspace DIR
+list --workspace DIR [--offset N --limit N]
 inspect --workspace DIR --id ID
 select --workspace DIR --id ID --response-sha256 SHA --index N|none --revision N [--note TEXT]
 export --workspace DIR --id ID --response-sha256 SHA --revision N
@@ -35,14 +37,43 @@ start --workspace DIR --generation N
 consume-buyer --buyer-config FILE --intent ID --plan PLAN.json --product ID --origin HTTPS_ORIGIN --out NEW_DIRECTORY
 adopt-buyer --workspace DIR --buyer-config FILE --intent ID --id ID --product ID [--package-id ID]
 
+batch-source --source INPUT.csv
+batch-review --workspace DIR --source INPUT.csv --product ID --mapping MAPPING.json [--reuse ID,ID]
+batch-prepare --workspace DIR --source INPUT.csv --product ID --mapping MAPPING.json --review-sha256 SHA [--reuse ID,ID]
+batch-list --workspace DIR
+batch-status --workspace DIR --batch ID [--offset N --limit N --status STATE]
+batch-row --workspace DIR --batch ID --row N
+batch-run --workspace DIR --batch ID --run ID
+batch-reconcile --workspace DIR --batch ID
+batch-select --workspace DIR --batch ID --row N --request ID --response-sha256 SHA --revision N --index N|none [--note TEXT]
+batch-retry --workspace DIR --batch ID --row N --request ID --response-sha256 SHA|none --reason TEXT [--acknowledge-uncertain true]
+batch-export --workspace DIR --batch ID --revision N [--max-bytes N]
+batch-read --delivery DIR [--row N | --offset N --limit N] [--verify true]
+batch-serve --delivery DIR [--port 0]
+
+CSV review/prepare also accept --label TEXT and --supersedes BATCH_ID.
+Mapping selects existing column names; each row keeps its original ordinal and values.
+Each deliberate new retry retains the previous original attempt and its reviewed reason.
+Batch exports keep every source row and each row's independent candidate decision.
+
 The key is supplied through the plan's named process environment variable.
 Each capture ID retains one attempted provider dispatch and its complete result.
 The original seller release and original buyer operation own commerce and recovery.
 `;
+const CSV_OPTIONS=['workspace','source','product','mapping','reuse','label','supersedes'];
 const OPTIONS={
+  'batch-source':['source'],
+  'batch-review':CSV_OPTIONS,'batch-prepare':[...CSV_OPTIONS,'review-sha256'],
+  'batch-list':['workspace'],'batch-status':['workspace','batch','offset','limit','status'],
+  'batch-row':['workspace','batch','row'],'batch-run':['workspace','batch','run'],
+  'batch-reconcile':['workspace','batch'],
+  'batch-select':['workspace','batch','row','request','response-sha256','revision','index','note'],
+  'batch-retry':['workspace','batch','row','request','response-sha256','reason','acknowledge-uncertain'],
+  'batch-export':['workspace','batch','revision','max-bytes'],
+  'batch-read':['delivery','row','offset','limit','verify'],'batch-serve':['delivery','port'],
   examples:['out'],init:['workspace','plan','terms'],serve:['workspace','delivery','port','managed-selection'],
   capture:['workspace','id','product','query'],'import-response':['workspace','id','product','query','observation','response'],
-  list:['workspace'],inspect:['workspace','id'],select:['workspace','id','response-sha256','index','revision','note'],
+  list:['workspace','offset','limit'],inspect:['workspace','id'],select:['workspace','id','response-sha256','index','revision','note'],
   export:['workspace','id','response-sha256','revision'],read:['delivery'],
   package:['workspace','plan','terms','out'],'package-inspect':['package'],
   stage:['workspace','release','package-id','package','label','facilitator'],
@@ -79,7 +110,20 @@ function signals(close){
 export async function main(argv=process.argv.slice(2)){
   if(!argv.length||argv.includes('--help')){process.stdout.write(HELP);return;}
   const options=parse(argv),command=options.command;let result;
-  if(command==='examples'){
+  if(command==='batch-source'){
+    result=inspectCsvSource(await readBytes(resolve(required(options,'source')),MAX_CSV_BYTES));
+  }else if(command==='batch-read'||command==='batch-serve'){
+    const delivery=await GeocodeBatchDelivery.open(resolve(required(options,'delivery')));
+    if(command==='batch-serve'){
+      const server=await createGeocodeServer({batchDelivery:delivery,port:number(options,'port',0,65535,0)});
+      print({url:server.url,mode:'GEOCODING_CSV_CUSTOMER',identity:delivery.manifest.identity});signals(server.close);return {server,delivery};
+    }
+    if(options.verify!==undefined&&options.verify!=='true')fail('GEOCODE_OPTION_INVALID');
+    if(options.row!==undefined&&(options.offset!==undefined||options.limit!==undefined))fail('GEOCODE_OPTION_INVALID');
+    if(options.verify==='true')await delivery.verify();
+    result=options.row!==undefined?await delivery.row(number(options,'row',1,10000)):
+      delivery.inspect({offset:number(options,'offset',0,Number.MAX_SAFE_INTEGER,0),limit:number(options,'limit',1,100,50)});
+  }else if(command==='examples'){
     const directory=await privateDirectory(resolve(required(options,'out')));
     await writeJson(directory+'/plan.json',examplePlan(),{exclusive:true});
     await writeJson(directory+'/terms.json',exampleTerms(),{exclusive:true});
@@ -108,14 +152,50 @@ export async function main(argv=process.argv.slice(2)){
       selection:options['managed-selection'],port:number(options,'port',0,65535,0)});
     process.stdout.write(JSON.stringify(opened.startup)+'\n');signals(opened.server.close);return opened;
   }else{
-    const readOnly=['list','inspect','release-status','release-diff'].includes(command);
+    const readOnly=['list','inspect','release-status','release-diff','batch-list','batch-status','batch-row','batch-review'].includes(command);
     const workspace=await GeocodeWorkspace.open(resolve(required(options,'workspace')),{
       ...(command==='init'?{plan:await readJson(resolve(required(options,'plan')),1048576),
         terms:await readJson(resolve(required(options,'terms')),1048576)}:{}),readOnly});
     let kept=false;
     try{
-      if(command==='init')result=await workspace.overview();
-      else if(command==='list'||command==='release-status')result=await workspace.overview();
+      if(command.startsWith('batch-')){
+        const manager=await workspace.batches(),batchId=options.batch;
+        if(command==='batch-review'||command==='batch-prepare'){
+          const source=resolve(required(options,'source'));
+          const input={bytes:await readBytes(source,MAX_CSV_BYTES),productId:required(options,'product'),
+            mapping:await readJson(resolve(required(options,'mapping')),65536),fileName:basename(source),
+            ...(options.label?{label:options.label}:{}),reuseRequestIds:options.reuse?options.reuse.split(','):[],
+            supersedesBatchId:options.supersedes??null};
+          result=command==='batch-review'?await manager.review(input):
+            await manager.prepare({...input,expectedReviewSha256:required(options,'review-sha256')});
+        }else if(command==='batch-list')result=await manager.list();
+        else if(command==='batch-status')result=await manager.status(required(options,'batch'),{
+          offset:number(options,'offset',0,Number.MAX_SAFE_INTEGER,0),limit:number(options,'limit',1,100,50),
+          ...(options.status?{status:options.status}:{})});
+        else if(command==='batch-row')result=await manager.row(required(options,'batch'),number(options,'row',1,10000));
+        else if(command==='batch-reconcile')result=await manager.reconcile({batchId:required(options,'batch')});
+        else if(command==='batch-run'){
+          const input={batchId:required(options,'batch'),runId:required(options,'run')};
+          const stop=()=>{void manager.stop(input).catch(()=>{});};
+          process.once('SIGINT',stop);process.once('SIGTERM',stop);
+          try{print(await manager.start(input));result=await manager.wait(input.batchId,input.runId);}
+          finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
+        }else if(command==='batch-select')result=await manager.select({batchId:required(options,'batch'),
+          ordinal:number(options,'row',1,10000),expectedRequestId:required(options,'request'),
+          responseSha256:required(options,'response-sha256'),expectedRevision:number(options,'revision'),
+          index:required(options,'index')==='none'?null:number(options,'index',0,99),note:options.note??''});
+        else if(command==='batch-retry'){
+          if(options['acknowledge-uncertain']!==undefined&&!['true','false'].includes(options['acknowledge-uncertain']))
+            fail('GEOCODE_OPTION_INVALID');
+          result=await manager.retry({batchId:required(options,'batch'),ordinal:number(options,'row',1,10000),
+            expectedRequestId:required(options,'request'),expectedResponseSha256:required(options,'response-sha256')==='none'?null:options['response-sha256'],
+            reason:required(options,'reason'),acknowledgeUncertain:options['acknowledge-uncertain']==='true'});
+        }else if(command==='batch-export')result=await manager.export({batchId:required(options,'batch'),
+          expectedRevision:number(options,'revision'),...(options['max-bytes']?{maxBytes:number(options,'max-bytes',1048576,536870912)}:{})});
+        else fail('GEOCODE_COMMAND_UNKNOWN');
+      }else if(command==='init')result=await workspace.overview();
+      else if(command==='list'||command==='release-status')result=await workspace.overview(options.limit!==undefined||options.offset!==undefined?{
+        offset:number(options,'offset',0,Number.MAX_SAFE_INTEGER,0),limit:number(options,'limit',1,1000,100)}:{});
       else if(command==='inspect')result=await workspace.get(required(options,'id'));
       else if(command==='capture')result=await workspace.capture({id:required(options,'id'),productId:required(options,'product'),input:query(options)});
       else if(command==='import-response')result=await workspace.importResponse({

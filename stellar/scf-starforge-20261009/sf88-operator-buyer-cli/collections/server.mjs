@@ -191,13 +191,19 @@ export async function serveCollections(collections, {
       }
       need(sameToken(request.headers.authorization, token), 'PRIVATE_SESSION_REQUIRED', 401);
       prune();
+      if (request.method === 'GET' && url.pathname === '/api/connection')
+        return send(collections
+          ? collectionsWorkspaceLaunch({ directory: collections.directory, queueRoot: collections.queueRoot,
+            approvalMode }, origin + '/#' + token)
+          : collectionsRecoveryWorkspaceLaunch({ receivingDirectory: recovery.directory }, origin + '/#' + token));
       if (request.method === 'GET' && url.pathname === '/api/status')
         return send({ schema: 'stellar-forge.sf88.collections-workspace.v1',
           directory: collections?.directory ?? null, queueRoot: collections?.queueRoot ?? null,
           mode: collections ? 'COLLECTIONS' : 'RECEIVING', recoveryDirectory: recovery.directory,
           recoveryBusy: recovery.busy, busy: mutation || recovery.busy || Boolean(runner?.busy), paymentApproval:
             approvals ? 'original-browser' : 'original-terminal',
-          command: 'buyer-collections', exportRoot: collections ? resolve(collections.directory, 'exports') : null, agentApi: 1 });
+          command: 'buyer-collections', exportRoot: collections ? resolve(collections.directory, 'exports') : null,
+            agentApi: 1, recoveryApi: 1, connectionApi: 1 });
       if (request.method === 'GET' && url.pathname === '/api/run')
         return send({ run: runner ? await runner.inspect() : null });
       const originalRun = /^\/api\/runs\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/.exec(url.pathname);

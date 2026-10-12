@@ -10,7 +10,7 @@ import { initializeOAuthConnection, oauthConnectionStatus } from '../store.mjs';
 import { HOST_CONNECTIONS_SCHEMA, normalizeOAuthHostConnections, readOAuthHostConnections,
   inspectOAuthHostDirectory } from '../host.mjs';
 import { normalizeOAuthProfile, oauthProfileIdentity } from '../profile.mjs';
-import { applicationEnvironment } from '../../../distribution/runtime-workspace/application-command.mjs';
+import { applicationEnvironment } from '../../../distribution/runtime-workspace/application-environment.mjs';
 import { oauthSetupProviderId } from './providers.mjs';
 import { SETUP_SCHEMA, MAX_SOURCE_BYTES, MAX_ENTRIES, MAX_REVIEW_BYTES, limits, fail, need, fields, text, revision,
   requestId, sourceId, normalizeContext, callbackUri, inspectSetupSource, normalizeNewDefinition,

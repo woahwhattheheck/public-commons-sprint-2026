@@ -122,16 +122,24 @@ export async function startDestinationsServer({ port = 8478, basePath = '', ...o
   server.requestTimeout = 30000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
   try {
     await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', () => { server.off('error', reject); done(); }); });
-    const selected = server.address().port, url = 'http://127.0.0.1:' + selected;
+    const selected = server.address().port, url = new URL('http://127.0.0.1:' + selected).origin;
     handler = await createDestinationsHandler({ model, basePath,
       origins: [url, 'http://localhost:' + selected] });
     return { model, server, url: url + basePath + '/', close() {
-      return closePromise ??= (async () => {
+      if (closePromise) return closePromise;
+      const attempt = (async () => {
         handler.close();
-        const stopped = new Promise(done => server.close(done)); server.closeIdleConnections?.();
-        await model.close(); await handler.done();
+        const stopped = server.listening ? new Promise(done => server.close(done)) : Promise.resolve();
+        server.closeIdleConnections?.();
+        let modelError;
+        try { await model.close(); } catch (error) { modelError = error; }
+        await handler.done();
         server.closeAllConnections?.(); await stopped;
+        if (modelError) throw modelError;
       })();
+      closePromise = attempt;
+      attempt.catch(() => { if (closePromise === attempt) closePromise = undefined; });
+      return attempt;
     } };
   } catch (error) { server.close(); await model.close(); throw error; }
 }

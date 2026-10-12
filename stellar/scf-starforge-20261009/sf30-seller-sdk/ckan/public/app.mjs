@@ -125,6 +125,7 @@ async function renderView() {
   if (tab === 'editions') await renderEditions(generation);
   if (tab === 'products') await renderProducts(generation);
   if (tab === 'merchant') renderMerchant();
+  if (tab === 'workspace') await renderWorkspace(generation);
 }
 function renderCatalogue() {
   const search = async (query, start = 0) => {
@@ -348,3 +349,48 @@ for (const item of document.querySelectorAll('nav button'))
   item.addEventListener('click', () => protect(async () => { tab = item.dataset.tab; await renderView(); }));
 protect(() => refresh());
 
+
+async function renderWorkspace(generation) {
+  const records = await api('workspace/archives');
+  if (generation !== renderGeneration) return;
+  view.append(heading('Workspace transfer'),
+    muted('Save the retained editions, reviewed selections, publisher history, dataset versions, merchant packages, seller releases and buyer requests as one project.'),
+    card(heading('Export this workspace'),
+      table([{ editions: state.editions.length, selections: state.sources.length,
+        publications: state.publications.length, merchant_packages: state.exports.length,
+        buyer_requests: state.buyerRequests.length }]),
+      muted('Stop the seller and finish the current project operation before exporting. Each export records the project state immediately before its own operation.'),
+      button('Create complete workspace archive', () => act('workspace/archives', {}), true)));
+  for (const item of records) view.append(card(
+    element('h3', {}, 'Workspace saved ' + item.createdAt),
+    row(pill(item.files + ' files'), pill(item.bytes.toLocaleString() + ' archive bytes')),
+    label('Archive SHA-256', input('archive-sha256', item.sha256, 'text', { readonly: true, class: 'mono' })),
+    button('Download workspace archive', () => download('workspace/archives/' + item.id, 'ckan-workspace-' + item.id + '.ckanw')),
+    detail('Retained project', item.source)));
+  view.append(card(heading('Receive a workspace'),
+    muted('Choose the archive, paste its SHA-256, and name a new project directory beside this one. A repeated receive resumes the same archive and destination.'),
+    form(async (data, node) => {
+      const file = node.elements.archive.files[0];
+      if (!file) throw new Error('Choose a .ckanw workspace archive.');
+      const sha = String(data.get('sha256') ?? '').trim(), name = String(data.get('name') ?? '').trim();
+      if (!/^[a-f0-9]{64}$/.test(sha)) throw new Error('Paste the complete archive SHA-256.');
+      const response = await fetch('/api/workspace/receive?' + new URLSearchParams({ name }), {
+        method: 'POST', headers: { authorization: 'Bearer ' + token,
+          'content-type': 'application/octet-stream', 'x-archive-sha256': sha }, body: file });
+      const result = await response.json();
+      if (!response.ok) throw new Error((result.error ?? response.status) + ': ' + result.message);
+      lastOperation = result.operationId; await refresh();
+    },
+    label('Workspace archive', input('archive', '', 'file', { accept: '.ckanw', required: true })),
+    label('Archive SHA-256', input('sha256', '', 'text', { required: true, pattern: '[a-f0-9]{64}', class: 'mono' })),
+    label('New project directory name', input('name', 'received-ckan-project', 'text', { required: true, pattern: '[A-Za-z0-9][A-Za-z0-9._-]{0,79}' })),
+    submit('Receive complete workspace'))));
+  const operation = state.operation;
+  if (operation?.kind === 'receive complete workspace' && operation.state === 'COMPLETE') {
+    const result = operation.result;
+    view.append(card(heading('Received project'),
+      element('p', { class: 'mono' }, result.directory),
+      muted('Open this directory in the existing CKAN Applications provider or the CKAN serve command. Its original seller selection is retained and can be started from its release store.'),
+      detail('Original project and receive result', result)));
+  }
+}

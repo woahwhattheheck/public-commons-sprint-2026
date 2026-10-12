@@ -54,6 +54,43 @@ const sha = value => {
   need(typeof value === 'string' && HASH.test(value), 'GRANT_INVALID_INPUT', 'Use the exact SHA256.'); return value;
 };
 
+const completionDate = value => {
+  need(typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value),
+    'GRANT_INVALID_INPUT', 'Use the native calendar date in YYYY-MM-DD form.');
+  return value;
+};
+const COMPLETION_FIELDS = Object.freeze({
+  save:{allowed:['inputs'], required:['inputs']},
+  prepare:{allowed:['receiptId','asOfDate','summary','expectedPreviewSha256'],
+    required:['receiptId','asOfDate','summary','expectedPreviewSha256']},
+  extension:{allowed:['receiptId','confirmedOn','deadlineOn','reference','sourceIds','confirmationNote'],
+    required:['receiptId','confirmedOn','deadlineOn','reference']},
+  submit:{allowed:['reviewId','expectedReviewSha256','submittedOn','formReference','sourceIds','sourceNote'],
+    required:['reviewId','expectedReviewSha256','submittedOn','formReference']},
+  decision:{allowed:['outcomeId','state','date','sourceIds','sourceNote'],
+    required:['outcomeId','state','date','sourceNote']},
+});
+function completionCommandBody(action, body) {
+  const selected=COMPLETION_FIELDS[action];
+  need(selected, 'GRANT_INVALID_ACTION', 'Choose an original completion lifecycle action.');
+  const common=['expectedVersion','requestId','actor','note'];
+  exact(body, [...common,...selected.allowed], ['expectedVersion','requestId','actor',...selected.required]);
+  const original=Object.fromEntries(Object.entries(body).filter(([key])=>common.includes(key)));
+  const data=Object.fromEntries(Object.entries(body).filter(([key])=>selected.allowed.includes(key)));
+  if (data.receiptId !== undefined) id(data.receiptId,'cash');
+  if (data.reviewId !== undefined) id(data.reviewId,'review');
+  if (data.outcomeId !== undefined) id(data.outcomeId,'outcome');
+  if (data.inputs !== undefined) object(data.inputs,'Completion assignments');
+  for (const key of ['asOfDate','confirmedOn','deadlineOn','submittedOn','date'])
+    if (data[key] !== undefined) completionDate(data[key]);
+  for (const key of ['expectedPreviewSha256','expectedReviewSha256'])
+    if (data[key] !== undefined) sha(data[key]);
+  if (action === 'decision') need(['ACCEPTED','CHANGES_REQUESTED','WITHDRAWN'].includes(data.state),
+    'GRANT_INVALID_INPUT', 'Use the original recorded issuer outcome.');
+  if (Object.hasOwn(data,'confirmationNote')) { data.note=data.confirmationNote; delete data.confirmationNote; }
+  return {...original,action:'completion.'+action,data};
+}
+
 const SUPPORT_DEPLOYMENT_FIELDS = [
   'name', 'operator', 'operatorId', 'role', 'participantClass', 'environment', 'state',
   'costIds', 'tranche', 'endpoint', 'releaseRef', 'caseRef', 'acceptedBy', 'acceptedAt', 'sourceNote',
@@ -296,6 +333,8 @@ export class GrantWorkspaceClient {
       portfolios:() => '/api/operations/' + cid() + '/portfolios',
       portfolio:() => '/api/operations/' + cid() + '/portfolios/' + id(args.portfolioId, 'portfolio'),
       review:() => '/api/operations/' + cid() + '/reviews/' + id(args.reviewId, 'review'),
+      completion:() => '/api/operations/' + cid() + '/completion' +
+        (args.asOfDate === undefined ? '' : '?asOfDate=' + encodeURIComponent(completionDate(args.asOfDate))),
     };
     need(Object.hasOwn(routes, view), 'GRANT_INVALID_VIEW', 'Choose a declared native grant view.');
     return this.#request(routes[view](), {});
@@ -367,6 +406,25 @@ export class GrantWorkspaceClient {
     return this.#request('/api/operations/' + caseId + '/portfolio-selection',
       {body:{expectedVersion, portfolioId, alternativeId}, mutation:false});
   }
+  completionSeed(caseId, expectedVersion, tranche) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version'); integer(tranche,'Completion tranche',1,3);
+    return this.#request('/api/operations/'+caseId+'/completion-seed',
+      {body:{expectedVersion,tranche},mutation:false});
+  }
+  completionPreview(caseId, expectedVersion, inputs) {
+    id(caseId,'operation'); integer(expectedVersion,'Current case version');
+    exact(inputs,['receiptId','asOfDate','summary'],['receiptId','summary']);
+    id(inputs.receiptId,'cash');
+    if (inputs.asOfDate !== undefined) completionDate(inputs.asOfDate);
+    text(inputs.summary,'Completed tranche result',20000,true);
+    return this.#request('/api/operations/'+caseId+'/completion-preview',
+      {body:{expectedVersion,...inputs},mutation:false});
+  }
+  completionSave(caseId, body) { return this.command(caseId,completionCommandBody('save',body)); }
+  completionPrepare(caseId, body) { return this.command(caseId,completionCommandBody('prepare',body)); }
+  completionExtension(caseId, body) { return this.command(caseId,completionCommandBody('extension',body)); }
+  completionSubmit(caseId, body) { return this.command(caseId,completionCommandBody('submit',body)); }
+  completionDecision(caseId, body) { return this.command(caseId,completionCommandBody('decision',body)); }
   supportPreview(caseId, expectedVersion, bytes, filename) {
     id(caseId, 'operation'); integer(expectedVersion, 'Current case version');
     return this.#request('/api/operations/' + caseId + '/support-preview',
@@ -402,6 +460,7 @@ export class GrantWorkspaceClient {
       forecast:() => '/api/operations/' + id(args.caseId, 'operation') + '/forecasts/' + id(args.forecastId, 'forecast') + '/export.zip',
       portfolio:() => '/api/operations/' + id(args.caseId, 'operation') + '/portfolios/' + id(args.portfolioId, 'portfolio') + '/export.zip',
       source:() => '/api/operations/' + id(args.caseId, 'operation') + '/sources/' + id(args.sourceId, 'source'),
+      completion:() => '/api/operations/' + id(args.caseId,'operation') + '/completion-reviews/' + id(args.reviewId,'review') + '/export.zip',
     };
     need(Object.hasOwn(routes, kind), 'GRANT_INVALID_DOWNLOAD', 'Choose a complete original grant export or source.');
     return this.#request(routes[kind](), {});

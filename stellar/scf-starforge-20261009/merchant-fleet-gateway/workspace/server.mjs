@@ -260,7 +260,7 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
   const close = () => {
     if (closingPromise) return closingPromise;
     closing = true;
-    closingPromise = (async () => {
+    const attempt = (async () => {
       try {
         // An in-flight native stage may own an HTTP response. Signal its original
         // capture before waiting for that response and the listener to drain.
@@ -272,11 +272,13 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
         });
       } finally { await releases?.close(); }
     })();
-    return closingPromise;
+    closingPromise = attempt;
+    attempt.catch(() => { if (closingPromise === attempt) closingPromise = undefined; });
+    return attempt;
   };
   try {
     await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
-    url = 'http://' + HOST + ':' + server.address().port;
+    url = new URL('http://' + HOST + ':' + server.address().port).origin;
     // The original merchant authorizes this actual navigation origin, including
     // an automatically allocated workspace port. Requests wait for native startup.
     if (managed) {
