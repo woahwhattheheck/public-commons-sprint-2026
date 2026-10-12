@@ -23,8 +23,8 @@ root.mkdir(parents=True, exist_ok=True, mode=0o700)
 info = root.stat()
 if root.is_symlink() or root.resolve() != root or not root.is_dir() or info.st_uid != os.getuid() or info.st_mode & 0o077:
     raise SystemExit("Select an owned private receiving directory")
-if not engine.is_file() or hashlib.sha256(engine.read_bytes()).hexdigest() != "71735df3b44ec5448756a359b52af115c3773df8f2c112a57e351e9ed341f56b":
-    raise SystemExit("Use the exact published a3d9748b engine.py")
+if not engine.is_file() or hashlib.sha256(engine.read_bytes()).hexdigest() != "52c2b42c1b222174679d07da89893ae268fbfe04f785f9dfdcda617ec727fb41":
+    raise SystemExit("Use the exact published engine.py for this producer")
 if not (source / "pyproject.toml").is_file():
     raise SystemExit("Select the original e287 Python project directory")
 observed = (sys.implementation.name, sys.version_info.major, sys.version_info.minor, sysconfig.get_platform(), platform.machine(), sys.implementation.cache_tag)
@@ -61,6 +61,42 @@ if value.get("candidate", value.get("id")) != sys.argv[2] or value["source"]["id
     raise SystemExit("The original source/interpreter/extras identity differs from the selected cohort")
 PY
 cohort_phase inspect inspect --candidate "$COHORT_CANDIDATE"
+if [ -n "${COHORT_DISK_LIMIT_BYTES:-}" ] || [ -n "${COHORT_DISK_RESERVE_BYTES:-}" ]; then
+  "$COHORT_PYTHON" -B - "$COHORT_ATTEMPT/inspect.json" "$COHORT_ROOT" "${COHORT_DISK_LIMIT_BYTES:-}" "${COHORT_DISK_RESERVE_BYTES:-}" "$COHORT_ATTEMPT/capacity.json" <<'PY'
+import json, os, pathlib, sys
+inspection, root_name, limit_text, reserve_text, report_name = sys.argv[1:]
+if not limit_text.isdecimal() or not reserve_text.isdecimal():
+    raise SystemExit("Declare both original disk limit and reserve in bytes")
+root = pathlib.Path(root_name)
+limit, reserve = int(limit_text), int(reserve_text)
+if limit <= 0:
+    raise SystemExit("The original disk limit must be positive")
+selected = json.loads(pathlib.Path(inspection).read_text())
+seen, allocated = set(), 0
+for path in (root, *root.rglob("*")):
+    info = path.lstat()
+    identity = (info.st_dev, info.st_ino)
+    if path.is_symlink() or identity in seen:
+        continue
+    seen.add(identity)
+    allocated += info.st_blocks * 512
+additional = selected["wheelBytes"] + 16 * 1024 * 1024
+fs = os.statvfs(root)
+available = fs.f_bavail * fs.f_frsize
+report = {"schema":"stellar-forge.public-cohort-capacity.v1",
+          "allocatedBytes":allocated,"wheelBytes":selected["wheelBytes"],
+          "bundleAndDiagnosticsAdditionalBytes":additional,
+          "projectedBytes":allocated+additional,"declaredBytes":limit,
+          "availableBytes":available,"reserveBytes":reserve,
+          "fits":allocated+additional <= limit and available >= additional+reserve}
+with pathlib.Path(report_name).open("x") as output:
+    json.dump(report, output, sort_keys=True, indent=2); output.write("\n")
+    output.flush(); os.fsync(output.fileno())
+if not report["fits"]:
+    print(json.dumps(report, sort_keys=True), file=sys.stderr)
+    raise SystemExit(75)
+PY
+fi
 cohort_phase bundle bundle --candidate "$COHORT_CANDIDATE" --output "$COHORT_ROOT/scf-public-python-e287-workbooks-agents.bundle.zip"
 "$COHORT_PYTHON" -B - "$COHORT_OPERATION" "$COHORT_ATTEMPT" "$COHORT_ROOT" "$COHORT_CANDIDATE" <<'PY'
 import hashlib, json, os, pathlib, sys

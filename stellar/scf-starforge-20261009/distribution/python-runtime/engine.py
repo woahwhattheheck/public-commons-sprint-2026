@@ -296,8 +296,11 @@ def platform_key(info):
 
 def wheel_metadata(path):
     with zipfile.ZipFile(path) as archive:
-        names = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
-        need(len(names) == 1 and archive.getinfo(names[0]).file_size <= MAX_JSON, "Wheel has no single package metadata identity")
+        # Vendored distributions may carry their own nested dist-info metadata.
+        # Only the top-level metadata belongs to the wheel being installed.
+        names = [name for name in archive.namelist()
+                 if name.count("/") == 1 and name.endswith(".dist-info/METADATA")]
+        need(len(names) == 1 and archive.getinfo(names[0]).file_size <= MAX_JSON, "Wheel has no single top-level package metadata identity")
         data = email.parser.Parser().parsestr(archive.read(names[0]).decode())
     return {"name": normalized(data["Name"]), "version": data["Version"]}
 

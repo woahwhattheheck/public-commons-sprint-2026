@@ -175,11 +175,11 @@ def operation_lease(directory):
 _RESERVED_HEADER = struct.Struct(">8sQQ32s")
 _RESERVED_MAGIC = b"SCFNDR1\0"
 
-def _reserved_info(fd):
+def _reserved_info(fd, *, require_allocated=True):
     info = os.fstat(fd)
     need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
          and not info.st_mode & 0o077 and info.st_size >= 8192 and info.st_size % 2 == 0
-         and info.st_blocks * 512 >= info.st_size,
+         and (not require_allocated or info.st_blocks * 512 >= info.st_size),
          "PREALLOCATED_PRIVATE_RECORD_REQUIRED")
     return info.st_size // 2
 
@@ -202,7 +202,9 @@ def _reserved_slots(fd, span):
 def read_reserved_record(path):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     try:
-        rows = _reserved_slots(fd, _reserved_info(fd))
+        # Transport may preserve the exact logical bytes using sparse backing.
+        # Read the committed checksummed slot; writers still require reservation.
+        rows = _reserved_slots(fd, _reserved_info(fd, require_allocated=False))
         return rows[-1] if rows else None
     finally:
         os.close(fd)
