@@ -241,7 +241,7 @@ class Listener:
         while row["status"] != "COMPLETED":
             state = (row["status"], row.get("displayStatus"), (row.get("progress") or {}).get("phase"))
             if state != last:
-                self.operation.progress(name, status=row["status"], phase=state[-1])
+                self.operation.progress(name, status=row["status"], requestPhase=state[-1])
                 last = state
             if row["status"] == "FAILED":
                 self.operation.record("failed-" + self.label + "-" + name, row)
