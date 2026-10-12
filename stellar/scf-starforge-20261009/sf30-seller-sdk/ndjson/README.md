@@ -242,3 +242,8 @@ The original retained merchant can now prepare an SF82 dataset release with the 
 ## Managed Applications
 
 The [managed JSON Lines application](MANAGED_APPLICATIONS.md) opens this same retained source console from the original runtime Applications catalog, with explicit Python selection, review/save/start/open/stop/reopen and an optional original merchant MCP connection file.
+
+
+## Retain prepared merchants across restarts
+
+The original console now supports prepare-once, saved package selection, verified repeat downloads and complete merchant receiving through the same original dataset engine. Browser, CLI and the existing source-workspace MCP share the retained packages. See [Retained NDJSON merchants](MERCHANT_PACKAGES.md) for complete commands, receiving and interruption recovery. The existing one-off merchant, source-project, seller and SF82 interfaces remain available.

@@ -108,6 +108,8 @@ async function refresh(pick = {}) {
   for (const id of ["plan-select", "build-plan"]) selection(id, plans, pick.plan);
   for (const id of ["build-select", "compare-before", "compare-after", "merchant-build", "export-build"]) selection(id, builds, pick.build);
   selection("comparison-select", comparisons, pick.comparison);
+  selection("merchant-saved", (state.merchants || []).map(m => ({id: m.id, label: m.resource + " · " + short(m.id)})), pick.merchant);
+  $("merchant-detail").replaceChildren();
   $("source-count").textContent = fmt(state.sources.length) + " retained sources";
   $("mapping-count").textContent = fmt(state.plans.length) + " immutable mappings";
   $("build-count").textContent = fmt(state.builds.length) + " completed editions";
@@ -393,12 +395,37 @@ for (const [id, route, name] of [["export-project", "/api/export", "ndjson-proje
     download(await api(route + "?build=" + encodeURIComponent(requireValue("export-build", "an edition")), { download: true }), name); notify("Complete edition export downloaded.");
   });
 }
-listen("merchant-form", "submit", "Preparing the original merchant and generated customer SDK…", async () => {
+function showMerchant(value) {
+  const merchant = value.merchant;
+  details($("merchant-detail"), [["Resource", merchant.resource], ["Package SHA-256", value.id],
+    ["Download bytes", fmt(value.archive.bytes)], ["Build", merchant.build],
+    ["Source", merchant.source], ["Mapping", merchant.plan], ["Native snapshot", merchant.snapshot],
+    ["Prepared directory", value.directory]]);
+}
+listen("merchant-form", "submit", "Preparing and retaining the original merchant and customer SDK…", async () => {
   const payment = JSON.parse($("merchant-payment").value);
-  const blob = await api("/api/merchant", { download: true, body: { build: requireValue("merchant-build", "a reviewed edition"),
+  const value = await api("/api/merchants/prepare", { body: { build: requireValue("merchant-build", "a reviewed edition"),
     payment, origin: $("merchant-origin").value, path: $("merchant-path").value } });
-  download(blob, "ndjson-merchant.zip"); notify("Complete merchant, original source and generated customer SDK downloaded.");
+  await refresh({ build: value.merchant.build, merchant: value.id }); showMerchant(value);
+  notify("Complete merchant retained. Reopen or download this same package at any time.");
 });
+listen("merchant-show", "click", "Verifying the saved merchant files…", async () => {
+  const value = await api("/api/merchants/package?id=" + encodeURIComponent(requireValue("merchant-saved", "a saved merchant")));
+  showMerchant(value); notify("Complete original merchant verified without recompiling.");
+});
+listen("merchant-download", "click", "Reading the saved complete merchant ZIP…", async () => {
+  const id = requireValue("merchant-saved", "a saved merchant");
+  download(await api("/api/merchants/download?id=" + encodeURIComponent(id), { download: true }), "ndjson-merchant.zip");
+  notify("The exact saved merchant package was downloaded.");
+});
+listen("merchant-receive-form", "submit", "Verifying and receiving the original merchant and source…", async () => {
+  const file = $("merchant-receive-file").files[0];
+  if (!file) throw new Error("Choose a complete original merchant ZIP.");
+  const value = await api("/api/merchants/receive", { raw: file, headers: { "Content-Type": "application/zip" } });
+  await refresh({ build: value.merchant.build, source: value.merchant.source, plan: value.merchant.plan, merchant: value.id });
+  showMerchant(value); notify("Original source reconstructed and complete merchant retained with the same ZIP identity.");
+});
+
 renderMapping(defaultPlan());
 export const consoleReady = !token
   ? Promise.resolve(notify("Open the private console link printed by the running NDJSON workspace.", true))
