@@ -16,7 +16,7 @@ Open **Client runbooks** from the accounting navigation, or open /runbooks.html 
 
 An edition published after a period opens applies to later selected periods. Existing periods retain their chosen edition. When an imported edition joins a book that already exists locally, it is retained in that book's history without changing its current latest edition.
 
-HTTPS resources retain their original links. Uploaded resources travel as their exact selected files. The printable handover and task CSV can accompany the firm's existing close-management system; the portable packet carries the complete retained working material.
+HTTPS resources retain their original links. Uploaded resources travel as their exact selected files. The printable handover and task CSV can accompany the firm's existing close-management system; the portable packet carries the complete retained working material. Each task CSV row includes the saved Runbook ID, Edition ID, Period ID and Task ID, so a checklist mapping stays exact when titles repeat.
 
 ## Local CLI
 

@@ -153,4 +153,6 @@ export function createAccountingRunbooksClient(options:{
 }):Readonly<AccountingRunbooksClient>;
 export function connectAccountingRunbooksClient(options:{
   workspace:string;url:string;tokenEnv?:string;environment?:NodeJS.ProcessEnv;signal?:AbortSignal;
+  /** Full JSON-RPC response limit; default128MiB, maximum128MiB. */
+  maxResponseBytes?:number;
 }):Promise<Readonly<AccountingRunbooksClient>>;

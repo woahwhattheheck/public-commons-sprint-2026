@@ -446,10 +446,10 @@ export class RunbookWorkspace{
   });}
   async tasksCsv(id){
     await this.workspace.tail;const cycle=clone(this.cycle(id));
-    const rows=[['Client','Period','Procedure','Preparer','Reviewer','Due date','Required','Status','Instructions','Result and open items','Supporting resources','Review stage']];
+    const rows=[['Client','Period','Procedure','Preparer','Reviewer','Due date','Required','Status','Instructions','Result and open items','Supporting resources','Review stage','Runbook ID','Edition ID','Period ID','Task ID']];
     for(const step of cycle.edition.steps){
       const work=cycle.work[step.id],resources=step.resourceIds.map(id=>cycle.edition.resources.find(row=>row.id===id)).map(row=>row.kind==='link'?row.title+' '+row.url:row.title);
-      rows.push([cycle.edition.client,cycle.label,step.title,cycle.preparer,cycle.reviewer,cycle.dueDate,step.required?'Yes':'No',work.status,step.instructions,work.note,resources.join('\n'),cycle.phase]);
+      rows.push([cycle.edition.client,cycle.label,step.title,cycle.preparer,cycle.reviewer,cycle.dueDate,step.required?'Yes':'No',work.status,step.instructions,work.note,resources.join('\n'),cycle.phase,cycle.runbookId,cycle.editionId,cycle.id,step.id]);
     }
     return {bytes:Buffer.from(rows.map(row=>row.map(csvCell).join(',')).join('\r\n')+'\r\n'),name:'client-close-'+cycle.id+'-tasks.csv',type:'text/csv; charset=utf-8'};
   }

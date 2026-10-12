@@ -74,7 +74,10 @@ The tool prefix is **merchant_accounting_runbooks_**.
 | execute | The unchanged request through the original writer; a matching saved result is recovered first. |
 | reconcile | The matching committed result or NOT_FOUND while preserving that same request. |
 
-Paged views return at most50 full records. Long instructions, resource notes and
+Paged views return at most50 full records and stop before the next complete row
+would exceed a512KiB serialized items target. A larger single row is returned
+whole. Continue from the actual nextOffset, which counts the rows returned;
+null means the selection is complete. Long instructions, resource notes and
 review text remain complete within their native field limits. The typed
 client's allStatus, allSources, allBook and allCycle read every page while pinning
 workspace ID, revision and total. A concurrent edit requires reopening the
@@ -152,6 +155,13 @@ async function commit(action,input,selection,filename) {
   return client.execute(prepared);
 }
 ~~~
+
+The Runbooks HTTP connection permits up to128MiB per complete JSON-RPC response,
+including the protocol's text and structured copies of a prepared request.
+Other retained-file clients keep their existing2MiB default. An operator can set
+maxResponseBytes to a smaller positive byte limit when their supported procedure
+sizes permit it. Exceeding a transport limit keeps the saved request available
+for reconciliation.
 
 The access token stays in its environment variable. Existing in-process, stdio
 or initialized HTTP consumers can use **createAccountingRunbooksClient** with
@@ -255,7 +265,9 @@ files or accountant handoff. Importing an older edition preserves any newer
 edition already selected in the local book.
 
 Print exports human-readable instructions and review; tasks.csv exports current
-procedure work with spreadsheet formula protection. These files can accompany
+procedure work with spreadsheet formula protection and the original Runbook ID,
+Edition ID, Period ID and Task ID columns. Use these saved identities to map
+procedures into an existing checklist even when titles repeat. These files can accompany
 the firm's existing close-management process.
 
 ## Ownership and sizes
