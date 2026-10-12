@@ -1,6 +1,6 @@
 # Bilingual consultation receiving
 
-Version 0.2.1 provides a complete local review exchange to the existing standards workbench. An operator freezes a recipient packet from one edition and consultation. A reviewer opens the packet in a browser, writes comments against its exact English and French text, and returns a JSON file. The operator retains those original bytes, reviews the proposals, changes the working clauses where appropriate, and records dispositions against a frozen resolution edition.
+Version 0.2.2 provides a complete local review exchange to the existing standards workbench. An operator freezes a recipient packet from one edition and consultation. A reviewer opens the packet in a browser, writes comments against its exact English and French text, and returns a JSON file. The operator retains those original bytes, reviews the proposals, changes the working clauses where appropriate, and records dispositions against a frozen resolution edition.
 
 The packet, returned comment, applied amendment and disposition have separate identities. A proposed sentence is not adopted wording. Receiving a file does not create committee membership, a vote, a closed consultation, a dispatch record or an approval.
 
