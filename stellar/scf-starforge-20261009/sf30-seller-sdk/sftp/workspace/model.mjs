@@ -165,8 +165,8 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
       await syncDirectory(join(root, 'samples')); return record;
     });
   }
-  const sellerView = session => session.seller ? { origin: session.seller.origin, mode: session.seller.mode,
-    docs: session.seller.origin + '/_seller/docs', startedAt: session.startedAt } : null;
+  const sellerView = session => session.seller ? { origin: session.seller.url, mode: session.seller.mode,
+    docs: session.seller.url + '/_seller/docs', startedAt: session.startedAt } : null;
   async function setServiceIntent(session, running) {
     await atomicJson(session.directory, 'service-intent.json', { schema: 'stellar-forge.sftp-dataset-service-intent.v1', running, savedAt: timestamp() });
   }
@@ -197,7 +197,7 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
     selection.set('snapshot', snapshot);
     const preview = await datasetControl(session.publisher.settings.targetDirectory, 'preview', { query: selection.toString() });
     if (preview.dataset?.snapshot !== snapshot) throw fault('TARGET_SNAPSHOT_CHANGED');
-    return readDatasetBuyerOffer({ seller: session.seller.origin, resource: session.link.merchant.publicOrigin + session.link.path, snapshot, query });
+    return readDatasetBuyerOffer({ seller: session.seller.url, resource: session.link.merchant.publicOrigin + session.link.path, snapshot, query });
   }
   async function buyer(session, runId, input) {
     const selected = await offer(session, runId, input.query ?? '');
@@ -240,7 +240,7 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
         }
         const surface = { ...publisher,
           status: options => ({ ...publisher.status(options), buyer: session.seller ?
-            { seller: session.seller.origin, resource: link.merchant.publicOrigin + link.path } : null }),
+            { seller: session.seller.url, resource: link.merchant.publicOrigin + link.path } : null }),
           buyerOffer: (runId, query) => offer(session, runId, query),
           prepareBuyer: (runId, input) => buyer(session, runId, input),
         };
