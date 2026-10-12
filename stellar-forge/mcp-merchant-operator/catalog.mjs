@@ -144,6 +144,8 @@ const families = new Map(Object.entries(familyTools));
 families.set('facilitators', MERCHANT_TOOLS.filter(value => value.name === 'merchant_facilitators' || value.name.startsWith('merchant_facilitator_')));
 const familyByTool = new Map([...families].flatMap(([family, values]) => values.map(value => [value.name, family])));
 
+export function merchantToolFamily(name) { return familyByTool.get(name) ?? null; }
+
 /** The complete export above is stable; each process advertises its configured capabilities. */
 export function merchantToolCatalog(config) {
   return MERCHANT_TOOLS.filter(value => !familyByTool.has(value.name) || merchantProviderConfigured(familyByTool.get(value.name), config));
