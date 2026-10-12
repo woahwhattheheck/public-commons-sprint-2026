@@ -1,9 +1,10 @@
 // MIT. Reopen the retained original DataCite and CIIM Dublin Core receiving case.
 // Inputs are the original three captured editions shipped with the worked case.
-import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,open,rename,unlink,link} from 'node:fs/promises';
+import {constants} from 'node:fs';
 import {resolve,join,dirname,isAbsolute} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import assert from 'node:assert/strict';
 
@@ -62,8 +63,44 @@ for(const member of declared){
  assert.equal(body.length,member.bytes);assert.equal(hash(body),member.sha256);
  verified.set(name,member.sha256);
 }
-await writeFile(join(root,'runtime.json'),runtimeBytes,{mode:0o600});
-await writeFile(join(root,'runtime-reference.json'),JSON.stringify({file:suppliedRuntime,sha256:hash(runtimeBytes)})+'\n',{mode:0o600});
+// Read retained runtime metadata before opening the JVM. A rejected runtime must
+// leave the original case metadata intact.
+const metadataFile=join(root,'runtime.json');
+async function originalRuntimeMetadata(){
+ let handle;
+ try{handle=await open(metadataFile,constants.O_RDONLY|constants.O_NOFOLLOW);}
+ catch(error){if(error.code==='ENOENT')return null;throw error;}
+ try{
+  assert.ok((await handle.stat()).isFile(),'Retained runtime metadata must be a regular file');
+  return await handle.readFile();
+ }finally{await handle.close();}
+}
+const priorRuntime=await originalRuntimeMetadata();
+if(priorRuntime!==null)assert.ok(priorRuntime.equals(runtimeBytes),'Retained case runtime differs from supplied runtime');
+async function retainAcceptedRuntimeMetadata(){
+ // Publish new metadata only after its complete bytes have been fsynced.
+ // An existing file is compared and preserved, including a concurrent creation.
+ const candidate=join(root,'.runtime.'+randomUUID()+'.pending');
+ try{
+  const handle=await open(candidate,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
+  try{await handle.writeFile(runtimeBytes);await handle.sync();}
+  finally{await handle.close();}
+  try{await link(candidate,metadataFile);}
+  catch(error){
+   if(error.code!=='EEXIST')throw error;
+   const retained=await originalRuntimeMetadata();
+   assert.ok(retained!==null&&retained.equals(runtimeBytes),'Retained case runtime changed during receiving');
+  }
+ }finally{await unlink(candidate).catch(error=>{if(error.code!=='ENOENT')throw error;});}
+ const referenceFile=join(root,'runtime-reference.json');
+ const temporary=join(root,'.runtime-reference.'+randomUUID()+'.pending');
+ try{
+  const reference=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
+  try{await reference.writeFile(JSON.stringify({file:suppliedRuntime,sha256:hash(runtimeBytes)})+'\n');await reference.sync();}
+  finally{await reference.close();}
+  await rename(temporary,referenceFile);
+ }finally{await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
+}
 process.stdout.write(JSON.stringify({stage:'runtime-verified',files:verified.size,manifestSha256:hash(runtimeBytes)})+'\n');
 await mkdir(join(root,'results'),{recursive:true,mode:0o700});
 const transform=await openJavaTransform({runtimeFile,workDirectory:join(root,'java-work'),heapMiB:128,timeoutMs:120000});
@@ -111,6 +148,7 @@ try{
  assert.equal(replay.manifest.records.sha256,initial.manifest.records.sha256);
  assert.equal(replayProgress.filter(p=>p.stage==='record-mapped').length,0);
  assert.equal(replayProgress.filter(p=>p.stage==='page-reopened').length,initial.manifest.pages.length);
+ await retainAcceptedRuntimeMetadata();
  const native={schema:'tjl.ciim.original-native-operation.v1',status:'complete',
   runtime:transform.runtime,sources:summary,restoration:changes,
   reopened:{name:'datacite',records:replay.manifest.counts.records,
