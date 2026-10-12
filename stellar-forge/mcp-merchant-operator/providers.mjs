@@ -1,5 +1,6 @@
 /** Original provider owners, constructed only when a configured tool first needs them. */
 export const MERCHANT_PROVIDERS = Object.freeze({
+  fredWorkspaces: Object.freeze({ configKey: 'fredWorkspaces', summary: true, dependencies: Object.freeze([]), load: () => import('./fred-workspace.mjs'), create: (module, config, options) => new module.MerchantFredWorkspaces(config, options.fredWorkspaces) }),
   stacWorkspaces: Object.freeze({ configKey: 'stacWorkspaces', summary: true, dependencies: Object.freeze([]), load: () => import('./stac-workspace.mjs'), create: (module, config) => new module.MerchantStacWorkspaces(config) }),
   dspaceOperators: Object.freeze({ configKey: "dspaceOperators", summary: true, dependencies: Object.freeze([]), load: () => import("../../stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/merchant-provider.mjs"), create: (module, config, options, dependencies) => new module.MerchantDspaceOperators(config) }),
   grantWorkspaces: Object.freeze({ configKey: "grantWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./grant-workspace.mjs"), create: (module, config, options, dependencies) => new module.MerchantGrantWorkspaces(config) }),
