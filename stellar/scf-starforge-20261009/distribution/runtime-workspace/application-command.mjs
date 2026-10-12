@@ -3,6 +3,7 @@ import { blockscoutStartup } from './application-blockscout.mjs';
 import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
 import { cheesecakeStartup } from './application-cheesecake.mjs';
 import { odataStartup } from '../../sf30-seller-sdk/odata/live/applications.mjs';
+import { secEdgarStartup } from './application-sec-edgar.mjs';
 import { jobResultReceiverStartup } from './application-job-result-receiver.mjs';
 import { sheetsStartup } from './application-sheets.mjs';
 import { atlasStartup } from './application-atlas.mjs';
@@ -11,6 +12,7 @@ import { openApiStartup } from './application-openapi.mjs';
 import { arcgisAgentStartup } from './application-arcgis.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
+import { pricingStartup } from './application-pricing.mjs';
 import { collectionsStartup } from './application-collections.mjs';
 import { grantStartup } from './application-grant.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
@@ -122,6 +124,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
           schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
           operationId: directory.split('/').at(-1), command: request.command,
           source: 'original-command-stdout', observedAt: now(), url, links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'sec-edgar' && request.args?.[0] === 'workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.sec-edgar-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await secEdgarStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
         });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
@@ -256,6 +274,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
+    if (request.command === 'revenue-workspace') {
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = pricingStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (request.command === 'job-workspace') {
       if (!text.startsWith('{"schema":"stellar-forge.sf88.job-workspace-launch.v1",')) return;
       saving = saving.then(async () => {
@@ -267,7 +301,7 @@ export function observeApplicationOutput(request, directory, context = {}) {
         await saveJSON(join(directory, 'application-url.json'), {
           schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
           operationId: directory.split('/').at(-1), command: request.command,
-          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+          source: 'original-command-stdout', observedAt: now(), url, links: startup.links, original: startup.original,
         });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;

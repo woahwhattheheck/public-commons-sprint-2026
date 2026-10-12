@@ -8,10 +8,12 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
+| Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
 | MPP merchant and customer | mpp serve | Saved merchant/customer profiles, original offers, purchases, packages, governor terminal and retained response receiving |
 | Stellar agent application | stellar-application serve | Original HTTP and governed MCP requests, current subject authorization, retained results and aggregate spending |
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
+| SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
@@ -54,6 +56,12 @@ A selected runtime must actually contain the command. XML and Object Buyer addit
 The API projects folder may be an existing private directory or one new directory in an existing private parent. Saving creates that one reviewed folder if needed. Source and dataset paths retain their original meanings.
 
 The runtime console and original application have separate capability URLs. The latter is captured only from the selected CLI's startup announcement and retained privately against its original operation ID. It is never inferred from a configured port, source example or arbitrary terminal text.
+
+## Merchant pricing and scenario planning
+
+The complete [managed pricing workflow](PRICING_APPLICATIONS.md) covers original
+seller and traffic selection, saved reviews, scenario comparisons, exact goals,
+commercial exports, reviewed price changes and managed stop/reopen.
 
 ## Catalog Atlas
 
@@ -432,3 +440,11 @@ The managed run retains **Open retained feeds** and **Open subscription collecti
 **Stop application** requests original capture cancellation and drains the current worker and requests before closing the workspace lease. Repeated Stop signals preserve that drain. Reopen the saved application for a new private session on the same collection, source records and native edition. The XML and feed Applications entries share the same workspace resource, including existing saved XML applications; stop its current run before using that directory through the other original console.
 
 The [complete feed Applications guide](../../sf30-seller-sdk/feeds/MANAGED_APPLICATIONS.md) includes initialization, exact CLI selection, structured startup, original receiving and recovery. This entry uses the existing **dataset-feeds** command and generic Applications browser controls.
+
+## SEC EDGAR source operator
+
+Choose **SEC EDGAR source operator** to open the original private operator workspace and immutable capture store. Review retains the selected source, workspace/store identities and current source editions; Save can create either directory in its existing private parent. Start opens the original SEC workspace and binds the actual child, private launch record and authenticated listener. Import company facts and filings, preview the retained records, save merchant drafts and export their original customer products. Stop closes the same listener; reopen preserves the drafts, editions and revision history. The [complete SEC operator guide](SEC_EDGAR_APPLICATIONS.md) includes the original retained-source receiving operation.
+
+## Retained recovery and job destinations
+
+The existing **Merchant recovery** selection also retains each declared capture-plan file when available. Completed captures can reopen when a live plan is unavailable; the original recovery workspace requires the current plan for a fresh capture review. Existing job applications retain every original private destination returned by their selected checkout helper, including Request, approval, Jobs, library and collections.
