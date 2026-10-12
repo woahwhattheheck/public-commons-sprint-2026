@@ -8,7 +8,7 @@ import io
 from model import clone, encoded
 
 PROPERTY_COLUMNS = ("key", "name", "address", "city", "state", "postal_code", "programs",
-                    "target_population", "status", "market_area_membership", "year_built", "year_renovated",
+                    "target_population", "status", "status_kind", "market_area_membership", "year_built", "year_renovated",
                     "unit_count", "vacant_units", "occupancy_pct_reported", "waitlist", "quality",
                     "neighborhood", "parking", "amenities", "observation_start", "observation_end", "observation_label")
 UNIT_COLUMNS = ("key", "bedrooms", "bathrooms", "style", "unit_count", "vacant_units", "sqft_min", "sqft_max",
@@ -87,7 +87,7 @@ def report(service, selection):
     property_rows, schedule_rows, selection_rows, issue_rows = [], [], [], []
     for prop in edition["properties"]:
         choice = choices[prop["key"]]
-        property_rows.append([prop["name"], prop.get("programs"), prop.get("unit_count"), prop.get("vacant_units"),
+        property_rows.append([prop["name"], prop.get("programs"), prop.get("status_kind"), prop.get("unit_count"), prop.get("vacant_units"),
                               prop.get("occupancy_pct_reported"), prop.get("waitlist"),
                               prop.get("observation_label") or interval(prop.get("observation_start"), prop.get("observation_end")),
                               references(prop["citations"])])
@@ -102,16 +102,24 @@ def report(service, selection):
                                   u.get("ami_raw"), u.get("utility_note"), references(u["citations"])])
         for issue in edition["issues"].get(prop["key"], []):
             issue_rows.append([prop["name"], issue, selection["review_snapshot"]["decisions"].get(prop["key"], {}).get("note")])
-    total = sum(p["unit_count"] for p in edition["properties"]) if all(p.get("unit_count") is not None for p in edition["properties"]) else None
-    vacant = sum(p["vacant_units"] for p in edition["properties"]) if all(p.get("vacant_units") is not None for p in edition["properties"]) else None
+    operating = [p for p in edition["properties"] if p.get("status_kind") == "operating"]
+    total = sum(p["unit_count"] for p in operating) if operating and all(p.get("unit_count") is not None for p in operating) else None
+    vacant = sum(p["vacant_units"] for p in operating) if operating and all(p.get("vacant_units") is not None for p in operating) else None
     occupancy = str(((Decimal(total - vacant) * 100) / total).quantize(Decimal("0.01"))) if total and vacant is not None else None
     rows = export_rows(edition, selection)
-    summary = {"surveyed_properties": len(edition["properties"]), "unit_schedules": len(schedule_rows), "reported_units_total": total,
-               "reported_vacant_total": vacant, "occupancy_pct_from_counts": occupancy,
-               "occupancy_calculation": "(sum of operating units − sum of vacant units) / sum of operating units × 100; only when every count is present",
-               "comparison_purpose": selection["purpose"], "selection_counts": selection["counts"], "exported_unit_schedules": len(rows)}
+    comparable_units = [row["unit_unit_count"] for row in rows if row["selection"] == "comparable"]
+    supply = {}
+    for status_kind in sorted({p["status_kind"] for p in edition["properties"]}):
+        group = [p for p in edition["properties"] if p["status_kind"] == status_kind]
+        supply[status_kind] = {"properties": len(group), "units": sum(p["unit_count"] for p in group) if all(p["unit_count"] is not None for p in group) else None}
+    summary = {"surveyed_properties": len(edition["properties"]), "unit_schedules": len(schedule_rows),
+               "operating_units": total, "operating_vacant_units": vacant, "occupancy_pct_from_operating_counts": occupancy,
+               "occupancy_calculation": "(sum of operating units − sum of vacant units) / sum of operating units × 100; only when every operating count is present",
+               "supply_by_status": supply, "comparison_purpose": selection["purpose"], "selection_counts": selection["counts"],
+               "comparable_units_in_selected_schedules": sum(comparable_units) if comparable_units and all(x is not None for x in comparable_units) else None,
+               "exported_unit_schedules": len(rows)}
     sections = [
-        ("Property inventory", ["Property", "Programme", "Units", "Vacant", "Reported occupancy %", "Waitlist as reported", "Observation period", "Source"], property_rows),
+        ("Property inventory", ["Property", "Programme", "Supply status", "Units", "Vacant", "Reported occupancy %", "Waitlist as reported", "Observation period", "Source"], property_rows),
         ("Original unit and rent schedules", ["Property", "Schedule", "Bedrooms", "Baths", "Units", "Vacant", "Square feet", "Rent as reported", "Rent basis", "AMHI as reported", "Utilities", "Source"], schedule_rows),
         ("Reviewed selection", ["Property", "Use for this purpose", "Reason", "Criteria", "Included schedules"], selection_rows),
         ("Source differences and review", ["Property", "Source detail", "Saved review"], issue_rows),

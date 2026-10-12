@@ -22,7 +22,9 @@ from workspace import Workspace, close_active_intakes, file_identity
 
 ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-          "/style.css": ("style.css", "text/css; charset=utf-8")}
+          "/style.css": ("style.css", "text/css; charset=utf-8"),
+          "/properties.js": ("properties.js", "text/javascript; charset=utf-8"),
+          "/properties.css": ("properties.css", "text/css; charset=utf-8")}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -105,7 +107,13 @@ class Handler(BaseHTTPRequestHandler):
         workspace = Workspace(self.server.directory)
         try:
             kind = params.get("kind")
-            if kind == "source" and set(params) == {"kind", "id", "path"}:
+            if kind == "property_document" and set(params) == {"kind", "id", "path"}:
+                from property_research.service import PropertyResearch
+                source = PropertyResearch(workspace).document(params["id"])
+                name = member(params["path"])
+                expected = next((item for item in source["files"] if item["path"] == name), None)
+                path = workspace.directory / "property-documents" / params["id"] / name
+            elif kind == "source" and set(params) == {"kind", "id", "path"}:
                 source = workspace.record("sources", params["id"])
                 name = member(params["path"])
                 expected = next((item for item in source["descriptor"]["files"] if item["path"] == name), None)
@@ -150,6 +158,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.server.stopping:
                 fail("WORKSPACE_CLOSING")
             path = urlsplit(self.path).path
+            if path == "/property-source":
+                from property_research.http import upload_document
+                return upload_document(self)
             if path == "/upload":
                 return self.upload()
             if path != "/api" or self.headers.get_content_type() != "application/json":

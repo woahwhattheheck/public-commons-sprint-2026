@@ -77,7 +77,7 @@ async function run(label, action) {
 }
 function view(name) {
   for (const section of document.querySelectorAll('main>section')) section.hidden = section.id !== 'view-' + name;
-  for (const item of document.querySelectorAll('nav button')) item.classList.toggle('active', item.dataset.view === name);
+  for (const item of document.querySelectorAll('aside nav button')) item.classList.toggle('active', item.dataset.view === name);
 }
 function options(id, values, label = value => value.label || value.name || short(value.id), empty = null) {
   const select = $(id), previous = select.value;
@@ -125,6 +125,7 @@ async function load() {
   }
   if (!state.columns.length) setColumns(template);
   renderAll();
+  if (window.propertyResearch) await window.propertyResearch.load();
 }
 function renderAll() {
   $('workspace-path').textContent = state.data.workspace;
@@ -445,7 +446,9 @@ $('receive-form').onsubmit = event => {
   event.preventDefault();
   run('Import retained study package', async () => {
     const result = await api('package.import', Object.fromEntries(new FormData(event.target)));
-    await load(); $('review-comparison').value = result.comparison.id; await readComparison(0); show('Reopened source and review state', result);
+    await load();
+    if (result.selection && window.propertyResearch) await window.propertyResearch.received(result.selection);
+    else { $('review-comparison').value = result.comparison.id; await readComparison(0); show('Reopened source and review state', result); }
   });
 };
 $('upload-form').onsubmit = event => {
@@ -456,7 +459,9 @@ $('upload-form').onsubmit = event => {
     const response = await fetch('/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + state.token, 'Content-Type': 'application/zip' }, body: file });
     const result = await response.json();
     if (!response.ok || !result.ok) throw new Error(readable(result.code) + ' ' + JSON.stringify(result.details || {}));
-    await load(); $('review-comparison').value = result.result.comparison.id; await readComparison(0); show('Received retained ZIP', result.result);
+    await load();
+    if (result.result.selection && window.propertyResearch) await window.propertyResearch.received(result.result.selection);
+    else { $('review-comparison').value = result.result.comparison.id; await readComparison(0); show('Received retained ZIP', result.result); }
   });
 };
 async function connect() {
