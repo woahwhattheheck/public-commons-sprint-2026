@@ -51,7 +51,8 @@ export async function readJobWorkspaceLaunch({
     value.checkoutUrl === url.origin + '/jobs/checkout/' + url.hash &&
     value.libraryUrl === url.origin + '/' + url.hash &&
     value.collectionsUrl === url.origin + '/collections' + url.hash &&
-    (value.intakeUrl === undefined || value.intakeUrl === url.origin + '/jobs/request/' + url.hash),
+    (value.intakeUrl === undefined || value.intakeUrl === url.origin + '/jobs/request/' + url.hash) &&
+    (value.resolutionUrl === undefined || value.resolutionUrl === url.origin + '/jobs/resolutions/' + url.hash),
     'JOB_WORKSPACE_LAUNCH_URL_INVALID');
   // Earlier launch records remain readable without invented interface defaults.
   // A managed launch that selected the new interface must match all three fields.

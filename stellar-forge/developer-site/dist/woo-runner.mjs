@@ -16,7 +16,9 @@ const WOO = 'sf104-woocommerce-merchant-bridge';
 const PLUGIN = ['starforge-sf98-woo.php','checkout-gateway.php','checkout-admission.php',
   'merchant-console.php','merchant-console.js','merchant-console.css','OPERATIONS.md',
   'merchant-operator.php','NATIVE_REVIEW.md', 'merchant-refunds.php','merchant-refunds.js',
-  'merchant-refunds.css','refund-networks.json','REFUNDS.md','checkout-basket.php','BASKET.md'];
+  'merchant-refunds.css','refund-networks.json','REFUNDS.md','checkout-basket.php','BASKET.md',
+  'merchant-erp.php','merchant-erp-mapping.php','merchant-erp-acumatica.php','merchant-erp-store.php',
+  'merchant-erp-console.php','merchant-erp.js','merchant-erp.css','ERP.md','erp-map.example.json'];
 const ENTRIES = {seller:WOO + '/seller.mjs', buyer:WOO + '/buyer.mjs',
   refund:WOO + '/refund-operator-cli.mjs',
   operator:'sf88-operator-buyer-cli/cli.mjs', queue:'sf88-operator-buyer-cli/queue-cli.mjs',

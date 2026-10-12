@@ -33,6 +33,7 @@ import { usaSpendingWorkspaceTools } from './catalog/usaspending-workspace.mjs';
 import { researchWorkspaceTools } from './catalog/research-workspace.mjs';
 import { grantsWorkspaceTools } from './catalog/grantsgov-workspace.mjs';
 import { sourceWorkspaceTools } from './catalog/source-workspace.mjs';
+import { clinicalTrialsWorkspaceTools } from './catalog/clinicaltrials-workspace.mjs';
 import { baserowWorkspaceTools } from './catalog/baserow-workspace.mjs';
 import { usgsWorkspaceTools } from './catalog/usgs-workspace.mjs';
 import { feedsWorkspaceTools } from './catalog/feeds-workspace.mjs';
@@ -96,6 +97,7 @@ const familyTools = {
   researchWorkspaces: researchWorkspaceTools(tool),
   grantsWorkspaces: grantsWorkspaceTools(tool),
   sourceWorkspaces: sourceWorkspaceTools(tool),
+  clinicalTrialsWorkspaces: clinicalTrialsWorkspaceTools(tool),
   baserowWorkspaces: baserowWorkspaceTools(tool),
   usgsWorkspaces: usgsWorkspaceTools(tool),
   feedsWorkspaces: feedsWorkspaceTools(tool),
@@ -188,6 +190,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.researchWorkspaces,
   ...familyTools.grantsWorkspaces,
   ...familyTools.sourceWorkspaces,
+  ...familyTools.clinicalTrialsWorkspaces,
   ...familyTools.baserowWorkspaces,
   ...familyTools.usgsWorkspaces,
   ...familyTools.feedsWorkspaces,

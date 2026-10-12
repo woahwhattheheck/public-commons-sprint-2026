@@ -4,6 +4,7 @@ import { JOB_ID, jobError } from './config.mjs';
 import { createJobIntake } from './intake/service.mjs';
 import { isIntakeRoute, handleJobIntake } from './intake/http.mjs';
 import { CATALOG_PATH } from './intake/protocol.mjs';
+import { resolutionCustomerPath, handleJobResolutionCustomer, readResolutionRequest } from './resolution/http.mjs';
 
 function token(req) {
   const counts = { authorization: 0, 'x-sfjobs-token': 0 };
@@ -70,6 +71,23 @@ export async function startCustomerServer({ model, port = 8477, maxInFlight = 8,
           intakeOperations.delete(controller); req.off('aborted', abort); res.off('close', abort);
         }
         return;
+      }
+      if (resolutionCustomerPath(req.url)) {
+        const capability = token(req);
+        if (!takeCapacity(req, res)) return;
+        const value = await readResolutionRequest(req);
+        const result = await handleJobResolutionCustomer(model.resolution, {
+          method: req.method, path: req.url, token: capability, value,
+        });
+        if (res.destroyed) return;
+        if (result.file) {
+          const file = result.file;
+          res.writeHead(result.status ?? 200, { ...baseHeaders, 'content-type': file.type,
+            'content-length': String(file.bytes.length), 'x-content-sha256': file.sha256,
+            'content-disposition': 'attachment; filename="' + file.name + '"' });
+          return res.end(req.method === 'HEAD' ? undefined : file.bytes);
+        }
+        return json(req, res, result.status ?? 200, result.value);
       }
       if (!['GET', 'HEAD'].includes(req.method)) return json(req, res, 405, { error: 'JOB_CUSTOMER_METHOD_REJECTED' }, { allow: 'GET, HEAD' });
       if (req.headers['transfer-encoding'] !== undefined || Number(req.headers['content-length'] ?? 0) !== 0) {

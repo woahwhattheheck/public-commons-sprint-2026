@@ -1,5 +1,6 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
 import { grpcStartup } from './application-grpc.mjs';
+import { wqxWaterQualityStartup } from './application-wqx-water-quality.mjs';
 import { coingeckoStartup } from './application-coingecko.mjs';
 import { oaiStartup } from './application-oai.mjs';
 import { fiscalDataStartup } from './application-fiscaldata.mjs';
@@ -113,12 +114,29 @@ export function observeApplicationOutput(request, directory, context = {}) {
   const decoder = new StringDecoder('utf8');
   const eventOutput = eventFeedOutputReader(request);
   const walletOutput = browserWalletOutputReader(request);
-  const lineLimit = request.command === 'mcp-native' && request.args?.includes('--duckdb-description') ? 65536 : 16384;
+  const lineLimit = request.command === 'water-quality-managed' ? 32768 : request.command === 'mcp-native' && request.args?.includes('--duckdb-description') ? 65536 : 16384;
   function line(text) {
     if (seen || !request.applicationId) return;
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (request.command === 'water-quality-managed') {
+      if (!text.startsWith('{"schema":"stellar-forge.wqx-managed-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await wqxWaterQualityStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (request.command === 'worldbank-agent') {
       if (!text.startsWith('{"schema":"stellar-forge.worldbank-agent-startup.v1",')) return;
       saving = saving.then(async () => {
