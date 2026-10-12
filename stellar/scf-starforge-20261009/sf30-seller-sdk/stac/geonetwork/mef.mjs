@@ -1,7 +1,7 @@
 // MIT. Verify the actual native MEF archive before retaining it as a recovery payload.
 import { inflateRawSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { parseXml } from './native.mjs';
+import { parseXml, xmlChildren, xmlText } from './native.mjs';
 const need = (condition, code) => { if (!condition) throw Object.assign(new Error(code), { code }); };
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const utf8 = new TextDecoder('utf-8', { fatal: true });
@@ -23,6 +23,17 @@ function pathName(bytes, flags) {
     !/^[A-Za-z]:/.test(name), 'CATALOGUE_ZIP_PATH_INVALID');
   return name;
 }
+/** ZIP64 descriptors have a different width even when their file sizes are small. */
+function checkExtra(bytes) {
+  let at = 0;
+  while (at < bytes.length) {
+    need(at + 4 <= bytes.length, 'CATALOGUE_ZIP_EXTRA_INVALID');
+    const kind = bytes.readUInt16LE(at), size = bytes.readUInt16LE(at + 2);
+    need(at + 4 + size <= bytes.length, 'CATALOGUE_ZIP_EXTRA_INVALID');
+    need(kind !== 1, 'CATALOGUE_ZIP64_OR_SPLIT_UNSUPPORTED');
+    at += 4 + size;
+  }
+}
 /** Single-disk ZIP, stored or DEFLATE entries, bounded by the selected native archive limit. */
 export function inspectZip(value, { maxBytes = 268435456, maxExpandedBytes = 1073741824,
   maxFiles = 100000, maxFileBytes = 268435456 } = {}) {
@@ -38,7 +49,7 @@ export function inspectZip(value, { maxBytes = 268435456, maxExpandedBytes = 107
   need(entries === bytes.readUInt16LE(end + 8) && entries !== 0xffff &&
     centralSize !== 0xffffffff && centralOffset !== 0xffffffff && entries <= maxFiles &&
     centralOffset + centralSize === end, 'CATALOGUE_ZIP64_OR_SPLIT_UNSUPPORTED');
-  const files = [], names = new Set(), ranges = []; let at = centralOffset, expanded = 0;
+  const files = [], directories = [], names = new Set(), rows = []; let at = centralOffset, expanded = 0;
   for (let index = 0; index < entries; index++) {
     need(at + 46 <= end && bytes.readUInt32LE(at) === 0x02014b50, 'CATALOGUE_ZIP_ENTRY_INVALID');
     const flags = bytes.readUInt16LE(at + 8), method = bytes.readUInt16LE(at + 10),
@@ -55,48 +66,91 @@ export function inspectZip(value, { maxBytes = 268435456, maxExpandedBytes = 107
     const unixType = (external >>> 16) & 0xf000;
     need(unixType !== 0xa000 && (!unixType || unixType === 0x8000 || unixType === 0x4000),
       'CATALOGUE_ZIP_SPECIAL_FILE');
+    checkExtra(bytes.subarray(at + 46 + nameSize, at + 46 + nameSize + extraSize));
     need(offset + 30 <= centralOffset && bytes.readUInt32LE(offset) === 0x04034b50 &&
       bytes.readUInt16LE(offset + 6) === flags && bytes.readUInt16LE(offset + 8) === method,
       'CATALOGUE_ZIP_LOCAL_HEADER_CHANGED');
-    const localNameSize = bytes.readUInt16LE(offset + 26), localExtraSize = bytes.readUInt16LE(offset + 28);
+    const localCrc = bytes.readUInt32LE(offset + 14), localCompressed = bytes.readUInt32LE(offset + 18),
+      localSize = bytes.readUInt32LE(offset + 22), localNameSize = bytes.readUInt16LE(offset + 26),
+      localExtraSize = bytes.readUInt16LE(offset + 28);
+    const dataStart = offset + 30 + localNameSize + localExtraSize, dataEnd = dataStart + compressed;
+    need(dataStart <= centralOffset && dataEnd <= centralOffset, 'CATALOGUE_ZIP_OVERLAPPING_ENTRY');
     need(localNameSize === nameSize &&
       bytes.subarray(offset + 30, offset + 30 + localNameSize).equals(rawName), 'CATALOGUE_ZIP_LOCAL_NAME_CHANGED');
-    const dataStart = offset + 30 + localNameSize + localExtraSize, dataEnd = dataStart + compressed;
-    need(dataStart <= dataEnd && dataEnd <= centralOffset && !ranges.some(([left, right]) =>
-      offset < right && dataEnd > left), 'CATALOGUE_ZIP_OVERLAPPING_ENTRY');
-    ranges.push([offset, dataEnd]);
+    checkExtra(bytes.subarray(offset + 30 + localNameSize, dataStart));
+    // A streamed local header may retain zeros or the final values, never conflicting values.
+    need((flags & 8) ? (localCrc === 0 || localCrc === crc) &&
+      (localCompressed === 0 || localCompressed === compressed) && (localSize === 0 || localSize === size) :
+      localCrc === crc && localCompressed === compressed && localSize === size,
+      'CATALOGUE_ZIP_LOCAL_CONTENT_CHANGED');
     expanded += size; need(expanded <= maxExpandedBytes, 'CATALOGUE_ZIP_EXPANDED_LIMIT');
-    let data;
-    try { data = method === 0 ? bytes.subarray(dataStart, dataEnd) :
-      inflateRawSync(bytes.subarray(dataStart, dataEnd), { maxOutputLength: Math.max(1, maxFileBytes) }); }
-    catch { need(false, 'CATALOGUE_ZIP_DEFLATE_INVALID'); }
-    need(data.length === size && crc32(data) === crc, 'CATALOGUE_ZIP_CONTENT_CHANGED');
-    if (name.endsWith('/')) need(size === 0, 'CATALOGUE_ZIP_DIRECTORY_CONTENT');
-    else files.push({ path: name, bytes: size, sha256: digest(data), data: Buffer.from(data) });
+    rows.push({ name, flags, method, crc, compressed, size, offset, dataStart, dataEnd });
     at += 46 + nameSize + extraSize + commentSize;
   }
   need(at === end, 'CATALOGUE_ZIP_DIRECTORY_CHANGED');
-  return { bytes: bytes.length, sha256: digest(bytes), expandedBytes: expanded, files };
+  // Central-directory order need not match local-header order. Check complete physical spans
+  // before inflating any entry, including the descriptor when general-purpose bit 3 is set.
+  const ordered = [...rows].sort((left, right) => left.offset - right.offset);
+  for (let index = 0; index < ordered.length; index++) {
+    const row = ordered[index], next = ordered[index + 1]?.offset ?? centralOffset;
+    need(row.offset < next && row.dataEnd <= next, 'CATALOGUE_ZIP_OVERLAPPING_ENTRY');
+    if (row.flags & 8) {
+      const matches = at => at + 12 <= next && bytes.readUInt32LE(at) === row.crc &&
+        bytes.readUInt32LE(at + 4) === row.compressed && bytes.readUInt32LE(at + 8) === row.size;
+      const candidates = [];
+      if (matches(row.dataEnd)) candidates.push(row.dataEnd + 12);
+      if (row.dataEnd + 16 <= next && bytes.readUInt32LE(row.dataEnd) === 0x08074b50 &&
+        matches(row.dataEnd + 4)) candidates.push(row.dataEnd + 16);
+      // The CRC can itself equal the optional signature; validate whole candidates.
+      need(candidates.length === 1, 'CATALOGUE_ZIP_DESCRIPTOR_INVALID');
+    }
+  }
+  const fileNames = new Set(rows.filter(row => !row.name.endsWith('/')).map(row => row.name));
+  for (const row of rows) {
+    const parts = row.name.replace(/\/$/, '').split('/');
+    if (row.name.endsWith('/')) need(!fileNames.has(parts.join('/')), 'CATALOGUE_ZIP_PATH_CONFLICT');
+    for (let count = 1; count < parts.length; count++)
+      need(!fileNames.has(parts.slice(0, count).join('/')), 'CATALOGUE_ZIP_PATH_CONFLICT');
+    let data;
+    try { data = row.method === 0 ? bytes.subarray(row.dataStart, row.dataEnd) :
+      inflateRawSync(bytes.subarray(row.dataStart, row.dataEnd), { maxOutputLength: Math.max(1, maxFileBytes) }); }
+    catch { need(false, 'CATALOGUE_ZIP_DEFLATE_INVALID'); }
+    need(data.length === row.size && crc32(data) === row.crc, 'CATALOGUE_ZIP_CONTENT_CHANGED');
+    if (row.name.endsWith('/')) {
+      need(row.size === 0, 'CATALOGUE_ZIP_DIRECTORY_CONTENT');
+      directories.push(row.name);
+    } else files.push({ path: row.name, bytes: row.size, sha256: digest(data), data: Buffer.from(data) });
+  }
+  return { bytes: bytes.length, sha256: digest(bytes), expandedBytes: expanded, files, directories };
 }
 
 function infoUuid(xml) {
-  parseXml(xml);
-  const values = [...xml.matchAll(/<(?:[A-Za-z_][\w.-]*:)?uuid(?:\s[^>]*)?>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?uuid\s*>/g)]
-    .map(match => match[1].trim().replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(x[0-9a-f]+|\d+);/gi,
-        (_, number) => String.fromCodePoint(number[0].toLowerCase() === 'x' ? parseInt(number.slice(1), 16) : Number(number))));
-  need(values.length === 1 && values[0].length > 0, 'CATALOGUE_MEF_UUID_REQUIRED');
-  return values[0];
+  const { root } = parseXml(xml);
+  need(root.localName === 'info' && root.namespaceURI === '', 'CATALOGUE_MEF_INFO_INVALID');
+  const generals = xmlChildren(root, 'general').filter(node => node.namespaceURI === '');
+  need(generals.length === 1, 'CATALOGUE_MEF_UUID_REQUIRED');
+  const uuids = xmlChildren(generals[0], 'uuid').filter(node => node.namespaceURI === '');
+  need(uuids.length === 1 && xmlChildren(uuids[0]).length === 0, 'CATALOGUE_MEF_UUID_REQUIRED');
+  const value = xmlText(uuids[0]);
+  need(value.length > 0, 'CATALOGUE_MEF_UUID_REQUIRED');
+  return value; // parseXml already decoded entities once; CDATA remains literal.
 }
 /** Native attachment names/sizes are compared; the archive supplies the actual byte hashes. */
 export function inspectMef(value, { records, ...limits } = {}) {
-  need(Array.isArray(records) && records.length > 0 && new Set(records.map(record => record.uuid)).size === records.length,
-    'CATALOGUE_MEF_RECORD_SELECTION_REQUIRED');
+  need(Array.isArray(records) && records.length > 0 && records.every(record =>
+    typeof record?.uuid === 'string' && record.uuid.length > 0 && record.uuid.length <= 1024 &&
+    !/[\/\\\0]/.test(record.uuid) && record.uuid !== '.' && record.uuid !== '..') &&
+    new Set(records.map(record => record.uuid)).size === records.length, 'CATALOGUE_MEF_RECORD_SELECTION_REQUIRED');
   const zip = inspectZip(value, limits), members = new Map(zip.files.map(file => [file.path, file]));
   const selected = new Set(records.map(record => record.uuid)), inventory = [];
-  const actual = new Set(zip.files.filter(file => file.path.endsWith('/metadata/metadata.xml'))
-    .map(file => file.path.slice(0, -'/metadata/metadata.xml'.length)));
-  need(actual.size === selected.size && [...actual].every(uuid => selected.has(uuid)), 'CATALOGUE_MEF_RECORDS_INCOMPLETE');
+  // The native ZIP filesystem visitor visits every top-level directory, including empty
+  // directories. Only its two root index files may live outside selected record roots.
+  for (const path of [...zip.files.map(file => file.path), ...zip.directories]) {
+    const slash = path.indexOf('/');
+    need(slash < 0 ? path === 'index.csv' || path === 'index.html' : selected.has(path.slice(0, slash)),
+      'CATALOGUE_MEF_UNSELECTED_MEMBER');
+  }
+  need([...selected].every(uuid => members.has(uuid + '/metadata/metadata.xml')), 'CATALOGUE_MEF_RECORDS_INCOMPLETE');
   for (const record of records) {
     const uuid = record.uuid, metadata = members.get(uuid + '/metadata/metadata.xml'),
       info = members.get(uuid + '/info.xml');
