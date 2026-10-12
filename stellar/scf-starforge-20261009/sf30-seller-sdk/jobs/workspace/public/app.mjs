@@ -89,6 +89,16 @@ function renderFunction() {
 }
 function render(snapshot) {
   state.snapshot = snapshot;
+  let deliveryLink = $('result-delivery-link');
+  if (snapshot.resultDelivery?.workspace === '/deliveries') {
+    if (!deliveryLink) {
+      deliveryLink = element('a', 'Result delivery');
+      deliveryLink.id = 'result-delivery-link';
+      $('refresh').before(deliveryLink);
+    }
+    deliveryLink.href = '/deliveries#' + token;
+    deliveryLink.hidden = false;
+  } else if (deliveryLink) deliveryLink.hidden = true;
   $('service-name').textContent = [snapshot.serviceName || 'Job merchant', snapshot.publicOrigin].filter(Boolean).join(' · ');
   const counts = {};
   for (const job of snapshot.jobs || []) counts[jobState(job)] = (counts[jobState(job)] || 0) + 1;
