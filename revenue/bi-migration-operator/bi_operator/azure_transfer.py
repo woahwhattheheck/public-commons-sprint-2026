@@ -117,6 +117,12 @@ def retry_seconds(value):
         return 0
 
 
+def retry_delay(headers):
+    """Honor the native Cost Management throttle delay and ordinary Retry-After."""
+    return max(retry_seconds(headers.get(name, "")) for name in (
+        "Retry-After", "x-ms-ratelimit-microsoft.consumption-retry-after"))
+
+
 class Azure:
     def __init__(self, config):
         self.config = config
@@ -209,7 +215,7 @@ class Azure:
                     code = ET.fromstring(raw).findtext("Code") or code
                 except ET.ParseError:
                     pass
-            raise AzureError(error.code, code, retry_seconds(error.headers.get("Retry-After", "0")),
+            raise AzureError(error.code, code, retry_delay(error.headers),
                 error.headers.get("x-ms-request-id", "")) from None
         except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException) as error:
             raise AzureError(0, type(error).__name__) from None
@@ -231,9 +237,18 @@ class Azure:
             root = ET.fromstring(result["raw"])
         except ET.ParseError:
             raise ValueError("Azure returned an invalid blob-list document.") from None
-        result["items"] = [{"name": b.findtext("Name"), "bytes": int(b.findtext("Properties/Content-Length", "0")),
-            "etag": b.findtext("Properties/Etag"), "modified": b.findtext("Properties/Last-Modified")}
-            for b in root.findall("Blobs/Blob")]
+        result["items"] = []
+        for blob in root.findall("Blobs/Blob"):
+            element = blob.find("Name")
+            if element is None or element.text is None:
+                raise ValueError("The native blob listing contains an unnamed file.")
+            name = element.text
+            # Azure encodes only Name elements marked Encoded=true. Ordinary percent
+            # sequences and the opaque continuation marker keep their original text.
+            if element.get("Encoded", "").lower() == "true":
+                name = unquote(name, encoding="utf-8", errors="strict")
+            result["items"].append({"name": name, "bytes": int(blob.findtext("Properties/Content-Length", "0")),
+                "etag": blob.findtext("Properties/Etag"), "modified": blob.findtext("Properties/Last-Modified")})
         result["next"] = root.findtext("NextMarker") or ""
         return result
 

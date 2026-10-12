@@ -19,6 +19,7 @@ from clinical_shared import (HERE, SourceWorkspace, InputError, json_bytes, load
 import clinical_source as registry
 import clinical_prs as prs
 from clinical_package import PackageOperations
+from clinical_batch import BatchOperations
 
 VERSION = "stellar-forge.clinicaltrials-workspace.v1"
 CAPTURE = "stellar-forge.clinicaltrials-capture.v1"
@@ -124,7 +125,7 @@ class PublisherBridge:
             if self.errors is not None:self.errors.close();self.errors=None
             self.opened=False
 
-class Workspace(PackageOperations, SourceWorkspace):
+class Workspace(BatchOperations, PackageOperations, SourceWorkspace):
     def __init__(self, root, create=False):
         super().__init__(root,create=create)
         self.publisher=PublisherBridge(self.root/"publisher")
@@ -147,6 +148,8 @@ class Workspace(PackageOperations, SourceWorkspace):
                 CREATE TABLE IF NOT EXISTS registry_prs_plans(id TEXT PRIMARY KEY,body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS registry_prs_reconciliations(id TEXT PRIMARY KEY,body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS registry_prs_previews(id TEXT PRIMARY KEY,body TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS registry_batches(id TEXT PRIMARY KEY,body TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS registry_batch_exports(id TEXT PRIMARY KEY,body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS registry_actions(id TEXT PRIMARY KEY,request_sha TEXT NOT NULL,body TEXT NOT NULL);
             """)
             if self._meta("revision") is None:self._set("revision",0)
@@ -196,6 +199,7 @@ class Workspace(PackageOperations, SourceWorkspace):
                 "reviews":self._all("registry_reviews"),"prs":self._all("registry_prs"),
                 "prsPlans":self._all("registry_prs_plans"),"prsReconciliations":self._all("registry_prs_reconciliations"),
                 "prsPreviews":self._all("registry_prs_previews"),
+                "batches":self.batch_index(),"batchExports":self._all("registry_batch_exports"),
                 "merchant":self._meta("merchant"),"exports":self._all("registry_exports"),
                 "publisher":self.publisher.state(),"runtime":{"prs":prs.doctor()},
                 "contract":{"apiVersion":registry.CONTRACT["apiVersion"],
@@ -639,6 +643,7 @@ class Workspace(PackageOperations, SourceWorkspace):
         if action=="prs.apply":return self.apply_prs(p)
         if action=="prs.reconcile":return self.reconcile_prs(p)
         if action=="prs.preview":return self.preview_prs(p)
+        if action.startswith("batch."):return self.batch_action(action,p,request_id)
         if action.startswith("publisher."):
             if action=="publisher.prepare":
                 directory=Path(p.get("exportDirectory","")).resolve()

@@ -512,3 +512,131 @@ async function retainPreparedFiles({server,base,review,directory,tranche}){
   assert.equal(inspected.sources,1);
   return{...file,...inspected};
 }
+
+
+export async function verifyGrantCompletionAgent({selected,grant,stage,note}){
+  const directory=join(stage,'grant-agent-completion');
+  await fs.mkdir(directory,{recursive:true,mode:0o700});
+  const reportFile=join(directory,'result.json');
+  const report={schema:'stellar-forge.sf47-completion-agent-receiving.v1',
+    sourcePin:selected.sourceCommit,originalCaseId:grant.completion.caseId,receivedCaseId:grant.imported.id,
+    startedAt:new Date().toISOString(),status:'RUNNING',operations:[],preparedFiles:[]};
+  const save=()=>atomicJson(reportFile,report);
+  const {pathToFileURL}=await import('node:url');
+  const clientModule=join(selected.sourceRoot,'stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs');
+  const providerModule=join(selected.sourceRoot,'stellar-forge/mcp-merchant-operator/grant-workspace.mjs');
+  const {inspectGrantAgentBinding}=await import(pathToFileURL(clientModule).href);
+  const {MerchantGrantWorkspaces,grantWorkspaceTools}=await import(pathToFileURL(providerModule).href);
+  const python=await execute(process.env.SF47_PYTHON||'python3',['-c','import os,sys; print(os.path.realpath(sys.executable))'],
+    {env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},timeout:30000,maxBuffer:65536});
+  const pythonExecutable=python.stdout.trim();
+  const scenarioFile=join(selected.sourceRoot,'stellar/scf_2026/sf47_budget_model/sf10_current_candidate.json');
+  const original=await inspectGrantAgentBinding({directory:grant.workspace,scenarioFile,pythonExecutable,
+    allowStart:true,label:'Original completed grant case'});
+  const received=await inspectGrantAgentBinding({directory:grant.reopenedWorkspace,scenarioFile,pythonExecutable,
+    allowStart:true,label:'Received complete grant case'});
+  const exportsDirectory=join(directory,'exports');await fs.mkdir(exportsDirectory,{recursive:true,mode:0o700});
+  const merchant=new MerchantGrantWorkspaces({exportsDirectory,grantWorkspaces:{
+    schema:'stellar-forge.sf47-workspace-connection.v1',
+    workspaces:{original:{...original,inputs:{}},received:{...received,inputs:{}}}
+  }});
+  const call=async(verb,args)=>{
+    const snapshot=await merchant.call('merchant_grant_'+verb,args);
+    assert.equal(snapshot.retention?.state,'COMPLETE','retain the complete original '+verb+' response');
+    assert.ok(snapshot.id&&snapshot.file);
+    const file=join(exportsDirectory,'grant-workspaces',args.workspace,'files',snapshot.file.sha256);
+    const bytes=await fs.readFile(file);
+    assert.equal(bytes.length,snapshot.file.bytes);assert.equal(digest(bytes),snapshot.file.sha256);
+    const value=/^application\/json\b/i.test(snapshot.file.contentType)?JSON.parse(bytes.toString('utf8')):undefined;
+    report.operations.push({tool:'merchant_grant_'+verb,workspace:args.workspace,
+      snapshotId:snapshot.id,sha256:snapshot.file.sha256,bytes:bytes.length,source:snapshot.source});
+    await save();return{snapshot,bytes,value};
+  };
+  try{
+    const required=['completion','completion_seed','completion_save','completion_preview',
+      'completion_prepare','completion_extension','completion_submit','completion_decision'];
+    for(const suffix of required)assert.ok(grantWorkspaceTools.some(row=>row.name==='merchant_grant_'+suffix));
+    report.catalogueOperations=grantWorkspaceTools.length;
+    const opened=await merchant.call('merchant_grant_open',{workspace:'original',
+      expectedSelectionSha256:original.selectionSha256});
+    report.originalInstanceId=opened.original.instanceId;await save();
+    const caseId=grant.completion.caseId;
+    const before=await call('case',{workspace:'original',caseId});
+    assert.equal(before.value.program.mode,'WALKTHROUGH');
+    const version=before.value.program.version;
+    const calendar=await call('completion',{workspace:'original',caseId,asOfDate:'2028-07-31'});
+    assert.deepEqual(calendar.value.clocks,grant.completion.clocks);
+    const seed=await call('completion_seed',{workspace:'original',caseId,expectedVersion:version,tranche:1});
+    assert.equal(seed.value.inputs.items.length,2);
+    const saved=await call('completion_save',{workspace:'original',caseId,expectedVersion:version,
+      requestId:'native-completion-agent-original-assignments',actor:'Native completion receiving operator',
+      note:'Reopen the original complete assignments through the retained seed object.',
+      input:{snapshotId:seed.snapshot.id},expectedInputSha256:seed.snapshot.file.sha256,inputPointer:'/inputs'});
+    assert.equal(saved.value.unchanged,true);assert.equal(saved.value.version,version);
+    assert.equal(saved.snapshot.selection.inputPointer,'/inputs');
+    assert.equal(saved.snapshot.selection.expectedInputSha256,seed.snapshot.file.sha256);
+    const active=calendar.value.clocks.find(row=>row.active&&row.tranche===1);
+    assert.ok(active);
+    const preview=await call('completion_preview',{workspace:'original',caseId,expectedVersion:version,
+      receiptId:active.receiptId,asOfDate:'2028-07-31',
+      summary:'Reopen the complete original tranche assignments through the maintained agent workspace.'});
+    assert.equal(preview.value.ready,true,JSON.stringify(preview.value.issues));
+    assert.equal(preview.value.clock.originalDeadlineOn,'2028-02-29');
+    // These commands already exist in the same native case. The agent lifecycle
+    // reopens their exact accepted original requests, including their old versions.
+    const recorded=[
+      ['completion_save','complete-plan-3'],
+      ['completion_prepare','prepare-tranche-one-revised'],
+      ['completion_extension','tranche-three-extension'],
+      ['completion_submit','submit-tranche-one-revised'],
+      ['completion_decision','accept-tranche-1'],
+    ];
+    for(const [verb,name]of recorded){
+      const request=JSON.parse(await fs.readFile(join(grant.completion.directory,'request-'+name+'.json'),'utf8'));
+      const accepted=JSON.parse(await fs.readFile(join(grant.completion.directory,'response-'+name+'.json'),'utf8'));
+      assert.equal(request.action,verb.replace('completion_','completion.'));
+      const {action,data,...body}=request,fields={...data};
+      if(verb==='completion_extension'&&Object.hasOwn(fields,'note')){
+        fields.confirmationNote=fields.note;delete fields.note;
+      }
+      const replay=await call(verb,{workspace:'original',caseId,...body,...fields});
+      assert.deepEqual(replay.value,accepted,'same original '+action+' receipt through agent transport');
+    }
+    const after=await call('case',{workspace:'original',caseId});
+    assert.equal(after.value.program.version,version);
+    assert.deepEqual(after.value.completionPlans,before.value.completionPlans);
+    assert.deepEqual(after.value.records,before.value.records);
+    const nativeOperation=JSON.parse(await fs.readFile(grant.completion.operationFile,'utf8'));
+    const originalFiles=Object.values(nativeOperation.phases).flatMap(phase=>
+      [phase.result?.files,phase.result?.revisionFiles].filter(value=>value?.reviewId));
+    assert.equal(originalFiles.length,4);
+    for(const originalFile of originalFiles){
+      const exported=await call('export',{workspace:'original',kind:'completion',caseId,reviewId:originalFile.reviewId});
+      assert.deepEqual(exported.bytes,await fs.readFile(originalFile.path));
+      report.preparedFiles.push({reviewId:originalFile.reviewId,sha256:exported.snapshot.file.sha256,
+        bytes:exported.bytes.length,snapshotId:exported.snapshot.id,originalPath:originalFile.path});
+    }
+    await merchant.call('merchant_grant_close',{workspace:'original',expectedInstanceId:opened.original.instanceId});
+    const openedReceived=await merchant.call('merchant_grant_open',{workspace:'received',
+      expectedSelectionSha256:received.selectionSha256});
+    report.receivedInstanceId=openedReceived.original.instanceId;
+    const receivedCase=await call('case',{workspace:'received',caseId:grant.imported.id});
+    assert.deepEqual(originalSelection(receivedCase.value,grant.completion.owned),grant.completion.selection);
+    const receivedCalendar=await call('completion',{workspace:'received',caseId:grant.imported.id,asOfDate:'2028-07-31'});
+    assert.deepEqual(receivedCalendar.value.clocks,grant.completion.clocks);
+    for(const [reviewId,originalReview]of Object.entries(grant.completion.reviews)){
+      const reopened=await call('review',{workspace:'received',caseId:grant.imported.id,reviewId});
+      assert.deepEqual(reopened.value,originalReview);
+      const exported=await call('export',{workspace:'received',kind:'completion',caseId:grant.imported.id,reviewId});
+      const same=report.preparedFiles.find(file=>file.reviewId===reviewId);
+      assert.equal(exported.snapshot.file.sha256,same.sha256);
+    }
+    await merchant.call('merchant_grant_close',{workspace:'received',expectedInstanceId:openedReceived.original.instanceId});
+    report.status='COMPLETE';report.completedAt=new Date().toISOString();await save();
+    await note('agent completion reopened original forms and complete received case',
+      {originalCaseId:caseId,receivedCaseId:grant.imported.id,preparedForms:report.preparedFiles.length,
+        catalogueOperations:report.catalogueOperations});
+    return{...report,reportFile,directory};
+  }catch(error){report.status='FAILED';report.error=String(error.stack||error);await save();throw error;}
+  finally{await merchant.close();}
+}

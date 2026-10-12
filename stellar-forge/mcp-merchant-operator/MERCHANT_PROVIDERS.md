@@ -110,6 +110,26 @@ common environment and optional own options inside its factory without adding
 a family branch to the host server. It returns the original runtime object. Ordinary provider tools use its
 existing call(name, args), summary and close() interfaces.
 
+Trusted JavaScript callers of `startMerchantMcp` may pass `providerOptions`,
+a plain object whose keys are the runtime option names consumed by their
+selected provider declarations. The host passes its common `environment` and
+all existing nested defaults first, then spreads `providerOptions` over them.
+A supplied top-level key replaces that entire option value; nested provider
+records are not deep-merged. For example:
+
+```js
+const merchant = await startMerchantMcp({
+  configPath, environment,
+  providerOptions: { nws: { environment, fetchImpl: sourceFetch } },
+});
+```
+
+This startup argument can carry existing native functions and handles. It is
+not an MCP request field or a path for remote code selection. The explicit
+startup authentication and OAuth arguments keep their existing behavior;
+overriding provider runtime options affects the provider factories. Omitting
+`providerOptions` retains the original defaults.
+
 ## Configuration and ordering
 
 configuration.input is the original top-level host input, such as

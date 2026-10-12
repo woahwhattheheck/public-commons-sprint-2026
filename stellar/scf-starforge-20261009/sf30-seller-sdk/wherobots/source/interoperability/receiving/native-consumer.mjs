@@ -1,0 +1,27 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {join,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {createHash} from 'node:crypto';
+import assert from 'node:assert/strict';
+const [directory,sourceManifestPath,output]=process.argv.slice(2);
+if(!directory||!sourceManifestPath||!output)throw Error('Pass original SF30 package, native source manifest and result path');
+const manifest=JSON.parse(await readFile(sourceManifestPath,'utf8'));
+const {loadDatasetConfig}=await import(pathToFileURL(manifest.loader).href);
+const {readDatasetSourceFiles}=await import(pathToFileURL(manifest.release).href);
+const root=resolve(directory),config=JSON.parse(await readFile(join(root,'dataset.json'),'utf8'));
+const sourceBytes=await readFile(join(root,'source.json')),source=JSON.parse(sourceBytes);
+assert.deepEqual(source.sourceFiles,source.original_objects);
+const native=await loadDatasetConfig(join(root,'dataset.json')),description=native.describe();
+const companions=await readDatasetSourceFiles(root,source);
+assert.equal(companions.length,source.sourceFiles.length);assert.ok(companions.length>0);
+const pages=[],rows=[];let cursor=null;
+do{
+ const query={limit:String(Math.min(config.maxLimit??250,100)),...(cursor?{cursor}:{})};
+ const context={query};const admission=native.admit(context);assert.equal(admission,true);
+ const response=native.handle(context);assert.equal(response.status,200);
+ pages.push(response);rows.push(...response.body.rows);cursor=response.body.page.nextCursor;
+}while(cursor);
+assert.equal(rows.length,description.rowCount);assert.equal(rows.length,source.row_count);
+const result={schema:'starforge.wherobots.native-publisher-receiving.v1',completedAt:new Date().toISOString(),directory:root,sourceManifestSha256:createHash('sha256').update(sourceBytes).digest('hex'),description,rows:rows.length,pages,companions,companionCount:companions.length,companionBytes:companions.reduce((n,x)=>n+x.bytes,0),originalCode:manifest};
+await writeFile(output,JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify({result:output,rowCount:rows.length,pages:pages.length,snapshot:description.snapshot,companions:result.companionCount,companionBytes:result.companionBytes}));

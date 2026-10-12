@@ -397,18 +397,33 @@ export async function openWordPressWorkspace({directory,environment=process.env,
     if(!original)fail('WORDPRESS_PUBLISHER_REQUIRED','Prepare this product at its selected host.',409);
     return original.readExport(kind,recordId);
   }
-  const close=()=>closing??=(async()=>{
-    closed=true;for(const row of active.values())row.controller.abort();
-    // Source jobs are independent of a completed launch request and drain first.
-    const resources=await Promise.allSettled([...sources.values()]);
-    await Promise.allSettled(resources.filter(row=>row.status==='fulfilled').map(row=>row.value.close()));
-    await tail.catch(()=>{});
-    const remaining=await Promise.allSettled([...sources.values()]);
-    await Promise.allSettled(remaining.filter(row=>row.status==='fulfilled').map(row=>row.value.close()));
-    const original=await Promise.allSettled([...publishers.values()]);
-    try {await Promise.all(original.filter(row=>row.status==='fulfilled').map(row=>row.value.close()));}
-    finally {await release();}
-  })();
+  const close=()=>{
+    if(closing)return closing;
+    const disposing=(async()=>{
+      closed=true;for(const row of active.values())row.controller.abort();
+      const closeOwned=async values=>{
+        const resources=await Promise.allSettled([...values]);
+        const results=await Promise.allSettled(resources.filter(row=>row.status==='fulfilled').map(row=>row.value.close()));
+        return results.filter(row=>row.status==='rejected').map(row=>row.reason);
+      };
+      // Source jobs are independent of a completed launch request and drain first.
+      // A transient first close is retried after the original operation has drained.
+      await closeOwned(sources.values());
+      await tail.catch(()=>{});
+      const sourceErrors=await closeOwned(sources.values());
+      const publisherErrors=await closeOwned(publishers.values());
+      const errors=[...sourceErrors,...publisherErrors];
+      if(errors.length){
+        const error=new AggregateError(errors,'The original WordPress source or publisher is still closing.');
+        error.code='WORDPRESS_WORKSPACE_CLOSE';throw error;
+      }
+      // Retain the workspace writer until every original child has disposed.
+      await release();
+    })();
+    closing=disposing;
+    void disposing.catch(()=>{if(closing===disposing)closing=null;});
+    return disposing;
+  };
   try {
     for(const name of ['sources','cache','mappings','editions','merchants','exports','publishers','packets','operations'])await privateDirectory(root(name),true);
     if(!await exists(root('workspace.json'))&&(expectedWorkspaceId!==undefined||expectedWorkspaceIdentity!==undefined))

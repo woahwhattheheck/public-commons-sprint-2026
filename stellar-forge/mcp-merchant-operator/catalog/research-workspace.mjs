@@ -1,5 +1,6 @@
 // MIT. Research tool metadata; the selected provider loads its runtime on demand.
 import {MAX_RETAINED_CHUNK_BYTES} from '../retained-file-contracts.mjs';
+import {researchClinicalTrialsTools,RESEARCH_CLINICALTRIALS_EXPORTS,RESEARCH_CLINICALTRIALS_CRITERIA} from './research-clinicaltrials.mjs';
 import {RESEARCH_SECTIONS,RESEARCH_COMPARISON_SECTIONS} from '../../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs';
 
 const alias={type:'string',pattern:'^[a-z0-9][a-z0-9_-]{0,63}$'};
@@ -18,6 +19,7 @@ export const RESEARCH_EXPORTS=Object.freeze({
   'portable-gzip':{format:'json.gz',extension:'json.gz'},
   markdown:{format:'md',extension:'md'},html:{format:'html',extension:'html'},
   'crossref-edition':{extension:'json'},'retained-edition':{extension:'json'},comparison:{extension:'json'},
+  ...RESEARCH_CLINICALTRIALS_EXPORTS,
 });
 const exportKind={type:'string',enum:Object.keys(RESEARCH_EXPORTS)};
 export function researchWorkspaceTools(tool){
@@ -78,7 +80,8 @@ export function researchWorkspaceTools(tool){
       ...operation,expectedRevision:revision,expectedPlanSha256:digest,expectedEditionSha256:digest},
       ['workspace','dossierId','operationId','expectedRevision','expectedPlanSha256','expectedEditionSha256'],{idempotent:true}),
     tool('merchant_research_export','Stream and retain a complete portable dossier, analyst report, original source edition or revision comparison. Returns its content-addressed export ID for reads and restart recovery.',{
-      ...dossier,kind:exportKind,operationId:nativeId,editionId:nativeId,before:revision,after:revision},
+      ...dossier,kind:exportKind,operationId:nativeId,editionId:nativeId,before:revision,after:revision,
+      sourceId:{type:'string',pattern:'^ctsrc_[a-f0-9]{64}$'},criteria:RESEARCH_CLINICALTRIALS_CRITERIA,expectedSha256:digest},
       ['workspace','dossierId','kind'],{}),
     tool('merchant_research_exports','Page complete exports already retained by this attachment. Recover a lost export reply by its original dossier ID, content hash and saved export receipt.',{
       ...workspace,dossierId:nativeId,offset,limit,snapshot:digest},['workspace'],read),
@@ -91,5 +94,6 @@ export function researchWorkspaceTools(tool){
     tool('merchant_research_reopen','Reopen one complete host-declared portable source or retained portable export through the original streamed reader. Preserves the package dossier ID, verified history, notes, selections and findings.',{
       ...workspace,source:alias,kind:{type:'string',enum:['portable-json','portable-gzip']},exportId:digest},
       ['workspace'],{idempotent:true}),
+    ...researchClinicalTrialsTools(tool)
   ];
 }
