@@ -304,8 +304,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-indexer/CLIENT.md",
-      "bytes": 24649,
-      "sha256": "82c5ada8035721af78b6fd32c704122ea5903427992894c16f02877b42f9fa38"
+      "bytes": 24645,
+      "sha256": "5c980e5e8c1b1b3ec1dac4ab3ca2751c87ec346a27e8275320545ab50cc65e82"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-indexer/application-provider.mjs",
