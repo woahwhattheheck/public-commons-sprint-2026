@@ -18,6 +18,7 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
     ['/', 'index.html','text/html; charset=utf-8'],
     ['/economics','../economics/index.html','text/html; charset=utf-8'],
     ['/economics/browser.mjs','../economics/browser.mjs','text/javascript; charset=utf-8'],
+    ['/economics/receiving-browser.mjs','../economics/receiving-browser.mjs','text/javascript; charset=utf-8'],
     ['/economics/style.css','../economics/style.css','text/css; charset=utf-8'],
     ['/browser.mjs','browser.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8'],
@@ -68,7 +69,7 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
         if (url.pathname === '/api/economics/state') return json(200,{...await model.economics.state(),token});
-        const costFile = /^\/cost-files\/(source|export|edition)\/([a-f0-9-]{36})(?:\/(.+))?$/.exec(url.pathname);
+        const costFile = /^\/cost-files\/(source|export|edition|received)\/([a-f0-9-]{36})(?:\/(.+))?$/.exec(url.pathname);
         if (costFile) {
           if (costFile[1] === 'source' && !costFile[3]) {
             const value=await model.economics.sourceDownload(costFile[2]);
@@ -79,8 +80,14 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
             return reply(200,name.endsWith('.csv')?'text/csv; charset=utf-8':'application/json; charset=utf-8',bytes,
               {'content-disposition':'attachment; filename="'+name.replace(/[^a-zA-Z0-9_.-]/g,'_')+'"'});
           }
-          if (costFile[1] === 'export' && !costFile[3]) {
-            const file=await model.economics.exportFile(costFile[2]),opened=await openBundleDownload(file);
+          if (costFile[1] === 'received' && costFile[3]) {
+            const file=await model.economics.receiving.download(costFile[2],decodeURIComponent(costFile[3]));
+            return reply(200,'application/octet-stream',file.bytes,
+              {'content-disposition':'attachment; filename="'+file.name.replace(/[^a-zA-Z0-9_.-]/g,'_')+'"','x-content-sha256':file.sha256});
+          }
+          if (['export','received'].includes(costFile[1]) && !costFile[3]) {
+            const file=await (costFile[1]==='received'?model.economics.receiving.archiveFile(costFile[2]):model.economics.exportFile(costFile[2])),
+              opened=await openBundleDownload(file);
             try{
               res.writeHead(200,{'content-type':'application/x-tar','content-length':String(file.bytes),
                 'content-disposition':'attachment; filename="'+file.filename+'"','cache-control':'no-store',
@@ -109,6 +116,16 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
         throw fault('NOT_FOUND','Workspace page not found.',404);
       }
       if (req.method !== 'POST') return reply(405,'text/plain','Use GET or POST.',{allow:'GET, HEAD, POST'});
+      const receivedUpload = /^\/api\/economics\/received-uploads\/([a-f0-9-]{36})$/.exec(url.pathname);
+      if(receivedUpload){
+        authorize();
+        if(req.headers['content-type']?.split(';')[0].trim().toLowerCase()!=='application/octet-stream')
+          throw fault('BUNDLE_BODY_REQUIRED','Send the complete original archive bytes.',415);
+        const header=req.headers['x-sf97-received'];let metadata;
+        if(typeof header!=='string'||header.length>12000)throw fault('BUNDLE_METADATA_REQUIRED','Name the original received package.');
+        try{metadata=JSON.parse(decodeURIComponent(header));}catch{throw fault('BUNDLE_METADATA_INVALID','The received package metadata is invalid.');}
+        return json(200,await model.economics.receiving.receive({...metadata,requestId:receivedUpload[1],body:req}));
+      }
       const upload = /^\/api\/economics\/uploads\/([a-f0-9-]{36})$/.exec(url.pathname);
       if (upload) {
         authorize();let metadata;
@@ -132,6 +149,12 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
         '/api/economics/proposal':()=>model.economics.proposal(input),
         '/api/economics/apply-pricing':()=>model.economics.applyPricing(input),
         '/api/economics/export':()=>model.economics.bundle(input),
+        '/api/economics/received':()=>model.economics.receiving.inspect(input.packageId),
+        '/api/economics/received-request':()=>model.economics.receiving.request(input.packageId),
+        '/api/economics/received-review':()=>model.economics.receiving.reviewDraft(input),
+        '/api/economics/received-import':()=>model.economics.receiving.importDraft(input),
+        '/api/economics/received-drafts':()=>model.economics.receiving.draftSummaries(input.packageId),
+        '/api/economics/received-draft':()=>model.economics.receiving.reopenDraft(input.packageId,input.requestId),
       };
       if(Object.hasOwn(costActions,url.pathname))return json(200,await costActions[url.pathname]());
       if (url.pathname === '/api/planning/source') return json(200,await planning.source(input.version));
@@ -153,7 +176,7 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
       {code:error.code ?? 'WORKSPACE_OPERATION_FAILED',
         message:error.status || error instanceof TypeError || error instanceof RangeError ? error.message : 'Workspace operation failed. Check the configured private source and state directory.'}));
   });
-  server.requestTimeout = 20000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
+  server.requestTimeout = 30*60*1000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
   await new Promise((done,fail) => {
     const onError = error => { server.removeListener('listening',onListen); fail(error); };
     const onListen = () => { server.removeListener('error',onError); done(); };
