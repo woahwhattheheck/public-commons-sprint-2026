@@ -316,3 +316,130 @@ award rows, the original analyst review and all three cited findings. The
 1,799,497-byte portable dossier resumed at byte 65,536 and retained its complete
 export hash through reopening and receiving. The native run also exercised the
 receiver's page-count binding against each retained page's `payload.rows.length`.
+
+
+## Complete award transaction history
+
+The transaction tools operate the original AwardWorkspace transaction store in
+the same SQLite database. Acquisition runs through the research browser's
+existing job controller. The original job, pause, instance ownership and shutdown
+tools also govern transaction captures.
+
+Select the original award in its retained edition before capturing transactions.
+The provider's transaction ID is separate from the award ID. Action descriptions
+retain the agency's text; funding direction and exact obligation changes come
+from the original monetary fields. Decimal source values remain strings, and
+nullable loan values remain distinct from obligations.
+
+| Native tool | Complete operation |
+| --- | --- |
+| transaction_inventory | Page retained captures or workshare reviews, optionally for one award |
+| transaction_capture | Start an award capture or resume its original capture ID |
+| transaction_capacity | Change paused row capacity using its exact updated_at |
+| transaction_summary | Read exact totals and review, then page fiscal years, conflicts or duplicate occurrences |
+| transaction_rows | Browse the retained timeline with search and date filters |
+| transaction_compare | Compare original captures and page added, changed, absent, unresolved or conflicting source records |
+| transaction_review_save | Save the source-bound workshare assessment with its expected revision |
+| transaction_source | Read original request, receipt, observation time and response identity |
+
+Every name in this table has the prefix
+`merchant_usaspending_`. Existing `source_import`, `export`,
+`file_read`, `file_release`, `job`, `status`, `pause` and
+`close` complete the same workflow.
+
+### Capture and recover the original operation
+
+Call `transaction_capture` with `editionId` and `awardKey`.
+Optional `pageSize` selects 1–5000 official transactions per page; `maxRows`
+selects the retained capacity up to 250000 rows. The returned job belongs to
+the existing research browser. Inspect that original job with
+`merchant_usaspending_job`. Its durable transaction capture ID also appears in
+the workspace status and transaction inventory.
+
+To continue an interrupted operation, call `transaction_capture` with only its
+original `captureId`. Accepted pages, response bytes and provider continuation
+remain attached to that capture. `merchant_usaspending_pause` accepts the
+original job ID or capture ID. For a capacity change, read the capture's
+`updated_at` in its summary and pass it as `expectedUpdatedAt` to
+`transaction_capacity` before resuming.
+
+Transaction inventories and summary/comparison sections use the existing
+offset, limit and snapshot protocol. Continue with the returned `nextOffset`
+and `expectedSnapshot`. Timeline rows use the model's page/limit protocol.
+Page one also returns a timeline snapshot; pass it as `expectedSnapshot` on
+later pages with the same filters and limit. If an active capture advances,
+reopen page one with its new snapshot.
+
+The summary retains source coverage beside the calculated totals. Conflicted
+source IDs remain unresolved in comparisons. A fiscal-year count is unknown
+when conflicting dates span fiscal years; `possible_transactions` is that
+year's candidate upper bound. The full captured data remains available in the
+transaction JSON export.
+
+### Receive exact source and portable captures
+
+Add existing canonical files to the normal workspace connection's `sources`
+object:
+
+```json
+{
+  "original-transactions": {
+    "kind": "transaction-pages",
+    "file": "/private/source/original-transaction-pages.json"
+  },
+  "portable-transactions": {
+    "kind": "transactions",
+    "file": "/private/receiving/transaction-capture.json"
+  }
+}
+```
+
+An optional `sha256` pins either complete declared file. The retained-page file
+contains an array, or an object with `pages`, whose entries retain the native
+`request`, complete `receipt` and `responseBase64`. The original store verifies
+the endpoint, request body, response bytes, observation times, contiguous pages
+and selected award before accepting them.
+
+Call `merchant_usaspending_source_import` with
+`source=original-transactions`, the receiving `editionId` and original
+`awardKey`. Optional `maxRows` selects capacity for that exact retained capture.
+This adds the original provider pages through the same native importer.
+
+For a complete portable capture, call the same source-import tool with
+`source=portable-transactions`. An optional `editionId` selects the already
+received original award edition; otherwise the packet retains its original
+edition selection. Set `includeReview=true` to receive the included workshare
+assessment with its original source provenance. The original receiver checks
+the award row, page receipts, projected transactions, complete coverage and
+source fingerprint before accepting the packet. Receive the original award
+edition first. Workspace backups also retain transaction tables, pages and
+reviews through the existing full-workspace serializer and restore path.
+
+### Preserve the complete workshare and every output byte
+
+Save a review with `transaction_review_save`, its `captureId`,
+`expectedRevision`, and `review`. The statuses are `researching`,
+`scope_match`, `review_with_owner` and `passed`. Available fields are
+`fit`, `fundingChange`, `proposedWorkshare`, `deliverables`,
+`acceptance`, `owner`, `caseUrl`, `nextAction` and `notes`.
+The native store binds the review to the completed capture's source fingerprint.
+The two scope-oriented statuses require the actual fit, workshare, deliverables
+and acceptance.
+
+The existing `merchant_usaspending_export` now supports:
+
+| Kind | Selection and contents |
+| --- | --- |
+| transaction-json | captureId; complete provider pages, receipts, projected rows and coverage; optional includeReviews |
+| transaction-csv | captureId; complete spreadsheet-safe transaction rows |
+| transaction-source | captureId and page; exact original response bytes |
+| transaction-source-receipt | captureId and page; original request, HTTP receipt and response identity |
+| transaction-comparison | before and after capture IDs; every native comparison section |
+| transaction-brief | captureId; original award brief plus transaction history and workshare assessment |
+
+Each export uses the existing immutable export ID and complete-file reader.
+Retain its kind, export ID and returned next offset through every read. Release
+the read snapshot after receiving the full file. After closing and reopening
+the owned workspace, resume the same export ID and offset. The same exact
+transaction JSON can then be declared as a receiving source and imported into
+the original award workspace.
