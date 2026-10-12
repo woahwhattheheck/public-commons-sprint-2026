@@ -1,6 +1,6 @@
 // MIT. Complete Baserow/Rails customer source around the original Ruby export.
 import { constants } from 'node:fs';
-import { open, realpath } from 'node:fs/promises';
+import { open, realpath, readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { exportNativeRubyClient, completeNativeRubyClient, inspectNativeRubyClient,
@@ -134,6 +134,18 @@ export async function exportBaserowRubyClient({ out } = {}) {
     for (const name of BASEROW_RUBY_CLIENT_FILES) payloads.set(name, await sourceFile(name));
     const customerFiles = [...payloads].map(([name, raw]) => record(name, raw));
     const selection = bytes({ schema: SOURCE_SCHEMA, files: customerFiles });
+    if (!await exists(join(directory, SELECTION))) {
+      // A stopped first write may leave only the original lock and its private
+      // pending selection file. Preserve those bytes; reject a different output.
+      for (const name of await readdir(directory)) {
+        if (name === 'publisher.lock') continue;
+        check(/^\.customer-pending-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(name),
+          'BASEROW_RUBY_UNSELECTED_OUTPUT_NOT_EMPTY');
+        const pending = await readPrivate(join(directory, name), selection.length);
+        check(pending.length <= selection.length && pending.equals(selection.subarray(0, pending.length)),
+          'BASEROW_RUBY_PENDING_SOURCE_SELECTION_CHANGED');
+      }
+    }
     await once(join(directory, SELECTION), selection);
     for (const [name, raw] of payloads) {
       await privateDirectory(dirname(join(directory, name)), true);
@@ -156,7 +168,6 @@ export async function exportBaserowRubyClient({ out } = {}) {
 export async function completeBaserowRubyClient({ directory } = {}) {
   const current = await inspectBaserowRubyClient({ directory });
   if (current.state === 'COMPLETE') return current;
-  await readJson(join(current.directory, SELECTION), MAX_FILE);
   return exportBaserowRubyClient({ out: current.directory });
 }
 export async function copyBaserowRubyClient({ directory, out, expectedManifestSha256 } = {}) {

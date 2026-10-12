@@ -60,7 +60,7 @@ The original request and raw native page files are retained before finalization.
 
 ## Receive the complete packet in Ruby
 
-The initial receiving host needs Ruby 3.1 or later, the installed original Python receiving environment, Node 24, and the complete selected Starforge checkout. The original receiver checks and retains the native SF100 room. Its stdout, stderr, original source modules, page chain and receiving result remain in the same receiving job.
+The initial receiving host needs Ruby 3.1 or later, the installed original Python receiving environment, Node 24, and the complete selected Starforge checkout. The original receiver checks and retains the native SF100 room. Its stdout, stderr, original source modules, page chain and receiving result remain in the same receiving job. Supply the selected environment's absolute Python path, such as **/private/runtime/.venv/bin/python**; the receiver validates its target and invokes that original path so Python can find the environment's **pyvenv.cfg** and installed packages. This follows [Python's original virtual-environment contract](https://peps.python.org/pep-0405/#specification). Saved historical requests retain their original runtime paths.
 
 ~~~sh
 ruby "$CUSTOMER_SOURCE/baserow/customer/customer.rb" receive \
@@ -294,7 +294,7 @@ The full continuation performs these connected customer operations:
 3. Read every selected attachment through the row-and-column-bound Ruby file interface. Compare full received sizes and SHA-256 values, preserving every reference.
 4. Export and copy the complete Ruby client, importer and operator source. Copy the whole customer delivery. Temporarily move only this continuation's producer packet, receiving job and source-client directories, then use the copied Ruby command to reopen the independent customer delivery.
 5. Load the operator commissioning entry from the verified copied client in a separate Ruby process. The actual application maps all delivered fields, selects the original record identity, retains a complete change preview, commits through the original importer, and exercises its operator and receiving workflow.
-6. Invoke the operator's offline reopen entry and require the same complete result. Retain the original native source, customer, file, client and application results with their selected hashes.
+6. Copy every declared application file after the original database closes, including the complete database, customer source, mapping, previews, historical receipts and operator result. Publish the copied completion last. Temporarily move the producer application out of its original path and invoke the operator's offline reopen on **delivered-application/**. Require the same complete result and actual current target rows.
 
 ### Retained directories and results
 
@@ -305,14 +305,15 @@ The full continuation performs these connected customer operations:
 | receiving/ | One original Ruby/Python/Node receiving job and its complete native result |
 | delivered-customer/ | Independent complete source, dataset, receiving record and original attachments |
 | delivered-client/ | Complete copied customer, importer and operator source under its original relative paths |
-| application/ | One configured operator application, copied source, preview, committed history and original application receiving |
+| application/ | Original configured operator application with its complete source, preview and committed history |
+| delivered-application/ | Independent complete application copy, reopened while its producer path is unavailable |
 | attempts/ | Each actual subprocess invocation, original arguments, complete stdout and stderr, exit state and byte hashes |
 | operator-result.json | Complete original Rails operator commissioning result |
 | native-result.json | Completed continuation, original identities, full attachment receiving and client/application result bindings |
 
-**native-result.json** is written after customer receiving, copied-client reopen and the operator's complete reopen succeed. **reopen** uses the retained copied client, customer delivery and the operator's own source/application. It does not need the original Baserow server, publisher process, capture directory, Python receiver or Node scanner.
+**native-result.json** is written after customer receiving, copied-client reopen and the copied operator application's complete reopen succeed. **reopen** uses **delivered-client/**, **delivered-customer/** and **delivered-application/**. Original source paths remain recorded as provenance; the actual database and source are opened from the receiver's complete copied directory.
 
-The source-client hash and compound customer hash remain separate. The original source's complete result stays in its existing native directory; this continuation adds its own receiving and application directories. The operator application includes its original receipt and transport metadata, so its own receiving interface can validate and reopen the complete application when moved.
+The source-client hash and compound customer hash remain separate. The original source's complete result stays in its existing native directory; this continuation adds its own receiving and application directories. The application copy streams every full file and retains its original byte count and hash, including outputs larger than the source dataset. An interrupted copy resumes those same files. A saved parking selection restores the original application after cancellation or process restart. The received application carries its original receipt and transport metadata and opens independently when moved.
 
 The callable operator composition is:
 

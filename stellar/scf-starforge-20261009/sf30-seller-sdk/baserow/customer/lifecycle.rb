@@ -26,7 +26,7 @@ module Starforge
         HASH.match?(input["originalResultSha256"].to_s) && HASH.match?(input["captureSha256"].to_s) &&
         HASH.match?(input["candidateSha256"].to_s) && HASH.match?(input["snapshot"].to_s) &&
         HASH.match?(input["sourceSha256"].to_s) && INTENT.match?(input["customerKey"].to_s) &&
-        INTENT.match?(input["datasetId"].to_s) && input["runtime"].is_a?(Hash),
+        INTENT.match?(input["datasetId"].to_s) && input["runtime"].is_a?(Hash) && [nil,"selected-absolute"].include?(input["runtimePathMode"]),
         "BASEROW_CUSTOMER_LIFECYCLE_SELECTION_CHANGED")
       [input,raw]
     end
@@ -72,7 +72,8 @@ module Starforge
         "requestId"=>original ? original.fetch("requestId") : SecureRandom.uuid,
         "originalRun"=>native,"originalResultSha256"=>Files.hash(result_raw),
         "sourceRef"=>options[:source_ref],"customerKey"=>options[:customer_key],"datasetId"=>options[:dataset_id],
-        "query"=>options.fetch(:query,""),"publisherDirectory"=>result["publication"]["publisherDirectory"],
+        "query"=>options.fetch(:query,""),"runtimePathMode"=>"selected-absolute",
+        "publisherDirectory"=>result["publication"]["publisherDirectory"],
         "runId"=>result["publication"]["runId"],"candidateSha256"=>result["publication"]["originalCandidateDigest"],
         "snapshot"=>result["publication"]["snapshot"],"sourceSha256"=>result["source"]["sha256"],
         "captureSha256"=>result["source"]["captureSha256"],"originalSourceRows"=>result["source"]["rows"],
@@ -242,6 +243,7 @@ module Starforge
     end
 
     def restore_producers(root)
+      restore_application(root)
       marker = File.join(root,"producer-parking.json")
       return unless File.exist?(marker)
       selected = Files.parse(Files.read(marker,1_048_576))
@@ -374,6 +376,7 @@ module Starforge
         raise ArgumentError,"BASEROW_OPERATOR_CALL_SELECTION" unless
           %w[run reopen].include?(mode) && client && directory &&
           (mode == "run" ? ARGV.length == 7 : ARGV.length == 3)
+        require File.expand_path("../../baserow/customer/baserow_customer_receiving",client)
         require File.join(client,"examples/rails_dataset/operator/commission")
         result = if mode == "run"
           Starforge::DatasetOperator::Commission.run(
@@ -382,7 +385,8 @@ module Starforge
         else
           Starforge::DatasetOperator::Commission.reopen(directory: directory)
         end
-        raise ArgumentError,"BASEROW_OPERATOR_INCOMPLETE_RESULT" unless result.is_a?(Hash) && !result.empty?
+        raise ArgumentError,"BASEROW_OPERATOR_INCOMPLETE_RESULT" unless result.is_a?(Hash) &&
+          result["schema"] == "stellar-forge.baserow-rails-operator-application.v1" && result["state"] == "COMPLETE"
         $stdout.write(JSON.pretty_generate(result)+"\n")
       rescue StandardError, LoadError => error
         code = error.respond_to?(:code) ? error.code.to_s : error.message.to_s
@@ -392,11 +396,13 @@ module Starforge
       end
     RUBY
 
-    def operator_call(root,input,client,mode,cancel,customer: nil)
+    def operator_call(root,input,client,mode,cancel,customer: nil,application: "application")
       verified = verify_client(root,client)
       script = File.join(root,"operator-call.rb")
       Files.once(script,OPERATOR_CALL)
-      args = [mode,File.join(verified["directory"],"developer/ruby-client"),File.join(root,"application")]
+      Files.need(%w[application delivered-application].include?(application),
+        "BASEROW_CUSTOMER_LIFECYCLE_APPLICATION_DIRECTORY")
+      args = [mode,File.join(verified["directory"],"developer/ruby-client"),File.join(root,application)]
       if mode == "run"
         Files.need(customer.is_a?(BaserowCustomerDelivery),
           "BASEROW_CUSTOMER_LIFECYCLE_OPERATOR_SOURCE_REQUIRED")
@@ -405,8 +411,157 @@ module Starforge
       end
       value = process_call(root,input,"rails-operator-"+mode,
         NativeDatasetReceiving.executable(RbConfig.ruby),script,args,cancel)["value"]
-      Files.need(value.is_a?(Hash) && !value.empty?,"BASEROW_CUSTOMER_LIFECYCLE_OPERATOR_INCOMPLETE")
+      Files.need(value.is_a?(Hash) && value["schema"] == "stellar-forge.baserow-rails-operator-application.v1" &&
+        value["state"] == "COMPLETE","BASEROW_CUSTOMER_LIFECYCLE_OPERATOR_INCOMPLETE")
       value
+    end
+
+    # Copy the closed native application using its complete original file set.
+    # Preview/history files can exceed the input dataset, so stream their full
+    # declared bytes rather than applying the dataset reader's input-size cap.
+    def application_file(directory,descriptor,cancel)
+      name = descriptor.fetch("name")
+      folder = BaserowCustomerFiles.parent(directory,name)
+      File.open(File.join(folder,File.basename(name)),File::RDONLY | File::NOFOLLOW | File::NONBLOCK) do |io|
+        before = io.stat
+        Files.need(before.file? && before.uid == Process.uid && (before.mode & 0077).zero? &&
+          before.size == descriptor.fetch("bytes"),
+          "BASEROW_CUSTOMER_APPLICATION_FILE_CHANGED")
+        count,digest = 0,Digest::SHA256.new
+        while (chunk = io.read(1_048_576))
+          raise Error,"BASEROW_CUSTOMER_CANCELLED" if cancel&.cancelled?
+          count += chunk.bytesize
+          Files.need(count <= descriptor["bytes"],"BASEROW_CUSTOMER_APPLICATION_FILE_CHANGED")
+          digest.update(chunk)
+          yield chunk if block_given?
+        end
+        after = io.stat
+        Files.need(count == descriptor["bytes"] && digest.hexdigest == descriptor["sha256"] &&
+          [before.dev,before.ino,before.size,before.mtime,before.ctime] ==
+          [after.dev,after.ino,after.size,after.mtime,after.ctime],
+          "BASEROW_CUSTOMER_APPLICATION_FILE_CHANGED")
+      end
+    end
+
+    def application_file_names(directory)
+      names = []
+      visit = lambda do |base,prefix|
+        Dir.children(base).sort.each do |name|
+          next if name.start_with?(".")
+          logical = prefix.empty? ? name : prefix+"/"+name
+          Files.need(relative_file?(logical),"BASEROW_CUSTOMER_APPLICATION_FILE_NAME")
+          child = File.join(base,name)
+          stat = File.lstat(child)
+          Files.need(!stat.symlink? && stat.uid == Process.uid && (stat.mode & 0077).zero?,
+            "BASEROW_CUSTOMER_APPLICATION_PRIVATE_FILE")
+          if stat.directory?
+            visit.call(Files.directory(child),logical)
+          else
+            Files.need(stat.file?,"BASEROW_CUSTOMER_APPLICATION_PRIVATE_FILE")
+            names << logical
+          end
+        end
+      end
+      visit.call(Files.directory(directory),"")
+      names.sort
+    end
+
+    def copy_application(root,value,cancel)
+      source = Files.directory(File.join(root,"application"))
+      destination = Files.directory(File.join(root,"delivered-application"),create: true)
+      Files.need(value.is_a?(Hash) && value["schema"] == "stellar-forge.baserow-rails-operator-application.v1" &&
+        value["state"] == "COMPLETE" && value["files"].is_a?(Array),
+        "BASEROW_CUSTOMER_APPLICATION_RESULT_REQUIRED")
+      raw = Files.read(File.join(source,"operator-result.json"),16_777_216)
+      Files.need(BaserowCustomerFiles.identity(Files.parse(raw)) == BaserowCustomerFiles.identity(value),
+        "BASEROW_CUSTOMER_APPLICATION_RESULT_CHANGED")
+      descriptors = value.fetch("files")
+      names = Set.new
+      descriptors.each do |file|
+        Files.need(file.is_a?(Hash) && file.keys.sort == %w[bytes name sha256] &&
+          relative_file?(file["name"]) && !file["name"].split("/").any? { |part| part.start_with?(".") } &&
+          file["name"] != "operator-result.json" && names.add?(file["name"]) &&
+          file["bytes"].is_a?(Integer) && file["bytes"] >= 0 && HASH.match?(file["sha256"].to_s),
+          "BASEROW_CUSTOMER_APPLICATION_FILE_DESCRIPTOR")
+      end
+      completed = {"name"=>"operator-result.json","bytes"=>raw.bytesize,"sha256"=>Files.hash(raw)}
+      all = descriptors+[completed]
+      expected_names = all.map { |file| file.fetch("name") }.sort
+      Files.need((application_file_names(destination)-expected_names).empty?,
+        "BASEROW_CUSTOMER_APPLICATION_COPY_CONFLICT")
+      all.each do |file|
+        folder = BaserowCustomerFiles.parent(destination,file["name"],create: true)
+        target = File.join(folder,File.basename(file["name"]))
+        if File.exist?(target) || File.symlink?(target)
+          application_file(destination,file,cancel)
+          next
+        end
+        temporary = Tempfile.new([".baserow-application-",".pending"],folder)
+        begin
+          temporary.binmode
+          application_file(source,file,cancel) do |chunk|
+            offset = 0
+            while offset < chunk.bytesize
+              count = temporary.write(chunk.byteslice(offset,chunk.bytesize-offset))
+              Files.need(count && count > 0,"BASEROW_CUSTOMER_APPLICATION_COPY_INCOMPLETE")
+              offset += count
+            end
+          end
+          temporary.flush
+          temporary.fsync
+          temporary.close
+          begin
+            File.link(temporary.path,target)
+            Files.sync(folder)
+          rescue Errno::EEXIST
+            application_file(destination,file,cancel)
+          end
+        ensure
+          temporary.close!
+        end
+      end
+      Files.need(application_file_names(destination) == expected_names &&
+        Files.read(File.join(source,"operator-result.json"),16_777_216) == raw,
+        "BASEROW_CUSTOMER_APPLICATION_COPY_CHANGED")
+      destination
+    end
+
+    def restore_application(root)
+      marker = File.join(root,"application-parking.json")
+      return unless File.exist?(marker)
+      selected = Files.parse(Files.read(marker,1_048_576))
+      Files.need(selected["schema"] == "stellar-forge.baserow-customer-application-parking.v1" &&
+        selected["directory"] == "application" && selected["receiver"] == "delivered-application" &&
+        selected["inputSha256"] == Files.hash(Files.read(File.join(root,"lifecycle-input.json"),4_194_304)) &&
+        selected["resultSha256"] == Files.hash(Files.read(File.join(root,"operator-result.json"),16_777_216)),
+        "BASEROW_CUSTOMER_APPLICATION_PARKING_CHANGED")
+      original,parked = File.join(root,"application"),File.join(root,"parked-application")
+      return unless File.exist?(parked) || File.symlink?(parked)
+      Files.directory(parked)
+      Files.need(!File.exist?(original) && !File.symlink?(original),
+        "BASEROW_CUSTOMER_APPLICATION_PRODUCER_CHANGED")
+      File.rename(parked,original)
+      Files.sync(root)
+    end
+
+    def detached_application(root,input,client,cancel)
+      restore_application(root)
+      Files.once(File.join(root,"application-parking.json"),Files.json({
+        "schema"=>"stellar-forge.baserow-customer-application-parking.v1",
+        "directory"=>"application","receiver"=>"delivered-application",
+        "inputSha256"=>Files.hash(Files.read(File.join(root,"lifecycle-input.json"),4_194_304)),
+        "resultSha256"=>Files.hash(Files.read(File.join(root,"operator-result.json"),16_777_216))}))
+      original,parked = File.join(root,"application"),File.join(root,"parked-application")
+      begin
+        Files.directory(original)
+        Files.need(!File.exist?(parked) && !File.symlink?(parked),
+          "BASEROW_CUSTOMER_APPLICATION_PRODUCER_CHANGED")
+        File.rename(original,parked)
+        Files.sync(root)
+        operator_call(root,input,client,"reopen",cancel,application: "delivered-application")
+      ensure
+        restore_application(root)
+      end
     end
 
     def operator_phase(root,input,client,customer,cancel)
@@ -419,18 +574,19 @@ module Starforge
         raw = Files.json(value)
         Files.once(path,raw)
       end
-      reopened = operator_call(root,input,client,"reopen",cancel)
+      copy_application(root,value,cancel)
+      reopened = detached_application(root,input,client,cancel)
       Files.need(BaserowCustomerFiles.identity(value) == BaserowCustomerFiles.identity(reopened),
         "BASEROW_CUSTOMER_LIFECYCLE_OPERATOR_REOPEN_CHANGED")
       {"file"=>"operator-result.json","bytes"=>raw.bytesize,"sha256"=>Files.hash(raw)}
     end
 
     def check_run_options(options,input)
-      values = {
-        native_run: input["originalRun"],checkout: input.dig("runtime","checkout"),
-        python: input.dig("runtime","python"),node: input.dig("runtime","node")
-      }
+      values = {native_run: input["originalRun"],checkout: input.dig("runtime","checkout")}
+      legacy = input["runtimePathMode"].nil?
       Files.need(values.all? { |key,value| File.expand_path(options.fetch(key)) == value } &&
+        NativeDatasetReceiving.matches_executable?(options.fetch(:python),input.dig("runtime","python"),legacy: legacy) &&
+        NativeDatasetReceiving.matches_executable?(options.fetch(:node),input.dig("runtime","node"),legacy: legacy) &&
         options[:source_ref] == input["sourceRef"] && options[:customer_key] == input["customerKey"] &&
         options[:dataset_id] == input["datasetId"] && options.fetch(:query,"") == input["query"],
         "BASEROW_CUSTOMER_LIFECYCLE_ORIGINAL_REQUEST_CHANGED")
@@ -446,7 +602,7 @@ module Starforge
         result["requestId"] == input["requestId"] && result["inputSha256"] == Files.hash(input_raw) &&
         result["sourceRef"] == input["sourceRef"] && result["originalResultSha256"] == input["originalResultSha256"] &&
         result["customer"].is_a?(Hash) && result["customer"]["directory"] == "delivered-customer" &&
-        result["applicationDirectory"] == "application" &&
+        result["applicationDirectory"] == "delivered-application" &&
         HASH.match?(result["customer"]["manifestSha256"].to_s),
         "BASEROW_CUSTOMER_LIFECYCLE_RESULT_CHANGED")
       customer = BaserowCustomerDelivery.open(directory: File.join(root,"delivered-customer"),
@@ -468,7 +624,7 @@ module Starforge
       operator_raw = Files.read(File.join(root,"operator-result.json"),16_777_216)
       Files.need(operator_raw.bytesize == descriptor["bytes"] && Files.hash(operator_raw) == descriptor["sha256"],
         "BASEROW_CUSTOMER_LIFECYCLE_OPERATOR_CHANGED")
-      reopened = operator_call(root,input,result.fetch("client"),"reopen",cancel)
+      reopened = operator_call(root,input,result.fetch("client"),"reopen",cancel,application: "delivered-application")
       Files.need(BaserowCustomerFiles.identity(Files.parse(operator_raw)) == BaserowCustomerFiles.identity(reopened) &&
         Files.read(File.join(root,"native-result.json"),16_777_216) == raw,
         "BASEROW_CUSTOMER_LIFECYCLE_OPERATOR_REOPEN_CHANGED")
@@ -476,7 +632,11 @@ module Starforge
     end
 
     def run(options,cancel)
-      root = Files.directory(options.fetch(:out),create: true)
+      out,native,checkout = %i[out native_run checkout].map { |key| File.expand_path(options.fetch(key)) }
+      Files.need(out != native && !native.start_with?(out+File::SEPARATOR) &&
+        out != checkout && !out.start_with?(checkout+File::SEPARATOR) &&
+        !checkout.start_with?(out+File::SEPARATOR),"BASEROW_CUSTOMER_LIFECYCLE_SEPARATE_OUTPUT_REQUIRED")
+      root = Files.directory(out,create: true)
       Files.lock(root) do
         restore_producers(root)
         if File.exist?(File.join(root,"lifecycle-input.json"))
@@ -510,7 +670,7 @@ module Starforge
         "nativeReceiptSha256"=>customer.dataset.descriptor("native-receiving.json").fetch("sha256"),
         "rowCount"=>customer.dataset.row_count,"fields"=>customer.dataset.fields,
         "membership"=>customer.dataset.membership,"files"=>products.fetch("files"),
-        "client"=>client,"applicationDirectory"=>"application","operator"=>operator,
+        "client"=>client,"applicationDirectory"=>"delivered-application","operator"=>operator,
         "copiedClientReopen"=>true,"producerDirectoriesUnavailableDuringCustomerReopen"=>true,
         "operatorReopen"=>true
       }

@@ -71,16 +71,13 @@ module Starforge
       if File.exist?(File.join(root,"request.json"))
         _root,request,_raw = BaserowCustomerReceiving.request(root)
         runtime = request["runtime"]
-        selected_executable = lambda { |path|
-          absolute = File.expand_path(path)
-          File.exist?(absolute) ? File.realpath(absolute) : absolute
-        }
+        legacy_runtime = request["runtimePathMode"].nil?
         Files.need(request["customerDirectory"] == File.expand_path(options[:package]) &&
           request["customerManifestSha256"] == options[:manifest] &&
           request["datasetId"] == options[:dataset_id] &&
           runtime["checkout"] == File.expand_path(options[:checkout]) &&
-          runtime["python"] == selected_executable.call(options[:python]) &&
-          runtime["node"] == selected_executable.call(options[:node]),"BASEROW_CUSTOMER_REQUEST_CHANGED")
+          NativeDatasetReceiving.matches_executable?(options[:python],runtime["python"],legacy: legacy_runtime) &&
+          NativeDatasetReceiving.matches_executable?(options[:node],runtime["node"],legacy: legacy_runtime),"BASEROW_CUSTOMER_REQUEST_CHANGED")
         BaserowCustomerReceiving.resume(directory: root,cancel: cancel,timeout: options.fetch(:timeout,1800))
       else
         package = BaserowCustomerPackage.open(directory: options[:package],
