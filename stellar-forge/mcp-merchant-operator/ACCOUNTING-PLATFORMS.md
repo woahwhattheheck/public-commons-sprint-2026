@@ -212,6 +212,30 @@ local accountant results. It never invokes native post-resume merely because an
 OAuth token becomes available. An unfinished native operation still requires the
 existing explicit post-resume preview and execute path with its original identity.
 
+### Recover the accounting operation and its configured OAuth sources
+
+The [same encrypted maintenance workflow](./ACCOUNTING-MAINTENANCE-CLIENT.md#recover-the-configured-quickbooks-oauth-host-sources)
+now includes this mode's connections file, complete selection directory and all
+native stores referenced by the configured registry. Keep them beneath the
+workspace's private recovery state root. The source review binds the original
+host profile and every retained file; the current company pin and directory
+references must agree before restore writes original destinations.
+
+Pause the accounting owner and stop the original external OAuth and
+company-selection writers before approving capture or restore. The existing
+maintenance client retains the same review, backup and request/job identities.
+A cold `recovery.startPaused:true` host can restore those authenticated sources
+when the live OAuth files and workspace are missing. It retains the opaque native
+grant bytes inside the original encrypted bundle; external environment secret
+values remain the operator's original host configuration.
+
+After restoring, resume and inspect the original connection status before
+explicit provider work. Recovery does not renew a grant, submit a journal or
+repeat an uncertain native operation. Changed host paths or a selection pin
+require reloading the whole merchant host configuration. A legacy backup reports
+`hostSourcesRestored:false` and restores only the operating sources it originally
+captured.
+
 ### Host ownership and shutdown
 
 The original maintenance controller drains admitted MCP calls and retained file

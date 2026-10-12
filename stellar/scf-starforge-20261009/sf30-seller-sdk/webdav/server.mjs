@@ -1,6 +1,6 @@
 // MIT. Same-host operator surface over the retained original source/publisher engines.
 import http from 'node:http';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
@@ -33,10 +33,11 @@ function tokenMatches(provided, token) {
   const left = Buffer.from(provided), right = Buffer.from(token);
   return left.length === right.length && timingSafeEqual(left, right);
 }
-export async function start({ directory, port = 0, environment = process.env, python = 'python3' } = {}) {
+export async function start({ directory, port = 0, environment = process.env, python = 'python3',
+  expectedWorkspaceId, expectedWorkspaceIdentity } = {}) {
   if (!Number.isSafeInteger(port) || port < 0 || port > 65535) fail('WEBDAV_PORT', 'Choose a valid local port.');
-  const workspace = await openWebDavWorkspace({ directory, environment, python });
-  const token = randomBytes(32).toString('hex');
+  const workspace = await openWebDavWorkspace({ directory, environment, python, expectedWorkspaceId, expectedWorkspaceIdentity });
+  const token = randomBytes(32).toString('hex'), instanceId = randomUUID();
   let origin, closing = null;
   const server = http.createServer(async (request, response) => {
     let authorized = false;
@@ -46,7 +47,7 @@ export async function start({ directory, port = 0, environment = process.env, py
       const url = new URL(request.url, origin), path = url.pathname;
       if (request.method === 'GET' && path === '/api/health') {
         const state = await workspace.inspect();
-        return send(response, 200, { status: 'ok', workspaceId: state.id, revision: state.revision, pid: process.pid });
+        return send(response, 200, { status: 'ok', workspaceId: state.id, createdAt: state.createdAt, revision: state.revision, pid: process.pid, instanceId });
       }
       if (path.startsWith('/api/')) {
         if (!tokenMatches(request.headers[HEADER], token)) fail('WEBDAV_TOKEN', 'Reload this original local operator page.', 403);
@@ -121,7 +122,7 @@ export async function start({ directory, port = 0, environment = process.env, py
   server.on('clientError', (_, socket) => { socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'); });
   try {
     await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); });
-    origin = 'http://127.0.0.1:' + server.address().port;
+    origin = new URL('http://127.0.0.1:' + server.address().port).origin;
   } catch (error) { await workspace.close(); throw error; }
   const close = () => closing ??= (async () => {
     const closed = new Promise((done, reject) => server.close(error => error ? reject(error) : done()));
@@ -129,5 +130,6 @@ export async function start({ directory, port = 0, environment = process.env, py
     try { await workspace.close(); } finally { await closed; }
   })();
   const state = await workspace.inspect();
-  return { url: origin, directory, workspaceId: state.id, revision: state.revision, token, workspace, close, pid: process.pid };
+  return { url: origin, directory, workspaceId: state.id, createdAt: state.createdAt, revision: state.revision,
+    token, workspace, close, pid: process.pid, instanceId };
 }
