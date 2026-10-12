@@ -80,7 +80,7 @@ async function verifyRecord(payload,record,{sourceRoot,environment,passphraseEnv
         const nativeRecord=await readJSON(join(payload,retained.member),256*1024,true);
         need(nativeRecord.subject===record.application.subject,'APPLICATION_PROJECT_REMOTE_SUBJECT_CHANGED');
         const quote=verifyRemoteMcpQuoteBinding({applicationId:record.config.applicationId,
-          sourceSha256:remote.sourceSha256,entry,record:nativeRecord,quote:review.review.native.quote});
+          sourceSha256:remote.sourceSha256,entry,record:nativeRecord,quote:review.review.native.quote,mcpJson:remote.mcpJson});
         need(hashPattern.test(quote.invocation.inputSchemaSha256)&&
           review.binding?.intentId===request.intentId&&review.binding.quoteId===nativeRecord.quoteId&&
           review.binding.configSha256===entry.view.configSha256&&

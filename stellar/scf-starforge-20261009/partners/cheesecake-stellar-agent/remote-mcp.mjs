@@ -159,7 +159,7 @@ function outcome(entry,record,quote,extra = {}) {
 }
 
 /** Reuse the original source/UUID/terms/invocation binding for live and retained quotes. */
-export function verifyRemoteMcpQuoteBinding({applicationId,sourceSha256,entry,record,quote}) {
+export function verifyRemoteMcpQuoteBinding({applicationId,sourceSha256,entry,record,quote,mcpJson}) {
     const d = entry.definition, invocation = quote.invocation;
     need(record.schema === REQUEST && record.applicationId === applicationId &&
       record.sourceSha256 === sourceSha256 && record.intentId === d.intentId &&
@@ -206,7 +206,7 @@ export async function attachRemoteMcpApplication({application,configurationFile,
       request:entry ? structuredClone(entry.view) : null}) === true,'APPLICATION_AUTHORIZATION_DENIED');
   }
   const checkQuote=(entry,record,quote)=>verifyRemoteMcpQuoteBinding({
-    applicationId,sourceSha256,entry,record,quote});
+    applicationId,sourceSha256,entry,record,quote,mcpJson});
   async function attached(entry,context,{optional = false} = {}) {
     const record = await optionalJSON(recordPath(entry));
     if (!record) { need(optional,'APPLICATION_REQUEST_NOT_PREPARED'); return null; }
