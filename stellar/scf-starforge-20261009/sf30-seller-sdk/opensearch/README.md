@@ -4,7 +4,7 @@ Turn an existing OpenSearch index into a paid search product using the maintaine
 
 One customer call runs one point-in-time search and gathers its pages before the original seller releases the result. The same source powers the [search workspace](workspace/README.md), where the operator keeps query drafts, captures retained editions, compares documents, exports results and prepares a merchant folder. Source credentials stay in the host environment.
 
-Agent hosts can use [merchant MCP](../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md) to author and inspect queries, maintain relevance judgments, recover original operations and deliver retained result/report/customer files. Its private connection file selects the existing source, plan and workspace; the installed toolkit includes the same operator.
+Agent hosts can use [merchant MCP](../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md) to author queries, maintain relevance judgments, operate managed releases and deliver original customer files. Its 43 OpenSearch tools use the existing source, plan, workspace and per-alias deployment store. After preparing a query, stage and compare its retained release, select and run it, generate the customer client from the actual seller, then use the same lifecycle for upgrades and rollback. Original request recovery and SHA-pinned result, report, client and archive reads continue from the saved records.
 
 ## Requirements
 

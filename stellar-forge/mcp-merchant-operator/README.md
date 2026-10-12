@@ -40,16 +40,16 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
-## Operate native OpenSearch queries and relevance
+## Operate native OpenSearch merchants and relevance
 
-Use the same operator for the original OpenSearch workspace: save query revisions,
-inspect the native source, capture result editions, maintain judged query sets,
-evaluate and compare native rankings, and prepare the selected query as a merchant.
-Original request IDs, revisions, captures and customer files remain available after
-the MCP process restarts. The browser and MCP operate the same retained workspace.
+Use the same operator to save query revisions, inspect the native source,
+capture result editions, maintain judgments, compare native rankings and prepare
+the selected search as a merchant. Its 43 OpenSearch tools continue through
+retained deployment, customer generation and complete file delivery. Browser and
+MCP share the original request IDs, revisions, results and prepared packages.
 
-The host declares each workspace alias in a private connection file with its
-original directory, source file and optional merchant plan. Initialize its operator:
+The host declares each alias with its original directory, source file, optional
+merchant plan and managed runtime settings. Initialize and connect the operator:
 
 ```sh
 node stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp init-opensearch-workspaces \
@@ -58,19 +58,29 @@ node stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp-stdio \
   --config /private/search/mcp/merchant-mcp.json
 ```
 
-An existing managed deployment can pass `--release-store ORIGINAL_SF82_STORE`
-to initialization. An existing merchant configuration can attach the same
-private connection file through `opensearchWorkspaceConnection`.
-Configured OpenSearch operators accept up to 2 MiB per HTTP request or stdio frame
-so complete original query definitions and judgment sets fit; each original
-workspace validator still enforces its own document and case limits.
-Saved results, reports and customer packages use the existing SHA-pinned,
-resumable file reads.
+An existing merchant configuration attaches that private connection file through
+`opensearchWorkspaceConnection`. Configured OpenSearch operators accept up to
+2 MiB per HTTP request or stdio frame; original query and judgment validators
+retain their own document limits.
 
-See [OPENSEARCH_WORKSPACE.md](OPENSEARCH_WORKSPACE.md) for the connection schema,
-26 operations, original capture and relevance workflow, customer delivery and
-recovery. The existing original release controls own deployment selection,
-startup, drain, upgrade and rollback.
+After preparation, use `merchant_opensearch_deployment_stage` for the saved
+package, compare retained releases, and activate the reviewed release at its
+current generation. Start the selected seller, retain its instance ID, and
+generate the original customer export from its live health, offers and OpenAPI.
+The same tools drain upgrades, restart selected releases and roll back to a
+retained version. An interrupted call recovers from the same original operation.
+
+Each alias's deployment tools use its own `WORKSPACE/deployment` store and
+`WORKSPACE/deployment.clients` customer directory. The optional
+`--release-store ORIGINAL_SF82_STORE` selects the host's general merchant
+release tools separately. A host with several aliases keeps their deployment
+stores distinct.
+
+See [OPENSEARCH_WORKSPACE.md](OPENSEARCH_WORKSPACE.md) for the complete connection
+schema, 43 operations, query and relevance workflow, release lifecycle and
+recovery. Original client files, complete customer archives, result JSON, CSV and
+reports use the shared SHA-pinned resumable readers. Retained customer files can
+be delivered after the original seller stops.
 
 ## Operate a saved Redis merchant
 

@@ -119,18 +119,19 @@ export const ROLES = Object.freeze({
   "opensearch": {
     "meta": "OPENSEARCH / SEARCH AND RELEVANCE",
     "title": "Turn selected index searches into a merchant.",
-    "description": "Author native searches, compare judged query variants and deliver the merchant, customer report and saved results through the workspace or MCP.",
+    "description": "Author native searches, compare judged variants, run versioned merchants and deliver complete customer files through the workspace or MCP.",
     "checklist": [
       "Use Node.js 22.16+ with an existing OpenSearch 3.3+ cluster and the current toolkit source.",
       "Prepare the private source and merchant plan from the OpenSearch guide; load the selected endpoint and credentials into the launching environment.",
-      "Save and capture query drafts. In Search relevance, add cases, judge original document identities and evaluate the saved query variants.",
-      "Review the native outcomes, export the customer report and open the chosen variant as a merchant draft for the original preparation flow.",
-      "For agent operations, declare the same retained workspace in a private MCP connection file and initialize it with merchant-mcp init-opensearch-workspaces."
+      "Save and capture query drafts. Add relevance cases, judge original document identities and evaluate the saved query variants.",
+      "Review native outcomes and customer reports, select the evaluated variant, and prepare its original merchant package.",
+      "Stage the saved package, compare retained releases, select the reviewed generation and start its seller. Generate the customer client from the actual running contract.",
+      "For agent operations, declare the same workspace and host runtime settings in a private connection file. The 43 OpenSearch tools cover the same authoring, deployment, upgrade, rollback and customer delivery workflow."
     ],
     "docs": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/README.md",
     "label": "TERMINAL / OPENSEARCH WORKSPACE",
-    "command": "# From the current toolkit source checkout:\nnode stellar/scf-starforge-20261009/distribution/cli.mjs opensearch-workspace \\\n  --source /private/search/source.json \\\n  --plan /private/search/merchant-plan.json \\\n  --workspace /private/search/workspace --port 0\n\n# Open the printed local URL. Save a draft, inspect its native source,\n# capture a result edition, and prepare the original merchant package.\n# An installed toolkit uses the same arguments with:\n# npx --no-install starforge opensearch-workspace\n\n# Agent operations on the same retained workspace (see MCP guide):\nnode stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp init-opensearch-workspaces \\\n  --dir /private/search/mcp --connection /private/search/mcp-workspaces.json\nnode stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp-stdio \\\n  --config /private/search/mcp/merchant-mcp.json",
-    "result": "Search editions and relevance evaluations retain their original query revisions, document identities, judgments and cluster scope. Browser and merchant MCP reopen the same retained workspace; chosen variants prepare through the original seller compiler and generated customer client."
+    "command": "# From the current toolkit source checkout:\nnode stellar/scf-starforge-20261009/distribution/cli.mjs opensearch-workspace \\\n  --source /private/search/source.json \\\n  --plan /private/search/merchant-plan.json \\\n  --workspace /private/search/workspace --port 0\n\n# Open the printed local URL. Save a draft, inspect its native source,\n# capture a result edition, and prepare the original merchant package.\n# Open Deployment to stage, compare, select and start the saved release,\n# then generate its customer client and complete archive.\n# An installed toolkit uses the same arguments with:\n# npx --no-install starforge opensearch-workspace\n\n# Agent operations on the same retained workspace (see MCP guide):\nnode stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp init-opensearch-workspaces \\\n  --dir /private/search/mcp --connection /private/search/mcp-workspaces.json\nnode stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp-stdio \\\n  --config /private/search/mcp/merchant-mcp.json",
+    "result": "Query editions and relevance evaluations retain their original revisions, document identities, judgments and cluster scope. Browser and merchant MCP use the same saved workspace, deployment generations and owned seller instances. Customer exports retain the actual release, public contract and original files through upgrade, rollback and reopening."
   },
   "s3": {
     "meta": "S3 / PRIVATE OBJECT DELIVERY",
