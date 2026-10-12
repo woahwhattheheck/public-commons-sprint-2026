@@ -105,7 +105,7 @@ class PropertyResearch:
                 fail("PROPERTY_DOCUMENT_CHANGED", document_id=document_id)
         return item
 
-    def import_document(self, path, metadata):
+    def import_document(self, path, metadata, expected_input_sha256=None):
         metadata = m.document(metadata)
         suffix = Path(path).suffix.lower()
         if suffix not in (".pdf", ".csv", ".json", ".txt", ".html", ".xlsx", ".geojson", ".zip"):
@@ -115,6 +115,9 @@ class PropertyResearch:
         try:
             name = "original" + suffix
             digest = copy_original(path, stage / name)
+            if expected_input_sha256 is not None and digest["sha256"] != hash_id(expected_input_sha256):
+                fail("PROPERTY_DOCUMENT_INPUT_CHANGED", expected_sha256=expected_input_sha256,
+                     actual_sha256=digest["sha256"])
             body = {"schema": "stellar-forge.property-document.v1", "metadata": metadata,
                     "label": metadata["title"], "key": metadata["key"], "files": [{"path": name, **digest}]}
             rid = identity(body)
@@ -152,13 +155,17 @@ class PropertyResearch:
         with self.w.mutation():
             return self._put("property_studies", body, "property.study.freeze")
 
-    def intake(self, *, document_ids, operator, label, packet=None, path=None, previous_id=None, note=""):
+    def intake(self, *, document_ids, operator, label, packet=None, path=None, previous_id=None, note="",
+               expected_input_sha256=None):
         text(operator, "operator", maximum=200)
         text(label, "label", maximum=1000)
         m.optional_text(note, "note", 16000)
         if (packet is None) == (path is None):
             fail("PROPERTY_INTAKE_ONE_INPUT_REQUIRED")
         raw = read(Path(path).expanduser().resolve(), 64 * 1024 * 1024) if path is not None else encoded(packet)
+        if expected_input_sha256 is not None and hashlib.sha256(raw).hexdigest() != hash_id(expected_input_sha256):
+            fail("PROPERTY_INTAKE_INPUT_CHANGED", expected_sha256=expected_input_sha256,
+                 actual_sha256=hashlib.sha256(raw).hexdigest())
         original = parse(raw)
         documents = self._bindings(document_ids)
         value = m.intake(original, documents)

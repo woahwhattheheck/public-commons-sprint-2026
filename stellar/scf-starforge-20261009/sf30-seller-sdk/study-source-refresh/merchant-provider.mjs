@@ -16,9 +16,9 @@ const requestIdentity=(operation,args)=>({operation,argumentsSha256:hash(Buffer.
     (typeof value==='string'||typeof value==='number')))});
 
 export class MerchantStudyWorkspaces {
-  #config; #clients=new Map(); #files; #pending=new Set(); #closing=false; #close=null;
-  constructor(config) {
-    this.#config=config;
+  #config; #options; #clients=new Map(); #files; #pending=new Set(); #closing=false; #close=null;
+  constructor(config, options = {}) {
+    this.#config=config; this.#options=options;
     this.#files=new StudyAgentFiles(config.exportsDirectory,config.studyWorkspaces?.workspaces??{});
   }
   get summary() {
@@ -31,7 +31,7 @@ export class MerchantStudyWorkspaces {
   }
   #client(alias) {
     const binding=this.#binding(alias);
-    if(!this.#clients.has(alias))this.#clients.set(alias,new StudyWorkspaceClient(binding));
+    if(!this.#clients.has(alias))this.#clients.set(alias,new StudyWorkspaceClient(binding,{environment:this.#options.environment}));
     return this.#clients.get(alias);
   }
   async #hostInput(alias,key,expected,kind) {
@@ -101,7 +101,8 @@ export class MerchantStudyWorkspaces {
     let native=rest;
     if(verb==='source_import') {
       const selected=await this.#hostInput(alias,args.hostInput,args.expectedSha256,'source');
-      native={provider:selected.input.provider,source:selected.path,node:binding.nodeExecutable};
+      native={provider:selected.input.provider,source:selected.path,node:binding.nodeExecutable,
+        expected_input_sha256:selected.sha256};
     } else if(verb==='source_receive_files'||verb==='source_receive_rows') {
       const acquisition=binding.acquisitions[identifier(args.acquisition)];
       need(acquisition,'STUDY_ACQUISITION_NOT_CONFIGURED','Choose an existing original SF88 acquisition alias.');
@@ -112,18 +113,18 @@ export class MerchantStudyWorkspaces {
     } else if(verb==='source_receive_scan') {
       const selected=await this.#hostInput(alias,args.hostInput,args.expectedSha256,'scan');
       const {hostInput,expectedSha256,...target}=rest;
-      native={...target,scan_file:selected.path,node:binding.nodeExecutable};
+      native={...target,scan_file:selected.path,node:binding.nodeExecutable,expected_input_sha256:selected.sha256};
     } else if(['portfolio_freeze','mapping_freeze','property_study_freeze'].includes(verb)) {
       native={value:await this.#value(alias,args),...(verb==='property_study_freeze'?{document_ids:args.document_ids}:{})};
     } else if(verb==='property_document_import') {
       const selected=await this.#files.input(alias,args.input,args.expectedSha256);
-      native={path:selected.path,metadata:args.metadata};
+      native={path:selected.path,metadata:args.metadata,expected_input_sha256:selected.sha256};
     } else if(verb==='property_intake'||verb==='property_edition_revise') {
       const {input,expectedSha256,...body}=rest;
       if(verb==='property_intake'&&input!==undefined) {
         need(body.packet===undefined,'STUDY_ONE_JSON_INPUT_REQUIRED','Choose one complete original property intake.');
         const selected=await this.#files.input(alias,input,expectedSha256,STUDY_MAX_JSON_BYTES);
-        native={...body,path:selected.path};
+        native={...body,path:selected.path,expected_input_sha256:selected.sha256};
       } else native={...body,packet:await this.#value(alias,args,'packet')};
     } else if(verb==='export_verify') {
       const status=await client.call('status');
