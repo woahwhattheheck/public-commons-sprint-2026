@@ -43,6 +43,7 @@ COUNT_FIELDS = {"sources", "activities", "transactions", "budgets", "plannedDisb
                 "reviewRecords", "excludedFinancialRecords"}
 RESERVED = {"manifest.json", "NOTICE.txt", "CONTENTS.md"}
 PUBLISHER_NOTICES = {"publisher/AIDDATA_NIGERIA.md", "publisher/aiddata-nigeria.json"}
+PUBLISHER_METADATA = re.compile(r"publisher/metadata/[A-Za-z0-9][A-Za-z0-9._-]{0,119}\.(?:json|md|txt)")
 STAMP = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns", "st_mode", "st_nlink")
 
 
@@ -345,6 +346,7 @@ def configuration(value):
          "Retain the complete public publisher notice and source metadata together")
     for name in names:
         need(name in required_names or name in runtime or name in PUBLISHER_NOTICES or
+             PUBLISHER_METADATA.fullmatch(name) or
              (name.startswith("guides/") and name.count("/") == 1 and name.endswith(".md")),
              "The customer selection contains a private or unsupported file category: " + name)
     need(sum(item["bytes"] for item in files) <= MAX_TOTAL, "The selected files exceed the 16 GiB customer capacity")
@@ -488,6 +490,11 @@ def contents(value, runtime_name):
              "No conversion or cross-group addition is performed by this handover.", "",
              "This delivery contains public source and reviewed dataset artifacts. Local connection settings, "
              "session tokens, command records and browser screenshots are outside this customer archive.", ""]
+    metadata = sorted(item["name"] for item in value["files"] if PUBLISHER_METADATA.fullmatch(item["name"]))
+    if metadata:
+        text += ["## Publisher metadata", ""]
+        text += ["- [" + name.rsplit("/", 1)[1] + "](" + name + ")" for name in metadata]
+        text.append("")
     return "\n".join(text).encode("utf-8")
 
 
