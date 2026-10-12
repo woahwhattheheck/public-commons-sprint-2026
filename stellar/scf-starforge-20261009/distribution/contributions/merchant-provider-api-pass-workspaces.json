@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "merchant-provider-api-pass-workspaces",
-  "description": "Original api pass workspaces MCP provider",
-  "merchantProviders": {
-    "api-pass-workspaces": "stellar-forge/mcp-merchant-operator/providers/api-pass-workspaces.mjs"
-  }
-}

@@ -1,4 +1,0 @@
-source_key,match_id,name,vid,status,description,site_key,group_id,ipam_role_id
-mgmt,,Management,100,active,Management segment,site-b,,
-apps,,Applications,110,active,Production applications,site-b,,
-guest,,Guest,120,active,Isolated guest segment,site-b,,

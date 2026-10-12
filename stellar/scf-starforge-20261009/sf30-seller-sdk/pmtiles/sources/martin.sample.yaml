@@ -1,8 +1,0 @@
-# Martin martin-v1.16.1; replace with the selected immutable archive path and owned port.
-listen_addresses: "127.0.0.1:3010"
-workers: 1
-convert_to_mlt: disabled
-convert_to_mvt: disabled
-pmtiles:
-  sources:
-    toner: "./stamen-toner-z0-z3.pmtiles"

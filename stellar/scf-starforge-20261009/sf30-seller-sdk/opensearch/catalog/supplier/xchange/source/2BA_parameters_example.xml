@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<UCProcessParameters xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.2ba.nl">
-<GeneratedBy>Softwarepakket</GeneratedBy>
-<PackageDescription>Beschrijving van de data aanlevering</PackageDescription>
-<SendReportToEmail>Ontvanger van het verwerkingsrapport</SendReportToEmail>
-<ReportLanguage>NL</ReportLanguage>
-</UCProcessParameters>
