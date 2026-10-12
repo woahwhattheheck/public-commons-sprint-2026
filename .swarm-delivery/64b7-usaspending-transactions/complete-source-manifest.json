@@ -1,0 +1,54 @@
+{
+  "schema": "tjlabs.usaspending.complete-source-transport.v1",
+  "operation": "SCF-USASPENDING-AWARD-TRANSACTIONS-64B7-20261012",
+  "source_repository": "woahwhattheheck/public-commons-sprint-2026",
+  "files": [
+    {
+      "path": "root-source.json",
+      "bytes": 613414,
+      "sha256": "9f5627c8149f9f380be85f46af564e537ddf3c871c27a285597129a602089814",
+      "git_blob": "9cfce7aae075c3c5f4cbc470bd85fd447e6aeacc"
+    },
+    {
+      "path": "root-native.py",
+      "bytes": 3748,
+      "sha256": "800c37da774d8cadfe2a47117320029b32cc27ce60eba42e04bc452999479c05",
+      "git_blob": "586be5bb44b38d8b1637792ba2c2bc8ec552da6e"
+    },
+    {
+      "path": "mcp-source.json",
+      "bytes": 1987252,
+      "sha256": "b102a965a202d00549ccc709fe08595755dcaaec96abee47e53b4aa2ac5f92dd",
+      "git_blob": "02a73125b410bcf0265e75f6b2cf7fc77ed48bf3"
+    },
+    {
+      "path": "mcp-native.py",
+      "bytes": 9694,
+      "sha256": "9367859d4838dd773bae7567e017573ae120b5ef1fbae413ca40dc722fb7b7bb",
+      "git_blob": "c91a13d55a40e948633c8b821fc1182fb1744204"
+    },
+    {
+      "path": "applications-source.json",
+      "bytes": 828406,
+      "sha256": "ce652a29fca4d02d9aee0f365c74757cccdd64187f6599793c2fc8ae5e295042",
+      "git_blob": "3f03c6f7db84188b207c7da262325685474f3edb"
+    },
+    {
+      "path": "applications-native.py",
+      "bytes": 6915,
+      "sha256": "847b4579157747725f26fb727477b82cf54671e8c6100e7cbc500f0168634ccd",
+      "git_blob": "ade593175eac367b331a771b904a6f12cf15addf"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1686,
+      "sha256": "2f92adb2b7cd7e61b59d8d63bb5be917079498abea4b61a47ea93160ff0dcfed"
+    }
+  ],
+  "archive": {
+    "path": "USAspending_Complete_Original_Source_64B7_20261012.zip",
+    "bytes": 3453667,
+    "sha256": "d5a7d25a5c99de7b8bfcbdcede3871ef626501745b78100e2dfd6f7782e92dfa",
+    "git_blob": "19121f457fe3b4a8ee8aa8401adaf98bc8e22da2"
+  }
+}
