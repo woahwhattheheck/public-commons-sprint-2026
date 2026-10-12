@@ -12,6 +12,8 @@ from pathlib import Path
 import runpy
 import sys
 
+from invocation import load_selection, run_native
+
 ENVIRONMENT_KEYS = (
     "JAX_PLATFORMS", "JAX_PLATFORM_NAME", "JAX_ENABLE_X64", "JAX_DISABLE_JIT",
     "XLA_FLAGS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
@@ -52,6 +54,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cpu-sync", action="store_true",
                         help="Apply the accepted synchronous CPU dispatch setting before initialization")
+    parser.add_argument("--source-manifest", type=Path, help="Exact retained source/option manifest")
+    parser.add_argument("--source-id", help="Explicit source arm within that manifest")
     parser.add_argument("native_arguments", nargs=argparse.REMAINDER,
                         help="Pass -- followed by the original native runner arguments")
     args = parser.parse_args()
@@ -72,6 +76,11 @@ def main():
     capture = Path(__file__).resolve()
     before = {"capture_sha256": sha(capture), "runner_sha256": sha(runner),
               "candidate_sha256": sha(native.candidate)}
+    if bool(args.source_manifest) != bool(args.source_id):
+        parser.error("--source-manifest and --source-id must be supplied together")
+    bound = load_selection(args.source_manifest, args.source_id, native.candidate) if args.source_manifest else None
+    if bound:
+        before["invocation_adapter_sha256"] = bound["adapter_sha256"]
 
     # No Objective is constructed here. This config precedes device initialization,
     # and the original runner still owns every warmup, evaluation and budget clock.
@@ -88,6 +97,8 @@ def main():
         "environment": {key: os.environ.get(key) for key in ENVIRONMENT_KEYS},
         "compilation_cache_configured": bool(jax.config.jax_compilation_cache_dir),
         "native_source_sha256": native_sources(),
+        "invocation_mode": "source_bound_options" if bound else "native_default_options",
+        "invocation_adapter_sha256": bound["adapter_sha256"] if bound else None,
     }
     record = {
         "schema": "tjlabs.l2d.runtime-context/v1", "state": "captured_before_native_runner",
@@ -96,12 +107,16 @@ def main():
         "compilation_cache_directory": jax.config.jax_compilation_cache_dir,
         "native_arguments": argv,
     }
+    if bound:
+        record["invocation"] = {}
     original = (json.dumps(record, indent=2, sort_keys=True) + "\n").encode()
     with context.open("xb") as stream:
         stream.write(original)
     previous_argv = sys.argv
     sys.argv = [str(runner), *argv]
     try:
+        if bound:
+            raise SystemExit(run_native(runner, argv, bound, record["invocation"]))
         runpy.run_path(str(runner), run_name="__main__")
     finally:
         sys.argv = previous_argv
