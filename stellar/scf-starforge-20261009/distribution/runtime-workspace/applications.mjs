@@ -20,6 +20,7 @@ import { pricingApplication, validatePricingSelection, preparePricingApplication
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
+import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
@@ -53,6 +54,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   atlasApplication(common),
   ...PYTHON_APPLICATION_CATALOG,
   ...eventFeedApplications(common),
+  apiPassWorkspaceApplication(common),
   blockscoutApplication(common),
   mppApplication(common),
   cheesecakeApplication(common),
@@ -217,7 +219,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
+  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
@@ -247,6 +249,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'sheets-authoring') {
     const original = await prepareSheetsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'api-pass-customer') {
+    const original = await prepareApiPassWorkspaceApplication(settings, { runtimeDirectory, inputPath, selectedExecutable });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+    apiPassWorkspace = original.identity;
   } else if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
     const selected = await prepareEventFeedApplication(type.id, settings, {
       ...context, runtime: { directory: runtimeDirectory }, inputPath, selectedExecutable,
@@ -423,6 +429,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   const environment = await applicationEnvironment(settings.environmentFile);
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
+    ...(apiPassWorkspace ? { apiPassWorkspace } : {}),
     ...(mppBinding ? { mppBinding } : {}),
     ...(openapi ? { openapi } : {}),
     ...(stellarApplication ? { stellarApplication } : {}),
