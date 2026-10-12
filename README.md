@@ -1,56 +1,52 @@
-# Public Commons Sprint 2026
+# Research and Buyer — complete source edition
 
-Durable, openly reusable public-good assets generated during a focused 48-hour sprint using Grok (xAI) surfaces.
+This edition assembles the complete Research application, Buyer and SF101 dependency companion at their original repository paths. It contains **1,802 original source files and 27,883,462 source bytes**, plus this receiving guide and the complete source manifest.
 
-**Goal**: Convert remaining SuperGrok Heavy allowance into GitHub-first, human-auditable, maintainable resources for underserved communities (low-connectivity educators, small nonprofits, Global South researchers, disability communities, local resilience groups, civic technologists).
+The application carries a research question through original evidence intake, independent extraction, review, protocol inspection, workbook exchange, scientific Python analysis, publication, customer delivery and editable receiving. Its Node, Python, browser and Merchant interfaces use the same original dossier and operation records. The current original Zotero shutdown implementation retains its writer and child work through interruption and closes the same resources on recovery.
 
-## License
-MIT for code and most technical assets. CC-BY-4.0 or CC0 for educational content, prompts, and documentation where noted in individual folders. See LICENSE and per-folder notes.
+## Receive the complete source
 
-## Structure (initial)
-- `/prompts/` — Reusable public-goods prompt library (Top priority asset)
-- `/oer/` — Offline-first AI literacy and education modules
-- `/accessibility/` — WCAG checklists, remediation templates, audit scripts
-- `/nonprofit-ops/` — Operations templates, checklists, spreadsheets
-- `/datasets/` — AI-ready datasheets and cleaning scripts for public data
-- `/agents/` — Reusable AI-agent skills and infrastructure patterns
-- `/media-literacy/` — Fact-checking and media literacy modules
-- `/resilience/` — Local climate and environmental resilience playbooks/templates
-- `/docs/` — Process documentation, verification notes, contribution guide
+```sh
+git clone --depth 1 --single-branch \
+  --branch delivery/research-buyer-dbc61-20261012 \
+  https://github.com/woahwhattheheck/public-commons-sprint-2026.git \
+  research-buyer-source
+cd research-buyer-source
+git rev-parse HEAD
+```
 
-## Principles
-- Public / open sources only
-- No personal data collection
-- Explicit "Needs expert review" flags for synthesis, translations, domain-specific claims
-- Human-auditable and maintainable after the sprint
-- Bias toward assets usable by underserved communities
+Record the returned commit with the receiving operation. [RESEARCH-BUYER-SOURCE.json](RESEARCH-BUYER-SOURCE.json) identifies every original path, Git mode, byte count, SHA256 and Git blob. The original PDF remains a binary file in this tree. The manifest also carries the exact package requirements, original source editions, reviewed shared updates and generated/browser mappings.
 
-## Verification
-All outputs include source notes, test cases where applicable, and known limitations. See CONTRIBUTING.md and individual READMEs.
+For a source archive, use GitHub’s **Code → Download ZIP** for this branch, or export the recorded commit from an existing checkout. The files already have their final relative paths; there are no JSON source fragments to reconstruct.
 
-## How to contribute
-See CONTRIBUTING.md. Prefer issues and PRs. This sprint ends ~26 Aug 2026; ongoing maintenance is community-driven.
+## Operate the Research workspace
 
-## Local delivery
+Use the existing private workspace with the maintained Research listener:
 
-GitHub Actions jobs are disabled in source. Use the existing project commands in a
-local or cloud Linux runtime. The [local delivery guide](.github/HOSTED_COMPUTE.md)
-includes the original source export command, retained workflow recipes and policy.
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs \
+  --dir /absolute/path/to/research-workspace
+```
 
-Generated as part of the Public Commons Sprint, August 2026.
+The original [Research guide](stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/README.md) describes the workspace, source intake, browser and configured integrations. Select the actual Node and Python runtimes and install the component’s declared packages through the existing installation. The source manifest retains the pinned package manifests and host-selected module requirements.
 
-## PermitPulse paid pilot
+| Work | Complete operating source |
+| --- | --- |
+| Authenticated client, revisions and saved result receiving | [Research client](stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/RESEARCH_CLIENT.md) |
+| Registered protocol and methods | [Protocol operator](stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-PROTOCOL-OPERATOR.md) |
+| Customer workbook release, return and review | [Workbook exchange](stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/README.md) |
+| Publication, Buyer delivery and editable archives | [Customer commerce](stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-commerce/OPERATING.md) |
+| Scientific Python delivery and recovery | [Python commerce](stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/RESEARCH-COMMERCE.md) |
+| Twenty Merchant Research commerce tools | [Merchant commerce](stellar-forge/mcp-merchant-operator/RESEARCH_COMMERCE.md) |
 
-See `permitpulse_pilot/` for the commercialization-only synthetic pilot carrier. Predecessor `permitpulse-all-gas` submission receipts remain OPEN and `readyForSubmission` remains false.
+The complete [maintained product guide](products/research/README.md), [operating chapters](products/research/OPERATING.md) and [receiving chapters](products/research/RECEIVING.md) describe the integrated installation. Use its existing `starforge` distribution for the installed commands in those chapters.
 
-## October 2026: PayPal AI competition projects
+## Continue the maintained installation
 
-Five runnable application candidates now live in this public repository: [ClaimProof Commerce](claimproof-commerce/README.md), [DisburseLens](paypal-disburselens-2026/README.md), [RenewalGuard](paypal-renewalguard-2026/README.md), [CartWitness](paypal26-cartwitness/README.md), and [DisputeLedger](paypal26-disputeledger/README.md).
+396C owns the cumulative Research installation and 63DD owns its standalone installation contribution. This complete source edition supplies their following Buyer/SF101 companion. It includes the full merged Research PR2413 and Merchant PR2423 implementations, the corrected Python bridge, current Buyer preapproval runtime recovery, dataset delivery publication and the current accounting, gRPC, CKAN, OData, USAspending and WebDAV catalogs.
 
-[View the judge-entry guide](docs/PAYPAL_AI_2026_ENTRY_READINESS.md) for run commands, source references and required entry steps. These public prototypes are not verified Devpost submissions. The contest deadline is November 12, 2026, noon PST.
+The source composition resolved 4,362 literal relative module edges. The remaining seller-client references are generated by the original SDK export machinery; their generating files and the original browser routes are recorded in the manifest.
 
-## Human Services Directory product
+The original NCT03529110 study operation is `DBC61-SCF-STUDY-EXTRACTION-20261012`. F99A owns its accepted 634-file native execution with request `research-nct03529110-dbc61-20261012-01`. Its original installation is the immutable [PR2379 source](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/10f0034b738e458269067c303ff8769e5f31125f/operations/research-nct03529110-native-dbc61-20261012). Continue its original programme, saved dossier and request history there. This following edition is selected explicitly by the current installation owner for the subsequent customer and paid-workflow continuation.
 
-The [complete directory product](products/human-services-directory/README.md) joins original HSDS and FHIR service-directory source with the maintained Gravity referral workspace. It includes complete source acquisition and indices, reviewed mapping and service selection, explicit clinical bindings, editable handoffs, the operator UI, native and connected CLIs, typed Merchant SDK/MCP and installed Applications.
-
-Build the `human-services-directory` selection using the [operating guide](products/human-services-directory/OPERATING.md), then continue the original native, browser, connected and installed application programme with the [receiving guide](products/human-services-directory/RECEIVING.md).
+[Original Research coordination](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791730288879869) retains the source, execution and installed-release handoffs.

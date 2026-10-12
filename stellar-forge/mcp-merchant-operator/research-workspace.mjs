@@ -12,7 +12,6 @@ import {callResearchRiskOfBias,exportResearchRiskOfBias,RESEARCH_RISK_PREFIX} fr
 import {callResearchExtraction,exportResearchExtraction,RESEARCH_EXTRACTION_PREFIX} from './research-extraction.mjs';
 import {callResearchEligibility,exportResearchEligibility,RESEARCH_ELIGIBILITY_PREFIX} from './research-eligibility.mjs';
 import {callResearchCustomerUpdates,exportResearchCustomerUpdates,RESEARCH_CUSTOMER_UPDATE_PREFIX} from './research-customer-updates.mjs';
-import {callResearchRis,exportResearchRis,RESEARCH_RIS_PREFIX} from './research-ris.mjs';
 import {ResearchCommerceOperations,RESEARCH_COMMERCE_PREFIX} from './research-commerce.mjs';
 import {callResearchEuropePmc,exportResearchEuropePmc,RESEARCH_EUROPE_PMC_PREFIX} from './research-europe-pmc.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
@@ -47,7 +46,7 @@ export async function readResearchWorkspaceConfiguration(file){
       throw failure('CONFIGURATION_ERROR','Declare original source handles.');
     for(const[name,source]of Object.entries(value.sources??{})){
       identifier(name);exact(source,['file','kind','sha256','provider','sourceReference','filename','contentType'],['file','kind','sha256']);
-      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication','ris-source'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication','ris-source'].includes(source.kind)&&
+      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication'].includes(source.kind)&&
         (typeof source.provider!=='string'||!/^[a-z][a-z0-9_-]{0,79}$/.test(source.provider)))
         throw failure('CONFIGURATION_ERROR','Each source declares its original kind and provider.');
       if(source.sourceReference!==undefined&&(typeof source.sourceReference!=='string'||source.sourceReference.length>4000)||
@@ -154,8 +153,7 @@ export class MerchantResearchWorkspaces{
       const client=new ResearchWorkspaceClient({connectionFile:definition.consoleUrlFile,directory:definition.directory});
       try{
         const status=await client.status();
-        const entry={alias,id:randomUUID(),definition,client,directory,pending:new Set(),detaching:false,
-          closedResources:new Set()};
+        const entry={alias,id:randomUUID(),definition,client,directory,pending:new Set(),detaching:false};
         this.#entries.set(alias,entry);this.#detached.delete(alias);
         return this.#describe(entry,status);
       }catch(error){await client.close();throw error;}
@@ -188,29 +186,16 @@ export class MerchantResearchWorkspaces{
       entry.detaching=true;
       entry.close=(async()=>{
         await Promise.allSettled([...entry.pending]);
-        // Each closer owns separate resources. Drain every attempt before
-        // reporting failures, and never repeat a successful close on retry.
-        const closers=[
-          ['commerce',()=>entry.commerce?.close()],
-          ['exports',()=>this.#reads.closeScope(entry.id)],
-          ['connection',()=>entry.client.close()],
-        ].filter(([resource])=>!entry.closedResources.has(resource));
-        const results=await Promise.allSettled(closers.map(async([resource,close])=>{
-          await close();entry.closedResources.add(resource);
-        }));
-        const failed=results.flatMap((result,index)=>result.status==='rejected'?
-          [{resource:closers[index][0],error:result.reason}]:[]);
-        if(failed.length)throw Object.assign(new AggregateError(failed.map(value=>value.error),
-          'Research attachment cleanup failed. Retry closing the same attachment.'),
-          {code:'RESEARCH_ATTACHMENT_CLOSE_INCOMPLETE',workspace:alias,attachmentId:id,
-            resources:failed.map(value=>value.resource)});
+        if(entry.commerce)await entry.commerce.close();
+        await this.#reads.closeScope(entry.id);
+        await entry.client.close();
         if(this.#entries.get(alias)===entry)this.#entries.delete(alias);
         this.#detached.set(alias,id);
         return {workspace:alias,attachmentId:id,state:'DETACHED',workspaceId:entry.client.workspaceId,
           listenerOwnership:'ORIGINAL_APPLICATIONS_WORKSPACE'};
       })().catch(error=>{
-        // Preserve the original owner and successful cleanup state while
-        // failed resources retry. Admission stays closed for this attachment.
+        // RetainedFileReads preserves failed handles for the SAME owner to
+        // retry. Keep detaching and the entry, but release the failed promise.
         entry.close=null;throw error;
       });
     }
@@ -267,9 +252,7 @@ export class MerchantResearchWorkspaces{
       }
     };
     try{
-      if(args.kind.startsWith('ris-')){
-        ({result,selection}=await exportResearchRis(entry.client,args,{file:temporary,download}));
-      }else if(args.kind.startsWith('commerce-')){
+      if(args.kind.startsWith('commerce-')){
         ({result,selection}=await this.#commerce(entry).export(args,{file:temporary}));
       }else if(args.kind.startsWith('risk-')){
         ({result,selection}=await exportResearchRiskOfBias(entry.client,args,{file:temporary,download}));
@@ -381,7 +364,6 @@ export class MerchantResearchWorkspaces{
     if(name==='merchant_research_detach')return this.#detach(args.workspace,args.attachmentId);
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
-      if(name.startsWith(RESEARCH_RIS_PREFIX))return callResearchRis(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
       if(name.startsWith(RESEARCH_COMMERCE_PREFIX))return this.#commerce(entry).call(name,args);
       if(name.startsWith(RESEARCH_CUSTOMER_UPDATE_PREFIX))return callResearchCustomerUpdates(c,name,args);
       if(name.startsWith(RESEARCH_ELIGIBILITY_PREFIX))return callResearchEligibility(c,name,args);
@@ -486,8 +468,7 @@ export class MerchantResearchWorkspaces{
           error.recovery??'The original write response was interrupted. Read the saved dossier revision and the same source receiving operation or retained input before another write.'),
           {outcomeUnknown:true,dossierId:args.dossierId??args.input?.dossierId,
             operationId:error.operationId??args.operationId??args.input?.operationId,
-            requestId:error.requestId??args.requestId??args.input?.requestId??args.input?.review?.requestId,sourceId:args.sourceId,
-            ...(name.startsWith(RESEARCH_RIS_PREFIX)?{questionId:args.input?.review?.questionId,source:args.input?.source,expectedPlanSha256:args.input?.expectedPlanSha256}:{}),
+            requestId:error.requestId??args.requestId??args.input?.requestId,sourceId:args.sourceId,
             ...(name.startsWith(RESEARCH_EUROPE_PMC_PREFIX)?{library:args.library}:{}),
             ...(error.recovery?{recovery:error.recovery}:{})});
         throw error;
@@ -499,20 +480,8 @@ export class MerchantResearchWorkspaces{
       this.#closed=true;
       this.#closing=(async()=>{
         await Promise.allSettled([...this.#pending]);
-        const entries=[...this.#entries.values()];
-        const results=await Promise.allSettled(entries.map(entry=>this.#detach(entry.alias,entry.id)));
-        const failures=results.flatMap((result,index)=>result.status==='rejected'?
-          [{workspace:entries[index].alias,attachmentId:entries[index].id,error:result.reason}]:[]);
-        // Global read ownership also drains after every attachment attempt,
-        // including when another resource failed to close.
-        try{
-          await this.#reads.close();
-          for(const entry of entries)entry.closedResources.add('exports');
-        }catch(error){failures.push({resource:'exports',error});}
-        if(failures.length)throw Object.assign(new AggregateError(failures.map(value=>value.error),
-          'Research merchant cleanup failed. Retry closing the same merchant.'),
-          {code:'RESEARCH_MERCHANT_CLOSE_INCOMPLETE',
-            resources:failures.map(({error,...resource})=>resource)});
+        await Promise.all([...this.#entries.values()].map(entry=>this.#detach(entry.alias,entry.id)));
+        await this.#reads.close();
         return {state:'DETACHED',listenerOwnership:'ORIGINAL_APPLICATIONS_WORKSPACE'};
       })().catch(error=>{
         // Closing remains admission-closed while its original readers retry.

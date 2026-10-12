@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "merchant-provider-grant-workspaces",
-  "description": "Original grant workspaces MCP provider",
-  "merchantProviders": {
-    "grant-workspaces": "stellar-forge/mcp-merchant-operator/providers/grant-workspaces.mjs"
-  }
-}

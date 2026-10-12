@@ -45,85 +45,6 @@ function integer(value, minimum, maximum, label) {
     fail('FRED_CLIENT_INPUT_INVALID', 'Supply a supported integer ' + label + '.');
   return value;
 }
-
-function recurringId(value, kind) {
-  const pattern = kind === 'template' ? /^fred-template-[a-f0-9]{64}$/ : /^fred-successor-[a-f0-9]{64}$/;
-  if (typeof value !== 'string' || !pattern.test(value))
-    fail('FRED_CLIENT_INPUT_INVALID', 'Select the retained briefing ' + kind + ' ID.');
-  return value;
-}
-function successorSelection(input, saved = false) {
-  fields(input, ['templateId', 'captureId', 'anchorDate', 'baselineReviewId', 'previousSuccessorId', 'note',
-    ...(saved ? ['id', 'expectedRevision', 'previewId'] : ['offset', 'limit', 'changesOnly'])], 'Successor selection');
-  const value = JSON.parse(canonicalFredJSON(input));
-  recurringId(value.templateId, 'template'); digest(value.captureId, 'target capture ID');
-  for (const key of ['baselineReviewId', 'previousSuccessorId']) if (value[key] !== undefined && value[key] !== null) {
-    if (key === 'baselineReviewId') digest(value[key], 'preceding saved review ID');
-    else recurringId(value[key], 'successor');
-  }
-  if (value.anchorDate !== undefined && value.anchorDate !== null &&
-      (typeof value.anchorDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.anchorDate)))
-    fail('FRED_CLIENT_INPUT_INVALID', 'Use an explicit calendar anchor in YYYY-MM-DD form.');
-  if (value.note !== undefined && (typeof value.note !== 'string' || value.note.length > 8000 ||
-      /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value.note)))
-    fail('FRED_CLIENT_INPUT_INVALID', 'Supply the complete readable successor review note.');
-  if (saved) {
-    operation(value.id); revision(value.expectedRevision); digest(value.previewId, 'reviewed successor preview ID');
-  } else {
-    value.offset = integer(value.offset ?? 0, 0, 60000, 'change offset');
-    value.limit = integer(value.limit ?? 100, 1, 500, 'change page size');
-    if (value.changesOnly !== undefined && typeof value.changesOnly !== 'boolean')
-      fail('FRED_CLIENT_INPUT_INVALID', 'Choose a boolean changesOnly value.');
-    value.changesOnly ??= true;
-  }
-  return value;
-}
-function successorChangePage(value, { captureId, comparisonId, offset, limit, changesOnly } = {}) {
-  if (value?.schema !== 'stellar-forge.fred-briefing-changes.v1' || !SHA.test(value.comparisonId ?? '') ||
-      !Array.isArray(value.rows) || !Number.isSafeInteger(value.rowCount) || value.rowCount < 0 || value.rowCount > 60000 ||
-      !Number.isSafeInteger(value.filteredCount) || value.filteredCount < 0 || value.filteredCount > value.rowCount ||
-      !Number.isSafeInteger(value.offset) || value.offset < 0 || value.offset > value.filteredCount ||
-      !Number.isSafeInteger(value.limit) || value.limit < 1 || value.limit > 500 || typeof value.changesOnly !== 'boolean' ||
-      value.rows.length !== Math.min(value.limit, value.filteredCount - value.offset) ||
-      value.nextOffset !== (value.offset + value.limit < value.filteredCount ? value.offset + value.limit : null) ||
-      captureId !== undefined && value.after?.captureId !== captureId ||
-      comparisonId !== undefined && value.comparisonId !== comparisonId ||
-      offset !== undefined && value.offset !== offset || limit !== undefined && value.limit !== limit ||
-      changesOnly !== undefined && value.changesOnly !== changesOnly)
-    fail('FRED_CLIENT_SUCCESSOR_CHANGED', 'The saved report change page or original source binding changed.');
-  return value;
-}
-function successorIdentity(value, successorId) {
-  const record = value?.successor;
-  if (record?.schema !== 'stellar-forge.fred-briefing-successor.v1' || record.id !== successorId ||
-      value.template?.id !== record.templateId || value.materialization?.templateId !== record.templateId ||
-      value.materialization?.captureId !== record.captureId || value.materialization?.originReviewId !== record.originReviewId ||
-      value.comparison?.before?.reviewId !== record.beforeReviewId ||
-      value.comparison?.before?.captureId !== record.beforeCaptureId ||
-      value.briefing?.reviewId !== record.reviewId || value.briefing?.reportId !== record.reportId ||
-      value.briefing?.manifest?.reviewId !== record.reviewId || value.briefing?.manifest?.captureId !== record.captureId ||
-      value.briefing?.manifest?.reportId !== record.reportId)
-    fail('FRED_CLIENT_SUCCESSOR_CHANGED', 'The received successor belongs to a different template, source or preceding report.');
-  return value;
-}
-function successorView(value, successorId, paging) {
-  successorIdentity(value, successorId);
-  successorChangePage(value.comparison, { ...paging, captureId: value.successor.captureId, comparisonId: value.successor.comparison?.id });
-  return value;
-}
-function successorFile(value, successorId) {
-  successorIdentity(value, successorId);
-  const comparison = value.comparison;
-  if (comparison?.schema !== 'stellar-forge.fred-briefing-changes.v1' ||
-      comparison.comparisonId !== value.successor.comparison?.id || comparison.after?.captureId !== value.successor.captureId ||
-      !Array.isArray(comparison.rows) || comparison.rowCount !== comparison.rows.length)
-    fail('FRED_CLIENT_SUCCESSOR_CHANGED', 'The full successor file lost its complete original comparison.');
-  const { comparisonId, ...identity } = comparison;
-  if (!SHA.test(comparisonId ?? '') || fredDigest(Buffer.from(canonicalFredJSON(identity))) !== comparisonId)
-    fail('FRED_CLIENT_SUCCESSOR_CHANGED', 'The complete successor comparison differs from its retained identity.');
-  return value;
-}
-
 function fields(value, allowed, label) {
   object(value, label);
   if (Object.keys(value).some(key => !allowed.includes(key)))
@@ -429,77 +350,6 @@ export class FredWorkspaceClient {
     return briefingPage(await this.#json('/api/briefing?' + new URLSearchParams({ review: reviewId,
       offset: String(integer(offset, 0, 30000, 'measure offset')) }), options), { reviewId });
   }
-  async briefingTemplates(options = {}) {
-    const value = await this.#json('/api/briefing-templates', options);
-    if (value?.projectId !== this.#boundId || !Number.isSafeInteger(value.revision) || value.revision < 1 ||
-        !Array.isArray(value.templates) || !Array.isArray(value.successors))
-      fail('FRED_CLIENT_PROJECT_CHANGED', 'The briefing inventory does not belong to the original project revision.');
-    const templates = new Set(), successors = new Set();
-    for (const item of value.templates) {
-      recurringId(item?.id, 'template');
-      if (templates.has(item.id)) fail('FRED_CLIENT_RESPONSE_INVALID', 'The original template inventory repeats a saved ID.');
-      templates.add(item.id);
-    }
-    for (const item of value.successors) {
-      recurringId(item?.id, 'successor');
-      if (successors.has(item.id) || !templates.has(item.templateId))
-        fail('FRED_CLIENT_RESPONSE_INVALID', 'The original successor inventory has a repeated or unbound saved ID.');
-      successors.add(item.id);
-    }
-    return value;
-  }
-  async saveBriefingTemplate(input, options) {
-    fields(input, ['id', 'expectedRevision', 'reviewId', 'name', 'window', 'previousTemplateId'], 'Briefing template');
-    const body = JSON.parse(canonicalFredJSON(input));
-    digest(body.reviewId, 'original saved analyst review ID');
-    if (body.name !== undefined) text(body.name, 'briefing template name', 160);
-    if (body.window !== undefined) {
-      fields(body.window, ['months', 'anchor', 'lagMonths'], 'Calendar window');
-      if (body.window.months !== undefined) integer(body.window.months, 1, 1200, 'calendar months');
-      if (body.window.lagMonths !== undefined) integer(body.window.lagMonths, 0, 1200, 'calendar lag months');
-      if (body.window.anchor !== undefined && !['latest_all', 'latest_any'].includes(body.window.anchor))
-        fail('FRED_CLIENT_INPUT_INVALID', 'Choose latest_all or latest_any for the original observation-date anchor.');
-    }
-    if (body.previousTemplateId !== undefined && body.previousTemplateId !== null) recurringId(body.previousTemplateId, 'template');
-    const value = await this.#action('template-save', body, options);
-    if (!/^fred-template-[a-f0-9]{64}$/.test(value?.templateId ?? '') ||
-        value.template?.id !== value.templateId || value.template?.origin?.reviewId !== body.reviewId)
-      fail('FRED_CLIENT_TEMPLATE_CHANGED', 'The saved template response differs from the original reviewed selection.',
-        { operationId: body.id, ambiguous: true, inspectOriginalOperation: true });
-    return value;
-  }
-  async previewBriefingSuccessor(input, options) {
-    const body = successorSelection(input);
-    const value = await this.#json('/api/briefing-successor-preview', {
-      ...options, method: 'POST', readOnly: true, body
-    });
-    if (!SHA.test(value?.previewId ?? '') || !SHA.test(value?.reviewId ?? '') ||
-        value.template?.id !== body.templateId || value.materialization?.templateId !== body.templateId ||
-        value.materialization?.captureId !== body.captureId ||
-        value.briefing?.captureId !== body.captureId || value.briefing?.reviewId !== value.reviewId ||
-        body.baselineReviewId != null && value.baselineReviewId !== body.baselineReviewId ||
-        body.previousSuccessorId != null && value.previousSuccessorId !== body.previousSuccessorId)
-      fail('FRED_CLIENT_SUCCESSOR_CHANGED', 'The successor preview differs from the selected template, source or report lineage.');
-    successorChangePage(value.comparison, { captureId: body.captureId, offset: body.offset, limit: body.limit, changesOnly: body.changesOnly });
-    return value;
-  }
-  async saveBriefingSuccessor(input, options) {
-    const body = successorSelection(input, true);
-    const value = await this.#action('successor-save', body, options);
-    if (!/^fred-successor-[a-f0-9]{64}$/.test(value?.successorId ?? '') || value.templateId !== body.templateId ||
-        value.captureId !== body.captureId || !SHA.test(value.reviewId ?? ''))
-      fail('FRED_CLIENT_SUCCESSOR_CHANGED', 'The saved successor response differs from its original reviewed preview.',
-        { operationId: body.id, ambiguous: true, inspectOriginalOperation: true });
-    return value;
-  }
-  async briefingSuccessor({ successorId, offset = 0, limit = 100, changesOnly = true }, options) {
-    recurringId(successorId, 'successor');
-    integer(offset, 0, 60000, 'change offset'); integer(limit, 1, 500, 'change page size');
-    if (typeof changesOnly !== 'boolean') fail('FRED_CLIENT_INPUT_INVALID', 'Choose a boolean changesOnly value.');
-    const query = new URLSearchParams({ successor: successorId, offset: String(offset), limit: String(limit), changesOnly: String(changesOnly) });
-    return successorView(await this.#json('/api/briefing-successor?' + query, options), successorId, { offset, limit, changesOnly });
-  }
-
   publication(publicationId, options) {
     return this.#json('/api/publication?' + new URLSearchParams({ publication: digest(publicationId, 'publication ID') }), options);
   }
@@ -577,25 +427,13 @@ export class FredWorkspaceClient {
       if (!expectedMember || !SHA.test(expectedMember.sha256) || !Number.isSafeInteger(expectedMember.bytes) || expectedMember.bytes < 1)
         fail('FRED_CLIENT_BRIEFING_CHANGED', 'The original saved briefing file descriptor is missing.');
       path = '/api/briefing?' + new URLSearchParams({ review: selection.reviewId, format: selection.format });
-    } else if (selection.kind === 'briefing-successor') {
-      recurringId(selection.successorId, 'successor');
-      if (!['json', 'csv', 'html'].includes(selection.format))
-        fail('FRED_CLIENT_INPUT_INVALID', 'Choose the complete successor JSON, CSV or HTML comparison.');
-      path = '/api/briefing-successor?' + new URLSearchParams({ successor: selection.successorId, format: selection.format });
-      fallback = selection.successorId + '.' + selection.format;
-    } else fail('FRED_CLIENT_INPUT_INVALID', 'Choose an original source, comparison, briefing, successor, project or customer file.');
+    } else fail('FRED_CLIENT_INPUT_INVALID', 'Choose an original source, comparison, briefing, project or customer file.');
     const { response, bytes } = await this.#request(path, options);
     const sha256 = fredDigest(bytes);
     if (expectedMember && (sha256 !== expectedMember.sha256 || bytes.length !== expectedMember.bytes))
       fail('FRED_CLIENT_BRIEFING_CHANGED', 'The complete original briefing differs from its saved source review.', { sha256, bytes: bytes.length });
     if (options.expectedSha256 !== undefined && digest(options.expectedSha256) !== sha256)
       fail('FRED_CLIENT_FILE_CHANGED', 'The complete original download differs from its reviewed SHA256.', { sha256, bytes: bytes.length });
-    if (selection.kind === 'briefing-successor' && selection.format === 'json') {
-      let value;
-      try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
-      catch { fail('FRED_CLIENT_SUCCESSOR_CHANGED', 'The original successor file is not complete JSON.'); }
-      successorFile(value, selection.successorId);
-    }
     const proposed = (response.headers.get('content-disposition') ?? '').match(/filename="([^"]*)"/)?.[1] ?? fallback;
     const name = basename(proposed).replace(/[\x00-\x1f\x7f"\\/]/g, '_').slice(0, 180) || fallback;
     const result = { name, type: response.headers.get('content-type') ?? 'application/octet-stream', bytes, sha256,
@@ -626,8 +464,7 @@ function briefingPage(value, binding) {
   return value;
 }
 export function inspectFredProjectBundle(bundle) {
-  const recurring = bundle?.schema === 'stellar-forge.fred-project-bundle.v3';
-  const briefing = recurring || bundle?.schema === 'stellar-forge.fred-project-bundle.v2';
+  const briefing = bundle?.schema === 'stellar-forge.fred-project-bundle.v2';
   if ((!briefing && bundle?.schema !== 'stellar-forge.fred-project-bundle.v1') || !plain(bundle.state) ||
       !Array.isArray(bundle.captures) || !Array.isArray(bundle.publicationPlans) || !SHA.test(bundle.bundleSha256 ?? '') ||
       (briefing ? !Array.isArray(bundle.briefings) || bundle.briefings.length < 1 : bundle.briefings !== undefined))
@@ -638,29 +475,6 @@ export function inspectFredProjectBundle(bundle) {
       bundle.state.schema !== 'stellar-forge.fred-project.v1' || !UUID.test(bundle.state.id ?? '') || bundle.state.pending ||
       !Array.isArray(bundle.state.reviews))
     fail('FRED_CLIENT_BUNDLE_INVALID', 'The original completed project bundle identity changed.');
-  const templates = bundle.state.briefingTemplates ?? [], successors = bundle.state.briefingSuccessors ?? [];
-  if (!Array.isArray(templates) || !Array.isArray(successors) || recurring && templates.length === 0 ||
-      !recurring && (templates.length > 0 || successors.length > 0))
-    fail('FRED_CLIENT_BUNDLE_INVALID', 'Use the project bundle version retaining its complete recurring briefing records.');
-  if (recurring) {
-    const templateIds = new Set(), successorIds = new Set();
-    for (const item of templates) {
-      if (!plain(item) || !/^fred-template-[a-f0-9]{64}$/.test(item.id ?? '') || templateIds.has(item.id) ||
-          !bundle.state.reviews.some(review => review.id === item.origin?.reviewId && review.captureId === item.origin?.captureId && review.briefing))
-        fail('FRED_CLIENT_BUNDLE_INVALID', 'A recurring template lost its original saved analyst source review.');
-      templateIds.add(item.id);
-    }
-    for (const item of successors) {
-      if (!plain(item) || !/^fred-successor-[a-f0-9]{64}$/.test(item.id ?? '') || successorIds.has(item.id) ||
-          !templateIds.has(item.templateId) ||
-          !bundle.state.reviews.some(review => review.id === item.reviewId && review.captureId === item.captureId && review.briefing))
-        fail('FRED_CLIENT_BUNDLE_INVALID', 'A recurring successor lost its original template or saved report.');
-      successorIds.add(item.id);
-    }
-    if (templates.some(item => item.previousTemplateId !== null && !templateIds.has(item.previousTemplateId)) ||
-        successors.some(item => item.previousSuccessorId !== null && !successorIds.has(item.previousSuccessorId)))
-      fail('FRED_CLIENT_BUNDLE_INVALID', 'The project export lost a preceding recurring briefing record.');
-  }
   const analystReviews = bundle.state.reviews.filter(review => review.briefing);
   if ((bundle.briefings ?? []).length !== analystReviews.length ||
       new Set((bundle.briefings ?? []).map(item => item.manifest?.reviewId)).size !== analystReviews.length ||
@@ -668,8 +482,7 @@ export function inspectFredProjectBundle(bundle) {
     fail('FRED_CLIENT_BUNDLE_INVALID', 'The complete project export lost an original analyst briefing.');
   return { schema: bundle.schema, projectId: bundle.state.id, revision: bundle.state.revision,
     bundleSha256: bundle.bundleSha256, captures: bundle.captures.length, publications: bundle.publicationPlans.length,
-    ...(briefing ? { briefings: bundle.briefings.length } : {}),
-    ...(recurring ? { templates: templates.length, successors: successors.length } : {}) };
+    ...(briefing ? { briefings: bundle.briefings.length } : {}) };
 }
 
 /** Publishes the complete original bytes without replacing an existing file. */

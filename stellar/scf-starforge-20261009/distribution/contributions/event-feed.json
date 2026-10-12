@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "event-feed",
-  "description": "event feed original Applications",
-  "applicationProviders": {
-    "event-feed": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/event-feed.mjs"
-  }
-}

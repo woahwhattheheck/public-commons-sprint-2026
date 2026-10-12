@@ -1,6 +1,5 @@
 // MIT. Durable extraction and review; publication delegates to original versions.
 import { DatabaseSync } from 'node:sqlite';
-import { publisherActionReceipts } from './requests.mjs';
 import { mkdir, lstat, chmod, open, rename } from 'node:fs/promises';
 import { randomUUID, createHash } from 'node:crypto';
 import { join } from 'node:path';
@@ -90,7 +89,6 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
     absolute(settings.sourceFile, 'source file'); absolute(settings.targetDirectory, 'target state directory');
     sourceFile = settings.sourceFile; targetDirectory = settings.targetDirectory;
     await privateDirectory(join(directory, 'plans')); await privateDirectory(join(directory, 'runs'));
-    const actionReceipts = publisherActionReceipts({ db, directory });
     let active = null, closing = null, closed = false;
     const event = (kind, run, data = {}) => db.prepare('INSERT INTO events(run,created,kind,data) VALUES(?,?,?,?)')
       .run(run ?? null, stamp(), kind, JSON.stringify(data));
@@ -111,12 +109,11 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
       if (!row) throw fault('RUN_NOT_FOUND', 'Choose a retained extraction.', 404);
       return row;
     }
-    function change(id, state, patch, kind, request = null) {
+    function change(id, state, patch, kind) {
       return transaction(() => {
         const current = run(id), data = { ...current.data, ...patch };
         db.prepare('UPDATE runs SET state=?,updated=?,data=? WHERE id=?').run(state, stamp(), JSON.stringify(data), id);
-        event(kind, id, { state, ...patch });
-        return actionReceipts.remember(request, run(id));
+        event(kind, id, { state, ...patch }); return run(id);
       });
     }
     function available() {
@@ -339,10 +336,6 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
     }
     async function review(id, input) {
       return mutate('review', id, async () => {
-      const bound = actionReceipts.bind('publisher.review', id, input);
-      const previous = actionReceipts.existing(bound.request);
-      if (previous) return previous;
-      input = bound.input;
       const current = await candidate(id), observed = await target();
       const reviewer = note(input.reviewer, 'the reviewer name', 128), text = note(input.note, 'the review note');
       let binding;
@@ -361,7 +354,7 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
       }
       const record = { id: randomUUID(), reviewer, note: text, recordedAt: stamp(),
         candidateDigest: current.manifest.candidateDigest, target: binding };
-      return change(id, 'REVIEWED', { review: record, error: null }, 'CANDIDATE_REVIEWED', bound.request);
+      return change(id, 'REVIEWED', { review: record, error: null }, 'CANDIDATE_REVIEWED');
       });
     }
     async function publish(id, reviewId) {
@@ -429,27 +422,13 @@ export async function openSourceDatasetPublisher({ directory, create = false, so
     }
     async function prepareBuyer(id, input) {
       return mutate('buyer handoff', id, async () => {
-      const bound = actionReceipts.bind('publisher.prepare-buyer', id, input);
-      const previous = actionReceipts.existing(bound.request);
-      if (previous) return actionReceipts.validateBuyer(bound.request, previous);
-      input = bound.input;
-      let prepared = await actionReceipts.preparedBuyer(bound.request);
-      if (!prepared) {
-        const offer = await buyerOffer(id, input.query ?? '');
-        const value = prepareDatasetBuyer(offer, input);
-        if (bound.request) prepared = await actionReceipts.retainBuyer(bound.request, value);
-        else {
-          const path = join(directory, 'runs', id, 'buyer-' + randomUUID() + '.json');
-          await createFile(path, Buffer.from(value.configText)); await syncDirectory(join(directory, 'runs', id));
-          prepared = { ...value, path };
-        }
-      }
-      return transaction(() => {
-        event('BUYER_HANDOFF_PREPARED', id, { snapshot: prepared.snapshot, configSha256: prepared.configSha256,
-          offerSha256: prepared.offerSha256, intentId: input.intentId, path: prepared.path,
-          ...(bound.request ? { requestId: bound.request.requestId } : {}) });
-        return actionReceipts.remember(bound.request, prepared);
-      });
+      const offer = await buyerOffer(id, input.query ?? '');
+      const prepared = prepareDatasetBuyer(offer, input);
+      const path = join(directory, 'runs', id, 'buyer-' + randomUUID() + '.json');
+      await createFile(path, Buffer.from(prepared.configText)); await syncDirectory(join(directory, 'runs', id));
+      event('BUYER_HANDOFF_PREPARED', id, { snapshot: prepared.snapshot, configSha256: prepared.configSha256,
+        offerSha256: prepared.offerSha256, intentId: input.intentId, path });
+      return { ...prepared, path };
       });
     }
     async function close() {

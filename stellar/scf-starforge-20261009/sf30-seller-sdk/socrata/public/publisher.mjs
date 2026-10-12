@@ -65,7 +65,7 @@ function queryString(value) {
 
 /** Renders retained state and submits original actions. It owns no dataset engine. */
 export function createPublisherPanel({getState, perform, download, handle, notice, selectSection}) {
-  let current = null, locked = true, reviewedDraft = null, buyerReview = null, scopeIdentity = null;
+  let current = null, locked = true, reviewedDraft = null, buyerReview = null;
   let preview = null, previewSelection = null, buyerFormDirty = false, sessionSelection = '';
   const pub = () => current?.publisher;
   const drafts = () => pub()?.drafts?.candidates || [];
@@ -320,10 +320,6 @@ export function createPublisherPanel({getState, perform, download, handle, notic
     });
   }
   function render(value) {
-    const identity=value?.propertyPublisherResourceId??'original-socrata';
-    if(scopeIdentity!==identity){scopeIdentity=identity;reviewedDraft=null;buyerReview=null;preview=null;previewSelection=null;buyerFormDirty=false;sessionSelection='';
-      for(const id of ['pub-buyer-workspace','pub-max-pages','pub-max-total','pub-max-rows','pub-max-page-bytes'])$(id).value='';
-    }
     current = value;
     const model = pub(), target = model?.target;
     $('pub-open').textContent = model ? 'Reconcile publisher' : 'Open publisher';

@@ -6,7 +6,6 @@ import {randomBytes, timingSafeEqual} from 'node:crypto';
 import {resolve, join} from 'node:path';
 import {pipeline} from 'node:stream/promises';
 import {openSocrataWorkspace} from './workspace.mjs';
-import {PROPERTY_ACTIONS} from '../property-operations/workspace.mjs';
 
 const actions = new Set([
   'source.configure', 'source.inspect', 'source.search',
@@ -34,8 +33,6 @@ const actions = new Set([
   'publisher.buyer.account',
   'publisher.buyer.export'
 ]);
-for (const action of PROPERTY_ACTIONS) actions.add(action);
-for (const action of [...actions].filter(action=>action.startsWith('publisher.'))) actions.add('property.'+action);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const policy = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const commonHeaders = {
@@ -74,7 +71,7 @@ export async function openSocrataOperator({directory, workspace: suppliedWorkspa
   const base = suppliedWorkspace ?? await openSocrataWorkspace({...backendOptions, directory: resolve(directory), appToken});
   const ownsWorkspace = suppliedWorkspace === undefined, ownsPublisher = suppliedPublisher === undefined;
   let publisher = suppliedPublisher, openingPublisher, closing;
-  const pending = new Set(), propertyPublishers = new Map(), propertySelections = new Map();
+  const pending = new Set();
   const run = operation => {
     if (closing) return Promise.reject(Object.assign(new Error('The operator is closing.'), {code: 'OPERATOR_CLOSING', status: 409}));
     const job = Promise.resolve().then(operation);
@@ -89,56 +86,20 @@ export async function openSocrataOperator({directory, workspace: suppliedWorkspa
       .catch(error => { openingPublisher = undefined; throw error; });
     return openingPublisher;
   };
-  const propertyViews = async () => Object.fromEntries(await Promise.all([...propertySelections].map(async ([id,key])=>{
-    const model=await propertyPublishers.get(key);return [id,await model.state()];
-  })));
-  const getPropertyPublisher = async resourceId => {
-    const selection=(await base.act('property.resource.publisher',{resource_id:resourceId})).result;
-    const key=selection.publisherDirectory;
-    if(!propertyPublishers.has(key)){
-      const opening=import('./publisher.mjs').then(({openSocrataPublisher})=>openSocrataPublisher({directory:key}));
-      propertyPublishers.set(key,opening);
-      opening.catch(()=>{if(propertyPublishers.get(key)===opening)propertyPublishers.delete(key);});
-    }
-    const model=await propertyPublishers.get(key);propertySelections.set(resourceId,key);
-    return {model,selection};
-  };
-  const view = async () => ({...await base.state(), publisher: publisher ? await publisher.state() : null, propertyPublishers:await propertyViews()});
+  const view = async () => ({...await base.state(), publisher: publisher ? await publisher.state() : null});
   return {
     state: () => run(view),
     act: (action, payload = {}) => run(async () => {
       if (!actions.has(action) || !object(payload))
         throw Object.assign(new TypeError('Choose a supported operator action and an object payload.'), {code: 'INVALID_ACTION'});
-      if (action.startsWith('property.publisher.')) {
-        if(typeof payload.resource_id!=='string'||!object(payload.payload??{})||Object.keys(payload).some(k=>!['resource_id','payload'].includes(k)))
-          throw Object.assign(new TypeError('Select the exact retained property resource and original publisher payload.'),{code:'PROPERTY_PUBLISHER_INPUT'});
-        const {model,selection}=await getPropertyPublisher(payload.resource_id), original=action.slice('property.'.length);
-        const input={...(payload.payload??{})};
-        if(original==='publisher.prepare'){
-          if(input.exportDirectory!==undefined&&input.exportDirectory!==selection.exportDirectory)
-            throw Object.assign(new TypeError('The selected resource owns a different original export.'),{code:'PROPERTY_PUBLISHER_EXPORT'});
-          input.exportDirectory=selection.exportDirectory;
-        }
-        const response=await model.act(original,input);
-        return {...response,state:await view(),property_resource_id:payload.resource_id};
-      }
       if (action.startsWith('publisher.')) {
         const model = await getPublisher(), response = await model.act(action, payload);
-        return {...response, state: {...await base.state(), publisher: response.state ?? await model.state(), propertyPublishers:await propertyViews()}};
+        return {...response, state: {...await base.state(), publisher: response.state ?? await model.state()}};
       }
       const response = await base.act(action, payload);
-      return {...response, state: {...response.state, publisher: publisher ? await publisher.state() : null, propertyPublishers:await propertyViews()}};
+      return {...response, state: {...response.state, publisher: publisher ? await publisher.state() : null}};
     }),
     readExport: (exportId, filename) => run(() => base.readExport(exportId, filename)),
-    readPropertyFile: file => run(()=>{
-      if(typeof base.readPropertyFile!=='function')throw new TypeError('The supplied original workspace does not include property sources.');
-      return base.readPropertyFile(file);
-    }),
-    readPropertyPublisherExport: (resourceId,kind,id) => run(async()=>{
-      if (!['draft-csv','draft-review','buyer-config','session-manifest','session-csv','session-jsonl','session-review'].includes(kind))
-        throw new TypeError('Choose an original publisher export kind.');
-      return (await getPropertyPublisher(resourceId)).model.readExport(kind,id);
-    }),
     readPublisherExport: (kind, id) => run(async () => {
       if (!['draft-csv', 'draft-review', 'buyer-config', 'session-manifest', 'session-csv', 'session-jsonl', 'session-review'].includes(kind))
         throw Object.assign(new TypeError('Choose an original publisher export kind.'), {code: 'INVALID_DOWNLOAD'});
@@ -148,7 +109,6 @@ export async function openSocrataOperator({directory, workspace: suppliedWorkspa
       if (!closing) closing = (async () => {
         await Promise.allSettled([...pending]);
         let originalError;
-        for(const opening of propertyPublishers.values()){try{await (await opening).close();}catch(error){if(!originalError)originalError=error;}}
         if (publisher && ownsPublisher) try { await publisher.close(); } catch (error) { originalError = error; }
         if (ownsWorkspace) try { await base.close(); } catch (error) { if (!originalError) originalError = error; }
         if (originalError) throw originalError;
@@ -174,7 +134,7 @@ export async function startSocrataWorkspace({directory, port = 0, operator: supp
     workspace: suppliedWorkspace, publisher: suppliedPublisher});
   let assets;
   try {
-    assets = await Promise.all(['index.html', 'app.mjs', 'style.css', 'publisher.mjs', 'property.mjs', 'property.css'].map(name => readFile(new URL('./public/' + name, import.meta.url))));
+    assets = await Promise.all(['index.html', 'app.mjs', 'style.css', 'publisher.mjs'].map(name => readFile(new URL('./public/' + name, import.meta.url))));
   } catch (error) {
     try { if (ownsOperator) await workspace.close(); } catch {}
     throw error;
@@ -199,8 +159,6 @@ export async function startSocrataWorkspace({directory, port = 0, operator: supp
         if (request.url === '/app.mjs') return reply(200, assets[1], 'text/javascript; charset=utf-8');
         if (request.url === '/style.css') return reply(200, assets[2], 'text/css; charset=utf-8');
         if (request.url === '/publisher.mjs') return reply(200, assets[3], 'text/javascript; charset=utf-8');
-        if (request.url === '/property.mjs') return reply(200, assets[4], 'text/javascript; charset=utf-8');
-        if (request.url === '/property.css') return reply(200, assets[5], 'text/css; charset=utf-8');
         if (request.url === '/favicon.ico') return reply(204, '');
       }
       const supplied = Buffer.from(request.headers.authorization ?? '');
@@ -208,23 +166,6 @@ export async function startSocrataWorkspace({directory, port = 0, operator: supp
         return reply(401, {error: 'SESSION_REQUIRED', message: 'Reopen the session URL printed by the workspace command.'});
       if (request.method === 'GET' && request.url === '/api/state')
         return reply(200, await workspace.state());
-      const propertyDownload=/^\/api\/property\/file\?file=([^&]+)$/.exec(request.url??'');
-      if(request.method==='GET'&&propertyDownload){
-        if(typeof workspace.readPropertyFile!=='function')return reply(409,{error:'PROPERTY_COMPONENT_REQUIRED'});
-        const file=await workspace.readPropertyFile(decodeURIComponent(propertyDownload[1]));
-        response.writeHead(200,{...commonHeaders,'content-type':file.contentType,'content-length':file.bytes,
-          'content-disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(file.filename).replaceAll("'",'%27')});
-        await pipeline(createReadStream(file.path),response);return;
-      }
-      const propertyPublisherDownload=/^\/api\/property\/publisher\/exports\/([^/?]+)\/([^/?]+)\/([^/?]+)$/.exec(request.url??'');
-      if(request.method==='GET'&&propertyPublisherDownload){
-        if(typeof workspace.readPropertyPublisherExport!=='function')return reply(409,{error:'PROPERTY_COMPONENT_REQUIRED'});
-        const [resourceId,kind,id]=propertyPublisherDownload.slice(1).map(decodeURIComponent);
-        const file=await workspace.readPropertyPublisherExport(resourceId,kind,id);
-        response.writeHead(200,{...commonHeaders,'content-type':file.contentType||'application/octet-stream','content-length':file.bytes.length,
-          'content-disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(file.filename).replaceAll("'",'%27')});
-        response.end(file.bytes);return;
-      }
       const publisherDownload = /^\/api\/publisher\/exports\/([^/?]+)\/([^/?]+)$/.exec(request.url ?? '');
       if (request.method === 'GET' && publisherDownload) {
         let kind, id;
