@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "clinicaltrials",
-  "description": "ClinicalTrials registry, PRS review and retained customer workspaces",
+  "description": "ClinicalTrials registry, PRS batch receiving and retained managed customer workspaces",
   "commands": {
     "clinicaltrials": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs",
     "dataset-clinicaltrials": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs"
@@ -31,7 +31,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed.py",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed-application.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/application-provider.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/MANAGED_APPLICATION.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/MANAGED_APPLICATION.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_batch.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/batch.js",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/BATCH_RECEIVING.md"
   ],
   "exports": {
     "./seller/clinicaltrials": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs",

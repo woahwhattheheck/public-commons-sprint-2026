@@ -170,7 +170,7 @@ Use the existing host's configured bearer environment reference. An existing
 merchant configuration can add the same clinicalTrialsWorkspaceConnection
 alongside its other configured providers.
 
-The ClinicalTrials attachment exposes its original 42 Clinical and source
+The ClinicalTrials attachment exposes its original 43 Clinical and source
 controls through that running console. Study/capture/PRS reads, reviewed native
 actions, original source mapping and dataset operations, publisher/customer
 operations and verified complete file delivery reach the same owner as the
