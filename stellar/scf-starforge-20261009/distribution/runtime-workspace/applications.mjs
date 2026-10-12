@@ -6,6 +6,7 @@ import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
+import { ndjsonApplication, prepareNdjsonApplication } from './application-ndjson.mjs';
 import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
 import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
@@ -61,6 +62,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   apiPassWorkspaceApplication(common),
   blockscoutApplication(common),
   mppApplication(common),
+  ndjsonApplication(common),
   cheesecakeApplication(common),
   odataApplication(common),
   secEdgarApplication(common),
@@ -309,6 +311,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'ndjson') {
+    const prepared = await prepareNdjsonApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
   } else if (type.id === 'xml') {
     await path('workspaceDirectory', 'directory', false, true);
     args.push('xml', '--workspace', settings.workspaceDirectory, 'serve');
