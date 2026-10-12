@@ -3,12 +3,13 @@
   "operationId": "SCF-MANAGED-CUSTOMERS-INSTALL-8F43-DB4D-20261012-C287-CHECKPOINT-CONTINUATION",
   "sourceCommit": "75dd7badd76f6cd1a3cad97866184c5a1e4922d2",
   "sourceBootstrap": {
-    "gitBlob": "7a7ed936b78b85e236d6ca6ae06a3fc08b90c78d",
-    "bytes": 225565
+    "gitBlob": "9adadbb5a8ac4bf7cf94a686c2b4f871caec1d57",
+    "bytes": 227072
   },
   "launcher": {
-    "gitBlob": "6e319e4214d0ca6adddca99be677195f09504cea",
-    "bytes": 16718
+    "gitBlob": "af25db37758fe890fe3177b7f7cc63fb9b409365",
+    "bytes": 18166,
+    "path": "launch-checkpoint-native-af25db37.py"
   },
   "inputs": {
     "phase.mjs": {
@@ -35,9 +36,9 @@
       "sha": "4995333c9e83bcb0b9523acfc13e0f3dc95cd10c",
       "bytes": 1116
     },
-    "launch-checkpoint-native.py": {
-      "sha": "6e319e4214d0ca6adddca99be677195f09504cea",
-      "bytes": 16718
+    "launch-checkpoint-native-af25db37.py": {
+      "sha": "af25db37758fe890fe3177b7f7cc63fb9b409365",
+      "bytes": 18166
     }
   },
   "host": {
@@ -59,5 +60,10 @@
     "recordInodes": 1024,
     "diskReserveMiB": 4,
     "diskReserveInodes": 128
+  },
+  "priorLifetime": {
+    "record": "/workspace/scratch/8f4370a17e6f/managed-native-records/91085fe875e06cee234286a2ff0851383a84d2845b60f46baca4db20fe1f2bab",
+    "operationId": "SCF-MANAGED-CUSTOMERS-INSTALL-8F43-DB4D-20261012-C287-CONTINUATION",
+    "completion": "Original inspect_interrupted and selection-bound release_interrupted before the new full resource lease"
   }
 }

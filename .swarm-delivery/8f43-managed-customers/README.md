@@ -13,10 +13,10 @@ This is the complete original caller for one retained RSS/Atom/OPML customer and
 | Host source | 71 original files; manifest base `46bbfc4da90915400033074f4c72b79582b5d95f`, source bundle `9e5d792d3ed1d819b7ed78422ca591c31223a280` |
 | Original native job blob | `d73a913a0cedcb39fb8ebdef325c67962240bf39` |
 | Original native checkpoint blob | `6234a05effb3fc69776c889fa00529b5a8936abd` |
-| Complete launcher blob | `6e319e4214d0ca6adddca99be677195f09504cea` |
-| Complete source/bootstrap blob | `7a7ed936b78b85e236d6ca6ae06a3fc08b90c78d` |
+| Complete launcher blob | `af25db37758fe890fe3177b7f7cc63fb9b409365` |
+| Complete source/bootstrap blob | `9adadbb5a8ac4bf7cf94a686c2b4f871caec1d57` |
 
-The bootstrap carries all seven exact caller inputs and the three-file original source correction. It verifies each input's Git object identity, reconstructs the published commit byte-for-byte, and executes the selected foreground launcher. The launcher verifies every member and mode of the complete installed host before registering the original native command.
+The bootstrap carries all seven exact caller inputs and the three-file original source correction. It verifies each input's Git object identity, reconstructs the published commit byte-for-byte, and executes the selected foreground launcher. The launcher verifies every member and mode of the complete installed host. It then uses the original interrupted-lifetime inspection and release API for the prior 91085 operation, retains its exact release result, and registers the new original native command after the old full resource lease has ended. The versioned launcher filename preserves the earlier published caller bytes.
 
 ## One execution owner and foreground
 
@@ -45,7 +45,7 @@ native.inspect(
 )
 ```
 
-A queued record whose supervisor has ended uses the original foreground's supported `resume-capacity` action; the retained launcher exposes that action as `--resume`. A dispatched record retains its actual outcome and source lineage.
+A queued record whose supervisor has ended uses the original foreground's supported `resume-capacity` action; the retained launcher exposes that action as `--resume`. A dispatched record retains its actual outcome and source lineage. This continuation completes the original 91085 registration through `runtime_consumers.inspect_interrupted` and `release_interrupted`, using the freshly observed selection SHA-256 and a stable release reason. The original API rechecks supervisor, command and descendant liveness. The retained unknown outcome, original record and source paths remain readable.
 
 ## Actual inputs
 

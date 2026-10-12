@@ -115,6 +115,25 @@ sys.path.insert(0,str(HOST));os.environ['SWARM_NODE24_BIN']=str(Path(NODE).paren
 os.environ['PYTHONDONTWRITEBYTECODE']='1'
 import swarm_cloud_job as native
 from native_foreground import ForegroundLaunch, resume_foreground
+import runtime_consumers
+# End this operation owner's prior interrupted lifetime before the new full lease.
+# The original reader rechecks supervisor, command and recorded descendant identity.
+prior_record=Path(intent['priorRecord'])
+prior=runtime_consumers.inspect_interrupted(prior_record)
+if prior.get('operation_id')!=intent['priorOperationId']:
+ raise RuntimeError('The previous original lifetime identity changed')
+closed=prior.get('release')
+if not isinstance(closed,dict) or closed.get('state')!='released':
+ if not prior.get('eligible'):
+  raise RuntimeError('Reconcile the existing original lifetime before continuing: '+str(prior.get('reason')))
+ closed=runtime_consumers.release_interrupted(prior_record,
+  expected_selection_sha256=prior['selection_sha256'],
+  reason='Original 8F43 source75dd package completed; both recorded processes ended when its carrier disappeared during PREPARE. Source and record retained; complete resource ownership before the same-source checkpoint continuation.')
+if closed.get('state')!='released':
+ raise RuntimeError('Complete the previous original resource release: '+str(closed.get('reason')))
+exact_write(PROJECT/'results/prior-lifetime-release.json',(json.dumps(closed,indent=2)+'\n').encode())
+print(json.dumps({'stage':'PRIOR_LIFETIME_RELEASED','operation_id':closed['operation_id'],
+ 'record':str(prior_record),'state':closed['state'],'selection_sha256':closed['selection_sha256']}),flush=True)
 if '--resume' in sys.argv:
  report=resume_foreground(native,intent['operationId'],str(RECORDS),action='resume-capacity',report_format='summary')
  if report is not None:print(json.dumps({key:report.get(key) for key in ['operation_id','record','state','supervisor_alive','process_alive','reused']}),flush=True)
