@@ -1,7 +1,9 @@
 /** Installed client of the original Flowable workspace and its complete native source/history deliveries. */
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
-export type RecordKind = 'connection' | 'portfolio' | 'release' | 'process' | 'task' | 'migration' | 'delivery' | 'receiving';
-export type OperationKind = 'release' | 'process' | 'task' | 'migration';
+export type RecordKind = 'connection' | 'portfolio' | 'release' | 'process' | 'task' | 'migration'
+  | 'decisionPortfolio' | 'decisionRelease' | 'decisionEvaluation' | 'delivery' | 'receiving';
+export type OperationKind = 'release' | 'process' | 'task' | 'migration' | 'decisionRelease' | 'decisionEvaluation';
+export type DecisionCollectionKind = 'deployments' | 'definitions' | 'historicExecutions';
 export type CollectionKind = 'deployments' | 'definitions' | 'processes' | 'tasks'
   | 'historicProcesses' | 'historicTasks' | 'historicActivities' | 'historicVariables';
 export type FlowableState = 'SAVED' | 'CAPTURING' | 'CAPTURED' | 'COMPLETED' | 'PREPARING' | 'PREPARED'
@@ -22,7 +24,9 @@ export interface SourceReference { sha256: string; bytes: number; mediaType?: st
 export interface RecordReference { kind: RecordKind; id: string; revision: number; sha256: string }
 export interface NativeEntity { id: string; [key: string]: Json | undefined }
 export interface NativeResource {
-  definitionId?: string; deploymentId?: string; filename: string; contentType?: string;
+  kind?: 'dmn-definition-resource' | 'dmn-execution-audit' | string;
+  definitionId?: string; definitionIds?: string[]; deploymentId?: string; executionId?: string;
+  filename: string; contentType?: string;
   bytes: number; sha256: string; contentBase64?: string;
   definitionRef?: SourceReference; originalResource?: SourceReference; [key: string]: unknown;
 }
@@ -34,7 +38,7 @@ export interface FlowableRecord<Value = Record<string, unknown>> extends RecordR
   schema: 'stellar-forge.flowable-workspace.v1';
   requestId: string; requestSha256: string; createdAt: string; updatedAt: string; bytes: number; value: Value;
   portfolio?: { startedAt: string; completedAt: string;
-    collections: Record<CollectionKind, { total: number; retained: number; complete: boolean; pages: number }>;
+    collections: Partial<Record<CollectionKind | DecisionCollectionKind, { total: number; retained: number; complete: boolean; pages: number }>>;
     resources: number };
   plan?: NativeRequestPlan;
   reconciliation?: NativeReconciliation;
@@ -59,8 +63,9 @@ export interface Paging { offset?: number; limit?: number }
 export interface ListRecordsInput extends Paging { kind?: RecordKind; snapshot?: string }
 export interface GetRecordInput extends Paging { kind: RecordKind; id: string; revision?: number }
 export interface ReadPortfolioInput extends Paging { id: string; revision?: number; collection: CollectionKind }
+export interface ReadDecisionPortfolioInput extends Paging { id: string; revision?: number; collection: DecisionCollectionKind }
 export interface PortfolioPage extends Paging {
-  portfolio: RecordReference; collection: CollectionKind; offset: number; limit: number;
+  portfolio: RecordReference; collection: CollectionKind | DecisionCollectionKind; offset: number; limit: number;
   items: NativeEntity[]; total: number; nativeTotal: number; complete: boolean;
   pages: unknown[]; exchanges: unknown[]; nextOffset: number | null;
 }
@@ -89,7 +94,19 @@ export interface MigrationSelection {
   /** Original Flowable migration document. Native validation precedes dispatch. */
   bodyText: string;
 }
-export type FlowableSelection = DeploymentSelection | ProcessSelection | TaskSelection | MigrationSelection;
+export interface DecisionDeploymentSelection {
+  action: 'deploy'; tenantId?: string;
+  /** One complete original DMN resource. Its filename determines the native deployment name. */
+  resource: { filename: string; contentType?: string; contentBase64: string };
+}
+export interface DecisionEvaluationSelection {
+  action: 'evaluate'; mode?: 'auto' | 'decision' | 'decisionService'; singleResult?: boolean;
+  /** Exact native JSON: decisionKey, tenantId, parentDeploymentId, inputVariables, disableHistory.
+   * The engine resolves its actual definition; retain original numeric text and native variable types. */
+  bodyText: string;
+}
+export type FlowableSelection = DeploymentSelection | ProcessSelection | TaskSelection | MigrationSelection
+  | DecisionDeploymentSelection | DecisionEvaluationSelection;
 export interface PrepareInput<Selection extends FlowableSelection> extends RequestIdentity {
   connectionId: string; selection: Selection; label?: string; note?: string;
 }
@@ -97,6 +114,8 @@ export type PrepareReleaseInput = PrepareInput<DeploymentSelection>;
 export type PrepareProcessInput = PrepareInput<ProcessSelection>;
 export type PrepareTaskInput = PrepareInput<TaskSelection>;
 export type PrepareMigrationInput = PrepareInput<MigrationSelection>;
+export type PrepareDecisionReleaseInput = PrepareInput<DecisionDeploymentSelection>;
+export type PrepareDecisionEvaluationInput = PrepareInput<DecisionEvaluationSelection>;
 export interface DispatchOperationInput extends RequestIdentity {
   id: string; expectedRevision: number; planSha256: string;
 }
@@ -118,7 +137,7 @@ export interface NativeState {
   connectionId?: string; observedAt?: string;
   definitions?: NativeEntity[]; deployments?: NativeEntity[]; processes?: NativeEntity[];
   historicProcesses?: NativeEntity[]; tasks?: NativeEntity[]; historicTasks?: NativeEntity[];
-  activities?: NativeEntity[]; historicActivities?: NativeEntity[]; resources?: NativeResource[];
+  activities?: NativeEntity[]; historicActivities?: NativeEntity[]; historicExecutions?: NativeEntity[]; resources?: NativeResource[];
   [key: string]: unknown;
 }
 export interface NativeReconciliation {
@@ -144,7 +163,8 @@ export interface OperationReview {
   request: { action: string; method: string; path: string; query?: Record<string, unknown>;
     contentType?: string; bodyBytes: number; bodySha256: string; planSha256: string; bodyText?: string;
     resource?: { filename: string; contentType?: string; bytes?: number; sha256?: string; mediaType?: string };
-    deploymentName?: string; deploymentKey?: string; tenantId?: string; processInstanceId?: string; taskId?: string } | null;
+    deploymentName?: string; deploymentKey?: string; tenantId?: string; processInstanceId?: string; taskId?: string;
+    mode?: 'auto' | 'decision' | 'decisionService'; singleResult?: boolean } | null;
   before: NativeState | null; after: NativeState | null;
   validation: NativeResponse | null; response: NativeResponse | null; reconciliation: NativeReconciliation | null;
   failure: OperationValue['failure'] | null;
@@ -179,6 +199,14 @@ export interface ActionInputs {
   dispatchTask: DispatchOperationInput;
   prepareMigration: PrepareMigrationInput;
   dispatchMigration: DispatchOperationInput;
+  readDecisionPortfolio: ReadDecisionPortfolioInput;
+  readDecisionDefinition: { portfolioId: string; definitionId: string; revision?: number };
+  readDecisionExecution: { portfolioId: string; executionId: string; revision?: number };
+  captureDecisionPortfolio: CapturePortfolioInput;
+  prepareDecisionRelease: PrepareDecisionReleaseInput;
+  dispatchDecisionRelease: DispatchOperationInput;
+  prepareDecisionEvaluation: PrepareDecisionEvaluationInput;
+  dispatchDecisionEvaluation: DispatchOperationInput;
   reconcileOperation: ReconcileOperationInput;
   exportWorkspace: ExportWorkspaceInput;
   inspectDelivery: InspectDeliveryInput;
@@ -189,7 +217,7 @@ export interface ActionResults {
   listRecords: RecordPage;
   getRecord: FlowableRecord;
   readPortfolio: PortfolioPage;
-  readDefinition: { portfolio: RecordReference; definition: NativeEntity; resources: NativeResource[] };
+  readDefinition: { portfolio: RecordReference; definition: NativeEntity; deployment: NativeEntity | null; resources: NativeResource[] };
   readSource: { reference: SourceReference; value: Json } | { reference: SourceReference; contentBase64: string; text?: string };
   readReview: OperationReview;
   saveConnection: FlowableRecord<{ label: string; connection: FlowableConnection; configurationSha256: string; state: 'SAVED' }>;
@@ -202,6 +230,14 @@ export interface ActionResults {
   dispatchTask: FlowableRecord<OperationValue>;
   prepareMigration: FlowableRecord<OperationValue>;
   dispatchMigration: FlowableRecord<OperationValue>;
+  readDecisionPortfolio: PortfolioPage;
+  readDecisionDefinition: { portfolio: RecordReference; definition: NativeEntity; deployment: NativeEntity | null; resources: NativeResource[] };
+  readDecisionExecution: { portfolio: RecordReference; execution: NativeEntity; resources: NativeResource[] };
+  captureDecisionPortfolio: FlowableRecord;
+  prepareDecisionRelease: FlowableRecord<OperationValue>;
+  dispatchDecisionRelease: FlowableRecord<OperationValue>;
+  prepareDecisionEvaluation: FlowableRecord<OperationValue>;
+  dispatchDecisionEvaluation: FlowableRecord<OperationValue>;
   reconcileOperation: FlowableRecord<OperationValue>;
   exportWorkspace: FlowableRecord<DeliveryValue>;
   inspectDelivery: FlowableRecord<ReceivingValue>;
@@ -257,6 +293,14 @@ export class FlowableProductClient {
   dispatchTask(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
   prepareMigration(input: PrepareMigrationInput): Promise<FlowableRecord<OperationValue>>;
   dispatchMigration(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
+  readDecisionPortfolio(input: ReadDecisionPortfolioInput): Promise<PortfolioPage>;
+  readDecisionDefinition(input: ActionInputs['readDecisionDefinition']): Promise<ActionResults['readDecisionDefinition']>;
+  readDecisionExecution(input: ActionInputs['readDecisionExecution']): Promise<ActionResults['readDecisionExecution']>;
+  captureDecisionPortfolio(input: CapturePortfolioInput): Promise<FlowableRecord>;
+  prepareDecisionRelease(input: PrepareDecisionReleaseInput): Promise<FlowableRecord<OperationValue>>;
+  dispatchDecisionRelease(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
+  prepareDecisionEvaluation(input: PrepareDecisionEvaluationInput): Promise<FlowableRecord<OperationValue>>;
+  dispatchDecisionEvaluation(input: DispatchOperationInput): Promise<FlowableRecord<OperationValue>>;
   reconcileOperation(input: ReconcileOperationInput): Promise<FlowableRecord<OperationValue>>;
   exportWorkspace(input: ExportWorkspaceInput): Promise<FlowableRecord<DeliveryValue>>;
   inspectDelivery(input: InspectDeliveryInput): Promise<FlowableRecord<ReceivingValue>>;

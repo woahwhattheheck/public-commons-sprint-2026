@@ -290,6 +290,7 @@ def receive_locked(args, root):
         need(hashlib.sha256(content).hexdigest() == item["sha256"], "Original source digest mismatch: " + path)
         blob = hashlib.sha1(b"blob " + str(len(content)).encode("ascii") + b"\0" + content).hexdigest()
         native = by_tree.get(path)
+        need(native and isinstance(native.get("size"), int), "Original Git tree entry is missing its blob size: " + path)
         need(native and native["type"] == "blob" and native["sha"] == blob == item["gitBlob"] and
              native["mode"] == item["mode"] and native["size"] == len(content), "Original Git source mismatch: " + path)
         decoded[path] = content

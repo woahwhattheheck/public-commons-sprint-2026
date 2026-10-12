@@ -1,4 +1,4 @@
-# Flowable process operations
+# Flowable process and decision operations
 
 This workspace gives an operator a complete view of a Flowable REST engine: original BPMN deployments and definition versions, active processes, human tasks, migration validation and process history. It preserves reviewed native requests and their replies alongside source resources, then exports the whole operating history for customer handover.
 
@@ -126,3 +126,9 @@ starforge flowable-workspace inspect --url-file /srv/private/receiver-url.txt --
 Read the returned receiving record, then call adoptDelivery with a new requestId, its id, expectedRevision and manifestSha256. The original stream, all revisions, source blobs and native journals are checked before adoption. Reopening the receiving directory resumes an interrupted adoption and exposes the complete original operating history.
 
 The browser stores an unfinished request's full input before transport and reconnects with that original request. Raw source downloads and streamed NDJSON handovers keep complete file bytes. The workspace serializes local writes, uses a kernel ownership lease and drains active operations during close.
+
+## Native decision operations
+
+The same installed workspace includes original DMN deployment, native decision and decision-service evaluation, captured execution audits and full source/history receiving. Save the original DMN REST endpoint as a separate named connection. Use the **Decisions** page, `capture-decisions`, `decision-portfolio`, `decision-definition` and `decision-execution` commands, the typed client, or the eight native decision MCP actions.
+
+See [Decision deployment, evaluation and operating history](../../../../../products/flowable-merchant/DECISIONS.md) for the complete operator workflow, typed numeric input and native result semantics.

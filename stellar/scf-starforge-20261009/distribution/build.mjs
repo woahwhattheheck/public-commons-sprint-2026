@@ -17,21 +17,21 @@ export { inspectDistributionBuild };
 
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|pyi|rb|rbs|erb|php|go|rs|java|json|jsonl|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|dtd|yaml|yml|svg|png|woff2|service|proto)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|pyi|rb|rbs|erb|php|go|rs|java|dmn|dmn11|json|jsonl|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|dtd|yaml|yml|svg|png|woff2|service|proto)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
 function isRuntimeFile(path, explicitRuntime = false) {
   const parts = path.split('/');
   // Retained source data can have an original fixtures path. Only explicitly
-  // declared data gets this exception; executable fixtures stay excluded.
-  const declaredData = explicitRuntime && /\.(?:csv|json|txt|parquet)$/i.test(path);
+  // declared data and native XML/DMN models get this exception; executable fixtures stay excluded.
+  const declaredData = explicitRuntime && /\.(?:csv|json|txt|parquet|xml|dmn|dmn11)$/i.test(path);
   // Explicit scientific references include original PDF, R/Rd and package metadata.
   // Keep these formats out of the automatic runtime-directory expansion.
   return !parts.some(part => part.startsWith('.') ||
     (excludedDirs.has(part) && !(part === 'fixtures' && declaredData))) &&
     (explicitRuntime || !excludedName.test(parts.at(-1))) &&
-    (supported.test(path) || (explicitRuntime && /\.(?:zip|parquet|gz|pdf|r|rd)$/i.test(path)) ||
+    (supported.test(path) || (explicitRuntime && /\.(?:zip|parquet|pdf|r|rd|gz|rst|conf)$/i.test(path)) ||
       ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)) ||
       (explicitRuntime && (['COPYING', 'DESCRIPTION', 'metadat-DESCRIPTION'].includes(parts.at(-1)) ||
         /^(?:LICENSE|NOTICE)[.-][A-Za-z0-9][A-Za-z0-9._-]*$/i.test(parts.at(-1)))));
@@ -112,7 +112,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   for (const path of [...specificationPaths, 'LICENSE'])
     if (!byPath.has(path)) throw new TypeError('Missing original distribution input: ' + path);
   const initial = source.readFiles([...specificationPaths.map(path => byPath.get(path)), byPath.get('LICENSE')]);
-  const distribution = composeDistribution({ base: JSON.parse(initial.get(distributionPath)),
+  const base = JSON.parse(initial.get(distributionPath));
+  const distribution = composeDistribution({ base,
     contributions: selectedPaths.map(path => ({ path, data: JSON.parse(initial.get(path)) })), selection: recipe });
   const spec = distribution.spec;
   const product = productPackageMetadata(spec.product);
@@ -125,13 +126,17 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {}),
     ...(recipe ? [...required, ...Object.values(spec.runtimePackageManifests ?? {}),
       ...(spec.browserAssets ?? []).flatMap(entry => [entry.server, entry.manifest])] : [])]);
+  // A production helper may have an acceptance-like name. The original base
+  // declaration authorizes that file only when an actual selected import needs
+  // it; it does not add unrelated support files to the selected archive.
+  const declaredRuntime = new Set(base.supportFiles ?? []);
   const originalInputs = new Set([...specificationPaths, product.readme]);
   const selectionIncludes = path => !recipe || !(
     path.startsWith(contributionDirectory + '/') || path.startsWith(sourceSelectionDirectory + '/')) ||
     originalInputs.has(path);
   // A selected archive carries only its original declarations, even when its
   // complete distribution component contains other product contribution files.
-  // Explicit support files include maintained ZIP data and can override a
+  // Explicit support files include maintained ZIP data and text .conf files, and can override a
   // test-like filename. Undeclared archives remain outside source selection;
   // directory, explicit exclusion and regular-file checks still apply.
   const selected = tree.filter(item => selectionIncludes(item.path) &&
@@ -169,7 +174,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const enqueue = (target, importer, discovered) => {
     if (names.has(target)) return;
     const item = byPath.get(target);
-    if (!item || excluded.has(target) || !selectionIncludes(target) || !isRuntimeFile(target, explicitRuntime.has(target))) {
+    if (!item || excluded.has(target) || !selectionIncludes(target) || !isRuntimeFile(target, explicitRuntime.has(target) || declaredRuntime.has(target))) {
       missingModules.push(importer + ' -> ' + target);
       return;
     }

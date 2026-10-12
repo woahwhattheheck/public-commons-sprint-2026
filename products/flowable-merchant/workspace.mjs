@@ -57,7 +57,7 @@ export async function initializeFlowableProduct(input = {}) {
     selected = await connections(selected);
     const setup = { schema: SETUP_SCHEMA, productId: old?.productId ?? randomUUID(),
       createdAt: old?.createdAt ?? new Date().toISOString(), directory, workspaceDirectory,
-      name: title(input.name ?? old?.name ?? 'Flowable process operations'), connections: selected, source };
+      name: title(input.name ?? old?.name ?? 'Flowable process and decision operations'), connections: selected, source };
     need(Buffer.byteLength(seedText(selected)) <= 1024 * 1024 &&
       Buffer.byteLength(JSON.stringify(setup, null, 2) + '\n') <= 1024 * 1024,
     'Keep the original initial connection declarations within 1 MiB; saved targets can be added in the workspace.');
