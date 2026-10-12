@@ -10,11 +10,13 @@ import {loadDatasetConfig} from '../dataset-handler.mjs';
 import {inspectDirectusSource,projectDirectusSources,compareDirectusEditions,hash,canonical,fault,object,MAX_SOURCE_BYTES} from './source.mjs';
 import {registerDirectusMerchant,registerDirectusBuyer,registerDirectusDelivery,captureDirectusProjectRuntime,
   validateDirectusProjectRuntime,restoreDirectusProjectRuntime,directusProjectLocations} from './project.mjs';
+import {registerDirectusBuyerSession,directusBuyerSessionLocations,captureDirectusBuyerSessions,
+  validateDirectusBuyerSessions,restoreDirectusBuyerSessions} from './sessions.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.directus-workspace.v1';
 const FILE = 'directus-datasets.sqlite3';
 const APPLICATION_ID = 1397113944;
-const KINDS = ['sources','editions','reviews','comparisons','publications','native-events','merchant-packages','buyer-configurations','customer-deliveries'];
+const KINDS = ['sources','editions','reviews','comparisons','publications','native-events','merchant-packages','buyer-configurations','customer-deliveries','buyer-sessions'];
 const HASH = /^[a-f0-9]{64}$/;
 const REQUEST = /^[A-Za-z0-9_.:-]{8,128}$/;
 const now = () => new Date().toISOString();
@@ -104,6 +106,8 @@ function summary(kind,doc) {
   if(['merchant-packages','buyer-configurations','customer-deliveries'].includes(kind))return {...common,
     edition_id:doc.edition.id,edition_sha256:doc.edition.sha256,snapshot:doc.edition.snapshot,
     files:doc.files.length,bytes:doc.files.reduce((sum,file)=>sum+file.bytes,0),delivery_sha256:doc.delivery_sha256};
+  if(kind==='buyer-sessions')return {...common,buyer_id:doc.buyer_id,session_id:doc.session_id,
+    session_sha256:doc.session_sha256,configuration_sha256:doc.configuration_sha256,snapshot:doc.snapshot};
   if(kind==='comparisons')return {...common,before_id:doc.before_id,after_id:doc.after_id,counts:doc.counts};
   return clone(doc);
 }
@@ -168,7 +172,7 @@ export class DirectusWorkspace {
     this.lease.assertHeld();
     return {schema:WORKSPACE_SCHEMA,id:this.meta('workspace_id'),revision:this.revision(),created_at:this.meta('created_at'),
       selected_edition_id:this.meta('selected_edition_id'),selected_review_id:this.meta('selected_review_id'),...Object.fromEntries(KINDS.map(k=>[k,this.list(k)])),
-      project_runtime:directusProjectLocations(this),
+      project_runtime:{...directusProjectLocations(this),sessions:directusBuyerSessionLocations(this)},
       operation_count:Number(this.db.prepare('SELECT count(*) AS n FROM operations').get().n)};
   }
   read(kind,id,{offset=0,limit=50}={}){
@@ -377,14 +381,17 @@ export class DirectusWorkspace {
   retainMerchant(input){return this.run(()=>registerDirectusMerchant(this,input));}
   retainBuyer(input){return this.run(()=>registerDirectusBuyer(this,input));}
   retainDelivery(input){return this.run(()=>registerDirectusDelivery(this,input));}
+  retainBuyerSession(input){return this.run(()=>registerDirectusBuyerSession(this,input));}
   exportFile(kind,id){
     return this.run(async()=>{
       const root=path.join(this.directory,'downloads');directory(root);
       let bytes,filename,contentType='application/json; charset=utf-8',file;
       if(kind==='project'){
         const runtime=await captureDirectusProjectRuntime(this);
+        const sessions=await captureDirectusBuyerSessions(this);
+        this.setMeta('session_custody',sessions);
         filename='Directus_Collection_Datasets_'+this.revision()+'.sqlite3';
-        file=path.join(root,this.meta('workspace_id')+'-'+this.revision()+'-'+runtime.sha256+'.sqlite3');
+        file=path.join(root,this.meta('workspace_id')+'-'+this.revision()+'-'+runtime.sha256+'-'+sessions.sha256+'.sqlite3');
         if(!fs.existsSync(file)){
           const temporary=file+'.partial-'+randomUUID();
           try{
@@ -520,7 +527,9 @@ export async function receiveDirectusWorkspace({file,directory:root}={}){
           throw fault('DIRECTUS_ARCHIVE_PROJECTION','The selected original source does not reproduce its saved customer projection.');
       }
       validateDirectusProjectRuntime(target,target.meta('runtime_custody'));
+      validateDirectusBuyerSessions(target,target.meta('session_custody'));
       target.setMeta('receiving_source',identity);target.setMeta('runtime_locations',{});target.setMeta('receiving_runtime',null);
+      target.setMeta('session_locations',{});target.setMeta('receiving_sessions',null);
       target.db.exec('COMMIT');
     }catch(error){target.db.exec('ROLLBACK');throw error;}
 
@@ -535,6 +544,11 @@ export async function receiveDirectusWorkspace({file,directory:root}={}){
     }
   }finally{try{await target?.close();}finally{try{source?.close();}finally{await receivingLease.close();}}}
   const received=await openDirectusWorkspace({directory:targetRoot});
-  try{await restoreDirectusProjectRuntime(received);return received;}
+  try{
+    await restoreDirectusProjectRuntime(received);
+    await restoreDirectusBuyerSessions(received,received.meta('session_custody'),{
+      sourceArchiveSha256:received.meta('receiving_source').sha256});
+    return received;
+  }
   catch(error){await received.close();throw error;}
 }

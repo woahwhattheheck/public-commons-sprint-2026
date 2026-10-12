@@ -94,8 +94,32 @@ export async function registerDirectusMerchant(workspace,{directory}={}){
   const names=['dataset.csv','dataset.json','seller.json','source.json','binding.json','directus-merchant-intent.json',
     ...prepared.sourceFiles.map(file=>file.path)];
   const files=await retainedFiles(prepared.directory,names);
-  const versionGroup='version-'+identity({workspace:workspace.state().id,directory:prepared.binding.datasetDirectory,
-    contract:prepared.binding.contractSha256,seller:hash(prepared.retained['seller.json'])});
+  const locations=workspace.meta('runtime_locations')?.['merchant-packages']??{};
+  const retained=workspace.list('merchant-packages').map(entry=>workspace.get('merchant-packages',entry.id));
+  const samePackage=retained.filter(doc=>locations[doc.id]?.directory===prepared.directory);
+  need(samePackage.length<=1,'This local publisher is associated with multiple original merchant records.');
+  if(samePackage.length){
+    const doc=samePackage[0],members=fileMap(workspace,doc),originalIntent=parse(members.get('directus-merchant-intent.json').raw);
+    need(doc.edition.id===prepared.source.edition.id&&doc.edition.sha256===prepared.source.edition.sha256&&
+      doc.review_id===prepared.source.review.id&&
+      identity(intent)===identity({...originalIntent,versionDirectory:prepared.binding.datasetDirectory})&&
+      identity(prepared.binding)===identity({...parse(members.get('binding.json').raw),datasetDirectory:prepared.binding.datasetDirectory}),
+      'The local publisher preparation differs from its original retained selection.');
+    need(files.length===doc.files.length,'The local publisher source closure differs from its original package.');
+    for(const file of files)if(!['binding.json','directus-merchant-intent.json'].includes(file.path)){
+      const original=members.get(file.path);
+      need(original&&original.bytes===file.bytes&&original.sha256===file.sha256,'The local publisher changed an original source or seller file.');
+    }
+    return doc;
+  }
+  const groupPeers=retained.filter(doc=>locations[doc.id]?.versionDirectory===prepared.binding.datasetDirectory);
+  const expectedBinding={schema:'stellar-forge.directus-version-binding.v1',workspace_id:prepared.source.workspace_id,
+    mode:prepared.source.mode,contract_sha256:prepared.binding.contractSha256,seller_sha256:hash(prepared.retained['seller.json'])};
+  for(const peer of groupPeers)need(identity(versionBinding(workspace,peer))===identity(expectedBinding),
+    'The existing received version store has different publishing terms.');
+  need(new Set(groupPeers.map(doc=>doc.version_group)).size<=1,'The same local version store names multiple original groups.');
+  const versionGroup=groupPeers[0]?.version_group??('version-'+identity({workspace:workspace.state().id,directory:prepared.binding.datasetDirectory,
+    contract:prepared.binding.contractSha256,seller:hash(prepared.retained['seller.json'])}));
   const id='merchant-'+identity({directory:prepared.directory,execution:prepared.dataset.executionSha256});
   const doc={schema:SCHEMAS['merchant-packages'],id,workspace_id:workspace.state().id,edition:prepared.source.edition,
     review_id:prepared.source.review.id,original_directory:prepared.directory,original_version_directory:prepared.binding.datasetDirectory,
@@ -366,7 +390,9 @@ export async function restoreDirectusProjectRuntime(workspace){
   for(const entry of workspace.list('buyer-configurations')){
     const doc=workspace.get('buyer-configurations',entry.id),directory=join(root,'buyers',doc.id);
     await writeMembers(workspace,doc,directory);
-    (locations['buyer-configurations']??={})[doc.id]={configuration:join(directory,'buyer.json'),selection:join(directory,'selection.json')};
+    const selection=doc.files.find(file=>file.path==='selection.json');
+    await saveExact(join(directory,'buyer.json.directus.json'),workspace.bytes(selection.sha256));
+    (locations['buyer-configurations']??={})[doc.id]={configuration:join(directory,'buyer.json'),selection:join(directory,'buyer.json.directus.json')};
   }
   for(const entry of workspace.list('customer-deliveries')){
     const doc=workspace.get('customer-deliveries',entry.id),directory=join(root,'deliveries',doc.id);

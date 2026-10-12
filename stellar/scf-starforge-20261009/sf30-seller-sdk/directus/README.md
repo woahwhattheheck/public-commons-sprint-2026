@@ -201,11 +201,19 @@ Merchant preparation saves the package into its open workspace automatically. Br
 
 **Receive project** validates the original records, source projections, approved package bindings, complete data-room files and dataset generations. It rebuilds local merchant execution paths inside the received project's private directory, preserving the original package bytes alongside the new local package. Packages that shared a version store continue to share one received store. The original dataset engine opens that store and verifies its selected generation.
 
-In **Saved publishing and customer files**, choose **Use publisher** to start a saved merchant with its retained history, **Download configuration** to retrieve a saved buyer configuration, or **Inspect delivery** to reopen a complete customer data room. These files and controls remain available after restarting the operator.
+Use **Save an acquired buyer session** to retain a session created from a saved buyer configuration. Choose that exact configuration and the existing session directory. Each complete project download captures the current acquired pages, response files, evidence and original session history through the native SF88 archive API. Receiving restores these files at the new project location and preserves the original configuration, request identity and source paths through the original receiver. Reopening the same incoming project preserves later progress in that received session.
 
-The same transfer works through the CLI:
+In **Saved publishing and customer files**, choose **Use session** to select an acquired session for customer receiving, **Inspect session** to read its current progress, or **Use publisher** to start a saved merchant with its retained history, **Download configuration** to retrieve a saved buyer configuration, or **Inspect delivery** to reopen a complete customer data room. These files and controls remain available after restarting the operator.
+
+The same transfer works through the CLI. Save a session using the buyer configuration ID returned by `buyer prepare --workspace` or shown in `state`:
 
 ~~~sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/directus/cli.mjs buyer retain-session \
+  --workspace /absolute/private/directus-workspace \
+  --buyer SAVED_BUYER_ID \
+  --session /absolute/private/buyer-session
+
+
 node stellar/scf-starforge-20261009/sf30-seller-sdk/directus/cli.mjs export \
   --workspace /absolute/private/directus-workspace \
   --kind project \
@@ -230,7 +238,7 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native-customer.mjs
   --out /absolute/private/directus-customer-run
 ~~~
 
-The run captures the original native collection, creates and saves a native content version, compares and promotes it, reads the returned item, and captures the edited collection. It builds and reviews both dataset editions, prepares the merchant, and starts an original SF88 page chain. It publishes the successor while that customer is still acquiring the earlier snapshot, completes the original snapshot, receives its complete data room, and transfers the full editable project. It starts the received publisher at its new host paths, selects the retained earlier edition, re-exports that changed project, and reopens the original incoming file to check that the later selection survives. It also opens the changed export as another complete project, then restarts the original seller and selects its retained earlier edition.
+The run captures the original native collection, creates and saves a native content version, compares and promotes it, reads the returned item, and captures the edited collection. It builds and reviews both dataset editions, prepares the merchant, and starts an original SF88 page chain. It publishes the successor while that customer is still acquiring the earlier snapshot, completes the original snapshot, receives its complete data room, and transfers the full editable project. The transferred project includes the acquired session. The run reopens that session through the original buyer, receives another complete data room from its relocated pages, and compares the original delivery bytes. It starts the received publisher at its new host paths, selects the retained earlier edition, re-exports that changed project, and reopens the original incoming file to check that the later selection survives. It also opens the changed export as another complete project, reopens the same acquisition at that second location, then restarts the original seller and selects its retained earlier edition.
 
 For the dataset acquisition portion, this exercise exposes the running version store through its original free HTTP response path. SF31/SF88 preserve the native `NO_PAYMENT_REQUIRED` pages, response files and acquisition history. The resulting record identifies this mode and its observed HTTP requests.
 
@@ -255,4 +263,4 @@ After the native customer completes, `native-browser.mjs` receives its SQLite pr
 node native-browser.mjs --input /private/directus-browser-input.json --out /private/directus-browser
 ~~~
 
-The walk uses the actual UI for native draft creation, exact patch text, comparison and promotion; collection capture; field selection and edition review; dataset query; merchant offer and buyer preparation; completed original customer receiving; project download, receiving and restart. It also starts a saved publisher from the received project, downloads its saved buyer configuration, and inspects its original customer delivery through the actual receiving controls. It saves eight desktop/mobile viewport images, including 390-pixel keyboard navigation and the saved publishing tables, plus the received editable project and `BROWSER_RESULT.json`. All browser and operator resources close before the native job releases its original Directus service.
+The walk uses the actual UI for native draft creation, exact patch text, comparison and promotion; collection capture; field selection and edition review; dataset query; merchant offer and buyer preparation; completed original customer receiving; project download, receiving and restart. It also saves and inspects the acquired session through the actual controls, receives customer data from its relocated pages, starts a saved publisher from the received project, downloads its saved buyer configuration, and inspects its original customer delivery. The session remains available after the second project transfer and operator restart. It saves eight desktop/mobile viewport images, including 390-pixel keyboard navigation and the saved publishing tables, plus the received editable project and `BROWSER_RESULT.json`. All browser and operator resources close before the native job releases its original Directus service.

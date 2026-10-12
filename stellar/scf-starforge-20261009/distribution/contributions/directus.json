@@ -15,7 +15,8 @@
     "./seller/directus/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/server.mjs",
     "./seller/directus/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/launch.mjs",
     "./buyer/directus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/customer.mjs",
-    "./seller/directus/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/project.mjs"
+    "./seller/directus/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/project.mjs",
+    "./seller/directus/sessions": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/directus/sessions.mjs"
   },
   "browserAssets": [
     {

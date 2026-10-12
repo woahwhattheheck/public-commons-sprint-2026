@@ -76,7 +76,8 @@ async function refresh(){
 }
 
 function renderProjectRuntime(){
-  const runtime=state.project_runtime??{merchants:[],buyers:[],deliveries:[]};
+  const runtime=state.project_runtime??{merchants:[],buyers:[],deliveries:[],sessions:[]};
+  options($('retained-session-buyer'),runtime.buyers.map(item=>[item.id,(item.edition.name??item.edition.id)+' · '+item.id.slice(0,22)]));
   table('project-merchants',['Edition','Snapshot',''],runtime.merchants.map(item=>{
     const use=button('Use publisher',()=>{
       for(const field of document.querySelectorAll('[data-package]'))field.value=item.directory;
@@ -94,6 +95,22 @@ function renderProjectRuntime(){
     download.href='/api/download?kind=buyer-config&id='+encodeURIComponent(item.id);
     download.dataset.projectBuyer=item.id;
     return[item.edition.name??item.edition.id,item.id.slice(0,22),download];
+  }));
+  table('project-sessions',['Acquisition','Snapshot',''],(runtime.sessions??[]).map(item=>{
+    const actions=document.createElement('div');actions.className='toolbar';
+    const use=button('Use session',()=>{
+      $('receive-buyer-form').elements.sessionDirectory.value=item.directory;
+      $('save-session-form').elements.directory.value=item.directory;
+      $('retained-session-buyer').value=item.buyerId;
+      const publisher=runtime.merchants.find(merchant=>merchant.edition.snapshot===item.snapshot);
+      if(publisher)$('receive-buyer-form').elements.directory.value=publisher.directory;
+      notice('Saved acquisition selected for customer receiving.');
+    });
+    use.dataset.projectSession=item.id;
+    const inspect=button('Inspect session',async()=>jsonView('merchant-result',
+      await api('/api/buyer',{method:'POST',value:{action:'session-status',id:item.id}})));
+    inspect.dataset.projectSessionInspect=item.id;actions.append(use,inspect);
+    return[item.sessionId,item.snapshot.slice(0,16),actions];
   }));
   table('project-deliveries',['Edition','Rows',''],runtime.deliveries.map(item=>{
     const inspect=button('Inspect delivery',async()=>{
@@ -205,6 +222,10 @@ $('publish-refresh').addEventListener('click',()=>guard(async()=>{const input=fo
 const buyerInput=()=>{const input=formValue('buyer-form');return {directory:input.directory,seller:input.seller,query:parse(input.query,'First page query')};};
 onForm('buyer-form',async()=>{const result=await api('/api/buyer',{method:'POST',value:{action:'offer',...buyerInput()}});jsonView('merchant-result',result);if(result.offerSha256)$('buyer-form').elements.offerSha256.value=result.offerSha256;});
 $('prepare-buyer').addEventListener('click',()=>guard(async()=>{const input=formValue('buyer-form');jsonView('merchant-result',await api('/api/buyer',{method:'POST',value:{action:'prepare',...buyerInput(),intentId:input.intentId,acceptIndex:Number(input.acceptIndex),offerSha256:input.offerSha256,destination:input.destination}}));await refresh();}));
+onForm('save-session-form',async input=>{
+  jsonView('merchant-result',await api('/api/buyer',{method:'POST',value:{action:'retain-session',...input}}));
+  await refresh();notice('Acquired session saved with this project.');
+});
 onForm('receive-buyer-form',async input=>{jsonView('merchant-result',await api('/api/buyer',{method:'POST',value:{action:'receive',...input,includeSourceCaptures:$('receive-buyer-form').elements.includeSourceCaptures.checked}}));await refresh();});
 $('inspect-delivery').addEventListener('click',()=>guard(async()=>jsonView('merchant-result',await api('/api/buyer',{method:'POST',value:{action:'inspect',directory:$('receive-buyer-form').elements.destination.value}}))));
 function fileBase64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('The selected file could not be read.'));reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.readAsDataURL(file);});}
