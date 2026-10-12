@@ -1,3 +1,4 @@
+import {pmtilesCommerceTools} from './pmtiles-commerce.mjs';
 // MIT. Source-owned PMTiles merchant metadata; native modules load only when selected.
 const workspace = {type:'string',pattern:'^[a-z0-9][a-z0-9_-]{0,63}$'};
 const id = {type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$'};
@@ -43,6 +44,7 @@ export function pmtilesWorkspaceTools(tool) {
     row('download_manifest','Inspect the retained original package download manifest. exportId is workspace:original-package-requestId.',{exportId},['exportId']),
     row('download_file','Read the exact selected package or its download manifest through the original retained-file descriptor. Repeat both hashes and nextOffset; omit an expired readId after reopen.',{exportId,file:{type:'string',enum:['pmtiles-download.json','pmtiles-operations.zip']},expectedManifestSha256:digest,expectedSha256:digest,...chunk},['exportId','file','expectedManifestSha256','expectedSha256']),
     row('download_file_release','Release the original retained package-file read.',{exportId,readId:{type:'string'}},['exportId','readId'],write),
-    row('receive','Receive the selected original package into a host-configured receiving target, with a separate installation and workspace under this requestId. Validates the source/runtime/workspace closure and reopens its exact native files.',durable({packageRequestId:id,archiveSha256:digest,target:workspace}),['workspace','requestId','packageRequestId','archiveSha256','target'],write)
+    row('receive','Receive the selected original package into a host-configured receiving target, with a separate installation and workspace under this requestId. Validates the source/runtime/workspace closure and reopens its exact native files.',durable({packageRequestId:id,archiveSha256:digest,target:workspace}),['workspace','requestId','packageRequestId','archiveSha256','target'],write),
+    ...pmtilesCommerceTools(tool)
   ];
 }

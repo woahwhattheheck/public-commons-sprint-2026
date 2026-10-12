@@ -89,7 +89,9 @@ export async function exercisePMTilesMcp({sourceRoot,directory,runtimeProfile,ex
   try{
     await start();
     const catalog=listener.operator.tools.map(value=>value.name).filter(name=>name.startsWith('merchant_pmtiles_'));
-    assert.equal(catalog.length,31);
+    const required=["merchant_pmtiles_status","merchant_pmtiles_open","merchant_pmtiles_close","merchant_pmtiles_console","merchant_pmtiles_resources","merchant_pmtiles_resource","merchant_pmtiles_resource_file","merchant_pmtiles_file_release","merchant_pmtiles_import","merchant_pmtiles_acquire","merchant_pmtiles_adopt_object","merchant_pmtiles_save","merchant_pmtiles_edition","merchant_pmtiles_compare","merchant_pmtiles_inspect","merchant_pmtiles_request","merchant_pmtiles_review","merchant_pmtiles_review_status","merchant_pmtiles_prepare","merchant_pmtiles_release","merchant_pmtiles_publish","merchant_pmtiles_restore","merchant_pmtiles_preview","merchant_pmtiles_stop_preview","merchant_pmtiles_export","merchant_pmtiles_package","merchant_pmtiles_package_info","merchant_pmtiles_download_manifest","merchant_pmtiles_download_file","merchant_pmtiles_download_file_release","merchant_pmtiles_receive"];
+    for(const name of required)assert.ok(catalog.includes(name),name);
+    assert.ok(catalog.length>=required.length);
     const opened=await call('open');assert.equal(opened.workspaceId,expectedWorkspaceId);
     const consoleFirst=await call('console');assert.equal(new URL(consoleFirst.url).origin,opened.authoring.origin);
     assert.ok(new URL(consoleFirst.url).hash.startsWith('#token='));

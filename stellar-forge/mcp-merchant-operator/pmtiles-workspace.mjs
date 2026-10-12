@@ -7,6 +7,7 @@ import {RetainedFileReads} from './retained-file-reads.mjs';
 import {PMTILES_DOWNLOAD_SCHEMA,PMTILES_DOWNLOAD_MANIFEST,PMTILES_DOWNLOAD_FILE,
   parsePMTilesExportId,parsePMTilesDownload} from './pmtiles-download.mjs';
 import {pmtilesWorkspaceTools} from './catalog/pmtiles-workspace.mjs';
+import {readPMTilesCommerceConfiguration,pmtilesCommerceSummary,MerchantPMTilesCommerce} from './pmtiles-commerce.mjs';
 import {servePMTilesWorkspace} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/server.mjs';
 import {readOperationsPackage,receiveOperationsPackage} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/portable.mjs';
 import {identifier,rights,clone,digest,hash,need,HASH} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/model.mjs';
@@ -71,7 +72,7 @@ export async function readPMTilesWorkspaceConfiguration(path,{exportsDirectory}=
   const base=dirname(path),workspaces=Object.create(null),seen=new Set();
   for(const [alias,value]of Object.entries(raw.workspaces)){
     aliasId(alias,'Workspace alias');
-    exact(value,['label','directory','expectedWorkspaceId','runtime','imports','sf88Objects','receivingTargets'],
+    exact(value,['label','directory','expectedWorkspaceId','runtime','imports','sf88Objects','receivingTargets','commerce'],
       ['directory','expectedWorkspaceId','runtime']);
     const directory=await canonicalPrivate(hostPath(value.directory,base));
     need(!seen.has(directory),'PMTILES_DUPLICATE_WORKSPACE_ALIAS');seen.add(directory);
@@ -100,6 +101,7 @@ export async function readPMTilesWorkspaceConfiguration(path,{exportsDirectory}=
       if(exportsDirectory)separate(resolve(exportsDirectory),selected);
       entry.receivingTargets[key]={directory:selected};
     }
+    entry.commerce=await readPMTilesCommerceConfiguration(value.commerce,{base,directory,exportsDirectory});
     workspaces[alias]=entry;
   }
   // A received installation cannot overlap another configured original workspace.
@@ -150,9 +152,10 @@ function packageView(result,manifest,manifestSha256){
 
 export class MerchantPMTilesWorkspaces{
   #config;#handles=new Map();#tails=new Map();#pending=new Set();#reads=new RetainedFileReads({errorPrefix:'PMTILES'});
-  #closing=false;#closePromise;#shutdown=new AbortController();
+  #closing=false;#closePromise;#shutdown=new AbortController();#commerce=new Map();
   constructor(config){
-    this.#config={exportsDirectory:resolve(config.exportsDirectory),pmtilesWorkspaces:clone(config.pmtilesWorkspaces??{workspaces:{}})};
+    this.#config={exportsDirectory:resolve(config.exportsDirectory),releaseStore:config.releaseStore===undefined?null:resolve(config.releaseStore),
+      pmtilesWorkspaces:clone(config.pmtilesWorkspaces??{workspaces:{}})};
   }
   get summary(){return {configured:Object.keys(this.#config.pmtilesWorkspaces.workspaces).length>0,
     count:Object.keys(this.#config.pmtilesWorkspaces.workspaces).length,opened:[...this.#handles.keys()],
@@ -176,7 +179,7 @@ export class MerchantPMTilesWorkspaces{
       workspace,label:entry.label,workspaceId:entry.expectedWorkspaceId,state:this.#handles.has(workspace)?'OPEN':'CLOSED',
       imports:Object.entries(entry.imports).map(([source,item])=>({source,...pick(item,['name','kind','expected'])})),
       sf88Objects:Object.entries(entry.sf88Objects).map(([source,item])=>({source,...pick(item,['name','kind','expected'])})),
-      receivingTargets:Object.keys(entry.receivingTargets)}));
+      receivingTargets:Object.keys(entry.receivingTargets),commerce:pmtilesCommerceSummary(entry)}));
     if(args.workspace===undefined)return {...this.summary,workspaces:rows};
     this.#entry(args.workspace);const row=rows.find(item=>item.workspace===args.workspace);
     if(this.#closing)return {...row,state:'CLOSING'};
@@ -197,9 +200,24 @@ export class MerchantPMTilesWorkspaces{
     return this.#status({workspace:alias});
   }
   async #closeWorkspace(alias){
-    const promise=this.#handles.get(alias);await this.#reads.closeScope(alias);
-    if(promise){await (await promise).close();if(this.#handles.get(alias)===promise)this.#handles.delete(alias);}
+    const promise=this.#handles.get(alias),commerce=this.#commerce.get(alias);
+    const closed=await Promise.allSettled([
+      this.#reads.closeScope(alias),commerce?commerce.close():Promise.resolve(),
+      promise?(async()=>{await (await promise).close();if(this.#handles.get(alias)===promise)this.#handles.delete(alias);})():Promise.resolve()
+    ]);
+    if(commerce&&closed[1].status==='fulfilled'&&this.#commerce.get(alias)===commerce)this.#commerce.delete(alias);
+    const failed=closed.find(row=>row.status==='rejected');if(failed)throw failed.reason;
     return {workspace:alias,state:'CLOSED'};
+  }
+  async #output(alias){
+    need(this.#config.releaseStore,'PMTILES_COMMERCE_RELEASE_STORE_REQUIRED');
+    if(!this.#commerce.has(alias)){
+      const server=await this.#server(alias);
+      this.#commerce.set(alias,new MerchantPMTilesCommerce({alias,entry:this.#entry(alias),
+        controller:server.controller,exportsDirectory:this.#config.exportsDirectory,releaseStore:this.#config.releaseStore,
+        packageSelection:requestId=>this.#packageMetadata(alias,requestId),signal:this.#shutdown.signal}));
+    }
+    return this.#commerce.get(alias);
   }
   async #packageMetadata(alias,requestId){
     const entry=this.#entry(alias),paths=this.#paths(alias,requestId);
@@ -262,6 +280,8 @@ export class MerchantPMTilesWorkspaces{
     if(name==='merchant_pmtiles_close')return this.#closeWorkspace(alias);
     if(name==='merchant_pmtiles_package_info')return this.#packageInfo(alias,identifier(args.requestId));
     if(name==='merchant_pmtiles_file_release')return {workspace:alias,...await this.#reads.release(alias,args.readId)};
+    if(name.startsWith('merchant_pmtiles_output_')||name.startsWith('merchant_pmtiles_purchase_'))
+      return (await this.#output(alias)).execute(name,args);
     const server=await this.#server(alias),controller=server.controller,model=controller.workspace;
     const owner=fields=>({...fields,requestId:identifier(args.requestId),expectedWorkspaceId:entry.expectedWorkspaceId});
     const execute=(action,input)=>controller.execute(action,owner(input),{signal:this.#shutdown.signal});
@@ -352,15 +372,14 @@ export class MerchantPMTilesWorkspaces{
   }
   requestClose(){
     this.#closing=true;this.#shutdown.abort(new Error('PMTILES_MERCHANT_CLOSING'));
-    for(const promise of this.#handles.values())promise.then(server=>server.close()).catch(()=>{});
+    for(const commerce of this.#commerce.values())commerce.requestClose();
   }
   close(){
     if(this.#closePromise)return this.#closePromise;this.requestClose();
     this.#closePromise=(async()=>{
       await Promise.allSettled([...this.#pending]);
-      const results=await Promise.allSettled([...this.#handles.entries()].map(async([alias,promise])=>{
-        await (await promise).close();this.#handles.delete(alias);
-      }));
+      const aliases=new Set([...this.#handles.keys(),...this.#commerce.keys()]);
+      const results=await Promise.allSettled([...aliases].map(alias=>this.#closeWorkspace(alias)));
       try{await this.#reads.close();}catch(error){results.push({status:'rejected',reason:error});}
       const failed=results.find(result=>result.status==='rejected');
       if(failed)throw failure('PMTILES_MERCHANT_CLOSE_INCOMPLETE',String(failed.reason?.message??'The original native owner is still closing.'));
