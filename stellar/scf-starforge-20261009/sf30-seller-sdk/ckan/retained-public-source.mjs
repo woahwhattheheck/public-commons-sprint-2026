@@ -1,9 +1,9 @@
 // MIT. Receive original public-source bodies through the existing CKAN capture engine.
 import { join, resolve, dirname } from 'node:path';
-import { lstat, link, unlink } from 'node:fs/promises';
+import { lstat, rename, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { captureCkanResource, captureSelection, parseCkanJson } from './capture.mjs';
-import { bytes, createFile, digest, fault, identity, privateDirectory, readPrivate,
+import { acquireWorkspace, bytes, createFile, digest, fault, identity, privateDirectory, readPrivate,
   syncDirectory } from '../postgres/publisher/files.mjs';
 
 const HASH = /^[a-f0-9]{64}$/;
@@ -16,8 +16,8 @@ const exists = async file => {
 };
 const sameBytes = (raw, item) => raw.length === item.bytes && digest(raw) === item.sha256;
 
-// Atomic, exclusive companion creation; an interrupted temporary file can never
-// become the next run's accepted source receipt or binding.
+// The caller owns the original capture lock. Rename publishes the complete
+// bytes atomically; interruption leaves only an unaccepted temporary file.
 async function retain(directory, name, raw) {
   const target = join(directory, name);
   if (await exists(target)) {
@@ -28,14 +28,9 @@ async function retain(directory, name, raw) {
   const temporary = join(directory, '.source-pending-' + randomUUID());
   try {
     await createFile(temporary, raw);
-    try { await link(temporary, target); }
-    catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-      requireValue((await readPrivate(target, MAX_BUNDLE)).equals(raw),
-        'CKAN_SOURCE_RECEIVING_CHANGED', 'The receiving directory belongs to another source bundle.');
-    }
+    await rename(temporary, target);
+    await syncDirectory(directory);
   } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
-  await syncDirectory(directory);
 }
 
 /**
@@ -125,18 +120,21 @@ export async function receivePublicSourceCapture({
     sourceReceipt: { file: 'source-acquisition.json', bytes: receiptMember.bytes, sha256: receiptMember.sha256 },
     selectionHash: identity(config), transport: 'notion_public_https_file_import',
   };
-  await retain(captureDirectory, 'source-input.json', bytes(inputBinding));
-  await retain(captureDirectory, 'source-acquisition.json', receiptMember.raw);
+  const releaseInput = await acquireWorkspace(captureDirectory);
+  try {
+    await retain(captureDirectory, 'source-input.json', bytes(inputBinding));
+    await retain(captureDirectory, 'source-acquisition.json', receiptMember.raw);
+    const initialState = await exists(join(captureDirectory, 'capture.json')) ||
+      await exists(join(captureDirectory, 'progress.json'));
+    if (!initialState) for (const name of order)
+      requireValue(!await exists(join(captureDirectory, name)), 'CKAN_CAPTURE_STATE_MISSING',
+        'Use the original capture progress for previously saved response files.');
+  } finally { await releaseInput(); }
 
   // Build the remaining sequence only when the original engine owns its capture
   // lock. Read actual files as well as progress: a process can stop after saving
   // a body and before its progress projection.
   let pending;
-  const initialState = await exists(join(captureDirectory, 'capture.json')) ||
-    await exists(join(captureDirectory, 'progress.json'));
-  if (!initialState) for (const name of order)
-    requireValue(!await exists(join(captureDirectory, name)), 'CKAN_CAPTURE_STATE_MISSING',
-      'Use the original capture progress for previously saved response files.');
   const transport = async (url, request) => {
     requireValue(request.method === 'GET' && !request.headers?.authorization,
       'CKAN_PUBLIC_SOURCE_REQUIRED', 'Receive the original public selection.');
@@ -174,7 +172,9 @@ export async function receivePublicSourceCapture({
       rows: capture.rows.length, pages: capture.manifest.pages.length },
     upstreamHttpMetadata: 'not_returned_by_this_connector',
   };
-  await retain(captureDirectory, 'source-acquisition-binding.json', bytes(binding));
+  const releaseBinding = await acquireWorkspace(captureDirectory);
+  try { await retain(captureDirectory, 'source-acquisition-binding.json', bytes(binding)); }
+  finally { await releaseBinding(); }
   return { capture, binding,
     locator: { file: capture.manifestFile, manifestSha256: capture.manifestSha256 } };
 }
