@@ -156,6 +156,46 @@ export class MerchantSensorThingsWorkspaces{
       fields(input.payload,ACTIONS[input.action]??[]);
       return wrap(await this.#request(session,'/api/action',{body:input,operationId:input.operationId}));
     }
+    if(name==='merchant_sensorthings_analysis'){
+      const mode=input.mode,plainRead=['overview','inbox'].includes(mode),rowsRead=mode==='rows';
+      if(plainRead&&input.id!==undefined||!plainRead&&input.id===undefined||
+        !rowsRead&&(input.offset!==undefined||input.limit!==undefined))
+        throw fault('MCP_ANALYSIS_SELECTION','Use an exact selected ID for this read; row paging belongs only to rows.');
+      if(!plainRead)checked(input.id,['project','publication','python-source'].includes(mode)?/^[A-Za-z0-9_-]{8,100}$/:SHA,'analysis selection identity');
+      const paths={
+        overview:'/api/analysis',inbox:'/api/analysis/inbox',
+        project:'/api/analysis/projects/'+input.id,
+        version:'/api/analysis/versions/'+input.id,
+        summary:'/api/analysis/versions/'+input.id+'/summary',
+        rows:'/api/analysis/versions/'+input.id+'/rows?offset='+(input.offset??0)+'&limit='+(input.limit??100),
+        streams:'/api/analysis/editions/'+input.id+'/streams',
+        comparison:'/api/analysis/comparisons/'+input.id,
+        publication:'/api/analysis/publications/'+input.id,
+        'python-source':'/api/analysis/python-sources/'+input.id
+      };
+      const r=await this.#request(session,paths[mode]);
+      if(r.ok){
+        const v=r.native;
+        if(!plain(v))throw fault('MCP_ANALYSIS_RESPONSE','The original analysis response is incomplete.',409);
+        const invalid=
+          mode==='overview'&&(v.schema!=='stellar-forge.sensorthings-analysis-view.v1'||v.workspaceId!==definition.workspaceId)||
+          mode==='project'&&v.project?.id!==input.id||
+          ['version','comparison','publication','python-source'].includes(mode)&&v.id!==input.id||
+          mode==='python-source'&&(v.schema!=='stellar-forge.sensorthings-python-source.v1'||v.originalWorkspaceId!==definition.workspaceId||!Array.isArray(v.files))||
+          mode==='summary'&&(v.schema!=='stellar-forge.sensorthings-analysis-summary.v1'||!SHA.test(v.editionId??''))||
+          mode==='streams'&&(v.editionId!==input.id||!Array.isArray(v.streams))||
+          mode==='inbox'&&(typeof v.bound!=='boolean'||!Array.isArray(v.files));
+        if(invalid)throw fault('MCP_ANALYSIS_IDENTITY','The original analysis response belongs to another selected identity.',409);
+        if(rowsRead){
+          const offset=input.offset??0;
+          if(!SHA.test(v.editionId??'')||!Array.isArray(v.rows)||!Number.isSafeInteger(v.total)||v.total<0||
+             v.offset!==offset||v.rows.length>(input.limit??100)||v.nextOffset!==(offset+v.rows.length<v.total?offset+v.rows.length:null)||
+             v.rows.some(row=>!plain(row)||!plain(row.source)||!SHA.test(row.source.sha256??'')||typeof row.source.jsonPointer!=='string'))
+            throw fault('MCP_ANALYSIS_ROWS','The original selected row page or source identity is incomplete.',409);
+        }
+      }
+      return wrap(r);
+    }
     let route;
     if(name==='merchant_sensorthings_view')route='/api/view';
     if(name==='merchant_sensorthings_catalog')route='/api/catalogs/'+input.catalogId+'/rows?offset='+(input.offset??0)+'&limit='+(input.limit??100);
