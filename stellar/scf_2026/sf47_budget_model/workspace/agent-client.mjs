@@ -54,6 +54,20 @@ const sha = value => {
   need(typeof value === 'string' && HASH.test(value), 'GRANT_INVALID_INPUT', 'Use the exact SHA256.'); return value;
 };
 
+const SUPPORT_DEPLOYMENT_FIELDS = [
+  'name', 'operator', 'operatorId', 'role', 'participantClass', 'environment', 'state',
+  'costIds', 'tranche', 'endpoint', 'releaseRef', 'caseRef', 'acceptedBy', 'acceptedAt', 'sourceNote',
+];
+const supportHandoff = (bytes, filename) => {
+  need(Buffer.isBuffer(bytes) && bytes.length > 0 && bytes.length <= GRANT_MAX_SOURCE_BYTES,
+    'GRANT_INPUT_TOO_LARGE', 'Use the complete nonempty original support handoff up to 8 MiB.');
+  text(filename, 'Original support filename', 240);
+  need(!/[\x00-\x1f\x7f\\/]/.test(filename) && !['.', '..'].includes(filename),
+    'GRANT_INVALID_INPUT', 'Use the plain original support filename without directory components.');
+  return {filename, contentBase64:bytes.toString('base64')};
+};
+
+
 
 
 /** Exact regular-file input. Private launch records additionally keep original ownership. */
@@ -352,6 +366,30 @@ export class GrantWorkspaceClient {
       'GRANT_INVALID_INPUT', 'Use the original saved alternative ID, including base for the base allocation.');
     return this.#request('/api/operations/' + caseId + '/portfolio-selection',
       {body:{expectedVersion, portfolioId, alternativeId}, mutation:false});
+  }
+  supportPreview(caseId, expectedVersion, bytes, filename) {
+    id(caseId, 'operation'); integer(expectedVersion, 'Current case version');
+    return this.#request('/api/operations/' + caseId + '/support-preview',
+      {body:{expectedVersion, ...supportHandoff(bytes, filename)}, mutation:false});
+  }
+  supportReceive(caseId, bytes, body) {
+    id(caseId, 'operation');
+    exact(body, ['expectedVersion', 'requestId', 'actor', 'note', 'filename',
+      'expectedPreviewSha256', 'deploymentId', 'deployment'],
+    ['expectedVersion', 'requestId', 'actor', 'filename', 'expectedPreviewSha256']);
+    integer(body.expectedVersion, 'Current case version'); requestId(body.requestId);
+    sha(body.expectedPreviewSha256); text(body.actor, 'Receiving operator', 300);
+    if (body.note !== undefined) text(body.note, 'Receiving note', 12000, true);
+    const {filename, expectedPreviewSha256, deploymentId = null, deployment, ...original} = body;
+    if (deploymentId !== null) {
+      id(deploymentId, 'deployment');
+      need(deployment === undefined || deployment === null ||
+        (plain(deployment) && Object.keys(deployment).length === 0), 'GRANT_INVALID_INPUT',
+      'Choose the existing deployment without competing replacement fields.');
+    } else exact(deployment, SUPPORT_DEPLOYMENT_FIELDS);
+    return this.#request('/api/operations/' + caseId + '/command', {originalRequestId:body.requestId,
+      body:{...original, action:'support.receive', data:{...supportHandoff(bytes, filename),
+        expectedPreviewSha256, deploymentId, ...(deployment === undefined ? {} : {deployment})}}});
   }
   download(kind, args) {
     object(args);
