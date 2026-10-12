@@ -1,11 +1,11 @@
 [general]
 name=Starforge STAC Receiving
-description=Verified STAC imagery receiving, native map projects, edition review and complete portable handover.
-version=1.0.0
+description=Verified STAC, vector and PostGIS receiving, native map projects, edition review and complete handover.
+version=1.1.0
 qgisMinimumVersion=3.40
 author=TJLabs Commons
 email=brycembusiness2@gmail.com
-about=Open an original Starforge STAC customer delivery in QGIS. Review complete scene and asset metadata, select local GIS layers, preserve native coordinates and styles, review successor editions, and save or receive complete offline project workspaces.
+about=Open original Starforge STAC, vector or accepted PostGIS deliveries in the same QGIS workspace. Review exact source editions, select retained files or verified native database relations, preserve native coordinates and styles, review successors, and save or receive complete workspaces with original history and explicit local connection references.
 category=Web
 homepage=https://github.com/woahwhattheheck/public-commons-sprint-2026
 repository=https://github.com/woahwhattheheck/public-commons-sprint-2026
