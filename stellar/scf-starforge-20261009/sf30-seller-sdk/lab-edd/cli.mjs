@@ -12,9 +12,11 @@ import { reconciliationTable } from './reconciliation-table.mjs';
 import { readReconciliationDecisions } from './reconciliation-application.mjs';
 import { readLabResult } from './result.mjs';
 import { openLocalInputs } from './local.mjs';
+import { writeLabMerchantConfiguration } from './merchant-configuration.mjs';
 const json=value=>JSON.stringify(value,null,2)+'\n';
 export const HELP='Laboratory EDD receiving\n\n'+
 'lab-edd profiles\n'+
+'lab-edd merchant-config --origin HTTPS_ORIGIN --network NETWORK --asset ASSET --pay-to RECIPIENT --amount ATOMIC_AMOUNT --out NEW_JSON [--service-name NAME] [--memory-limit-mb MB]\n'+
 'lab-edd inspect --source FILE --profile ID [--encoding utf-8|windows-1252] [--out JSON]\n'+
 'lab-edd table --source FILE --profile ID --out CSV_OR_TSV [--decisions FILE] [--format csv|tsv] [--scope issues|all] [--fields FIELD,FIELD]\n'+
 'lab-edd preview --source FILE --profile ID [--decisions FILE] [--baseline FILE] --out JSON\n'+
@@ -28,8 +30,8 @@ export const HELP='Laboratory EDD receiving\n\n'+
 function args(argv){
   if(!argv.length||argv.includes('--help')||argv.includes('-h'))return {command:'help'};
   const [command,...rest]=argv,options={command};
-  const allowed=new Set(['source','baseline','decisions','profile','encoding','review','out','format','scope','fields','file','expected-source-sha256','baseline-profile','baseline-encoding','expected-baseline-sha256','baseline-decisions','baseline-decision-format','reconciliation','reconciliation-format']);
-  if(!['profiles','inspect','table','preview','receive','result','reconcile','reconciliation-table'].includes(command))throw Error('Unknown lab-edd command.');
+  const allowed=new Set(['source','baseline','decisions','profile','encoding','review','out','format','scope','fields','file','expected-source-sha256','baseline-profile','baseline-encoding','expected-baseline-sha256','baseline-decisions','baseline-decision-format','reconciliation','reconciliation-format','origin','network','asset','pay-to','amount','service-name','memory-limit-mb']);
+  if(!['profiles','inspect','table','preview','receive','result','reconcile','reconciliation-table','merchant-config'].includes(command))throw Error('Unknown lab-edd command.');
   for(let i=0;i<rest.length;i+=2){
     const key=rest[i]?.replace(/^--/,'');
     if(!rest[i]?.startsWith('--')||!allowed.has(key)||options[key]!==undefined||rest[i+1]===undefined||rest[i+1].startsWith('--'))
@@ -48,6 +50,17 @@ async function output(path,bytes){
 export async function main(argv=process.argv.slice(2)){
   const options=args(argv);
   if(options.command==='help'){process.stdout.write(HELP);return {status:'HELP'};}
+  if(options.command==='merchant-config'){
+    if(!options.out)throw Error('Select --out for the new private merchant configuration.');
+    const memory=options['memory-limit-mb'];
+    if(memory!==undefined&&!/^[1-9][0-9]*$/.test(memory))throw Error('Use a whole memory-limit-mb value.');
+    const saved=await writeLabMerchantConfiguration({file:options.out,publicOrigin:options.origin,
+      payment:{scheme:'exact',network:options.network,asset:options.asset,payTo:options['pay-to'],
+        amount:options.amount,maxTimeoutSeconds:60},
+      ...(options['service-name']?{serviceName:options['service-name']}:{}),
+      ...(memory===undefined?{}:{memoryLimitMb:Number(memory)})});
+    process.stdout.write(json(saved));return saved;
+  }
   if(options.command==='profiles'){
     const profiles=labProfiles.map(({id,version,label,references})=>({id,version,label,references}));
     process.stdout.write(json(profiles));return profiles;
