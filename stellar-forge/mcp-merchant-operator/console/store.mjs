@@ -8,7 +8,7 @@ export const CONSOLE_SCHEMA = 'stellar-forge.merchant-operator-console.v1';
 export const ARCHIVE_SCHEMA = 'stellar-forge.merchant-operator-profile.v1';
 import { canonical, digest, fail } from './records.mjs';
 export { canonical, digest, fail } from './records.mjs';
-import { installWorkflowTables, archiveWorkflowRows, validateWorkflowRows, importWorkflowRows, reserveWorkflowNative } from './workflow-records.mjs';
+import { installWorkflowTables, archiveWorkflowRows, validateWorkflowRows, importWorkflowRows, reserveWorkflowNative, settleWorkflowNative } from './workflow-records.mjs';
 const json = value => JSON.stringify(value);
 const parse = value => JSON.parse(value);
 const now = () => new Date().toISOString();
@@ -48,7 +48,7 @@ function objectText(text, label) {
 }
 export class MerchantConsoleStore {
   constructor(directory) {
-    this.directory = resolve(directory);
+    this.directory = resolve(directory);this.dispatcherId=randomUUID();
     mkdirSync(this.directory, { recursive: true, mode: 0o700 });
     const st = lstatSync(this.directory);
     if (!st.isDirectory() || st.isSymbolicLink() || realpathSync(this.directory) !== this.directory ||
@@ -188,13 +188,14 @@ export class MerchantConsoleStore {
         throw fail('CONSOLE_HOST_CHANGED', 'Review and bind the profile to this host before running a saved request.');
       if (digest(canonical(definition)) !== draft.toolSchemaSha256)
         throw fail('CONSOLE_TOOL_CHANGED', 'Review the current native tool schema and save a new draft revision.');
-      reserveWorkflowNative(this.db,this.id,request,workflowGuard);
+      reserveWorkflowNative(this.db,this.id,this.dispatcherId,request,workflowGuard);
       const value = { ...request, workspaceId: this.id, requestSha256, state: 'RUNNING', startedAt: now(), completedAt: null,
         resultJson: null, resultSha256: null, error: null, origin: 'THIS_WORKSPACE' };
       this.db.prepare('INSERT INTO calls(id,profile_id,value) VALUES (?,?,?)').run(callId, profile.id, json(value));
       return { existing: false, value };
     });
   }
+  noteWorkflowCallSettled(callId){return this.transaction(()=>settleWorkflowNative(this.db,this.id,callId));}
   finish(callId, result, error) {
     return this.transaction(() => {
       const old = this.call(callId);

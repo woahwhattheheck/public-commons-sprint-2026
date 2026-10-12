@@ -1,6 +1,6 @@
 // MIT. Complete saved workflows over the original native console requests.
 import { canonical, digest, fail } from './records.mjs';
-import { WorkflowRecords, workflowPointer, workflowDispatchActive } from './workflow-records.mjs';
+import { WorkflowRecords, workflowPointer, workflowDispatchActive, registerWorkflowDispatcher } from './workflow-records.mjs';
 
 const clone=value=>JSON.parse(JSON.stringify(value));
 const plain=value=>Boolean(value&&typeof value==='object'&&!Array.isArray(value));
@@ -36,6 +36,7 @@ function assign(argumentsValue,pointer,value){
 }
 export function createMerchantWorkflows({store,definitions,getHost,startCall,waitCall,isCallActive,requireTool}){
   const records=new WorkflowRecords(store),active=new Map();
+  const unregister=registerWorkflowDispatcher(store.dispatcherId,isCallActive);
   let closing=false;
   const updateOwned=(id,kind,mutate,options={})=>records.update(id,kind,mutate,{...options,ownerWorkspaceId:store.id});
   const dispatchActive=run=>run.steps.some(step=>{const call=currentCall(step.callId);return call?.state==='RUNNING'&&workflowDispatchActive(step,store.id);});
@@ -176,7 +177,9 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
         const current=records.run(id);if(current.ownerWorkspaceId!==store.id)return;if(done(current.steps[index]))continue;
         requireResult(definition.steps[index],call);
         updateOwned(id,'STEP_COMPLETED',value=>{
-          const step=value.steps[index];step.state='COMPLETE';step.completedAt=call.completedAt;value.state='RUNNING';value.error=null;
+          const step=value.steps[index];if(done(step))return;
+          step.state='COMPLETE';step.completedAt=call.completedAt;value.state='RUNNING';value.error=null;
+          value.pauseRequested=value.pauseRequested||definition.steps[index].pauseAfter;
         },{stepId,callId:call.id,detail:{resultSha256:call.resultSha256}});
       }
     }catch(error){waiting(id,error,stepId);}
@@ -248,7 +251,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
     },
     async resolve(input,context){
       requireRevision(input);const run=records.run(input.id),definition=await authorizeRun(run,context);requireOwner(run);
-      need(!active.has(run.id),'CONSOLE_WORKFLOW_ACTIVE','Wait for the current native request to return before resolving this step.');
+      need(!active.has(run.id)&&!dispatchActive(run),'CONSOLE_WORKFLOW_ACTIVE','Wait for the original native dispatcher to finish before resolving this step.');
       const index=run.steps.findIndex(step=>!done(step)),step=run.steps[index];
       need(step&&step.id===input.stepId&&step.draftRevision!==null,'CONSOLE_WORKFLOW_RECOVERY','Select the original unfinished workflow step.');
       const original=currentCall(step.callId),recovered=store.call(input.callId),draft=store.draft(recovered.draftId,recovered.draftRevision);
@@ -258,6 +261,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
       requireResult(definition.steps[index],recovered);
       need(typeof input.note==='string'&&input.note.trim()&&input.note.length<=8000,'CONSOLE_WORKFLOW_RECOVERY_NOTE','Record how this completed native recovery resolves the original step.');
       const updated=updateOwned(run.id,'STEP_RECOVERED',value=>{
+        need(!dispatchActive(value),'CONSOLE_WORKFLOW_ACTIVE','Wait for the original native dispatcher to finish before resolving this step.');
         const selected=value.steps[index];selected.state='RECOVERED';selected.resolvedCallId=recovered.id;
         selected.resolutionNote=input.note.trim();selected.completedAt=new Date().toISOString();value.state='PAUSED';value.pauseRequested=true;value.error=null;
       },{expectedRevision:input.expectedRevision,stepId:step.id,callId:recovered.id,detail:{originalCallId:original.id,resultSha256:recovered.resultSha256,note:input.note.trim()}});
@@ -294,6 +298,7 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
     async close(){this.beginClose();const values=await Promise.allSettled([...active.values()]);
       const errors=values.filter(value=>value.status==='rejected').map(value=>value.reason);
       if(errors.length)throw new AggregateError(errors,'The original workflow owner has not completed its drain.');
+      unregister();
     }
   };
 }
