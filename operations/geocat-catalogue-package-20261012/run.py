@@ -143,6 +143,44 @@ def compose_lock(originals, package_json):
     need("dependencies" not in primary, "ORIGINAL_V3_LOCK_LEGACY_TREE_UNEXPECTED")
     return primary
 
+class RecordingHostedAppsClient:
+    """Retain the original private prepare/finalize exchange without replaying it."""
+
+    def __init__(self, client, directory, binding):
+        self.client = client; self.directory = Path(directory); self.binding = copy.deepcopy(binding)
+        need(not os.path.lexists(self.directory), "ORIGINAL_LIBRARY_CALL_JOURNAL_ALREADY_EXISTS")
+        self.directory.mkdir(mode=0o700)
+        need(self.directory.resolve(strict=True) == self.directory, "LIBRARY_JOURNAL_PARENT_CHANGED")
+        self.sequence = 0
+        save_json(self.directory / "binding.private.json", self.binding)
+
+    def call_tool(self, connector_id, tool_name, arguments):
+        self.sequence += 1
+        stem = str(self.sequence).zfill(4)
+        call = {"connector_id": connector_id, "tool_name": tool_name,
+                "arguments": copy.deepcopy(arguments)}
+        request = {"schema": "starforge.original-library-tool-call.v1",
+                   "binding": self.binding, "sequence": self.sequence,
+                   "status": "DISPATCHING", "at": now(), "call": call,
+                   "callSha256": digest_bytes(json_bytes(call))}
+        save_json(self.directory / (stem + "-request.private.json"), request)
+        try:
+            response = self.client.call_tool(connector_id, tool_name, arguments)
+        except BaseException as error:
+            uncertain = {"sequence": self.sequence, "callSha256": request["callSha256"],
+                         "status": "UNCERTAIN", "at": now(),
+                         "errorType": type(error).__name__, "error": str(error)}
+            native_result = getattr(error, "result", None)
+            if isinstance(native_result, dict):
+                uncertain["nativeErrorResponse"] = copy.deepcopy(native_result)
+            save_json(self.directory / (stem + "-uncertain.private.json"), uncertain)
+            raise
+        # A failed durable write stops the workflow before it can transfer or finalize.
+        save_json(self.directory / (stem + "-response.private.json"),
+                  {"sequence": self.sequence, "callSha256": request["callSha256"],
+                   "status": "RETURNED", "at": now(), "response": response})
+        return response
+
 class Run:
     def __init__(self, config, config_path):
         self.config = config; self.project = Path(config["project"])
@@ -391,11 +429,17 @@ class Run:
         sys.path.insert(0,str(helper_dir))
         from library_upload import LibraryUploadWorkflow, HostedAppsClient, LibraryFileMaterializer, SignedUrlUploader
         state_parent = self.work/"library-state"; state_parent.mkdir(mode=0o700)
-        request = {"uploads":[{"local_path":str(final),"purpose":"create_library_file","library_artifact_type":"other"}]}
+        request = {"uploads":[{"local_path":str(final_persistent),"purpose":"create_library_file","library_artifact_type":"other"}]}
+        calls = self.output / "library-calls"
+        client = RecordingHostedAppsClient(HostedAppsClient(), calls,
+            {"operationId": cfg["operation_id"], "sourceCommit": cfg["commit"],
+             "configSha256": self.config_sha, "package": identity,
+             "localPath": str(final_persistent)})
         save_json(self.output/"upload-dispatch.json", {"operationId":cfg["operation_id"],"status":"DISPATCHING",
-                  "package":identity,"at":now()})
+                  "package":identity,"localPath":str(final_persistent),"callJournal":str(calls),
+                  "requestSha256":digest_bytes(json_bytes(request)),"at":now()})
         self.checkpoint("SAVING_FINAL_PACKAGE")
-        result = LibraryUploadWorkflow(apps_client=HostedAppsClient(),materializer=LibraryFileMaterializer(),
+        result = LibraryUploadWorkflow(apps_client=client,materializer=LibraryFileMaterializer(),
             uploader=SignedUrlUploader(),state_parent=state_parent).run(request)
         save_json(self.output/"upload-result.private.json",result)
         rows = result.get("results",[])
@@ -403,9 +447,6 @@ class Run:
         selected = rows[0]
         saved = {k:selected[k] for k in ("status","file_id","library_file_id","file_name",
                  "current_version_number","local_metadata_applied") if k in selected}
-        try:
-            for name in os.listxattr(final): os.setxattr(final_persistent,name,os.getxattr(final,name))
-        except OSError: pass
         completion = {**self.state,"phase":"COMPLETED","completedAt":now(),"package":{**identity,
               "path":str(final_persistent),"name":final.name},"savedFile":saved,
               "sourceArchive":{"path":str(durable_archive),**archive_identity},"installedApplication":app,
