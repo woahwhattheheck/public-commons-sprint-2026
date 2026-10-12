@@ -55,6 +55,36 @@ export interface FredPublication {
   edition: JsonObject; plan: JsonObject; offers: JsonObject[];
   requests: Array<{ intentId: string; url: string; file: string | null; purchaseSha256: string }>;
 }
+export interface FredRevisionResult { revision: number; replayed?: boolean }
+export interface FredConfiguredResult extends FredRevisionResult { selection: JsonObject }
+export interface FredCaptureResult extends FredRevisionResult { captureId: string; rowCount: number; missing: number }
+export interface FredCombinedResult extends FredCaptureResult { originalCaptures: string[] }
+export interface FredSelectedResult extends FredRevisionResult { captureId: string }
+export interface FredReviewedResult extends FredSelectedResult { reviewId: string }
+export interface FredPublishedResult extends FredRevisionResult {
+  publicationId: string; reviewId: string; captureId: string; snapshot: string;
+  editionId: string; resource: string; publicOrigin: string;
+}
+export interface FredFileMetadata { path: string; bytes: number; sha256: string; contentType: string; role: string }
+export interface FredAdvertisedFile extends FredFileMetadata { resource: string }
+export interface FredMerchantRuntime {
+  publicationId: string; url: string; mode: string; editionId: string; snapshot: string; resource: string;
+}
+export interface FredPreparedPurchase {
+  schema: 'stellar-forge.fred-purchase.v1'; editionId: string; captureSha256: string; snapshot: string;
+  planSha256: string; intentId: string; url: string; file: string | null; previous: JsonObject | null;
+  expected: FredAdvertisedFile | null; configSha256: string; config: JsonObject; purchaseSha256: string;
+}
+export interface FredDeliveredPurchase {
+  state: 'DELIVERED'; intentId: string; editionId: string; bytes: number; sha256: string;
+  metadata: JsonObject & { snapshot?: string; nextCursor?: string | null; path?: string; contentType?: string };
+  page?: JsonObject;
+}
+export interface FredPendingPurchase {
+  state: 'PREPARED_NOT_STARTED' | 'NATIVE_PREPARATION_INCOMPLETE' | 'AWAITING_NATIVE_RESULT';
+  intentId: string; editionId?: string;
+}
+export type FredPurchaseStatus = FredDeliveredPurchase | FredPendingPurchase;
 export interface FredJournalInput { id: string; expectedRevision: number }
 export interface FredSelectionInput extends FredJournalInput { selection: JsonObject }
 export interface FredImportInput extends FredJournalInput { capture: JsonObject }
@@ -111,19 +141,19 @@ export declare class FredWorkspaceClient {
   compare(input: { before: string; after: string; offset?: number }, options?: FredRequestOptions): Promise<FredComparisonPage>;
   publication(publicationId: string, options?: FredRequestOptions): Promise<FredPublication>;
   preview(input: { publicationId: string; query?: string }, options?: FredRequestOptions): Promise<JsonObject>;
-  configure(input: FredSelectionInput, options?: FredRequestOptions): Promise<JsonObject>;
-  capture(input: FredJournalInput, options?: FredRequestOptions): Promise<JsonObject>;
-  importCapture(input: FredImportInput, options?: FredRequestOptions): Promise<JsonObject>;
-  combine(input: FredCombineInput, options?: FredRequestOptions): Promise<JsonObject>;
-  select(input: FredCaptureInput, options?: FredRequestOptions): Promise<JsonObject>;
-  review(input: FredReviewInput, options?: FredRequestOptions): Promise<JsonObject>;
-  publish(input: FredPublishInput, options?: FredRequestOptions): Promise<JsonObject>;
-  abandon(input: FredAbandonInput, options?: FredRequestOptions): Promise<JsonObject>;
-  startMerchant(input: FredPublicationInput, options?: FredRequestOptions): Promise<JsonObject>;
-  stopMerchant(input: FredPublicationInput, options?: FredRequestOptions): Promise<JsonObject>;
-  prepare(input: FredPrepareInput, options?: FredRequestOptions): Promise<JsonObject>;
-  buy(input: FredIntentInput, options?: FredRequestOptions): Promise<JsonObject>;
-  recover(input: FredIntentInput, options?: FredRequestOptions): Promise<JsonObject>;
+  configure(input: FredSelectionInput, options?: FredRequestOptions): Promise<FredConfiguredResult>;
+  capture(input: FredJournalInput, options?: FredRequestOptions): Promise<FredCaptureResult>;
+  importCapture(input: FredImportInput, options?: FredRequestOptions): Promise<FredCaptureResult>;
+  combine(input: FredCombineInput, options?: FredRequestOptions): Promise<FredCombinedResult>;
+  select(input: FredCaptureInput, options?: FredRequestOptions): Promise<FredSelectedResult>;
+  review(input: FredReviewInput, options?: FredRequestOptions): Promise<FredReviewedResult>;
+  publish(input: FredPublishInput, options?: FredRequestOptions): Promise<FredPublishedResult>;
+  abandon(input: FredAbandonInput, options?: FredRequestOptions): Promise<FredRevisionResult & { pendingId: string; state: 'ABANDONED' }>;
+  startMerchant(input: FredPublicationInput, options?: FredRequestOptions): Promise<FredMerchantRuntime>;
+  stopMerchant(input: FredPublicationInput, options?: FredRequestOptions): Promise<{ state: 'STOPPED' }>;
+  prepare(input: FredPrepareInput, options?: FredRequestOptions): Promise<FredPreparedPurchase>;
+  buy(input: FredIntentInput, options?: FredRequestOptions): Promise<FredPurchaseStatus>;
+  recover(input: FredIntentInput, options?: FredRequestOptions): Promise<FredPurchaseStatus>;
   wait(id: string, options?: FredRequestOptions & { timeoutMs?: number; intervalMs?: number }): Promise<FredOperation>;
   file(selection: FredFileSelection, options?: FredFileOptions): Promise<FredDownloadedFile>;
   close(): void;
