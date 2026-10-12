@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "kafka-workspace",
+  "description": "Kafka capture, retained datasets and merchant handoff in the original Applications workspace",
+  "commands": {
+    "dataset-kafka": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/cli.mjs"
+  },
+  "commandDescriptions": {
+    "dataset-kafka": "Inspect a Kafka source, retain explicit partition ranges, project datasets, and reopen the original workspace."
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/httpd.py",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/browser-assets.json"
+    }
+  ]
+}

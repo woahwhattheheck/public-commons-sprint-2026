@@ -1,6 +1,6 @@
 # Authenticated upstream sources
 
-This capability connects the existing SF31 HTTPS transport to an operator's assigned upstream Bearer credential. Its initial consumer is the original STAC catalog and asset provider used by the eoAPI onboarding workspace. The original STAC Auth Proxy remains responsible for validating the token and enforcing its configured route, scope and record policy.
+This capability connects the existing SF31 HTTPS transport to an operator's assigned upstream Bearer credential or Prescient/native API key. Its initial consumer is the original STAC catalog and asset provider used by the eoAPI onboarding workspace. The original STAC Auth Proxy remains responsible for validating the token and enforcing its configured route, scope and record policy.
 
 Public source requests continue to use the original unauthenticated transport. Payment authorization stays with the existing buyer and approval lifecycle. Configuring source access does not create an account, acquire a token, change provider permissions, approve a payment, or enable another origin.
 
@@ -35,7 +35,21 @@ const sourceAuth = createSourceBearerAuth({
 });
 ```
 
-The reference is an opaque operator-selected custody identifier, with 1–512 characters drawn from letters, numbers, period, underscore, colon, slash, at-sign and hyphen, beginning with a letter or number. It is not a token value. The callback returns the actual native Bearer token string. This module does not acquire, refresh, exchange or broaden credentials on its own; the existing configured resolver may manage its assigned token lifecycle.
+For a native API-key source, use the additive factory with the same private custody resolver, or name an `apiKeyEnv` variable:
+
+```js
+import { createSourceApiKeyAuth } from './source-auth.mjs';
+
+const sourceAuth = createSourceApiKeyAuth({
+  bindings: [{origin: configuredSourceOrigin, apiKeyEnv: 'PRESCIENT_API_KEY'}]
+});
+// Or: bindings: [{origin: configuredSourceOrigin, credentialRef: assignedReference}],
+//     resolveCredential: existingCredentialResolver
+```
+
+This factory emits the literal `api-key` header used by the original Prescient SDK. Its capability is `{origin, scheme:'ApiKey'}`. The original Bearer factory continues to emit `authorization: Bearer …` with `{origin, scheme:'Bearer'}`. Neither factory accepts a caller-selected header name or a raw credential in its binding.
+
+The reference is an opaque operator-selected custody identifier, with 1–512 characters drawn from letters, numbers, period, underscore, colon, slash, at-sign and hyphen, beginning with a letter or number. It is not a token value. The callback returns the actual native credential string for the selected factory. This module does not acquire, refresh, exchange or broaden credentials on its own; the existing configured resolver may manage its assigned token lifecycle.
 
 At most 64 exact origins can be configured; duplicates are rejected. Values are read afresh for each outgoing request, so replacing an environment token or rotating the resolver's assigned credential affects the next dispatch. Tokens are never cached in source records. Use distinct credential references for origins with different audience or access requirements.
 
@@ -84,7 +98,7 @@ A source link does not grant credential authority. For an unbound origin, reques
 
 ## Request behavior and recovery
 
-Only Bearer source Authorization is permitted by this capability. Scheme matching is case-insensitive; the token itself is used exactly, without trimming, decoding or JSON coercion. The supported native token form follows the Bearer token alphabet and is limited to 16 KiB. Duplicate/comma-joined Authorization values, whitespace-bearing values and other authentication schemes fail before dispatch.
+A `Bearer` capability permits only the source Bearer Authorization header. HTTP scheme matching is case-insensitive; the token itself follows the Bearer token alphabet and is used exactly. An `ApiKey` capability permits only the literal `api-key` header, with an opaque nonempty visible-ASCII value. Both credentials are limited to 16 KiB and are used without trimming, decoding or JSON coercion. Empty values, whitespace/control characters, duplicate comma-and-space-joined credentials, an API key without an ApiKey capability, and a credential belonging to the other scheme fail before dispatch. Source capability descriptors themselves use the exact `Bearer` or `ApiKey` spelling.
 
 The original transport returns redirects; it never follows them. A caller must review and select any new destination through its original workflow. Each resulting request resolves its own origin binding. Neither a redirect nor a pagination or asset link can expand the approved origins.
 
@@ -115,7 +129,7 @@ A newly opened operator runtime reinstalls its explicit private bindings. A port
 | SOURCE_AUTH_DUPLICATE_ORIGIN | Choose one credential source for each exact origin. |
 | SOURCE_AUTH_CREDENTIAL_RESOLVER_REQUIRED | The selected custody reference needs its original resolver. |
 | SOURCE_AUTH_CREDENTIAL_UNAVAILABLE | The named environment value or resolver result is absent. |
-| SOURCE_AUTH_CREDENTIAL_INVALID | The assigned value is not a supported native Bearer token. |
+| SOURCE_AUTH_CREDENTIAL_INVALID | The assigned value does not satisfy the selected Bearer or ApiKey format. |
 | SOURCE_AUTH_CREDENTIAL_RESOLUTION_FAILED | The private resolver failed; inspect its own private operational channel. |
 | SOURCE_AUTH_RESOLUTION_TIMEOUT | Credential resolution exceeded its configured deadline. |
 | SOURCE_AUTH_ABORTED / SOURCE_AUTH_CLOSED | The operation or source runtime was closed. |
@@ -132,6 +146,7 @@ Original public transport errors and response-body handling remain documented in
 - Original authentication middleware: https://developmentseed.org/stac-auth-proxy/reference/stac_auth_proxy/middleware/EnforceAuthMiddleware/
 - Route authorization: https://developmentseed.org/stac-auth-proxy/user-guide/route-level-auth/
 - Record authorization: https://developmentseed.org/stac-auth-proxy/user-guide/record-level-auth/
+- Original Prescient SDK, pinned integration source: https://github.com/sparkgeo/prescient-sdk/tree/895b7720b22c3047b76ecff512f6be13f1d62fc9
 - Bearer token request syntax, RFC 6750 §2.1: https://www.rfc-editor.org/rfc/rfc6750#section-2.1
 
 MIT, consistent with the original SF31 transport.

@@ -3,6 +3,9 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { JOB_ID } from '../config.mjs';
+import { jobInputWorkspaceExtension } from '../inputs/workspace/server.mjs';
+import { jobResolutionAssets, resolutionOperatorPath, handleJobResolutionOperator,
+  readResolutionRequest, RESOLUTION_REQUEST_BYTES } from '../resolution/http.mjs';
 
 const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
@@ -16,13 +19,13 @@ const policy = {
   'referrer-policy': 'no-referrer', 'cross-origin-resource-policy': 'same-origin',
   'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
 };
-async function readJSON(req) {
+async function readJSON(req, maximum = 1024 * 1024) {
   if (req.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json')
     throw fault('JSON_REQUIRED', 'Send application/json.', 415);
   const chunks = []; let bytes = 0;
   for await (const chunk of req) {
     bytes += chunk.length;
-    if (bytes > 1024 * 1024) throw fault('REQUEST_TOO_LARGE', 'The job request exceeds 1 MiB.', 413);
+    if (bytes > maximum) throw fault('REQUEST_TOO_LARGE', 'The request exceeds the endpoint body limit.', 413);
     chunks.push(chunk);
   }
   let value;
@@ -57,11 +60,22 @@ export async function startJobsWorkspace({ model, delivery = null, port = 0 } = 
     for (const [path, file, type] of deliveryAssets)
       staticAssets.set(path, { body: await readFile(new URL('../result-delivery/workspace/' + file, import.meta.url)), type });
   }
-  const pending = new Set(), readers = new Set();
+  for (const asset of await jobResolutionAssets())
+    staticAssets.set(asset.route, { body: asset.bytes, type: asset.type });
+  const inputReceiving = await jobInputWorkspaceExtension({ model });
+  for (const asset of inputReceiving.assets) staticAssets.set(asset.route, { body: asset.bytes, type: asset.type + '; charset=utf-8' });
+  const pending = new Set(), readers = new Set(), controllers = new Set();
   let origin, hostname, closing = false, closingPromise, drainPromise, drainError;
   const snapshot = async () => ({ ...await model.snapshot(), operator: { drainError: drainError ?? null },
-    ...(delivery ? { resultDelivery: { workspace: '/deliveries' } } : {}) });
+    ...(delivery ? { resultDelivery: { workspace: '/deliveries' } } : {}), inputReceiving: inputReceiving.status(),
+    resolution: { workspace: '/resolutions/' } });
   const server = createServer((req, res) => {
+    const controller = new AbortController(); controllers.add(controller);
+    const disconnected = () => { if (!res.writableFinished) controller.abort(new Error('CLIENT_DISCONNECTED')); };
+    const cancelReader = () => { if (readers.has(req)) req.destroy(); };
+    controller.signal.addEventListener('abort', cancelReader, { once: true });
+    res.once('close', disconnected);
+    const deadline = setTimeout(() => controller.abort(new Error('REQUEST_DEADLINE')), 120000); deadline.unref();
     const operation = (async () => {
       function send(status, data, type = 'application/json; charset=utf-8', extra = {}) {
         if (res.destroyed) return;
@@ -79,9 +93,34 @@ export async function startJobsWorkspace({ model, delivery = null, port = 0 } = 
         if (['GET', 'HEAD'].includes(req.method) && staticAssets.has(url.pathname)) {
           const asset = staticAssets.get(url.pathname); return send(200, asset.body, asset.type);
         }
+        if (await inputReceiving.publicRoute({ request: req, response: res, url, signal: controller.signal })) return;
         const supplied = Buffer.from(String(req.headers.authorization ?? ''));
         if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
           throw fault('WORKSPACE_AUTH_REQUIRED', 'Open the complete private launch address from your terminal.', 401);
+        if (await inputReceiving.authenticatedRoute({ request: req, response: res, url, signal: controller.signal,
+          send: (value, status = 200) => send(status, value), body: async maximum => {
+            readers.add(req);
+            try { controller.signal.throwIfAborted(); return await readJSON(req, maximum); }
+            finally { readers.delete(req); }
+          } })) return;
+        if (resolutionOperatorPath(url.pathname)) {
+          let value;
+          readers.add(req);
+          try {
+            controller.signal.throwIfAborted();
+            value = await readResolutionRequest(req, { maxBytes: url.pathname === '/api/resolutions/receive'
+              ? RESOLUTION_REQUEST_BYTES : 24000 });
+          } finally { readers.delete(req); }
+          controller.signal.throwIfAborted();
+          const result = await handleJobResolutionOperator(model.resolution, {
+            method: req.method, path: url.pathname, value,
+          });
+          if (result.file) return send(result.status ?? 200, result.file.bytes, result.file.type, {
+            'content-disposition': 'attachment; filename="' + name(result.file.name) + '"',
+            'x-content-sha256': result.file.sha256,
+          });
+          return send(result.status ?? 200, result.value);
+        }
         const match = /^\/api\/jobs\/([^/?#]+)(?:\/(preview|result|cancel|retry|renew-claim))?$/.exec(url.pathname);
         if (match) {
           let id;
@@ -171,16 +210,32 @@ export async function startJobsWorkspace({ model, delivery = null, port = 0 } = 
           'The operation could not complete. The original job remains in its workspace.' : error.message });
       }
     })();
-    pending.add(operation); operation.finally(() => pending.delete(operation)).catch(() => {});
+    pending.add(operation); operation.finally(() => {
+      pending.delete(operation); controllers.delete(controller); clearTimeout(deadline);
+      res.off('close', disconnected); controller.signal.removeEventListener('abort', cancelReader);
+    }).catch(() => {});
   });
   server.requestTimeout = 30000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
-  await new Promise((done, fail) => { server.once('error', fail); server.listen(port, '127.0.0.1', () => { server.off('error', fail); done(); }); });
+  try {
+    await new Promise((done, fail) => { server.once('error', fail); server.listen(port, '127.0.0.1', () => { server.off('error', fail); done(); }); });
+  } catch (error) {
+    try { await inputReceiving.close(); } catch (cleanup) { throw new AggregateError([error, cleanup], 'JOB_WORKSPACE_OPEN_FAILED'); }
+    throw error;
+  }
   hostname = '127.0.0.1:' + server.address().port; origin = 'http://' + hostname;
-  return { server, model, origin, token, url: origin + '/#' + token, close() {
+  return { server, model, origin, token, url: origin + '/#' + token,
+    inputReceivingUrl: origin + '/inputs/#' + token, resolutionUrl: origin + '/resolutions/#' + token, close() {
     return closingPromise ??= (async () => {
-      closing = true; for (const request of readers) request.destroy();
-      const stopped = new Promise(done => server.close(done)); server.closeIdleConnections?.();
-      await Promise.allSettled([...pending]); server.closeAllConnections?.(); await stopped;
+      closing = true;
+      for (const controller of controllers) controller.abort(new Error('WORKSPACE_CLOSED'));
+      for (const request of readers) request.destroy();
+      const stopped = new Promise((done, fail) => server.close(error => error ? fail(error) : done()));
+      stopped.catch(() => {}); server.closeIdleConnections?.();
+      const results = await Promise.allSettled([inputReceiving.close(), ...pending]);
+      server.closeAllConnections?.();
+      try { await stopped; } catch (error) { results.push({ status: 'rejected', reason: error }); }
+      const failures = results.filter(result => result.status === 'rejected').map(result => result.reason);
+      if (failures.length) throw new AggregateError(failures, 'JOB_WORKSPACE_CLOSE_FAILED');
       // A drain belongs to the borrowed model; its owner closes or aborts it.
     })();
   } };

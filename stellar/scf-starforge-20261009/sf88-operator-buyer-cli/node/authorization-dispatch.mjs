@@ -54,7 +54,7 @@ const PINS = Object.freeze({
 
 const PROTECTED_SOURCE_PROFILE = Object.freeze({
   id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_V1',
-  execute:'366544e23c3e1c1bd70b993dce3a5a16d133d8357e63ccec8dd2dfac0c97c4b2', wire:'8ab92a2b590c973b6b44f259e6cdeddf16a1cd4840f9dc1adbb436cf59c85f11', store:'5232d58fd2ac4e3666bdd13cb73322bd53785d9e0994b1511200b1dd15d89531',
+  execute:'366544e23c3e1c1bd70b993dce3a5a16d133d8357e63ccec8dd2dfac0c97c4b2', wire:'d6483ff3615e1b179edae3ac0df12ddd07c4aa9016d4a33487f3bb41f8be7be3', store:'5232d58fd2ac4e3666bdd13cb73322bd53785d9e0994b1511200b1dd15d89531',
   runtime:'96c57344c965e519069ab694d6f9a85ea856a448a134c6041730dcef8e026551', bootstrap:'aabc20e221b269957ff9e32115500980d27e32e3292ad9e338c7a1fff9eddac4',
   provider:'56362274bad8b536f8928234da773fe7aef4c15773911dfe087e4970a400c06c', runtimeSource:'d99256fcb72fd9956f62aad7c070beb627c1d5b140e0ccc858f8866d03118954',
   responseFile:'1aa6e71f1b308a4ea71b61ee597323c41da379408e75633bcc62246f3818c295',
@@ -329,7 +329,7 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
     'UNDISPATCHED_ORIGINAL_OPERATION_CHANGED');
   await privateDirectory(stateDirectory, {create:false});
   await privateDirectory(directory, {create:false});
-  const attemptFile = await reader.read(join(directory, 'attempt.json'), {limit:16384, privateFile:true, json:true});
+  const attemptFile = await reader.read(join(directory, 'attempt.json'), {limit:65536, privateFile:true, json:true});
   const attempt = attemptFile.value;
   need(attemptFile.descriptor.sha256 === selected.expectedAttemptId &&
     attempt.schema === bound.meta.schema && attempt.intentId === operation.intentId &&
@@ -361,6 +361,7 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
   const protectedSource = ['execute','wire','store'].every(name =>
     nativeSources[name] === PROTECTED_SOURCE_PROFILE[name]);
   need(historical || protectedSource,'UNDISPATCHED_REVIEWED_SOURCE_CHANGED');
+  need(protectedSource || attemptFile.descriptor.bytes <= 16384, 'UNDISPATCHED_SOURCE_FILE_INVALID');
   await pin('config',join(runtime,'config.mjs'));
   await pin('workspace',join(runtime,'workspace.mjs'));
   const reservedEntry = protectedSource ? await protectedEntrySource({

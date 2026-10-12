@@ -11,7 +11,6 @@ Use the Node and Python runtimes already required by SF88. Run from this directo
 ```sh
 node server.mjs \
   --state /absolute/private/customer-datasets \
-  --operator-settings /absolute/private/buyer-operator.json \
   --analysis-python /absolute/path/to/python3 \
   --analysis-checkout /absolute/path/to/public-commons-sprint-2026 \
   --analysis-directory /absolute/private/customer-analysis
@@ -19,16 +18,28 @@ node server.mjs \
 
 Open the complete private link printed in that terminal. The server binds `127.0.0.1`; its default port is `8439`, and `--port 0` selects an available port. Keep the terminal open. Ctrl+C stops owned acquisition/accounting continuation, drains its retained work, closes the owned analysis process and releases the customer workspace lock.
 
-`--operator-settings` is the existing private buyer preset accepted by [`readBuyerOperatorPreset`](../../buyer-runbook/handoff-intake.mjs). It declares the original actor, service, payer, Python executable and total/daily atomic ceilings, plus the existing signer/proxy settings when required. The customer browser receives the public payer and declared caps; it never chooses a signer executable, policy path or wallet secret. Refer to the original [buyer runbook](../../buyer-runbook/README.md) for custody and operator configuration.
+`--operator-settings /absolute/private/buyer-operator.json` is an optional way to seed the existing private preset accepted by [`readBuyerOperatorPreset`](../../buyer-runbook/handoff-intake.mjs). The receiving state retains that declared path, so reopening the same state does not require repeating the flag. Saving a workspace revision retains the reviewed original bytes and leaves the declared file intact. The host can also be configured directly through **Local buyer setup** after the application opens.
 
 The three analysis arguments are optional as a group. They select the original Python executable, matching source checkout and analytical directory. They are host settings, not merchant-provided commands. A retained-data-only workspace can open without either operator or analysis settings.
+
+## Configure the local buyer host
+
+Open **Local buyer setup** in the header or choose **Set up this buyer host** in the empty receiving view. Enter the actor and service IDs, public Stellar payer, Python executable, and total and daily ceilings for each prepared acquisition. Select the existing wallet environment-variable name or the original trusted SEP-43 provider configuration file. Optional RPC and proxy references pass through the same original validator.
+
+The form reuses the original [buyer host setup service](../../buyer-runbook/operator-preset.mjs) and [operator form](../../buyer-runbook/workspace-ui/operator.mjs). It accepts local reference names and paths; wallet and proxy values are read only by their existing native host integrations and are not returned in the setup response.
+
+1. **Review host settings** reads the current saved baseline, validates the proposed original preset, and shows the exact field changes and local reference availability. It also identifies received Dataset reviews that would need a new review.
+2. **Save host settings** publishes that reviewed revision through the original service. A changed baseline requires a new review. Retrying the same accepted save returns its original revision.
+3. **Saved host revisions** lets an operator load an earlier version as a draft, compare it with the current selection, and save it explicitly. **Download settings** receives that revision's exact private JSON bytes through the authenticated application.
+
+New Dataset reviews use the selected host. Preparing an acquisition retains that review's exact preset before publishing the recoverable native attempt. Prepared acquisitions and interrupted preparations keep their original payer, signing and transport references, limits, keys, and ledger when the host selection changes. The displayed ceilings apply to each prepared acquisition's original ledger; they are not a combined cap across all separate acquisitions.
 
 ## Receive and acquire
 
 1. **Receive a dataset:** choose the merchant's original saved offers or discovery JSON. The exact bytes are retained. Native seller arrays, saved `resources`/`items`, `scf61-observed-native-page-v1` and `ORIGINAL_UNSIGNED_CATALOG` are supported. Choose a GET dataset offer and payment option from that file.
 2. **Select the query:** use the original merchant's supported `fields`, `limit`, `sort`, `snapshot`, `where_*` and range parameters. The original dataset query validator and saved discovery preparation enforce the request contract. A snapshot parameter pins the requested edition; otherwise the first accepted native page fixes it. The cursor comes from accepted native pages.
 3. **Review the limits:** select a stable session name, page/row/page-byte ceilings and daily/total atomic caps. The review displays the exact URL, asset/network, payee, payer and page allocation. A total cap can intentionally permit fewer than the page limit; the original acquisition stops at its native total cap. Caps are allocations, not settled charges.
-4. **Create acquisition:** the original initializer creates its private operator workspace, ledger and native dataset session. This preparation makes no purchase. The reviewed source, preset, native configuration, signer module, policy, session definition and limits remain bound to the received review.
+4. **Create acquisition:** the original initializer creates its private operator workspace, ledger and native dataset session. This preparation makes no purchase. The exact host preset is retained for this attempt, and the reviewed source, native configuration, signer module, policy, session definition and limits remain bound to the received review.
 5. **Continue acquisition:** the application runs the original `runDatasetSession`, including native terminal approval, original signer selection, page evidence and cursor continuity. It never supplies an alternate `executePage`. The progress view shows retained pages, actual original outcomes, current snapshot, original request and native stop state.
 6. **Finalize data room:** after native `COMPLETE`, the original SF100 delivery builds or reopens the selected room. A completed room is reused. Download its exact JSONL, CSV, HTML review and manifest, or inspect a page of actual JSONL rows in the browser.
 
@@ -36,7 +47,11 @@ All native row types are preserved in the preview. The first access hashes the e
 
 ## Resume original work
 
-Reopen the same `--state` directory. Existing sessions and browser action history persist, while current acquisition state is read from the original native files. An interrupted browser job is marked `INTERRUPTED`; it is not automatically replayed.
+New native session definitions are fully written and synced before the original creator atomically publishes `session.json` inside its exclusively created private directory. An interrupted initial write therefore leaves its partial file and directory retained, with no final definition to mistake for a completed session. The receiving preparation can use another session path while keeping the same original operator keys and ledger.
+
+Reopen the same `--state` directory. Existing sessions, host revisions and browser action history persist, while current acquisition state is read from the original native files. An interrupted browser job is marked `INTERRUPTED`; it is not automatically replayed.
+
+Retrying an interrupted **Create acquisition** uses the original initializer's resume entry. It preserves the same operator generation, keys and ledger. If only a partial native session directory exists, the receiving state retains that directory and its attempt record, then assigns another session path to the original creator. Historical preparations created before attempt-local preset retention can resume when their exact original preset bytes are still available in the declared file or a saved host revision.
 
 - **Recover interrupted session** calls the original native recovery. Its same-host process and lock-identity checks determine whether a dead lock can be removed. This application does not remove a live or foreign-host native lock.
 - **Continue acquisition** resumes the original next page only when native state is `READY`. A retained ambiguous page remains subject to the original reconciliation rules; changing a browser record does not replace that page.
@@ -92,7 +107,7 @@ The receiving application does not infer that two different queries represent up
 
 | File | Responsibility |
 | --- | --- |
-| `receiving.mjs` | Retain original offers, native review, original operator/session preparation and reviewed setup preflight |
+| `receiving.mjs` | Original offers and review; shared host revisions and effects; attempt-bound preset, native preparation/resume and preflight |
 | `model.mjs` | One private customer owner; native session identity, asynchronous original actions, history, purchase views and exact delivered files |
 | `analysis.mjs` | Trusted original Python source registration followed by its owned server |
 | `server.mjs` | Fixed loopback listener, exact Host/Origin checks, per-instance capability, bounded input and streamed download tickets |

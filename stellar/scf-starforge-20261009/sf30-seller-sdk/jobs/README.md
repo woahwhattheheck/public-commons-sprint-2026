@@ -4,6 +4,14 @@ A merchant can sell a report, export, or other long-running application function
 
 [INSTALL.md](./INSTALL.md) covers installed commands, the four service ports, HTTPS routing, and the customer handoff. [BUYER.md](./BUYER.md) covers retaining the actual native purchase response and downloading its result. The [customer workspace](../../sf88-operator-buyer-cli/job-workspace/README.md) adds job intake, monitoring, verified resources, research notes, and portable collections.
 
+## Receive inputs and resolve a paid job
+
+Open **Input receiving** from the merchant workspace to inspect the actual customer files, preview verified content, download a complete original file, resume an operator copy, and review the jobs that retain each input. The [receiving desk guide](./inputs/workspace/README.md) covers storage, transfer and release controls. Its command interface is `starforge jobs inputs`; file streams and revisions use the running merchant’s existing state.
+
+Open **Resolutions** to handle a customer issue, reply, retry or cancel the selected job, and record a reviewed accounting decision. Connect the merchant’s running accounting workspace and select the reconciliation containing the job’s settlement. A reviewed refund retains the original adjustment request; a returned transfer is verified by the existing accounting verifier. The customer’s resolution receipt carries the resulting case, amounts and verified return alongside their original purchase.
+
+The [complete resolution guide](./resolution/README.md) covers case decisions, interruption recovery, accounting exports and customer receiving. Installed commands are `starforge jobs-resolution` for the merchant’s private host and `starforge jobs-buyer-resolution` for the retained buyer directory. Both workspaces include their own browser controls. Closing the merchant finishes admitted resolution work before releasing its job state.
+
 ## Use the original payment path
 
 `config.mjs` compiles each configured function into an original SF30 route. Original SF89 admission validates both the complete prepared input and the subsequent job purchase request. The purchased request carries exactly `{ "jobId": "..." }`, the prepared claim capability in `x-sfjobs-token`, and the same identifier in `x-sf98-order-id` and the approved URL's `sf98_order` query. The purchase handoff also supplies orderReference for original SF88 preparation.
