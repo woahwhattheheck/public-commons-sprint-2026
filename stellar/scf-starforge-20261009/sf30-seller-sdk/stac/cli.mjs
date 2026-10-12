@@ -59,6 +59,12 @@ Original merchant/customer controller:
   customer-deliver --directory DIR --buyer-config JSON_FILE --out DIR
   customer-open    --directory DIR
 
+Native QGIS project receiving:
+  qgis-export --directory RECEIVED_DIR --out QGIS_SOURCE_DIR
+  qgis-open   --directory QGIS_SOURCE_DIR [--expected-manifest-sha256 SHA256]
+  qgis-plugin --out PLUGIN_ZIP [--python EXISTING_PYTHON]
+  qgis-help
+
 Offline GIS from the original customer delivery:
   portable-export --directory RECEIVED_DIR --out PORTABLE_DIR
   portable-open   --directory PORTABLE_DIR [--expected-manifest-sha256 SHA256]
@@ -143,6 +149,11 @@ export async function runStacCLI(argv=process.argv.slice(2)){
     }catch(error){if(close)await close().catch(()=>{});throw error;}
     if(close)await keepOpen(close);
   };
+  if(command.startsWith('qgis-')) {
+    const {runQgisCommand}=await import('./qgis/cli.mjs');
+    const answer=await runQgisCommand({command,flags});
+    if(answer.text)process.stdout.write(answer.text);else stdout(answer.result);return;
+  }
   if(command.startsWith('prescient-')) {
     const {runPrescientCommand}=await import('./prescient/cli.mjs');
     const {result,close}=await runPrescientCommand({command,flags});await present(result,close);return;
