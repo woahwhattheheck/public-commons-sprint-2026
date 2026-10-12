@@ -16,7 +16,7 @@ import { exportRuntimeTransfer, inspectRuntimeTransfer, beginRuntimeTransferRece
   receiveRuntimeTransferPart, completeRuntimeTransferReceive, installReceivedRuntime } from '../runtime-transfer.mjs';
 import { MAX_MANIFEST_BYTES } from '../runtime-transfer-lock.mjs';
 import { plain, need, absolute, privateDirectory, makePrivate, regular, readJSON,
-  saveJSON, digest, canonical, json, operationLease } from '../runtime-workspace/storage.mjs';
+  saveJSON, digest, canonical, json, operationLease, operationRunning } from '../runtime-workspace/storage.mjs';
 
 const SCHEMA = 'stellar-forge.groundwater-distribution-receiving.v1';
 const RESULT = 'stellar-forge.groundwater-distribution-result.v1';
@@ -175,6 +175,7 @@ async function waitOperation(model, id, input, { signal, progress }, sourceBuild
 }
 async function beginOriginal(model, request, input, options, sourceBuild = false) {
   const prior = (await model.state()).operations.find(item => item.id === request.requestId);
+  options.owned?.add(request.requestId);
   await model.begin(request);
   if (prior && prior.phase !== 'SUCCEEDED' && !prior.workerActive) {
     if (sourceBuild) {
@@ -270,6 +271,116 @@ async function sourceUi(directory, review, expectedArchive, expectedWorkspace, i
       visible, stopped: true };
   } finally { try { if (browser) await browser.close(); } finally { await server.close(); } }
 }
+
+async function drainOwnedOperations(model, owned, progress) {
+  const ids = [...owned]; let last = '';
+  if (!ids.length) return { state: 'complete', operations: [] };
+  for (;;) {
+    let observed, pending, problem = null;
+    try {
+      const state = await model.state();
+      observed = [];
+      for (const id of ids) {
+        const op = state.operations.find(item => item.id === id);
+        if (!op) { observed.push({ operationId: id, state: 'NOT_DISPATCHED' }); continue; }
+        const running = await operationRunning(join(model.directory, 'operations', id, 'worker.lock'));
+        observed.push({ operationId: id, state: op.phase, workerActive: Boolean(op.workerActive),
+          commandActive: Boolean(op.commandActive), leaseHeld: running });
+      }
+      pending = observed.filter(item => item.workerActive || item.commandActive || item.leaseHeld || item.state === 'QUEUED');
+    } catch (error) {
+      problem = { code: error.code ?? 'GROUNDWATER_WORKER_OBSERVATION_UNAVAILABLE', message: String(error.message ?? error) };
+      pending = ids.map(operationId => ({ operationId, state: 'UNRESOLVED' }));
+    }
+    if (!pending.length) return { state: 'complete', operations: observed };
+    const signature = json(canonical({ pending, problem }));
+    if (signature !== last) {
+      try { await progress({ phase: 'OWNED_WORKER_DRAIN', pending, problem,
+        message: 'Retaining the original worker IDs and producing lifetime until native work is stopped.' }); } catch {}
+      last = signature;
+    }
+    // The maintained model.close() does not cancel detached workers. An abort or
+    // observation timeout therefore keeps this lease/lifetime until those exact
+    // workers finish. It does not authorize another job or a mutable checkpoint.
+    await new Promise(done => setTimeout(done, 1000));
+  }
+}
+async function receivedInstallation(input, transfer, receivingDirectory, original, { signal, progress }) {
+  const root = await privateRoot(join(input.directory, 'received-installations'));
+  const binding = { operationId: input.operationId, directory: receivingDirectory,
+    manifestSha256: transfer.manifestSha256, transferId: transfer.manifest.transferId,
+    installationId: original.installationId, sourceCommit: input.ref,
+    profileId: original.profileId, lockSha256: original.lockSha256,
+    archiveSha256: transfer.manifest.runtime.archiveSha256, python: input.python,
+    nodeHeaders: input.nodeHeaders ?? null };
+  const requestPath = number => join(root, String(number).padStart(6, '0') + '-request.json');
+  const resultPath = number => join(root, String(number).padStart(6, '0') + '-result.json');
+  const requestFor = (number, previous) => ({
+    schema: 'stellar-forge.groundwater-received-installation-request.v1', ...binding, number,
+    runtimeDirectory: join(input.directory, number === 0 ? 'groundwater-received' : 'groundwater-received-recovered-' + number),
+    recoverFrom: previous?.runtimeDirectory ?? null,
+    previousRequestSha256: previous ? digest(json(canonical(previous))) : null,
+  });
+  const retainedNames = await readdir(root);
+  const names = retainedNames.filter(name => /^\d{6}-request\.json$/.test(name)).sort();
+  for (const name of retainedNames.filter(name => /^\d{6}-result\.json$/.test(name)))
+    need(names.includes(name.replace('-result.json', '-request.json')),
+      'GROUNDWATER_RECEIVED_RECOVERY_REQUEST_UNAVAILABLE', name);
+  const history = []; let request;
+  for (let number = 0; number < names.length; number++) {
+    need(names[number] === String(number).padStart(6, '0') + '-request.json',
+      'GROUNDWATER_RECEIVED_RECOVERY_CHAIN_CHANGED');
+    const saved = await readJSON(requestPath(number));
+    need(same(saved, requestFor(number, request)), 'GROUNDWATER_RECEIVED_RECOVERY_REQUEST_CHANGED');
+    request = saved; history.push(requestPath(number));
+    if (await exists(resultPath(number))) history.push(resultPath(number));
+  }
+  if (!request) {
+    request = requestFor(0, null); await retain(requestPath(0), request); history.push(requestPath(0));
+  }
+  // A lost successful response reuses the first retained native result. The
+  // caller still verifies the current installed source/profile/lock afterward.
+  let recoveries = 0;
+  for (;;) {
+    abort(signal);
+    const saved = await readJSON(resultPath(request.number), true);
+    if (saved) {
+      need(saved.schema === 'stellar-forge.groundwater-received-installation-result.v1' &&
+        saved.requestSha256 === digest(json(canonical(request))) &&
+        saved.result?.status === 'READY' && saved.result.runtimeDirectory === request.runtimeDirectory &&
+        saved.result.manifestSha256 === binding.manifestSha256,
+      'GROUNDWATER_RECEIVED_RECOVERY_RESULT_CHANGED');
+      return { request, native: saved.result, files: [...new Set(history)] };
+    }
+    await progress({ phase: request.recoverFrom ? 'OFFLINE_INSTALL_RECOVERY' : 'OFFLINE_INSTALL',
+      directory: request.runtimeDirectory, recoverFrom: request.recoverFrom, request: requestPath(request.number) });
+    try {
+      const result = await installReceivedRuntime({ directory: receivingDirectory,
+        runtimeDirectory: request.runtimeDirectory, recoverFrom: request.recoverFrom,
+        python: input.python, nodeHeaders: input.nodeHeaders ?? null, signal,
+        onProgress: async event => progress({ phase: 'OFFLINE_INSTALL', original: event }) });
+      need(result.status === 'READY' && result.runtimeDirectory === request.runtimeDirectory &&
+        result.manifestSha256 === binding.manifestSha256, 'GROUNDWATER_RECEIVED_RECOVERY_RESULT_CHANGED');
+      const receipt = { schema: 'stellar-forge.groundwater-received-installation-result.v1',
+        requestSha256: digest(json(canonical(request))), result };
+      await retain(resultPath(request.number), receipt); history.push(resultPath(request.number));
+      return { request, native: result, files: [...new Set(history)] };
+    } catch (error) {
+      if (error.code !== 'RUNTIME_TRANSFER_PREPARATION_INTERRUPTED') throw error;
+      const previous = request;
+      need(previous.number < 999999, 'GROUNDWATER_RECEIVED_RECOVERY_HISTORY_BOUND');
+      request = requestFor(previous.number + 1, previous);
+      // Publish the exact new target and original --from before dispatch. Every
+      // later invocation follows this retained chain, including a stopped recovery.
+      await retain(requestPath(request.number), request); history.push(requestPath(request.number));
+      await progress({ phase: 'OFFLINE_INSTALL_RECOVERY_RETAINED',
+        original: previous.runtimeDirectory, selected: request.runtimeDirectory,
+        request: requestPath(request.number), originalCode: error.code });
+      if (recoveries++ > 0) throw error;
+    }
+  }
+}
+
 async function checkedRuntime(directory, input, contract, profileId, expectedLock) {
   const result = await inspectRuntimeInstall({ directory, load: true, source: true, python: input.python });
   need(result.ready && result.status === 'READY' && result.sourceCommit === input.ref &&
@@ -311,13 +422,14 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
   await privateRoot(input.directory);
   const lease = await operationLease(join(input.directory, 'worker.lock'));
   let model;
+  const owned = new Set();
   try {
     const requestFile = join(input.directory, 'request.json');
     await retain(requestFile, input);
-    const complete = await readJSON(join(input.directory, 'result.json'), true);
-    if (complete) return await verifyCompleted(complete, input, contract);
     const executor = await verifyExecutor(input, contract);
     await retain(join(input.directory, 'executor-source.json'), executor);
+    const complete = await readJSON(join(input.directory, 'result.json'), true);
+    if (complete) return await verifyCompleted(complete, input, contract);
     await progress({ phase: 'EXACT_SOURCE', sourceCommit: input.ref, scientificFiles: contract.files.length });
     const workspace = join(input.directory, 'workspace');
     if (!await exists(workspace)) await createRuntimeWorkspace({ directory: workspace });
@@ -334,7 +446,7 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
     const sourceRequest = { requestId: review.requestId, operation: 'source-build',
       reviewId: review.reviewId, selectionSha256: review.selectionSha256 };
     await retain(join(input.directory, 'source-request.json'), sourceRequest);
-    const built = await beginOriginal(model, sourceRequest, input, { signal, progress }, true);
+    const built = await beginOriginal(model, sourceRequest, input, { signal, progress, owned }, true);
     need(built.result?.status === 'SOURCE_READY', 'GROUNDWATER_SOURCE_NOT_READY');
     const archive = await model.sourceBuildsDownload(review.reviewId);
     const sourceArchive = { path: built.result.build.archive, bytes: archive.bytes, sha256: archive.sha256 };
@@ -360,7 +472,7 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
         ...(input.nodeHeaders ? { nodeHeaders: input.nodeHeaders } : {}) };
       await retain(recoveryFile, preparationRequest);
     }
-    const prepared = await beginOriginal(model, preparationRequest ?? prepare, input, { signal, progress });
+    const prepared = await beginOriginal(model, preparationRequest ?? prepare, input, { signal, progress, owned });
     const originalDirectory = prepared.result.directory;
     abort(signal);
     await progress({ phase: 'ORIGINAL_INSTALL', profileId: profile.profileId, directory: originalDirectory });
@@ -395,11 +507,9 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
     }
     await completeRuntimeTransferReceive({ directory: receivingDirectory, signal,
       onProgress: async event => progress({ phase: 'RECEIVING', original: event }) });
-    const receivedDirectory = join(input.directory, 'groundwater-received');
-    await progress({ phase: 'OFFLINE_INSTALL', directory: receivedDirectory });
-    await installReceivedRuntime({ directory: receivingDirectory, runtimeDirectory: receivedDirectory,
-      python: input.python, nodeHeaders: input.nodeHeaders ?? null, signal,
-      onProgress: async event => progress({ phase: 'OFFLINE_INSTALL', original: event }) });
+    const receivedInstallationResult = await receivedInstallation(input, transfer, receivingDirectory,
+      original.inspection, { signal, progress });
+    const receivedDirectory = receivedInstallationResult.request.runtimeDirectory;
     const received = await checkedRuntime(receivedDirectory, input, contract, profile.profileId, original.inspection.lockSha256);
     need(original.inspection.installationId === received.inspection.installationId, 'GROUNDWATER_RECEIVED_IDENTITY_CHANGED');
     await retain(join(input.directory, 'received-scientific-source.json'), received.scientific);
@@ -415,6 +525,7 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
       'GROUNDWATER_RECEIVED_PROFILE_CHANGED');
     await retain(join(input.directory, 'runtime-comparison.json'), comparison);
     await saveJSON(join(input.directory, 'received-handoff.json'), await model.handoff(receivedEntry.runtimeId), true);
+    const workerDrain = await drainOwnedOperations(model, owned, progress);
     await model.close(); model = null;
     await progress({ phase: 'OPERATOR_REOPEN', workspaceId });
     const operator = await sourceUi(workspace, review, sourceArchive, workspaceId, input, signal);
@@ -427,6 +538,7 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
         'original-handoff.json', 'received-handoff.json'].map(name => join(input.directory, name))])
       files.push(await fileIdentity(path));
     if (await exists(recoveryFile)) files.push(await fileIdentity(recoveryFile));
+    for (const path of receivedInstallationResult.files) files.push(await fileIdentity(path, MAX_MANIFEST_BYTES));
     const result = { schema: RESULT, state: 'complete', operationId: input.operationId,
       directory: input.directory,
       inputSha256: digest(json(canonical(input))), completedAt: now(), sourceCommit: input.ref, selection: SELECTION,
@@ -437,10 +549,11 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
       sourceArchive, profileId: profile.profileId, installationId: original.inspection.installationId,
       lockSha256: original.inspection.lockSha256,
       original: { directory: originalDirectory, runtimeId: originalEntry.runtimeId, inspection: original.inspection },
-      received: { directory: receivedDirectory, runtimeId: receivedEntry.runtimeId, inspection: received.inspection },
+      received: { directory: receivedDirectory, runtimeId: receivedEntry.runtimeId, inspection: received.inspection,
+        request: receivedInstallationResult.request, native: receivedInstallationResult.native },
       transfer: { directory: transferDirectory, id: transfer.manifest.transferId, manifestSha256: transfer.manifestSha256,
         parts: transfer.parts.length, payloadBytes: transfer.manifest.payload.bytes },
-      receiving: { directory: receivingDirectory }, operator, files,
+      receiving: { directory: receivingDirectory }, operator, workerDrain, files,
       scientificExecution: 'The existing publisher/model/portal operation is retained by its original owner.',
       modelRunsStarted: 0, sellerStarts: 0, buyerRequests: 0 };
     await retain(join(input.directory, 'result.json'), result);
@@ -452,7 +565,10 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
       operation: error.original ?? null, workerLog: error.workerLog ?? null,
       request: join(input.directory, 'request.json') }, true).catch(() => {});
     throw error;
-  } finally { try { if (model) await model.close(); } finally { await lease.close(); } }
+  } finally {
+    try { if (model) { await drainOwnedOperations(model, owned, progress); await model.close(); } }
+    finally { await lease.close(); }
+  }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const controller = new AbortController();
