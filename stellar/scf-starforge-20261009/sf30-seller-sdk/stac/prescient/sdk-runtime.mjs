@@ -193,6 +193,8 @@ export async function createPrescientSdkRuntime({
           current.endpoint === retainedConfig.expectedEndpoint &&
           current.authMode === retainedConfig.authMode,
           'PRESCIENT_RUNTIME_METADATA_MISMATCH');
+        need(retainedConfig.authMode !== 'oauth' || retainedConfig.expectedIdentityProvider == null ||
+          current.identityProvider === retainedConfig.expectedIdentityProvider, 'PRESCIENT_RUNTIME_IDENTITY_PROVIDER_MISMATCH');
         if (metadata) need(JSON.stringify(current) === JSON.stringify(metadata), 'PRESCIENT_RUNTIME_SOURCE_CHANGED');
         metadata = freeze(current);
         selected.initialized = true;

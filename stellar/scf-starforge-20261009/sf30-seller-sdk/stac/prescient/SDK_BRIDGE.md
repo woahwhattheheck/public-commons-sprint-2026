@@ -24,7 +24,7 @@ Source: [sparkgeo/prescient-sdk at895b7720](https://github.com/sparkgeo/prescien
 
 Keep the existing Prescient credentials in an absolute private envFile, or pass the approved private environment to the child process. A saved workspace profile contains the reference and the reviewed access scope. An env file should be readable only by its operator account.
 
-For API-key access the original SDK reads PRESCIENT_ENDPOINT_URL and PRESCIENT_API_KEY. For identity access it reads its existing Microsoft or Google settings, including client ID, authorization URL and the provider-specific tenant or client secret. Use the original SDK's Settings contract for the customer's identity provider.
+For API-key access the original SDK reads PRESCIENT_ENDPOINT_URL and PRESCIENT_API_KEY. For identity access it reads its existing Microsoft or Google settings, including client ID, authorization URL and the provider-specific tenant or client secret. Use the original SDK's Settings contract for the customer's identity provider. For OAuth, the operator facade passes expectedIdentityProvider as microsoft or google. The worker compares it with the effective frozen Settings before any identity request and returns the actual non-secret identityProvider in metadata.
 
 Run an OAuth worker in the same supported browser environment where the original SDK can complete Microsoft interactive acquisition or Google's loopback flow. Keep that worker running for session continuity: the original SDK retains refresh credentials in process memory.
 
@@ -50,7 +50,7 @@ The following is the non-secret runtime configuration shape. Replace the example
       "readTimeoutSeconds": 60
     }
 
-The worker reads the actual effective Settings and requires the endpoint and API-key/OAuth mode to match this profile. It uses the original client's stac_catalog_url property; the SDK's urljoin behavior determines the catalog path, including the effect of a trailing slash in the endpoint.
+The worker reads the actual effective Settings and requires the endpoint, API-key/OAuth mode and any expectedIdentityProvider to match this profile. It uses the original client's stac_catalog_url property; the SDK's urljoin behavior determines the catalog path, including the effect of a trailing slash in the endpoint.
 
 allowedOrigins is the explicit set of HTTPS origins that may receive the Prescient API key or ID-token header. The worker returns the original SDK's api-key header in API-key mode and its Authorization header in OAuth mode. The existing SF31 source-auth transport admits the corresponding reviewed header scheme for that exact origin: normalizeSourceAuthorization({origin, scheme: 'ApiKey'}) for the literal api-key header, or its existing Bearer scheme. The operator facade joins this runtime result to that existing transport capability.
 
@@ -88,7 +88,7 @@ downloadS3 requires the original selection:
       "operationId": "original-acquire-operation-id"
     }
 
-Capture directory must already exist beneath captureRoot. It may change on a retry because the original workspace retains a new attempt directory. The stable receiving spool is keyed by the original workspace and operation. Its journal binds the review ID, item digest, original href, resolved bucket/key/version, approved request conditions, SDK revision and byte limit. Changing any bound selection under that same operation is a conflict.
+Capture directory must already exist beneath captureRoot. It may change on a retry because the original workspace retains a new attempt directory. The stable receiving spool is keyed by the original workspace and operation. New receiving directories are synced in their parents before the first checkpoint. Its journal binds the review ID, item digest, original href, resolved bucket/key/version, approved request conditions, SDK revision and byte limit. Changing any bound selection under that same operation is a conflict.
 
 maxBytes is the reviewed positive integer limit, up to2GiB. chunkBytes controls a committed range; it defaults to8MiB and may be set between16KiB and64MiB. onProgress receives the actual committed byte count, total size, receiving ID, attempt count and safe session metadata. An observer exception leaves the fsynced receiving operation intact.
 
@@ -112,7 +112,7 @@ Each GetObject request has the exact byte Range and IfMatch validator. When the 
 
 After each complete range, it fsyncs the partial file and atomically saves its committed prefix length and SHA256. On interruption, recovery hashes the committed prefix and truncates only an unfinished range tail. It then rechecks the same source object before continuing the next range. A changed object preserves the existing checkpoint and returns PRESCIENT_S3_OBJECT_CHANGED for the original workspace to resolve.
 
-Once all bytes are committed, final rename, journal completion and capture publication can recover offline. A completed operation verifies its retained full SHA256 and replays the same original receiving record and completion time into a new capture attempt. Existing different asset bytes or a different receiving record in a capture are explicit conflicts.
+Once all bytes are committed, final rename, journal completion and capture publication can recover offline. A completed operation verifies its retained full SHA256 and replays the same original receiving record and completion time into a new capture attempt. Existing different asset bytes or a different receiving record in a capture are explicit conflicts. Recovery also syncs existing completion/capture entries before returning success, covering an earlier process death after rename but before its directory sync.
 
 Successful downloadS3 writes:
 
