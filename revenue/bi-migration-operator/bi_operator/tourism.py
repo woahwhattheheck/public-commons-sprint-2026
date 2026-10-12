@@ -389,7 +389,12 @@ def forecast(plan, observations):
         shift = adjustment["amount_minor"] if adjustment else 0
         scenario = {}
         for name, bps in (("base", 0), ("downside", plan["downside_bps"]), ("upside", plan["upside_bps"])):
-            result = scaled_money(value, factor + Decimal(bps) / Decimal(10000), shift)
+            with localcontext() as context:
+                context.prec = 60
+                # Percentage-point sensitivities use the original baseline's magnitude.
+                # A published net correction keeps its sign in the base projection.
+                projection = Decimal(value) * factor + Decimal(abs(value)) * Decimal(bps) / Decimal(10000)
+                result = bounded_money(rounded(projection) + shift)
             if result < 0:
                 raise ValueError("Forecast " + period + " is negative after its " + baseline +
                                  " baseline. Review its explicit growth or source-based adjustment.")
@@ -422,7 +427,7 @@ def forecast(plan, observations):
         "backtest_mean_error_minor": str(Decimal(sum(r["error_minor"] for r in backtest)) /
                                             Decimal(len(backtest))) if backtest else None,
         "backtest_method": "Rolling historical forecast using earlier calendar-month rows in the selected source editions; no manual event adjustment or archived publication-vintage reconstruction.",
-        "scenarios": "Downside and upside are explicit growth sensitivities, not statistical confidence intervals."}
+        "scenarios": "The base uses the signed original prior-year collection multiplied by the selected growth factor. Downside and upside add their basis-point changes against the absolute prior-year collection, then apply the same explicit future-month adjustment. This preserves directional sensitivities when a publisher reports a negative net correction; the ranges are not statistical confidence intervals."}
 
 
 def budget_report(row):

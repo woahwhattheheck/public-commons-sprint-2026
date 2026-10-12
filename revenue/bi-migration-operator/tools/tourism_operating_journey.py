@@ -210,14 +210,27 @@ def main():
         original_record = initial.service.store.get("tourism_export", produced["export"]["id"])
         if sha(initial.service.store.bytes(original_record["payload"]["package"]["digest"])) != reporting["sha256"]:
             raise ValueError("The downloaded report differs from the original saved package.")
-        from bi_operator.tourism import parse_source
+        from bi_operator.tourism import parse_source, forecast
         signed_source = {"schema": "commons.tourism-source.v1", "currency": "USD", "minor_unit": 2,
             "tables": {"collections": [{"period": "2025-06", "amount": "-110.38", "jurisdiction": "ABILENE",
                 "basis": "KDOR net collection (98%; state retains 2% administration)",
                 "source_ref": "https://www.ksrevenue.gov/pdf/tgfy25.pdf#location=ABILENE&month=2025-06"}]}}
         signed = parse_source(json.dumps(signed_source).encode(), "original-signed-source.json", {})
-        if signed["tables"]["collections"][0]["amount_minor"] != -11038:
+        signed_row = signed["tables"]["collections"][0]
+        if signed_row["amount_minor"] != -11038:
             raise ValueError("The original signed publisher adjustment did not survive source import.")
+        signed_plan = {"start": "2025-07", "as_of": "2026-05", "method": "fixed_growth",
+            "growth_bps": 0, "comparison_months": 6, "downside_bps": -500, "upside_bps": 500,
+            "adjustments": [{"period": "2026-06", "amount_minor": 20000,
+                "basis": "Explicit numerical sensitivity example; no actual cash or revenue event.",
+                "source_ref": signed_row["source_ref"]}]}
+        signed_forecast = forecast(signed_plan, {"2025-06": signed_row})
+        signed_scenario = signed_forecast["months"][-1]
+        if tuple(signed_scenario[key] for key in ("downside_minor", "base_minor", "upside_minor")) != (8410, 8962, 9514):
+            raise ValueError("The original signed baseline reversed the named growth sensitivities.")
+        signed_sensitivity = {"published_baseline_minor": -11038, "explicit_example_adjustment_minor": 20000,
+            "downside_minor": 8410, "base_minor": 8962, "upside_minor": 9514,
+            "source_ref": signed_row["source_ref"], "adjustment_is_assumption": True}
         initial.close()
         initial = None
         from bi_operator.archive import restore
@@ -264,6 +277,7 @@ def main():
                 "workbook_and_full_original_source_download", "original_encrypted_workspace_backup",
                 "cold_restore_and_saved_export_replay", "receiving_browser_reopen_and_unchanged_download"],
             "reporting": reporting, "signed_original_collection_preserved": True,
+            "signed_baseline_sensitivity": signed_sensitivity,
             "original_filename_namespace_preserved": True, "browser_errors": [],
             "files": {"reporting_package": file_info[names[0]], "receiving_package": file_info[names[1]],
                       "screen": file_info[names[2]]},
