@@ -206,6 +206,24 @@ class Workspace(HarvestWorkspace):
                 for key in ("title","creator","subject","description","publisher","contributor","date",
                             "type","format","identifier","source","language","relation","coverage","rights"):
                     array("dc_"+key,[Q("metadata"),dc,"{http://purl.org/dc/elements/1.1/}"+key])
+                provenance="{https://tokenjunkielabs.com/ns/ciim-feed-provenance/1}"
+                found=any(child.name==provenance+"provenance" for about in record.children
+                          if about.name==Q("about") for child in about.children)
+                if found:
+                    for column,key,kind in (
+                        ("source_edition_id","editionId","string"),
+                        ("source_query_sha256","querySha256","string"),
+                        ("source_manifest_sha256","manifestSha256","string"),
+                        ("source_page","page","integer"),
+                        ("source_page_sha256","pageSha256","string"),
+                        ("source_request_sha256","requestSha256","string"),
+                        ("source_record_sha256","recordSha256","string"),
+                        ("source_url","url","string"),
+                        ("source_retrieved_at","retrievedAt","string"),
+                        ("metadata_license","metadataLicense","string")):
+                        scalar(column,[Q("about"),provenance+"provenance",provenance+key],kind)
+                    plan["filters"]+=["source_edition_id","source_query_sha256","source_record_sha256"]
+                    plan["sorts"]+=["source_edition_id","source_page"]
             else:
                 if payload.name==wrapper+"oai_datacite":
                     parent=next((n for n in payload.children if n.name==wrapper+"payload"),None)
