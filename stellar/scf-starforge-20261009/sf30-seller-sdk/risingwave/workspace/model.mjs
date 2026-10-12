@@ -3,8 +3,7 @@ import { lstat, open, readdir, unlink } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
-import { createInterface } from 'node:readline';
-import { DatabaseSync } from 'node:sqlite';
+import { createCaptureComparison, readCaptureComparison, openComparisonFile } from './comparison.mjs';
 import { validateRisingWaveSource, openRisingWaveSourceFile } from '../config.mjs';
 import { compileRisingWaveReport, compileRisingWaveQueries, bindRisingWaveParameters } from '../report.mjs';
 import { readRisingWaveCapture, inspectRisingWaveCapture } from '../source.mjs';
@@ -292,7 +291,7 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
     if (!['full','changes','auto'].includes(mode) || !['error','rebuild'].includes(onGap))
       throw fault('CAPTURE_MODE_INVALID');
     if (input.baseCaptureId !== undefined && input.baseCaptureId !== null) id(input.baseCaptureId);
-    fields(input.extraction ?? {}, ['maxRows','maxBytes','batchSize','timeoutSeconds']);
+    fields(input.extraction ?? {}, ['maxRows','maxBytes','maxRowBytes','batchSize','timeoutSeconds','maxDurationMs']);
     if (mode === 'full' && input.baseCaptureId) throw fault('CAPTURE_BASE_NOT_USED', 'A full edition begins at the native initial snapshot.');
     const requestFor = saved => ({ revision: input.expectedRevision, query: input.query,
       input: normalizedInput(saved, input.query, input.input), mode,
@@ -331,6 +330,10 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
       baseCaptureId: base?.id ?? null, baseCaptureSha256: base?.files?.manifest?.sha256 ?? null, progress: null };
     await createFile(join(root, 'captures', selected + '.json'), bytes(record));
     await syncDirectory(join(root, 'captures'));
+    return startCaptureTask(record, saved);
+  }
+  function startCaptureTask(record, saved, resume = false) {
+    const selected = record.id, location = join(root, 'captures', selected);
     const controller = new AbortController();
     let writes = Promise.resolve();
     const persist = () => {
@@ -343,11 +346,12 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
       try {
         const source = await sourceFor(saved);
         if (closed) controller.abort();
-        const result = await source.capture(input.query, record.input, {
-          ...record.extraction, directory: location, mode, onGap,
-          ...(base ? { baseCaptureDirectory: join(root, 'captures', base.id) } : {}),
+        const progress = async value => { record.progress = structuredClone(value); await persist(); };
+        const result = resume ? await source.resumeCapture(location, { signal: controller.signal, onProgress: progress }) : await source.capture(record.query, record.input, {
+          ...record.extraction, directory: location, mode: record.mode, onGap: record.onGap,
+          ...(record.baseCaptureId ? { baseCaptureDirectory: join(root, 'captures', record.baseCaptureId) } : {}),
           signal: controller.signal,
-          onProgress: async progress => { record.progress = structuredClone(progress); await persist(); },
+          onProgress: progress,
         });
         if (resolve(result.directory) !== location || !object(result.files) || !result.manifest ||
             result.manifest.complete !== true || result.manifest.sourceHash !== record.sourceHash ||
@@ -370,6 +374,20 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
     captureTasks.set(selected, { controller, completion }); operations.add(completion);
     completion.finally(() => { captureTasks.delete(selected); operations.delete(completion); }).catch(() => {});
     return record;
+  }
+  async function resumeCapture(selected) {
+    const record = await captureRecord(selected);
+    if (captureTasks.has(selected) || record.state === 'COMPLETE') return record;
+    const saved = await revision(record.revision);
+    if (saved.sourceHash !== record.sourceHash || digest(bytes(record.input)) !== digest(bytes(normalizedInput(saved, record.query, record.request.input))))
+      throw fault('CAPTURE_BINDING_CHANGED');
+    record.attempts ??= [];
+    record.attempts.push({ state: record.state, completedAt: record.completedAt ?? null,
+      interruptedAt: record.interruptedAt ?? null, error: record.error ?? null, progress: record.progress ?? null });
+    record.state = 'CAPTURING'; record.resumedAt = timestamp();
+    delete record.error; delete record.completedAt; delete record.interruptedAt;
+    await atomicJson(join(root, 'captures'), selected + '.json', record);
+    return startCaptureTask(record, saved, true);
   }
   async function cancelCapture(selected) {
     const task = captureTasks.get(id(selected));
@@ -426,68 +444,48 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
     } finally { await file.handle.close(); }
   }
   async function compareCaptures(input) {
-    fields(input, ['before', 'after', 'keys', 'sampleLimit']);
+    fields(input, ['before', 'after', 'keys', 'sampleLimit', 'comparisonId']);
     const before = await captureRecord(input.before), after = await captureRecord(input.after);
-    const original = await revision(before.revision), keys = input.keys ?? original.source.queries[before.query]?.key ?? [];
-    if (before.state !== 'COMPLETE' || after.state !== 'COMPLETE' || !Array.isArray(keys) || keys.length === 0 ||
-        keys.some(value => typeof value !== 'string' || !value) || new Set(keys).size !== keys.length)
-      throw fault('CAPTURE_COMPARISON_INVALID', 'Select two complete editions and distinct row identity fields.');
-    const limit = input.sampleLimit ?? 100;
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) throw fault('CAPTURE_COMPARISON_LIMIT_INVALID');
-    const selected = key('comparison'), dbPath = join(root, 'comparisons', selected + '.sqlite');
-    const db = new DatabaseSync(dbPath);
-    const handles = [];
+    if (before.state !== 'COMPLETE' || after.state !== 'COMPLETE') throw fault('COMPLETE_CAPTURE_REQUIRED');
+    const original = await revision(before.revision), selected = input.comparisonId ?? key('comparison');
+    id(selected); if (!selected.startsWith('comparison-')) throw fault('COMPARISON_ID_INVALID');
+    const result = await createCaptureComparison({ directory: join(root, 'comparisons', selected), id: selected,
+      before, after, keys: input.keys ?? original.source.queries[before.query]?.key ?? [],
+      sampleLimit: input.sampleLimit ?? 100, openCaptureFile: captureFile });
+    await atomicJson(join(root, 'comparisons'), selected + '.json', {
+      id: selected, comparedAt: result.comparedAt, before: result.before.id, after: result.after.id, counts: result.counts });
+    return result;
+  }
+  async function comparisons(input = {}) {
+    fields(input, ['limit', 'offset']);
+    const limit = input.limit ?? 20, offset = input.offset ?? 0;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100 || !Number.isSafeInteger(offset) || offset < 0) throw fault('COMPARISON_PAGE_INVALID');
+    const names = (await readdir(join(root, 'comparisons'))).filter(name => /^comparison-[a-z0-9-]+\.json$/.test(name)).sort().reverse();
+    const items = [];
+    for (const name of names.slice(offset, offset + limit)) items.push(await readJson(join(root, 'comparisons', name), 65536));
+    return { total: names.length, offset, limit, items, nextOffset: offset + items.length < names.length ? offset + items.length : null };
+  }
+  async function comparisonRecord(selected) {
+    return readCaptureComparison(join(root, 'comparisons', id(selected)), { cache: verifiedFiles });
+  }
+  async function comparisonFile(selected, name) {
+    return openComparisonFile(join(root, 'comparisons', id(selected)), name, { cache: verifiedFiles });
+  }
+  async function comparisonChunk(selected, name, input = {}) {
+    fields(input, ['offset', 'limit']);
+    const offset = input.offset ?? 0, limit = input.limit ?? 196608;
+    if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 196608) throw fault('COMPARISON_RANGE_INVALID');
+    const file = await comparisonFile(selected, name);
     try {
-      db.exec('PRAGMA journal_mode=DELETE; PRAGMA temp_store=FILE; CREATE TABLE rows(side INTEGER,key TEXT,payload TEXT,hash TEXT,PRIMARY KEY(side,key));');
-      const put = db.prepare('INSERT INTO rows VALUES(?,?,?,?)');
-      for (const [side, record] of [[0,before],[1,after]]) {
-        const file = await captureFile(record.id, 'ndjson'); handles.push(file.handle);
-        let ordinal = 0; db.exec('BEGIN');
-        try {
-          const lines = createInterface({ input: file.handle.createReadStream({ autoClose: false, start: 0 }), crlfDelay: Infinity });
-          for await (const line of lines) {
-            if (!line) continue;
-            const row = JSON.parse(line);
-            if (!object(row) || keys.some(name => !Object.hasOwn(row, name) || row[name] === null)) throw fault('CAPTURE_KEY_NOT_FOUND');
-            const identity = JSON.stringify(keys.length ? keys.map(name => row[name]) : [ordinal]);
-            const payload = JSON.stringify(Object.fromEntries(Object.keys(row).sort().map(name => [name, row[name]])));
-            try { put.run(side, identity, payload, digest(Buffer.from(payload))); }
-            catch (issue) {
-              if (String(issue.message).includes('UNIQUE')) throw fault('CAPTURE_KEY_NOT_UNIQUE', 'Use fields that identify one row in each edition.');
-              throw issue;
-            }
-            ordinal++;
-            if (ordinal % 1000 === 0) { db.exec('COMMIT'); db.exec('BEGIN'); }
-          }
-          db.exec('COMMIT');
-        } catch (issue) { try { db.exec('ROLLBACK'); } catch {} throw issue; }
+      if (offset > file.size) throw fault('COMPARISON_RANGE_INVALID');
+      const chunk = Buffer.alloc(Math.min(limit, file.size - offset)); let read = 0;
+      while (read < chunk.length) {
+        const part = await file.handle.read(chunk, read, chunk.length - read, offset + read);
+        if (!part.bytesRead) throw fault('COMPARISON_FILE_CHANGED'); read += part.bytesRead;
       }
-      const count = sql => Number(db.prepare(sql).get().count);
-      const sample = (sql, ...args) => db.prepare(sql).all(...args).map(row => ({
-        key: JSON.parse(row.key), ...(row.before ? { before: JSON.parse(row.before) } : {}),
-        ...(row.after ? { after: JSON.parse(row.after) } : {}) }));
-      const counts = {
-        before: count('SELECT count(*) count FROM rows WHERE side=0'),
-        after: count('SELECT count(*) count FROM rows WHERE side=1'),
-        added: count('SELECT count(*) count FROM rows r LEFT JOIN rows l ON l.side=0 AND l.key=r.key WHERE r.side=1 AND l.key IS NULL'),
-        removed: count('SELECT count(*) count FROM rows l LEFT JOIN rows r ON r.side=1 AND r.key=l.key WHERE l.side=0 AND r.key IS NULL'),
-        changed: count('SELECT count(*) count FROM rows l JOIN rows r ON r.side=1 AND r.key=l.key WHERE l.side=0 AND l.hash<>r.hash'),
-        unchanged: count('SELECT count(*) count FROM rows l JOIN rows r ON r.side=1 AND r.key=l.key WHERE l.side=0 AND l.hash=r.hash'),
-      };
-      const result = { schema: 'stellar-forge.risingwave-capture-comparison.v1', id: selected, comparedAt: timestamp(),
-        before: { id: before.id, sourceHash: before.sourceHash, query: before.query, input: before.input, sha256: before.files.ndjson.sha256 },
-        after: { id: after.id, sourceHash: after.sourceHash, query: after.query, input: after.input, sha256: after.files.ndjson.sha256 },
-        sameSelection: before.query === after.query && digest(bytes(before.input)) === digest(bytes(after.input)),
-        identity: keys.length ? { kind: 'keyed', fields: keys } : { kind: 'ordered-row-position' }, counts, sampleLimit: limit,
-        added: sample('SELECT r.key,r.payload AS "after" FROM rows r LEFT JOIN rows l ON l.side=0 AND l.key=r.key WHERE r.side=1 AND l.key IS NULL ORDER BY r.key LIMIT ?', limit),
-        removed: sample('SELECT l.key,l.payload AS "before" FROM rows l LEFT JOIN rows r ON r.side=1 AND r.key=l.key WHERE l.side=0 AND r.key IS NULL ORDER BY l.key LIMIT ?', limit),
-        changed: sample('SELECT l.key,l.payload AS "before",r.payload AS "after" FROM rows l JOIN rows r ON r.side=1 AND r.key=l.key WHERE l.side=0 AND l.hash<>r.hash ORDER BY l.key LIMIT ?', limit),
-      };
-      await createFile(join(root, 'comparisons', selected + '.json'), bytes(result)); return result;
-    } finally {
-      await Promise.allSettled(handles.map(handle => handle.close())); db.close();
-      await unlink(dbPath).catch(issue => { if (issue.code !== 'ENOENT') throw issue; });
-    }
+      return { comparisonId: selected, file: name, name: file.name, totalBytes: file.size, sha256: file.sha256,
+        offset, bytes: read, nextOffset: offset + read < file.size ? offset + read : null, base64: chunk.toString('base64') };
+    } finally { await file.handle.close(); }
   }
   const sellerView = session => session.seller ? { origin: session.seller.url, mode: session.seller.mode,
     docs: session.seller.url + '/_seller/docs', startedAt: session.startedAt } : null;
@@ -712,7 +710,8 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
     }
     await inspect();
     return { directory: root,
-      ...Object.fromEntries(Object.entries({ inspect, revision, save, catalogue, compileReport, subscriptionInspect, subscriptionPrepare, subscriptionCreate, subscriptionRecord, subscriptions, sample, capture, captures, captureRecord, cancelCapture, recoverCapture, captureFile, captureChunk, compareCaptures,
+      ...Object.fromEntries(Object.entries({ inspect, revision, save, catalogue, compileReport, subscriptionInspect, subscriptionPrepare, subscriptionCreate, subscriptionRecord, subscriptions, sample, capture: value => mutate(() => capture(value)), captures, captureRecord, cancelCapture,
+        resumeCapture: value => mutate(() => resumeCapture(value)), recoverCapture: value => mutate(() => recoverCapture(value)), captureFile, captureChunk, compareCaptures, comparisons, comparisonRecord, comparisonFile, comparisonChunk,
         publicationCommand, createPublication,
         inspectPublication, publicationAction, buyerOffer, inspectRun, candidateFile, file })
         .map(([name, action]) => [name, admitted(action)])),

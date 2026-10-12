@@ -14,17 +14,23 @@ const HELP=[
 '  risingwave-workbench subscription-inspect|subscription-prepare|subscription-create --input INPUT.json',
 '  risingwave-workbench subscriptions',
 '  risingwave-workbench subscription-status --request ID',
-'  risingwave-workbench capture-status|capture-cancel|capture-recover --capture ID',
+'  risingwave-workbench capture-status|capture-cancel|capture-resume|capture-recover --capture ID',
 '  risingwave-workbench product-status --product ID',
 '  risingwave-workbench product --product ID --action ACTION [--input INPUT.json]',
 '  risingwave-workbench seller-start|seller-stop --product ID',
 '  risingwave-workbench run --product ID --run ID',
 '  risingwave-workbench buyer-offer --product ID --run ID [--query limit=10]',
 '  risingwave-workbench buyer-prepare --product ID --input BUYER.json',
-'  risingwave-workbench receive --capture ID --directory CUSTOMER_EDITION','',
+'  risingwave-workbench receive --capture ID --directory CUSTOMER_EDITION',
+'  risingwave-workbench comparisons [--limit 20 --offset 0]',
+'  risingwave-workbench comparison-status --comparison ID',
+'  risingwave-workbench receive-comparison --comparison ID --directory COMPLETE_DIFFERENCES','',
 'Use RISINGWAVE_WORKSPACE_URL or --connection PRIVATE_LAUNCH.json for the running original workbench.',
 'Capture input: expectedRevision, query, input, stable captureId, mode full|changes|auto,',
-'optional baseCaptureId, onGap error|rebuild, and extraction row/byte/batch/timeout limits.',
+'optional baseCaptureId, onGap error|rebuild, and extraction maxRows/maxBytes/maxRowBytes,',
+'batchSize, timeoutSeconds (native FETCH) and maxDurationMs (whole edition).',
+'capture-resume continues the same interrupted native request; capture-recover adopts completed files.',
+'Compare accepts a stable comparisonId and retains every difference in its three NDJSON files.',
 'Subscription creation requires its original requestId and reviewed reviewHash.',
 'Product actions: source, plan, plan/save, extract, extract/start, cancel, review, publish, recover,',
 'schedule/status, schedule/save, schedule/enable, schedule/pause, schedule/run, schedule/continue.',
@@ -36,7 +42,7 @@ export async function main(args=process.argv.slice(2)){
   if(args[0]==='serve'){const{main:serve}=await import('./server.mjs');return serve(args.slice(1));}
   const[command,...rest]=args,options={};
   for(let i=0;i<rest.length;i+=2){
-    if(!['--connection','--input','--out','--revision','--capture','--product','--action','--run','--query','--limit','--offset','--directory','--request'].includes(rest[i])||
+    if(!['--connection','--input','--out','--revision','--capture','--product','--action','--run','--query','--limit','--offset','--directory','--request','--comparison'].includes(rest[i])||
       !rest[i+1]||rest[i+1].startsWith('--')||Object.hasOwn(options,rest[i]))throw fault('RISINGWAVE_WORKBENCH_ARGUMENT_INVALID',HELP);
     options[rest[i]]=rest[i+1];
   }
@@ -52,6 +58,10 @@ export async function main(args=process.argv.slice(2)){
     'subscription-status':()=>client.subscriptionRecord(required('--request')),
     captures:()=>client.captures({limit:number('--limit',20),offset:number('--offset',0)}),
     'capture-status':()=>client.captureRecord(required('--capture')),'capture-cancel':()=>client.cancelCapture(required('--capture')),
+    'capture-resume':()=>client.resumeCapture(required('--capture')),
+    comparisons:()=>client.comparisons({limit:number('--limit',20),offset:number('--offset',0)}),
+    'comparison-status':()=>client.comparisonRecord(required('--comparison')),
+    'receive-comparison':()=>client.receiveComparison({comparisonId:required('--comparison'),directory:required('--directory')}),
     'capture-recover':()=>client.recoverCapture(required('--capture')),compare:()=>client.compareCaptures(input),
     'product-create':()=>client.createPublication(input),'product-status':()=>client.publication(required('--product')),
     product:()=>client.publicationCommand(required('--product'),required('--action'),input),
