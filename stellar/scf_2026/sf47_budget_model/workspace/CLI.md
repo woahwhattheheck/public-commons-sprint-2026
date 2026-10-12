@@ -177,3 +177,9 @@ The earlier source integration [PR1167](https://github.com/woahwhattheheck/publi
 ## Operating forecasts
 
 The original `operations` command includes `forecast-preview`, `forecast-save`, `forecasts`, `forecast-show` and `forecast-export`. Use the same case ID, explicit expected version and stable request ID. Saving additionally requires the exact reviewed preview SHA-256 and complete input JSON. Full examples and source/receiving semantics are in [FORECAST.md](FORECAST.md). The ordinary case `export` and `import` commands carry all immutable saved forecasts with the original source and work/payment records.
+
+## Cohort acceptance and its original tranche join
+
+Use `operations cohort-seed`, `cohort-preview`, `cohort-prepare` and `cohort-export` against the same retained case. Put `--workspace` after `operations` and before the selected action. The seed/preview need the exact current case version; preparation also needs the original actor/request ID, complete reviewed `--inputs` object and exact `--expected-preview-sha256`. An unchanged retry reuses the same request and source.
+
+The complete walkthrough and commands are in [OPERATIONS-COHORT.md](OPERATIONS-COHORT.md). `completion-preview` and `completion-prepare` accept optional `cohortReviewIds` inside their existing `--data` JSON. Native preparation checks the original review's tranche, cutoff, targets and measurement currentness and includes its original sources in the same completion ZIP. Omitting the field preserves the existing behavior. Ordinary case export/import retains all cohort reviews and their original history; it does not create replacement purchases.
