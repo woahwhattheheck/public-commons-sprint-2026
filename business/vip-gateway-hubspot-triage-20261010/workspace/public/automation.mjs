@@ -36,14 +36,15 @@ export function createAutomationView(c) {
   }
   async function load() {
     if (selectedProject !== ui.projectId) { selectedProject = ui.projectId; digestId = ''; cycleId = ''; digestDetail = null; cycleDetail = null; }
-    const currentProject = ui.projectId;
+    const currentProject = ui.projectId, epoch = ui.projectEpoch;
     if (digestId) {
       const selected = digestId, value = await request('/api/manager-digests/' + uri(selected));
-      if (currentProject === ui.projectId && selected === digestId && value.digest.projectId === currentProject) digestDetail = value;
+      if (currentProject === ui.projectId && epoch === ui.projectEpoch && selected === digestId && value.digest.projectId === currentProject) digestDetail = value;
     }
+    if (currentProject !== ui.projectId || epoch !== ui.projectEpoch) return;
     if (cycleId) {
       const selected = cycleId, value = await request('/api/monitor-cycles/' + uri(selected));
-      if (currentProject === ui.projectId && selected === cycleId && value.cycle.projectId === currentProject) cycleDetail = value;
+      if (currentProject === ui.projectId && epoch === ui.projectEpoch && selected === cycleId && value.cycle.projectId === currentProject) cycleDetail = value;
     }
   }
   const count = value => value ?? 0;
@@ -114,7 +115,12 @@ export function createAutomationView(c) {
     if (!digestDetail) return '';
     const { digest: value, report, review, bindings } = digestDetail;
     const activeRun = report.selected ? bindings.find(x => x.originalRunId === report.selected.runId)?.runId : null;
-    const d = draft(key('digest-review:' + value.id), { status: review?.status ?? 'acknowledged', note: '' });
+    const initial = { status: review?.status ?? 'acknowledged', note: review?.note ?? '',
+      _digestId: value.id, _digestSha256: value.sha256, _reviewId: review?.id ?? null, _reviewVersion: review?.version ?? 0 };
+    const d = draft(key('digest-review:' + value.id), initial);
+    if (!d.dirty && (d._reviewVersion !== initial._reviewVersion || d._reviewId !== initial._reviewId ||
+        d._digestId !== initial._digestId || d._digestSha256 !== initial._digestSha256))
+      Object.assign(d, structuredClone(initial), { _base: structuredClone(initial), dirty: false });
     let html = '<section class="card" id="monitor-digest-detail"><div class="pagehead"><div><h2>' + esc(value.name) +
       '</h2><p>' + esc(time(value.period.start.at)) + ' – ' + esc(time(value.period.end.at)) + ' · ' + esc(value.period.timeZone) +
       '</p></div><div class="actions">' + link('Readable digest', '/api/manager-digests/' + uri(value.id) + '/download?format=markdown', true) +
@@ -211,8 +217,11 @@ export function createAutomationView(c) {
       await write(() => null, { projectRevision: false, message: 'Original saved monitoring outcome retrieved.' }, pending.sent);
     } else if (action === 'monitor-older') {
       const kind = control.dataset.kind, target = kind === 'automation_cycle' ? 'cycles' : 'digests', current = data();
+      const projectId = ui.projectId, epoch = ui.projectEpoch;
       const result = await request(base() + '/monitor/items?' + new URLSearchParams({ kind, offset: current[target].length, limit: 50 }));
-      const ids = new Set(current[target].map(x => x.id)); current[target].push(...result.items.filter(x => !ids.has(x.id))); render();
+      if (projectId !== ui.projectId || epoch !== ui.projectEpoch || ui.data?.project?.id !== projectId) return;
+      const latest = data(); if (!latest) return;
+      const ids = new Set(latest[target].map(x => x.id)); latest[target].push(...result.items.filter(x => !ids.has(x.id))); render();
     } else throw Error('Unknown monitoring control.');
   }
   function reapplying(draftKey) {
@@ -245,8 +254,16 @@ export function createAutomationView(c) {
       { draftKey, projectRevision: false, after: () => closeDialog(), message: 'Manager digest frozen with its exact source and analysis cutoff.' });
     if (action === 'monitor-digest-review') return write(() => {
       if (digestDetail?.digest.id !== identity) throw Error('Open the exact retained digest before reviewing it.');
-      const d = values(draftKey); return { url: '/api/manager-digests/' + uri(identity) + '/review',
-        data: { version: digestDetail.review?.version ?? 0, sha256: digestDetail.digest.sha256, status: d.status, note: d.note } };
+      const d = values(draftKey), latest = digestDetail.review;
+      if (d._digestId !== identity || d._digestSha256 !== digestDetail.digest.sha256)
+        throw Error('This draft belongs to different frozen digest bytes. Open its original digest.');
+      if (d._reviewId && latest?.id !== d._reviewId)
+        throw Error('The original named digest review identity changed. Inspect the retained history.');
+      const reapply = reapplying(draftKey);
+      const chosen = (name, fallback) => reapply && d[name] === d._base?.[name] ? latest?.[name] ?? fallback : d[name];
+      return { url: '/api/manager-digests/' + uri(identity) + '/review',
+        data: { version: reapply ? latest?.version ?? 0 : d._reviewVersion ?? 0, sha256: d._digestSha256,
+          status: chosen('status', 'acknowledged'), note: chosen('note', '') } };
     }, { draftKey, projectRevision: false, inspect: () => digestDetail?.review, message: 'Named digest review retained against the frozen digest bytes.' });
     throw Error('Unknown monitoring form.');
   }
