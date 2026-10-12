@@ -66,9 +66,11 @@ def _snapshot(workspace, destination, spec, source_ids):
         query = "SELECT * FROM " + table + " WHERE " + key + " IN (" + ",".join("?" for _ in values) + ")"
         for row in workspace.connection.execute(query, values):
             target.execute("INSERT INTO " + table + " VALUES(" + ",".join("?" for _ in row) + ")", tuple(row))
+    acquisition_ids = set()
     for row in workspace.connection.execute("SELECT * FROM acquisitions WHERE source_id IN (" + ",".join("?" for _ in source_ids) + ")", source_ids):
         target.execute("INSERT INTO acquisitions VALUES(?,?,?,?)", tuple(row))
-    references = set(source_ids) | revision_ids | set(edition_ids) | {spec["id"]}
+        acquisition_ids.add(row["id"])
+    references = set(source_ids) | revision_ids | set(edition_ids) | acquisition_ids | {spec["id"]}
     for row in workspace.connection.execute("SELECT * FROM events ORDER BY id"):
         if row["reference"] in references:
             target.execute("INSERT INTO events VALUES(?,?,?,?,?)", tuple(row))
@@ -275,6 +277,80 @@ def verify_package(directory):
     return manifest
 
 
+
+def _verify_packet_subtree(directory, manifest, prefix):
+    directory = Path(directory)
+    if not directory.is_dir() or directory.is_symlink() or directory.resolve(strict=True) != directory:
+        fail("RECEIVED_MEMBER_DIRECTORY_CHANGED", prefix=prefix)
+    expected = {item["path"][len(prefix) + 1:]: {key: item[key] for key in ("bytes", "sha256")}
+                for item in manifest["files"] if item["path"].startswith(prefix + "/")}
+    if not expected:
+        fail("RECEIVED_MEMBER_INVENTORY_MISSING", prefix=prefix)
+    actual = {str(path.relative_to(directory)) for path in directory.rglob("*") if not path.is_dir()}
+    if actual != set(expected):
+        fail("RECEIVED_MEMBER_INVENTORY_CHANGED", prefix=prefix)
+    for name, details in expected.items():
+        path = directory / member(name)
+        if path.resolve(strict=True) != path or file_identity(path) != details:
+            fail("RECEIVED_MEMBER_CHANGED", path=prefix + "/" + name)
+
+
+def _copy_packet_subtree(source, destination, manifest, prefix):
+    if destination.exists() or destination.is_symlink():
+        _verify_packet_subtree(destination, manifest, prefix)
+        return
+    parent = private_directory(destination.parent)
+    stage = Path(tempfile.mkdtemp(prefix=".receive-members-", dir=parent))
+    try:
+        retained = stage / "members"
+        copy_tree(source / prefix, retained)
+        _verify_packet_subtree(retained, manifest, prefix)
+        os.rename(retained, destination)
+        sync_directory(parent)
+    finally:
+        shutil.rmtree(stage)
+
+
+def _retain_packet(workspace, source, manifest):
+    parent = private_directory(workspace.directory / "received-packages")
+    destination = parent / manifest["package_id"]
+    if destination.exists() or destination.is_symlink():
+        if verify_package(destination) != manifest:
+            fail("RECEIVED_PACKET_CONFLICT")
+    else:
+        stage = Path(tempfile.mkdtemp(prefix=".receive-packet-", dir=parent))
+        try:
+            packet = stage / "packet"
+            copy_tree(source, packet)
+            if verify_package(packet) != manifest:
+                fail("RECEIVED_PACKET_CHANGED")
+            os.rename(packet, destination)
+            sync_directory(parent)
+        finally:
+            shutil.rmtree(stage)
+    body = {"directory": str(destination), "origin": "received", **manifest}
+    previous = workspace.connection.execute("SELECT body FROM exports WHERE id=?", (manifest["package_id"],)).fetchone()
+    if previous:
+        if verify_package(unpack(previous["body"])["directory"]) != manifest:
+            fail("RECEIVED_PACKET_RECORD_CONFLICT")
+    else:
+        workspace.connection.execute("INSERT INTO exports VALUES(?,?,?)",
+                                     (manifest["package_id"], encoded(body).decode(), now()))
+    return destination
+
+
+def _receive_events(workspace, packed):
+    fields = ("time", "operation", "reference", "body")
+    def event_identity(row):
+        return identity({key: unpack(row[key]) if key == "body" else row[key] for key in fields})
+    existing = {event_identity(row) for row in workspace.connection.execute("SELECT * FROM events")}
+    for row in packed.execute("SELECT * FROM events ORDER BY id"):
+        eid = event_identity(row)
+        if eid not in existing:
+            workspace.connection.execute("INSERT INTO events(time,operation,reference,body) VALUES(?,?,?,?)",
+                                         tuple(row[key] for key in fields))
+            existing.add(eid)
+
 def receive_package(package, destination):
     source = Path(package).expanduser().resolve(strict=True)
     manifest = verify_package(source)
@@ -292,6 +368,12 @@ def receive_package(package, destination):
         try:
             for sid in manifest["source_ids"]:
                 verify_source(out / "sources" / sid, workspace.record("sources", sid)["descriptor"])
+            with workspace.mutation():
+                acquisition_ids = {item["path"].split("/")[1] for item in manifest["files"]
+                                   if item["path"].startswith("acquisitions/")}
+                for aid in sorted(acquisition_ids):
+                    _verify_packet_subtree(out / "acquisitions" / aid, manifest, "acquisitions/" + aid)
+                _retain_packet(workspace, source, manifest)
             return {**receipt, "directory": str(out), "reopened": True,
                     "comparison": workspace.comparison(manifest["comparison_id"], limit=1)}
         finally:
@@ -315,6 +397,12 @@ def receive_package(package, destination):
         os.rename(stage, out)
         stage = None
         sync_directory(parent)
+        workspace = Workspace(out)
+        try:
+            with workspace.mutation():
+                _retain_packet(workspace, source, manifest)
+        finally:
+            workspace.close()
         return {**receipt, "directory": str(out), "reopened": False, "comparison": overview}
     finally:
         if stage is not None:
@@ -354,7 +442,7 @@ def import_package(workspace, package):
                     if source_identity(descriptor) != sid:
                         fail("RECEIVED_SOURCE_CONFLICT")
                 else:
-                    copy_tree(source / "originals" / sid, destination)
+                    _copy_packet_subtree(source, destination, manifest, "originals/" + sid)
             tables = ("sources", "source_rows", "revisions", "editions", "edition_rows",
                       "comparisons", "differences", "decisions", "acquisitions")
             primary = {
@@ -379,14 +467,18 @@ def import_package(workspace, package):
                         workspace.connection.execute("INSERT INTO " + table + " VALUES(" + ",".join("?" for _ in row) + ")", tuple(row))
             for row in packed.execute("SELECT id FROM acquisitions"):
                 destination = workspace.directory / "acquisitions" / row["id"]
-                if not destination.exists():
-                    copy_tree(source / "acquisitions" / row["id"], destination)
+                _copy_packet_subtree(source, destination, manifest, "acquisitions/" + row["id"])
+            _receive_events(workspace, packed)
+            retained_packet = _retain_packet(workspace, source, manifest)
             private_directory(workspace.directory / "received")
             receipt = workspace.directory / "received" / (manifest["package_id"] + ".json")
             if not receipt.exists():
                 dump(receipt, manifest, exclusive=True)
-            workspace.event("package.receive", manifest["package_id"], {"comparison_id": manifest["comparison_id"]})
+            if not workspace.connection.execute("SELECT 1 FROM events WHERE operation=? AND reference=?",
+                                                ("package.receive", manifest["package_id"])).fetchone():
+                workspace.event("package.receive", manifest["package_id"], {"comparison_id": manifest["comparison_id"]})
         return {"package_id": manifest["package_id"], "source_ids": manifest["source_ids"],
+                "directory": str(retained_packet),
                 "comparison": workspace.comparison(manifest["comparison_id"], limit=1)}
     finally:
         packed.close()

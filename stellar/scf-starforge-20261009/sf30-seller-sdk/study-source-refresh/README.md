@@ -140,7 +140,7 @@ Each packet has a content-addressed manifest and includes:
 
 The snapshot includes only the selected comparison's source inventories, portfolio/mapping revisions and baseline/candidate editions. Other portfolios in the working database are not collected into that packet. Full native projections for included sources remain available for a later selection.
 
-verify checks every listed member, the exact inventory, source identities, workspace schema and reviewed comparison, and mapped row count. receive creates a new private workspace and reopens the saved state. Repeating receive at the same destination verifies the retained receipt and source files. The UI can also import a packet into an existing workspace; a conflicting immutable record or changed review produces a conflict instead of replacing it.
+verify checks every listed member, the exact inventory, source identities, workspace schema and reviewed comparison, and mapped row count. receive creates a new private workspace and reopens the saved state. Repeating receive at the same destination verifies the retained receipt, every source file and every original native acquisition receipt. The UI can also import a packet into an existing workspace; a conflicting immutable record or changed review produces a conflict instead of replacing it. Received packets remain complete under received-packages and appear beside produced packages for verification and ZIP download. Their original source, acquisition and review events retain their timestamps and are deduplicated by content across repeated imports.
 
 ## CLI/API operation map
 
@@ -154,6 +154,7 @@ POST /api accepts an operator-authenticated JSON object with operation and argum
 | source.rows | source_id; optional geography, measure, offset, limit |
 | source.receive_files | provider, checkout, session; optional expected_capture_id, node, timeout |
 | source.receive_rows | source_id, projection, checkout, session; optional node, timeout |
+| source.receive_scan | scan_file and either provider for source files, or source_id plus projection for observations; optional node, expected_capture_id |
 | mapping.template, mapping.fields | Template name optional; fields takes an empty object |
 | portfolio.freeze, mapping.freeze | value: complete explicit contract |
 | edition.freeze | source_ids, portfolio_id, mapping_id, label |
@@ -187,3 +188,11 @@ The host closes its own active original-provider child groups when it shuts down
 - Original SF88 DatasetAcquisition / DatasetDelivery and storage helpers under sf88-operator-buyer-cli/python/stellar_forge_buyer.
 
 Private customer names, proposals, commercial terms and bespoke receiving agreements belong in the operator's private workspace. This generic application packages the selected source and receiving contract supplied by its operator.
+
+## Selection coverage
+
+An explicit family/measure selection applies to every selected geography definition of that family in the edition. With all measures selected, the expected set is the union of native measures in that source definition edition. The freeze result names every missing geography/measure pair; a missing value cannot disappear merely because that measure exists in another geography. Portfolios can retain both baseline and candidate geography definitions, and only definitions present in the chosen source edition are evaluated. Correct the retained source or freeze a revised explicit portfolio before exporting an incomplete selection.
+
+## Original SF100 delivery intake
+
+A producer with a direct SF100 data room can save the unchanged result of the original `scan(directory, {retainPayload:false})`. Receive that saved scan with `cli.py --workspace WORK receive-scan --scan-file NATIVE_SCAN.json --provider acs` (or `bls`). For an observation product, select `--source-id ID --projection observations` (or `laus`, `qcew`, `limits`). The original DatasetDelivery.from_finalized_scan verifies the real manifest, original page chain, typed output rows and retained byte identities. Its directory must be the current original data room; after moving a data room, invoke the original producer's scan at its new location. This intake retains the original result and keeps the original buyer/session accounting in its owning runtime.

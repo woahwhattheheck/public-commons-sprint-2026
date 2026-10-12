@@ -191,7 +191,8 @@ def restore_file_projection(delivery, destination, *, result_type,
     if expected_capture_id is not None:
         contract.sha(expected_capture_id, "expected_capture_id")
     native = delivery.native
-    if not isinstance(native, dict) or native.get("schema") != "stellar-forge.sf88.dataset-delivery.v1":
+    if not isinstance(native, dict) or native.get("schema") not in (
+            "stellar-forge.sf88.dataset-delivery.v1", "stellar-forge.sf100.dataset-delivery.v1"):
         raise contract.error_type("ORIGINAL_SF88_DATASET_DELIVERY_REQUIRED")
     output = Path(os.path.abspath(Path(destination).expanduser()))
     parent = private_directory(output.parent)
