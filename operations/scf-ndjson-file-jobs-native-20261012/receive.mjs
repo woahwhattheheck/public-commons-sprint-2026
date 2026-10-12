@@ -1,7 +1,6 @@
 // MIT. Actual SCVO files through original sealed intake, native jobs and cold receiving.
-import { constants } from 'node:fs';
-import { readFile, writeFile, mkdir, lstat, open, realpath, readdir } from 'node:fs/promises';
-import { resolve, join, isAbsolute, dirname, basename } from 'node:path';
+import { readFile, writeFile, mkdir, lstat, realpath } from 'node:fs/promises';
+import { resolve, join, isAbsolute, basename } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createHash, randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';

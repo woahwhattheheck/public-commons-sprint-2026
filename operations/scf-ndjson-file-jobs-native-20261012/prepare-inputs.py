@@ -11,10 +11,12 @@ EDITIONS = [
     {"id": "digital-ethics-fund-2022", "rows": 5, "bytes": 11280,
      "sha256": "50c77b94091f5c642b7da04973335dde39d2334780b2716ee57e378cdd6eaf34",
      "gitBlob": "90d1f626977f45a552a8920077d92fb819191b3d",
+     "mappingSha256": "904e3a51670824df931efc4b0cbbd0cf3bbf620bec70e00faa760fbead583769",
      "title": "SCVO Digital Ethics Fund 2022", "baseline": True},
     {"id": "connecting-to-care-fund-2024", "rows": 7, "bytes": 37456,
      "sha256": "9ff39c6391a1ba484e9a25ece3f08c3b20151ad443901c84098a3e1ca6d42d9d",
      "gitBlob": "92e6e5f16ce95f3060a8f980c1ae4fa9cc77779d",
+     "mappingSha256": "cbc61965dbeef509ef361b80875b7f3a0ae24ac04471a388238a5e871b131753",
      "title": "SCVO Connecting to Care Fund 2024", "baseline": False},
 ]
 
@@ -47,7 +49,9 @@ def prepare(profile, directory):
             raise ValueError("Select the complete original publisher mapping")
         source = directory / path.name
         mapped = directory / (edition["id"] + "-mapping.json")
-        mapping_bytes = (json.dumps(mapping, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        mapping_bytes = (profile / "examples" / mapped.name).read_bytes()
+        if hashlib.sha256(mapping_bytes).hexdigest() != edition["mappingSha256"] or json.loads(mapping_bytes) != mapping:
+            raise ValueError("Retain the exact published production mapping and its original choices")
         write(source, body)
         write(mapped, mapping_bytes)
         write(directory / registry_path.name, registry_bytes)
