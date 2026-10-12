@@ -154,3 +154,5 @@ The original `ogc-room-temperature-reference-v1` operation completed on 12 Octob
 - The publisher observation retains its exact source-byte SHA256 `57aa8e6b29c4a054ec6bcce4dd6f6a0b16d9bb00263b5b04fe91f8dc65f17fba`; native original-observation cells and the independent receiver's reopened cells were verified.
 
 These native results do not imply browser completion, paid acquisition, a live field feed or acceptance of the separately failed demonstration services.
+
+The original [source packet](examples/ogc-room-temperature.connected-systems) and [complete native project](examples/ogc-room-temperature.connected-systems.zip) are retained byte-for-byte with this source release. The project contains six members: manifest, original source packet, original mapping, data CSV, dataset metadata and expected native review. Its immutable original source is 3916 bytes; the complete project is 6137 bytes. Both exact artifact SHA256 values above were independently rechecked from the saved files before source publication.

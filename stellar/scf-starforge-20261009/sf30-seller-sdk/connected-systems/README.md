@@ -297,6 +297,20 @@ The original operation completed on 12 October 2026. The [complete native result
 | Receiving scope | One single observation resource; `require-exhausted` within that explicit scope |
 | Original result | `23.5`, with the original observation JSON and schema unit retained |
 
+
+The exact [portable project](examples/ogc-room-temperature.connected-systems.zip) and [original source packet](examples/ogc-room-temperature.connected-systems) are included. To receive the accepted example without contacting the publisher again:
+
+```sh
+node "$CSAPI/cli.mjs" --workspace ./ogc-example-customer init
+node "$CSAPI/cli.mjs" --workspace ./ogc-example-customer receive \
+  --file "$CSAPI/examples/ogc-room-temperature.connected-systems.zip"
+node "$CSAPI/cli.mjs" --workspace ./ogc-example-customer query \
+  --build c87829609aeeef2790ac7ac91d283b9e0a7590e628c6a747281c886199d66879 \
+  --params '{"limit":"1"}'
+```
+
+The receiver recomputes the dataset through the installed native engine and checks the supplied expected review. It does not copy a prebuilt SQLite database or call the original provider.
+
 The producer and independent receiver returned the same ordered-row hash and original values. This result covers the committed illustrative resource; it does not claim a complete live sensor collection. Browser and installed-product receiving have separate result records.
 
 ## Retention and errors
