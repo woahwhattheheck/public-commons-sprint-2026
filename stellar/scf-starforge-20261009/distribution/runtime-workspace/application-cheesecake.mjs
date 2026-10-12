@@ -41,7 +41,9 @@ export async function prepareCheesecakeApplication(settings,inputPath,runtimeDir
     '--managed-source',selected.applicationDirectory];
   // State identity, rather than the configuration filename, owns exclusivity.
   const resourceKey=digest(json(canonical({family:'stellar-application',directory:selected.stateDirectory})));
-  return {args,inputs,resourceKey};
+  return {args,inputs,resourceKey,identity:{
+    schema:'stellar-forge.application-managed-selection.v1',sourceDirectory:selected.applicationDirectory,
+    runtimeDirectory:selected.runtimeDirectory,sourceFiles:selected.applicationSourceFiles}};
 }
 function selectedArgument(request,name) {
   need(Array.isArray(request.args)&&request.args[0]==='serve','APPLICATION_STELLAR_STARTUP_CHANGED');
@@ -61,6 +63,11 @@ export function cheesecakeStartup(request,text) {
   const launchSourceDirectory=join(absolute(request.releaseDirectory),'source',
     'stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent');
   const runtimeDirectory=join(sourceDirectory,'..','..','sf88-operator-buyer-cli');
+  const original=request.stellarApplication;
+  need(plain(original)&&original.schema==='stellar-forge.application-managed-selection.v1'&&
+    original.sourceDirectory===sourceDirectory&&original.runtimeDirectory===runtimeDirectory&&
+    plain(original.sourceFiles)&&plain(value.sourceFiles)&&digest(json(canonical(value.sourceFiles)))===digest(json(canonical(original.sourceFiles))),
+    'APPLICATION_STELLAR_STARTUP_CHANGED');
   need(value.sourceDirectory===sourceDirectory&&value.launchSourceDirectory===launchSourceDirectory&&
     value.runtimeDirectory===runtimeDirectory&&Number.isSafeInteger(value.pid)&&value.pid>0&&
     plain(value.sourceFiles)&&Object.hasOwn(value.sourceFiles,'installed.mjs')&&
@@ -87,6 +94,6 @@ export function cheesecakeStartup(request,text) {
   return {url:url.href,original:{schema:STARTUP,configFile,
     configurationSha256:value.configurationSha256,selectionSha256:expected,
     applicationId:value.applicationId,stateDirectory:value.stateDirectory,handoffId:value.handoffId,
-    sourceDirectory,launchSourceDirectory,runtimeDirectory,sourceFiles:value.sourceFiles,pid:value.pid,
+    sourceDirectory,launchSourceDirectory,runtimeDirectory,sourceFiles:original.sourceFiles,pid:value.pid,
     remoteMcpSourceSha256:value.remoteMcpSourceSha256,serverId:value.serverId}};
 }

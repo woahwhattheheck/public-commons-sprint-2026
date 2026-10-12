@@ -82,9 +82,9 @@ This adoption path consumes the existing HAR CLI workspaces, the completed H6 so
 
 ## Copy to a receiving operator
 
-Select the retained capture or packet and open **Copy to a receiving workspace**. Enter a new absolute directory beneath an existing private parent on the same host.
+Select the retained capture or packet and open **Copy to a receiving workspace**. Enter an absolute directory beneath an existing private parent on the same host. Choose a new destination for the first copy, or reuse the completed receiving directory for this same original source.
 
-A capture copy retains its exact original HAR, inventory, manifest and every saved review. A refresh copy retains both complete workspaces, all of their saved reviews, the comparison, migrated draft and original review page. The native copy operation checks the completed receiving source before returning its destination.
+A capture copy retains its exact original HAR, inventory, manifest and every saved review. A refresh copy retains both complete workspaces, all of their saved reviews, the comparison, migrated draft and original review page. The native copy operation checks the completed receiving source before returning its destination. Repeating that destination validates the same immutable source and adds later saved reviews through the original writer. Reviews authored only at the receiving side stay present. Both previous and candidate review sets advance for a refresh packet. A directory containing another original source returns a conflict.
 
 Open the receiving merchant console, use **Adopt an existing private HAR workspace**, select the copied directory's type and path, and choose its saved revision. That operator can then reopen decisions, continue capture editions and create a merchant package from the same reviewed source.
 
@@ -98,7 +98,7 @@ The merchant package retains the approved OpenAPI source, source/review hashes, 
 
 A completed capture upload or refresh preparation is identified by its original source or lineage hash. Repeating it reopens the completed result. A completed decision save reuses the same immutable review. Refresh the list and select the saved result after a lost browser response.
 
-The original source writers use private staging and create-only publication. A process interruption can leave an empty final reservation or temporary directory. Re-uploading or adopting the same original completes an empty reservation by building with the original writer in a fresh private directory, checking that the reservation is still the same empty directory, and publishing the completed source. A populated directory is preserved. If another writer completes first, refresh that retained result.
+The original source writers use private staging and create-only publication. A process interruption can leave an empty final reservation or temporary directory. Re-uploading, adopting or copying the same original completes an empty reservation by building with the original writer in a fresh private directory, checking that the reservation is still the same empty directory, and publishing the completed source. A populated directory is preserved. If another writer completes first, refresh that retained result.
 
 The console labels an entry missing its completed display record as unfinished. Re-uploading or adopting the same completed original recovers that label as well. Keep the exact original inputs and complete receiving copies while recovering an interrupted operation. Completed entries remain usable independently.
 
