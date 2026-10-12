@@ -1,3 +1,4 @@
+import {commercialReceivingTools} from './commercial-receiving.mjs';
 // MIT. Quotation controls use the configured original SF74 case writer.
 import {MAX_MATERIAL_BYTES} from '../../../stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs';
 import {MAX_RETAINED_CHUNK_BYTES} from '../retained-file-contracts.mjs';
@@ -18,6 +19,7 @@ const selected={id:uuid,expectedRevision:digest},change={...selected,requestId:u
 export function commercialTools(tool) {
   const read={readOnly:true,idempotent:true},write={idempotent:true};
   return [
+    ...commercialReceivingTools(tool),
     tool('merchant_case_commercial','Open the complete original saved quotation workspace: implementation editions, service terms, received SF97 pricing sources, unfinished draft, immutable quotes and actual customer responses. Keep its current case revision for a new change.',
       {id:uuid,revision:digest},['id'],read),
     tool('merchant_case_commercial_preview','Review explicit work hours, service fees and monthly route requests against the retained original sources. Returns exact decimal calculations, a customer-readable proposal and reviewSha256. No case write.',
