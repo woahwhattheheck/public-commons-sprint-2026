@@ -14,7 +14,8 @@
     "./merchant/console/managed": "./source/stellar-forge/mcp-merchant-operator/console/managed.mjs",
     "./merchant/console/application": "./source/stellar-forge/mcp-merchant-operator/console/application.mjs",
     "./merchant/console/receiving": "./source/stellar-forge/mcp-merchant-operator/receiving/console-applications.mjs",
-    "./merchant/console/reports": "./source/stellar-forge/mcp-merchant-operator/console/workflow-report-client.mjs"
+    "./merchant/console/reports": "./source/stellar-forge/mcp-merchant-operator/console/workflow-report-client.mjs",
+    "./merchant/console/report-files": "./source/stellar-forge/mcp-merchant-operator/console/workflow-report-files.mjs"
   },
   "applicationProviders": {
     "merchant-console": "stellar-forge/mcp-merchant-operator/console/application-provider.mjs"
@@ -22,6 +23,7 @@
   "supportFiles": [
     "stellar-forge/mcp-merchant-operator/console/APPLICATIONS.md",
     "stellar-forge/mcp-merchant-operator/console/WORKFLOW_REPORTS.md",
-    "stellar-forge/mcp-merchant-operator/console/workflow-report-client.d.mts"
+    "stellar-forge/mcp-merchant-operator/console/workflow-report-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/console/workflow-report-files.d.mts"
   ]
 }

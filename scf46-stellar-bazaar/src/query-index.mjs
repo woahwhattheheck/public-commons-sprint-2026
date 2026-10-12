@@ -1,6 +1,6 @@
 // MIT. Private read-side acceleration for the authoritative BazaarCatalog Map.
 // Indexes narrow candidates; they never validate, admit, retire or pay for an offer.
-import { rankBazaarEntries } from './ranking.mjs';
+import { BazaarRankingIndex } from './ranking.mjs';
 
 const PAYMENT_KEYS = ['payTo', 'network', 'scheme', 'asset'];
 const MAX_RESULTS = 64;
@@ -32,6 +32,7 @@ function dimensions(row) {
  */
 export class CatalogQueryIndex {
   #entries;
+  #ranking;
   #postings = new Map();
   #ordinals = new Map();
   #nextOrdinal = 0;
@@ -43,7 +44,10 @@ export class CatalogQueryIndex {
     listHits: 0, listMisses: 0, searchHits: 0, searchMisses: 0, rankRuns: 0,
     evictions: 0, invalidations: 0 };
 
-  constructor(entries) { this.#entries = entries; }
+  constructor(entries) {
+    this.#entries = entries;
+    this.#ranking = new BazaarRankingIndex(entries);
+  }
 
   #post(id, row, add) {
     for (const [field, values] of dimensions(row)) {
@@ -75,6 +79,7 @@ export class CatalogQueryIndex {
   }
 
   changed(id, before, after) {
+    this.#ranking.changed(id, before, after);
     // An update replaces the Map's value without changing its insertion order.
     // Delete/reinsert DOES get a new ordinal, exactly like the original Map.
     if (this.#ready) {
@@ -159,12 +164,12 @@ export class CatalogQueryIndex {
       // ranking's floating-point reductions and stable ties must remain identical.
       if (Object.keys(filters).length) ids.sort((a, b) => this.#ordinals.get(a) - this.#ordinals.get(b));
       this.#counts.rankRuns++;
-      return rankBazaarEntries(ids.map(id => [id, this.#entries.get(id)]), query).map(item => item.row);
+      return this.#ranking.rank(ids, query).map(item => item.row);
     });
   }
 
   get stats() {
-    return { ...this.#counts, indexedEntries: this.#ready ? this.#ordinals.size : 0,
+    return { ...this.#counts, ...this.#ranking.stats, indexedEntries: this.#ready ? this.#ordinals.size : 0,
       cachedResults: this.#cache.size, cachedReferences: this.#references,
       maxCachedResults: MAX_RESULTS, maxCachedReferences: MAX_REFERENCES };
   }

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // MIT. Operate the same original Research listener from a local command.
+import {RIS_COMMANDS,RIS_USAGE,main as risMain} from './ris-source/cli.mjs';
 import {parseArgs} from 'node:util';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -9,7 +10,9 @@ import {DOCUMENT_COMMANDS,main as documentMain} from './document-workspace-cli.m
 import {ELIGIBILITY_COMMANDS,main as eligibilityMain} from './eligibility-cli.mjs';
 import {RISK_OF_BIAS_COMMANDS,main as riskOfBiasMain} from './risk-of-bias/cli.mjs';
 import {CUSTOMER_UPDATE_COMMANDS,main as customerUpdateMain} from './customer-updates/cli.mjs';
+import {RESEARCH_COMMERCE_COMMANDS,main as researchCommerceMain} from './customer-commerce/cli.mjs';
 import {STUDY_EXTRACTION_COMMANDS,main as extractionMain} from './study-extraction-cli.mjs';
+import {TEMPLATE_EXCHANGE_COMMANDS,main as templateMain} from './template-exchange/template-workspace-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
 
 const usage=String.raw`Research workspace client
@@ -80,6 +83,17 @@ Commission and deliver complete recurring customer work in the same dossier:
   customer-updates-work|customer-updates-export|customer-updates-source-plan
   customer-updates-handover|customer-updates-inspect|customer-updates-receive|customer-updates-operation
 
+Publish and receive a paid original customer delivery:
+  commerce-help
+  commerce-configuration|commerce-list|commerce-publication|commerce-purchase
+  commerce-publication-prepare|commerce-publication-enroll|commerce-purchase-receive|commerce-purchase-prepare
+  commerce-execute|commerce-retrieve|commerce-recover|commerce-finalize|commerce-cancel
+  commerce-reconcile|commerce-receive-dossier|commerce-export|commerce-operation|commerce-replay
+  commerce-archive-inspect|commerce-archive-receive
+
+Run commerce-help for original checkout/Buyer selections, retained complete requests,
+native approval, purchased archive and full editable Research receiving.
+
 Operate full eligibility review in the same original dossier:
   eligibility-help
   eligibility-view|eligibility-queue|eligibility-review|eligibility-export
@@ -96,6 +110,16 @@ Operate source-bound study extraction and authored evidence tables:
 
 Run extraction-help for complete form/result/reviewer actions, original saved-request
 recovery, full source/report exports and table-publication history.
+
+Exchange complete client workbooks with frozen evidence and the original reviewer:
+  template-help
+  template-view|template-record|template-publication|template-operation
+  template-stage-template|template-stage-mapping|template-stage-release|template-stage-return
+  template-stage-return-review|template-review|template-prepare-extraction-draft
+  template-accept-extraction-draft|template-download
+
+Run template-help for complete files, explicit cell mapping, client return decisions,
+original extraction requests, whole downloads and exact saved-request recovery.
 
 Operate source-bound appraisals and independent review:
   risk-help
@@ -167,13 +191,18 @@ const commandOptions=Object.freeze({
 const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.dossier)}:value;
 const selected=value=>Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined));
 export async function main(argv=process.argv.slice(2),{output=process.stdout}={}){
+  if(RIS_COMMANDS.includes(argv[0]))return risMain(argv,{output});
+  if(RESEARCH_COMMERCE_COMMANDS.includes(argv[0])){
+    const code=await researchCommerceMain(argv,{stdout:output});if(code)process.exitCode=code;return code;
+  }
   if(CUSTOMER_UPDATE_COMMANDS.includes(argv[0]))return customerUpdateMain(argv,{stdout:output});
   if(DOCUMENT_COMMANDS.includes(argv[0]))return documentMain(argv,{output});
   if(ELIGIBILITY_COMMANDS.includes(argv[0]))return eligibilityMain(argv,{output});
   if(RISK_OF_BIAS_COMMANDS.includes(argv[0]))return riskOfBiasMain(argv,{output});
   if(STUDY_EXTRACTION_COMMANDS.includes(argv[0]))return extractionMain(argv,{output});
+  if(TEMPLATE_EXCHANGE_COMMANDS.includes(argv[0]))return templateMain(argv,{output});
   const [command,...args]=argv;
-  if(!command||['help','--help','-h'].includes(command)){output.write(usage);return;}
+  if(!command||['help','--help','-h'].includes(command)){output.write(usage+'\n'+RIS_USAGE);return;}
   need(Object.hasOwn(commandOptions,command),'COMMAND_UNKNOWN');
   const fields=['connection-file','directory','timeout-ms',...commandOptions[command]];
   const {values,tokens}=parseArgs({args,options:Object.fromEntries(fields.map(key=>[key,{type:'string'}])),strict:true,tokens:true});

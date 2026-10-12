@@ -6,10 +6,10 @@ The application runs on your computer. Its SQLite workspace contains the current
 
 ## Install and open
 
-Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.2.0-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
+Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.2.2-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.2.0-source.zip
+python -m pip install ./scc_standards_workbench-0.2.2-source.zip
 standards-workbench --workspace ./standards-workspace --demo
 ```
 
@@ -24,6 +24,10 @@ For an empty working project, omit `--demo` and choose **New project**. The publ
 Run `standards-workbench --workspace ./review-workspace --review-demo` to prepare the complete public-source reviewer example once. It freezes the paired clauses and cases into a ready packet while leaving actual returns and decisions for explicit entry. Repeating the command preserves the same project.
 
 **Consultation receiving** completes the recipient-to-operator path. Freeze a packet from one edition and consultation, enter its English/French instructions and return route, and download a standalone offline reviewer page. Reviewers read the exact paired clauses and original public case rows, save drafts, and export their comments as a packet-bound JSON file.
+
+The recipient can track unread clauses, search the paired document, save portable drafts and read every comment in **Review & return**. A readable HTML copy accompanies the packet-bound JSON return. The complete English/French guide travels with the downloaded packet.
+
+The operator's Reviewer packets, Returned comments and Amendments & dispositions queues provide search, paging, decision and language filters, predecessor links and a Next needing decision action. Paired wording and the recorded decision remain together while the operator works through a return.
 
 The operator previews and retains the original return bytes. Exact duplicate content preserves existing comments and dispositions. A corrected return retains its actual predecessor and earlier unresolved comments. Proposed wording can become an explicit amendment to the working clause, with the exact current clause identity, before/after text and rationale.
 

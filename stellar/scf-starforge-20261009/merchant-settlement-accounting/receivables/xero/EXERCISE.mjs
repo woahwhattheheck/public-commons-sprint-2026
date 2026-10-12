@@ -70,6 +70,8 @@ try {
   const initial=await client.state({asOf:'2026-01-31'});
   assert.match(initial.workspaceId,/^[0-9a-f]{64}$/);assert.match(initial.sourcesSha256,/^[0-9a-f]{64}$/);
   assert.equal((await fetch(origin+'/api/receivables/state')).status,200);
+  for(const path of ['/payment-plans/','/api/receivables/payment-plans/state'])
+    assert.equal((await fetch(origin+path)).status,200);
   assert.match(await (await fetch(running.url)).text(),/Xero/);
   for(const path of ['native-json.mjs','NATIVE_RETURN.md']){
     const response=await fetch(new URL(path,running.url));assert.equal(response.status,200);assert.ok((await response.text()).length>1000);

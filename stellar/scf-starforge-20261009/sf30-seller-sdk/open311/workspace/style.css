@@ -7,3 +7,7 @@
 @media print{.masthead>button,.sidebar,.notice,.pending-panel,.actions,button,.filter-row,.page-heading>button,#capture-panel{display:none!important}.shell{display:block}main{padding:0;max-width:none}.panel{break-inside:avoid;border:1px solid #bbb}.masthead{padding:8px 0;border-bottom:1px solid #222}.table-scroll{overflow:visible}table{font-size:10px}pre{max-height:none}body{background:white}.detail-columns{display:block}.review-editor{border:0;padding:0}}
 
 .collection-state-line{display:flex;gap:12px;align-items:flex-start;margin-bottom:16px}.collection-state-line .badge{margin-top:1px;flex-shrink:0}.collection-state-line p{margin:0;max-width:850px}.collection-section{padding-top:24px;margin-top:22px;border-top:1px solid var(--border)}.collection-help{margin:12px 0 0}.collection-refinement{border-left:2px solid #b8b8b0;padding-left:8px;margin-top:5px;font-size:11px;color:#666}.collection-member-actions{display:flex;flex-wrap:wrap;gap:6px;min-width:180px}.collection-member-actions button{font-size:11px;min-height:29px;padding:5px 7px}#collection-windows-table{min-width:820px}#collection-error pre{margin-bottom:0}#collection-facts{grid-template-columns:160px minmax(0,1fr)}@media(max-width:760px){.collection-state-line{display:block}.collection-state-line .badge{margin-bottom:8px}#collection-facts{grid-template-columns:115px minmax(0,1fr)}}
+
+.source-notes { margin: 1.25rem 0; }
+.source-note { padding: .75rem 0; border-top: 1px solid var(--line, #d6d9dc); }
+.source-note p { white-space: pre-wrap; overflow-wrap: anywhere; margin: .5rem 0; }

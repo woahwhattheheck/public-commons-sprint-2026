@@ -17,7 +17,7 @@ request identity, payment, execution and result recovery.
 | --- | --- | --- | --- |
 | `equis-lab-3` | Original ZIP containing sample, test-batch and combined test/result/QC CSV members | Complete original file family with explicitly selected field edits | EQEDD-family laboratory review, preserving source sample and analysis keys |
 | `equis-lab-4` | Original ZIP containing sample, test, result and batch CSV members | Complete original four-file family with explicitly selected field edits | EFWEDD-family laboratory review, including exact sample/test relationships |
-| `geotech-dts8d` | Original XLSX workbook, optionally with retained supporting members in a ZIP | Native XLSX under the original filename | Enviro Data DTS8D, May 2026: one worksheet and all 150 exact ordered headers |
+| `geotech-dts8d` | Original XLSX or Excel 97–2003 BIFF8 XLS workbook, optionally with supporting members in a ZIP | XLSX; an XLS source has a separately named `.xls.xlsx` reissue and retains its original binary | Enviro Data DTS8D, May 2026: one worksheet and all 150 exact ordered headers |
 
 McCampbell Analytical publishes the two example CSV families on its
 [EDD page](https://www.mccampbell.com/edds.php):
@@ -45,9 +45,10 @@ The DTS profile implements the official
 It retains the complete sample and analysis identities, sample-only records,
 duplicate and superseded indices, all five limits, qualifiers, source dates and
 worksheet cell representations. The profile lists the actual source pages for
-each field and observation. The native workbook route accepts XLSX. Save a legacy
-XLS source as XLSX in its original spreadsheet application before selecting this
-route; retain the original XLS alongside that supplied workbook when relevant.
+each field and observation. The native route accepts XLSX and original Excel
+97–2003 BIFF8 XLS. Legacy input retains its complete binary and cell/formula
+records, then prepares a separately named XLSX with an explicit source binding.
+See [the complete legacy Excel workflow](LEGACY_XLS.md).
 
 ## Run a complete receiving result
 
@@ -55,8 +56,8 @@ Use the supplied source-pinned `@tokenjunkielabs/starforge-merchant`
 distribution containing this product. The source-owned registration adds
 `starforge lab-edd` and `starforge lab-edd-receive`.
 Node 22 or newer runs the application. The DTS workbook profile also uses Python
-3.10 or newer with its standard library and the existing maintained workbook
-reader. The EQuIS CSV profiles need no Python process.
+3.10 or newer, the maintained XLSX reader and the complete pinned xlrd package
+included with this source. The EQuIS CSV profiles need no Python process.
 
 ```sh
 starforge lab-edd profiles
@@ -203,11 +204,13 @@ The sample contains explicit demonstration payment values.
 
 | File slot | Contract | Size |
 | --- | --- | --- |
-| source | Complete original delivery ZIP or DTS XLSX | Up to 16 MiB |
-| baseline | Optional earlier delivery in the same profile | Up to 16 MiB |
-| decisions | Optional source-bound JSON, CSV or TSV | Up to 4 MiB |
+| source | Complete original delivery ZIP or DTS XLS/XLSX | Up to 16 MiB |
+| baseline | Optional complete earlier delivery; an explicit baseline profile selects cross-profile review | Up to 16 MiB |
+| decisions | Source-bound current field choices as JSON, CSV or TSV | Up to 4 MiB |
+| baseline_decisions | Source-bound baseline field choices for the selected cross-profile review | Up to 4 MiB |
+| reconciliation | Complete two-source correspondence choices as JSON, CSV or TSV | Up to 16 MiB |
 
-The original slot policy limits the combined request to 36 MiB. The JSON request
+The original five-slot policy limits the combined request to 56 MiB. The JSON request
 selects `profile`, `reviewName`, optional source SHA256, encoding and editable
 table scope. The original input engine owns `$files`; use its file-selection,
 upload and sealing APIs rather than writing file descriptors by hand.
@@ -271,3 +274,9 @@ Use [Laboratory EDD in Applications](APPLICATIONS.md) for complete configuration
 The installed `starforge lab-edd-agent` command and `laboratory-workspaces` provider connect this same application to the original paid-job merchant and SF88 customer workspace. The complete workflow selects all five native file slots, pages every source row and correspondence group, exchanges full editable tables, saves and applies source-bound decisions, executes the original checkout, stops the exact native task and receives every result member with cold reopening.
 
 See [Laboratory EDD operator](../../../../stellar-forge/mcp-merchant-operator/LAB_EDD_WORKSPACE.md) for private connection setup, all 42 tools, the typed client and the complete original receiving command. The installed Applications selection and its existing `paid-job-merchant` owner run the same merchant and worker.
+
+## Included legacy reader
+
+The complete original xlrd package, source identities and license ship under
+`vendor/xlrd/`; [LEGACY_XLS.md](LEGACY_XLS.md) describes the native conversion.
+This product includes software developed by David Giffin <david@giffin.org>.

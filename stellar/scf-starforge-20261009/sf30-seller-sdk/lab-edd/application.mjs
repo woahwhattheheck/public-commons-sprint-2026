@@ -152,7 +152,9 @@ export async function laboratoryReview(input,context){
     try{
       prepared=await renderPreparedFiles(delivery,review,{signal,processes:context.processes});
       nativeZip=writeLabZip(prepared,{signal});
-      nativePreparation={status:'PREPARED',files:prepared.length};
+      nativePreparation={status:'PREPARED',files:prepared.length,
+        ...(prepared.some(file=>file.formatConversion)?{conversions:prepared.filter(file=>file.formatConversion)
+          .map(file=>({filename:file.filename,sourceFile:file.sourceFile,...file.formatConversion}))}:{})};
     }catch(error){
       signal.throwIfAborted();
       nativePreparation={status:'REVIEW_REQUIRED',error:{code:String(error.code??'NATIVE_PREPARATION'),message:String(error.message??error),
@@ -198,7 +200,8 @@ export async function laboratoryReview(input,context){
       report:{summary:review.report.summary,counts:review.report.counts,disposition:review.report.disposition},
       changes:review.changes,comparison:comparison?{disposition:comparison.disposition,counts:comparison.counts}:null,
       nativePreparation,reconciliation,prepared:nativeZip?{archive:'prepared/receiving-files.zip',bytes:nativeZip.byteLength,sha256:sha256(nativeZip),
-        files:prepared.map(file=>({filename:file.filename,bytes:file.size,sha256:file.sha256,mediaType:file.mediaType??null})),
+        files:prepared.map(file=>({filename:file.filename,bytes:file.size,sha256:file.sha256,mediaType:file.mediaType??null,
+          ...(file.formatConversion?{sourceFile:file.sourceFile,formatConversion:file.formatConversion}:{})})),
         directMember:directNative}:null,editableTables:tables};
     await archive.add('README.md',Buffer.from(guide(manifest)),{contentType:'text/markdown; charset=utf-8'});
     manifest.members=archive.members();await archive.add('manifest.json',JSON_BYTES(manifest),{contentType:'application/json'});

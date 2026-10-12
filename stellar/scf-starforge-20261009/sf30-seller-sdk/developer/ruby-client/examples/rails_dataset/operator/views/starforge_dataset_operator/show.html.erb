@@ -1,5 +1,5 @@
 <% chosen = @detail["selection"]; candidate = chosen["candidate"]; review = @detail["review"]; id = chosen["id"] %>
-<div class="heading"><div><h2><%= candidate["title"] %></h2><p>Selected <%= chosen["selected_at"] %> by <%= chosen["actor"] %> · Stream <%= candidate["stream_id"] %></p></div><%= link_to "Refresh", action: :show, id: id %></div>
+<div class="heading"><div><h2><%= candidate["title"] %></h2><p>Selected <%= operator_data_time(chosen["selected_at"]) %> by <%= chosen["actor"] %> · Stream <%= candidate["stream_id"] %></p></div><%= link_to "Refresh", action: :show, id: id %></div>
 <p class="notice" role="status">Current state: <strong><%= @detail.dig("state","phase").tr("_"," ") %></strong>
 <% if @detail.dig("state","message") %><br><%= @detail.dig("state","message") %><% end %></p>
 <% if review %>
@@ -8,6 +8,7 @@
   </div>
   <nav class="actions" aria-label="Review sections">
     <%= link_to "Review all changes", action: :changes,id: id %>
+    <% if @detail["committed"] %><%= link_to "Working records",action: :records,id: id %><% end %>
     <%= link_to "Original attachments", action: :attachments,id: id %>
     <%= link_to "Edition history", action: :history,id: id %>
     <%= link_to "Complete review handoff", action: :handoff,id: id %>
@@ -27,7 +28,7 @@
   </section>
   <% if @detail["committed"] %>
     <% receipt = @detail.dig("committed","receipt") %>
-    <section><h3>Committed edition <%= receipt["revision"] %></h3><p>Committed <%= receipt["committed_at"] %>. The original import operation and full source history are retained.</p><%= link_to "Download complete receipt",action: :download,id: id,name: "receipt.json" %></section>
+    <section><h3>Committed edition <%= receipt["revision"] %></h3><p>Committed <%= operator_data_time(receipt["committed_at"]) %>. The original import operation and full source history are retained.</p><%= link_to "Download complete receipt",action: :download,id: id,name: "receipt.json" %></section>
   <% else %>
     <section><h3>Import the selected edition</h3><p>The application uses its normal model validations, callbacks and tenant scope. If records changed after this review, prepare a new review from the received delivery.</p>
       <%= form_with url: {action: :commit,id: id}, local: true do %>

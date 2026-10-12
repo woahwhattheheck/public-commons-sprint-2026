@@ -1,13 +1,18 @@
 # Supplier-order operator, client and customer receiving
 
+For daily operation, start with the [customer operating guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/GUIDE.md).
+This document is the complete command, client, MCP and receiving reference for the
+same workspace. Install through the [selected package README](../../stellar/scf-starforge-20261009/distribution/selections/SUPPLIER_ORDERS.md)
+before using its installed commands.
+
 This desk receives complete openTRANS 1.0 orders and carries their original lines through confirmations, cancellations, dispatch documents, invoices and a portable customer workspace. The browser, installed commands and MCP tools use the same supplier-order store, immutable source files, draft history and durable request journal.
 
-A saved draft is an editable working document. **Prepare** validates and retains the complete XML for one saved revision. **Select for this order** makes that immutable document contribute to current quantities. Each step remains independently inspectable and recoverable by its original request ID.
+A saved draft is an editable working document. **Prepare XML** validates and retains the complete XML for one saved revision. **Select for this order** makes that immutable document contribute to current quantities. Each step remains independently inspectable and recoverable by its original request ID.
 
 
 ## Retained customer profiles
 
-The provider now has 40 tools. The original Unite profile remains implicit for
+The provider exposes 40 tools. The original Unite profile remains implicit for
 existing workspaces. A complete declared openTRANS 1.0 customer profile can be
 selected before first business intake through the same workspace and operation
 journal. Original source XML, document identities and saved history keep their
@@ -78,13 +83,13 @@ mkdir -p /srv/supplier-orders/customer-a
 starforge supplier-orders serve --workspace /srv/supplier-orders/customer-a --port 0
 ~~~
 
-The startup JSON gives the actual workspace ID, URL, origin and process ID. The process owns its workspace until it closes. To move from a browser-host process to a separate MCP-host process over the same directory, close the first process and then open the second host. The two surfaces share native state; each host retains its original workspace lifetime.
+The startup JSON gives the actual workspace ID, URL, origin and process ID. Several browser clients may use that one running host. Before starting a separate CLI or merchant host over the same directory, close the current host so accepted operations and retained reads finish. The interfaces share native state; each host owns its workspace lifetime.
 
 ### Receive the original order
 
 In **Original XML**, select the entire received file. The browser hashes it in bounded chunks, preserves the complete filename and chosen provenance, and sends its exact byte length and SHA-256 with one request ID. It streams the original file to the authenticated source endpoint.
 
-The first original ORDER establishes its order. Further documents default to retained history unless the operator explicitly chooses current selection with the reviewed order revision pins. Inspect the actual original business ID in the source; IDs can contain punctuation and use the selected profile limit (the unchanged Unite default is 21 characters).
+The first original ORDER establishes its order. In the browser receive form, **Current revision** defaults to current. Review that explicit choice and the current order pins before receiving a later edition: it can enter current reconciliation directly, or be retained as history. CLI imports and HTTPS intake retain later editions as history unless a CLI import request explicitly selects otherwise. Inspect the actual original business ID in the source; IDs can contain punctuation and use the selected profile limit (the unchanged Unite default is 21 characters).
 
 Every retained source remains downloadable as its complete original XML. Parsed values are additional working structure. Empty optional original fields remain present when the selected DTD permits them.
 
@@ -130,7 +135,7 @@ Every saved change includes an operator reason. Saving checks the draft revision
 
 The browser retains the complete request ID and request body before sending. An unresolved draft request prevents replacing its editor with another draft. While the request is active, the selected fields are frozen. After a recoverable failure, further edits belong to the same editor identity and generation.
 
-Use **Reopen request** to obtain the original saved operation. If the response arrives after newer edits, the browser preserves those edits. If the page was reloaded and has no working editor, the accepted saved draft is reopened. A different editor never receives another draft's returned metadata.
+Open **Continue saved request** and use **Reopen original request** to obtain the saved operation. If the response arrives after newer edits, the browser preserves those edits. If the page was reloaded and has no working editor, the accepted saved draft is reopened. A different editor never receives another draft's returned metadata.
 
 After an actual selected-state conflict, inspect the current order and deliberately restore or revise the earlier document. The original request and draft history remain available. A new intended change receives a new request ID; resending an uncertain original write keeps its original ID and body.
 
@@ -393,13 +398,13 @@ Use the connection schema and surrounding structure shown in the configuration s
 
 ### Browser delivery desk
 
-Open **EDI deliveries** from the workspace header. The **Channels** tab shows each declared channel and its setup requirements. Receive incoming HTTPS orders through the dedicated TLS listener; their original XML, selected orders and transport history appear in this same workspace. Open an incoming document to review the order. A later incoming revision remains in history until the operator selects the appropriate current contribution.
+Open **EDI deliveries** from the workspace header. The **Configured channels** tab shows each declared channel and its setup requirements. Receive incoming HTTPS orders through the dedicated TLS listener; their original XML, selected orders and transport history appear in this same workspace. Open an incoming document to review the order. A later incoming revision remains in history until the operator selects the appropriate current contribution.
 
-Prepare the complete outgoing XML in the ordinary draft editor. Use **Prepare delivery** on the prepared result or its document detail. The preparation dialog keeps the reviewed document and channel hashes, asks for a reason, and creates a `READY` delivery. Review that record and use **Send** to dispatch its retained bytes once. Delivery preparation and sending each retain their own request ID.
+Prepare the complete outgoing XML in the ordinary draft editor. Use **Prepare transmission** on the prepared result or its document detail. The preparation dialog keeps the reviewed document and channel hashes, asks for a reason, and creates a `READY` delivery. Review that record and use **Send this document** to dispatch its retained bytes once. Delivery preparation and sending each retain their own request ID.
 
 The delivery desk supports direction, state and exact order filters, paged results, complete event history, original XML downloads, and the retained HTTP response body. Its delivery state and recipient-processing record are separate fields. An agreed HTTP acknowledgment records transport acceptance; commercial processing follows the recipient's actual response.
 
-When a send returns `UNKNOWN`, use the provider's actual readback to record `ACKNOWLEDGED` or `NOT_ACCEPTED`, with the provider reference, reason and an optional retained evidence file and SHA-256. The desk can select its existing HTTP response as that evidence. A rejected, cancelled or confirmed unaccepted delivery can be returned to `READY` with a reason and sent through the separate **Send** action. Each action checks the reviewed transmission revision.
+When a send returns `UNKNOWN`, use **Record provider result** with the provider's actual readback to record `ACKNOWLEDGED` or `NOT_ACCEPTED`, its reference, a reason and any retained evidence file/SHA-256. The desk can select its existing HTTP response as that evidence. **Prepare another attempt** returns an eligible rejected, cancelled or confirmed unaccepted delivery to `READY` with a reason. **Send this document** then makes the separate POST. Each action checks the reviewed transmission revision.
 
 The original request journal remains available throughout the desk. Reopen an interrupted request by its original ID to recover its saved result. **Review current revisions** reloads the current document/channel or transmission while preserving the operator's reason and provider evidence for another deliberate review.
 
@@ -441,7 +446,7 @@ Use the existing installed CLI `call` command with `transportChannels`, `prepare
 
 ### Customer receiving
 
-The whole customer workspace carries the retained XML, HTTP response files, delivery records and event history. A received transmission retains its original workspace identity. The recipient can inspect that history and prepare a new local delivery from the retained outgoing document using its own declared channel. The browser offers **Prepare local delivery** for this continuation.
+The whole customer workspace carries the retained XML, HTTP response files, delivery records and event history. A received transmission retains its original workspace identity. The recipient can inspect that history and prepare a new local delivery from the retained outgoing document using its own declared channel. Prepare a local transmission from the retained document for this continuation; the imported record remains historical.
 
 ## Complete method map
 
@@ -454,6 +459,10 @@ All native names below begin `merchant_supplier_order_`.
 | `close` | `close` | Drain work/reads and close that handle |
 | `inputs` | `inputs` | Host-declared original file identities |
 | `state` | `state` | Current native state and selected hashes |
+| `profile` | `profile` | Complete selected declaration, hash and selection revision |
+| `profileTemplate` | `profile_template` | Complete editable standard or Unite declaration template |
+| `profileHistory` | `profile_history` | Paged profile selections and completed package adoptions |
+| `selectProfile` | `select_profile` | Reasoned selection in an empty workspace with reviewed profile/revision pins |
 | `orders` | `orders` | Paged current orders |
 | `order` | `order` | Complete selected order |
 | `orderItems` | `order_items` | Complete reconciled original lines |
@@ -488,14 +497,21 @@ All native names below begin `merchant_supplier_order_`.
 
 The ordinary HTTP operator exposes the corresponding `/api/supplier-orders` routes. Raw XML and ZIP intake send URI-encoded metadata in `x-supplier-order-metadata`; encoding preserves original Unicode filenames and provenance. `/files/:id` returns original bytes with Range/If-Range and native hash headers. The typed client uses the existing MCP transport over the same model. Raw transfer sockets have a 30-second inactivity bound; complete document preparation and package operations keep their own original lifetimes.
 
-## Native receiving and source lineage
+## Maintainer verification and source lineage
+
+The following is a product verification procedure, separate from ordinary daily
+operation. Source publication or installation is not a completed receiving result.
+Retain the actual report, source edition and artifacts before reporting a successful
+run. Use the customer's agreed acceptance process for its operational connection.
 
 The full operator receiving program in `receiving/supplier-orders-operator-native.mjs` consumes the actual `PASS`/`CLOSED` report from `supplier-orders/receiving/supplier-orders-native.mjs`. It reuses the original source identities and complete producer/customer packages, then carries the configured provider, full client, retained downloads, browser HTTP routes and customer continuation through their original APIs.
 
-Run this program after the original document/quantity/portable receiving has completed:
+Run this program from the verified package root after the original
+document/quantity/portable receiving has completed. For a source checkout, use its
+corresponding file path without the package's leading `source/`:
 
 ~~~sh
-node source/stellar-forge/mcp-merchant-operator/receiving/supplier-orders-operator-native.mjs --directory /srv/supplier-orders/operator-receiving --baseline-report /srv/supplier-orders/native-receiving/report.json --operation supplier-orders-operator-2769-20261012
+node source/stellar-forge/mcp-merchant-operator/receiving/supplier-orders-operator-native.mjs --directory /srv/supplier-orders/operator-receiving --baseline-report /srv/supplier-orders/native-receiving/report.json --operation supplier-operator-verification
 ~~~
 
 The exported `runSupplierOrderOperatorReceiving({directory, baselineReportPath, operationId, signal})` accepts the same retained inputs. The baseline's original producer/customer directories and artifact paths must remain available. Its report names the complete input generation; the continuation creates its own four receiving workspaces and retains the original workspaces unchanged. An interrupted merchant setup keeps its partial directory and resumes through a recorded setup attempt using the same business stores. Its operation directory retains the exact preceding report, request bodies, readback identities, full files and native report. A resumed operation reopens the same saved requests and verifies all original artifact bytes before returning its completion.

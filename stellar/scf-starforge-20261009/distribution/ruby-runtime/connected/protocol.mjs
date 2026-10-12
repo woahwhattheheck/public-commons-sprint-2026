@@ -28,6 +28,8 @@ const choice = (description, values) => text(description, { enum: values });
 const object = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 const originalOperation = object({ operationId: uuid }, ['operationId']);
 const originalApplication = object({ id: identifier }, ['id']);
+const workingCapture = object({ reviewId: reviewUuid, captureId: reviewUuid,
+  expectedCaptureSha256: sha256 }, ['reviewId', 'captureId', 'expectedCaptureSha256']);
 const customerSelection = object({ id: identifier, expectedSelectionSha256: sha256 }, ['id', 'expectedSelectionSha256']);
 const customerControl = object({
   id: identifier, expectedSelectionSha256: sha256,
@@ -65,15 +67,15 @@ define('create', 'runtime_create_environment',
   object({ id: identifier, title, ruby: path, bundlerVersion: bundler, projectDirectory: path,
     gemfile: member, requestId: uuid }, ['id', 'title', 'ruby', 'bundlerVersion', 'requestId']), false, true);
 define('start', 'runtime_start_operation',
-  'Start the selected install, verify or whole TAR export operation and return its saved status immediately. To export an application, stop its original listener first.',
+  'Start the selected install, verify or whole TAR export operation and return its saved status immediately. A selected workingCapture verifies the complete saved working dataset and carries legitimate application edits with original editions and files. Stop the original application listener before export or verification.',
   object({ id: identifier, operationId: uuid,
     action: choice('Native operation.', ['install', 'verify', 'export']),
-    offline: { type: 'boolean' }, applicationId: identifier },
+    offline: { type: 'boolean' }, applicationId: identifier, workingCapture },
   ['id', 'operationId', 'action']), false, true);
 define('run', 'runtime_run_customer_program',
-  'Run one of the two installed original customer lifecycle programs in its selected environment. The original entry and literal argv are retained. Use customer selection and advance for a guided complete application.',
+  'Run an installed original customer lifecycle or complete record program in its selected environment. The original entry and literal argv are retained. The record lifecycle uses the existing managed application and its saved working dataset.',
   object({ id: identifier, operationId: uuid,
-    entry: choice('Installed original lifecycle entry.', ['native-dataset-lifecycle', 'baserow-customer-lifecycle']),
+    entry: choice('Installed original lifecycle entry.', ['native-dataset-lifecycle', 'baserow-customer-lifecycle', 'dataset-records', 'dataset-records-lifecycle']),
     argv: { type: 'array', maxItems: 512, items: text('Original literal argument.', { maxLength: 65536 }) } },
   ['id', 'operationId', 'entry']), false, true);
 define('resume', 'runtime_resume_operation',
@@ -257,6 +259,10 @@ export function validateCall(method, input = {}) {
   const tool = byMethod.get(method);
   need(tool, 'RUBY_CONNECTED_METHOD', 'Unknown Ruby client method: ' + method, 404);
   verify(tool.inputSchema, input, method);
+  if (method === 'start' && input.workingCapture !== undefined) {
+    need(typeof input.applicationId === 'string' && ['verify', 'export'].includes(input.action),
+      'RUBY_CONNECTED_ARGUMENT', 'start.workingCapture: select the original application for verify or export');
+  }
   return tool;
 }
 export function toolForName(name) {

@@ -1,5 +1,5 @@
 // MIT. Durable multi-window operations in the original Open311 SQLite workspace.
-import { COLLECTION_SCHEMA, normalizeCollectionPlan, collectionNodeQuery, splitCollectionWindow,
+import { COLLECTION_SCHEMA, normalizeCollectionPlan, collectionNodeQuery, splitCollectionWindow, nextCollectionPage,
   projectCollection, queryCollection, compareCollections, validateCollectionRecord } from './collection-domain.mjs';
 import { collectionExport } from './collection-report.mjs';
 
@@ -194,6 +194,16 @@ export function createCollectionOperations(context) {
           const intended = collectionNodeQuery(value, window);
           if (canonical(result.capture.query) !== canonical(intended)) {
             window.state = 'LIMITED'; window.problem = 'SOURCE_QUERY_MISMATCH';
+          } else if (result.capture.saturated && value.policy.strategy === 'pages') {
+            const repeated = value.nodes.some(previous => previous.id !== window.id && previous.captureId &&
+              previous.startDate === window.startDate && previous.endDate === window.endDate &&
+              captureRecord(previous.captureId).capture.sourceSha256 === result.capture.sourceSha256);
+            if (repeated) {
+              window.state = 'LIMITED'; window.problem = 'REPEATED_SOURCE_PAGE';
+            } else {
+              const next = nextCollectionPage(window, value.policy);
+              window.state = 'PAGED'; window.children = [next.id]; value.nodes.push(next);
+            }
           } else if (result.capture.saturated) {
             const children = splitCollectionWindow(window, value.policy);
             if (children) {

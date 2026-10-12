@@ -7,9 +7,10 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+<a class="skip-link" href="#workspace-desk">Skip to order workspace</a>
 <header class="topbar">
   <div><h1>Supplier orders</h1><p id="workspace-label">Opening workspace</p><p id="profile-inline" class="muted"></p></div>
-  <nav aria-label="Workspace"><button id="open-profile" type="button">Customer profile</button><button id="refresh" type="button">Refresh</button><button id="open-source" type="button">Receive document</button><button id="open-transfer" type="button">Customer handover</button><button id="open-transport" type="button">EDI deliveries</button></nav>
+  <nav aria-label="Workspace"><button id="open-profile" type="button">Customer profile</button><button id="refresh" type="button">Refresh</button><button id="open-source" type="button">Receive document</button><button id="open-transfer" type="button">Customer handover</button><button id="open-transport" type="button">EDI deliveries</button><a class="button-link" href="/guide" target="_blank" rel="noopener">Operator guide</a></nav>
 </header>
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 <main class="workspace">
@@ -22,45 +23,49 @@
     <div id="order-list" class="order-list" aria-live="polite"><p class="empty">Orders will appear here after the workspace opens.</p></div>
     <div class="pager"><button id="orders-previous" type="button" disabled>Previous</button><span id="orders-page"></span><button id="orders-next" type="button" disabled>Next</button></div>
   </aside>
-  <section class="desk">
-    <div id="no-order" class="empty large">Select an order to review its quantities, source documents and delivery history.</div>
+  <section class="desk" id="workspace-desk" tabindex="-1">
+    <section id="no-order" class="empty large" aria-labelledby="no-order-title">
+      <h2 id="no-order-title">Receive your first order</h2><p id="no-order-description">Choose the customer profile, then receive an original order XML or a complete customer handover.</p>
+      <div class="actions"><button data-workspace-action="open-profile" type="button">Review customer profile</button><button data-workspace-action="open-source" type="button">Receive order XML</button><button data-workspace-action="open-transfer" type="button">Receive handover</button></div>
+      <p><a href="/guide" target="_blank" rel="noopener">Open the operator guide</a></p>
+    </section>
     <section id="selected-order" hidden>
       <header class="order-heading">
         <div><p class="eyebrow">Original order</p><h2 id="order-title"></h2><p id="order-subtitle" class="muted"></p></div>
         <div class="actions"><span id="order-state" class="badge"></span><button id="new-confirmation" type="button">Confirmation</button><button id="new-dispatch" type="button">Dispatch</button><button id="new-invoice" type="button">Invoice</button></div>
       </header>
       <div id="order-metrics" class="metrics"></div>
-      <nav class="tabs" aria-label="Order detail">
-        <button data-tab="lines" class="active" type="button" aria-selected="true">Lines and reconciliation</button>
-        <button data-tab="documents" type="button" aria-selected="false">Documents and history</button>
-        <button data-tab="drafts" type="button" aria-selected="false">Working drafts</button>
-        <button data-tab="parties" type="button" aria-selected="false">Parties and references</button>
+      <nav class="tabs" aria-label="Order detail" role="tablist">
+        <button id="order-tab-lines" data-tab="lines" role="tab" aria-controls="tab-lines" class="active" type="button" aria-selected="true">Lines and reconciliation</button>
+        <button id="order-tab-documents" data-tab="documents" role="tab" aria-controls="tab-documents" type="button" aria-selected="false">Documents and history</button>
+        <button id="order-tab-drafts" data-tab="drafts" role="tab" aria-controls="tab-drafts" type="button" aria-selected="false">Working drafts</button>
+        <button id="order-tab-parties" data-tab="parties" role="tab" aria-controls="tab-parties" type="button" aria-selected="false">Parties and references</button>
       </nav>
-      <section id="tab-lines" class="tab-panel">
+      <section id="tab-lines" class="tab-panel" role="tabpanel" aria-labelledby="order-tab-lines" tabindex="0">
         <div class="section-heading"><h3>Current documented quantities</h3><label class="check"><input id="differences-only" type="checkbox"> Show differences</label></div>
         <p class="hint">Quantities retain their original units. Confirmations, dispatches and invoices each contribute their selected document revisions.</p>
-        <div class="table-wrap"><table id="line-table"><thead><tr><th>Line / article</th><th class="number">Ordered</th><th class="number">Confirmed</th><th class="number">Cancelled</th><th class="number">Dispatched</th><th class="number">Invoiced</th><th>Unit</th><th>Review</th></tr></thead><tbody></tbody></table></div>
+        <div class="table-wrap"><table id="line-table" aria-label="Order line quantities"><thead><tr><th>Line / article</th><th class="number">Ordered</th><th class="number">Confirmed</th><th class="number">Cancelled</th><th class="number">Dispatched</th><th class="number">Invoiced</th><th>Unit</th><th>Review</th></tr></thead><tbody></tbody></table></div>
         <section id="line-detail" class="detail" hidden><div class="section-heading"><h3 id="line-title"></h3><button id="close-line" type="button">Close line</button></div><div id="line-values"></div><div id="line-contributions"></div></section>
         <section id="order-findings" class="findings" hidden><h3>Review findings</h3><div></div></section>
       </section>
-      <section id="tab-documents" class="tab-panel" hidden>
-        <div class="section-heading"><h3>Original and prepared documents</h3><select id="document-kind" aria-label="Document kind"><option value="">All kinds</option><option>ORDER</option><option>ORDERRESPONSE</option><option>DISPATCHNOTIFICATION</option><option>INVOICE</option></select></div>
-        <div class="table-wrap"><table id="document-table"><thead><tr><th>Document</th><th>Kind</th><th>Revision</th><th>Selection</th><th>Source / date</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+      <section id="tab-documents" class="tab-panel" role="tabpanel" aria-labelledby="order-tab-documents" tabindex="0" hidden>
+        <div class="section-heading"><h3>Original and prepared documents</h3><select id="document-kind" aria-label="Document kind"><option value="">All kinds</option><option value="ORDER">Order</option><option value="ORDERRESPONSE">Confirmation</option><option value="DISPATCHNOTIFICATION">Dispatch</option><option value="INVOICE">Invoice</option></select></div>
+        <div class="table-wrap"><table id="document-table" aria-label="Order documents"><thead><tr><th>Document</th><th>Kind</th><th>Revision</th><th>Selection</th><th>Source / date</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
         <div class="pager"><button id="documents-previous" type="button" disabled>Previous</button><span id="documents-page"></span><button id="documents-next" type="button" disabled>Next</button></div>
         <section id="document-detail" class="detail" hidden>
           <div class="section-heading"><h3 id="document-title"></h3><button id="close-document" type="button">Close document</button></div>
           <div id="document-metadata"></div><div id="document-findings"></div>
           <details><summary>Complete normalized document</summary><pre id="document-json"></pre></details>
           <form id="document-selection" class="inline align-end"><label class="grow">Reason for current revision selection<input id="selection-reason" required maxlength="2000" placeholder="Why this received revision is current"></label><button type="submit">Use this revision</button></form>
-          <div class="actions"><button id="document-download" type="button">Download original XML</button><button id="document-copy-draft" type="button">Create working copy</button><button id="document-deliver" type="button" disabled>Prepare delivery</button></div>
+          <div class="actions"><button id="document-download" type="button">Download original XML</button><button id="document-copy-draft" type="button">Create working copy</button><button id="document-deliver" type="button" disabled>Prepare transmission</button></div>
         </section>
       </section>
-      <section id="tab-drafts" class="tab-panel" hidden>
+      <section id="tab-drafts" class="tab-panel" role="tabpanel" aria-labelledby="order-tab-drafts" tabindex="0" hidden>
         <div class="section-heading"><h3>Working drafts</h3><button id="drafts-refresh" type="button">Refresh drafts</button></div>
         <div id="draft-list" class="draft-list"></div>
         <div class="pager"><button id="drafts-previous" type="button" disabled>Previous</button><span id="drafts-page"></span><button id="drafts-next" type="button" disabled>Next</button></div>
       </section>
-      <section id="tab-parties" class="tab-panel" hidden><div id="order-parties"></div><div id="order-history"></div></section>
+      <section id="tab-parties" class="tab-panel" role="tabpanel" aria-labelledby="order-tab-parties" tabindex="0" hidden><div id="order-parties"></div><div id="order-history"></div></section>
     </section>
 
     <section id="draft-editor" class="editor" hidden aria-label="Complete document editor">
@@ -91,7 +96,7 @@
         </details>
         <div class="section-heading"><h3>Document lines</h3><div class="actions"><button id="calculate-draft" type="button">Calculate amounts and totals</button><button id="add-draft-line" type="button">Add line</button><button id="restore-order-lines" type="button">Restore source lines</button></div></div>
         <p class="hint" id="draft-kind-hint"></p>
-        <div class="table-wrap"><table id="draft-lines"><thead><tr><th>Line</th><th>Original order / line</th><th>Supplier article</th><th class="number">Quantity</th><th>Unit</th><th class="number">Price</th><th>Details</th></tr></thead><tbody></tbody></table></div>
+        <div class="table-wrap"><table id="draft-lines" aria-label="Working document lines"><thead><tr><th>Line</th><th>Original order / line</th><th>Supplier article</th><th class="number">Quantity</th><th>Unit</th><th class="number">Price</th><th>Details</th></tr></thead><tbody></tbody></table></div>
         <section id="draft-line-editor" class="detail" hidden>
           <div class="section-heading"><h3 id="draft-line-heading"></h3><button id="remove-draft-line" type="button">Remove line from draft</button></div>
           <div class="form-grid">
@@ -119,7 +124,7 @@
             <label>Delivery document references<textarea id="edit-delivery-references" rows="4" spellcheck="false"></textarea></label>
             <label>Package associations<textarea id="edit-packages" rows="5" spellcheck="false"></textarea></label>
             <label>Original remarks and serial information<textarea id="edit-remarks" rows="5" spellcheck="false"></textarea></label>
-            <label>Derived serial values<textarea id="edit-serials" rows="4" spellcheck="false" readonly></textarea><span class="hint">Edit the original typed remarks. Serial values are derived again when the complete XML is prepared.</span></label>
+            <label>Derived serial values<textarea id="edit-serials" rows="4" spellcheck="false" readonly></textarea><span class="hint">Edit the original typed remarks. Serial values are derived again when the complete XML is prepared.</span>
             <label>Long description<textarea id="edit-description-long" rows="4"></textarea></label>
           </div>
           <button id="apply-line-edit" type="button">Apply line edits</button>
@@ -129,22 +134,22 @@
         <div id="draft-findings" class="findings" hidden></div>
         <div class="editor-actions"><span id="draft-save-state" class="muted">Unsaved working document</span><div class="actions"><button id="save-draft" type="submit">Save revision</button><button id="prepare-draft" type="button" disabled>Prepare complete XML</button></div></div>
       </form>
-      <section id="prepared-result" class="detail" hidden><h3>Prepared document</h3><div id="prepared-metadata"></div><div class="actions"><button id="prepared-download" type="button">Download complete XML</button><button id="prepared-select" type="button">Review for current reconciliation</button><button id="prepared-deliver" type="button">Prepare delivery</button></div></section>
+      <section id="prepared-result" class="detail" hidden><h3>Prepared document</h3><div id="prepared-metadata"></div><div class="actions"><button id="prepared-download" type="button">Download complete XML</button><button id="prepared-select" type="button">Review for current reconciliation</button><button id="prepared-deliver" type="button">Prepare transmission</button></div></section>
     </section>
   </section>
 </main>
 
-<dialog id="new-draft-dialog">
-  <form id="new-draft-form"><div class="section-heading"><h2>Create complete working document</h2><button data-close="new-draft-dialog" type="button">Close</button></div>
+<dialog id="new-draft-dialog" aria-labelledby="new-draft-title">
+  <form id="new-draft-form"><div class="section-heading"><h2 id="new-draft-title">Create working document</h2><button data-close="new-draft-dialog" type="button">Close</button></div>
     <label>Document kind<select id="new-draft-kind"><option value="ORDERRESPONSE">Order confirmation</option><option value="DISPATCHNOTIFICATION">Dispatch notification</option><option value="INVOICE">Invoice</option></select></label>
     <label>Original order IDs<textarea id="new-draft-orders" rows="5" spellcheck="false" required></textarea></label><p class="hint">Use a JSON array of exact original order IDs. A confirmation refers to one order. Dispatches and invoices may combine compatible orders with the same parties and currency.</p>
     <button type="submit">Create working document</button>
   </form>
 </dialog>
 
-<dialog id="source-dialog">
+<dialog id="source-dialog" aria-labelledby="source-title">
   <form id="source-form">
-    <div class="section-heading"><h2>Receive original document</h2><button data-close="source-dialog" type="button" aria-label="Close source form">Close</button></div>
+    <div class="section-heading"><h2 id="source-title">Receive original document</h2><button data-close="source-dialog" type="button" aria-label="Close source form">Close</button></div>
     <p class="hint">Receive complete openTRANS 1.0 XML. Original identifiers, values and source bytes remain available with every revision.</p>
     <p id="source-profile" class="hint"></p><label>Original XML file<input id="source-file" type="file" accept=".xml,application/xml,text/xml" required></label>
     <div class="form-grid two">
@@ -154,14 +159,14 @@
       <label class="span-all">Source note<textarea id="source-note" rows="3" maxlength="4000"></textarea></label>
       <label>Current revision choice<select id="source-selection"><option value="current">Receive for current reconciliation</option><option value="history">Retain in document history</option></select></label>
     </div>
-    <label>Reviewed current order revisions<textarea id="source-order-revisions" rows="6" spellcheck="false"></textarea><span class="hint">Known order IDs and their current revision numbers are frozen with this receive request.</span></label>
+    <details class="detail"><summary>Reviewed order revisions</summary><label>Current order revisions<textarea id="source-order-revisions" rows="6" spellcheck="false"></textarea><span class="hint">The current order revisions travel with this request so another update cannot be overwritten.</span></label></details>
     <div id="source-progress" class="hint" role="status"></div>
     <div class="actions"><button id="source-submit" type="submit">Receive complete document</button></div>
   </form>
 </dialog>
 
-<dialog id="transfer-dialog">
-  <div class="section-heading"><h2>Customer handover</h2><button data-close="transfer-dialog" type="button">Close</button></div>
+<dialog id="transfer-dialog" aria-labelledby="transfer-title">
+  <div class="section-heading"><h2 id="transfer-title">Customer handover</h2><button data-close="transfer-dialog" type="button">Close</button></div>
   <section class="detail"><h3>Export complete workspace</h3><p>Package original XML, document revisions, drafts, selection history and retained transport results for another customer workspace.</p><button id="export-workspace" type="button">Prepare customer ZIP</button><div id="package-result"></div></section>
   <form id="import-workspace-form" class="detail">
     <h3>Receive customer workspace</h3>
@@ -177,15 +182,15 @@
 
 <dialog id="transport-dialog" class="transport-desk" aria-labelledby="transport-title">
   <header class="section-heading"><div><p class="eyebrow">Supplier EDI</p><h2 id="transport-title">Deliveries and channels</h2><p class="hint">Receive orders and deliver prepared documents through the configured HTTPS channels.</p></div><div class="actions"><button id="transport-refresh" type="button">Refresh</button><button data-close="transport-dialog" type="button">Close</button></div></header>
-  <nav class="tabs" aria-label="EDI desk"><button data-transport-view="deliveries" class="active" aria-selected="true" type="button">Deliveries</button><button data-transport-view="channels" aria-selected="false" type="button">Configured channels</button></nav>
-  <section id="transport-view-deliveries">
+  <nav class="tabs" aria-label="EDI desk" role="tablist"><button id="transport-tab-deliveries" data-transport-view="deliveries" role="tab" aria-controls="transport-view-deliveries" class="active" aria-selected="true" type="button">Deliveries</button><button id="transport-tab-channels" data-transport-view="channels" role="tab" aria-controls="transport-view-channels" aria-selected="false" type="button">Configured channels</button></nav>
+  <section id="transport-view-deliveries" role="tabpanel" aria-labelledby="transport-tab-deliveries" tabindex="0">
     <form id="transport-filter-form" class="transport-filters">
       <label>Direction<select id="transport-direction"><option value="">All directions</option><option value="incoming">Incoming orders</option><option value="outgoing">Outgoing documents</option></select></label>
       <label>Transport outcome<select id="transport-state"><option value="">All outcomes</option></select></label>
       <label>Exact order ID<input id="transport-order-id" maxlength="250" autocomplete="off"></label>
       <button type="submit">Apply filters</button><button id="transport-clear-filters" type="button">Clear</button>
     </form>
-    <div class="table-wrap"><table id="transport-table"><thead><tr><th>Document</th><th>Channel</th><th>Transport outcome</th><th>Recipient record</th><th>Updated</th><th>Details</th></tr></thead><tbody></tbody></table></div>
+    <div class="table-wrap"><table id="transport-table" aria-label="Document deliveries"><thead><tr><th>Document</th><th>Channel</th><th>Transport outcome</th><th>Recipient record</th><th>Updated</th><th>Details</th></tr></thead><tbody></tbody></table></div>
     <div class="pager"><button id="transport-previous" type="button" disabled>Previous</button><span id="transport-page"></span><button id="transport-next" type="button" disabled>Next</button></div>
     <section id="transport-detail" class="detail" hidden aria-labelledby="transport-detail-title">
       <div class="section-heading"><h3 id="transport-detail-title"></h3><button id="transport-close-detail" type="button">Close delivery</button></div>
@@ -208,7 +213,7 @@
       <details class="detail"><summary>Complete transmission record</summary><pre id="transport-record-json"></pre></details>
     </section>
   </section>
-  <section id="transport-view-channels" hidden>
+  <section id="transport-view-channels" role="tabpanel" aria-labelledby="transport-tab-channels" tabindex="0" hidden>
     <p id="transport-channel-status" class="hint"></p><div id="transport-channel-list" class="transport-channels"></div>
     <details class="detail"><summary>Connect an agreed supplier channel</summary><ol class="transport-onboarding"><li>Agree the supplier identity, test and live URLs, authentication and acknowledgment rules with the receiving partner.</li><li>Place the complete HTTPS channel configuration in the private host and provide the referenced environment credentials and TLS files.</li><li>Start the supplier-order service with its transport configuration. Use the configured HTTPS intake listener for incoming orders.</li><li>Open the channel here, prepare a reviewed document and follow the partner’s test and activation process.</li></ol><p class="hint">The installed TRANSPORT.md guide contains the complete host configuration and service commands. A channel’s test or live setting is shown beside every prepared delivery.</p></details>
   </section>
@@ -230,8 +235,10 @@
 <dialog id="profile-dialog" class="profile-desk" aria-labelledby="profile-title">
   <header class="section-heading"><div><p class="eyebrow">Supplier interface</p><h2 id="profile-title">Customer profile</h2></div><button data-close="profile-dialog" type="button">Close</button></header>
   <section id="profile-current" class="detail"></section>
-  <p class="hint">The declaration selects the meaning of the original openTRANS 1.0 document. Record the actual customer contract and source revision. A different syntax needs its own source adapter; this selection does not convert ORDERS05 or cXML.</p>
-  <div class="actions"><button id="profile-from-standard" type="button">Start from openTRANS rules</button><button id="profile-from-unite" type="button">Start from Unite rules</button><button id="profile-discard" type="button">Discard edits and reopen</button><button id="profile-download" type="button">Download selected declaration</button></div>
+  <p class="hint">The profile records the agreed meaning of the customer’s openTRANS 1.0 documents. Review the interface reference, confirmation rules and required fields before receiving the first order.</p>
+  <div class="actions"><button id="profile-download" type="button">Download selected declaration</button></div>
+  <details id="profile-configuration" class="detail"><summary>Complete interface settings</summary>
+  <div class="actions"><button id="profile-from-standard" type="button">Start from openTRANS rules</button><button id="profile-from-unite" type="button">Start from Unite rules</button><button id="profile-discard" type="button">Discard edits and reopen</button></div>
   <div class="inline align-end"><label class="grow">Complete customer declaration<input id="profile-file" type="file" accept=".json,application/json"></label><button id="profile-load-file" type="button">Load declaration</button></div>
   <p id="profile-editor-state" class="hint" role="status"></p>
   <form id="profile-form">
@@ -270,13 +277,14 @@
     </fieldset>
     <button id="profile-save" type="submit">Select complete declaration</button>
   </form>
+  </details>
   <details id="profile-conflict" class="detail" hidden><summary>Complete earlier selection request</summary><p class="hint">Compare this earlier request with your current fields. Loading it replaces the current unsaved declaration and reason.</p><pre id="profile-conflict-json"></pre><button id="profile-conflict-load" type="button">Replace working fields with this earlier declaration</button></details>
   <details class="detail"><summary>Complete working declaration</summary><pre id="profile-complete"></pre></details>
   <section class="detail"><h3>Selection and customer adoption history</h3><div id="profile-history"></div><div class="pager"><button id="profile-history-previous" type="button" disabled>Previous</button><span id="profile-history-page"></span><button id="profile-history-next" type="button" disabled>Next</button></div></section>
 </dialog>
 
-<dialog id="request-dialog">
-  <div class="section-heading"><h2>Continue original request</h2><button data-close="request-dialog" type="button">Close</button></div>
+<dialog id="request-dialog" aria-labelledby="request-title">
+  <div class="section-heading"><h2 id="request-title">Continue saved request</h2><button data-close="request-dialog" type="button">Close</button></div>
   <p id="request-description"></p><dl id="request-identity"></dl><div id="request-details"></div>
   <div class="actions"><button id="request-retry" type="button">Reopen original request</button><button id="request-revise" type="button">Review current revisions</button></div>
 </dialog>

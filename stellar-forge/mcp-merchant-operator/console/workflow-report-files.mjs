@@ -3,7 +3,7 @@ import { mkdir, open, lstat, realpath } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { writeOpenApiWorkflowFile } from './openapi-workflow-client.mjs';
+import { writeConsoleWorkflowFile as writeOpenApiWorkflowFile } from './client-files.mjs';
 import { canonical, digest, fail } from './records.mjs';
 import { MAX_WORKFLOW_REPORT_REQUEST_BYTES, validateWorkflowReportPacket } from './workflow-reports.mjs';
 import { workflowReportHtml, workflowReportStepsCsv, workflowReportChangesCsv } from './public/workflow-report-format.mjs';

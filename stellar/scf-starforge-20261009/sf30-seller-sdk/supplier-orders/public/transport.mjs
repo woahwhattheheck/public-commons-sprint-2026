@@ -1,4 +1,5 @@
 // MIT. Complete browser consumer of the original supplier-order HTTPS transport.
+import { label, dateText, properties, technicalDetails, historyCard, labelTable, wireTabs } from '/presentation.mjs';
 export function createSupplierOrderTransportDesk({api,mutate,downloadFile,selectDocument,message,guard,getDocument,getPrepared,refreshWorkspace}){
   const $=id=>document.getElementById(id),copy=value=>JSON.parse(JSON.stringify(value));
   const stringify=value=>JSON.stringify(value,null,2),encoded=value=>encodeURIComponent(String(value)),PAGE=30;
@@ -13,10 +14,6 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
   const button=(text,action)=>{const b=node('button',text);b.type='button';b.addEventListener('click',guard(action));return b;};
   const show=(id,visible)=>{$(id).hidden=!visible;};
   const addOption=(select,value,text)=>{const option=node('option',text);option.value=value;select.append(option);};
-  function properties(target,rows){
-    clear(target);for(const [label,value]of rows){if(value===undefined||value===null||value==='')continue;
-      target.append(node('dt',label),node('dd',typeof value==='object'?stringify(value):value));}
-  }
   function query(path,values){const q=new URLSearchParams();for(const [key,value]of Object.entries(values))
     if(value!==undefined&&value!==null&&value!=='')q.set(key,String(value));return path+(q.size?'?'+q:'');}
   function checkedPage(value,offset){
@@ -33,7 +30,7 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
   }
   function view(name){
     for(const b of document.querySelectorAll('[data-transport-view]')){const active=b.dataset.transportView===name;
-      b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));show('transport-view-'+b.dataset.transportView,active);}
+      b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;show('transport-view-'+b.dataset.transportView,active);}
   }
   function displayChannels(){
     $('transport-channel-status').textContent=state.configured?
@@ -41,19 +38,18 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
       'Configure an agreed HTTPS channel in the supplier host to enable direct receiving and delivery.';
     const list=clear($('transport-channel-list'));
     for(const channel of state.channels){
-      const section=node('section',null,'transport-channel');section.append(node('h3',channel.title+' · '+channel.mode));
-      const meta=node('dl',null,'metadata');properties(meta,[['Channel',channel.id],['Supplier',channel.supplierId],
-        ['Agreement',channel.agreement?.reference],['Configuration SHA-256',channel.sha256]]);section.append(meta);
+      const section=node('section',null,'transport-channel');section.append(node('h3',channel.title),node('span',label(channel.mode)+' channel','badge'));
+      const meta=node('dl',null,'metadata');properties(meta,[['Supplier',channel.supplierId],['Agreement',channel.agreement?.reference]]);section.append(meta);
       if(channel.incoming){section.append(node('h4','Incoming orders'));const d=node('dl',null,'metadata');
         properties(d,[['HTTPS intake',channel.incoming.url],['Authentication',channel.incoming.authentication?.type],
-          ['Credential references',channel.incoming.authentication?.credentialRefs],['Message identity header',channel.incoming.messageIdHeader],
+          ['Message identity header',channel.incoming.messageIdHeader],
           ['Response status',channel.incoming.acknowledgment?.statusCode],['Response content type',channel.incoming.acknowledgment?.contentType],
-          ['Response body',channel.incoming.acknowledgment?.body]]);section.append(d);}
+          ['Acknowledgment',channel.incoming.acknowledgment?.body]]);section.append(d);}
       if(channel.outgoing){section.append(node('h4','Outgoing documents'));const d=node('dl',null,'metadata');
         properties(d,[...Object.entries(channel.outgoing.endpoints??{}).map(([kind,url])=>[kinds[kind]??kind,url]),
-          ['XML content type',channel.outgoing.contentType],['Authentication',channel.outgoing.authentication?.type],['Credential references',channel.outgoing.authentication?.credentialRefs],
+          ['XML content type',channel.outgoing.contentType],['Authentication',channel.outgoing.authentication?.type],
           ['Accepted HTTP statuses',channel.outgoing.acknowledgment?.acceptedStatusCodes],['Confirmed rejection statuses',channel.outgoing.acknowledgment?.rejectedStatusCodes],
-          ['Provider receipt header',channel.outgoing.acknowledgment?.receiptHeader],['Exact response SHA-256',channel.outgoing.acknowledgment?.exactBodySha256],
+          ['Provider receipt header',channel.outgoing.acknowledgment?.receiptHeader],
           ['Request timeout',channel.outgoing.timeoutMs+' ms'],['Retained response limit',channel.outgoing.maxResponseBytes+' bytes']]);section.append(d);}
       const details=node('details');details.append(node('summary','Complete channel declaration'),node('pre',stringify(channel)));section.append(details);list.append(section);
     }
@@ -70,17 +66,17 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
     for(const record of page.items){
       const row=node('tr');if(record.id===state.selected?.id)row.classList.add('selected');
       const documentCell=node('td');documentCell.append(node('strong',kinds[record.kind]??record.kind),
-        node('span',(record.orderIds??[]).join(', ')||record.documentId||record.id,'transport-table-sub'),
+        node('span',(record.orderIds??[]).join(', ')||record.source?.name||'Document details available','transport-table-sub'),
         node('span',record.direction==='incoming'?'Incoming':'Outgoing','transport-table-sub'));
       const channelCell=node('td');channelCell.append(node('strong',record.channel?.title??record.channel?.id??''),
-        node('span',(record.channel?.mode??'')+' · '+(record.channel?.supplierId??''),'transport-table-sub'));
+        node('span',[record.channel?.mode?label(record.channel.mode):null,record.channel?.supplierId].filter(Boolean).join(' · '),'transport-table-sub'));
       const statusCell=node('td');statusCell.append(node('span',names[record.state]??record.state,'badge'),
         node('span','Revision '+record.revision+' · '+record.attemptCount+' attempt'+(record.attemptCount===1?'':'s'),'transport-table-sub'));
       const action=node('td');action.append(button('Open',()=>openTransmission(record.id)));
       row.append(documentCell,channelCell,statusCell,node('td',processing[record.recipientProcessing]??record.recipientProcessing??''),
-        node('td',record.updatedAt??record.createdAt),action);body.append(row);
+        node('td',dateText(record.updatedAt??record.createdAt)),action);body.append(row);
     }
-    pager('transport',page);
+    labelTable($('transport-table'));pager('transport',page);
   }
   async function loadList(){
     const sequence=++state.listSequence,selected=filters();
@@ -120,14 +116,14 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
       'Record the result from the original receiving provider and retain its reference and reason.';
   }
   function renderSelected(record,{reset=false}={}){
-    $('transport-detail-title').textContent=(kinds[record.kind]??record.kind)+' delivery · '+record.id;
+    $('transport-detail-title').textContent=(kinds[record.kind]??record.kind)+' delivery'+(record.orderIds?.length?' · '+record.orderIds.join(', '):'');
     clear($('transport-selected-status')).append(node('strong',names[record.state]??record.state),node('p',stateExplanation(record)));
-    properties($('transport-metadata'),[['Transmission',record.id],['Revision',record.revision],['Direction',record.direction],
-      ['Channel',record.channel?.title??record.channel?.id],['Mode',record.channel?.mode],['Supplier',record.channel?.supplierId],
-      ['Original workspace',record.workspaceId],['Received history',record.foreign?'Yes':'No'],['Agreement',record.channel?.agreement?.reference],['Selected channel SHA-256',record.channel?.sha256],['Order references',record.orderIds],
-      ['Document record',record.documentId],['Original XML',record.source?.name],['XML bytes',record.source?.bytes],['XML SHA-256',record.source?.sha256],
+    properties($('transport-metadata'),[['Revision',record.revision],['Direction',label(record.direction)],
+      ['Channel',record.channel?.title??record.channel?.id],['Mode',record.channel?.mode?label(record.channel.mode):null],['Supplier',record.channel?.supplierId],
+      ['Received history',record.foreign?'Received from another workspace':'Local delivery'],['Agreement',record.channel?.agreement?.reference],['Order references',record.orderIds],
+      ['Original XML',record.source?.name],['File size',record.source?.bytes===undefined?null:record.source.bytes.toLocaleString()+' bytes'],
       ['Recipient record',processing[record.recipientProcessing]??record.recipientProcessing],['Attempts',record.attemptCount],
-      ['Provider receipt',record.providerReceipt],['Created',record.createdAt],['Updated',record.updatedAt]]);
+      ['Provider receipt',record.providerReceipt],['Created',dateText(record.createdAt)],['Updated',dateText(record.updatedAt)]]);
     const files=clear($('transport-file-actions'));
     if(record.source?.fileId)files.append(button('Download original XML',()=>downloadFile({...record.source,id:record.source.fileId,mimeType:'application/xml'})));
     if(record.documentId)files.append(button('Open document',async()=>{await selectDocument(record.documentId);$('transport-dialog').close();}));
@@ -135,7 +131,7 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
     if(record.http?.response?.fileId)files.append(button('Download HTTPS response',()=>downloadFile({...record.http.response,id:record.http.response.fileId})));
     show('transport-http',Boolean(record.http));
     if(record.http){properties($('transport-http-metadata'),[['HTTP status',record.http.statusCode],['Response complete',record.http.complete?'Yes':'No'],
-      ['Response file',record.http.response?.name],['Response bytes',record.http.response?.bytes],['Response SHA-256',record.http.response?.sha256]]);
+      ['Response file',record.http.response?.name],['Response size',record.http.response?.bytes===undefined?null:record.http.response.bytes.toLocaleString()+' bytes']]);
       $('transport-http-headers').textContent=stringify(record.http.headers??{});}
     $('transport-record-json').textContent=stringify(record);
     const outgoing=record.direction==='outgoing'&&!record.foreign;
@@ -160,9 +156,9 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
       throw new Error('This delivery has newer activity. Refresh it to continue through one complete history revision.');
     state.historyTotal=page.total;state.historyNextOffset=page.nextOffset;const list=clear($('transport-history-list'));
     if(!page.items.length)list.append(node('p','No retained events in this selection.','muted'));
-    for(const event of page.items){const detail=node('details');
-      detail.append(node('summary',[event.revision===undefined?null:'Revision '+event.revision,event.action??event.state??'Delivery event',event.at??event.createdAt??''].filter(Boolean).join(' · ')),
-        node('pre',stringify(event)));list.append(detail);}
+    for(const event of page.items)list.append(historyCard({
+      title:[event.revision===undefined?null:'Revision '+event.revision,label(event.action??event.state??'Delivery event')].filter(Boolean).join(' · '),
+      at:event.at??event.createdAt,reason:event.reason,rows:[['Outcome',event.state?label(event.state):null],['Provider receipt',event.providerReceipt]],record:event}));
     pager('transport-history',page);
   }
   async function openTransmission(id){
@@ -187,10 +183,10 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
     const prepared=state.preparing,channel=prepared?.channels.find(c=>c.id===$('transport-prepare-channel').value),target=clear($('transport-prepare-channel-info'));
     $('transport-prepare-submit').disabled=!channel;
     if(!channel){target.append(node('p','No declared outgoing channel supports this document. Open Configured channels to review the host setup.','hint'));return;}
-    const d=node('dl',null,'metadata');properties(d,[['Channel',channel.title],['Mode',channel.mode],['Supplier',channel.supplierId],
+    const d=node('dl',null,'metadata');properties(d,[['Channel',channel.title],['Mode',label(channel.mode)],['Supplier',channel.supplierId],
       ['Destination',channel.outgoing?.endpoints?.[prepared.document.kind]],['XML content type',channel.outgoing?.contentType],['Agreement',channel.agreement?.reference],
-      ['Accepted HTTP statuses',channel.outgoing?.acknowledgment?.acceptedStatusCodes],['Channel SHA-256',channel.sha256]]);
-    target.append(d);
+      ['Accepted HTTP statuses',channel.outgoing?.acknowledgment?.acceptedStatusCodes]]);
+    target.append(d,technicalDetails('Complete selected channel',channel));
   }
   async function openPrepare(original){
     if(!original?.id)throw new Error('Select a prepared outgoing document first.');
@@ -201,8 +197,8 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
     const usable=channels.channels.filter(c=>c.outgoing?.endpoints?.[record.kind]);
     state.preparing={document:copy(record),channels:copy(usable)};
     properties($('transport-prepare-document'),[['Document',record.documentId],['Kind',kinds[record.kind]],['Revision',record.revision],
-      ['Orders',record.orderIds],['Source XML',record.source?.name],['Bytes',record.source?.bytes],['Document SHA-256',record.sha256],['XML SHA-256',record.source?.sha256]]);
-    clear($('transport-prepare-channel'));for(const c of usable)addOption($('transport-prepare-channel'),c.id,c.title+' · '+c.mode);
+      ['Orders',record.orderIds],['Source XML',record.source?.name],['File size',record.source?.bytes===undefined?null:record.source.bytes.toLocaleString()+' bytes']]);
+    clear($('transport-prepare-channel'));for(const c of usable)addOption($('transport-prepare-channel'),c.id,c.title+' · '+label(c.mode));
     $('transport-prepare-reason').value='';prepareChannelInfo();if(!$('transport-prepare-dialog').open)$('transport-prepare-dialog').showModal();
   }
   async function mutation(kind,path,body){
@@ -244,7 +240,7 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
     if(!state.selected||state.selected.id===id||kind==='transport-prepare')await openTransmission(id);
     if(kind!=='transport-prepare'&&request?.body?.transmissionId===state.selected?.id)resetActionFields();
     if(refreshWorkspace)await refreshWorkspace();
-    message('Delivery '+id+' · '+(names[result.transmission?.state]??result.transmission?.state??'saved')+'.');
+    message((kinds[result.transmission?.kind]??'Document')+' delivery · '+(names[result.transmission?.state]??result.transmission?.state??'saved')+'.');
   }
   async function reviewRequest(request){
     if(request.kind==='transport-prepare'){
@@ -267,6 +263,7 @@ export function createSupplierOrderTransportDesk({api,mutate,downloadFile,select
   }
   for(const [value,label]of Object.entries(names))addOption($('transport-state'),value,label);
   for(const b of document.querySelectorAll('[data-transport-view]'))b.addEventListener('click',()=>view(b.dataset.transportView));
+  wireTabs(document.querySelectorAll('[data-transport-view]'),view,b=>b.dataset.transportView);
   $('open-transport').addEventListener('click',guard(open));
   $('transport-refresh').addEventListener('click',guard(refresh));
   $('transport-filter-form').addEventListener('submit',guard(async()=>{state.offset=0;state.listOffsets=[0];state.nextOffset=null;await loadList();}));

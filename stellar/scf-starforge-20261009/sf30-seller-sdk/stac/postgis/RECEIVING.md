@@ -211,3 +211,14 @@ The nested `request` is the original service operation: `{operationId, kind, exp
 The parent binds this child to its verified final **receive-current** directory and manifest; callers do not supply a second receipt or independently replace its edition. It derives one stable child operation ID and calls the maintained GeoServer receiving implementation with parent signal ownership. On continuation, the child retains the original service operation and the parent verifies its frozen saved result, complete receiving directories and export archives. A missing or changed original result remains a recovery issue. Completing the optional service cycle does not repeat a database stage or promotion, and the final parent result is saved only after owned services, database pools and child processes have drained.
 
 See the [complete example](native-journey.example.json) for the exact input fields and the maintained [GeoServer receiving implementation](geoserver/native-receiving.mjs) for its existing service workflow.
+
+
+## Accepted field publication continuation
+
+The complete [field publication programme](FIELD_PUBLICATION.md#complete-native-receiving-programme) joins an original accepted office field edition to this same producer and the maintained QGIS receiving child. It supports either explicit read-only adoption of the UI's committed field-import/field-review/stage/promote IDs, or one approved complete decision set with original request/CAS recovery.
+
+Receiving automatically includes field-evidence.json and the immutable source closure for each field publication in the accepted edition history. Full database backups include every retained field-import package referenced by operation history. Historical evidence remains distinguishable from later explicit edits; the package does not imply that every earlier accepted field value is still current.
+
+The QGIS handoff adds an optional successor object with the existing workspaceId, initial expectedRevision, old leftSourceId, complete keep/update/remove decisions for its logical map layer IDs, and an attributed note. It invokes the original review_successor API in that existing workspace before normal native save/reopen/refresh/export/receive. The original project, field maps, source editions and history remain retained.
+
+The full configured caller is field-publication.mjs --input ABSOLUTE_ORIGINAL_PROGRAMME_JSON. The [example](field-publication.example.json) contains explicit placeholders. No database credentials, accepted field observation or equipped runtime is assumed. The caller creates and independently receives a complete frozen handover ZIP through field_delivery.py; that file receiver does not restore a database or run QGIS. Actual database restore and native map receiving retain the existing original APIs.

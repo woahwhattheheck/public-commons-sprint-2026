@@ -1,4 +1,4 @@
-// MIT. Native lab workbook transport over the existing XLSX reader and file job.
+// MIT. Native lab workbook transport over source-bound Excel readers and the existing file job.
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
@@ -183,16 +183,14 @@ export async function decodeLabWorkbooks({ files, signal, processes }) {
   const tables = [], unassigned = [];
   for (const file of files) {
     signal?.throwIfAborted();
-    if (!/\.xlsx$/i.test(file.filename)) {
-      if (/\.xls$/i.test(file.filename))
-        throw error('DTS8D_XLSX_REQUIRED', 'Save the original DTS workbook as XLSX for this native receiving profile.', { filename: file.filename });
+    if (!/\.xlsx?$/i.test(file.filename)) {
       unassigned.push({ filename: file.filename, sha256: file.sha256, reason: 'Retained supporting source member.' });
       continue;
     }
     const decoded = await nativeWorkbook('decode', file, {}, signal, processes);
     tables.push(...decoded.tables);
   }
-  if (!tables.length) throw error('DTS8D_XLSX_REQUIRED', 'Select the original XLSX workbook with the DTS8D observation worksheet.');
+  if (!tables.length) throw error('DTS8D_WORKBOOK_REQUIRED', 'Select the original XLSX or Excel 97–2003 BIFF8 XLS workbook with its DTS8D observation worksheet.');
   return { tables, unassigned };
 }
 export async function renderLabWorkbooks({ originals, tables, fieldDefinitions, signal, processes }) {
@@ -219,7 +217,14 @@ export async function renderLabWorkbooks({ originals, tables, fieldDefinitions, 
       sheetName: table.origin.sheetName, headers: table.headers,
       fieldTypes: fieldDefinitions.map(field => field.type), rows,
     }, signal, processes);
-    native.push({ filename: file.filename, bytes, mediaType: XLSX });
+    const legacy = /\.xls$/i.test(file.filename);
+    native.push({ filename: legacy ? file.filename + '.xlsx' : file.filename, bytes, mediaType: XLSX,
+      ...(legacy ? {
+        sourceFile: { filename: file.filename, bytes: file.bytes.byteLength, sha256: file.sha256 },
+        formatConversion: { from: 'xls-biff8', to: 'xlsx', profileId: 'geotech-dts8d',
+          originalRetained: true },
+      } : {}),
+    });
   }
   return native;
 }

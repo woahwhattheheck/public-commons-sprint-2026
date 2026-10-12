@@ -117,7 +117,7 @@
 <label>Clock<select id="policy-clock"><option value="elapsed">Elapsed time</option><option value="business">Working calendar time</option></select></label>
 <label>Working calendar revision<select id="policy-calendar"></select></label>
 <label>Origin event<select id="policy-origin"><option value="requestedAt">Original request creation</option><option value="reviewAssignedAt">Source-pinned internal assignment</option></select></label>
-<label>Completion event<select id="policy-stop"><option value="asOf">Assess at report cutoff</option><option value="sourceClosed">Documented source closure</option><option value="reviewDone">Source-pinned internal completion</option></select></label>
+<label>Completion event<select id="policy-stop"><option value="asOf">Assess at report cutoff</option><option value="sourceClosed">Documented source case closure</option><option value="reviewDone">Source-pinned internal completion</option></select></label>
 </div>
 
 <fieldset class="selector"><legend>Exact source selector</legend>
@@ -167,7 +167,7 @@
 <section id="report-empty" class="empty">Build a report to open its saved totals and cases.</section>
 <div id="report-content" hidden>
 <section class="card"><div class="section-heading"><div><h3 id="report-title"></h3><p id="report-period" class="muted"></p><p id="report-identity" class="mono"></p></div><div class="actions"><button type="button" data-report-export="html">Download HTML report</button><button type="button" data-report-export="csv">Download case CSV</button><button type="button" data-report-export="json">Complete report package</button><button type="button" data-report-export="review">Reviewer template</button></div></div><div id="report-metrics" class="metrics"></div><p id="report-interpretation" class="help"></p><h4>Management commentary</h4><p id="report-commentary" class="preserve"></p></section>
-<section class="card"><h3>Source coverage and unresolved windows</h3><div id="report-coverage"></div></section>
+<section class="card"><h3>Source coverage and unresolved members</h3><div id="report-coverage"></div></section>
 <section class="card"><h3>Service and status groups</h3><div id="report-groups" class="group-grid"></div></section>
 <section class="card">
 <div class="section-heading"><h3>Case worklist</h3><span id="report-row-count" class="muted"></span></div>

@@ -48,6 +48,7 @@ export function patchWorkbook(body:Buffer,options:{filename:string;format?:'xlsx
 export const TEMPLATE_ROUTE_PREFIX:'/api/research/dossiers/:dossierId/template-exchange';
 export const TEMPLATE_POST_ACTIONS:readonly string[];
 export function createTemplateExchangeDispatcher(input:{templateExchange:TemplateExchange}):(request:{dossierId:string;method:string;action?:string;query?:Record<string,string>;body?:unknown})=>Promise<{kind:'json';body:unknown}|{kind:'file';body:Buffer;filename:string;contentType:string;sha256:string;revision:number}>;
-export function createTemplateExchangeClient(input:{baseUrl:string;dossierId:string;fetch?:typeof fetch;headers?:Record<string,string>}):Record<string,(...args:any[])=>Promise<any>>;
+export {createTemplateExchangeClient} from './client.mjs';
+export type {TemplateExchangeClient,TemplateClientOptions,TemplateDownload,TemplateFileInput,TemplateExchangeTransport,TemplateExchangeBrowserConnection} from './client.mjs';
 
 export function runTemplateExchangeCli(argv:string[],options?:{openStore?:Function;stdout?:{write:(text:string)=>unknown}}):Promise<unknown>;

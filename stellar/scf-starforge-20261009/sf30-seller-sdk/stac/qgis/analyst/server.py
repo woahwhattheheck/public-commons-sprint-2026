@@ -37,6 +37,7 @@ from analyst.binding import inspect_binding, STARTUP_SCHEMA
 
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+          "/parcels.js": ("parcels.js", "text/javascript; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 SECURITY = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
             "Referrer-Policy": "no-referrer",
@@ -44,6 +45,11 @@ SECURITY = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
                 "connect-src 'self'; img-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; "
                 "base-uri 'none'; form-action 'self'"}
 EXTERNAL_ACTIONS = frozenset(("source.inspect", "source.import", "project.export", "project.receive", "field.command"))
+
+
+def external_input(original):
+    return original["action"] in EXTERNAL_ACTIONS or (original["action"] == "parcel.command" and
+        original["payload"].get("action") in ("source.preview", "source.import"))
 
 
 def page(query, allowed=()):
@@ -101,7 +107,7 @@ class Analyst:
         selected_runtime = self.runtime if row["input"]["action"] in NATIVE_ACTIONS or row["input"]["action"] == "field.command" else {}
         native_changed = row["input"]["nativeRuntime"] != selected_runtime
         relocated = row["input"]["workspaceDirectory"] != str(self.workspace.root)
-        needs_location = relocated and row["input"]["action"] in EXTERNAL_ACTIONS
+        needs_location = relocated and external_input(row["input"])
         row.update({"workerActive": busy, "displayStatus":
                     "INTERRUPTED" if row["status"] == "RUNNING" and not busy else row["status"],
                     "currentRevision": self.workspace.read()["revision"],
@@ -120,7 +126,7 @@ class Analyst:
         require(record["input"]["nativeRuntime"] == selected_runtime,
                 "ANALYST_RUNTIME_CHANGED", "Reopen this action with its originally selected native runtime, or review a new action.")
         require(record["input"]["workspaceDirectory"] == str(self.workspace.root) or
-                record["input"]["action"] not in EXTERNAL_ACTIONS,
+                not external_input(record["input"]),
                 "ANALYST_ORIGINAL_HOST_INPUT",
                 "This unfinished action retains a path on its original host. Review a new action with the current original input location.")
         with self.mutex:
@@ -350,7 +356,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json(200, {"state": workspace.read(), "instanceId": self.app.instance_id,
                     "directory": str(workspace.root), "workerActive": active(workspace),
                     "capabilities": {"nativeRuntimeSelected": bool(self.app.runtime),
-                                     "field": (CORE_ROOT / "field.py").is_file()}})
+                                     "field": (CORE_ROOT / "field.py").is_file(),
+                                     "parcels": (CORE_ROOT / "parcels" / "operator.py").is_file()}})
+            if path == "/api/parcels" or path.startswith("/api/parcels/"):
+                from starforge_stac.parcels.operator import read_route
+                value = read_route(workspace, path, query)
+                require(value is not None, "ANALYST_ROUTE_NOT_FOUND", "Choose an original parcel route.")
+                return self.json(200, value)
+            if path.startswith("/download/parcels/"):
+                from starforge_stac.parcels.operator import download_route
+                value = download_route(workspace, path, query)
+                require(value is not None, "ANALYST_ROUTE_NOT_FOUND", "Choose an original parcel file.")
+                return self.download(member(workspace.root, value["record"]["path"]),
+                                     value["record"], value["name"], value["type"])
             if path == "/api/operations":
                 offset, limit = page(query)
                 return self.json(200, self.app.journal.list(offset=offset, limit=limit))

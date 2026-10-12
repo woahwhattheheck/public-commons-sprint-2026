@@ -94,7 +94,7 @@ For January 2024 through September 2026, the actual input yields 75 selected obs
 
 | Complete file | Bytes | SHA256 |
 | --- | ---: | --- |
-| [briefing.html](examples/briefing-20261012/briefing.html) | 94,259 | `4f688eaec0bff842d86a92bcb8274224eb0ee39fc88c728b71d49ac827668a3d` |
+| [briefing.html](examples/briefing-20261012/briefing.html) | 94,259 | `0a70ba3184c1ffed700295f85ae53162a74283cae9c8934983adff91140b98ae` |
 | [briefing-measures.csv](examples/briefing-20261012/briefing-measures.csv) | 37,608 | `2a3b211b515fcfde9ca50141196dce6952c39c3497566eba1f7b990f6541c089` |
 | [briefing.json](examples/briefing-20261012/briefing.json) | 79,423 | `3c2eb6d2f97879500aca97c56acf15773d354b1cf82014bd8f6cea78bdc63302` |
 | [briefing-manifest.json](examples/briefing-20261012/briefing-manifest.json) | 1,178 | `0779e5c139a65f3f1d88a79c5843d9336d9ae7ceb572a9585704d742b3ac62c4` |
@@ -172,3 +172,7 @@ Briefing files are written through private temporary files, synced, linked into 
 ## Attribution
 
 Every report carries the original source metadata and the application's FRED notice and [Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html). Preserve the original publisher attribution and applicable source notices when distributing an edition. A saved report identifies its source capture, review, calculation version and full file manifest.
+
+## Responsive rendering revision
+
+The HTML member now uses FRED_OFFLINE_REPORT_V2. Its filter controls fit phone widths and its labelled comparison region supports keyboard scrolling. The original report JSON, measures CSV, capture, review, calculation and report identity are unchanged. Retained V1 files remain readable and exportable.

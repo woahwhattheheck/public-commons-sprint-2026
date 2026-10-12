@@ -54,12 +54,23 @@ def _private_folder(path, *, create=True):
     while create and not os.path.lexists(current):
         missing.append(current)
         current = current.parent
-    folder = private_directory(Path(path), create=create)
+    # pathlib's parents=True does not apply mode to intermediate directories.
+    # Create each original receiving directory explicitly so a caller's ordinary
+    # umask cannot leave a 0755 parent inside this private payload tree.
+    for created in reversed(missing):
+        try:
+            created.mkdir(mode=0o700)
+        except FileExistsError:
+            pass
+        checked = private_directory(created, create=False)
+        if hasattr(os, "getuid") and checked.lstat().st_uid != os.getuid():
+            _error("PRIVATE_DIRECTORY_REQUIRED")
+        sync_directory(checked)
+        sync_directory(checked.parent)
+    folder = private_directory(Path(path), create=False)
     info = folder.lstat()
     if hasattr(os, "getuid") and info.st_uid != os.getuid():
         _error("PRIVATE_DIRECTORY_REQUIRED")
-    for created in missing:
-        sync_directory(created.parent)
     return folder
 
 
@@ -177,6 +188,7 @@ def _staged_tree(staging, files, *, complete=False):
 
 def _validate_database(staging, manifest):
     from .response_documents import allowed_document_payload, snapshot_document_files
+    from .response_sources import allowed_response_payload, snapshot_response_files
 
     path = staging / "datasets.sqlite3"
     # Immutable inspection neither creates WAL/SHM files nor runs application
@@ -219,6 +231,17 @@ def _validate_database(staging, manifest):
             }
             if received_documents != expected_documents:
                 _error("DOCUMENT_SOURCE_CLOSURE_CHANGED")
+            try:
+                responses = snapshot_response_files(staging, db)
+            except (StateError, OSError):
+                _error("RESPONSE_SOURCE_INVALID")
+            expected_responses = {item["path"]: item for item in responses}
+            received_responses = {
+                item["path"]: {key: item[key] for key in ("path", "bytes", "sha256")}
+                for item in manifest["files"] if allowed_response_payload(item["path"])
+            }
+            if received_responses != expected_responses:
+                _error("RESPONSE_SOURCE_CLOSURE_CHANGED")
         finally:
             db.close()
     except sqlite3.Error:
@@ -306,6 +329,12 @@ def restore_archive(archive, target, *, operation=None, expected_sha256=None):
             dump(record_path, state)
         operation = state["operation_id"]
         if _published(target, state):
+            # Keep later customer revisions, while still requiring each original
+            # immutable source file carried by this completed receiving.
+            from .response_sources import allowed_response_payload
+            for entry in files:
+                if allowed_response_payload(entry["path"]) and not _file_matches(target / entry["path"], entry):
+                    _error("RESPONSE_SOURCE_CLOSURE_CHANGED", operation)
             return _finish(control, target, state, True)
         if state["phase"] == "complete":
             _error("PUBLISHED_DIRECTORY_MISSING", operation)

@@ -1,0 +1,109 @@
+"""MIT. Human Services Directory CLI on the original private workspace."""
+from __future__ import annotations
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+from directory_runtime import InputError,ConflictError,ProviderError,source,original_workspace,safe_read
+from directory_workspace import Workspace
+import directory_schema as schema
+
+HERE=Path(__file__).resolve().parent
+def emit(value):print(source.lexical_json(value),flush=True)
+def input_file(path):
+    if path=="-":return source.json_value(sys.stdin.buffer.read(schema.MAX_RECORD+1))
+    return source.json_value(safe_read(Path(path),schema.MAX_RECORD))
+def copy_output(path,destination):
+    dest=Path(destination).expanduser().absolute()
+    with Path(path).open("rb")as inp,dest.open("xb")as out:
+        dest.chmod(0o600);shutil.copyfileobj(inp,out,65536);out.flush();os.fsync(out.fileno())
+    return {"file":str(dest),"bytes":dest.stat().st_size,"sha256":original_workspace.file_digest(dest,2147483648)}
+
+def main(argv=None):
+    argv=list(sys.argv[1:]if argv is None else argv)
+    if argv and argv[0]=="serve":
+        from directory_server import main as serve
+        return serve(argv[1:])
+    if argv and argv[0]=="native":
+        return subprocess.run([sys.executable,str(HERE.parent/"fhir_referral"/"cli.py"),*argv[1:]],check=False).returncode
+    p=argparse.ArgumentParser(description="Complete original Directory sources, reviewed choices and Gravity receiving")
+    sub=p.add_subparsers(dest="command",required=True)
+    common=argparse.ArgumentParser(add_help=False)
+    common.add_argument("--workspace");common.add_argument("--credentials-file")
+    def command(name):
+        c=sub.add_parser(name,parents=[common]);return c
+    command("init");command("state");command("catalogue");command("guidance")
+    operations={a["id"]:(a["python"],a["input"])for a in source.json_value((HERE/"directory-schema.json").read_bytes())["actions"]}
+    operations.update({"connection-save":("directory_connection","connection"),"request-save":("directory_request","request"),
+        "edition-save":("directory_edition","edition"),"edition-compare":("directory_compare","comparison"),"import-profile-save":("save_directory_import","import")})
+    for name in operations:command(name).add_argument("--input",required=True)
+    for name in ["discover","acquire"]:command(name).add_argument("--input",required=True)
+    for name in ["advance","pause","resume","capture-source"]:
+        command(name).add_argument("--operation",required=True)
+    c=command("source-import");c.add_argument("--file",required=True);c.add_argument("--input");c.add_argument("--import-profile")
+    c=command("records");c.add_argument("--kind",required=True);c.add_argument("--id");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
+    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison"],required=True);c.add_argument("--id",required=True)
+    c.add_argument("--table");c.add_argument("--group",default="findings");c.add_argument("--state");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
+    c=command("row");c.add_argument("--source",required=True);c.add_argument("--record",required=True);c.add_argument("--edition")
+    c=command("links");c.add_argument("--edition",required=True);c.add_argument("--record");c.add_argument("--source");c.add_argument("--link");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50)
+    c=command("file");c.add_argument("--kind",required=True,choices=["source","source-index","edition-index","comparison-index","row","changes","capture","export","guidance","workspace","handoff"])
+    c.add_argument("--id");c.add_argument("--record");c.add_argument("--member");c.add_argument("--out",required=True)
+    for name in ["receive-workspace","receive-handoff"]:command(name).add_argument("--file",required=True)
+    args=p.parse_args(argv)
+    if args.command=="catalogue":emit(schema.catalogue());return 0
+    if args.command=="guidance":emit(schema.guidance());return 0
+    if not args.workspace:p.error("--workspace is required for the original native operation")
+    root=Path(args.workspace).expanduser().absolute()
+    with Workspace(root,create=args.command in {"init","receive-workspace","receive-handoff"}and not root.exists(),credentials_file=args.credentials_file)as ws:
+        name=args.command
+        if name in {"init","state"}:result=ws.state()
+        elif name in operations:result=getattr(ws,operations[name][0])(input_file(args.input))
+        elif name in {"discover","acquire"}:
+            raw=input_file(args.input)
+            import directory_source_schema as native
+            raw=native.typed(name,raw)
+            result=ws.directory_discover(raw["connectionId"],raw["operationId"])if name=="discover"else ws.directory_acquire(raw["requestId"],raw["operationId"])
+        elif name in {"advance","pause","resume","capture-source"}:
+            result=getattr(ws,{"advance":"directory_advance","pause":"directory_pause","resume":"directory_resume","capture-source":"directory_capture_source"}[name])(args.operation)
+        elif name=="source-import":
+            if bool(args.input)==bool(args.import_profile):p.error("Choose exactly one --input profile or saved --import-profile")
+            if args.input:result=ws.directory_import(Path(args.file),input_file(args.input))
+            else:result=ws.import_directory_profile(args.import_profile,Path(args.file))
+        elif name=="records":
+            kind="acquisitions"if args.kind=="operations"else args.kind
+            result=ws.directory_operation(args.id)if kind=="acquisitions"and args.id else ws.directory_record(kind,args.id)if args.id else ws.directory_records(kind,args.offset,args.limit,args.query)
+        elif name=="rows":
+            if args.kind=="source":result=ws.directory_source_rows(args.id,args.offset,args.limit,args.table,args.query)
+            elif args.kind=="edition":result=ws.directory_edition_rows(args.id,args.offset,args.limit,args.table,args.query)
+            elif args.kind=="mapping-preview":result=ws.directory_preview_page(args.id,args.group,args.offset,args.limit)
+            elif args.kind=="selection":result=ws.directory_selection_page(args.id,args.offset,args.limit,args.query)
+            else:result=ws.directory_changes(args.id,args.offset,args.limit,args.state)
+        elif name=="row":result=ws.directory_edition_row(args.edition,args.source,args.record)if args.edition else ws.directory_source_row(args.source,args.record)
+        elif name=="links":
+            if bool(args.source)!=bool(args.link):p.error("A selected link target page requires both --source and --link")
+            result=ws.directory_link_targets(args.edition,args.source,args.link,args.offset,args.limit)if args.link else ws.directory_edition_links(args.edition,args.offset,args.limit,args.record)
+        elif name=="file":
+            if args.kind=="workspace":result=ws.export_workspace(args.out)
+            elif args.kind=="handoff":result=ws.export_directory_handoff(args.id,args.out)
+            else:
+                if args.kind=="source":path,d=ws.directory_source_file(args.id,args.member)
+                elif args.kind.endswith("-index"):
+                    kind={"source-index":"sources","edition-index":"editions","comparison-index":"comparisons"}[args.kind];path,d=ws.directory_index_file(kind,args.id)
+                elif args.kind=="row":path,d=ws.directory_record_file(args.id,args.record)
+                elif args.kind=="changes":path,d=ws.directory_changes_file(args.id)
+                elif args.kind=="capture":path,d=ws.directory_capture_file(args.id)
+                elif args.kind=="guidance":path,d=ws.directory_guidance_file(args.member)
+                else:
+                    record=ws.directory_record("exports",args.id);d=record["file"];path=ws._directory_file_path(d)
+                result={**copy_output(path,args.out),"original":d}
+        elif name in {"receive-workspace","receive-handoff"}:
+            result=ws.import_workspace(args.file)if name=="receive-workspace"else ws.import_directory_handoff(args.file)
+        else:raise InputError("Unknown Directory command")
+        emit(result);return 0
+if __name__=="__main__":
+    try:sys.exit(main())
+    except (InputError,ConflictError,ProviderError,OSError,ValueError)as error:
+        print(json.dumps({"error":str(error),"type":type(error).__name__},ensure_ascii=False),file=sys.stderr,flush=True);sys.exit(2)

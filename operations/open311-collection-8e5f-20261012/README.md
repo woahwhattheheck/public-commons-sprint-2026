@@ -2,31 +2,35 @@
 
 This operation runs the complete municipal collection and reporting journey on an existing Linux machine. One foreground receiver keeps the original source feed, both product stages, and delivery retrieval in the same process lifetime. It writes a new private output directory containing the complete archive, the execution result, and the operation log.
 
-Operation ID: `OPEN311-COLLECTION-REPORTING-8E5F-20261012-01`.
-
-Coordinate execution in the original [Open311 source thread](https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791812298043459). The accepting operator records its machine, operation ID, and actual start there. Source preparation and review can proceed alongside the accepted execution.
-
 ## Complete inputs
 
 | File | Purpose | Original Git blob |
 | --- | --- | --- |
-| `source-packet.json` | Complete collection product, browser assets, shared retained-file helpers, journey, connection profile, and real Helsinki source bodies | `b89dae77ad37c80bdb9fd1ce8e1e538694cf7ef8` |
-| `run_native.py` | Source materializer, collection/reporting process, retained-operation protocol, and archive producer | `a00d7fb1b8cb680336bcd414c1586c45e00dc7bd` |
-| `receive_native.py` | Ordinary file-to-stdin receiver and complete archive downloader | `0048886ebe9c7d5ecff55f2857cc196fe7a59b9a` |
-| An explicit reporting operation JSON | Complete reporting source files and the retained reporting journey for this same collection | Supplied with the reporting edition |
+| `source-packet.json` | Complete collection product, browser assets, shared retained-file helpers, journey, connection profile, and real Helsinki source bodies | `8e731340359628b63e870b7164f5be65109ef4c2` |
+| `run_native.py` | Source materializer, collection/reporting process, retained-operation protocol, and archive producer | `23cd38c71b5c8e845c3b31fd1c4b1661661ef2c4` |
+| `receive_native.py` | Ordinary file receiver, local complete archive download, and optional prepared upload | `430c1691eb3c08b9c7114321f1c951af82857092` |
+| `launch_native.py` | Receive exact public source files or a supplied compact input and start the existing receiver in one foreground command | `b305c2f51e9820cca26bf323b6db9150da60ca8a` |
+| `../open311-service-reporting-8e5f-20261012/reporting-operation.json` | Complete reporting source files and retained reporting journey for this same collection | `500e844a86063c5a0bacc5a1238a4f29aa113465` |
+| `../open311-service-reporting-8e5f-20261012/run-reporting.mjs` | Standalone source of the same reporting journey embedded in the operation | `39c1aa7b850340057e22a8d0918cd79244261c4c` |
 
 The collection source packet binds the product edition `e77d54da79135a2fe6870ba657ca3a2a9cb429fb`, published in collection PR2330 and merged at `e2a6d9711b732c84565b3b2811d815435c342a7c`. Its executable core edition is `fdfd46eba5c4d20b08dee7d3540725aab3542b2321fcca23753b5ace92aa110a`. Every materialized source file carries its original Git blob identity. The eleven additional SHA256 fields were independently checked against the actual UTF-8 source bytes.
 
-The current source packet includes the exact restored original bytes for the Helsinki commissioning profile, host file reader, retained file reader, and Open311 domain module. Those restorations match the declared original Git blobs. Use the current complete packet when creating a new intake file.
+The complete native inputs have these byte identities. Hashes cover the actual UTF-8 file bytes, including the selected file's final newline convention.
 
-The portable bootstrap's complete UTF-8 SHA256 is `2502a8d4ad31caf449ff4323a536f3f011ce759a3824f3e8488ce3e9bae7c08a`.
+| Input | Bytes | SHA256 |
+| --- | ---: | --- |
+| Collection packet | 667,687 | `e44e50a25d521ba1cbaa9da9113b5da54962e6fd446b493204dfe0163517df73` |
+| Reporting packet | 307,583 | `51735d92d21270d2b475f332a5c7eff16edc0c7711cb3e9e0a425869930d61a9` |
+| Portable bootstrap | 18,216 | `58b994e15464cdad99cdbc1ffa35d79f3676e5592fc2d4f0f86a9357536c12e2` |
+
+The commissioning adapters preserve optional provider coverage only when that field is present. Saved catalogue receipts retain their original fields without introducing an undefined JSON value. The collection and reporting product source files keep the same selected editions.
 
 The reporting operation has this structure:
 
 ```json
 {
   "op": "reporting",
-  "requestId": "the retained operation UUID",
+  "requestId": "reporting-8e5f-20261012-02",
   "files": [
     {
       "path": "repository-relative/source.mjs",
@@ -45,9 +49,11 @@ Use the full reporting operation delivered with the selected source edition. Its
 
 Select existing Python 3, Node 24 or later, the installed Playwright module directory, and its working Chromium executable. The operation creates no package installation or cloud machine. The chosen filesystem must have room for the source tree, SQLite workspaces, original municipal responses, screenshots, exported customer files, and the complete archive.
 
-Supply actual absolute paths. The module directory must contain `playwright/index.js`; the browser path points to the executable itself. On an equipped ChatGPT runtime, the runtime-owned Node and module locations may already be exposed by `CODEX_PRIMARY_RUNTIME_NODE` and `CODEX_PRIMARY_RUNTIME_NODE_MODULES`. An ordinary Linux host uses its existing installation.
+Supply actual absolute paths from the selected existing installation. The module directory must contain `playwright/index.js`; the browser path points to the executable itself.
 
 Choose a new private output directory under a durable writable parent. The receiver creates this directory with mode 0700. An existing destination causes an error before it starts the bootstrap.
+
+A tmpfs directory consumes the host's memory budget as well as its reported filesystem capacity. Select a private disk-backed destination for a substantial operating run when shared memory is constrained. Keep source materialization, both product stages, archive receipt, and external delivery inside the same foreground lifetime when the execution environment gives each invocation a private mount. The complete saved ZIP must reach its selected durable destination before that lifetime closes.
 
 ## Run the complete operation
 
@@ -57,14 +63,14 @@ The following path names are examples to replace with the actual existing machin
 python3 /absolute/checkout/operations/open311-collection-8e5f-20261012/receive_native.py \
   --bootstrap /absolute/checkout/operations/open311-collection-8e5f-20261012/run_native.py \
   --source-packet /absolute/checkout/operations/open311-collection-8e5f-20261012/source-packet.json \
-  --reporting-packet /absolute/intake/reporting-operation.json \
+  --reporting-packet /absolute/checkout/operations/open311-service-reporting-8e5f-20261012/reporting-operation.json \
   --output-directory /absolute/private/open311-collection-reporting-20261012-01 \
   --node /absolute/existing/node \
   --node-modules /absolute/existing/node_modules \
   --chromium /absolute/existing/chrome-headless-shell
 ```
 
-The receiver verifies the complete source and bootstrap files against the pinned Git blobs before execution. Pass `--reporting-git-blob FULL_SHA` when the reporting packet is also supplied as an exact Git blob. Explicit `--source-git-blob` and `--bootstrap-git-blob` arguments select a later reviewed edition; preserve the selected packet alongside the output.
+The receiver verifies the complete source, bootstrap, and reporting files against the three pinned Git blobs before execution. Explicit `--source-git-blob`, `--bootstrap-git-blob`, and `--reporting-git-blob` arguments select a separately supplied edition; use the complete 40-character blob for each changed input and preserve those selected packets alongside the output. A reporting request ID identifies the exact runner and source payload, so a changed reporting payload uses its own request ID.
 
 The bootstrap receives all original source in one stdin message. It verifies and materializes files in a fresh tree, checks the module syntax with the selected Node executable, and runs the complete collection journey. It then accepts the supplied reporting operation without ending the process. The receiver reads the complete resulting archive in ordered chunks, verifies its total bytes and SHA256, saves it, and closes the bootstrap.
 
@@ -76,7 +82,47 @@ The foreground receiver prints these progress records:
 - `OPEN311_LOCAL_ARCHIVE_SAVED`: complete archive path, byte count, and SHA256.
 - `OPEN311_LOCAL_RESULT`: final receiver state and the path of the detailed result.
 
-A successful receiver exits 0 only after both product stages report successful completion, the entire archive matches its original manifest, and the bootstrap exits cleanly. Native failures retain the results and files available at that point for the source owner to inspect.
+A successful receiver exits 0 only after the selected native stage and any supplied second reporting stage report successful completion, the entire archive matches its original manifest, and the bootstrap exits cleanly. Native failures retain the results and files available at that point for the source owner to inspect.
+
+## Receive the source and run in one foreground command
+
+The existing cloud machine can receive the pinned public source files directly, run the entire operation through local pipes, and save its complete archive before external delivery. Use `launch_native.py` when a coordinator needs to avoid transferring full source packets or archive chunks through its interactive terminal connection.
+
+Select an immutable commit containing the pinned launcher and receiver in this guide. The launcher receives the unchanged bootstrap, complete source packet and optional reporting operation from that exact public repository commit. Each source file must match its expected Git blob before execution. It retains the original received bytes and their request receipts under a new private intake directory.
+
+```sh
+python3 /absolute/checkout/operations/open311-collection-8e5f-20261012/launch_native.py \
+  --repository woahwhattheheck/public-commons-sprint-2026 \
+  --ref FULL_SELECTED_COMMIT \
+  --reporting-path operations/open311-service-reporting-8e5f-20261012/reporting-operation.json \
+  --output-directory /absolute/private/open311-source-and-delivery-20261012-01 \
+  --node /absolute/existing/node \
+  --node-modules /absolute/existing/node_modules \
+  --chromium /absolute/existing/chrome-headless-shell \
+  --wait-for-upload
+```
+
+The output directory is created once. Its `intake/` directory contains the original input, complete effective input, selected receiver and bootstrap, and `source-receiving.json` with every selected source identity and public GET receipt. The native product and completed archive are written under `result/`. A receiving failure writes `source-receiving-failed.json` and preserves the source that was received.
+
+When the complete ZIP has been saved and its bytes and SHA256 match, the receiver emits `OPEN311_LOCAL_UPLOAD_READY`. That record includes its private path, original filename, exact byte count and SHA256. Prepare the existing authorized Slack upload from this descriptor and send the same upload JSON described below to the live receiver. It forwards that command to the retained original bootstrap and returns `OPEN311_LOCAL_UPLOAD_RESULT`. Finalize the same provider file ID into the selected conversation, then send `{"op":"finish"}`. The complete ZIP is already stored on the cloud filesystem before any upload request.
+
+Omit `--wait-for-upload` when the selected operator only needs the completed local archive. It then follows the ordinary receiver's automatic finish behavior. The existing file receiver also accepts `--wait-for-upload` directly when all input files are already present.
+
+### Compact source input for another original operation
+
+Use `--source-file /absolute/private/original-input.json --source-git-blob FULL_INPUT_BLOB` for an existing full or compact input. This verifies its original complete bytes before hydration. A compact packet keeps its original schema and job fields:
+
+- `commons.open311.native-collection-job.v1` for the original collection operation, or `commons.open311.boston-native-input.v1` for the Boston operation.
+- `sourceRepository` and `sourceRef` select the original public source commit. The launcher repository and commit are the defaults.
+- Each `files` entry contains its original repository-relative `path` and complete `gitBlob`. Entries with complete `content` keep those exact bytes. Entries without it are received from the selected public source and verified before their content is added.
+- The original `runner` remains its full source string or selects `{path,gitBlob}` from that same public source. Optional original `bytes` and `sha256` values are verified too.
+- An individual source reference may explicitly select `repository` and `ref` when the operation's original dependency lives at another declared public commit.
+
+The launcher retains the compact original and the complete effective packet separately. It computes the effective packet's Git blob, byte count and SHA256 after hydration and passes that exact identity to the receiver. The product files, original municipal bodies, source observations and runner remain the selected originals.
+
+For a job whose initial runner already includes reporting, omit `--reporting-path` and `--reporting-file`. An independent second reporting stage can instead be supplied with its original path or local file and `--reporting-git-blob`. The selected archive filename follows the job's `archiveFilename` field.
+
+An existing caller that already holds the compact input may use `--source-deflate-base64` instead of a file. It supplies one complete raw-DEFLATE stream as Base64, together with the original decoded Git blob. Python's standard zlib decoder restores the input, and the full decoded identity must match before hydration or execution. Keep private input in the existing private operation channel or local file; public product source is received independently by its immutable paths.
 
 ## Real source and the collection journey
 
@@ -116,13 +162,11 @@ The receiver creates these top-level files inside the selected output directory:
 
 The working tree created below that output directory preserves the materialized product source and private workspaces. An interrupted archive transfer preserves `helsinki-collection-reporting.zip.partial`. The completed archive is created only after every chunk, total length, and SHA256 matches the bootstrap's manifest.
 
-Deliver the complete ZIP and receiver result to the original source/SCF thread or its established private artifact surface, with the exact operation ID and source edition. Include the generated collection and reporting exports so the receiving operator can open the useful work directly. Keep the editable workspace bundles with their reports for continued use.
+Share the complete ZIP and receiver result through the project's selected delivery destination, identifying the exact source edition. Include the generated collection and reporting exports so the receiving operator can open the useful work directly. Keep the editable workspace bundles with their reports for continued use.
 
-## A held tool runtime
+## Direct stdin protocol
 
-The same `run_native.py` also supports the original held-process protocol. When a tool runtime keeps process handles scoped to an orchestration lifetime, execute the start, source feed, reporting feed, result reads, and complete archive retrieval inside one live orchestration. Yield progress while that orchestration remains alive.
-
-The portable foreground receiver above performs those steps inside one ordinary Python process. A cloud runtime may instead retain its process handle inside one live tool isolate and drive the same protocol directly. In both cases the existing bootstrap remains alive until its complete archive has been preserved.
+An existing foreground process can also drive `run_native.py` directly. Keep its stdin and stdout streams open through source intake, both product stages, and complete archive retrieval. The supplied `receive_native.py` implements this whole exchange and saves the final ZIP.
 
 The direct protocol uses newline-delimited JSON on stdin. After `OPEN311_NATIVE_READY`, send the complete source packet. After `OPEN311_NATIVE_RESULT`, send the retained reporting operation. After `OPEN311_REPORTING_RESULT`, request archive chunks:
 
@@ -136,4 +180,40 @@ Use each returned `nextOffset` exactly. The final value is null. Verify all chun
 {"op":"finish"}
 ```
 
-A native operation that has already accepted its source remains the execution owner through artifact retrieval. If that process ends, preserve its recorded result and source/output identity before another operator accepts the next concrete run.
+Keep the current bootstrap alive until its complete archive has been preserved. If the process ends, retain the original output directory and saved results. A later execution uses a new output directory and the exact selected input files.
+
+## Complete archive upload from the live process
+
+An operator can preserve the entire generated archive directly through an already authorized Slack file upload while the bootstrap remains alive. The normal file receiver above downloads the archive to its private output directory. The direct upload command is available to an existing driver of the same stdin protocol when it has prepared a Slack upload for the selected delivery conversation.
+
+For the direct bootstrap, prepare the upload after `OPEN311_REPORTING_RESULT`. For `receive_native.py --wait-for-upload` or `launch_native.py --wait-for-upload`, use `OPEN311_LOCAL_UPLOAD_READY`, which confirms the whole ZIP has already been saved and verified locally. Both descriptors supply the actual archive filename, byte count, and SHA256.
+
+The Slack upload preparation may return structured `file_id` and `upload_url` properties, or a `result` string containing exact `File ID:` and `Upload URL:` lines. Decode the connector's outer JSON before extracting those values. Preserve the complete signed URL byte-for-byte and keep it out of console output:
+
+```js
+const description = typeof prepared.result === 'string' ? prepared.result : '';
+const fileId = prepared.file_id ?? description.match(/^File ID:\s*(\S+)/m)?.[1];
+const uploadUrl = prepared.upload_url ?? description.match(/^Upload URL:\s*(\S+)/m)?.[1];
+if (!fileId || !uploadUrl) throw new Error('Upload preparation is incomplete');
+```
+
+Retain the same file ID, complete signed upload URL, and current archive selection privately, then send:
+
+```json
+{
+  "op": "upload",
+  "uploadId": "the returned file ID",
+  "uploadUrl": "the exact prepared HTTPS upload URL",
+  "method": "POST",
+  "bytes": 123456,
+  "archiveSha256": "the exact current complete archive SHA256"
+}
+```
+
+Replace the example byte count with the archive descriptor's actual integer. The bootstrap verifies both the length and SHA256, posts the whole ZIP as raw `application/zip` bytes with its exact content length, and returns `OPEN311_NATIVE_UPLOADED`. It uses the prepared HTTPS target directly and does not follow redirects. The upload intent and result are saved privately below `archive-uploads/`, outside the delivery ZIP.
+
+`OPEN311_NATIVE_UPLOADED` carries a flat JSON record. The ordinary receiver forwards that identical record as `OPEN311_LOCAL_UPLOAD_RESULT`; it adds no `result` or `record` wrapper. Its fields include `replayed`, `uploadId`, `payloadHash`, `state`, `archive: {filename, bytes, sha256}`, `startedAt`, `status`, `uncertain`, `providerResponse`, and `completedAt`.
+
+An `UPLOADED` state records the provider's successful HTTP response. Require that state, the same prepared `uploadId`, and the selected archive's exact bytes and SHA256 before finalization. Finalize that same file ID into the selected delivery conversation using the existing Slack upload flow, then preserve the final file link and upload receipt. Keep the native foreground alive through this exchange and send `finish` after the delivery is complete. `REJECTED` records an explicit HTTP rejection; `UNCERTAIN` records a transport result that requires reconciliation with that existing upload. Repeating an identical command in the live process returns its retained result. The same upload ID cannot be reused for a changed URL or archive, and an uncertain upload is not automatically posted again.
+
+A source packet may also select `archiveFilename` for a different complete operation. It must be a plain `.zip` basename, beginning with a letter or digit and containing only letters, digits, dots, underscores, or hyphens, with at most 181 characters before `.zip`. Omitting the field preserves `helsinki-collection-reporting-workspace-8e5f-20261012.zip`. The ordinary local receiver uses that selected filename for its verified local download. With no explicit packet filename it keeps `helsinki-collection-reporting.zip` in the selected private output directory.

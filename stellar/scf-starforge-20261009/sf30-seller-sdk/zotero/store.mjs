@@ -17,7 +17,7 @@ export async function openZoteroStore(directory,{receiving=false}={}) {
   const marker=await readJson(join(directory,'receiving.json')).catch(e=>e.code==='ENOENT'?null:Promise.reject(e));
   need(!marker||marker.status==='COMPLETE'||receiving,'ZOTERO_RECEIVING_INCOMPLETE');
   await privateDirectory(join(directory,'objects'));
-  let lease,db,closed=false;
+  let lease,db,closing=false,closed=false,checkpointed=false,databaseClosed=false,leaseReleased=false;
   const secureFile=async path=>{
     const fd=await open(path,FS.O_RDWR|FS.O_CREAT|FS.O_NOFOLLOW,0o600);await fd.close();
     const st=await lstat(path);need(st.isFile()&&!st.isSymbolicLink()&&
@@ -44,7 +44,7 @@ export async function openZoteroStore(directory,{receiving=false}={}) {
     need(identity.schema===format,'ZOTERO_STORE_SCHEMA_INVALID');
     for(const name of ['workspace.sqlite','workspace.sqlite-wal','workspace.sqlite-shm','writer.sqlite'])
       await chmod(join(directory,name),0o600).catch(e=>{if(e.code!=='ENOENT')throw e;});
-    const live=()=>need(!closed,'ZOTERO_WORKSPACE_CLOSED');
+    const live=()=>need(!closing,'ZOTERO_WORKSPACE_CLOSED');
     const decode=row=>{
       if(!row)return null;
       const payload=parse(Buffer.from(row.payload));need(sha256(json(payload))===row.sha256,'ZOTERO_RECORD_HASH_MISMATCH');
@@ -127,12 +127,17 @@ export async function openZoteroStore(directory,{receiving=false}={}) {
       });
     }
     function close() {
-      if(closed)return;closed=true;const errors=[];
-      try{db.exec('PRAGMA wal_checkpoint(TRUNCATE)');}catch(e){errors.push(e);}
-      try{db.close();}catch(e){errors.push(e);}
-      try{lease.exec('ROLLBACK');}catch(e){errors.push(e);}
-      try{lease.close();}catch(e){errors.push(e);}
-      if(errors.length)throw new AggregateError(errors,'ZOTERO_CLOSE_FAILED');
+      if(closed)return;closing=true;
+      try{
+        if(!databaseClosed){
+          if(!checkpointed){db.exec('PRAGMA wal_checkpoint(TRUNCATE)');checkpointed=true;}
+          db.close();databaseClosed=true;
+        }
+        // Keep the original writer until the database has actually closed.
+        // A retry continues at the first unfinished native resource.
+        if(!leaseReleased){lease.exec('ROLLBACK');leaseReleased=true;}
+        lease.close();closed=true;
+      }catch(error){throw new AggregateError([error],'ZOTERO_CLOSE_FAILED');}
     }
     return {directory,get identity(){return clone(identity);},get,list,history,put,transaction,action,putObject,objectBytes,snapshot,adopt,close};
   }catch(error){try{db?.close();}catch{}try{lease?.close();}catch{}throw error;}
