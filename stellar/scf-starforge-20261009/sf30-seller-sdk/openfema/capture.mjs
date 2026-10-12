@@ -141,7 +141,7 @@ function declarationFilters(scope) {
   return scope.disasterNumbers.length?split(scope.disasterNumbers).map(ids=>[grouped(ids,'disasterNumber'),...rest].join(' and ')):[rest.join(' and ')];
 }
 function linkedFilters(numbers) {return split(numbers).map(ids=>grouped(ids,'disasterNumber'));}
-function pageUrl(kind,filter,skip,pageSize) {const d=DATASETS[kind];return query(d.entity,d.version,{'$filter':filter,'$orderby':d.orderBy,'$top':pageSize,'$skip':skip,'$count':skip===0?'true':'false'});}
+function pageUrl(kind,filter,skip,pageSize,{includeCount=skip===0}={}) {const d=DATASETS[kind];return query(d.entity,d.version,{'$filter':filter,'$orderby':d.orderBy,'$top':pageSize,'$skip':skip,'$count':includeCount?'true':'false'});}
 function freshDataset(kind,generation=0) {
   const d=DATASETS[kind];return {entity:d.entity,version:d.version,orderBy:d.orderBy,generation,state:'PENDING',
     metadataReceipt:null,metadataEndReceipt:null,fieldsReceipt:null,metadataSnapshot:null,
@@ -586,7 +586,10 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
           const batch={filter,sourceCount:null,rowCount:0,skip:0,lastKey:null,pages:[],complete:false};
           while(!batch.complete) {
             const item=incoming.pages[pageIndex++];if(!item)throw fault('OPENFEMA_IMPORT_INCOMPLETE','An imported source page is missing.');
-            const url=pageUrl(kind,filter,batch.skip,b.scope.pageSize),retained=await retainExternal(b.id,kind,item,url,0,kind+'/page/'+(pageIndex-1)),
+            // Recorded clients may request a fresh count on later pages. Both URLs bind
+            // the same exact cohort/order/limit/skip; boundPageMetadata verifies every count.
+            const countedUrl=pageUrl(kind,filter,batch.skip,b.scope.pageSize,{includeCount:true});
+            const url=item.url===countedUrl?countedUrl:pageUrl(kind,filter,batch.skip,b.scope.pageSize),retained=await retainExternal(b.id,kind,item,url,0,kind+'/page/'+(pageIndex-1)),
               records=entityRows(retained.body,dataset.entity),
               count=boundPageMetadata(retained.body,{skip:batch.skip,pageSize:b.scope.pageSize,firstCount:batch.sourceCount});
             if(records.length>b.scope.pageSize||batch.skip+records.length>count||(!records.length&&batch.skip<count))
