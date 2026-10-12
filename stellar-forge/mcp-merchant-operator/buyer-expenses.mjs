@@ -2,7 +2,7 @@
 import { constants } from 'node:fs';
 import { open, readFile, lstat, mkdir, realpath, readdir, rename, unlink, link, rm } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
-import { dirname, join, resolve, isAbsolute } from 'node:path';
+import { basename, dirname, join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { exact, failure, identifier, privateSupportDirectory, writePrivate } from './host-files.mjs';
@@ -58,7 +58,7 @@ export async function readBuyerExpenseConfiguration(path) {
   if(!Object.keys(raw.workspaces).length)throw fail('CONFIGURATION','Declare at least one original expense workspace.');
   const workspaces={};
   for(const [name,value] of Object.entries(raw.workspaces)) {
-    identifier(name);exact(value,['directory','python','ledgers','quoteSources','governedQuoteSources','refundSources','adjustmentSources','accountantSources'],['directory']);
+    identifier(name);exact(value,['directory','python','ledgers','quoteSources','governedQuoteSources','refundSources','adjustmentSources','accountantSources','nodeSources'],['directory']);
     const directory=hostPath(value.directory,dirname(path));
     const python=value.python ?? 'python3';
     if(typeof python!=='string'||python.includes('\0')||(python!=='python3'&&!isAbsolute(python)))throw fail('CONFIGURATION','Select python3 or a host-declared absolute Python interpreter path.');
@@ -109,6 +109,17 @@ export async function readBuyerExpenseConfiguration(path) {
         throw fail('CONFIGURATION','Declare the exact accountant return file, SHA-256, name and source provenance.');
       bindings.accountantSources[key]={...source,sourceFile:hostPath(source.sourceFile,dirname(path))};
     }
+    const nodeSources=value.nodeSources??{};exact(nodeSources,Object.keys(nodeSources));bindings.nodeSources={};
+    for(const [key,source] of Object.entries(nodeSources)){
+      identifier(key);exact(source,['sourceFile','sourceSha256','name','provenance','dataContext'],
+        ['sourceFile','sourceSha256','name','provenance','dataContext']);
+      if(typeof source.name!=='string'||!source.name.trim()||source.name.length>160||
+        typeof source.provenance!=='string'||!source.provenance.trim()||source.provenance.length>6000||
+        typeof source.sourceSha256!=='string'||!new RegExp(sha.pattern).test(source.sourceSha256)||
+        !['operational','development'].includes(source.dataContext))
+        throw fail('CONFIGURATION','Declare the exact original Node accounting export, source name and provenance.');
+      bindings.nodeSources[key]={...source,sourceFile:hostPath(source.sourceFile,dirname(path))};
+    }
     workspaces[name]={directory,python,...bindings};
   }
   if(new Set(Object.values(workspaces).map(v=>v.directory)).size!==Object.keys(workspaces).length)throw fail('CONFIGURATION','Use one alias for each original expense directory.');
@@ -133,7 +144,7 @@ function compactReport(value,view='summary',offset=0,limit=50) {
 export function parseBuyerExpenseExport(bytes,exportId) {
   const v=parse(bytes);
   if(v.schema!==BUYER_EXPENSE_EXPORT_SCHEMA||v.exportId!==exportId||!Array.isArray(v.files)||v.files.length!==1||
-     typeof v.workspaceId!=='string'||!Number.isSafeInteger(v.revision)||!['project','accountant','capture','issued-json','issued-html','refund-packet','buyer-accountant-source','bookkeeping','accountant-return'].includes(v.kind))
+     typeof v.workspaceId!=='string'||!Number.isSafeInteger(v.revision)||!['project','accountant','capture','issued-json','issued-html','refund-packet','buyer-accountant-source','bookkeeping','accountant-return','node-operation'].includes(v.kind))
     throw fail('MANIFEST','Use a complete original buyer expense export manifest.');
   const f=v.files[0];
   if(!['buyer-expense-project.zip','accountant-edition.zip','original-capture.json','issued-edition.json','issued-edition.html','original-refund-packet.zip','issued-buyer-accountant-source.json','buyer-bookkeeping-period.zip','original-accountant-return.json'].includes(f.name)||
@@ -223,6 +234,15 @@ export class MerchantBuyerExpenses {
     }
     if(!declared)throw fail('SOURCE_NOT_DECLARED','The host must declare this registered original source under its matching source type before a new capture.');
   }
+  async #nodeSource(selection,alias,operator){
+    const source=selection.nodeSources?.[identifier(alias)];
+    if(!source)throw fail('NODE_SOURCE_NOT_DECLARED','Select an original Node accounting export declared by this host.');
+    const bytes=await privateBytes(source.sourceFile,16_777_216);
+    if(hash(bytes)!==source.sourceSha256)throw fail('NODE_SOURCE_CHANGED','The original export differs from the host-declared SHA-256.');
+    return {content_base64:bytes.toString('base64'),source_sha256:source.sourceSha256,
+      filename:basename(source.sourceFile),name:source.name,provenance:source.provenance,
+      data_context:source.dataContext,operator};
+  }
   async #accountantSource(selection,alias){
     const source=selection.accountantSources?.[identifier(alias)];
     if(!source)throw fail('ACCOUNTANT_SOURCE_NOT_DECLARED','Select an original accountant-return alias declared by this host.');
@@ -266,6 +286,7 @@ export class MerchantBuyerExpenses {
         const routes={project:['/api/complete-project?expected_revision='+args.expectedRevision,'buyer-expense-project.zip','application/zip'],
           accountant:['/api/closes/'+recordPath+'/packet','accountant-edition.zip','application/zip'],
           capture:['/api/captures/'+recordPath+'/original','original-capture.json','application/json'],
+          'node-operation':['/api/captures/'+recordPath+'/node-original','original-node-accounting-export.json','application/json'],
           'refund-packet':['/api/refund-packets/'+recordPath+'/original','original-refund-packet.zip','application/zip'],
           'buyer-accountant-source':['/api/closes/'+recordPath+'/accountant-source','issued-buyer-accountant-source.json','application/json'],
           bookkeeping:['/api/closes/'+recordPath+'/bookkeeping-packet?expected_revision='+args.expectedRevision,'buyer-bookkeeping-period.zip','application/zip'],
@@ -297,7 +318,7 @@ export class MerchantBuyerExpenses {
   }
   async #execute(name,args) {
     const action=name.slice(PREFIX.length);
-    if(action==='workspaces')return {...this.summary,workspaces:Object.entries(this.#config?.workspaces ?? {}).map(([workspace,s])=>({workspace,ledgers:Object.entries(s.ledgers ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),quoteSources:Object.entries(s.quoteSources ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),governedQuoteSources:Object.entries(s.governedQuoteSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext})),refundSources:Object.entries(s.refundSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,siteUrl:v.siteUrl,manifestSha256:v.manifestSha256})),adjustmentSources:Object.entries(s.adjustmentSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,sourceSha256:v.sourceSha256,eventId:v.eventId,expectedJob:v.expectedJob??null})),accountantSources:Object.entries(s.accountantSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,sourceSha256:v.sourceSha256})),open:this.#sessions.has(workspace)}))};
+    if(action==='workspaces')return {...this.summary,workspaces:Object.entries(this.#config?.workspaces ?? {}).map(([workspace,s])=>({workspace,ledgers:Object.entries(s.ledgers ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),quoteSources:Object.entries(s.quoteSources ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),governedQuoteSources:Object.entries(s.governedQuoteSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext})),refundSources:Object.entries(s.refundSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,siteUrl:v.siteUrl,manifestSha256:v.manifestSha256})),adjustmentSources:Object.entries(s.adjustmentSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,sourceSha256:v.sourceSha256,eventId:v.eventId,expectedJob:v.expectedJob??null})),nodeSources:Object.entries(s.nodeSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,sourceSha256:v.sourceSha256})),accountantSources:Object.entries(s.accountantSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,sourceSha256:v.sourceSha256})),open:this.#sessions.has(workspace)}))};
     if(action==='exports'){const root=await this.#rootReady(),names=(await readdir(root)).filter(v=>/^[a-z0-9][a-z0-9_-]{0,63}$/.test(v)).sort();const selected=page(names,args.offset,args.limit);return {...selected,items:await Promise.all(selected.items.map(id=>this.#exportStatus(id)))};}
     if(action==='export_status')return this.#exportStatus(args.exportId);
     if(action==='manifest'){const s=await this.#exportStatus(args.exportId);if(s.state!=='COMPLETE')throw fail('EXPORT_PENDING','Resume the retained original export request.');return {exportId:args.exportId,state:'MANIFEST_RETAINED',manifestFile:s.manifestFile};}
@@ -322,6 +343,10 @@ export class MerchantBuyerExpenses {
         if(!source)throw fail('REFUND_SOURCE_NOT_DECLARED','Select the exact host-declared original customer refund packet.');
         return this.#mutate(s,args,'/api/refund-packets',{name:source.name,provenance:source.provenance,data_context:source.dataContext,
           directory:source.directory,manifest_sha256:source.manifestSha256,site_url:source.siteUrl});}
+      case 'node_preview':return parse(await this.#bytes(s,'/api/node-operations/preview',
+        {payload:await this.#nodeSource(selection,args.nodeSource,args.operator)}));
+      case 'node_capture':return this.#mutate(s,args,'/api/node-operations',
+        {...await this.#nodeSource(selection,args.nodeSource,args.operator),preview_sha256:args.previewSha256});
       case 'adjustment_capture':{const source=selection.adjustmentSources?.[identifier(args.adjustmentSource)];
         if(!source)throw fail('ADJUSTMENT_SOURCE_NOT_DECLARED','Select the exact host-declared original merchant adjustment export.');
         return this.#mutate(s,args,'/api/adjustment-packets',{name:source.name,provenance:source.provenance,data_context:source.dataContext,
