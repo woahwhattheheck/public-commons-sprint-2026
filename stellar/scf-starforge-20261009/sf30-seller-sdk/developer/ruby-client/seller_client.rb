@@ -20,7 +20,24 @@ module Starforge
   ORIGINAL_FILES = %w[seller-client.mjs seller-client.d.mts seller-openapi.json package.json README.md].freeze
   LEGACY_RUBY_FILES = %w[seller_client.rb seller_client.rbs seller-client-bridge.mjs seller-buyer-bridge.mjs seller-contract.json rails_receiving.rb customer.rb RUBY.md].freeze
   LEGACY_DATASET_RUBY_FILES = %w[seller_client.rb seller_client.rbs seller-client-bridge.mjs seller-buyer-bridge.mjs seller-contract.json rails_receiving.rb customer.rb RUBY.md seller-dataset-bridge.mjs dataset_delivery.rb dataset_receiving.rb dataset_customer.rb rails_dataset.rb DATASETS.md examples/dataset_lifecycle.rb examples/rails_dataset/create_dataset_import_tables.rb examples/rails_dataset/models.rb examples/rails_dataset/import_dataset_job.rb examples/rails_dataset/commission.rb examples/rails_dataset/mapping.json examples/rails_dataset/README.md].freeze
-  RUBY_FILES = (LEGACY_DATASET_RUBY_FILES + %w[native_dataset.rb native_dataset_receiving.rb native_dataset_customer.rb NATIVE_DATASETS.md examples/native_dataset_lifecycle.rb]).freeze
+  LEGACY_COMPLETE_RUBY_FILES = (LEGACY_DATASET_RUBY_FILES + %w[native_dataset.rb native_dataset_receiving.rb native_dataset_customer.rb NATIVE_DATASETS.md examples/native_dataset_lifecycle.rb]).freeze
+  DATASET_OPERATOR_RUBY_FILES = %w[
+    examples/rails_dataset/operator/workspace.rb
+    examples/rails_dataset/operator/jobs.rb
+    examples/rails_dataset/operator/controller.rb
+    examples/rails_dataset/operator/commission.rb
+    examples/rails_dataset/operator/README.md
+    examples/rails_dataset/operator/install.rb
+    examples/rails_dataset/operator/operator.css
+    examples/rails_dataset/operator/views/layouts/starforge_dataset_operator.html.erb
+    examples/rails_dataset/operator/views/starforge_dataset_operator/index.html.erb
+    examples/rails_dataset/operator/views/starforge_dataset_operator/show.html.erb
+    examples/rails_dataset/operator/views/starforge_dataset_operator/changes.html.erb
+    examples/rails_dataset/operator/views/starforge_dataset_operator/history.html.erb
+    examples/rails_dataset/operator/views/starforge_dataset_operator/attachments.html.erb
+    examples/rails_dataset/operator/views/starforge_dataset_operator/error.html.erb
+  ].freeze
+  RUBY_FILES = (LEGACY_COMPLETE_RUBY_FILES + DATASET_OPERATOR_RUBY_FILES).freeze
 
   class Error < StandardError
     attr_reader :code, :call_id, :intent_id
@@ -334,7 +351,7 @@ module Starforge
       base = Files.parse(base_bytes)
       Files.need(Files.hash(base_bytes) == @manifest["originalManifestSha256"] &&
         base["sourceSha256"] == @manifest["sourceSha256"], "RUBY_ORIGINAL_EXPORT_CHANGED")
-      selected = [LEGACY_RUBY_FILES,LEGACY_DATASET_RUBY_FILES,RUBY_FILES].find { |files|
+      selected = [LEGACY_RUBY_FILES,LEGACY_DATASET_RUBY_FILES,LEGACY_COMPLETE_RUBY_FILES,RUBY_FILES].find { |files|
         @manifest["files"].is_a?(Array) && @manifest["files"].length == files.length
       }
       Files.need(selected, "RUBY_PACKAGE_INCOMPLETE")
