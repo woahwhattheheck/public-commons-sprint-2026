@@ -4,7 +4,7 @@
 <body><main>
 <header class="app-header">
 <div class="tag">HOUSEHOLD ENERGY PLANNING / ALEXA+ SIMULATION</div>
-<h1>GridKind</h1>
+<div class="section-heading"><h1>GridKind</h1><a class="button-link secondary" href="/week">Plan a week</a></div>
 <p class="dim">Plan flexible loads, compare tariffs, and keep the reasoning behind each decision. Every household has its own saved inputs and decision history.</p>
 <div class="chips"><span>24-hour hypothetical tariff</span><span id="load-count">3 flexible loads</span><span>Quiet hours honored</span><span id="circuit-summary">3.0 kW circuit cap</span><span>Saved household workspace</span></div>
 </header>
@@ -103,7 +103,7 @@
 <aside class="history-column" aria-label="Household saved work">
 <section class="panel" aria-labelledby="history-title">
 <div class="section-heading"><div><div class="tag">Retained decisions</div><h2 id="history-title">Household history</h2></div><span id="history-count" class="status-chip">0</span></div>
-<p class="dim">Inputs, plans, tariff comparisons, and decisions are saved together.</p>
+<p class="dim">Inputs, weekly schedules, daily plans, tariff comparisons, and decisions are saved together.</p>
 <div id="household-history" class="history-list" aria-live="polite"></div>
 <div class="controls history-pagination"><button id="history-newer" type="button" class="secondary" disabled>Newer</button><button id="history-older" type="button" class="secondary" disabled>Older</button></div>
 <div id="history-detail" class="history-detail" tabindex="-1"><p class="dim">Open a saved record to inspect its inputs and result.</p></div>
