@@ -5,14 +5,16 @@ import {realpath,readFile,mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
-const allowed=new Set(['--source','--package','--output','--source-manifest']);
+const allowed=new Set(['--source','--package','--output','--source-manifest','--manifest-sha256','--package-identity']);
 const args=process.argv.slice(2),o={};
 for(let i=0;i<args.length;i+=2){assert(allowed.has(args[i])&&args[i+1]&&!o[args[i]]);o[args[i]]=args[i+1];}
-for(const name of allowed)assert(isAbsolute(o[name]??''),'Absolute '+name+' is required');
+for(const name of ['--source','--package','--output','--source-manifest'])assert(isAbsolute(o[name]??''),'Absolute '+name+' is required');
+for(const name of ['--manifest-sha256','--package-identity'])assert.match(o[name]??'',/^[a-f0-9]{64}$/,'Exact '+name+' is required');
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const source=await realpath(o['--source']),out=resolve(o['--output']),packageRoot=await realpath(o['--package']);
 const BASE='stellar/scf-starforge-20261009/';
-const manifestBytes=await readFile(o['--source-manifest']),manifest=JSON.parse(manifestBytes);
+const manifestBytes=await readFile(o['--source-manifest']);assert.equal(sha(manifestBytes),o['--manifest-sha256']);
+const manifest=JSON.parse(manifestBytes);
 assert.equal(manifest.sourceRoot,source);assert(Array.isArray(manifest.files));
 for(const item of manifest.files){
  const r=relative(source,resolve(source,item.path));assert(r&&!r.startsWith('../')&&!isAbsolute(r));
@@ -26,7 +28,7 @@ const host=await import(pathToFileURL(join(source,BASE+'sf30-seller-sdk/opencage
 const original=await import(pathToFileURL(join(source,BASE+'sf99-merchant-deploy/host.mjs')));
 const cli=await import(pathToFileURL(join(source,BASE+'sf30-seller-sdk/opencage/cli.mjs')));
 await files.privateDirectory(out);
-const pkg=await merchant.inspectGeocodePackage(packageRoot);
+const pkg=await merchant.inspectGeocodePackage(packageRoot);assert.equal(pkg.manifest.identity,o['--package-identity']);
 const profilePath=join(out,'host-settings.json'),envPath=join(out,'opencage.env');
 await files.putOnce(envPath,Buffer.from('# Private operator-owned environment; host preparation reads metadata only.\n'));
 const settings={schema:original.SCHEMA,merchant:'opencage-receiving',kind:'api',mode:'challenge',
