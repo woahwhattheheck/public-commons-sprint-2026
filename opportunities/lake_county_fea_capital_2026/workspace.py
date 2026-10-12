@@ -25,7 +25,7 @@ from domain import (ProgrammeError, TABLES, SCHEMA, require, identifier, stable,
 MAX_FILE = 32 * 1024 * 1024
 MAX_ARCHIVE = 512 * 1024 * 1024
 RUNTIME_FILES = ("domain.py", "workspace.py", "server.py", "cli.py", "operate.py",
-                 "web/index.html", "web/app.js", "web/style.css", "README.md",
+                 "web/index.html", "web/app.js", "web/style.css", "operate_browser.mjs", "README.md",
                  "INPUTS.md", "WORKSHARE.md", "LICENSE")
 DB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -112,26 +112,66 @@ class Workspace:
         require(isinstance(packet_sha256, str) and len(packet_sha256) == 64
                 and all(c in "0123456789abcdef" for c in packet_sha256),
                 "source_pin", "Bind the exact original prepared workshare source SHA-256.")
-        require(not root.exists(), "workspace_exists", "Reopen the selected workspace; do not create over it.", status=409)
         root.parent.mkdir(parents=True, exist_ok=True)
-        stage = root.parent / (root.name + ".initializing-" + uuid.uuid4().hex)
-        stage.mkdir(mode=0o700)
-        context = {"schema": SCHEMA, "workspace_id": str(uuid.uuid4()), "case_id": case_id,
-                   "packet_sha256": packet_sha256, "created_by": actor, "created_at": now(),
-                   "purpose": "internal_engineering_for_original_proposed_workshare",
-                   "client_acceptance": "not_established"}
-        atomic(stage / "initialization.json", stable({"destination": str(root), "context": context}).encode())
-        (stage / "objects").mkdir(mode=0o700)
-        con = connect(stage / "workspace.sqlite3")
-        try:
-            con.executescript(DB_SCHEMA)
-            con.execute("INSERT INTO meta VALUES(?,?)", ("context", stable(context)))
-            con.execute("INSERT INTO meta VALUES(?,?)", ("revision", stable(digest(context))))
-            con.execute("INSERT INTO meta VALUES(?,?)", ("sequence", "0"))
-            con.commit()
-        finally:
-            con.close()
-        # A complete stage is preserved on a collision. Never replace another workspace.
+        intent_path = root.parent / (root.name + ".initialize.json")
+        if intent_path.exists():
+            intent = json.loads(intent_path.read_text(encoding="utf-8"))
+            require(intent.get("schema") == "lake-county.workspace-initialization/v1"
+                    and intent.get("destination") == str(root)
+                    and intent.get("context", {}).get("case_id") == case_id
+                    and intent["context"].get("packet_sha256") == packet_sha256
+                    and intent["context"].get("created_by") == actor,
+                    "initialization_conflict", "Retain this directory's original initialization selection.", status=409)
+            context, stage = intent["context"], Path(intent["stage"])
+        else:
+            require(not root.exists(), "workspace_exists", "Reopen the selected workspace; do not create over it.", status=409)
+            stage = root.parent / (root.name + ".initializing-" + uuid.uuid4().hex)
+            context = {"schema": SCHEMA, "workspace_id": str(uuid.uuid4()), "case_id": case_id,
+                       "packet_sha256": packet_sha256, "created_by": actor, "created_at": now(),
+                       "purpose": "internal_engineering_for_original_proposed_workshare",
+                       "client_acceptance": "not_established"}
+            intent = {"schema": "lake-county.workspace-initialization/v1", "destination": str(root),
+                      "stage": str(stage), "context": context}
+            atomic(intent_path, stable(intent).encode())
+        require(stage.parent == root.parent and stage.name.startswith(root.name + ".initializing-")
+                and not stage.is_symlink() and not root.is_symlink(),
+                "initialization_path", "Keep the original private initialization directory.")
+        if root.exists():
+            reopened = cls(root)
+            try:
+                require(reopened.context == context, "initialization_identity",
+                        "The selected destination contains another native workspace.", status=409)
+                return reopened
+            except Exception:
+                reopened.close()
+                raise
+        if stage.exists():
+            try:
+                reopened = cls(stage)
+                try:
+                    require(reopened.context == context and reopened.revision() == digest(context)
+                            and all(reopened.db.execute("SELECT count(*) FROM " + table).fetchone()[0] == 0
+                                    for table in ("files", "editions", "records", "versions", "heads", "operations")),
+                            "initialization_changed", "The unconfirmed initialization stage contains later or different work.", status=409)
+                finally:
+                    reopened.close()
+            except Exception as exc:
+                raise ProgrammeError("initialization_pending",
+                    "The original partial initialization is preserved. Resolve that same stage before creating or publishing a workspace.",
+                    {"stage": str(stage), "cause": str(exc)}, 409)
+        else:
+            stage.mkdir(mode=0o700)
+            atomic(stage / "initialization.json", stable({"destination": str(root), "context": context}).encode())
+            (stage / "objects").mkdir(mode=0o700)
+            con = connect(stage / "workspace.sqlite3")
+            try:
+                con.executescript(DB_SCHEMA)
+                con.execute("INSERT INTO meta VALUES(?,?)", ("context", stable(context)))
+                con.execute("INSERT INTO meta VALUES(?,?)", ("revision", stable(digest(context))))
+                con.execute("INSERT INTO meta VALUES(?,?)", ("sequence", "0"))
+                con.commit()
+            finally:
+                con.close()
         rename_new_directory(stage, root)
         return cls(root)
 
@@ -328,6 +368,7 @@ class Workspace:
         require(set(p) == {"name", "mime", "bytes", "sha256", "base64", "metadata"}, "upload", "Supply exact file bytes, identity and source metadata.")
         require(isinstance(p["name"], str) and p["name"] == Path(p["name"]).name and p["name"] not in {"", ".", ".."}
                 and "\0" not in p["name"] and "\\" not in p["name"], "filename", "Use the original file basename.")
+        require(isinstance(p["mime"], str) and 1 <= len(p["mime"]) <= 150 and "\r" not in p["mime"] and "\n" not in p["mime"] and all(32 <= ord(c) < 127 for c in p["mime"]), "mime", "Use a single-line ASCII media type.")
         require(isinstance(p["metadata"], dict) and p["metadata"].get("source_kind")
                 and p["metadata"].get("authority"), "source_metadata", "State source kind and actual source authority.")
         require(isinstance(p["base64"], str) and len(p["base64"]) <= (MAX_FILE * 4 // 3 + 8), "file_limit", "File exceeds 32 MiB.")

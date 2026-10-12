@@ -333,6 +333,12 @@ def compare_records(before, after, key_fields, guard_fields=(), editable_fields=
             "complete": True, "adoptable": not any(counts[k] for k in ("invalid_key", "duplicate_key", "guard_changed"))}
 
 def evaluate_scenario(spec, rows, *, source_edition, model_exchange=None):
+    # 120-character operands, pairwise products and up to 200,000 rows remain exact.
+    with localcontext() as context:
+        context.prec = 320
+        return _evaluate_scenario(spec, rows, source_edition=source_edition, model_exchange=model_exchange)
+
+def _evaluate_scenario(spec, rows, *, source_edition, model_exchange=None):
     require(isinstance(spec, dict), "scenario", "Scenario must be an object.")
     name = spec.get("name")
     require(isinstance(name, str) and name.strip(), "scenario", "Name the scenario.")
@@ -384,6 +390,8 @@ def evaluate_scenario(spec, rows, *, source_edition, model_exchange=None):
     unknown = []
     excluded = []
     schedule = []
+    closing_rows = defaultdict(list)
+    ambiguous_closing = set()
     for row in selected:
         v = row["values"]
         errors = [x for x in row.get("issues", []) if x["severity"] == "error"]
@@ -426,9 +434,16 @@ def evaluate_scenario(spec, rows, *, source_edition, model_exchange=None):
             if target not in annual:
                 excluded.append({**record, "reason": "Outside the selected horizon."})
                 continue
-            if mode == "received_model" and metric == "closing_cash" and supplied[target][metric]:
-                unknown.append({"row_id": row["row_id"], "reason": "Multiple closing-cash outputs cannot be summed. Select the original combined output."})
-                continue
+            if mode == "received_model" and metric == "closing_cash":
+                closing_rows[target].append(row["row_id"])
+                if len(closing_rows[target]) > 1:
+                    ambiguous_closing.add(target)
+                    annual[target][metric] = Decimal(0)
+                    supplied[target][metric] = 0
+                    unknown.append({"row_id": row["row_id"], "row_ids": list(closing_rows[target]),
+                                    "year": target, "metric": metric,
+                                    "reason": "Multiple closing-cash outputs are ambiguous. No first row is selected as the combined balance."})
+                    continue
             annual[target][metric] += value
             supplied[target][metric] += 1
             if mode == "selected_actions":
@@ -464,15 +479,25 @@ def evaluate_scenario(spec, rows, *, source_edition, model_exchange=None):
             excluded.append({**entry, "reason": reason})
             continue
         try:
-            target, value = year(v.get("fiscal_year")), decimal(v.get("amount"), "Funding amount", False)
+            value = decimal(v.get("amount"), "Funding amount", False)
+        except ProgrammeError as exc:
+            unknown.append({"row_id": row_id, "reason": str(exc), "code": exc.code})
+            continue
+        metric = "authorized_funding" if v["status"] in {"adopted", "committed", "historical_actual"} else "contingent_funding"
+        try:
+            target = year(v.get("fiscal_year"), "Authorization/funding year")
             if target not in annual:
-                excluded.append({**entry, "reason": "Funding year is outside the selected horizon."})
-                continue
-            metric = "authorized_funding" if v["status"] in {"adopted", "committed", "historical_actual"} else "contingent_funding"
-            annual[target][metric] += value
-            supplied[target][metric] += 1
-            # Appropriation and commitment never become a cash receipt.
-            if v.get("receipt_status") == "actual_received":
+                excluded.append({**entry, "year": target, "metric": metric,
+                                 "reason": "Authorization/funding year is outside the selected horizon."})
+            else:
+                annual[target][metric] += value
+                supplied[target][metric] += 1
+        except ProgrammeError as exc:
+            unknown.append({"row_id": row_id, "metric":metric, "reason":str(exc), "code":exc.code})
+        # Actual receipt timing is selected independently of the authorization date.
+        # An unknown authorization date remains unresolved while a valid receipt is retained.
+        if v.get("receipt_status") == "actual_received":
+            try:
                 received = year(v.get("receipt_year"), "Actual receipt year")
                 require(v["status"] in {"historical_actual", "adopted", "committed"}, "cash_status",
                         "An anticipated/requested/proposed amount cannot also be an actual receipt.")
@@ -480,15 +505,16 @@ def evaluate_scenario(spec, rows, *, source_edition, model_exchange=None):
                     annual[received]["cash_receipt"] += value
                     supplied[received]["cash_receipt"] += 1
                 else:
-                    excluded.append({**entry, "reason": "Actual receipt lies outside the horizon."})
-        except ProgrammeError as exc:
-            unknown.append({"row_id": row_id, "reason": str(exc), "code": exc.code})
+                    excluded.append({**entry, "year":received, "metric":"cash_receipt",
+                                     "reason":"Actual receipt lies outside the horizon."})
+            except ProgrammeError as exc:
+                unknown.append({"row_id":row_id, "metric":"cash_receipt", "reason":str(exc), "code":exc.code})
     years = []
     for y in horizon:
         metrics = {}
         for metric, total in annual[y].items():
             # A metric never supplied remains unknown; an explicitly supplied zero remains zero.
-            metrics[metric] = amount(total) if supplied[y][metric] else None
+            metrics[metric] = amount(total) if supplied[y][metric] and not (metric == "closing_cash" and y in ambiguous_closing) else None
         years.append({"year": y, **metrics, "supplied_counts": dict(supplied[y])})
     views = {}
     for length in (5, 10, 15):
