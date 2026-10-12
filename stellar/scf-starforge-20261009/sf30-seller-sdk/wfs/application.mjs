@@ -19,6 +19,8 @@ import { readWfsProject,discoverWfsSource,readWfsCatalog,describeWfsType,saveWfs
 import { exportWfsProject,inspectWfsProjectBundle,receiveWfsProject } from './portable.mjs';
 import { stageWfsMerchant,readWfsMerchant,startWfsMerchant,prepareWfsPurchase,
   executeWfsPurchase,recoverWfsPurchase,exportWfsPurchase } from './merchant.mjs';
+import { runWfsVector,resumeWfsVector,listWfsVectors,inspectWfsVector,pageWfsVectorChanges,
+  downloadWfsVector,downloadWfsVectorDocument } from './vector.mjs';
 import { prepareWfsDataset,createWfsDataset,actWfsDataset,receiveWfsDataset,
   reopenWfsSources,exportWfsDatasetDelivery } from './customer.mjs';
 
@@ -31,6 +33,11 @@ export const ACTION_FIELDS=Object.freeze({
   compare:[...recorded,'before','after','keyPointer'],
   'export-order':[...recorded,'orderId','plan','payment','origin','path'],
   abandon:[...recorded,'pendingId','note'],
+  'vector-capture':['id','orderId','sourceCrs','coordinateOrder','sourceId','selectionId','identityJson'],
+  'vector-export':['id','captureId','profileJson'],
+  'vector-compare':['id','before','after'],
+  'vector-receive':['id','archiveBase64','archiveSha256','manifestSha256'],
+  'vector-resume':['id'],
   'merchant-start':['publicationId'],'merchant-stop':['publicationId'],
   'publication-open':['publicationId'],
   prepare:['publicationId','intentId','query','kind','file','previous','acceptIndex'],
@@ -46,12 +53,13 @@ export const ACTION_FIELDS=Object.freeze({
 export const QUERY_FIELDS=Object.freeze({
   launch:[],state:[],catalog:['sourceId','offset','limit'],schema:['schemaId'],
   order:['orderId'],features:['orderId','offset','limit'],inspection:['orderId'],plan:['orderId'],
+  vectors:['offset','limit'],vector:['id'],'vector-changes':['id','offset','limit','layerId','status'],
   comparison:['comparisonId','kind','offset','limit'],publication:['publicationId'],
   preview:['publicationId','kind','query']
 });
 export const DOWNLOAD_FIELDS=Object.freeze({
   capabilities:['sourceId'],schema:['schemaId'],'raw-page':['orderId','index'],
-  features:['orderId'],comparison:['comparisonId'],project:[],
+  features:['orderId'],comparison:['comparisonId'],project:[],vector:['id'],'vector-document':['id','document'],
   customer:['publicationId','intentId'],dataset:['publicationId','id','file']
 });
 const declared=(fields,kind,input)=>need(Object.hasOwn(fields,kind)&&plain(input)&&
@@ -112,6 +120,9 @@ export async function openWfsApplication(options={}) {
       case'state':return{project:await readWfsProject(directory),merchant:merchantView(),
         busy:pending?{action:pending.action,id:pending.id,startedAt:pending.startedAt}:null,
         buyerConfigured:Boolean(buyer),sourceAuthConfigured:Boolean(sourceAuth)};
+      case'vectors':return listWfsVectors({directory,...input});
+      case'vector':return inspectWfsVector({directory,...input,python:options.python,signal:lifetime.signal});
+      case'vector-changes':return pageWfsVectorChanges({directory,...input,python:options.python,signal:lifetime.signal});
       case'catalog':{
         const{source,record,model}=await readWfsCatalog(directory,input.sourceId),{offset,limit}=pageRange(input);
         const{featureTypes,...service}=model;
@@ -175,6 +186,11 @@ export async function openWfsApplication(options={}) {
     const source={sourceAuth,transport:options.transport,python:options.python,fetchImpl:options.fetchImpl,
       metadataRecordSource:options.metadataRecordSource,featureRecordSource:options.featureRecordSource,signal};
     switch(request.action){
+      case'vector-capture':case'vector-export':case'vector-compare':case'vector-receive':{
+        const {action,id,...input}=request;
+        return runWfsVector({directory,application:{binding,query,download},id,kind:action.slice(7),input,python:options.python,signal});
+      }
+      case'vector-resume':return resumeWfsVector({directory,application:{binding,query,download},id:request.id,python:options.python,signal});
       case'discover':return discoverWfsSource({...common,...source,endpoint:request.endpoint,name:request.name,
         terms:request.terms??'',allowLoopback:request.allowLoopback===true});
       case'describe':return describeWfsType({...common,...source,sourceId:request.sourceId,typeName:request.typeName});
@@ -187,7 +203,7 @@ export async function openWfsApplication(options={}) {
       case'abandon':return abandonWfsOperation({...common,pendingId:request.pendingId,note:request.note});
       case'merchant-start':{
         if(merchant){need(runningPublication===request.publicationId,'Another selected edition is already served.','WFS_MERCHANT_RUNNING',409);return{...merchantView(),reused:true};}
-        await stageWfsMerchant({directory,publicationId:request.publicationId});
+        await stageWfsMerchant({directory,publicationId:request.publicationId,python:options.python,signal});
         merchant=await startWfsMerchant({directory:await publication(request.publicationId),port:binding.merchantPort,
           facilitator:binding.facilitator??undefined,allowLocalFacilitator:binding.allowLocalFacilitator,nativeFactory:options.nativeFactory});
         runningPublication=request.publicationId;return merchantView();
@@ -251,7 +267,9 @@ export async function openWfsApplication(options={}) {
   }
   async function download(kind,input={}){
     await assertCurrent();declared(DOWNLOAD_FIELDS,kind,input);
-    if(kind==='project')return{name:'wfs-feature-project.json',type:'application/json',bytes:jsonBytes(await exportWfsProject({directory}))};
+    if(kind==='vector')return downloadWfsVector({directory,...input,python:options.python,signal:lifetime.signal});
+    if(kind==='vector-document')return downloadWfsVectorDocument({directory,...input,python:options.python,signal:lifetime.signal});
+    if(kind==='project')return{name:'wfs-feature-project.json',type:'application/json',bytes:jsonBytes(await exportWfsProject({directory,python:options.python}))};
     if(kind==='capabilities'){const{raw}=await readWfsCatalog(directory,input.sourceId);return{name:'GetCapabilities.xml',type:'application/xml',bytes:raw};}
     if(kind==='schema'){
       const project=await readWfsProject(directory),schema=selected(project.schemas,input.schemaId);

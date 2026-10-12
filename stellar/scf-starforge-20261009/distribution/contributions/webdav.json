@@ -1,12 +1,14 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "webdav",
-  "description": "WebDAV file data products",
+  "description": "WebDAV source, complete remote operator, reviewed editions and resumable native receiving",
   "commands": {
-    "webdav": "stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/cli.mjs"
+    "webdav": "stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/cli.mjs",
+    "merchant-webdav": "stellar-forge/mcp-merchant-operator/webdav-workspace-cli.mjs"
   },
   "commandDescriptions": {
-    "webdav": "Capture selected WebDAV or Nextcloud files, review dataset projections, and operate seller delivery."
+    "webdav": "Capture selected WebDAV or Nextcloud files, review dataset projections, and operate seller delivery.",
+    "merchant-webdav": "Configure, capture, review, publish, recover and receive complete original WebDAV workspaces"
   },
   "exports": {
     "./seller/webdav/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/source.mjs",
@@ -14,9 +16,40 @@
     "./seller/webdav/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/capture.mjs",
     "./seller/webdav/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/workspace.mjs",
     "./seller/webdav/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/server.mjs",
-    "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs"
+    "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs",
+    "./merchant/mcp/webdav/client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-client.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-client.mjs"
+    },
+    "./merchant/mcp/webdav/operations": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-receiving.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-receiving.mjs"
+    },
+    "./merchant/mcp/webdav/download": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-download.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-download.mjs"
+    },
+    "./merchant/mcp/webdav/setup": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-setup.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-setup.mjs"
+    },
+    "./merchant/mcp/webdav/cli": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-cli.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/webdav-workspace-cli.mjs"
+    }
   },
   "applicationProviders": {
     "webdav": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/webdav.mjs"
-  }
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/webdav-workspace-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/webdav-workspace-download.d.mts",
+    "stellar-forge/mcp-merchant-operator/webdav-workspace-receiving.d.mts",
+    "stellar-forge/mcp-merchant-operator/webdav-workspace-setup.d.mts",
+    "stellar-forge/mcp-merchant-operator/webdav-workspace-cli.d.mts",
+    "stellar-forge/mcp-merchant-operator/WEBDAV_CLIENT.md",
+    "stellar-forge/mcp-merchant-operator/webdav-workspace-connection.example.json",
+    "stellar-forge/mcp-merchant-operator/examples/webdav-reviewed-edition.mjs",
+    "stellar-forge/mcp-merchant-operator/examples/webdav-reviewed-edition.example.json"
+  ]
 }
