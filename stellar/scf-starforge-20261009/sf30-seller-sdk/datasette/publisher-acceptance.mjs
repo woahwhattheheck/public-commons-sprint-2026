@@ -8,9 +8,11 @@ import { fileURLToPath } from 'node:url';
 import { openDatasetteWorkspace } from './workspace.mjs';
 import { startDatasetteServer } from './server.mjs';
 import { createDatasetteClient, DATASETTE_OPERATIONS } from './client.mjs';
-import { MerchantDatasetteWorkspaces, readDatasetteWorkspaceConfiguration } from './provider.mjs';
+import { readDatasetteWorkspaceConfiguration } from './provider.mjs';
+import { MerchantDatasetteWorkspaces } from '../../../../stellar-forge/mcp-merchant-operator/datasette-workspace.mjs';
 import { runDatasetteCLI } from './cli.mjs';
 import { receiveDatasetteWorkspace } from './archive.mjs';
+import { readDatasetteEdition } from './editions.mjs';
 import { openDatasetVersions, DATASET_SNAPSHOT_PARAMETER } from '../dataset-refresh/versions.mjs';
 import { startVersionedDatasetSeller, datasetControl } from '../dataset-refresh/service.mjs';
 import { buildDatasetSellerConfig } from '../dataset-cli.mjs';
@@ -66,7 +68,8 @@ async function retainedJourney(directory,inputs) {
     const startedAt=new Date().toISOString();
     state={schema:'stellar-forge.datasette-publisher-programme-state.v1',directory,inputs,
       startedAt,runId:randomUUID(),requestId:randomUUID(),buyerIntentId:'datasette-wri-'+randomUUID(),
-      sellerPort:await freePort(),phase:'CREATED',
+      selectionRequestId:randomUUID(),reviewRequestId:randomUUID(),buyerRequestId:randomUUID(),receivedSelectionRequestId:randomUUID(),
+      sellerPort:await freePort(),uploadId:randomUUID(),refreshOperationId:'wri-refresh-'+randomUUID(),refreshEditionId:'wri-geothermal-refresh',phase:'CREATED',
       report:{schema:'stellar-forge.datasette-publisher-programme.v1',startedAt,node:process.version,
         source:{archiveSha256:EXPECTED_ARCHIVE,editionSha256:EXPECTED_EDITION},checks:{}}};
     const handle=await open(file,'wx',0o600);
@@ -75,28 +78,22 @@ async function retainedJourney(directory,inputs) {
     const parent=await open(directory,'r');
     try { await parent.sync(); } finally { await parent.close(); }
   }
+  for(const name of ['selectionRequestId','reviewRequestId','buyerRequestId','receivedSelectionRequestId']) state[name]??=randomUUID();
+  state.uploadId??=state.runId;
+  state.refreshOperationId??='wri-refresh-'+state.runId;
+  state.refreshEditionId??='wri-geothermal-refresh';
   const save=async phase=>{
     state.phase=phase;state.updatedAt=new Date().toISOString();delete state.error;
     await privateJson(file,state);
   };
   return {state,file,save};
 }
-async function reopenBuyer(directory,runId,offer,buyerIntentId) {
-  const expected=prepareDatasetBuyer(offer,{intentId:buyerIntentId,acceptIndex:0,offerSha256:offer.offerSha256});
-  const folder=join(directory,'publisher','runs',runId);
-  const names=(await readdir(folder)).filter(name=>/^buyer-[a-f0-9-]+\.json$/.test(name)).sort();
-  for(const name of names) {
-    const path=join(folder,name),raw=await readFile(path);
-    if(hash(raw)===expected.configSha256)
-      return {...expected,path,retainedPreparationReopened:true};
-  }
-  return null;
-}
 function programmeSummary(report,reportFile) {
   return {schema:report.schema,startedAt:report.startedAt,completedAt:report.completedAt,node:report.node,
     checks:report.checks,runId:report.extraction.run.id,planId:report.plan.id,snapshot:report.buyer.snapshot,reportFile,
     archive:{file:report.archive.archiveFile,sha256:report.archive.sha256,bytes:report.archive.bytes},
-    editedArchive:report.editedArchive};
+    editedArchive:report.editedArchive,sourceRefresh:{state:report.sourceRefresh?.state??null,
+      operationId:report.sourceRefresh?.operationId??null,error:report.sourceRefresh?.error??null}};
 }
 async function freePort() {
   const server=reserveServer();
@@ -183,7 +180,7 @@ async function execute(options) {
   const preservedDirectory=join(directory,'original-preserved'),sellerUrl='http://127.0.0.1:'+sellerPort;
   const resource=options.origin+'/data',reportFile=join(directory,'publisher-programme-result.json');
   let workspace,server,provider,seller,received,cliServer;
-  if(state.phase==='COMPLETE') {
+  if(state.phase==='COMPLETE'&&report.sourceRefresh) {
     for(const item of [report.archive,report.editedArchive])
       check(hash(await readFile(item.archiveFile))===item.sha256,'A completed programme archive changed.');
     await privateJson(reportFile,report);
@@ -197,12 +194,6 @@ async function execute(options) {
       if(state.workspaceId)check(state.workspaceId===workspace.workspaceId,'The original workspace identity changed during programme recovery.');
       state.workspaceId=workspace.workspaceId;
       await save('ORIGINAL_OPEN');
-      const imported=await workspace.dispatch('source.receive',{archiveFile:options.archive,sha256:EXPECTED_ARCHIVE,id:'wri-geothermal'});
-      check(imported.editionSha256===EXPECTED_EDITION,'The native source receiving changed the reviewed edition.');
-      await workspace.dispatch('source.select',{editionId:'wri-geothermal'});
-      const retainedInput=join(originalDirectory,'imports','wri-geothermal.sfds.gz');
-      if(await exists(retainedInput))check(hash(await readFile(retainedInput))===EXPECTED_ARCHIVE,'The retained original edition archive changed.');
-      else await writeFile(retainedInput,input,{flag:'wx',mode:0o600});
       server=await startDatasetteServer({workspace,host:'127.0.0.1',port:0});
       const announcement={schema:'stellar-forge.datasette-server.v1',url:server.url,workspaceId:server.workspaceId,
         instanceId:server.instanceId,directory:server.directory,pid:process.pid};
@@ -215,10 +206,62 @@ async function execute(options) {
       const [health,operations,providerHealth]=await Promise.all([client.health(),client.operations(),
         provider.call('merchant_datasette_health',{workspace:'wri'})]);
       check(health.workspaceId===workspace.workspaceId&&providerHealth.native.workspaceId===health.workspaceId,'SDK and provider selected different workspaces.');
-      check(DATASETTE_OPERATIONS.length===31&&DATASETTE_OPERATIONS.every(name=>operations.some(item=>item.operation===name)),
+      check(same([...DATASETTE_OPERATIONS].sort(),operations.map(item=>item.operation).sort()),
         'The installed interfaces do not expose every original operation.');
       report.checks.originalWorkspaceIdentity=true;
       report.operationCatalog=operations;
+      const declaration={uploadId:state.uploadId,name:'wri-geothermal.sfds.gz',
+        bytes:String(input.length),sha256:EXPECTED_ARCHIVE},split=Math.floor(input.length/2);
+      const firstInput={...declaration,offset:'0',length:String(split)};
+      const first=await client.uploadChunk(firstInput,input.subarray(0,split));
+      check(Number(first.receivedBytes)>=split&&first.uploadId===state.uploadId,
+        'The first original upload chunk did not retain its prefix.');
+      if(first.receivedBytes===String(split))
+        check(first.prefixSha256===hash(input.subarray(0,split)),'The original upload prefix hash changed.');
+      const prefixReplay=await client.uploadChunk(firstInput,input.subarray(0,split));
+      check(prefixReplay.replayed===true&&prefixReplay.receivedBytes===first.receivedBytes&&
+        prefixReplay.prefixSha256===first.prefixSha256,'The exact original upload chunk replay changed its durable prefix.');
+      const prefixStatus=await client.uploadStatus({uploadId:state.uploadId});
+      check(prefixStatus.receivedBytes===first.receivedBytes&&prefixStatus.prefixSha256===first.prefixSha256,
+        'Upload status selected a different durable prefix.');
+      let completion=await client.uploadChunk({...declaration,offset:String(split),length:String(input.length-split)},
+        input.subarray(split));
+      if(completion.state==='FINALIZABLE')
+        completion=await client.uploadChunk({...declaration,offset:String(input.length),length:'0'},Buffer.alloc(0));
+      const finalStatus=await client.uploadStatus({uploadId:state.uploadId});
+      check(completion.state==='COMPLETE'&&finalStatus.state==='COMPLETE'&&finalStatus.sha256===EXPECTED_ARCHIVE&&
+        finalStatus.receivedBytes===String(input.length)&&typeof finalStatus.archiveFile==='string'&&
+        typeof finalStatus.retainedFile?.path==='string','The original upload did not publish its complete exact archive.');
+      report.upload??={declaration,first,prefixReplay,prefixStatus,completion,finalStatus};
+      await save('ORIGINAL_UPLOADED');
+      const imported=await client.dispatch('source.receive',{archiveFile:finalStatus.archiveFile,
+        sha256:finalStatus.sha256,id:'wri-geothermal'});
+      check(imported.editionSha256===EXPECTED_EDITION,'The native source receiving changed the reviewed edition.');
+      state.selectionInput??={editionId:'wri-geothermal',requestId:state.selectionRequestId,
+        expectedSelectionHash:(await client.status()).selectionHash};
+      await save('SOURCE_SELECTION_PREPARED');
+      const selection=await client.dispatch('source.select',state.selectionInput);
+      check(same(selection,await client.dispatch('source.select',state.selectionInput)),
+        'The retained source selection request did not return its original result.');
+      report.checks.nativeResumableUpload=true;
+      const sourceFile=await provider.call('merchant_datasette_file',{workspace:'wri',
+        path:finalStatus.retainedFile.path,sha256:EXPECTED_ARCHIVE});
+      check(sourceFile.native.sha256===EXPECTED_ARCHIVE&&Number(sourceFile.native.bytes)===input.length,
+        'The installed provider did not inspect the exact retained source archive.');
+      const downloadUrl=new URL('/api/download',server.url);
+      downloadUrl.searchParams.set('path',finalStatus.retainedFile.path);
+      downloadUrl.searchParams.set('sha256',EXPECTED_ARCHIVE);
+      const downloaded=await fetch(downloadUrl,{redirect:'error',signal:AbortSignal.timeout(30000),
+        headers:{'X-Datasette-Workspace-ID':workspace.workspaceId}});
+      check(downloaded.status===200&&downloaded.headers.get('x-datasette-sha256')===EXPECTED_ARCHIVE,
+        'The original pinned HTTP download did not return the selected archive.');
+      const receivedInput=Buffer.from(await downloaded.arrayBuffer());
+      check(receivedInput.length===input.length&&hash(receivedInput)===EXPECTED_ARCHIVE,
+        'The complete HTTP archive bytes differ from the retained original edition.');
+      report.interfaces={provider:'ORIGINAL_COMPOSED_DATASETTE_PROVIDER',sourceFile,
+        download:{bytes:receivedInput.length,sha256:hash(receivedInput),status:downloaded.status}};
+      report.checks.nativeComposedProvider=true;
+      report.checks.completePinnedHTTPDownload=true;
       const planInput={title:'WRI geothermal original-source publication',requestId};
       const planned=await observed(client,()=>command(['--url-file',launchFile,'--operation','publisher.plan','--input',JSON.stringify(planInput)]));
       const plan=planned.value.value;
@@ -239,10 +282,12 @@ async function execute(options) {
       const inspect=await client.dispatch('publisher.inspect',{runId});
       report.extraction??={run,inspect,statusReads:extracted.reads};
       await save('EXTRACTED');
-      let review;
-      if(run.state==='READY')review=await client.dispatch('publisher.review',{runId,reviewer:'Datasette integrated programme',
-        note:'Original WRI edition, complete retained capture and publisher candidate reviewed before initialization.',initialize:true});
-      else review=run;
+      state.reviewInput??={runId,requestId:state.reviewRequestId,reviewer:'Datasette integrated programme',
+        note:'Original WRI edition, complete retained capture and publisher candidate reviewed before initialization.',initialize:true};
+      await save('REVIEW_PREPARED');
+      const review=await client.dispatch('publisher.review',state.reviewInput);
+      check(same(review,await client.dispatch('publisher.review',state.reviewInput)),
+        'Review replay created a different original review or run result.');
       check(['REVIEWED','PUBLISHED'].includes(review.state)&&typeof review.data.review?.id==='string','The original candidate review was not retained.');
       report.review??=review;
       await save('REVIEWED');
@@ -255,9 +300,12 @@ async function execute(options) {
       const target=await client.dispatch('publisher.target',{});
       check(target.connected===true&&target.versions.current===publication.value.data.publication.snapshot,'The original target did not expose the published snapshot.');
       const offer=await client.dispatch('publisher.buyer-offer',{runId,query:'limit=5'});
-      const buyer=await reopenBuyer(originalDirectory,runId,offer,buyerIntentId) ??
-        await client.dispatch('publisher.prepare-buyer',{runId,intentId:buyerIntentId,
-          acceptIndex:0,offerSha256:offer.offerSha256,query:'limit=5'});
+      state.buyerInput??={runId,requestId:state.buyerRequestId,intentId:buyerIntentId,
+        acceptIndex:0,offerSha256:offer.offerSha256,query:'limit=5'};
+      await save('BUYER_REQUEST_PREPARED');
+      const buyer=await client.dispatch('publisher.prepare-buyer',state.buyerInput);
+      check(same(buyer,await client.dispatch('publisher.prepare-buyer',state.buyerInput)),
+        'Buyer request replay created a different original configuration or file.');
       check(buyer.mode==='ORIGINAL_SF88_CONFIG_PREPARED'&&buyer.snapshot===target.versions.current,'The original buyer preparation did not bind the published snapshot.');
       report.seller={url:seller.url,mode:seller.mode,target,offer};
       report.buyer={...buyer,configText:undefined};
@@ -270,6 +318,13 @@ async function execute(options) {
         id:'wri-geothermal',label:'WRI geothermal original edition',runtime:{port:0}});
       report.release={prepared,staged,role:'ORIGINAL_STAGED_RELEASE_HISTORY'};
       report.publisherBefore=await client.dispatch('publisher.status',{limit:100});
+      report.requests={};
+      for(const requestId of [state.selectionRequestId,state.requestId,state.reviewRequestId,state.buyerRequestId]) {
+        const original=await client.dispatch('requests.inspect',{requestId});
+        check(original.state==='COMPLETE'&&original.requestId===requestId,
+          'An original operator request has no complete retained native result.');
+        report.requests[requestId]=original;
+      }
       await save('RELEASE_STAGED');
       await seller.close();seller=null;
       const exported=await observed(client,()=>client.dispatch('workspace.export',{outputFile:join(directory,'complete-workspace.zip')}));
@@ -327,7 +382,10 @@ async function execute(options) {
     const cliHealth=await nativeCLI.health();
     const cliStatus=await command(['status','--url',cliServer.announcement.url,'--expected-workspace-id',receiveId]);
     check(cliHealth.workspaceId===receiveId&&cliStatus.value.workspaceId===receiveId,'The actual CLI server could not reopen the complete received workspace.');
-    const changed=await nativeCLI.dispatch('source.select',{editionId:'wri-geothermal',query:'receiving-edit'});
+    state.receivedSelectionInput??={editionId:'wri-geothermal',query:'receiving-edit',
+      requestId:state.receivedSelectionRequestId,expectedSelectionHash:(await nativeCLI.status()).selectionHash};
+    await save('RECEIVED_EDIT_PREPARED');
+    const changed=await nativeCLI.dispatch('source.select',state.receivedSelectionInput);
     check(changed.query==='receiving-edit','The independent received source could not be edited.');
     const terminal=await cliServer.close();cliServer=null;
     report.cli={announcement:cliHealth,shutdown:{code:terminal.code,signal:terminal.signal,stderr:terminal.stderr}};
@@ -337,18 +395,54 @@ async function execute(options) {
     check(replayReceive.value.reused===true,'Standalone CLI receiving did not reconcile the original completed transfer.');
     received=await openDatasetteWorkspace({directory:receivedDirectory});
     check((await received.status()).selection.query==='receiving-edit','Receive replay overwrote the later edit.');
+    const oldChoice=await received.dispatch('source.select',state.selectionInput);
+    check(oldChoice.query==='data'&&(await received.status()).selection.query==='receiving-edit',
+      'Replaying an older completed source request overwrote the later reviewed choice.');
+    for(const [requestId,before] of Object.entries(report.requests)) {
+      const original=await received.dispatch('requests.inspect',{requestId});
+      check(original.state==='COMPLETE'&&original.requestHash===before.requestHash&&
+        same(original.input,before.input)&&same(original.result,before.result),
+        'Receiving changed the original accepted request or its complete native result.');
+    }
+    if(!report.sourceRefresh) {
+      const attemptedAt=new Date().toISOString(),operationId=state.refreshOperationId;
+      await save('SOURCE_REFRESH_STARTED');
+      const progress={operationId,editionId:state.refreshEditionId,attemptedAt};
+      try {
+        const baseline=await readDatasetteEdition(join(receivedDirectory,'editions','wri-geothermal','edition.json'),
+          {expectedSha256:EXPECTED_EDITION});
+        progress.capture=await received.dispatch('source.capture',{operationId,selection:baseline.capture.selection});
+        progress.review=await received.dispatch('source.review',{operationId,
+          key:baseline.review.key.columns,projection:baseline.review.projection});
+        progress.edition=await received.dispatch('editions.create',{id:state.refreshEditionId,operationId,
+          name:'WRI geothermal current original-source edition',key:baseline.review.key.columns,
+          projection:baseline.review.projection});
+        progress.comparison=await received.dispatch('editions.compare',{left:'wri-geothermal',right:state.refreshEditionId});
+        report.sourceRefresh={...progress,state:'COMPLETE',completedAt:new Date().toISOString()};
+      } catch(error) {
+        report.sourceRefresh={...progress,state:'FAILED',completedAt:new Date().toISOString(),
+          error:{code:error.code??error.name,message:error.message,status:error.status??null,
+            cause:error.cause?{code:error.cause.code??error.cause.name,message:error.cause.message}:null}};
+      }
+      await save('SOURCE_REFRESH_RETAINED');
+    }
+    const unchanged=await received.status();
+    check(unchanged.selection.editionSha256===EXPECTED_EDITION&&unchanged.selection.query==='receiving-edit',
+      'The fresh source comparison changed the original selected publication.');
     const last=await received.dispatch('workspace.export',{outputFile:join(directory,'editable-received-workspace.zip')});
     await received.close();received=null;
     report.cli.receiveReused=replayReceive.value.reused;
     report.editedArchive={archiveFile:last.archiveFile,sha256:last.sha256,bytes:last.bytes,snapshotSha256:last.snapshotSha256};
     report.checks={...report.checks,originalOperationCatalog:true,retainedProgrammeIdentities:true,
-      planReplay:true,originalExtraction:true,allOriginalRowsPublished:true,
+      planReplay:true,originalRequestHistory:true,sourceSelectionReplay:true,reviewRequestReplay:true,buyerRequestReplay:true,
+      earlierRequestPreservesLaterSelection:true,originalExtraction:true,allOriginalRowsPublished:true,
       concurrentPublisherStatus:true,reviewedNativePublication:true,originalSellerMetadata:true,
       originalBuyerPreparation:true,sourceRetainingRelease:true,originalStagedReleaseHistoryRetained:true,
       completePublisherDatabase:true,publisherHistoryUnchanged:true,relocatedPublisherReopened:true,
       sqlitePreimageRetained:true,independentVersionStore:true,
       receivedReleasePreparedFromSameSnapshot:true,nativeCLIServer:true,
-      standaloneCLIReceiving:true,receivedSourceEditable:true,replayPreservesEdits:true};
+      standaloneCLIReceiving:true,receivedSourceEditable:true,replayPreservesEdits:true,
+      freshOriginalSourceAttemptRetained:true,originalPublicationSelectionPreserved:true};
     report.completedAt=new Date().toISOString();
     await privateJson(reportFile,report);
     await save('COMPLETE');

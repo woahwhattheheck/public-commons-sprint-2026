@@ -65,7 +65,7 @@ function json(response, status, value, head = false) {
   response.end(head ? undefined : body);
 }
 function identityFor(input) {
-  return input?.operationId ?? input?.runId ?? input?.requestId ?? input?.uploadId ?? input?.id ?? null;
+  return input?.requestId ?? input?.operationId ?? input?.runId ?? input?.uploadId ?? input?.id ?? null;
 }
 function errorResult(error, context) {
   const status = Number.isInteger(error?.status) && error.status >= 400 && error.status <= 599 ? error.status
@@ -79,6 +79,9 @@ function errorResult(error, context) {
     ...(context.started ? {uncertain:error?.uncertain === true || status >= 500} : {}),
     ...(typeof error?.directory === 'string' ? {directory:error.directory} : {}),
     ...(object(error?.details) ? {details:error.details} : {}),
+    ...(typeof error?.requestId === 'string' ? {requestId:error.requestId} : {}),
+    ...(typeof error?.requestHash === 'string' ? {requestHash:error.requestHash} : {}),
+    ...(typeof error?.requestState === 'string' ? {requestState:error.requestState} : {}),
   }};
 }
 function attachment(name) {

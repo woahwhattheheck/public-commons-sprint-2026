@@ -11,7 +11,7 @@ export const DATASETTE_OPERATIONS = Object.freeze([
   'publisher.publish', 'publisher.recover', 'publisher.buyer-offer',
   'publisher.prepare-buyer', 'release.prepare', 'release.stage',
   'source.export', 'source.receive', 'files.list', 'files.inspect', 'files.read',
-  'workspace.export', 'workspace.receive', 'operations.inspect', 'operations.cancel',
+  'workspace.export', 'workspace.receive', 'requests.inspect', 'requests.list', 'operations.inspect', 'operations.cancel',
 ]);
 const operationNames = new Set(DATASETTE_OPERATIONS);
 
@@ -96,7 +96,7 @@ export function createDatasetteClient({url, expectedWorkspaceId, fetchImpl = glo
   }
   async function request(path, {operation = null, input, signal, rawBody, uploadInput} = {}) {
     const mutating = input !== undefined || rawBody !== undefined;
-    const operationId = input?.operationId ?? input?.runId ?? input?.requestId ?? input?.id ?? uploadInput?.uploadId ?? null;
+    const operationId = input?.requestId ?? input?.operationId ?? input?.runId ?? input?.id ?? uploadInput?.uploadId ?? null;
     let body = rawBody;
     if (input !== undefined) {
       try {body = JSON.stringify({operation, input});}
