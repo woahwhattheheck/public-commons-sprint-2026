@@ -39,6 +39,8 @@ from .workspace_archive import WorkspaceArchives
 from ._analysis_export_http import send_export
 from .response_tables import AnalysisResponses
 from .research_intake import ResearchIntake
+from .analysis_synthesis import AnalysisSynthesis
+from . import synthesis_http
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
 from .storage import digest, dump, parse, private_directory, read
@@ -164,6 +166,7 @@ class AnalysisWorkspace:
             self.reports = AnalysisReports(self.database, encode_cell=_cell, parse_parameters=_parameters, changes=self.changes)
             self.responses = AnalysisResponses(self.database, checkout=self.checkout, node=self.node, encode_cell=_cell)
             self.research = ResearchIntake(self, connections=research_connections)
+            self.synthesis = AnalysisSynthesis(self)
             self.exports = AnalysisExports(self.database, identity=self.identity, read_job=self._job, parse_parameters=_parameters)
             self.exports.recover_completed()
             self.workbooks = AnalysisWorkbooks(self.database, identity=self.identity, reports=self.reports)
@@ -180,6 +183,7 @@ class AnalysisWorkspace:
             if self._closed:
                 return
             self._closed = True
+        self.synthesis.close()
         self.research.close()
         self.exports.close()
         self.workbooks.close()
@@ -293,13 +297,15 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile", "research-capture"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "query-export", "workbook", "backup", "workspace-export", "compare", "change-export", "report", "report-export", "response-preview", "response-import", "profile", "research-capture", "synthesis"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
             raise StateError("ANALYSIS_REQUEST_ID_REQUIRED")
         spec = {"id": job_id}
-        if kind == "research-capture":
+        if kind == "synthesis":
+            spec.update(self.synthesis.prepare(request))
+        elif kind == "research-capture":
             spec.update(self.research.prepare(request))
         elif kind == "workspace-export":
             spec.update(self.archives.prepare(request))
@@ -350,14 +356,17 @@ class AnalysisWorkspace:
                     if old["kind"] != kind or old["request"] != raw:
                         raise StateError("ANALYSIS_REQUEST_ID_REUSED")
                     resumable = (
-                        kind in {"workspace-export", "research-capture"} and
+                        kind in {"workspace-export", "research-capture", "synthesis"} and
                         old["status"] in {"INTERRUPTED", "FAILED", "CANCELLED"}) or (
                         kind in {"response-preview", "response-import"} and
                         old["status"] == "INTERRUPTED")
                     if resumable:
                         if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                             raise StateError("ANALYSIS_JOB_RUNNING")
-                        if kind == "research-capture":
+                        if kind == "synthesis":
+                            self.synthesis.validate(db, spec)
+                            self.synthesis.resume(job_id)
+                        elif kind == "research-capture":
                             self.research.resume(job_id)
                         elif kind == "workspace-export":
                             self.archives.resume(job_id)
@@ -381,7 +390,9 @@ class AnalysisWorkspace:
                     return self.job(job_id)
                 if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                     raise StateError("ANALYSIS_JOB_RUNNING")
-                if kind == "research-capture":
+                if kind == "synthesis":
+                    self.synthesis.validate(db, spec)
+                elif kind == "research-capture":
                     self.research.validate(db, spec)
                 elif kind == "profile":
                     self.profiles.validate(db, spec)
@@ -413,6 +424,8 @@ class AnalysisWorkspace:
             if kind == "profile":
                 self.profiles.run(job_id, spec)
                 return
+            elif kind == "synthesis":
+                result = self.synthesis.run(job_id, spec)
             elif kind == "research-capture":
                 result = self.research.run(job_id, spec)
             elif kind == "workspace-export":
@@ -477,7 +490,8 @@ class AnalysisWorkspace:
                 code += ": " + str(exc.__cause__)
             with self.database._connection() as db:
                 status = "CANCELLED" if ((kind == "workspace-export" and code == "WORKSPACE_ARCHIVE_CANCELLED") or
-                    (kind == "research-capture" and code == "ANALYSIS_RESEARCH_CANCELLED")) else "FAILED"
+                    (kind == "research-capture" and code == "ANALYSIS_RESEARCH_CANCELLED") or
+                    (kind == "synthesis" and code == "ANALYSIS_SYNTHESIS_CANCELLED")) else "FAILED"
                 db.execute("UPDATE sf_analysis_jobs SET status=?,error=?,finished_at=? WHERE id=? AND status='RUNNING'", (status, str(code)[:256], _now(), job_id))
 
     def _job(self, job_id):
@@ -503,6 +517,8 @@ class AnalysisWorkspace:
         elif job["kind"] == "report" and job["result"] is not None:
             with self.database._connection(readonly=True) as db:
                 job["result"] = self.reports._report(db, job_id)
+        elif job["kind"] == "synthesis":
+            job["progress"] = self.synthesis.progress(job_id)
         elif job["kind"] == "research-capture":
             job["progress"] = self.research.progress(job_id)
         elif job["kind"] == "query-export":
@@ -602,7 +618,7 @@ def serve(workspace, *, port=0):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
-            self.send_header("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+            self.send_header("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
             if name:
                 self.send_header("Content-Disposition", 'attachment; filename="' + name + '"')
 
@@ -634,6 +650,7 @@ def serve(workspace, *, port=0):
             if url.scheme or url.netloc or url.fragment:
                 return self._reply(400, {"error": "ANALYSIS_ROUTE_INVALID"})
             assets = {"/": (_analysis_ui.HTML, "text/html;charset=utf-8"), "/app.js": (_analysis_ui.JS, "text/javascript;charset=utf-8"), "/style.css": (_analysis_ui.CSS, "text/css;charset=utf-8")}
+            assets.update(synthesis_http.assets())
             assets.update({"/profiles": (_analysis_profiles_ui.HTML, "text/html;charset=utf-8"),
                            "/profiles.js": (_analysis_profiles_ui.JS, "text/javascript;charset=utf-8"),
                            "/profiles.css": (_analysis_profiles_ui.CSS, "text/css;charset=utf-8")})
@@ -647,6 +664,8 @@ def serve(workspace, *, port=0):
                 raise StateError("ANALYSIS_QUERY_PARAMETERS_INVALID")
             get = lambda key, default=None: query.get(key, [default])[0]
             parts = url.path.strip("/").split("/")
+            if synthesis_http.get(self, workspace, url, query, parts):
+                return
             if (self.command in {"GET", "HEAD"} and len(parts) == 4
                     and parts[:2] == ["api", "workbook-runs"] and parts[3] == "file"):
                 if set(query) != {"name"}:
@@ -797,7 +816,9 @@ def serve(workspace, *, port=0):
                 if self.headers.get("Transfer-Encoding") or self.headers.get_content_type() != "application/json":
                     return self._reply(415, {"error": "ANALYSIS_JSON_REQUIRED"})
                 length = int(self.headers.get("Content-Length", "0"))
-                if not 0 < length <= _MAX_BODY:
+                body_limit = (128 * 1024 * 1024 if url.path == "/api/synthesis-publications" else
+                              16 * 1024 * 1024 if url.path == "/api/synthesis-protocols" else _MAX_BODY)
+                if not 0 < length <= body_limit:
                     return self._reply(413, {"error": "ANALYSIS_REQUEST_SIZE_INVALID"})
                 raw = self.rfile.read(length)
                 if len(raw) != length:
@@ -805,6 +826,8 @@ def serve(workspace, *, port=0):
                 body = parse(raw)
                 if not isinstance(body, dict):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
+                if synthesis_http.post(self, workspace, url, parts, body):
+                    return
                 if url.path in {"/api/research-dossiers", "/api/research-sources", "/api/research-review", "/api/research-elements"}:
                     return self._reply(200, workspace.research.read(url.path.removeprefix("/api/research-"), body))
                 if len(parts) == 4 and parts[:2] == ["api", "research-captures"] and parts[3] == "cancel":

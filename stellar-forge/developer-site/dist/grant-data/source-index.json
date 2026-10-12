@@ -5,9 +5,9 @@
   "applicant": "Bryce Muhlnickel / TokenJunkieLabs",
   "application": {
     "path": "application.md",
-    "bytes": 27607,
-    "sha256": "8ae4324b2c25cd650f3131bd0787446e6a6599d38ae6641af093efaa9680169f",
-    "git_blob": "a851a50da120e96493e56e11ba57ce063508aaf0"
+    "bytes": 40407,
+    "sha256": "691f862ab4efcd3e0f53ffa52a96e01038a1d95de87f35da93cbcbb7fa1be1c4",
+    "git_blob": "2444c0c0f9e5068dcc39b7aa1a087a52ea3bb32a"
   },
   "request": {
     "basis": "prospective",
@@ -183,7 +183,16 @@
         "selected_calendar_requirement_usd": "26600.00",
         "peak_date": "2027-04-13"
       }
-    ]
+    ],
+    "valuation": {
+      "basis": "Settlement price for the actual award payment date",
+      "source": "https://stellar.gitbook.io/scf-handbook/scf-awards/official-rules-for-submissions",
+      "sections": [
+        "5.3",
+        "5.6"
+      ],
+      "price_reference": "CF Stellar Lumens-Dollar Settlement Price (XLMUSD_RR), or the fallback selected by SDF"
+    }
   },
   "submission": {
     "state": "INTEREST_SUBMITTED_AWAITING_INVITATION",
@@ -215,7 +224,14 @@
         "cash",
         "applicant",
         "federal-awards",
-        "environmental-provider-intake"
+        "environmental-provider-intake",
+        "procurement-review",
+        "prepaid-api",
+        "environmental-data",
+        "recurring-economic-report",
+        "coastal-model-input",
+        "imagery-and-processing",
+        "buyer-accounting"
       ]
     },
     {
@@ -444,15 +460,77 @@
         "funded independent Stellar deployment"
       ],
       "native_stellar_purchases": 0
+    },
+    {
+      "id": "economic-recurring",
+      "kind": "maintained-product",
+      "source_commit": "be44be564e35b63af23246bad531a95374bbb4c0",
+      "repository": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/TEMPLATES.md",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/be44be564e35b63af23246bad531a95374bbb4c0/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/TEMPLATES.md",
+      "operator_workflow": "Retained source, analyst review, calendar template, successor comparison, saved report, existing merchant publication, complete project receiving.",
+      "paid_unit": "One selected advertised briefing.html or briefing.json resource; additional advertised files and observation pages retain their own requests and prices.",
+      "application_operation": "SCF-FRED-ECONOMIC-CUSTOMER-APPLICATION-20261012"
+    },
+    {
+      "id": "coastal-model-input",
+      "kind": "maintained-product",
+      "source_commit": "92eb1c73a3cab9781ef7dbabdc12067344fb6aa2",
+      "repository": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/",
+      "path": "products/coops/OPERATING.md",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/92eb1c73a3cab9781ef7dbabdc12067344fb6aa2/products/coops/OPERATING.md",
+      "study_guide": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/92eb1c73a3cab9781ef7dbabdc12067344fb6aa2/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/STUDIES.md",
+      "receiving_guide": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/92eb1c73a3cab9781ef7dbabdc12067344fb6aa2/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/python/RECEIVING.md",
+      "operator_workflow": "Original station responses, reviewed editions and study mapping, complete release, returned-file comparison and explicit receiving, native queries and Python offline receiving.",
+      "paid_unit": "One selected advertised model-input resource, such as the complete released study CSV; other files and query pages retain their own advertised access and request terms.",
+      "application_operation": "SCF-COASTAL-COMMISSIONING-APPLICATION-018A-20261012",
+      "native_receiving_operation": "COOPS-LA-JOLLA-STUDY-RECEIVING-018A-20261012-01",
+      "native_receiving_status": "Registered original operating run in progress."
+    },
+    {
+      "id": "scf-official-rules",
+      "kind": "official-program",
+      "label": "Official Rules for Submissions",
+      "url": "https://stellar.gitbook.io/scf-handbook/scf-awards/official-rules-for-submissions",
+      "sections": [
+        "5.3",
+        "5.6",
+        "5.8"
+      ],
+      "accessed": "2026-10-12"
+    },
+    {
+      "id": "application-reference-1",
+      "kind": "application-source",
+      "label": "Tonbridge & Malling cemetery opportunity",
+      "url": "https://www.sell2wales.gov.wales/search/show/search_view.aspx?ID=OCT666186&catID="
+    },
+    {
+      "id": "application-reference-2",
+      "kind": "application-source",
+      "label": "Current buyer workflow",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/c0fbc20eb8c8c73c3639c2760f531987e3c6a733/stellar-forge/mcp-merchant-operator/ACCOUNTING_BUYER.md"
+    },
+    {
+      "id": "application-reference-3",
+      "kind": "application-source",
+      "label": "Completed original workflow and operating source",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2272"
+    },
+    {
+      "id": "application-reference-4",
+      "kind": "application-source",
+      "label": "maintained installation",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/tree/87801e395d496ffb36fba5cd7215ea942ed96aa2/products/federal-awards"
     }
   ],
   "product_and_finance": {
     "path": "product-and-finance.md",
-    "git_blob": "29e0ab9723e0eb787041409803158dc3ae94c1e3",
-    "bytes": 56242,
-    "sha256": "3868d29714a697ca447447d0d561d9f74515cbb0dc9f1ea4d17967ad9bcca8a7",
-    "basis": "Independently reviewed full product, cost, cash, customer and operating companion, extended with the canonical federal-awards customer, installation and existing-package mapping. The ERDDAP/Axiom contribution adds the complete source-to-customer operation, proposed commissioning scope, completed native receiving and common six-package mapping.",
-    "prior_git_blob": "f945864b5326bf312abc6327d37c0a197f7632a6"
+    "git_blob": "60b69d028ee6638830759569f9264fca3bc07f38",
+    "bytes": 72222,
+    "sha256": "66708d1bd72c9f1708cd7967e633fc02436776e4467af7e40517d3146a7ce193",
+    "basis": "Complete original finance companion with retained federal-award and Axiom provider sections, joined with the current recurring economic-report and coastal model-input installations.",
+    "prior_git_blob": "29e0ab9723e0eb787041409803158dc3ae94c1e3"
   },
   "narrative_source": {
     "basis": "Original manuscript author's complete October 12 reviewer answer",
@@ -468,6 +546,15 @@
         "before": "at least thirty useful purchases within fourteen consecutive days",
         "after": "at least thirty useful purchases in total across the two buyers within fourteen consecutive days",
         "reason": "State the existing combined purchase-count target across the two independent buyers."
+      },
+      {
+        "before": "scheduled-payment-day conversion",
+        "after": "conversion using the settlement price on the day the award is paid",
+        "source": "https://stellar.gitbook.io/scf-handbook/scf-awards/official-rules-for-submissions",
+        "sections": [
+          "5.3",
+          "5.6"
+        ]
       }
     ],
     "integrations": [
@@ -522,6 +609,39 @@
           "ndbc_periods_overlap": true
         }
       }
-    ]
+    ],
+    "current_application_sha256": "691f862ab4efcd3e0f53ffa52a96e01038a1d95de87f35da93cbcbb7fa1be1c4",
+    "economic_product_commit": "be44be564e35b63af23246bad531a95374bbb4c0",
+    "economic_application_operation": "SCF-FRED-ECONOMIC-CUSTOMER-APPLICATION-20261012",
+    "coastal_product_commit": "92eb1c73a3cab9781ef7dbabdc12067344fb6aa2",
+    "coastal_application_operation": "SCF-COASTAL-COMMISSIONING-APPLICATION-018A-20261012",
+    "composition": {
+      "operation": "SCF-GRANT-REVIEWER-PUBLICATION-8910-20261012",
+      "source_join": "SCF-GRANT-CUMULATIVE-COMPOSITION-81CF-20261012",
+      "canonical_front_sha256": "f35a63099fcb85efa539fad317b8ce2dfcfef965a9699dbfd4cbdeccc5164a1f",
+      "canonical_front_bytes": 41629,
+      "renderer_git_blob": "44e13b50ae2d92527d907fe9159d3946f087aa8d",
+      "source_editions": [
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "e37e2a7e8fcc87f4b290df78a46ef5544765d227",
+          "application": "a851a50da120e96493e56e11ba57ce063508aaf0",
+          "companion": "29e0ab9723e0eb787041409803158dc3ae94c1e3",
+          "source_index": "9b053ad2720ba2c6aed647be4f03c07213f284e8"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "3d3aa895ce964271516733f9c210e4d5bd7e4524",
+          "companion": "8f9f58b8329a3fda48ee37077963aa35bd6376f1",
+          "source_index": "7947c29a3cf590e250701b17397a243511f08827"
+        }
+      ],
+      "retained_product_sections": [
+        "Recurring economic-report installation",
+        "Coastal model-input installation",
+        "Federal awards: complete funding research, workshares and receiving",
+        "Environmental provider intake: complete source editions, commissioning and receiving"
+      ]
+    }
   }
 }

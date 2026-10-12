@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "redis-applications",
   "title": "Redis and Valkey applications",
-  "description": "Complete original Redis/Valkey connection, commissioning, customer response export, cutover and managed operation",
+  "description": "Complete original Redis/Valkey connection, commissioning, paid response export, paired cutover operator and managed operation",
   "base": {
     "commands": [
       "installation",
@@ -127,7 +127,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstream-service.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/application.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstreams.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/local-draft-store.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/local-draft-store.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/cutover-workspace.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/cutover-operator-cli.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/CUTOVER_OPERATOR.md"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",

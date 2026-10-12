@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { createGrpcWorkspace } from './model.mjs';
 import { nativeFactoryFor } from '../start.mjs';
 import { OPERATIONS_MAX_BYTES } from '../operations/domain.mjs';
+import { openTransferArchive, sendTransferArchive } from '../transfer/files.mjs';
 import { parseGrpcManagedSelection, validateGrpcManagedSelection, assertGrpcManagedSource,
   createGrpcManagedLaunch } from './managed-launch.mjs';
 import { readBrowserAssets } from '../../../distribution/browser-assets.mjs';
@@ -60,7 +61,12 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
     return typeof token === 'string' && Buffer.byteLength(token) === capability.length &&
       timingSafeEqual(Buffer.from(token), Buffer.from(capability));
   };
-  const actions = { 'operations-capture': 'operationsCapture', 'operations-captures': 'operationsCaptures',
+  const actions = { 'transfer-capture': 'transferCapture', 'transfer-list': 'transferList', 'transfer-read': 'transferRead',
+    'transfer-files': 'transferFiles', 'transfer-chunk': 'transferChunk', 'transfer-upload': 'transferUpload',
+    'transfer-upload-status': 'transferUploadStatus', 'transfer-inspect': 'transferInspect',
+    'transfer-receive': 'transferReceive', 'transfer-receipt': 'transferReceipt', 'transfer-open': 'transferOpen',
+    'transfer-close': 'transferClose', 'transfer-cancel': 'transferCancel', 'transfer-manifest-file': 'transferManifestFile',
+    'operations-capture': 'operationsCapture', 'operations-captures': 'operationsCaptures',
     'operations-read': 'operationsRead', 'operations-save': 'operationsSave', 'operations-case': 'operationsCase',
     'operations-cases': 'operationsCases', 'operations-export': 'operationsExport', 'operations-download': 'operationsDownload',
     'operations-receive': 'operationsReceive', 'health-start': 'healthStart', 'health-read': 'healthRead', 'health-list': 'healthList',
@@ -105,9 +111,9 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
           if (controller.signal.aborted) return;
           downloads.add(req.socket); res.once('close', () => downloads.delete(req.socket));
           const capture = download.capture;
-          res.writeHead(200, { 'content-type': 'application/x-ndjson; charset=utf-8',
+          res.writeHead(200, { 'content-type': capture.contentType ?? 'application/x-ndjson; charset=utf-8',
             'content-length': capture.bytes, 'content-disposition': 'attachment; filename="' + capture.filename + '"',
-            'x-content-sha256': capture.sha256, 'x-grpc-stream-complete': String(capture.complete),
+            'x-content-sha256': capture.sha256, ...(typeof capture.complete === 'boolean' ? { 'x-grpc-stream-complete': String(capture.complete) } : {}),
             'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' });
           if (!capture.bytes) { res.end(); return; }
           const input = download.handle.createReadStream({ autoClose: false, start: 0, end: capture.bytes - 1,
@@ -117,6 +123,22 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
         return;
       }
       if (!authorized(req)) return response(res, 403, { error: 'GRPC_WORKSPACE_CAPABILITY_REQUIRED' });
+      if (req.method === 'POST' && ['/api/transfer-download', '/api/transfer-archive'].includes(url.pathname)) {
+        const selected = await model.transferDownload(await body(req, 65536));
+        if (url.pathname === '/api/transfer-archive') {
+          downloads.add(req.socket); res.once('close', () => downloads.delete(req.socket));
+          return sendTransferArchive(selected.path, selected.descriptor, res);
+        }
+        if (streamTickets.size >= 16) return response(res, 429, { error: 'GRPC_STREAM_DOWNLOAD_CAPACITY' });
+        const download = await openTransferArchive(selected.path, selected.descriptor);
+        if (controller.signal.aborted || closing) { await download.close(); return; }
+        const ticket = randomBytes(32).toString('hex');
+        const timer = setTimeout(() => { void releaseTicket(ticket).catch(() => {}); }, 60000);
+        timer.unref?.(); streamTickets.set(ticket, { download, timer });
+        return response(res, 200, { url: '/api/stream-files/' + ticket, expiresInSeconds: 60,
+          filename: download.capture.filename, sha256: download.capture.sha256,
+          bytes: download.capture.bytes, manifestSha256: selected.descriptor.manifestSha256 });
+      }
       if (req.method === 'POST' && url.pathname === '/api/stream-download') {
         if (streamTickets.size >= 16) return response(res, 429, { error: 'GRPC_STREAM_DOWNLOAD_CAPACITY' });
         const download = await model.streamDownload(await body(req), { signal: controller.signal });
@@ -136,7 +158,7 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
       const action = url.pathname.startsWith('/api/') ? actions[url.pathname.slice(5)] : null;
       if (req.method === 'POST' && action) {
         const value = await model[action](await body(req, action === 'operationsReceive' ? OPERATIONS_MAX_BYTES + 1048576 : 17825792), { signal: controller.signal });
-        if (['download', 'archive', 'operationsDownload'].includes(action)) {
+        if (['download', 'archive', 'operationsDownload', 'transferManifestFile'].includes(action)) {
           downloads.add(req.socket); res.once('close', () => downloads.delete(req.socket));
           res.writeHead(200, { 'content-type': value.contentType, 'content-length': value.bytes.length,
             'content-disposition': 'attachment; filename="' + value.filename + '"', 'x-content-sha256': value.sha256,

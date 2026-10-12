@@ -3,6 +3,8 @@ import { clone, digest as nativeDigest, WorkspaceError } from '../opensearch/wor
 import { exact, add, subtract, multiply, divide, compare, absolute, maximum, ZERO, sum,
   exactText, exactValue, lineValue, moneyMatches, rounded } from './numbers.mjs';
 
+import { defaultSupplierOrderProfile, supplierOrderDocumentProfile, supplierOrderProfileSha256, supplierOrderProfileFields, supplierOrderProfileFindings, supplierOrderProfilesEqual } from './profiles.mjs';
+
 export const PROFILE_ID='unite-opentrans-1.0';
 export const DOCUMENT_SCHEMA='stellar-forge.supplier-order-document.v1';
 export const ORDER_SCHEMA='stellar-forge.supplier-order.v1';
@@ -23,7 +25,7 @@ export function text(value,label,max=512){
     fail('ORDER_TEXT_INVALID',label+' must contain 1–'+max+' characters.');
   return value;
 }
-export function orderId(value){return text(value,'Unite order number',21);}
+export function orderId(value,profile=defaultSupplierOrderProfile()){return text(value,profile.id===PROFILE_ID?'Unite order number':'Order number',profile.orderIdMaximum);}
 export function data(value,depth=0){
   if(depth>512)fail('ORDER_DATA_TOO_DEEP','Document data exceeds 512 JSON levels.');
   if(value===null||typeof value==='string'||typeof value==='boolean')return value;
@@ -43,21 +45,22 @@ export const digest=value=>nativeDigest(typeof value==='string'?value:canonical(
 
 export function normalizedDocument(value){
   data(value);
-  if(!object(value)||value.schema!==DOCUMENT_SCHEMA||value.profileId!==PROFILE_ID||value.version!=='1.0'||!KINDS.includes(value.kind))
-    fail('ORDER_DOCUMENT_PROFILE_INVALID','Use an original openTRANS 1.0 document with the Unite supplier profile.');
+  if(!object(value)||value.schema!==DOCUMENT_SCHEMA||value.version!=='1.0'||!KINDS.includes(value.kind))
+    fail('ORDER_DOCUMENT_PROFILE_INVALID','Use an original openTRANS 1.0 document with its retained supplier profile.');
+  const profile=supplierOrderDocumentProfile(value);
   text(value.documentId,'Document number',250);
   if(!object(value.header)||!Array.isArray(value.items)||!value.items.length||value.items.length>100000)
     fail('ORDER_DOCUMENT_ITEMS_REQUIRED','Supply the complete header and between one and 100,000 item lines.');
   if(!object(value.summary))fail('ORDER_DOCUMENT_SUMMARY_REQUIRED','Retain the original document summary.');
-  if(['ORDER','ORDERRESPONSE'].includes(value.kind))orderId(value.orderId);
+  if(['ORDER','ORDERRESPONSE'].includes(value.kind))orderId(value.orderId,profile);
   return clone(value);
 }
 export function referencedOrders(document){
-  if(['ORDER','ORDERRESPONSE'].includes(document.kind))return [orderId(document.orderId)];
+  if(['ORDER','ORDERRESPONSE'].includes(document.kind))return [orderId(document.orderId,supplierOrderDocumentProfile(document))];
   return [...new Set(document.items.map(item=>item.orderReference?.orderId).filter(value=>typeof value==='string'&&value))].sort();
 }
 export function businessKey(document){return canonical([document.kind,document.documentId]);}
-export function sourceDocumentId(document,sourceSha256){return digest([PROFILE_ID,businessKey(document),sourceSha256]);}
+export function sourceDocumentId(document,sourceSha256){const profile=supplierOrderDocumentProfile(document);return digest([profile.id===PROFILE_ID?PROFILE_ID:supplierOrderProfileSha256(profile),businessKey(document),sourceSha256]);}
 export function lineReference(document,item){
   return ['ORDER','ORDERRESPONSE'].includes(document.kind)
     ?{orderId:document.orderId,lineId:item.orderReference?.lineId??item.lineId}
@@ -81,9 +84,10 @@ function samePrice(left,right){
   catch{return false;}
 }
 export function reviewDocument(document,{orders=[],roundingPolicy=null,forOutput=false}={}){
+  const profile=supplierOrderDocumentProfile(document),policy=profile.validation;
   const findings=[],kind=document.kind, seen=new Set(), refs=new Map(orders.map(order=>[order.orderId,order]));
   required(findings,document.documentId,'/documentId','Document number',kind,250);
-  if(['ORDER','ORDERRESPONSE'].includes(kind))required(findings,document.orderId,'/orderId','Unite order number',kind,21);
+  if(['ORDER','ORDERRESPONSE'].includes(kind))required(findings,document.orderId,'/orderId',profile.id===PROFILE_ID?'Unite order number':'Order number',kind,profile.orderIdMaximum);
   if(!document.items?.length)findings.push(issue('ITEMS_REQUIRED','/items','Include at least one complete item line.',kind));
   let calculatedNet=ZERO,calculatedTax=ZERO,netKnown=true,taxKnown=true;
   for(let index=0;index<(document.items??[]).length;index++){
@@ -114,14 +118,16 @@ export function reviewDocument(document,{orders=[],roundingPolicy=null,forOutput
         const tax=numeric(findings,item.price.tax,path+'/price/tax','Tax fraction',kind,{nonnegative:true});
         if(tax&&value&&(item.price.lineAmount==null||declaredLine))calculatedTax=add(calculatedTax,taxAmount(declaredLine??value,tax,roundingPolicy));
         else taxKnown=false;
-      }else {taxKnown=false;if(kind==='INVOICE')findings.push(issue('TAX_REQUIRED',path+'/price/tax','The invoice needs the applicable fractional tax rate.',kind));}
+      }else {taxKnown=false;if(kind==='INVOICE'&&policy.invoiceTaxRate)findings.push(issue('TAX_REQUIRED',path+'/price/tax','The invoice needs the applicable fractional tax rate.',kind));}
     }else{netKnown=false;taxKnown=false;if(kind==='INVOICE')findings.push(issue('PRICE_REQUIRED',path+'/price','The invoice needs its original or explicitly revised price.',kind));}
     if(['DISPATCHNOTIFICATION','INVOICE'].includes(kind)){
-      required(findings,item.orderReference?.orderId,path+'/orderReference/orderId','Original Unite order number',kind,21);
+      required(findings,item.orderReference?.orderId,path+'/orderReference/orderId',profile.id===PROFILE_ID?'Original Unite order number':'Original order number',kind,profile.orderIdMaximum);
       required(findings,item.orderReference?.lineId,path+'/orderReference/lineId','Original order line number',kind,250);
     }
     const reference=lineReference(document,item),selected=refs.get(reference.orderId);
     if(selected){
+      const selectedDocument=selected.document?.document??selected.document??selected.original;
+      if(selectedDocument&&!supplierOrderProfilesEqual(profile,supplierOrderDocumentProfile(selectedDocument)))findings.push(issue('ORDER_PROFILE_REFERENCE_DIFFERS',path+'/orderReference','The referenced order uses a different retained customer profile.',kind));
       const originals=selected.document?.document?.items??selected.document?.items??selected.original?.items??selected.items;
       const original=originals?.find(line=>line.lineId===reference.lineId);
       if(!original)findings.push(issue('ORDER_LINE_NOT_FOUND',path+'/orderReference','The referenced line is absent from the selected original order.',kind,'error',{orderId:reference.orderId,lineId:reference.lineId}));
@@ -142,9 +148,10 @@ export function reviewDocument(document,{orders=[],roundingPolicy=null,forOutput
           findings.push(issue('PRICE_CHANGED',path+'/price','The invoice price differs from the original order. Review the selected confirmation and commercial agreement.',kind,'warning'));
       }
     }else if(kind!=='ORDER'&&refs.size)findings.push(issue('ORDER_NOT_FOUND',path+'/orderReference','The original referenced order is not in this workspace selection.',kind));
-    if(kind==='ORDERRESPONSE'&&quantity&&compare(quantity,ZERO)>=0&&!item.deliveryDate&&!document.header.deliveryDate&&forOutput)
+    if(kind==='ORDERRESPONSE'&&quantity&&compare(quantity,ZERO)<0&&profile.confirmation.negativeQuantity==='reject')findings.push(issue('PROFILE_NEGATIVE_CONFIRMATION_REJECTED',path+'/quantity','This selected interface does not permit a negative cancellation quantity.',kind));
+    if(kind==='ORDERRESPONSE'&&quantity&&compare(quantity,ZERO)>=0&&!item.deliveryDate&&!document.header.deliveryDate&&forOutput&&policy.confirmationDeliveryWarning)
       findings.push(issue('DELIVERABILITY_DATE_REQUIRED',path+'/deliveryDate','Give the expected delivery period when it is known for this confirmation.',kind,'warning'));
-    if(kind==='DISPATCHNOTIFICATION'&&!(item.packages?.length||document.header.packages?.length))
+    if(kind==='DISPATCHNOTIFICATION'&&policy.dispatchTrackingWarning&&!(item.packages?.length||document.header.packages?.length))
       findings.push(issue('PACKAGE_REFERENCE_REQUIRED',path+'/packages','Include the parcel or Track & Trace number when it is available for this dispatched line.',kind,'warning'));
   }
   if(document.summary?.totalItems!=null){
@@ -162,14 +169,20 @@ export function reviewDocument(document,{orders=[],roundingPolicy=null,forOutput
   if(kind==='INVOICE'&&forOutput){
     required(findings,document.header.currency,'/header/currency','Invoice currency',kind,3);
     required(findings,document.header.date,'/header/date','Invoice date',kind,64);
-    if(!document.header.deliveryDate&&!document.items.every(item=>item.deliveryDate||item.deliveryReferences?.length))
+    if(policy.invoiceDeliveryReference&&!document.header.deliveryDate&&!document.items.every(item=>item.deliveryDate||item.deliveryReferences?.length))
       findings.push(issue('DELIVERY_DATE_REQUIRED','/header/deliveryDate','Give the service or delivery date in the invoice header or each item.',kind));
-    for(const name of ['buyer','supplier','invoice'])if(!document.header.parties?.[name])
+    for(const name of policy.invoiceParties)if(!document.header.parties?.[name])
       findings.push(issue('PARTY_REQUIRED','/header/parties/'+name,'Retain the original '+name+' party and its required company details.',kind));
     if(document.summary?.totalAmount==null)findings.push(issue('NET_TOTAL_REQUIRED','/summary/totalAmount','The invoice requires its total net amount.',kind));
     if(document.summary?.totalTaxAmount==null)findings.push(issue('TAX_TOTAL_REQUIRED','/summary/totalTaxAmount','The invoice requires its total tax amount.',kind));
   }
-  return{schema:'stellar-forge.supplier-order-review.v1',profileId:PROFILE_ID,findings,
+  if(kind==='ORDERRESPONSE'&&profile.confirmation.omittedLines==='require-complete'){
+    const selected=refs.get(document.orderId),original=selected?.document?.document??selected?.document??selected?.original;
+    for(const item of original?.items??[])if(!document.items.some(line=>(line.orderReference?.lineId??line.lineId)===item.lineId))findings.push(issue('PROFILE_CONFIRMATION_LINE_MISSING','/items','The selected interface requires every original line in a confirmation; missing lines do not imply cancellation.',kind,'error',{lineId:item.lineId}));
+  }
+  findings.push(...supplierOrderProfileFindings(document,{forOutput}));
+  if(profile.id!==PROFILE_ID)for(const finding of findings)finding.rule={...finding.rule,url:profile.declaration.url,reference:finding.rule?.reference??profile.declaration.reference,profileId:profile.id,profileRevision:profile.revision,profileSha256:supplierOrderProfileSha256(profile)};
+  return{schema:'stellar-forge.supplier-order-review.v1',...supplierOrderProfileFields(profile),findings,
     errors:findings.filter(f=>f.severity==='error').length,warnings:findings.filter(f=>f.severity==='warning').length,
     net:netKnown?exactValue(calculatedNet):null,tax:taxKnown?exactValue(calculatedTax):null};
 }
@@ -202,7 +215,7 @@ function currentDocumentFindings(record,activeIndexes,order){
   return kept;
 }
 export function projectOrder(originalRecord,selectionRecords=[],{revision=1,history=[]}={}){
-  const original=documentRecord(originalRecord), id=orderId(original.orderId);
+  const original=documentRecord(originalRecord),profile=supplierOrderDocumentProfile(original), id=orderId(original.orderId,profile);
   const confirmations=new Map(),currentDocuments=new Map(),sourceFindings=[];
   for(const record of selectionRecords){
     const doc=documentRecord(record);if(doc.kind==='ORDER')continue;
@@ -214,7 +227,8 @@ export function projectOrder(originalRecord,selectionRecords=[],{revision=1,hist
   const lines=original.items.map(item=>{
     const q=numericOrNull(item.quantity),confirmation=confirmations.get(item.lineId);
     const compatibleConfirmation=confirmation&&confirmation.item.unit===item.unit&&confirmation.item.article?.supplierId===item.article?.supplierId;
-    const cq=compatibleConfirmation?numericOrNull(confirmation.item.quantity):null;
+    const parsedConfirmation=compatibleConfirmation?numericOrNull(confirmation.item.quantity):null;
+    const cq=parsedConfirmation&&!(compare(parsedConfirmation,ZERO)<0&&profile.confirmation.negativeQuantity==='reject')?parsedConfirmation:null;
     const cancelled=cq&&compare(cq,ZERO)<0?absolute(cq):ZERO;
     const confirmed=cq&&compare(cq,ZERO)>=0?cq:null;
     const dispatches=[],invoices=[];let dispatched=ZERO,invoiced=ZERO;
@@ -320,7 +334,8 @@ export function createDocumentDraft(kind,orders,{date=new Date().toISOString(),d
   if(!['ORDERRESPONSE','DISPATCHNOTIFICATION','INVOICE'].includes(kind))fail('ORDER_DRAFT_KIND_INVALID','Choose a confirmation, dispatch notification or invoice.');
   if(!Array.isArray(orders)||!orders.length)fail('ORDER_DRAFT_ORDERS_REQUIRED','Select at least one complete original order.');
   if(kind==='ORDERRESPONSE'&&orders.length!==1)fail('ORDER_CONFIRMATION_ONE_ORDER','One confirmation refers to one original order.');
-  const source=orders[0].document.document??orders[0].document, header=clone(source.header),items=[];
+  const source=orders[0].document.document??orders[0].document,profile=supplierOrderDocumentProfile(source), header=clone(source.header),items=[];
+  if(orders.some(order=>!supplierOrderProfilesEqual(profile,supplierOrderDocumentProfile(order.document.document??order.document))))fail('ORDER_DRAFT_PROFILES_DIFFER','Create separate documents for different retained customer profiles.');
   const sharedRoles=kind==='INVOICE'?['buyer','supplier','invoice']:['buyer','supplier','delivery','finalDelivery','transport'];
   const sameParties=header=>Object.fromEntries(sharedRoles.map(role=>[role,header.parties?.[role]??null]));
   if(orders.some(order=>canonical(sameParties((order.document.document??order.document).header))!==canonical(sameParties(source.header))))
@@ -361,7 +376,7 @@ export function createDocumentDraft(kind,orders,{date=new Date().toISOString(),d
       }else items.push(line);
     }
   }
-  const document={schema:DOCUMENT_SCHEMA,profileId:PROFILE_ID,kind,version:'1.0',
+  const document={schema:DOCUMENT_SCHEMA,...supplierOrderProfileFields(profile),kind,version:'1.0',
     documentId:kind==='ORDERRESPONSE'?source.orderId:documentId??'',
     orderId:kind==='ORDERRESPONSE'?source.orderId:null,header,items,summary:{totalItems:String(items.length)},
     raw:null,source:{kind:'supplier-draft',orders:orders.map(order=>({orderId:order.orderId,revision:order.revision,documentId:order.document.id,sha256:order.document.sha256}))}};
