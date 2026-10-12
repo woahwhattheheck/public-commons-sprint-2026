@@ -1,6 +1,7 @@
 // MIT. FilmDrop reads use the maintained SF31 transport and SF88 private store.
 import { join } from 'node:path';
 import { createPublicHttpsFetch, normalizeBuyerTransport } from '../../../sf31-buyer-client/public-transport.mjs';
+import { createSourceBearerAuth } from '../../../sf31-buyer-client/source-auth.mjs';
 import { privateDirectory, readBytes, readJson, writeBytes, writeJson, exists, need, intent }
   from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { canonicalJson, sha256, publicURL } from '../provider.mjs';
@@ -24,7 +25,7 @@ export function normalizeDeployment(input) {
     credential: null };
   need(Number.isSafeInteger(result.pageSize) && result.pageSize >= 1 && result.pageSize <= 1000, 'PROCESSING_PAGE_SIZE_INVALID');
   need(Number.isSafeInteger(result.maxPages) && result.maxPages > 0 && result.maxPages <= 100000, 'PROCESSING_PAGE_LIMIT_INVALID');
-  need(Number.isSafeInteger(result.timeoutMs) && result.timeoutMs >= 1000 && result.timeoutMs <= 600000, 'PROCESSING_TIMEOUT_INVALID');
+  need(Number.isSafeInteger(result.timeoutMs) && result.timeoutMs >= 1000 && result.timeoutMs <= 300000, 'PROCESSING_TIMEOUT_INVALID');
   need(Number.isSafeInteger(result.maxResponseBytes) && result.maxResponseBytes > 0 && result.maxResponseBytes <= MAX_BODY, 'PROCESSING_RESPONSE_LIMIT_INVALID');
   if (input.credential !== undefined && input.credential !== null) {
     const c = input.credential;
@@ -32,6 +33,7 @@ export function normalizeDeployment(input) {
       !/^(host|cookie|proxy-|connection|content-length|transfer-encoding)/i.test(c.header), 'PROCESSING_CREDENTIAL_HEADER_INVALID');
     const prefix = c.prefix ?? '';
     need(typeof prefix === 'string' && prefix.length <= 80 && !/[\r\n\0]/.test(prefix), 'PROCESSING_CREDENTIAL_PREFIX_INVALID');
+    need(c.header.toLowerCase() !== 'authorization' || /^Bearer $/i.test(prefix), 'PROCESSING_AUTHORIZATION_REQUIRES_BEARER');
     result.credential = { envRef: reference(c.envRef), header: c.header, prefix };
   }
   return result;
@@ -153,12 +155,15 @@ export async function readProcessingCapture(directory, expectedRequestHash) {
   return { request: request.request, requestHash: request.requestHash, record, raw, document, parseError };
 }
 
-export function createProcessingProvider({ deployment: input, transport, environment = process.env } = {}) {
+export function createProcessingProvider({ deployment: input, transport, environment = process.env, credentialsAuthorized = true } = {}) {
   const deployment = normalizeDeployment(input);
   const profiles = (transport ? Array.isArray(transport) ? transport : [transport] : []).map(normalizeBuyerTransport);
   const origin = new URL(deployment.baseUrl).origin, profile = profiles.find(p => p.origin === origin);
   need(!profiles.length || profile, 'PROCESSING_TRANSPORT_ORIGIN_NOT_CONFIGURED');
-  const fetch = createPublicHttpsFetch({ timeoutMs: deployment.timeoutMs, ...(profile ? { trustedProxy: profile } : {}) });
+  const sourceAuth = deployment.credential?.header.toLowerCase() === 'authorization'
+    ? createSourceBearerAuth({ bindings: [{ origin, tokenEnv: deployment.credential.envRef }], environment, timeoutMs: deployment.timeoutMs }) : null;
+  const fetch = createPublicHttpsFetch({ timeoutMs: deployment.timeoutMs, ...(profile ? { trustedProxy: profile } : {}),
+    ...(sourceAuth ? { sourceAuthorization: sourceAuth.authorizationForOrigin(origin) } : {}) });
   async function capture(request, { directory, signal } = {}) {
     request = selectedRequest(request, deployment);
     await privateDirectory(directory);
@@ -170,13 +175,17 @@ export function createProcessingProvider({ deployment: input, transport, environ
     }
     await writeJson(requestPath, { request, requestHash, startedAt: stamp() }, { exclusive: true });
     const headers = { ...request.headers };
-    if (deployment.credential) {
-      const c = deployment.credential, secret = environment[c.envRef];
-      need(typeof secret === 'string' && secret.length > 0 && !/[\r\n\0]/.test(secret), 'PROCESSING_CREDENTIAL_ENV_UNAVAILABLE');
-      headers[c.header] = c.prefix + secret;
-    }
     let response;
     try {
+      if (deployment.credential) {
+        need(credentialsAuthorized === true, 'PROCESSING_LOCAL_CREDENTIAL_CONFIGURATION_REQUIRED');
+        if (sourceAuth) Object.assign(headers, await sourceAuth.requestHeaders({ url: request.url, method: 'GET', signal }));
+        else {
+          const c = deployment.credential, secret = environment[c.envRef];
+          need(typeof secret === 'string' && secret.length > 0 && secret.length <= 16384 && !/[\r\n\0]/.test(secret), 'PROCESSING_CREDENTIAL_ENV_UNAVAILABLE');
+          headers[c.header] = c.prefix + secret;
+        }
+      }
       response = await fetch(request.url, { method: 'GET', headers, redirect: 'manual', signal });
       const head = { requestHash, status: response.status, ...retainedHeaders(Object.fromEntries(response.headers)),
         capturedAt: stamp(), imported: false };
@@ -222,5 +231,5 @@ export function createProcessingProvider({ deployment: input, transport, environ
     await writeJson(join(directory, 'response.json'), record, { exclusive: true });
     return await readProcessingCapture(directory, requestHash);
   }
-  return Object.freeze({ deployment, capture, importResponse });
+  return Object.freeze({ deployment, capture, importResponse, close: () => sourceAuth?.close() });
 }
