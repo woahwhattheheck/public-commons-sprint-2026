@@ -1,5 +1,5 @@
 // MIT. Merchant inputs → retained private request → original customer checkout.
-import { createInputFilePanel } from '/jobs/request/files.mjs';
+import { createInputFilePanel } from './files.mjs';
 const byId = id => document.getElementById(id);
 const SESSION = 'sf88-paid-job-customer-session';
 let token = location.hash.slice(1);
