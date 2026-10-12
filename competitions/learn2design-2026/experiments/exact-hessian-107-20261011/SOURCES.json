@@ -378,7 +378,7 @@
     "path": "runner/run_recorded.py",
     "sha256": "b2a294bf78f9593799ed25c0c5f5c3ef5d76fe00f1e18fc792066fa66e9d6b00",
     "cpu_launcher": "runner/run_recorded_cpu.sh",
-    "cpu_launcher_sha256": "97c55ae3559befea87db90a3ae902e903042579ab81ca50320a452813ad76356",
+    "cpu_launcher_sha256": "ec0e8f9d9ba157db70b1e69c9fba965e6f066c8b816965a0eee5058e2030d9be",
     "semantics": "Same-process effective runtime plus exact source/companion/options invocation; original native Objective, runner and report remain authoritative. Coordinate-map diagnostics must identify the requested actual map.",
     "invocation_adapter": "runner/invocation.py",
     "invocation_adapter_sha256": "d567f5b43902893b80d419bcd27bbeb88028627dba6dcab3c1f72344fa765594"
