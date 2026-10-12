@@ -94,7 +94,7 @@ export async function inspectStacManagedSelection({command,flags,sourceDirectory
   }
   const options={port:portValue(flags.port),maxRequestBytes:flags['max-request-bytes']===undefined?
     128*1024*1024:Number(flags['max-request-bytes'])};
-  need(Number.isSafeInteger(options.maxRequestBytes)&&options.maxRequestBytes>0,'STAC_MANAGED_REQUEST_LIMIT_INVALID');
+  need(Number.isSafeInteger(options.maxRequestBytes)&&options.maxRequestBytes>=1024,'STAC_MANAGED_REQUEST_LIMIT_INVALID');
   const processing=flags['processing-workspace']?await privateIdentity(absolute(flags['processing-workspace'])):null;
   if(command==='prescient-serve'){
     const native=await import(pathToFileURL(join(sourceDirectory,'prescient/configuration.mjs')).href);
