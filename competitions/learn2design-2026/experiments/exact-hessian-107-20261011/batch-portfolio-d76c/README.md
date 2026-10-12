@@ -20,7 +20,9 @@ basins. New random starts remain part of exploration.
 Donor mapping receives a snapshot of finite public bounds, problem specification
 and parameter context captured before the Objective switches to unbounded
 search. Both donor clipping and the sigmoid inverse use that same snapshot.
-The original helper and compiled bank retain their exact bytes.
+The original helper and compiled bank retain their exact bytes. Native reports
+retain the complete donor selection and any random fallback, so the comparison
+includes the policy's outcome on every selected topology.
 
 ## Native feasibility and timing
 

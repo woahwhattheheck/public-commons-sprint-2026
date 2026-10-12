@@ -256,10 +256,9 @@
           },
           {
             "path": [
-              "initializer",
-              "status"
+              "corpus_starts"
             ],
-            "equals": "ready"
+            "equals": true
           }
         ]
       }
@@ -318,10 +317,9 @@
           },
           {
             "path": [
-              "initializer",
-              "status"
+              "corpus_starts"
             ],
-            "equals": "ready"
+            "equals": true
           }
         ]
       }

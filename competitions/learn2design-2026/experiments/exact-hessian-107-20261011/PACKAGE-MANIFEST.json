@@ -32,8 +32,8 @@
     },
     {
       "path": "batch-portfolio-d76c/README.md",
-      "bytes": 6321,
-      "sha256": "2ab9625bcc4d4ff6d2fd58e8e8ebc5a56ac6b20b285067c2bd885989f819445d"
+      "bytes": 6473,
+      "sha256": "f718f20a5f6a3a7c8da73bb846b91441bce6c13aaf1b0a4189c55b8d6aee3e5c"
     },
     {
       "path": "batch-portfolio-d76c/requirements.txt",
@@ -187,8 +187,8 @@
     },
     {
       "path": "SOURCES.json",
-      "bytes": 16650,
-      "sha256": "00ba428db972917d972d5d79c0cdbe4325d0a2611228cee390cbac8296687fc9"
+      "bytes": 16600,
+      "sha256": "ff4a75446599f6777002f5fcc07116176a3acc7850cf4cca3fed53748a589b8e"
     },
     {
       "path": "submission-zips/099.zip",
