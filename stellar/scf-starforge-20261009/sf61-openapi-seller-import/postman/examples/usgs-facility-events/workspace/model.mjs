@@ -123,6 +123,9 @@ export function validateBuyerSource(source,collection,metadata) {
   return {sourceId:source.id,collection,member};
 }
 
+function originalSourceString(value,label,maximum) {
+  string(value,label,maximum);return value;
+}
 export function sourceRecord(bytes, input={}) {
   need(bytes.byteLength<=SOURCE_LIMIT,'A retained response may contain at most 64 MiB.');
   const status=input.status??200;
@@ -135,8 +138,10 @@ export function sourceRecord(bytes, input={}) {
     need(document.features.length<=100000,'This source exceeds the original reporter’s 100000 received-row limit.');
     need(document.metadata?.status===undefined || document.metadata.status===200,'The retained provider metadata reports an unsuccessful response.');
   }
-  const record={name:string(input.name??'events.geojson','Source filename',4096,true),bodySha256:hash(bytes),bytes:bytes.byteLength,
-    status,receivedAt:timestamp(input.receivedAt??now(),'Receiving time'),url:string(input.url??document?.metadata?.url??'','Source URL',8000),
+  const sourceName=input.name??'events.geojson',sourceUrl=input.url??document?.metadata?.url??'';
+  const record={name:input.acquisition?originalSourceString(sourceName,'Source filename',4096):string(sourceName,'Source filename',4096,true),bodySha256:hash(bytes),bytes:bytes.byteLength,
+    status,receivedAt:timestamp(input.receivedAt??now(),'Receiving time'),
+    url:input.acquisition?originalSourceString(sourceUrl,'Source URL',8000):string(sourceUrl,'Source URL',8000),
     mode:input.mode??'retained-file',returnedFeatures:document?.features.length??0,
     metadata:document?.metadata??null,headers:plain(input.headers)?input.headers:{},
     ...(input.captureId?{captureId:input.captureId}:{}),...(input.plan?{plan:queryPlan(input.plan)}:{}),
@@ -281,6 +286,6 @@ export function handoverHtml(project,current,rows,rosterEntry,sources,{retainedW
       '<br>Original manifest SHA-256: '+escape(collection.manifestSha256)+'<br>Original response SHA-256: '+
       escape(member.sha256)+'<br>Facility source edition: '+escape(sourceId)+'</p></article>').join('')+
     '<p>The complete original collection archives, including all members, accompany the full workspace transfer.</p></section>':'';
-  return renderFacilityHtml(current.report).replace('</main>',extra+carried+historyHtml+acquisitionHtml+'</main>');
+  return renderFacilityHtml(current.report).replace('</main>',() => extra+carried+historyHtml+acquisitionHtml+'</main>');
 }
 export { renderFacilityCsv };
