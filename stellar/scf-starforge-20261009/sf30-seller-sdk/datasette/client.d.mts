@@ -49,6 +49,8 @@ export interface SourceReview {
 }
 export interface PublisherReview {
   runId: string;
+  /** Retain this exact original request through a lost response. */
+  requestId?: string;
   reviewer: string;
   note: string;
   initialize?: boolean;
@@ -70,7 +72,7 @@ export interface DatasetteOperationInputs {
   'editions.list': Record<string, never>;
   'editions.inspect': PageSelection & { id: string };
   'editions.compare': { left: string; right: string };
-  'source.select': { editionId: string; query?: string };
+  'source.select': { editionId: string; query?: string; requestId?: string; expectedSelectionHash?: string | null };
   'publisher.status': { limit?: number; plansOffset?: number; runsOffset?: number; historyOffset?: number };
   'publisher.source': Record<string, never>;
   'publisher.target': Record<string, never>;
@@ -100,6 +102,8 @@ export interface DatasetteOperationInputs {
   'files.read': { path: string; sha256: string; offset?: number | string; limit?: number | string };
   'workspace.export': { outputFile?: string };
   'workspace.receive': { archiveFile: string; directory: string; sha256: string };
+  'requests.inspect': { requestId: string };
+  'requests.list': PageSelection;
   'operations.inspect': { operationId: string };
   'operations.cancel': { operationId: string };
 }
@@ -196,7 +200,21 @@ export interface DatasetteUploadStatus extends JsonObject {
   error?: JsonObject;
   replayed?: boolean;
 }
+export interface DatasetteOriginalRequest extends JsonObject {
+  schema: 'stellar-forge.datasette-request.v1';
+  workspaceId: string; requestId: string; operation: string; input: JsonObject; requestHash: string;
+  state: 'PENDING' | 'COMPLETE' | 'REJECTED'; createdAt: string; completedAt: string | null;
+  result: JsonValue | null; error: JsonObject | null;
+  receiving?: {originDirectory:string;directory:string;note:string};
+}
+export interface DatasetteRequestPage extends JsonObject {
+  schema: 'stellar-forge.datasette-request-list.v1'; workspaceId: string;
+  requests: Array<JsonObject & {requestId:string;operation:string;requestHash:string;state:string}>;
+  page: {offset:number;limit:number;total:number;next:number|null;previous:number|null};
+}
 export interface DatasetteOperationResults {
+  'requests.inspect': DatasetteOriginalRequest;
+  'requests.list': DatasetteRequestPage;
   'files.list': DatasetteFilePage;
   'files.inspect': DatasetteRetainedFile;
   'files.read': DatasetteFileChunk;

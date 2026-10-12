@@ -13,6 +13,7 @@ import {
 } from './editions.mjs';
 import { isJsonNumber, numericToken, exactCell } from './json.mjs';
 import { retainedDatasetteFiles } from './files.mjs';
+import { openDatasetteRequests } from './requests.mjs';
 
 export const DATASETTE_WORKSPACE_SCHEMA = 'stellar-forge.datasette-workspace.v1';
 const HASH = /^[a-f0-9]{64}$/;
@@ -48,6 +49,8 @@ const descriptions = [
   ['files.read', 'Read a complete byte range of an identified original file.', ['path', 'sha256']],
   ['workspace.export', 'Export complete source editions, publisher history and customer work for independent receiving.', []],
   ['workspace.receive', 'Receive the complete archived workspace and its original history.', ['archiveFile', 'directory', 'sha256']],
+  ['requests.inspect', 'Reopen the exact original operator request and its native result.', ['requestId']],
+  ['requests.list', 'Read the paged original request history and pending outcomes.', []],
   ['operations.inspect', 'Reopen a saved source or publisher operation by its original identifier.', ['operationId']],
   ['operations.cancel', 'Cancel the currently running source capture or extraction.', ['operationId']],
 ];
@@ -126,6 +129,7 @@ export async function openDatasetteWorkspace({
       await privateDirectory(join(directory, name), true);
 
     files = retainedDatasetteFiles({ directory, workspaceId: settings.workspaceId });
+    const requests = await openDatasetteRequests({ directory, workspaceId: settings.workspaceId });
     const capturePath = operationId => join(directory, 'captures', identifier(operationId, 'capture operation'), 'capture.json');
     const editionPath = id => join(directory, 'editions', identifier(id, 'edition identifier'), 'edition.json');
     const selectedSource = join(directory, 'selected-source.json');
@@ -200,13 +204,57 @@ export async function openDatasetteWorkspace({
       return {
         schema: DATASETTE_WORKSPACE_SCHEMA, directory, workspaceId: settings.workspaceId,
         createdAt: settings.createdAt, buyer: settings.buyer ?? null,
-        selection, captures, editions, publisher: publication,
+        selection, selectionHash: requests.selectionHash(selection), captures, editions, publisher: publication,
         active: active ? { operation: active.operation, operationId: active.operationId, startedAt: active.startedAt } : null,
       };
     }
     function operations() { return DATASETTE_OPERATIONS; }
 
-    async function execute(operation, input, controller) {
+
+    async function prepareSelection(input) {
+      const value = await readDatasetteEdition(editionPath(input.editionId));
+      const declaration = { schema: 'stellar-forge.datasette-source.v1',
+        edition: relative(directory,value.editionFile),editionSha256:value.editionSha256,
+        query:identifier(input.query ?? 'data','query name') };
+      const previous = await selected(), beforeHash = requests.selectionHash(previous);
+      if (Object.hasOwn(input,'expectedSelectionHash') &&
+          (!(input.expectedSelectionHash === null || HASH.test(input.expectedSelectionHash ?? '')) ||
+           input.expectedSelectionHash !== beforeHash))
+        throw fault('DATASETTE_SELECTION_CHANGED','Read the currently saved source selection before submitting a new choice.',409);
+      return {declaration,declarationHash:requests.selectionHash(declaration),beforeHash};
+    }
+    async function preparePublisherPlan(value,input) {
+          const source = await value.source(), queryName = input.query ?? 'data', query = source.queries[queryName];
+          if (!query) throw fault('QUERY_NOT_FOUND');
+          const selectedDeclaration = await selected();
+          const edition = await readDatasetteEdition(resolve(directory, selectedDeclaration.edition),
+            { expectedSha256: selectedDeclaration.editionSha256 });
+          const types = edition.review.columnTypes;
+          const columns = Object.fromEntries(types.map(field => [field.name, { type: field.type, nullable: field.nullable }]));
+          const key = edition.review.key.columns.map(name =>
+            Object.entries(edition.review.projection).find(([, field]) => field.column === name)?.[0]).filter(Boolean);
+          const order = (key.length ? key : query.columns.slice(0, 1)).map(column => ({ column, direction: 'asc' }));
+          const numeric = types.filter(field => ['integer', 'number'].includes(field.type)).map(field => field.name);
+          const categorical = types.filter(field => ['string', 'boolean'].includes(field.type)).map(field => field.name);
+          // The original dataset offer allows eight fields per capability group
+          // and 32 total query parameters. All reviewed columns remain in the dataset.
+          const dataset = input.dataset ?? { name: edition.edition.name, columns,
+            filters: [...new Set([...key, ...categorical])].slice(0, 8),
+            sorts: [...new Set([...key, ...numeric, ...categorical])].slice(0, 8),
+            ranges: numeric.slice(0, 4) };
+          return { title: text(input.title, 'a publication plan title', 128),
+            query: queryName, input: input.input ?? {}, dataset,
+            extraction: { order, ...(input.extraction ?? {}) }, sourceHash: input.sourceHash ?? source.hash };
+    }
+    async function prepareRequest(operation,input) {
+      if (operation === 'source.select') return prepareSelection(input);
+      if (operation === 'publisher.plan') return {nativeInput:await withPublisher(value => preparePublisherPlan(value,input))};
+      return {};
+    }
+
+    async function execute(operation, input, controller, request = null) {
+      if (operation === 'requests.inspect') return requests.inspect(input);
+      if (operation === 'requests.list') return requests.list(input);
       if (operation === 'files.list') return files.list(input);
       if (operation === 'files.inspect') return files.inspect(input);
       if (operation === 'files.read') return files.read(input);
@@ -267,14 +315,13 @@ export async function openDatasetteWorkspace({
       if (operation === 'editions.compare')
         return compareDatasetteEditions(editionPath(input.left), editionPath(input.right));
       if (operation === 'source.select') {
-        const value = await readDatasetteEdition(editionPath(input.editionId));
-        const declaration = { schema: 'stellar-forge.datasette-source.v1',
-          edition: relative(directory, value.editionFile), editionSha256: value.editionSha256,
-          query: identifier(input.query ?? 'data', 'query name') };
-        const previous = await selected();
-        if (previous && identity(previous) === identity(declaration)) return { ...declaration, reused: true };
-        await atomicJson(directory, 'selected-source.json', declaration);
-        return { ...declaration, reused: false };
+        const prepared = await prepareSelection(input);
+        await publisherTail; controller.signal.throwIfAborted();
+        const currentHash = requests.selectionHash(await selected());
+        if (currentHash !== prepared.beforeHash) throw fault('DATASETTE_SELECTION_CHANGED','The source choice changed while it was being prepared.',409);
+        if (currentHash === prepared.declarationHash) return {...prepared.declaration,reused:true};
+        await atomicJson(directory,'selected-source.json',prepared.declaration);
+        return {...prepared.declaration,reused:false};
       }
       if (operation === 'source.export') {
         const outputFile = input.outputFile === undefined ?
@@ -304,28 +351,8 @@ export async function openDatasetteWorkspace({
         if (operation === 'publisher.source') return value.source();
         if (operation === 'publisher.target') return value.target();
         if (operation === 'publisher.plan') {
-          const source = await value.source(), queryName = input.query ?? 'data', query = source.queries[queryName];
-          if (!query) throw fault('QUERY_NOT_FOUND');
-          const selectedDeclaration = await selected();
-          const edition = await readDatasetteEdition(resolve(directory, selectedDeclaration.edition),
-            { expectedSha256: selectedDeclaration.editionSha256 });
-          const types = edition.review.columnTypes;
-          const columns = Object.fromEntries(types.map(field => [field.name, { type: field.type, nullable: field.nullable }]));
-          const key = edition.review.key.columns.map(name =>
-            Object.entries(edition.review.projection).find(([, field]) => field.column === name)?.[0]).filter(Boolean);
-          const order = (key.length ? key : query.columns.slice(0, 1)).map(column => ({ column, direction: 'asc' }));
-          const numeric = types.filter(field => ['integer', 'number'].includes(field.type)).map(field => field.name);
-          const categorical = types.filter(field => ['string', 'boolean'].includes(field.type)).map(field => field.name);
-          // The original dataset offer allows eight fields per capability group
-          // and 32 total query parameters. All reviewed columns remain in the dataset.
-          const dataset = input.dataset ?? { name: edition.edition.name, columns,
-            filters: [...new Set([...key, ...categorical])].slice(0, 8),
-            sorts: [...new Set([...key, ...numeric, ...categorical])].slice(0, 8),
-            ranges: numeric.slice(0, 4) };
-          return value.savePlan({ title: text(input.title, 'a publication plan title', 128),
-            query: queryName, input: input.input ?? {}, dataset,
-            extraction: { order, ...(input.extraction ?? {}) }, sourceHash: input.sourceHash ?? source.hash },
-            input.requestId === undefined ? {} : { requestId: input.requestId });
+          const prepared = request?.prepared?.nativeInput ?? await preparePublisherPlan(value,input);
+          return value.savePlan(prepared,input.requestId === undefined ? {} : { requestId: input.requestId });
         }
         if (operation === 'publisher.extract') {
           if (!UUID.test(input.runId ?? '')) throw fault('EXTRACTION_ID_INVALID', 'Retain an extraction UUID before starting this operation.');
@@ -380,9 +407,20 @@ export async function openDatasetteWorkspace({
         if (current.cancel) await current.cancel();
         return { operationId: current.operationId, cancelling: true };
       }
-      if (operation === 'operations.inspect') return execute(operation, input, new AbortController());
-      return admitted(operation, input.operationId ?? input.runId ?? input.requestId ?? randomUUID(),
-        controller => execute(operation, input, controller));
+      if (['operations.inspect','requests.inspect','requests.list'].includes(operation)) return execute(operation,input,new AbortController());
+      return admitted(operation, input.requestId ?? input.operationId ?? input.runId ?? randomUUID(), async controller => {
+        const writeSelection = async declaration => {
+          await publisherTail; controller.signal.throwIfAborted(); ensureOpen();
+          await atomicJson(directory, 'selected-source.json', declaration);
+        };
+        if (operation === 'source.select')
+          await requests.settleSelections({readSelection:selected, writeSelection, signal:controller.signal});
+        return requests.run(operation, input, {
+          prepare:selectedInput => prepareRequest(operation, selectedInput),
+          execute:request => execute(operation, request?.input ?? input, controller, request),
+          readSelection:selected, writeSelection, signal:controller.signal,
+        });
+      });
     }
     async function admitted(operation, operationId, action) {
       ensureOpen();
