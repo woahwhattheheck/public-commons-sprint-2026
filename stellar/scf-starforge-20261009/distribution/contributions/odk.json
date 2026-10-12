@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "odk",
-  "description": "Complete ODK Central field reporting, two-period commissioning, approved PostgreSQL receiving and reports, native host recovery, dataset publication and portable receiving",
+  "description": "Complete ODK Central field reporting, two-period commissioning, approved PostgreSQL reports and customer handover, installed SDK/typed-tool/browser receiving, editable archive restoration and native host recovery",
   "commands": {
     "odk-central-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.mjs",
     "odk-central-host": "products/odk-central/host.mjs",
@@ -39,7 +39,8 @@
     "./seller/odk/warehouse/receiving": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/receiving.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/receiving.mjs"
-    }
+    },
+    "./seller/odk/managed-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/receive-managed.mjs"
   },
   "applicationProviders": {
     "odk": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/application-provider.mjs"
