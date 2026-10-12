@@ -9,6 +9,7 @@ import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs
 import { execution, bytes, need } from './config.mjs';
 import { readRequestBody } from './request-body.mjs';
 import { createAttemptWireRecorder } from './attempt-wire.mjs';
+import { readNativeSigningDiagnostic } from '../sf103-native-buyer-signer/diagnostics.mjs';
 import { currentFileReservation } from './node/store.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
@@ -56,7 +57,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   need(!signal?.aborted, 'OPERATOR_ABORTED');
 
   let output, download, delivery, evidence, evidenceError, nativeResult, nativeError;
-  let cleanupError, setupError, setupFailed = false, wire;
+  let cleanupError, setupError, setupFailed = false, wire, signingDiagnostic;
   try {
     // Refuse an existing/unusable destination before a buyer can run or sign.
     if (responseFile) output = await prepareBuyerResponseFile({ ...responseFile,
@@ -107,7 +108,11 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
             await wire.signingInput(args);
             let signed;
             try { signed = await sign(args); }
-            catch (error) { try { await wire.signingError(error); } catch {} throw error; }
+            catch (error) {
+              try { signingDiagnostic=readNativeSigningDiagnostic(error?.nativeSigning); } catch {}
+              try { await wire.signingError(error); } catch {}
+              throw error;
+            }
             requireCurrentOperationTicket(ticket);
             await wire.signingResult(signed);
             return signed;
@@ -163,6 +168,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     intentId:op.intentId,
     requestTimeoutMs,
     ...(wire ? {transportCheckpoint:wire.snapshot()} : {}),
+    ...(signingDiagnostic ? {nativeSigning:signingDiagnostic} : {}),
     status:result?.status ?? null,
     httpStatus:result?.response?.status ?? null,
     sellerReportedSettlement:result?.settlement ?? null,
