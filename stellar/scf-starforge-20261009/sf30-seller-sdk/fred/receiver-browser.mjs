@@ -50,9 +50,9 @@ export async function inspectFredReceiverBrowser({ directory, receiverDirectory,
   };
   try {
     active();
-    browser = await chromium.launch({ headless: settings.headless ?? true,
+    const launchOptions = { headless: settings.headless ?? true,
       ...(settings.executablePath ? { executablePath: resolve(settingsDirectory, settings.executablePath) } : {}),
-      ...(settings.args ? { args: settings.args } : {}) });
+      ...(settings.args ? { args: settings.args } : {}) };
     signal?.addEventListener('abort', aborted, { once: true }); active();
     for (const [kind, projectDirectory] of [['original', directory], ['received', state.results.received.directory]]) {
       active();
@@ -61,6 +61,9 @@ export async function inspectFredReceiverBrowser({ directory, receiverDirectory,
         project.publications.some(item => item.id === result.publicationId), 'Open the original complete project and its received edition.');
       workspace = await startFredWorkspace({ directory: projectDirectory,
         ...(kind === 'original' ? { buyerConfig } : {}) });
+      // A fresh browser per reopened project also supports the selected low-memory
+      // single-process Chromium runtime, which can exit with its last context.
+      browser = await chromium.launch(launchOptions); active();
       const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } });
       const page = await context.newPage(); page.setDefaultTimeout(timeout);
       page.on('pageerror', error => errors.push({ kind, name: error.name, message: error.message.slice(0, 400) }));
@@ -106,6 +109,7 @@ export async function inspectFredReceiverBrowser({ directory, receiverDirectory,
       await screenshot(page, kind + '-history.png');
       result.stages.push({ workspace: kind, stage: 'complete-project-export', bundleSha256: state.results.export.bundleSha256 });
       await context.close(); await workspace.close(); workspace = null;
+      await browser.close(); browser = null;
     }
     need(errors.length === 0, 'The original browser application reported a page error.', 'FRED_RECEIVER_BROWSER_PAGE_ERROR');
     result.state = 'COMPLETE'; result.completedAt = new Date().toISOString();
