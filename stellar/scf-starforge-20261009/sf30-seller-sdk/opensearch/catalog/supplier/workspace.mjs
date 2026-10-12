@@ -7,6 +7,10 @@ import { PLAN_SCHEMA, CORRECTION_SCHEMA, REVIEW_SCHEMA, ROW_SCHEMA, SUPPLIER_TAB
   fail, text, revision, seal, verifySealed, normalizeBindings, normalizePatches,
   projectSupplier, applyCorrections, correctionFor, supplierId, rowCounts, setupSupplierTables } from './model.mjs';
 
+import { isXChangeProfile,xChangeTemplates } from './xchange/profile.mjs';
+import { deriveXChangeRecipient,RECIPIENT_SCHEMA } from './xchange/recipient.mjs';
+import { exportXChangeReview } from './xchange/exports.mjs';
+
 const parse = row => row ? JSON.parse(row.record_json) : null;
 const json = value => JSON.stringify(value);
 const like = value => '%' + value.replaceAll('\\','\\\\').replaceAll('%','\\%').replaceAll('_','\\_') + '%';
@@ -38,7 +42,8 @@ export function supplierRowsRoot(db,reviewId) {
 }
 export class SupplierWorkspace {
   constructor(catalog) { this.catalog=catalog;this.store=catalog.store;this.db=catalog.db;setupSupplierTables(this.db); }
-  templates() {
+  templates({target}={}) {
+    if(['xchange-2.0','2ba-xchange-2.0'].includes(target))return xChangeTemplates(target);
     return {schema:'stellar-forge.supplier-templates.v1',profileId:PROFILE_ID,source:PROFILE_SOURCE,
       profile:normalizeSupplierProfile({}),product:supplierProductTemplate(),
       bindings:{'/supplierProductId':'/materialId','/manufacturerProductId':'/partNumber',
@@ -63,7 +68,7 @@ export class SupplierWorkspace {
     const reviews=this.db.prepare('SELECT r.record_json FROM catalog_supplier_reviews r JOIN catalog_supplier_plans p ON p.id=r.plan_id WHERE p.catalog_id=? ORDER BY r.created_at DESC,r.id DESC').all(catalogId).map(parse);
     return {schema:'stellar-forge.supplier-workspace.v1',catalogId,plans,reviews:reviews.map(item=>({
       id:item.id,planId:item.planId,planRevision:item.planRevision,editionId:item.editionId,createdAt:item.createdAt,
-      counts:item.counts,sha256:item.sha256,rowsRootSha256:item.rowsRootSha256}))};
+      counts:item.counts,sha256:item.sha256,rowsRootSha256:item.rowsRootSha256,...(item.recipient?{recipient:clone(item.recipient)}:{})}))};
   }
   save(request) {
     return this.catalog.sync('catalog-supplier-save',request,()=>{
@@ -72,13 +77,14 @@ export class SupplierWorkspace {
       if(prior&&prior.catalogId!==selected.id)fail('SUPPLIER_CATALOG_IMMUTABLE','Create another submission for a different catalog.');
       const edition=this.catalog.edition(request.editionId);
       if(edition.catalogId!==selected.id)fail('SUPPLIER_EDITION_FOREIGN','Choose an edition in this catalog.');
+      const profile=normalizeSupplierProfile(request.profile);
       const previousReviewId=request.previousReviewId||null;
       if(previousReviewId) {
         const previous=this.review(previousReviewId);
-        if(!prior||previous.planId!==prior.id)
-          fail('SUPPLIER_PREVIOUS_REVIEW_FOREIGN','Choose an earlier review of this supplier submission.');
+        if(isXChangeProfile(profile)?previous.catalogId!==selected.id||previous.tenantId!==selected.tenantId||previous.recipient?.target!==profile.target:!prior||previous.planId!==prior.id)
+          fail('SUPPLIER_PREVIOUS_REVIEW_FOREIGN',isXChangeProfile(profile)?'Choose an earlier native review in this same catalog, tenant and recipient target.':'Choose an earlier review of this supplier submission.');
       }
-      const profile=normalizeSupplierProfile(request.profile),bindings=normalizeBindings(request.bindings),at=now();
+      const bindings=normalizeBindings(request.bindings),at=now();
       const plan=seal({schema:PLAN_SCHEMA,id:prior?.id??randomUUID(),revision:(prior?.revision??0)+1,
         catalogId:selected.id,tenantId:selected.tenantId,title:text(request.title,'Submission title',120),
         editionId:edition.id,editionReviewSha256:edition.reviewSha256,profile,bindings,
@@ -169,7 +175,8 @@ export class SupplierWorkspace {
         }
         total++;
       }
-      const globalFindings=checkSupplierProductCoverage(productIds(this.db,id),plan.profile).findings;
+      const nativeRecipient=isXChangeProfile(plan.profile)?deriveXChangeRecipient(this.db,id,plan):null;
+      const globalFindings=[...checkSupplierProductCoverage(productIds(this.db,id),plan.profile).findings,...(nativeRecipient?.findings??[])];
       const globalCounts=rowCounts(globalFindings);errors+=globalCounts.errors;warnings+=globalCounts.warnings;
       for(const finding of globalFindings){const key=finding.severity+':'+finding.code,prior=codes.get(key)??{severity:finding.severity,code:finding.code,count:0};prior.count++;codes.set(key,prior);}
       const findProductIn=(reviewId,pid)=>{
@@ -178,7 +185,8 @@ export class SupplierWorkspace {
         return matches.length===1?parse(matches[0]).product:null;
       };
       const context={findProduct:pid=>findProductIn(id,pid),
-        findPreviousProduct:pid=>plan.previousReviewId?findProductIn(plan.previousReviewId,pid):null};
+        findPreviousProduct:pid=>plan.previousReviewId?findProductIn(plan.previousReviewId,pid):null,
+        findNativeProduct:(supplierKey,manufacturer,pid)=>{const key=digest(['xchange-recipient-product',supplierKey,manufacturer,pid]);for(const selected of [id,plan.previousReviewId].filter(Boolean)){const row=parse(this.db.prepare('SELECT record_json FROM catalog_supplier_recipient WHERE review_id=? AND kind=? AND record_key=?').get(selected,'product',key));if(row?.after)return row.after.product;}return null;}};
       for(const saved of this.db.prepare('SELECT material_key,supplier_id,record_json FROM catalog_supplier_products WHERE review_id=? ORDER BY material_key').iterate(id)) {
         const row=parse(saved),checked=checkSupplierProduct(row.product,plan.profile,context);
         const findings=[...row.findings,...checked.findings];
@@ -203,6 +211,7 @@ export class SupplierWorkspace {
         editionId:edition.id,editionReviewSha256:edition.reviewSha256,source:clone(edition.source),plan:clone(plan),
         correctionsRootSha256,rowsRootSha256:supplierRowsRoot(this.db,id),createdAt:at,globalFindings:clone(globalFindings),
         counts:{total,readyProducts:total-errorProducts,errorProducts,errors,warnings},
+        ...(nativeRecipient?{recipient:nativeRecipient.recipient}:{}),
         findings:[...codes.values()].sort((a,b)=>(a.severity+':'+a.code).localeCompare(b.severity+':'+b.code,'en'))});
       put(this.db,'catalog_supplier_reviews',review,[id,plan.id,at,json(review)]);
       return {supplierReview:review};
@@ -222,9 +231,29 @@ export class SupplierWorkspace {
       .all(...args,paging.limit,paging.offset).map(parse);
     return {reviewId:review.id,...paging,total,nextOffset:paging.offset+rows.length<total?paging.offset+rows.length:null,rows};
   }
+  recipientRows({reviewId,kind='all',change='all',search='',offset=0,limit=50}) {
+    const review=this.review(reviewId),paging=page(offset,limit);
+    if(!review.recipient)fail('XCHANGE_RECIPIENT_REVIEW_REQUIRED','Select a native xChange supplier review.');
+    if(!['all','product','tradeItem'].includes(kind)||!['all','added','changed','unchanged','expired','deleted'].includes(change))
+      fail('XCHANGE_RECIPIENT_FILTER','Choose a native record kind and recipient action.');
+    if(typeof search!=='string'||search.length>1024)fail('XCHANGE_RECIPIENT_SEARCH','Use an original identifier up to1024characters.');
+    const clauses=['review_id=?'],args=[review.id];
+    if(kind!=='all'){clauses.push('kind=?');args.push(kind);}
+    if(change!=='all'){clauses.push('action=?');args.push(change);}
+    if(search){
+      const pattern=like(search);
+      clauses.push("(identifier LIKE ? ESCAPE '\\' OR supplier_key LIKE ? ESCAPE '\\' OR supplier_key IN (SELECT supplier_key FROM catalog_supplier_recipient WHERE review_id=? AND kind='product' AND (json_extract(record_json,'$.after.supplier.header.SupplierName') LIKE ? ESCAPE '\\' OR json_extract(record_json,'$.before.supplier.header.SupplierName') LIKE ? ESCAPE '\\')))");
+      args.push(pattern,pattern,review.id,pattern,pattern);
+    }
+    const where=clauses.join(' AND '),total=count(this.db,'SELECT COUNT(*) n FROM catalog_supplier_recipient WHERE '+where,...args);
+    const rows=this.db.prepare('SELECT record_json FROM catalog_supplier_recipient WHERE '+where+' ORDER BY kind,record_key LIMIT ? OFFSET ?')
+      .all(...args,paging.limit,paging.offset).map(row=>verifySealed(parse(row),RECIPIENT_SCHEMA));
+    return{reviewId:review.id,reviewSha256:review.sha256,recipient:clone(review.recipient),...paging,total,nextOffset:paging.offset+rows.length<total?paging.offset+rows.length:null,rows};
+  }
   export({reviewId,format,expectedReviewSha256}) {
     const review=this.review(reviewId);
     expectedHash(review.sha256,expectedReviewSha256,'The selected supplier review');
+    if(['xchange.json','recipient.jsonl','impact.csv'].includes(format)){if(!isXChangeProfile(review.plan.profile))fail('XCHANGE_PROFILE_REQUIRED','Select a native xChange review for this export.');return exportXChangeReview(this.db,review,format);}
     const workspace=this;
     function* rows() {
       for(const saved of workspace.db.prepare('SELECT record_json FROM catalog_supplier_products WHERE review_id=? ORDER BY material_key').iterate(review.id))
