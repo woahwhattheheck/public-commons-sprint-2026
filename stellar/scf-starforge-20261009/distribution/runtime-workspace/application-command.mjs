@@ -1,5 +1,6 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
 import { blockscoutStartup } from './application-blockscout.mjs';
+import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
 import { atlasStartup } from './application-atlas.mjs';
 import { redisStartup } from './application-redis.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
@@ -86,6 +87,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
       saving = saving.then(async () => {
         if (seen) return;
         const startup = await atlasStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'mpp') {
+      if (!text.startsWith('{"schema":"' + MPP_READY_SCHEMA + '",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await mppStartup(request, text, directory);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
