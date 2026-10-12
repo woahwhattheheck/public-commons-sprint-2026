@@ -92,7 +92,8 @@ async function verifyRecord(payload,record,{sourceRoot,environment,passphraseEnv
       const value=await native.verifyNativeMcpSpendingRecovery({bundle,passphraseEnv,
         expectedManifestSha256:component.manifestSha256,expectedRecordSha256:component.recordSha256,
         temporaryDirectory:temporary,environment,signal});
-      need(isDeepStrictEqual(value.owner,component.owner)&&isDeepStrictEqual(value.checkpoint,component.checkpoint),
+      need(isDeepStrictEqual(value.owner,component.owner)&&isDeepStrictEqual(value.checkpoint,component.checkpoint)&&
+        (value.ledgerState??'INITIALIZED')===(component.ledgerState??'INITIALIZED'),
         'APPLICATION_PROJECT_COMPONENT_CHANGED');
       verified.push({kind:'mcp',value});
     }else{
@@ -211,7 +212,7 @@ export async function inspectReceivedApplicationProject({directory,sourceRoot,mo
     runtimeDirectory:record.config.runtimeDirectory,sourceRoot:record.sourceRoot,
     requests:record.application.requests.length,resultBytes:record.application.results.reduce((n,row)=>n+row.bytes,0),
     references,paths,financialOwners:record.components.map(item=>({kind:item.kind,ledger:item.ledger,
-      stateRoot:item.stateRoot,checkpoint:item.checkpoint,checkpoints:item.checkpoints,
+      stateRoot:item.stateRoot,ledgerState:item.ledgerState??'INITIALIZED',checkpoint:item.checkpoint,checkpoints:item.checkpoints,
       owner:item.owner??null,recordSha256:item.recordSha256})),
     passphraseEnv:receiver.passphraseEnv,
     walletEnvironment:record.components.find(item=>item.kind==='mcp')?.owner?.signerSecretEnv??null,
