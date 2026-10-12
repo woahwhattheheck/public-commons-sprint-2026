@@ -6,9 +6,14 @@ import { main as publisherMain } from '../postgres/publisher/cli.mjs';
 import { bytes, createFile, readJson, fault } from '../postgres/publisher/files.mjs';
 import { openFrictionlessPublisher } from './model.mjs';
 import { inspectFrictionlessSource, runFrictionlessCommand } from './source.mjs';
+import { frictionlessPlanInput } from './plan.mjs';
 
 const SOURCE_COMMANDS = new Set(['capture', 'inspect-capture', 'suggest-source', 'source-export', 'source-receive', 'compare', 'review-source']);
 const HELP = `Frictionless Data Package merchant publisher
+
+Source workbench (same original merchant owner):
+  workbench --help
+  Installed browser: stellar-forge frictionless-agent serve --config MERCHANT.json --workspace ALIAS
 
 Source edition:
   capture --descriptor PATH_OR_HTTPS_URL --output NEW_DIR [--resource NAME ...]
@@ -62,14 +67,7 @@ function options(args, keys, required = keys) {
 
 export async function makeFrictionlessPlan(sourceFile, queryName, output) {
   const source = await inspectFrictionlessSource(resolve(sourceFile)), query = source.queries[queryName];
-  if (!query) throw fault('QUERY_NOT_FOUND');
-  const columns = Object.fromEntries(Object.entries(query.projection).map(([alias, spec]) =>
-    [alias, { type: spec.type, nullable: spec.missing === 'null' }]));
-  const plan = { title: queryName + ' retained package edition', query: queryName, input: {}, sourceHash: source.hash,
-    dataset: { name: queryName, columns, filters: [], ranges: [], sorts: [], defaultLimit: 50, maxLimit: 250,
-      maxCellChars: 65536, maxPageBytes: 921600 },
-    extraction: { order: [{ column: query.columns[0], direction: 'asc' }], maxRows: 250000,
-      maxBytes: 67108864, maxRowBytes: 1048576, timeoutMs: 300000 } };
+  const plan = frictionlessPlanInput(source, queryName), columns=plan.dataset.columns;
   await createFile(resolve(output), bytes(plan));
   return { created: resolve(output), sourceHash: source.hash, resource: query.resource, columns,
     captureSha256: source.captureSha256 };
@@ -77,6 +75,7 @@ export async function makeFrictionlessPlan(sourceFile, queryName, output) {
 
 export async function main(argv = process.argv.slice(2)) {
   if (!argv.length || argv[0] === '--help') { process.stdout.write(HELP); return; }
+  if (argv[0] === 'workbench') return (await import('./workbench/cli.mjs')).main(argv.slice(1));
   if (SOURCE_COMMANDS.has(argv[0])) return runFrictionlessCommand(argv);
   if (argv[0] === 'plan') {
     const input = options(argv.slice(1), ['--source', '--query', '--out']);
