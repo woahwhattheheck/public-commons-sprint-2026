@@ -85,7 +85,7 @@ export async function readSourceWorkspaceConfiguration(path) {
     for (const [handle, file] of Object.entries(input.files ?? {})) {
       checked(handle, ALIAS, 'file handle');
       exact(file, ['path', 'kind', 'label', 'name', 'sha256'], ['path', 'kind']);
-      if (!['source', 'packet'].includes(file.kind)) throw fail('CONFIGURATION_ERROR', 'File kind must be source or packet.');
+      if (!['source', 'packet', 'merchant'].includes(file.kind)) throw fail('CONFIGURATION_ERROR', 'File kind must be source, packet or complete NDJSON merchant.');
       files[handle] = { path: hostPath(file.path, base), kind: file.kind,
         ...(file.label === undefined ? {} : { label: text(file.label, 'Source label') }),
         ...(file.name === undefined ? {} : { name: text(file.name, 'Source name') }),
@@ -239,7 +239,7 @@ export class MerchantSourceWorkspaces {
     });
   }
   async #upload(definition, file, route) {
-    const { handle, info } = await fileHandle(file.path, route === '/api/import' ? (definition.format === 'iati' ? MAX_IATI_PACKET : 2 * MAX_SOURCE) : MAX_SOURCE);
+    const { handle, info } = await fileHandle(file.path, route === '/api/merchants/receive' ? MAX_IATI_PACKET : route === '/api/import' ? (definition.format === 'iati' ? MAX_IATI_PACKET : 2 * MAX_SOURCE) : MAX_SOURCE);
     let stream;
     try {
       if (file.sha256) {
@@ -250,7 +250,7 @@ export class MerchantSourceWorkspaces {
       stream = handle.createReadStream({ autoClose: false, start: 0 });
       const prefix = 'X-' + definition.format.toUpperCase() + '-';
       const result = await this.#request(definition, route, { body: stream, headers: {
-        'Content-Length': String(info.size), 'Content-Type': route === '/api/import' ? 'application/zip' : 'application/octet-stream',
+        'Content-Length': String(info.size), 'Content-Type': ['/api/import','/api/merchants/receive'].includes(route) ? 'application/zip' : 'application/octet-stream',
         ...(file.name ? { [prefix + 'Name']: encodeURIComponent(file.name) } : {}),
         ...(file.label ? { [prefix + 'Label']: encodeURIComponent(file.label) } : {}) } },
         async response => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await responseBytes(response, MAX_JSON))));
@@ -263,11 +263,13 @@ export class MerchantSourceWorkspaces {
   async #execute(name, args) {
     if (name === 'merchant_source_workspaces') return this.summary;
     const { workspace, ...input } = args, definition = this.#definition(workspace);
-    for (const field of ['source','plan','build','before','after','comparison','exportId','portfolio'])
+    for (const field of ['source','plan','build','before','after','comparison','exportId','portfolio','merchant'])
       if (input[field] !== undefined) checked(input[field], SHA, field + ' SHA256');
     const result = native => ({ workspace, native });
     if (name.startsWith('merchant_source_iati_') && definition.format !== 'iati')
       throw fail('SOURCE_FORMAT_REQUIRED', 'Select an original IATI console for its portfolio operation.');
+    if (['merchant_source_merchant_save','merchant_source_merchants','merchant_source_merchant','merchant_source_merchant_export','merchant_source_merchant_receive'].includes(name) && definition.format !== 'ndjson')
+      throw fail('SOURCE_FORMAT_REQUIRED', 'Select the original NDJSON console for its retained merchant package.');
     switch (name) {
       case 'merchant_source_status': {
         const state = await this.#state(definition);
@@ -330,6 +332,34 @@ export class MerchantSourceWorkspaces {
         if (definition.format !== 'ndjson' || !plain(input.payment) || typeof input.origin !== 'string' || typeof input.path !== 'string' ||
             Buffer.byteLength(JSON.stringify(input)) > 131072) throw fail('INVALID_PARAMS', 'Supply an NDJSON build and its complete original public merchant terms.');
         return this.#retain(workspace, definition, '/api/merchant', 'merchant', { build: input.build }, input);
+      case 'merchant_source_merchant_save':
+        if (!plain(input.payment) || typeof input.origin !== 'string' || typeof input.path !== 'string')
+          throw fail('INVALID_PARAMS', 'Supply the complete original public merchant terms.');
+        return result(await this.#json(definition, '/api/merchants/prepare', input));
+      case 'merchant_source_merchants':
+        return result(paged((await this.#json(definition, '/api/merchants')).merchants, input));
+      case 'merchant_source_merchant':
+        return result(await this.#json(definition, '/api/merchants/package?id=' + input.merchant));
+      case 'merchant_source_merchant_export':
+        return this.#retain(workspace, definition, '/api/merchants/download?id=' + input.merchant,
+          'merchant', { merchant: input.merchant });
+      case 'merchant_source_merchant_receive': {
+        if ((input.file === undefined) === (input.exportId === undefined))
+          throw fail('INVALID_PARAMS', 'Choose one declared merchant file or original retained merchant export.');
+        let file;
+        if (input.file !== undefined) {
+          if (input.fromWorkspace !== undefined) throw fail('INVALID_PARAMS', 'fromWorkspace selects a retained export.');
+          file = definition.files[checked(input.file, ALIAS, 'merchant file handle')];
+          if (!file || file.kind !== 'merchant') throw fail('INVALID_PARAMS', 'Choose a declared complete NDJSON merchant ZIP.');
+        } else {
+          const owner = input.fromWorkspace ?? workspace; this.#definition(owner);
+          const { directory, metadata } = await this.#exportMetadata(owner, input.exportId);
+          if (metadata.kind !== 'merchant' || metadata.format !== 'ndjson')
+            throw fail('INVALID_PARAMS', 'Receive the complete original NDJSON merchant export.');
+          file = { path: join(directory, input.exportId + '.data'), sha256: input.exportId };
+        }
+        return result(await this.#upload(definition, file, '/api/merchants/receive'));
+      }
       case 'merchant_source_exports': return result(paged(await this.#exports(workspace), input));
       case 'merchant_source_file_read': {
         if (input.readId !== undefined) checked(input.readId, UUID, 'original file read');

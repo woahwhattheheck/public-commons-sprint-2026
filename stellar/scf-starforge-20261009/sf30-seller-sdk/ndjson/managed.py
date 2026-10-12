@@ -14,6 +14,7 @@ SOURCE = Path(__file__).resolve().parents[1]
 SOURCE_FILES = (
     "ndjson/application.py", "ndjson/cli.py", "ndjson/cli.mjs",
     "ndjson/ndjson_source.py", "ndjson/managed.py", "ndjson/merchant.mjs",
+    "ndjson/merchant_packages.py",
     "ndjson/public/index.html", "ndjson/public/app.js", "ndjson/public/style.css",
     "xml/xml_source.py", "xml/workspace.py", "xml/server.py", "xml/native.mjs",
     "dataset-handler.mjs",
