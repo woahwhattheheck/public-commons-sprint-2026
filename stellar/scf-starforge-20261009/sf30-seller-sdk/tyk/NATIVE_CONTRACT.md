@@ -205,7 +205,7 @@ The workspace persists DISPATCHED before the native call. It reopens that saved 
 
 ## Complete original native journey
 
-native-journey.mjs is one coherent receiving operation over the original Gateway and Dashboard, the same saved workspace model, its actual HTTP server/client, and full NDJSON receiving. It uses the selected original Classic seeds, retains them as complete source, and creates separate deterministic API IDs and listen paths for this named operation. Native Classic-to-OAS conversion remains with the Dashboard.
+native-journey.mjs is one coherent receiving operation over the original Gateway and, in the complete scope, Dashboard, the same saved workspace model, its actual HTTP server/client, and full NDJSON receiving. It uses the selected original Classic seeds, retains them as complete source, and creates separate deterministic API IDs and listen paths for this named operation. Native Classic-to-OAS conversion remains with the Dashboard.
 
 The journey carries:
 
@@ -266,9 +266,104 @@ node --max-old-space-size=384 \
   /absolute/private/tyk-native-receiving
 ~~~
 
-The original workspace uses Linux flock and its existing private storage module. The server and native driver require the complete joined Tyk component and maintained distribution/runtime-workspace source. The optional browser step uses the original installed Playwright and declared chromiumExecutablePath; Node operation remains the same receiving lifetime.
+The original workspace uses Linux flock and its existing private storage module. The server and native driver require the complete joined Tyk component and maintained distribution/runtime-workspace source. The optional direct-driver browser step uses the original installed Playwright (or explicit playwrightModulePath) and declared chromiumExecutablePath; Node operation remains the same receiving lifetime.
 
 The directory retains journey.json, result.json, full native source hashes, original request/record IDs, exact review/source downloads, both complete NDJSON deliveries and the saved sender/receiver workspaces. A partial run preserves its original request inputs and journals. Resume with the same configuration bytes and directory so the original workspace can recover its saved requests. The original operation-specific APIs remain available for operator inspection and subsequent product use.
+
+## Provision and run the original OSS Gateway on an existing Linux worker
+
+[gateway-native-host.py](./gateway-native-host.py) runs the complete Gateway portion in the equipped owner's existing Linux operation. It acquires the original publisher binaries/source, starts a private Redis, Gateway and actual HTTP upstream, then invokes the same native-journey.mjs. It retains the native targets, selected source, request journals and portable receiving bytes for an explicit later Dashboard continuation.
+
+The bootstrap requires Python 3.12+, Node 24, dpkg-deb, flock, a C compiler and GNU make. It reuses an exact installed Redis 6.2.20 when available; otherwise it builds that original release privately. It uses the existing installed Playwright module and Chromium. When Chromium is absent, that same Playwright installation acquires its declared browser into the operation directory. All mutable files and vendor extraction stay inside the selected private directory.
+
+### Exact publisher acquisition
+
+| Runtime | Original selection | Retained identity |
+| --- | --- | --- |
+| Gateway | Tyk 5.15.1 from the official Packagecloud Debian buster index, for amd64 or arm64 | Complete original Packages.gz, selected package paragraph, publisher SHA-256 and size, full package and actual extracted executable SHA-256 |
+| Redis | Redis 6.2.20 from download.redis.io | Official redis-hashes SHA-256 7f8b8a7aed53c445a877adf9e3743cdd323518524170135a58c0702f2dba6ef4, source archive, build log, actual version and executable SHA-256 |
+| Native seed | apps/app_sample.json at the pinned Gateway source commit | Original e080f6e7c4b03048000f74b91baf11da34e28325 source and complete explicit receiving definition |
+| Gateway configuration | tyk.conf.example at the same source commit | Original 634c28f07b365fa45709b3ce4c9d687ef9360ecc source and private selected runtime configuration |
+| Browser | The equipped owner's original Playwright installation | Actual Chromium executable path and full file SHA-256; the selected Playwright module path remains in the native input |
+
+The Gateway package is selected once from [Tyk's publisher repository](https://packagecloud.io/tyk/tyk-gateway). The complete original index and package selection are saved before acquisition, so a retry verifies the same artifact. The package is extracted with dpkg-deb into the private vendor directory. Redis source is verified against the [official release hash list](https://github.com/redis/redis-hashes); its compilation uses the original source and make targets. The running /hello response must report Gateway 5.15.1 and a passing Redis connection before the driver begins.
+
+### One complete Gateway operation
+
+Use the complete merged repository checkout containing this source and its maintained workspace/storage dependencies. The original installed Node and Playwright may be declared explicitly:
+
+~~~sh
+python3 /absolute/merged-source/stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/gateway-native-host.py \
+  --source-root /absolute/merged-source \
+  --source-revision EXACT_MERGED_COMMIT \
+  --directory /absolute/private/tyk-native-operation \
+  --node /absolute/existing/node \
+  --playwright-module /absolute/existing/node_modules/playwright/index.mjs \
+  --return-directory /absolute/private/equipped-return
+~~~
+
+The bootstrap selects three unused loopback ports once and preserves them. It generates the Gateway administrator and Redis secrets in a private, mode-0600 file; native-input.json contains the Gateway credential environment reference. It writes an explicit private Gateway configuration and removes inherited TYK_GW_ overrides from that process's environment so the selected local ports and storage remain authoritative.
+
+The original HTTP upstream is a real loopback server. The Gateway forwards its native API request to that server; the bootstrap compares the exact Gateway response bytes with the recorded original upstream response. This checks the actual route, explicit reload and upstream behavior in the same lifecycle.
+
+The script invokes the full Gateway scope: complete inventory, Classic create, plain OpenAPI import, full native OAS update, explicit reloads, real upstream request, original partial-response recovery, a later different native edit, saved cohort and paged field review, two complete NDJSON exports, cold receiving, old-archive reconstruction and the actual customer browser. It opens the saved Portfolio, Cohorts, Rollouts and Handover views, downloads the full original source from the review, and retains both native-review and received-history screenshots.
+
+No service is installed globally. The actual Redis, Gateway and Node process identities are retained with their Linux start time, process group and session. The original bootstrap directory is held by one kernel lease. Its native owners are closed before final receiving is reported; close failures remain visible in the operation result.
+
+### Restart and result publication
+
+Run the same command with the same directory to continue an interrupted operation. The artifact lock, generated secrets, selected ports, input configuration and saved native request identities are reused. Before continuing, the bootstrap reconciles its retained original process identities. The native workspace handles its original prepared/dispatched requests and readback.
+
+When the native journey and owned services have completed but packaging or return-copy is interrupted, the next invocation resumes only the original archive publication. It verifies the frozen complete member inventory and any retained final archive before copying the same artifact. It does not repeat the native journey to recover an upload or filesystem response.
+
+The operation retains:
+
+- bootstrap.json and artifact-lock.json with actual source, publisher, runtime and owner identities.
+- native-input.json with selected URLs, seed identity and environment references.
+- Native journey.json, result-gateway.json and result.json with original request/record IDs and source hashes.
+- Complete review pages and before/after definition downloads, full NDJSON deliveries, and the original sender/receiver workspaces.
+- Actual upstream request/response hashes and saved customer screenshots.
+- tyk-gateway-native-receiving.tar.gz plus delivery.json with the complete portable artifact byte count and SHA-256.
+
+The archive contains the complete original customer exports and receiving reports. The private native-secrets.json, Redis configuration and Gateway administrator configuration stay in the private operation directory. Preserve that original directory for native continuation. The return-directory option copies the complete measured archive and its receipt to the equipped owner's existing durable return destination; it also records the actual returned path.
+
+### Add the licensed Dashboard to the same completed operation
+
+After Gateway receiving completes, the same original directory accepts one explicit Dashboard addition. Create a private file containing its actual original declaration and seed:
+
+~~~json
+{
+  "connection": {
+    "id": "receiving-dashboard",
+    "label": "Original licensed receiving Dashboard",
+    "kind": "dashboard",
+    "baseUrl": "https://dashboard.example.com/",
+    "authEnv": "TYK_DASHBOARD_AUTH"
+  },
+  "installedVersion": "5.15",
+  "classicSeedApiId": "ORIGINAL_UNVERSIONED_CLASSIC_API_ID",
+  "upstreamUrl": "https://original-upstream.example.com/"
+}
+~~~
+
+Run the same bootstrap command with the additional --dashboard-config option:
+
+~~~sh
+python3 /absolute/merged-source/stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/gateway-native-host.py \
+  --source-root /absolute/merged-source \
+  --source-revision EXACT_MERGED_COMMIT \
+  --directory /absolute/private/tyk-native-operation \
+  --node /absolute/existing/node \
+  --playwright-module /absolute/existing/node_modules/playwright/index.mjs \
+  --dashboard-config /absolute/private/dashboard-native-input.json \
+  --return-directory /absolute/private/equipped-return
+~~~
+
+TYK_DASHBOARD_AUTH is supplied through the existing private environment. The saved Gateway declaration, runtime paths, ports and original operation remain identical. The driver keeps the completed Gateway phases and original API/request identities, captures the selected Dashboard, and executes its complete native dryRun/stage/override/promote/direct lifecycle. It retains the exact returned canonical, staged and version IDs.
+
+The later complete scope uses distinct original receiving request IDs and archive names while retaining the earlier Gateway result and complete history. It exports and receives the combined workspace over the earlier customer edition, reopens the original requests, and preserves the first Gateway archive. The combined result is tyk-all-native-receiving.tar.gz; result-gateway.json remains available beside result-all.json.
+
+The direct native driver also supports scope:"gateway" in its private JSON configuration. Omitted scope retains the full Gateway-and-Dashboard behavior. After a Gateway-only result is complete, adding scope:"all" and the Dashboard declaration is accepted only when all existing Gateway and runtime input fields remain identical.
 
 ## Full portability
 
