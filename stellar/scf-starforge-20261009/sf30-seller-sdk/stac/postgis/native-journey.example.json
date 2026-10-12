@@ -218,5 +218,56 @@
       "sslMode": "verify-full",
       "allowEditing": false
     }
+  },
+  "sourceHead": "REPLACE_WITH_SELECTED_COMPLETE_SOURCE_COMMIT",
+  "geoserver": {
+    "profileFile": "/absolute/private/geoserver-profile.json",
+    "readerFile": "/absolute/private/postgis-reader.json",
+    "expectedProfileSha256": "REPLACE_WITH_ACTUAL_PRIVATE_PROFILE_SHA256",
+    "expectedReaderSha256": "REPLACE_WITH_ACTUAL_PRIVATE_READER_SHA256",
+    "request": {
+      "operationId": "original-postgis-geoserver-publication",
+      "kind": "publish",
+      "expectedPublication": null,
+      "layers": [
+        {
+          "layerId": "parcels",
+          "name": "selected_service_layer",
+          "title": "Selected accepted layer",
+          "enabled": true,
+          "advertised": true,
+          "style": {
+            "name": "existing_observed_style",
+            "workspace": null
+          },
+          "access": {
+            "read": [
+              "EXISTING_READER_ROLE"
+            ],
+            "write": [
+              "EXISTING_EDITOR_ROLE"
+            ]
+          },
+          "map": {
+            "bbox": [
+              "REPLACE_WITH_OBSERVED_MINX",
+              "REPLACE_WITH_OBSERVED_MINY",
+              "REPLACE_WITH_OBSERVED_MAXX",
+              "REPLACE_WITH_OBSERVED_MAXY"
+            ],
+            "width": 1024,
+            "height": 768
+          }
+        }
+      ]
+    },
+    "cycle": {
+      "rollbackOperationId": "original-postgis-geoserver-rollback",
+      "refreshOperationId": "original-postgis-geoserver-refresh"
+    },
+    "browser": {
+      "playwrightModule": "/absolute/original-playwright/package/index.mjs",
+      "chromiumExecutable": "/absolute/selected-chromium"
+    }
   }
 }
