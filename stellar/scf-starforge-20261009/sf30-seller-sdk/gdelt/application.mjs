@@ -234,9 +234,11 @@ export async function openGdeltApplication(options={}) {
     close(){return closingPromise??=(async()=>{
       closing=true;lifetime.abort();
       await Promise.allSettled([...tasks]);
-      await Promise.all([...receivedWindows.values()].map(browser=>browser.close()));receivedWindows.clear();
-      if(merchant)await merchant.close();
-      merchant=null;runningPublication=null;
+      const closingResources=[...receivedWindows.values(),...(merchant?[merchant]:[])];
+      const outcomes=await Promise.allSettled(closingResources.map(resource=>Promise.resolve().then(()=>resource.close())));
+      receivedWindows.clear();merchant=null;runningPublication=null;
+      const failed=outcomes.find(outcome=>outcome.status==='rejected');
+      if(failed)throw failed.reason;
     })();}
   };
 }

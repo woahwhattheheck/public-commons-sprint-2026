@@ -497,9 +497,10 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    return{captureId:imported.captureId,editionId:later.id,sourcePackageSha256:original.artifact.sha256,originalObservedTimesPreserved:true,comparison,complete};
   });
   await phase('prepare_and_query_original_sf30_dataset',async()=>{
+   const pinned=cp.phases.returned_mapping_file_and_versioned_handoff.result.mapping;
    await navigate('datasets');
    const dataset=await action('prepare-original-sf30-dataset','dataset.prepare',async()=>{
-    await input('dataset','editionId',cp.ids.importedEdition);await input('dataset','table','observations');
+    await input('dataset','editionId',cp.ids.importedEdition);await input('dataset','table','observations');await input('dataset','mappingId',pinned.id);
     await input('dataset','name','La Jolla original received observations '+cp.id.slice(0,8));
     for(const field of ['beginDate','endDate','products'])await input('dataset',field,'');
     await page.locator('#dataset-form button[type="submit"]').click();
@@ -507,9 +508,14 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    cp.ids.dataset=dataset.id;persist();
    assert(dataset.mode==='ORIGINAL_SF30_DATASET'&&dataset.editionId===cp.ids.importedEdition&&dataset.sourceSha256===cp.ids.sourceSha256,'The dataset must use the original SF30 package and received source identity.');
    assert(dataset.rows===cp.artifacts['reference-observations'].rows,'The native dataset omitted selected original observation rows.');
+   assert(dataset.mapping?.id===pinned.id&&dataset.mapping.revision===pinned.revision&&dataset.mapping.sourceFileSha256===pinned.sourceFile.sha256&&stable(dataset.mapping.columns)===stable(pinned.columns),'The native dataset lost its exact reviewed mapping revision, selected headings or original input file.');
+   cp.ids.datasetMappingRevision=dataset.mapping.revision;persist();
    await saveJSON('native-dataset-receipt','native-dataset-receipt.json',dataset);
    const first=await queryDataset('query-original-sf30-first-page',dataset,'limit=20&sort=timestampUtc');
-   for(const row of first.rows)assert(row.editionId===cp.ids.importedEdition&&row.stationId===selection.stationId&&Object.hasOwn(row,'valueType'),'A native query row lost its original source/type fields.');
+   for(const row of first.rows){
+    assert(row.editionId===cp.ids.importedEdition&&row.stationId===selection.stationId&&Object.hasOwn(row,'valueType'),'A native query row lost its original source/type fields.');
+    assert(pinned.columns.every(c=>Object.hasOwn(row,c.heading))&&Object.hasOwn(row,'water_level_m')&&Object.hasOwn(row,'source_request_url')&&!Object.hasOwn(row,'value'),'The native query did not use the selected receiving headings.');
+   }
    await saveJSON('native-query-first-page','native-query-first-page.json',first);
    let second=null;
    if(first.page.nextCursor){
@@ -519,6 +525,25 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    }
    await screenshot('original-sf30-query-desktop');await closeDialog();
    return{dataset,first,second,nativePublisherAndPayment:'No release, payment or customer transaction was configured or executed by this source receiving journey.'};
+  });
+  await phase('preserve_prepared_dataset_across_later_mapping_revision',async()=>{
+   const pinned=cp.phases.returned_mapping_file_and_versioned_handoff.result.mapping,dataset=cp.phases.prepare_and_query_original_sf30_dataset.result.dataset;
+   await navigate('mappings');
+   const revised=await action('later-mapping-after-dataset','mapping.save',async()=>{
+    await page.locator('[data-cmd="edit-mapping"][data-id="'+pinned.id+'"]').click();
+    const draft=(await browserState()).drafts.mapping,index=draft.columns.findIndex(c=>c.source==='value');assert(index>=0,'Keep the original value field in this later receiving convention.');
+    await page.locator('[data-column="'+index+'"][data-part="heading"]').fill('water_level_m_v3');
+    await input('mapping','note',pinned.note+'\n\nVersion 3: a later internal receiving convention uses water_level_m_v3. The already prepared native dataset and earlier complete exports retain their original version 2 or version 1 headings and original source files.');
+    await page.locator('#mapping-form button[type="submit"]').click();
+   });
+   assert(revised.id===pinned.id&&revised.revision===pinned.revision+1&&revised.sourceFile.sha256===pinned.sourceFile.sha256,'The later mapping must preserve its target and acquired original file.');
+   const {history,...pinnedRecord}=pinned;assert(stable(revised.history.find(m=>m.revision===pinned.revision))===stable(pinnedRecord),'The prepared dataset’s source mapping revision changed.');
+   cp.ids.mappingRevision=revised.revision;persist();await saveJSON('mapping-after-native-dataset','mapping-after-native-dataset.json',revised);
+   const retained=(await api('/api/view')).datasets.find(d=>d.id===dataset.id);assert(stable(retained)===stable(dataset),'A later mapping edit changed the retained original dataset receipt.');
+   const query=await queryDataset('query-pinned-dataset-after-mapping-edit',dataset,'limit=20&sort=timestampUtc');
+   assert(stable(query)===stable(cp.phases.prepare_and_query_original_sf30_dataset.result.first),'A later mapping revision changed an earlier native query snapshot or its selected receiving headings.');
+   await saveJSON('native-query-after-mapping-edit','native-query-after-mapping-edit.json',query);await screenshot('pinned-query-after-mapping-edit-desktop');await closeDialog();
+   return{mappingId:pinned.id,preparedMappingRevision:dataset.mapping.revision,currentMappingRevision:revised.revision,sourceFileSha256:pinned.sourceFile.sha256,datasetId:dataset.id,snapshot:dataset.snapshot,originalQueryPreserved:true};
   });
   if(historical)await phase('serial_historical_capture_and_complete_streamed_handoff',async()=>{
    const key='historical-backfill-start',label='Selected historical '+selection.stationId+' hourly source study '+historical.beginDate+' through '+historical.endDate;
@@ -571,7 +596,7 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    return{workspaceId:after.workspaceId,revision:after.revision,originalSourceAndReviewPreserved:true,mappingAndNativeDatasetPreserved:true,earlierExportsPreserved:true,laterUnsavedDraftPreserved:true};
   });
   const finalView=await api('/api/view'),result={schema:'stellar-forge.coops-operator-result.v1',status:'PASS',operationId:cp.id,workspaceId:cp.workspaceId,completedAt:new Date().toISOString(),resultPath,checkpointPath,
-   scope:'Actual original NOAA capture, independent source review, explicit mapping-file intake/versioned complete model-input handoff, retained-package receiving/comparison, native SF30 cursor/query, declared serial historical capture and same-origin saved-workspace reopen.',
+   scope:'Actual original NOAA capture, independent source review, explicit mapping-file intake/versioned complete model-input handoff, retained-package receiving/comparison, mapped native SF30 cursor/query preserved across a later mapping revision, declared serial historical capture and same-origin saved-workspace reopen.',
    sourceModule:moduleIdentity,selected:cp.selected,ids:cp.ids,reviewStatus:cp.review.status,sourceCoverage:cp.phases.capture_original_reference.result.actualCoverage,finalRevision:finalView.revision,
    checks:Object.fromEntries(Object.entries(cp.phases).map(([key,value])=>[key,value.result])),artifacts:cp.artifacts,
    nativeOperations:Object.fromEntries(Object.entries(cp.issued).map(([key,value])=>[key,{action:value.action,operationId:value.request?.operationId,state:value.state,native:value.native??null,replayed:value.replay?.reused===true}])),

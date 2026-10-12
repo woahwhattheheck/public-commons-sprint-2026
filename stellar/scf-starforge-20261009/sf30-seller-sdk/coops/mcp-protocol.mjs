@@ -705,7 +705,7 @@ const actions = [
   ],
   [
     "dataset.prepare",
-    "Prepare a selected original source table/window through native SF30.",
+    "Prepare an original source table/window with an optional pinned saved model-input mapping through native SF30.",
     {
       "editionId": {
         "type": "string",
@@ -723,6 +723,10 @@ const actions = [
       "name": {
         "type": "string",
         "maxLength": 128
+      },
+      "mappingId": {
+        "type": "string",
+        "pattern": "^mapping-[0-9a-f]{24}$"
       },
       "beginDate": {
         "type": "string",

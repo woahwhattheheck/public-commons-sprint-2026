@@ -7,6 +7,7 @@ import {RetainedFileReads} from './retained-file-reads.mjs';
 import {researchWorkspaceTools,RESEARCH_EXPORTS} from './catalog/research-workspace.mjs';
 import {callResearchClinicalTrials,exportResearchClinicalTrials,RESEARCH_CLINICALTRIALS_PREFIX} from './research-clinicaltrials.mjs';
 import {callResearchDocuments,exportResearchDocuments,RESEARCH_DOCUMENT_PREFIXES} from './research-documents.mjs';
+import {callResearchCitationUpdates,RESEARCH_CITATION_REVIEW_PREFIX} from './research-citation-updates.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
 import {ResearchWorkspaceClient} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs';
 import {readResearchHostFile,openResearchSource} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-files.mjs';
@@ -69,6 +70,10 @@ function checkValue(value,schema){
       schema.maximum!==undefined&&value>schema.maximum)||schema.type==='boolean'&&typeof value!=='boolean'||
     schema.enum&&!schema.enum.includes(value))
     throw failure('INVALID_PARAMS','Use the declared native field values and reviewed identifiers.');
+  if(schema.type==='object'){
+    exact(value,Object.keys(schema.properties??{}),schema.required??[]);
+    for(const[key,item]of Object.entries(value))checkValue(item,schema.properties[key]);
+  }
   if(schema.type==='array'){
     if(!Array.isArray(value)||schema.maxItems!==undefined&&value.length>schema.maxItems||
       schema.uniqueItems&&new Set(value).size!==value.length)
@@ -226,8 +231,8 @@ export class MerchantResearchWorkspaces{
       }else if(args.kind.startsWith('clinicaltrials-')){
         ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary,download}));
       }else if(spec.format){
-        exact(args,['workspace','dossierId','kind','expectedSha256'],['workspace','dossierId','kind']);
-        result=await download(()=>entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,expectedSha256:args.expectedSha256}));
+        exact(args,['workspace','dossierId','kind','revision','expectedSha256'],['workspace','dossierId','kind']);
+        result=await download(()=>entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,revision:args.revision,expectedSha256:args.expectedSha256}));
         selection={dossierId:args.dossierId,revision:result.revision??null};
       }else if(args.kind==='crossref-edition'){
         exact(args,['workspace','dossierId','kind','operationId','expectedSha256'],['workspace','dossierId','kind','operationId']);
@@ -321,6 +326,7 @@ export class MerchantResearchWorkspaces{
     if(name==='merchant_research_detach')return this.#detach(args.workspace,args.attachmentId);
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
+      if(name.startsWith(RESEARCH_CITATION_REVIEW_PREFIX))return callResearchCitationUpdates(c,name,args);
       if(RESEARCH_DOCUMENT_PREFIXES.some(prefix=>name.startsWith(prefix))){
         const result=await callResearchDocuments(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
         return name.endsWith('_receive')?compactDossier(result):result;
@@ -414,9 +420,9 @@ export class MerchantResearchWorkspaces{
       try{return await this.#execute(name,args);}
       catch(error){
         if(error.outcomeUnknown)throw Object.assign(failure(error.code??'RESEARCH_CONNECTION_INTERRUPTED',
-          'The original write response was interrupted. Read the saved dossier revision and the same source receiving operation or retained input before another write.'),
+          error.recovery??'The original write response was interrupted. Read the saved dossier revision and the same source receiving operation or retained input before another write.'),
           {outcomeUnknown:true,dossierId:args.dossierId,operationId:error.operationId??args.operationId,
-            requestId:error.requestId??args.requestId,sourceId:args.sourceId});
+            requestId:error.requestId??args.requestId,sourceId:args.sourceId,...(error.recovery?{recovery:error.recovery}:{})});
         throw error;
       }
     });
