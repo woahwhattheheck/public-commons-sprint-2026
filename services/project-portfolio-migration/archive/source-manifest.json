@@ -122,8 +122,8 @@
     },
     {
       "path": "web/archive.js",
-      "bytes": 24395,
-      "sha256": "64556f545ac8ef89465d5905a5b26da16618115d61a5543c2109fe6734f4fb6a"
+      "bytes": 24422,
+      "sha256": "e8d0ec9d5b81ad31f00297ff6b96f45b427023ab10afd6ba09e28f0cfb4a0c5c"
     },
     {
       "path": "web/companions.js",

@@ -168,7 +168,8 @@ export async function receiveDesk(entry) {
       requireValue(sha(bytes)===item.sha256 && bytes.length===item.bytes,'The saved original download changed.');
       return {path,filename,sha256:item.sha256,bytes:item.bytes};
     }
-    const button=page.locator(container).getByRole('button').filter({hasText:filename+' · '});
+    requireValue(/^[a-f0-9]{64}$/.test(item.sha256),'The selected original artifact identity is incomplete.');
+    const button=page.locator(container).locator('button[title="'+item.sha256+'"]').filter({hasText:filename+' · '});
     requireValue(await button.count()===1,'Select exactly one original saved artifact: '+filename);
     const downloadPromise=page.waitForEvent('download');
     await button.click();
