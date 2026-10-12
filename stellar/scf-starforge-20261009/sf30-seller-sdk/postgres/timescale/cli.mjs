@@ -19,6 +19,13 @@ const USAGE=`Timescale operations and original PostgreSQL dataset publisher
   work-item | work-context | work-report --directory DIR --id UUID [--edition UUID]
   work-command --directory DIR --input REQUEST.json
   work-report --directory DIR --id UUID --format html > work-report.html
+  commissioning-list --directory DIR [--offset 0 --limit 25 --query TEXT --status OPEN]
+  commissioning-item | commissioning-context | commissioning-reports --directory DIR --id UUID [--kind KIND]
+  commissioning-intake --directory DIR --id UUID [--format original]
+  commissioning-source --directory DIR --id UUID --source-id UUID [--format original]
+  commissioning-comparison --directory DIR --id UUID --comparison UUID [--offset 0 --limit 25]
+  commissioning-command | commissioning-report --directory DIR --input REQUEST.json
+  commissioning-report-file --directory DIR --id ORIGINAL_REPORT_REQUEST_UUID --format json|html
   inspect-package --package DIR [--digest SHA256]
   receive --input REQUEST.json
 
@@ -46,7 +53,7 @@ async function input(value){
 function required(options,name){if(!options[name])throw fault('CLI_ARGUMENT_REQUIRED','Provide --'+name+'.');return options[name];}
 async function main(argv=process.argv.slice(2)){
   const {command,values:v}=options([...argv]);
-  const allowed=['directory','source','target','maintenance-source','title','seller','resource','port','offset','limit','input','id','before','after','package','digest','edition','format','status','owner','query'];
+  const allowed=['directory','source','target','maintenance-source','title','seller','resource','port','offset','limit','input','id','before','after','package','digest','edition','format','status','owner','query','source-id','comparison','kind'];
   if(Object.keys(v).some(k=>!allowed.includes(k)))throw fault('CLI_ARGUMENT_INVALID');
   if(command==='help'){process.stdout.write(USAGE);return;}
   const print=value=>process.stdout.write(JSON.stringify(value,null,2)+'\n');
@@ -54,7 +61,8 @@ async function main(argv=process.argv.slice(2)){
   if(command==='receive'){const result=await receiveTimescaleWorkspace(await input(v.input));print(result);return result;}
   const methods={capture:'startCapture',review:'saveReview','refresh-plan':'prepareRefresh',refresh:'startRefresh',verify:'startVerification',
     'job-plan':'prepareJob','job-apply':'applyJob',select:'selectAggregate',extract:'startPublicationExtraction'};
-  if(!['init','serve','status','edition','operation','plan','compare','export','work-list','work-sources','work-item','work-context','work-command','work-report',...Object.keys(methods)].includes(command))throw fault('CLI_COMMAND_INVALID',USAGE);
+  if(!['init','serve','status','edition','operation','plan','compare','export','work-list','work-sources','work-item','work-context','work-command','work-report','commissioning-list','commissioning-item','commissioning-context','commissioning-intake',
+    'commissioning-source','commissioning-comparison','commissioning-reports','commissioning-command','commissioning-report','commissioning-report-file',...Object.keys(methods)].includes(command))throw fault('CLI_COMMAND_INVALID',USAGE);
   const workspace=await openTimescaleWorkspace({directory:resolve(required(v,'directory')),create:command==='init',
     ...(v.source?{sourceFile:resolve(v.source)}:{}),...(v.target?{targetDirectory:resolve(v.target)}:{}),
     ...(v['maintenance-source']?{maintenanceSourceFile:resolve(v['maintenance-source'])}:{}),
@@ -85,9 +93,26 @@ async function main(argv=process.argv.slice(2)){
       if(v.format==='html'){process.stdout.write(report.html+'\n');return report;}
       if(v.format&&v.format!=='json')throw fault('CLI_FORMAT_INVALID','Choose json or html.');
       result=report.json;
+    }else if(command==='commissioning-list')result=workspace.commissioning.list({offset:v.offset===undefined?0:Number(v.offset),limit:v.limit===undefined?25:Number(v.limit),
+      ...(v.status?{status:v.status}:{}),...(v.query?{q:v.query}:{})});
+    else if(command==='commissioning-reports')result=workspace.commissioning.reports(required(v,'id'),{offset:v.offset===undefined?0:Number(v.offset),limit:v.limit===undefined?25:Number(v.limit)});
+    else if(command==='commissioning-item')result=workspace.commissioning.item(required(v,'id'));
+    else if(command==='commissioning-context')result=await workspace.commissioning.context(required(v,'id'),{
+      offset:v.offset===undefined?0:Number(v.offset),limit:v.limit===undefined?25:Number(v.limit),...(v.kind?{kind:v.kind}:{})});
+    else if(command==='commissioning-source'||command==='commissioning-intake'){
+      result=command==='commissioning-intake'?await workspace.commissioning.intakeFile(required(v,'id')):
+        await workspace.commissioning.source(required(v,'id'),required(v,'source-id'));
+      if(v.format==='original'){process.stdout.write(result.original.content);return result;}
+      if(v.format&&v.format!=='json')throw fault('CLI_FORMAT_INVALID','Choose json or original.');
+    }else if(command==='commissioning-comparison')result=await workspace.commissioning.comparison(required(v,'id'),required(v,'comparison'),{
+      offset:v.offset===undefined?0:Number(v.offset),limit:v.limit===undefined?25:Number(v.limit)});
+    else if(command==='commissioning-report-file'){
+      result=await workspace.commissioning.reportFile(required(v,'id'),v.format??'json');
+      process.stdout.write(result.content);return result;
     }else{
       const request=await input(v.input);
-      const started=command==='export'?exportTimescaleWorkspace(workspace,request):command==='work-command'?workspace.remediation.command(request):workspace[methods[command]](request);
+      const started=command==='export'?exportTimescaleWorkspace(workspace,request):command==='work-command'?workspace.remediation.command(request):
+        command==='commissioning-command'?workspace.commissioning.command(request):command==='commissioning-report'?workspace.commissioning.publishReport(request):workspace[methods[command]](request);
       result=await started.completion;
       if(result.state!=='COMPLETE'||result.kind==='extraction'&&!['READY','REVIEWED','PUBLISHED'].includes(result.data.result?.state))process.exitCode=1;
     }

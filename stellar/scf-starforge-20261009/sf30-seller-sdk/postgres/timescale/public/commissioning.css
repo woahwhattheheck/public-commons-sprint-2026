@@ -1,0 +1,23 @@
+/* MIT. Grayscale industrial operator controls. */
+.tc-desk{color:#202020;background:#fff;border:1px solid #b8b8b8;padding:20px;margin:20px 0}
+.tc-desk .tc-heading,.tc-desk nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tc-desk h2,.tc-desk h3,.tc-desk h4{font-weight:650;margin:12px 0}
+.tc-desk section,.tc-desk details{border-top:1px solid #c8c8c8;margin-top:18px;padding-top:12px}
+.tc-desk summary{font-weight:650;cursor:pointer;padding:8px 0}
+.tc-desk label{display:block;margin:10px 0;font-size:14px}
+.tc-desk input:not([type=checkbox]),.tc-desk select,.tc-desk textarea{display:block;width:100%;box-sizing:border-box;max-width:100%;padding:8px;margin-top:5px;border:1px solid #8c8c8c;border-radius:2px;background:#fff;color:#161616;font:inherit}
+.tc-desk input[type=checkbox]{margin-right:8px}
+.tc-desk textarea{min-height:60px;resize:vertical}
+.tc-desk button,.tc-desk a{font:inherit;color:#151515}
+.tc-desk button{background:#eee;border:1px solid #777;border-radius:2px;padding:8px 12px;cursor:pointer;margin:6px 6px 6px 0}
+.tc-desk button:hover{background:#ddd}.tc-desk button:disabled{color:#727272;border-color:#bbb;background:#f6f6f6;cursor:default}
+.tc-desk a{display:inline-block;text-decoration:underline;padding:5px 0;margin-right:12px}
+.tc-desk fieldset{border:1px solid #bbb;padding:12px;margin:12px 0}
+.tc-desk legend{font-weight:600;overflow-wrap:anywhere}
+.tc-desk pre{background:#f5f5f5;border:1px solid #d0d0d0;padding:12px;max-height:400px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.tc-desk .tc-scroll{overflow:auto}.tc-desk table{width:100%;border-collapse:collapse;font-size:13px}
+.tc-desk th,.tc-desk td{padding:9px;text-align:left;vertical-align:top;border:1px solid #c8c8c8;white-space:pre-wrap;overflow-wrap:anywhere;min-width:90px}
+.tc-desk th{background:#ececec}.tc-desk p{line-height:1.5;white-space:pre-wrap}
+.tc-desk .tc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px}
+.tc-desk [hidden]{display:none!important}
+@media(max-width:800px){.tc-desk{padding:12px}.tc-desk .tc-grid{grid-template-columns:minmax(0,1fr)}}
