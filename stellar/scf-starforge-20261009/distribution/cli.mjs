@@ -106,6 +106,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   routescan-workspace Operate its saved project through the original local workspace
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  stac                                      Discover imagery, compare scenes and deliver selected assets to customers
   tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
   coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
@@ -130,6 +131,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   api-application                           Run source-pinned application functions over purchased API allowances
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  baserow-source                            Discover, retain and publish original Baserow records and files
+  baserow-workspace                         Author Baserow sources, publish and reopen customer delivery
+  baserow-publisher                         Operate the original Baserow dataset publisher
+  baserow-deployment                        Review and stage the original Baserow merchant release
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
