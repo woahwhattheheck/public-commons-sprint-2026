@@ -225,7 +225,9 @@ def _decode_sv(s):
     try:return json.loads('"'+s.replace('"','\\"')+'"')
     except (ValueError,UnicodeError) as e:raise InputError("Unsupported original ERDDAP separated-value escaping") from e
 
-def csv_comparison(raw,t):
+def csv_comparison(raw,t,*,comparison_version="decimal-v1"):
+    if comparison_version not in {"lexical-v1","decimal-v1"}:
+        raise InputError("Unsupported original JSON/CSV comparison version")
     try:reader=csv.reader(io.StringIO(raw.decode("iso-8859-1"),newline=""),strict=True)
     except (UnicodeError,csv.Error) as e:raise InputError("Invalid original ERDDAP CSV") from e
     differences=[];count=0;numeric_missing=0;numeric_equivalent_spellings=0
@@ -249,7 +251,7 @@ def csv_comparison(raw,t):
                 elif kind in {"String","char"}:equal=_decode_sv(actual)==expected
                 else:
                     equal=actual==expected
-                    if not equal and NUMBER.fullmatch(actual):
+                    if not equal and comparison_version=="decimal-v1" and NUMBER.fullmatch(actual):
                         # Compare exact decimal values while keeping both original spellings.
                         # JSON 36 and CSV 36.0 are the same provider value, without float rounding.
                         try:equal=Decimal(actual)==Decimal(expected)
@@ -259,8 +261,10 @@ def csv_comparison(raw,t):
                     differences.append({"row":count,"column":names[i],"json":expected,"csv":actual})
         if count!=len(t["rows"]) and len(differences)<20:differences.append({"reason":"row counts differ"})
     except (StopIteration,csv.Error) as e:raise InputError("Incomplete original ERDDAP CSV") from e
-    return {"status":"equivalent" if not differences else "different","jsonRows":len(t["rows"]),"csvRows":count,
-            "numericMissingRepresentations":numeric_missing,"numericEquivalentSpellings":numeric_equivalent_spellings,"differences":differences}
+    result={"status":"equivalent" if not differences else "different","jsonRows":len(t["rows"]),"csvRows":count,
+            "numericMissingRepresentations":numeric_missing,"differences":differences}
+    if comparison_version=="decimal-v1":result["numericEquivalentSpellings"]=numeric_equivalent_spellings
+    return result
 
 def validate_response_receipt(record,name,raw,expected_url,server):
     """Bind complete source bytes to the original request and observed transport."""

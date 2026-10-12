@@ -8,6 +8,7 @@ import {SupersetClient,sourceOptions} from './client.mjs';
 import {readCapture,buildEdition,compareEditions} from './source.mjs';
 import {stringifyExact} from './exact-json.mjs';
 import {captureSupersetVersionStores,validateSupersetVersionStores,restoreSupersetVersionStores} from './native-custody.mjs';
+import {captureSupersetBuyerSessions,validateSupersetBuyerSessions,restoreSupersetBuyerSessions} from './session-custody.mjs';
 import {loadDatasetConfig} from '../dataset-handler.mjs';
 import {absolute,object,bytes,digest,identity,readPrivate,hashPrivate,privateDirectory,
   syncDirectory,fault,acquireWorkspace,saveExact,MiB} from './files.mjs';
@@ -395,6 +396,7 @@ export class SupersetWorkspace{
       const root=join(this.directory,'downloads');await privateDirectory(root,true);
       if(kind==='workspace'){
         this.setMeta('version_custody',await captureSupersetVersionStores(this));
+        this.setMeta('buyer_session_custody',await captureSupersetBuyerSessions(this));
         const temporary=join(root,'workspace.partial-'+randomUUID());
         try{
           this.db.exec("VACUUM INTO '"+temporary.replaceAll("'","''")+"'");
@@ -462,7 +464,7 @@ export async function receiveSupersetWorkspace({file,directory}={}){
   const sourceIdentity=await hashPrivate(file,2*1024*MiB);
   await privateDirectory(directory,true);
   const unlock=await acquireWorkspace(directory),finalFile=join(directory,WORKSPACE_FILE);
-  let source,target,versionCustody;
+  let source,target,versionCustody,sessionCustody;
   const receiving={schema:'stellar-forge.superset-receiving.v1',bytes:sourceIdentity.bytes,sha256:sourceIdentity.hash};
   try{
     let exists=true;try{await lstat(finalFile);}catch(e){if(e.code==='ENOENT')exists=false;else throw e;}
@@ -478,6 +480,8 @@ export async function receiveSupersetWorkspace({file,directory}={}){
       source=new DatabaseSync(file,{readOnly:true});source.exec('PRAGMA trusted_schema=OFF;BEGIN');
       const custody=source.prepare('SELECT value FROM meta WHERE key=?').get('version_custody');
       versionCustody=custody?JSON.parse(custody.value):null;
+      const sessionSource=source.prepare('SELECT value FROM meta WHERE key=?').get('buyer_session_custody');
+      sessionCustody=sessionSource?JSON.parse(sessionSource.value):null;
       source.exec('COMMIT');source.close();source=null;
     }else{
       source=new DatabaseSync(file,{readOnly:true});source.exec('PRAGMA trusted_schema=OFF;BEGIN');
@@ -491,6 +495,7 @@ export async function receiveSupersetWorkspace({file,directory}={}){
       }
       const metadata=source.prepare('SELECT key,value FROM meta').all(),values=new Map(metadata.map(r=>[r.key,JSON.parse(r.value)]));
       versionCustody=values.get('version_custody')??null;
+      sessionCustody=values.get('buyer_session_custody')??null;
       if(values.get('schema')!==WORKSPACE_SCHEMA||!Number.isSafeInteger(values.get('revision'))||values.get('revision')<0)
         throw fault('SUPERSET_RECEIVING_FORMAT','The retained workspace metadata is invalid.');
       const stage=join(directory,'receiving-stage');target=await openSupersetWorkspace({directory:stage});
@@ -555,7 +560,9 @@ export async function receiveSupersetWorkspace({file,directory}={}){
               throw fault('SUPERSET_RECEIVING_DELIVERY','An original delivery differs from its buyer.');
           }
           validateSupersetVersionStores(target,target.meta('version_custody'));
-          target.setMeta('receiving_source',receiving);target.setMeta('receiving_version_stores',null);target.db.exec('COMMIT');
+          validateSupersetBuyerSessions(target,target.meta('buyer_session_custody'));
+          target.setMeta('receiving_source',receiving);target.setMeta('receiving_version_stores',null);
+          target.setMeta('receiving_buyer_sessions',null);target.db.exec('COMMIT');
         }catch(e){target.db.exec('ROLLBACK');throw e;}
       }
       await target.close();target=null;
@@ -580,6 +587,12 @@ export async function receiveSupersetWorkspace({file,directory}={}){
     for(const item of workspace.list('buyers')){
       const buyer=workspace.get('buyers',item.id);
       await saveExact(join(workspace.directory,'buyers',buyer.id,'buyer.json'),workspace.bytes(buyer.configurationSha256));
+    }
+    const sessionReceipt=workspace.meta('receiving_buyer_sessions');
+    if(sessionCustody&&sessionReceipt?.sourceArchiveSha256!==receiving.sha256){
+      const sessions=await restoreSupersetBuyerSessions(workspace,sessionCustody,{sourceArchiveSha256:receiving.sha256});
+      workspace.setMeta('receiving_buyer_sessions',{sourceArchiveSha256:receiving.sha256,
+        sourceCustodySha256:sessionCustody.sha256,sessions,restoredAt:new Date().toISOString()});
     }
     for(const item of workspace.list('deliveries'))await workspace.materializeDelivery(item.id);
     return{...workspace.state(),receiving};
