@@ -62,7 +62,7 @@ def main():
     if frame.get("schema")!="stellar-forge.analysis-original-source-frame.v1" or frame.get("operation")!=OPERATION:
         raise ValueError("Continue the same original Analysis operation")
     sources={}
-    for name in ("receiver","driver","publisher","uploader","coordinator"):
+    for name in ("receiver","driver","publisher","uploader","coordinator","response_sources"):
         body=frame[name].encode()
         if git_blob(body)!=frame["source_blobs"][name]:
             raise ValueError("The selected complete source differs: "+name)
