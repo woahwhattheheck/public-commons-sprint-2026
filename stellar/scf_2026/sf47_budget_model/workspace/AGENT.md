@@ -187,3 +187,11 @@ completionExtension takes receiptId, confirmedOn, deadlineOn, reference, optiona
 completionDecision takes outcomeId, state, date, sourceNote and optional sourceIds. It updates the recorded issuer outcome while preserving the form identity, prepared source and earlier events. Use a newly prepared form and the actual new form reference for a resubmission.
 
 asOfDate selects which payment, confirmation and submission dates participate in the calendar view. Issuer outcomes display their current recorded state. Complete case export/import retains all completion plans, confirmations, form receipts, source files and complete frozen reviews.
+
+## Cohort acceptance through the existing native case
+
+The original HTTP/CLI operations now include `cohort-seed`, `cohort-preview`, `cohort.prepare` and `cohort-export`; see [OPERATIONS-COHORT.md](OPERATIONS-COHORT.md). The source-owned agent/provider can delegate those native methods while keeping the same case, version, actor, request and exact preview digest. Do not synthesize new purchase, operator or grant facts to satisfy a proposed target.
+
+Use the reviewed seed `inputs` object for preview. Present the complete numerator/denominator scopes and source findings. A `COHORT_EVALUATION` review may truthfully retain unmet targets. Its `reviewId` can be selected through optional `cohortReviewIds` on the existing native Completion preview/preparation. The original service validates currentness and embeds the full frozen cohort source in its prepared export; there is no separate completion submission path.
+
+Recovery replays the original preparation request. Reopening a frozen review or export does not recapture an Inbox or repeat a provider/payment operation. Keep gross earlier completion, later adjustments, independent/current source differences and unplaced/partial observations visible in any generated grant material.
