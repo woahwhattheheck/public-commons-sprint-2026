@@ -171,11 +171,14 @@ class Workspace:
                             self.connection.execute("SELECT * FROM events ORDER BY id DESC LIMIT 50")]
         return result
 
-    def import_source(self, provider, source, *, node=None, acquisition=None):
+    def import_source(self, provider, source, *, node=None, acquisition=None, expected_input_sha256=None):
+        if expected_input_sha256 is not None:
+            hash_id(expected_input_sha256)
         with lock(self.directory):
-            return self._import_source(provider, source, node=node, acquisition=acquisition)
+            return self._import_source(provider, source, node=node, acquisition=acquisition,
+                                       expected_input_sha256=expected_input_sha256)
 
-    def _import_source(self, provider, source, *, node=None, acquisition=None):
+    def _import_source(self, provider, source, *, node=None, acquisition=None, expected_input_sha256=None):
         if provider not in ("acs", "acs_api", "bls", "hud"):
             fail("SOURCE_PROVIDER_INVALID")
         executable = node or os.environ.get("CODEX_PRIMARY_RUNTIME_NODE", "node")
@@ -203,6 +206,10 @@ class Workspace:
                 detail = stderr.decode("utf-8", errors="replace")[-8192:]
                 fail("ORIGINAL_PROVIDER_INTAKE_FAILED", detail=detail, exit_code=child.returncode)
             descriptor = verify_source(target)
+            if (expected_input_sha256 is not None
+                    and descriptor.get("source_sha256") != expected_input_sha256):
+                fail("SOURCE_INPUT_CHANGED", expected_sha256=expected_input_sha256,
+                     actual_sha256=descriptor.get("source_sha256"))
             sid = source_identity(descriptor)
             body = {"schema": "stellar-forge.study-source.v1", "descriptor": descriptor,
                     "provider": provider, "capture_id": descriptor["capture_id"],
