@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, failure } from './config.mjs';
+import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
@@ -22,6 +22,7 @@ const HELP = `Starforge merchant MCP
   init-sheets-workspaces --dir NEW_DIRECTORY --connection SHEETS_WORKSPACE_CONNECTION.json [--name NAME]
   init-ckan-workspaces --dir NEW_DIRECTORY --connection CKAN_WORKSPACE_CONNECTION.json [--workspace ALIAS] [--name NAME]
   init-tenderly-workspaces --dir NEW_DIRECTORY --connection TENDERLY_WORKSPACE_CONNECTION.json [--name NAME]
+  init-usaspending-workspaces --dir NEW_DIRECTORY --connection USASPENDING_WORKSPACE_CONNECTION.json [--name NAME]
   init --dir NEW_DIRECTORY --spec OPENAPI.json --selections SELECTIONS.json
        --bindings BINDINGS.json [--name NAME] [--seller-port PORT]
        [--handlers TRUSTED_MODULE.mjs | --upstreams UPSTREAMS.json]
@@ -168,6 +169,12 @@ export async function main(args = process.argv.slice(2)) {
         onProgress: progress => process.stderr.write(JSON.stringify(progress) + '\n') }) : await inspectS3Customer(args);
       process.stdout.write(JSON.stringify(result) + '\n'); return result;
     } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+  }
+  if (command === 'init-usaspending-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeUSASpendingWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
   if (command === 'init-tenderly-workspaces') {
     const options = pairs(rest, ['--dir', '--connection', '--name']);
@@ -327,7 +334,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-woocommerce, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-sheets-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-s3-workspaces, init-publishers, serve, maintenance, adjustments, platforms, inspect-support, inspect-client, inspect-s3, download-support, download-client, download-s3, reopen-support, download-python or reopen-python.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-woocommerce, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-sheets-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-usaspending-workspaces, init-s3-workspaces, init-publishers, serve, maintenance, adjustments, platforms, inspect-support, inspect-client, inspect-s3, download-support, download-client, download-s3, reopen-support, download-python or reopen-python.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),
