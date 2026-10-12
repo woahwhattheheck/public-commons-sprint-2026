@@ -211,7 +211,9 @@ offset. The read-only descriptor retains that exact file.
 
 `merchant_kafka_file_release` releases a descriptor early.
 `merchant_kafka_manifest` and `merchant_kafka_exports` inspect retained files
-without contacting Kafka. An incomplete export listing returns its original
+without contacting Kafka. Set includeFile:true on the manifest tool to receive its
+exact retained manifest.json bytes, length and SHA-256; the customer downloader
+pins its original manifest before receiving the payload. An incomplete export listing returns its original
 operation and selection for recovery.
 
 ### Import and reopen
