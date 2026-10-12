@@ -15,7 +15,7 @@ SOURCES=[
 ("developer-assets.json",ASSET_BASE+"Developer_Portal_Source_Additions.json",46410,"f1890ee59c679d9322dc5e2edaf97eda606c34c7c1921a797215395b5d02e45e"),
 ]
 LOCAL=[
-("run-complete-research.py",11573,"350671311e655b9076add760caa9edbf36365d3faf097930c1a190df3e689f60"),
+("run-complete-research.py",12824,"0b4d2354e91590e6dee90ebe4536ac9d4a569bfdcfbfe03090fa741f4f174284"),
 ("RESEARCH_PROGRAMME_README.md",4820,"e55ba2a2c9429c219dd81656af6597fceeb4827d266b2d36bfd80b0c5169aab4"),
 ]
 def need(value,message):
