@@ -1,6 +1,6 @@
 // MIT. Complete original Zotero documents, typed metadata, and edition comparison.
 import {SCHEMA,LIMIT,need,plain,parse,json,sha256,clone,key,library,libraryIdentity,collectionScope,text,safeFilename} from './contracts.mjs';
-import {createSourceBundle,SOURCE_MANIFEST_SCHEMA} from '../../sf88-operator-buyer-cli/research-dossiers/source-bundle.mjs';
+import {createSourceBundle,SOURCE_MANIFEST_SCHEMA} from '../../sf88-operator-buyer-cli/research-dossiers/source-bundles.mjs';
 
 function objectVersion(value) {
   need(Number.isSafeInteger(value)&&value>=0,'ZOTERO_OBJECT_VERSION_INVALID');return value;
