@@ -162,7 +162,7 @@ export async function openTykProduct(input = {}, { environment = process.env, fe
     const retainedWorkspace = await inspectTykWorkspaceDirectory(first.profile.workspaceDirectory);
     need(retainedWorkspace.workspaceId === native.workspaceId, 'The started native workspace identity changed.', 'NATIVE_STARTUP');
     await publish(first.profile.browserUrlFile, native.url + '\n', { replace: true, lease });
-    started = { state: 'OPEN', browserUrl: native.url, workspaceId: native.workspaceId };
+    started = { state: 'OPEN', browserUrl: native.url, workspaceId: native.workspaceId, port: native.port };
     await save({ ...initial, ...started });
     return { ...initial, ...started, workspace: native.workspace, native,
       close() { return closing ??= finish().catch(error => { closing = null; throw error; }); } };

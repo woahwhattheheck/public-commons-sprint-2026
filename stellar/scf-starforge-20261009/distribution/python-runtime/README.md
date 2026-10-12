@@ -116,3 +116,111 @@ interface follows the primary documentation:
 [installation reports](https://pip.pypa.io/en/stable/reference/installation-report/),
 [managing another interpreter](https://pip.pypa.io/en/stable/topics/python-option/),
 and [pip install](https://pip.pypa.io/en/stable/cli/pip_install/).
+
+## Evidence synthesis in the same Python installation
+
+Select the source-declared `synthesis` extra to install
+`statsmodels==0.15.0` and `matplotlib==3.10.8` with their actual wheel
+dependencies. The original resolver retains the interpreter-specific wheels,
+full source, requirements and lock. The resulting installation names
+`stellar_forge_buyer.synthesis_cli` as its `synthesis` application module
+and exposes the `stellar-forge-synthesis` console entrypoint. The Applications
+command binding checks that same installed module or script, source identity,
+selected extra and database path.
+
+Use the original resolve/install/activate procedure above with
+`--extras synthesis`; combine it with other original extras when the same
+customer environment needs them. A synthesis protocol and its results remain
+in the original Analysis SQLite database. The complete publication JSON,
+frozen descriptor projection, saved protocol, statistical result and generated
+reports are retained there as database records and BLOBs.
+
+```bash
+/selected/installation/bin/python -m stellar_forge_buyer.synthesis_cli engine
+
+/selected/installation/bin/stellar-forge-synthesis \
+  --database /private/customer/analysis \
+  --checkout /selected/complete-source \
+  import-publication --request /private/requests/publication.json \
+  --source /private/research/accepted-publication.json
+
+/selected/installation/bin/stellar-forge-synthesis \
+  --database /private/customer/analysis \
+  save-protocol --request /private/requests/protocol.json
+
+/selected/installation/bin/stellar-forge-synthesis \
+  --database /private/customer/analysis \
+  review --name bcg-primary --revision 1
+
+/selected/installation/bin/stellar-forge-synthesis \
+  --database /private/customer/analysis \
+  run --request /private/requests/run.json
+
+/selected/installation/bin/stellar-forge-synthesis \
+  --database /private/customer/analysis \
+  receive --id ORIGINAL_32_CHARACTER_RUN_ID --output /private/delivery/bcg
+```
+
+The import request contains the original `id`, name, expected revision,
+complete source SHA256, source context, results pointer and optional descriptor
+pointer. `--source` supplies the unchanged original bytes and must match that
+request's SHA256; an already prepared request may instead contain `raw_text`.
+The protocol request selects one exact publication name/revision/SHA256 and
+the full reviewed definition. The run request is precisely
+`{id, protocol_name, protocol_revision, protocol_sha256}`. Preserve those
+request files and IDs when continuing after an interrupted response.
+
+Native `run` opens the original Analysis owner, waits for its actual
+background job, and closes only after the job drains. SIGINT or SIGTERM requests
+cancellation of that same job and waits for the original owner to finish. An
+explicit repeat of the same run request reuses a completed result or resumes
+that original interrupted job; changing the selected protocol under its ID is
+rejected by the existing job store.
+
+When the private Analysis app is already open, add `--live` to borrow its
+current launch and capability. Mutations also require `--operation`, a
+private retained SDK request directory:
+
+```bash
+/selected/installation/bin/stellar-forge-synthesis \
+  --database /private/customer/analysis --live \
+  --operation /private/operations/bcg-run \
+  run --request /private/requests/run.json
+
+/selected/installation/bin/stellar-forge-synthesis \
+  --database /private/customer/analysis --live \
+  --operation /private/operations/bcg-run resume
+
+/selected/installation/bin/stellar-forge-synthesis \
+  --database /private/customer/analysis --live \
+  cancel --id ORIGINAL_32_CHARACTER_RUN_ID
+```
+
+Live `--wait-seconds` controls how long the caller waits before returning the
+same retained RUNNING job; the original app continues to own it. `resume`
+reconciles the original SDK request and returns its current native postimage.
+Read the same job/result or use `receive` to finish its delivery. A changed
+port on app reopen is resolved from the original private launch record, while
+the retained workspace identity continues to bind the request.
+
+`history`, `publication`, `protocol`, `review`, `job`, `result` and
+`source` expose the same original saved editions and complete source.
+History uses `--before` cursors; publication rows use a fixed
+`--revision` plus `--offset`. The receiver verifies every file's complete
+byte count and SHA256, retains an interrupted partial under its original
+identity, and publishes complete files without replacing different local
+content. It stores the selected run and complete delivery receipt alongside
+the files.
+
+Use the existing Analysis workspace archive/export and receiving commands for
+portable customer databases. All synthesis source, protocols, jobs and report
+BLOBs travel in the original database snapshot; reopen through the same
+AnalysisWorkspace and receive the same result files. The separate report ZIP
+contains the complete selected publication, protocol, statistical data and
+figures for delivery. It does not replace the original customer's database
+backup.
+
+The statistical methods and protocol fields are documented in the Python
+package's maintained [SYNTHESIS_OPERATOR.md](../../sf88-operator-buyer-cli/SYNTHESIS_OPERATOR.md) guide. Dependency declarations follow
+the selected `pyproject.toml` and
+[statsmodels' published release](https://pypi.org/project/statsmodels/0.15.0/).

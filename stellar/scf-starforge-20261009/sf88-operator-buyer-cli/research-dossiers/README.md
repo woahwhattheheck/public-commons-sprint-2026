@@ -450,3 +450,15 @@ Start the existing research command with `--pipeline-source /absolute/private/pi
 ## Study extraction, evidence tables and appraisal
 
 [Study extraction](STUDY-EXTRACTION-OPERATOR.md) operates complete forms, independent reviewer entries, original source values, adjudication, immutable evidence-table publications and exact-request recovery in this same application. [The full browser receiving guide](STUDY-EXTRACTION-BROWSER.md) documents the original author/inspect programme. [Appraisal](risk-of-bias/BROWSER.md) adds source-bound design/result review on the same Eligibility studies and extraction records. Their Node and CLI operations preserve the same dossier revisions and editable portable history. Optional Zotero navigation opens its original library workspace through the current host.
+
+## Python customer commissioning and delivery
+
+The installed `ResearchWorkspace.customer_updates(dossier_id)` provides complete typed commissioning, retained briefs and source-bound update review, the ten original customer actions, all report formats, complete editable handover and receiving. Original submission and explicit replay attempts keep their separate durable client requests while preserving native operation IDs.
+
+The [Python customer guide](../python/RESEARCH-CUSTOMER-UPDATES.md) covers the 17 original Research CLI commands, exact request recovery, full-file readers and sender/receiver operation. Its complete Python receiving wrapper invokes the original customer programme with the same saved case and programme directory, keeping every original phase request, source record, frozen work/report and later correction.
+
+## Customer workbook template exchange
+
+The installed `research-template-exchange` command and the original Research workspace carry customer XLSX or delimited templates from source mapping through released files, returned workbook comparison, reviewed corrections and the original assigned-reviewer draft. Versioned layouts, frozen publications, source identities and every full workbook remain with the original dossier and travel through its ordinary or streamed portable handover.
+
+Open the current dossier's Template exchange view, or use the [complete operating guide](template-exchange/README.md). The [receiving guide](template-exchange/native/RECEIVING.md) continues the original study and customer programme, including the authored workbook, actual returned file, whole source-bound review and independent receiving. Existing Python and JavaScript customer workflows use the same dossier history.

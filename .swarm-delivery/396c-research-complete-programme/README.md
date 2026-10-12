@@ -23,3 +23,9 @@ The operation IDs remain SCF-RESEARCH-CITATION-REVIEW-396C-20261012, SCF-RESEARC
 The receiver embeds exact public commit paths, lengths and hashes for the original283/449/473-file envelopes, their original materializers, and the merged three-asset addition. The programme pins the resulting286/452/476-file successor envelopes and materializers. No hosted Actions workflow is required.
 
 The initial cloud operation received the original source and built its Crossref edition, then stopped on the omitted portal HTML. The complete source repair is merged. This carrier supplies the corrected full run and packaging; its native completion is recorded by the original result files when execution succeeds.
+
+## Continue after the source-composition repair
+
+The original complete run exposed a mismatch in the Developer Portal source composer: its added-file metadata included three duplicate `sourceUrl` fields absent from the selected frozen envelopes. The corrected helper in commit `18c0961841c36c63129c938804817b941096e235` projects the original descriptor fields and reproduces all three existing envelope byte lengths and SHA256s. Every original engine body, added asset, source URL in the retained addition packet, materializer identity and customer operation remains selected.
+
+Use this complete programme directory with the same receiving command and original run directory. The preparer receives the corrected 16,697-byte helper, SHA256 `891275f172f5497fdbc2cffb1165b7a6f2dc14bae58dfb77e8023d024442693a`. When the original 16,710-byte helper is already present, it retains that exact predecessor beside the source and atomically advances only the declared helper. Other differing source files still require their original selected edition. Completed engine materialization and customer outputs continue through the same original receiving logic.

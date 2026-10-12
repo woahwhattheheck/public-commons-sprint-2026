@@ -13,11 +13,12 @@ const own = (value, key) => Object.hasOwn(value, key);
 const definitions = new Map(wqxWorkspaceTools((name, description, properties, required) =>
   [name, { properties, required }]));
 const inventoryKeys = Object.freeze({ captures: 'captures', reviews: 'reviews', plans: 'openWaters',
-  decisions: 'reviewSheets', editions: 'editions', jobs: 'jobs' });
+  decisions: 'reviewSheets', scientific: 'standardizedReviews', editions: 'editions', jobs: 'jobs' });
 const recordRoots = Object.freeze({ capture: '/api/captures/', review: '/api/reviews/',
-  plan: '/api/open-waters/', decision: '/api/review-sheets/', edition: '/api/editions/' });
+  plan: '/api/open-waters/', decision: '/api/review-sheets/', scientific: '/api/standardized-analysis/', edition: '/api/editions/' });
 const formats = Object.freeze({
   review: ['html', 'json', 'csv', 'geojson', 'bundle'],
+  scientific: ['json','observations','observations-tsv','groups','changes','report','bundle'],
   plan: ['json', 'locations', 'results', 'crosswalk', 'report', 'bundle', 'references'],
   decision: ['csv', 'tsv', 'json', 'report', 'bundle', 'native-locations', 'native-results',
     'native-crosswalk', 'native-report', 'native-references', 'native-bundle'],
@@ -91,9 +92,11 @@ function responseName(response, fallback) {
 }
 function nativeBody(definition, value) {
   exact(value, definition.keys, definition.required);
-  for (const key of ['operationId', 'captureId', 'comparisonCaptureId', 'reviewId', 'planId', 'editionId', 'intentId'])
+  for (const key of ['operationId', 'captureId', 'comparisonCaptureId', 'reviewId', 'planId', 'editionId', 'intentId', 'decisionReviewId'])
     if (value[key] !== undefined) wqxId(value[key], key);
-  for (const key of ['expectedCaptureSha256', 'expectedReviewSha256'])
+  if (value.previousReviewId !== undefined && value.previousReviewId !== null) wqxId(value.previousReviewId, 'previous scientific review');
+  if (value.expectedPreviousReviewSha256 !== undefined && value.expectedPreviousReviewSha256 !== null) wqxDigest(value.expectedPreviousReviewSha256, 'previous scientific review');
+  for (const key of ['expectedCaptureSha256', 'expectedReviewSha256', 'expectedDecisionReviewSha256', 'expectedPreviewSha256'])
     if (value[key] !== undefined) wqxDigest(value[key], key);
   if (value.expectedRevision !== undefined) wqxInteger(value.expectedRevision, 0, Number.MAX_SAFE_INTEGER, 'project revision');
   for (const key of ['selection', 'options', 'payment', 'query'])
@@ -224,7 +227,7 @@ export class MerchantWqxWorkspaces {
       '/api/captures/' + encodeURIComponent(input.captureId) + '/result?' + query, undefined);
   }
   async #file(input) {
-    choose(input.family, ['capture', 'review', 'plan', 'decision', 'customer'], 'file family'); wqxId(input.id);
+    choose(input.family, ['capture', 'review', 'plan', 'decision', 'scientific', 'customer'], 'file family'); wqxId(input.id);
     const connection = await this.#connection(input.workspace);
     let path, format = input.format;
     if (input.family === 'capture') {
@@ -395,10 +398,10 @@ export class MerchantWqxWorkspaces {
       save ? '/api/review-sheets' : '/api/review-sheets/preview', request, BULK_BYTES);
   }
   async #receive(input) {
-    const kind = choose(input.kind, ['review', 'plan', 'decision'], 'complete bundle');
+    const kind = choose(input.kind, ['review', 'plan', 'decision', 'scientific'], 'complete bundle');
     const maximum = kind === 'review' ? REVIEW_BUNDLE_BYTES : WQX_MAX_FILE_BYTES;
     const bundle = wqxDecode(await this.#files.readInput(input.inputRef, maximum));
-    const path = kind === 'review' ? '/api/receive' : kind === 'plan' ? '/api/open-waters/receive' : '/api/review-sheets/receive';
+    const path = kind === 'review' ? '/api/receive' : kind === 'plan' ? '/api/open-waters/receive' : kind === 'scientific' ? '/api/standardized-analysis/receive' : '/api/review-sheets/receive';
     const connection = await this.#connection(input.workspace);
     return this.#nativeResult(connection, input.workspace, kind + '-receive', path, { bundle }, maximum);
   }

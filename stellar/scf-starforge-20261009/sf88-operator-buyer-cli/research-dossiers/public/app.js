@@ -912,6 +912,13 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
       $('export-dialog').close(); notify('Dossier export downloaded.');
     }, form);
   });
+  $('template-exchange-open').addEventListener('click',()=>{
+    if(state.busy||!state.dossier||!state.token)return;
+    const destination=new URL('/template-exchange.html',location.origin);
+    destination.searchParams.set('dossierId',state.dossier.id);
+    destination.hash=new URLSearchParams({token:state.token}).toString();
+    location.assign(destination.href);
+  });
   ['open-portable', 'empty-open'].forEach(id => $(id).addEventListener('click', () => {if (!state.busy) {$('portable-file').value = ''; $('portable-file').click();}}));
   $('portable-file').addEventListener('change', () => task(async () => {
     const file = $('portable-file').files?.[0]; if (!file) return;

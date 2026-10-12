@@ -1,3 +1,4 @@
+import type { ProducerReceipt, ProducerStatus } from "./producer.mjs";
 export type EntityKey = string;
 export type Decision = "accepted" | "needs-work" | "excluded" | "observed";
 export interface Mutation { operationId: string; expectedRevision: number; }
@@ -10,11 +11,13 @@ export interface Export { id: string; bytes: number; workspaceId: string; revisi
 export class LineageClient {
   constructor(baseUrl: string, options?: {token?: string | null; fetchImpl?: typeof fetch; timeoutMs?: number; expectedWorkspaceId?: string; instanceId?: string; signal?: AbortSignal});
   action(action: string, args?: Record<string, unknown>): Promise<any>;
+  producerStatus(): Promise<ProducerStatus>;
+  emitSource(bytes: Uint8Array | string, options?: {name?: string; sourceUrl?: string; contentEncoding?: "identity" | "gzip"; operationId?: string; expectedRevision?: number}): Promise<ProducerReceipt>;
   metadata(): Promise<{workspaceId: string; title: string; revision: number; counts: Record<string, number>; retained: Record<string, number>}>;
   records(args: {collection: string; expectedRevision: number; edition?: string; offset?: number; limit?: number}): Promise<{workspaceId: string; revision: number; total: number; nextOffset: number | null; items: any[]}>;
   object(id: string, options?: {offset?: number; length?: number}): Promise<{id: string; name: string; mediaType: string; totalBytes: number; offset: number; bytes: number; nextOffset: number; complete: boolean; base64: string}>;
   read(options?: {edition?: string}): Promise<WorkspaceView>;
-  importSource(bytes: Uint8Array | string, args: Mutation & {name?: string; sourceUrl?: string}): Promise<{revision: number; added: number; retained: number; source: Record<string, unknown>}>;
+  importSource(bytes: Uint8Array | string, args: Mutation & {name?: string; sourceUrl?: string; contentEncoding?: "identity" | "gzip"}): Promise<{revision: number; added: number; retained: number; source: Record<string, unknown>}>;
   saveEdition(args: Mutation & {title: string; description?: string}): Promise<{revision: number; edition: Edition}>;
   compare(from: string, to?: string): Promise<{from: string; to: string | null; changes: {kind: string; key: string; change: string; before: Entity | null; after: Entity | null}[]; addedEventIds: string[]}>;
   entity(key: EntityKey, edition?: string): Promise<Entity>;

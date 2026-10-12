@@ -131,6 +131,13 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
         key === apiKeyParameter || /key|token|secret|password|signature|authorization/iu.test(key))
       throw new TypeError('queryExtensions must name noncredential provider-specific parameters');
   }
+  const responseLimitParameter = config.responseLimitParameter ?? null;
+  if (responseLimitParameter != null && !queryExtensions.has(responseLimitParameter))
+    throw new TypeError('responseLimitParameter must name a declared provider-specific query parameter');
+  const effectiveLimit = query => Math.min(responseLimit,
+    query.page_size ? positive(query.page_size, responseLimit, 'page_size') : responseLimit,
+    responseLimitParameter && query[responseLimitParameter] != null
+      ? positive(query[responseLimitParameter], responseLimit, responseLimitParameter) : responseLimit);
   const pagination = config.pagination === true;
   const extendedAttributes = config.extendedAttributes === true;
 
@@ -279,7 +286,7 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
           : Array.isArray(value?.service_requests) ? value.service_requests
           : Array.isArray(value?.service_requests?.request) ? value.service_requests.request : null;
         const selectedIds = Boolean(query.service_request_id);
-        const limit = query.page_size ? Math.min(Number(query.page_size), responseLimit) : responseLimit;
+        const limit = effectiveLimit(query);
         receipt.coverage = { returned: rows?.length ?? null, documentedLimit: limit,
           mayBeTruncated: rows ? rows.length >= limit : null, singlePage: true,
           paginationDeclared: pagination, page: query.page ? Number(query.page) : null,
@@ -291,6 +298,11 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
   }
 
   return Object.freeze({
+    prepareRequests: (query = {}) => {
+      const selected = requestQuery(query);
+      return { query: selected, url: redactedUrl(urlFor('requests.json', selected)),
+        documentedLimit: effectiveLimit(selected), paginationDeclared: pagination };
+    },
     services: (query = {}, options = {}) => get(urlFor('services.json', extraQuery(query)),
       { ...options, kind: 'services', query: extraQuery(query) }),
     service: (code, query = {}, options = {}) => get(
@@ -298,6 +310,7 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
       { ...options, kind: 'service', query: extraQuery(query) }),
     requests: (query = {}, options = {}) => {
       const selected = requestQuery(query);
+      effectiveLimit(selected);
       return get(urlFor('requests.json', selected), { ...options, kind: 'requests', query: selected });
     },
     request: (id, query = {}, options = {}) => {
@@ -325,3 +338,13 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
     },
   });
 }
+
+/** Pure request description: validates the original query without resolving a live credential or fetching. */
+export function describeRequests(config, query = {}) {
+  const selected = { ...config };
+  const hasCredential = selected.apiKey != null || Boolean(selected.apiKeyEnv);
+  delete selected.apiKeyEnv;
+  if (hasCredential) selected.apiKey = '[redacted]';
+  return createClient(selected).prepareRequests(query);
+}
+export const sourceDateTime = dateTime;

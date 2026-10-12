@@ -101,7 +101,8 @@ export class MerchantOpenLineageWorkspaces {
       if (name === "merchant_lineage_import_file") {
         need(found.input.kind === "source", "Select an original source input for import.");
         return client.action("source.import", { ...operation, name: found.input.name, base64: found.bytes.toString("base64"),
-          sourceUrl: args.sourceUrl ?? found.input.sourceReference });
+          sourceUrl: args.sourceUrl ?? found.input.sourceReference,
+          ...(args.contentEncoding === undefined ? {} : { contentEncoding: args.contentEncoding }) });
       }
       need(found.input.kind === "result", "Select a complete result input for attachment.");
       return client.action("result.attach", { ...operation, name: found.input.name, base64: found.bytes.toString("base64"),
