@@ -24,7 +24,7 @@ starforge dataset geocoder --workspace /absolute/private/census-operations serve
 
 Open the printed **operatorUrl** on that host. It contains the private session token in its URL fragment; the browser retains it in session storage and removes it from the address bar. The listener uses 127.0.0.1, authenticated API requests, a strict Host/origin check and no external page assets.
 
-The process owns the original publisher and any seller it starts. Ctrl-C drains accepted operations, closes the original seller and publisher, then releases the workspace. Reopen the same directory; do not create a replacement workspace to recover a retained response or customer attempt. The **Open / reopen publisher** button reacquires the original publisher after a cold restart.
+The process owns the original publisher and any seller it starts. Ctrl-C drains accepted operations, closes the original seller and publisher, then releases the workspace. If disposal reports an error, keep that process and use Ctrl-C again to retry the same owned close. Signal handlers and any owner acquired during startup remain retained until disposal succeeds. Reopen the same directory; do not create a replacement workspace to recover a retained response or customer attempt. The **Open / reopen publisher** button reacquires the original publisher after a cold restart.
 
 ## Customer CSV mapping and result delivery
 

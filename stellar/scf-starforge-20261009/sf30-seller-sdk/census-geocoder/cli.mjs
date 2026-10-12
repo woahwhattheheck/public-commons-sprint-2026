@@ -59,19 +59,36 @@ export async function main(args = process.argv.slice(2)) {
   else if (command === 'download') allow(['--kind', '--id', '--out']);
   else if (command === 'capture.import') allow(['--directory']);
   else allow(['--input', ...(['batch.create', 'customer.source'].includes(command) ? ['--csv'] : [])]);
-  const workspace = await openGeocoderWorkspace({ directory: options['--workspace'], create: command === 'init' });
-  let resource = workspace, resolveStop, stopTask = null;
+  let workspace = null, resource = null, opening = null, resolveStop, stopTask = null, stopRequested = false;
   const stopped = new Promise(done => { resolveStop = done; });
-  const onInterrupt = () => {
-    stopTask ??= Promise.resolve().then(() => resource.close());
-    void stopTask.catch(() => {}); resolveStop();
+  const closeOwned = () => {
+    if (stopTask) return stopTask;
+    const current = Promise.resolve().then(async () => {
+      // An interruption during startup retains any owner acquired afterwards.
+      if (opening) await opening.catch(() => {});
+      if (resource) await resource.close();
+      if (workspace && resource !== workspace) await workspace.close();
+      process.removeListener('SIGINT', onInterrupt); process.removeListener('SIGTERM', onInterrupt);
+    });
+    stopTask = current;
+    void current.catch(() => { if (stopTask === current) stopTask = null; });
+    return current;
   };
-  process.once('SIGINT', onInterrupt); process.once('SIGTERM', onInterrupt);
+  const onInterrupt = () => {
+    stopRequested = true; resolveStop();
+    void closeOwned().catch(() => {});
+  };
+  process.on('SIGINT', onInterrupt); process.on('SIGTERM', onInterrupt);
   try {
+    opening = openGeocoderWorkspace({ directory: options['--workspace'], create: command === 'init' })
+      .then(value => { workspace = value; resource = value; return value; });
+    await opening; opening = null;
+    if (stopRequested) return;
     if (command === 'serve') {
-      const server = await startGeocoderServer({ workspace, port: options['--port'] === undefined ? 0 : Number(options['--port']) });
-      resource = server;
-      if (!stopTask) print({ directory: workspace.directory, operatorUrl: server.operatorUrl, state: 'RUNNING' });
+      opening = startGeocoderServer({ workspace, port: options['--port'] === undefined ? 0 : Number(options['--port']) })
+        .then(value => { resource = value; return value; });
+      const server = await opening; opening = null;
+      if (!stopRequested) print({ directory: workspace.directory, operatorUrl: server.operatorUrl, state: 'RUNNING' });
       await stopped; return;
     }
     if (['init', 'status'].includes(command)) { print(await workspace.status()); return; }
@@ -95,9 +112,7 @@ export async function main(args = process.argv.slice(2)) {
     const result = await workspace.act(command, payload); print(result);
     if (command === 'publisher.release.start') await stopped;
   } finally {
-    process.removeListener('SIGINT', onInterrupt); process.removeListener('SIGTERM', onInterrupt);
-    const closing = await Promise.allSettled([resource.close(), ...(stopTask ? [stopTask] : [])]);
-    const failure = closing.find(item => item.status === 'rejected'); if (failure) throw failure.reason;
+    await closeOwned();
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
