@@ -1,0 +1,47 @@
+/* MIT. Neutral administrative interface; all values render on the server. */
+.dataset-operator{margin:0;background:#f3f4f5;color:#24282d;font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.dataset-operator *{box-sizing:border-box}
+.dataset-operator header{background:#25292e;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px 28px}
+.dataset-operator header h1{font-size:21px;line-height:1.25;margin:0}
+.dataset-operator header p{font-size:12px;color:#d0d4d9;margin:4px 0 0}
+.dataset-operator header a{color:#fff}
+.dataset-operator main{max-width:1480px;margin:auto;padding:22px 28px 50px}
+.dataset-operator h2{font-size:20px;font-weight:600;margin:0 0 10px}
+.dataset-operator h3{font-size:16px;margin:0 0 10px}
+.dataset-operator h4{font-size:14px}
+.dataset-operator p{margin:9px 0 15px}
+.dataset-operator a{color:#30363d;text-underline-offset:3px}
+.dataset-operator a:hover{text-decoration-thickness:2px}
+.dataset-operator section{background:#fff;border:1px solid #ccd1d6;padding:20px;margin:20px 0;border-radius:3px}
+.dataset-operator .candidate{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;border-top:1px solid #d5d9dd;padding:18px 0}
+.dataset-operator .candidate:last-child{padding-bottom:0}
+.dataset-operator .candidate>div{min-width:0;flex:1}
+.dataset-operator .heading{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.dataset-operator .notice{padding:13px 16px;background:#e7eaed;border-left:4px solid #555d67;white-space:pre-wrap;overflow-wrap:anywhere}
+.dataset-operator .metrics{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:12px;margin:18px 0}
+.dataset-operator .metrics>div{background:#fff;border:1px solid #cbd0d6;padding:16px}
+.dataset-operator .metrics span{display:block;font-size:12px;color:#535d68}
+.dataset-operator .metrics strong{display:block;font-weight:600;line-height:1.2;font-size:28px;font-variant-numeric:tabular-nums}
+.dataset-operator .actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;margin:18px 0}
+.dataset-operator .actions form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dataset-operator button,.dataset-operator input{font:inherit;border:1px solid #979fa8;border-radius:3px;background:#fff;color:#25292e;padding:8px 12px}
+.dataset-operator input[type=submit],.dataset-operator button{cursor:pointer}
+.dataset-operator input[type=number]{width:90px}
+.dataset-operator .primary{background:#30363d;color:#fff;border-color:#30363d}
+.dataset-operator input[type=submit]:hover,.dataset-operator button:hover{box-shadow:inset 0 0 0 1px #4f5964}
+.dataset-operator :focus-visible{outline:2px solid #4b5765;outline-offset:3px}
+.dataset-operator .scroll{overflow:auto;max-width:100%}
+.dataset-operator table{border-collapse:collapse;width:100%;background:#fff;font-size:13px}
+.dataset-operator th,.dataset-operator td{text-align:left;vertical-align:top;border-bottom:1px solid #d5d9de;padding:10px 12px}
+.dataset-operator th{background:#e9ecef;font-weight:600}
+.dataset-operator td.number{text-align:right;font-variant-numeric:tabular-nums}
+.dataset-operator td details{min-width:260px;max-width:850px}
+.dataset-operator summary{cursor:pointer;font-weight:500;margin:9px 0}
+.dataset-operator details[open]{padding-bottom:9px}
+.dataset-operator pre{background:#f0f2f4;border:1px solid #dde1e5;padding:12px;max-width:100%;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.dataset-operator .mono{font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+.dataset-operator .preserve{white-space:pre-wrap;overflow-wrap:anywhere;min-width:120px}
+.dataset-operator .small{font-size:12px;color:#58626e}
+.dataset-operator .empty{color:#59636e;padding:18px;border:1px dashed #aeb6bf}
+@media(max-width:650px){.dataset-operator header{padding:15px}.dataset-operator main{padding:15px}.dataset-operator .candidate{display:block}.dataset-operator .candidate form{margin-top:14px}.dataset-operator .metrics{grid-template-columns:repeat(2,1fr)}.dataset-operator .heading{align-items:flex-start}.dataset-operator section{padding:14px}.dataset-operator th,.dataset-operator td{padding:8px}.dataset-operator .metrics strong{font-size:24px}}
+@media print{.dataset-operator header,.dataset-operator .actions,.dataset-operator form{display:none}.dataset-operator{background:#fff}.dataset-operator main{padding:0}.dataset-operator section{border:0;padding:0}.dataset-operator .scroll{overflow:visible}}
