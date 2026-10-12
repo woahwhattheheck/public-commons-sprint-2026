@@ -10,10 +10,10 @@ from copy import deepcopy
 from pathlib import PurePosixPath
 
 if __package__:
-    from . import engine
+    from . import engine, consultation
     from .workspace import json_read
 else:
-    import engine
+    import engine, consultation
     from workspace import json_read
 
 PRIVATE_SCHEMA="standards-private-continuation/v1"
@@ -86,11 +86,28 @@ def public_edition(edition):
     result["projection_note"]="Selected public text and public citations from the retained edition; contributor identities and internal notes are excluded."
     return result
 
-def export_project(workspace,project_id,audience="private_restore",edition_id=None,publication_id=None,comparison_edition_id=None,include_source_ids=None):
-    if audience not in ("private_restore","edition","management"):
-        raise ValueError("Choose complete private restore, selected edition, or management handover.")
+def export_project(workspace,project_id,audience="private_restore",edition_id=None,publication_id=None,comparison_edition_id=None,include_source_ids=None,packet_id=None,response_id=None):
+    if audience not in ("private_restore","edition","management","consultation","review_response"):
+        raise ValueError("Choose private_restore, edition, management, consultation or review_response.")
     state,events,requests,originals=workspace.snapshot(project_id)
     include_source_ids=list(dict.fromkeys(include_source_ids or []))
+    if audience in ("consultation","review_response"):
+        if include_source_ids:
+            raise ValueError("Consultation handovers contain their selected public edition or respondent content; original attachments are selected through the ordinary edition export.")
+        if audience=="consultation":
+            if not packet_id:raise ValueError("Select the frozen consultation packet.")
+            packet=engine.record(state,"review_packets",packet_id)
+            files=consultation.packet_files(state,packet_id)
+            manifest={"schema":HANDOVER_SCHEMA,"audience":audience,"project_id":project_id,"revision":state["revision"],
+                      "packet_id":packet_id,"packet_sha256":packet["packet_sha256"],
+                      "source_edition_sha256":packet["source_edition_sha256"],"projection_sha256":packet["projection_sha256"]}
+        else:
+            if not response_id:raise ValueError("Select the original respondent's returned review.")
+            response=engine.record(state,"review_responses",response_id)
+            files=consultation.disposition_files(state,response_id=response_id)
+            manifest={"schema":HANDOVER_SCHEMA,"audience":audience,"project_id":project_id,"revision":state["revision"],
+                      "response_id":response_id,"packet_id":response["packet_id"],"packet_sha256":response["packet_sha256"]}
+        return _zip(files,manifest)
     files={};source_entries=[]
     manifest={"schema":PRIVATE_SCHEMA if audience=="private_restore" else HANDOVER_SCHEMA,
               "audience":audience,"project_id":project_id,"revision":state["revision"],"project_sha256":engine.digest(state)}
@@ -117,10 +134,12 @@ def export_project(workspace,project_id,audience="private_restore",edition_id=No
                           comparison_edition=public_edition(comparison) if comparison else None))
             manifest.update({"edition_id":edition_id,"source_edition_sha256":edition["sha256"],
                              "projection_sha256":projected["projection_sha256"],"comparison_edition_id":comparison_edition_id})
+            files.update(consultation.disposition_files(state,edition_id=edition_id,public=True))
             allowed_sources={s["id"]:s for s in edition["snapshot"]["sources"] if s.get("citation_visibility")=="public"}
         else:
             files.update(publisher.delivery_files(state,engine.analyze(state)))
             files["management/analysis.json"]=(engine.canonical(engine.analyze(state))+"\n").encode()
+            files["management/consultation-operations.json"]=(engine.canonical(consultation.analyze(state))+"\n").encode()
             allowed_sources={s["id"]:s for s in state["sources"]}
         for source_id in include_source_ids:
             if source_id not in allowed_sources:

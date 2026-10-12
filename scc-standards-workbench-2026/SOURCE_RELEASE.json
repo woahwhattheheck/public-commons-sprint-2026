@@ -1,221 +1,243 @@
 {
-  "schema": "standards-workbench/source-release/v1",
-  "name": "scc-standards-workbench",
-  "version": "0.1.1",
-  "parent_source_release": {
-    "commit": "4b8a1b8f9e7c0ea7e41155ced87bef3bf00fab6f",
-    "sha256": "f3b6d92c3d514af79b6e4d5c0f2745c24dfbe3341620f65dc6cbbc9a96495747"
-  },
-  "files": [
-    {
-      "path": "API.md",
-      "bytes": 11912,
-      "sha256": "16aa7e1ddc33c530cf65a24d6c6b83fdf26adb22c237b5ab9a7241026a82dea2",
-      "git_blob": "60511dec8f4aacfa8f297345cd41640a2f55aed8"
-    },
-    {
-      "path": "LICENSE",
-      "bytes": 1365,
-      "sha256": "0f8a14a192a99600d73f61efd77a1806dd29a17fb690a2d4e0f4f13e05add325",
-      "git_blob": "ae4af7b573be649fe306a1c2de69e4b8e381d9a2"
-    },
-    {
-      "path": "PUBLICATION.md",
-      "bytes": 9750,
-      "sha256": "fae4cfb035a41475419f9a115caa694634c2c7c55a719a08656aa3f3cffd8243",
-      "git_blob": "e531f91b22e3b4dcff8a3c881d5e23af6ff176f8"
-    },
-    {
-      "path": "README.md",
-      "bytes": 18427,
-      "sha256": "1ceb0e968c54d88c5e8d82f5fd94e6c5172080b2c18eda605ba137c902cf67ee",
-      "git_blob": "1e8f7116ccae4d7bb2be0e98122ba10b7427c937"
-    },
-    {
-      "path": "SOURCE-NOTICES.md",
-      "bytes": 5089,
-      "sha256": "fd1ce752366cb75f6148670e12f29f13e23cdc3ecda15bd3571eaae680e4bc45",
-      "git_blob": "7824144ae9c304f0c0ec713c24f1bfebb6f5b027"
-    },
+  "schema": "scc-workbench/source-release/v2",
+  "package": "scc-standards-workbench",
+  "version": "0.2.0",
+  "identity_algorithm": "git-blob-sha1",
+  "source_files": [
     {
       "path": "__init__.py",
-      "bytes": 81,
-      "sha256": "cf10e3dbb01986c1f1c90ca53d91347d8d236a861e0726153ec1f5cb14dd4fd6",
-      "git_blob": "eb2e71aead9ecc6c4acb4b81e4b04052d8cf1e70"
+      "git_blob_sha": "eb2e71aead9ecc6c4acb4b81e4b04052d8cf1e70",
+      "bytes": 81
     },
     {
       "path": "__main__.py",
-      "bytes": 64,
-      "sha256": "f62b759b2fe633bc41a4387bf504a2ec502f643dd5922dc64053c9203670ff3b",
-      "git_blob": "f5f6e402df1b5c89dadf67fce4c71897dba19cc1"
+      "git_blob_sha": "f5f6e402df1b5c89dadf67fce4c71897dba19cc1",
+      "bytes": 64
+    },
+    {
+      "path": "API.md",
+      "git_blob_sha": "f8f4ecbc5be4a4c17a7f10ce0870a9155831f9ce",
+      "bytes": 20149
+    },
+    {
+      "path": "CONSULTATION.md",
+      "git_blob_sha": "7e0687d02565c30291bc43edc1fc15dfa9a421c7",
+      "bytes": 15249
+    },
+    {
+      "path": "consultation.py",
+      "git_blob_sha": "4787fbc37500fbbe130a908fc903a3b9096f4a47",
+      "bytes": 55283
+    },
+    {
+      "path": "delivery/consultation-config.example.json",
+      "git_blob_sha": "822349dac2933600fc47b3e147be2a152fe3d727",
+      "bytes": 332
+    },
+    {
+      "path": "delivery/CONSULTATION-RECEIVING.md",
+      "git_blob_sha": "fd915a7190e7a5683858bc31930a0e8134cb6279",
+      "bytes": 6183
+    },
+    {
+      "path": "delivery/consultation-receiving.mjs",
+      "git_blob_sha": "797359fb6e74bf83ad8cde64c483bd1151c060e2",
+      "bytes": 26041
     },
     {
       "path": "demo.py",
-      "bytes": 18199,
-      "sha256": "3d1036654efb81e33710c6ebc4081b9769fc9c8170df2ba22c94518758399225",
-      "git_blob": "cfdcffe9655aec1c5532c29ebb52c4f765da12b9"
+      "git_blob_sha": "9daae93894b747873c87ef7f940d4496b57dc6b6",
+      "bytes": 21839
     },
     {
       "path": "demo/procedural-profiles.json",
-      "bytes": 14143,
-      "sha256": "dc9c16e7415ca3d44e515ae6c23a70a09c05f6332ef305ad1194140808223edc",
-      "git_blob": "9e928b402247e0a62f178a66aa9fce9ad64c4fc9"
+      "git_blob_sha": "9e928b402247e0a62f178a66aa9fce9ad64c4fc9",
+      "bytes": 14143
     },
     {
       "path": "demo/profile-annex.json",
-      "bytes": 154896,
-      "sha256": "f120629ce45345b8a188347a91501183846d47042f01f2b0be3d8ccb8b2b1656",
-      "git_blob": "86b131abb76965672cf5ebb69c720ce8d632e73f"
+      "git_blob_sha": "86b131abb76965672cf5ebb69c720ce8d632e73f",
+      "bytes": 154896
     },
     {
       "path": "demo/source-manifest.json",
-      "bytes": 10671,
-      "sha256": "257c05833d93b4dd71cf6211b8486d08016a875672b65fa1df1eed1867cafb46",
-      "git_blob": "972ba1e7e816cc15fdaf0571f4c19a9fb9fcacf7"
+      "git_blob_sha": "972ba1e7e816cc15fdaf0571f4c19a9fb9fcacf7",
+      "bytes": 10671
     },
     {
       "path": "demo/sources/statcan-boundary-guide-2025-en.html",
-      "bytes": 41538,
-      "sha256": "28c24cf5ab07010f1a205f049ef000aafff3047ea79dfc1d46b439345e151d9e",
-      "git_blob": "6f8aa9ad52932a4e52277dff4e0b47dd467f510e"
+      "git_blob_sha": "6f8aa9ad52932a4e52277dff4e0b47dd467f510e",
+      "bytes": 41538
     },
     {
       "path": "demo/sources/statcan-boundary-guide-2025-fr.html",
-      "bytes": 49318,
-      "sha256": "9c5763f5e7fc70dd557fdb438e4ef6fd1e877ddc8abb368b2a89ee9fde2bdad3",
-      "git_blob": "51a0269880caeaebf9eff05971e2a122ea5d2cb9"
+      "git_blob_sha": "51a0269880caeaebf9eff05971e2a122ea5d2cb9",
+      "bytes": 49318
     },
     {
       "path": "demo/sources/statcan-change-codes-en.html",
-      "bytes": 21700,
-      "sha256": "60c8fcac9ba6df00cb6b90877cf65131c08af3a182324b5d7897fa157df3a5c2",
-      "git_blob": "262214f7e0ac2ccb91e761f7436d699386cd3d17"
+      "git_blob_sha": "262214f7e0ac2ccb91e761f7436d699386cd3d17",
+      "bytes": 21700
     },
     {
       "path": "demo/sources/statcan-change-codes-fr.html",
-      "bytes": 20761,
-      "sha256": "435234dc62e94c419a95b301156ef9056764923b98214ca9ebd9fb0d31772ca3",
-      "git_blob": "1b632c444f2117f09473f2e16a9f6a5f9bb320c0"
+      "git_blob_sha": "1b632c444f2117f09473f2e16a9f6a5f9bb320c0",
+      "bytes": 20761
     },
     {
       "path": "demo/sources/statcan-language-switch.html",
-      "bytes": 28592,
-      "sha256": "dd7388c2632195eaca2d4a691bf694fb3785e1781a16b6be6ab6ae77137deb0a",
-      "git_blob": "dcd59ae0c1456dcded30f6e667802e6fcc43e323"
+      "git_blob_sha": "dcd59ae0c1456dcded30f6e667802e6fcc43e323",
+      "bytes": 28592
     },
     {
       "path": "demo/sources/statcan-municipal-change-2025-en.csv",
-      "bytes": 47722,
-      "sha256": "b8a29420b27fa1f6387a01655ffac3f30b40e8193256992efd3facd4782b887e",
-      "git_blob": "4428ffa1221449caf960790e2e6a560fff2af173"
+      "git_blob_sha": "4428ffa1221449caf960790e2e6a560fff2af173",
+      "bytes": 47722
     },
     {
       "path": "demo/sources/statcan-municipal-change-2025-en.html",
-      "bytes": 27010,
-      "sha256": "e123655d3cf1ceea9de96c406de58a99c0b8983d57252d75fb8124701e523351",
-      "git_blob": "3af5e63f16275600696f1b18b33e96463b4e3964"
+      "git_blob_sha": "3af5e63f16275600696f1b18b33e96463b4e3964",
+      "bytes": 27010
     },
     {
       "path": "demo/sources/statcan-municipal-change-2025-en.utf8.csv",
-      "bytes": 47753,
-      "sha256": "83b0a4beeaaa9ab9344b3f08e0cea78063a8a89cde3fe76ad8689c0fd0b78072",
-      "git_blob": "baa3c2bf897c1f687a502b0785636484b60044ff"
+      "git_blob_sha": "baa3c2bf897c1f687a502b0785636484b60044ff",
+      "bytes": 47753
     },
     {
       "path": "demo/sources/statcan-municipal-change-2025-fr.csv",
-      "bytes": 58408,
-      "sha256": "1cf1de44bbe0c8350534076fa7a97bac9d21c1b05ded2ff1a677a7b4a69108cd",
-      "git_blob": "3751ff5ad883891c649611b90b751ab998ca0a35"
+      "git_blob_sha": "3751ff5ad883891c649611b90b751ab998ca0a35",
+      "bytes": 58408
     },
     {
       "path": "demo/sources/statcan-municipal-change-2025-fr.utf8.csv",
-      "bytes": 58462,
-      "sha256": "05b8681f908d873586bf645258c33e670b41426171a788dec7a931507aa2cecd",
-      "git_blob": "eb8aa4cbafa0d0779a295f6028afe1bba9178452"
+      "git_blob_sha": "eb8aa4cbafa0d0779a295f6028afe1bba9178452",
+      "bytes": 58462
     },
     {
       "path": "demo/sources/statcan-open-licence-en.html",
-      "bytes": 27044,
-      "sha256": "d441c0159f7eeaa3e6b1904d1f27f6cb601a225ec5fe8e85502c02b9789bc11f",
-      "git_blob": "c150bb1e8f4f490c323b605637be0e9d5d589a93"
+      "git_blob_sha": "c150bb1e8f4f490c323b605637be0e9d5d589a93",
+      "bytes": 27044
     },
     {
       "path": "demo/sources/statcan-record-layout-en.html",
-      "bytes": 25361,
-      "sha256": "551ebf72fc5aaec4bb42c1b0e633024524777271ab8883c9829c90038798b84d",
-      "git_blob": "b16a78969f4fe62ee84faa031a6563259503990e"
+      "git_blob_sha": "b16a78969f4fe62ee84faa031a6563259503990e",
+      "bytes": 25361
     },
     {
       "path": "demo/sources/statcan-record-layout-fr.html",
-      "bytes": 24821,
-      "sha256": "d7a5fa2625c2956faffd772993296ab4d5d9d89480a232b748766e659ec15ebe",
-      "git_blob": "7c1c9821e6e7737e33c75b18f3a751fb686b4765"
+      "git_blob_sha": "7c1c9821e6e7737e33c75b18f3a751fb686b4765",
+      "bytes": 24821
     },
     {
       "path": "demo/work-program.json",
-      "bytes": 15538,
-      "sha256": "f65e1fd3d3f62e949513495fc908884283c13dee8330d0da5028ae5825eaf627",
-      "git_blob": "7400604df9d759777e661ee5271914483ac5ce3e"
+      "git_blob_sha": "7400604df9d759777e661ee5271914483ac5ce3e",
+      "bytes": 15538
     },
     {
       "path": "engine.py",
-      "bytes": 82563,
-      "sha256": "ace42c88f39e89af15980629693c0faba8e5936d0b3dce7306abe58295a3efd8",
-      "git_blob": "dea54db303ac66f8a857de2faae654a057700725"
+      "git_blob_sha": "14f0f59f226669de6a9da5197db363336f154e00",
+      "bytes": 84239
     },
     {
       "path": "exports.py",
-      "bytes": 10323,
-      "sha256": "e5e29d7f4d41252913596c900be4488c62ab81e258d044cd02943a7c2688b5c7",
-      "git_blob": "b34a1c9a3c749fcddb6f28616d026bfb0f26d6aa"
+      "git_blob_sha": "f9b350516bfae58d331a6f62130a532c90f5a5b6",
+      "bytes": 12049
+    },
+    {
+      "path": "LICENSE",
+      "git_blob_sha": "ae4af7b573be649fe306a1c2de69e4b8e381d9a2",
+      "bytes": 1365
+    },
+    {
+      "path": "PUBLICATION.md",
+      "git_blob_sha": "e531f91b22e3b4dcff8a3c881d5e23af6ff176f8",
+      "bytes": 9750
     },
     {
       "path": "publisher.py",
-      "bytes": 72269,
-      "sha256": "c40e2a3849e6ef4ea432f539cf002a20c39561c5ece80ad9efef2aa5a5a17e90",
-      "git_blob": "be762fb720da57833f4d50e67b12dd39c8223b5d"
+      "git_blob_sha": "be762fb720da57833f4d50e67b12dd39c8223b5d",
+      "bytes": 72269
     },
     {
       "path": "pyproject.toml",
-      "bytes": 807,
-      "sha256": "2c05e1ee59a89ad2275c4ba5755395a286163d00d94af2b4d5af682e0678b5ba",
-      "git_blob": "c0843c60d37c3adbb75d453f8eed3f0585428e21"
+      "git_blob_sha": "5cf14534ed0f0ce1e3f4c2c7fe0a3abd16ae6fd0",
+      "bytes": 826
+    },
+    {
+      "path": "README.md",
+      "git_blob_sha": "5140cb2c6eecee90f72a30e6ef3454e754e449fe",
+      "bytes": 20160
     },
     {
       "path": "server.py",
-      "bytes": 14140,
-      "sha256": "0411f3388f80c73dbf589e0f5925faf18c59a17e302e39f57f446cabfa060d43",
-      "git_blob": "d3e41e5f30f6d2180106ed47845e327a6cf77bfc"
+      "git_blob_sha": "187f73c18f07a4b192ebd7ef54a047fd870dc770",
+      "bytes": 16728
     },
     {
       "path": "source_intake.py",
-      "bytes": 78645,
-      "sha256": "ba4de76acc4867e0a5f17dd1bfedb6d9e9ab48e2a71216d4cfc9df113e9b6684",
-      "git_blob": "28ca25b41c5dfdc2586b64f815b3a238aa0e9b66"
+      "git_blob_sha": "28ca25b41c5dfdc2586b64f815b3a238aa0e9b66",
+      "bytes": 78645
+    },
+    {
+      "path": "SOURCE-NOTICES.md",
+      "git_blob_sha": "7824144ae9c304f0c0ec713c24f1bfebb6f5b027",
+      "bytes": 5089
     },
     {
       "path": "web/app.js",
-      "bytes": 71743,
-      "sha256": "808b9abbda6ef5a7eb96cd05206c42f2dff04fa04ee1b7903602b21ecc46a78f",
-      "git_blob": "b48fb1bfaf8821b8762c6e8ce4e74beafd1c83b9"
+      "git_blob_sha": "264d90009f3b0b9e5046ff07f1e9ff01b62b7e2b",
+      "bytes": 72361
+    },
+    {
+      "path": "web/consultation.css",
+      "git_blob_sha": "8293f36296b8cfb0eb283989150f8550f0ab1c93",
+      "bytes": 4261
+    },
+    {
+      "path": "web/consultation.js",
+      "git_blob_sha": "d6618116e0aadcb094f94d0b5c739aa019551a68",
+      "bytes": 33693
     },
     {
       "path": "web/index.html",
-      "bytes": 2418,
-      "sha256": "089ef78c1e416b98c5b93136f0e571187d2f449723138055b1525aa2fcf28f97",
-      "git_blob": "947e4f732cdf32e122b43fc46dd3ad97a695f354"
+      "git_blob_sha": "0bdb0d9c168e06b7d0ff6bb2e1aa035b95f4b33d",
+      "bytes": 2538
+    },
+    {
+      "path": "web/reviewer.css",
+      "git_blob_sha": "d871de688f85977d768868d6a0d411248ccb7f9c",
+      "bytes": 5054
+    },
+    {
+      "path": "web/reviewer.html",
+      "git_blob_sha": "0fbd7bcd5840698ed89600c17b498dd4fc677004",
+      "bytes": 2012
+    },
+    {
+      "path": "web/reviewer.js",
+      "git_blob_sha": "b71d66f78ce298dd069e17b75f3cbf694235f3d1",
+      "bytes": 22255
     },
     {
       "path": "web/style.css",
-      "bytes": 11793,
-      "sha256": "2418c725249e61b9f9d69eaf07c92f8881c80957a9f2bdba58c0daaff130aeac",
-      "git_blob": "95a9e72fc9fb5dd34b94bce21b84f252fd2e5b86"
+      "git_blob_sha": "95a9e72fc9fb5dd34b94bce21b84f252fd2e5b86",
+      "bytes": 11793
     },
     {
       "path": "workspace.py",
-      "bytes": 40694,
-      "sha256": "3f8071a84f622fbeb8e845e4cf897332128aae5b3d5fc717dbd5db644101934e",
-      "git_blob": "50e1b24cdbc2514ac434287ad0c7ad7de80fd68d"
+      "git_blob_sha": "d64c956aa96e1da48ffe59bbf1173a4d27a9fcff",
+      "bytes": 46377
     }
+  ],
+  "execution": {
+    "initial_feature_imports_and_javascript_checks": "completed on the first feature cut",
+    "consultation_full_browser_and_installed_return_journey": "authored, not yet executed",
+    "prior_publisher_0_1_1": "completed document generation and all 81 rendered-page visual review"
+  },
+  "notes": [
+    "The original source data, license notices and the immutable 0.1.1 downloads are retained.",
+    "The receiving controller uses the same retained project and records explicit source transitions for any necessary correction.",
+    "This manifest records source identities. It is not an external digital signature or an assertion that the new browser journey has executed."
   ]
 }
