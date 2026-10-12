@@ -1,5 +1,10 @@
 # Python applications for the Stellar Forge buyer
 
+The [read-only Inbox workflow](INBOX.md) exposes `Inbox` and `buyer.inbox(...)` for
+original job selection, private Operations source export and same-file inspection
+after interruption. It reuses the existing native queue/readers and Runtime without
+creating another journal or performing a purchase or accounting action.
+
 The complete [acquisition workflow](ACQUISITIONS.md) joins private request intake,
 receiver-owned preparation, immutable runbooks, original execution/accounting,
 verified downloads and multi-operator recovery through `AcquisitionWorkspace`

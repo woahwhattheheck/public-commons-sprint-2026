@@ -471,6 +471,33 @@ export class InboxError extends BuyerError {
   constructor(code: string, result: InboxResult<JsonObject | null>, details?: Record<string, unknown>);
 }
 
+/** Original capture counts; they do not count independent customer acceptance. */
+export interface InboxOperationsCounts {
+  jobs: number;
+  knownSignedAttempts: number;
+  settled: number;
+  verifiedRetainedOutputs: number;
+  pendingOrUnknown: number;
+}
+export interface InboxOperationsExport {
+  path: string;
+  bytes: number;
+  sha256: string;
+  counts: InboxOperationsCounts;
+  intentIds: string[];
+  /** Every original row is receivable; a recipient can still select a subset. */
+  canReceive: boolean;
+  noExecution: true;
+}
+export interface InboxOperationsInspection extends InboxOperationsExport {
+  report: JsonObject & {
+    schema: 'stellar-forge.sf88.operations-handoff.v1';
+    source: JsonObject & {sha256: string; bytes: number; inboxSha256: string};
+    counts: InboxOperationsCounts;
+    rows: Array<JsonObject & {intentId: string; canReceive: boolean; issues: string[]}>;
+  };
+}
+
 export interface InboxLostOutputSelection {
   workspaceDirectory: string;
   approvedRequestFile?: string;
@@ -514,6 +541,14 @@ export class Inbox {
   exportReport(destination: string, options?: {
     workspaceDirectory?: string; signal?: AbortSignal;
   }): Promise<InboxResult<{path: string; bytes: number; sha256: string}>>;
+  /** Capture 1–100 exact original intents to a new private file. No execution/accounting call. */
+  exportOperations(destination: string, options: {
+    intentIds: string[];
+    /** Per-file verification cap; 256 MiB default, 0–1 GiB. Aggregate verification stays ≤1 GiB. */
+    maxVerifyBytes?: number; signal?: AbortSignal;
+  }): Promise<InboxResult<InboxOperationsExport>>;
+  /** Reopen the exact saved edition without recapturing current Inbox state. */
+  inspectOperations(file: string, options?: {signal?: AbortSignal}): Promise<InboxResult<InboxOperationsInspection>>;
   /** Original terminal summary + configured saved response; null if no response record exists. */
   response(intentId: string, options?: {signal?: AbortSignal}): Promise<InboxResponse | null>;
 }

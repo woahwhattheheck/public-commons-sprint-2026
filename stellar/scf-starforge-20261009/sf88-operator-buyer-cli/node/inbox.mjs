@@ -198,6 +198,20 @@ export class Inbox {
     return this._command('report', {destination:absolute(destination),
       ...(workspaceDirectory === undefined ? {} : {workspaceDirectory:absolute(workspaceDirectory)})}, {signal});
   }
+  exportOperations(destination, {intentIds, maxVerifyBytes=268435456, signal} = {}) {
+    need(Array.isArray(intentIds) && intentIds.length > 0 && intentIds.length <= 100,
+      'BUYER_SELECT_ORIGINAL_INTENTS');
+    const selected = intentIds.map(intent);
+    need(new Set(selected).size === selected.length, 'BUYER_SELECT_ORIGINAL_INTENTS');
+    need(Number.isSafeInteger(maxVerifyBytes) && maxVerifyBytes >= 0 && maxVerifyBytes <= 1073741824,
+      'BUYER_OUTPUT_LIMIT_INVALID');
+    return this._command('export-operations', {destination:absolute(destination),
+      intentIds:selected, maxVerifyBytes}, {signal});
+  }
+  /** Read the saved edition, including after the original source Inbox is offline. */
+  inspectOperations(file, {signal} = {}) {
+    return this._command('inspect-operations', {file:absolute(file)}, {signal});
+  }
   async response(intentId, {signal} = {}) {
     const {result, responseFile} = await command(this.buyer, 'response', {
       root:this.directory, intentId:intent(intentId)}, {signal});
