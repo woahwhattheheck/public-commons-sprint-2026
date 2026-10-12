@@ -95,3 +95,10 @@ This phase binds the original source and ZIP hashes, unchanged selected namefile
 An already saved browser-handoff.json and browser-operate-input.json remain exact. The parent validates their unchanged data, paths and selected original identities, and records the current source context separately under browser-handoff-revisions. The final native result identifies the current application source and the original browser handoff source separately. It does not rewrite an old phase payload to carry the new reader.
 
 The stopped backup carries the original import, all reference inspections and their operations. Independent restore compares the original source and inspection basis, then the restored browser displays that same source inspection alongside the original report and native results. A previously complete browser result remains an immutable completed result; it is not recaptured solely because a newer reader is installed.
+
+
+### Completing a retained browser result
+
+The publisher keeps native file-access descriptors in their original form while reading the backup and report. At the JSON handover boundary it validates each complete file again and records its absolute path as text with the unchanged filename, byte count and SHA256. The same projection is used in `restored-browser-handoff.json` and `native-result.json`; native `Path` objects are never embedded in these JSON artifacts.
+
+If the original operator browser has already written a complete `browser-operate-result.json`, continue the same input/work directory with the publisher's existing `--phase complete` option and, for changed installed caller source, the original attributed `--source-revision` record. This verifies the completed native runs, exact report and backup, finishes the original independent receiving/restore and runs the same restored-browser phase. It does not queue another scientific run or create another report/backup. Existing restored handoff and input files remain create-only, and their exact original IDs and archive identities are checked on replay.
