@@ -20,12 +20,95 @@ const azPanel=(title,body)=>'<div class="panel"><h2>'+h(title)+'</h2>'+body+'</d
 const azFile=(id,multiple=false,accept=".zip,.json")=>'<input type="file" id="'+id+'" accept="'+accept+'"'+(multiple?" multiple":"")+'>';
 const azField=(name,id,selected,choices)=>'<label>'+h(name)+'<select id="'+id+'">'+choices.map(([v,l])=>'<option value="'+h(v)+'"'+(v===selected?" selected":"")+'>'+h(l)+'</option>').join("")+'</select></label>';
 
-async function azureRecord(kind,id){
+const azureDrafts=new Map(),azurePendingDrafts=new Map();
+let azureDraftVersion=0;
+const azDraftKey=(scope,id="new")=>JSON.stringify([workspace.workspace_id,scope,String(id||"new")]);
+const azDraftPanel=(scope,id,title,body,revision=0)=>'<div class="panel" data-azure-draft="'+h(azDraftKey(scope,id))+'" data-azure-scope="'+scope+'" data-azure-revision="'+revision+'"><h2>'+h(title)+'</h2><div class="azure-draft-notice muted" hidden></div>'+body+'</div>';
+
+function azureCaptureDraft(panel){
+  if(!panel)return null;
+  const key=panel.dataset.azureDraft,previous=azureDrafts.get(key),values={};
+  panel.querySelectorAll("input[id],select[id],textarea[id]").forEach(field=>{
+    if(["az-profile-select","az-preview-part"].includes(field.id))return;
+    values[field.id]=field.type==="file"?Array.from(field.files?.length?field.files:previous?.values[field.id]||[]):field.type==="checkbox"?field.checked:field.value;
+  });
+  const draft={version:++azureDraftVersion,revision:previous?.revision??Number(panel.dataset.azureRevision),values};
+  azureDrafts.set(key,draft);return {key,version:draft.version};
+}
+function azDraftMark(button,fields=null){
+  const mark=azureCaptureDraft(button.closest("[data-azure-draft]"));
+  return mark?{...mark,fields}:null;
+}
+function azFiles(id){
+  const field=$(id),draft=field&&azureDrafts.get(field.closest("[data-azure-draft]")?.dataset.azureDraft);
+  return Array.from(field?.files?.length?field.files:draft?.values[id]||[]);
+}
+async function azSave(action,body,mark){
+  if(busy)throw new Error("The current operation is still running.");
+  const pending=act(action,body);
+  if(mark&&lastRequest?.action===action)azurePendingDrafts.set(lastRequest.body.operation_id,mark);
+  return pending;
+}
+function azureAfterRender(){
+  document.querySelectorAll("[data-azure-draft]").forEach(panel=>{
+    const draft=azureDrafts.get(panel.dataset.azureDraft);if(!draft)return;
+    panel.querySelectorAll("input[id],select[id],textarea[id]").forEach(field=>{
+      if(!Object.hasOwn(draft.values,field.id))return;
+      const saved=draft.values[field.id];
+      if(field.type==="file"){
+        if(saved.length){
+          try{const transfer=new DataTransfer();saved.forEach(file=>transfer.items.add(file));field.files=transfer.files;}catch(error){}
+          const retained=document.createElement("small");retained.className="muted";retained.textContent="Selected: "+saved.map(file=>file.name).join(", ");field.after(retained);
+        }
+      }else if(field.type==="checkbox")field.checked=saved;
+      else{
+        if(field.tagName==="SELECT"&&saved&&!Array.from(field.options).some(option=>option.value===saved)){
+          const option=document.createElement("option");option.value=saved;option.textContent=saved+(field.id.startsWith("az-map-")?" (not in this partition)":" (retained selection)");field.append(option);
+        }
+        field.value=saved;
+      }
+    });
+    const notice=panel.querySelector(".azure-draft-notice"),current=Number(panel.dataset.azureRevision);
+    notice.hidden=false;
+    notice.textContent=panel.dataset.azureScope==="profile"&&draft.revision&&current!==draft.revision?
+      "These edits began at connection revision "+draft.revision+". Saved revision "+current+" is available. ":"Unsaved fields retained. ";
+    const reset=document.createElement("button");reset.dataset.action="azure-reset-draft";reset.textContent="Reload saved fields";notice.append(reset);
+    if(panel.dataset.azureScope==="profile"){
+      const save=panel.querySelector('[data-action="azure-save-profile"]');
+      if(save&&draft.revision)save.dataset.revision=String(draft.revision);
+    }
+  });
+}
+function azureCaptureInput(event){
+  const panel=event.target.closest?.("[data-azure-draft]");if(!panel)return;
+  if(event.target.type==="file"){
+    const draft=azureDrafts.get(panel.dataset.azureDraft);
+    if(draft)draft.values[event.target.id]=Array.from(event.target.files||[]);
+  }
+  azureCaptureDraft(panel);
+}
+document.addEventListener("input",azureCaptureInput);
+document.addEventListener("change",azureCaptureInput);
+
+async function azureRecord(kind,id,revision){
   if(!id)return null;
-  try{return await entity(kind,id);}catch(error){return null;}
+  try{return await entity(kind,id,revision);}catch(error){return null;}
 }
 
-function azureOperationSaved(action,record){
+function azureOperationSaved(action,record,payload={}){
+  const mark=azurePendingDrafts.get(payload.operation_id);
+  if(mark){
+    const draft=azureDrafts.get(mark.key);
+    if(draft?.version===mark.version){
+      if(mark.fields)mark.fields.forEach(id=>delete draft.values[id]);
+      else azureDrafts.delete(mark.key);
+    }else if(draft&&action==="azure.profile.save"){
+      draft.revision=record.revision;
+      const nextKey=azDraftKey("profile",record.id);
+      if(nextKey!==mark.key){azureDrafts.delete(mark.key);azureDrafts.set(nextKey,draft);}
+    }
+    azurePendingDrafts.delete(payload.operation_id);
+  }
   const key={azure_profile:"profile",azure_discovery:"discovery",azure_run:"run",azure_source:"source",
     azure_review:"review",azure_import:"import",azure_delivery:"delivery"}[record.kind];
   if(key)azureSelection[key]=record.id;
@@ -67,37 +150,42 @@ async function azureConnectionView(){
     input("Local protocol origin, if already configured","az-profile-local",p.local_endpoint||"")+'</div></details>'+
     '<div class="actions">'+azButton("save-profile",record?"Save connection revision":"Save connection",record)+
     (record?historyButton(record):"")+'</div>';
-  let body=azPanel("Azure source connection",form);
+  let body=azDraftPanel("profile",record?.id,"Azure source connection",form,record?.revision||0);
   if(!record)return body;
   const discovery=await azureRecord("azure_discovery",azureSelection.discovery);
   let query='<p>Read existing export definitions or the actual files in this container. Every page and native continuation stays attached to this selection.</p><div class="actions">'+
     azButton("discover-exports","Read exports",record)+azButton("discover-blobs","Read container files",record)+'</div>';
+  if(azList("azure_discovery").length)query+=rowsTable(["Retained discovery","Pages","State",""],azList("azure_discovery").map(r=>'<tr><td>'+h(label(r))+'</td><td>'+r.payload.pages.length+'</td><td>'+azState(r.payload.state)+'</td><td>'+azButton("open-discovery","Open retained discovery",r)+'</td></tr>'));
   if(discovery){
-    const d=discovery.payload;
-    query+='<div class="panel-head"><h3>'+h(d.label)+'</h3>'+azState(d.state)+'</div><p>'+d.items.length+' retained entries · '+d.pages.length+' pages</p>'+
+    const d=discovery.payload,profileData=' data-profile="'+h(d.profile.id)+'" data-profile-revision="'+d.profile.revision+'"';
+    query+='<div class="panel-head"><h3>'+h(d.label)+'</h3>'+azState(d.state)+'</div><p>Connection revision '+d.profile.revision+' · '+d.items.length+' retained entries · '+d.pages.length+' pages</p>'+
       (d.error?'<p class="azure-error">'+h(d.error)+'</p>':"")+'<div class="actions">'+
       azButton("advance-discovery","Read next page",discovery)+azButton("drive-discovery","Read remaining pages",discovery)+historyButton(discovery)+'</div>';
     if(d.category==="exports")query+=rowsTable(["Export","Dataset","Format",""],d.items.map(item=>{
       const x=item.properties||{},def=x.definition||{};
-      return '<tr><td>'+h(item.name)+'<div class="muted mono">'+h(item.id)+'</div></td><td>'+h(def.type)+'<div class="muted">'+h(def.timeframe)+'</div></td><td>'+h(x.format)+' / '+h(x.compressionMode||"None")+'</td><td>'+azButton("use-export","Inspect monthly runs",null,' data-export="'+h(item.id)+'"')+'</td></tr>';
+      return '<tr><td>'+h(item.name)+'<div class="muted mono">'+h(item.id)+'</div></td><td>'+h(def.type)+'<div class="muted">'+h(def.timeframe)+'</div></td><td>'+h(x.format)+' / '+h(x.compressionMode||"None")+'</td><td>'+azButton("use-export","Inspect monthly runs",null,' data-export="'+h(item.id)+'"'+profileData)+'</td></tr>';
     }));
-    else if(d.category==="blobs")query+=rowsTable(["Native file","Bytes","Modified",""],d.items.map(item=>'<tr><td class="mono">'+h(item.name)+'</td><td>'+azBytes(item.bytes)+'</td><td>'+h(item.modified)+'</td><td>'+azButton("choose-manifest","Select as manifest",null,' data-path="'+h(item.name)+'"')+'</td></tr>'));
+    else if(d.category==="blobs")query+=rowsTable(["Native file","Bytes","Modified",""],d.items.map(item=>'<tr><td class="mono">'+h(item.name)+'</td><td>'+azBytes(item.bytes)+'</td><td>'+h(item.modified)+'</td><td>'+azButton("choose-manifest","Select as manifest",null,' data-path="'+h(item.name)+'"'+profileData)+'</td></tr>'));
     else query+=rowsTable(["Run","State","Period"],d.items.map(item=>'<tr><td class="mono">'+h(item.id)+'</td><td>'+h(item.properties?.status)+'</td><td>'+h(item.properties?.startDate)+' → '+h(item.properties?.endDate)+'</td></tr>'));
   }
   body+=azPanel("Discover original Azure sources",query);
-  body+=azPanel("Open an exact manifest",'<p class="muted">Use the complete manifestFile path returned by Azure run history, or a manifest selected from the retained container listing.</p>'+
+  body+=azDraftPanel("manifest",record.id,"Open an exact manifest",'<p class="muted">Use the complete manifestFile path returned by Azure run history, or a manifest selected from the retained container listing.</p>'+
     input("Original manifest blob path","az-direct-manifest")+
     azButton("select-manifest","Acquire original manifest",record));
   return body;
 }
 
-let azureChosenExport="";
+let azureChosenExport="",azureChosenProfile=null;
 async function azureRunsView(){
-  const profiles=azList("azure_profile");
+  let profiles=azList("azure_profile");
+  if(azureChosenProfile){
+    const selected=await azureRecord("azure_profile",azureChosenProfile.id,azureChosenProfile.revision);
+    if(selected)profiles=profiles.map(profile=>profile.id===selected.id?selected:profile);
+  }
   const record=await azureRecord("azure_run",azureSelection.run),p=record&&record.payload;
-  let body=azPanel("Inspect or run an existing monthly export",
+  let body=azDraftPanel("run","prepare","Inspect or run an existing monthly export",
     '<p>The prepared selection reads the existing export definition. <strong>Run selected month</strong> executes that original export once. Its saved execution boundary and history are used for recovery.</p>'+
-    '<div class="grid"><label>Azure connection'+azSelect("az-run-profile",profiles,azureSelection.profile)+'</label>'+
+    '<div class="grid"><label>Azure connection'+azSelect("az-run-profile",profiles,azureChosenProfile?.id||azureSelection.profile)+'</label>'+
     input("Existing export resource ID","az-run-export",azureChosenExport||p?.export_id||"")+
     input("Billing month","az-run-period",p?.period||"","month")+
     input("Run label","az-run-label",p?.label||"Monthly cost export")+'</div>'+
@@ -120,7 +208,7 @@ async function azureRunsView(){
 }
 
 async function azureSourcesView(){
-  let body=azPanel("Receive original source files",
+  let body=azDraftPanel("native","input","Receive original source files",
     '<p>Open the native Azure manifest and its complete partition ZIP, or choose the manifest alone and receive/download its files in place.</p><div class="grid"><label>Native manifest or full source ZIP'+azFile("az-native-file")+'</label>'+
     input("Manifest path inside ZIP","az-native-manifest","manifest.json")+
     input("ZIP prefix before native blob paths","az-native-prefix","")+'</div>'+
@@ -141,7 +229,7 @@ async function azureSourcesView(){
     (p.error?'<p class="azure-error">'+h(p.error)+'</p>':"")+
     '<details><summary>Bind an existing connection</summary><label>Same source container'+azSelect("az-bind-profile",azList("azure_profile"),p.profile?.id||azureSelection.profile)+'</label>'+azButton("bind-source","Bind connection",record)+'</details>';
   detail+=rowsTable(["Partition","Rows / bytes","Received","Original file"],p.parts.map(part=>'<tr><td class="mono">'+h(part.name)+'</td><td>'+h(part.rows==null?"Native row count unavailable":part.rows)+'<br>'+azBytes(part.bytes)+'</td><td>'+azBytes(part.received)+'</td><td>'+(part.file?objectButton(part.file,"Download original"):'<label>Complete native file'+azFile("az-part-"+part.index,false,".csv,.gz,.gzip,.parquet")+'</label>'+azButton("receive-part","Receive this partition",record,' data-partition="'+part.index+'"'))+'</td></tr>'));
-  body+=azPanel("Retained native edition",detail);
+  body+=azDraftPanel("source-files",record.id,"Retained native edition",detail,record.revision);
   if(p.state!=="complete")return body;
   if(!p.parts.length)return body+azPanel("Complete empty export","<p>The original native manifest contains no partitions. Its complete source and run remain retained.</p>");
   const sourceReviews=azList("azure_review").filter(r=>r.payload.source.id===record.id&&r.payload.source.revision===record.revision);
@@ -170,7 +258,7 @@ async function azureSourcesView(){
     azButton("preview-next","Next rows",null,azureSelection.offset+20>=previewData.total?" disabled":"")+
     '<span>'+previewData.total+' complete original rows</span></div>'+
     rowsTable(["Native row",...previewData.headers],previewData.rows.map(row=>'<tr><td>'+row.ordinal+'</td>'+previewData.headers.map(header=>'<td>'+h(row.values[header])+'</td>').join("")+'</tr>'));
-  body+=azPanel("Review the complete monthly source",sourceReview);
+  body+=azDraftPanel("review",record.id+"@"+record.revision,"Review the complete monthly source",sourceReview,record.revision);
   if(review){
     const r=review.payload;
     body+=azPanel("Saved source review",'<div class="panel-head"><h3>'+h(r.label)+'</h3>'+azState(r.state)+'</div>'+
@@ -192,7 +280,7 @@ async function azureSourcesView(){
 }
 
 async function azureReceivingView(){
-  let body=azPanel("Receive a portable Azure source",
+  let body=azDraftPanel("volumes","input","Receive a portable Azure source",
     '<p>Receive every numbered source volume. Each complete file is reconstructed and checked against its original byte identity. Volumes can arrive in any order, and repeated volumes reopen the same receipt.</p>'+
     '<label>Original receiving ZIP volumes'+azFile("az-receive-volumes",true,".zip")+'</label>'+
     azButton("receive-volumes","Receive selected volumes"));
@@ -202,7 +290,7 @@ async function azureReceivingView(){
       (p.source?azButton("open-source","Open received source",{id:p.source.id,revision:p.source.revision}):"")+historyButton(r)+'</section>';
   }).join(""));
   const sources=azList("azure_source").filter(r=>r.payload.state==="complete");
-  body+=azPanel("Prepare an independent receiving handoff",'<p>The handoff contains the original native manifest, every exact partition, acquisition metadata, and the selected reviewed mapping. Large sources use complete numbered volumes.</p>'+
+  body+=azDraftPanel("handoff","selection","Prepare an independent receiving handoff",'<p>The handoff contains the original native manifest, every exact partition, acquisition metadata, and the selected reviewed mapping. Large sources use complete numbered volumes.</p>'+
     '<label>Complete acquired source'+azSelect("az-export-source",sources,azureSelection.source)+'</label>'+
     '<label>Saved source review, if selected'+azSelect("az-export-review",azList("azure_review"),azureSelection.review)+'</label>'+
     azButton("prepare-selected-handoff","Prepare complete source handoff"));
@@ -240,7 +328,7 @@ async function azureDrive(kind,id){
 }
 
 async function azUpload(id){
-  const file=$(id)?.files?.[0];
+  const file=azFiles(id)[0];
   if(!file)throw new Error("Select the complete original input file.");
   return filePayload(file);
 }
@@ -248,41 +336,64 @@ async function azUpload(id){
 async function azureAction(action,button){
   const id=button.dataset.id,expected=Number(button.dataset.revision);
   const body={id,expected};
+  if(action==="azure-reset-draft"){
+    const panel=button.closest("[data-azure-draft]");azureDrafts.delete(panel.dataset.azureDraft);
+    if(panel.dataset.azureScope==="run"){azureChosenExport="";azureChosenProfile=null;}
+    await render();return;
+  }
   if(action==="azure-pane"){azureSelection.pane=button.dataset.pane;await render();return;}
   if(action==="azure-stop"){if(azureDriveState)azureDriveState.stop=true;notify("The current native range will finish, then this transfer will retain its checkpoint and stop.");return;}
   if(action==="azure-new-profile"){azureSelection.profile=false;await render();return;}
   if(action==="azure-save-profile"){
-    const record=await act("azure.profile.save",{...(id?body:{}),
+    const mark=azDraftMark(button);
+    const record=await azSave("azure.profile.save",{...(id?body:{}),
       label:value("az-profile-label"),scope:value("az-profile-scope"),container_url:value("az-profile-container"),
       prefix:value("az-profile-prefix"),credential:value("az-profile-credential"),arm_token_env:value("az-profile-arm"),
       storage_token_env:value("az-profile-storage"),storage_sas_env:value("az-profile-sas"),
-      subscription:value("az-profile-subscription"),api_version:value("az-profile-version"),local_endpoint:value("az-profile-local")});
+      subscription:value("az-profile-subscription"),api_version:value("az-profile-version"),local_endpoint:value("az-profile-local")},mark);
     azureSelection.profile=record.id;return;
   }
   if(action==="azure-discover-exports"||action==="azure-discover-blobs"){
     const record=await act("azure.discovery.start",{profile_id:id,profile_revision:expected,category:action.endsWith("blobs")?"blobs":"exports"});
     await act("azure.discovery.advance",{id:record.id,expected:record.revision});return;
   }
+  if(action==="azure-open-discovery"){
+    const record=await entity("azure_discovery",id,expected);
+    azureSelection.discovery=id;azureSelection.profile=record.payload.profile.id;azureSelection.pane="connection";
+    await render();return;
+  }
   if(action==="azure-advance-discovery")return act("azure.discovery.advance",body);
   if(action==="azure-drive-discovery")return azureDrive("discovery",id);
-  if(action==="azure-use-export"){azureChosenExport=button.dataset.export;azureSelection.pane="runs";await render();return;}
-  if(action==="azure-choose-manifest")return act("azure.source.select",{profile_id:azureSelection.profile,manifest_path:button.dataset.path});
-  if(action==="azure-select-manifest")return act("azure.source.select",{profile_id:id,profile_revision:expected,manifest_path:value("az-direct-manifest")});
-  if(action==="azure-prepare-run")return act("azure.run.prepare",{profile_id:value("az-run-profile"),export_id:value("az-run-export"),period:value("az-run-period"),label:value("az-run-label")});
+  if(action==="azure-use-export"){
+    azureChosenExport=button.dataset.export;azureChosenProfile={id:button.dataset.profile,revision:Number(button.dataset.profileRevision)};
+    const draft=azureDrafts.get(azDraftKey("run","prepare"));
+    if(draft){draft.values["az-run-export"]=azureChosenExport;draft.values["az-run-profile"]=azureChosenProfile.id;draft.version=++azureDraftVersion;}
+    azureSelection.pane="runs";await render();return;
+  }
+  if(action==="azure-choose-manifest")return act("azure.source.select",{profile_id:button.dataset.profile,profile_revision:Number(button.dataset.profileRevision),manifest_path:button.dataset.path});
+  if(action==="azure-select-manifest")return azSave("azure.source.select",{profile_id:id,profile_revision:expected,manifest_path:value("az-direct-manifest")},azDraftMark(button));
+  if(action==="azure-prepare-run"){
+    const profileId=value("az-run-profile"),profile=azureChosenProfile?.id===profileId?azureChosenProfile:azList("azure_profile").find(r=>r.id===profileId);
+    if(!profile)throw new Error("Select a saved Azure connection.");
+    return azSave("azure.run.prepare",{profile_id:profileId,profile_revision:profile.revision,export_id:value("az-run-export"),period:value("az-run-period"),label:value("az-run-label")},azDraftMark(button));
+  }
   if(action==="azure-open-run"){azureSelection.run=id;azureSelection.pane="runs";await render();return;}
   if(action==="azure-submit-run")return act("azure.run.submit",body);
   if(action==="azure-refresh-run")return act("azure.run.refresh",body);
   if(action==="azure-select-run")return act("azure.run.select",{...body,native_run_id:button.dataset.native});
   if(action==="azure-acquire-run"){
-    const record=await entity("azure_run",id);
-    return act("azure.source.select",{profile_id:record.payload.profile.id,run_id:id,run_revision:expected});
+    const record=await entity("azure_run",id,expected);
+    return act("azure.source.select",{profile_id:record.payload.profile.id,profile_revision:record.payload.profile.revision,run_id:id,run_revision:expected});
   }
-  if(action==="azure-import-native")return act("azure.source.import",{...await azUpload("az-native-file"),
-    manifest_path:value("az-native-manifest"),archive_prefix:value("az-native-prefix"),note:value("az-native-note")});
+  if(action==="azure-import-native"){
+    const mark=azDraftMark(button),settings={manifest_path:value("az-native-manifest"),archive_prefix:value("az-native-prefix"),note:value("az-native-note")};
+    return azSave("azure.source.import",{...settings,...await azUpload("az-native-file")},mark);
+  }
   if(action==="azure-open-source"){azureSelection.source=id;azureSelection.review=null;azureSelection.partition=0;azureSelection.offset=0;azureSelection.pane="sources";await render();return;}
   if(action==="azure-receive-part"){
-    const record=await entity("azure_source",id),partition=Number(button.dataset.partition);
-    return act("azure.source.receive",{...body,partition,native_name:record.payload.parts[partition].name,...await azUpload("az-part-"+partition)});
+    const partition=Number(button.dataset.partition),mark=azDraftMark(button,["az-part-"+partition]),file=azFiles("az-part-"+partition)[0];
+    const record=await entity("azure_source",id,expected);
+    return azSave("azure.source.receive",{...body,partition,native_name:record.payload.parts[partition].name,...await filePayload(file)},mark);
   }
   if(action==="azure-bind-source")return act("azure.source.bind",{...body,profile_id:value("az-bind-profile")});
   if(action==="azure-advance-source")return act("azure.source.advance",body);
@@ -293,14 +404,14 @@ async function azureAction(action,button){
   if(action==="azure-preview-next"){azureSelection.offset+=20;await render();return;}
   if(action==="azure-review-source"){
     const columns={};Object.keys(azureLabels).forEach(field=>columns[field]=value("az-map-"+field));
-    return act("azure.source.review",{source_id:id,source_revision:expected,period:value("az-review-period"),
+    return azSave("azure.source.review",{source_id:id,source_revision:expected,period:value("az-review-period"),
       basis:value("az-review-basis"),allocation_view:value("az-review-view"),invoice_status:value("az-review-status"),
-      invoice_id:value("az-review-invoice"),date_format:value("az-review-date"),columns,note:value("az-review-note")});
+      invoice_id:value("az-review-invoice"),date_format:value("az-review-date"),columns,note:value("az-review-note")},azDraftMark(button));
   }
   if(action==="azure-restore-review"){
-    const record=await entity("azure_source",id),review=record.payload.received_review;
+    const mark=azDraftMark(button),record=await entity("azure_source",id,expected),review=record.payload.received_review;
     if(!review)throw new Error("This acquired source has no received mapping.");
-    return act("azure.source.review",{source_id:id,source_revision:expected,...review.payload.settings,note:review.payload.note});
+    return azSave("azure.source.review",{source_id:id,source_revision:expected,...review.payload.settings,note:review.payload.note},mark);
   }
   if(action==="azure-prepare-import"){
     const record=await act("azure.import.prepare",{review_id:id,review_revision:expected});
@@ -313,22 +424,30 @@ async function azureAction(action,button){
   if(action==="azure-prepare-handoff"||action==="azure-prepare-selected-handoff"){
     const requestBody=action==="azure-prepare-handoff"?{source_id:id,source_revision:expected,review_id:button.dataset.review,review_revision:Number(button.dataset.reviewRevision)}:
       {source_id:value("az-export-source"),...(value("az-export-review")?{review_id:value("az-export-review")}:{})};
-    const record=await act("azure.handoff.prepare",requestBody);
+    const record=await azSave("azure.handoff.prepare",requestBody,azDraftMark(button));
     azureSelection.pane="receiving";await render();
     return azureDrive("handoff",record.id);
   }
   if(action==="azure-advance-handoff")return act("azure.handoff.advance",body);
   if(action==="azure-drive-handoff")return azureDrive("handoff",id);
   if(action==="azure-receive-volumes"){
-    const files=Array.from($("az-receive-volumes")?.files||[]);
+    const mark=azDraftMark(button),files=azFiles("az-receive-volumes");
     if(!files.length)throw new Error("Select the original receiving volumes.");
-    for(const file of files)await act("azure.handoff.receive",await filePayload(file));
+    for(let index=0;index<files.length;index++){
+      const payload=await filePayload(files[index]);
+      if(index===files.length-1)await azSave("azure.handoff.receive",payload,mark);
+      else await act("azure.handoff.receive",payload);
+    }
     return;
   }
   if(action==="azure-open-recovery")return changeTab("delivery");
 }
 
 document.addEventListener("change",event=>run(async()=>{
+  if(event.target.id==="az-run-profile"){
+    const profile=azList("azure_profile").find(r=>r.id===event.target.value);
+    azureChosenProfile=profile?azRef(profile):null;
+  }
   if(event.target.id==="az-profile-select"){azureSelection.profile=event.target.value;azureSelection.discovery=null;await render();}
   if(event.target.id==="az-preview-part"){azureSelection.partition=Number(event.target.value);azureSelection.offset=0;await render();}
 }));

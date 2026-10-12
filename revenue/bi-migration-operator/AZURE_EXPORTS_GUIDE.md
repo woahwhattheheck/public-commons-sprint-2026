@@ -2,7 +2,7 @@
 
 Azure exports is part of the original Commons BI Operator. It takes an existing Cost Management export through native execution history, its exact partition manifest, resumable file acquisition, a staff mapping review, and the existing Agency billing engine. A source can also arrive as original files or portable receiving volumes.
 
-Open **Azure exports** in the left navigation. The four views are **Sources & billing**, **Azure connection**, **Native runs**, and **Receiving & handoff**. The same operations are available through the original structured CLI and authenticated local HTTP API. Agency policies, usage inputs, allocation calculations, statement revisions and accounting workbooks remain in **Agency billing**.
+Open **Azure exports** in the left navigation. The four views are **Sources & billing**, **Azure connection**, **Native runs**, and **Receiving & handoff**. Working edits and selected files stay in this browser's memory while using the application's Refresh control, switching views, or paging through native rows and partitions. Save a review or connection before reloading or closing the browser. The same operations are available through the original structured CLI and authenticated local HTTP API. Agency policies, usage inputs, allocation calculations, statement revisions and accounting workbooks remain in **Agency billing**.
 
 ## Start the complete product
 
@@ -39,7 +39,7 @@ Save a connection containing:
 | Azure CLI subscription | Optional existing subscription selector for the CLI token request |
 | Cost Management API version | The installed default is 2025-03-01; a different published edition can be saved explicitly |
 
-The saved connection contains environment variable names, never their values. A SAS query is attached only when issuing the selected container request. Enter the container URL without query parameters. Credential refresh means updating the environment or existing CLI login used by the running operator; source identities and retained file bytes stay stable.
+The saved connection contains environment variable names, never their values. A SAS query is attached only when issuing the selected container request. Enter the container URL without query parameters. For an environment token refresh, restart the operator with the refreshed token values in the same named variables and reopen the same workspace. With Azure CLI authentication, renew the operator machine's existing login; each request asks that CLI for a current token. Source identities, saved connection revisions and retained file bytes stay stable.
 
 Management and storage permissions are separate. Use the existing account's permissions for reading/exporting the selected Cost Management source and reading the selected Blob container. **Read exports** and **Read container files** give the original provider result, including an actionable native status if that account cannot perform the operation.
 
@@ -52,7 +52,7 @@ The advanced loopback origin is for an already equipped local protocol carrier. 
 There are two cloud paths:
 
 1. Select an existing native manifest from the container listing and acquire it directly.
-2. In **Native runs**, choose an existing export and billing month, then **Prepare monthly run**. Review the retained definition and explicit time period. **Execute this prepared run** makes one request to that existing export's /run endpoint. Refresh native execution history, choose the actual completed run ID, then acquire its returned manifestFile.
+2. In **Native runs**, choose an existing export and billing month, then **Prepare monthly selection**. Review the retained definition and explicit time period. **Run selected month** makes one request to that existing export's /run endpoint. Refresh native execution history, choose the actual completed run ID, then acquire its returned manifestFile.
 
 The run request is saved before the provider POST. If its response is lost, the record reopens in the uncertain state. Continue with **Refresh original run history**, select the actual provider run, and receive it. Refreshing history retains every native response and continuation. It never substitutes a guessed run ID or starts a second export execution.
 
@@ -62,7 +62,7 @@ The product retains the manifest's own exportConfig, deliveryConfig, runInfo, da
 
 ## Receive and resume original files
 
-**Acquire next range** commits one response of at most 4 MiB. **Continue acquisition** repeats these saved steps while the operator view remains open. **Stop after this transfer step** stops at the next committed boundary. Closing the browser also leaves the last completed checkpoint in the selected workspace.
+**Transfer next range** commits one response of at most 4 MiB. **Continue all partitions** repeats these saved steps while the operator view remains open. **Stop after this transfer step** stops at the next committed boundary. Closing the browser also leaves the last completed checkpoint in the selected workspace.
 
 The first request pins the manifest ETag. Each partition starts with its original length and ETag and continues with Range and If-Match. A committed chunk records its digest and byte count; the next request starts after those bytes. Completion joins all chunks into the original full file and checks the manifest again. The implementation follows the original [Get Blob range/conditional contract](https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob).
 
@@ -88,7 +88,7 @@ The review reads every original row and validates the complete native row count 
 
 If a partition contains several currencies, receiving creates separate complete inputs by currency and records their original row ordinals. Choose each currency's inputs in a separate billing period. For a single currency the original CSV bytes flow into the prepared input without row rewriting. The review processes native partitions in manifest order, flushing complete billing ZIPs as currency or the existing byte/row limits require. One capped batch remains in memory while saved batches are retained as workspace objects.
 
-**Save source review** creates an immutable review. Correcting a mapping creates another review of the same acquired source. The earlier review remains available. **Prepare original billing import**, then **Import next billing input** or **Complete billing import**, sends each reviewed input through billing.cost.import with a stable operation identity. Retrying after response loss reopens the same original billing import.
+**Save complete source review** creates an immutable review. Correcting a mapping creates another review of the same acquired source. The earlier review remains available. **Prepare billing import** starts sending the reviewed inputs through billing.cost.import with stable operation identities. If that continuation stops, use **Import next input** or **Complete reviewed import** on the saved import. Retrying after response loss reopens the same original billing import.
 
 ## Allocate and issue the statements
 
@@ -108,9 +108,9 @@ Refreshing a connection or acquiring a later Azure edition does not change these
 
 ## Send the source and reopen it
 
-**Prepare portable handoff** selects one complete source and optionally one saved review. **Build next receiving volume** or **Build all receiving volumes** creates ordinary numbered ZIPs. Each volume contains the complete receiving descriptor and its declared file segments. Download every numbered volume.
+Use **Prepare portable source handoff** from a saved source review, or choose a complete source and optional saved review under **Receiving & handoff** and press **Prepare complete source handoff**. Preparation starts building ordinary numbered ZIPs. If the continuation stops, use **Build next volume** or **Build all source volumes** on the saved delivery. Each volume contains the complete receiving descriptor and its declared file segments. Download every numbered volume.
 
-On the receiving operator, choose **Receive portable handoff** and select the ZIPs. Volumes may arrive in any order; repeat delivery reopens the same saved receipt. The receiver checks every declared file hash/length, joins the complete objects, and matches the source partitions against the native manifest. The source keeps its manifest-derived ID and the sender's original source reference.
+On the receiving operator, select the ZIPs in **Original receiving ZIP volumes**, then press **Receive selected volumes**. Volumes may arrive in any order; repeat delivery reopens the same saved receipt. The receiver checks every declared file hash/length, joins the complete objects, and matches the source partitions against the native manifest. The source keeps its manifest-derived ID and the sender's original source reference.
 
 Open the received source and **Restore received mapping**. This re-runs the saved mapping through the installed native billing parser against the received original files and creates a local review. Then prepare/import the original billing inputs. The recipient chooses its existing agency and usage records in Agency billing.
 
