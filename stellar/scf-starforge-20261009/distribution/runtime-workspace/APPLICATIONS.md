@@ -4,6 +4,14 @@ Applications opens the original merchant and buyer tools from a selected READY r
 
 Buyer receiving: [complete setup, acquisition, Stop and reopen guide](BUYER_RECEIVING_APPLICATIONS.md).
 
+## Source-owned application inventory
+
+The catalog and original startup adapters are discovered from the same maintained
+source contributions as merchant commands. Each product owns its registration;
+Review, Save, Start, Open, Stop and recovery remain the original shared lifecycle.
+The [Applications provider guide](APPLICATION_PROVIDERS.md) explains source
+selection, the provider inventory, exact original adapters and installed receiving.
+
 ## Available original tools
 
 | Application | Maintained command | Original workflow |

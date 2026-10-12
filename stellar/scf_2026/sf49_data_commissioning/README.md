@@ -91,6 +91,12 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/managed-receiving
 
 Both source-owned runners retain complete outputs and original operation identities in their selected output directory. The merchant and buyer operation remain with their existing owners while receiving proceeds.
 
+## Continue into the buyer's recurring analysis
+
+The [Python analysis and workbook commissioning guide](PYTHON_ANALYSIS.md) carries the selected SEC observations or complete OData collection into the customer's saved query, exact-value spreadsheet mapping, reviewed source refresh and receiving handover. It includes original client recipes for [SEC observations](sec-workbook.recipe.example.json), [OData Orders](odata-workbook.recipe.example.json) and [a reviewed recurring edition](sec-workbook-refresh.recipe.example.json).
+
+This is the downstream use of the source and purchase selected above. The customer chooses the decision, precision policy and reason to return; the original AnalysisWorkspace, workbook client, native agent tools and managed runtime retain its work. The [self-contained application insertion](PYTHON_APPLICATION_TEXT.md) gives the current manuscript editors the customer outcome and remaining host-integration work.
+
 ## The remaining engineering in the grant cohort
 
 Apply these designs to the canonical two-merchant/two-buyer deployment. They make the first tranche a concrete customer-host integration rather than another architecture exercise. Keep the current six cost packages, 400 prospective hours, $38,000 request and award-relative 150-day schedule in the original model.
