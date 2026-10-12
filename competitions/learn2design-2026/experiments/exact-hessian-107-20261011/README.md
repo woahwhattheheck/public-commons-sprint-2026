@@ -142,3 +142,10 @@ original099, original scalar107, batched random starts and batched corpus starts
 and a separate twenty-cell CPU comparison. The original Objective runner and
 all previous source arms remain in this project. The guide supplies the complete
 native campaign, recovery, export and seven-file submission commands.
+
+The same operator can divide complete topology groups across existing GPU
+allocations with `--partition-count` and `--partition-index`. Each worker keeps
+all paired methods for its assigned problems. The batch guide includes the
+whole broad and four-hour campaigns, partition recovery and combined-result
+commands. Phase intents and results retain both assigned and complete panel
+coverage.
