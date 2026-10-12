@@ -18,11 +18,20 @@ Open the selected application through the original local source server:
 starforge grant-application --port 8787
 ~~~
 
-The returned URL opens `/grant.html`. Read all nine application answers, the
-existing-work section, complete product and financing companion, budget and
-source index. Its current economic, coastal and Datasette source selections
+The returned URL opens `/grant.html`. Begin with **Explore the working product**
+to inspect the original film, complete economic report and installed purchase
+reviewer. Read all nine application answers, the existing-work section, complete
+product and financing companion, budget and source index. Its current economic, coastal and Datasette source selections
 remain attached to the downloaded files. If the original setup listener is
 already open, use `/grant.html` at that same origin.
+
+Choose **Prepare submission** to edit the full answers and map the actual issuer
+fields, prompts and limits. Save a complete version, copy the selected answer or
+field text, and export the whole working draft. The same workspace receives a
+later source edition while preserving manual edits and their original baselines.
+Its [submission operating guide](../../../../stellar-forge/developer-site/GRANT_SUBMISSION.md)
+travels under `source/stellar-forge/developer-site/GRANT_SUBMISSION.md`; the original
+browser draft store retains optimistic revisions and complete version history.
 
 The installed composer receives an owner's selected manuscript into those
 same four reader files:
