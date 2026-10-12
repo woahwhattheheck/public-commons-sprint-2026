@@ -2,6 +2,21 @@
 
 Use the original native facilitator from a local operator screen: review a profile, retain its original JSON file, start the SDK backend, inspect its accounts and payment state, drain it, and reopen the same configuration. The browser and original CLI use the same configuration schema and runtime. The same screen retains optional durable Bazaar publication, its original merchant bindings and its committed discovery resources.
 
+## Installed Applications and typed client
+
+The [complete selected installation and receiving guide](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar/scf-starforge-20261009/distribution/selections/NATIVE_FACILITATOR_OPERATOR.md)
+packages this same operator as `native-facilitator-operator`. The source-owned
+Applications provider opens it through the original Review, Save, Connect,
+Review Start, Start, Open and Stop/recovery lifecycle. Saved Applications retain
+the original host directories, managed operation and selected source.
+
+The same guide documents the typed Node client at
+`@tokenjunkielabs/starforge-merchant/facilitator/operator/client`. It reviews and
+saves native profiles, probes readiness, controls the original runtime and
+receives complete catalog views through this authenticated operator. Its
+`receiveCatalog` and the browser share the same original pagination and
+fixed-revision receiving implementation.
+
 ## Start the workspace
 
 Choose a private workspace and the **same shared signer ownership directory used by the other native facilitator processes on this host**. Keep those paths canonical and absolute. Use the existing configured Stellar accounts and secret environment-variable names. Set the actual secrets in the host environment before launching.
