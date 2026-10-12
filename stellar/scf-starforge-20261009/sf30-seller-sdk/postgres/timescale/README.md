@@ -162,3 +162,13 @@ The portable directory contains private connection policy and actual database me
 - [PostgreSQL 17 collation](https://www.postgresql.org/docs/17/collation.html)
 
 TimescaleDB contains Apache and Timescale-licensed components. This adapter connects to the selected customer's native database. Native dependency redistribution and hosted-service rights remain governed by the exact upstream licenses.
+
+## Operate the complete native demonstration
+
+`native-demo.mjs` operates an explicit new private schema in the selected actual TimescaleDB2.30.2 database. Its original input is an identified set of industrial usage readings, including an exact decimal larger than JavaScript's integer range and late-arriving rows. It is a native product demonstration, not customer production data or a competition result. The source declaration must authorize creating that new isolated schema. The script does not install Timescale or modify another customer's existing schema.
+
+```sh
+node timescale/native-demo.mjs --directory /private/timescale-native-demo --connection /private/timescale-demo-source.json
+```
+
+It retains one operation record and native transaction markers for its input setup, then operates two editions, a batched refresh, an atomic refresh after late input, complete aggregate comparisons, a native job schedule change, all edition decisions, original publisher extraction/publication, whole export/receive and the original customer dataset reader. The final customer rows must preserve `9007199254740996.50` exactly. Reuse the same directory to continue its original work. Its HTTP phase reads the actual listener and HTML; DOM/browser execution is a separate real browser step. The new native schema and completed package remain available to the customer engineer after the run. The job is disabled by the operated native schedule change.
