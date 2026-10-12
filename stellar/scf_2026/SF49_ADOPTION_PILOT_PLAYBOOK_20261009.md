@@ -82,6 +82,8 @@ Assign complementary source, merchant, buyer/receiving and operating arms to tha
 
 Agree the included operation, source volume and files, environments, receiving consumer, support window, acceptance, price, payment events and additional-work process in the original commercial case. Use the existing SF77 workorder for a diagnosed repair and SF97 for the integrated merchant pilot. The implementation owner maps the agreed business outcome to the following commissioning sequence.
 
+The [SEC and OData commissioning designs](./sf49_data_commissioning/README.md) give this sequence concrete company-data and operational-collection contracts: buyer task, source edition, units and accessions, declared keys, snapshot/live behavior, page pricing and complete receiving. They include the original managed runners' input templates and map the remaining customer-host adaptation to the existing grant packages. Use the selected design in the same private workorder and receiving operation.
+
 ### Commission the selected customer installation
 
 | Phase | Work to complete | Retained customer outcome |
