@@ -207,6 +207,7 @@
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/BASKET.md"
   ],
   "commands": {
+    "opencage-workbench": "stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/cli.mjs",
     "openalex": "stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",
     "research": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/cli.mjs",
     "research-receive": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/receive-cli.mjs",
@@ -457,6 +458,14 @@
     "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs"
   },
   "exports": {
+    "./seller/opencage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/index.mjs",
+    "./seller/opencage/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/config.mjs",
+    "./seller/opencage/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/source.mjs",
+    "./seller/opencage/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/merchant.mjs",
+    "./seller/opencage/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/customer.mjs",
+    "./seller/opencage/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/workspace.mjs",
+    "./seller/opencage/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/server.mjs",
+    "./merchant/mcp/opencage": "./source/stellar-forge/mcp-merchant-operator/opencage-workspace.mjs",
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
     "./seller/openalex/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/config.mjs",
     "./seller/openalex/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/source.mjs",
