@@ -404,7 +404,8 @@
     "mcp-analysis-archive": "stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
     "geocodio": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/cli.mjs",
     "mssql": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/cli.mjs",
-    "mssql-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs"
+    "mssql-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs",
+    "sec-edgar": "stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -929,7 +930,13 @@
     "./seller/mssql/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/prepare.mjs",
     "./seller/mssql/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/server.mjs",
     "./seller/mssql/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/model.mjs",
-    "./seller/releases/mssql": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-mssql.mjs"
+    "./seller/releases/mssql": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-mssql.mjs",
+    "./seller/sec-edgar/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/cli.mjs",
+    "./seller/sec-edgar/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/config.mjs",
+    "./seller/sec-edgar/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/source.mjs",
+    "./seller/sec-edgar/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/merchant.mjs",
+    "./seller/sec-edgar/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/workspace.mjs",
+    "./seller/sec-edgar/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
