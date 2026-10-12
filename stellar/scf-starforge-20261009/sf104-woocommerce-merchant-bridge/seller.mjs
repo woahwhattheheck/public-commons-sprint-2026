@@ -164,7 +164,8 @@ export function createWooApplication(compiled, {env = process.env, fetchImpl} = 
 }
 
 export async function startWooMerchant(compiled, {nativeFactory = null, env = process.env,
-  fetchImpl, port = 8423, operationsPort = 8424, maxInFlight = 64, drainGraceMs = 60000} = {}) {
+  fetchImpl, port = 8423, operationsPort = 8424, operationsNavigationOrigin = null,
+  maxInFlight = 64, drainGraceMs = 60000} = {}) {
   const outbox = await openOutbox(compiled.outbox);
   const handlers = createWooApplication(compiled, {env, fetchImpl});
   let seller, operations, closing;
@@ -177,7 +178,8 @@ export async function startWooMerchant(compiled, {nativeFactory = null, env = pr
     seller = await startSellerService({config:compiled.service, handlers, port, maxInFlight, drainGraceMs,
       nativeFactory:nativeFactory ? async routes => instrumentNativeSettlement(await nativeFactory(routes), {
         compiled:routes, outbox, onWriteFailure:() => process.stderr.write('WOO_NATIVE_OUTBOX_RECONCILIATION_REQUIRED\n')}) : null});
-    operations = await startSellerOperations(seller, {port:operationsPort, deliveryOutbox:outbox});
+    operations = await startSellerOperations(seller, {port:operationsPort, deliveryOutbox:outbox,
+      navigationOrigin:operationsNavigationOrigin});
     return {seller, operations, outbox, close};
   } catch (error) { await close().catch(() => {}); throw error; }
 }

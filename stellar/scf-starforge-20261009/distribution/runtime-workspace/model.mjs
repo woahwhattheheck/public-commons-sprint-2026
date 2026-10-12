@@ -420,7 +420,9 @@ export async function openRuntimeWorkspace({ directory } = {}) {
       const request = await applicationBindingOperation(root, applicationId);
       return request ? { applicationId, ...await model.begin(request) } : { applicationId, connected: true, reopened: true };
     },
-    async applicationsStartReview({ applicationId }) { return reviewApplicationStart(root, applicationId); },
+    async applicationsStartReview({ applicationId, navigationOrigin = null }) {
+      return reviewApplicationStart(root, applicationId, { navigationOrigin });
+    },
     async applicationsStart(input) { return dispatchApplicationStart(root, input, request => model.begin(request)); },
     async applicationsStop(input) { return cancelApplicationRun(root, input, id => model.stopManagedCommand(id)); },
     async applicationsRecover(input) {

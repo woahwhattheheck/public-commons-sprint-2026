@@ -6,6 +6,7 @@ import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
+import { wooApplication, prepareWooApplication } from './application-woo.mjs';
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
 import { ndjsonApplication, prepareNdjsonApplication } from './application-ndjson.mjs';
 import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
@@ -64,6 +65,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   ...eventFeedApplications(common),
   apiPassWorkspaceApplication(common),
   blockscoutApplication(common),
+  wooApplication(common),
   mppApplication(common),
   ndjsonApplication(common),
   cheesecakeApplication(common),
@@ -238,13 +240,19 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
+  let woo;
   let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'grpc-workspace') {
+  if (type.id === 'woo-merchant') {
+    const original = await prepareWooApplication(settings, { inputPath, runtimeDirectory,
+      applicationEnvironment, navigationOrigin: context.navigationOrigin ?? null });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+    selectedResourceKey = original.resourceKey; woo = original.identity;
+  } else if (type.id === 'grpc-workspace') {
     const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
@@ -473,6 +481,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   const environment = await applicationEnvironment(settings.environmentFile);
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
+    ...(woo ? { woo } : {}),
     ...(apiPassWorkspace ? { apiPassWorkspace } : {}),
     ...(mppBinding ? { mppBinding } : {}),
     ...(openapi ? { openapi } : {}),
@@ -661,21 +670,23 @@ export async function applicationBindingOperation(root, id) {
   const saved = await application(root, id), { release } = await selectedRelease(root, saved);
   return release ? null : saved.adoption;
 }
-export async function reviewApplicationStart(root, id) {
+export async function reviewApplicationStart(root, id, { navigationOrigin = null } = {}) {
   const saved = await application(root, id);
+  const wooNavigationOrigin = saved.kind === 'woo-merchant' ? navigationOrigin : null;
   need(!await busyApplication(root, id), 'APPLICATION_RUNNING', 'Reopen the retained application operation', 409);
   const runtime = await inspectMerchantRuntime(saved.runtime.directory, { expectedManifest: saved.runtime.sourceManifestSha256, load: false });
   need(hash(binding(runtime)) === hash(saved.runtime), 'APPLICATION_RUNTIME_CHANGED');
   const { home, release } = await selectedRelease(root, saved);
   need(release && (applicationType(saved.kind).python || Object.hasOwn(release.commands, applicationType(saved.kind).command)), 'APPLICATION_CONNECTION_REQUIRED');
   const command = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
-    root, runtimeId: saved.runtimeId,
+    root, runtimeId: saved.runtimeId, navigationOrigin: wooNavigationOrigin,
   });
   need(command.resourceKey === undefined || command.resourceKey === saved.resourceKey,
     'APPLICATION_STATE_CHANGED', 'Review and save this application with its current private state directory before starting', 409);
   const value = { schema: 'stellar-forge.application-start-review.v1', applicationId: id,
     applicationRevision: saved.revision, runtime: saved.runtime, homeId: home.id, homeRevision: home.revision,
-    releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command };
+    releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command,
+    ...(saved.kind === 'woo-merchant' ? { navigationOrigin: wooNavigationOrigin } : {}) };
   const reviewId = hash(value).slice(0, 24);
   try { await saveJSON(reviewPath(root, reviewId), { ...value, id: reviewId, reviewedAt: now() }); }
   catch (error) { if (error.code !== 'EEXIST') throw error; }
@@ -702,7 +713,7 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
           'The original application for this data directory already has a retained operation. Reopen or stop that operation.', 409);
     }
     const current = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
-      root, runtimeId: saved.runtimeId,
+      root, runtimeId: saved.runtimeId, navigationOrigin: reviewed.navigationOrigin ?? null,
     });
     need(hash(current) === hash(reviewed.command), 'APPLICATION_INPUTS_CHANGED', 'Review the original current inputs again', 409);
     const { home, release } = await selectedRelease(root, saved);
