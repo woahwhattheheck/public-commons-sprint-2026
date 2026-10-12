@@ -42,7 +42,9 @@ export async function startWfsWorkspace(options={}){
   const port=options.port??0;need(Number.isInteger(port)&&port>=0&&port<=65535,'Choose an available loopback port.');
   const token=randomBytes(32).toString('hex'),assets=new Map();
   for(const [route,name,type] of [['/','index.html','text/html; charset=utf-8'],
-    ['/app.js','app.js','text/javascript; charset=utf-8'],['/style.css','style.css','text/css; charset=utf-8']]){
+    ['/app.js','app.js','text/javascript; charset=utf-8'],['/vector.mjs','vector.mjs','text/javascript; charset=utf-8'],
+    ['/vector-json.mjs','../../stac/vector/json.mjs','text/javascript; charset=utf-8'],
+    ['/style.css','style.css','text/css; charset=utf-8']]){
     assets.set(route,{bytes:await readFile(new URL('./ui/'+name,import.meta.url)),type});
   }
   const owned=!options.application,application=options.application??await openWfsApplication(options);

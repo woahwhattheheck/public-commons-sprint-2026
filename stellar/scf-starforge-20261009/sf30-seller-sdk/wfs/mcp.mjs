@@ -56,7 +56,8 @@ export class MerchantWfsWorkspaces {
   #client(alias){const entry=this.#entry(alias);if(!this.#clients.has(alias))this.#clients.set(alias,new WfsWorkspaceClient(entry));return this.#clients.get(alias);}
   #inputs(alias) {const entry=this.#entry(alias);return {workspace:alias,label:entry.label,projectId:entry.projectId,
     bindingSha256:entry.expectedBindingSha256,
-    inputs:Object.entries(entry.inputs).map(([input,row])=>({input,label:row.label,kind:row.kind,sha256:row.sha256})),
+    inputs:Object.entries(entry.inputs).map(([input,row])=>({input,label:row.label,kind:row.kind,sha256:row.sha256,
+      ...(row.manifestSha256?{manifestSha256:row.manifestSha256}:{})})),
     merchantProfiles:Object.entries(entry.merchantProfiles).map(([profile,row])=>({profile,...row}))};}
   async #state(alias,expectedRevision) {const value=await this.#client(alias).query('state');
     if(expectedRevision!==undefined)need(value.project.revision===expectedRevision,'The original project revision changed; restart this record page from its current revision.','WFS_REVISION_CONFLICT',409);return value;}
@@ -81,11 +82,13 @@ export class MerchantWfsWorkspaces {
     if(name==='merchant_wfs_query')return client.query(args.kind,args.input??{});
     if(name==='merchant_wfs_input'){
       const found=await readWfsHostInput(entry,args.input);
-      return{workspace:alias,input:args.input,kind:'project',name:basename(found.input.path),bytes:found.bytes.length,
-        sha256:found.sha256,schema:found.value.schema,bundleSha256:found.value.bundleSha256};
+      return{workspace:alias,input:args.input,kind:found.input.kind,name:basename(found.input.path),bytes:found.bytes.length,
+        sha256:found.sha256,...(found.value?{schema:found.value.schema,bundleSha256:found.value.bundleSha256}:{}),
+        ...(found.input.manifestSha256?{manifestSha256:found.input.manifestSha256}:{})};
     }
     if(name==='merchant_wfs_import'){
       const found=await readWfsHostInput(entry,args.input,args.expectedSha256);
+      need(found.input.kind==='project','Select a complete project input for project receiving.');
       return client.action({action:'project-receive',bundle:found.value});
     }
     if(name==='merchant_wfs_publish'||name==='merchant_wfs_export'){
@@ -106,6 +109,27 @@ export class MerchantWfsWorkspaces {
       const action=args.action==='reopen'?'customer-reopen':args.action==='open'?'customer-open':'dataset-'+args.action;
       const keys=args.action==='prepare'?['publicationId','id','kind','query','maxPages','maxRows','maxTotalAtomic','acceptIndex']:['publicationId','id'];
       return client.action({action,...actionInput(args,keys)});
+    }
+    if(name==='merchant_wfs_vector_capture'||name==='merchant_wfs_vector_compare'||name==='merchant_wfs_vector_resume'){
+      const{workspace,...input}=args;
+      return client.action({action:name==='merchant_wfs_vector_capture'?'vector-capture':
+        name==='merchant_wfs_vector_compare'?'vector-compare':'vector-resume',...input});
+    }
+    if(name==='merchant_wfs_vector_export'){
+      need(Boolean(args.profileInput)!==Boolean(args.profileJson),'Select one complete native profile JSON or host input.');
+      let profileJson=args.profileJson;
+      if(args.profileInput){
+        const found=await readWfsHostInput(entry,args.profileInput,args.expectedSha256);
+        need(found.input.kind==='vector-profile','Select an original vector-profile host input.');
+        profileJson=found.sourceText;
+      }else need(args.expectedSha256===undefined,'expectedSha256 belongs to a host-selected profile input.');
+      return client.action({action:'vector-export',id:args.id,captureId:args.captureId,profileJson});
+    }
+    if(name==='merchant_wfs_vector_receive'){
+      const found=await readWfsHostInput(entry,args.input,args.expectedSha256);
+      need(found.input.kind==='vector','Select the host-pinned native vector archive.');
+      return client.action({action:'vector-receive',id:args.id,archiveBase64:found.bytes.toString('base64'),
+        archiveSha256:found.sha256,manifestSha256:found.input.manifestSha256});
     }
     if(name==='merchant_wfs_cancel')return client.cancel(args.id);
     if(name==='merchant_wfs_file_release'){await this.#reads.release(alias,args.readId);return {workspace:alias,readId:args.readId,state:'RELEASED'};}

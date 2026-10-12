@@ -232,12 +232,25 @@ def claim(directory, request):
     import fcntl
     root = private_directory(directory)
     request_path = root / "request.json"
-    if not request_path.exists():
-        need(not any(p.name != ".vector.lock" for p in root.iterdir()),
-             "VECTOR_DESTINATION_ALREADY_USED", str(root))
     with (root / ".vector.lock").open("a+b") as lock:
         os.chmod(root / ".vector.lock", 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
+        if not request_path.exists():
+            # No domain work precedes the original request commit. A killed first
+            # write may leave only its private, uncommitted atomic staging file.
+            # Inspect under the same lock so an active writer is never mistaken
+            # for an interrupted operation.
+            staged = [path for path in root.iterdir() if path.name != ".vector.lock"]
+            need(all(re.fullmatch(r"\.request\.json\.[a-f0-9]{32}\.receiving", path.name)
+                     for path in staged), "VECTOR_DESTINATION_ALREADY_USED", str(root))
+            for path in staged:
+                info = path.lstat()
+                need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and
+                     not info.st_mode & 0o077, "VECTOR_REQUEST_STAGING_INVALID", str(path))
+            for path in staged:
+                path.unlink()
+            if staged:
+                fsync_directory(root)
         if request_path.exists():
             original = read_json(request_path)
             need(canonical(original) == canonical(request), "VECTOR_ORIGINAL_REQUEST_CONFLICT",
