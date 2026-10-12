@@ -47,8 +47,9 @@
   ],
   "archive": {
     "path": "USAspending_Complete_Original_Source_64B7_20261012.zip",
-    "bytes": 3453667,
-    "sha256": "d5a7d25a5c99de7b8bfcbdcede3871ef626501745b78100e2dfd6f7782e92dfa",
-    "git_blob": "19121f457fe3b4a8ee8aa8401adaf98bc8e22da2"
+    "bytes": 874026,
+    "sha256": "6dcaefe8976c55b86c70109dcff49cee240ce2f7f8d4ee45a40e240fd30f77a4",
+    "git_blob": "c33defa158437384a99ae310acf404cd2e4148a4",
+    "compression": "DEFLATE"
   }
 }
