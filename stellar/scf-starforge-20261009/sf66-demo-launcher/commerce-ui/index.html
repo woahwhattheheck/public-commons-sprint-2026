@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/request.css">
   <link rel="stylesheet" href="/stream.css">
   <link rel="stylesheet" href="/recovery.css">
+  <link rel="stylesheet" href="/approval-ui/approval.css">
   <script type="module" src="/app.mjs"></script>
 </head>
 <body>
@@ -44,8 +45,9 @@
 
         <section class="panel" aria-labelledby="execute-heading">
           <div class="panel-heading"><div><span class="eyebrow">02 · Run</span><h2 id="execute-heading">Execute the reviewed request</h2></div><span id="execution-state" class="badge">Awaiting review</span></div>
-          <p id="execution-note" class="help">Execution uses the configured buyer. Its payment approval appears in the terminal that started this workspace.</p>
-          <div class="action-row"><button id="execute" class="primary-button" type="button" disabled>Execute operation</button><button id="cancel" type="button" disabled>Cancel queued request</button><button id="recover" type="button" hidden disabled>Recover recorded result</button></div>
+          <p id="execution-note" class="help">Loading this workspace's configured approval method.</p>
+          <div class="action-row"><button id="execute" class="primary-button" type="button" disabled>Execute operation</button><button id="cancel" type="button" disabled>Cancel queued request</button><button id="interrupt-buyer" type="button" hidden disabled>Interrupt this buyer</button><button id="recover" type="button" hidden disabled>Recover recorded result</button></div>
+          <section id="operator-approval" aria-label="Native purchase approval" hidden></section>
           <div id="outcome" class="outcome" hidden><dl id="outcome-facts" class="facts"></dl><p id="outcome-message" class="help"></p></div>
           <div id="rpc-recovery" class="outcome" hidden>
             <h3>Recover this RPC result</h3>
@@ -106,3 +108,4 @@
   <footer><span>Local operator workspace</span><span id="session-id"></span></footer>
 </body>
 </html>
+
