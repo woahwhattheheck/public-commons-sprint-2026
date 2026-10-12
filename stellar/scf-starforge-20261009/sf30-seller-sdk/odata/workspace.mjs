@@ -3,7 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { discoverService, compileQuery, fetchPage } from './source.mjs';
+import { projectODataSemantics, odataCaptureManifest } from './semantics.mjs';
 import { acquireReleaseLease } from '../../sf82-seller-pilot/release-process.mjs';
+import { serviceCollectionFiles,parseCollectionTransferPath,validateServiceCollectionTransfer,verifyServiceCollections } from './live/collection-store.mjs';
 import { openState, atomic, readJson, retain, writeNew, identifier, digest, stable, formatted, fault, now } from './state.mjs';
 
 const copy = value => structuredClone(value);
@@ -221,17 +223,41 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
       beforeRows:left.length,afterRows:right.length,added,removed,changed,
       note:before.query.url===after.query.url?'Entity changes within the same reviewed query.':'Query scope changed; added and removed rows may reflect the selected filters or limit.'};
   }
-  async function exportEdition({id,name,fields,payment,origin,path='/data',defaultLimit=50,maxLimit=250}){
-    const selected=await edition(id);
-    if(selected.status!=='COMPLETE')throw fault('ODATA_EXPORT_INCOMPLETE','Finish the source edition before exporting.',409);
-    if(selected.decisions.at(-1)?.decision!=='accept')throw fault('ODATA_EXPORT_REVIEW','Accept this edition in the receiving review before export.',409);
-    const records=await rows(id),available=new Map(selected.query.fields.map(field=>[field.path||field.name,field]));
+  function exportProjection(selected, fields) {
+    const available=new Map(selected.query.fields.map(field=>[field.path||field.name,field]));
+    if(fields!==undefined&&!Array.isArray(fields))throw fault('ODATA_EXPORT_FIELDS','Select an array of captured properties.');
     const paths=fields?.length?[...new Set([...selected.query.keyFields,...fields])]:[...available.keys()];
     if(paths.length<1||paths.length>32||paths.some(path=>!available.has(path)))throw fault('ODATA_EXPORT_FIELDS','Select up to 32 captured properties, including the entity keys.');
     const used=new Set(),mapping=paths.map(path=>{const field=available.get(path);return {path,name:columnName(path,used),odataType:field.type,
       type:datasetType(field),collection:field.collection===true};});
     const columns={};
     for(const field of mapping){columns[field.name]={type:field.type,nullable:field.type!=='string'};columns[field.name+'_state']='string';}
+    return {mapping,columns};
+  }
+  async function semantics({id,fields}) {
+    const selected=await edition(id),projection=exportProjection(selected,fields);
+    return projectODataSemantics({edition:selected,metadataBytes:await raw(selected.catalog.receipts.metadata.sha256),...projection});
+  }
+  async function exportEdition({id,name,fields,payment,origin,path='/data',defaultLimit=50,maxLimit=250,expectedSemanticSha256}) {
+    const selected=await edition(id);
+    if(selected.status!=='COMPLETE')throw fault('ODATA_EXPORT_INCOMPLETE','Finish the source edition before exporting.',409);
+    if(selected.decisions.at(-1)?.decision!=='accept')throw fault('ODATA_EXPORT_REVIEW','Accept this edition in the receiving review before export.',409);
+    const records=await rows(id),{mapping,columns}=exportProjection(selected,fields);
+    const metadataBytes=await raw(selected.catalog.receipts.metadata.sha256);
+    const dictionary=projectODataSemantics({edition:selected,metadataBytes,mapping,columns});
+    if(expectedSemanticSha256!==undefined&&expectedSemanticSha256!==dictionary.sha256)
+      throw fault('ODATA_SEMANTICS_CHANGED','The selected source meaning or projection changed; reopen its dictionary.',409);
+    const retainedFiles=new Map([
+      ['semantics.json',formatted(dictionary)],['table-schema.json',formatted(dictionary.csvw)],
+      ['capture/manifest.json',formatted(odataCaptureManifest(selected))],
+      ['capture/metadata.csdl',metadataBytes],
+      ['capture/service.json',await raw(selected.catalog.receipts.service.sha256)],
+    ]);
+    for(const page of selected.pages){
+      retainedFiles.set('capture/pages/'+page.source.sha256+'.json',await raw(page.source.sha256));
+      retainedFiles.set('capture/rows/'+page.rowsSha256+'.json',await raw(page.rowsSha256));
+    }
+    const sourceFiles=[...retainedFiles].map(([path,body])=>({path,bytes:body.length,sha256:digest(body)}));
     const header=mapping.flatMap(field=>[field.name,field.name+'_state']);
     const csv=Buffer.from([header.join(','),...records.map(row=>mapping.flatMap(field=>{
       const cell=fieldValue(row,field.path);let value=cell.value;
@@ -240,24 +266,29 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
       return [csvCell(cell.state==='value'?value:''),cell.state];}).join(','))].join('\n')+'\n');
     const primary=mapping.map(field=>field.name);
     const config={schema:'stellar-forge.csv-dataset.v1',name:String(name||selected.label).slice(0,128),file:'dataset.csv',columns,
-      filters:primary.slice(0,8),ranges:[],sorts:primary.slice(0,8),defaultLimit,maxLimit};
+      filters:primary.slice(0,8),ranges:[],sorts:primary.slice(0,8),defaultLimit,maxLimit,semantics:dictionary};
+    if(formatted(config).length>65536)throw fault('ODATA_SEMANTIC_CONFIG_SIZE','This source dictionary exceeds the original 64 KiB dataset configuration; select a smaller field projection.');
     const source={schema:'stellar-forge.odata-dataset-source.v1',serviceUrl:selected.catalog.serviceUrl,entitySet:entityName(selected.query.entitySet),
       editionId:id,catalogHash:selected.catalogHash,query:selected.query.plan,queryUrl:selected.query.url,keyFields:selected.query.keyFields,
       completedAt:selected.completedAt,sourceCount:selected.sourceCount,rowCount:records.length,contentHash:selected.contentHash,
-      review:selected.decisions.at(-1),mapping,pages:selected.pages,
+      review:selected.decisions.at(-1),mapping,pages:selected.pages,sourceFiles,
+      semantics:{schema:dictionary.schema,sha256:dictionary.sha256,definitionSha256:dictionary.definitionSha256,
+        captureManifestSha256:dictionary.source.captureManifestSha256,file:'semantics.json'},
       valueEncoding:'Every property has a state column: value, null or missing. Decimal and Int64 retain exact source text.'};
     const exportId=digest(stable({config,source,payment:payment||null,origin:origin||null,path}));
     const output=join(root,'exports',exportId);await mkdir(output,{recursive:true,mode:0o700});
-    async function save(name,bytes){try{await writeNew(join(output,name),bytes);}catch(error){if(error.code!=='EEXIST')throw error;
+    async function save(name,bytes){await mkdir(resolve(join(output,name),'..'),{recursive:true,mode:0o700});
+      try{await writeNew(join(output,name),bytes);}catch(error){if(error.code!=='EEXIST')throw error;
       if(digest(await readFile(join(output,name)))!==digest(bytes))throw fault('ODATA_EXPORT_CHANGED','An existing immutable export differs.',409);}}
     await save('dataset.csv',csv);await save('dataset.json',formatted(config));await save('source.json',formatted(source));
     await save('rows.json',formatted(records));
+    for(const [name,bytes]of retainedFiles)await save(name,bytes);
     const {loadDatasetConfig}=await import('../dataset-handler.mjs'),dataset=await loadDatasetConfig(join(output,'dataset.json'));
     let seller=null;
     if(payment||origin){if(!payment||!origin)throw fault('ODATA_PAYMENT_CONFIG','Supply both public payment terms and public origin.');
       const {buildDatasetSellerConfig}=await import('../dataset-cli.mjs');seller=await buildDatasetSellerConfig(dataset,{payment,origin,path});await save('seller.json',formatted(seller));}
-    const record={id:exportId,editionId:id,directory:output,createdAt:now(),dataset:dataset.describe(),mapping,merchant:seller!==null,
-      files:['dataset.csv','dataset.json','source.json','rows.json',...(seller?['seller.json']:[])]};
+    const record={id:exportId,editionId:id,directory:output,createdAt:now(),dataset:dataset.describe(),mapping,merchant:seller!==null,semantics:source.semantics,
+      files:['dataset.csv','dataset.json','source.json','rows.json',...(seller?['seller.json']:[]),...retainedFiles.keys()]};
     return store.mutate(state=>{const existing=state.exports.find(value=>value.id===exportId);if(existing)return copy(existing);state.exports.push(record);return copy(record);});
   }
   async function queryExport({id,query=''}){
@@ -305,6 +336,8 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
             try{bytes=await readFile(join(root,path));}catch(error){if(error.code==='ENOENT')continue;throw error;}
             files.push({path,sha256:digest(bytes),bodyBase64:bytes.toString('base64')});}}
       }
+      const collections=await serviceCollectionFiles({directory:join(root,'live','products',record.id),profile:record});
+      files.push(...collections.files);
     }
     return {schema:'stellar-forge.odata-transfer.v1',exportedAt:now(),state:saved,files};
     }finally{await liveLease?.close();}
@@ -314,10 +347,13 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
       throw fault('ODATA_TRANSFER_SCHEMA','Use an original OData workspace transfer.');
     const transferSha256=digest(formatted(bundle)),current=await store.read();
     if(current.restoredFrom?.sha256===transferSha256){const {sha256,...counts}=current.restoredFrom;return counts;}
-    if(current.connections.length||current.editions.length||current.plans.length)throw fault('ODATA_RESTORE_TARGET','Restore into an empty workspace.',409);
-    const permitted=/^(sources\/[a-f0-9]{64}|exports\/[a-f0-9]{64}\/(dataset\.csv|dataset\.json|source\.json|rows\.json|seller\.json)|live\/products\/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\/(profile\.json|package\/[a-z-]+\.json|buyers\/[a-f0-9]{64}\/(request|offers|buyer|handoff|response)\.json|receiving\/[a-f0-9]{64}\/(original-response\.json|rows\.jsonl|receiving\.json|next-request\.json)))$/;
+    if(current.connections.length||current.editions.length||current.plans.length||current.liveProducts?.length)throw fault('ODATA_RESTORE_TARGET','Restore into an empty workspace.',409);
+    const permitted=/^(sources\/[a-f0-9]{64}|exports\/[a-f0-9]{64}\/(dataset\.csv|dataset\.json|source\.json|rows\.json|seller\.json|semantics\.json|table-schema\.json|capture\/(manifest\.json|metadata\.csdl|service\.json|(?:pages|rows)\/[a-f0-9]{64}\.json))|live\/products\/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\/(profile\.json|package\/[a-z-]+\.json|buyers\/[a-f0-9]{64}\/(request|offers|buyer|handoff|response)\.json|receiving\/[a-f0-9]{64}\/(original-response\.json|rows\.jsonl|receiving\.json|next-request\.json)))$/;
     const seen=new Set(),validated=[];
-    for(const file of bundle.files){if(!permitted.test(file.path)||seen.has(file.path))throw fault('ODATA_TRANSFER_PATH','The transfer contains an unsupported or repeated file path.');
+    for(const file of bundle.files){
+      const collection=parseCollectionTransferPath(file?.path);
+      const retainedCollection=collection&&(bundle.state.liveProducts||[]).some(record=>record.id===collection.serviceId);
+      if(!file||(!permitted.test(file.path)&&!retainedCollection)||seen.has(file.path))throw fault('ODATA_TRANSFER_PATH','The transfer contains an unsupported or repeated file path.');
       const bytes=Buffer.from(file.bodyBase64,'base64');if(digest(bytes)!==file.sha256)throw fault('ODATA_TRANSFER_HASH','A transfer file differs from its original hash.',409);
       if(file.path.startsWith('sources/')&&file.path.slice(8)!==file.sha256)throw fault('ODATA_TRANSFER_HASH','Source identity differs from its original bytes.',409);
       seen.add(file.path);validated.push({path:file.path,bytes});}
@@ -327,6 +363,7 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
     for(const record of bundle.state.exports){identifier(record.id);for(const name of record.files)required.add('exports/'+record.id+'/'+name);}
     for(const record of bundle.state.liveProducts||[]){
       for(const path of liveFilePaths(record))required.add(path);
+      validateServiceCollectionTransfer({profile:record,files:bundle.files});
       const original=validated.find(file=>file.path==='live/products/'+record.id+'/profile.json');
       if(!original||stable(JSON.parse(original.bytes.toString('utf8')))!==stable(record))throw fault('ODATA_LIVE_PROFILE','The transferred live profile differs from its saved identity.',409);
     }
@@ -341,16 +378,19 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
     if([...required].some(path=>!seen.has(path)))throw fault('ODATA_TRANSFER_MISSING','The transfer omits a referenced source, export, or live service file.');
     for(const file of validated){const target=join(root,file.path);await mkdir(resolve(target,'..'),{recursive:true,mode:0o700});
       try{await writeNew(target,file.bytes);}catch(error){if(error.code!=='EEXIST')throw error;if(digest(await readFile(target))!==digest(file.bytes))throw fault('ODATA_RESTORE_CHANGED','A receiving file differs.',409);}}
+    let collectionCount=0;
+    for(const record of bundle.state.liveProducts||[])collectionCount+=(await verifyServiceCollections({
+      directory:join(root,'live','products',record.id),profile:record})).length;
     return store.mutate(state=>{
       if(state.restoredFrom?.sha256===transferSha256){const {sha256,...counts}=state.restoredFrom;return counts;}
-      if(state.connections.length||state.editions.length||state.plans.length)throw fault('ODATA_RESTORE_TARGET','The receiving workspace changed during restore.',409);
+      if(state.connections.length||state.editions.length||state.plans.length||state.liveProducts?.length)throw fault('ODATA_RESTORE_TARGET','The receiving workspace changed during restore.',409);
       const revision=state.revision;Object.assign(state,copy(bundle.state));state.revision=revision;state.restoredAt=now();
       for(const record of state.exports)record.directory=join(root,'exports',record.id);
       for(const record of state.editions)if(record.status==='IMPORTING')record.status='PAUSED';
-      const counts={connections:state.connections.length,editions:state.editions.length,exports:state.exports.length,liveProducts:state.liveProducts?.length||0};
+      const counts={connections:state.connections.length,editions:state.editions.length,exports:state.exports.length,liveProducts:state.liveProducts?.length||0,collections:collectionCount};
       state.restoredFrom={sha256:transferSha256,...counts};return counts;});
   }
   async function close(){closed=true;for(const control of running.values())control.abort();await Promise.allSettled([...completions.values()]);await store.settle();}
   return {directory:root,state,connect,refreshConnection,plan,reviewPlan,startCapture,capture,pause,edition,rows,reviewEdition,compare,
-    exportEdition,queryExport,recordLiveProduct,backup,restore,raw,close};
+    semantics,exportEdition,queryExport,recordLiveProduct,backup,restore,raw,close};
 }

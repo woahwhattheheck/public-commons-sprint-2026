@@ -69,6 +69,17 @@ def register(subparsers, common):
     target.add_argument("--file", required=True)
     target.add_argument("--name", required=True)
     mutation(target)
+    target = command("buyer-preview", "Review selected original SF88 buyer jobs for this case", case=True, output=True)
+    target.add_argument("--file", required=True, help="Original private SF88 operations handoff")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("buyer-receive", "Receive exact buyer source and selected original purchase associations", case=True, output=True)
+    mutation(target, version=True)
+    target.add_argument("--file", required=True, help="Same original handoff used for preview")
+    target.add_argument("--expected-preview-sha256", required=True)
+    target.add_argument("--selections", required=True, help="JSON array of reviewed jobId/purchaseId selections")
+    deployment = target.add_mutually_exclusive_group(required=True)
+    deployment.add_argument("--deployment", help="Existing original buyer or combined deployment ID")
+    deployment.add_argument("--deployment-file", help="Explicit JSON fields for a new buyer deployment")
     target = command("support-preview", "Review an original merchant support handoff for this delivery case", case=True, output=True)
     target.add_argument("--file", required=True, help="Original SF74 portable support handoff")
     target.add_argument("--expected-version", type=int, required=True)
@@ -79,6 +90,24 @@ def register(subparsers, common):
     deployment = target.add_mutually_exclusive_group(required=True)
     deployment.add_argument("--deployment", help="Original deployment ID from this operations case")
     deployment.add_argument("--deployment-file", help="JSON fields for a new original deployment")
+    target = command("completion-calendar", "Read payment-derived completion clocks and original award dates", case=True, output=True)
+    target.add_argument("--as-of", help="Explicit YYYY-MM-DD calendar date; defaults to current UTC date")
+    target = command("completion-seed", "Open the original tranche assignments without saving", case=True, output=True)
+    target.add_argument("--tranche", type=int, choices=(1, 2, 3), required=True)
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("completion-preview", "Preview completed deliverables against their actual previous payment", case=True, output=True)
+    target.add_argument("--data", required=True, help="JSON with receiptId, asOfDate and summary")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("completion-save", "Save the complete original tranche assignment input", case=True, output=True)
+    target.add_argument("--inputs", required=True, help="Original completion-seed inputs JSON, edited by the operator")
+    mutation(target, version=True)
+    for verb in ("prepare", "extension", "submit", "decision"):
+        target = command("completion-" + verb, "Retain the original completion " + verb + " through its case journal", case=True, output=True)
+        target.add_argument("--data", required=True, help="Native completion action data JSON")
+        mutation(target, version=True)
+    target = command("completion-export", "Download the frozen form preparation and its exact selected sources", case=True)
+    target.add_argument("--review", required=True)
+    target.add_argument("--output", required=True)
     target = command("forecast-preview", "Calculate a dated forecast from current original records", case=True, output=True)
     target.add_argument("--inputs", required=True, help="Forecast input JSON file")
     target.add_argument("--expected-version", type=int, required=True)
@@ -165,6 +194,23 @@ def operate(workspace, args):
         result = ops.forecast(args.case, args.forecast)
     elif action == "forecast-export":
         return {"forecastId": args.forecast, "output": publish(args.output, ops.export_forecast(args.case, args.forecast))}
+    elif action in ("buyer-preview", "buyer-receive"):
+        original = {"filename": Path(args.file).name,
+                    "contentBase64": base64.b64encode(read_bytes(args.file, MAX_SOURCE)).decode("ascii")}
+        if action == "buyer-preview":
+            result = ops.preview_buyer(args.case, {"expectedVersion": args.expected_version, **original})
+        else:
+            try:
+                selections = json.loads(read_bytes(args.selections, MAX_SOURCE))
+                deployment = json.loads(read_bytes(args.deployment_file, MAX_SOURCE)) if args.deployment_file else None
+            except (UnicodeError, ValueError) as exc:
+                raise Problem("Use the original UTF-8 JSON selection and deployment fields.", 422, "INVALID_JSON") from exc
+            data = {**original, "expectedPreviewSha256": args.expected_preview_sha256,
+                    "deploymentId": args.deployment, "selections": selections}
+            if deployment is not None:
+                data["deployment"] = deployment
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "buyer.receive", "data": data})
     elif action in ("support-preview", "support-receive"):
         original = {"filename": Path(args.file).name,
                     "contentBase64": base64.b64encode(read_bytes(args.file, MAX_SOURCE)).decode("ascii")}
@@ -180,6 +226,27 @@ def operate(workspace, args):
                     raise Problem("New deployment fields must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
             result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
                 "requestId": args.request_id, "note": args.note, "action": "support.receive", "data": data})
+    elif action == "completion-calendar":
+        result = ops.completion_calendar(args.case, args.as_of)
+    elif action == "completion-seed":
+        result = ops.seed_completion(args.case, {"expectedVersion": args.expected_version, "tranche": args.tranche})
+    elif action == "completion-export":
+        return {"reviewId": args.review, "output": publish(args.output, ops.export_completion(args.case, args.review))}
+    elif action.startswith("completion-"):
+        filename = args.inputs if action == "completion-save" else args.data
+        try:
+            data = json.loads(read_bytes(filename, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Completion input must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "completion-preview":
+            if not isinstance(data, dict) or "expectedVersion" in data:
+                raise Problem("Use only the native completion preview fields in the data file.", 422, "INVALID_COMPLETION")
+            result = ops.preview_completion(args.case, {"expectedVersion": args.expected_version, **data})
+        else:
+            if action == "completion-save":
+                data = {"inputs": data}
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": action.replace("-", ".", 1), "data": data})
     elif action in ("forecast-preview", "forecast-save"):
         try:
             inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))

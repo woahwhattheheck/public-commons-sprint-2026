@@ -167,3 +167,11 @@ For the original merchant accounting receiver, use its existing signed SF98 acco
 Fleet workspace, foreground CLI and merchant MCP all close their owned original destination workers and cancel active transfer reads. Cancellation reaches the original delivery model before the parent waits for HTTP or serialized MCP calls. Native gateway drain and owned merchant shutdown retain their existing ordering.
 
 Reopening the same fleet resumes its original merchant selections and source journals. Destination worker state, enrollment and history remain visible; the operator starts delivery explicitly through the original controls. Named transfers survive source relocation and use the original inspection/receiving lifecycle.
+
+## Integrated merchant lifecycle
+
+The source-owned `providers/fleet.mjs` declaration attaches the existing fleet catalog and cancels staging, client transfers and destination delivery before host request draining. The current merchant registry retains that declaration and its original setup hooks.
+
+The fleet and standalone destination workspaces use the browser's canonical loopback origin, including port 80. Mounted destination handlers use that same normalized origin and original private session.
+
+Shutdown retains the original fleet lease while any owned resource reports incomplete cleanup. Concurrent close calls share the active attempt; a failed attempt can be repeated on the same operator after its retained delivery state is repaired. Completed native child shutdown and destination history remain selected during that continuation.

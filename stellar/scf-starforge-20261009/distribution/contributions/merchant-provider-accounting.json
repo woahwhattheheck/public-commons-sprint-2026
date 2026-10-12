@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-accounting",
+  "description": "Original accounting MCP provider",
+  "merchantProviders": {
+    "accounting": "stellar-forge/mcp-merchant-operator/providers/accounting.mjs"
+  }
+}

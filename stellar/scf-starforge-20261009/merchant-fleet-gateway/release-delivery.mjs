@@ -135,14 +135,15 @@ export function createFleetDeliveryDesk({ planDigest, locate, getManaged }) {
     },
     async mount(req, res, input) {
       const held = await scope(input, ['origin']);
-      if (typeof input.origin !== 'string' || !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(input.origin) ||
-          Number(new URL(input.origin).port) > 65535) throw failure('FLEET_DELIVERY_ORIGIN_REQUIRED');
-      let handler = held.handlers.get(input.origin);
+      const authority = typeof input.origin === 'string' && /^http:\/\/127\.0\.0\.1(?::([1-9]\d{0,4}))?$/.exec(input.origin);
+      if (!authority || Number(authority[1] ?? 80) > 65535) throw failure('FLEET_DELIVERY_ORIGIN_REQUIRED');
+      const origin = new URL(input.origin).origin;
+      let handler = held.handlers.get(origin);
       if (!handler) {
-        const pending = createDestinationsHandler({ model: held.model, origins: [input.origin],
+        const pending = createDestinationsHandler({ model: held.model, origins: [origin],
           basePath: '/delivery/' + input.tenant + '/' + input.slot });
-        held.handlers.set(input.origin, pending);
-        pending.catch(() => { if (held.handlers.get(input.origin) === pending) held.handlers.delete(input.origin); });
+        held.handlers.set(origin, pending);
+        pending.catch(() => { if (held.handlers.get(origin) === pending) held.handlers.delete(origin); });
         handler = pending;
       }
       return (await handler)(req, res);
@@ -181,7 +182,7 @@ export function createFleetDeliveryDesk({ planDigest, locate, getManaged }) {
       if (closed) return closed;
       closing = true; lifetime.abort(new Error('FLEET_DELIVERY_CLOSING'));
       for (const controller of downloads) controller.abort(new Error('FLEET_DELIVERY_CLOSING'));
-      closed = (async () => {
+      const attempt = (async () => {
         const holdings = (await Promise.allSettled([...opened.values()])).filter(row => row.status === 'fulfilled').map(row => row.value);
         const handlers = (await Promise.allSettled(holdings.flatMap(row => [...row.handlers.values()])))
           .filter(row => row.status === 'fulfilled').map(row => row.value);
@@ -193,7 +194,9 @@ export function createFleetDeliveryDesk({ planDigest, locate, getManaged }) {
         const failures = (await stopped).filter(row => row.status === 'rejected').map(row => row.reason);
         if (failures.length) throw new AggregateError(failures, 'Original delivery shutdown failed');
       })();
-      return closed;
+      closed = attempt;
+      attempt.catch(() => { if (closed === attempt) closed = undefined; });
+      return attempt;
     },
   };
   return api;

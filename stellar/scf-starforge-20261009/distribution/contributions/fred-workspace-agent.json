@@ -1,0 +1,59 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "fred-workspace-agent",
+  "description": "Original economic-edition typed client, installed agent workflow and exact-source analyst briefings",
+  "commands": {
+    "fred-workspace": "stellar-forge/mcp-merchant-operator/fred-workspace-cli.mjs"
+  },
+  "commandDescriptions": {
+    "fred-workspace": "Import, author briefings, publish, purchase, recover and receive original economic editions"
+  },
+  "exports": {
+    "./buyer/fred/workspace-client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-client.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-client.mjs"
+    },
+    "./buyer/fred/workspace-client/operations": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-cli.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-cli.mjs"
+    },
+    "./merchant/mcp/fred": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/fred-workspace.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/fred-workspace.mjs"
+    },
+    "./merchant/mcp/fred/setup": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-setup.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-setup.mjs"
+    },
+    "./merchant/fred/briefing": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/briefing/model.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/briefing/model.mjs"
+    }
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/FRED.md",
+    "stellar-forge/mcp-merchant-operator/examples/fred-workspace-inputs.json",
+    "stellar-forge/mcp-merchant-operator/fred-workspace-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/fred-workspace-cli.d.mts",
+    "stellar-forge/mcp-merchant-operator/fred-workspace.d.mts",
+    "stellar-forge/mcp-merchant-operator/fred-workspace-setup.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/unrate-20261012.public-table.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/cpiaucsl-20261012.public-table.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/gdp-20261012.public-table.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/MACRO_STARTER.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/BRIEFINGS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/macro-briefing.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/briefing/model.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/briefing.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/briefing-measures.csv",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/briefing.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/briefing-manifest.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/macro-source.capture.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/review.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/review-note.txt",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md"
+  ],
+  "merchantProviders": {
+    "fred-workspaces": "stellar-forge/mcp-merchant-operator/providers/fred-workspaces.mjs"
+  }
+}

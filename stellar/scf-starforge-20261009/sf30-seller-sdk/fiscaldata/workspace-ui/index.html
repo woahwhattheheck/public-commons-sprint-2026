@@ -20,7 +20,8 @@
         <a href="#capture" data-view="capture" aria-current="page"><span class="nav-number">01</span>Sources &amp; captures<span id="nav-captures" class="nav-count">0</span></a>
         <a href="#editions" data-view="editions"><span class="nav-number">02</span>Review editions<span id="nav-editions" class="nav-count">0</span></a>
         <a href="#compare" data-view="compare"><span class="nav-number">03</span>Compare &amp; export<span id="nav-comparisons" class="nav-count">0</span></a>
-        <a href="#publish" data-view="publish"><span class="nav-number">04</span>Publish &amp; deliver</a>
+        <a href="#refresh" data-view="refresh"><span class="nav-number">04</span>Saved refresh plans</a>
+        <a href="#publish" data-view="publish"><span class="nav-number">05</span>Publish &amp; deliver</a>
       </nav>
       <div class="sidebar-note"><p class="eyebrow">Source authority</p><p>U.S. Department of the Treasury</p><a href="https://fiscaldata.treasury.gov/" target="_blank" rel="noopener noreferrer">Fiscal Data website ↗</a><a href="https://fiscaldata.treasury.gov/api-documentation/" target="_blank" rel="noopener noreferrer">API documentation ↗</a></div>
       <div class="worker-card"><p class="eyebrow">Capture worker</p><p id="worker-status">Opening…</p><p id="worker-detail" class="muted small">Progress is retained after each source page.</p></div>
@@ -176,6 +177,10 @@
           <div id="buyer-controls" class="inset"></div>
           <div id="buyer-result" class="inset" hidden></div>
         </section>
+      </section>
+      <section id="view-refresh" class="view" aria-labelledby="refresh-heading" hidden>
+        <div class="page-heading"><div><p class="eyebrow">04 / Repeatable source review</p><h2 id="refresh-heading">Saved refresh plans</h2><p>Retain a reviewed baseline and source policy, capture the next real period, and deliver its exact comparison and briefing.</p></div></div>
+        <div id="refresh-root"></div>
       </section>
       <footer class="workspace-footer"><span>Exact source values · Retained editions · Original seller and buyer</span><span id="workspace-operator" hidden></span><span id="workspace-revision"></span></footer>
     </main>

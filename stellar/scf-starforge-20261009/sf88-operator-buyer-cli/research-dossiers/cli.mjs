@@ -5,12 +5,16 @@ import { resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { readBytes, parseJson, writeBytes, need } from '../node/store.mjs';
 import { openDossierStore } from './dossier.mjs';
+import {createSourceBundleFromDirectory,inspectSourceBundle,SOURCE_BUNDLE_LIMIT} from './source-bundles.mjs';
 import { openPortableFile, writePortableFile } from './portable.mjs';
 import { receiveOpenAlexEdition } from './openalex.mjs';
 import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 
 const usage = 'Research dossiers\n\n' +
   '  remote COMMAND --connection-file FILE --directory ORIGINAL_STORE [OPTIONS]\n' +
+  '  bundle-create --manifest FILE --source-directory DIR --out FILE\n' +
+  '  bundle-preview --file SOURCE_BUNDLE_JSON\n' +
+  '  import-bundle --store DIR --id ID --question ID --file SOURCE_BUNDLE_JSON --revision N [--sha256 HASH] [--projection full|metadata]\n' +
   '  create --store DIR --title TEXT [--description TEXT]\n' +
   '  list|get --store DIR [--id ID] [--revision N]\n' +
   '  question --store DIR --id ID --text TEXT --revision N\n' +
@@ -31,8 +35,20 @@ export async function main(argv = process.argv.slice(2)) {
   const keys = ['store', 'id', 'title', 'description', 'text', 'revision', 'question', 'file',
     'provider', 'label', 'source-reference', 'source', 'selected', 'note', 'classification',
     'before', 'after', 'format', 'out', 'edition-adapter', 'buyer-state', 'runtime', 'intent',
-    'openalex-workspace', 'openalex-module', 'edition', 'projection'];
+    'openalex-workspace', 'openalex-module', 'edition', 'projection', 'manifest', 'source-directory', 'sha256'];
   const { values } = parseArgs({ args: argv.slice(1), options: Object.fromEntries(keys.map(key => [key, { type: 'string' }])), strict: true });
+  if(command==='bundle-create'){
+    need(values.manifest&&values['source-directory']&&values.out,'SOURCE_BUNDLE_INPUTS_REQUIRED');
+    const prepared=await createSourceBundleFromDirectory({manifestFile:resolve(values.manifest),
+      directory:resolve(values['source-directory'])});
+    await writeBytes(resolve(values.out),prepared.bytes,{exclusive:true});
+    process.stdout.write(JSON.stringify({file:resolve(values.out),...prepared.preview},null,2)+'\n');return;
+  }
+  if(command==='bundle-preview'){
+    need(values.file,'SOURCE_BUNDLE_FILE_REQUIRED');
+    const prepared=inspectSourceBundle(await readBytes(resolve(values.file),SOURCE_BUNDLE_LIMIT));
+    process.stdout.write(JSON.stringify(prepared.preview,null,2)+'\n');return;
+  }
   need(values.store, 'STORE_REQUIRED');
   let providers = {};
   if (values['edition-adapter']) {
@@ -53,6 +69,11 @@ export async function main(argv = process.argv.slice(2)) {
       result = await store.receive(values.id, { questionId: values.question, label: values.label,
         provider: values.provider ?? 'research', rawBytes: await readBytes(resolve(values.file), 64 * 1024 * 1024),
         sourceReference: values['source-reference'] ?? '', expectedRevision: revision }); break;
+    case 'import-bundle':
+      need(values.file,'SOURCE_BUNDLE_FILE_REQUIRED');
+      result=await store.receiveSourceBundle(values.id,{questionId:values.question,
+        rawBytes:await readBytes(resolve(values.file),SOURCE_BUNDLE_LIMIT),
+        expectedBundleSha256:values.sha256,expectedRevision:revision,projection:values.projection??'metadata'});break;
     case 'attach':
       result = await store.receiveReference(values.id, { questionId: values.question, label: values.label,
         provider: values.provider, reference: await input(), expectedRevision: revision }); break;

@@ -1,0 +1,72 @@
+[
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libparquet.so.2600",
+    "bytes": 13064296,
+    "sha256": "dc01293bb692e40531105dc31db304fd0fc4a56b750dc38c9011f2e298f193d8"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_python.so",
+    "bytes": 2414888,
+    "sha256": "e11d382bb77cbad05f27393a2dcbf8f3a7cb32e0d4ce62615959e4c7bf5a2349"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/_compute.cpython-312-x86_64-linux-gnu.so",
+    "bytes": 1352840,
+    "sha256": "410c37c4147b20b61f5c4a184f6adaa32344a03d022dbb4905a006942477c640"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_dataset.so.2600",
+    "bytes": 2418472,
+    "sha256": "de1664cc7ea7b972108851c77b8164338f368fced0640adc8bd71f328cd223ac"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_flight.so.2600",
+    "bytes": 30025232,
+    "sha256": "90cd9710a50aac844301fbc30a7fc0113b5ca0f19d63fee67b23da3167786aa2"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/_flight.cpython-312-x86_64-linux-gnu.so",
+    "bytes": 1158472,
+    "sha256": "39f05d6969db9ae0013109c52e07df4c348ed13446320eb3cb95273a01273cd0"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_acero.so.2600",
+    "bytes": 2015232,
+    "sha256": "bf66021710f8f7f546efb596abfd296dc1757311e450828202ff210a7a602061"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_substrait.so.2600",
+    "bytes": 5801672,
+    "sha256": "32707d36915e1af927032d66bebef383490d0f5725cabd8ae7581deaf4155f97"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_python.so.2600.0.0",
+    "bytes": 2414888,
+    "sha256": "e11d382bb77cbad05f27393a2dcbf8f3a7cb32e0d4ce62615959e4c7bf5a2349"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_python.so.2600",
+    "bytes": 2414888,
+    "sha256": "e11d382bb77cbad05f27393a2dcbf8f3a7cb32e0d4ce62615959e4c7bf5a2349"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_compute.so.2600",
+    "bytes": 19336624,
+    "sha256": "30ea434fa01248b00b05355ccec2a12927a9074be5ae3efa719147c955fd5f00"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/lib.cpython-312-x86_64-linux-gnu.so",
+    "bytes": 4697640,
+    "sha256": "fed5cc774f08312c3543222c31fcc2a3b8f94dbcdec3e0d0f5126760e840b038"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow_s3.so.2600",
+    "bytes": 16913776,
+    "sha256": "5b7831d637fa86edf04d8a005c6ec7519c443bb88796dc8276aab7b63a51f827"
+  },
+  {
+    "relative": "lib/python3.12/site-packages/pyarrow/libarrow.so.2600",
+    "bytes": 47807400,
+    "sha256": "0f8e4181765d6eab80f86f1176cec53ec4ff7377b8d2c52a3288224323f8a0b5"
+  }
+]

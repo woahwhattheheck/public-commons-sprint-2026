@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { clinicalTrialsWorkspaceTools, validateClinicalTrialsArguments, parseClinicalTrialsExport,
-  CLINICALTRIALS_MANIFEST } from './clinicaltrials-workspace.mjs';
+  CLINICALTRIALS_MANIFEST, CLINICALTRIALS_MAX_JSON_BYTES } from './clinicaltrials-workspace.mjs';
 import { openMerchantFileClient, createRetainedDownload } from './retained-download.mjs';
 
 const PREFIX = 'merchant_clinicaltrials_';
@@ -15,6 +15,9 @@ export const clinicalTrialsActions = Object.freeze(Object.fromEntries(clinicalTr
 
 export async function openClinicalTrialsClient(options = {}) {
   const original = await openMerchantFileClient({ ...options, errorPrefix: 'CLINICALTRIALS',
+    // The native JSON appears as structuredContent and as JSON-escaped text.
+    // Keep every original field while bounding both complete representations.
+    maximumResponseBytes: 3 * CLINICALTRIALS_MAX_JSON_BYTES + 65536,
     clientName: 'starforge-clinicaltrials-operator' });
   const call = async (action, args = {}, requestOptions) => {
     if (typeof action !== 'string') throw fail('INVALID_PARAMS', 'Choose an action from clinicaltrials tools.');

@@ -27,7 +27,28 @@
 <div class="buttons"><button id="rows-previous">Previous page</button><button id="rows-next">Next page</button></div>
 <div class="box"><h3>Combine retained public tables</h3><p>Select one original capture for each series to create a shared economic edition. Every observation keeps its own frequency, units and retrieval date.</p><label>Original source captures<select id="combine-captures" multiple size="5"></select></label><button id="combine-tables">Create combined edition</button></div>
 <div class="box"><h3>Review the customer edition</h3><p>Keep the original value, missing marker, date basis, units and frequency together. Configure the original dataset’s selected fields and query capabilities.</p>
-<label>Projection and page policy<textarea id="policy" rows="13" spellcheck="false"></textarea></label><label>Review note<textarea id="review-note" rows="3" maxlength="8000"></textarea></label><button id="save-review">Save reviewed edition</button></div>
+<label>Projection and page policy<textarea id="policy" rows="13" spellcheck="false"></textarea></label><label>Review note<textarea id="review-note" rows="3" maxlength="8000"></textarea></label><div id="briefing-editor" class="briefing-editor">
+<label class="check"><input id="briefing-enabled" type="checkbox">Include an analyst briefing in this reviewed edition</label>
+<div id="briefing-controls" hidden>
+<p>Select original series and a reporting interval. Period comparisons use the exact source calendar, including baselines before this interval. Missing values remain visible.</p>
+<div class="form-grid"><label class="wide">Briefing title<input id="briefing-title" maxlength="160" value="Economic briefing"></label>
+<label>Reporting start<input id="briefing-start" type="date"></label><label>Reporting end<input id="briefing-end" type="date"></label><label>Relative-change decimals<input id="briefing-decimals" type="number" min="0" max="12" value="6"></label></div>
+<h4>Original series and comparison methods</h4><div id="briefing-series" class="table-wrap"></div>
+<p class="briefing-method">Absolute changes preserve the source units. Changes in a series measured in Percent are percentage points. Relative percent change is a separate explicit selection; it is calculated from the two original values.</p>
+<label>Analyst note<textarea id="briefing-notes" rows="4" maxlength="8000"></textarea></label>
+<button type="button" id="briefing-preview">Preview complete briefing selection</button>
+</div></div>
+<button id="save-review">Save reviewed edition</button></div>
+<div class="box" id="briefing-report-panel">
+<h3>Analyst briefings</h3><p>Open a saved briefing or preview the current selection. The offline HTML, full measures CSV, report JSON and manifest are retained with the source review and included in complete project exports.</p>
+<label>Saved briefing<select id="briefing-saved"></select></label>
+<div class="buttons"><button id="briefing-open">Open saved briefing</button><button id="briefing-copy">Use this briefing selection</button><button id="briefing-html">Download offline HTML</button><button id="briefing-csv">Download full CSV</button><button id="briefing-json">Download report JSON</button><button id="briefing-manifest">Download manifest</button></div>
+<p id="briefing-view-state" role="status">Select an original source to author a briefing.</p>
+<div id="briefing-summary" class="metrics"></div><div id="briefing-series-summary" class="table-wrap"></div>
+<div id="briefing-measures" class="table-wrap"></div><div class="buttons"><button id="briefing-previous" disabled>Previous measures</button><button id="briefing-next" disabled>Next measures</button></div>
+<p id="briefing-method-summary" class="briefing-method"></p>
+</div>
+
 <h3>Compare two retained vintages</h3><div class="form-grid"><label>Earlier capture<select id="compare-before"></select></label><label>Later capture<select id="compare-after"></select></label></div>
 <div class="buttons"><button id="compare">Compare source editions</button><button id="download-comparison">Download full comparison</button></div><pre id="comparison-summary">Select the same series and observation interval in two captures.</pre><div id="comparison" class="table-wrap"></div>
 <div class="buttons"><button id="compare-previous">Previous changes</button><button id="compare-next">Next changes</button></div>

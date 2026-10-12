@@ -62,7 +62,9 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
   const actions = { save: 'save', capture: 'capture', open: 'open', checkout: 'checkout',
     'reflection-inventory': 'reflectionInventory', 'reflection-capture': 'reflectionCapture',
     'reflection-open': 'reflectionOpen', 'reflection-save': 'reflectionSave',
-    method: 'method', review: 'review', call: 'call', 'cancel-call': 'cancelCall', attempt: 'readAttempt', attempts: 'attemptsPage', prepare: 'prepare',
+    'upgrade-review': 'upgradeReview', 'upgrade-open': 'upgradeOpen',
+    'upgrade-adopt': 'upgradeAdopt', 'upgrade-method': 'upgradeMethod',
+    method: 'method', 'validate-input': 'validateInput', review: 'review', call: 'call', 'cancel-call': 'cancelCall', attempt: 'readAttempt', attempts: 'attemptsPage', prepare: 'prepare',
     run: 'run', stop: 'stop', download: 'download', archive: 'archive', stage: 'stage',
     'release-console': 'openReleaseConsole', 'release-close': 'closeReleaseConsole' };
   const server = createServer((req, res) => {

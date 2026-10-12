@@ -27,6 +27,8 @@ First call inspectGrantAgentBinding with directory and optional scenarioFile, py
 | portfolioSelection(caseId, expectedVersion, portfolioId, alternativeId) | Native selected dates returned as an original forecast input. |
 | supportPreview(caseId, expectedVersion, bytes, filename) | Original SF74 support reader and complete source/deployment preview, without saving. |
 | supportReceive(caseId, bytes, body) | Native support.receive, retaining the original file and rendered review with an existing or new deployment in the original case transaction. |
+| buyerPreview(caseId, expectedVersion, bytes, filename) | Original SF88 source reader, full job/purchase/deployment review and preview SHA, without saving. |
+| buyerReceive(caseId, bytes, body) | Native buyer.receive: explicitly selected original jobs remain associated with their original purchase and accountable buyer deployment. |
 | download(kind, selection) | Complete original plan, case, forecast or portfolio ZIP, source, scenario or CSV. |
 | importBundle(kind, bytes, body) | Original complete plan or case ZIP receiver. |
 | importScenario(bytes, body) | Original source JSON with native byte identity. |
@@ -98,3 +100,90 @@ The native support.receive command re-previews the file and compares expectedPre
 Preview is read-only: native reader availability, size and busy errors retain their definite original outcome. Receiving uses the same after-dispatch uncertainty and original-ID recovery as the other case writes. Source/case/reader changes require a fresh preview; an interrupted accepted write requires the identical original payload and request ID.
 
 Source downloads and complete case export/import preserve the original file, retained report and deployment associations. The original operator, CLI, environment fields and native reader lifecycle are documented in [Merchant support in delivery operations](SUPPORT_DELIVERY.md).
+
+
+## Receive original buyer observations
+
+Use the complete original JSON exported by [Native buyer work in delivery Operations](BUYER_OPERATIONS.md). The file contains selected original SF88 Inbox sources and their native outcome/retained-output observations. Keep it private with the operating case. The client passes its nonempty original bytes, up to 8 MiB, to the installed native reader.
+
+```js
+const preview = await client.buyerPreview(caseId, version, handoffBytes, filename);
+// Present every preview.value.rows entry and its original source, issues,
+// receiving classification, matches and suggestedPurchaseId for review.
+// selections contains only the operator's explicit original job choices.
+const received = await client.buyerReceive(caseId, handoffBytes, {
+  expectedVersion: version,
+  filename,
+  expectedPreviewSha256: preview.value.previewSha256,
+  deploymentId,
+  selections,
+  actor,
+  requestId,
+  note: 'Receive the selected original buyer observations.'
+});
+```
+
+Each selection is exactly `{jobId, purchaseId}`. The jobId is the original 64-character SHA-256 identifier, and purchaseId is the explicit original `purchase-...` ID or null for a new original purchase. Select one through 100 distinct original jobs; the native preview determines whether each is receivable and which existing intent or transaction it matches. The same existing purchase cannot be selected for two different source jobs.
+
+Select an existing buyer or combined deployment by deploymentId, with no nonempty competing deployment object. A later observation retains its original purchase's deployment. For a new deployment use deploymentId:null or omit it, and provide deployment with its original name, operator and explicit role BUYER or BOTH. Other editable fields follow the existing deployment contract: participantClass, environment, state, original work-package costIds, tranche, source/reference details and actual handover fields. Generated identity, source associations, version and recordedBy remain native-owned.
+
+buyerPreview is read-only. buyerReceive preserves the exact filename, bytes, reviewed preview SHA, current case version and stable requestId. It invokes the original command transaction directly; it does not reconstruct or edit payment fields. The native source reader determines the original intent, attempt, amount, asset/network, settlement and output observations. A later recovery remains linked to the existing purchase.
+
+The returned value contains version, recordId (the deployment), sourceIds, sourceSha256, selectedJobIds, purchaseIds, totalSourceJobs, unselectedJobIds and unchanged. The whole source remains retained even for jobs left unselected; only selected native purchase records contribute to case metrics. An identical source association can return unchanged. Read the actual returned version and the current case.
+
+A definite version/preview/source-identity conflict requires a fresh review. After an interrupted receive response, preserve and resubmit the identical original requestId, filename, byte sequence and payload; the original transaction returns its committed result before applying a later case-version check. The client makes no automatic write retry.
+
+Download each sourceId through `download('source', ...)` and export the complete case with `download('case', ...)`. The normal case import retains exact buyer JSON and native HTML, job-to-purchase links, source metadata and original history alongside Completion, Support, forecasts and portfolios. Reopen the returned received case ID; do not assume an import replaces another operating case.
+
+## Completion assignments, payment clocks and prepared forms
+
+The completion client uses the same operating case and original work packages as the browser’s Completion tab. The award’s day 30/90/150 delivery schedule remains alongside the form deadline: each received T0, T1 or T2 grant payment starts the next tranche’s 90-calendar-day completion clock. A T3 payment remains the final receipt. The original service handles calendar arithmetic, payment corrections, recorded confirmations and the case’s OPERATIONS or WALKTHROUGH mode.
+
+| Method | Original operation |
+| --- | --- |
+| read('completion', {caseId, asOfDate?}) | Complete payment clocks, original and confirmed deadlines, assignments and currently recorded issuer outcomes. |
+| completionSeed(caseId, expectedVersion, tranche) | All original tranche packages and their saved or seeded assignment input. |
+| completionSave(caseId, body) | Save the complete input in the native completion plan. |
+| completionPreview(caseId, expectedVersion, {receiptId, asOfDate?, summary}) | Preview the completed deliverables and their original payment-based form. |
+| completionPrepare(caseId, body) | Freeze the reviewed preparation and its entire original business snapshot. |
+| completionExtension(caseId, body) | Retain an issuer-confirmed later deadline on the original payment. |
+| completionSubmit(caseId, body) | Record the actual original form receipt against a frozen preparation. |
+| completionDecision(caseId, body) | Record ACCEPTED, CHANGES_REQUESTED or WITHDRAWN on that original receipt. |
+| download('completion', {caseId, reviewId}) | Complete prepared ZIP: form JSON, readable HTML, deliverables CSV, selected original source bytes and file manifest. |
+
+Every write body includes expectedVersion, requestId and actor; note is an optional case-operation note. The specialized methods pass that envelope through the original command transport and native request journal. They never automatically retry an uncertain write.
+
+completionSave also takes inputs. The seed’s value.inputs includes every original cost ID, accountable contributors, assignment dates, completed result, and linked work, deployment and source IDs. Save the complete object. For a later change in a linked work record’s contributor/cost or a deployment’s tranche/packages, preview identifies the association that needs an updated assignment. The older saved plan and its event remain in the case’s history and complete export.
+
+completionPrepare takes receiptId, asOfDate, summary and expectedPreviewSha256. Keep the exact calendar date and summary used in the preview. Read the current case after the preparation to obtain its new version.
+
+~~~js
+const current = await client.read('case', {caseId});
+const proposed = await client.completionPreview(caseId, current.value.program.version, {
+  receiptId, asOfDate, summary
+});
+if (!proposed.value.ready) {
+  // Present the native deliverable issues to the operating user.
+  return proposed.value.issues;
+}
+const prepared = await client.completionPrepare(caseId, {
+  expectedVersion: current.value.program.version,
+  requestId: preparationRequestId, actor,
+  receiptId, asOfDate, summary,
+  expectedPreviewSha256: proposed.value.previewSha256
+});
+const review = await client.read('review', {
+  caseId, reviewId: prepared.value.recordId
+});
+const files = await client.download('completion', {
+  caseId, reviewId: prepared.value.recordId
+});
+~~~
+
+The prepared review’s businessSha256 is the source identity expected by completionSubmit; it is distinct from the downloadable ZIP’s file SHA. The actual SCF form receipt supplies submittedOn and formReference. Record it using reviewId, expectedReviewSha256, optional sourceIds and sourceNote. If the operating case advanced after the form was prepared, the receipt retains that original frozen preparation and reports whether its source is still current.
+
+completionExtension takes receiptId, confirmedOn, deadlineOn, reference, optional sourceIds and confirmationNote. confirmationNote becomes the original extension record’s note; the outer note remains the case-operation note. The service keeps the original 90-day deadline and uses the retained confirmation only on or after confirmedOn. Forecast assumptions and an extension request do not establish an issuer confirmation.
+
+completionDecision takes outcomeId, state, date, sourceNote and optional sourceIds. It updates the recorded issuer outcome while preserving the form identity, prepared source and earlier events. Use a newly prepared form and the actual new form reference for a resubmission.
+
+asOfDate selects which payment, confirmation and submission dates participate in the calendar view. Issuer outcomes display their current recorded state. Complete case export/import retains all completion plans, confirmations, form receipts, source files and complete frozen reviews.

@@ -1,12 +1,12 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "stac-workspace-agent",
-  "description": "Original STAC imagery and Cirrus processing customer client and merchant agent workflow",
+  "description": "Original STAC imagery, Cirrus processing and Prescient customer operations through the maintained client and merchant agent workflow",
   "commands": {
     "stac-workspace": "stellar-forge/mcp-merchant-operator/stac-workspace-cli.mjs"
   },
   "commandDescriptions": {
-    "stac-workspace": "Review, capture, compare, receive and download original imagery and processing workspaces"
+    "stac-workspace": "Review, capture, compare and receive original imagery, processing and Prescient customer workspaces"
   },
   "exports": {
     "./buyer/stac/workspace-client": {
@@ -26,6 +26,12 @@
     "stellar-forge/mcp-merchant-operator/STAC.md",
     "stellar-forge/mcp-merchant-operator/stac-workspace-client.d.mts",
     "stellar-forge/mcp-merchant-operator/stac-workspace-cli.d.mts",
-    "stellar-forge/mcp-merchant-operator/stac-workspace.d.mts"
+    "stellar-forge/mcp-merchant-operator/stac-workspace.d.mts",
+    "stellar-forge/mcp-merchant-operator/PRESCIENT.md",
+    "stellar-forge/mcp-merchant-operator/stac-prescient-contract.mjs",
+    "stellar-forge/mcp-merchant-operator/STAC_RECEIVING.md",
+    "stellar-forge/mcp-merchant-operator/examples/stac-client-retained-receiving.mjs",
+    "stellar-forge/mcp-merchant-operator/PRESCIENT_CONTINUATION.md",
+    "stellar-forge/mcp-merchant-operator/examples/prescient-client-retained-operation.mjs"
   ]
 }

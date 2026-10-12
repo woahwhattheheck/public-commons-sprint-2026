@@ -471,6 +471,7 @@ export function mountOpenWaters({ api, notice, refresh }) {
 
   $('ow-plan-id').value = name(); applyForm(); renderStatus();
   return {
+    open(record) { acceptPlan(record); },
     update(next) {
       workspace = next;
       const review = $('ow-review').value;

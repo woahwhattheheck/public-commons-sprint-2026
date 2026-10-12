@@ -26,11 +26,47 @@ const query = { ...selected, productId: id, input: { type: 'object',
 const views = ['status', 'requests', 'request', 'candidates', 'decisions', 'packages', 'package',
   'deliveries', 'delivery', 'release-diff'];
 
-const fileSelection = { ...selected, kind: { type: 'string', enum: ['capture', 'delivery', 'package'] },
+const fileSelection = { ...selected, kind: { type: 'string', enum: ['capture', 'delivery', 'package', 'batch-delivery'] },
   id, file: { type: 'string', minLength: 1, maxLength: 240 } };
+
+const batchId={type:'string',pattern:'^csv-[a-f0-9]{20}$'};
+const batchSelection={...selected,batchId};
+const batchPage={offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:100}};
+const ordinal={type:'integer',minimum:1,maximum:10000};
+const batchQuery={...selected,source:alias,productId:id,mapping:{type:'object'},
+  label:{type:'string',minLength:1,maxLength:120},reuseRequestIds:{type:'array',maxItems:100,uniqueItems:true,items:id},
+  supersedesBatchId:{...batchId,type:['string','null']}};
+const batchRow={...batchSelection,ordinal,expectedRequestId:id};
+const batchViews=['batches','rows','row','deliveries','delivery','delivery-row'];
 
 function opencageWorkspaceTools(tool) {
   return [
+    tool('merchant_opencage_batch_source','Inspect the exact bytes of a host-declared CSV source alias before choosing its original columns. Returns header names, row count, first 20 source rows and source SHA256; sends no provider request.',{
+      ...selected,source:alias,
+    },['workspace','source'],read),
+    tool('merchant_opencage_batch_review','Review a complete CSV column mapping against the original geocoding product and current source/terms. Retains every input row, reports invalid input and unique query count, and binds explicitly selected original successful captures for reuse. Source aliases pin complete CSV bytes at host configuration load.',batchQuery,['workspace','source','productId','mapping'],read),
+    tool('merchant_opencage_batch_prepare','Save the same reviewed CSV bytes, mapping, normalized per-row queries and source/terms binding into the original workspace. Each row gets its own stable capture and candidate decision. Reuse the same source and expectedReviewSha256 after an interrupted reply.',{
+      ...batchQuery,expectedReviewSha256:sha,
+    },['workspace','source','productId','mapping','expectedReviewSha256'],{idempotent:true}),
+    tool('merchant_opencage_batch_inspect','Inspect original retained batches, paged progress rows, one row with original candidates, joined deliveries or a retained customer row. rows/row select batchId; row/delivery-row select ordinal; delivery/delivery-row select exportId. Collections use offset/limit; a rows page carries the current progress revision. Each source row keeps its one-based ordinal.',{
+      ...selected,view:{type:'string',enum:batchViews},batchId,exportId:id,ordinal,...batchPage,
+      status:{type:'string',enum:['READY','INVALID','CANDIDATES','NO_RESULTS','EXCEPTION','NEEDS_RECONCILIATION','SELECTED']},
+    },['workspace','view'],read),
+    tool('merchant_opencage_batch_run','Start or stop the original paced CSV loop, or reconcile its derived index from the original immutable intake, actual request/capture bundles and reviewed retry receipts. start/stop require the original runId; reconcile takes batchId only. Completed same-ID captures are reused. Quota, rate, credentials and uncertain dispatch remain distinct outcomes.',{
+      ...batchSelection,action:{type:'string',enum:['start','stop','reconcile']},runId:id,
+    },['workspace','batchId','action'],{openWorld:true}),
+    tool('merchant_opencage_batch_select','Save one source row’s independent original candidate decision against its current request ID, native response hash and decision revision. null clears a choice. A repeated query in another row retains a separate decision.',{
+      ...batchRow,responseSha256:sha,expectedRevision:{type:'integer',minimum:0,maximum:999},
+      index:{type:['integer','null'],minimum:0,maximum:99},note:{type:'string',maxLength:2000},
+    },['workspace','batchId','ordinal','expectedRequestId','responseSha256','expectedRevision','index'],{destructive:true}),
+    tool('merchant_opencage_batch_retry','Prepare a separately reviewed new attempt for an exception row while retaining the original request/result. Require its current request ID, response hash or null, and a reason. An uncertain dispatch additionally requires acknowledgeUncertain:true; inspect/import its actual result whenever available. This operation does not dispatch the retry.',{
+      ...batchRow,expectedResponseSha256:{...sha,type:['string','null']},reason:{type:'string',minLength:1,maxLength:500},
+      acknowledgeUncertain:{type:'boolean'},
+    },['workspace','batchId','ordinal','expectedRequestId','expectedResponseSha256','reason'],{destructive:true}),
+    tool('merchant_opencage_batch_export','Freeze all current row capture/decision identities under the original workspace owner and publish a complete joined customer delivery. Requires the reviewed batch progress revision and a stopped batch. results.csv preserves every source row; exceptions.csv keeps invalid/unrun/empty/error/unselected rows; GeoJSON contains explicit selections. Original capture objects and licenses remain exact and deduplicated.',{
+      ...batchSelection,expectedRevision:{type:'integer',minimum:0},
+      maxBytes:{type:'integer',minimum:1048576,maximum:536870912},
+    },['workspace','batchId','expectedRevision'],{idempotent:true}),
     tool('merchant_opencage_workspaces', 'List host-declared OpenCage workspaces and source aliases, process-owned operator/customer browsers and retained file reads. Opens no provider connection.', {}, [], read),
     tool('merchant_opencage_open', 'Open the original saved GeocodeWorkspace and its industrial browser on one process-owned instance. A new workspace uses the host-selected plan and terms. Saved captures, candidate decisions and merchant generations remain original.', selected, ['workspace'], { idempotent: true }),
     tool('merchant_opencage_close', 'Drain the exact owned operator, customer browsers, active original requests and file reads. Retain the workspace identity and reopen the same host alias after close.', {
@@ -66,10 +102,11 @@ function opencageWorkspaceTools(tool) {
       expectedGeneration: { type: 'integer', minimum: 0 },
       reason: { type: 'string', minLength: 1, maxLength: 240 },
     }, ['workspace', 'action'], { destructive: true, openWorld: true }),
-    tool('merchant_opencage_customer', 'Open the original read-only customer browser for a retained export, or close that exact process-owned customer instance. open needs exportId; close also needs its instanceId. The customer browser and complete file reads use the original exported bytes.', {
+    tool('merchant_opencage_customer', 'Open the original read-only customer browser for a retained export (kind delivery by default, or batch-delivery), or close that exact process-owned customer instance. open needs exportId; close also needs its instanceId. The customer browser and complete file reads use the original exported bytes.', {
       ...selected, action: { type: 'string', enum: ['open', 'close'] }, exportId: id, instanceId: uuid,
+      kind:{type:'string',enum:['delivery','batch-delivery']},
     }, ['workspace', 'action', 'exportId'], { idempotent: true }),
-    tool('merchant_opencage_file_read', 'Receive an exact original capture, merchant-package or delivery file, including manifest.json, in resumable SHA256-pinned base64 chunks. Continue with the same selection/readId/expectedSha256 and nextOffset; after expiry or restart omit readId and resume the original selection/hash/offset.', {
+    tool('merchant_opencage_file_read', 'Receive an exact original capture, merchant-package, delivery or batch-delivery file, including manifest.json, in resumable SHA256-pinned base64 chunks. Continue with the same selection/readId/expectedSha256 and nextOffset; after expiry or restart omit readId and resume the original selection/hash/offset.', {
       ...fileSelection, readId: uuid, expectedSha256: sha, offset: { type: 'integer', minimum: 0 },
       limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES },
     }, ['workspace', 'kind', 'id', 'file'], read),

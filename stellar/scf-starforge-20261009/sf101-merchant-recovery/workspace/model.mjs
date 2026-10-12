@@ -158,7 +158,7 @@ function compileHost(value) {
 function publicError(error) {
   const result = { code: String(error.code ?? 'RECOVERY_WORKSPACE_FAILED').slice(0, 100),
     message: String(error.message ?? 'Recovery operation failed').slice(0, 500) };
-  for (const key of ['status', 'providerCode', 'requestId', 'putRequestId', 'retryAfter', 'retryable', 'mayHaveCommitted'])
+  for (const key of ['status', 'providerCode', 'originalCode', 'requestId', 'putRequestId', 'retryAfter', 'retryable', 'mayHaveCommitted', 'reconciliationCode', 'reconciliationStatus'])
     if (['string', 'number', 'boolean'].includes(typeof error[key])) result[key] = error[key];
   return result;
 }
@@ -175,6 +175,18 @@ export async function readRecoveryConfiguration(configFile) {
   absolute(configFile, 'Host configuration');
   const bytes = await privateBytes(configFile);
   return { configFile, sha256: hash(bytes), host: compileHost(JSON.parse(bytes.toString('utf8'))) };
+}
+
+// Native attachment identity: read the existing state without acquiring its writer.
+export async function readRecoveryWorkspaceIdentity({ configFile, directory } = {}) {
+  await privateDirectory(directory);
+  const { sha256 } = await readRecoveryConfiguration(configFile);
+  const state = await privateJSON(join(directory, 'workspace.json'));
+  need(state.schema === STATE_SCHEMA && state.configFile === configFile &&
+    /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(state.id ?? ''),
+    'WORKSPACE_IDENTITY_CHANGED', 'Select this existing workspace and its original host configuration');
+  return { schema: 'stellar-forge.recovery-workspace-identity.v1', workspaceId: state.id,
+    directory, configFile, configurationSha256: sha256 };
 }
 
 export async function openRecoveryWorkspace({ configFile, directory, readOnly = false } = {}) {
@@ -578,6 +590,12 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       operation: original, ...(local ? { local } : {}),
       error: error ?? request.error ?? null };
   }
+  async function request(profileId, id) {
+    selectedProfile(profileId); identifier(id, 'operation ID');
+    const retained = await readRequest(profileId, id);
+    need(retained, 'WORKSPACE_REQUEST_NOT_FOUND', 'No workspace request exists for this profile and operation ID', 404);
+    return requestView(retained);
+  }
   async function requests({ cursor, limit = 50 } = {}) {
     if (!await exists(requestRoot)) return { requests: [], nextCursor: null };
     const entries = (await readdir(requestRoot)).filter(name => /^[a-f0-9]{64}\.json$/.test(name));
@@ -734,7 +752,13 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     await active?.promise;
     closed = true; await lease?.release();
   }
-  return { state, localBundles, operations, operation, inventory, requests, review: selection,
+  async function identity() {
+    need(!closed, 'WORKSPACE_CLOSED', 'The recovery workspace is closed', 409);
+    await currentHost();
+    return { schema: 'stellar-forge.recovery-workspace-identity.v1', workspaceId: workspaceState.id,
+      directory, configFile, configurationSha256: configHash };
+  }
+  return { state, identity, localBundles, operations, operation, inventory, requests, request, review: selection,
     start: input => transition(() => start(input)),
     resume: (profileId, id) => transition(() => resume(profileId, id)),
     cancel: (profileId, id) => transition(() => cancel(profileId, id)), close };

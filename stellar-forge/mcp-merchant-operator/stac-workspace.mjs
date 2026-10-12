@@ -1,6 +1,7 @@
 // MIT. Complete agent workflow on the ORIGINAL STAC imagery/processing host.
 import { basename } from 'node:path';
 import { RetainedFileReads } from './retained-file-reads.mjs';
+import { STAC_PRESCIENT_ACTIONS } from './stac-prescient-contract.mjs';
 import { StacWorkspaceClient, StacWorkspaceError, STAC_WORKSPACE_CONNECTION_SCHEMA,
   readStacWorkspaceConfiguration, readStacHostFile, canonicalStacJSON, nativeStacItemId, stacDigest } from './stac-workspace-client.mjs';
 
@@ -84,7 +85,9 @@ export class MerchantStacWorkspaces {
     const entry = this.#entry(alias);
     return { workspace: alias, inputs: Object.entries(entry.inputs ?? {}).map(([input, value]) =>
       ({ input, kind: value.kind, label: value.label, ...(value.sha256 ? { configuredSha256: value.sha256 } : {}) })),
-      processingProfiles: Object.entries(entry.processingProfiles ?? {}).map(([profile, value]) => ({ profile, label: value.label, sourceInput: value.sourceInput })) };
+      processingProfiles: Object.entries(entry.processingProfiles ?? {}).map(([profile, value]) => ({ profile, label: value.label, sourceInput: value.sourceInput })),
+      prescientDeliveries: Object.entries(entry.prescientDeliveries ?? {}).map(([delivery, value]) =>
+        ({ delivery, label: value.label, ...(value.manifestSha256 ? { configuredManifestSha256: value.manifestSha256 } : {}) })) };
   }
   async #input(alias, name, expectedSha256) {
     const value = this.#entry(alias).inputs?.[name];
@@ -100,6 +103,31 @@ export class MerchantStacWorkspaces {
       fail('STAC_WORKSPACE_REVISION_CHANGED', 'The original workspace revision changed. Start paging from the current revision.', { revision: result.workspace.revision });
     return result;
   }
+  async #prescientState(alias, expectedRevision) {
+    const value = await this.#client(alias).prescientState();
+    if (expectedRevision !== undefined && value.configuration.revision !== expectedRevision)
+      fail('PRESCIENT_CONFIGURATION_REVISION_CHANGED', 'The original configuration changed. Start paging from its current configuration revision.',
+        { revision: value.configuration.revision });
+    return value;
+  }
+  async #prescientAction(alias, args) {
+    const definition = STAC_PRESCIENT_ACTIONS[args.name];
+    const input = args.input;
+    if (!definition || !plain(input) || Object.keys(input).some(key => key === 'directory' || !definition.fields.includes(key)))
+      fail('STAC_MCP_INPUT_INVALID', 'Supply only this native action’s input fields. Directories are selected through a host delivery alias.');
+    let selected = { ...input };
+    if (definition.delivery) {
+      const delivery = this.#entry(alias).prescientDeliveries?.[args.delivery];
+      if (!args.delivery || !delivery) fail('STAC_MCP_DELIVERY_NOT_FOUND', 'Choose one original host-configured Prescient delivery alias.');
+      if (args.name === 'delivery-open' && delivery.manifestSha256 && delivery.manifestSha256 !== input.manifestSha256)
+        fail('STAC_MCP_DELIVERY_CHANGED', 'The requested receiving manifest differs from the host-configured manifest SHA256.');
+      selected.directory = delivery.directory;
+    } else if (args.delivery !== undefined) {
+      fail('STAC_MCP_INPUT_INVALID', 'A delivery alias applies only to delivery-review or delivery-open.');
+    }
+    return this.#client(alias).prescientAction(args.name, { ...selected,
+      actor: args.actor, operationId: args.operationId, expectedRevision: args.expectedRevision });
+  }
   async #operation(alias, operationId) {
     const client = this.#client(alias), state = await client.state(); let recentJob = null;
     try { recentJob = await client.job(operationId); } catch (error) { if (error.code !== 'JOB_NOT_FOUND') throw error; }
@@ -109,8 +137,13 @@ export class MerchantStacWorkspaces {
       const matches = Object.entries(view.operations ?? {}).filter(([key]) => key === operationId || key.endsWith(':' + operationId));
       processing = Object.fromEntries(matches);
     }
+    let prescient = null;
+    if (state.capabilities?.prescient?.enabled) {
+      const view = await client.prescientState();
+      prescient = { revision: view.configuration.revision, operation: view.configuration.operations?.[operationId] ?? null };
+    }
     return { workspaceId: state.workspace.id, operationId, revision: state.workspace.revision,
-      operation: state.workspace.operations?.[operationId] ?? null, recentJob, processing,
+      operation: state.workspace.operations?.[operationId] ?? null, recentJob, processing, prescient,
       recentJobRetention: 'ORIGINAL_SERVER_MEMORY; durable workspace records remain authoritative after restart' };
   }
   async #call(name, args) {
@@ -211,6 +244,27 @@ export class MerchantStacWorkspaces {
         fail('STAC_MCP_HOST_INPUT_REQUIRED', 'Use the host-profile configure or complete input_import tool for this native action.');
       return client.processingAction(args.name, { input: args.input, operationId: args.operationId });
     }
+    if (name === 'merchant_stac_prescient_status') {
+      const view = await this.#prescientState(alias);
+      return { workspaceId: view.workspaceId, configuration: summarize(view.configuration),
+        selectedProfileSha256: view.selectedProfileSha256, selectedProfile: view.selectedProfile,
+        bindingChoices: view.bindingChoices, connection: view.connection, receivingProgress: view.receivingProgress,
+        sdk: view.sdk, actions: Object.keys(STAC_PRESCIENT_ACTIONS), ...this.#inputs(alias) };
+    }
+    if (name === 'merchant_stac_prescient_records' || name === 'merchant_stac_prescient_record') {
+      if (name.endsWith('_records') && (args.offset ?? 0) > 0 && args.expectedRevision === undefined)
+        fail('STAC_MCP_REVISION_REQUIRED', 'Continue Prescient records with the configuration revision returned by the first page.');
+      const view = await this.#prescientState(alias, args.expectedRevision), native = view.configuration;
+      const values = args.kind === 'operations' ? Object.entries(native.operations ?? {}).map(([operationId, value]) =>
+        ({ ...value, operationId })) : native[args.kind];
+      if (name.endsWith('_records'))
+        return { workspaceId: view.workspaceId, revision: native.revision, kind: args.kind, ...slice(values, args) };
+      const record = values?.find(value => (value.id ?? value.operationId) === args.id);
+      if (!record) fail('STAC_MCP_RECORD_NOT_FOUND', 'This record is not in the original Prescient configuration.');
+      return { workspaceId: view.workspaceId, revision: native.revision, kind: args.kind, record };
+    }
+    if (name === 'merchant_stac_prescient_profile') return client.prescientProfile(args.profileSha256);
+    if (name === 'merchant_stac_prescient_action') return this.#prescientAction(alias, args);
     if (name === 'merchant_stac_file_read') {
       const selection = Object.fromEntries(Object.keys(fileSelection).filter(k => args[k] !== undefined).map(k => [k, args[k]]));
       const key = canonicalStacJSON(selection);

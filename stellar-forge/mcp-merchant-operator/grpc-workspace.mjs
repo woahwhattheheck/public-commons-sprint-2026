@@ -1,5 +1,7 @@
 import { grpcWorkspaceTools, read, selection, page, revision, alias, baseRevision, digest, methodName, uuid, generation, reason, instance, ALIAS, SHA, UUID } from './catalog/grpc-workspace.mjs';
 export { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
+import { executeGrpcUpgrade } from './grpc-upgrades.mjs';
+import { GRPC_UPGRADE_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/upgrade-receiving.mjs';
 // MIT. Agent operation and complete delivery over the original private gRPC workspace.
 import { constants } from 'node:fs';
 import { open, lstat, mkdir, readdir, link, unlink, rm } from 'node:fs/promises';
@@ -254,7 +256,8 @@ export class MerchantGrpcWorkspaces {
   }
   async #retain(workspace, kind, original, sources) {
     const root = await this.#root(), temporary = await privateDirectory(join(root, '.collect-' + randomUUID()));
-    const maximum = sources.some(source => source.path === 'grpc-stream.ndjson') ? GRPC_EXPORT_MAX_BYTES : 64 * 1024 * 1024;
+    const maximum = kind === 'upgrade' ? GRPC_UPGRADE_MAX_BYTES
+      : sources.some(source => source.path === 'grpc-stream.ndjson') ? GRPC_EXPORT_MAX_BYTES : 64 * 1024 * 1024;
     const files = []; let total = 0;
     try {
       for (const source of sources) {
@@ -401,10 +404,16 @@ export class MerchantGrpcWorkspaces {
       return { exportId: args.exportId, manifestSha256: retained.sha256, ...result };
     }
     const workspace = args.workspace, definition = this.#definition(workspace);
+    if (name.startsWith('merchant_grpc_upgrade_')) return executeGrpcUpgrade(name, args, {
+      request: (route, body) => this.#json(definition, route, body), state: () => this.#state(definition),
+      revision: id => this.#revision(definition, id), paged, revisionSummary,
+      bounded: (value, original) => this.#bounded(workspace, value, original),
+      retain: (kind, original, sources) => this.#retain(workspace, kind, original, sources),
+    });
     if (name === 'merchant_grpc_status') {
       const state = await this.#state(definition);
       return { schema: state.schema, workspace, currentRevision: state.currentRevision, generation: state.generation,
-        counts: { revisions: state.revisions.length, prepared: state.prepared.length, intents: state.intents.length, attempts: state.attemptCount, reflections: state.reflections?.length ?? 0 },
+        counts: { revisions: state.revisions.length, prepared: state.prepared.length, intents: state.intents.length, attempts: state.attemptCount, reflections: state.reflections?.length ?? 0, upgrades: state.upgrades?.length ?? 0 },
         runtime: state.runtime };
     }
     if (name === 'merchant_grpc_inventory') {
@@ -483,6 +492,13 @@ export class MerchantGrpcWorkspaces {
     if (name === 'merchant_grpc_checkout') return revisionSummary(await this.#json(definition, '/api/checkout', { revision: args.revision, baseRevision: args.baseRevision }));
     if (name === 'merchant_grpc_method') return this.#bounded(workspace, await this.#json(definition, '/api/method', { revision: args.revision, method: args.method }), { revision: args.revision, topic: 'method-schema' });
     if (name === 'merchant_grpc_review') return this.#bounded(workspace, await this.#json(definition, '/api/review', { revision: args.revision }), { revision: args.revision, topic: 'review' });
+    if (name === 'merchant_grpc_validate_input') {
+      if ((args.input === undefined) === (args.file === undefined)) throw fail('INVALID_PARAMS', 'Choose exactly one complete input object or host request file.');
+      const input = args.file === undefined ? args.input : await this.#hostJson(definition, args.file, 'request');
+      if (!plain(input)) throw fail('INVALID_PARAMS', 'Use the complete native operation object.');
+      return this.#bounded(workspace, await this.#json(definition, '/api/validate-input',
+        { revision: args.revision, method: args.method, input }), { revision: args.revision, topic: 'request-preview' });
+    }
     if (name === 'merchant_grpc_call') {
       if ((args.input === undefined) === (args.file === undefined)) throw fail('INVALID_PARAMS', 'Choose exactly one complete input object or host request file.');
       const input = args.file === undefined ? args.input : await this.#hostJson(definition, args.file, 'request');

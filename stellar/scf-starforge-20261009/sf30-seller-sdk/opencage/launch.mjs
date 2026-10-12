@@ -13,6 +13,7 @@ export const OPENCAGE_APPLICATION_SCHEMA = 'stellar-forge.opencage-application-s
 export const OPENCAGE_SELECTION_SCHEMA = 'stellar-forge.opencage-application-selection.v1';
 export const OPENCAGE_SOURCE_FILES = Object.freeze([
   'launch.mjs', 'cli.mjs', 'config.mjs', 'customer.mjs', 'index.mjs', 'merchant.mjs',
+  'batch.mjs', 'batch-delivery.mjs', 'ui/batch.js',
   'server.mjs', 'source.mjs', 'workspace.mjs', 'ui/app.js', 'ui/index.html', 'ui/style.css',
 ]);
 const SOURCE_SCHEMA = 'stellar-forge.opencage-application-source.v1';

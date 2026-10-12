@@ -2,7 +2,7 @@
 
 This single original receiving operation uses the public Python merchant example, native x402 SDK, original SF82 fleet stores, SF98 destination engine, SF101 fulfillment receiver and merchant accounting workspace.
 
-Run from one selected product source after installing its original production runtime through the maintained merchant distribution. The source root needs the native SDK and merchant MCP dependency profile, including jose. SF98_DELIVERY_NODE_MODULES selects the existing Playwright module directory. Preserve the same output directory on continuation.
+Run from one selected product source after installing its original production runtime through the maintained merchant distribution. The source root uses the original native production profile with the mcp, schema and openapi features: x4022.28.0, Stellar SDK16.3.1, MCP SDK1.32.1, jose6.2.12, re2js2.8.6 and yaml2.9.1. Reuse a matching installed profile. SF98_DELIVERY_NODE_MODULES selects the existing Playwright module directory. Preserve the same output directory on continuation.
 
 ```sh
 SF98_DELIVERY_SOURCE=/absolute/selected/source \
@@ -13,7 +13,7 @@ SF98_DELIVERY_CHROMIUM=/absolute/existing/chromium \
 node experiments/managed-settlement-delivery-acceptance/journey.mjs all
 ```
 
-The selected product is 5ea93bab2847142462087b6785169deaeebee267. The operation ID is SCF-MANAGED-SF98-DELIVERY-E49D-20261012. The driver generates its own private signing and claim values in its output directory.
+The selected merged product is 5b8272877502a2d7831a9bdf58121a5b0fa6b8cb. It retains the complete managed delivery merge05aa019b6c0e79c5812947a779fae0230e48600c, the current source-owned fleet provider and the original customer cleanup retry. The operation ID is SCF-MANAGED-SF98-DELIVERY-E49D-20261012. The driver generates its own private signing and claim values in its output directory.
 
 The fixture follows the original fleet contract with two separately declared Python merchants, four blue/green release stores and eight selected loopback ports. The primary merchant exercises the complete delivery lifecycle; the second merchant retains its own source and verifies that the primary merchant’s events remain isolated. Source relocation covers all three original input packages.
 

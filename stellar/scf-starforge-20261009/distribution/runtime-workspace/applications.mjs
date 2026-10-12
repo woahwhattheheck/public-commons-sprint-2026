@@ -8,7 +8,7 @@ import { managedState, managedHome, openManagedHome, reviewManagedAdoption } fro
 import { applicationRunPage, applicationHistoryLimit } from './application-history.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
 import { defaultApplicationProviders } from './application-providers.mjs';
-import { prepareProviderApplication } from './application-provider.mjs';
+import { prepareProviderApplication, retainedApplicationArguments } from './application-provider.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
   operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now } from './storage.mjs';
 
@@ -275,7 +275,7 @@ export async function applicationBindingOperation(root, id) {
   const saved = await application(root, id), { release } = await selectedRelease(root, saved);
   return release ? null : saved.adoption;
 }
-export async function reviewApplicationStart(root, id) {
+export async function reviewApplicationStart(root, id, { navigationOrigin = null } = {}) {
   const saved = await application(root, id);
   need(!await busyApplication(root, id), 'APPLICATION_RUNNING', 'Reopen the retained application operation', 409);
   const runtime = await inspectMerchantRuntime(saved.runtime.directory, { expectedManifest: saved.runtime.sourceManifestSha256, load: false });
@@ -283,13 +283,14 @@ export async function reviewApplicationStart(root, id) {
   const { home, release } = await selectedRelease(root, saved);
   need(release && (applicationType(saved.kind).python || Object.hasOwn(release.commands, applicationType(saved.kind).command)), 'APPLICATION_CONNECTION_REQUIRED');
   const command = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
-    root, runtimeId: saved.runtimeId,
+    root, runtimeId: saved.runtimeId, navigationOrigin,
   });
   need(command.resourceKey === undefined || command.resourceKey === saved.resourceKey,
     'APPLICATION_STATE_CHANGED', 'Review and save this application with its current private state directory before starting', 409);
   const value = { schema: 'stellar-forge.application-start-review.v1', applicationId: id,
     applicationRevision: saved.revision, runtime: saved.runtime, homeId: home.id, homeRevision: home.revision,
-    releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command };
+    releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command,
+    ...(navigationOrigin !== null ? { navigationOrigin } : {}) };
   const reviewId = hash(value).slice(0, 24);
   try { await saveJSON(reviewPath(root, reviewId), { ...value, id: reviewId, reviewedAt: now() }); }
   catch (error) { if (error.code !== 'EEXIST') throw error; }
@@ -316,14 +317,15 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
           'The original application for this data directory already has a retained operation. Reopen or stop that operation.', 409);
     }
     const current = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
-      root, runtimeId: saved.runtimeId,
+      root, runtimeId: saved.runtimeId, navigationOrigin: reviewed.navigationOrigin ?? null,
     });
     need(hash(current) === hash(reviewed.command), 'APPLICATION_INPUTS_CHANGED', 'Review the original current inputs again', 409);
     const { home, release } = await selectedRelease(root, saved);
     need(home?.revision === reviewed.homeRevision && release?.id === reviewed.releaseId &&
       release?.digest === reviewed.releaseDigest, 'APPLICATION_RELEASE_CHANGED');
     const request = { requestId, operation: 'managed-run', homeId: home.id, releaseId: release.id,
-      expectedRevision: home.revision, applicationId: id, command: current.command, args: current.args,
+      expectedRevision: home.revision, applicationId: id, command: current.command,
+      args: retainedApplicationArguments(providers.forKind(saved.kind), current, requestId),
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
       ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),

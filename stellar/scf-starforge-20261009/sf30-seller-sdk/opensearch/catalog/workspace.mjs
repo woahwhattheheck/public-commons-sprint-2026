@@ -9,6 +9,7 @@ import { normalizeCatalogMapping, compileCatalogMapping, catalogText, catalogIde
   catalogMaterialFields, catalogQuantity } from './mapping.mjs';
 import { exportCatalog, createCatalogQueryDraft } from './exports.mjs';
 import { exportCatalogBundle, importCatalogBundle } from './transfer.mjs';
+import { SupplierWorkspace } from './supplier/workspace.mjs';
 
 export const CATALOG_SCHEMA = 'stellar-forge.material-catalog.v1';
 export const SOURCE_SCHEMA = 'stellar-forge.material-catalog-source.v1';
@@ -102,6 +103,7 @@ export class OpenSearchCatalogWorkspace {
       'CREATE TABLE IF NOT EXISTS catalog_refs(edition_id TEXT NOT NULL,value TEXT NOT NULL,material_key TEXT NOT NULL,kind TEXT NOT NULL,PRIMARY KEY(edition_id,value,material_key,kind));' +
       "CREATE VIRTUAL TABLE IF NOT EXISTS catalog_terms USING fts5(edition_id UNINDEXED,material_key UNINDEXED,terms,tokenize='unicode61 remove_diacritics 2');"
     );
+    this.supplier = new SupplierWorkspace(this);
   }
   open() { if (this.workspace.closed) fail('WORKSPACE_CLOSING', 'Workspace is closing.', 503); }
   async directories() {
@@ -468,4 +470,7 @@ export class OpenSearchCatalogWorkspace {
   }
   importBundle(meta, bytes) { return importCatalogBundle(this, meta, bytes); }
   createDraft(request) { this.open(); return createCatalogQueryDraft(this, request); }
+  supplierSave(request) { return this.supplier.save(request); }
+  supplierCorrection(request) { return this.supplier.saveCorrection(request); }
+  supplierReview(request) { return this.supplier.runReview(request); }
 }

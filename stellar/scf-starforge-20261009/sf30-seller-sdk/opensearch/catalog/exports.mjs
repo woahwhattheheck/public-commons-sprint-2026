@@ -1,5 +1,5 @@
 // MIT. Deterministic catalog handover and queries through the original OpenSearch seller.
-import { WorkspaceError, clone, digest } from '../workspace/store.mjs';
+import { WorkspaceError, clone, digest, identifier } from '../workspace/store.mjs';
 import { validateOpenSearchSource, compileOpenSearchQueries } from '../declaration.mjs';
 
 const fail = (code, message, status = 422) => { throw new WorkspaceError(code, message, status); };
@@ -190,6 +190,19 @@ export function exportCatalog(workspace, catalogId, format, options = {}) {
   fail('CATALOG_EXPORT_FORMAT_INVALID', 'Select a supported catalog, index, delta, query, client, or match export.');
 }
 export function createCatalogQueryDraft(workspace, request) {
+  request = clone(request);
+  identifier(request.requestId, 'request ID');
+  let prior;
+  try { prior = workspace.workspace.store.operation(request.requestId); }
+  catch (error) { if (error.code !== 'WORKSPACE_OPERATION_NOT_FOUND') throw error; }
+  // Keep the exact original catalog selection beside the ordinary draft save.
+  // Reconcile it before reading a current catalog which may have advanced.
+  if (prior?.request?.mcp) {
+    if (prior.kind !== 'save-draft' || prior.request.mcp.kind !== 'catalog-material-draft' ||
+        digest(prior.request.mcp.request) !== digest(request))
+      fail('WORKSPACE_REQUEST_REUSED', 'This request ID already belongs to different saved input.', 409);
+    return workspace.workspace.save(prior.request);
+  }
   if (!Number.isSafeInteger(request.expectedRevision)) fail('CATALOG_REVISION_REQUIRED', 'Select the current saved catalog revision.');
   const catalog = workspace.catalog(request.catalogId, request.expectedRevision);
   if (!catalog.activeEditionId) fail('CATALOG_EDITION_REQUIRED', 'Select a reviewed edition before creating the source query.');
@@ -205,5 +218,6 @@ export function createCatalogQueryDraft(workspace, request) {
       term: 'Customer description or original material/part identifier. Catalog and tenant are fixed by this service.' } }];
   return workspace.workspace.save({ requestId: request.requestId, queryName: 'material_search',
     title: request.title ?? catalog.title + ' — ' + (request.variant === 'baseline' ? 'baseline' : 'identifiers'),
-    query, input: { term: probe }, plan });
+    query, input: { term: probe }, plan,
+    ...(prior ? {} : { mcp: { kind: 'catalog-material-draft', request } }) });
 }

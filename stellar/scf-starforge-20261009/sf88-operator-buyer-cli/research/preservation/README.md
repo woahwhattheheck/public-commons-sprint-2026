@@ -318,3 +318,12 @@ receipts, replay/reopen results and damaged-transfer rejection.
 - [OpenAlex metadata license](https://docs.openalex.org/download-all-data/openalex-snapshot).
 - The adjacent original OAI operator guide documents native query/cursor binding
   and the distinction between metadata and described-resource rights.
+
+## Operate the same reviewed collection in RODA
+
+The [RODA workflow](RODA.md) builds a compatible outer submission package around
+this complete original transfer, preserving its original bytes and source paths.
+It adds the entered submission agreement, a complete record catalog, repository
+upload and ingest operations, original job/report/AIP reconciliation, and whole
+application/workspace export and receiving. Use `roda.py` directly or prefix
+commands with `roda` through this directory's existing Node wrapper.

@@ -300,6 +300,75 @@ On the selected operator store, use `merchant_inspect`,
 `merchant_compare` and the current generation to activate the release;
 explicit original start/restart controls apply it to a running seller.
 
+## Convert saved quotes and deliver the complete price decision
+
+The same repricing preview/save tools accept `quoteValuations` instead of
+`edits`. Each valuation names an original route and ordered payment option,
+its `expectedAmount`, a positive integer string `atomicUnits`, positive
+six-place USD string `usd`, and a 4-300 character `basis`. The saved review
+supplies the service quote. Use a saved review of the selected scenario when
+preparing its commercial quotes.
+
+~~~json
+{
+  "workspace": "dataset",
+  "version": "SAVED_REVIEW_UUID",
+  "sellerSha256": "INSPECTED_SELLER_SHA256",
+  "quoteValuations": [{
+    "routeId": "dataset",
+    "paymentIndex": 0,
+    "expectedAmount": "20000",
+    "atomicUnits": "10000000",
+    "usd": "1",
+    "basis": "Illustrative operator valuation for this saved pricing decision"
+  }]
+}
+~~~
+
+The native helper computes `ceil(quote × atomicUnits / usd)` in exact integer
+micro-USD arithmetic and passes the resulting edits through the original
+seller compiler. `quoteConversion` in the preview contains every selected
+valuation, its saved quote basis, exact proposed USD value, rounding excess and
+atomic-unit value. Values retain reduced numerator/denominator fractions plus
+twelve-place display bounds. The same conversion enters `reviewSha256` and
+the original retained `decision.json`.
+
+Preview and Save each require exactly one of `edits` or `quoteValuations`.
+Save adds the same original price-decision `expectedRevision`, request UUID,
+name and review hash. Equal interrupted retries recover the original decision
+before rechecking later seller/revision changes. The original staged-release
+operation consumes that saved package.
+
+The maintained CLI exposes the complete sequence through its existing MCP
+connection and private input files:
+
+~~~sh
+merchant-mcp pricing price-source --url "$MCP_URL" --workspace dataset --version "$SAVED_REVIEW"
+merchant-mcp pricing price-preview --url "$MCP_URL" --input /private/price-preview.json
+merchant-mcp pricing price-save --url "$MCP_URL" --input /private/price-save.json
+merchant-mcp pricing price-manifest --url "$MCP_URL" --workspace dataset --decision "$DECISION_ID"
+merchant-mcp pricing price-download --url "$MCP_URL" --workspace dataset --decision "$DECISION_ID" \
+  --manifest-sha256 "$MANIFEST_SHA256" --out /private/saved-price-decision
+merchant-mcp pricing price-stage --url "$MCP_URL" --input /private/price-stage.json
+~~~
+
+The `price-download` operation retrieves the complete original manifest and
+every file it names, including nested `source-package/` members. The same
+retained downloader owns its private directory lease, immutable manifest,
+exact file hashes, byte offsets, recovery checkpoints and create-only
+completion. It binds every response to the original workspace, decision,
+manifest digest and file identity. Use the same output directory to recover
+an interruption. Its 64 MiB per-file limit matches the original pricing file
+reader. The downloaded `decision.json` includes the complete conversion.
+
+`pricing-client.mjs` exports `downloadMerchantPriceDecision` and
+`inspectMerchantPriceDecision` with `{workspace,decision,...connection}` and
+the existing retained download options. `callMerchantPricing` exposes
+`price-source`, `price-preview`, `price-save`, `price-stage` and
+`price-manifest` alongside the original scenario and cost commands.
+The browser path and full valuation rules are documented in
+[Merchant pricing](../../stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/WORKSPACE.md#prepare-atomic-prices-from-saved-usd-quotes).
+
 ## Retained files and interrupted operations
 
 Pricing reviews, commercial plans and exact-price saves recover equal retries by

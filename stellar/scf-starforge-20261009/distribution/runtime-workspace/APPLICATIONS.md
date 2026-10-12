@@ -34,11 +34,12 @@ Imagery receiving: [STAC, eoAPI and Prescient setup, agent connection, Stop and 
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | gRPC merchant authoring | grpc-workspace | Captured protobuf source, exact typed requests and terms, saved merchant editions, retained release controls and customer files |
 | Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
-| Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
+| Redis and Valkey merchant authoring | redis workspace setup / open | Source onboarding, saved topology and products, live previews, customer packages and original release controls |
 | MPP merchant and customer | mpp serve | Saved merchant/customer profiles, original offers, purchases, packages, governor terminal and retained response receiving |
 | Stellar agent application | stellar-application serve | Original HTTP and governed MCP requests, current subject authorization, retained results and aggregate spending |
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
+| USGS water and native DSS | usgs-water managed | Original source selection, scientific review, saved editions, native HEC-DSS mapping and complete project receiving |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
@@ -472,27 +473,13 @@ Choose **Event-feed buyer** to reopen an initialized original SF88 subscription.
 
 ## Redis and Valkey merchant authoring
 
-Choose **Redis and Valkey merchant authoring** and select an initialized private Redis workspace. A selected installation must contain the original Redis authoring CLI, model and binding inspector. Native TCP previews use that runtime's optional Redis feature; Upstash HTTPS uses the original HTTPS source. Source editing and reopening use the retained local workspace.
+Choose **Redis and Valkey merchant authoring** and select its original private workspace, or enable **Set up a new workspace** for a new directory in an existing private parent. New setup uses the original browser for standalone Redis/Valkey, Cluster, Sentinel or Upstash connections, products, merchant terms and public CA bundles. After creation, the same application reopens that saved workspace.
 
-Create the workspace once through its original command:
+Review retains the immutable source identity, topology, required environment names and data/monitor CA fingerprints. Saved product revisions remain editable, and offline opening and source review work with live credentials unavailable. The original preview and release controls resolve those host credentials when needed.
 
-    starforge-merchant redis workspace create \
-      --directory /private/inventory-workspace \
-      --source /private/inventory-source.json \
-      --plan /private/inventory-merchant-plan.json \
-      --label "Inventory data"
+The managed operation owns the original setup and authoring servers. Its Open URL comes from their matching structured startup; Stop releases the same workspace. Continue after interrupted creation reuses the retained setup operation and input identity, while a fresh reviewed start opens the original workspace with its immutable binding.
 
-Select that directory in Applications and optionally select the original private environment JSON. The imported source retains its password or Upstash-token environment reference names and selected database CA. Application configuration, start reviews and managed operation records retain those references and file identities; values pass only through the original child's environment.
-
-**Review configuration** reads the workspace's original SQLite metadata in read-only mode. It does not acquire its writer, recover a pending operation or open Redis. The binding retains the immutable workspace ID and a SHA-256 of the original source profile, including transport, connection references, pool settings and database CA identity. Product edits and merchant terms stay on their normal saved revisions.
-
-**Save configuration**, **Review start** and **Start reviewed application** use the existing Applications lifecycle. The original command receives the reviewed workspace ID and profile SHA-256. It checks both after taking its original writer lease and before recovering operations or opening its HTTP server. Changing the connection profile or replacing the directory requires a new review.
-
-The original startup record contains schema stellar-forge.redis-workspace-startup.v1, status REDIS_WORKSPACE_READY, the matching workspace ID, source-profile digest, saved head and canonical directory. Applications accepts its operatorUrl only for those same reviewed arguments and the requested loopback port. The private capability URL stays with its original managed run.
-
-**Open application** exposes the original product editor, full merchant terms, source review, saved revisions, real database preview and native next-page inputs. Prepare customer OpenAPI/client files from a saved revision, stage the prepared package, then open the original release controls for seller start, stop, upgrade, rollback and customer handoff.
-
-**Stop application** closes that original authoring server and its owned release console. After it has stopped, a new reviewed start reopens the same workspace ID, saved revisions, requests, customer packages and release store with a fresh private URL. The Redis workspace's own Continue action resumes an original interrupted request; launching Applications preserves its normal recovery semantics.
+The [complete Redis Applications guide](REDIS_APPLICATIONS.md) covers settings, full source creation, private environment configuration, customer packages, release operation and Stop/Continue/reopen. The [connection setup guide](../../sf30-seller-sdk/redis/workspace/SETUP.md) provides the original source and merchant draft format.
 
 ## API merchant connections and managed reopening
 
@@ -663,6 +650,11 @@ Choose **Databento migration** with the initialized or received workbench direct
 
 Complete historical source editions, inspect field mappings, perform the named review, preserve results and export the customer handover from the original workbench. Stop closes its native server and model; reopen retains the same work and history. The complete [Databento Applications guide](DATABENTO_APPLICATIONS.md) covers initial setup or receiving, source/runtime selection, original producer and review actions, customer export, Stop and recovery.
 
+
+## WooCommerce merchant
+
+**WooCommerce merchant** starts the original SF104 native seller and the original SF98 notice worker together over the selected merchant configuration and same private outbox. Review retains the actual store, notice endpoint, source/configuration identities and named secret environment binding. First start binds the outbox to its original store under the existing exclusive delivery lease; subsequent launches reuse that binding and journal. Open uses the original Operations dashboard, and the WordPress order-console link keeps order, frozen-term, release and refund work in the actual configured store. Stop drains the original seller before awaiting delivery termination; a delivery failure also drains the seller. See the [complete managed Woo operating guide](../../sf104-woocommerce-merchant-bridge/MANAGED.md) for setup, original CLI, same-request recovery and same-outbox receiving. The installed command is `woo-managed`; no independent process manager or payment engine is added.
+
 ## World Bank economic data
 
 Choose **World Bank economic data** with the original private merchant configuration and a declared World Bank workspace alias. Review and Save retain both connection files, the workspace directory and the installed launcher. Start opens one original merchant MCP host and its World Bank model; the same model serves the authenticated browser. Open checks the running model and browser identities against the saved request and original configuration binding.
@@ -676,3 +668,11 @@ Use the browser or agent to capture complete indicator pages, compare editions, 
 The agent host attaches to that same original listener through its private launch file. Explicit operator, process, project and workspace scope prevents a stale agent request from following a browser project switch. Stop releases the original writer; Start reopens the saved project with a fresh process instance.
 
 See [the complete DSpace Applications guide](APPLICATION_DSPACE.md) for setup, source selection, agent attachment, full-project receiving and saved-workspace reopening.
+
+## USGS Water and native DSS
+
+Choose **USGS water and native DSS** to review and save the original project, optional buyer and official HEC-DSS interpreter. Start opens the original Water workspace; Open uses its verified local listener, and Stop drains its original source/edition/native work before releasing the project. A received project can reopen its existing source edition and DSS export without a saved project selection or another native write. Changes to a saved selection or other reviewed inputs require reviewing the current application before the next Start. The existing managed-home adoption, operation history and restart behavior apply. See [the complete Water Applications guide](../../sf30-seller-sdk/usgs-water/MANAGED.md) for setup, received-project operation, command-line use and recovery.
+
+## Find applications and keep unfinished setup
+
+The saved library supports search, runtime and status filters, pagination, and a selected application that stays attached to its original history and output. The complete live tool catalog is searchable by purpose, command and setup fields. Setup drafts retain raw fields per workspace, application and tool in the current tab, survive refresh and view changes, and make saved-revision conflicts explicit. A save or recovered response clears only the exact reviewed draft; later changes remain available. See [the Applications library and setup guide](APPLICATION_LIBRARY.md) for the complete workflow.

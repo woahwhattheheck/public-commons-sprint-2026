@@ -404,13 +404,26 @@ export class MerchantGrantWorkspaces {
     const rest = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'workspace'));
     const reads = {plans:'plans', plan:'plan', plan_history:'plan-history', cases:'cases', case:'case',
       case_report:'case-report', case_history:'case-history', forecasts:'forecasts', forecast:'forecast',
-      portfolios:'portfolios', portfolio:'portfolio', review:'review'};
+      portfolios:'portfolios', portfolio:'portfolio', review:'review', completion:'completion'};
     let original;
     if (Object.hasOwn(reads, verb)) original = await client.read(reads[verb], rest);
     else if (['plan_estimate','plan_save','plan_restore','plan_clone'].includes(verb)) {
       const {planId, ...body} = rest; original = await client.plan(verb.slice(5), planId, body);
     } else if (verb === 'case_create') original = await client.createCase(rest);
     else if (verb === 'case_command') { const {caseId, ...body} = rest; original = await client.command(caseId, body); }
+    else if (verb === 'completion_seed') original=await client.completionSeed(args.caseId,args.expectedVersion,args.tranche);
+    else if (verb === 'completion_preview') {
+      const {caseId,expectedVersion,...inputs}=rest;
+      original=await client.completionPreview(caseId,expectedVersion,inputs);
+    } else if (verb === 'completion_save') {
+      const {caseId,input,inputPointer,expectedInputSha256,...body}=rest;
+      original=await client.completionSave(caseId,{...body,inputs:await this.#modelInputs(alias,args,'Completion')});
+    } else if (['completion_prepare','completion_extension','completion_submit','completion_decision'].includes(verb)) {
+      const {caseId,...body}=rest;
+      const method={completion_prepare:'completionPrepare',completion_extension:'completionExtension',
+        completion_submit:'completionSubmit',completion_decision:'completionDecision'}[verb];
+      original=await client[method](caseId,body);
+    }
     else if (verb === 'forecast_preview') original = await client.forecastPreview(args.caseId, args.expectedVersion,
       await this.#modelInputs(alias, args, 'Forecast'));
     else if (verb === 'forecast_save') {
@@ -425,13 +438,18 @@ export class MerchantGrantWorkspaces {
     } else if (verb === 'portfolio_selection') original = await client.portfolioSelection(args.caseId, args.expectedVersion,
       args.portfolioId, args.alternativeId);
     else if (verb === 'export') original = await client.download(args.kind, rest);
-    else if (['plan_import','case_import','source_attach','intake','support_preview','support_receive'].includes(verb)) {
+    else if (['plan_import','case_import','source_attach','intake','support_preview','support_receive','buyer_preview','buyer_receive'].includes(verb)) {
       const {input, expectedInputSha256, ...body} = rest, selected = await this.#input(alias, input, expectedInputSha256);
       if (verb === 'support_preview') {
         original = await client.supportPreview(body.caseId, body.expectedVersion, selected.bytes, body.filename);
       } else if (verb === 'support_receive') {
         const {caseId, ...fields} = body;
         original = await client.supportReceive(caseId, selected.bytes, fields);
+      } else if (verb === 'buyer_preview') {
+        original = await client.buyerPreview(body.caseId, body.expectedVersion, selected.bytes, body.filename);
+      } else if (verb === 'buyer_receive') {
+        const {caseId, ...fields} = body;
+        original = await client.buyerReceive(caseId, selected.bytes, fields);
       } else if (verb === 'plan_import') {
         const {kind, ...fields} = body;
         if (kind === 'plan') need(!['note','planning','filename'].some(key => Object.hasOwn(fields,key)),
@@ -447,7 +465,8 @@ export class MerchantGrantWorkspaces {
     return this.#snapshot(alias, original, {tool:name, ...Object.fromEntries(Object.entries(rest).filter(([key]) =>
       ['planId','caseId','forecastId','portfolioId','alternativeId','sourceId','reviewId','revision','after','limit','kind',
         'requestId','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256',
-        'filename','expectedPreviewSha256','deploymentId'].includes(key)))});
+        'filename','expectedPreviewSha256','deploymentId','tranche','asOfDate','receiptId',
+        'expectedReviewSha256','confirmedOn','deadlineOn','submittedOn','formReference','outcomeId','state','date'].includes(key)))});
   }
   async call(name, args = {}) {
     need(!this.#closing, 'GRANT_CLOSING', 'The original grant client is closing.');

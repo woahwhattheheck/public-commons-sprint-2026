@@ -20,9 +20,17 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('operations port must be 0–65535');
   if (!Number.isInteger(historyCheckpointMs) || historyCheckpointMs < 1000 || historyCheckpointMs > 60000)
     throw new RangeError('history checkpoint interval must be 1000–60000 ms');
-  if (navigationOrigin !== null && (typeof navigationOrigin !== 'string' ||
-      !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(navigationOrigin) ||
-      Number(new URL(navigationOrigin).port)>65535)) throw new TypeError('navigationOrigin must be an explicit loopback workspace origin');
+  if (navigationOrigin !== null) {
+    let origin;
+    try {
+      if (typeof navigationOrigin === 'string' &&
+          /^http:\/\/127\.0\.0\.1(?::[1-9]\d{0,4})?$/.test(navigationOrigin)) origin = new URL(navigationOrigin);
+    } catch {}
+    if (!origin || Number(origin.port || 80) > 65535)
+      throw new TypeError('navigationOrigin must be a loopback HTTP origin');
+    // Browsers omit the default port from both Origin and Referer origins.
+    navigationOrigin = origin.origin;
+  }
   const merchantDesk = createMerchantOperationDesk(session.operationControl,{enabled:operationControls});
   const availabilityDesk = createAvailabilityDesk(session.availability);
   if(deliveryWorkspaceDirectory!==null && (!deliveryOutbox || deliveryRecovery!==null))
@@ -256,10 +264,11 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       server.once('error', onError); server.once('listening', onListen); server.listen(port, HOST);
     });
     const assigned = server.address().port;
-    allowedHosts = new Set([`${HOST}:${assigned}`, `localhost:${assigned}`]);
-    allowedOrigins = new Set([...allowedHosts].map(host => `http://${host}`));
+    allowedHosts = new Set([`${HOST}:${assigned}`, `localhost:${assigned}`,
+      ...(assigned === 80 ? [HOST, 'localhost'] : [])]);
+    allowedOrigins = new Set([...allowedHosts].map(host => new URL(`http://${host}`).origin));
     if (history) checkpointTimer = setInterval(checkpoint, historyCheckpointMs).unref();
-    const url = `http://${HOST}:${assigned}`;
+    const url = new URL(`http://${HOST}:${assigned}`).origin;
     operationsOrigin=url;
     if(deliveryWorkspaceDirectory!==null) {
       const [{openDeliveryWorkspace},{createDeliveryWorkspaceHandler}]=await Promise.all([

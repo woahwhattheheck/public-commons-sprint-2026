@@ -22,6 +22,27 @@
         "styles.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/collections.mjs",
+      [
+        "collections.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/collection-hash-worker.mjs",
+      [
+        "collection-hash-worker.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/buyer-sha256.mjs",
+      [
+        "../../../../../../sf88-operator-buyer-cli/job-workspace/inputs/public/sha256.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

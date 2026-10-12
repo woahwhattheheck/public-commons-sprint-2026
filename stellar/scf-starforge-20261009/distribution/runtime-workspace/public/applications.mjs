@@ -1,6 +1,10 @@
 // MIT. Applications presentation over the original runtime and managed-command APIs.
 import { renderOpenApiApplicationReview } from './openapi-application.mjs';
+import { renderApplicationReview } from './application-review.mjs';
+import { renderAccountingApplicationReview } from './accounting-application.mjs';
 import { createOpenApiConnectionSetupView } from './openapi-connection-setup.mjs';
+import { createApplicationLibrary } from './application-library.mjs';
+import { createApplicationDrafts } from './application-drafts.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -32,24 +36,40 @@ function mppReviewRows(command) {
     ['Configured roles', roles.join(', ') || 'Ready for merchant or customer configuration'],
   ];
 }
+function wooReviewRows(command) {
+  const woo = command?.woo;
+  if (!woo) return [];
+  return [
+    ['WordPress store', woo.storeOrigin], ['Original outbox', woo.outbox],
+    ['Notice destination', woo.deliveryUrl], ['Shared secret environment name', woo.secretEnv],
+    ['Retained native routes / catalogs', woo.routes.length + ' / ' + woo.catalogs.length],
+    ['Store binding', woo.originalOutboxBinding ?? 'Created under the original worker lease at first start'],
+  ];
+}
 async function textHash(text) {
   const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
   return [...bytes].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 export function createApplicationsWorkspaceView({ root, api, getState, refreshWorkspace, switchView, message, error }) {
   let data = null, selectedId = null, selectedRun = null, editingId = null, configurationReview = null, startReview = null;
-  let loading = false, sending = false, scope = 0, settingsScope = 0, initial = true;
+  let loading = false, sending = false, scope = 0, settingsScope = 0, initial = true, navigationVersion = 0;
   let historyData = null, historyApplicationId = null, historyCursor = null, historyTrail = [], historyScope = 0, historyLoading = false;
-  const key = name => 'starforge-applications-' + getState()?.workspaceId + '-' + name;
-  const readSaved = name => { try { return JSON.parse(sessionStorage.getItem(key(name)) ?? 'null'); } catch { return null; } };
-  const saveSaved = (name, value) => { try { if (value === null) sessionStorage.removeItem(key(name)); else sessionStorage.setItem(key(name), JSON.stringify(value)); } catch {} };
+  const key = (name, workspaceId = getState()?.workspaceId) => 'starforge-applications-' + workspaceId + '-' + name;
+  const readSaved = (name, workspaceId) => { try { return JSON.parse(sessionStorage.getItem(key(name, workspaceId)) ?? 'null'); } catch { return null; } };
+  const saveSaved = (name, value, workspaceId) => {
+    try {
+      if (value === null) sessionStorage.removeItem(key(name, workspaceId));
+      else sessionStorage.setItem(key(name, workspaceId), JSON.stringify(value));
+      return true;
+    } catch { return false; }
+  };
   const selected = () => data?.applications.find(item => item.id === selectedId) ?? null;
   const currentType = () => data?.catalog.find(item => item.id === kind.value);
   const header = element('div', undefined, 'section-title');
   header.append(element('h2', 'Applications'), button('New application', () => edit(null)));
   const intro = element('p', 'Open the original merchant and buyer tools using an installed runtime. Application data, private URLs and process history stay with this workspace.', 'note');
-  const list = element('div', undefined, 'runtime-list');
-  const empty = element('p', 'No applications have been saved. Select a ready runtime and review an application below.', 'empty');
+  const libraryRoot = element('div'); libraryRoot.id = 'application-library';
+  const draftRoot = element('div'); draftRoot.id = 'application-setup-drafts';
   const configuration = element('details'); configuration.open = true;
   configuration.append(element('summary', 'Configure application'));
   const form = element('form'), grid = element('div', undefined, 'columns');
@@ -62,10 +82,11 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const reviewButton = element('button', 'Review application'); reviewButton.type = 'submit';
   const reviewResult = element('div', undefined, 'result'); reviewResult.hidden = true;
   form.append(grid, field('Original application', kind), description, settings, reviewButton, reviewResult);
-  configuration.append(form);
+  configuration.append(draftRoot, form);
   const openapiSetupRoot = element('div'); configuration.append(openapiSetupRoot);
   const openapiSetup = createOpenApiConnectionSetupView({
     root: openapiSetupRoot, api, message, error,
+    applicationKinds: ['openapi', 'merchant-accounting'],
     getContext() {
       const value = configurationValue();
       return { workspaceId: getState()?.workspaceId, runtimeId: value.runtimeId,
@@ -76,8 +97,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     },
     onPrepared(prepared) {
       const value = configurationValue();
-      if (value.kind !== 'openapi') return;
-      renderSettings({ ...value.settings, ...prepared });
+      if (!['openapi', 'merchant-accounting'].includes(value.kind)) return;
+      drafts.mergeSettings(prepared);
       configuration.open = true; reviewButton.focus();
     },
   });
@@ -88,7 +109,32 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const details = element('div'), actions = element('div', undefined, 'actions'), operationReview = element('div', undefined, 'result');
   operationReview.hidden = true;
   const open = element('a', 'Open application'); open.target = '_blank'; open.rel = 'noopener noreferrer'; open.referrerPolicy = 'no-referrer'; open.hidden = true;
+  const wordpress = element('a', 'WordPress order console'); wordpress.target = '_blank';
+  wordpress.rel = 'noopener noreferrer'; wordpress.referrerPolicy = 'no-referrer'; wordpress.hidden = true;
   const urlNote = element('p', '', 'note');
+  const navigationRecovery = element('div', undefined, 'result'); navigationRecovery.hidden = true;
+  function savedAddress(label, value) {
+    let url;
+    try { url = new URL(value); } catch { return null; }
+    if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
+        Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
+        url.username || url.password) return null;
+    const row = element('div'), address = element('input');
+    address.type = 'text'; address.value = value; address.readOnly = true;
+    address.setAttribute('aria-label', label + ' saved address');
+    address.addEventListener('focus', () => address.select());
+    const copy = button('Copy ' + label.toLowerCase() + ' address', async () => {
+      address.focus(); address.select();
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(value);
+        message(label + ' address copied. Paste it into a new tab’s address bar.');
+      } catch {
+        message(label + ' address selected. Copy it and paste it into a new tab’s address bar.');
+      }
+    });
+    row.append(field(label, address), copy); return row;
+  }
   const relatedApplications = element('div', undefined, 'actions');
   relatedApplications.hidden = true;
   const reviewStart = button('Review start', () => act(async () => {
@@ -112,8 +158,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     await refresh(); await refreshWorkspace();
   }));
   const editButton = button('Edit settings', () => edit(selected()));
-  actions.append(open, reviewStart, stop, reconnect, continueRun, editButton);
-  selectedPanel.append(selectedTitle, details, actions, relatedApplications, urlNote, operationReview);
+  actions.append(open, wordpress, reviewStart, stop, reconnect, continueRun, editButton);
+  selectedPanel.append(selectedTitle, details, actions, relatedApplications, navigationRecovery, urlNote, operationReview);
   const history = element('section', undefined, 'panel'); history.hidden = true;
   history.append(element('h3', 'Original operations'));
   const historyRows = element('div'), historyControls = element('div', undefined, 'actions');
@@ -137,7 +183,34 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   inputForm.append(element('p', 'This is the original application terminal. Review its current prompt, then enter the response yourself. Opening or refreshing this page sends no input.', 'note'),
     field('Terminal response', input), terminalActions, inputStatus);
   outputPanel.append(outputDescription, output, inputForm);
-  root.replaceChildren(header, intro, list, empty, configuration, selectedPanel, history, outputPanel);
+  root.replaceChildren(header, intro, libraryRoot, configuration, selectedPanel, history, outputPanel);
+  const drafts = createApplicationDrafts({
+    root: draftRoot, controls: { label, runtime, kind, settings }, reviewButton,
+    getWorkspaceId: () => getState()?.workspaceId,
+    getCatalog: () => data?.catalog ?? [], getApplications: () => data?.applications ?? [],
+    getRuntimes: () => getState()?.runtimes ?? [],
+    selectedRuntime: () => getState()?.selected?.phase === 'READY' ? getState().selected.id : null,
+    renderSettings,
+    onContext(id, { select = true } = {}) {
+      editingId = id;
+      if (select && id && selectedId !== id) {
+        navigationVersion++; selectedId = id; selectedRun = null; startReview = null; resetHistory(id);
+        outputPanel.hidden = true; output.textContent = ''; inputForm.hidden = true;
+        library.select(id); renderSelected(); saveSelection();
+        act(async () => {
+          if (!await refreshHistory() || selectedId !== id) return;
+          renderSelected(); await refreshOutput(); saveSelection();
+        });
+      }
+    },
+    onChange() { configurationReview = null; reviewResult.hidden = true; },
+    onNotice: message,
+  });
+  const library = createApplicationLibrary({
+    root: libraryRoot, readSaved, saveSaved, getWorkspaceId: () => getState()?.workspaceId,
+    openApplication: id => act(() => selectApplication(id)),
+    configureApplication: kind => edit(null, { kind }),
+  });
 
   const visibleRuns = () => historyData?.applicationId === selectedId ? historyData.runs : selected()?.runs ?? [];
   const saveSelection = () => saveSaved('selected', { selectedId, selectedRun, historyCursor, historyTrail });
@@ -185,6 +258,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       if (!historyTrail.length) return;
       historyCursor = historyTrail.pop();
     } else { historyCursor = null; historyTrail = []; }
+    navigationVersion++;
     let received = false;
     try {
       if (await refreshHistory()) {
@@ -198,21 +272,48 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     }
   }
   async function selectApplication(id) {
-    selectedId = id; selectedRun = null; startReview = null; resetHistory(id);
-    renderSelected();
+    navigationVersion++; selectedId = id; selectedRun = null; startReview = null; resetHistory(id);
+    library.select(id); renderSelected();
     await refreshHistory(); renderSelected(); await refreshOutput(); saveSelection();
   }
 
-  async function retainedRequest(route, body) {
+  async function retainedRequest(route, body, setupTicket = null) {
     const existing = readSaved('pending');
     const same = existing?.route === route && existing.body.reviewId === body.reviewId &&
       existing.body.applicationId === body.applicationId;
     if (existing && !same) throw new Error('Recover the retained application request before starting a different request.');
-    const pending = same ? existing : { route, body: { ...body, requestId: crypto.randomUUID() } };
-    saveSaved('pending', pending);
-    const result = await api(pending.route, pending.body);
-    saveSaved('pending', null);
-    return result;
+    const pending = same ? existing : { route, workspaceId: getState()?.workspaceId,
+      body: { ...body, requestId: crypto.randomUUID() }, ...(setupTicket ? { setupTicket } : {}) };
+    if (!saveSaved('pending', pending))
+      throw new Error('The browser could not retain this application request. Restore tab storage, then retry this reviewed action.');
+    return completeRetainedRequest(pending);
+  }
+  function clearRetainedRequest(pending, workspaceId) {
+    const current = readSaved('pending', workspaceId);
+    if (!current || current.route !== pending.route ||
+        JSON.stringify(current.body) !== JSON.stringify(pending.body)) return false;
+    return saveSaved('pending', null, workspaceId);
+  }
+  async function completeRetainedRequest(pending) {
+    const workspaceId = pending.workspaceId ?? pending.setupTicket?.workspaceId ?? getState()?.workspaceId;
+    try {
+      const result = await api(pending.route, pending.body);
+      clearRetainedRequest(pending, workspaceId); return result;
+    } catch (issue) {
+      // These original save guards precede the application record write.
+      const rejectedSave = pending.route === '/api/applications/save' &&
+        [400, 409].includes(issue.status) &&
+        ['APPLICATION_REVIEW_CHANGED', 'APPLICATION_RUNNING', 'APPLICATION_INPUTS_CHANGED'].includes(issue.code);
+      if (rejectedSave) {
+        saveSaved('rejected-save', { ...pending, error: { code: issue.code, status: issue.status },
+          observedAt: new Date().toISOString() }, workspaceId);
+        clearRetainedRequest(pending, workspaceId);
+        if (workspaceId === getState()?.workspaceId && configurationReview?.id === pending.body.reviewId) {
+          configurationReview = null; reviewResult.hidden = true; drafts.refresh();
+        }
+      }
+      throw issue;
+    }
   }
   async function act(action) {
     const own = scope;
@@ -246,7 +347,12 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
               (entry.extras.join(', ') || 'base') + ' · ' + entry.id.slice(0, 12), entry.id)));
           node.value = entries.some(entry => entry.id === values[item.name]) ? values[item.name] :
             entries.some(entry => entry.id === value.active?.installation) ? value.active.installation : '';
-        }).catch(issue => { if (generation === settingsScope) { node.replaceChildren(new Option('Python inventory unavailable', '')); error(issue); } });
+          drafts.settingsReady(node);
+        }).catch(issue => {
+          if (generation !== settingsScope || selectedRuntime !== runtime.value || !node.isConnected) return;
+          node.replaceChildren(new Option('Python inventory unavailable', ''));
+          drafts.settingsReady(node); error(issue);
+        });
       }
     }
     configurationReview = null; reviewResult.hidden = true;
@@ -259,25 +365,24 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       if (item.type === 'boolean') { if (node.checked) values[item.name] = true; }
       else if (node.value !== '') values[item.name] = item.type === 'port' ? Number(node.value) : node.value.trim();
     }
-    const previous = data?.applications.find(item => item.id === editingId);
     return { runtimeId: runtime.value, kind: kind.value, label: label.value.trim(), settings: values,
-      applicationId: editingId, expectedRevision: previous?.revision ?? null };
+      applicationId: editingId, expectedRevision: drafts.baseRevision() };
   }
-  function edit(app) {
-    editingId = app?.id ?? null;
-    if (app) { selectedId = app.id; label.value = app.label; runtime.value = app.runtimeId; kind.value = app.kind; }
-    else { label.value = ''; runtime.value = getState()?.selected?.phase === 'READY' ? getState().selected.id : runtime.options[1]?.value ?? ''; }
-    renderSettings(app?.settings ?? {}); configuration.open = true; configuration.scrollIntoView({ block: 'nearest' });
-    label.focus(); renderSelected();
+  function edit(app, options = {}) {
+    drafts.edit(app, options);
+    configuration.open = true; configuration.scrollIntoView({ block: 'nearest' });
+    label.focus(); library.select(selectedId); renderSelected();
   }
-  kind.addEventListener('change', () => renderSettings());
+  kind.addEventListener('change', () => drafts.changeKind(kind.value));
   form.addEventListener('input', event => {
     configurationReview = null; reviewResult.hidden = true;
     // Hide the previous registration review immediately while a bound field changes.
     // The change event reads the new context once, after the field edit.
     if (openapiContextField(event.target)) openapiSetup.reset();
+    drafts.capture();
   });
   form.addEventListener('change', event => {
+    drafts.capture();
     if (openapiContextField(event.target)) openapiSetup.setContext().catch(error);
   });
   runtime.addEventListener('change', () => {
@@ -285,10 +390,18 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     configurationReview = null; reviewResult.hidden = true;
     if (currentType()?.python) renderSettings({ ...values, installationId: undefined });
     else openapiSetup.setContext().catch(error);
+    drafts.capture();
   });
   form.addEventListener('submit', event => {
     event.preventDefault(); act(async () => {
-      configurationReview = await api('/api/applications/review', configurationValue());
+      drafts.expectedRevision();
+      const setupTicket = drafts.snapshot(), request = configurationValue();
+      const received = await api('/api/applications/review', request);
+      if (!drafts.matches(setupTicket)) {
+        message('The setup changed while review was running. Review the current retained fields.');
+        return;
+      }
+      configurationReview = received;
       const reviewed = configurationReview;
       const rows = facts([
         ['Original command', reviewed.command.pythonCommand ? reviewed.command.pythonCommand.executable + ' ' +
@@ -299,19 +412,26 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         ['Input', reviewed.command.terminal ? 'Connected original terminal, explicit operator responses' : 'Original application output'],
         ['Environment file', reviewed.settings.environmentFile ?? 'Inherited operator environment'],
         ...mppReviewRows(reviewed.command),
+        ...wooReviewRows(reviewed.command),
       ]);
       const save = button(editingId ? 'Save reviewed settings' : 'Save application', () => act(async () => {
         if (configurationReview !== reviewed) return;
+        const submitted = { scope, navigationVersion };
         save.disabled = true;
         let result;
-        try { result = await retainedRequest('/api/applications/save', { reviewId: reviewed.id, applicationId: editingId }); }
+        try { result = await retainedRequest('/api/applications/save', { reviewId: reviewed.id, applicationId: reviewed.applicationId }, setupTicket); }
         finally { save.disabled = false; }
-        selectedId = result.applicationId; editingId = null;
-        configuration.open = false; configurationReview = null; reviewResult.hidden = true;
-        await refresh(); await refreshWorkspace(); message(result.connectionError?.message ?? 'Application saved with its original runtime and data locations.');
+        const completedSetup = drafts.saved(setupTicket, result);
+        if (submitted.scope !== scope) return;
+        if (submitted.navigationVersion === navigationVersion && completedSetup) selectedId = result.applicationId;
+        configuration.open = !completedSetup; configurationReview = null; reviewResult.hidden = true;
+        await refresh(); await refreshWorkspace();
+        message(result.connectionError?.message ?? (completedSetup ?
+          'Application saved with its original runtime and data locations.' :
+          'Application saved. Your newer setup draft remains open.'));
       }));
       reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows,
-        renderOpenApiApplicationReview(reviewed.command), save);
+        renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), save);
       if (reviewed.command.createDirectories.length) reviewResult.append(element('p', 'Creates private folder: ' + reviewed.command.createDirectories.join(', '), 'note'));
       reviewResult.hidden = false;
     });
@@ -321,11 +441,13 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     const reviewed = startReview;
     const start = button('Start reviewed application', () => act(async () => {
       if (startReview !== reviewed) return;
+      const submitted = { scope, navigationVersion };
       start.disabled = true;
       let result;
       try { result = await retainedRequest('/api/applications/start', { applicationId: reviewed.applicationId, reviewId: reviewed.id }); }
       finally { start.disabled = false; }
-      followOperation(reviewed.applicationId, result.operationId);
+      if (submitted.scope !== scope) return;
+      if (submitted.navigationVersion === navigationVersion) followOperation(reviewed.applicationId, result.operationId);
       if (startReview === reviewed) startReview = null;
       await refresh(); await refreshWorkspace(); message(reviewed.command.pythonCommand && !reviewed.command.pythonCommand.ready ?
         'The original workbook command is starting. Its operating result and output appear below.' :
@@ -339,14 +461,18 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ['Inputs', reviewed.command.inputs.map(item => item.path).join('\n')],
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
       ...mppReviewRows(reviewed.command),
-    ]), renderOpenApiApplicationReview(reviewed.command), start); operationReview.hidden = false;
+      ...wooReviewRows(reviewed.command),
+    ]), renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), start); operationReview.hidden = false;
   }
   function renderSelected() {
     const app = selected(); selectedPanel.hidden = !app; history.hidden = !app;
     if (!app) { outputPanel.hidden = true; return; }
     title.textContent = app.label; phase.textContent = app.phase;
     actions.hidden = Boolean(app.error);
-    if (app.error) { details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren(); return; }
+    if (app.error) {
+      details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren();
+      relatedApplications.hidden = navigationRecovery.hidden = true; urlNote.textContent = ''; return;
+    }
     details.replaceChildren(facts([
       ['Application', data.catalog.find(item => item.id === app.kind)?.title ?? app.kind],
       ['Runtime', app.runtime.directory], ['Source commit', app.runtime.sourceCommit],
@@ -368,23 +494,58 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     continueRun.hidden = !current || active || !unsettled;
     continueRun.textContent = current?.phase === 'INTERRUPTED' ? 'Reconcile original operation' : 'Continue original start';
     editButton.disabled = active || unsettled;
-    open.hidden = !current?.privateUrl;
-    if (current?.privateUrl) open.href = current.privateUrl; else open.removeAttribute('href');
+    const woo = app.kind === 'woo-merchant';
+    open.rel = woo ? 'noopener' : 'noopener noreferrer';
+    open.referrerPolicy = woo ? 'origin' : 'no-referrer';
+    wordpress.hidden = true; wordpress.removeAttribute('href');
+    const wooRun = current?.url?.original;
+    if (woo && wooRun?.schema === 'stellar-forge.sf104.managed-startup.v1') {
+      try {
+        const admin = new URL(wooRun.adminUrl), store = new URL(wooRun.storeOrigin);
+        if (admin.protocol === 'https:' && admin.origin === store.origin && !admin.username && !admin.password &&
+            admin.pathname.endsWith('/wp-admin/admin.php') && admin.search === '?page=sf98-woocommerce' && !admin.hash) {
+          wordpress.href = admin.href; wordpress.hidden = false;
+        }
+      } catch { /* Original startup remains visible in its retained output. */ }
+    }
+    const navigationChanged = woo && Boolean(current?.privateUrl) &&
+      (wooRun?.schema !== 'stellar-forge.sf104.managed-startup.v1' || wooRun.navigationOrigin !== location.origin);
+    open.hidden = !current?.privateUrl || navigationChanged;
+    if (current?.privateUrl && !navigationChanged) open.href = current.privateUrl; else open.removeAttribute('href');
     open.textContent = app.kind === 'mercury-feed' ? 'Open event feed' : 'Open application';
-    relatedApplications.replaceChildren(...(current?.privateLinks ?? []).flatMap(link => {
+    const related = (current?.privateLinks ?? []).flatMap(link => {
       let url;
       try { url = new URL(link.url); } catch { return []; }
       if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
           Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
           url.username || url.password || typeof link.label !== 'string') return [];
-      const anchor = element('a', link.label); anchor.href = url.href; anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer'; anchor.referrerPolicy = 'no-referrer'; return [anchor];
-    }));
+      return [{ label: link.label, url: link.url }];
+    });
+    relatedApplications.replaceChildren(...(navigationChanged ? [] : related.map(link => {
+      const anchor = element('a', link.label); anchor.href = link.url; anchor.target = '_blank';
+      anchor.rel = woo ? 'noopener' : 'noopener noreferrer';
+      anchor.referrerPolicy = woo ? 'origin' : 'no-referrer'; return anchor;
+    })));
     relatedApplications.hidden = !relatedApplications.childElementCount;
+    navigationRecovery.hidden = !navigationChanged;
+    if (navigationChanged) {
+      const signature = JSON.stringify([app.id, current.id, wooRun?.navigationOrigin, location.origin, current.privateUrl, related]);
+      if (navigationRecovery.dataset.signature !== signature) {
+        navigationRecovery.dataset.signature = signature;
+        navigationRecovery.replaceChildren(
+          element('h4', 'Open the running merchant'),
+          element('p', 'This Applications address differs from the one recorded at merchant startup. Copy a saved address and paste it into a new tab’s address bar. The running service keeps its original access settings.', 'note'),
+          ...[savedAddress('Operations', current.privateUrl), ...related.map(link => savedAddress(link.label, link.url))].filter(Boolean));
+      }
+    } else {
+      navigationRecovery.replaceChildren(); delete navigationRecovery.dataset.signature;
+    }
     const workbookCommand = ['python-workbooks', 'python-workbook-delivery'].includes(app.kind);
     urlNote.textContent = workbookCommand ? (active ? 'The original workbook command is running. Its output is retained below.' :
       current ? 'The original workbook command has ended. Open its retained outcome and complete output below.' :
-      'Review a start to run this original workbook command.') : current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts.' :
+      'Review a start to run this original workbook command.') : navigationChanged ?
+      'The original process and saved addresses are still attached to this operation. To restore direct Open buttons here, stop it and review a new start from this Applications address.' :
+      current?.privateUrl ? 'The link above is the original private application URL. It remains attached to this operation across runtime-console restarts at the same address.' :
       active ? current.stop ? 'The original application is draining its work and stopping.' : 'Waiting for the original application to print its local session URL.' :
         current?.url ? 'This operation has ended. Its retained URL is historical; review a new start to open the same saved application data.' :
           'Save and review a start to receive the original application URL.';
@@ -395,7 +556,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       historyRows.replaceChildren(...pageRuns.map(run => {
         const row = element('article', undefined, 'operation');
         const actions = element('div', undefined, 'actions');
-        actions.append(button('Open output', () => { selectedRun = run.id; saveSelection(); refreshOutput().catch(error); }));
+        actions.append(button('Open output', () => { navigationVersion++; selectedRun = run.id; saveSelection(); refreshOutput().catch(error); }));
         row.append(element('h3', run.command + ' · ' + run.phase),
           element('p', run.id + ' · ' + run.createdAt),
           element('p', run.result?.state ? 'Original outcome: ' + run.result.state + (run.result.exitCode !== null && run.result.exitCode !== undefined ? ', exit ' + run.result.exitCode : '') :
@@ -451,10 +612,16 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   inputForm.addEventListener('submit', event => { event.preventDefault(); terminalSend(input.value + '\n').catch(error); });
   const recoverRequest = button('Recover last application request', () => act(async () => {
     const pending = readSaved('pending'); if (!pending) return;
-    const result = await api(pending.route, pending.body);
-    selectedId = result.applicationId ?? selectedId;
-    followOperation(selectedId, result.operationId);
-    saveSaved('pending', null); await refresh(); await refreshWorkspace();
+    const submitted = { scope, navigationVersion };
+    const result = await completeRetainedRequest(pending);
+    const completedSetup = pending.route === '/api/applications/save' && pending.setupTicket ? drafts.saved(pending.setupTicket, result) : false;
+    if (submitted.scope !== scope) return;
+    if (submitted.navigationVersion === navigationVersion && (!pending.setupTicket || completedSetup)) {
+      selectedId = result.applicationId ?? selectedId;
+      followOperation(selectedId, result.operationId);
+    }
+    if (completedSetup) configuration.open = false;
+    await refresh(); await refreshWorkspace();
   }));
   header.append(recoverRequest);
   async function refresh() {
@@ -472,31 +639,12 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
           historyTrail = Array.isArray(saved.historyTrail) ? saved.historyTrail.filter(value => value === null || typeof value === 'string') : [];
         }
       }
-      const currentRuntime = runtime.value;
-      const options = (getState()?.runtimes ?? []).filter(item => item.phase === 'READY');
-      const signature = JSON.stringify(options.map(item => [item.id, item.label, item.packageVersion]));
-      if (runtime.dataset.signature !== signature) {
-        runtime.dataset.signature = signature;
-        runtime.replaceChildren(new Option('Choose a ready runtime', ''), ...options.map(item => new Option(item.label + ' · ' + (item.packageVersion ?? item.sourceCommit), item.id)));
-        runtime.value = options.some(item => item.id === currentRuntime) ? currentRuntime :
-          options.some(item => item.id === getState()?.selected?.id) ? getState().selected.id : options[0]?.id ?? '';
-      }
-      if (!kind.options.length) {
-        kind.replaceChildren(...data.catalog.map(item => new Option(item.title, item.id)));
-        renderSettings();
-      }
+      drafts.refresh();
       if (!data.applications.some(item => item.id === selectedId)) { selectedId = data.applications[0]?.id ?? null; resetHistory(selectedId); }
-      const listSignature = JSON.stringify(data.applications.map(app => [app.id, app.label, app.phase]));
-      if (list.dataset.signature !== listSignature) {
-        list.dataset.signature = listSignature;
-        list.replaceChildren(...data.applications.map(app => {
-          const node = button(app.label + ' · ' + app.phase, () => act(() => selectApplication(app.id)));
-          node.className = 'runtime-entry'; node.dataset.applicationId = app.id; return node;
-        }));
-      }
-      empty.hidden = data.applications.length > 0;
+      library.update(data, selectedId);
       recoverRequest.hidden = !readSaved('pending');
-      if (data.applications.length && editingId === null && !configurationReview && !label.value) configuration.open = false;
+      if (data.applications.length && editingId === null && !configurationReview && !label.value && !drafts.hasDraft())
+        configuration.open = false;
       if (!historyLoading) await refreshHistory();
       renderSelected(); await refreshOutput();
       await openapiSetup.refresh().catch(error);
@@ -514,8 +662,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       const savedRuntime = getState()?.runtimes.find(item => item.id === descriptor.runtime.runtimeId);
       if (![...runtime.options].some(item => item.value === descriptor.runtime.runtimeId))
         runtime.append(new Option(savedRuntime?.label ?? descriptor.runtime.directory, descriptor.runtime.runtimeId));
-      editingId = null; configurationReview = startReview = null;
-      label.value = type.title; runtime.value = descriptor.runtime.runtimeId; kind.value = type.id;
+      configurationReview = startReview = null;
       const values = { installationId: descriptor.installationId };
       if (descriptor.command === 'postgres') {
         if (!descriptor.args.includes('serve')) throw new Error('Prepare the PostgreSQL serve command with its private operator directory.');
@@ -538,14 +685,15 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         if (descriptor.args.includes('--node')) values.nodeExecutable = value('--node');
         values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;
       } else values.argumentsJSON = JSON.stringify(descriptor.args, null, 2);
-      renderSettings(values); configuration.open = true;
+      drafts.edit(null, { kind: type.id, label: type.title, runtimeId: descriptor.runtime.runtimeId, values });
+      configuration.open = true;
       switchView('applications'); configuration.scrollIntoView({ block: 'nearest' });
       label.focus();
     },
-    async choose(id) { selectedId = id; selectedRun = null; resetHistory(id); switchView('applications'); await refresh(); },
+    async choose(id) { navigationVersion++; selectedId = id; selectedRun = null; resetHistory(id); switchView('applications'); await refresh(); },
     reset() {
-      scope++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
-      resetHistory(null); initial = true; label.value = ''; kind.replaceChildren(); runtime.replaceChildren(); list.replaceChildren();
+      scope++; navigationVersion++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
+      resetHistory(null); initial = true; drafts.reset(); library.reset(); label.value = ''; kind.replaceChildren(); runtime.replaceChildren();
       selectedPanel.hidden = history.hidden = outputPanel.hidden = reviewResult.hidden = true; configuration.open = true;
       openapiSetup.reset();
     },
