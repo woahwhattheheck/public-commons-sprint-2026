@@ -151,11 +151,11 @@ export function createSupplierController({container,api,perform,host,notice,elem
     }
     buttons();
   }
-  async function openPlan(id){
+  async function openPlan(id,selectedReviewId){
     const value=await api('/api/catalog/supplier/plan?'+new URLSearchParams({planId:id}));
     fillPlan(value);review=null;offset=0;
     const latest=snapshot.reviews.find(item=>item.planId===value.id);
-    if(latest)await openReview(latest.id);else renderReview();
+    if(selectedReviewId??latest?.id)await openReview(selectedReviewId??latest.id);else renderReview();
   }
   function renderReview(){
     const counts=review?.counts;$('counts').replaceChildren();$('exports').replaceChildren();
@@ -202,6 +202,20 @@ export function createSupplierController({container,api,perform,host,notice,elem
   }
   function choosePath(path){
     if(!path||path==='/')return;
+    if(path==='/profile'||path.startsWith('/profile/')||path==='/submission'||path.startsWith('/submission/')){
+      const fields={'/profile/languages':'languages','/profile/countries':'countries',
+        '/profile/defaultLanguage':'language','/profile/role':'role',
+        '/profile/envelope/supplier/name':'supplier-name','/profile/envelope/buyer/name':'buyer-name',
+        '/profile/envelope/catalogId':'catalog-id','/profile/envelope/catalogVersion':'catalog-version',
+        '/profile/envelope/generationDate':'date','/profile/envelope/currency':'currency'};
+      const field=$(fields[path]??'profile-json');
+      for(let parent=field.parentElement;parent&&parent!==container;parent=parent.parentElement)
+        if(parent.tagName==='DETAILS')parent.open=true;
+      notice(path.startsWith('/submission/')?
+        'Set the previous complete product identifiers in profile.envelope.previousProductIds, then save and review the submission.':
+        'Update '+path.slice('/profile'.length)+' in the submission settings, then save and review the products.');
+      field.focus();field.scrollIntoView({block:'center'});return;
+    }
     const value=valueAt(current.product,path);$('patch-path').value=path;
     $('patch-type').value=typeof value==='string'?'text':'json';
     $('patch-value').value=typeof value==='string'?value:pretty(value);$('patch-reason').value='';
@@ -278,6 +292,9 @@ export function createSupplierController({container,api,perform,host,notice,elem
   $('add-patch').addEventListener('click',()=>attempt(async()=>{
     const path=$('patch-path').value.trim(),reason=$('patch-reason').value;
     if(!path.startsWith('/')||!reason.trim())throw Error('Choose a field path and give the reason for its correction.');
+    if(path==='/profile'||path.startsWith('/profile/')||path==='/submission'||path.startsWith('/submission/')){
+      choosePath(path);return;
+    }
     const value=$('patch-type').value==='text'?$('patch-value').value:parseEditor($('patch-value').value,'Replacement value');
     const index=patches.findIndex(item=>item.path===path),patch={path,value,reason};
     if(index<0)patches.push(patch);else patches[index]=patch;patchDirty=true;renderPatches();buttons();
@@ -294,13 +311,22 @@ export function createSupplierController({container,api,perform,host,notice,elem
     async acceptOperation(operation){
       const result=operation.result??{};
       if(result.supplierPlan){await sync(catalog,editions);await openPlan(result.supplierPlan.id);notice('Supplier submission saved.');return true;}
-      if(result.supplierCorrection){patchDirty=false;current=null;$('product').hidden=true;notice('Saved product correction revision '+result.supplierCorrection.revision+'.');return true;}
-      if(result.supplierReview){await sync(catalog,editions);await openReview(result.supplierReview.id);notice('Reviewed all '+result.supplierReview.counts.total+' supplier products.');return true;}
+      if(result.supplierCorrection){
+        await sync(catalog,editions);await openPlan(result.supplierCorrection.planId);
+        notice('Saved product correction revision '+result.supplierCorrection.revision+'.');return true;
+      }
+      if(result.supplierReview){
+        await sync(catalog,editions);await openPlan(result.supplierReview.planId,result.supplierReview.id);
+        notice('Reviewed all '+result.supplierReview.counts.total+' supplier products.');return true;
+      }
       return false;
     },
     restorePending(pending){
       if(pending?.kind!=='catalog'||!pending.payload?.action?.startsWith('supplier-'))return;
       const value=pending.payload;
+      if(value.planId&&value.action!=='supplier-save'){
+        const selected=snapshot.plans.find(item=>item.id===value.planId);if(selected)fillPlan(selected);
+      }
       if(value.action==='supplier-save'){
         plan=value.planId?snapshot.plans.find(item=>item.id===value.planId)??null:null;
         $('title').value=value.title;fillProfile(value.profile);renderBindings(value.bindings);
