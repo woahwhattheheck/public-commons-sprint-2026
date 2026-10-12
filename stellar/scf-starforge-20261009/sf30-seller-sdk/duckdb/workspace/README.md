@@ -7,6 +7,12 @@ edits public merchant routes and payment options, saves revisions, prepares the
 original self-contained merchant package, and starts the original seller with its
 operations console.
 
+For retained Coin Metrics Cloud, API and Snowflake exports, use the
+[Cloud Delivery edition workflow](../cloud-delivery/README.md). It adds source and
+catalog history, exact typed comparison, reviewed source selection and complete
+archive receiving to this same workspace. Start the original launcher with `--cloud` and its normal state/Python arguments;
+the original query/merchant steps below remain the same.
+
 ## Open the workspace
 
 Use Node 22.13 or later with `node:sqlite`, and the Python environment already used

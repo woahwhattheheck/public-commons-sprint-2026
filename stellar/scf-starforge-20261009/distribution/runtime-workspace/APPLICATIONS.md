@@ -8,11 +8,14 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
+| Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
 | MPP merchant and customer | mpp serve | Saved merchant/customer profiles, original offers, purchases, packages, governor terminal and retained response receiving |
 | Stellar agent application | stellar-application serve | Original HTTP and governed MCP requests, current subject authorization, retained results and aggregate spending |
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
+| SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
+| ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
@@ -54,9 +57,29 @@ The API projects folder may be an existing private directory or one new director
 
 The runtime console and original application have separate capability URLs. The latter is captured only from the selected CLI's startup announcement and retained privately against its original operation ID. It is never inferred from a configured port, source example or arbitrary terminal text.
 
+## Merchant pricing and scenario planning
+
+The complete [managed pricing workflow](PRICING_APPLICATIONS.md) covers original
+seller and traffic selection, saved reviews, scenario comparisons, exact goals,
+commercial exports, reviewed price changes and managed stop/reopen.
+
 ## Catalog Atlas
 
 The complete [managed Atlas workflow](../../sf61-bazaar-explorer/APPLICATIONS.md) covers new and retained directories, reviewed installed source, original private launch, stop/reopen, native buyer continuation and whole-workspace receiving.
+
+## ArcGIS merchant workspace
+
+Select the original merchant configuration JSON and an ArcGIS workspace alias from its `arcgisWorkspaceConnection`. The configuration also references the original `publisherConnection` and release store. The installed runtime must contain `arcgis-workspace-launcher.mjs` and the maintained ArcGIS publisher/workbench.
+
+Use **Local port** for the browser and **MCP port** for the agent service; each accepts `0` for an available loopback port. **MCP token environment name** defaults to `MCP_ACCESS_TOKEN`. Set its value, together with any declared source credential, through the host environment or the existing private environment JSON field. Credential values remain on the host.
+
+Review retains the exact merchant JSON and both connection files, the original publisher directory and the installed launcher/configuration source. Startup checks their configuration SHA-256, opens one original merchant MCP owner, and attaches the browser to that owner. Its native startup record supplies the actual browser URL, MCP endpoint, persistent workbench ID and current publisher/workbench instance IDs to the saved managed operation.
+
+Use the browser for source intake, field mapping, edition selection, extraction, publication and deployment, or use the MCP tools against that same state. Closing only the ArcGIS browser listener leaves the merchant owner available. Stopping the saved application closes the owner and drains all attached resources. A later start reopens its saved captures, editions, plans and delivery history.
+
+Applications prevents a second managed launch of the same merchant configuration. The publisher retains its own native writer lease. A changed connection file requires a fresh application review; source records and ordinary workspace progress continue through their original controls.
+
+See `stellar-forge/mcp-merchant-operator/ARCGIS_WORKSPACE.md` in the selected source for complete configuration, native request recovery, deployment and file-delivery instructions.
 
 ## Publisher initialization and reopening
 
@@ -417,3 +440,15 @@ The managed run retains **Open retained feeds** and **Open subscription collecti
 **Stop application** requests original capture cancellation and drains the current worker and requests before closing the workspace lease. Repeated Stop signals preserve that drain. Reopen the saved application for a new private session on the same collection, source records and native edition. The XML and feed Applications entries share the same workspace resource, including existing saved XML applications; stop its current run before using that directory through the other original console.
 
 The [complete feed Applications guide](../../sf30-seller-sdk/feeds/MANAGED_APPLICATIONS.md) includes initialization, exact CLI selection, structured startup, original receiving and recovery. This entry uses the existing **dataset-feeds** command and generic Applications browser controls.
+
+## SEC EDGAR source operator
+
+Choose **SEC EDGAR source operator** to open the original private operator workspace and immutable capture store. Review retains the selected source, workspace/store identities and current source editions; Save can create either directory in its existing private parent. Start opens the original SEC workspace and binds the actual child, private launch record and authenticated listener. Import company facts and filings, preview the retained records, save merchant drafts and export their original customer products. Stop closes the same listener; reopen preserves the drafts, editions and revision history. The [complete SEC operator guide](SEC_EDGAR_APPLICATIONS.md) includes the original retained-source receiving operation.
+
+## Retained recovery and job destinations
+
+The existing **Merchant recovery** selection also retains each declared capture-plan file when available. Completed captures can reopen when a live plan is unavailable; the original recovery workspace requires the current plan for a fresh capture review. Existing job applications retain every original private destination returned by their selected checkout helper, including Request, approval, Jobs, library and collections.
+
+## Economic data editions
+
+Choose **Economic data editions** to reopen the initialized FRED project, retained public tables or explicit API vintages, saved reviews and merchant editions, and the original configured buyer. The standard managed terminal carries customer approval; the same application stops and reopens its project and buyer journal. Select the original merchant port already routed by the publication HTTPS origin separately from the private UI port. The complete input, source, customer, export and receiving workflow is in [FRED Applications](FRED_APPLICATIONS.md).
