@@ -1,0 +1,92 @@
+{
+  "schema": "stellar-forge.clinicaltrials-committed-receiving.v1",
+  "operation": "CLINICAL-CUSTOMER-COMMITTED-RECEIVING-20261012-1FB3",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "sourceCommit": "32f9b1b5c6635352b8de7b43360c8c548eb444e6",
+  "sourceRoster": {
+    "gitBlob": "59b3e7f7cbce9b304195858178e29e023f547223",
+    "encoding": "utf-8",
+    "json": "{\n  \"schema\": \"stellar-forge.clinicaltrials-receiving-source.v1\",\n  \"repository\": \"woahwhattheheck/public-commons-sprint-2026\",\n  \"sourceCommit\": \"8f859b5f427655d2dd50a592a60411cb466a0353\",\n  \"reviewedHead\": \"2addd5e5ff2879b7c3d81d7e8494f153e906cd3b\",\n  \"hashAlgorithm\": \"git-blob-sha1\",\n  \"files\": [\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs\",\n      \"sha\": \"ecab847a0b24d3cd4f6b2b40aa4f34e95a5266c1\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.py\",\n      \"sha\": \"af38ea7070239f382e0d886e10e3b971c08da4c4\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_package.py\",\n      \"sha\": \"3b9f7913569c0d4db9a26b00a1bdc69d9f10d321\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_prs.py\",\n      \"sha\": \"6a790b1ded7764da275a64a35118063061d54cd7\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_server.py\",\n      \"sha\": \"3d1ae5294dd58a7bb0391d3251e02b7214dcc7c3\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_shared.py\",\n      \"sha\": \"4a63d4dddae010caf6fbae376d80b4545695db48\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_source.py\",\n      \"sha\": \"658635dd780f524688904b54713ec688bd2a6e9f\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_workspace.py\",\n      \"sha\": \"f9d676498ec73a0f3f24f3f22f66e33b042c73f2\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/ProtocolRecordSchema.xsd\",\n      \"sha\": \"a73d175b4aacb181f6a20b324de7bcce42756db7\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/RRSUploadSchema.xsd\",\n      \"sha\": \"48793070afad716d1414181f4721780effad2698\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/api-contract.json\",\n      \"sha\": \"7706dc2b136fb2092dbbd9f07ef65392c66d81e7\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/clinicaltrials-openapi.yaml\",\n      \"sha\": \"7bc3572d7a86bfc1efbeb318ad84606b4c4b80a0\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/contracts/source-contracts.json\",\n      \"sha\": \"3245a4f116ce987a0dd7c211f24850271ef634a8\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/API.md\",\n      \"sha\": \"49bd66d20991ec41036733d4c98c6196ddafa7df\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/README.md\",\n      \"sha\": \"28fbe7510609316c4ab6bc5bf5b45e3bba02e979\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/SOURCES.md\",\n      \"sha\": \"00a1a01d346a1c34d0767bba8092c8d12fa5179d\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/__init__.py\",\n      \"sha\": \"9e7298877b4a8bfa08de90449a21d96132c9b305\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/__main__.py\",\n      \"sha\": \"a0ba133ead2ce29ad3aa92c866e06556d854b805\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/errors.py\",\n      \"sha\": \"af45a099e71460029393019b52ee77ce04b0e716\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/1234.xml\",\n      \"sha\": \"5386d86bab47c3ccf26f56e1f70ce47fb6a903ac\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/COPYING\",\n      \"sha\": \"d159169d1050894d3ea3b98e1c965c4058208fe1\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/DESCRIPTION\",\n      \"sha\": \"5b812f6eaa490141cfb826d84bb34692dc05e40b\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/ct_safety_upload.xml\",\n      \"sha\": \"96d8d01fd14c11c3ec2f2bb3913a7ddf109c764d\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/source.json\",\n      \"sha\": \"d216e0b22bcc1c031002ce3b933f2b27414ad3c5\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/examples/eudract_pkg/study_file.xml\",\n      \"sha\": \"73bb6c55eee59633583d6f4c9f4355f3b96da685\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/modernization.py\",\n      \"sha\": \"3464812010ae21ab230eb9fe996c610f478a4f17\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/profiles/nlm-20261012.json\",\n      \"sha\": \"0a2c2d16b20ff6822726738646c1faaa98c480e0\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/reconcile.py\",\n      \"sha\": \"10986aa703057ae328711dfcef7c993be9a8e0df\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/requirements.txt\",\n      \"sha\": \"aa867df6f526b4bbf1d43e674ca3b4ab57530348\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schema.py\",\n      \"sha\": \"e0efd1dca092d445fa318e3bbcec2d5099a5880b\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/ProtocolRecordSchema.xsd\",\n      \"sha\": \"a73d175b4aacb181f6a20b324de7bcce42756db7\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/RRSUploadSchema.xsd\",\n      \"sha\": \"48793070afad716d1414181f4721780effad2698\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/clinicaltrials-openapi.yaml\",\n      \"sha\": \"7bc3572d7a86bfc1efbeb318ad84606b4c4b80a0\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/source-contracts.json\",\n      \"sha\": \"3245a4f116ce987a0dd7c211f24850271ef634a8\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/upload.py\",\n      \"sha\": \"1288a46b7bb8b87042c518ee703c6195c0d1c1a6\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/app.js\",\n      \"sha\": \"f634a7a8d7d3463c7d62cf04fa68ad61645763c9\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/index.html\",\n      \"sha\": \"d5eb104a99d22555d056d1c63ec662d0b01977d4\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/style.css\",\n      \"sha\": \"da04f94de63319765a2f51442b9dadc4977200e7\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/publisher-bridge.mjs\",\n      \"sha\": \"6953c4c940b2dab31fff110707306e9c5248710f\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/clinicaltrials-workspace.mjs\",\n      \"sha\": \"330e40bc2fd4724e8f792477a4aeb00f31717aaf\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/clinicaltrials-client.mjs\",\n      \"sha\": \"255c9d6d651634a3d7a5a26843b5193f85c4d07c\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/clinicaltrials-cli.mjs\",\n      \"sha\": \"bd51c2a431978902ae95750439c9c00292b16d5b\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/CLINICALTRIALS_WORKSPACE.md\",\n      \"sha\": \"f3dc9886a0853e21983c2470105c895b87987cae\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/config.mjs\",\n      \"sha\": \"b9f227ddc2a2c83944f0d532870d889b88ed6f75\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/serve.mjs\",\n      \"sha\": \"50d48fb741fbba52f9718e73bd4dd4b3dd709a7e\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/distribution/contributions/clinicaltrials.json\",\n      \"sha\": \"e8169b0bfd4569cbadb315373df9e383903eb87e\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/requirements.txt\",\n      \"sha\": \"492c30277d430f5ea642e33ad4c23d14f9806674\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/distribution/build.mjs\",\n      \"sha\": \"0f677e3957086a7a1fae43a635bda4d0bc0a01ec\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/distribution/RUNTIME.md\",\n      \"sha\": \"d5bc1254c6d095cb51e0b3d40a04c555d494e575\"\n    },\n    {\n      \"path\": \"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/README.md\",\n      \"sha\": \"e9e23fc3c378d7723f9613081f485c7e6c206523\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/catalog/clinicaltrials-workspace.mjs\",\n      \"sha\": \"bc448dc624954af92eb8ea8d4c8e6a5cd1fe9a55\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/providers.mjs\",\n      \"sha\": \"efe8846861c391481ef5b02c591a1a0848f6dd5f\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/catalog.mjs\",\n      \"sha\": \"0f132e25328f477f46e8733778385dfdc08d9cf1\"\n    },\n    {\n      \"path\": \"stellar-forge/mcp-merchant-operator/instructions.mjs\",\n      \"sha\": \"c24db2ebaf5927bbb765a304160469bb80d2f5dd\"\n    }\n  ]\n}\n"
+  },
+  "callback": {
+    "path": "run-mcp-receiving.mjs",
+    "bytes": 23506,
+    "sha256": "dadb491aef7f62915f48f1c65ae13c2ae256540e9e5520fc3d18abbd60548614",
+    "sourceCommit": "e4ed5b2592cef74d333073ee5c7f36996f70aac3"
+  },
+  "inputs": {
+    "checkpoint": {
+      "name": "ClinicalTrials_Customer_Checkpoint.zip",
+      "bytes": 7936017,
+      "sha256": "ed8eb65e0d4fce506390eb50a0e7cd5f91df1e5ce07f4eb83927d9b4538b9416",
+      "libraryFileId": "libfile_91580b793e208191b0650f73b1b272bd",
+      "fileId": "file_00000000ad0081f59a489299e0d316ae"
+    },
+    "operation": {
+      "name": "ClinicalTrials_Customer_Operation.json",
+      "bytes": 147717,
+      "sha256": "5e599d54f63837612cc89135aa95df4fb49fbe602dc0a573577391a8d80f34e4",
+      "libraryFileId": "libfile_eed4d1370d0c81918c8fdc78e9afcf16",
+      "fileId": "file_00000000823c81fd92c17bc9c10e292f"
+    },
+    "customer": {
+      "name": "ClinicalTrials_Daiichi_Registry_Customer.zip",
+      "bytes": 15928141,
+      "sha256": "f0b584653a8481eb4331530fb6946694a9a4b778328e00f2dcaf981995ec7e05",
+      "libraryFileId": "libfile_c8d8d30c56488191864285c5a36a8d27",
+      "fileId": "file_000000006b4481f693651f0379dae4dc"
+    }
+  },
+  "expected": {
+    "captureId": "capture-fb551338-f35d-46b3-b257-1138ba449c28",
+    "studies": 165,
+    "pages": 4,
+    "sourceId": "30df480b1dc4f295eec7c536a9158cd1ad45ddde1eb684cbcd33862754199130",
+    "buildId": "94f5417fe4cd79239d12af4b309d8ae1940adfca869ce840e0ac36708528371c",
+    "planId": "95c873ac240646d41df5ebe26e8081bfd6fbda5ff553851bc41994913f5bf0af",
+    "snapshot": "ade2c08954dc92830e14d152290d2543a8c6bd7335dbb949bf57a4e605a4b0a4",
+    "csv": {
+      "bytes": 35935,
+      "sha256": "1b36c292f9e3ae65123f6e66ce2baab1a267a6017393f2f2fbadbc309287ac70"
+    },
+    "providerVersion": {
+      "apiVersion": "2.0.5",
+      "dataTimestamp": "2026-10-09T09:00:05"
+    },
+    "reviewIds": [
+      "7f82857ab38977b3fea662d329fbb66175c891726507a1309661ca4f3cf7ce3c",
+      "01577be1c3e1105ff0beb101b707539a1832cf9670dc7268b9f8a694901c3522"
+    ]
+  },
+  "originalJournalPointer": "mcp.observed",
+  "outputThread": {
+    "channelId": "C0BTTA66TK3",
+    "parentTs": "1791772881.074649"
+  },
+  "receivingRequest": {
+    "channelId": "C0BTTA66TK3",
+    "messageTs": "1791781778.710529"
+  },
+  "runtime": {
+    "python": "Original Python 3 runtime with clinicaltrials/requirements.txt satisfied",
+    "node": "Node.js 22 or newer",
+    "browser": "Existing Chromium and Playwright package selected by SCF_BROWSER_EXECUTABLE and SCF_PLAYWRIGHT_PACKAGE",
+    "sourceRoot": "Full installed package/source or exact complete repository checkout at sourceCommit"
+  },
+  "clinicalSourceCommit": "8f859b5f427655d2dd50a592a60411cb466a0353",
+  "sourceDependencies": {
+    "reason": "Committed original Research constant correction required by the complete shared merchant interface",
+    "sourceCommit": "32f9b1b5c6635352b8de7b43360c8c548eb444e6",
+    "hashAlgorithm": "git-blob-sha1",
+    "files": [
+      {
+        "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs",
+        "sha": "aca5ad6b33ddb1afdc5bcbb8e6e00b45dc366d34"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-protocol.mjs",
+        "sha": "e052caf500ca3d1119e554b45ac5d1841eef236d"
+      }
+    ]
+  }
+}
