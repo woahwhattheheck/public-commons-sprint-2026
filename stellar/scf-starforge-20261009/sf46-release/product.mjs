@@ -144,11 +144,12 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
     } else {
       const stage = await mkdtemp(join(lockedHome, 'releases', '.install-'));
       try {
-        let consumed = false;
+        let preparedStage = stage, consumed = false;
         if (consumePrepared) {
           // The runtime adopter explicitly hands over its own private prepared
-          // directory. External bundle callers keep the normal copy behavior.
-          try { await rename(bundle.root, stage); consumed = true; }
+          // directory. The child does not already exist on any supported host.
+          const ownedStage = join(stage, 'release');
+          try { await rename(bundle.root, ownedStage); preparedStage = ownedStage; consumed = true; }
           catch (error) { if (error.code !== 'EXDEV') throw error; }
         }
         if (!consumed) {
@@ -157,10 +158,10 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
           await putFile(join(stage, MANIFEST), bundle.manifestBytes);
         }
         // A changed input cannot be promoted after the initial source read.
-        await verifyRelease(stage, bundle.manifest.digest);
-        await rename(stage, target);
+        await verifyRelease(preparedStage, bundle.manifest.digest);
+        await rename(preparedStage, target);
         state = 'INSTALLED';
-      } catch (error) { await rm(stage, { recursive: true, force: true }); throw error; }
+      } finally { await rm(stage, { recursive: true, force: true }); }
     }
     // A runtime-aware caller prepares the installed dependency attachment under
     // this same lock. Selection only follows successful preparation, including
