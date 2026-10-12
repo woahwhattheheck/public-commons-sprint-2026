@@ -438,7 +438,9 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
         return { applicationId, ...begun, ...await model.recoverManagedOperation(begun.operationId) };
       return { applicationId, ...begun };
     },
-    async applicationsStartReview({ applicationId }) { return reviewApplicationStart(root, applicationId); },
+    async applicationsStartReview({ applicationId, navigationOrigin = null }) {
+      return reviewApplicationStart(root, applicationId, { navigationOrigin });
+    },
     async applicationsStart(input) { return dispatchApplicationStart(root, input, request => model.begin(request)); },
     async applicationsStop(input) { return cancelApplicationRun(root, input, id => model.stopManagedCommand(id)); },
     async applicationsRecover(input) {

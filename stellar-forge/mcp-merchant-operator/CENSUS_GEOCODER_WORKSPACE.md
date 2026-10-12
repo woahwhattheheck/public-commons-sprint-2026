@@ -171,6 +171,91 @@ Publisher action values are the original fully qualified names:
 
 The native operation decides which optional fields are applicable. Undeclared fields and host-path substitutions are rejected by the adapter.
 
+## Receive a complete edition
+
+The recipient command receives the entire original edition through the existing authenticated merchant file calls. It writes the exact edition.json, dataset.csv, dataset.json, review, provenance, submitted/input CSV, actual Census response and HTTP metadata, the retained discovery/capture records, and seller.json when that edition has merchant terms. Native strings such as geography codes remain unchanged. No new export is generated on the source host.
+
+Keep the original Census application open. Use its actual MCP URL and token environment, the declared workspace alias, and the edition UUID returned by the existing workspace. Inspect first to read the original workspace UUID, dataset snapshot, complete member list and manifest SHA-256:
+
+~~~sh
+starforge census-geocoder-download inspect \
+  --url MCP_URL --workspace addresses --edition EDITION_UUID
+~~~
+
+Receive the reviewed edition using those returned identities:
+
+~~~sh
+starforge census-geocoder-download download \
+  --url MCP_URL --workspace addresses --edition EDITION_UUID \
+  --workspace-id WORKSPACE_UUID --manifest-sha256 MANIFEST_SHA256 \
+  --out /absolute/private/received-edition
+~~~
+
+The default token variable is MCP_ACCESS_TOKEN; --token-env selects the existing host variable. Credentials remain outside command values. The source selection must refer to a complete edition in the currently open original workspace. Inspection pages the actual retained edition history, so an older edition remains selectable after the first hundred records.
+
+The receiver delegates private directory ownership, nested files, complete file hashes and durable partial prefixes to the maintained retained-download engine. Each invocation reads the same original manifest. Its checkpoint is bound to the original workspace UUID, alias, edition UUID, review, operation and dataset snapshot. A later MCP process or port can serve the same retained workspace without invalidating that checkpoint. A different workspace, edition, manifest or member digest is rejected before it is mixed into the saved download.
+
+After an interruption, run the same download command with the same directory and reviewed identities. Use the current actual MCP URL if the original application has reopened. Completed members are checked and reused; partial members continue after the original verified byte prefix. --chunk-bytes may select a value from 1 to 196608. Progress goes to stderr and the complete result goes to stdout. SIGINT and SIGTERM retain the partial directory for this same continuation.
+
+Reopen and query the received edition locally:
+
+~~~sh
+starforge census-geocoder-download reopen \
+  --dir /absolute/private/received-edition \
+  --workspace-id WORKSPACE_UUID --edition EDITION_UUID \
+  --manifest-sha256 MANIFEST_SHA256
+
+starforge census-geocoder-download query \
+  --dir /absolute/private/received-edition \
+  --query 'fields=record_id,match_status&limit=25'
+~~~
+
+Reopen retains the existing receiving lease while it checks the original checkpoint, exact manifest and every member, then calls the native reopenEdition implementation. Query uses that same completed selection and original dataset handler. Its response preserves the native typed fields, filters, ordering, snapshot and cursor. A native query error is returned with its original status/body and makes the CLI exit unsuccessfully. Both local commands work without a merchant connection or token.
+
+The received directory is also a normal portable Census edition. The existing command remains available:
+
+~~~sh
+starforge dataset geocoder reopen --directory /absolute/private/received-edition
+~~~
+
+### Typed client
+
+The existing Census contribution exports the client as ./merchant/mcp/census-geocoder/download with its paired TypeScript declaration. It provides inspectCensusGeocoderEdition, downloadCensusGeocoderEdition, reopenCensusGeocoderDownload and queryCensusGeocoderDownload. From the installed distribution root:
+
+~~~js
+import {
+  inspectCensusGeocoderEdition,
+  downloadCensusGeocoderEdition,
+  queryCensusGeocoderDownload,
+} from './source/stellar-forge/mcp-merchant-operator/census-geocoder-download.mjs';
+
+const remote = {
+  url: process.env.CENSUS_MCP_URL,
+  workspace: 'addresses',
+  editionId: process.env.CENSUS_EDITION_ID,
+};
+const inspected = await inspectCensusGeocoderEdition(remote);
+const received = await downloadCensusGeocoderEdition({
+  ...remote,
+  directory: '/absolute/private/received-edition',
+  expectedWorkspaceId: inspected.workspaceId,
+  expectedManifestSha256: inspected.manifestSha256,
+  onProgress: value => process.stderr.write(JSON.stringify(value) + '\n'),
+});
+const page = await queryCensusGeocoderDownload({
+  directory: received.directory,
+  expectedWorkspaceId: inspected.workspaceId,
+  expectedEditionId: inspected.editionId,
+  expectedManifestSha256: inspected.manifestSha256,
+  query: 'fields=record_id,match_status&limit=25',
+});
+console.log(page.response);
+~~~
+
+Remote SDK calls also accept the original embedded native file client through client:{endpoint,call}, in place of url. They use the same existing merchant tool names and authenticated/native results. AbortSignal and async progress callbacks retain the shared engine's ordinary partial-file behavior. Applications continues to own the source workspace; receiving releases its retained file reads and local directory lease.
+
+The native limits remain explicit: a four-MiB edition manifest, at most 512 members, and 64MiB per original member. The SDK preserves the same required files and seller selection. The original native validator remains authoritative for the received dataset and provenance.
+
 ## Receiving and recovery
 
 merchant_census_geocoder_export writes the complete native edition under the merchant's existing customer export root. Its original edition.json enumerates all dataset, schema, review, seller and source files with sizes and digests. The original reopen command validates the received directory:

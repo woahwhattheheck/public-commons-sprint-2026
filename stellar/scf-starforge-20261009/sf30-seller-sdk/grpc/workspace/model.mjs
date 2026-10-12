@@ -14,6 +14,7 @@ import { captureGrpcStream, inspectGrpcStream } from '../stream-capture.mjs';
 import { compileGrpcMerchantPlan, prepareGrpcSeller, readGrpcPrepared, CUSTOMER_FILES } from '../prepare.mjs';
 import { startGrpcMerchant } from '../merchant.mjs';
 import { assertGrpcWorkspaceBinding } from './binding.mjs';
+import { createGrpcUpgradeWorkspace } from './upgrade.mjs';
 import { fields, text, canonical, sha256, jsonBytes, readJson, readBytes, writeNew,
   syncDirectory, privateDirectory, fail, assertProtoArchiveFits, writeJsonSnapshot } from '../common.mjs';
 
@@ -78,7 +79,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   const root = await privateDirectory(stateDirectory, true), lease = await acquireStateLease(root);
   const environment = { ...env };
   const retainedRuntime = releaseRuntime === undefined ? (nativeFactory ? null : { port: sellerPort }) : structuredClone(releaseRuntime);
-  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections'].map(name => [name, join(root, name)]));
+  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections', 'upgrades'].map(name => [name, join(root, name)]));
   let current = null, revisionIndex = [], reflectionIndex = [], busy = null, closing = false, closePromise, active = null, previousRun = null;
   let navigationOrigin = null, releaseConsole = null, activeCall = null;
   const cached = new Map(), reflectionControllers = new Set();
@@ -90,6 +91,9 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     return busy;
   };
   const currentId = () => current?.revision ?? null;
+  const upgrades = createGrpcUpgradeWorkspace({ directory: folders.upgrades,
+    selection: () => ({ revision: currentId(), generation: current?.generation ?? 0 }),
+    loadRevision: revision, loadReflection: readReflection, saveRevision: saveInside, visibleRevision: visible });
   const revisionPath = id => join(folders.revisions, identifier(id) + '.json');
   async function revision(id) {
     identifier(id);
@@ -201,7 +205,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       generation: current?.generation ?? 0, revisions: revisions.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       prepared: prepared.sort((a, b) => b.createdAt.localeCompare(a.createdAt)), intents,
       attempts: attempts.slice(0, 50),
-      attemptCount: attempts.length, reflections: structuredClone(reflectionIndex).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), runtime: runtime() };
+      attemptCount: attempts.length, upgrades: upgrades.list(), reflections: structuredClone(reflectionIndex).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), runtime: runtime() };
   }
   async function reflectionAction(action, signal) {
     const controller = new AbortController(); reflectionControllers.add(controller);
@@ -286,6 +290,10 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     return saveInside({ source: retained.request.source, protoSource: retained.protoSource, plan: body.plan,
       baseRevision: body.baseRevision, title: body.title });
   });
+  const upgradeReview = body => execute(() => upgrades.review(body));
+  const upgradeOpen = body => execute(() => upgrades.open(body));
+  const upgradeAdopt = body => execute(() => upgrades.adopt(body));
+  const upgradeMethod = body => execute(() => upgrades.method(body));
   const save = body => execute(() => saveInside(body));
   const capture = body => execute(async () => {
     fields(body, ['directory', 'entrypoints', 'source', 'plan', 'baseRevision', 'title'], 'GRPC_CAPTURE_FIELDS_INVALID');
@@ -605,6 +613,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     if (current && (current.schema !== 'stellar-forge.grpc-workspace-current.v1' ||
         !REV.test(current.revision) || !Number.isSafeInteger(current.generation))) fail('GRPC_WORKSPACE_CURRENT_INVALID', 409);
     if (current) await revision(current.revision);
+    await upgrades.initialize();
     previousRun = await optional(join(root, 'run.json'), 65536);
     if (previousRun && !['STOPPED', 'START_FAILED'].includes(previousRun.phase))
       previousRun = { ...previousRun, phase: 'PREVIOUS_OWNER_ENDED', note: 'The prior workspace process ended before recording its final stop. Select a retained merchant to run again.' };
@@ -616,7 +625,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await saveInside({ source, protoSource, plan, baseRevision: null, title: 'gRPC merchant' });
     }
   } catch (issue) { await lease.close(); throw issue; }
-  return { stateDirectory: root, state, attemptsPage, runtime, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, open, checkout, method, review,
+  return { stateDirectory: root, state, attemptsPage, runtime, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, upgradeReview, upgradeOpen, upgradeAdopt, upgradeMethod, open, checkout, method, review,
     call, readAttempt, cancelCall, streamDownload, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
     bindOperationsNavigationOrigin(origin) {
       const url = new URL(origin);

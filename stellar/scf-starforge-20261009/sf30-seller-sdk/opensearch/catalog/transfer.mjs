@@ -10,13 +10,18 @@ import { catalogInputFormat } from './input.mjs';
 import { CATALOG_TABLES, CATALOG_SCHEMA, SOURCE_SCHEMA, EDITION_SCHEMA, DECISION_SCHEMA,
   sourceIdentity, editionReview, materialRoot, hashCatalogFile } from './workspace.mjs';
 
+import { SUPPLIER_TABLES, SUPPLIER_KEYS, SUPPLIER_MUTABLE, SUPPLIER_MERGE_ORDER, setupSupplierTables } from './supplier/model.mjs';
+import { captureSupplier, supplierRecords, validateSupplierRow, validateSupplierClosure } from './supplier/transfer.mjs';
+
 export const CATALOG_BUNDLE_SCHEMA = 'stellar-forge.material-catalog-bundle.v1';
+export const CATALOG_SUPPLIER_BUNDLE_SCHEMA = 'stellar-forge.material-catalog-bundle.v2';
+const tables = () => ({ ...CATALOG_TABLES, ...SUPPLIER_TABLES });
 const fail = (code, message, status = 422) => { throw new WorkspaceError(code, message, status); };
 const parse = row => row ? JSON.parse(row.record_json) : null;
 const keys = {
   catalog_catalogs: ['id'], catalog_history: ['catalog_id','revision'], catalog_sources: ['id'],
   catalog_editions: ['id'], catalog_materials: ['edition_id','material_key'],
-  catalog_decisions: ['id'], catalog_decision_history: ['decision_id','revision']
+  catalog_decisions: ['id'], catalog_decision_history: ['decision_id','revision'], ...SUPPLIER_KEYS
 };
 function lookups(value, ids = new Set()) {
   if (!value || typeof value !== 'object') return ids;
@@ -34,17 +39,20 @@ function snapshot(workspace, catalogId) {
     sourceIds.add(edition.source.id);
     for (const source of edition.dependencies) sourceIds.add(source.id);
   }
-  return { catalog, catalogHistory, editions, decisions, sources: [...sourceIds].sort().map(id => workspace.source(id)) };
+  return { catalog, catalogHistory, editions, decisions, sources: [...sourceIds].sort().map(id => workspace.source(id)),
+    supplier: captureSupplier(workspace, catalogId) };
 }
 export function exportCatalogBundle(workspace, catalogId) {
   const saved = workspace.store.transaction(() => snapshot(workspace, catalogId));
+  const withSupplier = saved.supplier.plans.length > 0;
+  const schema = withSupplier ? CATALOG_SUPPLIER_BUNDLE_SCHEMA : CATALOG_BUNDLE_SCHEMA;
   async function* body() {
     const hash = createHash('sha256'); let frames = 0;
-    const rows = Object.fromEntries(Object.keys(CATALOG_TABLES).map(name => [name, 0]));
+    const rows = Object.fromEntries(Object.keys(withSupplier ? tables() : CATALOG_TABLES).map(name => [name, 0]));
     let sourceBytes = 0;
     const frame = value => { const raw = JSON.stringify(value) + '\n'; hash.update(raw); frames++; return raw; };
     const record = (table, values) => { rows[table]++; return frame({ type: 'record', table, values }); };
-    const header = { type: 'header', schema: CATALOG_BUNDLE_SCHEMA, catalogId: saved.catalog.id,
+    const header = { type: 'header', schema, catalogId: saved.catalog.id,
       catalogRevision: saved.catalog.revision, tenantId: saved.catalog.tenantId,
       sourceWorkspaceId: workspace.store.id, exportedAt: now() };
     yield frame(header);
@@ -78,7 +86,8 @@ export function exportCatalogBundle(workspace, catalogId) {
       for (const row of workspace.db.prepare('SELECT decision_id,revision,record_json FROM catalog_decision_history WHERE decision_id=? AND revision<=? ORDER BY revision').iterate(decision.id, decision.revision))
         yield record('catalog_decision_history', CATALOG_TABLES.catalog_decision_history.map(name => row[name]));
     }
-    yield JSON.stringify({ type: 'complete', schema: CATALOG_BUNDLE_SCHEMA, catalogId: saved.catalog.id,
+    if (withSupplier) for (const item of supplierRecords(workspace, saved.supplier)) yield record(item.table, item.values);
+    yield JSON.stringify({ type: 'complete', schema, catalogId: saved.catalog.id,
       frames, rows, sourceBytes, payloadSha256: hash.digest('hex') }) + '\n';
   }
   return { filename: 'material-catalog-' + saved.catalog.id + '-r' + saved.catalog.revision + '.jsonl',
@@ -105,6 +114,7 @@ function stageTables(db) {
     db.exec('CREATE TABLE ' + name + '(' + definition + ',PRIMARY KEY(' + keys[name].join(',') + '));');
   }
   db.exec('CREATE UNIQUE INDEX catalog_decision_context ON catalog_decisions(catalog_id,context_key);');
+  setupSupplierTables(db);
 }
 function count(db, sql, ...values) { return Number(db.prepare(sql).get(...values).n); }
 function validRevision(value) { return Number.isSafeInteger(value) && value > 0 && value <= 1000000; }
@@ -113,6 +123,10 @@ function requireRecord(row, expectedSchema) {
   identifier(row.id);
 }
 function validateRow(table, values, header) {
+  if (Object.hasOwn(SUPPLIER_TABLES, table)) {
+    if (header.schema !== CATALOG_SUPPLIER_BUNDLE_SCHEMA) fail('CATALOG_BUNDLE_VERSION_REQUIRED', 'Supplier records require the complete v2 catalog bundle.');
+    return validateSupplierRow(table, values, header);
+  }
   const columns = CATALOG_TABLES[table];
   if (!columns || !Array.isArray(values) || values.length !== columns.length)
     fail('CATALOG_BUNDLE_ROW_INVALID', 'The handover contains an unknown table or row shape.');
@@ -222,14 +236,14 @@ function validateClosure(db, header, completedSources) {
         !revision || revision.activeEditionId !== decision.editionId)
       fail('CATALOG_BUNDLE_DECISION_MATERIAL_CHANGED', 'A customer decision does not match its originally selected material and edition.');
   }
-  return { catalog, editions };
+  return { catalog, editions, supplier: validateSupplierClosure(db, header) };
 }
 function mergeRows(workspace, staged, table) {
-  const columns = CATALOG_TABLES[table], selected = keys[table];
+  const columns = tables()[table], selected = keys[table];
   const where = selected.map(key => key + '=?').join(' AND ');
   const get = workspace.db.prepare('SELECT * FROM ' + table + ' WHERE ' + where);
   const insert = workspace.db.prepare('INSERT INTO ' + table + '(' + columns.join(',') + ') VALUES(' + columns.map(() => '?').join(',') + ')');
-  const mutable = table === 'catalog_catalogs' || table === 'catalog_decisions';
+  const mutable = table === 'catalog_catalogs' || table === 'catalog_decisions' || SUPPLIER_MUTABLE.has(table);
   for (const row of staged.prepare('SELECT * FROM ' + table).iterate()) {
     const prior = get.get(...selected.map(key => row[key]));
     if (!prior) { insert.run(...columns.map(key => row[key])); continue; }
@@ -237,6 +251,8 @@ function mergeRows(workspace, staged, table) {
       if (sourceIdentity(parse(prior)) !== sourceIdentity(parse(row))) fail('CATALOG_BUNDLE_EXISTING_SOURCE_CHANGED', 'A source conflicts with existing retained work.', 409);
       continue;
     }
+    if (SUPPLIER_MUTABLE.has(table) && columns.some(key => !['revision','record_json'].includes(key) && prior[key] !== row[key]))
+      fail('SUPPLIER_BUNDLE_EXISTING_IDENTITY_CHANGED', 'The supplier plan or correction conflicts with an existing identity.', 409);
     if (mutable && prior.revision !== row.revision) {
       if (prior.revision > row.revision) continue;
       workspace.db.prepare('UPDATE ' + table + ' SET revision=?,record_json=? WHERE id=?').run(row.revision, row.record_json, row.id);
@@ -264,10 +280,10 @@ export function importCatalogBundle(workspace, meta, iterable) {
     try {
     db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;'); stageTables(db);
     const hash = createHash('sha256'); let frames = 0, header, footer, sourceBytes = 0;
-    const rowCounts = Object.fromEntries(Object.keys(CATALOG_TABLES).map(name => [name, 0]));
+    let rowCounts = Object.fromEntries(Object.keys(CATALOG_TABLES).map(name => [name, 0]));
     const completedSources = new Set();
     let pendingRows = [], pendingBytes = 0;
-    const inserts = Object.fromEntries(Object.entries(CATALOG_TABLES).map(([table, columns]) => [table,
+    const inserts = Object.fromEntries(Object.entries(tables()).map(([table, columns]) => [table,
       db.prepare('INSERT INTO ' + table + '(' + columns.join(',') + ') VALUES(' + columns.map(() => '?').join(',') + ')')]));
     const flushRows = () => {
       if (!pendingRows.length) return;
@@ -280,13 +296,15 @@ export function importCatalogBundle(workspace, meta, iterable) {
         let frame; try { frame = JSON.parse(raw); } catch { fail('CATALOG_BUNDLE_JSON_INVALID', 'The handover contains an invalid JSON record.'); }
         if (footer) fail('CATALOG_BUNDLE_TRAILING_CONTENT', 'The handover contains records after completion.');
         if (!header) {
-          if (frame?.type !== 'header' || frame.schema !== CATALOG_BUNDLE_SCHEMA || !validRevision(frame.catalogRevision))
+          if (frame?.type !== 'header' || ![CATALOG_BUNDLE_SCHEMA,CATALOG_SUPPLIER_BUNDLE_SCHEMA].includes(frame.schema) || !validRevision(frame.catalogRevision))
             fail('CATALOG_BUNDLE_HEADER_REQUIRED', 'Select a complete material catalog handover.');
           identifier(frame.catalogId); catalogText(frame.tenantId, 'Tenant ID', 256);
           header = frame;
+          if (header.schema === CATALOG_SUPPLIER_BUNDLE_SCHEMA)
+            rowCounts = Object.fromEntries(Object.keys(tables()).map(name => [name, 0]));
         } else if (frame.type === 'complete') {
           flushRows();
-          if (liveSource || frame.schema !== CATALOG_BUNDLE_SCHEMA || frame.catalogId !== header.catalogId ||
+          if (liveSource || frame.schema !== header.schema || frame.catalogId !== header.catalogId ||
               frame.frames !== frames || canonical(frame.rows) !== canonical(rowCounts) || frame.sourceBytes !== sourceBytes ||
               frame.payloadSha256 !== hash.digest('hex'))
             fail('CATALOG_BUNDLE_COMPLETION_CHANGED', 'The complete bundle manifest does not match its original records and source streams.');
@@ -343,11 +361,12 @@ export function importCatalogBundle(workspace, meta, iterable) {
         // Immutable histories are checked before current pointers advance. Newer local
         // revisions survive a replay of an earlier handover from the same history.
         for (const table of ['catalog_sources','catalog_history','catalog_editions','catalog_materials',
-          'catalog_decision_history','catalog_decisions','catalog_catalogs']) mergeRows(workspace, db, table);
+          'catalog_decision_history','catalog_decisions','catalog_catalogs', ...SUPPLIER_MERGE_ORDER]) mergeRows(workspace, db, table);
         for (const edition of closure.editions) workspace.buildSearchIndex(edition);
         const catalog = workspace.catalog(closure.catalog.id);
         const result = { catalog, importedRevision: closure.catalog.revision,
-          handover: { schema: CATALOG_BUNDLE_SCHEMA, sha256: request.sha256, bytes: request.bytes,
+          supplier: closure.supplier,
+          handover: { schema: header.schema, sha256: request.sha256, bytes: request.bytes,
             sourceWorkspaceId: header.sourceWorkspaceId, payloadSha256: footer.payloadSha256,
             rows: rowCounts, sourceBytes } };
         workspace.complete(operation, result); return result;

@@ -221,7 +221,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
   if (directory === stateDirectory) throw fail('FLEET_RELEASE_SEPARATE_STATE_REQUIRED', 400);
   const lease = await acquireStateLease(directory), journalPath = join(directory, 'links.json');
   const manifestPath = join(directory, 'prepared-fleet.json');
-  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise, clientClosePromise, deliveryClosePromise;
+  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise, clientClosePromise, deliveryClosePromise, deliveryCloseFailed = false;
   const owned = new Map(), reviews = new Map(), tenants = new Map(plan.tenants.map(row => [row.id, row]));
   function locate(tenantId, slotName) {
     const tenant = tenants.get(tenantId), slot = tenant?.slots[slotName];
@@ -632,8 +632,11 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       clientClosePromise = clients.close(); clientClosePromise.catch(() => {}); return true;
     },
     cancelDeliveryOperations() {
-      if (deliveryClosePromise) return false;
-      deliveryClosePromise = delivery.close(); deliveryClosePromise.catch(() => {}); return true;
+      if (deliveryClosePromise && !deliveryCloseFailed) return false;
+      deliveryCloseFailed = false;
+      deliveryClosePromise = delivery.close();
+      deliveryClosePromise.catch(() => { deliveryCloseFailed = true; });
+      return true;
     },
     close() {
       if (closingPromise) return closingPromise;
@@ -641,7 +644,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       api.cancelStaging();
       api.cancelClientTransfers();
       api.cancelDeliveryOperations();
-      closingPromise = (async () => {
+      const attempt = (async () => {
         await operation?.promise.catch(() => {});
         const errors = [];
         // Observe original listener completion before invoking native close: its
@@ -655,12 +658,14 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
         errors.push(...results.filter(row => row.status === 'rejected').map(row => row.reason));
         try { await clientClosePromise; } catch (error) { errors.push(error); }
         try { await deliveryClosePromise; } catch (error) { errors.push(error); }
-        try { await lease.close(); } catch (error) { errors.push(error); }
-        closed = true;
         if (errors.length) throw Object.assign(fail('FLEET_RELEASE_SHUTDOWN_INCOMPLETE', 500),
           { cause: new AggregateError(errors, 'Original owned shutdown reported errors') });
+        await lease.close();
+        closed = true;
       })();
-      return closingPromise;
+      closingPromise = attempt;
+      attempt.catch(() => { if (closingPromise === attempt) closingPromise = undefined; });
+      return attempt;
     },
   };
   try {

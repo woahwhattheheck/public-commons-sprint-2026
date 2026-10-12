@@ -12,6 +12,8 @@ from .errors import DeliveryError
 from .storage import digest, parse
 
 SCHEMA = "stellar-forge.ckan-semantics.v1"
+ODATA_SCHEMA = "stellar-forge.odata-semantics.v1"
+SCHEMAS = frozenset({SCHEMA, ODATA_SCHEMA})
 SQL_SCHEMA = "stellar-forge.python-dataset-semantics.v1"
 MAX_BYTES = 2 * 1024 * 1024
 _HEX = re.compile(r"[a-f0-9]{64}")
@@ -40,9 +42,18 @@ def identity(document):
     result = {"schema": document.get("schema"), "sha256": document.get("sha256"),
               "definitionSha256": document.get("definitionSha256"),
               "captureManifestSha256": source.get("captureManifestSha256")}
-    _require(result["schema"] == SCHEMA and all(isinstance(result[key], str) and
+    _require(isinstance(result["schema"], str) and result["schema"] in SCHEMAS and all(isinstance(result[key], str) and
              _HEX.fullmatch(result[key]) for key in _IDENTITY if key != "schema"),
              "DATASET_SEMANTIC_IDENTITY_INVALID")
+    if result["schema"] == ODATA_SCHEMA:
+        _require(source.get("provider") == "odata4"
+                 and source.get("protocolVersion") in ("4.0", "4.01")
+                 and all(isinstance(source.get(key), str) and 0 < len(source[key]) <= 8192
+                         for key in ("serviceUrl", "schemaUrl", "entityContainer", "entitySet", "entityType"))
+                 and isinstance(source.get("schemaSha256"), str)
+                 and _HEX.fullmatch(source["schemaSha256"])
+                 and isinstance(document.get("csdl"), dict),
+                 "DATASET_ODATA_SOURCE_FORMAT_INVALID")
     return result
 
 
@@ -80,6 +91,30 @@ def validate_document(document, fields):
              and isinstance(csvw.get("tableSchema"), dict)
              and isinstance(csvw["tableSchema"].get("columns"), list),
              "DATASET_SEMANTIC_DEFINITIONS_INVALID")
+    if binding["schema"] == ODATA_SCHEMA:
+        _require(len(columns) % 2 == 0, "DATASET_ODATA_STATE_COLUMNS_CHANGED")
+        value_names = set()
+        for index in range(0, len(columns), 2):
+            value, state = columns[index:index + 2]
+            _require(value.get("role") == "value" and state.get("role") == "state"
+                     and state["sourceField"] == value["sourceField"]
+                     and state["name"] == value["name"] + "_state"
+                     and value.get("stateColumn") == state["name"]
+                     and state.get("valueColumn") == value["name"]
+                     and state["type"] == "string" and state["nullable"] is False
+                     and isinstance(value.get("sourceDefinition"), dict)
+                     and isinstance(state.get("sourceDefinition"), dict)
+                     and state["sourceDefinition"].get("role") == "source-presence"
+                     and state["sourceDefinition"].get("sourcePath") == value["sourceField"]
+                     and same_json(state["sourceDefinition"].get("values"), ["value", "null", "missing"]),
+                     "DATASET_ODATA_STATE_COLUMNS_CHANGED")
+            value_names.add(value["name"])
+        _require(all(isinstance(key, str) and key for key in primary["source"])
+                 and len(primary["source"]) == len(set(primary["source"]))
+                 and all(isinstance(key, str) and key in value_names for key in primary["projected"])
+                 and len(primary["projected"]) == len(set(primary["projected"]))
+                 and (not primary["complete"] or len(primary["source"]) == len(primary["projected"])),
+                 "DATASET_ODATA_PRIMARY_KEY_CHANGED")
     definitions = [column["projectedDefinition"] for column in columns]
     for column in virtual:
         _require(isinstance(column, dict) and (column.get("projectedDefinition") is None
@@ -146,6 +181,18 @@ def validate_page_semantics(payload, receiving):
                  for key in ("name", "type", "nullable")),
                  "DATASET_NATIVE_SEMANTIC_COLUMNS_CHANGED")
 
+    if expected["schema"] == ODATA_SCHEMA:
+        selected = payload.get("fields")
+        rows = payload.get("rows")
+        _require(isinstance(selected, list) and isinstance(rows, list)
+                 and all(isinstance(row, dict) for row in rows),
+                 "DATASET_NATIVE_SEMANTIC_PAGE_CHANGED")
+        states = [column["name"] for column in definitions
+                  if column["role"] == "state" and column["name"] in selected]
+        _require(all(row.get(name) in ("value", "null", "missing")
+                     for row in rows for name in states),
+                 "DATASET_ODATA_STATE_VALUE_CHANGED")
+
 
 def sql_descriptor(receiving, fields, mapped):
     """Bind source definitions to reviewed SQL aliases without changing meaning."""
@@ -164,7 +211,12 @@ def sql_descriptor(receiving, fields, mapped):
             "columns": [{"source": field, "column": column} for field, column in zip(fields, mapped)]}
 
 
-def sql_context(raw, descriptor, version_id):
+def sql_context(raw, descriptor, version_id, *, case_sensitive_targets=False):
+    """Reopen original meanings under the receiving engine's identifier rules.
+
+    SQLite and DuckDB use case-insensitive target names. PostgreSQL receives
+    explicitly quoted names and therefore requests case-sensitive equality.
+    """
     _require(isinstance(descriptor, dict) and descriptor.get("schema") == SQL_SCHEMA
              and isinstance(descriptor.get("file"), dict)
              and len(raw) <= MAX_BYTES
@@ -178,8 +230,9 @@ def sql_context(raw, descriptor, version_id):
                      and isinstance(column.get("column"), str) for column in mappings),
              "DATASET_SQL_SEMANTIC_MAPPING_INVALID")
     fields = [column["source"] for column in mappings]
-    _require(len(fields) == len(set(fields)) and
-             len({column["column"].casefold() for column in mappings}) == len(mappings),
+    targets = [column["column"] if case_sensitive_targets else column["column"].casefold()
+               for column in mappings]
+    _require(len(fields) == len(set(fields)) and len(set(targets)) == len(mappings),
              "DATASET_SQL_SEMANTIC_MAPPING_INVALID")
     document = parse(raw)
     binding = validate_document(document, fields)

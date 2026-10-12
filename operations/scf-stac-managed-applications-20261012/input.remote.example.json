@@ -1,0 +1,81 @@
+{
+  "schema": "starforge.following-stac-applications-operation.v1",
+  "operationId": "SCF-STAC-MANAGED-APPLICATION-RECEIVING-B710-20261012",
+  "projectDirectory": "/root/stac-managed-applications-7169/operation",
+  "runtimeDirectory": "/root/stac-managed-applications-7169/runtime",
+  "previousRuntime": null,
+  "builderDirectory": "/root/stac-managed-applications-7169/builder",
+  "sourceCache": "/root/stac-managed-applications-7169/source/repository.git",
+  "sourceCommit": "7169c10e37a1800d22133efaf37cfaac5d96e343",
+  "sourceTree": "eda6ec9050eeedb4bd401c66b7bfba0b604a8fca",
+  "sourceWorkspace": "/root/stac-managed-applications-7169/private-inputs/scenes",
+  "sourceProcessingWorkspace": "/root/stac-managed-applications-7169/private-inputs/processing",
+  "builderFiles": [
+    {
+      "name": "browser-assets.mjs",
+      "blob": "63801fa838c0479e6ae156d9f155461f02df0cfb",
+      "bytes": 4571
+    },
+    {
+      "name": "build-state.mjs",
+      "blob": "48a48a8fed8fb8d1106930afadf4474796541fe8",
+      "bytes": 19807
+    },
+    {
+      "name": "build.mjs",
+      "blob": "8b9aedb8051e7b57c2a16048cd94ab40378bd299",
+      "bytes": 17466
+    },
+    {
+      "name": "git-object-receiving.py",
+      "blob": "9b94c60e2996dce7e8ec6c9db99983dd08a908aa",
+      "bytes": 27369
+    },
+    {
+      "name": "git-source.mjs",
+      "blob": "c211d5b344a6d403cf945e5089637746572fed91",
+      "bytes": 9120
+    },
+    {
+      "name": "runtime-unpack.py",
+      "blob": "338e059bdd45d078ec0daefff2889205ae7d86ae",
+      "bytes": 9594
+    },
+    {
+      "name": "specification.mjs",
+      "blob": "bc1d76064cbcab60835da9b158be7893b9d092fc",
+      "bytes": 18079
+    },
+    {
+      "name": "product-package.mjs",
+      "blob": "2c668933f214f201137ac6d3c6b7410525955c9b",
+      "bytes": 3764
+    }
+  ],
+  "previousInputs": {},
+  "installedSources": [
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/stac.mjs",
+      "blob": "b1c18f04257e36745a56c9c55c68dab9a1d90460",
+      "import": true
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-provider.mjs",
+      "blob": "ead95675dcedd110588c707f76286ab4f5a7a4c7",
+      "import": true
+    }
+  ],
+  "sourceOffline": false,
+  "dependencyOffline": true,
+  "pythonExecutable": "python3",
+  "npmExecutable": "npm",
+  "label": "Satellite imagery and processing receiving",
+  "timeoutMs": 180000,
+  "pollMs": 500,
+  "selection": {
+    "native": false,
+    "features": [],
+    "operator": true,
+    "pins": {}
+  }
+}

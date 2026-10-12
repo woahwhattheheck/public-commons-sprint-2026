@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "clinicaltrials",
-  "description": "ClinicalTrials registry, PRS review and retained customer workspaces",
+  "description": "ClinicalTrials registry, PRS batch receiving and retained managed customer workspaces",
   "commands": {
     "clinicaltrials": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs",
     "dataset-clinicaltrials": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs"
@@ -27,7 +27,14 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/ProtocolRecordSchema.xsd",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/RRSUploadSchema.xsd",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/clinicaltrials-openapi.yaml",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/source-contracts.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/prs/schemas/source-contracts.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/managed-application.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/application-provider.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/MANAGED_APPLICATION.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/clinical_batch.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/public/batch.js",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/BATCH_RECEIVING.md"
   ],
   "exports": {
     "./seller/clinicaltrials": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/cli.mjs",
@@ -35,5 +42,8 @@
     "./merchant/mcp/clinicaltrials-workspaces": "./source/stellar-forge/mcp-merchant-operator/clinicaltrials-workspace.mjs",
     "./merchant/mcp/clinicaltrials/client": "./source/stellar-forge/mcp-merchant-operator/clinicaltrials-client.mjs",
     "./merchant/mcp/clinicaltrials/cli": "./source/stellar-forge/mcp-merchant-operator/clinicaltrials-cli.mjs"
+  },
+  "applicationProviders": {
+    "clinicaltrials": "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/application-provider.mjs"
   }
 }

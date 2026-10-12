@@ -154,6 +154,52 @@ If a response survived but its local receipt did not, recovery reconstructs a di
 
 Receiving creates a private staging directory, verifies the archive inventory and native scan, reconstructs all source bytes, and publishes the completed customer directory atomically. Reopen checks the same archive, pages, operator records and source inventory. No provider call occurs.
 
+## Installed customer command
+
+The same product contribution exposes `matomo-customer`. In an installed
+cut that includes this command, inspect its registration and open the received
+archive with the existing Python interpreter:
+
+```sh
+starforge registrations --command matomo-customer
+starforge matomo-customer --help
+
+starforge matomo-customer receive \
+  --archive /absolute/private/matomo-handover.zip \
+  --out /absolute/private/customer-matomo \
+  --python /absolute/existing-python/bin/python
+
+starforge matomo-customer reopen \
+  --out /absolute/private/customer-matomo \
+  --python /absolute/existing-python/bin/python
+
+starforge matomo-customer rows \
+  --out /absolute/private/customer-matomo \
+  --python /absolute/existing-python/bin/python \
+  > /absolute/private/matomo-report-rows.jsonl
+```
+
+The launcher supplies the original SDK and Buyer Python import directories from
+that installed source. It uses `MATOMO_PYTHON` or `python3` when `--python`
+is omitted. Its Node verifier defaults to the executable running the installed
+command; `--node` can select the existing native verifier explicitly.
+No interpreter or package is installed by this command.
+
+Receive and reopen invoke the unchanged `matomo.customer` functions. They keep
+the same archive, page-chain, operator-evidence, source-file and edition checks.
+An existing customer destination must match the original archive; it is not
+overwritten with a different handover. The native summary retains its payment
+status. `rows` streams original JSONL bytes directly, including number text,
+string/null/absence distinctions and source references, without parsing those
+rows through JavaScript or collecting the output in memory.
+
+Advanced operators can invoke `pack --scan … --operator-evidence … --out …`
+or `from-scan --scan … --out …` through the same command. Those modes retain the
+original Python semantics described below. Native error output, exit status and
+interrupt/termination signals pass through the installed launcher. After an
+interruption, inspect or reopen the same private destination before choosing a
+new operation.
+
 ## Python customer use
 
 Use the original Buyer package on `PYTHONPATH`, together with the SDK root. The maintained distribution may already supply these imports.
@@ -293,3 +339,7 @@ The source retains the demo's returned site context and report definitions. Thes
 ## Saved Applications and native agent operation
 
 The same original workspace can be selected by the maintained Applications loader and the merchant MCP host. The complete [Applications and agent guide](../../../../stellar-forge/mcp-merchant-operator/MATOMO_WORKSPACES.md) covers source-bound saved launch, exact operation/revision recovery, typed reviews, SF82 controls, full source publication and native customer receiving. The product-owned contribution preserves the original CLI and exposes the native provider through the existing shared registry; use a selected distribution that actually includes that contribution. The saved Application kind is `matomo-authoring`; the source-owned merchant provider is `matomo-workspaces`. Its initializer binds the original workspace and SF82 store, and the native agent owner cancels/drains the same model on close.
+
+## Remote customer and retained artifact transfer
+
+Use [the complete remote client guide](CLIENT.md) for the installed `starforge matomo-remote` command and typed JavaScript APIs. The source-owned client exposes the same 52 original MCP tools, retains exact revision-bound requests before dispatch, and reconciles an unconfirmed response through the original action instead of repeating it. Its artifact selection binds the original workspace UUID/source identity and file SHA; the maintained file writer resumes that exact payload, and the original Python customer receives/reopens the complete handover. The original Apps, MCP provider, capture, publisher, release and receiving owners remain in use.

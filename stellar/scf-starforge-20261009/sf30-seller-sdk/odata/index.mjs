@@ -6,3 +6,5 @@ export { startODataServer } from './server.mjs';
 export { openODataPublisher } from './publisher.mjs';
 export { openODataLiveOperations } from './live-operations.mjs';
 export * as live from './live-sdk.mjs';
+export { ODATA_SEMANTICS_SCHEMA, describeODataSemantics, projectODataSemantics,
+  odataCaptureManifest, compareODataSemantics } from './semantics.mjs';

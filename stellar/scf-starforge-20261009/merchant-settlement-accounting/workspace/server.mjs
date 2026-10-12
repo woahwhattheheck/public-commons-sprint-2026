@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // MIT. Loopback operator interface for the maintained accounting workspace.
 import {createServer} from 'node:http';
+import {readBrowserAssets} from '../../distribution/browser-assets.mjs';
 import {readFile} from 'node:fs/promises';
-import {fileURLToPath,pathToFileURL} from 'node:url';
-import {join,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
 import {openAccountingWorkspace,WorkspaceError} from './store.mjs';
 import {accountingWorkspaceBinding} from './binding.mjs';
 import {openCollectionWorkspace} from './collection-workspace.mjs';
@@ -22,10 +23,11 @@ import {handleCustomerStatementRequest,customerStatementAsset} from '../customer
 import {XeroWorkspace,handleXeroRequest,XERO_REQUEST_BYTES} from './xero-workspace.mjs';
 import {QboWorkspace,handleQboRequest,QBO_REQUEST_BYTES} from './qbo-workspace.mjs';
 import {XERO_HELP,xeroMain} from './xero-cli.mjs';
+import {handleAccountingConnections,ACCOUNTING_CONNECTION_REQUEST_BYTES} from './connections-workspace.mjs';
 import {AccountingDeliveryWorkspace,SIGNED_NOTICE_PATH} from '../delivery/workspace.mjs';
 import {readSignedNotice,handleDeliveryNoticeRequest,deliveryNoticeAsset} from '../delivery/server.mjs';
 
-const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
+const STATIC=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
 const TYPES={'.json':'application/json; charset=utf-8','.csv':'text/csv; charset=utf-8','.html':'text/html; charset=utf-8','.tar':'application/x-tar'};
 const check=(ok,code,message,status=400)=>{if(!ok)throw new WorkspaceError(code,message,status);};
 async function body(request,limit=600_000){
@@ -35,7 +37,7 @@ async function body(request,limit=600_000){
   let value;try{value=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{throw new WorkspaceError('INVALID_JSON','The request is not valid JSON.');}
   check(value&&typeof value==='object'&&!Array.isArray(value),'INVALID_REQUEST','Send an object.');return value;
 }
-export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,xeroClient,qboClient,
+export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,xeroClient,qboClient,connectionsWorkspace,
   recoveryStateRoot,recoveryBackupRoot,recoveryPassEnv,recoveryStartPaused=false,deliverySecretEnv,...options}){
   check(host==='127.0.0.1'||host==='localhost','LOOPBACK_REQUIRED','This operator workspace binds to loopback.');
   check(Number.isInteger(port)&&port>=0&&port<=65535,'INVALID_PORT','Choose a valid port.');
@@ -64,20 +66,14 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
   const server=createServer(async(request,response)=>{
     let operation;
     try{
-      check(hosts.has(request.headers.host),'INVALID_HOST','Open the printed local workspace address.',403);
       const url=new URL(request.url,'http://'+request.headers.host),path=url.pathname;
-      const assets={'/':['index.html','text/html; charset=utf-8'],'/app.mjs':['app.mjs','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],
-        '/collection.mjs':['collection.mjs','text/javascript; charset=utf-8'],'/collection.html':['collection.html','text/html; charset=utf-8'],'/collection.css':['collection.css','text/css; charset=utf-8'],
-        '/pricing.mjs':['pricing.mjs','text/javascript; charset=utf-8'],'/pricing.html':['pricing.html','text/html; charset=utf-8'],'/pricing.css':['pricing.css','text/css; charset=utf-8'],
-        '/periods.mjs':['periods.mjs','text/javascript; charset=utf-8'],'/periods.html':['periods.html','text/html; charset=utf-8'],'/periods.css':['periods.css','text/css; charset=utf-8'],
-        '/accountant.mjs':['accountant.mjs','text/javascript; charset=utf-8'],'/accountant.html':['accountant.html','text/html; charset=utf-8'],'/accountant.css':['accountant.css','text/css; charset=utf-8'],
-        '/cryptoworth.mjs':['cryptoworth.mjs','text/javascript; charset=utf-8'],'/cryptoworth.html':['cryptoworth.html','text/html; charset=utf-8'],'/cryptoworth.css':['cryptoworth.css','text/css; charset=utf-8'],
-        '/qbo.mjs':['qbo.mjs','text/javascript; charset=utf-8'],'/qbo.html':['qbo.html','text/html; charset=utf-8'],'/qbo.css':['qbo.css','text/css; charset=utf-8'],
-        '/xero.mjs':['xero.mjs','text/javascript; charset=utf-8'],'/xero.html':['xero.html','text/html; charset=utf-8'],'/xero.css':['xero.css','text/css; charset=utf-8'],
-        '/bitwave.mjs':['bitwave.mjs','text/javascript; charset=utf-8'],'/bitwave.html':['bitwave.html','text/html; charset=utf-8'],'/bitwave.css':['bitwave.css','text/css; charset=utf-8'],
-        '/recovery.mjs':['recovery.mjs','text/javascript; charset=utf-8'],'/recovery.html':['recovery.html','text/html; charset=utf-8'],'/recovery.css':['recovery.css','text/css; charset=utf-8'],
-        '/adjustments.mjs':['adjustments.mjs','text/javascript; charset=utf-8'],'/adjustments.html':['adjustments.html','text/html; charset=utf-8'],'/adjustments.css':['adjustments.css','text/css; charset=utf-8']};
-      if(request.method==='GET'&&assets[path]){const [name,type]=assets[path];send(response,200,await readFile(join(PUBLIC,name)),{type});return;}
+      const nativeCallback=connectionsWorkspace?.oauth.acceptCallbackRequest(request,url)===true;
+      check(hosts.has(request.headers.host)||nativeCallback,'INVALID_HOST','Open the printed local workspace address.',403);
+      if(connectionsWorkspace){
+        if(await connectionsWorkspace.oauth.callback(request,response,url))return;
+        if(connectionsWorkspace.oauth.returned(response,url))return;
+      }
+      if(request.method==='GET'&&STATIC.has(path)){const asset=STATIC.get(path);send(response,200,await readFile(asset.url),{type:asset.type});return;}
       if(request.method==='GET'&&(path==='/customer-statements'||path.startsWith('/customer-statements/'))){
         const asset=await customerStatementAsset(path);if(asset){send(response,200,asset.bytes,{type:asset.type});return;}
       }
@@ -85,7 +81,8 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
         const asset=await deliveryNoticeAsset(path);if(asset){send(response,200,asset.bytes,{type:asset.type});return;}
       }
       const maintenancePath=path==='/api/maintenance'||path.startsWith('/api/maintenance/');
-      if(!maintenancePath)operation=maintenance.enter();
+      const connectionsPath=path==='/api/oauth/connections'||path==='/api/oauth/connection'||path==='/api/oauth/command'||path==='/api/accounting-connections'||path.startsWith('/api/accounting-connections/');
+      if(!maintenancePath&&!connectionsPath)operation=maintenance.enter();
       if(path===SIGNED_NOTICE_PATH){
         check(request.method==='POST'&&!url.search,'NOT_FOUND','This signed delivery endpoint accepts original POST notices only.',404);
         const accepted=await operation.delivery.acceptSigned(await readSignedNotice(request));
@@ -95,9 +92,16 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       if(request.method==='POST'){
         check(request.headers['x-workspace-request']==='1','WORKSPACE_REQUEST_REQUIRED','Use the operator workspace form.',403);
         check(!request.headers.origin||request.headers.origin==='http://'+request.headers.host,'INVALID_ORIGIN','Use this local workspace address.',403);
-        value=await body(request,path.startsWith('/api/cryptoworth/')?CRYPTOWORTH_REQUEST_BYTES:path.startsWith('/api/customer-statements/')?STATEMENT_REQUEST_BYTES:path.startsWith('/api/qbo/')?QBO_REQUEST_BYTES:path.startsWith('/api/xero/')?XERO_REQUEST_BYTES:path.startsWith('/api/bitwave/')?BITWAVE_REQUEST_BYTES:path.startsWith('/api/accountant/')?ACCOUNTANT_REQUEST_BYTES:path==='/api/collection/sources'?8_200_000:path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
+        value=await body(request,connectionsPath?ACCOUNTING_CONNECTION_REQUEST_BYTES:path.startsWith('/api/cryptoworth/')?CRYPTOWORTH_REQUEST_BYTES:path.startsWith('/api/customer-statements/')?STATEMENT_REQUEST_BYTES:path.startsWith('/api/qbo/')?QBO_REQUEST_BYTES:path.startsWith('/api/xero/')?XERO_REQUEST_BYTES:path.startsWith('/api/bitwave/')?BITWAVE_REQUEST_BYTES:path.startsWith('/api/accountant/')?ACCOUNTANT_REQUEST_BYTES:path==='/api/collection/sources'?8_200_000:path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
       }
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
+      if(connectionsPath){
+        check(connectionsWorkspace,'ACCOUNTING_CONNECTION_SETUP_REQUIRED','Use the reviewed managed accounting Application to configure provider connections.',409);
+        const connected=await handleAccountingConnections(connectionsWorkspace,{method:request.method,path,value,query,scope:request.headers['x-accounting-connection-scope']});
+        check(connected,'NOT_FOUND','This connection operation was not found.',404);
+        if(connected.file)send(response,200,connected.file.bytes,{type:connected.file.type,name:connected.file.name});
+        else send(response,200,connected.value);return;
+      }
       if(maintenancePath){send(response,200,await maintenance.route({method:request.method,path,value}));return;}
       const {workspace,accountant,cryptoworth,bitwave,qbo,xero,collection,statements,delivery}=operation;
       const cryptoworthResult=await handleCryptoworthRequest(cryptoworth,{method:request.method,path,query,value});
@@ -205,6 +209,14 @@ Use a recovery subcommand with --help for the original encrypted workflow.
 `;
 export async function main(argv=process.argv.slice(2)){
   if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP+'\n'+ADJUSTMENTS_HELP+'\n'+XERO_HELP+'\n'+CRYPTOWORTH_HELP);return;}
+  if(argv.includes('--managed-launch-sha256')){
+    const {accountingManagedArguments,startManagedAccountingWorkspace}=await import('./managed-launch.mjs');
+    const selected=accountingManagedArguments(argv);
+    const app=await startManagedAccountingWorkspace(selected.settings,{expectedSha256:selected.expectedSha256,
+      startWorkspace:startAccountingWorkspace});
+    const stop=()=>app.close().then(()=>process.exit(0),error=>{console.error(error.message);process.exit(1);});
+    process.once('SIGINT',stop);process.once('SIGTERM',stop);return;
+  }
   if(argv[0]==='cryptoworth')return cryptoworthMain(argv.slice(1));
   if(argv[0]==='xero')return xeroMain(argv.slice(1));
   if(argv[0]==='adjustments')return adjustmentsMain(argv.slice(1));
