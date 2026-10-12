@@ -9,7 +9,7 @@ const object=(properties,required=[])=>({type:'object',properties,required,addit
 export const ALIAS=/^[a-z0-9][a-z0-9_-]{0,63}$/,SHA=/^[a-f0-9]{64}$/,
   UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const scope={workspace:matching(ALIAS)},id=string(100),offset=integer(0),limit=integer(1,500),readOnly={readOnly:true,idempotent:true};
-const selection=object({kind:choice(['source','edition','dataset','comparison','transfer','buyer','publisher']),
+const selection=object({kind:choice(['source','edition','dataset','comparison','transfer','buyer','publisher','analysis']),
   id,sha256:matching(SHA),datasetId:matching(/^dataset-[a-f0-9]{24}$/),file:string(500)},['kind','id']);
 const readModes=choice(['metadata','summary']);
 export function sensorThingsWorkspaceTools(tool){
@@ -24,11 +24,12 @@ export function sensorThingsWorkspaceTools(tool){
     tool('merchant_sensorthings_release','Inspect the original selected seller release and publisher generations.',{...scope,releaseId:id},['workspace','releaseId'],readOnly),
     tool('merchant_sensorthings_publisher','Inspect the same original dataset publisher and SF88 session/recovery/accounting state.',{...scope,datasetId:matching(/^dataset-[a-f0-9]{24}$/)},['workspace','datasetId'],readOnly),
     tool('merchant_sensorthings_operation','Read a retained operation outcome after a lost reply. Keep its original ID and exact payload; a pending or failed operation is not a new success.',{...scope,operationId:matching(/^[A-Za-z0-9_-]{8,100}$/)},['workspace','operationId'],readOnly),
+    tool('merchant_sensorthings_analysis','Read the original retained analysis overview, project, version, scalar summary, source-linked rows, stream profile, comparison, publication, prepared Python source document or inbox. This uses the same native writer and private session; no provider capture or new analysis is created.',{...scope,mode:choice(['overview','project','version','summary','rows','streams','comparison','publication','python-source','inbox']),id:matching(/^[A-Za-z0-9_-]{8,100}$/),offset,limit},['workspace','mode'],readOnly),
     tool('merchant_sensorthings_action','Execute one advertised native action using the current revision and one stable operationId. Payload fields must match the original schema. Source registration/capture/review/export, dataset/publication and customer workflows remain in the original writer. A lost reply requires reading this same operation before any repeat.',{
       ...scope,operationId:matching(/^[A-Za-z0-9_-]{8,100}$/),expectedRevision:integer(0),
       action:choice(Object.keys(ACTIONS)),payload:{type:'object',additionalProperties:true}
     },['workspace','operationId','expectedRevision','action','payload'],{idempotent:true,openWorld:true,destructive:true}),
-    tool('merchant_sensorthings_files','Page exact original source, dataset, comparison, source-transfer or customer file identities. Choose a returned file selection for bounded reads. Repeat manifestSha256 for later metadata pages.',{
+    tool('merchant_sensorthings_files','Page exact original source, dataset, comparison, source-transfer, analysis publication/project or customer file identities. Choose a returned file selection for bounded reads. Repeat manifestSha256 for later metadata pages.',{
       ...scope,selection,offset,limit,manifestSha256:matching(SHA)
     },['workspace','selection'],readOnly),
     tool('merchant_sensorthings_file_read','Read at most one original verified byte chunk through the running native held-file owner. Continue the returned readId, same selector, expectedSha256 and nextOffset. After client/restart or expired read, resume the same SHA and offset without the old readId.',{
