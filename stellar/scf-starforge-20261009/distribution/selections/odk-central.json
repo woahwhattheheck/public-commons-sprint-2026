@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "odk-central",
   "title": "ODK Central field reporting",
-  "description": "Complete Central field captures, two-period commissioning and approved PostgreSQL receiving/reporting, original publisher/customer flow, existing-host recovery and portable delivery",
+  "description": "Complete Central captures, two-period commissioning, approved PostgreSQL reports and customer ZIP, installed SDK/typed-tool/browser receiving, editable archive restoration and original host recovery",
   "base": {
     "commands": [
       "installation",
@@ -115,14 +115,17 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstream-service.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/application.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstreams.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/receive-managed.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/run-managed-receiving.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/MANAGED_RECEIVING.md"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Complete Central field captures, two-period commissioning and approved PostgreSQL receiving/reporting, original publisher/customer flow, existing-host recovery and portable delivery",
+    "description": "Complete Central captures, two-period commissioning, approved PostgreSQL reports and customer ZIP, installed SDK/typed-tool/browser receiving, editable archive restoration and original host recovery",
     "readme": "products/odk-central/OPERATING.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
