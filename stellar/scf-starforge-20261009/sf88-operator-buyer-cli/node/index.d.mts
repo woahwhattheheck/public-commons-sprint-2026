@@ -1396,11 +1396,11 @@ export interface ExpiredContinuationStatus {
 /** Exact original authorization has no durable signed-dispatch record. */
 export interface UndispatchedContinuationOptions extends Omit<ExpiredContinuationOptions,'expiryEvidence'> {}
 export interface UndispatchedAuthorizationEvidence {
-  schema: string;
+  schema: 'stellar-forge.sf88.undispatched-authorization-evidence.v1';
   kind: 'ORIGINAL_AUTHORIZATION_NOT_DISPATCHED';
   binding: Record<string, unknown> & {intentId: string; requestSha256: string; attemptId: string; configSha256: string};
   wire: Record<string, unknown> & {writerActive: false; signedDispatchRecorded: false};
-  signerSources: Array<{role: string; path: string; bytes: number; sha256: string}>;
+  signerSources: Record<string, {path: string; bytes: number; sha256: string}>;
   scope: Record<string, unknown>;
   sha256: string;
 }
