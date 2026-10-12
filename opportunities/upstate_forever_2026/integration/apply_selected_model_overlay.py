@@ -32,13 +32,14 @@ def prepare(application, packet):
         body = before_bytes.decode("utf-8")
         for index, edit in enumerate(edits, 1):
             before, after = edit["before"], edit["after"]
-            after_count = body.count(after)
-            if after_count == 1:
+            before_count, after_count = body.count(before), body.count(after)
+            if before_count == 1 and not (before in after and after_count == 1):
+                body = body.replace(before, after, 1)
+            elif after_count == 1 and before_count <= 1:
                 continue
-            if after_count or body.count(before) != 1:
+            else:
                 raise ValueError(name + " edit " + str(index) +
                                  " has newer overlapping source; merge this exact change with its owner")
-            body = body.replace(before, after, 1)
         after_bytes = body.encode("utf-8")
         ast.parse(body, filename=str(path))
         base = packet["base_file_metadata"][name]["sha256"]
