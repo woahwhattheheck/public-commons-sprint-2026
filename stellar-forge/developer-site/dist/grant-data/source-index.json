@@ -5,9 +5,9 @@
   "applicant": "Bryce Muhlnickel / TokenJunkieLabs",
   "application": {
     "path": "application.md",
-    "bytes": 23481,
-    "sha256": "b1cf1ecea13f2f50c3968b17716c1635b8331b069a6ef93ed3a86f690a4beb58",
-    "git_blob": "40ac3d76a35d2b0e993245c5354abb00a9059645"
+    "bytes": 25467,
+    "sha256": "42ffd63f20b0ee82f7328418cc4f3e221d408d35d498b6a819a3afdce072a83a",
+    "git_blob": "16fed13a5cc725cafe9c5969aaa43c717b6edc97"
   },
   "request": {
     "basis": "prospective",
@@ -213,7 +213,8 @@
         "customer-learning",
         "capacity",
         "cash",
-        "applicant"
+        "applicant",
+        "federal-awards"
       ]
     },
     {
@@ -312,14 +313,72 @@
       "kind": "official-program",
       "label": "Budget, tranche and receipt-based form guidance",
       "url": "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines"
+    },
+    {
+      "id": "federal-awards-readme",
+      "kind": "published-source",
+      "label": "Federal awards readme guide",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "87801e395d496ffb36fba5cd7215ea942ed96aa2",
+      "path": "products/federal-awards/README.md",
+      "git_blob": "9fb404f1db96a61fb263546c55f4392ec9b40fc8",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/87801e395d496ffb36fba5cd7215ea942ed96aa2/products/federal-awards/README.md"
+    },
+    {
+      "id": "federal-awards-operating",
+      "kind": "published-source",
+      "label": "Federal awards operating guide",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "87801e395d496ffb36fba5cd7215ea942ed96aa2",
+      "path": "products/federal-awards/OPERATING.md",
+      "git_blob": "71602389aa7f057b0b70a4759240e314d9dee44e",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/87801e395d496ffb36fba5cd7215ea942ed96aa2/products/federal-awards/OPERATING.md"
+    },
+    {
+      "id": "federal-awards-receiving",
+      "kind": "published-source",
+      "label": "Federal awards receiving guide",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "87801e395d496ffb36fba5cd7215ea942ed96aa2",
+      "path": "products/federal-awards/RECEIVING.md",
+      "git_blob": "2bb88c0d83b0609719183309d41dc85275d34f4a",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/87801e395d496ffb36fba5cd7215ea942ed96aa2/products/federal-awards/RECEIVING.md"
+    },
+    {
+      "id": "federal-awards-federal-awards",
+      "kind": "published-source",
+      "label": "Federal awards complete product selection",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "87801e395d496ffb36fba5cd7215ea942ed96aa2",
+      "path": "stellar/scf-starforge-20261009/distribution/selections/federal-awards.json",
+      "git_blob": "d0219ecea75c8ad43f36943eaf833cd5dafc07ab",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/87801e395d496ffb36fba5cd7215ea942ed96aa2/stellar/scf-starforge-20261009/distribution/selections/federal-awards.json"
+    },
+    {
+      "id": "federal-awards-original-input",
+      "kind": "retained-official-source",
+      "label": "Complete original Carahsoft award and transaction input",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "commit": "6096db94d538ae73bdbee9483366062b7ecbe595",
+      "path": ".swarm-delivery/64b7-usaspending-transactions/original-source-packet.json",
+      "git_blob": "9cfce7aae075c3c5f4cbc470bd85fd447e6aeacc",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/6096db94d538ae73bdbee9483366062b7ecbe595/.swarm-delivery/64b7-usaspending-transactions/original-source-packet.json",
+      "original_award_key": "CONT_AWD_47QACA26F0383_4732_NNG15SC27B_8000",
+      "transaction_observed_at": "2026-10-12T13:41:08.635511+00:00",
+      "transaction_completed_at": "2026-10-12T13:41:13.939943+00:00",
+      "transaction_response_sha256": "c12c9538e78bed82f93c7e5a02fa18c1533680b1b82a43c398a2a46813c23a60",
+      "complete_source_pages": 1,
+      "transaction_occurrences": 2,
+      "net_obligation_usd": "2104799.96"
     }
   ],
   "product_and_finance": {
     "path": "product-and-finance.md",
-    "git_blob": "f945864b5326bf312abc6327d37c0a197f7632a6",
-    "bytes": 30731,
-    "sha256": "161a66badaa90ec61c22e6fc95b1a702169e850548eb47fddc80a79c8c6f441b",
-    "basis": "Independently reviewed full product, cost, cash, customer and operating companion retained unchanged from public PR2097."
+    "git_blob": "530d8e70a6431ac248303252c43251f4191b14de",
+    "bytes": 43129,
+    "sha256": "6b35650bad1b03d4cf413561904900c069cc03a26aeb58c37a31e994ab645ec5",
+    "basis": "Independently reviewed full product, cost, cash, customer and operating companion, extended with the canonical federal-awards customer, installation and existing-package mapping.",
+    "prior_git_blob": "f945864b5326bf312abc6327d37c0a197f7632a6"
   },
   "narrative_source": {
     "basis": "Original manuscript author's complete October 12 reviewer answer",
@@ -335,6 +394,18 @@
         "before": "at least thirty useful purchases within fourteen consecutive days",
         "after": "at least thirty useful purchases in total across the two buyers within fourteen consecutive days",
         "reason": "State the existing combined purchase-count target across the two independent buyers."
+      }
+    ],
+    "integrations": [
+      {
+        "id": "federal-awards",
+        "basis": "Same canonical October 12 application: federal-award example and complete customer/installation mapping.",
+        "source_repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+        "source_commit": "87801e395d496ffb36fba5cd7215ea942ed96aa2",
+        "source_path": "products/federal-awards",
+        "front_sha256": "4f36ff002cd2ccd8f59fb35ed32bb38d30ebce0ad79d5820bcf0839ed92143d9",
+        "complete_companion_section_sha256": "41d6539d4950dfcb69ef44d7d23c984c5e8333089ef073775ce11eaa2dbd71a7",
+        "public_source_projection": "Retained official input points to its already published original source packet."
       }
     ]
   }
