@@ -2,6 +2,7 @@
 import { createRequestView } from './request.mjs';
 import { createStreamPanel } from './stream.mjs';
 import { createRecoveryPanel } from './recovery.mjs';
+import { createApprovalPanel } from '/approval-ui/approval-panel.mjs';
 const byId = id => document.getElementById(id);
 const tokenKey = 'stellar-forge-commerce-token';
 const supplied = location.hash.slice(1);
@@ -47,6 +48,8 @@ async function request(path, { method = 'GET', body, raw = false, signal } = {})
 const streamPanel = createStreamPanel({ host:byId('stream-workspace'), request, action });
 const recoveryPanel = createRecoveryPanel({ host:byId('recovery-workspace'), request, notice,
   refreshSession:refresh });
+const approvalPanel = createApprovalPanel({ host:byId('operator-approval'),
+  decide: decision => action('approval', decision), refresh: () => refresh({ quiet: true }) });
 function link(container, title, value) {
   if (!value) return;
   let url;
@@ -70,13 +73,14 @@ function operationsAddress(container, value) {
   hint.textContent = 'Open this address directly in a new tab.';
   container.append(button, field, hint);
 }
-function render(next) {
+function render(next, { fresh = false } = {}) {
   // Only a successful matching selection may unlock the selected operation.
   // An older preview/action callback or superseded refresh must not restore it.
   if (selectionLoading && next.session?.state !== 'OFFLINE' && next.operation?.intentId !== selectedIntent) return;
   selectionLoading = false;
   view = next;
   const { session, seller, operation: op, review, attempt, delivery, controls } = next;
+  const browserApproval = next.approvalMode === 'BROWSER';
   selectedIntent = op?.intentId ?? '';
   const select = byId('operation-select');
   const choices = next.operations.map(row => ({ value: row.intentId,
@@ -124,18 +128,35 @@ function render(next) {
   requestView.render(op, controls);
   byId('review').disabled = pending || !controls.canReview;
   text('review-note', review ? 'The displayed operation is the current reviewed request.' : 'The operation comes from the prepared buyer configuration.');
-  text('execution-state', attempt ? label(attempt.state) : review ? 'Ready to execute' : 'Awaiting review');
-  text('execution-note', attempt?.state === 'RUNNING' ? 'The buyer is running. Answer its payment approval in the terminal that started this workspace. Interrupt this buyer retains its recorded progress; Stop session drains the merchant.' :
-    next.activeIntent ? 'Another prepared operation is running: ' + next.activeIntent + '. This session runs one buyer at a time.' :
+  text('execution-state', next.approval?.state === 'AWAITING_OPERATOR' ? 'Awaiting your approval' :
+    next.approval?.state === 'APPROVING' ? 'Reserving approved amount' :
+      attempt?.state === 'RUNNING' && ['REJECTED', 'EXPIRED', 'FAILED'].includes(next.approval?.state) ? 'Recording approval result' :
+        attempt ? label(attempt.state) : review ? 'Ready to execute' : 'Awaiting review');
+  text('execution-note', attempt?.state === 'RUNNING' ? browserApproval ?
+    next.approval?.state === 'AWAITING_OPERATOR' ? 'The current merchant payment terms are ready. Review them below and choose Approve purchase or Reject purchase.' :
+      next.approval?.state === 'APPROVING' ? 'Your decision is being recorded against the current native spending limits. The same buyer continues when its reservation is approved.' :
+        next.approval?.state === 'APPROVED' ? 'The buyer is completing the approved purchase. Its payment status, saved response and recovery controls appear here.' :
+          next.approval?.state === 'REJECTED' ? 'You rejected this purchase. The buyer is recording the original result.' :
+            next.approval?.state === 'EXPIRED' ? 'The approval window ended. The buyer is recording the original result.' :
+              next.approval?.state === 'FAILED' ? 'The approval stopped. The buyer is retaining its original progress and recovery status.' :
+          'The buyer is contacting the merchant. Its exact payment request will appear below for your approval.' :
+      'The buyer is running. Answer its payment approval in the terminal that started this workspace. Interrupt this buyer retains its recorded progress; Stop session drains the merchant.' :
+    next.activeIntent ? 'Another prepared operation is running: ' + next.activeIntent +
+      (browserApproval ? '. Select that operation to review its payment approval and progress.' : '. This session runs one buyer at a time.') :
     attempt?.state === 'SETUP_FAILED' ? 'The buyer could not start. Resolve the reported setup error, then review this queued request again.' :
     op?.state === 'CANCELLED' ? 'This request was cancelled before execution and remains in the inbox.' :
     op?.state === 'RUNNING_OR_INTERRUPTED' ? 'This intent has a permanent attempt. Recover its recorded result before deciding what further work is needed.' :
     attempt?.outcome ? 'The buyer result is retained below. This attempted intent will not be executed again.' :
     seller.mode === 'OFFLINE' ? 'Restore the retained state and reopen the original session using Backup and recovery below.' :
     seller.mode !== 'NATIVE_X402' ? 'This merchant is in challenge-only mode. Configure its native facilitator to execute a purchase.' :
-    'Execution uses the configured buyer. Its payment approval appears in the terminal that started this workspace.');
+    browserApproval ? 'Start this operation to read its current merchant terms, then explicitly approve or reject the purchase here.' :
+      'Execution uses the configured buyer. Its payment approval appears in the terminal that started this workspace.');
+  text('execute', browserApproval ? 'Start purchase review' : 'Execute operation');
   byId('execute').disabled = pending || !controls.canExecute;
   byId('cancel').disabled = pending || !controls.canCancel;
+  byId('interrupt-buyer').hidden = !controls.canInterrupt;
+  byId('interrupt-buyer').disabled = pending || selectionLoading || !controls.canInterrupt;
+  approvalPanel.render(next.approval, { intentId: selectedIntent, pending: pending || selectionLoading, fresh });
   byId('recover').hidden = !controls.canRecover;
   byId('recover').disabled = pending || !controls.canRecover;
   const outcome = attempt?.outcome;
@@ -331,13 +352,13 @@ async function refresh({ quiet = false } = {}) {
   try {
     const next = await request(selectionPath('/api/session'));
     if (order !== lastRequest) return;
-    render(next);
+    render(next, { fresh: true });
     if (next.recoveryEnabled) void recoveryPanel.refresh();
     if (!quiet && !pending) notice(null);
-  } catch (error) { if (order === lastRequest) notice(error.message, true); }
+  } catch (error) { if (order === lastRequest) { approvalPanel.disconnect(); notice(error.message, true); } }
   finally {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.recoveryBusy || view?.activeIntent || view?.retrieval?.state === 'RUNNING' || view?.rpcAction?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
+    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.recoveryBusy || view?.activeIntent || ['AWAITING_OPERATOR', 'APPROVING'].includes(view?.approval?.state) || view?.retrieval?.state === 'RUNNING' || view?.rpcAction?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
   }
 }
 async function action(name, body = {}) {
@@ -349,9 +370,10 @@ async function action(name, body = {}) {
   if (name === 'facilitator') notice('Checking the configured network, node health and latest ledger…');
   ++lastRequest;
   try {
-    const next = await request('/api/' + name, { method: 'POST', body: { intent: selectedIntent, ...body } }); render(next);
+    const next = await request('/api/' + name, { method: 'POST', body: { intent: selectedIntent, ...body } }); render(next, { fresh: true });
     if (name === 'review') notice('Review ready. The exact prepared request and terms are shown above.');
     if (name === 'execute') notice('Operation started. Its progress and result will appear below.');
+    if (name === 'approval') notice(body.decision === 'approve' ? 'Your approval was received. The native reservation and original purchase progress appear below.' : 'You rejected this payment request. Its original result appears below.');
     if (name === 'interrupt') notice('This buyer finished handling the interruption. Its original result and captured bytes appear below.');
     if (name === 'cancel') notice('The queued request was cancelled and retained in the inbox.');
     if (name === 'recover') notice('The recorded result was recovered from the inbox.');
@@ -361,8 +383,8 @@ async function action(name, body = {}) {
     if (name === 'recover-rpc-response') notice('Recovery progress and the saved response are shown below.');
     if (name === 'facilitator') notice('Payment-service observation refreshed.');
     if (name === 'stop') notice(next.session.state === 'STOPPED' ? 'The session has stopped. Saved results remain available.' : 'The session is draining. Its progress remains visible below.');
-  } catch (error) { notice(error.message, true); }
-  finally { pending = false; if (view) render(view); await refresh({ quiet: true }); }
+  } catch (error) { notice(error.message, true); if (name === 'approval') throw error; }
+  finally { pending = false; if (view) render(view); if (name !== 'approval') await refresh({ quiet: true }); }
 }
 byId('refresh').addEventListener('click', () => refresh());
 byId('operation-select').addEventListener('change', async event => {
@@ -370,7 +392,8 @@ byId('operation-select').addEventListener('change', async event => {
   selectionLoading = true;
   selectedIntent = event.target.value; ++lastRequest;
   streamPanel.reset();
-  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-reset-transfer', 'product-preview', 'product-download', 'facilitator', 'rpc-verify', 'rpc-read']) byId(id).disabled = true;
+  approvalPanel.reset();
+  for (const id of ['review', 'execute', 'cancel', 'interrupt-buyer', 'recover', 'preview', 'download', 'product-retrieve', 'product-reset-transfer', 'product-preview', 'product-download', 'facilitator', 'rpc-verify', 'rpc-read']) byId(id).disabled = true;
   byId('preview-area').hidden = true;
   byId('product-preview-area').hidden = true;
   await refresh();
@@ -379,6 +402,7 @@ byId('review').addEventListener('click', () => action('review'));
 byId('facilitator').addEventListener('click', () => action('facilitator'));
 byId('execute').addEventListener('click', () => action('execute', { reviewId: view?.review?.id }));
 byId('cancel').addEventListener('click', () => action('cancel'));
+byId('interrupt-buyer').addEventListener('click', () => action('interrupt'));
 function rpcSelection(transaction) {
   const original = view?.rpcRecovery?.original;
   return { transaction, expectedRequestSha256: original?.expectedRequestSha256,
@@ -423,3 +447,4 @@ byId('product-preview').addEventListener('click', () => previewFile('product-', 
 byId('product-download').addEventListener('click', () => downloadFile('product-', '/api/product-delivery', view?.purchase?.delivery));
 if (token) await refresh();
 else notice('Open the complete local operator URL printed by the commerce console command.', true);
+

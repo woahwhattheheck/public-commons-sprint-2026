@@ -1,13 +1,14 @@
 // MIT — SF88 privileged operator execution delegates to original source modules.
 import { stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { OperatorApprovedBuyer, checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { OperatorApprovedBuyer, checkOperatorChannel } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { execution, bytes, need } from './config.mjs';
 import { readRequestBody } from './request-body.mjs';
+import { createAttemptWireRecorder } from './attempt-wire.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
 
@@ -50,22 +51,22 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   const retainedBody=await readRequestBody(op);
   const body=retainedBody===undefined?undefined:Uint8Array.from(retainedBody);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
-  await checkOperatorTerminal(op.intentId);
+  await checkOperatorChannel(op.intentId, {environment});
   need(!signal?.aborted, 'OPERATOR_ABORTED');
 
   let output, download, delivery, evidence, evidenceError, nativeResult, nativeError;
-  let cleanupError, setupError, setupFailed = false;
+  let cleanupError, setupError, setupFailed = false, wire;
   try {
     // Refuse an existing/unusable destination before a buyer can run or sign.
     if (responseFile) output = await prepareBuyerResponseFile(responseFile);
     const signer = await import(pathToFileURL(cfg.signerModule).href);
     const sign = signer.sign ?? signer.default?.sign;
     need(typeof sign === 'function', 'TRUSTED_SIGN_FUNCTION_REQUIRED');
+    wire = await createAttemptWireRecorder({cfg,body,fetchImpl:createPublicHttpsFetch({
+      trustedProxy:transport, timeoutMs:requestTimeoutMs,
+    })});
     const buyer = new OperatorApprovedBuyer({
-      operator: { ...owner, environment },
-      ...((transport === null && requestTimeoutMs === 30000) ? {} : {fetchImpl:createPublicHttpsFetch({
-        trustedProxy:transport, timeoutMs:requestTimeoutMs,
-      })})
+      operator: { ...owner, environment }, fetchImpl:wire.fetch,
     });
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     const recordingBuyer = {
@@ -100,8 +101,12 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
             // Approval and wallet access can outlast a merchant ticket. Recheck
             // this same imported capability before signing and before sending.
             requireCurrentOperationTicket(ticket);
-            const signed = await sign(args);
+            await wire.signingInput(args);
+            let signed;
+            try { signed = await sign(args); }
+            catch (error) { try { await wire.signingError(error); } catch {} throw error; }
             requireCurrentOperationTicket(ticket);
+            await wire.signingResult(signed);
             return signed;
           }, ...(signal ? {signal} : {}),
         },
@@ -132,6 +137,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     setupFailed = true;
   } finally {
     if (output) try { await output.abort(); } catch (error) { cleanupError ??= error; }
+    if (wire) try { await wire.close(); } catch (error) { cleanupError ??= error; }
   }
   if (setupFailed) {
     if (cleanupError) {
@@ -153,6 +159,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     mode:'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT',
     intentId:op.intentId,
     requestTimeoutMs,
+    ...(wire ? {transportCheckpoint:wire.snapshot()} : {}),
     status:result?.status ?? null,
     httpStatus:result?.response?.status ?? null,
     sellerReportedSettlement:result?.settlement ?? null,

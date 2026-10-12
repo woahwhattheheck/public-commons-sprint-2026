@@ -9,6 +9,8 @@ import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs
 import { BuyerResult } from './result.mjs';
 import { inspectUnpaidContinuation, prepareUnpaidContinuation, followUnpaidContinuation,
   assertUnpaidContinuationBinding } from './unpaid-continuation.mjs';
+import {inspectNodeLostOutput,recoverNodeLostOutput,readNodeLostOutputRecovery,
+  exportNodeLostOutputProof} from './lost-output.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
 import { Inbox, createInbox, inspectOperationHandoff } from './inbox.mjs';
@@ -298,6 +300,10 @@ export class Operation {
     if (meta.unpaidContinuation !== undefined) await assertUnpaidContinuationBinding(this, { meta, config });
     return { meta, config };
   }
+  inspectLostOutput(options) { return inspectNodeLostOutput(this,options); }
+  recoverLostOutput(options) { return recoverNodeLostOutput(this,options); }
+  readLostOutputRecovery(options) { return readNodeLostOutputRecovery(this,options); }
+  exportLostOutputProof(options) { return exportNodeLostOutputProof(this,options); }
   inspectUnpaidContinuation() { return inspectUnpaidContinuation(this); }
   prepareUnpaidContinuation(options) { return prepareUnpaidContinuation(this, options); }
   followUnpaidContinuation() { return followUnpaidContinuation(this); }
@@ -408,13 +414,23 @@ export class Operation {
       recovered: true, recordedAt: now() });
   }
   async inspect() {
-    const { meta } = await this._bound();
+    const { meta, config } = await this._bound();
     const attemptPath = join(this.directory, 'attempt.json');
     const attempt = await exists(attemptPath) ? await readJson(attemptPath) : null;
     const result = await this.recover();
+    let transportCheckpoint = null;
+    if (await exists(join(config.evidenceDir, 'wire-' + digest(Buffer.from(this.intentId))))) {
+      // The selected native runtime owns its checkpoint version. The standalone
+      // Node package remains independent of the sibling runtime source tree.
+      const reader = await import(pathToFileURL(join(this.buyer.runtime.directory, 'attempt-wire.mjs')).href);
+      need(typeof reader.readAttemptWireCheckpoint === 'function', 'ORIGINAL_WIRE_CHECKPOINT_READER_REQUIRED');
+      const body = config.operation.bodyFile === undefined ? undefined :
+        await (await this.buyer._requestFiles()).readRequestFile(config.operation.bodyFile);
+      transportCheckpoint = await reader.readAttemptWireCheckpoint({cfg:config,body});
+    }
     return { intentId: this.intentId, directory: this.directory, state: attempt?.state ?? meta.state,
       resultRecoverable: result !== null, nativeStatus: result?.status ?? null,
-      deliveryStatus: result?.delivery.status ?? null,
+      deliveryStatus: result?.delivery.status ?? null, transportCheckpoint,
       ...(attempt?.kind === 'INBOX_DELEGATED' ? {inboxDirectory:attempt.inboxDirectory} : {}),
       ...(meta.nativeWorkspace === undefined ? {} : {nativeWorkspace:meta.nativeWorkspace}),
       retry: 'NO_AUTOMATIC_RETRY' };

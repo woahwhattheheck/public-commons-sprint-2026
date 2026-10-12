@@ -5,8 +5,14 @@ import { request } from 'node:http';
 import { Console } from 'node:console';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { MCP_VERSION } from './agent-server.mjs';
-import { startMcpWorkspace } from './serve.mjs';
+import { MCP_VERSION } from './http-tools.mjs';
+
+// A merchant-supplied workspace owns its runtime. Load the paid buyer only when
+// the default buyer transport is actually selected.
+async function startDefaultWorkspace(options) {
+  const { startMcpWorkspace } = await import('./serve.mjs');
+  return startMcpWorkspace(options);
+}
 
 const MAX_FRAME_BYTES = 128 * 1024;
 const MAX_REPLY_BYTES = 8 * 1024 * 1024;
@@ -55,12 +61,13 @@ function forward(endpoint, token, rpc, signal) {
 /**
  * A trusted embedding can supply its existing workspace factory. It receives the
  * same environment as startMcpWorkspace, with an ephemeral loopback port and a
- * transport-only bearer generated here. It must return {address, close}.
+ * transport-only bearer generated here. It must return {address, close} and may
+ * declare maxRequestBytes (up to 8 MiB) for its original HTTP handler.
  * The default factory owns the original broker, approval adapter and quote store.
  */
 export async function startMcpStdio({
   environment = process.env, input = process.stdin, output = process.stdout,
-  startWorkspace = startMcpWorkspace, cancelRequest = null, maxConcurrent = 32,
+  startWorkspace = startDefaultWorkspace, cancelRequest = null, maxConcurrent = 32,
   diagnostic = code => process.stderr.write(`Stellar MCP stdio: ${code}\n`),
 } = {}) {
   if (!Number.isSafeInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > 256)
@@ -72,8 +79,11 @@ export async function startMcpStdio({
   const workspace = await startWorkspace({ environment: {
     ...environment, MCP_ACCESS_TOKEN: token, MCP_PORT: '0', MCP_CLIENT_ORIGINS: '',
   } });
-  let endpoint;
+  let endpoint, maxFrameBytes;
   try {
+    maxFrameBytes = workspace.maxRequestBytes ?? MAX_FRAME_BYTES;
+    if (!Number.isSafeInteger(maxFrameBytes) || maxFrameBytes < 1 || maxFrameBytes > 8 * 1024 * 1024)
+      throw failure('MCP_WORKSPACE_REQUEST_LIMIT_INVALID');
     endpoint = new URL(workspace.address);
     if (endpoint.protocol !== 'http:' || endpoint.hostname !== '127.0.0.1' ||
         endpoint.username || endpoint.password || endpoint.hash || endpoint.search ||
@@ -208,11 +218,11 @@ export async function startMcpStdio({
           const part = chunk.subarray(offset, end);
           if (!oversized) {
             size += part.byteLength;
-            if (size > MAX_FRAME_BYTES) { oversized = true; chunks = []; }
+            if (size > maxFrameBytes) { oversized = true; chunks = []; }
             else if (part.byteLength) chunks.push(part);
           }
           if (newline < 0) break;
-          if (oversized) await emit(rpcError(null, -32700, 'Frame exceeds 128 KiB'));
+          if (oversized) await emit(rpcError(null, -32700, maxFrameBytes === MAX_FRAME_BYTES ? 'Frame exceeds 128 KiB' : 'Frame exceeds configured byte limit'));
           else if (size) {
             let line = Buffer.concat(chunks, size);
             if (line.at(-1) === 13) line = line.subarray(0, -1);
@@ -229,7 +239,7 @@ export async function startMcpStdio({
   })();
   reading.catch(() => { void close('INPUT_CLOSED'); });
   return {
-    close, closed, protocolVersion: MCP_VERSION,
+    close, closed, protocolVersion: MCP_VERSION, maxRequestBytes: maxFrameBytes,
     durable: workspace.durable === true,
     paymentAdapterConnected: workspace.paymentAdapterConnected === true,
   };

@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.grpc-merchant-plan.v1",
+  "publicOrigin": "https://merchant.example.com",
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "amount": "25000",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "maxTimeoutSeconds": 60
+  },
+  "routes": [
+    {
+      "id": "summary",
+      "path": "/summary",
+      "grpcMethod": "/stellarforge.analytics.v1.Analytics/Summary",
+      "serviceName": "Account analytics",
+      "description": "Read the original demonstration account summary through a captured unary gRPC method.",
+      "example": {
+        "account_id": "18446744073709551615",
+        "day": "2026-10-11",
+        "include_voided": false
+      }
+    }
+  ]
+}
