@@ -1,3 +1,4 @@
+import {mountConsultation} from "./consultation.js";
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const clone=v=>structuredClone(v),pretty=v=>JSON.stringify(v,null,2),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -12,7 +13,7 @@ const titleOf=r=>r?.title_en||r?.title||r?.label||r?.name||r?.number||r?.identif
 let catalog=null,project=null,projects=[],section="overview",subsection={},clauseId=null,editor=null,noticeTimer=null,renderEpoch=0,listOffset=0,listCache=null;
 const GROUPS=[
  ["Project",[["overview","Overview"],["scope","Scope & references"],["sources","Original sources"]]],
- ["Standard",[["draft","Draft & languages"],["review","Review comments"],["ballots","Ballots & decisions"],["publication","Publication & maintenance"]]],
+ ["Standard",[["draft","Draft & languages"],["review","Review comments"],["consultation","Consultation receiving"],["ballots","Ballots & decisions"],["publication","Publication & maintenance"]]],
  ["Delivery",[["delivery","Phases & reports"],["finance","Costs & invoices"],["procedure","People & procedures"],["history","Development history"]]]
 ];
 const COLLECTIONS_BY_SECTION={
@@ -39,7 +40,7 @@ const LONG_FIELDS=new Set(["body","body_en","body_fr","purpose","purpose_fr","pr
 function notify(message){$("#notice").textContent=message;$("#notice").classList.add("visible");clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$("#notice").classList.remove("visible"),6500);}
 async function api(path,options={}){
  const res=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});
- let data;try{data=await res.json();}catch{throw Error("The application response could not be read.");}
+ let data;try{data=await res.json();}catch{const e=Error("The application response could not be read.");e.status=res.status;throw e;}
  if(!res.ok){const e=Error(data.error||"Operation failed.");e.status=res.status;e.data=data;throw e;}return data;
 }
 const endpoint=()=>"/api/projects/"+encodeURIComponent(project.id);
@@ -72,6 +73,13 @@ async function render(){
  const epoch=++renderEpoch;
  if(section==="overview")return renderOverview();
  if(section==="history")return renderHistory(epoch);
+ if(section==="consultation"){
+  const selected=project.id;
+  return mountConsultation({project,catalog,api,notify,newRecord,workflow,openRecord:editRecord,openSource:sourceDialog,
+   refresh:()=>loadAll(selected),isCurrent:()=>section==="consultation"&&project?.id===selected,
+   openSection:target=>{section=target;listOffset=0;listCache=null;return render();}});
+ }
+
  if(section==="draft"&&currentCollection()==="clauses")return renderDraft();
  if(section==="sources")return renderSources();
  const collection=currentCollection();let rows=project[collection]||[];
@@ -629,8 +637,8 @@ async function createProject(){
  const result=await api("/api/projects",{method:"POST",body:JSON.stringify({title,actor:"Local operator"})});section="scope";subsection.scope="scope";await loadAll(result.id);newRecord("scope");
 }
 async function seedExample(kind){
- notify("Opening the retained "+(kind==="authored"?"authored workflow":"Canadian source")+" example…");
- const result=await api("/api/demo",{method:"POST",body:JSON.stringify({kind})});section="overview";await loadAll(result.id);
+ notify("Opening the retained "+(kind==="authored"?"authored workflow":kind==="review"?"bilingual review":"Canadian source")+" example…");
+ const result=await api("/api/demo",{method:"POST",body:JSON.stringify({kind})});section=kind==="review"?"consultation":"overview";await loadAll(result.id);
 }
 async function renameProject(){
  if(!project)return;const title=prompt("Project title",project.title);if(!title||title===project.title)return;
@@ -653,6 +661,7 @@ async function dispatch(button){
  if(action==="new-project")return createProject();
  if(action==="public-demo")return seedExample("public");
  if(action==="authored-demo")return seedExample("authored");
+ if(action==="review-demo")return seedExample("review");
  if(action==="rename")return renameProject();
  if(action==="section"){section=button.dataset.target;listOffset=0;return render();}
  if(action==="edit")return editRecord(button.dataset.collection,button.dataset.id);
