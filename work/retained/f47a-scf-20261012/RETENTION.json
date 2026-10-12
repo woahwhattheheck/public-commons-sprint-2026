@@ -1,0 +1,138 @@
+{
+  "schema": "commons.retained-git-worktree.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "originalHead": "92f8ec31d5fadc8cec84f07fea1a5de1cde2f584",
+  "originalParent": "9c2a32c35b5471b2c249512cf9629c263bc743af",
+  "originalTree": "fd6c86e4e0870be4e6e0b508a048d1137361873a",
+  "workingTreeBeforeCustodyFiles": "55759913906f8ae3faa92aa9a85a08b7c2b18a6f",
+  "sourceFileCount": 2768,
+  "originalStatus": " M stellar/scf-starforge-20261009/distribution/distribution.json\n M stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/README.md\n M stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/public/accountant.html\n M stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs\n?? revenue/bitwave-merchant-data-fusion-20261011/Bitwave_Merchant_Data_Fusion_Workshare.pdf\n?? revenue/bitwave-merchant-data-fusion-20261011/README.md\n?? revenue/bitwave-merchant-data-fusion-20261011/WORKSHARE.md\n?? revenue/bitwave-merchant-data-fusion-20261011/contact-source.json\n?? revenue/bitwave-merchant-data-fusion-20261011/sources.json\n?? stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/bitwave-http.mjs\n?? stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/bitwave.mjs\n?? stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/BITWAVE_WORKFLOW.md\n?? stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/bitwave-workspace.mjs\n?? stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/public/bitwave.css\n?? stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/public/bitwave.html\n?? stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/public/bitwave.mjs\n",
+  "changedAndUntrackedFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/distribution.json",
+      "mode": "100644",
+      "bytes": 36372,
+      "sha256": "923c6ed21a60831161bafe8ff1168b690ac8b4ea79cd9d013e3032ae8624b029",
+      "sha": "3e21f8db6157b61f8cc16525493f34354df995a9"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/README.md",
+      "mode": "100644",
+      "bytes": 22815,
+      "sha256": "cd77683d06366badada3e21568e2952df230bdffc6fa94bcd083ef3c374b86a8",
+      "sha": "3ced3b5437969c5ed3a4c1c7461235c9426b19c8"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/public/accountant.html",
+      "mode": "100644",
+      "bytes": 6940,
+      "sha256": "78c2751796cc83539685440abae0c48f56111de53e9891429aa7fd74d194a0af",
+      "sha": "03402a351b46e436926456e6eb44c548904c0c2b"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs",
+      "mode": "100644",
+      "bytes": 12885,
+      "sha256": "9e218ff32b7e9366b0ac874460a0c2bb04f47cdf4cc72e11290dbe19b1512ac0",
+      "sha": "f6b596e613eeac549c4e3b99154b1e9ecc2df3d1"
+    },
+    {
+      "path": "revenue/bitwave-merchant-data-fusion-20261011/Bitwave_Merchant_Data_Fusion_Workshare.pdf",
+      "mode": "100644",
+      "bytes": 48185,
+      "sha256": "1ffef9fe3a6133887b317ac4289b40fc13e33d0ed5e4ba8bfc4d0274890fe920",
+      "sha": "9953033bf56d906ad48d1c1313b6ef0d4e33d4bb"
+    },
+    {
+      "path": "revenue/bitwave-merchant-data-fusion-20261011/README.md",
+      "mode": "100644",
+      "bytes": 3940,
+      "sha256": "5db1e7336c0d6033abae613fd5d2ea4bbfa4f906d134b5b19f2d98306f597a26",
+      "sha": "bc1fae47b78d9f1bf0c8ceccee869ec7a71987b6"
+    },
+    {
+      "path": "revenue/bitwave-merchant-data-fusion-20261011/WORKSHARE.md",
+      "mode": "100644",
+      "bytes": 6523,
+      "sha256": "8a35fff19ad9a42e3b7d0e7a781d2649f956d70af2e01a71ac64155183c71a8d",
+      "sha": "78c9db523313ac3453c34399401037b157e3134c"
+    },
+    {
+      "path": "revenue/bitwave-merchant-data-fusion-20261011/contact-source.json",
+      "mode": "100644",
+      "bytes": 511,
+      "sha256": "8642562ecdb33534407155ce9df5dbcfec80bd1f96cd3d9797b9e4882dd3f0af",
+      "sha": "bd0606b2236f4b5fffab5393de957a7dcc6ea2c6"
+    },
+    {
+      "path": "revenue/bitwave-merchant-data-fusion-20261011/sources.json",
+      "mode": "100644",
+      "bytes": 1464,
+      "sha256": "0b17fb0c1f574004b647b3b1b68e0714d2b6e16669b70e1c2caa26b617aa3b16",
+      "sha": "5096e7fd81374506c62a2b44aad0dfb65c4242ae"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/bitwave-http.mjs",
+      "mode": "100644",
+      "bytes": 3111,
+      "sha256": "940bc3579149c60fded69fb538a2f18ee2593a0f5cbd03bc97b485e510ab4e74",
+      "sha": "3b3a977a604d711a31b02daa4d8f2baa4b87089b"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/bitwave.mjs",
+      "mode": "100644",
+      "bytes": 13958,
+      "sha256": "11a38ac4fb752f7c1ae13b7d5494501d47ac51c49522a04eef3e8d23b6f36fb5",
+      "sha": "3ed3d559a3cc73e51de035ea5671d9d08859536e"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/BITWAVE_WORKFLOW.md",
+      "mode": "100644",
+      "bytes": 10937,
+      "sha256": "75f4057f34e93473c440b9cf257cf4d8e84ddfff77e0155bbed2fcf0c04e2629",
+      "sha": "4c3ff064917c4e9dd5ea505eb5636f444fdd6db8"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/bitwave-workspace.mjs",
+      "mode": "100644",
+      "bytes": 41686,
+      "sha256": "5c423d1701630834caa3564b58e9a777b3027b15551bb0a6e61faeba632ba5d6",
+      "sha": "e6c829fcae8b885bd04621909e1616dd86a265ed"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/public/bitwave.css",
+      "mode": "100644",
+      "bytes": 4871,
+      "sha256": "f2ae7db15b0d1563c8bf23df9e3a0da6fe6b2c2c141682669691c35cc2b0bb14",
+      "sha": "0179286262d263e475c221b19e30b81c4d0b0acd"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/public/bitwave.html",
+      "mode": "100644",
+      "bytes": 17522,
+      "sha256": "a983dc755a1dd5c20dae4ed0b76284d9c6f98855da047ff54f34baa160beae94",
+      "sha": "77d21ad18114b90dd314ba0615b2ba3cdfdc227e"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/public/bitwave.mjs",
+      "mode": "100644",
+      "bytes": 42925,
+      "sha256": "5e4bba56cc0f1f2ffa0ea2c12707f16d53e9545f86412356872e1bf1cfbe9354",
+      "sha": "bdabdfdfbb19c5539e3fc290d6395fec2c783cd1"
+    }
+  ],
+  "originalCommitBundle": {
+    "file": "original-local-commit.bundle",
+    "bytes": 35367,
+    "sha256": "56efa89ffb57ac9e83a47b60e5334a115b62df510cb84fd878179c6bf46f6872",
+    "gitBlob": "2ef8ab451d24b67f0b0a56e8dfa1ed77d25d08f8",
+    "verification": "The bundle contains this ref:\n92f8ec31d5fadc8cec84f07fea1a5de1cde2f584 HEAD\nThe bundle requires this ref:\n9c2a32c35b5471b2c249512cf9629c263bc743af \nThe bundle uses this hash algorithm: sha1\n/dev/shm/f47a-scf-retirement/original-local-commit.bundle is okay\n"
+  },
+  "restore": [
+    "Clone the retained branch to obtain the exact working source snapshot.",
+    "Fetch the published original parent 9c2a32c35b5471b2c249512cf9629c263bc743af if it is not present in the clone.",
+    "Run git bundle verify work/retained/f47a-scf-20261012/original-local-commit.bundle.",
+    "Run git fetch work/retained/f47a-scf-20261012/original-local-commit.bundle HEAD:refs/heads/restored-f47a-original-commit to recover the exact original local commit.",
+    "The retained branch includes all former untracked files as ordinary tracked source."
+  ]
+}
