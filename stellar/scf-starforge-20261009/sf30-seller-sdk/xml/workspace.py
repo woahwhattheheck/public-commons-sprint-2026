@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from dataclasses import dataclass
 import csv
 import hashlib
 import io
@@ -26,6 +27,29 @@ HEX = re.compile(r"[0-9a-f]{64}\Z")
 VERSION = "stellar-forge.xml-workspace.v1"
 BUILD = "stellar-forge.xml-build.v1"
 PACKET = "stellar-forge.xml-packet.v1"
+
+
+@dataclass(frozen=True)
+class SourceFormat:
+    """Trusted local parsing functions sharing the retained dataset workflow."""
+    kind: str
+    label: str
+    inventory: object
+    validate_plan: object
+    extract: object
+    dataset_spec: object
+
+    def __post_init__(self):
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", self.kind):
+            raise InputError("Source format kind must be a short identifier")
+        if not isinstance(self.label, str) or not self.label or len(self.label) > 64:
+            raise InputError("Source format label must be short text")
+        if any(not callable(getattr(self, name)) for name in
+               ["inventory", "validate_plan", "extract", "dataset_spec"]):
+            raise InputError("Source format requires its complete local parser")
+
+
+XML_FORMAT = SourceFormat("xml", "XML", inventory, validate_plan, extract, dataset_spec)
 
 
 def json_bytes(value) -> bytes:
@@ -177,20 +201,30 @@ class NativeEngine:
 
 
 class Workspace:
-    def __init__(self, root: str | Path, create: bool = False):
+    def __init__(self, root: str | Path, create: bool = False, *, source_format: SourceFormat | None = None):
+        self.format = source_format or XML_FORMAT
+        if not isinstance(self.format, SourceFormat):
+            raise InputError("Use a trusted local SourceFormat adapter")
+        self.kind, self.label = self.format.kind, self.format.label
+        self.source_name = "source." + self.kind
+        self.lineage_name = self.kind + "-lineage.json"
+        self.version = f"stellar-forge.{self.kind}-workspace.v1"
+        self.build_schema = f"stellar-forge.{self.kind}-build.v1"
+        self.packet_schema = f"stellar-forge.{self.kind}-packet.v1"
+        self.comparison_schema = f"stellar-forge.{self.kind}-comparison.v1"
         root = Path(root).expanduser().absolute()
         if create:
             root.mkdir(mode=0o700, parents=True, exist_ok=False)
             for name in ["sources", "plans", "builds", "comparisons", "tmp"]:
                 (root / name).mkdir(mode=0o700)
-            private_write(root / "workspace.json", json_bytes({"schema": VERSION}))
+            private_write(root / "workspace.json", json_bytes({"schema": self.version}))
         self.root = root.resolve(strict=True)
         info = self.root.stat()
         if os.name == "posix" and (info.st_uid != os.getuid() or info.st_mode & 0o077):
             raise InputError("Use a private, operator-owned workspace directory (mode 0700)")
         regular(self.root / "workspace.json", 4096)
-        if load_json((self.root / "workspace.json").read_bytes()) != {"schema": VERSION}:
-            raise InputError("Unsupported XML workspace version")
+        if load_json((self.root / "workspace.json").read_bytes()) != {"schema": self.version}:
+            raise InputError(f"Unsupported {self.label} workspace version")
         for name in ["sources", "plans", "builds", "comparisons", "tmp"]:
             p = self.root / name
             if p.is_symlink() or not p.is_dir():
@@ -209,7 +243,7 @@ class Workspace:
                 msvcrt.locking(self.lease.fileno(), msvcrt.LK_NBLCK, 1)
         except OSError as e:
             self.lease.close()
-            raise InputError("This XML workspace is already open; use its existing console or close that process") from e
+            raise InputError(f"This {self.label} workspace is already open; use its existing console or close that process") from e
         db_path = self.root / "workspace.sqlite"
         if not db_path.exists():
             private_write(db_path, b"")
@@ -251,7 +285,7 @@ class Workspace:
 
     def state(self) -> dict:
         with self.mutex:
-            return {"schema": VERSION,
+            return {"schema": self.version,
                 "sources": [dict(r) for r in self.db.execute("SELECT id,label,name,bytes,created FROM sources ORDER BY created DESC")],
                 "plans": [{"id": r["id"], "name": load_json(r["body"])["name"], "created": r["created"]}
                           for r in self.db.execute("SELECT * FROM plans ORDER BY created DESC")],
@@ -267,30 +301,32 @@ class Workspace:
             result["inventory"] = load_json(result["inventory"])
             return result
 
-    def add_source(self, stream, label: str = "XML source", name: str = "source.xml") -> dict:
+    def add_source(self, stream, label: str | None = None, name: str | None = None) -> dict:
+        label = label if label is not None else self.label + " source"
+        name = name if name is not None else self.source_name
         if not isinstance(label, str) or not label.strip() or len(label) > 160:
             raise InputError("Source label must be 1–160 characters")
         name = Path(name.replace("\\", "/")).name[:160]
         with self.mutex, self.scratch() as temp:
-            target = temp / "source.xml"
+            target = temp / self.source_name
             h, total = hashlib.sha256(), 0
             with os.fdopen(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as output:
                 while block := stream.read(65536):
                     total += len(block)
                     if total > MAX_SOURCE:
-                        raise InputError("XML source exceeds 256 MiB")
+                        raise InputError(f"{self.label} source exceeds 256 MiB")
                     h.update(block)
                     output.write(block)
                 output.flush()
                 os.fsync(output.fileno())
             ident = h.hexdigest()
             if self.db.execute("SELECT 1 FROM sources WHERE id=?", (ident,)).fetchone():
-                if file_digest(self.root / "sources" / (ident + ".xml")) != ident:
+                if file_digest(self.root / "sources" / (ident + "." + self.kind)) != ident:
                     raise InputError("Retained source bytes were changed")
                 return self.source(ident)
             with target.open("rb") as input_file:
-                shape = inventory(input_file)
-            destination = self.root / "sources" / (ident + ".xml")
+                shape = self.format.inventory(input_file)
+            destination = self.root / "sources" / (ident + "." + self.kind)
             if destination.exists():
                 if file_digest(destination) != ident:
                     raise InputError("Retained source path contains different bytes")
@@ -303,7 +339,7 @@ class Workspace:
             return self.source(ident)
 
     def save_plan(self, raw: dict) -> dict:
-        plan = validate_plan(raw)
+        plan = self.format.validate_plan(raw)
         data = json_bytes(plan)
         if len(data) > 65536:
             raise InputError("Mapping exceeds 64 KiB")
@@ -356,14 +392,14 @@ class Workspace:
         with self.mutex:
             self.source(source_id)
             plan = self.plan(plan_id)
-            ident = digest(json_bytes({"schema": BUILD, "source": source_id, "plan": plan_id}))
+            ident = digest(json_bytes({"schema": self.build_schema, "source": source_id, "plan": plan_id}))
             if self.db.execute("SELECT 1 FROM builds WHERE id=?", (ident,)).fetchone():
                 result = self.build_view(ident)
                 for name in ["data.csv", "dataset.json", "rows.sqlite"]:
                     self._build_path(ident, name)
                 self._expected(result, expected)
                 return result
-            source_path = self.root / "sources" / (source_id + ".xml")
+            source_path = self.root / "sources" / (source_id + "." + self.kind)
             if file_digest(source_path) != source_id:
                 raise InputError("Retained source bytes were changed")
             with self.scratch() as temp:
@@ -394,22 +430,22 @@ class Workspace:
                                 stats[i]["emptyCells"] += cells[i] == ""
                                 stats[i]["nullValues"] += value is None
                         with source_path.open("rb") as stream:
-                            count = extract(stream, plan, record)
+                            count = self.format.extract(stream, plan, record)
                         output.flush()
                         os.fsync(output.fileno())
                     if count == 0 and not plan["allowEmpty"]:
-                        raise InputError("Record selector matched zero elements; review the path or explicitly allow an empty edition")
+                        raise InputError("Record selector matched zero records; review the source mapping or explicitly allow an empty edition")
                     index.commit()
                 finally:
                     index.close()
-                private_write(temp / "dataset.json", (json.dumps(dataset_spec(plan), ensure_ascii=False, separators=(",", ":"), allow_nan=False) + "\n").encode())
+                private_write(temp / "dataset.json", (json.dumps(self.format.dataset_spec(plan), ensure_ascii=False, separators=(",", ":"), allow_nan=False) + "\n").encode())
                 native = self.native.query(temp / "dataset.json", {"limit": "1"})
                 if native["response"]["status"] != 200 or native["dataset"]["rowCount"] != count:
                     raise InputError("Original SF30 engine did not accept the complete projection")
                 files = {name: {"bytes": (temp / name).stat().st_size,
                                 "sha256": file_digest(temp / name, 4 * MAX_SOURCE)}
                          for name in ["data.csv", "dataset.json", "rows.sqlite"]}
-                result = {"schema": BUILD, "id": ident, "source": source_id, "plan": plan_id,
+                result = {"schema": self.build_schema, "id": ident, "source": source_id, "plan": plan_id,
                           "rowCount": count, "keys": plan["keys"], "columns": stats,
                           "native": native["dataset"], "engineBlob": native["engineBlob"], "files": files}
                 self._expected(result, expected)
@@ -462,7 +498,7 @@ class Workspace:
 
     def compare(self, before_id: str, after_id: str) -> dict:
         with self.mutex:
-            ident = digest(json_bytes({"schema": "stellar-forge.xml-comparison.v1", "before": before_id, "after": after_id}))
+            ident = digest(json_bytes({"schema": self.comparison_schema, "before": before_id, "after": after_id}))
             existing = self.db.execute("SELECT summary FROM comparisons WHERE id=?", (ident,)).fetchone()
             if existing:
                 return load_json(existing["summary"])
@@ -490,7 +526,7 @@ class Workspace:
                             "fields": [name for i, name in enumerate(names) if left is None or right is None or left[i] != right[i]]}))
                     out.flush()
                     os.fsync(out.fileno())
-                summary = {"schema": "stellar-forge.xml-comparison.v1", "id": ident,
+                summary = {"schema": self.comparison_schema, "id": ident,
                     "before": before_id, "after": after_id, "plan": after["plan"], "keys": after["keys"],
                     "semantics": "exact projected CSV cells; record order changes are not field changes",
                     "counts": counts, "changesSha256": file_digest(temp / "changes.jsonl", 4 * MAX_SOURCE)}
@@ -546,7 +582,7 @@ class Workspace:
                     with source.open("rb") as inp, os.fdopen(os.open(destination / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as out:
                         shutil.copyfileobj(inp, out, 1048576)
                         out.flush(); os.fsync(out.fileno())
-                private_write(destination / "xml-lineage.json", json_bytes(view))
+                private_write(destination / self.lineage_name, json_bytes(view))
                 sync_dir(destination)
             except Exception:
                 shutil.rmtree(destination)
@@ -556,15 +592,15 @@ class Workspace:
     def export_packet(self, build_id: str, output: Path):
         with self.mutex:
             view = self.build_view(build_id)
-            sources = {"source.xml": self.root / "sources" / (view["source"] + ".xml"),
+            sources = {self.source_name: self.root / "sources" / (view["source"] + "." + self.kind),
                        "plan.json": self.root / "plans" / (view["plan"] + ".json"),
                        "data.csv": self._build_path(build_id, "data.csv"),
                        "dataset.json": self._build_path(build_id, "dataset.json"),
                        "review.json": self._build_path(build_id, "review.json")}
             entries = {name: {"bytes": regular(path).st_size, "sha256": file_digest(path)} for name, path in sources.items()}
-            if entries["source.xml"]["sha256"] != view["source"] or entries["plan.json"]["sha256"] != view["plan"]:
+            if entries[self.source_name]["sha256"] != view["source"] or entries["plan.json"]["sha256"] != view["plan"]:
                 raise InputError("Retained source or mapping changed")
-            manifest = {"schema": PACKET, "build": build_id, "files": entries}
+            manifest = {"schema": self.packet_schema, "build": build_id, "files": entries}
             with os.fdopen(os.open(output, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600), "w+b") as out:
                 try:
                     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
@@ -578,7 +614,7 @@ class Workspace:
             return {"file": str(output), "bytes": output.stat().st_size, "sha256": file_digest(output, 2 * MAX_SOURCE), "build": build_id}
 
     def import_packet(self, path: Path) -> dict:
-        limits = {"manifest.json": 16384, "source.xml": MAX_SOURCE, "plan.json": 65536,
+        limits = {"manifest.json": 16384, self.source_name: MAX_SOURCE, "plan.json": 65536,
                   "data.csv": MAX_SOURCE, "dataset.json": 65536, "review.json": 131072}
         with self.mutex, self.scratch() as temp:
             with zipfile.ZipFile(path) as archive:
@@ -597,27 +633,27 @@ class Workspace:
                                 raise InputError("Packet member exceeds its size limit")
                             out.write(block)
                 manifest = load_json((temp / "manifest.json").read_bytes())
-                if not isinstance(manifest, dict) or manifest.get("schema") != PACKET or not isinstance(manifest.get("files"), dict) or set(manifest["files"]) != set(limits) - {"manifest.json"}:
+                if not isinstance(manifest, dict) or manifest.get("schema") != self.packet_schema or not isinstance(manifest.get("files"), dict) or set(manifest["files"]) != set(limits) - {"manifest.json"}:
                     raise InputError("Invalid packet manifest")
                 for name, entry in manifest["files"].items():
                     if not isinstance(entry, dict) or entry != {"bytes": (temp / name).stat().st_size, "sha256": file_digest(temp / name)}:
                         raise InputError(f"Packet member failed its declared identity: {name}")
                 expected = load_json((temp / "review.json").read_bytes())
-                mapped_body = validate_plan(load_json((temp / "plan.json").read_bytes()))
-                source_id = manifest["files"]["source.xml"]["sha256"]
+                mapped_body = self.format.validate_plan(load_json((temp / "plan.json").read_bytes()))
+                source_id = manifest["files"][self.source_name]["sha256"]
                 plan_id = digest(json_bytes(mapped_body))
-                expected_id = digest(json_bytes({"schema": BUILD, "source": source_id, "plan": plan_id}))
-                if (not isinstance(expected, dict) or expected.get("schema") != BUILD or
+                expected_id = digest(json_bytes({"schema": self.build_schema, "source": source_id, "plan": plan_id}))
+                if (not isinstance(expected, dict) or expected.get("schema") != self.build_schema or
                     expected.get("source") != source_id or expected.get("plan") != plan_id or
                     expected.get("id") != expected_id or manifest.get("build") != expected_id or
                     not isinstance(expected.get("native"), dict) or not HEX.fullmatch(str(expected["native"].get("snapshot", ""))) or
                     not isinstance(expected.get("files"), dict) or
                     any(expected["files"].get(n) != manifest["files"][n] for n in ["data.csv", "dataset.json"])):
                     raise InputError("Packet source, mapping, dataset and review are not one consistent build")
-                with (temp / "source.xml").open("rb") as source:
-                    retained = self.add_source(source, "Imported XML edition", "source.xml")
+                with (temp / self.source_name).open("rb") as source:
+                    retained = self.add_source(source, f"Imported {self.label} edition", self.source_name)
                 mapped = self.save_plan(load_json((temp / "plan.json").read_bytes()))
-                if not isinstance(expected, dict) or expected.get("schema") != BUILD or expected.get("source") != retained["id"] or expected.get("plan") != mapped["id"] or expected.get("id") != manifest.get("build"):
+                if not isinstance(expected, dict) or expected.get("schema") != self.build_schema or expected.get("source") != retained["id"] or expected.get("plan") != mapped["id"] or expected.get("id") != manifest.get("build"):
                     raise InputError("Packet source, mapping and native review are not the same build")
                 result = self.build(retained["id"], mapped["id"], expected=expected)
                 if result["id"] != manifest["build"]:

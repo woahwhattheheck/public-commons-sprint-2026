@@ -1,0 +1,76 @@
+{
+  "schema": "stellar-forge.ndjson-native-outcome.v1",
+  "recordedDate": "2026-10-12",
+  "sourceBase": "3863fa574de7a2c73f02ef78953ac5620403eed1",
+  "mcpModule": {
+    "sha256": "bffe07d6adfa6c7dd4158a2e30fe62baa0f1b6d4ffc6a855018ebf5e8feae52d",
+    "gitBlob": "ffe60c76b02bbdd534fcf97884099336df5309b5",
+    "bytes": 29913
+  },
+  "source": {
+    "first": "31aca80a817ef759087db060a4823226318daf861764295cde824dfe2e6b281f",
+    "next": "11daacca762d9708dbb4260a17d16da8a602c3b24f648dec9844b7ec39db9c9e",
+    "plan": "95ac00d5900d32d670ef42100a77cbcb3aff1e3546f944b30f1752987a5f945e",
+    "build": "5a678f4854f06fc09a5e6beaf3a61773b54fcc86e6b184dba74e4b140b0a8161",
+    "nativeSnapshot": "26665c344dae2e638465b4473a74025d6cc617fb528dbe421c18e160d068fcc0"
+  },
+  "observed": {
+    "fullSourceRecords": 3,
+    "originalNativeEngine": true,
+    "exactIdentifier": "9007199254740993",
+    "exactFirstDecimal": "0.123456789012345678901",
+    "exactNextDecimal": "0.123456789012345678902",
+    "exactNestedJson": "{\"width\":12.50,\"unit\":\"cm\"}",
+    "nullMissingEmptyDistinct": true,
+    "equalitySortNativeCursor": true,
+    "comparison": {
+      "added": 1,
+      "removed": 1,
+      "changed": 1,
+      "unchanged": 1
+    },
+    "mcpRestart": true,
+    "projectByteResume": {
+      "firstChunkBytes": 37,
+      "continuedChunkBytes": 1024,
+      "sha256Matched": true
+    },
+    "secondConsoleProjectImport": {
+      "buildAndNativeSnapshotMatched": true
+    },
+    "originalConsoleRestart": true
+  },
+  "merchant": {
+    "tool": "merchant_source_merchant_prepare",
+    "zipSha256": "d53cb9b0c385f7e0970a3f3ac4978c192c69d45096a90c25cb66c06f8c8e393d",
+    "zipBytes": 24239,
+    "files": 16,
+    "payloadFiles": 15,
+    "customerManifestCompletion": "GENERATED",
+    "originalSellerMode": "CHALLENGE_ONLY",
+    "originalDatasetHttpStatus": 402,
+    "paymentRequiredHeader": true,
+    "openapiVersion": "3.1.1"
+  },
+  "xmlCompatibility": {
+    "source": "2ac1ed5436d2aa01727c37ea5cfd79ea0c452e0e828536430a509e69d88eb868",
+    "plan": "83fed2d330ff44f28ef67847d072db8a9222a4c787059bcc88e5681a5fc689fb",
+    "build": "15d6e2a8bf2ee42887bea7220b72801e2219387905d28b3c3b6ad252cd980515",
+    "schema": "stellar-forge.xml-build.v1",
+    "snapshot": "1a27803218cbe4e4356045bf560d321a1bca777cfc9c0caffb4146649ac98259",
+    "packetFiles": [
+      "data.csv",
+      "dataset.json",
+      "manifest.json",
+      "plan.json",
+      "review.json",
+      "source.xml"
+    ],
+    "lineage": true,
+    "comparedAgainstOriginalWorkspace": true,
+    "sourceDefaultLabelAndNameEqual": true,
+    "sourcePlanBuildIdentityEqual": true,
+    "csvConfigQueryAndNativeSnapshotEqual": true
+  },
+  "state": "COMPLETE"
+}

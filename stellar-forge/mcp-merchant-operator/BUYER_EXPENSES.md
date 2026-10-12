@@ -135,21 +135,21 @@ Named methods use camelCase (`captureReview`, `codingSave`, `periodClose`, `expo
 
 ## Customer command line
 
-The installed `merchant-mcp` command reaches the same entrypoint; a repository checkout can invoke `node stellar-forge/mcp-merchant-operator/serve.mjs`.
+The installed `starforge merchant-mcp` command reaches the same entrypoint; a repository checkout can invoke `node stellar-forge/mcp-merchant-operator/serve.mjs`.
 
 ```sh
-merchant-mcp expenses tools
-merchant-mcp expenses call --url http://127.0.0.1:3211/mcp \
+starforge merchant-mcp expenses tools
+starforge merchant-mcp expenses call --url http://127.0.0.1:3211/mcp \
   --action state --arguments /private/finance-state.json
-merchant-mcp expenses call --url http://127.0.0.1:3211/mcp \
+starforge merchant-mcp expenses call --url http://127.0.0.1:3211/mcp \
   --action period_close --arguments /private/exact-close-request.json \
   --output /private/close-response.json
-merchant-mcp expenses inspect --url http://127.0.0.1:3211/mcp \
+starforge merchant-mcp expenses inspect --url http://127.0.0.1:3211/mcp \
   --export finance-project-2026-10-12
-merchant-mcp expenses download --url http://127.0.0.1:3211/mcp \
+starforge merchant-mcp expenses download --url http://127.0.0.1:3211/mcp \
   --export finance-project-2026-10-12 --directory /private/download \
   --manifest-sha256 THE_RETAINED_MANIFEST_SHA256
-merchant-mcp expenses receive \
+starforge merchant-mcp expenses receive \
   --archive /private/download/buyer-expense-project.zip \
   --directory /private/received-expenses --sha256 THE_PROJECT_FILE_SHA256
 ```
