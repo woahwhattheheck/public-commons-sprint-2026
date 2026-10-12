@@ -68,7 +68,7 @@ export function inspectBuyerSource(input){
   const start=date(close.period.from_day),end=date(close.period.through_day);
   check(start<=end&&['operational','development'].includes(close.data_context??'operational'),'INVALID_BUYER_SOURCE','Retain the original period scope and data context.');
   check(Array.isArray(close.allocations)&&Array.isArray(close.credit_allocations??[])&&close.allocations.length+(close.credit_allocations??[]).length<=22000,'BUYER_ROW_LIMIT','Retain up to 22,000 issued expense and credit allocation lines.');
-  const seen=new Set(),rows=[];
+  const seen=new Set(),rows=[],economic=new Map();
   for(const [kind,lines]of [['EXPENSE',close.allocations],['CREDIT',close.credit_allocations??[]]]){
     for(const original of lines){
       check(object(original),'INVALID_BUYER_SOURCE','Retain the complete original allocation object.');
@@ -78,6 +78,13 @@ export function inspectBuyerSource(input){
       text(original.network,'network',200);text(original.asset,'asset',1000);text(original.center_code,'cost center code',160);text(original.project,'project',2000,true);text(original.account_code,'account code',160,true);
       const amount=positive(original.amount,'allocation amount'),maximum=positive(kind==='EXPENSE'?original.settled_actual:original.native_return,'original economic amount');
       check(amount<=maximum,'BUYER_ALLOCATION_CHANGED','An allocation exceeds its original economic amount.',409);
+      const economicKey=buyerCanonical([kind,kind==='CREDIT'?original.credit_id:original.item_id]);
+      const previous=economic.get(economicKey);
+      if(previous)check(previous.network===original.network&&previous.asset===original.asset&&previous.maximum===maximum,
+        'BUYER_ECONOMIC_SOURCE_CHANGED','Allocation lines disagree on their original economic amount or denomination.',409);
+      const allocated=(previous?.allocated??0n)+amount;
+      check(allocated<=maximum,'BUYER_ALLOCATION_CHANGED','The combined allocations exceed their original expense or returned-credit amount.',409);
+      economic.set(economicKey,{network:original.network,asset:original.asset,maximum,allocated});
       check(date(original.recognition_date)>=start&&original.recognition_date<=end,'BUYER_DATE_CHANGED','An allocation falls outside the frozen buyer period.',409);
       const identity=sourceLineId(source.workspaceId,kind,original);
       check(!seen.has(identity),'BUYER_LINE_REPEATED','The issued source repeats an allocation identity.',409);seen.add(identity);
@@ -125,10 +132,11 @@ export function validateBuyerHandoff(handoff){
   return handoff;
 }
 export function buyerProtectedValues(handoff,row){
-  return {handoffId:handoff.id,sourceWorkspaceId:handoff.source.buyer.workspaceId,sourceCloseId:handoff.source.buyer.closeId,
+  return {...row.original,handoffId:handoff.id,sourceWorkspaceId:handoff.source.buyer.workspaceId,sourceCloseId:handoff.source.buyer.closeId,
     sourceCloseSequence:handoff.source.buyer.sequence,sourceContextSha256:handoff.source.buyer.contextSha256,
     sourceReportSha256:handoff.source.reportSha256,rowId:row.rowId,sourceRowSha256:row.sourceRowSha256,
-    ...row.original,allocationKind:row.kind,sourceLineId:row.sourceLineId,...row.label};
+    allocationKind:row.kind,sourceLineId:row.sourceLineId,assetLabel:row.label.assetLabel,unitLabel:row.label.unitLabel,
+    accountCode:row.label.accountCode,accountName:row.label.accountName};
 }
 
 const html=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
