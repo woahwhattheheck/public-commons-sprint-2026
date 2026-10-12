@@ -482,7 +482,10 @@ def serve(workspace, port):
             return
 
         def host_ok(self):
-            return self.headers.get("Host") in ("127.0.0.1:" + str(port), "localhost:" + str(port))
+            hosts = {"127.0.0.1:" + str(effective_port), "localhost:" + str(effective_port)}
+            if effective_port == 80:
+                hosts.update(("127.0.0.1", "localhost"))
+            return self.headers.get("Host") in hosts
 
         def respond(self, code, body, mime="application/json; charset=utf-8", filename=None):
             if isinstance(body, (dict, list)):
@@ -594,7 +597,9 @@ def serve(workspace, port):
                 self.error(400, error)
 
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print("Permitting workspace: http://127.0.0.1:" + str(port), flush=True)
+    effective_port = server.server_address[1]
+    local_url = "http://127.0.0.1" + ("" if effective_port == 80 else ":" + str(effective_port))
+    print("Permitting workspace: " + local_url, flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

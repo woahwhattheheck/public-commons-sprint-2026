@@ -6,7 +6,7 @@ const CURRENT_FORMS=new Set(['assignment-form','retire-assignment-form','finding
 const S={state:null,cash:null,db:null,scope:null,export:null,source:null,detail:null,historyId:null,
   pending:null,busy:false,selectionGeneration:0,refreshGeneration:0,sourceGeneration:0,detailGeneration:0,pageGeneration:0,
   rowOffset:0,rowTotal:0,sourceOffset:0,preparedOffset:0,statusOffset:0,selectedRow:null,
-  observation:null,prepared:null,originalFile:null,drafts:{},history:[],view:{}};
+  observation:null,prepared:null,originalFile:null,drafts:{},history:[],view:{},rowSelectionGeneration:{observations:0,prepared:0,findings:0},rowPanelGeneration:0};
 const text=(id,value)=>{$(id).textContent=value??'';};
 const show=(id,visible)=>{$(id).hidden=!visible;};
 const clone=value=>structuredClone(value);
@@ -39,9 +39,53 @@ function fields(form){return Object.fromEntries([...form.elements].filter(n=>n.n
 function setFields(form,value){for(const n of form.elements){if(!n.name||!Object.hasOwn(value,n.name)||n.type==='file'||['submit','button'].includes(n.type))continue;if(n.type==='checkbox')n.checked=Boolean(value[n.name]);else n.value=value[n.name]??'';}}
 function rawMapping(){return {fields:fields($('mapping-form')),keys:[...$('identity-pairs').children].map(r=>({prepared:r.querySelector('[data-prepared]').value,returned:r.querySelector('[data-returned]').value})),labels:[...$('status-pairs').children].map(r=>({native:r.querySelector('[data-native]').value,status:r.querySelector('[data-meaning]').value})),included:[...$('amount-statuses').querySelectorAll('input:checked')].map(n=>n.value)};}
 function versionedForm(id){return CURRENT_FORMS.has(id)||(id==='comparison-form'&&Boolean(S.detail));}
-async function retainForm(id){if(!S.scope||(S.historyId&&versionedForm(id)))return;const form=$(id),context=formContext(id);if((id==='mapping-form'&&!S.source)||(CURRENT_FORMS.has(id)&&!S.detail))return;form.dataset.dirty='true';const previous=S.drafts[context];const item={context,at:utc(),base_version:versionedForm(id)?Number(form.dataset.baseVersion||S.detail.version):null,value:id==='mapping-form'?rawMapping():fields(form),...(id==='comparison-form'?{bindings:comparisonBindings(false)}:{}),...(id==='assignment-form'?{selection:{edition_id:S.detail.edition_id,analysis_id:S.detail.analysis_id,observation_id:S.observation?.id??null,prepared_id:S.prepared?.id??null}}:{})};if(previous?.reconciled_from)item.reconciled_from=previous.reconciled_from;S.drafts[context]=item;await put('drafts',key(context),item);decorateDraft(form);}
-async function restoreForm(id,defaults={}){const form=$(id),context=formContext(id),expected=context;const record=S.historyId&&versionedForm(id)?null:S.drafts[context]??await get('drafts',key(context));if(formContext(id)!==expected)return;if(id!=='mapping-form'){form.reset();setFields(form,defaults);}form.dataset.dirty=record?'true':'false';if(record){S.drafts[context]=record;if(id==='mapping-form')restoreRawMapping(record.value);else setFields(form,record.value);}if(versionedForm(id))form.dataset.baseVersion=String(record?.base_version??S.detail?.version??'');decorateDraft(form);return record;}
-function decorateDraft(form){form.querySelector('[data-draft-reconcile]')?.remove();if(!versionedForm(form.id)||!S.detail||S.historyId)return;const base=Number(form.dataset.baseVersion);if(base===S.detail.version||!Number.isInteger(base))return;const panel=element('div',undefined,'pending panel');panel.dataset.draftReconcile='';panel.append(element('p','These edits began on edition '+base+'. The current comparison is edition '+S.detail.version+'. Review its current sources and findings before carrying the edits forward.'));panel.append(button('Use these edits with the current edition',async()=>{const old=Number(form.dataset.baseVersion);form.dataset.baseVersion=String(S.detail.version);await retainForm(form.id);const d=S.drafts[formContext(form.id)];d.reconciled_from=old;await put('drafts',key(formContext(form.id)),d);decorateDraft(form);}));form.prepend(panel);}
+async function retainForm(id){
+  if(!S.scope||(S.historyId&&versionedForm(id)))return null;
+  const form=$(id),context=formContext(id);
+  if((id==='mapping-form'&&!S.source)||(CURRENT_FORMS.has(id)&&!S.detail))return null;
+  const previous=S.drafts[context];
+  const value={context,base_version:id==='mapping-form'?Number(form.dataset.baseVersion||S.source.latest_mapping_version):versionedForm(id)?Number(form.dataset.baseVersion||S.detail.version):null,
+    value:id==='mapping-form'?rawMapping():fields(form),
+    ...(id==='mapping-form'?{source_mapping_version:S.source.mapping_version}:{}),
+    ...(id==='comparison-form'?{bindings:comparisonBindings(false)}:{}),
+    ...(id==='assignment-form'?{selection:{edition_id:S.detail.edition_id,analysis_id:S.detail.analysis_id,observation_id:S.observation?.id??null,prepared_id:S.prepared?.id??null}}:{})};
+  if(previous?.reconciled_from!==undefined)value.reconciled_from=previous.reconciled_from;
+  if(previous?.carried_from)value.carried_from=previous.carried_from;
+  const semantic=item=>{if(!item)return null;const out=clone(item);delete out.id;delete out.at;return out;};
+  const item=previous?.id&&canonicalJSON(semantic(previous))===canonicalJSON(value)?previous:{...value,id:crypto.randomUUID(),at:utc()};
+  form.dataset.dirty='true';S.drafts[context]=item;await put('drafts',key(context),item);
+  if(formContext(id)===context)decorateDraft(form);
+  return item;
+}
+async function restoreForm(id,defaults={}){
+  const form=$(id),context=formContext(id),expected=context;
+  const generationKey=id==='mapping-form'?'sourceGeneration':id==='capture-form'?'selectionGeneration':'detailGeneration',generation=S[generationKey];
+  const historical=Boolean(S.historyId&&versionedForm(id));
+  let record=historical?null:S.drafts[context]??await get('drafts',key(context));
+  if(formContext(id)!==expected||S[generationKey]!==generation)return;
+  if(!historical)record=S.drafts[context]??record;
+  if(id!=='mapping-form'){form.reset();setFields(form,defaults);}
+  form.dataset.dirty=record?'true':'false';
+  if(record){S.drafts[context]=record;if(id==='mapping-form')restoreRawMapping(record.value);else setFields(form,record.value);}
+  if(id==='mapping-form')form.dataset.baseVersion=String(record?.base_version??S.source?.latest_mapping_version??'');
+  else if(versionedForm(id))form.dataset.baseVersion=String(record?.base_version??S.detail?.version??'');
+  decorateDraft(form);return record;
+}
+function decorateDraft(form){
+  form.querySelector('[data-draft-reconcile]')?.remove();
+  const mapping=form.id==='mapping-form';
+  if(mapping?!S.source:!versionedForm(form.id)||!S.detail||S.historyId)return;
+  const current=mapping?S.source.latest_mapping_version:S.detail.version,base=Number(form.dataset.baseVersion);
+  if(base===current||!Number.isInteger(base))return;
+  const panel=element('div',undefined,'pending panel');panel.dataset.draftReconcile='';
+  const origin=base===0?'These edits were entered while the comparison was being created.':'These edits began on '+(mapping?'mapping ':'comparison ')+'edition '+base+'.';
+  panel.append(element('p',origin+' The current '+(mapping?'mapping':'comparison')+' is edition '+current+'. Review the current original sources before carrying these edits forward.'));
+  panel.append(button('Use these edits with the current edition',async()=>{
+    const old=Number(form.dataset.baseVersion);form.dataset.baseVersion=String(mapping?S.source.latest_mapping_version:S.detail.version);
+    await retainForm(form.id);const context=formContext(form.id),item={...S.drafts[context],id:crypto.randomUUID(),at:utc(),reconciled_from:old};
+    S.drafts[context]=item;await put('drafts',key(context),item);decorateDraft(form);
+  }));form.prepend(panel);
+}
 async function retainAllForms(){for(const id of ['capture-form','mapping-form','comparison-form',...CURRENT_FORMS]){if(!$(id).hidden&&$(id).dataset.dirty==='true')await retainForm(id);}}
 function controls(){for(const n of document.querySelectorAll('[data-mutation]'))n.disabled=S.busy||Boolean(S.pending)||!S.export||Boolean(n.hasAttribute('data-current-only')&&(!S.detail||S.historyId));for(const id of ['export-select','mapping-edition','returned-file','document-select'])$(id).disabled=S.busy;for(const id of CURRENT_FORMS)for(const field of $(id).querySelectorAll('input,textarea,select'))field.disabled=Boolean(S.historyId);show('open-current',Boolean(S.historyId));}
 function requestSummary(r){return {id:r.id,action:r.action,created_at:r.created_at,state:r.state,error:r.error??null,request_sha256:r.request_sha256,receiving_id:r.payload?.receiving_id??null,source_id:r.payload?.source_id??null,export_id:r.payload?.export_id??null};}
@@ -50,11 +94,71 @@ async function finishRequest(record,state,response,error=null){const completed={
 function renderPending(){show('pending-panel',Boolean(S.pending));if(S.pending){text('pending-summary',S.pending.action+' · '+S.pending.id+' · saved '+S.pending.created_at);const p=clone(S.pending);if(p.payload.content_base64)p.payload.content_base64='Complete original file retained in this browser request ('+p.payload.content_base64.length+' base64 characters).';text('pending-detail',nice(p));}controls();}
 async function renderRequestHistory(){const prefix=key('request:');const rows=await new Promise((resolve,reject)=>{const tx=S.db.transaction('summaries','readonly'),found=[],r=tx.objectStore('summaries').openCursor(IDBKeyRange.bound(prefix,prefix+'\uffff'),'prev');r.onerror=()=>reject(r.error);r.onsuccess=()=>{const c=r.result;if(!c||found.length>=50){resolve(found);return;}found.push(c.value);c.continue();};});table('request-history',['Time','Operation','State',''],rows.map(r=>[r.created_at,r.action,r.state,button('Download original',async()=>download(await get('requests',key(r.id)),'Accounting_Return_Request_'+r.id+'.json'))]));}
 async function originalResult(record){const found=await readJSON(API+'requests/'+encodeURIComponent(record.id));if(found.workspace_id!==S.scope||found.request_id!==record.id)throw new Error('The original result belongs to a different saved workspace. Reopen the original database.');if(found.found&&found.request_sha256!==record.request_sha256)throw new Error('This saved request ID belongs to different original inputs. Keep both records for review.');return found;}
-async function adoptResult(record,response){await finishRequest(record,'committed',response);if(record.formContext){S.drafts[record.formContext]=undefined;const completedForm=document.getElementById(record.formId??'');if(completedForm)completedForm.dataset.dirty='false';await transaction(['drafts'],tx=>tx.objectStore('drafts').delete(key(record.formContext)));}if(record.fileKey){await transaction(['files'],tx=>{const st=tx.objectStore('files'),r=st.get(record.fileKey);r.onsuccess=()=>{if(r.result?.sha256===record.fileSha256)st.delete(record.fileKey);};});if(S.originalFile?.sha256===record.fileSha256){S.originalFile=null;$('returned-file').value='';text('retained-file','');}}
-  await refresh({reopen:false});const result=response.result??{};if(result.receiving_id)await openComparison(result.receiving_id);else if(result.source?.id)await openSource(result.source.id);status('Saved '+record.action+' in the original workspace. Request '+record.id+'.');return response;}
+async function releaseSubmittedDraft(record){
+  if(!record.formContext)return null;
+  const submittedId=record.submittedDraft?.id;
+  await transaction(['drafts'],tx=>{
+    const store=tx.objectStore('drafts'),read=store.get(key(record.formContext));
+    read.onsuccess=()=>{if(submittedId&&read.result?.id===submittedId)store.delete(key(record.formContext));};
+  });
+  if(submittedId&&S.drafts[record.formContext]?.id===submittedId)delete S.drafts[record.formContext];
+  const saved=S.drafts[record.formContext]??await get('drafts',key(record.formContext));
+  const later=S.drafts[record.formContext]??saved;
+  if(later)S.drafts[record.formContext]=later;
+  const form=document.getElementById(record.formId??'');
+  if(form&&formContext(record.formId)===record.formContext)form.dataset.dirty=later?'true':'false';
+  return later??null;
+}
+async function carryCreatedComparisonDraft(record,later,result){
+  if(!later||record.action!=='receiving-compare'||!result.receiving_id)return;
+  const context='comparison-form:'+record.payload.export_id+':'+result.receiving_id;
+  const candidate={...clone(later),id:crypto.randomUUID(),at:utc(),context,base_version:0,carried_from:record.id};
+  let existing=null;
+  await transaction(['drafts'],tx=>{
+    const store=tx.objectStore('drafts'),read=store.get(key(context));
+    read.onsuccess=()=>{existing=read.result??null;if(!existing)store.put(candidate,key(context));};
+  });
+  if(!existing){S.drafts[context]??=candidate;return;}
+  // The original creation draft and an existing saved-comparison draft both survive.
+  let panel=$('later-draft-panel');if(!panel){panel=element('section',undefined,'pending panel');panel.id='later-draft-panel';$('notice').after(panel);}
+  panel.replaceChildren(element('p','This saved comparison already has a retained draft. The later creation edits remain in their original context.'));
+  panel.append(button('Download later creation edits',()=>download(later,'Accounting_Return_Later_Draft_'+later.id+'.json')));
+  panel.append(button('Open original creation draft',()=>selectExport(record.payload.export_id)));
+}
+async function adoptResult(record,response){
+  await retainAllForms();
+  await finishRequest(record,'committed',response);
+  const later=await releaseSubmittedDraft(record),result=response.result??{};
+  await carryCreatedComparisonDraft(record,later,result);
+  if(record.fileKey){
+    await transaction(['files'],tx=>{const st=tx.objectStore('files'),r=st.get(record.fileKey);r.onsuccess=()=>{if(r.result?.sha256===record.fileSha256)st.delete(record.fileKey);};});
+    if(S.originalFile?.sha256===record.fileSha256){S.originalFile=null;$('returned-file').value='';text('retained-file','');}
+  }
+  await refresh({reopen:false});
+  if(result.receiving_id)await openComparison(result.receiving_id);
+  else if(result.source?.id)await openSource(result.source.id,record.formId==='mapping-form'&&later?later.source_mapping_version??record.submittedDraft?.source_mapping_version??null:null,{retain:false});
+  status('Saved '+record.action+' in the original workspace. Request '+record.id+'.'+(later?' Your later form edits remain retained for review.':''));
+  return response;
+}
 async function recoverOriginal(){if(!S.pending)return;const record=S.pending;S.busy=true;controls();try{const result=await originalResult(record);if(result.found)return await adoptResult(record,result.response);status('The original request has no committed result. Continue the retained request to use the same inputs and request ID.');}finally{S.busy=false;controls();}}
 async function sendOriginal(record,{readFirst=true}={}){if(S.busy)throw new Error('Let the current receiving operation finish.');S.busy=true;controls();try{if(readFirst){const original=await originalResult(record);if(original.found)return await adoptResult(record,original.response);}const r=await fetch('/api/cashiering/'+record.action,{method:'POST',headers:{'content-type':'application/json','X-Workspace-Token':TOKEN},body:JSON.stringify(record.payload)});let value;try{value=await r.json();}catch{throw new Error('The operation response was interrupted. Read the retained original result.');}if(!r.ok){const error=new Error(typeof value.error==='string'?value.error:value.message??'The workspace rejected this request.');error.status=r.status;if(r.status===400||r.status===409||r.status===413){const original=await originalResult(record);if(original.found)return await adoptResult(record,original.response);await finishRequest(record,'unsaved',null,error.message);await refresh({reopen:true});error.message+=' The edited form remains available. Review the current edition before saving a new request.';}throw error;}const original=await originalResult(record);if(!original.found)throw new Error('The response arrived but the original request receipt is not yet available. Keep this retained request and read its result.');return await adoptResult(record,original.response);}catch(error){if(S.pending?.id===record.id){const kept={...record,error:error.message,state:'pending'};await retainRequest(kept);}throw error;}finally{S.busy=false;controls();}}
-async function write(action,input,formId,extra={}){if(S.pending)throw new Error('Resolve the original saved request before starting another write. Your form edits are retained.');if(S.busy)throw new Error('Let the current original operation finish.');const owner=$('operator-name').value.trim();if(!owner)throw new Error('Name the operator retaining this change.');if(!input.note?.trim())throw new Error('Record the receiving or review note.');S.busy=true;controls();let record;try{await retainForm(formId);const context=formContext(formId),payload={...clone(input),owner,request_id:crypto.randomUUID(),revision:S.state.revision,receiving_workspace_id:S.scope};const request_sha256=await sha(canonicalJSON({action,payload}));record={schema:'berkeley.cashiering.receiving-browser-request.v1',id:payload.request_id,action,payload,request_sha256,created_at:utc(),state:'pending',formContext:context,formId,...extra};await retainRequest(record);}finally{S.busy=false;controls();}return sendOriginal(record,{readFirst:false});}
+async function write(action,input,formId,extra={}){
+  if(S.pending)throw new Error('Resolve the original saved request before starting another write. Your form edits are retained.');
+  if(S.busy)throw new Error('Let the current original operation finish.');
+  const owner=$('operator-name').value.trim();if(!owner)throw new Error('Name the operator retaining this change.');
+  if(!input.note?.trim())throw new Error('Record the receiving or review note.');
+  S.busy=true;controls();let record;
+  try{
+    const submittedDraft=extra.submittedDraft??await retainForm(formId);
+    if(!submittedDraft?.context)throw new Error('The complete submitted form draft could not be retained.');
+    const payload={...clone(input),owner,request_id:crypto.randomUUID(),revision:S.state.revision,receiving_workspace_id:S.scope};
+    const request_sha256=await sha(canonicalJSON({action,payload}));
+    record={schema:'berkeley.cashiering.receiving-browser-request.v1',id:payload.request_id,action,payload,request_sha256,
+      created_at:utc(),state:'pending',formContext:submittedDraft.context,formId,...extra,submittedDraft:clone(submittedDraft)};
+    await retainRequest(record);
+  }finally{S.busy=false;controls();}
+  return sendOriginal(record,{readFirst:false});
+}
 function currentInput(formId){if(!S.detail||S.historyId)throw new Error('Open the current editable comparison before saving a review.');return {receiving_id:S.detail.id,receiving_version:Number($(formId).dataset.baseVersion||S.detail.version)};}
 
 
@@ -70,14 +174,31 @@ function renderBindings(){if(!S.export)return;const chosen=new Map((S.bindingSel
 function renderFile(){text('retained-file',S.originalFile?S.originalFile.name+' · '+S.originalFile.bytes+' bytes · SHA-256 '+S.originalFile.sha256:'Choose a complete original file or a document already retained in the workspace.');}
 async function chooseFile(){const file=$('returned-file').files[0],e=selectedExport();if(!file)return;if(!/\.(csv|json)$/i.test(file.name)||file.size<1||file.size>25*1024*1024)throw new Error('Choose a complete CSV or JSON original up to 25 MiB.');S.busy=true;controls();try{const raw=new Uint8Array(await file.arrayBuffer()),record={file,name:file.name,bytes:file.size,sha256:await sha(raw),selected_at:utc(),export_id:e.id};if(S.export?.id!==e.id)throw new Error('The prepared exchange changed while this file was being retained. Choose it from its original exchange.');await put('files',key('file:'+e.id),record);S.originalFile=record;$('document-select').value='';await retainForm('capture-form');renderFile();}finally{S.busy=false;controls();}}
 async function base64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(reader.error);reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.readAsDataURL(file);});}
-async function captureOriginal(){if(S.busy||S.pending)throw new Error('Resolve the current original request before retaining another file.');const e=selectedExport(),v=fields($('capture-form')),file=S.originalFile;let attachment={};S.busy=true;controls();try{if(v.document_id)attachment.document_id=v.document_id;else{if(!file||file.export_id!==e.id)throw new Error('Choose the complete original returned file.');attachment={filename:file.name,content_base64:await base64(file.file),captured_at:v.captured_at};if(S.export?.id!==e.id)throw new Error('The prepared exchange changed. Reopen the original file selection.');}}finally{S.busy=false;controls();}const metadata={source_system:v.source_system,report_family:v.report_family,native_reference:v.native_reference,observed_at:v.observed_at,mode:v.mode,complete:v.complete,note:v.metadata_note};return write('receiving-capture',{run_id:e.run_id,export_id:e.id,...attachment,metadata,note:v.note},'capture-form',v.document_id?{}:{fileKey:key('file:'+e.id),fileSha256:file.sha256});}
+async function captureOriginal(){
+  if(S.busy||S.pending)throw new Error('Resolve the current original request before retaining another file.');
+  const e=selectedExport(),v=fields($('capture-form')),file=S.originalFile,submitted=retainForm('capture-form');
+  let attachment={},submittedDraft;S.busy=true;controls();
+  try{
+    submittedDraft=await submitted;
+    if(v.document_id)attachment.document_id=v.document_id;
+    else{
+      if(!file||file.export_id!==e.id)throw new Error('Choose the complete original returned file.');
+      attachment={filename:file.name,content_base64:await base64(file.file),captured_at:v.captured_at};
+      if(S.export?.id!==e.id)throw new Error('The prepared exchange changed. Reopen the original file selection.');
+    }
+  }finally{S.busy=false;controls();}
+  const metadata={source_system:v.source_system,report_family:v.report_family,native_reference:v.native_reference,
+    observed_at:v.observed_at,mode:v.mode,complete:v.complete,note:v.metadata_note};
+  return write('receiving-capture',{run_id:e.run_id,export_id:e.id,...attachment,metadata,note:v.note},'capture-form',
+    {submittedDraft,...(v.document_id?{}:{fileKey:key('file:'+e.id),fileSha256:file.sha256})});
+}
 async function openSource(id,version=null,{retain=true}={}){if(retain&&S.source)await retainForm('mapping-form');const generation=++S.sourceGeneration,e=selectedExport();const source=await readJSON(API+'sources/'+encodeURIComponent(id)+(version?'?mapping_version='+version:''));if(generation!==S.sourceGeneration||S.export?.id!==e.id)return;if(source.export_id!==e.id||source.run_id!==e.run_id)throw new Error('This original source belongs to another prepared exchange.');S.source=source;S.sourceOffset=0;S.statusOffset=0;show('mapping-empty',false);show('mapping-form',true);text('mapping-title',source.filename);text('mapping-state','Reading mapping edition '+source.mapping_version+' ('+(source.confirmed?'confirmed':'draft')+'). Saving creates a new edition after current edition '+source.latest_mapping_version+'.');options($('mapping-edition'),source.mapping_history.map(m=>[m.version,'Edition '+m.version+' · '+(m.confirmed?'Confirmed':'Draft')]),source.mapping_version);const prepared=e.profile.columns.map(c=>c.header);for(const select of document.querySelectorAll('[data-returned-column]'))options(select,source.headers,'',{empty:'Not supplied'});for(const select of document.querySelectorAll('[data-prepared-column]'))options(select,prepared,'',{empty:'Select original column'});options($('status-column'),source.headers,source.mapping.status_column,{empty:'Select native status column'});fillMapping(source.mapping);await restoreForm('mapping-form');if(generation!==S.sourceGeneration)return;show('amount-fields',$('compare-amounts').checked);text('mapping-issues',source.mapping_issues.join('\n'));text('native-status-count','');show('more-statuses',false);text('source-selection',source.filename+' · '+source.rows+' rows · '+source.metadata.source_system+' / '+source.metadata.report_family+'\nOriginal SHA-256 '+source.sha256);$('source-download').href=sourceURL(source.document_id);show('source-download',true);show('source-json',true);await sourcePage();controls();}
 function identityPair(value={prepared:'',returned:''}){const source=selectedSource(),row=element('div',undefined,'mapping-pair');const prepared=element('label','Prepared column'),p=document.createElement('select');p.dataset.prepared='';options(p,S.export.profile.columns.map(c=>c.header),value.prepared,{empty:'Select original prepared key'});prepared.append(p);const returned=element('label','Returned column'),r=document.createElement('select');r.dataset.returned='';options(r,source.headers,value.returned,{empty:'Select original returned key'});returned.append(r);const remove=button('Remove',async()=>{row.remove();await retainForm('mapping-form');});row.append(prepared,returned,remove);$('identity-pairs').append(row);}
 function statusPair(value={native:'',status:'unknown'}){const row=element('div',undefined,'mapping-pair'),native=element('label','Exact native value'),n=document.createElement('textarea');n.rows=1;n.dataset.native='';n.value=value.native??'';native.append(n);const meaning=element('label','Interpreted meaning'),s=document.createElement('select');s.dataset.meaning='';options(s,STATUSES,value.status);meaning.append(s);row.append(native,meaning,button('Remove',async()=>{row.remove();await retainForm('mapping-form');}));$('status-pairs').append(row);}
 function fillMapping(value){const form=$('mapping-form');form.reset();$('identity-pairs').replaceChildren();(value.keys.length?value.keys:[{}]).forEach(identityPair);$('status-pairs').replaceChildren();const labels=Object.entries(value.status_map);(labels.length?labels:[['','unknown']]).forEach(([native,status])=>statusPair({native,status}));const am=value.amount;const fieldsValue={...value,mapping_note:value.note,compare_amounts:Boolean(am),...(am??{})};for(const side of ['prepared','returned'])if(am){const binding=am[side+'_currency'];fieldsValue[side+'_currency_kind']=Object.hasOwn(binding,'column')?'column':'literal';fieldsValue[side+'_currency_column']=binding.column??'';fieldsValue[side+'_currency_literal']=binding.literal??'';}setFields(form,fieldsValue);$('amount-statuses').replaceChildren();for(const value of STATUSES){const label=element('label',undefined,'check'),input=document.createElement('input');input.type='checkbox';input.name='included_statuses';input.value=value;input.checked=(am?.included_statuses??['accepted','posted']).includes(value);label.append(input,element('span',value));$('amount-statuses').append(label);}show('amount-fields',Boolean(am));}
 function restoreRawMapping(value){setFields($('mapping-form'),value.fields??{});$('identity-pairs').replaceChildren();(value.keys??[]).forEach(identityPair);$('status-pairs').replaceChildren();(value.labels??[]).forEach(statusPair);for(const n of $('amount-statuses').querySelectorAll('input'))n.checked=(value.included??[]).includes(n.value);show('amount-fields',$('compare-amounts').checked);}
 function mappingValue(){const raw=rawMapping(),v=raw.fields,keys=raw.keys,status_map=Object.fromEntries(raw.labels.map(p=>[p.native,p.status]));if(new Set(raw.labels.map(p=>p.native)).size!==raw.labels.length)throw new Error('Each exact native status must have one explicit meaning.');const amount=v.compare_amounts?{prepared_column:v.prepared_column,returned_column:v.returned_column,prepared_mode:v.prepared_mode,returned_mode:v.returned_mode,prepared_currency:{[v.prepared_currency_kind]:v[v.prepared_currency_kind==='column'?'prepared_currency_column':'prepared_currency_literal']},returned_currency:{[v.returned_currency_kind]:v[v.returned_currency_kind==='column'?'returned_currency_column':'returned_currency_literal']},value_basis:v.value_basis,included_statuses:raw.included}:null;return {keys,status_column:v.status_column,status_map,event_id_column:v.event_id_column,reference_column:v.reference_column,error_code_column:v.error_code_column,error_message_column:v.error_message_column,observed_at_column:v.observed_at_column,amount,note:v.mapping_note};}
-async function saveMapping(confirmed){const source=selectedSource();return write('receiving-mapping',{source_id:source.id,mapping_version:source.latest_mapping_version,mapping:mappingValue(),confirmed,note:fields($('mapping-form')).note},'mapping-form');}
+async function saveMapping(confirmed){const source=selectedSource();return write('receiving-mapping',{source_id:source.id,mapping_version:Number($('mapping-form').dataset.baseVersion||source.latest_mapping_version),mapping:mappingValue(),confirmed,note:fields($('mapping-form')).note},'mapping-form');}
 async function readStatuses(more=false){const source=selectedSource(),column=$('status-column').value,generation=S.sourceGeneration;if(!column)throw new Error('Select the original native status column first.');const offset=more?S.statusOffset:0,result=await readJSON(API+'sources/'+encodeURIComponent(source.id)+'/values?'+query({column,offset,limit:100}));if(generation!==S.sourceGeneration||S.source?.id!==source.id||$('status-column').value!==column)return;if(result.source_id!==source.id||result.sha256!==source.sha256)throw new Error('Native status values differ from the selected original.');const existing=new Set([...$('status-pairs').querySelectorAll('[data-native]')].map(n=>n.value));let unsupported=0;for(const value of result.values){if(typeof value.value!=='string'){unsupported++;continue;}if(!existing.has(value.value)){statusPair({native:value.value,status:'unknown'});existing.add(value.value);}}S.statusOffset=result.offset+result.values.length;text('native-status-count','Read '+S.statusOffset+' of '+result.total+' original values'+(unsupported?' · '+unsupported+' nontext values retained for inspection':'')+'. Assign each meaning explicitly.');show('more-statuses',S.statusOffset<result.total);await retainForm('mapping-form');}
 async function sourcePage(){const source=selectedSource(),generation=S.sourceGeneration,offset=S.sourceOffset;const result=await readJSON(API+'sources/'+encodeURIComponent(source.id)+'/rows?'+query({offset,limit:25}));if(generation!==S.sourceGeneration||S.source?.id!==source.id||offset!==S.sourceOffset)return;if(result.source_id!==source.id||result.sha256!==source.sha256)throw new Error('The returned source page differs from its original capture.');table('source-preview',['Original record',...source.headers.slice(0,5),''],result.rows.map(r=>[r.line,...source.headers.slice(0,5).map(h=>r.values[h]),button('Complete row',()=>inspectOriginal({source_id:source.id,source_sha256:source.sha256,...r},source.filename+' · original record '+r.line))]));show('source-pager',true);text('source-page-status',(result.total?offset+1:0)+'–'+(offset+result.rows.length)+' of '+result.total);$('source-previous').disabled=offset===0;$('source-next').disabled=offset+result.rows.length>=result.total;}
 async function preparedPage(){const e=selectedExport(),offset=S.preparedOffset;const result=await readJSON(API+'exports/'+encodeURIComponent(e.id)+'?'+query({run_id:e.run_id,offset,limit:25}));if(S.export?.id!==e.id||S.preparedOffset!==offset)return;if(result.export.id!==e.id||result.export.sha256!==e.sha256)throw new Error('The prepared page belongs to a different retained export.');table('prepared-preview',['Prepared record',...result.export.prepared_headers.slice(0,6),''],result.rows.map(r=>[r.ordinal,...result.export.prepared_headers.slice(0,6).map(h=>r.values[h]),button('Complete row',()=>download(r,'Prepared_Row_'+r.ordinal+'.json'))]));show('prepared-pager',true);text('prepared-page-status',(result.total?offset+1:0)+'–'+(offset+result.rows.length)+' of '+result.total);$('prepared-previous').disabled=offset===0;$('prepared-next').disabled=offset+result.rows.length>=result.total;}
@@ -99,11 +220,42 @@ async function rowPage(){if(!S.detail)return;const detail=S.detail,generation=++
   else if(kind==='observations'){headers=['Returned original','Identity result','Native / interpreted status','Observation time','Amount',''];rows=result.rows.map(r=>[(detail.source_bindings.find(s=>s.id===r.source_id)?.filename??r.source_id)+' · record '+r.record+(r.active_source?'':' · earlier snapshot'),r.match,String(r.native_status??'Not supplied')+' / '+r.status,r.observed_at,minor(r.amount_minor,r.currency),button('Select original',()=>selectRow(kind,r.id))]);}
   else{headers=['Finding','Original row context','Review',''];rows=result.rows.map(r=>[r.code+'\n'+r.message,r.prepared_ids.length+' prepared / '+r.observation_ids.length+' returned',r.review.status,button('Open finding',()=>selectRow(kind,r.id))]);}
   table('row-table',headers,rows);text('row-page-status',(result.total?offset+1:0)+'–'+(offset+result.rows.length)+' of '+result.total+' '+kind);$('row-previous').disabled=offset===0;$('row-next').disabled=offset+result.rows.length>=result.total;controls();}
-async function selectRow(kind,id){const detail=S.detail,url=detailURL(kind+'/'+encodeURIComponent(id));const row=await readJSON(url);if(S.detail?.edition_id!==detail.edition_id)return;if(row.id!==id)throw new Error('The selected original row identity changed.');S.selectedRow={kind,receiving_id:detail.id,edition_id:detail.edition_id,version:detail.version,row};text('selected-row',nice(S.selectedRow));text('selected-row-summary',kind+' · '+id+' · edition '+detail.version);show('download-row',true);let related=$('selected-related');if(!related){related=element('div',undefined,'actions');related.id='selected-related';$('selected-row').after(related);}related.replaceChildren();
-  if(kind==='observations'){S.observation=row;const source=detail.source_bindings.find(s=>s.id===row.source_id);if(source)related.append(link('Download original returned file',sourceURL(source.document_id)));if(row.prepared_id)related.append(button('Open identified prepared row',()=>selectRow('prepared',row.prepared_id)));}
-  else if(kind==='prepared'){S.prepared=row;related.append(link('Download exact prepared CSV',artifactURL(detail.export.artifact_id)));for(const id of row.observation_ids.slice(0,20))related.append(button('Returned '+ident(id),()=>selectRow('observations',id)));if(row.observation_ids.length>20)related.append(element('p','The complete selected row lists every observation ID. Use the returned-row search to open another exact ID.','help'));}
-  else{const form=$('finding-form');form.elements.finding_id.value=row.id;form.elements.status.value=row.review.status;form.elements.note.value=row.review.note??'';form.dataset.baseVersion=String(detail.version);text('finding-selection',row.code+' · '+row.message);for(const [family,ids] of [['prepared',row.prepared_ids],['observations',row.observation_ids]])for(const linked of ids.slice(0,10))related.append(button((family==='prepared'?'Prepared ':'Returned ')+ident(linked),()=>selectRow(family,linked)));await retainForm('finding-form');}
-  if((kind==='observations'||kind==='prepared')&&!S.historyId)await retainForm('assignment-form');renderAssignmentSelection();controls();}
+async function selectRow(kind,id){
+  if(!Object.hasOwn(S.rowSelectionGeneration,kind))throw new Error('Choose a maintained original row family.');
+  const detail=S.detail,contextGeneration=S.detailGeneration,familyGeneration=++S.rowSelectionGeneration[kind],panelGeneration=++S.rowPanelGeneration;
+  const row=await readJSON(detailURL(kind+'/'+encodeURIComponent(id)));
+  const current=()=>S.detailGeneration===contextGeneration&&S.detail?.id===detail.id&&S.detail?.edition_id===detail.edition_id&&S.detail?.analysis_id===detail.analysis_id&&S.rowSelectionGeneration[kind]===familyGeneration;
+  if(!current())return;
+  if(row.id!==id)throw new Error('The selected original row identity changed.');
+  if(kind==='observations')S.observation=row;
+  else if(kind==='prepared')S.prepared=row;
+  else{
+    const form=$('finding-form');form.elements.finding_id.value=row.id;form.elements.status.value=row.review.status;
+    form.elements.note.value=row.review.note??'';form.dataset.baseVersion=String(detail.version);
+    text('finding-selection',row.code+' · '+row.message);
+  }
+  if(panelGeneration===S.rowPanelGeneration){
+    S.selectedRow={kind,receiving_id:detail.id,edition_id:detail.edition_id,analysis_id:detail.analysis_id,version:detail.version,row};
+    text('selected-row',nice(S.selectedRow));text('selected-row-summary',kind+' · '+id+' · edition '+detail.version);show('download-row',true);
+    let related=$('selected-related');if(!related){related=element('div',undefined,'actions');related.id='selected-related';$('selected-row').after(related);}related.replaceChildren();
+    if(kind==='observations'){
+      const source=detail.source_bindings.find(item=>item.id===row.source_id);
+      if(source)related.append(link('Download original returned file',sourceURL(source.document_id)));
+      if(row.prepared_id)related.append(button('Open identified prepared row',()=>selectRow('prepared',row.prepared_id)));
+    }else if(kind==='prepared'){
+      related.append(link('Download exact prepared CSV',artifactURL(detail.export.artifact_id)));
+      for(const observationId of row.observation_ids.slice(0,20))related.append(button('Returned '+ident(observationId),()=>selectRow('observations',observationId)));
+      if(row.observation_ids.length>20)related.append(element('p','The complete selected row lists every observation ID. Use the returned-row search to open another exact ID.','help'));
+    }else{
+      for(const [family,ids] of [['prepared',row.prepared_ids],['observations',row.observation_ids]])
+        for(const linked of ids.slice(0,10))related.append(button((family==='prepared'?'Prepared ':'Returned ')+ident(linked),()=>selectRow(family,linked)));
+    }
+  }
+  if(kind==='findings')await retainForm('finding-form');
+  else if(!S.historyId)await retainForm('assignment-form');
+  if(!current())return;
+  renderAssignmentSelection();controls();
+}
 function renderAssignments(){const rows=S.detail.assignments??[];table('assignment-list',['Original assignment','State',''],rows.map(a=>[ident(a.observation_id)+' → '+(a.excluded?'Excluded':ident(a.prepared_id)),a.active?'Active':'Retired',button(a.active?'Review retirement':'Read',async()=>{if(!a.active){download(a,'Receiving_Assignment_'+a.id+'.json');return;}show('retire-assignment-form',true);const form=$('retire-assignment-form');form.elements.assignment_id.value=a.id;form.elements.note.value='';form.dataset.baseVersion=String(S.detail.version);text('retire-assignment-summary',a.id+' · '+a.note);await retainForm('retire-assignment-form');controls();})]));}
 function renderDecisions(){table('decision-list',['Time / operator','Decision','Exact review','Statement'],S.detail.decisions.map(d=>[d.created_at+'\n'+d.owner,d.status,d.current?'Current source and review':'Earlier source or review',d.statement]));}
 function renderDownloads(){const box=$('receiving-downloads');box.replaceChildren();for(const [suffix,label] of [['json','Complete receiving JSON'],['report','Open full report'],['prepared.csv','All prepared rows CSV'],['observations.csv','All returned rows CSV'],['findings.csv','All findings CSV']])box.append(link(label,detailURL(suffix)));box.append(link('Complete editable workspace','/api/backup'));table('packet-list',['Saved handoff','Bytes',''],S.detail.packets.map(p=>[p.label+' · receiving edition '+p.receiving_version,p.bytes,link('Download ZIP',artifactURL(p.artifact_id))]));}

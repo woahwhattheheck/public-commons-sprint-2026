@@ -182,3 +182,7 @@ python -B cashiering/examples/operate_original_receiving.py \
 ~~~
 
 Use the original browser operation to open `/cashiering/receiving/` on that same saved workspace and select the returned receiving ID from `result.json`.
+
+Browser drafts retain immutable draft IDs in the exact original request. A completed request clears only its submitted draft; later edits retain their own source/comparison context and require reconciliation against a newer edition. Original row selection uses separate generations for each assignment endpoint and the visible row, so response ordering preserves the operator's latest selection.
+
+The host prints its actual bound loopback URL, including when `--port 0` selects an available port.
