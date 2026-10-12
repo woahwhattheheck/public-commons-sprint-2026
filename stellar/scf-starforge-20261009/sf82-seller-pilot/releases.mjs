@@ -410,7 +410,7 @@ export async function stageRelease(root, options) {
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
   const datasetSource = options.datasetPackage !== undefined;
   if (datasetSource && (Object.keys(options).some(key =>
-      !['id','label','runtime','datasetPackage'].includes(key) && options[key] !== undefined) ||
+      !['id','label','alias','runtime','datasetPackage'].includes(key) && options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
     throw new TypeError('Choose the prepared dataset package or another source; the dataset owns its original controller and query bindings.');
   const pythonSource = options.python !== undefined;
@@ -722,6 +722,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'sqlite', before: before?.sqlite ?? null, after: after.sqlite ?? null });
   if (stable(before?.clickhouse ?? null) !== stable(after.clickhouse ?? null))
     runtimeChanges.push({ field: 'clickhouse', before: before?.clickhouse ?? null, after: after.clickhouse ?? null });
+  if (stable(before?.dataset ?? null) !== stable(after.dataset ?? null))
+    runtimeChanges.push({ field: 'dataset', before: before?.dataset ?? null, after: after.dataset ?? null });
   if (stable(before?.facilitatorReview ?? null) !== stable(after.facilitatorReview ?? null))
     runtimeChanges.push({ field: 'facilitatorReview', before: before?.facilitatorReview ?? null, after: after.facilitatorReview ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
