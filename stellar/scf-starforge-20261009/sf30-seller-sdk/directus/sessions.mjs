@@ -19,7 +19,7 @@ const CHUNK=4*MiB,MAX_ARCHIVE=17*1024**3,DEFINITION_LIMIT=262144;
 const identity=value=>hash(canonical(value));
 const decode=raw=>JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));
 const need=(ok,code,message)=>{if(!ok)throw fault(code,message,409);};
-const sameFile=(a,b)=>['dev','ino','size','mode','uid','gid','mtimeNs','ctimeNs'].every(key=>a[key]===b[key]);
+const sameFile=(a,b)=>['dev','ino','size','mode','uid','gid','nlink','mtimeNs','ctimeNs'].every(key=>a[key]===b[key]);
 const exactPath=value=>typeof value==='string'&&isAbsolute(value)&&resolve(value)===value&&!value.includes('\0');
 const archiveOptions=({python,signal,maxBytes}={})=>
   Object.fromEntries(Object.entries({python,signal,maxBytes}).filter(([,value])=>value!==undefined));
@@ -272,43 +272,122 @@ export function validateDirectusBuyerSessions(workspace,value,{allowAdditionalSe
     'DIRECTUS_SESSION_CUSTODY_INCOMPLETE','The complete project must include every registered acquisition.');
   return value;
 }
-async function materializeArchive(workspace,root,archive){
-  await privateDirectory(root,true);const file=join(root,archive.sha256+'.zip');
+const privateArchiveInfo=(info,links)=>info.isFile()&&!info.isSymbolicLink()&&
+  info.uid===BigInt(process.getuid())&&(info.mode&0o077n)===0n&&info.nlink===BigInt(links);
+async function optionalInfo(file){try{return await lstat(file,{bigint:true});}catch(error){if(error.code==='ENOENT')return null;throw error;}}
+async function verifyLinkedArchive(file,archive){
+  const handle=await open(file,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
   try{
-    const previous=await hashPrivate(file,MAX_ARCHIVE);
-    need(previous.bytes===archive.bytes&&previous.hash===archive.sha256,
+    const before=await handle.stat({bigint:true});
+    need(privateArchiveInfo(before,2)&&before.size===BigInt(archive.bytes),
+      'DIRECTUS_SESSION_ARCHIVE_LINKS','The interrupted archive has an unrelated inode or link.');
+    const digest=createHash('sha256');let offset=0;
+    while(offset<archive.bytes){
+      const buffer=Buffer.allocUnsafe(Math.min(CHUNK,archive.bytes-offset));
+      const {bytesRead}=await handle.read(buffer,0,buffer.length,offset);
+      need(bytesRead>0,'DIRECTUS_SESSION_ARCHIVE_SHORT','The interrupted archive ended early.');
+      digest.update(buffer.subarray(0,bytesRead));offset+=bytesRead;
+    }
+    need(sameFile(before,await handle.stat({bigint:true}))&&digest.digest('hex')===archive.sha256,
+      'DIRECTUS_SESSION_ARCHIVE_CHANGED','The interrupted linked archive differs from its complete source.');
+    return before;
+  }finally{await handle.close();}
+}
+async function removeExpectedPartial(partial,expected){
+  const current=await lstat(partial,{bigint:true});
+  need(current.isFile()&&!current.isSymbolicLink()&&current.dev===expected.dev&&current.ino===expected.ino&&
+    current.uid===BigInt(process.getuid())&&(current.mode&0o077n)===0n,
+    'DIRECTUS_SESSION_PARTIAL_CHANGED','The retained original archive partial was replaced.');
+  await unlink(partial);
+}
+async function materializeArchive(workspace,root,archive){
+  await privateDirectory(root,true);
+  const file=join(root,archive.sha256+'.zip'),partial=join(root,'.'+archive.sha256+'.partial');
+  const complete=await optionalInfo(file),pending=await optionalInfo(partial);
+  if(complete){
+    if(pending&&complete.dev===pending.dev&&complete.ino===pending.ino){
+      need(privateArchiveInfo(complete,2)&&privateArchiveInfo(pending,2),
+        'DIRECTUS_SESSION_ARCHIVE_LINKS','Only the exact original partial/final link pair can be recovered.');
+      const checked=await verifyLinkedArchive(file,archive);
+      const finalNow=await lstat(file,{bigint:true}),partialNow=await lstat(partial,{bigint:true});
+      need(sameFile(checked,finalNow)&&sameFile(checked,partialNow),
+        'DIRECTUS_SESSION_ARCHIVE_CHANGED','The original archive link pair changed before recovery.');
+      await removeExpectedPartial(partial,checked);await syncDirectory(root);
+    }
+    // An unrelated partial name is left untouched. The complete native archive
+    // still must have its one original private link and exact bytes.
+    const actual=await hashPrivate(file,MAX_ARCHIVE);
+    need(actual.bytes===archive.bytes&&actual.hash===archive.sha256,
       'DIRECTUS_SESSION_ARCHIVE_CHANGED','The retained receiving archive differs.');
     return file;
-  }catch(error){if(error.code!=='ENOENT')throw error;}
-  const temporary=join(root,'.archive-'+randomUUID());let handle,created;
+  }
+  let handle,opened;
   try{
-    handle=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
-    created=await handle.stat({bigint:true});
+    if(pending){
+      need(privateArchiveInfo(pending,1)&&pending.size>=0n&&pending.size<=BigInt(archive.bytes),
+        'DIRECTUS_SESSION_PARTIAL','The selected original archive partial is not privately recoverable.');
+      handle=await open(partial,constants.O_RDWR|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+      opened=await handle.stat({bigint:true});
+      need(sameFile(pending,opened),'DIRECTUS_SESSION_PARTIAL_CHANGED','The original archive partial changed before opening.');
+    }else{
+      handle=await open(partial,constants.O_RDWR|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW|constants.O_NONBLOCK,0o600);
+      opened=await handle.stat({bigint:true});
+      need(privateArchiveInfo(opened,1),'DIRECTUS_SESSION_PARTIAL','Use the original private archive partial.');
+    }
+    const prefixBytes=Number(opened.size);let checked=0;
+    // A previously interrupted partial is writable only after every retained
+    // prefix byte matches this exact archive's original SQLite chunks.
     for(const chunk of archive.chunks){
-      const raw=bytesOf(workspace,chunk,CHUNK);let offset=0;
+      if(checked>=prefixBytes)break;
+      const expected=bytesOf(workspace,chunk,CHUNK),count=Math.min(expected.length,prefixBytes-checked);
+      const actual=Buffer.allocUnsafe(count);let filled=0;
+      while(filled<count){
+        const {bytesRead}=await handle.read(actual,filled,count-filled,checked+filled);
+        need(bytesRead>0,'DIRECTUS_SESSION_PARTIAL_SHORT','The original retained prefix ended early.');
+        filled+=bytesRead;
+      }
+      need(actual.equals(expected.subarray(0,count)),
+        'DIRECTUS_SESSION_PARTIAL_CHANGED','The existing partial contains different original archive bytes.');
+      checked+=count;
+    }
+    need(checked===prefixBytes&&sameFile(opened,await handle.stat({bigint:true})),
+      'DIRECTUS_SESSION_PARTIAL_CHANGED','The original archive prefix changed while being checked.');
+    let written=prefixBytes;
+    for(const chunk of archive.chunks){
+      const end=chunk.offset+chunk.bytes;if(end<=written)continue;
+      const raw=bytesOf(workspace,chunk,CHUNK);let offset=written-chunk.offset;
+      need(offset>=0&&offset<raw.length,'DIRECTUS_SESSION_CHUNKS','The resumed original archive chunk sequence differs.');
       while(offset<raw.length){
-        const {bytesWritten}=await handle.write(raw,offset,raw.length-offset,null);
+        const {bytesWritten}=await handle.write(raw,offset,raw.length-offset,chunk.offset+offset);
         need(bytesWritten>0,'DIRECTUS_SESSION_ARCHIVE_WRITE','The received archive write made no progress.');
-        offset+=bytesWritten;
+        offset+=bytesWritten;written+=bytesWritten;
       }
     }
-    await handle.sync();await handle.close();handle=null;
-    const actual=await hashPrivate(temporary,MAX_ARCHIVE);
+    need(written===archive.bytes,'DIRECTUS_SESSION_ARCHIVE_SHORT','The resumed archive is incomplete.');
+    await handle.sync();
+    const completed=await handle.stat({bigint:true});
+    need(privateArchiveInfo(completed,1)&&completed.dev===opened.dev&&completed.ino===opened.ino&&completed.size===BigInt(archive.bytes),
+      'DIRECTUS_SESSION_PARTIAL_CHANGED','The completed original archive partial changed identity.');
+    await handle.close();handle=null;
+    const actual=await hashPrivate(partial,MAX_ARCHIVE);
     need(actual.bytes===archive.bytes&&actual.hash===archive.sha256,
       'DIRECTUS_SESSION_ARCHIVE_CHANGED','The written original archive differs.');
-    try{await link(temporary,file);}catch(error){
+    const beforeLink=await lstat(partial,{bigint:true});
+    need(sameFile(completed,beforeLink),'DIRECTUS_SESSION_PARTIAL_CHANGED','The completed archive changed before publication.');
+    try{await link(partial,file);}catch(error){
       if(error.code!=='EEXIST')throw error;
-      const previous=await hashPrivate(file,MAX_ARCHIVE);
-      need(previous.bytes===archive.bytes&&previous.hash===archive.sha256,
+      const existing=await hashPrivate(file,MAX_ARCHIVE);
+      need(existing.bytes===archive.bytes&&existing.hash===archive.sha256,
         'DIRECTUS_SESSION_ARCHIVE_CHANGED','Another archive occupies the receiving path.');
     }
-    await syncDirectory(root);return file;
-  }finally{
-    await handle?.close();
-    if(created)try{const current=await lstat(temporary,{bigint:true});
-      if(current.dev===created.dev&&current.ino===created.ino&&current.isFile())await unlink(temporary);
-    }catch(error){if(error.code!=='ENOENT')throw error;}
-  }
+    // Directory durability includes removal of the expected partial. A crash
+    // between these operations reopens the exact two-name inode pair above.
+    await removeExpectedPartial(partial,completed);await syncDirectory(root);
+    const published=await hashPrivate(file,MAX_ARCHIVE);
+    need(published.bytes===archive.bytes&&published.hash===archive.sha256,
+      'DIRECTUS_SESSION_ARCHIVE_CHANGED','The published acquisition archive differs.');
+    return file;
+  }finally{await handle?.close();}
 }
 
 /** Reopen the original portable SF88 acquisition under its explicit storage map.
