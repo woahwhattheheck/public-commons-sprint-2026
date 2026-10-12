@@ -333,44 +333,119 @@ try{
         durationOutcome:durationRead.operation.outcome.reason};
     });
     await step('frozen-receiving-live-growth-and-original-resume',async()=>{
+      const progress=result.refs.healthReceiving??={stages:{},resumeTargets:{}};
+      const mark=async(name,run)=>{
+        if(progress.stages[name]?.state==='COMPLETE')return progress.stages[name].value;
+        progress.stages[name]??={state:'STARTED',startedAt:now()};await checkpoint();
+        const value=await run();progress.stages[name]={state:'COMPLETE',finishedAt:now(),value};await checkpoint();return value;
+      };
       let watch=await startHealth('receiving',{kind:'watch',service:'transition.receiving.'+result.runId,
         timeoutMs:500,durationMs:120000,maxEvents:500});
-      if(!watch.operation.runningHere&&['CANCELLED','INTERRUPTED'].includes(watch.operation.phase))
-        watch=await full(await mcp('health_resume',{operationId:watch.operation.id,expectedVersion:watch.operation.version}),'resumed-receiving');
-      await until(watch.operation.id,value=>value.operation.updates>=2);
-      const exported=await mcp('health_export',{operationId:watch.operation.id});
-      const receiving={client,exportId:exported.exportId,expectedManifestSha256:exported.manifestFile.sha256,
-        directory:join(workRoot,'downloads','health-first'),chunkSize:196608};
-      const received=await downloadGrpcHealthExport(receiving),firstBytes=await readFile(received.healthFile);
-      await until(watch.operation.id,value=>value.operation.version>received.operation.version);
-      const again=await downloadGrpcHealthExport(receiving);assert.equal(again.snapshotSha256,received.snapshotSha256);
-      assert.deepEqual(await readFile(received.healthFile),firstBytes);
+      const operationId=watch.operation.id;
+      if(progress.originalDeadline)assert.equal(watch.operation.deadlineAt,progress.originalDeadline);
+      else{progress.originalDeadline=watch.operation.deadlineAt;await checkpoint();}
+      const resumeWithStatus=async(stage,requiredResume,requireLive=false)=>{
+        for(;;){
+          let current=await healthRead(operationId);
+          if(progress.resumeTargets[stage]===undefined){
+            progress.resumeTargets[stage]=current.operation.epochs+(requiredResume||!current.operation.runningHere?1:0);
+            await checkpoint();
+          }
+          const targetEpoch=progress.resumeTargets[stage];
+          if(current.operation.epochs<targetEpoch){
+            assert(!current.operation.runningHere);
+            await mcp('health_resume',{operationId,expectedVersion:current.operation.version});
+            current=await healthRead(operationId);
+          }
+          const events=await allEvents(operationId);let epoch=0;
+          const seen=events.some(event=>{
+            if(event.kind==='lifecycle'&&event.data.phase==='RUNNING')epoch++;
+            return epoch>=targetEpoch&&event.kind==='native'&&event.data.type==='status'&&event.data.status?.name==='SERVING';
+          });
+          if(seen&&(!requireLive||current.operation.runningHere))return current;
+          if(current.operation.runningHere){
+            await until(operationId,value=>value.operation.version>current.operation.version||!value.operation.runningHere);
+            continue;
+          }
+          assert(Date.parse(current.operation.deadlineAt)>Date.now(),'The original retained Watch deadline elapsed before the selected continuation.');
+          // An owner may end before a resumed Watch produces its first status.
+          // Record the next original epoch before explicitly resuming it.
+          progress.resumeTargets[stage]=current.operation.epochs+1;await checkpoint();
+        }
+      };
+      const first=await mark('first-prefix-receiving',async()=>{
+        await resumeWithStatus('capture',false);
+        if(!progress.exportIntent){
+          const current=await healthRead(operationId);
+          progress.exportIntent={throughSequence:current.operation.version,expectedSnapshot:current.operation.snapshot};
+          await checkpoint();
+        }
+        if(!progress.exportDescriptor){
+          progress.exportDescriptor=await mcp('health_export',{operationId,...progress.exportIntent});await checkpoint();
+        }
+        const exported=progress.exportDescriptor;
+        const received=await downloadGrpcHealthExport({client,exportId:exported.exportId,
+          expectedManifestSha256:exported.manifestFile.sha256,directory:join(workRoot,'downloads','health-first'),chunkSize:196608});
+        const bytes=await readFile(received.healthFile);
+        return {snapshotSha256:received.snapshotSha256,fileSha256:hash(bytes),version:received.operation.version};
+      });
+      await mark('repeat-original-prefix-after-growth',async()=>{
+        await until(operationId,value=>value.operation.version>first.version);
+        const exported=progress.exportDescriptor;
+        const received=await downloadGrpcHealthExport({client,exportId:exported.exportId,
+          expectedManifestSha256:exported.manifestFile.sha256,directory:join(workRoot,'downloads','health-first'),chunkSize:196608});
+        assert.equal(received.snapshotSha256,first.snapshotSha256);
+        assert.equal(hash(await readFile(received.healthFile)),first.fileSha256);
+        return {originalExportId:exported.exportId,repeatReceivingExact:true};
+      });
       const file=join(workRoot,'downloads','health-cli.json');
+      const cliPrefix=await mark('cli-prefix-receiving',async()=>{
+        await healthMain(['export','--console-url-file',join(workRoot,'operator','console-url.txt'),
+          '--id',operationId,'--out',file],{stdout:{write(){}}});
+        return {sha256:hash(await readFile(file))};
+      });
+      await mark('operator-stop',async()=>{
+        let current=await healthRead(operationId);
+        if(current.operation.phase!=='CANCELLED'||current.operation.reason!=='operator_cancelled'){
+          if(!current.operation.runningHere)current=await resumeWithStatus('first-stop',false,true);
+          await cancelHealth(operationId);current=await finished(operationId);
+        }
+        assert.equal(current.operation.phase,'CANCELLED');assert.equal(current.operation.reason,'operator_cancelled');
+        return {epoch:current.operation.epochs,version:current.operation.version};
+      });
       await healthMain(['export','--console-url-file',join(workRoot,'operator','console-url.txt'),
-        '--id',watch.operation.id,'--out',file],{stdout:{write(){}}});
-      const initialCli=await readFile(file);
-      await cancelHealth(watch.operation.id);watch=await finished(watch.operation.id);
-      assert.equal(watch.operation.phase,'CANCELLED');assert.equal(watch.operation.reason,'operator_cancelled');
-      await healthMain(['export','--console-url-file',join(workRoot,'operator','console-url.txt'),
-        '--id',watch.operation.id,'--out',file],{stdout:{write(){}}});
-      assert.deepEqual(await readFile(file),initialCli);
-      const originalDeadline=watch.operation.deadlineAt,originalVersion=watch.operation.version;
-      await mcp('health_resume',{operationId:watch.operation.id,expectedVersion:originalVersion});
-      await until(watch.operation.id,value=>value.operation.epochs===2&&value.operation.updates>=3);
-      await workspace.close();workspace=null;
-      await openWorkspace();
-      let reopened=await healthRead(watch.operation.id);
-      assert.equal(reopened.operation.phase,'INTERRUPTED');assert.equal(reopened.operation.reason,'workspace_closed');
-      assert.equal(reopened.operation.deadlineAt,originalDeadline);
-      await mcp('health_resume',{operationId:watch.operation.id,expectedVersion:reopened.operation.version});
-      await until(watch.operation.id,value=>value.operation.epochs===3&&value.operation.updates>=4);
-      await cancelHealth(watch.operation.id);
-      reopened=await finished(watch.operation.id);assert.equal(reopened.operation.deadlineAt,originalDeadline);
+        '--id',operationId,'--out',file],{stdout:{write(){}}});
+      assert.equal(hash(await readFile(file)),cliPrefix.sha256);
+      await mark('resume-before-workspace-close',async()=>{
+        const current=await resumeWithStatus('close',true);
+        return {epoch:progress.resumeTargets.close,version:current.operation.version};
+      });
+      const closed=await mark('workspace-close-and-reopen',async()=>{
+        let current=await healthRead(operationId);
+        if(current.operation.runningHere){await workspace.close();workspace=null;await openWorkspace();current=await healthRead(operationId);}
+        assert.equal(current.operation.phase,'INTERRUPTED');assert.equal(current.operation.reason,'workspace_closed');
+        assert.equal(current.operation.deadlineAt,progress.originalDeadline);
+        return {epoch:current.operation.epochs,version:current.operation.version,reason:current.operation.reason};
+      });
+      await mark('resume-after-workspace-reopen',async()=>{
+        const current=await resumeWithStatus('final',true);
+        return {epoch:progress.resumeTargets.final,version:current.operation.version};
+      });
+      const stopped=await mark('final-original-stop',async()=>{
+        let current=await healthRead(operationId);
+        if(current.operation.phase!=='CANCELLED'||current.operation.reason!=='operator_cancelled'){
+          if(!current.operation.runningHere)current=await resumeWithStatus('final-stop',false,true);
+          await cancelHealth(operationId);current=await finished(operationId);
+        }
+        assert.equal(current.operation.phase,'CANCELLED');assert.equal(current.operation.reason,'operator_cancelled');
+        assert.equal(current.operation.deadlineAt,progress.originalDeadline);
+        return {epoch:current.operation.epochs,version:current.operation.version};
+      });
       const inspect=await healthMain(['inspect','--file',file,'--section','summary'],{stdout:{write(){}}});
-      assert.equal(inspect.id??inspect.operation?.id??inspect.summary?.id,watch.operation.id);
-      return {operationId:watch.operation.id,originalDeadline,epochs:reopened.operation.epochs,
-        prefixSnapshotSha256:received.snapshotSha256,prefixFileSha256:hash(firstBytes),cliPrefixSha256:hash(initialCli),
-        liveGrowthPreserved:true,repeatReceivingExact:true};
+      assert.equal(inspect.operation.id,operationId);
+      return {operationId,originalDeadline:progress.originalDeadline,epochs:stopped.epoch,workspaceClosedEpoch:closed.epoch,
+        prefixSnapshotSha256:first.snapshotSha256,prefixFileSha256:first.fileSha256,cliPrefixSha256:cliPrefix.sha256,
+        originalExportId:progress.exportDescriptor.exportId,liveGrowthPreserved:true,repeatReceivingExact:true};
     });
     await step('durable-unary-control-and-publication-window-recovery',async()=>{
       const {createGrpcHealthWorkspace}=await load(GRPC+'workspace/health.mjs');
