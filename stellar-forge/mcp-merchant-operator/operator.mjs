@@ -134,6 +134,7 @@ export class MerchantReleaseOperator {
   #clientExports; #facilitators; #woocommerce; #mpp;
   constructor(config, { woocommerce, mpp } = {}) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#socrataWorkspaces = new MerchantSocrataWorkspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#ckanWorkspaces = new MerchantCkanWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#usaSpendingWorkspaces = new MerchantUSASpendingWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); this.#woocommerce = new MerchantWooCommerce(config, woocommerce); this.#mpp = new MerchantMppConsole(config, mpp); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
+  get maximumRequestBytes() { return this.#config.mpp ? 3*1024*1024 : 128*1024; }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
     return { schema: 'stellar-forge.merchant-mcp-status.v1', merchant: this.#config.name,

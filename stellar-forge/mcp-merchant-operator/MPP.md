@@ -253,3 +253,7 @@ The original native customer export also exposes `inspectCustomerPurchase`, `cus
 | `GET /api/customer-workbench/purchases/:id/file` | Original paid response chunks, bound to `expectedSha256` |
 
 The existing loopback host, bearer and same-origin checks apply to these endpoints. Customer contract/request binding, native credential recovery, original governor accounting and the historical response store remain the authorities for their respective operations.
+
+### Native document envelope
+
+A native MPP connection selects a 3 MiB request envelope in the original merchant HTTP transport and private console. This carries the native receiver’s complete 2 MiB bundle with its MCP/control fields; original contract, package and request-body parsers retain their own limits. The shared MCP handler defaults to 128 KiB for other hosts and accepts an explicit bounded host option. The stdio merchant host uses the same original listener.

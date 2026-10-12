@@ -15,13 +15,15 @@ import { createCustomerBundle } from './customer/export.mjs';
 import { createCustomerWorkbench, customerWorkbenchProfile } from './customer/workbench.mjs';
 
 const uiRoot=new URL('./public/',import.meta.url);
+// A full native customer bundle is up to 2 MiB; control requests include its JSON envelope.
+const MAX_CONSOLE_BODY=3*1024*1024;
 function portNumber(value) {
   requireValue(Number.isInteger(value) && value>=0 && value<=65535,'MPP_PORT_INVALID'); return value;
 }
-async function readBody(request) {
+async function readBody(request,maximum=MAX_BODY) {
   const chunks=[];let length=0;
   for await(const chunk of request) {
-    length+=chunk.length;requireValue(length<=MAX_BODY,'MPP_REQUEST_TOO_LARGE',413);chunks.push(chunk);
+    length+=chunk.length;requireValue(length<=maximum,'MPP_REQUEST_TOO_LARGE',413);chunks.push(chunk);
   }
   return Buffer.concat(chunks);
 }
@@ -103,7 +105,7 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
   const workspace=await openWorkspace(directory);
   const customerWorkbench=createCustomerWorkbench({workspace,environment});
   const tokenBytes=Buffer.from(token);
-  const jobs=new Map();let merchantServer=null,merchantTransition=false,origin,closed=false;
+  const jobs=new Map();let merchantServer=null,merchantTransition=false,origin,closePromise;
   function authorized(request) {
     requireValue(request.headers.authorization?.startsWith('Bearer '),'MPP_WORKSPACE_AUTH_REQUIRED',401);
     const candidate=Buffer.from(request.headers.authorization.slice(7));
@@ -236,7 +238,7 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
       }
       requireValue(request.method==='POST' && request.headers['content-type']?.split(';')[0]==='application/json',
         'MPP_JSON_POST_REQUIRED',405);
-      const body=JSON.parse((await readBody(request)).toString('utf8'));
+      const body=JSON.parse((await readBody(request,MAX_CONSOLE_BODY)).toString('utf8'));
       let result;
       if(url.pathname==='/api/customer-workbench/intake') {
         result=await customerWorkbench.intake(body.document);
@@ -311,11 +313,16 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
     const readiness=Object.freeze({schema:'stellar-forge.mpp-console-ready.v1',
       pid:process.pid,ppid:process.ppid,origin,privateUrl,workspace:workspace.root,createdAt:initialIdentity.createdAt,
       versions,tokenEnv:tokenEnv??null});
-    return {workspace,url:privateUrl,origin,snapshot,identity,readiness,close:async()=>{
-      if(closed) return;closed=true;
-      await new Promise(resolve=>server.close(resolve));
-      await Promise.allSettled([...jobs.values()].map(job=>job.promise));
-      await merchantServer?.close();await workspace.close();
+    return {workspace,url:privateUrl,origin,snapshot,identity,readiness,close:()=>{
+      if(!closePromise)closePromise=(async()=>{
+        await new Promise(resolve=>server.close(resolve));
+        await Promise.allSettled([...jobs.values()].map(job=>job.promise));
+        try{await merchantServer?.close();}finally{await workspace.close();}
+      })();
+      return closePromise;
     }};
-  } catch(error){await workspace.close();throw error;}
+  } catch(error){
+    await new Promise(resolve=>server.close(()=>resolve()));
+    await workspace.close();throw error;
+  }
 }

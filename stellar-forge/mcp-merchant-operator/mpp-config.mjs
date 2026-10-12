@@ -43,8 +43,9 @@ export function consoleOrigin(value) {
 }
 export function publicConfiguration(value) {
   if(!value)return null;
+  let rpcOrigin=null;try{if(value.rpcUrl)rpcOrigin=new URL(value.rpcUrl).origin;}catch{}
   return {payer:value.signer?.payer,operator:{actor:value.operator?.actor,service:value.operator?.service},
-    assetLimits:value.assetLimits,rpcUrl:value.rpcUrl??null,
+    assetLimits:value.assetLimits,rpcConfigured:Boolean(value.rpcUrl),rpcOrigin,
     runtimeConfigured:Boolean(value.dependencyRoot),signerConfigured:Boolean(value.signer?.keyEnv),
     governorConfigured:Boolean(value.operator?.python && value.operator?.ledger && value.operator?.policy),
     transport:value.transport?{origin:value.transport.origin,proxyConfigured:true}:null};
