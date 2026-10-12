@@ -59,7 +59,7 @@ Every tool below uses the prefix `merchant_opensearch_`. The table groups the co
 | `deployment_status`, `deployment_compare`, `deployment_open` | Inspect original release selection, compare retained releases and open the maintained deployment controller. |
 | `deployment_stage`, `deployment_activate`, `deployment_rollback` | Stage verified prepared packages and select releases using the original generation checks. |
 | `deployment_start`, `deployment_stop`, `deployment_restart` | Run and drain the actual seller through its original controller and instance identity. |
-| `deployment_generate_client`, `deployment_clients`, `deployment_client`, `deployment_manifest` | Generate from the actual owned seller and inspect retained customer exports, provenance and file manifests. |
+| `deployment_generate_client`, `deployment_clients`, `deployment_client`, `deployment_manifest`, `deployment_adopt_client` | Generate from the actual owned seller, inspect original manifests and recover intact customer exports. |
 | `deployment_file`, `deployment_file_release`, `deployment_archive`, `deployment_handover` | Transfer original client files or complete archives and generate the current deployment handover. |
 
 ## Query and merchant workflow
@@ -145,7 +145,7 @@ Closing one alias waits for accepted work and releases its retained file handles
 
 ## Managed deployment and customer delivery
 
-The 17 deployment tools compose the original [OpenSearch deployment workspace](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/deployment.mjs), [SF82 release manager](../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs), and [retained customer exporter](./client-exports.mjs). The same merchant operator now exposes 43 OpenSearch tools across authoring, native evaluation, deployment and customer delivery.
+The 18 deployment tools compose the original [OpenSearch deployment workspace](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/deployment.mjs), [SF82 release manager](../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs), and [retained customer exporter](./client-exports.mjs). The same merchant operator now exposes 44 OpenSearch tools across authoring, native evaluation, deployment and customer delivery.
 
 Each alias uses the release store at its original workspace's `deployment` directory. Its customer exports live beside that store in `deployment.clients`. The source workspace, deployment store and customer directory travel together when transferring an installation. Typed deployment tools always resolve the selected alias's original store. The maintained host's optional `--release-store` configures its general release tools separately; a multi-alias host can keep that parent store distinct. Configure it to an alias's exact store only when intentionally composing the general tools with that installation.
 
@@ -187,7 +187,7 @@ For an upgrade, stage a new prepared package, compare it with the active release
 
 `deployment_rollback` selects the original previous release, or the explicit retained release in `to`. It also requires the current `expectedGeneration`. Use `deployment_restart` with the current owned instance to run the rolled-back selection. `deployment_stop` gracefully stops only the exact instance identified in its request.
 
-Every mutation includes a unique original workspace `requestId`. After a lost response, repeat the identical call or recover it through `merchant_opensearch_operation`. The adapter waits for the original accepted deployment task to finish before returning its retained outcome. A completed operation's embedded status describes that operation; use `deployment_status` for the current selection and runtime. Reusing an ID for changed inputs is rejected by the original journal. A browser stage request that omitted default runtime fields can be recovered when its effective runtime matches the current host selection.
+Every release or customer-generation action includes a unique original workspace `requestId`. After a lost response, repeat the identical call or recover it through `merchant_opensearch_operation`. The adapter waits for the original accepted deployment task to finish before returning its retained outcome. A completed operation's embedded status describes that operation; use `deployment_status` for the current selection and runtime. Reusing an ID for changed inputs is rejected by the original journal. A browser stage request that omitted default runtime fields can be recovered when its effective runtime matches the current host selection.
 
 Closing the OpenSearch alias drains its accepted MCP work, closes retained readers and closes the original deployment controller. That controller gracefully stops the seller it owns. Retained releases, generations, original journal entries and customer exports reopen from their saved directories.
 
@@ -207,6 +207,8 @@ Closing the OpenSearch alias drains its accepted MCP work, closes retained reade
 `exportId` names the new customer export. Its completion manifest binds the original release ID, release digest, seller instance and file bytes. Use the original request ID to recover generation after a disconnected call.
 
 The list and file tools read `deployment.clients` directly through the maintained `MerchantClientExports` authority, so retained customer delivery continues after the seller stops. `deployment_clients` pages by the original `nextAfter` export cursor. `deployment_client` returns inspected completion and offer information. `deployment_manifest` returns the original manifest and `manifestFile.sha256`.
+
+`deployment_adopt_client` completes an intact original customer export when its completion manifest was interrupted. First inspect it with `deployment_client`, then pass that exact `filesSha256` as `expectedFilesSha256` together with `exportId`. The original exporter validates its five retained files and records `ADOPTED_RETAINED`; an existing completed manifest is reused. This recovery uses the original customer export identity and inspected file-set digest. The inspected state identifies missing files when the export still needs those original bytes.
 
 ### Transfer original customer files and archives
 
@@ -247,7 +249,7 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/mcp-man
   --directory /private/receiving/catalog-managed-mcp
 ~~~
 
-Run it after the original native deployment owner has completed staging, activation, start, upgrade/restart, rollback and actual-seller client generation. It discovers those original completed request IDs, recovers their typed MCP outcomes, compares retained releases, transfers all original customer files and the original archive, checks archive members against those files, and resumes pinned transfers after closing and reopening the workspace. The private output directory receives the original customer artifacts and a complete receiving record.
+Run it after the original native deployment owner has completed staging, activation, start, upgrade/restart, rollback and actual-seller client generation. It discovers those original completed request IDs, recovers their typed MCP outcomes, compares retained releases, recovers the original customer completion, transfers all original customer files and the original archive, checks archive members against those files, and resumes pinned transfers after closing and reopening the workspace. The private output directory receives the original customer artifacts and a complete receiving record.
 
 ## Completed native example
 

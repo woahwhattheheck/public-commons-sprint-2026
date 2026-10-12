@@ -79,6 +79,7 @@ export function openSearchDeploymentTools(tool) {
     tool('merchant_opensearch_deployment_clients','Page customer exports in the original deployment.clients directory. Reads saved completion records independently of a running seller.',fields({after:alias,limit:{type:'integer',minimum:1,maximum:50}}),['workspace'],read),
     tool('merchant_opensearch_deployment_client','Inspect the original customer export, offers, completion provenance and retained file reads.',fields({exportId:alias}),['workspace','exportId'],read),
     tool('merchant_opensearch_deployment_manifest','Read the exact retained customer manifest and its file digest before transferring original files or the complete archive.',fields({exportId:alias}),['workspace','exportId'],read),
+    tool('merchant_opensearch_deployment_adopt_client','Recover the completion manifest for an intact original customer export using its inspected filesSha256. The original exporter validates all files and records ADOPTED_RETAINED; an already completed export is reused.',fields({exportId:alias,expectedFilesSha256:digest}),['workspace','exportId','expectedFilesSha256'],write),
     tool('merchant_opensearch_deployment_file','Transfer an original customer file through the maintained MerchantClientExports reader. Bind the export ID, inspected manifest digest, original file digest and original readId/offset.',fields({exportId:alias,file:{type:'string',minLength:1,maxLength:512},expectedManifestSha256:digest,...chunks}),['workspace','exportId','file','expectedManifestSha256','expectedSha256'],read),
     tool('merchant_opensearch_deployment_file_release','Release an unfinished original customer-file read owned by this export.',fields({exportId:alias,readId}),['workspace','exportId','readId'],write),
     tool('merchant_opensearch_deployment_archive','Transfer the original customer tar.gz archive through a SHA-256-pinned snapshot. The original archive encoder verifies every retained file against the inspected manifest. Continue with readId and expectedSha256; read_release releases unfinished archive reads.',fields({exportId:alias,expectedManifestSha256:digest,...chunks}),['workspace','exportId','expectedManifestSha256'],read),
@@ -261,6 +262,10 @@ export class MerchantOpenSearchDeployments {
       case 'manifest':
         identifier(args.exportId,'Customer export ID');
         return (await this.#customer(args.workspace,model)).call('merchant_client_export_manifest',{exportId:args.exportId});
+      case 'adopt_client':
+        identifier(args.exportId,'Customer export ID'); reviewed(args.expectedFilesSha256);
+        return omit(await (await this.#customer(args.workspace,model)).call('merchant_client_export_adopt',
+          {exportId:args.exportId,expectedFilesSha256:args.expectedFilesSha256}),['directory']);
       case 'file':
         identifier(args.exportId,'Customer export ID'); reviewed(args.expectedManifestSha256); reviewed(args.expectedSha256);
         if (typeof args.file !== 'string' || !args.file || args.file.length > 512)
