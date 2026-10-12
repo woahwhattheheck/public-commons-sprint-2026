@@ -169,7 +169,7 @@ class Source:
         try:
             self.before = os.fstat(fd)
             need(stat.S_ISREG(self.before.st_mode) and self.before.st_nlink == 1 and
-                 self.before.st_size <= maximum, "Select one regular unlinked original file within capacity")
+                 self.before.st_size <= maximum, "Select one regular original file without additional hard links and within capacity")
             actual = stream_to(self.stream, maximum=maximum)
             self.value = {"path": str(self.path), **actual}
             self.check()
@@ -643,9 +643,12 @@ def main():
         with Source(input_path, maximum=MAX_JSON) as selected:
             value = selected.json()
         need(isinstance(value, dict), "The handover input must be a JSON object")
-        need(input_path.parent != absolute(value.get("output", "")).parent or
-             input_path.name not in {"result.json", ".iati-customer-selection.json", ".iati-customer-handover.lock"},
-             "The command input overlaps an owned output record")
+        output = absolute(value.get("output", ""))
+        if input_path.parent == output.parent:
+            reserved_prefixes = (".iati-customer-", "." + output.name + ".partial", ".result.json.partial")
+            need(input_path not in {output, output.parent / "result.json"} and
+                 not input_path.name.startswith(reserved_prefixes),
+                 "The command input overlaps an owned output, stage or receipt")
         result = create_handover(value)
     print(json.dumps(result, ensure_ascii=False, allow_nan=False), flush=True)
 
