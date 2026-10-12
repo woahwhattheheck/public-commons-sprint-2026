@@ -18,6 +18,7 @@ const HELP=[
  'import-source --profile-id ID --operation-id ID --file ORIGINAL_SOURCE_PACKAGE',
  'rows --edition-id ID --table observations|predictions|metadata|coverage [--offset 0] [--limit 100] [--begin YYYY-MM-DD] [--end YYYY-MM-DD]',
  'study-preview --file STUDY_SELECTION_JSON',
+ 'study-dataset --study-release-id ORIGINAL_RELEASE --name DATASET_NAME --operation-id ORIGINAL_ID',
  'study-rows --study-id ID --study-revision N [--offset 0] [--limit 100]',
  'study-return --study-release-id ID --format csv|jsonl --file ORIGINAL_RETURN --operation-id ORIGINAL_PREFIX [--note ACTUAL_SOURCE_NOTE]',
  'inspect-mapping --file ORIGINAL_MAPPING_JSON',
@@ -34,6 +35,7 @@ const HELP=[
  'A running console owns the original workspace. Use its startup JSON with --session.',
  'Collect/import/backfill wait for the original capture or backfill; a stopped source remains explicitly partial.',
  'Every write needs its original operationId. The native journal reconciles exact replay before revision checks.',
+ 'study-dataset uses the exact complete released CSV, recorded review and source provenance; native capacity is 250000 rows / 256 MiB. Narrower data requires a separately reviewed release.',
  'dataset.prepare action payload may include mappingId; its exact saved revision and original file stay with native query/release provenance.',
  'Download files are created exclusively and streamed; an existing or partial selected path is preserved.'
 ].join('\n');
@@ -140,7 +142,7 @@ async function returnStudyFile(app,v){
 export async function main(args=process.argv.slice(2)){
  const parsed=argumentsOf(args);if(parsed.help){console.log(HELP);return;}
  const {values:v,command}=parsed;
- if(!['schema','view','stations','action','analyse','collect','backfill','import-source','rows','source','capture-source','download','receive-file','inspect-mapping','mapping-source','study-preview','study-rows','study-return'].includes(command))throw new TypeError('Choose a listed command; see --help.');
+ if(!['schema','view','stations','action','analyse','collect','backfill','import-source','rows','source','capture-source','download','receive-file','inspect-mapping','mapping-source','study-preview','study-rows','study-return','study-dataset'].includes(command))throw new TypeError('Choose a listed command; see --help.');
  const app=v['--session']?await sessionClient(v['--session']):await openCoopsWorkspace({directory:resolve(v['--workspace']),inboxDirectory:v['--inbox']?resolve(v['--inbox']):undefined,userAgent:v['--user-agent'],releaseRuntime:v['--release-runtime']?await readReleaseRuntime(v['--release-runtime']):undefined});
  try{
   let result;
@@ -150,6 +152,11 @@ export async function main(args=process.argv.slice(2)){
   else if(command==='study-preview'){if(!v['--file'])throw new TypeError('--file is required.');result=await app.studyPreview(await json(v['--file']));}
   else if(command==='study-rows'){const revision=Number(v['--study-revision']);if(!v['--study-id']||!Number.isSafeInteger(revision)||revision<1)throw new TypeError('Choose the exact study ID and revision.');result=await app.studyRows(v['--study-id'],revision,{offset:Number(v['--offset']??0),limit:Number(v['--limit']??100)});}
   else if(command==='study-return')result=await returnStudyFile(app,v);
+  else if(command==='study-dataset'){
+   if(!v['--study-release-id']||!v['--name']||!v['--operation-id'])throw new TypeError('Choose an original reviewed study release, dataset name and stable operation ID.');
+   const current=await app.view();
+   result=await app.action({action:'study.dataset.prepare',payload:{releaseId:v['--study-release-id'],name:v['--name']},operationId:v['--operation-id'],expectedRevision:current.revision});
+  }
   else if(command==='inspect-mapping'){if(!v['--file'])throw new TypeError('--file is required.');const file=await open(resolve(v['--file']),'r');let bytes;try{const info=await file.stat();if(!info.isFile()||info.size>65536)throw new TypeError('Select an original mapping JSON file up to 64 KiB.');bytes=await file.readFile();}finally{await file.close();}result=await app.inspectMappingFile({filename:basename(v['--file']),base64:bytes.toString('base64')});}
   else if(command==='action'){
    if(!v['--request'])throw new TypeError('--request is required.');const request=await json(v['--request']);

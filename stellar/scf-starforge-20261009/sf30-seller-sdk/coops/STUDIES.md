@@ -128,6 +128,36 @@ Use the same return prefix and exact original file to resume. The CLI checks eve
 
 The existing Merchant contribution advertises `merchant_coops_study_preview`, `merchant_coops_study_rows`, and one corresponding tool for each study action. Complete source/archive/return/comparison files use the existing `merchant_coops_files` and `merchant_coops_file_read` contract with export IDs and verified chunk continuation.
 
+
+## Use a reviewed delivery in native queries and publication
+
+Open **Studies**, locate the exact immutable delivery, and choose **Use complete delivery in native queries**. The dialog shows its study revision, original reviewer/time, complete CSV rows and bytes, mapping and source-basis warnings. Enter the dataset name and choose **Prepare or open this named dataset**. Opening the same prepared name reuses that saved dataset. Another name is an explicit separate preparation of the same frozen release.
+
+This action consumes the exact complete released CSV. It does not project the current working study again, use a later mapping, infer an edition ID, or rerun NOAA acquisition. The original SF30 parser owns query admission, selected fields, filters, sort order and cursors. Every mapped field remains a string. A field named for metres is not automatically a numeric-range field. Original valueType, quality, time, unit and station-datum fields remain available through the reviewed mapping.
+
+The original query limit is **250,000 rows and 256 MiB of CSV**. All delivered headings must satisfy the native field-name contract shown in the dialog. An oversized or incompatible release remains intact. To query a narrower window or different headings, save an explicit mapping/study revision, obtain its actual review, and create another complete release. There is no implicit truncation, remapping or downsampling. A study's streamed CSV/JSONL/TAR capacity remains separate from the native query snapshot limit. The native publisher also retains its 16 MiB source-manifest limit.
+
+In **Datasets**, the source column identifies the study release and recorded review. **Provenance** provides the original dataset receipt and downloadable byte-verified source manifest and query configuration. The package contains the exact CSV, study/review/release records, original delivery manifest, mapping and acquired mapping JSON, complete selected source editions, every accepted/failed response body and any retained imported capture package. Provenance entries use the original flat source-file convention. The original JSONL, HTML and TAR remain available in the study delivery rather than being duplicated in the query package.
+
+Use **Query** for the existing native first/next cursor flow. **Use for release** selects this dataset in the original merchant form. Enter the real reviewed origin, resource path and payment terms, then use the existing publisher's preparation, inspection and generation controls. No payment terms, merchant runtime, activation, customer purchase or settlement are implied by dataset preparation.
+
+The dataset receipt has sourceKind `reviewed-study`, explicit studyReleaseId/studyId/studyRevision/studySha256, the exact delivered review and mapping, originalCSVExportId/csvSha256/csvBytes, and the native snapshot. Its editionId and profileId are null because this is a selected study, potentially containing multiple editions and station profiles. sourceSha256 identifies the original study-delivery manifest bytes; sourceManifestSha256 identifies the native query source manifest. The original publisher's `selection` continues to mean its generation/active-release selection. Added `sourceSelection` describes the frozen study input.
+
+A later study edit or source-review decision remains a different working record. The dataset and merchant package identify the historical review recorded in the selected release; they do not claim it approves a newer revision. The native reservation pins the complete release before any file materialization. An interrupted request reuses that exact release and operation ID. The browser binds the returned dataset ID to its original draft on both a normal reply and exact replay, while preserving later field edits.
+
+### Native command and tools
+
+```sh
+node coops/cli.mjs --session PRIVATE_STARTUP_JSON study-dataset \
+  --study-release-id ORIGINAL_STUDY_RELEASE_ID \
+  --name "Reviewed coastal model input" \
+  --operation-id ORIGINAL_PREPARATION_ID
+```
+
+The same original action is `study.dataset.prepare` with payload `{releaseId,name}`. The merchant tool is `merchant_coops_study_dataset_prepare`; it takes the usual host-declared workspace alias, current expectedRevision and stable operationId. Continue through existing dataset_query, release_prepare/inspect/activate/start/stop/rollback and native customer receiving tools. Download the two metadata exports or the original released CSV using the existing retained-file selector and exact SHA/offset protocol.
+
+The single original receiving journey prepares this query after the actual study release and returned-file work. It records an accepted-request/lost-response replay, checks the saved preparation ID, downloads the native source/configuration manifests, compares actual first-page values with the original JSONL, follows the native cursor, and preserves the same dataset through a later working study edit and same-origin reopen. The source module's presence is not a completed receiving result.
+
 ## Installation and receiving status
 
 The study code and assets are part of the original CO-OPS contribution and normal source package. There is no extra database, server, browser profile, dependency installation or formula engine.
