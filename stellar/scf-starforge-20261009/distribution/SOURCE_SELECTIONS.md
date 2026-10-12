@@ -28,6 +28,9 @@ node stellar/scf-starforge-20261009/distribution/build.mjs \
   --selection grant-reviewer --out /absolute/grant-reviewer-release
 ```
 
+Use any selection ID from the table below in the same build command and give
+that product its own output directory.
+
 Replace `ORIGINAL_COMMIT` with the full original commit SHA. Each output directory
 belongs to one source commit and selection. The packaged receipt names the
 archive, SHA-256, installed/source bytes, source acquisition and materialization.
@@ -39,13 +42,17 @@ The package version includes both the commit and selection, for example
 `0.1.0-source.g0123456789ab.selection.water-operations`. The full package retains
 the original `0.1.0-source.g0123456789ab` version form.
 
-| Selection | Product | Original Applications |
-| --- | --- | --- |
-| `water-operations` | USGS observations, editions, Water workspace, merchant and customer file receiving | Water, Buyer, merchant console |
-| `woo-merchant` | Existing WooCommerce orders, native checkout, Operations, purchased files and refunds | WooCommerce, Buyer, merchant console |
-| `openapi-merchant` | OpenAPI/Postman/HAR authoring, exact route worksheets, reusable policy editions, seller releases and complete receiving | API merchant authoring, Buyer, merchant console |
-| `grant-reviewer` | Retained purchase/source review, complete native Buyer results and closed receiving handover | Grant purchase reviewer |
-| `all` or no flag on a new build | Complete maintained toolkit | All registered applications |
+| Selection | Product | Original Applications | Complete installed workflow |
+| --- | --- | --- | --- |
+| `water-operations` | USGS observations, editions, Water workspace, merchant and complete customer files | Water, Buyer, merchant console | [Operating guide](selections/WATER_OPERATIONS.md) |
+| `woo-merchant` | Existing WooCommerce orders, native checkout, Operations, purchased files and refunds | WooCommerce, Buyer, merchant console | [Operating guide](selections/WOO_MERCHANT.md) |
+| `openapi-merchant` | OpenAPI/Postman/HAR authoring, route worksheets, policy editions, seller releases and complete receiving | API merchant authoring, Buyer, merchant console | [Operating guide](selections/OPENAPI_MERCHANT.md) |
+| `grant-reviewer` | Retained purchase/source review, complete native Buyer results and closed receiving handover | Grant purchase reviewer | [Operating guide](selections/GRANT_REVIEWER.md) |
+| `iati-operator` | IATI aid-finance source intake, review, native editions and complete operator exports | IATI aid finance | [Operating guide](selections/IATI_OPERATOR.md) |
+| `redis-applications` | Redis/Valkey commissioning, native products, customer clients, complete exports and cutover comparison | Redis, Buyer, merchant console | [Operating guide](selections/REDIS_APPLICATIONS.md) |
+| `safe-review` | Original Safe transaction intake, simulation purchase, retained result comparison and portable receiving | Safe simulation buyer, Tenderly, Buyer | [Operating guide](selections/SAFE_REVIEW.md) |
+| `study-research` | Source editions, property research, reports, PostgreSQL publishing and complete customer receiving | Study Source Refresh, PostgreSQL workspace and publisher, Buyer, merchant console | [Operating guide](selections/STUDY_RESEARCH.md) |
+| `all` or no flag on a new build | Complete maintained toolkit | All registered applications | [Runtime installation](RUNTIME_INSTALL.md) |
 
 The [API merchant installation and handover guide](selections/OPENAPI_MERCHANT.md)
 continues from its selected archive through managed authoring, source-bound policies,
@@ -80,10 +87,21 @@ travel in the selected archive.
 
 ## Install and operate the original product
 
-Use the returned archive path and SHA-256 with the original installer. The Water,
-Woo and API merchant examples below select their `schema`, `openapi` and `mcp` features.
-The Grant reviewer selects `--native --feature mcp --operator`; its complete
-installed workflow is in [GRANT_REVIEWER.md](selections/GRANT_REVIEWER.md).
+Use the returned archive path and SHA-256 with the original installer. Select
+its dependency profile from the complete installed workflow linked above:
+
+| Selected product | Profile flags for the complete installed edition |
+| --- | --- |
+| `openapi-merchant`, `safe-review`, `water-operations`, `woo-merchant` | `--native --feature schema --feature openapi --feature mcp --operator` |
+| `redis-applications` | `--native --feature redis --feature schema --feature openapi --feature mcp --operator` |
+| `study-research` | `--native --feature schema --feature openapi --feature mcp --feature postgres --operator` |
+| `grant-reviewer` | `--native --feature mcp --operator` |
+| `iati-operator` | `--operator` |
+
+The following example uses the common merchant profile. Substitute the flags
+from the product's row and keep that product's original runtime directory.
+The selected recipe and its contribution declarations determine the available
+dependency groups; the installer resolves the actual profile and lock.
 
 ```sh
 node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs prepare \
@@ -132,7 +150,14 @@ explicit original files. Optional `excludeFiles` adds exact file exclusions to
 the original base exclusions. A required command, export, provider, runtime
 manifest or static import cannot be excluded successfully. The optional
 `product` object selects existing source README/bin and product metadata through
-the maintained product-package contract.
+the maintained product-package contract. When that object omits `repository`,
+the selected product inherits only `base.product.repository` when present.
+An explicit recipe repository remains authoritative. README and executable
+selection continue to use the recipe and the original product-package defaults;
+unrelated base executables are not inherited. If the base has no repository
+override, the maintained package default remains in effect. This keeps a
+standalone product's source identity without bringing other products' bins
+into its selected archive.
 
 Required command and export targets, selected provider modules, runtime package
 manifests, and browser server/manifests are retained as explicit runtime seeds.
