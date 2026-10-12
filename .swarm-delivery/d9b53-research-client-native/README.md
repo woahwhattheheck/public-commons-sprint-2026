@@ -101,3 +101,10 @@ The completed native case can continue through the maintained source-bundle rece
 The receiving operation preserves the original dossier, question, revision history, selections, findings and review models. It receives the original source groups and full findings together, exports every original study file with readable reports, and independently reopens the complete portable history. The producing owner retains the actual application outcome and one sealed archive through the existing artifact keeper. It can also restore the preceding operation's exact completed saved return into the original private case paths before continuing this stage.
 
 See [OTTAWA_RECEIVING.md](OTTAWA_RECEIVING.md) for the complete reviewed-input contract, current source pins, saved-case restoration, selected output and same-file continuation. The private case input and original source-bundle data remain with their existing receiving operation.
+
+
+## Continue the original case on its receiving host
+
+The complete [native host-placement guide](HOST_PLACEMENT.md) and [linked continuation producer](hosted-linked-native-continuation.py) preserve the original case input while selecting the receiving host's actual Node executable, existing shared controller and original upload helper. The optional host binding is retained separately and the native runtime input includes that stable companion configuration. The controller performs the actual journal write and admission; the producer records filesystem context and follows the original exact-failure recovery instead of waiting on a fixed free-space threshold.
+
+This is the same `SCF-RESEARCH-CLIENT-NCC-D9B53-20261012-CONTINUATION-01` and frozen 162-file product cohort. The complete original result feeds the [Ottawa source-bundle receiving](OTTAWA_RECEIVING.md) in the same producing lifetime, with the original artifact keeper retaining each sealed result through saving.
