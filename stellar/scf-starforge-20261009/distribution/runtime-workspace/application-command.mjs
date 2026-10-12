@@ -1,5 +1,6 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
 import { grpcStartup } from './application-grpc.mjs';
+import { stacStartup, saveStacApplicationConnection } from './application-stac.mjs';
 import { wqxWaterQualityStartup } from './application-wqx-water-quality.mjs';
 import { coingeckoStartup } from './application-coingecko.mjs';
 import { oaiStartup } from './application-oai.mjs';
@@ -137,6 +138,25 @@ export function observeApplicationOutput(request, directory, context = {}) {
           source: 'original-command-stdout', observedAt: now(), url,
           links: startup.links, original: startup.original,
         });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'stac') {
+      if (!text.startsWith('{"schema":"stellar-forge.stac-managed-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await stacStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        const record = {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          workspaceId: startup.original.workspaceId, original: startup.original,
+        };
+        const connectionFile = await saveStacApplicationConnection(request, directory, record);
+        await saveJSON(join(directory, 'application-url.json'), { ...record, connectionFile });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }

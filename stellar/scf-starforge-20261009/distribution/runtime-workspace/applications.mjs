@@ -2,6 +2,7 @@
 import { readDistributionSpecification } from '../specification.mjs';
 import { wqxWaterQualityApplication, prepareWqxWaterQualityApplication } from './application-wqx-water-quality.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
+import { stacApplications, prepareStacApplication } from './application-stac.mjs';
 import { coingeckoApplication, prepareCoingeckoApplication } from './application-coingecko.mjs';
 import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
 import { fiscalDataApplication, prepareFiscalDataApplication } from './application-fiscaldata.mjs';
@@ -76,6 +77,7 @@ const common = [
   field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
 ];
 export const APPLICATION_CATALOG = Object.freeze([
+  ...stacApplications(common),
   wqxWaterQualityApplication(common),
   coingeckoApplication(common),
   oaiApplication(common),
@@ -283,6 +285,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
   if (type.id === 'wqx-water-quality') {
     const original = await prepareWqxWaterQualityApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
+  } else if (['stac-imagery', 'stac-eoapi', 'stac-prescient'].includes(type.id)) {
+    const original = await prepareStacApplication(type.id, settings, { inputPath, runtimeDirectory });
+    Object.assign(settings, original.settings);
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
   } else if (type.id === 'webdav') {
