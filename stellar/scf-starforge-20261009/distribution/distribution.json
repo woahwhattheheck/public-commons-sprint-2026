@@ -346,11 +346,7 @@
     "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
     "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs",
     "merchant-api-pass": "stellar-forge/mcp-merchant-operator/api-pass-cli.mjs",
-    "merchant-accounting-cryptoworth": "stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.mjs",
-    "opendatasoft": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
-    "huwise": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
-    "merchant-opendatasoft": "stellar-forge/mcp-merchant-operator/opendatasoft-cli.mjs",
-    "merchant-huwise": "stellar-forge/mcp-merchant-operator/opendatasoft-cli.mjs"
+    "merchant-accounting-cryptoworth": "stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.mjs"
   },
   "exports": {
     "./seller/opencage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/index.mjs",
@@ -799,18 +795,6 @@
     "./merchant/accounting-cryptoworth/operations": {
       "types": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.d.mts",
       "import": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.mjs"
-    },
-    "./seller/opendatasoft": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/source.mjs",
-    "./seller/opendatasoft/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/capture.mjs",
-    "./seller/opendatasoft/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/declaration.mjs",
-    "./seller/opendatasoft/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/workspace/server.mjs",
-    "./seller/opendatasoft/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/engine.mjs",
-    "./seller/opendatasoft/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/model.mjs",
-    "./seller/opendatasoft/publisher/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/release.mjs",
-    "./merchant/mcp/opendatasoft": "./source/stellar-forge/mcp-merchant-operator/opendatasoft-workspace.mjs",
-    "./merchant/mcp/opendatasoft/client": {
-      "types": "./source/stellar-forge/mcp-merchant-operator/opendatasoft-client.d.mts",
-      "import": "./source/stellar-forge/mcp-merchant-operator/opendatasoft-client.mjs"
     }
   },
   "nativePeers": {
