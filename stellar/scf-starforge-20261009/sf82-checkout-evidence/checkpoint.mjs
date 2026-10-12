@@ -1,6 +1,6 @@
 // MIT. Atomic private records for the original SF82 checkout and its recovery.
 import {constants} from 'node:fs';
-import {open,lstat,link,unlink} from 'node:fs/promises';
+import {open,lstat,link,unlink,readdir} from 'node:fs/promises';
 import {dirname,join,isAbsolute} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 
@@ -48,5 +48,31 @@ export async function createCheckoutRecord(file,value) {
   return {value,bytes:bytes.length,sha256:digest(bytes),path:file};
  } finally {
   await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});
+ }
+}
+
+
+/** Complete a publication interrupted between hard-link publication and removal
+ * of this writer's temporary name. The published bytes are never replaced. */
+export async function finishCheckoutRecordPublication(file) {
+ await privateDirectory(dirname(file));
+ let target;
+ try {target=await lstat(file);}catch(error){if(error.code==='ENOENT')return;throw error;}
+ fail(target.isFile()&&!target.isSymbolicLink(),'CHECKOUT_RECORD_INVALID_OR_TOO_LARGE');
+ if(target.nlink<=1)return;
+ let removed=false;
+ for(const name of await readdir(dirname(file))) {
+  if(!/^\.checkout-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.tmp$/.test(name))continue;
+  const candidate=join(dirname(file),name);
+  let info;
+  try {info=await lstat(candidate);}catch(error){if(error.code==='ENOENT')continue;throw error;}
+  if(!info.isFile()||info.isSymbolicLink()||info.dev!==target.dev||info.ino!==target.ino)continue;
+  const current=await lstat(file);
+  fail(current.dev===target.dev&&current.ino===target.ino,'CHECKOUT_PUBLISHED_FILE_CHANGED');
+  try {await unlink(candidate);removed=true;}catch(error){if(error.code!=='ENOENT')throw error;}
+ }
+ if(removed) {
+  const parent=await open(dirname(file),'r');
+  try {await parent.sync();}finally{await parent.close();}
  }
 }
