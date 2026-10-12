@@ -2,7 +2,9 @@
 
 This complete operating kit receives a retained Research dossier and its existing reviewed Crossref operation, then drives the maintained authenticated Research client, CLI and merchant attachment through receiving, review, complete exports and reopen.
 
-The frozen application source is commit `496ef23a7442f96240af0f5a5ccfa7b3954a2920`. Its 159 selected files are carried in `source-envelope.json`, retaining each original Git blob and directory path. The worker copies these selected files into its own project; the current repository and other installed product work stay independent.
+The frozen application source is commit `496ef23a7442f96240af0f5a5ccfa7b3954a2920`. Its 162 selected files are carried in `source-envelope.json`, retaining each original Git blob and directory path. The worker copies these selected files into its own project; the current repository and other installed product work stay independent.
+
+The closure includes the original seller SDK developer portal's eagerly loaded `developer/index.html`, `developer/browser.mjs` and `developer/style.css`, alongside its already selected request and generator modules. These assets use their original `496ef23` bytes so importing the Research server works in a clean receiving directory.
 
 ## Files
 
@@ -21,7 +23,7 @@ The selected worker needs Python 3.9+ compatible with its existing native contro
 The setup argument has schema `sf88.research-client.native-worker-input.v1`. Keep these values together in the original private operation:
 
 - `operationId`, canonical absolute `directory`, existing `sharedControl` and `controllerSource`.
-- `sourceMerge` and `source` with `repository`, `sourceMerge`, `files`, `bytes`, `sha256` and `gitBlobSha`. The envelope in this kit is 2,012,711 bytes; SHA256 `bd4574e1567c5419ed092e906e1939c6ac3e66799628d7f96f1b0e2fd075ea57`; Git blob `8a1c787d624e9ec6116973a6dc426390a560502d`.
+- `sourceMerge` and `source` with `repository`, `sourceMerge`, `files`, `bytes`, `sha256` and `gitBlobSha`. The envelope in this kit is 2,044,685 bytes; SHA256 `32a883db529f16e83cf863ee2dd6ca2118a2d2e7a59157fb24e1b5c40fcfb6b7`; Git blob `118df984631d8c578c438f921521ed7b29406a61`.
 - `receivingHelper` with `path`, `bytes`, `sha256` and `gitBlobSha` for the exact helper in this kit.
 - `masterArchive` and `companionArchive`, each with the original archive's byte length and SHA256. The master is an existing ZIP containing its complete gzip Research portable. The companion ZIP retains `reviewed-edition.json`, `operations/<original operation>/plan.json`, `state.json`, every capture reference and `source-captures/<capture SHA>.json`.
 - `portable` with its original archive `member` and uncompressed member `bytes`. Setup derives and retains this member's SHA256 after verifying the complete archive.
