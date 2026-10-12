@@ -42,7 +42,7 @@ async function body(req) {
 }
 
 export async function startFleetWorkspace({ stateDirectory, manifests = {}, port = 8402,
-  releasePlan, releaseDirectory } = {}) {
+  releasePlan, releaseDirectory, expectedPlanDigest } = {}) {
   const managed = releasePlan !== undefined;
   if (!managed && (typeof stateDirectory !== 'string' || !stateDirectory.trim())) throw new TypeError('--state is required');
   if (managed && (typeof releasePlan !== 'string' || !releasePlan.trim() ||
@@ -68,7 +68,7 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
   const snapshot = async () => {
     const releaseStatus = releases ? await releases.status() : undefined;
     return { status: releaseStatus ? releaseStatus.native : await fleetControl(directory, 'status'),
-      ...(releaseStatus ? { releaseStatus } : {}), capturedAt: new Date().toISOString() };
+      ...(releaseStatus ? { releaseStatus, planDigest: releases.planDigest } : {}), capturedAt: new Date().toISOString() };
   };
   const sessionKey = randomBytes(32).toString('base64url');
   let url, starting = true, closing = false, closingPromise;
@@ -211,7 +211,7 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
     if (managed) {
       releases = await (await import('../release-operator.mjs')).openFleetReleaseOperator({
         planFile: releasePlan, directory: releaseDirectory, gatewayStateDirectory: stateDirectory,
-        operationsNavigationOrigin: url,
+        operationsNavigationOrigin: url, expectedPlanDigest,
       });
       directory = releases.stateDirectory;
     }

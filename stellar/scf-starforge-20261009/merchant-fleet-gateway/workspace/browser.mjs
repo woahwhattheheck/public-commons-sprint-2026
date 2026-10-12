@@ -250,7 +250,7 @@ const selectedSlot = () => selectedTenant()?.slots.find(row => row.name === $('r
 const sourceName = kind => ({ OPENAPI_WORKSPACE: 'API workspace', OPENAPI_SELLER: 'API seller',
   PYTHON_APPLICATION: 'Python application', DUCKDB_PACKAGE: 'DuckDB data product', S3_OBJECT_PACKAGE: 'S3 objects',
   JSONRPC_MERCHANT_PACKAGE: 'Stellar RPC', SQLITE_MERCHANT_PACKAGE: 'SQLite snapshot', MYSQL_MERCHANT_PACKAGE: 'MySQL / MariaDB',
-  POSTGRES_MERCHANT_PACKAGE: 'PostgreSQL' }[kind] ?? 'Seller source');
+  POSTGRES_MERCHANT_PACKAGE: 'PostgreSQL', CLICKHOUSE_MERCHANT_PACKAGE: 'ClickHouse' }[kind] ?? 'Seller source');
 function releaseReviewValid() {
   return Boolean(releaseReview && releaseReview.baseRevision === status?.revision && Date.parse(releaseReview.expiresAt) > Date.now());
 }

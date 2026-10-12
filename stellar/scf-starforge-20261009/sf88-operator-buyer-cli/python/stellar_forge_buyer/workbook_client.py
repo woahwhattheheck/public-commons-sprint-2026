@@ -114,6 +114,40 @@ class WorkspaceWorkbookClient:
             write(intent_path, json.dumps(intent, ensure_ascii=False, separators=(",", ":")).encode(), exclusive=True)
         # The same IDs survive both a lost HTTP reply and a client restart.
         saved = self.call("/api/workbooks/" + intent["save_request"]["name"], intent["save_request"])
+        return self._complete_delivery(saved, intent, operation, wait_seconds=wait_seconds)
+
+    def refresh(self, recipe, operation, *, wait_seconds=300):
+        """Review, save and receive one complete recurring workbook edition."""
+        operation = private_directory(Path(operation))
+        intent_path = operation / "intent.json"
+        recipe_raw = json.dumps(recipe, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode()
+        if intent_path.exists():
+            intent = parse(read(intent_path, 4 * 1024 * 1024))
+            if (intent.get("schema") != "stellar-forge.workbook-refresh-client-operation.v1"
+                    or intent.get("recipe_sha256") != digest(recipe_raw) or intent.get("database") != str(self.database)):
+                raise StateError("ANALYSIS_WORKBOOK_OPERATION_REUSED")
+            self.workspace_id = intent["workspace_id"]
+        else:
+            state = self.call("/api/state")
+            if state["workspace_id"] != self.workspace_id:
+                raise StateError("ANALYSIS_WORKBOOK_WORKSPACE_CHANGED")
+            name = recipe["definition"]["name"]
+            review = self.call("/api/workbooks/" + name + "/refresh-review", recipe)
+            if not review["ready"]:
+                write(operation / "review.json", json.dumps(review, ensure_ascii=False, indent=2).encode())
+                raise StateError("ANALYSIS_WORKBOOK_REFRESH_PROJECTION_REVIEW_REQUIRED")
+            intent = {"schema": "stellar-forge.workbook-refresh-client-operation.v1",
+                      "database": str(self.database), "workspace_id": self.workspace_id,
+                      "recipe_sha256": digest(recipe_raw),
+                      "refresh_request": {**recipe, "id": uuid.uuid4().hex, "review_sha256": review["review_sha256"]},
+                      "build_id": uuid.uuid4().hex}
+            write(operation / "review.json", json.dumps(review, ensure_ascii=False, indent=2).encode())
+            write(intent_path, json.dumps(intent, ensure_ascii=False, separators=(",", ":")).encode(), exclusive=True)
+        request = intent["refresh_request"]
+        saved = self.call("/api/workbooks/" + request["definition"]["name"] + "/refresh", request)
+        return self._complete_delivery(saved, intent, operation, wait_seconds=wait_seconds)
+
+    def _complete_delivery(self, saved, intent, operation, *, wait_seconds):
         definition = self.call(f"/api/workbooks/{saved['name']}?revision={saved['revision']}")
         if saved["definition_sha256"] != definition["definition_sha256"]:
             raise StateError("ANALYSIS_WORKBOOK_SAVED_DEFINITION_CHANGED")
@@ -148,16 +182,20 @@ class WorkspaceWorkbookClient:
 def main():
     parser = argparse.ArgumentParser(description="Save, build, download and reopen a complete workbook through the running customer workspace.")
     parser.add_argument("--database", required=True, help="Directory of the existing running AnalysisWorkspace")
-    parser.add_argument("--recipe", required=True, help="Private JSON workbook definition with expected_revision")
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--recipe", help="Private JSON workbook definition with expected_revision")
+    inputs.add_argument("--refresh-recipe", help="Reviewed successor definition with base revision, digest and edition note")
     parser.add_argument("--operation", required=True, help="Private durable request and receiving directory; reuse it to reconnect")
     parser.add_argument("--wait-seconds", type=int, default=300)
     args = parser.parse_args()
     if args.wait_seconds < 0:
         parser.error("--wait-seconds must be nonnegative")
-    recipe = parse(read(Path(args.recipe), 1024 * 1024))
+    recipe = parse(read(Path(args.recipe or args.refresh_recipe), 1024 * 1024))
     if not isinstance(recipe, dict):
         parser.error("the recipe must be a JSON object")
-    result = WorkspaceWorkbookClient(args.database).deliver(recipe, args.operation, wait_seconds=args.wait_seconds)
+    client = WorkspaceWorkbookClient(args.database)
+    deliver = client.refresh if args.refresh_recipe else client.deliver
+    result = deliver(recipe, args.operation, wait_seconds=args.wait_seconds)
     print(json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(",", ":")))
 
 

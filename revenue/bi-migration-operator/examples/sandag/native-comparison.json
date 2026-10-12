@@ -1,0 +1,69 @@
+{
+  "keys": [
+    "source_record_id"
+  ],
+  "null_token": "\\N",
+  "fields": [
+    {
+      "left": "source_record_id",
+      "right": "[source_record_id]",
+      "type": "text"
+    },
+    {
+      "left": "year",
+      "right": "[year]",
+      "type": "number",
+      "absolute": "0",
+      "relative": "0"
+    },
+    {
+      "left": "jurisdiction_id",
+      "right": "[jurisdiction_id]",
+      "type": "text"
+    },
+    {
+      "left": "offense_id",
+      "right": "[offense_id]",
+      "type": "text"
+    },
+    {
+      "left": "group",
+      "right": "[group]",
+      "type": "text"
+    },
+    {
+      "left": "value",
+      "right": "[value]",
+      "type": "number",
+      "absolute": "0",
+      "relative": "0"
+    },
+    {
+      "left": "value_state",
+      "right": "[value_state]",
+      "type": "text"
+    },
+    {
+      "left": "raw_value",
+      "right": "[raw_value]",
+      "type": "text"
+    },
+    {
+      "left": "page",
+      "right": "[page]",
+      "type": "number",
+      "absolute": "0",
+      "relative": "0"
+    },
+    {
+      "left": "is_detail_leaf",
+      "right": "[is_detail_leaf]",
+      "type": "boolean"
+    },
+    {
+      "left": "is_regional_group_component",
+      "right": "[is_regional_group_component]",
+      "type": "boolean"
+    }
+  ]
+}

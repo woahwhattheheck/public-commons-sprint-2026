@@ -7,6 +7,7 @@ import {inspectHandoff,renderCsv} from '../accountant/engine.mjs';
 import {QBO_DOCS,QBO_CURRENCIES,qboHash,qboCanonical,qboJson,qboCheck as check,qboId as id,qboText as text,
   createQboPlan,validateQboPlan,checkQboSource,inspectQboResponse,validateQboResult,qboReturnCsv,renderQboReview} from '../accountant/qbo.mjs';
 import {normalizeQboCompany} from '../accountant/qbo-company.mjs';
+import {QboHttpClient,qboRetryAt} from '../accountant/qbo-http.mjs';
 
 export const QBO_REQUEST_BYTES=32*1024*1024;
 const copy=value=>structuredClone(value),now=()=>new Date().toISOString();
@@ -61,7 +62,7 @@ function sealResult(result,accountantReturn){
 }
 
 export class QboWorkspace{
-  constructor(workspace,accountant){this.workspace=workspace;this.accountant=accountant;}
+  constructor(workspace,accountant,{client=new QboHttpClient()}={}){this.workspace=workspace;this.accountant=accountant;this.client=client;this.nativeFlights=new Map();this.nativeStop=new AbortController();}
   row(planId){id(planId);const record=records(this.workspace).find(item=>item.id===planId);check(record,'QBO_PLAN_NOT_FOUND','Choose a retained QuickBooks journal.',404);return record;}
   directory(planId){return join(this.workspace.directory,'qbo',id(planId));}
   responseRow(planId,responseId){const row=this.row(planId).responses.find(item=>item.id===id(responseId));check(row,'QBO_RESPONSE_NOT_FOUND','Choose a retained QuickBooks response.',404);return row;}
@@ -69,7 +70,7 @@ export class QboWorkspace{
     const record=this.row(planId),plan=JSON.parse((await readExact(this.directory(planId),record.files.find(file=>file.name==='plan.json'))).toString('utf8'));
     validateQboPlan(plan);check(plan.id===record.id&&plan.integrity.sha256===record.integrity.sha256,'QBO_PLAN_CHANGED','The journal identity changed.',409);return plan;
   }
-  view(){return {revision:this.workspace.state.revision,handoffs:copy(this.workspace.state.accountantHandoffs??[]),plans:copy(records(this.workspace)),currencies:QBO_CURRENCIES,docs:QBO_DOCS};}
+  view(){return {revision:this.workspace.state.revision,handoffs:copy(this.workspace.state.accountantHandoffs??[]),plans:copy(records(this.workspace)),currencies:QBO_CURRENCIES,docs:QBO_DOCS,connection:this.connection()};}
   async current(handoffId){
     const record=this.accountant.row(handoffId),handoff=await this.accountant.readHandoff(handoffId),parent=await this.accountant.readRevision(record,handoff);
     return {record,handoff,parent};
@@ -138,6 +139,9 @@ export class QboWorkspace{
       if(record.cancellation?.id===request.id){check(record.cancellation.requestSha256===requestSha256,'QBO_CANCEL_CHANGED','This cancellation request changed.',409);return {record:copy(record),duplicate:true,revision:this.workspace.state.revision};}
       this.workspace.expected(value.revision);
       check(request.unusedConfirmed,'QBO_UNUSED_CONFIRMATION','Confirm this journal is unused before releasing its selected events.');
+      check(!record.nativePost||!this.nativeFlights.has(planId)&&!record.nativePost.observedJournalId&&!record.nativePost.sourceAttemptId&&
+        (!record.nativePost.dispatched||record.nativePost.status==='FAULT'&&record.nativePost.writeAttempts===1),
+        'QBO_NATIVE_POST_RETAINED','Reconcile the retained native posting before releasing these source events.',409);
       check(['DRAFT','REVIEWED'].includes(record.status)&&!record.responses.some(row=>row.status==='PENDING'||row.status==='SAVED'),
         'QBO_CANCEL_STATE','A retained matched response or booked journal must be handled in the original accounting records.',409);
       check(request.planSha256===record.integrity.sha256,'QBO_PLAN_CHANGED','Choose the exact journal to cancel.',409);
@@ -149,6 +153,8 @@ export class QboWorkspace{
   async prepareResponse(planId,value){
     const record=this.row(planId);check(record.status==='REVIEWED','QBO_REVIEW_REQUIRED','Review this retained journal before importing its result.',409);
     const plan=await this.plan(planId),request=responseRequest(value),{handoff,parent}=await this.current(plan.handoffId);
+    check(!this.nativeFlights.has(planId)||record.nativePost?.id===request.id,'QBO_NATIVE_POST_ACTIVE','Continue the retained native posting before importing another response.',409);
+    check(!record.responses.some(response=>['PENDING','SAVED'].includes(response.status)),'QBO_RESPONSE_ALREADY_RETAINED','Finish the original retained journal response before importing another result.',409);
     check(request.expectedParentId===(parent?.id??null),'QBO_STALE_ACCOUNTANT','Reload the current accountant return before previewing this response.',409);
     const raw=Buffer.from(value.responseJson,'utf8'),inspected=inspectQboResponse({...request,plan,responseBytes:raw});
     let accountantValue=null,accountantPreview=null,csvBytes=null;
@@ -221,6 +227,14 @@ export class QboWorkspace{
     return {record:copy(this.row(planId)),response:copy(this.responseRow(planId,responseId)),revision:this.workspace.state.revision};
   }
   async recover(){
+    await this.workspace.serial(async()=>{
+      let changed=false;
+      for(const record of records(this.workspace))if(record.nativePost&&['PREPARED','RUNNING'].includes(record.nativePost.status)){
+        record.nativePost.status=record.nativePost.dispatched||record.nativePost.observedJournalId?'UNCERTAIN':'RETRYABLE';record.nativePost.updatedAt=now();
+        record.nativePost.lastError={code:'QBO_NATIVE_PROCESS_INTERRUPTED',message:'The original process ended during this posting. Resume its retained identity.'};changed=true;
+      }
+      if(changed)await this.workspace.commit('qbo_native_interruption_recovered','workspace',{});
+    });
     for(const record of [...records(this.workspace)])for(const response of [...record.responses])if(response.status==='PENDING'){
       try{await this.finishResponse(record.id,response.id);}
       catch(error){
@@ -231,7 +245,198 @@ export class QboWorkspace{
         });
       }
     }
+    for(const record of [...records(this.workspace)])if(record.nativePost&&record.nativePost.status!=='BOOKED'&&
+      (record.nativePost.sourceAttemptId||record.responses.some(response=>['PENDING','SAVED'].includes(response.status)))){
+      try{await this.finishNativeLocal(record.id);}
+      catch(error){
+        const operation=this.row(record.id).nativePost,lastError={code:error.code??'QBO_NATIVE_LOCAL_RECOVERY',message:String(error.message??error).slice(0,1000)};
+        if(qboCanonical(operation.lastError)!==qboCanonical(lastError))await this.updateNative(record.id,
+          {status:operation.sourceAttemptId?'RECEIVED':operation.dispatched||operation.observedJournalId?'UNCERTAIN':'RETRYABLE',lastError},'qbo_native_local_recovery_pending');
+      }
+    }
   }
+
+  connection(){return this.client.info();}
+  async fetchCompany(value){return this.client.company(value,{signal:this.nativeStop.signal});}
+  nativeDirectory(planId){return join(this.directory(planId),'native-post');}
+  nativeState(planId){const record=this.row(planId);return {record:copy(record),nativePost:copy(record.nativePost??null),revision:this.workspace.state.revision};}
+  async previewPost(planId,value){
+    this.workspace.expected(value.revision);
+    const record=this.row(planId);check(record.status==='REVIEWED','QBO_REVIEW_REQUIRED','Review this journal before posting it to the configured company.',409);
+    check(!record.nativePost,'QBO_NATIVE_POST_EXISTS','Continue the retained posting operation for this journal.',409);
+    check(!record.responses.some(response=>['PENDING','SAVED'].includes(response.status)),'QBO_RESPONSE_ALREADY_RETAINED','Finish the original retained journal response before posting.',409);
+    const plan=await this.plan(planId),{handoff,parent}=await this.current(plan.handoffId);checkQboSource(plan,handoff,parent);this.client.target(plan);
+    check((value.expectedParentId??null)===(parent?.id??null),'QBO_STALE_ACCOUNTANT','Reload this journal after the accountant return changes.',409);
+    const operationId=id(value.id),actor=text(value.actor,'operator',1000);
+    check(!records(this.workspace).some(row=>row.nativePost?.requestId===operationId||row.responses.some(response=>response.id===operationId)),
+      'QBO_NATIVE_REQUEST_ID_REUSED','Choose a new posting UUID; an original operation already owns this identity.',409);
+    check(typeof value.createdAt==='string'&&Number.isFinite(Date.parse(value.createdAt))&&new Date(value.createdAt).toISOString()===value.createdAt,'QBO_NATIVE_CREATED_AT','Use the original posting review timestamp.');
+    const bytes=await readExact(this.directory(planId),record.files.find(file=>file.name==='journal-entry.json'));
+    const preview={schema:'stellar-forge.quickbooks-native-post.v1',id:operationId,requestId:operationId,createdAt:value.createdAt,actor,
+      planId,planSha256:plan.integrity.sha256,requestSha256:qboHash(bytes),expectedParentId:parent?.id??null,realmId:plan.realmId,
+      environment:plan.environment,docNumber:plan.docNumber,summary:copy(plan.summary),method:'POST',requestUrl:this.client.endpoint('journalentry',{requestId:operationId}).href};
+    return {preview,previewSha256:digest(preview),revision:this.workspace.state.revision};
+  }
+  async post(planId,value){
+    const existing=this.row(planId).nativePost;
+    if(existing){
+      check(existing.id===value.id&&existing.previewSha256===value.previewSha256&&existing.actor===value.actor&&existing.createdAt===value.createdAt,
+        'QBO_NATIVE_REQUEST_CHANGED','This journal already has an exact retained posting request.',409);
+      return this.runNativePost(planId);
+    }
+    await this.workspace.serial(async()=>{
+      const prepared=await this.previewPost(planId,value);check(value.previewSha256===prepared.previewSha256,'QBO_NATIVE_PREVIEW_CHANGED','Review this exact company and journal request before posting.',409);
+      const record=this.row(planId),bytes=await readExact(this.directory(planId),record.files.find(file=>file.name==='journal-entry.json'));
+      const files=await packet(this.nativeDirectory(planId),{'intent.json':qboJson(prepared.preview),'request.json':bytes});
+      await privateDir(join(this.nativeDirectory(planId),'attempts'));
+      record.nativePost={...prepared.preview,previewSha256:prepared.previewSha256,status:'PREPARED',files,attempts:[],dispatched:false,
+        responseId:null,journalEntryId:null,observedJournalId:null,sourceAttemptId:null,writeAttempts:0,retryAt:null,lastError:null,updatedAt:now()};
+      await this.workspace.commit('qbo_native_post_reviewed',value.actor,{planId,requestId:value.id,requestSha256:prepared.preview.requestSha256,realmId:prepared.preview.realmId});
+    });
+    return this.runNativePost(planId);
+  }
+  async resumePost(planId,value){
+    const operation=this.row(planId).nativePost;check(operation,'QBO_NATIVE_POST_REQUIRED','Choose a retained native posting.',404);
+    check(value.id===operation.id,'QBO_NATIVE_REQUEST_CHANGED','Continue the original posting request.',409);
+    await this.workspace.serial(async()=>{
+      this.workspace.expected(value.revision);const actor=text(value.actor,'operator',1000);
+      this.row(planId).nativePost.lastResume={actor,at:now()};
+      await this.workspace.commit('qbo_native_post_resumed',actor,{planId,requestId:operation.id});
+    });
+    return this.runNativePost(planId);
+  }
+  async updateNative(planId,values,action='qbo_native_post_updated'){
+    await this.workspace.serial(async()=>{
+      const operation=this.row(planId).nativePost;check(operation,'QBO_NATIVE_POST_REQUIRED','Choose a retained native posting.',404);
+      Object.assign(operation,values,{updatedAt:now()});
+      await this.workspace.commit(action,operation.actor,{planId,requestId:operation.id,status:operation.status,...(operation.lastError?{code:operation.lastError.code}:{})});
+    });
+  }
+  async captureNative(planId,kind,response){
+    const attemptId=randomUUID(),receipt={schema:'stellar-forge.quickbooks-native-attempt.v1',id:attemptId,kind,
+      receivedAt:response.receivedAt,status:response.status,ok:response.ok,headers:response.headers,request:response.request,
+      responseSha256:qboHash(response.bytes),responseBytes:response.bytes.length};
+    let saved;
+    await this.workspace.serial(async()=>{
+      const operation=this.row(planId).nativePost;
+      const files=await packet(join(this.nativeDirectory(planId),'attempts',attemptId),{'response.json':response.bytes,'receipt.json':qboJson(receipt)});
+      saved={...receipt,files};operation.attempts.push(saved);operation.updatedAt=now();
+      await this.workspace.commit('qbo_native_response_retained',operation.actor,{planId,requestId:operation.id,attemptId,kind,status:response.status,responseSha256:receipt.responseSha256});
+    });
+    return saved;
+  }
+  async nativeHttpFailure(planId,response,kind){
+    const operation=this.row(planId).nativePost;
+    let source;try{source=JSON.parse(response.bytes.toString('utf8'));}catch{}
+    const fault=kind==='post'&&response.status===400&&source?.Fault&&operation.writeAttempts===1&&!operation.observedJournalId;
+    const status=fault?'FAULT':operation.dispatched||operation.observedJournalId?'UNCERTAIN':'RETRYABLE';
+    const retryAt=qboRetryAt(response);
+    await this.updateNative(planId,{status,retryAt,lastError:{code:response.status===429?'QBO_NATIVE_THROTTLED':'QBO_NATIVE_HTTP_'+response.status,
+      message:response.status===429?'QuickBooks requested a pause. Resume at or after the retained retry time.':'QuickBooks returned HTTP '+response.status+'. Its exact response is retained with this operation.'}});
+  }
+  async finishNativeLocal(planId){
+    const record=this.row(planId),operation=record.nativePost;
+    if(!operation)return false;
+    const prior=record.responses.find(response=>response.status==='PENDING');
+    if(prior?.status==='PENDING')await this.finishResponse(planId,prior.id);
+    const saved=this.row(planId).responses.find(response=>response.status==='SAVED'&&(response.id===operation.id||this.row(planId).status==='BOOKED'));
+    if(saved){
+      if(operation.status!=='BOOKED')await this.updateNative(planId,{status:'BOOKED',responseId:saved.id,journalEntryId:saved.journalEntryId,lastError:null,retryAt:null},'qbo_native_booking_linked');
+      return true;
+    }
+    if(!operation.sourceAttemptId)return false;
+    const attempt=operation.attempts.find(item=>item.id===operation.sourceAttemptId);check(attempt,'QBO_NATIVE_RESPONSE_REQUIRED','The retained native response reference changed.',409);
+    const raw=await readExact(join(this.nativeDirectory(planId),'attempts',attempt.id),attempt.files.find(file=>file.name==='response.json'));
+    const plan=await this.plan(planId),{parent}=await this.current(plan.handoffId);
+    const value={id:operation.id,createdAt:operation.createdAt,actor:operation.actor,name:'Native QuickBooks journal '+plan.docNumber,
+      realmId:plan.realmId,expectedParentId:parent?.id??null,responseJson:raw.toString('utf8')};
+    const prepared=await this.previewResponse(planId,value);
+    check(prepared.result.kind==='MATCHED','QBO_NATIVE_RESPONSE_MISMATCH','The retained response does not match the original reviewed journal.',409);
+    await this.saveResponse(planId,{...value,revision:prepared.revision,previewSha256:prepared.previewSha256});
+    const response=this.responseRow(planId,operation.id);
+    await this.updateNative(planId,{status:'BOOKED',responseId:response.id,journalEntryId:response.journalEntryId,lastError:null,retryAt:null},'qbo_native_booking_linked');
+    return true;
+  }
+  async acceptNative(planId,response,attempt){
+    const plan=await this.plan(planId),operation=this.row(planId).nativePost;
+    const result=inspectQboResponse({plan,responseBytes:response.bytes,realmId:plan.realmId,id:operation.id,actor:operation.actor,
+      name:'Native QuickBooks journal '+plan.docNumber,createdAt:operation.createdAt});
+    if(result.kind==='FAULT'){
+      const definitive=attempt.kind==='post'&&operation.writeAttempts===1&&!operation.observedJournalId;
+      await this.updateNative(planId,{status:definitive?'FAULT':operation.dispatched||operation.observedJournalId?'UNCERTAIN':'RETRYABLE',
+        lastError:{code:'QBO_NATIVE_FAULT',message:'QuickBooks returned a fault. Review the retained native response.'}});return;
+    }
+    await this.updateNative(planId,{status:'RECEIVED',sourceAttemptId:attempt.id,journalEntryId:result.journalEntryId,observedJournalId:result.journalEntryId,lastError:null,retryAt:null},'qbo_native_journal_received');
+    await this.finishNativeLocal(planId);
+  }
+  runNativePost(planId){
+    if(this.nativeFlights.has(planId))return this.nativeFlights.get(planId);
+    const run=this.performNativePost(planId).finally(()=>this.nativeFlights.delete(planId));this.nativeFlights.set(planId,run);return run;
+  }
+  async performNativePost(planId){
+    const operation=this.row(planId).nativePost;check(operation,'QBO_NATIVE_POST_REQUIRED','Choose a retained native posting.',404);
+    check(!this.nativeStop.signal.aborted,'QBO_NATIVE_CLOSING','The original workspace is closing.',409);
+    if(operation.status==='BOOKED')return this.nativeState(planId);
+    if(operation.retryAt)check(Date.now()>=Date.parse(operation.retryAt),'QBO_NATIVE_THROTTLED','QuickBooks requested a pause until '+operation.retryAt+'.',429);
+    try{
+      if(await this.finishNativeLocal(planId))return this.nativeState(planId);
+      const record=this.row(planId),plan=await this.plan(planId),{handoff,parent}=await this.current(plan.handoffId);
+      check(record.status==='REVIEWED','QBO_REVIEW_REQUIRED','The native posting belongs to a reviewed retained journal.',409);
+      checkQboSource(plan,handoff,parent);this.client.target(plan);
+      const intent=JSON.parse((await readExact(this.nativeDirectory(planId),operation.files.find(file=>file.name==='intent.json'))).toString('utf8'));
+      const bytes=await readExact(this.nativeDirectory(planId),operation.files.find(file=>file.name==='request.json'));
+      check(digest(intent)===operation.previewSha256&&intent.id===operation.id&&intent.planSha256===plan.integrity.sha256&&qboHash(bytes)===intent.requestSha256,
+        'QBO_NATIVE_REQUEST_CHANGED','The retained native posting request changed.',409);
+      check(intent.requestUrl===this.client.endpoint('journalentry',{requestId:operation.id}).href,'QBO_NATIVE_CONNECTION_CHANGED','Resume with the original company, environment and minor-version configuration.',409);
+      await this.updateNative(planId,{status:'RUNNING',lastError:null,retryAt:null});
+      const matches=[];
+      for await(const page of this.client.searchJournal(plan,{signal:this.nativeStop.signal})){
+        await this.captureNative(planId,'query',page.response);
+        if(!page.response.ok){await this.nativeHttpFailure(planId,page.response,'query');return this.nativeState(planId);}
+        if(page.error)throw Object.assign(new Error(page.error.message),{code:page.error.code});
+        for(const entry of page.rows)if(entry.PrivateNote===plan.journalEntry.PrivateNote)matches.push(entry);
+      }
+      if(matches.length>1){await this.updateNative(planId,{status:'CONFLICT',observedJournalId:matches[0].Id,observedJournalIds:matches.map(entry=>entry.Id),lastError:{code:'QBO_NATIVE_MULTIPLE_JOURNALS',message:'Several native journals carry this exact plan identity. Review their retained source before continuing.'}});return this.nativeState(planId);}
+      if(matches.length===1){
+        await this.updateNative(planId,{observedJournalId:matches[0].Id},'qbo_native_journal_observed');
+        const response=await this.client.readJournal(plan,matches[0].Id,{signal:this.nativeStop.signal}),attempt=await this.captureNative(planId,'read',response);
+        if(!response.ok){await this.nativeHttpFailure(planId,response,'read');return this.nativeState(planId);}
+        try{await this.acceptNative(planId,response,attempt);}
+        catch(error){await this.updateNative(planId,{status:this.row(planId).nativePost.sourceAttemptId?'RECEIVED':'CONFLICT',
+          lastError:{code:error.code??'QBO_NATIVE_RECONCILIATION',message:String(error.message??error).slice(0,1000)}});}
+        return this.nativeState(planId);
+      }
+      check(!this.row(planId).nativePost.observedJournalId,'QBO_NATIVE_OBSERVED_JOURNAL_MISSING','A previously observed journal is absent from this source query. Reconcile its original native identity before another write.',409);
+      // Admission precedes the external effect. Every retry keeps its original
+      // requestid, URL and exact reviewed request bytes.
+      await this.workspace.serial(async()=>{
+        const live=this.row(planId),{handoff:currentHandoff,parent:currentParent}=await this.current(plan.handoffId);
+        check(live.status==='REVIEWED','QBO_REVIEW_REQUIRED','The journal changed before native dispatch.',409);checkQboSource(plan,currentHandoff,currentParent);
+        check(!live.responses.some(response=>['PENDING','SAVED'].includes(response.status)),'QBO_RESPONSE_ALREADY_RETAINED','Finish the original retained journal response before dispatch.',409);
+        live.nativePost.writeAttempts=(live.nativePost.writeAttempts??0)+1;live.nativePost.dispatched=true;live.nativePost.firstDispatchedAt??=now();live.nativePost.updatedAt=now();
+        await this.workspace.commit('qbo_native_dispatch_admitted',operation.actor,{planId,requestId:operation.id,requestSha256:operation.requestSha256});
+      });
+      const response=await this.client.createJournal(plan,{requestId:operation.id,bytes,signal:this.nativeStop.signal});
+      const attempt=await this.captureNative(planId,'post',response);
+      if(!response.ok){await this.nativeHttpFailure(planId,response,'post');return this.nativeState(planId);}
+      await this.acceptNative(planId,response,attempt);
+    }catch(error){
+      const current=this.row(planId).nativePost;
+      await this.updateNative(planId,{status:current.sourceAttemptId?'RECEIVED':current.dispatched||current.observedJournalId?'UNCERTAIN':'RETRYABLE',
+        lastError:{code:error.code??'QBO_NATIVE_OPERATION_INTERRUPTED',message:String(error.message??error).slice(0,1000)}});
+    }
+    return this.nativeState(planId);
+  }
+  async nativeFile(planId,name,attemptId){
+    const operation=this.row(planId).nativePost;check(operation,'QBO_NATIVE_POST_REQUIRED','Choose a retained native posting.',404);
+    const source=attemptId?operation.attempts.find(item=>item.id===id(attemptId)):operation;check(source,'QBO_NATIVE_ATTEMPT_REQUIRED','Choose a retained native response.',404);
+    const file=source.files.find(item=>item.name===name);check(file,'QBO_FILE_NOT_FOUND','Choose a retained native file.',404);
+    const directory=attemptId?join(this.nativeDirectory(planId),'attempts',attemptId):this.nativeDirectory(planId);
+    return {bytes:await readExact(directory,file),type:fileType(name),name:'quickbooks-native-'+(attemptId??operation.id)+'-'+name};
+  }
+  get tasks(){return new Set(this.nativeFlights.values());}
+  async close(){this.nativeStop.abort();await Promise.allSettled([...this.nativeFlights.values()]);}
+
   async file(planId,name,responseId){
     const record=this.row(planId);await this.plan(planId);
     if(!responseId&&name==='journal-entry.json')check(['REVIEWED','BOOKED'].includes(record.status),'QBO_REVIEW_REQUIRED','Review the retained journal before exporting its native request.',409);
@@ -244,12 +449,19 @@ export class QboWorkspace{
 export async function handleQboRequest(qbo,{method,path,value}){
   const parts=path.split('/').filter(Boolean);if(parts[0]!=='api'||parts[1]!=='qbo')return null;
   if(parts.length===2&&method==='GET')return {value:qbo.view()};
+  if(path==='/api/qbo/connection'&&method==='GET')return {value:qbo.connection()};
+  if(path==='/api/qbo/company/fetch'&&method==='POST')return {value:await qbo.fetchCompany(value)};
   if(path==='/api/qbo/company/preview'&&method==='POST')return {value:{company:normalizeQboCompany(value)}};
   if(parts.length===4&&parts[2]==='handoffs'&&method==='GET')return {value:await qbo.handoff(parts[3])};
   if(path==='/api/qbo/preview'&&method==='POST')return {value:await qbo.preview(value)};
   if(path==='/api/qbo/plans'&&method==='POST')return {value:await qbo.create(value)};
   if(parts[2]==='plans'&&parts[3]){
     const planId=parts[3];
+    if(parts.length===5&&parts[4]==='post'&&method==='POST')return {value:await qbo.post(planId,value)};
+    if(parts.length===6&&parts[4]==='post'&&parts[5]==='preview'&&method==='POST')return {value:await qbo.previewPost(planId,value)};
+    if(parts.length===6&&parts[4]==='post'&&parts[5]==='resume'&&method==='POST')return {value:await qbo.resumePost(planId,value)};
+    if(parts.length===7&&parts[4]==='post'&&parts[5]==='download'&&method==='GET')return {file:await qbo.nativeFile(planId,parts[6])};
+    if(parts.length===9&&parts[4]==='post'&&parts[5]==='attempts'&&parts[7]==='download'&&method==='GET')return {file:await qbo.nativeFile(planId,parts[8],parts[6])};
     if(parts.length===4&&method==='GET')return {value:await qbo.detail(planId)};
     if(parts.length===5&&parts[4]==='review'&&method==='POST')return {value:await qbo.review(planId,value)};
     if(parts.length===5&&parts[4]==='cancel'&&method==='POST')return {value:await qbo.cancel(planId,value)};
