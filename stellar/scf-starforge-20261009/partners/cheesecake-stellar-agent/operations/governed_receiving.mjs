@@ -13,10 +13,12 @@ import {resolve,join,isAbsolute} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash,randomBytes} from 'node:crypto';
 import {openMcpSpendingHost} from '../../../../../stellar-forge/mcp-paid-agent/native-spend-workspace.mjs';
+import {runNativeMcpSpendingRecoveryReceiving} from '../../../../../stellar-forge/mcp-paid-agent/native-spend-recovery-receiving.mjs';
 import {inspectHandoff} from '../application.mjs';
 import {loadApplication} from '../configuration.mjs';
 import {initializeInstalledApplication,inspectInstalledApplication,startInstalledApplication} from '../installed.mjs';
 import {receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject} from '../project-receive.mjs';
+import {createApplicationServer} from '../server.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const endpoint='https://merchant.example/mcp';
@@ -266,6 +268,24 @@ export async function main(args=process.argv.slice(2)) {
       assert.equal(hash(await readFile(offlineExport)),saved.result.file.sha256);
       assert.equal((await offline.call(context,'recover','remote-paid')).binding.quoteId,paid.binding.quoteId);
     }finally{await offline.close();}
+    const receivingOpens=control.opens;
+    server=await createApplicationServer({receivedDirectory:receiverDirectory,sourceRoot,
+      subject:context.subject,environment,passphraseEnv,bearerToken:token,port:0});
+    assert.equal(server.identity.project.mode,'RECEIVED');assert.equal(server.identity.readOnly,true);
+    const receivingReview=await fetch(server.origin+'/api/project',{headers});
+    assert.equal(receivingReview.status,200);
+    assert.equal((await receivingReview.json()).recordSha256,snapshot.recordSha256);
+    const receivingDownload=await fetch(server.origin+'/api/requests/remote-paid/download',{headers});
+    assert.equal(receivingDownload.status,200);
+    assert.equal(hash(Buffer.from(await receivingDownload.arrayBuffer())),saved.result.file.sha256);
+    const receivingMcp=await fetch(server.origin+'/mcp',{method:'POST',
+      headers:{...headers,accept:'application/json, text/event-stream','mcp-protocol-version':'2025-11-25'},
+      body:JSON.stringify({jsonrpc:'2.0',id:'received-native-result',method:'tools/call',
+        params:{name:'stellar_request_read',arguments:{intentId:'remote-paid',format:'file'}}})});
+    assert.equal(receivingMcp.status,200);
+    assert.equal((await receivingMcp.json()).result.structuredContent.result.file.sha256,saved.result.file.sha256);
+    assert.equal(control.opens,receivingOpens);
+    await server.close();server=null;
     const settings={directory:receiverDirectory,sourceRoot,passphraseEnv,
       expectedRecordSha256:snapshot.recordSha256,environment};
     const verifyOriginal=async reopened=>{
@@ -293,8 +313,11 @@ export async function main(args=process.argv.slice(2)) {
     assert.equal((await stat(prepared.configFile)).mode&0o077,0);
     const project={operationId:projectId,recordSha256:snapshot.recordSha256,manifestSha256:snapshot.manifestSha256,
       archivedRequests:snapshot.requests,archivedResultBytes:snapshot.resultBytes,
-      receiving:true,offlineCompleteResult:true,sameOperationReplay:true,reattached,restored,scopedOriginalKeys:true,
+      receiving:true,offlineCompleteResult:true,receivingHttpAndMcp:true,sameOperationReplay:true,reattached,restored,scopedOriginalKeys:true,
       installedSourceReuse:true};
+    const nativeRecovery=await runNativeMcpSpendingRecoveryReceiving({sourceRoot,
+      work:join(work,'native-spending-recovery'),python:control.python});
+    assert.equal(nativeRecovery.status,'PASSED');
     const sourcePaths=['application.mjs','configuration.mjs','remote-mcp.mjs','server.mjs','cli.mjs','installed.mjs','project.mjs','project-receive.mjs','project-files.mjs','ui/app.js'];
     const files=await Promise.all(sourcePaths.map(async path=>({path,sha256:hash(await readFile(new URL('../'+path,import.meta.url)))})));
     const report={outcome:'PASS',operation:'cheesecake-governed-receiving-f232-20261012',
@@ -303,7 +326,7 @@ export async function main(args=process.argv.slice(2)) {
       originalReviews,remoteRequests:4,signingCalls:control.signing,signedCalls:control.signed,
       reservedAmount:'60',resultBytes:bytes.length,resultSha256:hash(bytes),
       factoryInstances:control.opens,approvalCancellation:true,grantRevocation:true,
-      originalRestartQuoteId:paid.binding.quoteId,httpDownload:true,mcpRead:true,project,
+      originalRestartQuoteId:paid.binding.quoteId,httpDownload:true,mcpRead:true,project,nativeRecovery,
       sourceFiles:files,workspace:work};
     await writeFile(join(work,'receiving.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600,flag:'wx'});
     process.stdout.write(JSON.stringify(report)+'\n');return report;
