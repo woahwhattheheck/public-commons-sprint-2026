@@ -65,7 +65,9 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
   async function configure(input,{receivedFrom=null}={}) {
     only(input,['operationId','expectedRevision','editionId','configuration','draft']);
     const id=identifier(input.operationId),edition=await editions.manifest(input.editionId,{database:true});
-    const defaults=matomoMerchantDraft(edition.value,input.configuration),draft=input.draft??defaults;
+    // A received complete draft is the editable source. Earlier generator settings
+    // stay in provenance and are only evaluated when no explicit draft was supplied.
+    const draft=input.draft??matomoMerchantDraft(edition.value,input.configuration);
     // Validate the complete public draft with the original native compiler before
     // allocating a retained merchant identity. No source query or provider read.
     inspectMerchantDraft(draft,edition.database);
