@@ -389,7 +389,8 @@
     "atlas": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
     "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs",
     "upstream-tls": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/cli.mjs",
-    "fred": "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/cli.mjs"
+    "fred": "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/cli.mjs",
+    "browser-wallet": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -894,7 +895,9 @@
     "./seller/fred/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/model.mjs",
     "./seller/fred/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/source.mjs",
     "./seller/fred/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/project.mjs",
-    "./seller/fred/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/workspace.mjs"
+    "./seller/fred/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/workspace.mjs",
+    "./buyer/browser-wallet": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/index.mjs",
+    "./buyer/browser-wallet/server": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -960,6 +963,12 @@
       "ssh2": {
         "version": "1.17.0",
         "probe": "ssh2"
+      }
+    },
+    "freighter-wallet": {
+      "@stellar/freighter-api": {
+        "version": "6.0.1",
+        "probe": "@stellar/freighter-api"
       }
     }
   },
