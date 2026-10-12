@@ -10,7 +10,7 @@ export function validatePMTilesOutputNativeSelection(value){
   const commerce=structuredClone(value);
   assert.ok(commerce&&typeof commerce==='object'&&!Array.isArray(commerce));
   assert.ok(Object.keys(commerce).every(key=>['schema','origin','payment','runtime','buyer','mapAtomic','operationsAtomic',
-    'mapBudgetAtomic','operationsBudgetAtomic'].includes(key)));
+    'mapBudgetAtomic','operationsBudgetAtomic','nativeEnvironment'].includes(key)));
   assert.equal(commerce.schema,'starforge.pmtiles-output-native-selection.v1');
   assert.equal(commerce.payment?.network,'stellar:testnet','Select the existing isolated native testnet profile.');
   const origin=new URL(commerce.origin);
@@ -22,12 +22,19 @@ export function validatePMTilesOutputNativeSelection(value){
   assert.ok(BigInt(commerce.mapAtomic)>0n&&BigInt(commerce.operationsAtomic)>0n,'The native payment journey selects a positive amount.');
   const buyer=commerce.buyer;assert.ok(buyer&&typeof buyer==='object'&&!Array.isArray(buyer));
   assert.ok(Object.keys(buyer).every(key=>['runtimeDirectory','stateDirectory','configuration','configurationSha256',
-    'operatorProfile','operatorProfileSha256'].includes(key)));
+    'operatorProfile','operatorProfileSha256','operatorWorkspace'].includes(key)));
   for(const key of ['runtimeDirectory','stateDirectory','configuration'])assert.ok(isAbsolute(buyer[key]));
   assert.match(buyer.configurationSha256??'',/^[a-f0-9]{64}$/);
   if(buyer.operatorProfile!==undefined){
     assert.ok(isAbsolute(buyer.operatorProfile));assert.match(buyer.operatorProfileSha256??'',/^[a-f0-9]{64}$/);
   }else assert.equal(buyer.operatorProfileSha256,undefined);
+  if(buyer.operatorWorkspace!==undefined)assert.ok(isAbsolute(buyer.operatorWorkspace));
+  if(commerce.nativeEnvironment!==undefined){
+    const selected=commerce.nativeEnvironment;
+    assert.ok(selected&&typeof selected==='object'&&!Array.isArray(selected));
+    assert.ok(Object.keys(selected).every(key=>['configuration','configurationSha256'].includes(key)));
+    assert.ok(isAbsolute(selected.configuration));assert.match(selected.configurationSha256??'',/^[a-f0-9]{64}$/);
+  }
   return commerce;
 }
 
@@ -79,8 +86,19 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
   const configuration=await retainPrivateSelection(selectedBuyer.configuration,selectedBuyer.configurationSha256,'buyer-configuration');
   const operatorProfile=selectedBuyer.operatorProfile
     ?await retainPrivateSelection(selectedBuyer.operatorProfile,selectedBuyer.operatorProfileSha256,'buyer-operator'):null;
+  const nativeEnvironment=commerce.nativeEnvironment
+    ?await retainPrivateSelection(commerce.nativeEnvironment.configuration,commerce.nativeEnvironment.configurationSha256,'native-environment'):null;
+  const environmentSelection=nativeEnvironment?await readJson(nativeEnvironment.path,65536):null;
+  const selectedAccountingWorkspace=selectedBuyer.operatorWorkspace??environmentSelection?.operatorWorkspace;
+  if(selectedAccountingWorkspace!==undefined)assert.ok(isAbsolute(selectedAccountingWorkspace));
+  const operatorWorkspace=selectedAccountingWorkspace===undefined?null:resolve(selectedAccountingWorkspace);
+  if(nativeEnvironment){
+    assert.ok(operatorWorkspace,'The native receiving retains its original accounting workspace.');
+    assert.equal(resolve(environmentSelection.operatorWorkspace),operatorWorkspace);
+  }
   const input={schema:'starforge.pmtiles-output-native-input.v1',sourceRoot,directory,runtimeProfile:resolve(runtimeProfile),
-    runtimeSha256:native.runtimeSha256,runtimeProfileSha256:profile.sha256,expectedWorkspaceId,root,operationId,commerce};
+    runtimeSha256:native.runtimeSha256,runtimeProfileSha256:profile.sha256,expectedWorkspaceId,root,operationId,commerce,
+    ...(operatorWorkspace?{operatorWorkspace}:{})};
   const inputSha256=digest(input),prefix='sale-'+inputSha256.slice(0,16),id=name=>identifier(prefix+'-'+name);
   await retainJson(join(root,'input.json'),input);
   async function step(name,work){
@@ -116,7 +134,8 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
   const receivingRoot=await privateDirectory(join(root,'customer-receiving'));
   const connection=join(root,'connection.json'),operatorRoot=join(root,'operator');
   const buyerConnection={runtimeDirectory:resolve(selectedBuyer.runtimeDirectory),stateDirectory:resolve(selectedBuyer.stateDirectory),
-    configuration:configuration.path,...(operatorProfile?{operatorProfile:operatorProfile.path}:{})};
+    configuration:configuration.path,...(operatorProfile?{operatorProfile:operatorProfile.path}:{}),
+    ...(operatorWorkspace?{operatorWorkspace}:{})};
   await retainJson(connection,{schema:'stellar-forge.pmtiles-workspace-connection.v1',workspaces:{original:{
     label:'Original paid PMTiles output',directory,expectedWorkspaceId,runtime:resolve(runtimeProfile),
     imports:{},sf88Objects:{},receivingTargets:{customer:{directory:receivingRoot}},
@@ -124,7 +143,8 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
   const initialized=await initializePMTilesWorkspaceMerchant({directory:operatorRoot,connection,name:'Original paid PMTiles receiving'});
   const merchantDirectory=join(operatorRoot,'customer-exports','pmtiles-output','original','merchant');
   const outputRequestId=id('output'),outputDirectory=join(merchantDirectory,'packages',outputRequestId);
-  const tokenEnv='PMTILES_OUTPUT_RECEIVING_MCP_TOKEN',environment={...process.env,[tokenEnv]:randomBytes(32).toString('hex')};
+  const tokenEnv='PMTILES_OUTPUT_RECEIVING_MCP_TOKEN',token=randomBytes(32).toString('hex');
+  let environment={...process.env,[tokenEnv]:token},environmentOwner,executionError;
   const listenerPath=join(root,'listener.json');let listener,client;
   const calls=[];
   async function startMcp(){
@@ -144,6 +164,16 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
     const current=listener;listener=null;client=null;if(current)await current.close();
   }
   try{
+    if(nativeEnvironment){
+      const {startPMTilesNativeEnvironment}=await moduleAt(product+'commerce/native-environment.mjs');
+      const retained=await fileDescriptor(nativeEnvironment.path,{limit:65536,signal});
+      environmentOwner=await startPMTilesNativeEnvironment({
+        selection:{configuration:nativeEnvironment.path,configurationSha256:retained.sha256},commerce,
+        buyerConfiguration:await readJson(configuration.path,65536),
+        operatorProfile:operatorProfile?await readJson(operatorProfile.path,65536):undefined,
+        directory:join(root,'native-environment'),signal});
+      environment={...environmentOwner.environment,[tokenEnv]:token};
+    }
     await startMcp();
     const expectedTools=pmtilesCommerceTools(name=>name);
     const tools=listener.operator.tools.map(value=>value.name);
@@ -227,6 +257,54 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
       assert.equal(stop.result.state,'STOPPED');
       return {firstStart,mapPurchase,operationsPurchase,mapResult,operationsResult,adopted,receivingInput,receiving,stop};
     });
+    const accounting=operatorWorkspace?await step('original-final-accounting',async()=>{
+      const purchases={map:paid.mapPurchase,operations:paid.operationsPurchase},rows={map,operations},summaries={};
+      for(const name of ['map','operations']){
+        const purchase=purchases[name],pages=[];let offset=0,total=null;
+        do{
+          const stepName='accounting-'+name+'-'+offset;
+          const expectedTotal=rows[name].pricing.requests,expectedEnd=Math.min(expectedTotal,offset+100);
+          const completeRange=page=>{
+            const result=page?.accounting,native=result?.native,range=native?.range;
+            return page?.requestSha256===purchase.requestSha256&&native?.kind==='object'&&
+              native.mode==='FINALIZE'&&native.workspace===operatorWorkspace&&
+              range?.offset===offset&&range.limit===100&&range.total===expectedTotal&&
+              range.nextOffset===(expectedEnd<expectedTotal?expectedEnd:null)&&
+              native.interrupted===false&&result.process?.exitCode===0&&!result.process.errorCode&&
+              Array.isArray(native.entries)&&native.entries.length===expectedEnd-offset&&
+              native.entries.every(entry=>['FINALIZED','IDEMPOTENT_FINALIZED'].includes(entry.outcome));
+          };
+          const page=await step(stepName,async()=>{
+            // Reconcile the original command first. A partial native report stays
+            // in that command's own records and does not complete this page.
+            const recovered=await call('purchase_accounting_recover',{
+              buyer:'original',purchaseRequestId:purchase.requestId});
+            const prior=recovered.accounting?.lastComplete;
+            const reopened=prior?{...recovered,accounting:prior}:null;
+            if(completeRange(reopened))return reopened;
+            const current=await call('purchase_finalize',{
+              buyer:'original',purchaseRequestId:purchase.requestId,offset,limit:100});
+            assert.ok(completeRange(current),'The original accounting range needs its retained idempotent continuation.');
+            return current;
+          });
+          assert.ok(completeRange(page),'The retained complete accounting range changed.');
+          const result=page.accounting,native=result.native;
+          total??=native.range.total;assert.equal(native.range.total,total);
+          const recovered=await call('purchase_accounting_recover',{
+            buyer:'original',purchaseRequestId:purchase.requestId,commandId:result.commandId});
+          assert.deepEqual(recovered.accounting.lastComplete.native,native);
+          const path=join(root,'steps',stepName+'.json');
+          pages.push({path,...await fileDescriptor(path,{signal}),commandId:result.commandId,
+            range:clone(native.range),sessionId:native.sessionId,configurationSha256:native.configurationSha256,
+            nativeSha256:digest(native)});
+          if(native.range.nextOffset!==null)assert.ok(native.range.nextOffset>offset);
+          offset=native.range.nextOffset;
+        }while(offset!==null);
+        assert.equal(pages.reduce((sum,page)=>sum+(page.range.nextOffset??total)-page.range.offset,0),total);
+        summaries[name]={purchaseRequestId:purchase.requestId,total,pages};
+      }
+      return {workspace:operatorWorkspace,purchases:summaries};
+    }):null;
     // Cold reopen keeps the original start result while fresh status reports STOPPED.
     await closeMcp();await startMcp();await call('open');
     const coldStatus=await call('output_status');
@@ -242,6 +320,15 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
     const coldOperations=await call('purchase_recover',{buyer:'original',purchaseRequestId:paid.operationsPurchase.requestId});
     assert.equal(coldMap.delivery.assembly.sha256,map.expectedSha256);
     assert.equal(coldOperations.delivery.assembly.sha256,operations.expectedSha256);
+    const coldAccounting={};
+    if(accounting)for(const name of ['map','operations']){
+      const selected=accounting.purchases[name],last=selected.pages.at(-1);
+      const request={buyer:'original',purchaseRequestId:selected.purchaseRequestId,commandId:last.commandId};
+      const recovered=await call('purchase_accounting_recover',request);
+      assert.equal(recovered.accounting.commandId,last.commandId);
+      assert.equal(digest(recovered.accounting.lastComplete.native),last.nativeSha256);
+      coldAccounting[name]=recovered;
+    }
     const customerReplay=await call('purchase_receive',paid.receivingInput);
     assert.equal(customerReplay.archiveSha256,paid.receiving.archiveSha256);
     assert.deepEqual(customerReplay.originalReceiving,paid.receiving.originalReceiving);
@@ -264,6 +351,7 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
     });
     const finalStatus=await call('output_status');assert.equal(finalStatus.runtime.state,'STOPPED');
     await call('close');await closeMcp();
+    const environmentClosure=environmentOwner?await environmentOwner.close():null;
     const customerWorkspace=await openPMTilesWorkspace({directory:paid.receiving.originalReceiving.workspaceDirectory,
       expectedWorkspaceId,create:false});
     let customerState;
@@ -271,6 +359,10 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
     finally{await customerWorkspace.close();}
     const filePaths=[coldMap.delivery.path,coldOperations.delivery.path,join(outputDirectory,'package.json'),
       join(root,'steps','original-paid-deliveries.json')];
+    if(accounting){
+      filePaths.push(join(root,'steps','original-final-accounting.json'));
+      for(const selected of Object.values(accounting.purchases))for(const page of selected.pages)filePaths.push(page.path);
+    }
     const files=[];
     for(const path of filePaths){
       assert.ok(resolve(path).startsWith(root+'/'));
@@ -282,7 +374,17 @@ export async function exercisePMTilesOutputCommerce({sourceRoot,directory,runtim
       sellerRelease:{id:release.id,digest:release.digest,generation},catalogSha256:catalog.catalogSha256,
       objects:[map,operations],purchases:{map:coldMap,operations:coldOperations},
       customerReceiving:customerReplay,customerState,firstStart:paid.firstStart,coldStatus,finalStatus,
-      cliStatus,nativeStatus,tools:expectedTools,calls,files,completedAt:new Date().toISOString()};
+      cliStatus,nativeStatus,tools:expectedTools,calls,files,
+      ...(accounting?{accounting,coldAccounting}:{}),
+      ...(environmentOwner?{nativeEnvironment:{selection:commerce.nativeEnvironment,ready:environmentOwner.ready,closed:environmentClosure}}:{}),
+      completedAt:new Date().toISOString()};
     await retainJson(join(root,'result.json'),result);return result;
-  }finally{await closeMcp();}
+  }catch(error){executionError=error;throw error;}
+  finally{
+    const errors=[];
+    try{await closeMcp();}catch(error){errors.push(error);}
+    try{await environmentOwner?.close();}catch(error){errors.push(error);}
+    if(errors.length)throw new AggregateError([...new Set([...(executionError?[executionError]:[]),...errors])],
+      'The original paid receiving and its owned environment need their retained continuation.');
+  }
 }

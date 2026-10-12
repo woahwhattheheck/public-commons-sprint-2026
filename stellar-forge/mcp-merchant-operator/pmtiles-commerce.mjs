@@ -9,7 +9,8 @@ import {need,identifier,clone,digest,hash,plain} from '../../stellar/scf-starfor
 import {retainJson} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/files.mjs';
 import {PMTilesOutputController} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/controller.mjs';
 import {prepareOutputPurchase,inspectOutputPurchase,runOutputPurchase,recoverOutputPurchase,
-  adoptPurchasedMapResource,receivePurchasedMapOperations,selectOutputCatalog}
+  adoptPurchasedMapResource,receivePurchasedMapOperations,selectOutputCatalog,
+  inspectOutputPurchaseAccounting,finalizeOutputPurchaseAccounting,recoverOutputPurchaseAccounting}
   from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/buyer.mjs';
 import {fields,outputHash,OUTPUT_METADATA_BYTES}
   from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/model.mjs';
@@ -45,7 +46,7 @@ export async function readPMTilesCommerceConfiguration(input,{base,directory,exp
   }
   need(plain(input.buyers??{})&&Object.keys(input.buyers??{}).length<=32,'PMTILES_COMMERCE_BUYER_LIMIT');
   for(const [name,value]of Object.entries(input.buyers??{})){
-    identifier(name);fields(value,['stateDirectory','runtimeDirectory','configuration','operatorProfile'],
+    identifier(name);fields(value,['stateDirectory','runtimeDirectory','configuration','operatorProfile','operatorWorkspace'],
       ['stateDirectory','runtimeDirectory','configuration']);
     const stateDirectory=await canonicalDirectory(hostPath(value.stateDirectory,base),{privateState:true});
     const runtimeDirectory=await canonicalDirectory(hostPath(value.runtimeDirectory,base));
@@ -54,6 +55,7 @@ export async function readPMTilesCommerceConfiguration(input,{base,directory,exp
     const configuration=hostPath(value.configuration,base);await privateConfig(configuration);
     const buyer={stateDirectory,runtimeDirectory,configuration};
     if(value.operatorProfile!==undefined){buyer.operatorProfile=hostPath(value.operatorProfile,base);await privateConfig(buyer.operatorProfile);}
+    if(value.operatorWorkspace!==undefined)buyer.operatorWorkspace=await canonicalDirectory(hostPath(value.operatorWorkspace,base),{privateState:true});
     buyers[name]=buyer;
   }
   return {runtimes,buyers};
@@ -150,13 +152,19 @@ export class MerchantPMTilesCommerce{
       return output(action,pick(args,selections[action]));
     }
     if(suffix==='purchase_prepare')return this.#preparePurchase(args);
-    const {buyer}=await this.#buyer(args.buyer);
+    const {buyer,selected}=await this.#buyer(args.buyer);
     const purchaseRequestId=identifier(args.purchaseRequestId);
     const directory=join(this.#purchaseDirectory(purchaseRequestId),'native-purchase');
     const common={buyer,directory,requestId:purchaseRequestId,signal:this.#shutdown};
     if(suffix==='purchase_status')return inspectOutputPurchase(common);
     if(suffix==='purchase_run')return runOutputPurchase(common);
     if(suffix==='purchase_recover')return recoverOutputPurchase(common);
+    if(suffix==='purchase_accounting'||suffix==='purchase_finalize'){
+      need(selected.operatorWorkspace,'PMTILES_COMMERCE_ORIGINAL_OPERATOR_WORKSPACE_REQUIRED');
+      const input={workspaceDirectory:selected.operatorWorkspace,...pick(args,['offset','limit'])};
+      return (suffix==='purchase_finalize'?finalizeOutputPurchaseAccounting:inspectOutputPurchaseAccounting)({...common,input});
+    }
+    if(suffix==='purchase_accounting_recover')return recoverOutputPurchaseAccounting({...common,input:pick(args,['commandId'])});
     if(suffix==='purchase_adopt')return adoptPurchasedMapResource({buyer,directory,purchaseRequestId,
       workspace:this.#controller.workspace,input:{...scope,requestId:identifier(args.requestId)},signal:this.#shutdown});
     if(suffix==='purchase_receive'){
