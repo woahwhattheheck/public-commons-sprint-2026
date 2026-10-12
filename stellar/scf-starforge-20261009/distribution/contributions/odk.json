@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "odk",
-  "description": "Complete ODK Central field reporting, two-period commissioning, approved PostgreSQL receiving and reports, native host recovery, dataset publication and portable receiving",
+  "description": "Complete ODK Central field reporting, two-period commissioning, approved PostgreSQL reports and customer handover, installed SDK/typed-tool/browser receiving, editable archive restoration and native host recovery",
   "commands": {
     "odk-central-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.mjs",
     "odk-central-host": "products/odk-central/host.mjs",
@@ -10,7 +10,7 @@
   "commandDescriptions": {
     "odk-central-workspace": "Open the original Central field, commissioning and warehouse application or run its retained data commands",
     "odk-central-host": "Operate the original Central host, complete native backup, restore and service handover",
-    "odk-central-receive": "Receive original Central source, released forms, commissioned periods and approved PostgreSQL reports through complete native archives and reopening"
+    "odk-central-receive": "Receive the managed application, Central source, approved period reports and complete customer handovers through their original portable workspaces"
   },
   "exports": {
     "./seller/odk": {
@@ -39,7 +39,8 @@
     "./seller/odk/warehouse/receiving": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/receiving.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/receiving.mjs"
-    }
+    },
+    "./seller/odk/managed-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/receive-managed.mjs"
   },
   "applicationProviders": {
     "odk": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/application-provider.mjs"
@@ -83,6 +84,9 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/README.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/profiles.example.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/receive-released-periods.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RELEASED_PERIODS.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RELEASED_PERIODS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/receive-managed.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/run-managed-receiving.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/MANAGED_RECEIVING.md"
   ]
 }

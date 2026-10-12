@@ -17,6 +17,7 @@ const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 export const DATASET_SEMANTIC_SCHEMAS = Object.freeze([
   'stellar-forge.ckan-semantics.v1', 'stellar-forge.odata-semantics.v1',
   'stellar-forge.superset-semantics.v1', 'stellar-forge.directus-semantics.v1',
+  'stellar-forge.datasette-semantics.v1',
 ]);
 const HASH = /^[a-f0-9]{64}$/;
 function need(condition, message) {

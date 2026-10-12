@@ -1,9 +1,12 @@
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+export interface QueryDateRange { start: string; end: string; maxDays: number; }
 export interface Open311Connection {
   id?: string; name?: string; label?: string; baseUrl: string; jurisdictionId?: string | null;
   discoveryUrl?: string | null; allowHttp?: boolean;
   attribution?: { publisher?: string; title?: string; license?: string; licenseUrl?: string; sourceUrl?: string };
   apiKey?: string; apiKeyEnv?: string; apiKeyParameter?: string;
+  apiKeyTransport?: 'query' | 'bearer'; minimumRequestIntervalMs?: number;
+  queryDateRanges?: QueryDateRange[];
   timeoutMs?: number; maxResponseBytes?: number; responseLimit?: number; responseLimitParameter?: string;
   pagination?: boolean; extendedAttributes?: boolean;
   statusValues?: string[]; queryExtensions?: string[];
@@ -13,7 +16,8 @@ export interface RequestQuery {
   service_code?: string | number | (string | number)[] | null;
   status?: string | string[] | null;
   start_date?: string | null; end_date?: string | null;
-  page?: string | number | null; page_size?: string | number | null;
+  updated_after?: string | null; updated_before?: string | null;
+  page?: string | number | null; page_size?: string | number | null; per_page?: string | number | null;
   extensions?: boolean | 'true' | 'false' | null;
   [key: string]: string | number | boolean | null | undefined | (string | number)[];
 }
@@ -95,7 +99,7 @@ export function queryRequests(rows: RequestRow[], filter?: RequestFilter): Reque
 
 export { COLLECTION_SCHEMA, normalizeCollectionPlan, collectionNodeQuery, splitCollectionWindow,
   projectCollection, queryCollection, compareCollections } from './collection-domain.mjs';
-export type { CollectionPolicy, CollectionState, CollectionWindowState, CollectionSourceError, CollectionAttempt,
+export type { CollectionTimeBasis, CollectionStrategy, CollectionCreatedQuery, CollectionUpdatedQuery, CollectionQuery, CollectionPolicy, CollectionState, CollectionWindowState, CollectionSourceError, CollectionAttempt,
   CollectionWindow, CollectionSelection, CollectionPlan, SourceCollection, CollectionCounts, CollectionSummary,
   CollectionRequest, CollectionOccurrence, CollectionVersion, CollectionObservation, CollectionRecord,
   CollectionProjection, CollectionFilter, CollectionPage, CollectionInfo, CollectionRequestView,

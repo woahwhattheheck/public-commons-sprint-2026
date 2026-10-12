@@ -447,3 +447,12 @@ package metadata says LGPL-2.0-or-later. Both original declarations are
 preserved. MPXJ and JPype are installed as the named upstream distributions;
 the application owns its workspace/operator layer and calls the maintained
 native engine.
+
+
+## Portfolio archive and reporting
+
+The migration desk includes an Archive tab for retaining a reviewed cohort of complete project editions. Each business project has one selected edition and an explicit project key. The [archive operating guide](archive/README.md) covers cohort selection, native field columns, companion data, reporting measures, SQL, publishing and receiving into a fresh workspace.
+
+A publication includes the complete native source closure, relational SQLite database, all table CSVs, data dictionary, exact measure contributions and totals, Power Query, Azure SQL script, printable report and portable archive. Cost measures retain their native currency or an explicit project declaration. Work measures retain their original units and elapsed-time flag. Select project properties, leaf tasks or assignments as the measure grain so the report does not add summary and detail values together.
+
+The saved review identifies the complete projected rows before publication. A receiving desk restores the source editions and recomputes the same relational rows and measure totals before committing the received cohort. Query exports use the original completed database and preserve all returned rows. The [native archive receiving phase](archive/native/README.md) continues the existing equipped Portfolio operation through the actual browser, full delivery, fresh receiving and cold reopen.

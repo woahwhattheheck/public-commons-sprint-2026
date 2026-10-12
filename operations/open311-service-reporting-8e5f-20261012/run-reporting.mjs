@@ -50,7 +50,7 @@ async function sourceCollection() {
       return { ...result, receipt: { ...original.receipt, method: original.receipt.method ?? null,
         status: original.receipt.status ?? null, headers: original.receipt.headers ?? null,
         startedAt: original.receipt.startedAt ?? null, durationMs: original.receipt.durationMs ?? null,
-        kind: result.receipt.kind, query: result.receipt.query, coverage: result.receipt.coverage,
+        kind: result.receipt.kind, query: result.receipt.query, ...(result.receipt.coverage ? { coverage: result.receipt.coverage } : {}),
         replayedAt: at(), replaySource: 'Complete original commissioning input', replayTransportStatus: original.receipt.status ?? 200 } };
     }]));
   }

@@ -14,11 +14,12 @@ export function openZoteroResearchBridge({directory,dossierStore}={}) {
     need(!closing,'ZOTERO_RESEARCH_BRIDGE_CLOSING');
     if(!opening)opening=(async()=>{
       const created=await startZoteroWorkspace({directory,dossierStore});
-      if(closing){await created.close();throw Object.assign(new Error('ZOTERO_RESEARCH_BRIDGE_CLOSING'),{code:'ZOTERO_RESEARCH_BRIDGE_CLOSING'});}
-      child=created;return created;
+      child=created;
+      need(!closing,'ZOTERO_RESEARCH_BRIDGE_CLOSING');return created;
     })();
-    try{await opening;need(!closing,'ZOTERO_RESEARCH_BRIDGE_CLOSING');return status();}
-    finally{opening=null;}
+    const selected=opening;
+    try{await selected;need(!closing,'ZOTERO_RESEARCH_BRIDGE_CLOSING');return status();}
+    finally{if(opening===selected)opening=null;}
   }
   function status(){
     return {configured:true,active:child?.active===true&&!closing,
@@ -29,10 +30,10 @@ export function openZoteroResearchBridge({directory,dossierStore}={}) {
     closed=(async()=>{
       const errors=[];
       try{await opening;}catch(error){if(error.code!=='ZOTERO_RESEARCH_BRIDGE_CLOSING')errors.push(error);}
-      try{await child?.close();}catch(error){errors.push(error);}
-      child=null;
+      try{await child?.close();child=null;}catch(error){errors.push(error);}
       if(errors.length)throw new AggregateError(errors,'ZOTERO_RESEARCH_BRIDGE_CLOSE_FAILED');
-    })();return closed;
+    })();
+    closed.catch(()=>{closed=null;});return closed;
   }
   return {open,status,close};
 }

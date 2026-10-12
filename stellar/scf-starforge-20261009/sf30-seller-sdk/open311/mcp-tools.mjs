@@ -40,22 +40,24 @@ export function open311WorkspaceTools(tool) {
       kind: { type: 'string', enum: ['services', 'service', 'requests', 'request', 'token', 'discovery'] },
       query: { type: 'object' }, resourceId: sourceId,
     }, ['workspace', 'connectionId', 'requestId', 'expectedRevision'], change),
-    tool('merchant_open311_collection_create', 'Save a complete fixed-date source collection and its original provider filters. The plan pins the endpoint, jurisdiction, cap and boundary policy before the first capture. Inspect its windows, then run it.', {
+    tool('merchant_open311_collection_create', 'Save a complete source collection by creation time or declared update time, with original provider filters and window or page traversal. The plan pins the endpoint, jurisdiction, cap and policy before its first capture. Inspect its members, then run it.', {
       ...mutation, connectionId: id, name: { type: 'string', minLength: 1, maxLength: 200 },
       query: { type: 'object' }, policy: { type: 'object', additionalProperties: false, properties: {
+        timeBasis: { type: 'string', enum: ['created', 'updated'] },
+        strategy: { type: 'string', enum: ['windows', 'pages'] },
         maxWindowDays: { type: 'integer', minimum: 1, maximum: 90 },
         queryQuantumMs: { type: 'integer', minimum: 1, maximum: 86400000 },
         minimumWindowMs: { type: 'integer', minimum: 1, maximum: 7776000000 },
         boundaryOverlapMs: { type: 'integer', minimum: 0, maximum: 3887999999 },
       } },
     }, ['workspace', 'connectionId', 'query', 'requestId', 'expectedRevision'], change),
-    tool('merchant_open311_collection_run', 'Run or resume one saved collection through its original source windows. Retain capped parents, subdivide with the saved overlap policy, preserve every original response and stop on an explicit pause, source interruption or unsplittable cap. Repeat the same original run intent after uncertain delivery; use a new run intent to continue a settled interrupted or paused run.', {
+    tool('merchant_open311_collection_run', 'Run or resume a saved collection through its original windows or declared source pages. Window traversal refines capped parents; page traversal retains full pages and follows their numbered successors until a short page. Every original remains available, including a repeated full page retained as LIMITED. Repeat the same original run intent after uncertain delivery; use a new intent for a settled interrupted or paused run.', {
       ...mutation, collectionId: id,
     }, ['workspace', 'collectionId', 'requestId', 'expectedRevision'], change),
     tool('merchant_open311_collection_pause', 'Request a durable pause after the in-flight source window is retained. This tool can run concurrently with collection_run. Observe the current revision immediately before preparing this separate pause operation.', {
       ...mutation, collectionId: id,
     }, ['workspace', 'collectionId', 'requestId', 'expectedRevision'], change),
-    tool('merchant_open311_collection_info', 'Page every original and refined collection window, its attempts, capture receipt, selected boundary policy and complete progress counts. Original bodies are available through each capture source file. Follow nextOffset at the selected revision.', {
+    tool('merchant_open311_collection_info', 'Page every original collection member, its date bounds, source page, attempts, capture receipt, traversal policy and complete progress counts. Original bodies are available through each capture source file. Follow nextOffset at the selected revision.', {
       ...workspace, id, expectedRevision: revision, ...page,
     }, ['workspace', 'id', 'expectedRevision'], read),
     tool('merchant_open311_capture_info', 'Inspect retained capture metadata, query, response receipt and exact source-byte manifest. Download its complete json or source file for the original body.', {
