@@ -161,7 +161,13 @@ export class MerchantSensorThingsWorkspaces{
     if(name==='merchant_sensorthings_catalog')route='/api/catalogs/'+input.catalogId+'/rows?offset='+(input.offset??0)+'&limit='+(input.limit??100);
     if(name==='merchant_sensorthings_edition')route='/api/editions/'+input.editionId+'/'+(input.mode??'metadata');
     if(name==='merchant_sensorthings_rows')route='/api/editions/'+input.editionId+'/rows?table='+input.table+'&offset='+(input.offset??0)+'&limit='+(input.limit??100);
-    if(name==='merchant_sensorthings_capture')route='/api/captures/'+input.captureId;
+    if(name==='merchant_sensorthings_capture'){
+      const keys=['offset','limit','taskId','expectedRevision'];
+      if(input.part===undefined&&keys.some(key=>input[key]!==undefined))throw fault('MCP_CAPTURE_PART','Select a capture part before requesting journal pages.');
+      const query=new URLSearchParams();
+      for(const key of ['part',...keys])if(input[key]!==undefined)query.set(key,String(input[key]));
+      route='/api/captures/'+input.captureId+(query.size?'?'+query:'');
+    }
     if(name==='merchant_sensorthings_release')route='/api/releases/'+encodeURIComponent(input.releaseId);
     if(name==='merchant_sensorthings_publisher')route='/api/publishers/'+input.datasetId;
     if(name==='merchant_sensorthings_operation')route='/api/operations/'+input.operationId;
@@ -169,6 +175,20 @@ export class MerchantSensorThingsWorkspaces{
     const r=await this.#request(session,route);
     if(r.ok&&name==='merchant_sensorthings_view'&&(r.native?.workspaceId!==definition.workspaceId||r.native.schema!=='stellar-forge.sensorthings-view.v1'))
       throw fault('MCP_IDENTITY_CHANGED','The original workspace view identity differs.',409);
+    if(r.ok&&name==='merchant_sensorthings_capture'&&input.part!==undefined){
+      const page=r.native;
+      if(page?.schema!=='stellar-forge.sensorthings-capture-page.v1'||page.workspaceId!==definition.workspaceId||
+          page.captureId!==input.captureId||page.part!==input.part||!Number.isSafeInteger(page.revision)||page.revision<0||
+          input.expectedRevision!==undefined&&page.revision!==input.expectedRevision)
+        throw fault('MCP_CAPTURE_PAGE','The original capture page identity or revision differs.',409);
+      if(input.part!=='summary'){
+        const offset=input.offset??0;
+        if(!Array.isArray(page.rows)||!Number.isSafeInteger(page.total)||page.total<0||page.offset!==offset||
+            page.rows.length>(input.limit??100)||page.rows.some((row,index)=>row?.index!==offset+index||!plain(row.record))||
+            page.nextOffset!==(offset+page.rows.length<page.total?offset+page.rows.length:null))
+          throw fault('MCP_CAPTURE_PAGE','The original capture journal page is incomplete.',409);
+      }
+    }
     if(r.ok&&name==='merchant_sensorthings_rows'){
       if(!Array.isArray(r.native?.rows)||!Number.isSafeInteger(r.native.total))throw fault('MCP_ROWS','The original row page is incomplete.',409);
       const next=(input.offset??0)+r.native.rows.length;r.native={...r.native,nextOffset:next<r.native.total?next:null};

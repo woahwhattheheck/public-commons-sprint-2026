@@ -20,7 +20,7 @@ const COMMANDS=Object.freeze({
   serve:['workspace','host','port','session-file','expected-workspace-id','source-inbox','buyer-workspace'],
   schema:['workspace'],view:['workspace'],
   catalog:['workspace','id','offset','limit'],edition:['workspace','id'],summary:['workspace','id'],
-  rows:['workspace','id','table','offset','limit'],capture:['workspace','id'],
+  rows:['workspace','id','table','offset','limit'],capture:['workspace','id','part','task-id','offset','limit','expected-revision'],
   operation:['workspace','id'],release:['workspace','id'],publisher:['workspace','id'],
   files:['workspace','selection'],'file-read':['workspace','input'],
   action:['workspace','input','source-inbox','buyer-workspace'],
@@ -35,7 +35,9 @@ export const HELP=[
   '      [--expected-workspace-id UUID] [--source-inbox DIR] [--buyer-workspace DIR]',
   'schema|view --workspace DIR',
   'catalog --workspace DIR --id ID [--offset N] [--limit N]',
-  'edition|summary|capture|operation|release|publisher --workspace DIR --id ID',
+  'edition|summary|operation|release|publisher --workspace DIR --id ID',
+  'capture --workspace DIR --id ID [--part summary|tasks|pages|issues|attempts|parents]',
+  '        [--task-id ID] [--offset N] [--limit N] [--expected-revision N]',
   'rows --workspace DIR --id EDITION --table observations|components|entities [--offset N] [--limit N]',
   'files --workspace DIR --selection JSON_FILE',
   'file-read --workspace DIR --input JSON_FILE',
@@ -164,7 +166,15 @@ async function direct(options){
       case 'edition':return await workspace.edition(required(options,'id'));
       case 'summary':return await workspace.summary(required(options,'id'));
       case 'rows':return await workspace.rows(required(options,'id'),{...range,table:required(options,'table')});
-      case 'capture':return workspace.capture(required(options,'id'));
+      case 'capture':{
+        if(options.part===undefined&&['task-id','offset','limit','expected-revision'].some(key=>options[key]!==undefined))
+          throw argumentError('Use --part before selecting capture journal pages.');
+        return workspace.capture(required(options,'id'),options.part===undefined?undefined:{part:options.part,
+          ...(options['task-id']!==undefined?{taskId:options['task-id']}:{}),
+          ...(options.offset!==undefined?{offset:range.offset}:{}),
+          ...(options.limit!==undefined?{limit:range.limit}:{}),
+          ...(options['expected-revision']!==undefined?{expectedRevision:number(options,'expected-revision',0,0,Number.MAX_SAFE_INTEGER)}:{})});
+      }
       case 'release':return await workspace.release(required(options,'id'));
       case 'publisher':return await workspace.publisher(required(options,'id'));
       case 'operation':{

@@ -1,5 +1,5 @@
 // MIT. Pure tool catalog for the original SensorThings operating workspace.
-import {ACTIONS} from './schema.mjs';
+import {ACTIONS,CAPTURE_READ_PARTS} from './schema.mjs';
 import {MAX_RETAINED_CHUNK_BYTES} from '../../../../stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs';
 const string=(maxLength=200)=>({type:'string',maxLength});
 const matching=pattern=>({type:'string',pattern:pattern.source});
@@ -20,7 +20,7 @@ export function sensorThingsWorkspaceTools(tool){
     tool('merchant_sensorthings_catalog','Page one retained original stream catalogue. Use its exact catalogue ID and source pointer when preparing a plan; do not invent stream IDs.',{...scope,catalogId:matching(SHA),offset,limit},['workspace','catalogId'],readOnly),
     tool('merchant_sensorthings_edition','Read one immutable source edition or its original coverage/result/unit/quality summary.',{...scope,editionId:matching(SHA),mode:readModes},['workspace','editionId'],readOnly),
     tool('merchant_sensorthings_rows','Page original observation, ordered multidimensional component or entity rows, retaining null/missing/type/time distinctions and source pointers.',{...scope,editionId:matching(SHA),table:choice(['observations','components','entities']),offset,limit},['workspace','editionId','table'],readOnly),
-    tool('merchant_sensorthings_capture','Inspect the same original capture, request attempts, exact source pages and explicit continuation or failure state.',{...scope,captureId:matching(/^[a-f0-9]{24}$/)},['workspace','captureId'],readOnly),
+    tool('merchant_sensorthings_capture','Inspect the same original capture and continuation state. Omit part for its complete legacy read; use summary or bounded tasks/pages/issues/attempts/parents for a large journal. Task pages retain complete original IDs; attempt/parent pages select taskId. Later offsets require the first page expectedRevision; a changed local journal requires a new first page.',{...scope,captureId:matching(/^[a-f0-9]{24}$/),part:choice(CAPTURE_READ_PARTS),offset,limit,taskId:matching(SHA),expectedRevision:integer(0)},['workspace','captureId'],readOnly),
     tool('merchant_sensorthings_release','Inspect the original selected seller release and publisher generations.',{...scope,releaseId:id},['workspace','releaseId'],readOnly),
     tool('merchant_sensorthings_publisher','Inspect the same original dataset publisher and SF88 session/recovery/accounting state.',{...scope,datasetId:matching(/^dataset-[a-f0-9]{24}$/)},['workspace','datasetId'],readOnly),
     tool('merchant_sensorthings_operation','Read a retained operation outcome after a lost reply. Keep its original ID and exact payload; a pending or failed operation is not a new success.',{...scope,operationId:matching(/^[A-Za-z0-9_-]{8,100}$/)},['workspace','operationId'],readOnly),

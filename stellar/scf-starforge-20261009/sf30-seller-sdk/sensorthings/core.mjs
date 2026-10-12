@@ -11,6 +11,7 @@ import {rowsPage,summarize,comparison} from './domain.mjs';
 import {prepareSensorThingsDataset,queryNativeDataset,nativePublishers,prepareNativeRelease,inspectNativeRelease,controlNativeRelease,
   inspectBuyer,receiveBuyer,readBuyerOutput} from './dataset.mjs';
 import {exportEdition,importEdition} from './portable.mjs';
+import {CAPTURE_READ_PARTS} from './schema.mjs';
 const find=(items,id,label)=>{const item=items.find(x=>x.id===id);if(!item)throw fault('SELECTION','Select an existing '+label+'.',404);return item;};
 const errorInfo=e=>({code:e.code??'SENSORTHINGS_OPERATION_FAILED',message:e.message??'The original operation failed.',
   status:e.status??503,details:e.details??{},retryable:e.code==='SENSORTHINGS_REQUEST_INTERRUPTED'||(e.status??503)>=500});
@@ -31,11 +32,54 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
       captures:s.captures.map(c=>({id:c.id,planId:c.planId,state:c.state,createdAt:c.createdAt,updatedAt:c.updatedAt,
         requests:c.tasks.reduce((n,t)=>n+t.attempts.length,0),pages:c.pages.length,bytes:c.totalBytes,
         tasks:c.tasks.length,remaining:c.tasks.filter(t=>t.state!=='COMPLETE').length,editionIds:c.editionIds,
-        issues:c.issues,pauseReason:c.pauseReason??null,running:running.has(c.id)})),
+        issues:c.issues.slice(0,100),issueCount:c.issues.length,issuesTruncated:c.issues.length>100,pauseReason:c.pauseReason??null,running:running.has(c.id)})),
       editions:s.editionIds,selectedEditionId:s.selectedEditionId,reviews:s.reviews,datasets:s.datasets,releases:s.releases,
       receipts:s.receipts,sourceReceipts:s.sourceReceipts??[],comparisons:s.comparisons,exports:s.exports,
       operations:Object.values(s.operations).slice(-100).map(({payload,context,...v})=>v),running:[...running.keys()]};
   }
+
+  function captureRead(id,options){
+    const s=store.read(),c=find(s.captures,id,'capture');
+    if(options===undefined)return structuredClone(c);
+    fields(options,['part','offset','limit','taskId','expectedRevision']);
+    const part=options.part??'summary',offset=integer(options.offset??0,'capture offset',0,Number.MAX_SAFE_INTEGER),
+      limit=integer(options.limit??100,'capture limit',1,500);
+    if(!CAPTURE_READ_PARTS.includes(part))throw fault('CAPTURE_READ_PART','Choose an advertised original capture part.');
+    if(options.expectedRevision!==undefined)integer(options.expectedRevision,'capture read revision',0,Number.MAX_SAFE_INTEGER);
+    if(offset>0&&options.expectedRevision===undefined)throw fault('CAPTURE_READ_REVISION','Retain the original first page revision for subsequent capture pages.',409);
+    if(options.expectedRevision!==undefined&&options.expectedRevision!==s.revision)
+      throw fault('CAPTURE_READ_CHANGED','The original workspace changed. Read a new first capture page or pause the original capture before its complete review.',409,{expectedRevision:options.expectedRevision,currentRevision:s.revision});
+    const taskPart=['attempts','parents'].includes(part);
+    if(taskPart&&!/^[a-f0-9]{64}$/.test(options.taskId??''))throw fault('CAPTURE_TASK','Select an actual original task ID for its attempt or parent pages.');
+    if(!taskPart&&options.taskId!==undefined)throw fault('CAPTURE_TASK','A task ID selects only original attempt or parent pages.');
+    if(part==='summary'&&(offset!==0||options.limit!==undefined))throw fault('CAPTURE_SUMMARY','Summary has no offset or row limit.');
+    const summary={id:c.id,planId:c.planId,sourceId:c.source.id,state:c.state,createdAt:c.createdAt,updatedAt:c.updatedAt??c.createdAt,
+      requests:c.tasks.reduce((n,t)=>n+t.attempts.length,0),tasks:c.tasks.length,pages:c.pages.length,issues:c.issues.length,
+      remaining:c.tasks.filter(t=>t.state!=='COMPLETE').length,totalBytes:c.totalBytes,editionIds:c.editionIds,
+      pauseReason:c.pauseReason??null,limitReached:c.limitReached,endQueued:c.endQueued,running:running.has(c.id)};
+    const response={schema:'stellar-forge.sensorthings-capture-page.v1',workspaceId:s.workspaceId,revision:s.revision,captureId:c.id,part,summary,
+      consistency:'Original local journal at the returned revision; not a frozen or atomic provider snapshot.'};
+    if(part==='summary')return response;
+    let records,task=null;
+    if(taskPart){task=find(c.tasks,options.taskId,'source request');records=task[part];}
+    else records=c[part];
+    const rows=[];let rowBytes=0;
+    for(let index=offset;index<records.length&&rows.length<limit;index++){
+      let row=records[index];
+      if(part==='tasks'){
+        const {attempts,parents,...details}=row;
+        row={...details,attemptCount:attempts.length,parentCount:parents.length,latestAttempt:attempts.at(-1)??null};
+      }
+      const bytes=json(row).length;
+      if(bytes>8*1024*1024)throw fault('CAPTURE_ROW_CAPACITY','This complete original journal row exceeds the capture page capacity. Keep the source and use the original closed-workspace full read.',413,{captureId:c.id,part,index,bytes});
+      if(rowBytes+bytes>8*1024*1024&&rows.length)break;
+      rows.push({index,record:row});rowBytes+=bytes;
+    }
+    return {...response,taskId:task?.id??null,total:records.length,offset,limit,rows,
+      nextOffset:offset+rows.length<records.length?offset+rows.length:null,
+      projection:part==='tasks'?'Task metadata with latest attempt and counts; complete attempts/parents have their own original pages.':'Original complete selected journal entries.'};
+  }
+
   async function catalogRows(id,{offset=0,limit=100}={}){
     const c=find(store.read().catalogs,id,'catalogue');integer(offset,'offset',0,1000000);integer(limit,'limit',1,500);
     const doc=sourceDocument(await store.object(c.receipt.sha256)),page=collection(doc,find(store.read().sources,c.sourceId,'source'),c.url);
@@ -447,7 +491,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
     void closePromise.catch(()=>{closePromise=null;});return closePromise;
   }
   return {store,directory:store.root,schema,view,action,catalogRows,edition,
-    capture:id=>structuredClone(find(store.read().captures,id,'capture')),
+    capture:captureRead,
     rows:async(id,options)=>rowsPage(store,await edition(id),options),
     summary:async id=>summarize(store,await edition(id)),
     release:async id=>inspectNativeRelease(store,find(store.read().releases,id,'release'),publishers),

@@ -144,7 +144,17 @@ export function createSensorThingsHandler({workspace,token,origin,staticHandler=
           await workspace.rows(m[1],{table:parameter(url,'table','observations'),offset:numberParameter(url,'offset',0),limit:numberParameter(url,'limit',100,500)});
         return send(res,200,value,workspaceId);
       }
-      if((m=/^\/api\/captures\/([a-f0-9]{24})$/.exec(url.pathname)))return send(res,200,workspace.capture(m[1]),workspaceId);
+      if((m=/^\/api\/captures\/([a-f0-9]{24})$/.exec(url.pathname))){
+        const part=parameter(url,'part',null);
+        if(part===null&&['offset','limit','taskId','expectedRevision'].some(key=>url.searchParams.has(key)))
+          throw fault('CAPTURE_READ_PART','Select a capture part before requesting journal pages.');
+        const options=part===null?undefined:{part,
+          ...(url.searchParams.has('offset')?{offset:numberParameter(url,'offset',0)}:{}),
+          ...(url.searchParams.has('limit')?{limit:numberParameter(url,'limit',100,500)}:{}),
+          ...(url.searchParams.has('taskId')?{taskId:parameter(url,'taskId',null)}:{}),
+          ...(url.searchParams.has('expectedRevision')?{expectedRevision:numberParameter(url,'expectedRevision',0)}:{})};
+        return send(res,200,workspace.capture(m[1],options),workspaceId);
+      }
       if((m=/^\/api\/releases\/([a-z][a-z0-9-]{0,100})$/.exec(url.pathname)))return send(res,200,await workspace.release(m[1]),workspaceId);
       if((m=/^\/api\/publishers\/(dataset-[a-f0-9]{24})$/.exec(url.pathname)))return send(res,200,await workspace.publisher(m[1]),workspaceId);
       if((m=/^\/api\/operations\/([A-Za-z0-9_-]{8,100})$/.exec(url.pathname))){
