@@ -1,6 +1,7 @@
 """Receive a complete original buyer-expense project without executing archive code."""
 from __future__ import annotations
 import argparse
+import base64
 import contextlib
 import fcntl
 import hashlib
@@ -12,7 +13,8 @@ import stat
 import zipfile
 from store import DDL
 from credit_store import CREDIT_TABLES
-from portable import CREDIT_READER_FILES
+from accountant_store import ACCOUNTANT_TABLES
+from portable import CREDIT_READER_FILES, ACCOUNTANT_READER_FILES
 from domain import SCHEMA
 
 FORMAT = "stellar-forge.buyer-expense-private-project.v1"
@@ -43,6 +45,9 @@ CREDIT_REQUIRED.update("app/" + n for n in CREDIT_READER_FILES if n not in ADJUS
 ADJUSTMENT_REQUIRED = {APP_PREFIX + "expense-workspace/native_adjustments.py"}
 ADJUSTMENT_REQUIRED.update("app/" + n for n in ADJUSTMENT_READER_FILES)
 CREDIT_VERSIONS = ("original-woo-refund-v1", "original-native-refund-v2")
+ACCOUNTANT_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in ("native_accountant.py", "accountant_store.py", "accountant-reader-files.json")}
+ACCOUNTANT_REQUIRED.update("app/" + n for n in ACCOUNTANT_READER_FILES)
+ACCOUNTANT_FEATURE = "issued-accountant-return-v1"
 
 
 def digest_file(path):
@@ -96,8 +101,12 @@ def inspect_database(path, manifest):
         credit_feature = manifest.get("buyer_credit_capture")
         if credit_feature not in (None, *CREDIT_VERSIONS):
             raise ValueError("The project advertises an unsupported buyer refund source version.")
-        required = set(expected) - ({"api_requests"} if legacy else set()) - (CREDIT_TABLES if credit_feature is None else set())
-        allowed_tables = set(expected) - (CREDIT_TABLES if credit_feature is None else set())
+        bookkeeping = manifest.get("buyer_bookkeeping")
+        if bookkeeping not in (None, ACCOUNTANT_FEATURE):
+            raise ValueError("The project advertises an unsupported accountant return version.")
+        missing_features = (CREDIT_TABLES if credit_feature is None else set()) | (ACCOUNTANT_TABLES if bookkeeping is None else set())
+        required = set(expected) - ({"api_requests"} if legacy else set()) - missing_features
+        allowed_tables = set(expected) - missing_features
         if not required <= tables <= allowed_tables:
             raise ValueError("The archive does not retain the complete supported expense schema.")
         for name in tables:
@@ -131,7 +140,27 @@ def inspect_database(path, manifest):
         if credit_feature and (manifest.get("credit_count") != credit_count or manifest.get("refund_packet_count") != packet_count or
                                manifest.get("data_context") != context or context not in ("", "operational", "development")):
             raise ValueError("The complete buyer credits, original packets or operation context do not match their native state.")
+        accountant_count = 0
+        if bookkeeping:
+            from domain import canonical
+            accountant_count = database.execute("SELECT COUNT(*) FROM accountant_returns").fetchone()[0]
+            if manifest.get("accountant_return_count") != accountant_count:
+                raise ValueError("The complete project is missing its original accountant return history.")
+            retained = {}
+            for ident,close_id,handoff_id,body,packet in database.execute("SELECT id,close_id,handoff_id,body,packet_base64 FROM accountant_returns"):
+                value = json.loads(body)
+                original = database.execute("SELECT body FROM closes WHERE id=?", (close_id,)).fetchone()
+                if not original or value["id"] != ident or value["close_id"] != close_id or value["handoff_id"] != handoff_id:
+                    raise ValueError("A bookkeeping return differs from its native issued identity.")
+                source = (canonical({"schema":"stellar-forge.buyer-accountant-source.v1","workspaceId":meta["id"],"issued":json.loads(original[0])})+"\n").encode()
+                if hashlib.sha256(source).hexdigest() != value["source_sha256"] or hashlib.sha256(base64.b64decode(packet,validate=True)).hexdigest() != value["packet_sha256"]:
+                    raise ValueError("An original returned packet or its issued source changed.")
+                retained[ident] = handoff_id
+            for handoff_id,return_id in database.execute("SELECT handoff_id,return_id FROM accountant_heads"):
+                if retained.get(return_id) != handoff_id:
+                    raise ValueError("A current bookkeeping head is missing its exact accepted return.")
         return {"workspace": meta["id"], "revision": revision, "successful_requests": count,
+                "accountant_return_count": accountant_count,
                 "credit_count": credit_count, "refund_packet_count": packet_count, "data_context": context,
                 "source_kinds": source_kinds,
                 "legacy_request_history": legacy, "tables": len(tables)}
@@ -188,6 +217,11 @@ def receive(archive, directory, expected_sha256):
             if credit_feature not in (None, *CREDIT_VERSIONS) or credit_feature and not feature:
                 raise ValueError("The original refund feature requires its complete native reader closure.")
             extra = ADJUSTMENT_REQUIRED if credit_feature == "original-native-refund-v2" else set()
+            bookkeeping = manifest.get("buyer_bookkeeping")
+            if bookkeeping not in (None, ACCOUNTANT_FEATURE) or bookkeeping and not credit_feature:
+                raise ValueError("The accountant return feature requires its original typed source closure.")
+            if bookkeeping:
+                extra = extra | ACCOUNTANT_REQUIRED
             required = REQUIRED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
             allowed = ALLOWED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
             if len(entries) != len(descriptions) or not required <= set(entries) <= allowed or set(names) != set(entries) | {"manifest.json"}:

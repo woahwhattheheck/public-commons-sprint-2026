@@ -59,14 +59,15 @@ async function bounded(path, limit = MAX_INPUT) {
 }
 
 
-// The CKAN meaning document travels unchanged with original typed pages. Its
+// Reviewed source meanings travel unchanged with the original typed pages. Their
 // two identities distinguish this retained edition from value-independent meaning.
 const canonicalValue = value => Array.isArray(value) ? value.map(canonicalValue) :
   obj(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalValue(value[key])])) : value;
 const semanticIdentity = value => sha(JSON.stringify(canonicalValue(value)));
 function checkSemantics(value, columns) {
   if (value === undefined) return null;
-  need(obj(value) && value.schema === 'stellar-forge.ckan-semantics.v1' &&
+  const odata = value?.schema === 'stellar-forge.odata-semantics.v1';
+  need(obj(value) && (value.schema === 'stellar-forge.ckan-semantics.v1' || odata) &&
     DIGEST.test(value.sha256 ?? '') && DIGEST.test(value.definitionSha256 ?? '') &&
     obj(value.source) && DIGEST.test(value.source.captureManifestSha256 ?? '') &&
     (value.source.schemaSha256 === null || DIGEST.test(value.source.schemaSha256 ?? '')) &&
@@ -75,13 +76,20 @@ function checkSemantics(value, columns) {
     Array.isArray(value.primaryKey.projected) && typeof value.primaryKey.complete === 'boolean' &&
     obj(value.aboutUrl) && Array.isArray(value.virtualColumns) && Array.isArray(value.issues) &&
     obj(value.csvw) && obj(value.csvw.tableSchema) && Array.isArray(value.csvw.tableSchema.columns),
-    'Invalid retained CKAN semantic document');
+    'Invalid retained dataset semantic document');
+  if (odata) {
+    need(value.source.provider === 'odata4' && ['4.0','4.01'].includes(value.source.protocolVersion) &&
+      ['serviceUrl','schemaUrl','entityContainer','entitySet','entityType'].every(key =>
+        typeof value.source[key] === 'string' && value.source[key].length > 0 && value.source[key].length <= 8192) &&
+      DIGEST.test(value.source.schemaSha256) && obj(value.csdl),
+      'Invalid retained OData source format or CSDL binding');
+  }
   const { sha256, definitionSha256, ...payload } = value;
   need(semanticIdentity({ ...payload, definitionSha256 }) === sha256,
-    'Retained CKAN semantic document digest changed');
+    'Retained dataset semantic document digest changed');
   const { captureManifestSha256, schemaSha256, ...sourceMeaning } = payload.source;
   need(semanticIdentity({ ...payload, source: sourceMeaning }) === definitionSha256,
-    'Retained CKAN semantic definition digest changed');
+    'Retained dataset semantic definition digest changed');
   for (let i = 0; i < columns.length; i++) {
     const meaning = value.columns[i], physical = columns[i];
     need(obj(meaning) && meaning.name === physical.name && meaning.type === physical.type &&
@@ -89,16 +97,39 @@ function checkSemantics(value, columns) {
       meaning.sourceField.length > 0 && ['native','text','json'].includes(meaning.encoding) &&
       obj(meaning.projectedDefinition) && meaning.projectedDefinition.name === physical.name &&
       Array.isArray(meaning.issues),
-      'Retained CKAN semantic columns differ from the original dataset');
+      'Retained dataset semantic columns differ from the original dataset');
+  }
+  if (odata) {
+    need(value.columns.length % 2 === 0, 'OData value/state column pairing changed');
+    const valueFields = new Set();
+    for (let index = 0; index < value.columns.length; index += 2) {
+      const field = value.columns[index], state = value.columns[index + 1];
+      need(field.role === 'value' && state.role === 'state' &&
+        field.sourceField === state.sourceField && state.name === field.name + '_state' &&
+        field.stateColumn === state.name && state.valueColumn === field.name &&
+        state.type === 'string' && state.nullable === false &&
+        obj(field.sourceDefinition) && obj(state.sourceDefinition) &&
+        state.sourceDefinition.role === 'source-presence' &&
+        state.sourceDefinition.sourcePath === field.sourceField &&
+        compact(state.sourceDefinition.values) === compact(['value','null','missing']),
+        'OData source meaning or value/state column pairing changed');
+      valueFields.add(field.name);
+    }
+    need(value.primaryKey.source.every(key => typeof key === 'string' && key.length > 0) &&
+      new Set(value.primaryKey.source).size === value.primaryKey.source.length &&
+      value.primaryKey.projected.every(key => typeof key === 'string' && valueFields.has(key)) &&
+      new Set(value.primaryKey.projected).size === value.primaryKey.projected.length &&
+      (!value.primaryKey.complete || value.primaryKey.source.length === value.primaryKey.projected.length),
+      'OData source key differs from its published value columns');
   }
   const expectedDefinitions = [...value.columns.map(column => column.projectedDefinition),
     ...value.virtualColumns.map(column => {
       need(obj(column) && (column.projectedDefinition === null || obj(column.projectedDefinition)),
-        'Invalid retained CKAN virtual column');
+        'Invalid retained dataset virtual column');
       return column.projectedDefinition;
     }).filter(Boolean)];
   need(semanticIdentity(expectedDefinitions) === semanticIdentity(value.csvw.tableSchema.columns),
-    'Retained CKAN CSVW definitions differ from the reviewed columns');
+    'Retained dataset CSVW definitions differ from the reviewed columns');
   return { schema: value.schema, sha256, definitionSha256,
     captureManifestSha256: value.source.captureManifestSha256 };
 }
@@ -178,6 +209,13 @@ function checkPage(page) {
       need(own(row, field) && typed(row[field], names.get(field)), 'Row type mismatch: ' + field);
   }
   const semantics = checkSemantics(page.semantics, d.columns);
+  if (semantics?.schema === 'stellar-forge.odata-semantics.v1') {
+    const selectedStates = page.semantics.columns.filter(column =>
+      column.role === 'state' && page.fields.includes(column.name));
+    for (const row of page.rows) for (const column of selectedStates)
+      need(['value','null','missing'].includes(row[column.name]),
+        'OData state value differs from its declared value/null/missing encoding');
+  }
   const advanced = triples.length > 0 || order !== null;
   const query = { fields: page.fields,
     filters: Object.entries(page.filters).sort(([a], [b]) => compareText(a, b)),
@@ -387,7 +425,7 @@ function html(state, manifest) {
     ['Result order', state.order ? compact(state.order) : 'csv-record-order'],
     ['Original query hash', state.queryHash],
     ['Data files', 'dataset.jsonl · dataset.csv'],
-    ...(state.semantics ? [['Reviewed CKAN meaning', state.semantics.sha256],
+    ...(state.semantics ? [['Reviewed source meaning', state.semantics.sha256],
       ['Meaning definition', state.semantics.definitionSha256],
       ['Retained data dictionary', 'semantics.json — full published column meanings, units, keys and URI templates']] : []),
     ['Acceptance', 'Operator review only; source response and digest are not chain finality'],

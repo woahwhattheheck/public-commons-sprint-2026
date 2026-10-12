@@ -72,7 +72,7 @@ export function applicationPrivateUrl(text) {
 
 /**
  * A provider synchronously reads original normalized startup lines. It returns a URL,
- * {url, original?, links?}, a deferred resolver function, an array of those values, or null.
+ * {url, original?, links?, workspaceId?, connectionFile?}, a deferred resolver function, an array of those values, or null.
  * Defer asynchronous source checks so ignored later announcements never run them. Stateful original
  * multi-line readers live in that provider. This one writer retains the first
  * accepted announcement, its original identity and the shared operation ID.
@@ -104,6 +104,8 @@ export function observeApplicationStartup(request, directory, readLine, { lineLi
           source: 'original-command-stdout', observedAt: now(), url,
           ...(Object.hasOwn(startup, 'links') ? { links: startup.links } : {}),
           ...(Object.hasOwn(startup, 'original') ? { original: startup.original } : {}),
+          ...(Object.hasOwn(startup, 'workspaceId') ? { workspaceId: startup.workspaceId } : {}),
+          ...(Object.hasOwn(startup, 'connectionFile') ? { connectionFile: startup.connectionFile } : {}),
         });
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
     }
