@@ -42,3 +42,40 @@ Host file declarations use kind operations and the optional exact SHA-256 in the
 ## Working with original stream output
 
 The case stores each stream’s original hash, byte/record count, completeness, terminal metadata and preview. Receive the original call/stream export as well when the full NDJSON payload is part of the investigation. Its operation ID and response identity join it to the same captured call.
+
+## Complete installed customer continuation
+
+The installed gRPC source also includes `grpc/native-operations/journey.mjs`. It
+opens the selected original workspace through the existing product and carries
+its saved calls through capture, reviewed incident revisions, native CLI,
+merchant file transport, cold receiving, browser editing and the persistent
+Console customer archive.
+
+Use one private journal directory outside the original workspace. The
+`--source-root` directory contains the installed `products/`,
+`stellar-forge/` and `stellar/` trees. Select its exact source commit and the
+existing Chromium/Playwright runtime:
+
+~~~sh
+node /opt/stellar-merchant/source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/native-operations/journey.mjs \
+  --work /srv/private/operations-receiving \
+  --workspace /srv/private/original-service-workspace \
+  --source-root /opt/stellar-merchant/source \
+  --source-commit INSTALLED_SOURCE_COMMIT \
+  --chromium /opt/browser/chromium \
+  --playwright-modules /opt/browser/node_modules
+~~~
+
+When an original native run journal is available, add `--original-run` with
+that existing file. Its complete bytes and identity are retained beside the
+original call inventory. The continuation stores each original capture, save,
+manifest and receiving intent before the corresponding operation, keeps the
+first completed Console export, and resumes that same directory after
+interruption. A completed continuation returns its saved result immediately.
+
+The resulting journal records all nine phases, the complete five-file customer
+deliveries and Console archive, original call-file hashes, and desktop/mobile
+screenshots. Browser response-loss recovery uses the actual first saved incident
+operation. The following cold import preserves all earlier revisions and their
+stable corrective-action IDs. Every owned native listener, client and browser is
+closed before completion is recorded.
