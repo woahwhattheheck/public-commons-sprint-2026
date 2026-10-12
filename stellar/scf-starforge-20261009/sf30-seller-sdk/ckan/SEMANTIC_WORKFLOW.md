@@ -451,6 +451,35 @@ original wire response by phase, bytes and SHA. Receive the complete existing
 `dataset/` customer directory with its manifest and page chain when moving
 the queue result to another host.
 
+## Continue into Python customer analysis
+
+The [Python semantic customer workflow](../../sf88-operator-buyer-cli/python/SEMANTICS.md)
+opens the original complete SF88 or SF100 delivery, imports its typed rows into
+the existing SQLite customer database and retains the exact dictionary with
+the same immutable edition. It supplies the full receiving commands, reviewed
+SQL mapping and native analysis example.
+
+For an opened original Python delivery, `delivery.read_semantics()` returns
+the checked dictionary, or `None` for a legacy delivery. The existing
+`DatasetDatabase.import_delivery(delivery, columns=...)` accepts the reviewed
+source-to-SQL aliases. Read the imported meaning with
+`database.semantics(version_id)`, or its original file bytes with
+`database.semantics_bytes(version_id)`.
+
+The existing customer browser shows definitions beside the imported SQL fields,
+downloads the dictionary and compares the meaning of two selected editions.
+Saved queries, complete query exports, published reports and workbook source
+packages retain the dictionaries of the imported editions they actually read.
+Printable reports show those source meanings; report CSV archives also include
+the exact dictionary files. The original SQLite backup carries the rows,
+edition mapping and retained dictionary together.
+
+Use the guide's [complete analysis receiver](../../sf88-operator-buyer-cli/python/examples/semantic_analysis.py)
+to create the saved query, complete query export, report, workbook handoff,
+authenticated dictionary download and reopened database backup from the same
+finalized delivery. The retained source-to-SQL mapping explains input fields;
+the saved SQL defines calculated results and aggregates.
+
 ## Complete the native receiving journey
 
 Use the retained native execution job and one equipped runtime for the integrated
