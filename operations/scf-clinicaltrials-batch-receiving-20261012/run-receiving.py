@@ -9,25 +9,40 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--source-root",required=True,help="Original repository-shaped installed source or pinned checkout")
 parser.add_argument("--out",required=True,help="Persistent private output directory")
 parser.add_argument("--work",help="New private working directory; defaults to OUT/work")
-parser.add_argument("--resume-empty",action="store_true",help="Continue the same initialized empty workspace after an interrupted pre-intake browser step")
+resume=parser.add_mutually_exclusive_group()
+resume.add_argument("--resume-empty",action="store_true",help="Continue the same initialized empty workspace after an interrupted pre-intake browser step")
+resume.add_argument("--resume-receiving",action="store_true",help="Continue MCP and cold receiving after the original browser completed; reuse every saved XML, batch, review and export")
 parser.add_argument("--node",default=shutil.which("node") or "node")
-parser.add_argument("--browser-executable",required=True,help="Existing Chromium executable")
-parser.add_argument("--playwright-package",required=True,help="Existing playwright/package.json")
+parser.add_argument("--browser-executable",help="Existing Chromium executable; required for the browser phase")
+parser.add_argument("--playwright-package",help="Existing playwright/package.json; required for the browser phase")
 args=parser.parse_args()
+if not args.resume_receiving and (not args.browser_executable or not args.playwright_package):
+    parser.error("The browser phase requires --browser-executable and --playwright-package")
+resuming=args.resume_empty or args.resume_receiving
 source_root=Path(args.source_root).expanduser().resolve(strict=True)
 output=Path(args.out).expanduser().absolute();output.mkdir(mode=0o700,parents=True,exist_ok=True);output.chmod(0o700)
 work=Path(args.work).expanduser().absolute() if args.work else output/"work"
-if args.resume_empty:
+if resuming:
     if not work.is_dir() or not (output/"Customer_Operation.json").is_file():raise RuntimeError("Resume requires the original working directory and operation report")
 else:
     work.mkdir(mode=0o700,parents=True,exist_ok=False)
 clinical=source_root/"stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials"
 manifest=json.loads((HERE/"batch-operator-source.json").read_text())
 report={"schema":"stellar-forge.disclosure-batch-customer-operation.v1","sourceCommit":manifest["sourceCommit"],"startedAt":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"phases":[],"passed":False}
-if args.resume_empty:
+previous=None
+if resuming:
     prior=(output/"Customer_Operation.json").read_bytes()
     previous=json.loads(prior)
-    if previous.get("passed") or previous.get("batchId"):raise RuntimeError("This entrypoint resumes only a pre-intake operation; continue an existing batch through its retained actions")
+    if previous.get("passed"):raise RuntimeError("This original receiving operation is already complete")
+    if args.resume_empty and previous.get("batchId"):
+        raise RuntimeError("An existing reviewed batch continues with --resume-receiving")
+    if args.resume_receiving:
+        if not previous.get("batchId") or previous.get("browser",{}).get("passed") is not True or not previous.get("originalExport",{}).get("id"):
+            raise RuntimeError("Receiving continuation requires the completed original browser report, batch and export")
+        if (work/"customer-workspace").exists():
+            raise RuntimeError("A customer workspace already exists; continue its saved CLI actions before rerunning receiving")
+        report.update({key:previous[key] for key in ["browser","batchId","originalBatch","originalExport"]})
+        report["portableSha256"]=previous.get("portableSha256") or next((row["portableSha256"] for row in reversed(previous.get("phases",[])) if row.get("portableSha256")),None)
     previous_path=output/("Previous_Operation_"+hashlib.sha256(prior).hexdigest()[:16]+".json")
     if previous_path.exists() and previous_path.read_bytes()!=prior:raise RuntimeError("Original prior operation changed")
     previous_path.write_bytes(prior);previous_path.chmod(0o600)
@@ -79,8 +94,9 @@ try:
         required(completed.returncode==0,completed.stderr)
     import lxml.etree
     env=dict(os.environ);env["TMPDIR"]=str(work);env["SF30_XML_NODE"]=args.node;env["NODE_OPTIONS"]="--max-old-space-size=192"
-    env["SCF_BROWSER_EXECUTABLE"]=str(Path(args.browser_executable).expanduser().resolve(strict=True))
-    env["SCF_PLAYWRIGHT_PACKAGE"]=str(Path(args.playwright_package).expanduser().resolve(strict=True))
+    if not args.resume_receiving:
+        env["SCF_BROWSER_EXECUTABLE"]=str(Path(args.browser_executable).expanduser().resolve(strict=True))
+        env["SCF_PLAYWRIGHT_PACKAGE"]=str(Path(args.playwright_package).expanduser().resolve(strict=True))
     examples=clinical/manifest["examplesDirectory"]
     for item in manifest["examples"]:
         raw=(examples/item["name"]).read_bytes()
@@ -88,23 +104,31 @@ try:
     jsonfile(output/"Source_Manifest.json",manifest)
     cli=[args.node,str(clinical/"cli.mjs"),"--python",sys.executable]
     original=work/"original-workspace"
-    initial=invoke(cli+["--workspace",str(original),"status" if args.resume_empty else "init"],env=env)
-    required(not initial["batches"] and not initial["prs"],"Original initialized workspace must be empty")
-    phase("original_empty_workspace_resumed" if args.resume_empty else "original_cli_initialized",revision=initial["revision"],lxml=lxml.etree.LXML_VERSION)
+    initial=invoke(cli+["--workspace",str(original),"status" if resuming else "init"],env=env)
+    if args.resume_receiving:
+        required(any(row["id"]==previous["batchId"] for row in initial["batches"]),"Original reviewed batch is absent from its restored owner")
+        phase("original_reviewed_workspace_resumed",batchId=previous["batchId"],revision=initial["revision"],lxml=lxml.etree.LXML_VERSION)
+    else:
+        required(not initial["batches"] and not initial["prs"],"Original initialized workspace must be empty")
+        phase("original_empty_workspace_resumed" if args.resume_empty else "original_cli_initialized",revision=initial["revision"],lxml=lxml.etree.LXML_VERSION)
     sys.path.insert(0,str(clinical))
     from clinical_workspace import Workspace
     from clinical_server import OperatorServer
     workspace=Workspace(original);server=OperatorServer(workspace,0);worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
-    browser_output=output/"browser";browser_output.mkdir(mode=0o700,exist_ok=args.resume_empty)
-    browser_entry=work/"browser-entry.mjs"
-    write(browser_entry,"import {runBatchReceiving} from "+json.dumps((HERE/"run-browser-receiving.mjs").as_uri())+";\nconst result=await runBatchReceiving(JSON.parse(process.env.BATCH_BROWSER_INPUT));\nprocess.stdout.write(JSON.stringify({passed:result.passed,batchId:result.batchId,exportId:result.export?.id})+'\\n');\n")
-    browser_env={**env,"BATCH_BROWSER_INPUT":json.dumps({"consoleUrl":server.url,"sourceRoot":str(source_root),"exampleDirectory":str(examples),"outputDirectory":str(browser_output)})}
-    browser=subprocess.run([args.node,str(browser_entry)],capture_output=True,text=True,env=browser_env,timeout=600)
-    report["browser"]=json.loads((browser_output/"browser-operation.json").read_text()) if (browser_output/"browser-operation.json").exists() else {}
-    required(browser.returncode==0,"Browser operation: "+browser.stderr[-4000:])
-    required(report["browser"].get("passed") is True,"Whole original browser operation must complete")
+    if not args.resume_receiving:
+        browser_output=output/"browser";browser_output.mkdir(mode=0o700,exist_ok=args.resume_empty)
+        browser_entry=work/"browser-entry.mjs"
+        write(browser_entry,"import {runBatchReceiving} from "+json.dumps((HERE/"run-browser-receiving.mjs").as_uri())+";\nconst result=await runBatchReceiving(JSON.parse(process.env.BATCH_BROWSER_INPUT));\nprocess.stdout.write(JSON.stringify({passed:result.passed,batchId:result.batchId,exportId:result.export?.id})+'\\n');\n")
+        browser_env={**env,"BATCH_BROWSER_INPUT":json.dumps({"consoleUrl":server.url,"sourceRoot":str(source_root),"exampleDirectory":str(examples),"outputDirectory":str(browser_output)})}
+        browser=subprocess.run([args.node,str(browser_entry)],capture_output=True,text=True,env=browser_env,timeout=600)
+        report["browser"]=json.loads((browser_output/"browser-operation.json").read_text()) if (browser_output/"browser-operation.json").exists() else {}
+        required(browser.returncode==0,"Browser operation: "+browser.stderr[-4000:])
+        required(report["browser"].get("passed") is True,"Whole original browser operation must complete")
     batch_id=report["browser"]["batchId"];batch=workspace.batch(batch_id)
     native_export=workspace.verify_batch_export(report["browser"]["export"]["id"]);declared={f["name"]:f for f in native_export["files"]}
+    if args.resume_receiving:
+        required(batch==previous["originalBatch"],"The original reviewed batch changed during receiving continuation")
+        required(native_export==previous["originalExport"],"The original declared batch export changed during receiving continuation")
     used=set()
     for entry in batch["entries"]:
         for kind,ident,record in workspace._batch_artifact_closure(entry):
@@ -112,8 +136,12 @@ try:
                 used.add(ident);required("prs/"+ident+".xml" in declared,"Export omitted an original/candidate XML")
     required(len(batch["entries"])==4 and len({e["inputDocumentId"] for e in batch["entries"]})==3,"Four references must preserve three original inputs")
     required(all(e["review"] for e in batch["entries"]),"Every reference requires its retained disposition")
-    portable=output/"Disclosure_Workspace.zip";workspace._portable(portable)
-    report.update({"batchId":batch_id,"originalExport":native_export,"originalBatch":batch})
+    portable=output/"Disclosure_Workspace.zip"
+    if args.resume_receiving:
+        expected=previous.get("portableSha256") or next((row["portableSha256"] for row in reversed(previous.get("phases",[])) if row.get("portableSha256")),None)
+        required(expected and portable.is_file() and sha(portable.read_bytes())==expected,"Use the exact retained portable workspace from the original browser operation")
+    else:workspace._portable(portable)
+    report.update({"batchId":batch_id,"originalExport":native_export,"originalBatch":batch,"portableSha256":sha(portable.read_bytes())})
     jsonfile(output/"Original_State.json",workspace.state())
     phase("whole_batch_source_closure",batchId=batch_id,exportId=native_export["id"],sourceDocuments=len(used),files=len(declared),summary=batch["summary"],portableSha256=sha(portable.read_bytes()))
     mcp_entry=work/"mcp-entry.mjs"

@@ -4,7 +4,7 @@ This command operates the original published PRS examples through the installed 
 
 ## Exact source and input
 
-Product source: `a1700f90b92fd7879a5ede18f11f9bfe1b24b92d` in `woahwhattheheck/public-commons-sprint-2026`.
+Product source: `a831ce7b6db5be2d38b10125d8bc4ef6c200f0b3` in `woahwhattheheck/public-commons-sprint-2026`.
 
 `batch-operator-source.json` declares the exact 64 source members used by this operation, including all 22 original PRS files. The runner checks their Git blob identities and byte lengths before opening a workspace. The adjacent `source-manifest.json` is the original 12-file MCP closure and its 43 advertised tool names.
 
@@ -55,3 +55,19 @@ Return the completed package, report and images to the existing ClaritiDox batch
 If the original CLI initialized the workspace but the browser stopped before retaining any XML, keep the same `--out` and `--work` paths and pass `--resume-empty`. The receiver reads the original status, requires empty PRS and batch inventories, and preserves the previous operation report by its exact SHA256 before resuming. It never initializes that directory again. A populated batch is continued through its existing retained actions instead of this pre-intake entrypoint. The browser opens the client-manifest section before filling it, and every completion or failure refreshes the closed original workspace backup.
 
 The closed original workspace backup retains its directory entries, including the empty source directories needed by the ordinary native CLI. When restoring an earlier pre-intake backup that omitted them, restore the original private `sources`, `plans`, `builds`, `comparisons` and `tmp` directories beside the unchanged workspace marker and database before `--resume-empty`.
+
+## Continue after the original browser completed
+
+Use `--resume-receiving` when the original browser report is complete and agent-based file receiving stopped before the customer CLI workspace was created. This continuation opens the same retained owner, checks the exact original batch and export, reuses the original portable workspace bytes, and continues only MCP file receiving and the ordinary customer CLI restore/reopen. Every XML input, candidate and review stays in its original record.
+
+Restore the complete saved output bundle to the selected private output directory and its `Original_Workspace_Backup.zip` to `OUT/work/original-workspace`. The existing report and portable workspace must remain at their original output filenames. The runner preserves the prior report by its SHA256 and refuses an already-created customer directory so that a later CLI interruption is reconciled through that directory's saved original actions.
+
+```sh
+python3 operations/scf-clinicaltrials-batch-receiving-20261012/run-receiving.py \
+  --source-root /path/to/pinned/repository-source \
+  --out /path/to/same/restored/disclosure-receiving \
+  --node /path/to/node \
+  --resume-receiving
+```
+
+This continuation requires no browser process or Playwright path. The original Clinical MCP client now uses the complete native JSON allowance for retained batch-entry context; all other client consumers retain their existing response limit. Full file downloads still verify the original length, SHA256 and manifest, then reopen the same received bytes.

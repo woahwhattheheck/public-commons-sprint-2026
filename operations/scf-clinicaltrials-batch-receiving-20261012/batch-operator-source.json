@@ -1,6 +1,6 @@
 {
   "schema": "stellar-forge.clinicaltrials-batch-operator-source.v1",
-  "sourceCommit": "a1700f90b92fd7879a5ede18f11f9bfe1b24b92d",
+  "sourceCommit": "a831ce7b6db5be2d38b10125d8bc4ef6c200f0b3",
   "files": [
     {
       "path": "stellar-forge/mcp-merchant-operator/catalog/clinicaltrials-workspace.mjs",
@@ -14,13 +14,15 @@
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/clinicaltrials-client.mjs",
-      "gitBlob": "255c9d6d651634a3d7a5a26843b5193f85c4d07c",
-      "bytes": 4280
+      "gitBlob": "680d48e4bdc9192bf51e43bf00754047c701a00a",
+      "bytes": 4537,
+      "sha256": "e8127a9e3203fe67043ea47c776e765dec56ac84af7c57a5476bf5727abce900"
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/clinicaltrials-workspace.mjs",
-      "gitBlob": "5f06ab79c82c8a592e51f1032fe211ef54b6f925",
-      "bytes": 41695
+      "gitBlob": "88d0e5a04e66d841243df1cb310f4bf5cbd97bbc",
+      "bytes": 41771,
+      "sha256": "54084af5d1ea70ff1405488b09933ae1a12a2ce215124442001b9af6cc9fc818"
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/host-files.mjs",
@@ -29,8 +31,9 @@
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/retained-download.mjs",
-      "gitBlob": "60d671158175d8d23e6e889069443d01c7c12ea2",
-      "bytes": 24911
+      "gitBlob": "82f568d16045877945d83f85c10e6b6a0dd86a6b",
+      "bytes": 28159,
+      "sha256": "3ed98b453944cd7a77d17c7a53b252c9a5898645054eabfbd368dc487f201fd4"
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs",
