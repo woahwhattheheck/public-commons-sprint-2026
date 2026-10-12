@@ -24,12 +24,20 @@ export interface DatasetteSelection {
 export interface DatasetteCapturedPage extends JsonObject {
   body: string;
   bodyEncoding?: 'base64';
-  requestedUrl: string;
-  responseUrl: string;
-  status: number;
-  headers: JsonObject | Array<[string, string]>;
-  startedAt: string;
-  completedAt: string;
+  requestedUrl?: string;
+  requested_url?: string;
+  responseUrl?: string;
+  response_url?: string;
+  status?: number | null;
+  headers?: JsonObject | Array<[string, string]>;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  retrievedAt?: string | null;
+  retrievalWindow?: { notBefore?: string; notAfter?: string; not_before?: string; not_after?: string };
+  providerReceipt?: JsonObject;
+  responseUrlBasis?: string;
+  originalReceipt?: JsonObject;
+  recovery?: JsonObject;
   sha256?: string;
   redirects?: JsonValue[];
 }
@@ -68,7 +76,7 @@ export interface DatasetteOperationInputs {
   'publisher.target': Record<string, never>;
   'publisher.plan': {
     title: string; query?: string; input?: JsonObject; dataset?: JsonObject;
-    extraction?: JsonObject; sourceHash?: string;
+    extraction?: JsonObject; sourceHash?: string; requestId?: string;
   };
   /** runId is the original UUID for this extraction, including continuation. */
   'publisher.extract': { planId: string | number; runId: string };
@@ -87,6 +95,12 @@ export interface DatasetteOperationInputs {
   };
   'source.export': { editionId: string; outputFile?: string };
   'source.receive': { archiveFile: string; sha256: string; directory?: string; id?: string };
+  'files.list': PageSelection & { prefix?: string };
+  'files.inspect': { path: string; sha256?: string };
+  'files.read': { path: string; sha256: string; offset?: number | string; limit?: number | string };
+  'workspace.export': { outputFile?: string };
+  'workspace.receive': { archiveFile: string; directory: string; sha256: string };
+  'operations.inspect': { operationId: string };
   'operations.cancel': { operationId: string };
 }
 export type DatasetteOperation = keyof DatasetteOperationInputs;
@@ -99,6 +113,66 @@ export interface DatasetteHealth extends JsonObject {
   directory?: string;
   pid?: number;
 }
+export interface DatasetteRetainedFile extends JsonObject {
+  schema: 'stellar-forge.datasette-retained-file.v1';
+  workspaceId: string;
+  path: string;
+  name: string;
+  /** Decimal byte count, preserving the original file identity. */
+  bytes: string;
+  sha256: string;
+  kind: string;
+  modifiedAt: string;
+}
+export interface DatasetteFilePage extends JsonObject {
+  workspaceId: string;
+  files: DatasetteRetainedFile[];
+  page: { offset: number; limit: number; total: number; next: number | null; previous: number | null };
+}
+export interface DatasetteFileChunk extends DatasetteRetainedFile {
+  offset: string;
+  length: string;
+  encoding: 'base64';
+  data: string;
+  complete: boolean;
+  nextOffset: string | null;
+}
+export interface DatasetteWorkspaceArchive extends JsonObject {
+  schema: 'stellar-forge.datasette-workspace-archive.v1';
+  workspaceId: string;
+  archiveFile: string;
+  bytes: string;
+  sha256: string;
+  manifestSha256: string;
+  snapshotSha256: string;
+  manifest: JsonObject;
+  reused: boolean;
+  retainedFile?: DatasetteRetainedFile;
+}
+export interface DatasetteWorkspaceReceiving extends JsonObject {
+  schema: 'stellar-forge.datasette-workspace-receiving.v1';
+  workspaceId: string;
+  directory: string;
+  archiveFile: string;
+  bytes: string;
+  sha256: string;
+  phase: 'COMPLETE';
+  originalArchive: string;
+  manifestFile: string;
+  preimagesDirectory: string;
+  relocations: JsonObject[];
+  reused: boolean;
+  manifest: JsonObject;
+}
+export interface DatasetteOperationResults {
+  'files.list': DatasetteFilePage;
+  'files.inspect': DatasetteRetainedFile;
+  'files.read': DatasetteFileChunk;
+  'workspace.export': DatasetteWorkspaceArchive;
+  'workspace.receive': DatasetteWorkspaceReceiving;
+}
+export type DatasetteOperationResult<K extends DatasetteOperation> =
+  K extends keyof DatasetteOperationResults ? DatasetteOperationResults[K] : JsonValue;
 export interface DatasetteRequestOptions { signal?: AbortSignal; }
 export interface DatasetteClientOptions {
   /** Original local HTTP workspace URL, or an explicitly supplied HTTPS origin. */
@@ -123,7 +197,7 @@ export interface DatasetteClient {
     operation: K,
     input: DatasetteOperationInputs[K],
     options?: DatasetteRequestOptions,
-  ): Promise<JsonValue>;
+  ): Promise<DatasetteOperationResult<K>>;
 }
 export interface DatasetteErrorContext {
   status?: number | null;
