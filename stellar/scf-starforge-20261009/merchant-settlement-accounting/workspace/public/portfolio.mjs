@@ -136,13 +136,41 @@ function saveDraft(scope,value){
  state.draftTimers.set(key,timer);
 }
 async function clearDraft(scope){if(state.storageReady){const key=draftKey('draft:'+scope);clearTimeout(state.draftTimers.get(key));state.draftTimers.delete(key);const pending=state.draftWrites.get(key);if(pending)await pending;await dbDelete(key);}}
+const pendingMatches=(left,right)=>Boolean(left&&right&&left.workspaceId===right.workspaceId&&left.id===right.id&&left.mode===right.mode&&left.route===right.route&&left.requestSha256===right.requestSha256&&left.commandSha256===right.commandSha256&&canonical(left.body)===canonical(right.body));
+let pendingChannel=null;
+try{if(typeof BroadcastChannel==='function')pendingChannel=new BroadcastChannel('merchant-accounting-portfolio-v1');}catch{}
+function announcePending(workspaceId){pendingChannel?.postMessage({workspaceId});}
+function pendingStore(value,remove=false){
+ return new Promise((resolve,reject)=>{
+  const tx=state.db.transaction('private','readwrite'),records=tx.objectStore('private'),key=value.workspaceId+'::pending',request=records.get(key);let selected;
+  request.onsuccess=()=>{
+   const existing=request.result?.value;
+   if(remove){if(pendingMatches(existing,value)){records.delete(key);selected=null;}else selected=existing||null;}
+   else if(existing&&!pendingMatches(existing,value))selected=existing;
+   else{selected=existing||value;records.put({key,value:selected});}
+  };
+  tx.oncomplete=()=>resolve(selected);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Private request storage was interrupted.'));
+ });
+}
 async function savePending(value){
  if(!state.storageReady)throw Error('Private request storage is unavailable.');
- await dbPut(draftKey('pending'),value);state.pending=value;renderPending();refreshWrites();
+ const selected=await pendingStore(value);
+ announcePending(value.workspaceId);
+ if(state.workspaceId===value.workspaceId){state.pending=selected;renderPending();refreshWrites();}
+ if(!pendingMatches(selected,value))throw Error('Another tab has already retained a different operation for this workspace. Reconcile that original request before preparing this change.');
+ if(state.workspaceId!==value.workspaceId)throw Error('The request is retained in its original workspace. Reopen that workspace to reconcile or replay it.');
 }
-async function clearPending(){
- await dbDelete(draftKey('pending'));state.pending=null;renderPending();refreshWrites();
+async function removePending(value){
+ const remaining=await pendingStore(value,true);announcePending(value.workspaceId);
+ if(state.workspaceId===value.workspaceId){state.pending=remaining;renderPending();refreshWrites();}
+ return remaining;
 }
+async function clearPending(){if(state.pending)await removePending(state.pending);}
+if(pendingChannel)pendingChannel.onmessage=event=>{
+ const workspaceId=event.data?.workspaceId;
+ if(!state.storageReady||!workspaceId||workspaceId!==state.workspaceId||state.busy)return;
+ dbGet(workspaceId+'::pending').then(value=>{if(state.workspaceId===workspaceId&&!state.busy){state.pending=value||null;renderPending();refreshWrites();}}).catch(error=>notice(error.message,true));
+};
 function setBusy(value){state.busy=value;document.body.setAttribute('aria-busy',String(value));refreshWrites();}
 function discardRenderedState(){
  for(const id of ['client-detail','plan-detail','command-detail','received-detail'])put(id,empty('Select an item from this workspace.'));
@@ -248,9 +276,9 @@ async function prepareMutation({type,route,fields,scope,title}){
 async function finishPending(pending,result){
  if(result.workspaceId&&result.workspaceId!==pending.workspaceId)throw Error('The saved result belongs to another coordinator workspace.');
  await dbPut(pending.workspaceId+'::result:'+pending.id,{pendingId:pending.id,at:new Date().toISOString(),result});
- await dbDelete(pending.workspaceId+'::pending');
- if(state.workspaceId!==pending.workspaceId||state.pending?.id!==pending.id)return;
- state.pending=null;renderPending();refreshWrites();
+ const owned=state.workspaceId===pending.workspaceId&&state.pending?.id===pending.id;
+ await removePending(pending);
+ if(!owned||state.workspaceId!==pending.workspaceId)return;
  if(pending.scope)await clearDraft(pending.scope);
  await refreshRoot();
  if(pending.type==='settings'){state.firmLoaded=false;await loadFirm();setView('firm');}
@@ -278,8 +306,8 @@ async function performPending(pending=state.pending){
   await finishPending(pending,value);
  }catch(error){
   if(error.applied===false){
-   await dbDelete(pending.workspaceId+'::pending');
-   if(state.workspaceId===pending.workspaceId&&state.pending?.id===pending.id){state.pending=null;renderPending();await refreshRoot();}
+   await removePending(pending);
+   if(state.workspaceId===pending.workspaceId)await refreshRoot();
    notice(error.message+' The original input is still available to correct and prepare again.',true);
   }else notice(error.message+' Keep this retained request and reconcile or replay its exact bytes.',true);
  }finally{setBusy(false);renderPending();}
