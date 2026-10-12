@@ -1,0 +1,3 @@
+id,title,description,reference_amount,currency,period,amount_scale,source_url
+fsu-example-financial-aid,Student Financial Aid Specialist,"Position and reference amount from the published market-pricing illustration on printed page 22. Production job-content matching requires the receiving job description.",38.6,USD,annual,1000,https://hr.fsu.edu/sites/default/files/PDF/Staff%20Pay%20Administration%20Guidelines.pdf
+

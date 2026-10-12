@@ -109,9 +109,19 @@ export interface Review {
   /** Original workspace chosen at preparation; its keys are not in application metadata. */
   readonly nativeWorkspace?: string;
 }
+export interface TransportCheckpointStatus {
+  schema: 'stellar-forge.sf88.attempt-wire.v1';
+  intentId: string; directory: string; state: string; writerActive: boolean;
+  sourceSha256?: string; configValueSha256?: string;
+  signingEntered?: boolean; signedDispatchRecorded?: boolean; signedResponseRecorded?: boolean;
+  records?: Record<string, {path:string; sha256:string; bytes:number; recordedAt:string}>;
+  response?: {status:number; headersSha256:string} | null;
+}
 export interface OperationStatus {
   intentId: string; directory: string; state: string;
   resultRecoverable: boolean; nativeStatus: unknown; deliveryStatus: string | null;
+  /** Read-only checkpoint projection; null for operations created before this feature. */
+  transportCheckpoint: TransportCheckpointStatus | null;
   /** Present after this prepared operation is assigned to an original inbox. */
   inboxDirectory?: string;
   nativeWorkspace?: string;
@@ -123,6 +133,7 @@ export interface NativeSummary extends JsonObject {
   status: unknown;
   httpStatus: number | null;
   requestTimeoutMs?: number;
+  transportCheckpoint?: TransportCheckpointStatus;
   responseFile?: { status: string; path?: string; bytes?: number; sha256?: string;
     stream?: BuyerStreamSummary; partialPath?: string; partialSha256?: string; [key: string]: unknown };
 }

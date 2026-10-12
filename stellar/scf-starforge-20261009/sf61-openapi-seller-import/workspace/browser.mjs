@@ -6,11 +6,12 @@ import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './s
 import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
 import { createPostmanPanel, mergePostmanMerchantPlan } from '/postman-browser.mjs';
 import { createTransportPanel, createTransportDelivery, appendTransportReview, renderTransportRuntime } from './transport-browser.mjs';
+import { createHarPanel, mergeHarMerchantPlan } from '/har-browser.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
 $('migration-link').href='/migrations/#'+token;
-let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null, transportPanel=null, transportDelivery=null, lastPreview=null;
+let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null, transportPanel=null, transportDelivery=null, lastPreview=null, harPanel=null, capturedSource=null;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
@@ -30,7 +31,7 @@ function available() {
   $('save').disabled=busy||!specText;
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
-  revisionDesk?.available(busy);connections?.available(busy);postmanPanel?.refresh(busy);
+  revisionDesk?.available(busy);connections?.available(busy);postmanPanel?.refresh(busy);harPanel?.refresh(busy);
   transportPanel?.available(busy);transportDelivery?.available(busy);
 }
 function dirty() {
@@ -128,6 +129,12 @@ postmanPanel=createPostmanPanel({container:$('postman-intake'),api,act,notice,
   async onSource(text,operations) {
     const current=mergePostmanMerchantPlan({currentSource:specText,source:text,currentPlan:planFromForm(),operations});
     await loadSource(text,current);
+  }});
+harPanel=createHarPanel({container:$('har-intake'),api,act,notice,token,
+  async onSource(prepared) {
+    const result=mergeHarMerchantPlan({currentSource:specText,currentPlan:planFromForm(),prepared});
+    await loadSource(prepared.specText,result.plan,prepared.capturedSource);
+    return result;
   }});
 connections=createOAuthConnections({container:$('oauth-connections'),make,field,selectField,api,act,notice,
   onChanged(values,changed){
@@ -270,13 +277,14 @@ function fillPlan(plan) {
   transportPanel.load(plan?.transports??{});
   drawRoutes(plan?.operations??[]);
 }
-async function loadSource(text,plan) {
+async function loadSource(text,plan,captured) {
   const info=await api('inspect',{specText:text});
-  specText=text;inspection=info;selectedPackage=null;
+  specText=text;inspection=info;selectedPackage=null;capturedSource=null;
   $('source-summary').replaceChildren(make('p',info.title+' · OpenAPI '+info.version+' · '+countLabel(info.operations.length,'operation')),
     make('p','Original source SHA256: '+info.sourceSha256,'hint wrap'));
   fillPlan(plan);dirty();available();
   await postmanPanel.reopen(text);
+  capturedSource=await harPanel.reopen(text,captured);
 }
 function preview(value) {
   lastPreview=value;
@@ -361,7 +369,7 @@ async function refresh() {
     }));$('packages').append(button);
   }
   if(!result.packages.length)$('packages').append(make('p','No saved projects yet.','small'));
-  $('output').textContent='Output: '+result.output;runtime(result.runtime);await revisionDesk.refresh();
+  $('output').textContent='Output: '+result.output;runtime(result.runtime);await revisionDesk.refresh();await harPanel.list();
 }
 $('file').addEventListener('change',()=>act(async()=>{
   const file=$('file').files[0];if(!file)return;
@@ -380,10 +388,10 @@ $('stream-example').addEventListener('click',()=>act(async()=>{
 $('configuration').addEventListener('input',dirty);
 $('routes').addEventListener('input',dirty);
 $('preview').addEventListener('click',()=>act(async()=>{
-  const result=await api('preview',{specText,plan:planFromForm()});preview(result);notice('Configuration accepted. Review the exact routes, then save a new package.');
+  const result=await api('preview',{specText,plan:planFromForm(),...(capturedSource?{capturedSource}:{})});preview(result);notice('Configuration accepted. Review the exact routes, then save a new package.');
 }));
 $('save').addEventListener('click',()=>act(async()=>{
-  const result=await api('save',{specText,plan:planFromForm(),name:$('package-name').value.trim()});
+  const result=await api('save',{specText,plan:planFromForm(),name:$('package-name').value.trim(),...(capturedSource?{capturedSource}:{})});
   preview(result.preview);await saved(result.name);$('saved-path').textContent='Saved to '+result.folder+'\n\nStart from a shell:\n'+result.command;$('saved-path').hidden=false;
   await refresh();notice('Saved '+result.name+'. The compiled seller and private configuration are ready.');
 }));
@@ -407,6 +415,11 @@ else act(async()=>{
     const retained=await api('migrations/source?project='+encodeURIComponent(migration)+'&ref='+encodeURIComponent(source));
     await loadSource(retained.content);
     notice('Loaded '+retained.metadata.name+' from migration '+migration+'. Select its routes and enter your merchant terms.');
+  } else if(selected.get('package')) {
+    const name=selected.get('package'),loaded=await api('load?name='+encodeURIComponent(name));
+    await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name,loaded);
+    $('package-name').value=loaded.name;
+    notice('Reopened '+loaded.name+'. Start its saved policy with the original seller controls.');
   } else notice('Ready. Load an OpenAPI description or reopen a saved project.');
 });
 setInterval(()=>{if(!busy&&token)api('status').then(runtime).catch(()=>{});},10000);
