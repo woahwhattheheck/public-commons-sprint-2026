@@ -4,11 +4,12 @@ The materializer receives the three exact public Audit Services references and t
 
 From this source directory:
 
-    python materialize_reference.py --reference /private/umich-reference \
+    python tools/materialize_reference.py --reference /private/umich-reference \
+      --contract reference/audit-domain-contract.json \
       --retained /existing/umich-audit-source-2d58 \
       --notice-directory /existing/umich-audit-source-7a2f
 
-Keep audit-domain-contract.json beside the script, or pass --contract with its exact retained path. Omit --retained on a receiving machine to fetch the three public URLs. --notice-directory is optional: it uses the already acquired event PDF and event-catalog.json, not another supplier login or source-request operation. Detailed Buyer Attachments, agreements, Attachment F and selected platform schemas join separately through the original source owner.
+The command names the bundled reference/audit-domain-contract.json explicitly; --contract may select another exact retained contract path. Omit --retained on a receiving machine to fetch the three public URLs. --notice-directory is optional: it uses the already acquired event PDF and event-catalog.json, not another supplier login or source-request operation. Detailed Buyer Attachments, agreements, Attachment F and selected platform schemas join separately through the original source owner.
 
 The function materialize(reference, retained=None, notice_directory=None, contract_file=None, refresh_public=False, timeout=30) is callable from an operator. It returns the acquisition identity, state, receipt path, selected count and any source errors. The process exits 0 for a complete original selection, 2 when source acquisition or edition review remains.
 
