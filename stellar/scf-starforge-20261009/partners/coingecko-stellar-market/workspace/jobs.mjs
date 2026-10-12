@@ -298,9 +298,11 @@ export class MarketJobs {
     const retained=original?await this.nativeFiles(original):[];
     let responseBytes=null,delivery=original?.outcome?.responseFile;
     if(delivery?.status==='SAVED'){
-      need(typeof delivery.destination==='string'&&typeof delivery.sha256==='string'&&Number.isSafeInteger(delivery.bytes),'ORIGINAL_DOWNLOAD_SUMMARY_REQUIRED');
-      need(delivery.destination===original.responseDestination,'NATIVE_RESPONSE_DESTINATION_CHANGED');
-      responseBytes=await trustedBytes(delivery.destination,LIMITS.responseBytes);
+      const responsePath=delivery.path??delivery.destination;
+      need(typeof responsePath==='string'&&typeof delivery.sha256==='string'&&Number.isSafeInteger(delivery.bytes),'ORIGINAL_DOWNLOAD_SUMMARY_REQUIRED');
+      need((delivery.path===undefined||delivery.destination===undefined||delivery.path===delivery.destination)&&
+        responsePath===original.responseDestination,'NATIVE_RESPONSE_DESTINATION_CHANGED');
+      responseBytes=await trustedBytes(responsePath,LIMITS.responseBytes);
       need(sha(responseBytes)===delivery.sha256&&responseBytes.length===delivery.bytes,'ORIGINAL_DOWNLOAD_HASH_MISMATCH');
     }
     return this.store.transaction(()=>{
