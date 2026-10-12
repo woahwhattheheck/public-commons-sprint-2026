@@ -18,6 +18,10 @@ import { previewStandardizedReview, saveStandardizedReview, readStandardizedRevi
 import { concentrationSourceGroups, prepareConcentrationChoices, concentrationReportForDocument,
   concentrationReportCsv } from './review-sheet/concentrations.mjs';
 
+import { acquireCommissioningSource, importCommissioningCapture, readCommissioningCapture, saveCommissioningSource, readCommissioningSource,
+  previewCommissioningReview, saveCommissioningReview, readCommissioningReview, listCommissioning,
+  compareCommissioningEditions, exportCommissioningReview, receiveCommissioningReview } from './kiwis/workflow.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATIC = new Map([['/', ['ui/index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['ui/app.mjs', 'text/javascript; charset=utf-8']],
@@ -25,7 +29,8 @@ const STATIC = new Map([['/', ['ui/index.html', 'text/html; charset=utf-8']],
   ['/openwaters.mjs', ['ui/openwaters.mjs', 'text/javascript; charset=utf-8']],
   ['/review-sheet.mjs', ['ui/review-sheet.mjs', 'text/javascript; charset=utf-8']],
   ['/concentrations.mjs', ['ui/concentrations.mjs', 'text/javascript; charset=utf-8']],
-  ['/standardized-analysis.mjs', ['ui/standardized-analysis.mjs', 'text/javascript; charset=utf-8']]]);
+  ['/standardized-analysis.mjs', ['ui/standardized-analysis.mjs', 'text/javascript; charset=utf-8']],
+  ['/kiwis.mjs', ['ui/kiwis.mjs', 'text/javascript; charset=utf-8']]]);
 const json = value => JSON.stringify(value, null, 2) + '\n';
 function fail(message, code = 'WQX_WORKSPACE_INVALID', status = 400) { throw Object.assign(new Error(message), { code, status }); }
 function sameToken(value, expected) {
@@ -45,7 +50,7 @@ async function body(request, limit = 2 * 1024 * 1024) {
 }
 function publicError(error) {
   return { code: error.code ?? 'WQX_OPERATION_FAILED',
-    message: typeof error.status === 'number' || error.code?.startsWith('WQX_') || error.code?.startsWith('WQX_')
+    message: typeof error.status === 'number' || error.code?.startsWith('WQX_') || error.code?.startsWith('KIWIS_')
       ? error.message : error.code === 'ENOENT' ? 'The original saved record is unavailable.' : 'The operation could not complete. Its saved input and retained source files remain available.',
     retryAt: error.retryAt ?? null, retryAfter: error.retryAfter ?? null };
 }
@@ -58,9 +63,9 @@ function plainRuntime(session, editionId) {
   return { running: Boolean(session), editionId: editionId ?? null, merchantUrl: session?.merchantUrl ?? session?.url ?? null,
     paths: session?.paths ?? null, mode: session?.mode ?? null, snapshot: typeof session?.snapshot === 'function' ? null : session?.snapshot ?? null };
 }
-export async function startWaterQualityWorkspace({ directory, port = 0, merchantPort = 0, nativeFactory, facilitator, allowLocalFacilitator = false, transport, buyer, env = process.env } = {}) {
+export async function startWaterQualityWorkspace({ directory, port = 0, merchantPort = 0, nativeFactory, facilitator, allowLocalFacilitator = false, transport, kiwisFetch, buyer, env = process.env } = {}) {
   const project = await openWaterQualityProject(resolve(directory), { transport, env });
-  const token = randomBytes(32).toString('hex'), jobs = new Map(), purchasePlans = new Map();
+  const token = randomBytes(32).toString('hex'), jobs = new Map(), purchasePlans = new Map(), kiwisCaptures = new Map();
   let origin, activeMerchant, activeEditionId, closing, stopping = false;
   let mutations = Promise.resolve();
   function serial(work) {
@@ -104,6 +109,18 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       if (request.method === 'GET' && path === '/api/status')
         return send(response, 200, { captures: await project.listCaptures(), runtime: plainRuntime(activeMerchant, activeEditionId),
           jobs: [...jobs.values()].map(({ promise, ...row }) => row) });
+      if (request.method === 'GET' && path === '/api/kiwis') return send(response, 200, await listCommissioning({ project }));
+      if (request.method === 'GET' && (match = /^\/api\/kiwis\/capture\/([A-Za-z0-9_-]+)$/.exec(path)))
+        return send(response, 200, await readCommissioningCapture({ project, sourceId: match[1] }));
+      if (request.method === 'GET' && (match = /^\/api\/kiwis\/source\/([A-Za-z0-9_-]+)$/.exec(path))) {
+        const {sourceId, source} = await readCommissioningSource({ project, sourceId: match[1] });
+        return send(response, 200, {sourceId, source});
+      }
+      if (request.method === 'GET' && (match = /^\/api\/kiwis\/review\/([A-Za-z0-9_-]+)(?:\/(bundle|review|decisions|observations|counterparts|correspondences|series|report))?$/.exec(path))) {
+        if (!match[2]) return send(response, 200, await readCommissioningReview({ project, reviewId: match[1] }));
+        const file = await exportCommissioningReview({ project, reviewId: match[1], format: match[2] });
+        return send(response, 200, file.bytes, file.mime, file.filename);
+      }
       if (request.method === 'GET' && path === '/api/standardized-analysis')
         return send(response, 200, await listStandardizedReviews({ project }));
       if (request.method === 'GET' && (match = /^\/api\/standardized-analysis\/([A-Za-z0-9_-]+)(?:\/(json|observations|observations-tsv|groups|changes|report|bundle))?$/.exec(path))) {
@@ -178,10 +195,28 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       if (request.method !== 'POST') fail('Workspace route not found.', 'WQX_ROUTE_NOT_FOUND', 404);
       if (!sameToken(request.headers['x-workspace-token'], token)) fail('Refresh the workspace before making a change.', 'WQX_TOKEN_MISMATCH', 403);
       const input = await body(request,
+        path.startsWith('/api/kiwis') ? 256 * 1024 * 1024 :
         path === '/api/standardized-analysis/receive' ? 128 * 1024 * 1024 :
         path.startsWith('/api/standardized-analysis') ? 1024 * 1024 :
         ['/api/open-waters/receive', '/api/review-sheets/receive'].includes(path) ? 128 * 1024 * 1024 :
         path.startsWith('/api/review-sheets') ? 64 * 1024 * 1024 : path === '/api/receive' ? 96 * 1024 * 1024 : undefined);
+      if (path === '/api/kiwis/acquire') {
+        if (stopping) fail('The workspace is closing.', 'WQX_WORKSPACE_CLOSED', 503);
+        const sourceId = operationId(input.sourceId), id = 'kiwis-' + sourceId;
+        if (kiwisCaptures.has(sourceId)) fail('This original source capture is already running.', 'KIWIS_OPERATION_ACTIVE', 409);
+        const controller = new AbortController(); kiwisCaptures.set(sourceId, controller);
+        return send(response, 202, startJob(id, async onProgress => {
+          try {
+            const capture = await acquireCommissioningSource({project, sourceId, selection:input.selection,
+              fetch:kiwisFetch, signal:controller.signal, onProgress});
+            return {sourceId, editionSha256:capture.editionSha256, responses: capture.responses.length};
+          } finally {kiwisCaptures.delete(sourceId);}
+        }));
+      }
+      if ((match = /^\/api\/kiwis\/capture\/([A-Za-z0-9_-]+)\/cancel$/.exec(path))) {
+        const controller = kiwisCaptures.get(match[1]); controller?.abort();
+        return send(response, 200, {sourceId:match[1], stopping:Boolean(controller)});
+      }
       if (path === '/api/captures') {
         const id = operationId(input.operationId ?? randomUUID());
         return send(response, 202, startJob(id, progress => project.acquire({ operationId: id, expectedRevision: input.expectedRevision, onProgress: progress })));
@@ -190,6 +225,17 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       if (path === '/api/analysis') return send(response, 200, await project.analyze(input));
       if (path === '/api/open-waters/preview') return send(response, 200, await project.previewOpenWaters(input));
       const result = await serial(async () => {
+        if (path === '/api/kiwis/import') return importCommissioningCapture({project,sourceId:input.sourceId,packet:input.packet});
+        if (path === '/api/kiwis/sources') {
+          if (input.capture && input.captureId) fail('Select one original capture file or saved capture name.', 'KIWIS_CAPTURE_SELECTION');
+          const capture = input.capture ?? await readCommissioningCapture({project, sourceId:input.captureId});
+          return saveCommissioningSource({project, sourceId:input.sourceId, capture, counterpart:input.counterpart});
+        }
+        if (path === '/api/kiwis/preview') return previewCommissioningReview({...input, project});
+        if (path === '/api/kiwis/reviews') return saveCommissioningReview({...input, project});
+        if (path === '/api/kiwis/compare') return compareCommissioningEditions({...input, project});
+        if (path === '/api/kiwis/receive') return receiveCommissioningReview({project, bundle:input.bundle});
+
         if (path === '/api/standardized-analysis/preview') return previewStandardizedReview({ ...input, project });
         if (path === '/api/standardized-analysis') return saveStandardizedReview({ ...input, project });
         if (path === '/api/standardized-analysis/receive') return receiveStandardizedReview({ project, bundle: input.bundle });
@@ -270,8 +316,10 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
   function close() {
     return closing ??= (async () => {
       stopping = true;
+      const captureWork = [...kiwisCaptures.keys()].map(sourceId => jobs.get('kiwis-' + sourceId)?.promise).filter(Boolean);
+      for (const controller of kiwisCaptures.values()) controller.abort();
       const closed = new Promise(done => { server.close(done); server.closeIdleConnections?.(); });
-      await mutations; await project.close();
+      await mutations; await Promise.allSettled(captureWork); await project.close();
       await Promise.allSettled([...jobs.values()].map(row => row.promise));
       await activeMerchant?.close(); activeMerchant = null;
       server.closeIdleConnections?.(); await closed; return { closed: true };

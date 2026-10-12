@@ -147,6 +147,9 @@ export async function openStellarRatingsWorkspace({directory,connections={},prof
   const native=typeof adapter.descriptor==='function'?adapter.descriptor():adapter.descriptor??adapter.describe?.();
   need(plain(native),'INVALID_NATIVE_SOURCE','The native adapter must expose its original source descriptor.');
   Object.assign(summary,{sourceScope:native.id??digest(jsonBytes(native)),nativeSource:clone(native),network:native.network??summary.network,projectId:native.projectId??summary.projectId,contracts:native.contracts??configuration.contracts??null});
+  // An absent optional project identity must stay absent, including before persistence.
+  // JSON persistence has always omitted it; normalizing here preserves original capture bindings.
+  if(summary.projectId===undefined)delete summary.projectId;
   connectionMap.set(alias,{summary,private:configuration,adapter});
  }
  let closed=false;

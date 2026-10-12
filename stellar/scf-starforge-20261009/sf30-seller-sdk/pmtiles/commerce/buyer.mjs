@@ -3,6 +3,7 @@ import {resolve,join,isAbsolute,sep} from 'node:path';
 import {privateDirectory,readBytes,readJson,exists,jsonBytes,writeBytes} from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import {Buyer} from '../../../sf88-operator-buyer-cli/node/client.mjs';
 import {ObjectDelivery} from '../../../sf88-operator-buyer-cli/node/object.mjs';
+import {accountingOptions} from '../../../sf88-operator-buyer-cli/node/session-accounting.mjs';
 import {selectObjectDescriptionBytes} from '../../../sf88-operator-buyer-cli/object-description.mjs';
 import {operation as originalBuyerOperation} from '../../../sf88-operator-buyer-cli/config.mjs';
 import {need,clone,digest,hash,identifier,rights,plain} from '../model.mjs';
@@ -206,6 +207,34 @@ export async function recoverOutputPurchase({buyer,directory,requestId,signal}){
     const progress=await value.acquisition.recover({signal});
     if(progress.status==='COMPLETE')return runSelectedPurchase(value,signal);
     return purchaseSummary(value.saved,progress);
+  });
+}
+async function purchaseAccounting({buyer,directory,requestId,input={},signal},action){
+  input=clone(input);
+  fields(input,['workspaceDirectory','offset','limit'],['workspaceDirectory']);
+  // Use the original range and workspace validation, including its 250-row ceiling.
+  const options=accountingOptions({...input,signal},action==='finalize');
+  const value=await purchaseFiles(buyer,directory,requestId);
+  return withNativeLease(join(value.root,'locks'),'purchase-mutate',async()=>{
+    signal?.throwIfAborted();await originalObjectBinding(value);
+    const accounting=await value.acquisition[action]({
+      workspaceDirectory:options.workspaceDirectory,offset:options.offset,limit:options.limit,signal});
+    return {...purchaseSummary(value.saved),accounting};
+  });
+}
+/** Read one unchanged original SF88/SF36 accounting range for this exact purchase. */
+export function inspectOutputPurchaseAccounting(options){return purchaseAccounting(options,'accounting');}
+/** Finalize one original range; repeated ranges use the native governor's idempotent finalizer. */
+export function finalizeOutputPurchaseAccounting(options){return purchaseAccounting(options,'finalize');}
+/** Recover the original command's complete output without launching a native process or payment. */
+export async function recoverOutputPurchaseAccounting({buyer,directory,requestId,input={},signal}){
+  input=clone(input);fields(input,['commandId']);
+  if(input.commandId!==undefined)need(typeof input.commandId==='string'&&
+    /^(accounting|finalize)-[A-Za-z0-9]{6}$/.test(input.commandId),'PMTILES_OUTPUT_ACCOUNTING_COMMAND_INVALID');
+  const value=await purchaseFiles(buyer,directory,requestId);
+  return withNativeLease(join(value.root,'locks'),'purchase-mutate',async()=>{
+    signal?.throwIfAborted();await originalObjectBinding(value);
+    return {...purchaseSummary(value.saved),accounting:await value.acquisition.recoverAccounting(input)};
   });
 }
 async function selectedDelivery(buyer,directory,requestId,signal){

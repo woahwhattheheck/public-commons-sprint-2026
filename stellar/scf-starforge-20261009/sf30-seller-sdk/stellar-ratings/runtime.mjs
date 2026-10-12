@@ -230,12 +230,25 @@ function registryOriginal(value,bytes) {
     fail('RUNTIME_PUBLISHER_SOURCE_MISMATCH');
   return value;
 }
+function originalPackageField(metadata,name) {
+  const value=metadata[name]??null;
+  if(name!=='bin'||value===null)return value;
+  const entries=typeof value==='string'?{[metadata.name.split('/').at(-1)]:value}:value;
+  if(!object(entries))return value;
+  return Object.fromEntries(Object.entries(entries).map(([command,target])=>{
+    if(typeof target!=='string')fail('RUNTIME_ORIGINAL_PACKAGE_DECLARATION_CHANGED',{field:'bin'});
+    const normalized=path.posix.normalize(target.replace(/\\/g,'/'));
+    if(normalized==='.'||normalized==='..'||normalized.startsWith('../')||path.posix.isAbsolute(normalized))
+      fail('RUNTIME_ORIGINAL_PACKAGE_DECLARATION_CHANGED',{field:'bin'});
+    return [command,normalized];
+  }));
+}
 function requireOriginalSDK(metadata,registry) {
   if(metadata.name!==SDK_NATIVE||metadata.version!==SDK_VERSION)
     fail('RATINGS_STELLAR_VERSION_MISMATCH',{expected:SDK_VERSION,actual:metadata.version??null});
   for(const name of ['dependencies','optionalDependencies','peerDependencies','peerDependenciesMeta','exports',
     'imports','main','module','type','types','engines','bin','license']) {
-    if(canonical(metadata[name]??null)!==canonical(registry[name]??null))
+    if(canonical(originalPackageField(metadata,name))!==canonical(originalPackageField(registry,name)))
       fail('RUNTIME_ORIGINAL_PACKAGE_DECLARATION_CHANGED',{field:name});
   }
 }

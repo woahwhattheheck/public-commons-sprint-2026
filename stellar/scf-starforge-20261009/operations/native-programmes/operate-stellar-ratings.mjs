@@ -1088,9 +1088,9 @@ if(received&&!received.error){
   for(const row of captureRows){
    const original=originalState.captures[row.id];need(original,'The receiving capture was not in the selected original source.');
    need(canonical(row.nextRead)===canonical(original.nextRead),'Receiving changed an original native continuation.',{captureId:row.id});
-   if(original.status!=='COMPLETE')need(row.paused===true||row.status==='PAUSED','An unfinished received capture retained active ownership.',{captureId:row.id});
+   if(!['COMPLETE','CANCELED'].includes(original.status))need(row.paused===true||row.status==='PAUSED','An unfinished received capture retained active ownership.',{captureId:row.id});
   }
-  for(const row of runRows)if(!['COMPLETE','PARTIAL'].includes(originalState.runs[row.id]?.status))
+  for(const row of runRows)if(!['COMPLETE','CANCELED','PARTIAL'].includes(originalState.runs[row.id]?.status))
    need(row.paused===true||row.status==='PAUSED','An unfinished received review retained active ownership.',{runId:row.id});
   return {workspaceId:selected.workspaceId,revision:selected.revision,sourceIds:sources.map(row=>row.id),editionIds:editions.map(row=>row.id),
    captures:captureRows.map(row=>({id:row.id,status:row.status,paused:row.paused,nextRead:row.nextRead})),
