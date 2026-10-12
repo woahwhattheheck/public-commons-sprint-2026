@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "healthcare-interoperability-product",
+  "description": "Complete installed FHIR exports and eLTSS Care Plans product and customer receiving.",
+  "components": [
+    "products/healthcare-interoperability"
+  ]
+}

@@ -112,7 +112,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   for (const path of [...specificationPaths, 'LICENSE'])
     if (!byPath.has(path)) throw new TypeError('Missing original distribution input: ' + path);
   const initial = source.readFiles([...specificationPaths.map(path => byPath.get(path)), byPath.get('LICENSE')]);
-  const distribution = composeDistribution({ base: JSON.parse(initial.get(distributionPath)),
+  const base = JSON.parse(initial.get(distributionPath));
+  const distribution = composeDistribution({ base,
     contributions: selectedPaths.map(path => ({ path, data: JSON.parse(initial.get(path)) })), selection: recipe });
   const spec = distribution.spec;
   const product = productPackageMetadata(spec.product);
@@ -125,6 +126,9 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {}),
     ...(recipe ? [...required, ...Object.values(spec.runtimePackageManifests ?? {}),
       ...(spec.browserAssets ?? []).flatMap(entry => [entry.server, entry.manifest])] : [])]);
+  // A selected static import may need a production helper declared in the
+  // original base support inventory. Keep that declaration with its importer.
+  const declaredRuntime = new Set(base.supportFiles ?? []);
   const originalInputs = new Set([...specificationPaths, product.readme]);
   const selectionIncludes = path => !recipe || !(
     path.startsWith(contributionDirectory + '/') || path.startsWith(sourceSelectionDirectory + '/')) ||
@@ -169,7 +173,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const enqueue = (target, importer, discovered) => {
     if (names.has(target)) return;
     const item = byPath.get(target);
-    if (!item || excluded.has(target) || !selectionIncludes(target) || !isRuntimeFile(target, explicitRuntime.has(target))) {
+    if (!item || excluded.has(target) || !selectionIncludes(target) || !isRuntimeFile(target, explicitRuntime.has(target) || declaredRuntime.has(target))) {
       missingModules.push(importer + ' -> ' + target);
       return;
     }
