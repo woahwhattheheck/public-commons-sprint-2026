@@ -14,7 +14,7 @@ import { readReconciliationDecisions, appendReconciliationResult } from './recon
 const JSON_BYTES=value=>Buffer.from(JSON.stringify(value,null,2)+'\n');
 const SOURCE_LIMIT=16777216,DECISION_LIMIT=4194304;
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
-function request(input){
+export function normalizeLaboratoryRequest(input){
   const keys=['profile','reviewName','expectedSourceSha256','encoding','decisionFormat','tableScope','tableFields','baselineProfile','baselineEncoding','expectedBaselineSha256','baselineDecisionFormat','reconciliationFormat','$files'];
   if(!plain(input)||Object.keys(input).some(key=>!keys.includes(key))||
     typeof input.profile!=='string'||typeof input.reviewName!=='string'||!/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(input.reviewName))
@@ -97,7 +97,7 @@ function guide(manifest){
   ].join('\n');
 }
 export async function laboratoryReview(input,context){
-  request(input);
+  normalizeLaboratoryRequest(input);
   if(!context?.files||!context.signal||typeof context.jobId!=='string')labError('RECEIVER','Use the original sealed-file application receiver.');
   const profile=labProfile(input.profile),signal=context.signal,descriptors=context.files.list();
   signal.throwIfAborted();
