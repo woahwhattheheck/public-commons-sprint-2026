@@ -78,11 +78,12 @@ try {
   const { downloadGrpcExport } = await imported(merchantPath + 'grpc-workspace-download.mjs');
   const { grpcCanonical } = await imported(merchantPath + 'grpc-workspace-export.mjs');
   const { validateBazaarExtension } = await imported('stellar-forge/payment-auto-catalog/schema-validation.mjs');
+  const { readGrpcPrepared } = await imported(nativePath + 'prepare.mjs');
   const environment = { ...process.env, GRPC_DEMO_AUTHORIZATION: randomBytes(24).toString('hex'),
     GRPC_AGENT_MCP_TOKEN: randomBytes(32).toString('hex') };
   report.sourceFiles = {};
   for (const path of [nativePath + 'examples/server.mjs', nativePath + 'workspace/model.mjs', nativePath + 'workspace/server.mjs', nativePath + 'prepare.mjs',
-    'stellar-forge/payment-auto-catalog/schema-validation.mjs',
+    'stellar-forge/payment-auto-catalog/schema-validation.mjs', 'experiments/grpc-merchant-agent-20261012-9b23.mjs',
     merchantPath + 'grpc-workspace.mjs', merchantPath + 'grpc-workspace-export.mjs', merchantPath + 'grpc-workspace-download.mjs',
     merchantPath + 'operator.mjs', merchantPath + 'config.mjs', merchantPath + 'serve.mjs'])
     report.sourceFiles[path] = sha(await readFile(join(sourceRoot, path)));
@@ -258,9 +259,20 @@ try {
     await call('prepare', { revision: first.revision, operationId: ids.firstPreparation });
     await call('checkout', { revision: second.revision, baseRevision: first.revision });
     const suffix = report.runId.slice(0, 8), one = 'grpc-agent-a-' + suffix, two = 'grpc-agent-b-' + suffix;
-    await call('stage', { preparation: ids.firstPreparation, releaseId: one });
-    await call('stage', { preparation: ids.secondPreparation, releaseId: two });
     await call('release_open');
+    for (const [preparation, releaseId] of [[ids.firstPreparation, one], [ids.secondPreparation, two]]) {
+      const status = await call('release_status'), retained = status.releases.find(row => row.id === releaseId);
+      if (!retained) await call('stage', { preparation, releaseId });
+      else {
+        const { manifest } = await readGrpcPrepared(join(out, 'source-workspace', 'prepared', preparation));
+        requireValue(retained.source.kind === 'GRPC_MERCHANT_PACKAGE' &&
+          retained.source.protoSha256 === manifest.protoSha256 &&
+          retained.source.sourceConfigSha256 === manifest.files['source.json'].sha256 &&
+          retained.source.planSha256 === manifest.files['merchant-plan.json'].sha256 &&
+          retained.source.bindingsSha256 === manifest.files['bindings.json'].sha256,
+          'The retained release differs from its original native preparation.');
+      }
+    }
     await call('release_diff', { from: one, to: two });
     const operate = async (action, values) => {
       const status = await call('release_status');
