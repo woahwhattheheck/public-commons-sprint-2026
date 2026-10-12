@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { readPrivate, fault } from '../../postgres/publisher/files.mjs';
 
 const staticRoot = fileURLToPath(new URL('./static/', import.meta.url));
+const receivingGuideFile = new URL('../publisher/RECEIVING.md', import.meta.url);
 const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
@@ -176,6 +177,23 @@ export async function startOpendatasoftServer({
         if (parts[0] === 'buyer-requests' && parts[2] === 'download' && parts.length === 3) {
           const entry = item(workbench, 'buyerRequests', parts[1]);
           return download(response, await readPrivate(entry.out, 1048576), 'application/json; charset=utf-8', 'opendatasoft-buyer-' + entry.id + '.json');
+        }
+        if (parts[0] === 'exports' && parts[2] === 'guide' && parts.length === 3) {
+          const entry = item(workbench, 'exports', parts[1]);
+          const guide = await readFile(receivingGuideFile);
+          const binding = {
+            manifestSha256: entry.manifestSha256, handlerSha256: entry.handlerSha256,
+            resource: entry.resource, snapshot: entry.dataset?.snapshot, rowCount: entry.dataset?.rowCount,
+            capture: {
+              catalogOrigin: entry.capture?.catalogOrigin, datasetId: entry.capture?.datasetId,
+              datasetUid: entry.capture?.datasetUid, manifestSha256: entry.capture?.manifestSha256,
+            },
+          };
+          const companion = Buffer.from('\n## Selected package for this companion\n\n' +
+            'Use these identities when receiving this retained package. The manifest SHA-256 is the value for ODS_MANIFEST_SHA256.\n\n' +
+            '~~~json\n' + JSON.stringify(binding, null, 2) + '\n~~~\n');
+          return download(response, Buffer.concat([guide, companion]), 'text/markdown; charset=utf-8',
+            'opendatasoft-receiving-' + entry.id + '.md');
         }
         if (parts[0] === 'exports' && parts[2] === 'download' && parts.length === 3)
           return archive(response, item(workbench, 'exports', parts[1]), children);
