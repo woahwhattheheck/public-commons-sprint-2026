@@ -75,6 +75,24 @@ def sync_directory(path):
         os.close(descriptor)
 
 
+def durable_directory(path):
+    """Persist each newly created directory entry before its first checkpoint."""
+    path = Path(path)
+    missing, cursor = [], path
+    while not cursor.exists():
+        missing.append(cursor)
+        cursor = cursor.parent
+    require(cursor.is_dir(), "PRESCIENT_PRIVATE_ROOT_INVALID")
+    for directory in reversed(missing):
+        try:
+            directory.mkdir(mode=0o700)
+        except FileExistsError:
+            require(directory.is_dir(), "PRESCIENT_PRIVATE_ROOT_INVALID")
+        sync_directory(directory)
+        sync_directory(directory.parent)
+    require(path.is_dir(), "PRESCIENT_PRIVATE_ROOT_INVALID")
+
+
 def write_json(path, value):
     path = Path(path)
     temporary = path.with_name(path.name + ".tmp")
@@ -103,6 +121,8 @@ def normalize_config(config):
     require(isinstance(config, dict), "PRESCIENT_CONFIGURATION_REQUIRED")
     result = dict(config)
     require(result.get("authMode") in ("api-key", "oauth"), "PRESCIENT_AUTH_MODE_REQUIRED")
+    require(result.get("expectedIdentityProvider") is None or result["expectedIdentityProvider"] in ("microsoft", "google"),
+            "PRESCIENT_IDENTITY_PROVIDER_INVALID")
     endpoint = result.get("expectedEndpoint")
     origin(endpoint)
     require(isinstance(result.get("allowedOrigins"), list) and result["allowedOrigins"],
@@ -153,6 +173,9 @@ class PrescientSession:
                 "PRESCIENT_EFFECTIVE_ENDPOINT_MISMATCH")
         require(bool(self.settings.prescient_api_key) == (config["authMode"] == "api-key"),
                 "PRESCIENT_EFFECTIVE_AUTH_MODE_MISMATCH")
+        provider = self.settings.prescient_auth_provider if config["authMode"] == "oauth" else None
+        require(config["authMode"] != "oauth" or config.get("expectedIdentityProvider") is None
+                or provider == config["expectedIdentityProvider"], "PRESCIENT_EFFECTIVE_IDENTITY_PROVIDER_MISMATCH")
         require(origin(self.client.stac_catalog_url) in config["allowedOrigins"],
                 "PRESCIENT_CATALOG_ORIGIN_NOT_APPROVED")
         self.expiration, self.native_session, self.generation = None, None, 0
@@ -165,7 +188,7 @@ class PrescientSession:
             "schema": "prescient-sdk-runtime/v1", "sdkCommit": SDK_COMMIT,
             "sdkSourceHashes": SDK_HASHES, "installedVersion": version,
             "endpoint": config["expectedEndpoint"], "catalogUrl": self.client.stac_catalog_url,
-            "authMode": config["authMode"], "allowedOrigins": config["allowedOrigins"],
+            "authMode": config["authMode"], "identityProvider": provider, "allowedOrigins": config["allowedOrigins"],
         }
 
     def _discard_session(self):
@@ -348,7 +371,7 @@ class S3Receiver:
         identity = hashlib.sha256(canonical({"schema": "prescient-s3-operation/v1",
                     "workspaceId": selection["workspaceId"], "operationId": selection["operationId"]})).hexdigest()
         spool = Path(self.config["receivingRoot"]) / identity
-        spool.mkdir(mode=0o700, parents=True, exist_ok=True)
+        durable_directory(spool)
         lock = os.open(spool / "receive.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         try:
             try:
@@ -398,6 +421,7 @@ class S3Receiver:
             if journal["phase"] == "COMPLETE":
                 require(digest_file(complete) == (journal["bytes"], journal["sha256"]),
                         "PRESCIENT_RETAINED_ASSET_CHANGED")
+                sync_directory(spool)
                 return self._publish(complete, destination, journal["record"], identity)
             # Every byte is already committed. Recover rename/journal/reply
             # interruptions offline, including an unavailable source or identity.
@@ -529,6 +553,8 @@ class S3Receiver:
             require(json.loads(receipt_path.read_text()) == record["prescient"], "PRESCIENT_CAPTURE_RECEIPT_CONFLICT")
         else:
             write_json(receipt_path, record["prescient"])
+        # Recovery may find both entries after a killed rename-before-fsync.
+        sync_directory(destination)
         return record
 
 
