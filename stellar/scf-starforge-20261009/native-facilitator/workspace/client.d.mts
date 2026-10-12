@@ -94,8 +94,10 @@ export interface NativeCatalogExportMetadata {
 export interface NativeCatalogExport extends NativeCatalogExportMetadata {
   resources:NativeDiscoveryResource[]; resourceCount:number; pages:number;
 }
-export interface NativeCatalogReceiving {
+export interface NativeCatalogCompletion {
   metadata:NativeCatalogExportMetadata; resourceCount:number; pages:number;
+}
+export interface NativeCatalogReceiving extends NativeCatalogCompletion {
   /** Complete UTF-8 JSON content, assembled only after the original final page arrives. */
   parts:string[];
 }
@@ -105,6 +107,10 @@ export interface NativeCatalogProgress {
 export interface RequestOptions {signal?:AbortSignal}
 export interface CatalogReceivingOptions extends RequestOptions {
   onProgress?:(progress:NativeCatalogProgress) => void | Promise<void>;
+}
+export interface CatalogStreamingOptions extends CatalogReceivingOptions {
+  /** A page is accepted only after its entire UTF-8 JSON fragment has been written. */
+  write:(part:string) => void | Promise<void>;
 }
 export type NativeProbeSelection = {runtimeId:string} | {name:string; sha256:string};
 
@@ -116,7 +122,7 @@ export class NativeOperatorError extends Error {
 export interface NativeOperatorClient {
   readonly origin:string;
   status(options?:RequestOptions):Promise<NativeOperatorStatus>;
-  profiles(options?:RequestOptions & {after?:string}):Promise<NativeProfilePage>;
+  profiles(options?:RequestOptions & {after?:string; limit?:number}):Promise<NativeProfilePage>;
   profile(name:string, options?:RequestOptions):Promise<NativeProfile>;
   /** Retains the exact canonical bytes of the selected original JSON file. */
   downloadProfile(selection:{name:string; sha256:string}, options?:RequestOptions):Promise<string>;
@@ -132,6 +138,8 @@ export interface NativeOperatorClient {
   catalog(selection:NativeCatalogSelection, options?:RequestOptions):Promise<NativeCatalogPage>;
   exportCatalog(selection:NativeCatalogSelection, options?:CatalogReceivingOptions):Promise<NativeCatalogExport>;
   receiveCatalog(selection:NativeCatalogSelection, options?:CatalogReceivingOptions):Promise<NativeCatalogReceiving>;
+  /** Streams verified original pages; publish the receiving file only after completion. */
+  streamCatalog(selection:NativeCatalogSelection, options:CatalogStreamingOptions):Promise<NativeCatalogCompletion>;
 }
 export function createNativeOperatorClient(options:{
   /** Printed original loopback operator URL, including its token fragment. */
