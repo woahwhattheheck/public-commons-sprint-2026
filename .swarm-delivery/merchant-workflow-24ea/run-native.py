@@ -17,6 +17,12 @@ import uuid
 PACKET_SHA256 = "b7d01eb49ade2b2fee84e6f9afcf52992c48eda59ece387989bf04ac2af2982e"
 SOURCE_COMMIT = "ce592daecb3865d0d2395764991ab8e276f2df5f"
 OPERATION = "ASTRA-24EA-MERCHANT-WORKFLOW-20261012"
+SOURCE_ASSET_BLOBS = {
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/index.html": "684a401e4d23d6e49847ec4909d7cae9275b9b1c",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/browser.mjs": "fb09624f2ca813ece875cfd2546cc449a7321f1e",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/style.css": "1651243b074251cb0148571880cbd4abde4b9b5b",
+    "stellar/scf-starforge-20261009/sf82-seller-pilot/release-client.mjs": "ae886744fbb4a4e72d3aa1a39c554422be89e47e",
+}
 
 
 def echo(text):
@@ -92,6 +98,29 @@ def executable(value):
     return path
 
 
+def read_source_assets(path):
+    """Retain the exact original runtime closure beside the immutable 497-file packet."""
+    raw = Path(path).read_bytes()
+    value = json.loads(raw)
+    if (not isinstance(value, dict)
+            or set(value) != {"schema", "operationId", "authoredCommit", "files", "file_blobs"}
+            or value.get("schema") != "commons.original-native-source-additions.v1"
+            or value.get("operationId") != OPERATION
+            or value.get("authoredCommit") != SOURCE_COMMIT
+            or value.get("file_blobs") != SOURCE_ASSET_BLOBS
+            or not isinstance(value.get("files"), dict)
+            or set(value["files"]) != set(SOURCE_ASSET_BLOBS)):
+        raise RuntimeError("The original Workflow and Recipes source assets differ")
+    for name, content in value["files"].items():
+        if not isinstance(content, str):
+            raise RuntimeError("The original source asset must contain complete UTF-8 text: " + name)
+        data = content.encode("utf-8")
+        observed = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        if observed != SOURCE_ASSET_BLOBS[name]:
+            raise RuntimeError("Original source asset blob mismatch " + name)
+    return value, hashlib.sha256(raw).hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", required=True, help="Original persistent native case/checkpoint directory.")
@@ -101,6 +130,8 @@ def main():
     parser.add_argument("--playwright-module", required=True, help="Installed Playwright JavaScript module.")
     parser.add_argument("--node-modules", required=True, help="Existing application dependency directory.")
     parser.add_argument("--source-packet", default="-", help="Exact source-map.json file; '-' reads its bytes from stdin.")
+    parser.add_argument("--source-assets", default=str(Path(__file__).with_name("source-assets.json")),
+                        help="Exact companion with the original Developer Portal assets and customer archive reader.")
     parser.add_argument("--inspect", action="store_true", help="Read the original native checkpoint/result without writing or launching.")
     args = parser.parse_args()
     packet_bytes = sys.stdin.buffer.read() if args.source_packet == "-" else Path(args.source_packet).read_bytes()
@@ -111,6 +142,11 @@ def main():
         raise RuntimeError("Unexpected Workflow and Recipes receiving source")
     if set(packet["files"]) != set(packet["file_blobs"]):
         raise RuntimeError("The complete source and original blob index differ")
+    additions, additions_sha256 = read_source_assets(args.source_assets)
+    if set(packet["files"]) & set(additions["files"]):
+        raise RuntimeError("Source additions must not replace any original packet file")
+    source_files = {**packet["files"], **additions["files"]}
+    source_blobs = {**packet["file_blobs"], **additions["file_blobs"]}
 
     root = Path(args.work_dir).expanduser().resolve()
     source = root / "source"
@@ -136,7 +172,9 @@ def main():
         key: owner["value"].get(key) for key in
         ("attemptId", "host", "phase", "pid", "processStart", "controllerPid", "controllerProcessStart", "startedAt", "finishedAt")}
     emit({"event": "workflow-existing-native-read", "operationId": OPERATION,
-          "directory": str(native), "records": existing, "active": owner_summary, "nativeChildStarted": False})
+          "directory": str(native), "records": existing, "active": owner_summary,
+          "sourcePacketFiles": len(packet["files"]), "sourceAssetFiles": len(additions["files"]),
+          "sourceFiles": len(source_files), "nativeChildStarted": False})
     if args.inspect:
         return 0
 
@@ -173,13 +211,13 @@ def main():
             if (current["sha256"] if current else None) != selected_records.get(str(path)):
                 raise RuntimeError("The original Workflow and Recipes checkpoint changed during receiving selection")
 
-        for name, content in packet["files"].items():
+        for name, content in source_files.items():
             parts = PurePosixPath(name)
             if parts.is_absolute() or ".." in parts.parts or "\\" in name:
                 raise RuntimeError("Unsafe source path")
             data = content.encode("utf-8")
             observed = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
-            if observed != packet["file_blobs"][name]:
+            if observed != source_blobs[name]:
                 raise RuntimeError("Source blob mismatch " + name)
             target = source.joinpath(*parts.parts)
             if not target.resolve().is_relative_to(source) or target.is_symlink():
@@ -192,7 +230,7 @@ def main():
                 write_bytes(target, data)
 
         entry = source / packet["nativeEntry"]
-        if packet["nativeEntry"] not in packet["files"] or not entry.is_file():
+        if packet["nativeEntry"] not in source_files or not entry.is_file():
             raise RuntimeError("The original native entrypoint is absent")
         modules = source / "node_modules"
         if modules.exists() or modules.is_symlink():
@@ -225,7 +263,9 @@ def main():
 
         selection = {
             "operationId": OPERATION, "commit": SOURCE_COMMIT, "packetSha256": PACKET_SHA256,
-            "source": str(source), "native": str(native), "files": packet["file_blobs"],
+            "source": str(source), "native": str(native), "files": source_blobs,
+            "sourcePacketFiles": len(packet["files"]),
+            "sourceAssets": {"sha256": additions_sha256, "files": additions["file_blobs"]},
             "browserProfile": str(browser_link.resolve()),
             "runtime": {"node": str(node), "chromium": str(chromium),
                         "playwrightModule": str(playwright), "nodeModules": str(deps)},
@@ -240,15 +280,22 @@ def main():
                     raise RuntimeError("The existing runtime custody selects a different original source")
                 if value.get("packetSha256") not in (None, PACKET_SHA256):
                     raise RuntimeError("The existing runtime custody selects different original packet bytes")
-                if value.get("files") not in (None, packet["file_blobs"]):
+                prior_files = value.get("files")
+                if prior_files not in (None, source_blobs, packet["file_blobs"]):
                     raise RuntimeError("The existing runtime custody contains a different original file index")
+                if prior_files == packet["file_blobs"]:
+                    # All 501 actual files were verified above. Preserve the original
+                    # packet and operation while completing its runtime source closure.
+                    selection.setdefault("adoptedSourceClosure", []).append({
+                        "path": str(path), "sha256": prior["sha256"],
+                        "originalFiles": len(packet["files"]), "verifiedFiles": len(source_files)})
                 if value.get("packetSha256") is None:
-                    # All 497 actual source bytes above have already matched the retained blob map.
+                    # All actual source bytes above have already matched the retained blob map.
                     selection.setdefault("adoptedCustody", []).append({
-                        "path": str(path), "sha256": prior["sha256"], "verifiedFiles": len(packet["files"])})
+                        "path": str(path), "sha256": prior["sha256"], "verifiedFiles": len(source_files)})
         write_json(root / "source-selection.json", selection)
         write_json(native / "runtime-custody.json", {key: value for key, value in selection.items() if key != "files"})
-        emit({"event": "workflow-source-ready", "commit": SOURCE_COMMIT, "files": len(packet["files"]),
+        emit({"event": "workflow-source-ready", "commit": SOURCE_COMMIT, "files": len(source_files),
               "native": str(native), "sharedFreeBytes": shutil.disk_usage(native).free,
               "sourceFreeBytes": shutil.disk_usage(source).free})
         argv = [str(node), str(entry), "--directory", str(native), "--source-commit", SOURCE_COMMIT,
@@ -260,7 +307,7 @@ def main():
             "host": host_identity, "work": str(root), "directory": str(native),
             "startedAt": now(), "phase": "STARTING",
             "controllerPid": os.getpid(), "controllerProcessStart": process_start(os.getpid()),
-            "argv": argv, "packetSha256": PACKET_SHA256, "files": len(packet["files"]),
+            "argv": argv, "packetSha256": PACKET_SHA256, "sourceAssetsSha256": additions_sha256, "files": len(source_files),
         }
         write_json(active_path, active)
         log = native / "workflow-recipes-native-output.log"
