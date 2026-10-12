@@ -1,6 +1,6 @@
 // MIT. Ruby customer continuation of the ORIGINAL five-file JS seller export.
 import { constants } from 'node:fs';
-import { readFile, open, lstat, mkdir, link, unlink } from 'node:fs/promises';
+import { readFile, open, lstat, mkdir, link, unlink, realpath } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
@@ -8,9 +8,8 @@ import { exportSellerClient, inspectSellerClientExport, readSellerClientFile,
   CLIENT_EXPORT_MANIFEST, CLIENT_EXPORT_FILES } from '../client-export.mjs';
 
 export const RUBY_CLIENT_MANIFEST = 'ruby-client.json';
-export const RUBY_CLIENT_FILES = Object.freeze(['seller_client.rb', 'seller_client.rbs',
-  'seller-client-bridge.mjs', 'seller-buyer-bridge.mjs', 'seller-contract.json',
-  'rails_receiving.rb', 'customer.rb', 'RUBY.md']);
+export const LEGACY_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","seller-client-bridge.mjs","seller-buyer-bridge.mjs","seller-contract.json","rails_receiving.rb","customer.rb","RUBY.md"]);
+export const RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","seller-client-bridge.mjs","seller-buyer-bridge.mjs","seller-contract.json","rails_receiving.rb","customer.rb","RUBY.md","seller-dataset-bridge.mjs","dataset_delivery.rb","dataset_receiving.rb","dataset_customer.rb","rails_dataset.rb","DATASETS.md","examples/dataset_lifecycle.rb","examples/rails_dataset/create_dataset_import_tables.rb","examples/rails_dataset/models.rb","examples/rails_dataset/import_dataset_job.rb","examples/rails_dataset/commission.rb","examples/rails_dataset/mapping.json","examples/rails_dataset/README.md"]);
 const SCHEMA = 'stellar-forge.ruby-seller-client.v1';
 const LIMIT = 64 * 1024 * 1024;
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -26,15 +25,32 @@ const USAGE = `Original Ruby customer package:
 The same commands work with: node developer/ruby-client/export.mjs ...
 Request construction delegates to the original exported JS runtime. The Ruby
 application delegates preparation, review, execution and recovery to the original
-Node Buyer. See the generated RUBY.md for the complete customer flow.`;
+Node Buyer. See RUBY.md for saved responses and DATASETS.md plus the delivered\nRails examples for complete dataset receiving and transactional application editions.`;
 
 async function directoryAt(value) {
   if (typeof value !== 'string' || !value || value.includes('\0')) throw error('DIRECTORY_REQUIRED', 'Select the original customer directory');
   const path = resolve(value), info = await lstat(path);
-  if (!info.isDirectory() || info.isSymbolicLink()) throw error('DIRECTORY_REQUIRED', 'Select a real directory, not a symbolic link');
+  if (!info.isDirectory() || info.isSymbolicLink() || await realpath(path) !== path) throw error('DIRECTORY_REQUIRED', 'Select a real directory, not a symbolic link');
   return path;
 }
+async function parentAt(directory, name, create = false) {
+  const parts = name.split('/');
+  if (!parts.length || parts.some(part => !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(part) || part === '.' || part === '..'))
+    throw error('FILE_NAME_INVALID', 'Choose an original customer package file');
+  let parent = directory;
+  for (const part of parts.slice(0,-1)) {
+    const next = join(parent,part);
+    if (create) {
+      try { await mkdir(next,{mode:0o700}); await syncDirectory(parent); }
+      catch (cause) { if (cause.code !== 'EEXIST') throw cause; }
+    }
+    await directoryAt(next);
+    parent = next;
+  }
+  return parent;
+}
 async function bytesAt(directory, name, maximum = LIMIT) {
+  await parentAt(directory,name);
   const file = await open(join(directory, name), constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
     const before = await file.stat();
@@ -51,10 +67,11 @@ async function syncDirectory(directory) {
   try { await file.sync(); } finally { await file.close(); }
 }
 async function publishOnce(directory, name, bytes) {
-  const temporary = join(directory, '.ruby-client-' + randomUUID()); let file;
+  const parent = await parentAt(directory,name,true);
+  const temporary = join(parent, '.ruby-client-' + randomUUID()); let file;
   try {
     file = await open(temporary, 'wx', 0o600); await file.writeFile(bytes); await file.sync(); await file.close(); file = null;
-    try { await link(temporary, join(directory, name)); await syncDirectory(directory); }
+    try { await link(temporary, join(directory, name)); await syncDirectory(parent); }
     catch (cause) {
       if (cause.code !== 'EEXIST') throw cause;
       if (!(await bytesAt(directory, name)).equals(bytes)) throw error('FILE_CONFLICT', 'Retained file differs; preserve it and use a new export directory: ' + name);
@@ -63,10 +80,11 @@ async function publishOnce(directory, name, bytes) {
 }
 function fileRecord(name, bytes) { return { name, bytes: bytes.length, sha256: sha(bytes) }; }
 function checkManifest(value, original) {
+  const expected = value?.files?.length === LEGACY_RUBY_CLIENT_FILES.length ? LEGACY_RUBY_CLIENT_FILES : RUBY_CLIENT_FILES;
   if (!value || value.schema !== SCHEMA || value.sourceSha256 !== original.sourceSha256 ||
       value.originalManifestSha256 !== original.manifestFile.sha256 || !Array.isArray(value.files) ||
-      value.files.length !== RUBY_CLIENT_FILES.length || value.files.some((file, i) =>
-        file?.name !== RUBY_CLIENT_FILES[i] || !Number.isSafeInteger(file.bytes) || file.bytes < 1 || file.bytes > LIMIT ||
+      value.files.length !== expected.length || value.files.some((file, i) =>
+        file?.name !== expected[i] || !Number.isSafeInteger(file.bytes) || file.bytes < 1 || file.bytes > LIMIT ||
         typeof file.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(file.sha256)))
     throw error('MANIFEST_INVALID', 'Ruby completion does not match the original complete seller export');
 }
@@ -106,6 +124,7 @@ module Starforge
     attr_reader manifest_sha256: String
     def initialize: (?String directory, ?node: String, ?environment: Hash[String, String]?, ?timeout: Numeric) -> void
     def verify_package!: () -> bool
+    def dataset_available?: () -> bool
     def source: () -> json_object
     def operations: () -> Array[json_object]
     def build_request: (operation_id operation_id, json_object inputs, intent_id: String,
@@ -167,6 +186,91 @@ module Starforge
     def each_csv: (?headers: bool) { (untyped) -> void } -> untyped
                | (?headers: bool) -> Enumerator[untyped, untyped]
   end
+
+  class DatasetDelivery
+    attr_reader directory: String
+    attr_reader manifest_sha256: String
+    attr_reader manifest: json_object
+    attr_reader native_manifest: json_object
+    attr_reader semantics: json_object?
+    def self.open: (String directory, expected_manifest_sha256: String) -> DatasetDelivery
+    def fields: () -> Array[String]
+    def row_count: () -> Integer
+    def snapshot: () -> String
+    def source_sha256: () -> String
+    def selection: () -> json_object
+    def acquisition: () -> json_object
+    def native_delivery: () -> json_object
+    def source: () -> json_object
+    def descriptor: (String name) -> json_object
+    def file_bytes: (String name, ?limit: Integer) -> String
+    def json_file: (String name, ?limit: Integer) -> untyped
+    def each_chunk: (String name, ?chunk_size: Integer) { (String) -> void } -> nil
+                  | (String name, ?chunk_size: Integer) -> Enumerator[String, nil]
+    def each_record: (?max_row_bytes: Integer) { (json_object) -> void } -> nil
+                   | (?max_row_bytes: Integer) -> Enumerator[json_object, nil]
+    def each_row: (?max_row_bytes: Integer) { (json_object) -> void } -> nil
+                | (?max_row_bytes: Integer) -> Enumerator[json_object, nil]
+    def copy_to: (String destination) -> DatasetDelivery
+  end
+
+  class DatasetReceiving
+    attr_reader directory: String
+    attr_reader dataset_id: String
+    def self.dataset_id: (String key) -> String
+    def self.normalize_limits: (json_object limits, ?historical: bool) -> json_object
+    def self.directory_for: (String directory, String key, ?create: bool) -> String
+    def self.retained_job: (directory: String, key: String) -> json_object
+    def self.received: (directory: String, key: String, ?expected_manifest_sha256: String?) -> DatasetDelivery
+    def initialize: (client: SellerClient, buyer: Buyer, directory: String, key: String,
+      bound: BoundRequest, limits: json_object, ?expected_snapshot: String?, ?original_session: json_object?) -> void
+    def complete?: () -> bool
+    def delivery: () -> DatasetDelivery
+    def prepare: (?cancel: Cancellation?) -> json_object
+    def review: (?cancel: Cancellation?) -> json_object
+    def recover: (?cancel: Cancellation?) -> json_object
+    def status: (?cancel: Cancellation?) -> json_object
+    def run: (review: json_object, action_key: String, ?cancel: Cancellation?) -> json_object
+    def receive: (?cancel: Cancellation?) -> DatasetDelivery
+  end
+
+  class RailsDataset
+    class ImportError < StandardError
+      attr_reader code: String
+      attr_reader details: Hash[Symbol, untyped]
+    end
+
+    class Mapping
+      attr_reader definition: json_object
+      attr_reader columns: Hash[String, json_object]
+      attr_reader key_columns: Array[String]
+      attr_reader sha256: String
+      attr_reader key_sha256: String
+      attr_reader removal: json_object
+    end
+
+    class Preview
+      attr_reader binding: json_object
+      attr_reader counts: Hash[String, Integer]
+      attr_reader sha256: String
+      attr_reader entries_sha256: String
+      attr_reader row_count: Integer
+      def summary: () -> json_object
+      def each_entry: () { (json_object) -> void } -> Preview
+                    | () -> Enumerator[json_object, Preview]
+      def write_json: (untyped io) -> Preview
+      def write_csv: (untyped io) -> Preview
+      def close: () -> void
+    end
+
+    attr_reader mapping: Mapping
+    def initialize: (delivery: DatasetDelivery, scope: untyped, stream: untyped,
+      models: Hash[Symbol, untyped], mapping: json_object) -> void
+    def preview: () -> Preview
+    def import!: (operation_key: String, expected_preview_sha256: String) -> json_object
+    def receipt: (operation_key: String) -> json_object
+    def write_receipt: (untyped io, operation_key: String) -> json_object
+  end
 end
 `;
 }
@@ -180,6 +284,19 @@ async function payloads(original) {
     ['rails_receiving.rb', await readFile(new URL('./rails_receiving.rb', import.meta.url))],
     ['customer.rb', await readFile(new URL('./examples/customer.rb', import.meta.url))],
     ['RUBY.md', await readFile(new URL('./RUBY.md', import.meta.url))],
+    ['seller-dataset-bridge.mjs', await readFile(new URL('./dataset-bridge.mjs', import.meta.url))],
+    ['dataset_delivery.rb', await readFile(new URL('./dataset_delivery.rb', import.meta.url))],
+    ['dataset_receiving.rb', await readFile(new URL('./dataset_receiving.rb', import.meta.url))],
+    ['dataset_customer.rb', await readFile(new URL('./examples/dataset_customer.rb', import.meta.url))],
+    ['rails_dataset.rb', await readFile(new URL('./rails_dataset.rb', import.meta.url))],
+    ['DATASETS.md', await readFile(new URL('./DATASETS.md', import.meta.url))],
+    ['examples/dataset_lifecycle.rb', await readFile(new URL('./examples/dataset_lifecycle.rb', import.meta.url))],
+    ['examples/rails_dataset/create_dataset_import_tables.rb', await readFile(new URL('./examples/rails_dataset/create_dataset_import_tables.rb', import.meta.url))],
+    ['examples/rails_dataset/models.rb', await readFile(new URL('./examples/rails_dataset/models.rb', import.meta.url))],
+    ['examples/rails_dataset/import_dataset_job.rb', await readFile(new URL('./examples/rails_dataset/import_dataset_job.rb', import.meta.url))],
+    ['examples/rails_dataset/commission.rb', await readFile(new URL('./examples/rails_dataset/commission.rb', import.meta.url))],
+    ['examples/rails_dataset/mapping.json', await readFile(new URL('./examples/rails_dataset/mapping.json', import.meta.url))],
+    ['examples/rails_dataset/README.md', await readFile(new URL('./examples/rails_dataset/README.md', import.meta.url))],
   ]);
 }
 
@@ -202,6 +319,7 @@ export async function inspectRubySellerClient({ directory } = {}) {
   }
   return { state: 'COMPLETE', directory, sourceSha256: original.sourceSha256,
     origin: original.origin, mode: original.mode, operations: original.operations,
+    capabilities:manifest.files.length === LEGACY_RUBY_CLIENT_FILES.length ? ['single-response'] : ['single-response','dataset','rails-dataset-editions'],
     manifest, manifestSha256: sha(await bytesAt(directory, RUBY_CLIENT_MANIFEST, 131072)),
     files: [...original.files, original.manifestFile, ...manifest.files] };
 }
