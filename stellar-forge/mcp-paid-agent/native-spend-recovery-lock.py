@@ -62,16 +62,36 @@ def run():
     relay = module("native_recovery_ledger", ROOT / "sf88-operator-buyer-cli" / "workspace-recovery-ledger.py")
     args = SimpleNamespace(actor=owner["actor"], service=owner["service"],
         ledger=Path(owner["ledger"]), policy=Path(owner["policy"]), state_directory=state)
-    configuration = original.read_record(state / "configuration.json")
-    if configuration != {"schema": original.SCHEMA, "actor": args.actor, "service": args.service,
-                         "ledger": owner["ledger"], "policy": owner["policy"]}:
+    entries = sorted(state.iterdir())
+    configuration_path = state / "configuration.json"
+    initialized_path = state / "ledger-initialized.json"
+    configured, initialized = configuration_path.exists(), initialized_path.exists()
+    if configured and original.read_record(configuration_path) != {
+            "schema": original.SCHEMA, "actor": args.actor, "service": args.service,
+            "ledger": owner["ledger"], "policy": owner["policy"]}:
         raise ValueError("original configuration changed")
-    if original.read_record(state / "ledger-initialized.json") != {
+    if initialized and original.read_record(initialized_path) != {
             "schema": original.SCHEMA, "ledger": owner["ledger"]}:
         raise ValueError("original ledger binding changed")
+    records = [entry for entry in entries if entry.name.endswith(".finality.json") or
+               entry.name.endswith(".json") and original.UUID.fullmatch(entry.name[:-5])]
+    if initialized and not configured or records and not (configured and initialized):
+        raise ValueError("original native markers missing")
     keys = [base64.b64decode(values["keys"]["SF36_" + name + "_KEY_B64"], validate=True)
             for name in ("CONSENT", "AUDIT", "OPERATOR")]
     policy = original.read_record(Path(values["policy"]), private=False)
+    relay.validate_policy(policy)
+    ledger_state = values.get("ledger_state", "INITIALIZED")
+    if ledger_state == "UNINITIALIZED":
+        if Path(values["database"]).exists() or initialized or records or values.get("expected_checkpoint") is not None:
+            raise ValueError("original uninitialized state changed")
+        print(json.dumps({"status": "NATIVE_STATE_VERIFIED", "checkpoint": None,
+            "ledgerState": ledger_state, "nativeInitialized": False, "boundRequests": 0,
+            "reservedRequests": 0, "finalityRecords": 0, "boundRequestReferences": [],
+            **({"archivePrefix": None} if "expected_checkpoint" in values else {})}, sort_keys=True), flush=True)
+        return
+    if ledger_state != "INITIALIZED":
+        raise ValueError("original ledger state invalid")
     governor = relay.existing_governor(values["database"], policy, keys, readonly=True)
     try:
         governor.db.execute("BEGIN")
@@ -92,7 +112,7 @@ def run():
                     (sequence > 0 and (observed is None or observed[0] != mac)) or checkpoint["sequence"] < sequence:
                 raise ValueError("archive is not a prefix of current history")
         bindings, finals, pending = {}, 0, 0
-        for entry in sorted(state.iterdir()):
+        for entry in entries:
             if entry.name.endswith(".json") and original.UUID.fullmatch(entry.name[:-5]):
                 binding, request, request_sha = original.record_at(state, entry.name[:-5], args)
                 row = audited.get(request["request_id"])
@@ -131,8 +151,8 @@ def run():
             "reservationState": value[3]["state"] if value[3] else None}
             for request_id, value in sorted(bindings.items())]
         print(json.dumps({"status": "NATIVE_STATE_VERIFIED", "checkpoint": checkpoint,
-                          "boundRequests": len(bindings), "reservedRequests": pending,
-                          "finalityRecords": finals, "boundRequestReferences": references, **({"archivePrefix": prefix} if prefix is not None else {})}, sort_keys=True), flush=True)
+                          "ledgerState": ledger_state, "nativeInitialized": initialized, "boundRequests": len(bindings), "reservedRequests": pending,
+                          "finalityRecords": finals, "boundRequestReferences": references, **({"archivePrefix": prefix} if "expected_checkpoint" in values else {})}, sort_keys=True), flush=True)
     finally:
         governor.close()
 

@@ -16,7 +16,7 @@ const operationId=value=>{
     'APPLICATION_PROJECT_OPERATION_ID_INVALID');return value;
 };
 const componentSummary=component=>({kind:component.kind,manifestSha256:component.manifestSha256,
-  recordSha256:component.recordSha256,checkpoint:component.checkpoint??null,
+  recordSha256:component.recordSha256,ledgerState:component.ledgerState??'INITIALIZED',checkpoint:component.checkpoint??null,
   checkpoints:component.checkpoints??null,ledger:component.ledger??null,stateRoot:component.stateRoot??null});
 export async function readProjectProfile(file) {
   const raw=await readBytes(absolute(file),65536,true),profile=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));
@@ -91,7 +91,7 @@ function publicInspection(selected) {
     passphraseEnv:selected.profile.passphraseEnv,passphraseAvailable:selected.passphraseAvailable,
     remoteMcpSourceSha256:selected.remoteMcpSourceSha256,
     financialOwners:selected.components.map(item=>({kind:item.kind,ledger:item.ledger,stateRoot:item.stateRoot,
-      ...(item.kind==='mcp'?{owner:item.owner}: {operatorDirectories:[item.plan.directory,...(item.plan.operators??[]).map(x=>x.directory)]})})),
+      ...(item.kind==='mcp'?{owner:item.owner,ledgerState:item.inspected.ledgerState??'INITIALIZED'}: {operatorDirectories:[item.plan.directory,...(item.plan.operators??[]).map(x=>x.directory)]})})),
     restoreMode:'ORIGINAL_CANONICAL_PATHS',receivingMode:'VERIFIED_OFFLINE_RESULTS'};
 }
 function summary(record,recordSha256,manifestSha256,bundle) {
@@ -138,20 +138,24 @@ async function capturedView(application,context,payload,signal) {
     requests:listing.requests,reviews,outcomes,spending,results};
 }
 function checkpointRows(component) {
-  if(component.kind==='mcp')return [{ledger:component.ledger,checkpoint:component.checkpoint}];
+  if(component.kind==='mcp')return [{ledger:component.ledger,checkpoint:component.checkpoint,
+    ledgerState:component.ledgerState??'INITIALIZED'}];
   if(Array.isArray(component.checkpoints))return component.checkpoints.map(item=>({
-    ledger:item.ledger??item.database,checkpoint:item.checkpoint??item}));
-  return [{ledger:component.ledger,checkpoint:component.checkpoint}];
+    ledger:item.ledger??item.database,checkpoint:item.checkpoint??item,ledgerState:'INITIALIZED'}));
+  return [{ledger:component.ledger,checkpoint:component.checkpoint,ledgerState:'INITIALIZED'}];
 }
 function equalFinancialCheckpoints(components) {
   const ledgers=new Map();
   for(const component of components)for(const row of checkpointRows(component)){
     if(!row.ledger)continue;
-    need(object(row.checkpoint)&&row.checkpoint.outcome==='JOURNAL_CONSISTENT',
+    need(row.ledgerState==='UNINITIALIZED'?row.checkpoint===null:
+      row.ledgerState==='INITIALIZED'&&object(row.checkpoint)&&row.checkpoint.outcome==='JOURNAL_CONSISTENT',
       'APPLICATION_PROJECT_FINANCIAL_CHECKPOINT_REQUIRED');
-    const prior=ledgers.get(row.ledger);
-    need(!prior||isDeepStrictEqual(prior,row.checkpoint),'APPLICATION_PROJECT_SHARED_LEDGER_ADVANCED');
-    ledgers.set(row.ledger,row.checkpoint);
+    const observed={ledgerState:row.ledgerState,checkpoint:row.checkpoint};
+    // A shared ledger cannot be absent in one capture and initialized in another.
+    need(!ledgers.has(row.ledger)||isDeepStrictEqual(ledgers.get(row.ledger),observed),
+      'APPLICATION_PROJECT_SHARED_LEDGER_ADVANCED');
+    ledgers.set(row.ledger,observed);
   }
 }
 async function snapshot({application,context,selected,environment,signal,id}) {
@@ -208,7 +212,7 @@ async function snapshot({application,context,selected,environment,signal,id}) {
       components.push({kind:item.kind,member,manifestSha256:manifest.sha256,recordSha256:result.recordSha256,
         checkpoint:result.checkpoint??null,checkpoints:result.operators?.map(row=>({ledger:row.ledger,checkpoint:row.checkpoint}))??null,
         ledger:item.ledger,stateRoot:item.stateRoot,
-        ...(item.kind==='http'?{plan:item.plan}:{owner:item.owner}),native:result});
+        ...(item.kind==='http'?{plan:item.plan}:{owner:item.owner,ledgerState:result.ledgerState??'INITIALIZED'}),native:result});
     }
     equalFinancialCheckpoints(components);
     const roots=[{path:selected.configFile,role:'configuration'},

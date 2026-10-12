@@ -34,7 +34,7 @@ node stellar-forge/mcp-paid-agent/native-spend-recovery.mjs snapshot \
 
 The result returns `manifestSha256`, `recordSha256`, the full original
 `checkpoint`, `ledgerIdentity`, the original canonical `owner` paths, and native
-request/finality counts. Its \`boundRequestReferences\` contain each original
+request/finality counts. Its `boundRequestReferences` contain each original
 request UUID/digest, actor, service, and reservation state for the private
 application export's exact operation join. Save these values with the original application export
 receipt. A completed capture also preserves reserved requests that have not yet
@@ -45,6 +45,30 @@ directory. It may contain original binding and finality JSON, the original
 configuration and ledger initialization markers, its lock, and the original
 helper's interrupted private temporary files. Filesystem links and unrelated
 state cause capture to refuse the ambiguous closure.
+
+## Export before the first native purchase
+
+A configured owner can be backed up before its first native helper call.
+Capture reports `ledgerState: "UNINITIALIZED"`, `checkpoint: null`, and
+`ledgerIdentity: null` when the original ledger is absent. Its native records
+remain absent. The operation may create the private state directory and original
+lock to coordinate capture; it does not create a SQLite database, initialization
+markers, reservations, or signing activity.
+
+An existing shared SF36 ledger is different: capture audits and copies its
+complete history even if this native consumer has no configuration or
+initialization markers yet. That result reports `ledgerState: "INITIALIZED"`
+and `nativeInitialized: false`. Both cases retain the original host, policy,
+canonical paths, and encrypted control keys. A missing ledger with leftover
+SQLite sidecars or retained native initialization/history is refused.
+
+Restoring an uninitialized capture preserves the absent ledger and captured
+native state. It refuses a current initialized ledger. Use `verify-current`
+to attach after the original owner has legitimately initialized: it audits the
+whole current history and reports `currentLedgerState: "INITIALIZED"`,
+`currentCheckpoint`, and `archivePrefix: null`. There is no archived journal
+prefix until the first ledger exists. An initialized archive still requires its
+exact archived prefix in the current journal.
 
 ## Verify an encrypted component
 
@@ -66,7 +90,8 @@ directory used by the application importer.
 ## Restore at the original financial paths
 
 The selected original owner paths remain part of the financial identity.
-Create their private parent directories on the receiving host, then restore:
+Restore beneath an existing private directory owned by the receiving user; missing
+private parent directories are created as needed:
 
 ```sh
 node stellar-forge/mcp-paid-agent/native-spend-recovery.mjs restore \
@@ -117,6 +142,10 @@ establishes which project and operation should be opened.
 
 ## Embedding in an application
 
+Installed package consumers can import the direct-owner API from
+`@tokenjunkielabs/starforge-merchant/buyer/mcp/spending-recovery`. The source module
+is `stellar-forge/mcp-paid-agent/native-spend-recovery.mjs`.
+
 The module exports:
 
 | Export | Main input | Result |
@@ -153,7 +182,7 @@ await withNativeMcpSpendingRecoveryEnvironment(selectedBundle, async ({environme
 The callback receives a new environment containing only the three recovered
 SF36 additions. The wallet and provider environment still comes from the
 trusted receiving host. An existing supplied SF36 value must match the encrypted
-original. The generated module also exports \`spendingConfigurationFile\` so the
+original. The generated module also exports `spendingConfigurationFile` so the
 private application exporter can compare the selected module's actual owner to
 its requested native host configuration. The native host factory accepts this explicit environment,
 while its existing zero-argument and lazy module interfaces continue to work.

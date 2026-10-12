@@ -59,11 +59,26 @@ async function privateDirectory(path) {
 async function ensurePrivateDirectory(path) {
   absolute(path);
   if (!await exists(path)) {
-    await privateDirectory(dirname(path));
+    await ensurePrivateDirectory(dirname(path));
     await mkdir(path, {mode:0o700}).catch(error => { if (error.code !== 'EEXIST') throw error; });
     await syncDirectory(dirname(path));
   }
   return privateDirectory(path);
+}
+async function privateAncestor(path) {
+  let parent = dirname(absolute(path));
+  while (!await exists(parent)) parent = dirname(parent);
+  await privateDirectory(parent);
+}
+async function ledgerStatus(plan) {
+  if (await exists(plan.ledger)) {
+    const {file,stat} = await regular(plan.ledger); await file.close();
+    return {ledgerState:'INITIALIZED',ledgerIdentity:{dev:stat.dev,ino:stat.ino}};
+  }
+  await privateAncestor(plan.ledger);
+  for (const suffix of ['-wal','-shm','-journal']) need(!await exists(plan.ledger+suffix),
+    'NATIVE_RECOVERY_ORIGINAL_LEDGER_MISSING');
+  return {ledgerState:'UNINITIALIZED',ledgerIdentity:null};
 }
 async function regular(path, {max = MAX_FILE, privateMode = true} = {}) {
   absolute(path);
@@ -185,6 +200,7 @@ async function runChild(executable, args, {input, expected, hold = false, signal
   } catch (error) { if (!closed) child.kill('SIGKILL'); await done.catch(() => {}); throw error; }
 }
 async function stateLock(plan, ctx) {
+  await ensurePrivateDirectory(plan.stateDirectory);
   return runChild(await pythonExecutable(plan.python),['-I','-B',LOCK,'lock',plan.stateDirectory],
     {expected:'STATE_LOCKED',hold:true,signal:ctx.signal,timeout:1800000});
 }
@@ -200,13 +216,16 @@ async function captureLedger(plan, destination, keys, ctx) {
   }
   return {...holder,identity};
 }
-async function verifyNative(plan, staged, keys, ctx, python, expectedCheckpoint) {
+async function verifyNative(plan, staged, keys, ctx, python, expectedCheckpoint, ledgerState = 'INITIALIZED') {
   const result = await runChild(await pythonExecutable(python ?? plan.python),
     ['-I','-B',LOCK,'verify',join(staged,'state')],
-    {input:{owner:plan,keys,database:join(staged,'ledger.sqlite'),policy:join(staged,'policy.json'),
+    {input:{owner:plan,keys,ledger_state:ledgerState,database:join(staged,'ledger.sqlite'),policy:join(staged,'policy.json'),
       ...(expectedCheckpoint === undefined ? {} : {expected_checkpoint:expectedCheckpoint})},
       expected:'NATIVE_STATE_VERIFIED',signal:ctx.signal,maxOutput:12*1024**2});
-  need(result.value.checkpoint?.outcome === 'JOURNAL_CONSISTENT','NATIVE_RECOVERY_LEDGER_AUDIT_FAILED');
+  need(result.value.ledgerState === ledgerState && typeof result.value.nativeInitialized === 'boolean' &&
+    (ledgerState === 'INITIALIZED' ? result.value.checkpoint?.outcome === 'JOURNAL_CONSISTENT' :
+      ledgerState === 'UNINITIALIZED' && result.value.checkpoint === null),
+    'NATIVE_RECOVERY_LEDGER_AUDIT_FAILED');
   return result.value;
 }
 async function cryptography(args, options, ctx, originalOwner) {
@@ -231,9 +250,12 @@ async function stateInventory(plan, ctx) {
   }
   return files;
 }
-async function stageInventory(staged, ctx) {
-  const result = [];
-  for (const name of ['host.json','policy.json','ledger.sqlite','control-keys.json']) {
+async function stageInventory(staged, ctx, ledgerState = 'INITIALIZED') {
+  need(['INITIALIZED','UNINITIALIZED'].includes(ledgerState),'NATIVE_RECOVERY_RECORD_INVALID');
+  const result = [], names = ['host.json','policy.json',
+    ...(ledgerState === 'INITIALIZED' ? ['ledger.sqlite'] : []),'control-keys.json'];
+  need(same((await readdir(staged)).sort(),[...names,'state'].sort()),'NATIVE_RECOVERY_CONTENT_CHANGED');
+  for (const name of names) {
     result.push({path:name,...await digest(join(staged,name),undefined,ctx.signal)});
   }
   for (const name of (await readdir(join(staged,'state'))).sort()) {
@@ -247,7 +269,8 @@ async function stageInventory(staged, ctx) {
 function summary(record, recordSha256, manifestSha256) {
   return {schema:SCHEMA,operationId:record.operationId,createdAt:record.createdAt,
     owner:record.owner,configSha256:record.configSha256,policySha256:record.policySha256,
-    recordSha256,manifestSha256,checkpoint:record.checkpoint,ledgerIdentity:record.ledgerIdentity,
+    recordSha256,manifestSha256,ledgerState:record.ledgerState,nativeInitialized:record.nativeInitialized,
+    checkpoint:record.checkpoint,ledgerIdentity:record.ledgerIdentity,
     nativeState:record.nativeState,boundRequestReferences:record.boundRequestReferences,files:record.files.length,
     bytes:record.files.reduce((sum,file) => sum+file.size,0),
     controlKeyEnvironment:[...KEYS],controlKeyCustody:'ORIGINAL_ENCRYPTED_RECOVERY'};
@@ -260,11 +283,10 @@ export async function inspectNativeMcpSpendingRecovery(options, supplied) {
   for (const path of [plan.policy,plan.ledger,plan.stateDirectory]) absolute(path);
   need(new Set([plan.configFile,plan.policy,plan.ledger,plan.stateDirectory]).size === 4,
     'NATIVE_RECOVERY_OWNER_PATHS_OVERLAP');
-  await privateDirectory(plan.stateDirectory);
-  const ledger = await regular(plan.ledger); await ledger.file.close();
+  if (await exists(plan.stateDirectory)) await privateDirectory(plan.stateDirectory);
+  else await privateAncestor(plan.stateDirectory);
   return {schema:SCHEMA,owner:plan,configSha256:(await digest(configFile,undefined,ctx.signal)).sha256,
-    policySha256:(await digest(plan.policy,undefined,ctx.signal,false)).sha256,
-    ledgerIdentity:{dev:ledger.stat.dev,ino:ledger.stat.ino}};
+    policySha256:(await digest(plan.policy,undefined,ctx.signal,false)).sha256,...await ledgerStatus(plan)};
 }
 export async function snapshotNativeMcpSpendingRecovery(options, supplied) {
   const ctx = context(options,supplied);
@@ -284,7 +306,8 @@ export async function snapshotNativeMcpSpendingRecovery(options, supplied) {
   let locked, ledger, placeholder;
   try {
     locked = await stateLock(plan,ctx);
-    ledger = await captureLedger(plan,join(staged,'ledger.sqlite'),keys,ctx);
+    if (inspected.ledgerState === 'INITIALIZED')
+      ledger = await captureLedger(plan,join(staged,'ledger.sqlite'),keys,ctx);
     const before = await stateInventory(plan,ctx);
     await digest(plan.configFile,join(staged,'host.json'),ctx.signal);
     await digest(plan.policy,join(staged,'policy.json'),ctx.signal,false);
@@ -295,14 +318,15 @@ export async function snapshotNativeMcpSpendingRecovery(options, supplied) {
     await save(join(staged,'control-keys.json'),{schema:SCHEMA,keys});
     need(same(before,await stateInventory(plan,ctx)) &&
       same(inspected,await inspectNativeMcpSpendingRecovery(options,ctx)), 'NATIVE_RECOVERY_SOURCE_CHANGED');
-    const verified = await verifyNative(plan,staged,keys,ctx);
-    need(same(verified.checkpoint,ledger.value.checkpoint),'NATIVE_RECOVERY_CHECKPOINT_CHANGED');
-    const ledgerIdentity = ledger.identity;
-    await ledger.release(); ledger = undefined;
+    const verified = await verifyNative(plan,staged,keys,ctx,undefined,undefined,inspected.ledgerState);
+    need(same(verified.checkpoint,ledger?.value.checkpoint ?? null),'NATIVE_RECOVERY_CHECKPOINT_CHANGED');
+    const ledgerIdentity = ledger?.identity ?? null;
+    if (ledger) {await ledger.release(); ledger = undefined;}
     await locked.release(); locked = undefined;
-    const files = await stageInventory(staged,ctx);
+    const files = await stageInventory(staged,ctx,inspected.ledgerState);
     const record = {schema:SCHEMA,operationId:options.operationId,createdAt:new Date().toISOString(),
       owner:plan,configSha256:inspected.configSha256,policySha256:inspected.policySha256,
+      ledgerState:inspected.ledgerState,nativeInitialized:verified.nativeInitialized,
       ledgerIdentity,checkpoint:verified.checkpoint,
       nativeState:{boundRequests:verified.boundRequests,reservedRequests:verified.reservedRequests,
         finalityRecords:verified.finalityRecords},boundRequestReferences:verified.boundRequestReferences,files};
@@ -345,8 +369,11 @@ async function openBackup(options, ctx) {
       'NATIVE_RECOVERY_SELECTED_MANIFEST_CHANGED');
     const {value:record,raw} = await readJson(join(extracted,'record'));
     need(plain(record) && record.schema === SCHEMA && plain(record.owner) && Array.isArray(record.files) &&
-      record.checkpoint?.outcome === 'JOURNAL_CONSISTENT' && HASH.test(record.configSha256) &&
-      HASH.test(record.policySha256), 'NATIVE_RECOVERY_RECORD_INVALID');
+      HASH.test(record.configSha256) && HASH.test(record.policySha256), 'NATIVE_RECOVERY_RECORD_INVALID');
+    record.ledgerState ??= 'INITIALIZED'; // Original initialized archives retain their exact format and identity.
+    need(record.ledgerState === 'INITIALIZED' ? record.checkpoint?.outcome === 'JOURNAL_CONSISTENT' &&
+      plain(record.ledgerIdentity) : record.ledgerState === 'UNINITIALIZED' && record.checkpoint === null &&
+      record.ledgerIdentity === null, 'NATIVE_RECOVERY_RECORD_INVALID');
     const recordSha256 = sha(raw);
     if (options.expectedRecordSha256 !== undefined) need(options.expectedRecordSha256 === recordSha256,
       'NATIVE_RECOVERY_SELECTED_RECORD_CHANGED');
@@ -354,7 +381,7 @@ async function openBackup(options, ctx) {
     const cfg = await readMcpSpendingHost(join(staged,'host.json'));
     need(same(record.owner,owner(absolute(record.owner.configFile),cfg)),
       'NATIVE_RECOVERY_ORIGINAL_OWNER_CHANGED');
-    const files = await stageInventory(staged,ctx);
+    const files = await stageInventory(staged,ctx,record.ledgerState);
     need(same(record.files,files) && files.find(f => f.path === 'host.json').sha256 === record.configSha256 &&
       files.find(f => f.path === 'policy.json').sha256 === record.policySha256,
       'NATIVE_RECOVERY_CONTENT_CHANGED');
@@ -362,7 +389,11 @@ async function openBackup(options, ctx) {
     need(stored.schema === SCHEMA && plain(stored.keys) && Object.keys(stored.keys).length === 3,
       'NATIVE_RECOVERY_CONTROL_KEYS_INVALID');
     const keys = keysFrom(stored.keys);
-    const native = await verifyNative(record.owner,staged,keys,ctx,options.python ?? '/usr/bin/python3');
+    const native = await verifyNative(record.owner,staged,keys,ctx,options.python ?? '/usr/bin/python3',
+      undefined,record.ledgerState);
+    if (record.nativeInitialized !== undefined) need(record.nativeInitialized === native.nativeInitialized,
+      'NATIVE_RECOVERY_NATIVE_INITIALIZATION_CHANGED');
+    else record.nativeInitialized = native.nativeInitialized;
     need(same(native.checkpoint,record.checkpoint) && same(record.nativeState,
       {boundRequests:native.boundRequests,reservedRequests:native.reservedRequests,finalityRecords:native.finalityRecords}),
       'NATIVE_RECOVERY_CHECKPOINT_CHANGED');
@@ -431,13 +462,16 @@ export async function restoreNativeMcpSpendingRecovery(options, supplied) {
     const presentState = await stateInventory(plan,ctx);
     need(presentState.every(present => expectedState.some(expected => expected.path === 'state/'+present.path &&
       expected.sha256 === present.sha256 && expected.size === present.size)), 'NATIVE_RECOVERY_EXISTING_STATE_CONFLICT');
+    const presentLedger = await ledgerStatus(plan), ledgerExisted = presentLedger.ledgerState === 'INITIALIZED';
+    if (record.ledgerState === 'UNINITIALIZED') need(!ledgerExisted,'NATIVE_RECOVERY_PRESENT_HISTORY_CHANGED');
     await publish('policy.json',plan.policy,false);
-    const ledgerExisted = Boolean(await exists(plan.ledger));
-    if (!ledgerExisted) await publish('ledger.sqlite',plan.ledger);
-    // Original online backup/audit, not immutable reads of a live WAL database.
-    const liveCopy = join(opened.temporary,'current-ledger.sqlite');
-    ledger = await captureLedger(plan,liveCopy,keys,ctx);
-    need(same(ledger.value.checkpoint,record.checkpoint),'NATIVE_RECOVERY_PRESENT_HISTORY_CHANGED');
+    if (record.ledgerState === 'INITIALIZED') {
+      if (!ledgerExisted) await publish('ledger.sqlite',plan.ledger);
+      // Original online backup/audit, not immutable reads of a live WAL database.
+      const liveCopy = join(opened.temporary,'current-ledger.sqlite');
+      ledger = await captureLedger(plan,liveCopy,keys,ctx);
+      need(same(ledger.value.checkpoint,record.checkpoint),'NATIVE_RECOVERY_PRESENT_HISTORY_CHANGED');
+    }
     for (const entry of expectedState) await publish(entry.path,join(plan.stateDirectory,entry.path.slice(6)));
     await publish('host.json',plan.configFile);
     need(same(record.owner,owner(plan.configFile,await readMcpSpendingHost(plan.configFile))),
@@ -445,10 +479,12 @@ export async function restoreNativeMcpSpendingRecovery(options, supplied) {
     const finalState = await stateInventory(plan,ctx);
     need(same(finalState,expectedState.map(f => ({...f,path:f.path.slice(6)}))),
       'NATIVE_RECOVERY_CONTENT_CHANGED');
-    const currentIdentity = ledger.identity;
-    await ledger.release(); ledger = undefined;
+    if (record.ledgerState === 'UNINITIALIZED') need((await ledgerStatus(plan)).ledgerState === 'UNINITIALIZED',
+      'NATIVE_RECOVERY_PRESENT_HISTORY_CHANGED');
+    const currentIdentity = ledger?.identity ?? null;
+    if (ledger) {await ledger.release(); ledger = undefined;}
     await locked.release(); locked = undefined;
-    return {status:ledgerExisted ? 'NATIVE_SPENDING_OWNER_REATTACHED' : 'NATIVE_SPENDING_OWNER_RESTORED',
+    return {status:ledgerExisted || created.length === 0 ? 'NATIVE_SPENDING_OWNER_REATTACHED' : 'NATIVE_SPENDING_OWNER_RESTORED',
       ...summary(record,opened.recordSha256,opened.manifestSha256),currentLedgerIdentity:currentIdentity,created};
   } catch (error) {
     // A created original file is retained as a receipt for the same operation.
@@ -481,7 +517,10 @@ export async function verifyCurrentNativeMcpSpendingOwner(options, supplied) {
     locked = await stateLock(plan,ctx);
     const current = join(opened.temporary,'current'); await mkdir(current,{mode:0o700});
     await mkdir(join(current,'state'),{mode:0o700});
-    ledger = await captureLedger(plan,join(current,'ledger.sqlite'),keys,ctx);
+    need(record.ledgerState !== 'INITIALIZED' || inspected.ledgerState === 'INITIALIZED',
+      'NATIVE_RECOVERY_ORIGINAL_LEDGER_MISSING');
+    if (inspected.ledgerState === 'INITIALIZED')
+      ledger = await captureLedger(plan,join(current,'ledger.sqlite'),keys,ctx);
     const before = await stateInventory(plan,ctx);
     const archivedState = record.files.filter(file => file.path.startsWith('state/') &&
       !file.path.startsWith('state/.mcp-spending-'));
@@ -496,14 +535,15 @@ export async function verifyCurrentNativeMcpSpendingOwner(options, supplied) {
     need(same(before,await stateInventory(plan,ctx)) &&
       same(inspected,await inspectNativeMcpSpendingRecovery({configFile:plan.configFile},ctx)),
       'NATIVE_RECOVERY_SOURCE_CHANGED');
-    const verified = await verifyNative(plan,current,keys,ctx,options.python,record.checkpoint);
-    need(same(verified.checkpoint,ledger.value.checkpoint) && same(verified.archivePrefix,record.checkpoint),
+    const verified = await verifyNative(plan,current,keys,ctx,options.python,record.checkpoint,inspected.ledgerState);
+    need(same(verified.checkpoint,ledger?.value.checkpoint ?? null) && same(verified.archivePrefix,record.checkpoint),
       'NATIVE_RECOVERY_CHECKPOINT_CHANGED');
-    const currentLedgerIdentity = ledger.identity;
-    await ledger.release(); ledger = undefined;
+    const currentLedgerIdentity = ledger?.identity ?? null;
+    if (ledger) {await ledger.release(); ledger = undefined;}
     await locked.release(); locked = undefined;
     return {status:'NATIVE_SPENDING_CURRENT_OWNER_VERIFIED',
       ...summary(record,opened.recordSha256,opened.manifestSha256),
+      currentLedgerState:inspected.ledgerState,currentNativeInitialized:verified.nativeInitialized,
       currentCheckpoint:verified.checkpoint,currentLedgerIdentity,currentBoundRequestReferences:verified.boundRequestReferences,
       currentNativeState:{boundRequests:verified.boundRequests,reservedRequests:verified.reservedRequests,
         finalityRecords:verified.finalityRecords},archivePrefix:verified.archivePrefix};
