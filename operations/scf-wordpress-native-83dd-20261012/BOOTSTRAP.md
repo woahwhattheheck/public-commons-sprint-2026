@@ -48,7 +48,7 @@ python -u -B bootstrap.py \
   --source-cache /absolute/retained/source
 ```
 
-The cache has the original repository-relative paths and is checked against the original Git blobs. `--no-network` selects an entirely local preparation; `--workers 1` through `--workers 4` select public-read concurrency.
+The cache has the original repository-relative paths and is checked against the original Git blobs. It also works with `--source-stdin`: verified retained members are installed first, and the preparer discovers their dependencies before requesting the remaining sources on stdin. `--no-network` selects preparation from retained or explicitly received inputs; `--workers 1` through `--workers 4` select public-read concurrency.
 
 The fixed receiving, source, native record, operation and custody paths remain those in the reviewed carrier. The original installed PHP, WordPress, SQLite, Node, SDK, browser and native host dependencies are selected by the existing host input and preparer.
 
