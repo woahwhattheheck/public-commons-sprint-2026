@@ -30,7 +30,7 @@ export function createSupplierController({container,api,perform,host,notice,elem
     '<details><summary>Bulk mapping as JSON</summary><label>Field mappings<textarea id="sup-binding-json" class="code" rows="8" spellcheck="false"></textarea></label><button id="sup-use-binding-json" type="button">Apply mappings to table</button></details></details>',
     '<details><summary>Complete profile and local requirements</summary><p class="help">Set applicable documents, packaging conversions, classification definitions and any sourced local requirements. The complete saved values remain editable here.</p><label>Profile JSON<textarea id="sup-profile-json" class="code" rows="16" spellcheck="false"></textarea></label><button id="sup-use-profile-json" type="button">Apply profile to fields</button><details><summary>Available product fields</summary><pre id="sup-template"></pre></details><p id="sup-source" class="help"></p></details>',
     '<div class="actions"><button id="sup-save" type="button" class="primary">Save and review products</button><button id="sup-review" type="button">Review saved submission</button></div></article>',
-    '<article><h3>Product review</h3><label>Retained review<select id="sup-review-select"></select></label><p id="sup-review-summary" class="summary">Save a submission to review its complete product edition.</p><div id="sup-counts" class="cat-counts"></div>',
+    '<article><h3>Product review</h3><label>Retained review<select id="sup-review-select"></select></label><p id="sup-review-summary" class="summary">Save a submission to review its complete product edition.</p><div id="sup-counts" class="cat-counts"></div><section id="sup-delivery-findings" hidden></section>',
     '<div class="cat-table-controls"><label>Show<select id="sup-status"><option value="errors">Products with errors</option><option value="warnings">Products with warnings</option><option value="ready">Ready products</option><option value="all">All products</option></select></label><label>Material or supplier identifier<input id="sup-search" type="search"></label><button id="sup-find" type="button">Show products</button></div>',
     '<div id="sup-rows" class="table-wrap"></div><div class="actions"><button id="sup-back" type="button">Previous products</button><span id="sup-page" class="help"></span><button id="sup-next" type="button">Next products</button></div>',
     '<section id="sup-product" hidden><h4 id="sup-product-title"></h4><p id="sup-product-state" class="help"></p><div id="sup-findings"></div>',
@@ -159,6 +159,11 @@ export function createSupplierController({container,api,perform,host,notice,elem
   }
   function renderReview(){
     const counts=review?.counts;$('counts').replaceChildren();$('exports').replaceChildren();
+    const global=$('delivery-findings');global.replaceChildren();global.hidden=!review?.globalFindings?.length;
+    if(!global.hidden){global.append(element('h4','Delivery requirements'));
+      for(const finding of review.globalFindings){const item=element('p');item.append(element('strong',finding.severity+' · '+finding.code+': '),document.createTextNode(finding.message+' '));
+        if(/^https?:\/\//i.test(finding.rule?.url??''))item.append(element('a',finding.rule.section??'Source rule',{href:finding.rule.url,target:'_blank',rel:'noreferrer'}));global.append(item);}}
+
     $('review-summary').textContent=review?review.createdAt+' · submission revision '+review.planRevision+' · '+review.counts.total+' products':
       'Save a submission to review its complete product edition.';
     if(counts)for(const [label,value]of [['Products',counts.total],['Ready',counts.readyProducts],['Errors',counts.errors],['Warnings',counts.warnings]]){
@@ -169,7 +174,7 @@ export function createSupplierController({container,api,perform,host,notice,elem
     if(!counts.errors&&counts.total&&review.plan.profile.targets.includes('bmecat-5.0'))formats.push(['bmecat.xml','BMEcat delivery (XML)']);
     for(const [format,label]of formats)$('exports').append(element('a',label,{href:'/api/catalog/supplier/export?'+new URLSearchParams({
       reviewId:review.id,expectedReviewSha256:review.sha256,format})}));
-    $('export-note').textContent=counts.errors?counts.errors+' delivery errors remain. Open a product, correct the affected fields and review again.':
+    $('export-note').textContent=counts.errors?counts.errors+' delivery errors remain. Resolve the delivery requirements or affected product fields, then review again.':
       'The selected review is ready for the chosen delivery requirements. Warnings remain visible in its review data.';
     renderSelections();buttons();
   }

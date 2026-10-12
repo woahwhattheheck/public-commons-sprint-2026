@@ -39,6 +39,8 @@ Map an entire object or array when the source already supplies it, or map its in
 
 ## Work through the correction queue
 
+Delivery-wide findings appear above the product queue. A price-only update compares its complete supplier identifier set with the profile's original product IDs before downloading XML.
+
 Filter the reviewed products by errors, warnings, ready products or all products. Search by original material or supplier product identifier. Open a product to read its findings, rule references, original material, mapped product and existing corrections.
 
 A correction specifies the exact supplier field path, its replacement value and the operator's reason. Use **Text** for identifiers, codes and decimal text; use **JSON** for an array, object, boolean or explicit null. Several field corrections can be saved together. Replacing /prices, for example, preserves the original array's currency, territories, dates, price quantities and lexical decimal values.
