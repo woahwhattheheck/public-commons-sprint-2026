@@ -49,6 +49,13 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
+## ArcGIS merchant workspace
+
+The same interface now operates the original ArcGIS source workbench: source-file intake and live capture, reviewed field mappings, immutable editions, deployment exports and staging, release controls and complete customer file delivery. The existing publisher tools share that workbench’s original publisher, saved plans, publication history and scheduler.
+
+Use `starforge arcgis-agent serve` to open the browser and MCP service together, or select **ArcGIS merchant workspace** in the installed runtime’s Applications screen. Both surfaces use one merchant owner and the original release store. Full host configuration, native request recovery and source-to-delivery commands are in [ARCGIS_WORKSPACE.md](ARCGIS_WORKSPACE.md).
+
+
 ## Operate native OpenSearch merchants and relevance
 
 Use the same operator to save query revisions, inspect the native source,
@@ -675,3 +682,8 @@ create another workspace or transfer engine.
 
 See [GRAPHQL_WORKSPACES.md](GRAPHQL_WORKSPACES.md) for host configuration, the
 complete authoring-to-release flow, exact tool arguments and customer receiving.
+
+## CoinGecko market research and native purchase workspaces
+
+[COINGECKO-WORKSPACE.md](COINGECKO-WORKSPACE.md) connects the original CoinGecko browser and research model to this same merchant MCP. Its 32 tools cover complete request collections, exact source imports, paged market rows and linked entities, snapshots and comparisons, versioned research notes, original provider compilation, native SF88 purchase preparation/action recovery, and full retained handover downloads/restoration. The host declares private directory, input and buyer-profile aliases; browser and agents share the original project revision and operation IDs. Start with `starforge merchant-mcp init-coingecko-workspaces --dir NEW_PRIVATE_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json`. Opening the CoinGecko native SQLite workspace requires Node.js 24 or later.
+
