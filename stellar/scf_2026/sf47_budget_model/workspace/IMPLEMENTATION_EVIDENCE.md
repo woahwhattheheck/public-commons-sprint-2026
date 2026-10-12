@@ -191,6 +191,8 @@ The existing `merchant_grant_export` supports the two implementation export kind
 
 The selected complete provider catalogue has 67 tools, including the maintained Installation, cohort and implementation interfaces. The managed Python and Node launchers include the four new source/UI modules in the same boot identity. The SF74 producer modules remain explicit files in the original distribution source selection.
 
+`buyer-receiving-runtime.json` retains the original buyer runtime and selects the current Grant Operations, Installation, implementation, SF74 source-bundle and MCP retained-file reader modules by exact path and Git blob identity. The selection contains 212 source files; retaining the descriptor itself gives a 213-file source package. Its static native import closure is complete. The original receiving owner selects this complete source before dispatching the unchanged case/intent workflow; an already started operation retains its saved source and request identity.
+
 ## Continue the one original receiving workflow
 
 `implementation-operations-receiving.mjs` is an optional phase of the existing `buyer-operations-receiving.mjs` controller. It does not register a job, make a purchase or initialize another source population. The original complete v37 case, selected Routescan operation and all other original purchases/deployments remain the receiving input.
