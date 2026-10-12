@@ -96,7 +96,7 @@ python3 -B "$MCC_CONTROLLER_HOST/native_foreground.py" resume-capacity \
 
 A changed controller uses its existing native_runtime_handoff.py inspect and prepare path. A reviewed runtime-path amendment belongs in the original native record. Transfer the same prepared operation and retained source/checkpoint selection when changing hosts; first reconcile its original owner and supervisor.
 
-The receiving wrapper also owns receiving.lock, passed into each actual Node child. An interrupted wrapper therefore cannot release that exclusion while its original child is still running. Its paired checkpoint includes the application workspace, buyer-receiving workspace, current operation journal, and handoff together. It restores those files together after private working storage is lost.
+The receiving wrapper also owns receiving.lock, passed into each actual Node child. An interrupted wrapper therefore cannot release that exclusion while its original child is still running. Its paired checkpoint includes the application workspace, buyer-receiving workspace, current operation journal, and handoff together. It restores those files together after private working storage is lost, publishing the operation journal atomically only after every selected state member has been restored.
 
 Each completed phase is saved only after the original store has closed. A continuation reopens completed phases and continues the original incomplete phase. The applicator's request journal and retained project history govern exact-request replay inside the apply phase.
 
