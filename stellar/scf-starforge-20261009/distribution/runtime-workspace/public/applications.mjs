@@ -398,7 +398,18 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       editingId = null; configurationReview = startReview = null;
       label.value = type.title; runtime.value = descriptor.runtime.runtimeId; kind.value = type.id;
       const values = { installationId: descriptor.installationId };
-      if (descriptor.command === 'duckdb') {
+      if (descriptor.command === 'postgres') {
+        if (!descriptor.args.includes('serve')) throw new Error('Prepare the PostgreSQL serve command with its private operator directory.');
+        const option = (name, fallback) => {
+          const index = descriptor.args.indexOf(name);
+          return index >= 0 ? descriptor.args[index + 1] :
+            descriptor.args.find(item => item.startsWith(name + '='))?.slice(name.length + 1) ?? fallback;
+        };
+        values.workspaceDirectory = option('--workspace');
+        values.connectionEnvironment = option('--connection-env', 'SF_BUYER_POSTGRES_DSN');
+        values.databaseSchema = option('--schema', 'sf_received');
+        values.port = Number(option('--port', '0'));
+      } else if (descriptor.command === 'duckdb') {
         values.workspaceDirectory = value('--workspace');
         values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;
         if (descriptor.args.includes('--export-root')) values.exportRoot = value('--export-root');

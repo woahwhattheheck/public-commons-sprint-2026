@@ -113,7 +113,8 @@ async function readPackage(packageDirectory, { expectedManifest } = {}) {
   const catalogBytes = bytesByPath.get('source/' + CATALOG_PATH);
   if (!catalogBytes || !sourcePaths.has(DOCTOR_PATH)) throw new Error('Original merchant catalog or doctor missing');
   const { catalog, commands, commandCatalog } = compileCommandCatalog(catalogBytes,
-    path => sourcePaths.has(path), { prefix: 'source/' });
+    path => sourcePaths.has(path), { prefix: 'source/', sourcePaths: [...sourcePaths],
+      readSource: path => bytesByPath.get('source/' + path) });
   if (catalog.name !== manifest.packageName ||
       catalog.version + '-source.g' + manifest.sourceCommit.slice(0, 12) !== manifest.packageVersion)
     throw new Error('Merchant package version differs from its original catalog');
