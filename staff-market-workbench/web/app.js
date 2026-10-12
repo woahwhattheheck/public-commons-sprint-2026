@@ -7,7 +7,7 @@ let renderSequence = 0, sourceSequence = 0, contextRestored = false;
 let publisherScope = null, pricingCorrection = null;
 const extensionViews = new Map();
 const pageSize = 30;
-const titles = {sources:'Sources',publisher:'Publisher intake',receiving:'Receiving and annual review',matches:'Jobs and matches',analysis:'Market analysis',cycles:'Survey cycles',reports:'Decisions and exports',workspace:'Workspace'};
+const titles = {sources:'Sources',publisher:'Publisher intake',receiving:'Receiving and annual review',classification:'Classification and placement',matches:'Jobs and matches',analysis:'Market analysis',cycles:'Survey cycles',reports:'Decisions and exports',workspace:'Workspace'};
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
 const h = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -131,7 +131,7 @@ async function render(){
   if(generation!==renderSequence)return;
   $('#view-title').textContent=titles[currentView];
   $$('#nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===currentView?'page':'false'));
-  if(currentView==='publisher'||currentView==='receiving')await renderExtension(currentView,generation);
+  if(currentView==='publisher'||currentView==='receiving'||currentView==='classification')await renderExtension(currentView,generation);
   else if(currentView==='sources')renderSources();
   else if(currentView==='matches')await renderMatches(generation);
   else if(currentView==='analysis')renderAnalysis();
@@ -155,13 +155,15 @@ async function renderExtension(name,generation){
     element.innerHTML=empty('Loading '+titles[name].toLowerCase()+'…');
     view={element,workspaceId,controller:null,disposed:false,ready:null};
     extensionViews.set(name,view);
-    const path=name==='publisher'?'/extensions/publisher/bridge.mjs':'/receiving-bridge.mjs';
+    const path=name==='publisher'?'/extensions/publisher/bridge.mjs':name==='classification'?'/extensions/classification/browser.mjs':'/receiving-bridge.mjs';
     view.ready=import(path).then(async module=>{
       if(view.disposed||state.workspace.id!==workspaceId)return;
       const common={request,mutate,refresh,note};
       view.controller=name==='publisher'
         ?module.mountPublisherBridge(element,{...common,onSource:openPublisherSource})
-        :module.mountReceivingBridge(element,{...common,getState:()=>state,onOpenAnalysis:openReceivingAnalysis});
+        :name==='classification'
+          ?module.mountClassificationBridge(element,{...common,getState:()=>state})
+          :module.mountReceivingBridge(element,{...common,getState:()=>state,onOpenAnalysis:openReceivingAnalysis});
       await view.controller.ready;
     }).catch(error=>{if(!view.disposed){note(error.message||String(error),true);if(!view.controller)element.innerHTML=empty('The view could not load. Refresh this view to retry.');throw error;}});
   }

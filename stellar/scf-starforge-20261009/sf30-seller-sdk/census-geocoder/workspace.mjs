@@ -27,7 +27,7 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
   const index = join(directory, 'workspace.json');
   if (create && !await absent(index)) throw fault('GEOCODER_WORKSPACE_EXISTS', 'Reopen this existing workspace.');
   await privateDirectory(directory, create); const release = await acquireWorkspace(directory);
-  let state, active = null, closing = null, closed = false, publisher = null, publisherOpening = null;
+  let state, active = null, closing = null, closeRequested = false, closed = false, publisher = null, publisherOpening = null;
   const pending = new Set();
   const save = async () => { state.updatedAt = stamp(); await atomicJson(directory, 'workspace.json', state); };
   const selected = (list, id, label) => {
@@ -129,7 +129,7 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
     if (recovered) await save();
   } catch (error) { await release(); throw error; }
 
-  function ensureOpen() { if (closed || closing) throw fault('GEOCODER_WORKSPACE_CLOSED'); }
+  function ensureOpen() { if (closed || closeRequested) throw fault('GEOCODER_WORKSPACE_CLOSED'); }
   async function getPublisher() {
     if (publisher) return publisher;
     publisherOpening ??= (async () => {
@@ -434,16 +434,21 @@ export async function openGeocoderWorkspace({ directory, create = false, fetch: 
   };
   return { directory, status: track(status), inspectBatch: track(inspectBatch), act: track(act), download: track(download),
     close() {
-      closing ??= (async () => {
+      if (closing) return closing;
+      closeRequested = true;
+      const disposing = (async () => {
         const current = active;
         if (current && ['discovery.benchmarks', 'discovery.vintages', 'batch.capture'].includes(current.action)) current.controller.abort();
-        try { await Promise.allSettled([...pending, ...(current?.promise ? [current.promise] : [])]);
-          if (publisherOpening) publisher = await publisherOpening; }
-        finally {
-          try { await publisher?.close(); } finally { closed = true; await release(); }
-        }
+        await Promise.allSettled([...pending, ...(current?.promise ? [current.promise] : [])]);
+        if (publisherOpening) publisher = await publisherOpening;
+        // Keep this writer lease while an original publisher or child still owns state.
+        await publisher?.close();
+        await release();
+        closed = true;
       })();
-      return closing;
+      closing = disposing;
+      void disposing.catch(() => { if (closing === disposing) closing = null; });
+      return disposing;
     }
   };
 }

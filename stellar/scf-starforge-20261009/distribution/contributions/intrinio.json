@@ -3,12 +3,26 @@
   "id": "intrinio",
   "description": "Intrinio fundamentals and filing review",
   "commands": {
-    "intrinio": "stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/cli.mjs"
+    "intrinio": "stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/cli.mjs",
+    "intrinio-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/receiving/native.mjs",
+    "intrinio-application-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/receiving/applications.mjs"
   },
   "commandDescriptions": {
-    "intrinio": "Review retained statements, compare exact facts and receive complete customer handoffs"
+    "intrinio": "Review retained statements, compare exact facts and receive complete customer handoffs",
+    "intrinio-receive": "Restore a complete Intrinio customer and receive its original outputs through native Start, Open, Stop and reopen",
+    "intrinio-application-receive": "Receive a complete saved Intrinio customer through an existing managed Applications runtime"
   },
   "exports": {
-    "./seller/intrinio/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/workspace.mjs"
-  }
+    "./seller/intrinio/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/workspace.mjs",
+    "./seller/intrinio/managed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/managed.mjs",
+    "./seller/intrinio/managed-application": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/managed-application.mjs",
+    "./seller/intrinio/receiving/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/receiving/native.mjs",
+    "./seller/intrinio/receiving/applications": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/receiving/applications.mjs"
+  },
+  "applicationProviders": {
+    "intrinio": "stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/application-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/MANAGED_APPLICATION.md"
+  ]
 }

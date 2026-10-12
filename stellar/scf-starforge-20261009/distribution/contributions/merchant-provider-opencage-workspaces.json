@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-opencage-workspaces",
+  "description": "Original opencage workspaces MCP provider",
+  "merchantProviders": {
+    "opencage-workspaces": "stellar-forge/mcp-merchant-operator/providers/opencage-workspaces.mjs"
+  }
+}
