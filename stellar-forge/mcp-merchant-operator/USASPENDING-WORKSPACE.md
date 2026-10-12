@@ -443,3 +443,29 @@ the read snapshot after receiving the full file. After closing and reopening
 the owned workspace, resume the same export ID and offset. The same exact
 transaction JSON can then be declared as a receiving source and imported into
 the original award workspace.
+
+
+### Run the original native receiving continuation
+
+After the application receiving command produces its complete output directory,
+continue those same artifacts through the native merchant owner:
+
+```sh
+node stellar-forge/mcp-merchant-operator/examples/usaspending-transactions-native.mjs \
+  --received /private/original-transaction-receiving \
+  --out /private/transaction-native-receiving \
+  --operation ORIGINAL_OPERATION_ID
+```
+
+The command verifies the original receiving result's award and capture files,
+then uses the maintained MCP class to import the original award and transaction
+pages. It pages the timeline, saves the retained workshare, resumes the completed
+capture through the original browser job controller, exports all six transaction
+formats, closes and reopens the owner during a complete-file read, and receives
+the exported capture into its own original award workspace. It replays that
+receiving operation and reopens the saved result with its source-bound review.
+
+The same operation ID and output directory retain the operation journal,
+immutable exports and completed steps for continuation. The full receiving
+workspaces and downloads remain in that directory. The command consumes the
+application's existing provider records and complete output files.
