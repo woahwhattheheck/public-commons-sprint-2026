@@ -117,15 +117,20 @@ export function createOAuthConnections({container,make,field,selectField,api,act
     const facts=make('div',undefined,'oauth-definitions');
     for(const [label,value] of [
       ['Declared source scheme',profile.source.scheme],['Original source SHA256',profile.source.sha256],
-      ['Registered public client ID',profile.clientId],['Client authentication',profile.authMethod+' · PKCE S256'],
+      ['Registered public client ID',profile.clientId],['Client authentication',profile.authMethod+' · '+(profile.pkceMethod==='none'?'Intuit confidential client flow':'PKCE S256')],
       ['Authorization endpoint',profile.authorizationEndpoint],['Token endpoint',profile.tokenEndpoint],
-      ['Register this callback',callbackOrigin+current.callbackPath],['Approved resource origins',profile.resourceOrigins.join(', ')],
+      ['Register this callback',(profile.callbackOrigin??callbackOrigin)+current.callbackPath],['Approved resource origins',profile.resourceOrigins.join(', ')],
       ['Profile scopes',profile.scopes.join(', ')||'No explicit scopes'],['Private directory environment reference',current.directoryEnv],
       ['Current grant',grant.id??'No reviewed grant'],['Actual granted scopes',grant.scopes.join(', ')||'None supplied'],
       ['Access expiry',displayDate(grant.expiresAt)],['Refresh support',grant.hasRefreshToken?'Provider returned a refresh token':'No refresh token retained'],
       ['Remote revocation',grant.remoteRevocation??'not_requested'],
       ['Grant review',grant.review?grant.review.actor+' · '+grant.review.reference+' · '+displayDate(grant.review.at):'Not reviewed']
     ])facts.append(definition(label,value));
+    if(profile.provider?.kind==='intuit-quickbooks') {
+      facts.append(definition('QuickBooks environment',profile.provider.environment),
+        definition('Reviewed QuickBooks company ID',grant.realmId??'Authorize and review a company'));
+      if(grant.refreshHardExpiresAt)facts.append(definition('Refresh authorization ends',displayDate(grant.refreshHardExpiresAt)));
+    }
     if(profile.clientSecretEnv)facts.append(definition('Client secret environment reference',profile.clientSecretEnv));
     if(grant.refreshExpiresAt)facts.append(definition('Refresh expiry',displayDate(grant.refreshExpiresAt)));
     if(grant.retryAfter)facts.append(definition('Provider retry boundary',String(grant.retryAfter)));
@@ -179,10 +184,17 @@ export function createOAuthConnections({container,make,field,selectField,api,act
         flowBox.append(definition('Returned scopes',(flow.scopes??[]).join(', ')||'No explicit scopes'),
           definition('Access expiry',displayDate(flow.tokenExpiresAt)),definition('Refresh token returned',flow.refreshable?'Yes':'No'),
           make('p','Review the actual provider consent and intended use. These OAuth scopes do not establish an independently verified personal account identity.','hint'));
+        if(profile.provider?.kind==='intuit-quickbooks') {
+          flowBox.append(definition('QuickBooks company ID returned with this authorization',flow.realmId),
+            definition('QuickBooks environment',profile.provider.environment),
+            definition('Refresh expiry',displayDate(flow.refreshExpiresAt)),
+            definition('Refresh authorization ends',displayDate(flow.refreshHardExpiresAt)),
+            make('p','Review the company selected at Intuit. This company ID and the environment remain bound to the saved grant and accounting workspace.','hint'));
+        }
         const actor=field('Reviewer name',''),reference=field('Nonsecret review reference','');
         actor.input.maxLength=128;reference.input.maxLength=1000;actor.input.id='oauth-review-actor';reference.input.id='oauth-review-reference';
         const confirmation=make('input');confirmation.type='checkbox';confirmation.id='oauth-review-confirm';
-        const label=make('label',undefined,'check');label.append(confirmation,make('span','I reviewed this provider grant, its scopes, and the declared API use'));
+        const label=make('label',undefined,'check');label.append(confirmation,make('span',profile.provider?.kind==='intuit-quickbooks'?'I reviewed this QuickBooks company, environment, grant and accounting scope':'I reviewed this provider grant, its scopes, and the declared API use'));
         const approve=button('Approve and keep private grant',async()=>{
           if(!confirmation.checked||!actor.input.value.trim()||!reference.input.value.trim())throw new Error('Enter a reviewer and review reference, then confirm the grant review.');
           return command('approve',{flowId:flow.flowId,reviewId:flow.reviewId,review:{actor:actor.input.value.trim(),reference:reference.input.value.trim()}});

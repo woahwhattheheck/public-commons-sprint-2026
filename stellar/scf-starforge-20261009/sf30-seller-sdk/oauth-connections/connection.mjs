@@ -3,7 +3,7 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypt
 import { identity, fault, stamp } from '../postgres/publisher/files.mjs';
 import { initializeOAuthConnection, oauthConnectionStatus, loadOAuthConnection, publicOAuthStatus,
   saveOAuthConnection, withOAuthConnectionLock, checkRevision, commandIdentity, existingCommand, recordCommand } from './store.mjs';
-import { oauthCallbackPath, identifier, opaque, bearer, scopes, text, plain } from './profile.mjs';
+import { oauthCallbackPath, identifier, opaque, bearer, scopes, text, plain, intuitQboProfile, qboRealm } from './profile.mjs';
 import { oauthRequest, oauthFailure } from './transport.mjs';
 
 export { initializeOAuthConnection, oauthConnectionStatus } from './store.mjs';
@@ -13,15 +13,15 @@ const equal = (left, right) => typeof left === 'string' && typeof right === 'str
 const errorCode = error => /^OAUTH_CONNECTION_[A-Z_]+$/.test(error?.code ?? '') ? error.code : 'OAUTH_CONNECTION_FAILED';
 const safeError = error => ({ code: errorCode(error), message: error?.code?.startsWith('OAUTH_CONNECTION_') ?
   error.message : 'The private connection operation could not be completed.' });
-function seconds(value, label) {
+function seconds(value, label, allowZero = false) {
   if (value === undefined) return null;
   const result = typeof value === 'string' && /^[0-9]{1,10}$/.test(value) ? Number(value) : value;
-  if (!Number.isSafeInteger(result) || result < 1 || result > 2147483647)
+  if (!Number.isSafeInteger(result) || result < (allowZero ? 0 : 1) || result > 2147483647)
     throw oauthFailure('OAUTH_CONNECTION_TOKEN_INVALID', 'The provider returned an invalid ' + label + '.');
   return result;
 }
 function tokenFields(profile, response, previous = null) {
-  const value = response.value, now = response.startedAt;
+  const value = response.value, intuit = intuitQboProfile(profile), now = intuit ? response.receivedAt : response.startedAt;
   if (!plain(value) || typeof value.token_type !== 'string' || value.token_type.toLowerCase() !== 'bearer' ||
       !bearer(value.access_token) || value.refresh_token !== undefined && !opaque(value.refresh_token))
     throw oauthFailure('OAUTH_CONNECTION_TOKEN_INVALID', 'The provider did not return a usable bearer authorization.');
@@ -31,15 +31,21 @@ function tokenFields(profile, response, previous = null) {
       profile.scopes.some(scope => !returnedScopes.includes(scope)))
     throw oauthFailure('OAUTH_CONNECTION_SCOPE_CHANGED', 'The granted scopes differ from the reviewed source profile. Review the profile and authorize again.');
   const lifetime = seconds(value.expires_in, 'access-token lifetime');
-  const refreshLifetime = seconds(value.refresh_token_expires_in, 'refresh-token lifetime');
+  const refreshLifetime = seconds(intuit ? value.x_refresh_token_expires_in : value.refresh_token_expires_in, 'refresh-token lifetime', intuit);
+  const hardLifetime = intuit ? seconds(value.x_refresh_token_hard_expires_in, 'refresh-token hard lifetime', true) : null;
+  const earlier = (a, b) => a === null ? b : b === null ? a : Date.parse(a) <= Date.parse(b) ? a : b;
+  const refreshHardExpiresAt = intuit ? earlier(previous?.refreshHardExpiresAt ?? null,
+    hardLifetime === null ? null : until(hardLifetime * 1000, now)) : null;
+  const refreshExpiresAt = refreshLifetime === null ?
+    (intuit || value.refresh_token === undefined || value.refresh_token === previous?.refreshToken ?
+      previous?.refreshExpiresAt ?? null : null) : until(refreshLifetime * 1000, now);
   const expiresAt=lifetime===null?null:until(lifetime*1000,now);
   if(expiresAt && Date.parse(expiresAt)<=Date.now())
     throw oauthFailure('OAUTH_CONNECTION_TOKEN_TOO_OLD','The returned access token expired during the provider exchange.');
   return { accessToken: value.access_token, refreshToken: value.refresh_token ?? previous?.refreshToken ?? null,
     expiresAt,
-    refreshExpiresAt: refreshLifetime === null ?
-      (value.refresh_token===undefined || value.refresh_token===previous?.refreshToken ? previous?.refreshExpiresAt ?? null : null) :
-      until(refreshLifetime * 1000, now),
+    refreshExpiresAt: intuit ? earlier(refreshExpiresAt, refreshHardExpiresAt) : refreshExpiresAt,
+    ...(intuit ? { refreshHardExpiresAt, realmId: previous?.realmId ?? null } : {}),
     scopes: returnedScopes, issuedAt: new Date(now).toISOString() };
 }
 function reviewFields(review) {
@@ -155,7 +161,9 @@ export async function openOAuthConnection(directory, options = {}) {
     expiresAt: new Date(flow.expiresAt).toISOString(), profileSha256: flow.profileSha256,
     ...(flow.reviewId ? { reviewId: flow.reviewId } : {}),
     ...(flow.pending ? { scopes: [...flow.pending.scopes], refreshable: Boolean(flow.pending.refreshToken),
-      tokenExpiresAt: flow.pending.expiresAt } : {}), ...(flow.lastError ? { lastError: { ...flow.lastError } } : {}) });
+      tokenExpiresAt: flow.pending.expiresAt,
+      ...(intuitQboProfile(flow.profile) ? { realmId: flow.pending.realmId, refreshExpiresAt: flow.pending.refreshExpiresAt,
+        refreshHardExpiresAt: flow.pending.refreshHardExpiresAt } : {}) } : {}), ...(flow.lastError ? { lastError: { ...flow.lastError } } : {}) });
   function selectedFlow(id) {
     active();
     const flow = flows.get(id);
@@ -232,9 +240,11 @@ export async function openOAuthConnection(directory, options = {}) {
       let redirect;
       try { redirect = new URL(args.redirectUri); } catch { throw fault('OAUTH_CONNECTION_CALLBACK_INVALID'); }
       const callbackPath = oauthCallbackPath(state.profileSha256);
-      if (redirect.protocol !== 'http:' || redirect.hostname !== '127.0.0.1' || !redirect.port || redirect.search ||
-          redirect.hash || redirect.username || redirect.password || redirect.pathname !== callbackPath || args.redirectUri !== redirect.href)
-        throw fault('OAUTH_CONNECTION_CALLBACK_INVALID', 'Use the original listener and this source-specific registered callback path.');
+      const validOrigin = state.profile.callbackOrigin ? redirect.origin === state.profile.callbackOrigin :
+        redirect.protocol === 'http:' && redirect.hostname === '127.0.0.1' && Boolean(redirect.port);
+      if (!validOrigin || redirect.search || redirect.hash || redirect.username || redirect.password ||
+          redirect.pathname !== callbackPath || args.redirectUri !== redirect.href)
+        throw fault('OAUTH_CONNECTION_CALLBACK_INVALID', 'Use the configured callback origin and this source-specific registered path.');
       for (const [id, flow] of flows) if (Date.now() >= flow.expiresAt || ['discarded', 'failed', 'declined', 'connected'].includes(flow.phase)) {
         flow.controller.abort(); flow.pending = null; flows.delete(id);
       }
@@ -252,7 +262,7 @@ export async function openOAuthConnection(directory, options = {}) {
       }
       for (const [key, value] of Object.entries({ response_type: 'code', client_id: state.profile.clientId,
         redirect_uri: redirect.href, ...(state.profile.scopes.length?{scope:state.profile.scopes.join(' ')}:{}), state: stateToken,
-        code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256' }))
+        ...(state.profile.pkceMethod === 'S256' ? { code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256' } : {}) }))
         url.searchParams.set(key, value);
       for (const resource of state.profile.resourceParameters) url.searchParams.append('resource', resource);
       if(url.href.length>16384)throw fault('OAUTH_CONNECTION_AUTHORIZATION_URL_TOO_LARGE','The selected registration and scope parameters exceed the supported browser authorization URL size.');
@@ -269,6 +279,14 @@ export async function openOAuthConnection(directory, options = {}) {
         throw fault('OAUTH_CONNECTION_STATE_MISMATCH', 'The provider callback does not match the current authorization.');
       if (parameters.has('iss') && (parameters.getAll('iss').length !== 1 || !flow.profile.issuer || parameters.get('iss') !== flow.profile.issuer))
         throw fault('OAUTH_CONNECTION_ISSUER_MISMATCH', 'The callback issuer differs from the reviewed provider.');
+      let realmId = null;
+      if (intuitQboProfile(flow.profile) && !parameters.has('error')) {
+        realmId = parameters.get('realmId');
+        if (parameters.getAll('realmId').length !== 1 || !qboRealm(realmId))
+          throw fault('OAUTH_CONNECTION_REALM_REQUIRED', 'The state-matched QuickBooks callback must identify one company.');
+        if (flow.pending?.realmId && flow.pending.realmId !== realmId)
+          throw fault('OAUTH_CONNECTION_REALM_CHANGED', 'This authorization callback belongs to a different QuickBooks company.', 409);
+      }
       if (['review_grant', 'connected'].includes(flow.phase)) return flowView(flow);
       if (flow.phase !== 'awaiting_authorization') throw fault('OAUTH_CONNECTION_CALLBACK_USED', 'This callback has already been handled.', 409);
       if (parameters.has('error')) {
@@ -281,14 +299,17 @@ export async function openOAuthConnection(directory, options = {}) {
       flow.phase = 'exchanging';
       try {
         const response = await oauthRequest(flow.profile, 'token', { grant_type: 'authorization_code', code,
-          code_verifier: flow.verifier, redirect_uri: flow.redirectUri,
+          ...(flow.profile.pkceMethod === 'S256' ? { code_verifier: flow.verifier } : {}), redirect_uri: flow.redirectUri,
           ...(flow.profile.resourceParameters.length ? { resource: flow.profile.resourceParameters } : {}) },
         { ...options, signal: AbortSignal.any([flow.controller.signal, lifetime.signal]) });
         currentFlow(flow, generation);
         const fields = tokenFields(flow.profile, response);
+        if (intuitQboProfile(flow.profile)) fields.realmId = realmId;
         flow.pending = fields; flow.phase = 'review_grant';
         flow.reviewId = identity({ flowId, profileSha256: flow.profileSha256, grant: {
           scopes: fields.scopes, expiresAt: fields.expiresAt, refreshable: Boolean(fields.refreshToken),
+          ...(intuitQboProfile(flow.profile) ? { realmId: fields.realmId, refreshExpiresAt: fields.refreshExpiresAt,
+            refreshHardExpiresAt: fields.refreshHardExpiresAt } : {}),
         }, salt: randomBytes(32).toString('base64url') });
         flow.verifier = null;
         return flowView(flow);
@@ -357,6 +378,7 @@ export async function openOAuthConnection(directory, options = {}) {
         state.lastDisconnectedGrantId=state.grant.id??state.lastDisconnectedGrantId;
         state.grant = { ...state.grant, id: null, state: 'disconnected', accessToken: null, refreshToken: null,
           expiresAt: null, refreshExpiresAt: null, refreshPending: null, retryAfter: null, lastError: null,
+          ...(intuitQboProfile(state.profile) ? { realmId: null, refreshHardExpiresAt: null } : {}),
           generation: state.grant.generation + 1, remoteRevocation: args.revoke && token ? 'requested' : 'not_requested' };
         if (!args.revoke || !token) return (await finish(directory, state, 'disconnected', command, options)).result;
         recordCommand(state, command, 'pending');

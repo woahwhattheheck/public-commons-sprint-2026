@@ -744,7 +744,11 @@
     "./research/usaspending/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/server.mjs",
     "./buyer/usaspending/dossier": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier.mjs",
     "./merchant/accounting-platforms": "./source/stellar-forge/mcp-merchant-operator/accounting-platform-client.mjs",
-    "./merchant/accounting-platforms/operations": "./source/stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs"
+    "./merchant/accounting-platforms/operations": "./source/stellar-forge/mcp-merchant-operator/accounting-platform-cli.mjs",
+    "./seller/oauth-connections/quickbooks": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {
