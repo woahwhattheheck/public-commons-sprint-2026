@@ -70,25 +70,75 @@ def opened(warehouse, directory):
         server.server_close()
 
 
-def receive_review(request, inspected, mapping, reviewer):
+def receive_review(request, inspected, mapping, reviewer, *, record_id=None):
+    note = "Receive original source meanings with this complete SQL mapping."
+
+    def matches(review):
+        return (review["source_sha256"] == inspected["source_sha256"]
+                and review["mapping"] == mapping and review["reviewer"] == reviewer
+                and review["note"] == note)
+
+    if record_id is not None:
+        review = request("/api/reviews/" + record_id)
+        require(matches(review), "The original receiving review differs from this source, mapping or reviewer.")
+        return review
     before = None
     while True:
         suffix = "" if before is None else "&before=" + quote(before, safe="")
         page = request("/api/reviews?limit=100" + suffix)
         for item in page["reviews"]:
             review = request("/api/reviews/" + item["record_id"])
-            if (review["source_sha256"] == inspected["source_sha256"]
-                    and review["mapping"] == mapping and review["reviewer"] == reviewer
-                    and review["note"] == "Receive original source meanings with this complete SQL mapping."):
+            if matches(review):
                 return review
         before = page["next_before"]
         if before is None:
             break
     return request("/api/reviews", {
         "report_path": inspected["source_path"], "mapping": mapping, "reviewer": reviewer,
-        "expected_report_sha256": inspected["source_sha256"],
-        "note": "Receive original source meanings with this complete SQL mapping.",
+        "expected_report_sha256": inspected["source_sha256"], "note": note,
     })
+
+
+def retained_request(request, request_id):
+    # An unavailable record file is not an absent request. Use the native index
+    # to distinguish absence before opening the exact retained request body.
+    before = None
+    while True:
+        suffix = "" if before is None else "&before=" + quote(before, safe="")
+        page = request("/api/requests?limit=100" + suffix)
+        for item in page["requests"]:
+            if item["record_id"] == request_id:
+                return request("/api/requests/" + request_id)
+        before = page["next_before"]
+        if before is None:
+            return None
+
+
+def prepare_import(request, inspected, mapping, reviewer, checkpoint):
+    review = None
+    if checkpoint is None:
+        review = receive_review(request, inspected, mapping, reviewer)
+        request_id = sha(("semantic-import/" + review["version_id"]).encode())[:32]
+    else:
+        request_id = checkpoint["request_id"]
+    original = retained_request(request, request_id)
+    if original is not None:
+        body = original["body"]
+        require(original["route"] == "/api/import"
+                and set(body) == {"review_id", "request_id"} and body["request_id"] == request_id,
+                "The retained request is not this original dataset import.")
+        # The version can have several named reviews. An existing request owns
+        # its first review, including when an earlier client lost its response.
+        review = receive_review(request, inspected, mapping, reviewer, record_id=body["review_id"])
+    else:
+        if checkpoint is not None:
+            review = receive_review(request, inspected, mapping, reviewer, record_id=checkpoint["review_id"])
+        body = {"review_id": review["record_id"], "request_id": request_id}
+    if checkpoint is not None:
+        require(checkpoint["review_id"] == review["record_id"]
+                and checkpoint["version_id"] == review["version_id"],
+                "The original receiving checkpoint and retained import differ.")
+    return review, body
 
 
 def read_rows(request, version_id):
@@ -115,6 +165,9 @@ def main():
     parser.add_argument("--node-modules", type=Path)
     parser.add_argument("--chromium", type=Path)
     args = parser.parse_args()
+    args.reviewer = args.reviewer.strip()
+    require(args.reviewer and len(args.reviewer.encode()) <= 160 and "\x00" not in args.reviewer,
+            "Provide a reviewer name of at most 160 UTF-8 bytes.")
     os.umask(0o077)
     directory = private_directory(args.directory)
     result_path = directory / "receiving.json"
@@ -193,13 +246,25 @@ def main():
         while "received_field_" + str(number) in used:
             number += 1
         following["columns"][0]["column"] = "received_field_" + str(number)
-        received = []
+        labels = ("original", "alternate-alias")
+        received = {item["label"]: item for item in result["editions"]}
+        require(len(received) == len(result["editions"]) and set(received) <= set(labels),
+                "The original receiving checkpoints have unexpected edition labels.")
         for label, chosen in (("original", mapping), ("alternate-alias", following)):
-            review = receive_review(request, inspected, chosen, args.reviewer)
-            request_id = sha(("semantic-import/" + review["version_id"]).encode())[:32]
-            imported = request("/api/import", {"review_id": review["record_id"], "request_id": request_id})
+            checkpoint = received.get(label)
+            review, import_body = prepare_import(request, inspected, chosen, args.reviewer, checkpoint)
+            item = dict(checkpoint or {})
+            item.update(label=label, version_id=review["version_id"],
+                        request_id=import_body["request_id"], review_id=review["record_id"])
+            received[label] = item
+            result["editions"] = [received[name] for name in labels if name in received]
+            # Save the chosen original review and request before the import can
+            # commit. Keep both editions' previous rows and downloads on retry.
+            save()
+            imported = request("/api/import", import_body)
             edition = imported["result"]
-            require(imported["state"] == "COMPLETE" and edition["semantics_status"] == "RETAINED",
+            require(imported["state"] == "COMPLETE" and edition["semantics_status"] == "RETAINED"
+                    and edition["version_id"] == item["version_id"],
                     "The full original dictionary and row import did not complete.")
             version_id = edition["version_id"]
             rows, pages = read_rows(request, version_id)
@@ -214,12 +279,9 @@ def main():
                 if route == "semantics-file":
                     require(raw == source_dictionary, "The retained dictionary bytes changed.")
                 downloads.append(exact_file(directory / label / filename, raw))
-            received.append({"label": label, "version_id": version_id, "request_id": request_id,
-                             "review_id": review["record_id"], "rows": len(rows), "pages": pages,
-                             "downloads": downloads})
-            result["editions"] = received
+            item.update(rows=len(rows), pages=pages, downloads=downloads)
             save()
-        first_id, second_id = (row["version_id"] for row in received)
+        first_id, second_id = (received[label]["version_id"] for label in labels)
         current = request("/api/current?name=source_data")
         selection_id = sha(("semantic-select/" + first_id).encode())[:32]
         baseline = result.get("selection_body")

@@ -216,9 +216,9 @@ class PostgresOperator:
                     Column(name, sql_name, kind)
                 except WarehouseError:
                     sql_name = "field_" + str(index + 1)
-                while sql_name.casefold() in used:
+                while sql_name in used:
                     sql_name += "_"
-                used.add(sql_name.casefold())
+                used.add(sql_name)
                 columns.append(Column(name, sql_name, kind, nulls[name] > 0 or not kinds))
             mapping = DatasetMapping(tuple(columns))
             native = review_delivery(delivery, mapping)
