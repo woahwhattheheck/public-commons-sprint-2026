@@ -213,7 +213,8 @@ export async function createApplicationServer({configFile,bearerToken=process.en
       })();
       return closed;
     }
-    return {server,origin,address,identity:publicIdentity(loaded.application,loaded.context,component.info),close};
+    return {server,origin,address,identity:publicIdentity(loaded.application,loaded.context,component.info),
+      launchBinding:loaded.launchBinding,close};
   } catch(error) {
     component?.close();if(server?.listening)await new Promise(done=>server.close(done));
     await loaded.close();throw error;
