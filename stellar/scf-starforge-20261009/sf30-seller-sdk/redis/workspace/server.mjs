@@ -2,10 +2,14 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { handleRedisCommissioningHttp } from './commission-http.mjs';
 
 const ASSETS = new Map([
   ['/', ['index.html','text/html; charset=utf-8']],
   ['/app.mjs',['app.mjs','text/javascript; charset=utf-8']],
+  ['/commissioning',['commissioning.html','text/html; charset=utf-8']],
+  ['/commissioning.mjs',['commissioning.mjs','text/javascript; charset=utf-8']],
+  ['/commissioning.css',['commissioning.css','text/css; charset=utf-8']],
   ['/style.css',['style.css','text/css; charset=utf-8']],
   ['/local-draft-store.mjs',['../../../python/workspace/local-draft-store.mjs','text/javascript; charset=utf-8']],
 ]);
@@ -17,10 +21,10 @@ function json(res,status,value){
     'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'});
   res.end(body);
 }
-async function body(req){
+async function body(req,maximum=524288){
   if(!/^application\/json(?:;|$)/i.test(req.headers['content-type']??''))throw failure('JSON_REQUIRED','Send a JSON object.');
   const parts=[];let size=0;
-  for await(const part of req){size+=part.length;if(size>524288)throw failure('INPUT_TOO_LARGE','Keep this request within 512 KiB.',413);parts.push(part);}
+  for await(const part of req){size+=part.length;if(size>maximum)throw failure('INPUT_TOO_LARGE','Keep this complete request within '+Math.floor(maximum/1024)+' KiB.',413);parts.push(part);}
   let value;try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(parts)));}
   catch{throw failure('INVALID_JSON','Correct the JSON input.');}
   if(!value||typeof value!=='object'||Array.isArray(value))throw failure('OBJECT_REQUIRED','Send a JSON object.');
@@ -62,6 +66,7 @@ export async function startRedisAuthoringServer({workspace,port=8438}={}){
       const supplied=req.headers['x-workspace-token'];
       if(typeof supplied!=='string'||Buffer.byteLength(supplied)!==tokenBytes.length||!timingSafeEqual(Buffer.from(supplied),tokenBytes))
         return json(res,403,{error:'WORKSPACE_TOKEN_REQUIRED',message:'Reopen the original operator link printed by this workspace process.'});
+      if(await handleRedisCommissioningHttp({workspace,req,res,url,origin,json,body}))return;
       if(req.method==='GET'&&url.pathname==='/api/state'){
         exactQuery(url,[]);return json(res,200,workspace.state());
       }

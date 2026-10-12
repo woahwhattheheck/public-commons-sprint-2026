@@ -105,3 +105,7 @@ The browser offers the same request retrieval and continuation. A lost response 
 The existing `redis/native-journey.mjs` owns the real Redis/Valkey server, source fixtures, original merchant, generated client, buyer files and retained upgrade/rollback. Set `SF30_REDIS_JOURNEY_WORKSPACE=1` to include the authoring workspace's create/edit/save/preview/package/stage/reopen sequence on that same database.
 
 Set `SF30_REDIS_JOURNEY_TOPOLOGY=cluster` or `sentinel` to run that same workspace on the native topology fixture, including routing or primary promotion. Set `SF30_REDIS_WORKSPACE_BROWSER=1` for its actual Chromium editor flow using an already installed Playwright module. `SF30_PLAYWRIGHT_MODULE` can select the existing module path; `SF30_CHROMIUM_EXECUTABLE` can select an existing Chromium executable. `SF30_REDIS_WORKSPACE_SCREENSHOT` optionally retains the actual browser screen. Add `SF30_REDIS_JOURNEY_COLLECTIONS=1` for actual List/Set editing, native cursor previews, same-request cold recovery and complete customer-page delivery. The workspace continuation is additive to the original merchant and payment journey.
+
+## Customer commissioning operator
+
+The original saved workspace now includes a complete customer commissioning view, expected-result matrix, durable receiving operations and customer handover. See [COMMISSIONING_OPERATOR.md](COMMISSIONING_OPERATOR.md) for the browser, original CLI, HTTP and same-workspace native receiving flow.
