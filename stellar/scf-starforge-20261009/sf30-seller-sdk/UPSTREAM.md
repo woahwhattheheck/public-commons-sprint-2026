@@ -295,3 +295,13 @@ recovery. The transport owner's acceptance exercises the same shared transport.
 These local checks do not claim an external merchant API request or a Stellar
 network payment. One actual merchant endpoint and its original native payment
 flow remain the merchant onboarding exercise, not a new test framework.
+
+## Opening an unpaid offer before installing provider credentials
+
+The original `upstream-serve.mjs` launcher can start in `CHALLENGE_ONLY` mode with valid `headerEnv` and OAuth environment references whose values are not installed yet. The full origins, paths, methods, header names, variable names, OAuth declaration, request limits and merchant routes are still validated. No substitute credential is generated, and no environment value is added to the exported package.
+
+The native launcher enables `deferCredentials` only when it has no facilitator and is not running `--check`. Paid launches and `--check` keep their existing eager credential validation. Install the real provider credentials and restart with the reviewed facilitator configuration before serving paid work. The launcher retains one private environment snapshot for that lifetime.
+
+Embedders may explicitly pass `{deferCredentials: true}` to `compileUpstreamBindings`, `createUpstreamHandlers` or `createUpstreamApplication`. Static header values then resolve through the original shared handler's server-owned headers factory. Resolution runs inside the admitted backend attempt, after capacity admission and before DNS or an HTTP request. Missing, empty, oversized or invalid header values return the original `503 UPSTREAM_CONFIGURATION_UNAVAILABLE` outcome with no backend dispatch. OAuth retains its original lazy token provider; it validates the actual client credentials before starting a token request. Public snapshots do not contain credential values.
+
+This does not defer the merchant's local durable-operation encryption key: configured idempotency admission and stored-operation recovery still require their existing private `keyEnv`. It also does not add a provider retry or alter the payment gate, request/response validation, cache partitioning, or release/package identities.
