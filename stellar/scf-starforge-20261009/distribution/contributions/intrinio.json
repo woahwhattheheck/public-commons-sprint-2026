@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "intrinio",
+  "description": "Intrinio fundamentals and filing review",
+  "commands": {
+    "intrinio": "stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/cli.mjs"
+  },
+  "commandDescriptions": {
+    "intrinio": "Review retained statements, compare exact facts and receive complete customer handoffs"
+  },
+  "exports": {
+    "./seller/intrinio/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/intrinio/workspace.mjs"
+  }
+}

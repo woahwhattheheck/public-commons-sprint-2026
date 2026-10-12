@@ -17,9 +17,12 @@ import {initializationDirectory as directory, initializationBytes as bytes,
   retainInitializationRecord as retainRecord, initializationJson as encoded,
   acquireInitialization} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs';
 import {createSavedFileReader} from './native-file.mjs';
+import {baseDatasetFiles,datasetFileTypes,datasetDeliveryNames,bindDatasetFiles,datasetMeaning} from './native-dataset-meaning.mjs';
+import {registerReceivedDataset,loadReceivedDataset,receivedDatasetView,receivedDatasetHandoff} from './native-dataset-receive.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-dataset.v1';
 const SOURCE='stellar-forge.mcp-native-dataset-source.v1';
+const RECEIVED='stellar-forge.mcp-native-received-dataset.v1';
 const HASH=/^[a-f0-9]{64}$/;
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const same=(a,b)=>canonical(a)===canonical(b);
@@ -28,12 +31,7 @@ const fail=code=>{throw new InputError(code);};
 const integer=(value,min,max)=>Number.isSafeInteger(value)&&value>=min&&value<=max;
 const fieldName=value=>typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(value)&&
   !['constructor','prototype','__proto__'].includes(value);
-const files=Object.freeze({
-  'dataset.jsonl':'application/x-ndjson',
-  'dataset.csv':'text/csv; charset=utf-8',
-  'review.html':'text/html; charset=utf-8',
-  'manifest.json':'application/json',
-});
+const files=datasetFileTypes;
 const pins=['operator.json','workspace.json','policy.json','signer.mjs'];
 const datasetCli=fileURLToPath(new URL('../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-cli.mjs',import.meta.url));
 const identifier=value=>{
@@ -107,7 +105,7 @@ function selection(value,query,route){
   need(limit<=value.maxLimit,'MCP_DATASET_PAGE_LIMIT_EXCEEDS_DESCRIPTION');
   const filters={},ranges=[];
   for(const [key,text] of params){
-    if(['fields','limit','snapshot'].includes(key))continue;
+    if(['fields','limit','snapshot','semantics'].includes(key))continue;
     if(key==='sort'){
       const name=text.startsWith('-')?text.slice(1):text;
       need(columns.get(name)?.sortable===true,'DATASET_SORT_NOT_ENABLED');continue;
@@ -122,6 +120,7 @@ function selection(value,query,route){
   const sort=params.get('sort');
   return {url:url.href,query:Object.fromEntries(params),snapshot:value.snapshot,
     fields:projected,columns:projected.map(name=>columns.get(name)),limit,filters,ranges,
+    ...(params.has('semantics')?{semanticsSha256:params.get('semantics')}:{}),
     order:sort?{column:sort.startsWith('-')?sort.slice(1):sort,direction:sort.startsWith('-')?'desc':'asc',
       nulls:'last',ties:'csv-record-order'}:'csv-record-order'};
 }
@@ -143,6 +142,7 @@ const fields=Object.freeze({
   'dataset-deliver':['acquisitionId'],
   'dataset-rows':['acquisitionId','offset','limit','maxBytes'],
   'dataset-read':['acquisitionId','filename','byteOffset','maxBytes'],
+  'dataset-semantics':['acquisitionId','offset','limit','maxBytes','dictionarySection'],
   'dataset-accounting':['acquisitionId','offset','limit'],
   'dataset-finalize':['acquisitionId','offset','limit'],
 });
@@ -181,6 +181,11 @@ function originalCommand(arguments_,signal){
 /** No new payment or acquisition engine: the host owns one original approval gate. */
 export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelOwned,isActive,isClosed}){
   const root=join(manifest.directory,'datasets'),readSavedFile=createSavedFileReader();
+  // A complete native room has at most 4096 page archives. Keep those in eight
+  // existing 512-entry readers so a long room cannot evict/re-hash its own
+  // earlier pages on every small typed-row or file request.
+  const archiveReaders=Array.from({length:8},()=>createSavedFileReader());
+  const readArchive=(file,args,index)=>archiveReaders[index%archiveReaders.length](file,args);
   const preparing=new Map(),offline=new Set(),rowIndexes=new Map();
   function track(task){
     offline.add(task);task.finally(()=>offline.delete(task)).catch(()=>{});
@@ -232,6 +237,23 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
     return {schema:SCHEMA,status:'DATASET_SOURCE_REGISTERED',source:record,dataset,
       authority:'OPERATOR_REGISTERED_ORIGINAL_SF30_DATASET_DESCRIPTION'};
   }
+  async function registerReceived({acquisitionId,room,session=null}={}){
+    need(!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
+    const key=identifier(acquisitionId),current=await currentWorkspace();
+    need(typeof room==='string'&&(session===null||typeof session==='string'),
+      'MCP_DATASET_RECEIVING_PATH_REQUIRED');
+    await roots(true);
+    const path=join(root,'acquisitions',key);
+    const lease=await acquireInitialization(path,{python:current.config.operator.python,resume:true});
+    try{
+      need(!await exists(join(path,'request.json')),'MCP_DATASET_RECEIVING_ID_ALREADY_ACQUIRED');
+      await registerReceivedDataset({path,acquisitionId,room,session,
+        python:current.config.operator.python,readSavedFile,readArchive});
+      const saved=await loadReceivedDataset({path,acquisitionId,readSavedFile,readArchive});
+      return {...receivedDatasetView(saved),status:'FINALIZED_DATASET_REGISTERED',
+        delivery:deliveryView(saved.received.delivered)};
+    }finally{await lease.close();}
+  }
   async function request(acquisitionId,{optional=false}={}){
     const key=identifier(acquisitionId),path=join(root,'acquisitions',key);
     if(optional&&!await exists(join(path,'request.json')))return null;
@@ -268,6 +290,12 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
     return {path,key,record,cfg,pointer,definition,session,source:src};
   }
   async function completed(acquisitionId){
+    const path=join(root,'acquisitions',identifier(acquisitionId));
+    const received=await loadReceivedDataset({path,acquisitionId,readSavedFile,readArchive});
+    if(received){
+      need(!await exists(join(path,'request.json')),'MCP_DATASET_RECEIVING_ID_CONFLICT');
+      return received;
+    }
     const saved=await request(acquisitionId);
     need(saved.pointer,'MCP_DATASET_INITIALIZATION_INCOMPLETE');return saved;
   }
@@ -283,7 +311,8 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
     return {...report,pages:rows,pageRange:{offset,limit,total:report.pages.length,
       nextOffset:offset+rows.length<report.pages.length?offset+rows.length:null}};
   }
-  const view=async(saved,args={})=>({schema:SCHEMA,acquisitionId:saved.record.acquisitionId,
+  const view=async(saved,args={})=>saved.received?receivedDatasetView(saved,args):({
+    schema:SCHEMA,acquisitionId:saved.record.acquisitionId,
     binding:{sessionId:saved.pointer.sessionId,configurationSha256:saved.record.configurationSha256},
     report:reportView(saved,await inspectDatasetSession(saved.session),args)});
   async function newRunPreflight(saved){
@@ -314,6 +343,7 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
     const path=join(root,'acquisitions',key);
     const lease=await acquireInitialization(path,{python:current.config.operator.python,resume:true});
     try{
+      need(!await exists(join(path,'received.json')),'MCP_DATASET_RECEIVED_SOURCE_READ_ONLY');
       const prior=await request(args.acquisitionId,{optional:true});
       if(prior){
         need(same(prior.record.specification,specification),'MCP_DATASET_ACQUISITION_CONFLICT');
@@ -381,11 +411,13 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
     }finally{await lease.close();}
   }
   async function delivery(saved){
+    if(saved.received)return saved.received.delivered;
     const record=await json(join(saved.path,'delivery.json')),room=join(saved.path,'data-room');
     need(record.schema===SCHEMA&&record.acquisitionId===saved.record.acquisitionId&&
       record.sessionId===saved.pointer.sessionId&&record.sessionSha256===saved.pointer.sessionSha256&&
       record.configurationSha256===saved.record.configurationSha256&&record.room===room&&
-      HASH.test(record.sourceBindingSha256??'')&&same(Object.keys(record.files??{}).sort(),Object.keys(files).sort()),
+      HASH.test(record.sourceBindingSha256??'')&&object(record.files)&&
+      Object.keys(baseDatasetFiles).every(name=>Object.hasOwn(record.files,name)),
       'MCP_DATASET_DELIVERY_CHANGED');
     const marker=await json(join(saved.path,'.data-room.sf88-source.json'),8192);
     need(marker.schema==='stellar-forge.sf88.native-delivery-source.v1'&&marker.destination===room&&
@@ -402,11 +434,9 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
       integer(native.dataset.rows,0,saved.record.specification.limits.maxRows)&&
       native.dataset.rows===record.rows&&native.chainDigest===record.chainDigest,
       'MCP_DATASET_NATIVE_MANIFEST_CHANGED');
-    for(const name of Object.keys(files).filter(name=>name!=='manifest.json')){
-      const file=record.files[name];
-      need(same(native.outputs[name],{sha256:file.sha256,bytes:file.bytes}),'MCP_DATASET_NATIVE_MANIFEST_CHANGED');
-    }
-    return {record,native};
+    const bound=await bindDatasetFiles({record,room,native,readSavedFile});
+    return {record:{...record,files:bound.files},native,
+      ...(bound.legacySemantics?{legacySemantics:true}:{})};
   }
   function deliveryView(value){
     const {record,native}=value;
@@ -414,9 +444,14 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
       chainDigest:record.chainDigest,files:Object.entries(record.files).map(([filename,file])=>({
         filename,contentType:file.contentType,bytes:file.bytes,sha256:file.sha256})),
       paymentStatus:native.paymentStatus,
-      accountingAction:{action:'dataset-accounting',acquisitionId:record.acquisitionId}};
+      ...(native.semantics?{semantics:native.semantics}:{}),
+      ...(record.schema===RECEIVED?{sourceFormat:record.sourceFormat,readOnly:true}:
+        {accountingAction:{action:'dataset-accounting',acquisitionId:record.acquisitionId}})};
   }
   async function deliver(saved){
+    if(saved.received)return {schema:RECEIVED,acquisitionId:saved.record.acquisitionId,
+      sourceFormat:saved.received.receipt.sourceFormat,status:'REOPENED',readOnly:true,
+      delivery:deliveryView(saved.received.delivered),appendedPages:0};
     const current=await currentWorkspace();
     const lease=await acquireInitialization(saved.path,{python:current.config.operator.python,resume:true});
     try{
@@ -434,9 +469,11 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
         result.directory===room&&result.nativeStatus.complete===true&&result.nativeStatus.finalized===true&&
         result.nativeStatus.rows===report.totalRows&&result.nativeStatus.snapshot===saved.record.selected.snapshot,
         'MCP_DATASET_NATIVE_DELIVERY_INVALID');
-      const output={};
-      for(const [name,contentType] of Object.entries(files)){
-        const file=result.outputs[name];
+      const nativeManifest=await json(join(room,'manifest.json'),4*1024*1024);
+      const names=datasetDeliveryNames(nativeManifest),output={};
+      need(same(Object.keys(result.outputs).sort(),names.slice().sort()),'MCP_DATASET_NATIVE_DELIVERY_INVALID');
+      for(const name of names){
+        const contentType=files[name],file=result.outputs[name];
         need(file?.path===join(room,name)&&integer(file.bytes,0,256*1024*1024)&&HASH.test(file.sha256??''),
           'MCP_DATASET_NATIVE_DELIVERY_INVALID');
         output[name]={destination:file.path,contentType,bytes:file.bytes,sha256:file.sha256};
@@ -517,6 +554,7 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
     if(row===total)need(cursor===file.bytes,'MCP_DATASET_TYPED_FILE_CHANGED');
     return {schema:SCHEMA,acquisitionId:saved.record.acquisitionId,dataset:delivered.native.dataset,
       columns:saved.record.selected.columns,rows:result,sha256:file.sha256,verifiedSavedFile:true,
+      ...(delivered.native.semantics?{semantics:delivered.native.semantics}:{}),
       range:{offset,limit,total,nextOffset:offset+result.length<total?offset+result.length:null,
         maxBytes,returnedRowBytes:used},...(oversizedRow?{nextRow:oversizedRow}:{}),
       retry:'NO_AUTOMATIC_RETRY'};
@@ -534,6 +572,14 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
     for(const key of selected){
       if(sources)records.push((await source(key)).record);
       else{
+        if(await exists(join(where,key,'received.json'))){
+          const registered=await json(join(where,key,'received.json'),16*1024*1024);
+          const saved=await completed(registered.acquisitionId);
+          need(saved.received&&saved.key===key,'MCP_DATASET_RECEIVING_ID_CONFLICT');
+          records.push({...receivedDatasetView(saved),registeredAt:registered.registeredAt,
+            query:saved.record.selected.query,hasDelivery:true});
+          continue;
+        }
         if(!await exists(join(where,key,'request.json'))){
           records.push({acquisitionKey:key,acquisitionId:null,status:'INITIALIZATION_NOT_RETAINED',
             executionInspected:false,hasDelivery:false,
@@ -554,10 +600,13 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
   }
   return {
     register:path=>track(register(path)),
+    registerReceived:options=>track(registerReceived(options)),
     /** Host-only source handoff: callers supply a saved ID, never another path. */
     async completedDataset(acquisitionId){
       need(!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
-      const saved=await completed(acquisitionId),report=await inspectDatasetSession(saved.session);
+      const saved=await completed(acquisitionId);
+      if(saved.received)return receivedDatasetHandoff(saved);
+      const report=await inspectDatasetSession(saved.session);
       reportView(saved,report);
       need(report.status==='COMPLETE','DATASET_COMPLETE_SESSION_REQUIRED');
       const delivered=await delivery(saved);
@@ -593,17 +642,21 @@ export function createNativeDatasets({manifest,currentWorkspace,runOwned,cancelO
         try{return await promise;}finally{preparing.delete(key);}
       }
       const saved=await completed(args.acquisitionId),owner='dataset:'+key;
-      if(['dataset-status','dataset-run','dataset-cancel','dataset-recover'].includes(action)){
+      if(saved.received&&['dataset-run','dataset-cancel','dataset-recover','dataset-accounting','dataset-finalize'].includes(action))
+        fail('MCP_DATASET_RECEIVED_SOURCE_READ_ONLY');
+      if(!saved.received&&['dataset-status','dataset-run','dataset-cancel','dataset-recover'].includes(action)){
         need(page(args).offset<=saved.definition.limits.maxPages,'MCP_DATASET_PAGE_INVALID');
       }
       if(action==='dataset-status')return view(saved,args);
       if(action==='dataset-read'){
         need(Object.hasOwn(files,args.filename),'MCP_DATASET_FILENAME_REQUIRED');
         const value=await delivery(saved);
+        need(Object.hasOwn(value.record.files,args.filename),'MCP_DATASET_OUTPUT_NOT_PRESENT');
         return {schema:SCHEMA,acquisitionId:args.acquisitionId,filename:args.filename,
           result:await readSavedFile(value.record.files[args.filename],args),retry:'NO_AUTOMATIC_RETRY'};
       }
       if(action==='dataset-rows')return rows(saved,args);
+      if(action==='dataset-semantics')return datasetMeaning(await delivery(saved),args,readSavedFile);
       if(action==='dataset-cancel'){
         const cancelled=await cancelOwned(owner);
         return {...await view(saved,args),cancelRequested:cancelled,

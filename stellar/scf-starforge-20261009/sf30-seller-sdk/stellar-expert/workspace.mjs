@@ -42,6 +42,7 @@ export async function startStellarExpertWorkspace({directory,inboxDirectory,port
       if(req.method==='GET'){
         if(url.pathname==='/api/schema')return reply(200,app.schema());
         if(url.pathname==='/api/view')return reply(200,await app.view());
+        if(url.pathname==='/api/edition')return reply(200,await app.edition(url.searchParams.get('editionId')));
         if(url.pathname==='/api/editions')return reply(200,await app.editions({
           offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??100)}));
         if(url.pathname==='/api/rows'){

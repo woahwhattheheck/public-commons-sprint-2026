@@ -176,6 +176,8 @@ def _staged_tree(staging, files, *, complete=False):
 
 
 def _validate_database(staging, manifest):
+    from .response_documents import allowed_document_payload, snapshot_document_files
+
     path = staging / "datasets.sqlite3"
     # Immutable inspection neither creates WAL/SHM files nor runs application
     # initialization or interrupted-job reconciliation on the original bytes.
@@ -204,6 +206,19 @@ def _validate_database(staging, manifest):
                 quoted = '"' + name.replace('"', '""') + '"'
                 if db.execute("SELECT COUNT(*) FROM " + quoted).fetchone()[0] != expected:
                     _error("DATABASE_ROWS_CHANGED")
+            # Reopen the original document descriptors below this receiving
+            # directory and require the complete DB-referenced source closure.
+            try:
+                documents = snapshot_document_files(staging, db)
+            except (StateError, OSError):
+                _error("DOCUMENT_SOURCE_INVALID")
+            expected_documents = {item["path"]: item for item in documents}
+            received_documents = {
+                item["path"]: {key: item[key] for key in ("path", "bytes", "sha256")}
+                for item in manifest["files"] if allowed_document_payload(item["path"])
+            }
+            if received_documents != expected_documents:
+                _error("DOCUMENT_SOURCE_CLOSURE_CHANGED")
         finally:
             db.close()
     except sqlite3.Error:
