@@ -427,9 +427,17 @@ node cli.mjs serve --directory /absolute/new-private-workspace --port 0
 
 Inspection streams and hashes all original members. Import creates a new private
 directory and a new workspace identity, while preserving original source,
-capture, mapping, edition, merchant and product-reference IDs. The exact incoming
-workspace projection remains in imported-workspace.json; the import receipt
-retains its original source workspace/revision and archive hash.
+capture, mapping, edition, merchant and export IDs. Every created intermediate
+directory is private (0700), and retained regular files are private (0600), so
+the original native source and publisher helpers can reopen the received data.
+
+The new workspace starts with an empty active product index. Its source packet
+contains no publisher directories to support the original host's product
+entries. Historical product references in exact retained exports and the incoming
+workspace projection remain unchanged in imported-workspace.json. This also
+supports receiving packets made by earlier versions that included those
+references. The import receipt retains the original source workspace/revision
+and archive hash.
 
 The archive's exact declared set is checked, including duplicate paths,
 traversal, member type, compression, file limits and actual expanded bytes.
@@ -442,6 +450,37 @@ After import, inspect retained source and edition bytes, then prepare an existin
 merchant export through the original publisher at that host. Reusing a completed
 capture needs no live WebDAV service. Continuing an incomplete capture requires
 its actual source connection and original strong validator.
+
+
+## Retained native receiving example
+
+The completed operator workflow used WsgiDAV 4.3.5 serving the exact CSV member
+of the [CMS 2026 OEP county-level public use file](https://www.cms.gov/files/zip/2026-oep-county-level-public-use-file.zip).
+The 723,009-byte original has SHA256
+`2857e5932d4dbaf0d0985ad57470dda062666adc98c8e62cda540a98ceb31926`.
+Its public projection retains 2,055 rows and 12 string columns, including county
+FIPS leading zeros, commas, suppression markers and original whitespace.
+
+The same operator journey retained the original catalogue XML, paused after
+180,224 bytes, resumed that exact capture with one conditional HTTP 206, built
+the native dataset, and exported its complete 18-file source closure alongside
+the four original publisher inputs. The existing publisher then staged,
+activated and published the original release and downloaded an unsigned buyer
+configuration from an actual challenge. No payment or signature was made.
+
+The resulting source packet is 760,192 bytes, with 42 declared members and
+2,024,083 expanded bytes; its SHA256 is
+`af02f6818b256bd5db9941a3325e95e99626ac3faacd5598bbf08893a0520016`.
+It is a retained source/data handoff for the matching installed runtime. Use the
+inspect/import/serve sequence above, then select the received edition to query
+its original rows. The completed fresh receiver reopened that native dataset
+without the provider, while the original host reopened its own published product
+and unchanged unsigned buyer configuration. All seven original operator views
+were exercised at a 390-pixel viewport.
+
+The original offer process was stopped at the end of the journey. A recipient
+prepares and starts its own reviewed offer through the existing publisher;
+the source packet does not keep an old loopback service running.
 
 ## CLI and JavaScript API
 
