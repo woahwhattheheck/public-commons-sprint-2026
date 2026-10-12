@@ -472,3 +472,8 @@ The existing OData CLI also supports live collections, collection, collect, coll
     node stellar/scf-starforge-20261009/sf30-seller-sdk/odata/cli.mjs --workspace EMPTY_DIRECTORY restore --input COMPLETE_TRANSFER.json
 
 This uses the same workspace.restore implementation as the browser and retains the complete original source and collection files.
+
+
+## Complete customer operation
+
+The [retained-input customer operation](examples/COLLECTION_CUSTOMER.md) composes this original service with Analysis, saved SQL, a published two-section report, an original workbook and both complete workspace receivers. Its two executable phases consume the original five-response Northwind selection, compare every one of the 830 delivered records, preserve value/null states and recover the collection from the independently received Analysis source. The same operation journal retains native IDs and the exact final customer archive across interruption and resume.
