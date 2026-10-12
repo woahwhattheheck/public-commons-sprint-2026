@@ -23,13 +23,13 @@
     },
     {
       "path": "native/browser.mjs",
-      "bytes": 27092,
-      "sha256": "2792091295d55b70221e44d08cb4d695b907fadedd3af62e21fb941a0ea528fb"
+      "bytes": 27302,
+      "sha256": "3a70da58286a283dd1a94dc2546b10819b293e0ee15eccca7aee8e5d697fc32f"
     },
     {
       "path": "native/README.md",
-      "bytes": 5881,
-      "sha256": "980a1e9b78390f86c6b6b43947e1365595c4c8256ee06d4b19b0f74d229b8a89"
+      "bytes": 5954,
+      "sha256": "9ac1a9c2e7deb1e3c32b9acdf7369df49bd9a2480263b467495b9dd62842184e"
     },
     {
       "path": "native/receive.py",
@@ -63,8 +63,8 @@
     },
     {
       "path": "portfolio_target/server.py",
-      "bytes": 24448,
-      "sha256": "03892878570a5980df8dd322cddc5bd8ec41c5f207587d479b175ad64c218211"
+      "bytes": 24568,
+      "sha256": "0a20bd41173326e3bed4f865bb57f6f7bad7495e650bdc4c4789a132ed42ed65"
     },
     {
       "path": "portfolio_target/storage.py",

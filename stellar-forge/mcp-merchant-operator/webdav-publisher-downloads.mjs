@@ -8,7 +8,7 @@ import { identity } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/w
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
-const LIMIT = 16 * 1024 * 1024;
+const LIMIT = 256_000_000; // Same generated snapshot limit as RetainedFileReads.
 const digest = value => createHash('sha256').update(value).digest('hex');
 const stamp = value => ['dev','ino','size','mtimeNs','ctimeNs','mode','uid'].map(key => String(value[key])).join(':');
 

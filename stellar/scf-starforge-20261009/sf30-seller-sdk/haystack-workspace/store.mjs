@@ -7,7 +7,9 @@ import { freshState, seal, validateState, summary, analyzed, applyAction, source
 import { clone, digest, sha256, json, base64, plain, need, id, hash, integer, text, now, newId, page, canonical } from "./util.mjs";
 import { exists, plainRead, atomicWrite, createOnlyFile, syncDirectory } from "./files.mjs";
 import { validateArguments, MUTATIONS } from "./catalog.mjs";
-import { buildBundle, PACKAGE_MAX_BYTES } from "./portable.mjs";
+import { buildBundle, verifyBundle, PACKAGE_MAX_BYTES } from "./portable.mjs";
+import { workRows, workView, evidenceBytes, previewReturn, applyReturn, returnRows, returnView } from "./corrective-work.mjs";
+import { makeWorkReport } from "./corrective-reports.mjs";
 import { makeReport, nativeGrid } from "./reports.mjs";
 
 function assertRevision(state, expectedRevision) {
@@ -382,7 +384,7 @@ export class HaystackWorkspace {
       }
       need(!await exists(this.deliveryDirectory(operationId)), "This operation identity belongs to an existing delivery.", "HAYSTACK_OPERATION", 409);
       assertRevision(state, args.expectedRevision);
-      const result = applyAction(state, action, args); state.revision += 1;
+      const result = action === "return.apply" ? applyReturn(state, args, verifyBundle(base64(args.base64, PACKAGE_MAX_BYTES))) : applyAction(state, action, args); state.revision += 1;
       const outcome = { ...clone(result), workspaceId: state.workspaceId, revision: state.revision, operationId };
       const operation = { id: operationId, action, argumentsSha256, revision: state.revision, at: now(),
         previousSha256: state.operations.at(-1)?.sha256 || null, result: outcome };
@@ -455,6 +457,7 @@ export class HaystackWorkspace {
     const operationId = id(args.operationId), argumentsSha256 = digest({ action: "delivery.prepare", args });
     if (args.kind === "workspace") need(args.format === undefined && args.editionId === undefined && args.sourceId === undefined && args.role === undefined,
       "The complete workspace delivery includes every source, edition and application file; omit report-only fields.");
+    else if (args.kind === "work-register") need(args.editionId === undefined && args.sourceId === undefined && args.role === undefined, "The complete corrective-work register retains every finding and review; omit asset-report scope fields.");
     else if (args.kind === "native-grid") need(args.sourceId && args.role === undefined && (args.format === undefined || args.format === "json"), "Native grid delivery needs one selected source and JSON format.");
     else need(args.sourceId === undefined, "Register and diagnostic reports use their complete selected source set.");
     return this.withWriter(async () => {
@@ -468,6 +471,7 @@ export class HaystackWorkspace {
       const state = await this.read(); assertRevision(state, args.expectedRevision);
       need(!state.operations.some(item => item.id === operationId), "This identity belongs to an original saved mutation.", "HAYSTACK_OPERATION", 409);
       const result = args.kind === "workspace" ? await buildBundle(state) :
+        args.kind === "work-register" ? makeWorkReport(state, args) :
         args.kind === "native-grid" ? nativeGrid(state, args) : makeReport(state, args);
       const bytes = Buffer.from(result.bytes);
       need(bytes.length <= PACKAGE_MAX_BYTES, "This complete delivery exceeds 192 MiB.", "HAYSTACK_SIZE", 413);
@@ -496,6 +500,10 @@ export class HaystackWorkspace {
     }
     const state = await this.read();
     if (action === "workspace.status") return summary(state);
+    if (action === "evidence.read") {
+      const value = evidenceBytes(state, args.evidenceId);
+      return range(value.bytes, { evidenceId: value.evidenceId, sha256: value.sha256, name: value.name, mediaType: value.mediaType }, args);
+    }
     if (action === "operation.read") {
       const operationId = id(args.operationId), operation = state.operations.find(item => item.id === operationId);
       if (operation) return { ...clone(operation.result), replayed: true };
@@ -510,6 +518,11 @@ export class HaystackWorkspace {
     assertRevision(state, args.expectedRevision);
     const envelope = { workspaceId: state.workspaceId, revision: state.revision, ...(args.editionId ? { editionId: args.editionId } : {}) };
     const paginate = items => ({ ...envelope, ...page(items, args) });
+    if (action === "works.list") return paginate(workRows(state, args, { analyzed }));
+    if (action === "work.read") return { ...envelope, ...workView(state, args.itemId, { analyzed }) };
+    if (action === "return.preview") return { ...envelope, ...previewReturn(state, verifyBundle(base64(args.base64, PACKAGE_MAX_BYTES))) };
+    if (action === "returns.list") return paginate(returnRows(state));
+    if (action === "return.read") return { ...envelope, ...returnView(state, args.returnId) };
     if (action === "sources.list") return paginate(state.sources.map(source => ({ ...sourceSummary(source), selected: state.selectedSourceIds.includes(source.id) })));
     if (action === "operations.list") return paginate(state.operations);
     if (action === "editions.list") return paginate(state.editions);

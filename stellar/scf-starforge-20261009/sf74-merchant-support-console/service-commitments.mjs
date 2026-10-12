@@ -1,3 +1,4 @@
+import {validateServiceRenewals,mergeServiceRenewals} from './service-renewals.mjs';
 // MIT. Service terms and operating reports in the original SF74 saved case.
 export const SERVICE_SCHEMA='stellar-forge.merchant-service-case.v1';
 export const SERVICE_SOURCE_SCHEMA='stellar-forge.merchant-service-source.v1';
@@ -265,7 +266,7 @@ async function buildPreview(record,input){
 }
 export async function validateServiceRecord(value){
   if(value==null)return createServiceRecord();
-  fields(value,['schema','terms','captures','exclusions','reports','operations','draft'],'service case');if(value.schema!==SERVICE_SCHEMA)problem('Choose the original service case schema.');
+  fields(value,['schema','terms','captures','exclusions','reports','operations','renewals','draft'],'service case');if(value.schema!==SERVICE_SCHEMA)problem('Choose the original service case schema.');
   const record=clone(value);record.draft=draft(record.draft??{});withinSize(record);
   const versions=new Map(),captureIds=new Set(),exclusionIds=new Set(),reportIds=new Set();
   for(const terms of list(record.terms,'terms editions',1000)){
@@ -276,6 +277,7 @@ export async function validateServiceRecord(value){
     if(await serviceSha256(termsInput(terms))!==terms.requestSha256)problem('The retained terms request changed.');
     versions.set(terms.id,terms.revision);
   }
+  if(record.renewals!==undefined)record.renewals=await validateServiceRenewals(record.renewals,record.terms);
   for(const capture of list(record.captures,'original captures',1000)){
     fields(capture,['schema','snapshot','sha256'],'retained capture');if(capture.schema!=='stellar-forge.merchant-service-capture.v1')problem('The retained incident capture schema differs.');
     normalizeSnapshot(capture.snapshot);await checkSeal(capture,'incident capture');if(captureIds.has(capture.sha256))problem('A retained source capture is duplicated.');captureIds.add(capture.sha256);
@@ -448,6 +450,8 @@ export async function mergeServiceHistory(value,retained){
     result[name]=[...rows.values()];
     if(name==='terms')result[name].sort((a,b)=>a.id.localeCompare(b.id)||a.revision-b.revision);
   }
+  if(old.renewals!==undefined||incoming.renewals!==undefined)
+    result.renewals=await mergeServiceRenewals(incoming.renewals,old.renewals,result.terms);
   return validateServiceRecord(withinSize(result));
 }
 export function serviceSummary(record){

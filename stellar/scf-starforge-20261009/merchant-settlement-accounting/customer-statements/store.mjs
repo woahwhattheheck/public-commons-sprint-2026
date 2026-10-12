@@ -5,6 +5,7 @@ import {open,mkdir,rename,unlink,lstat} from 'node:fs/promises';
 import {join} from 'node:path';
 import {STATEMENT_SCHEMA,normalizeCustomer,normalizeUsage,compileCustomerStatement,renderStatementCsv,renderStatementHtml,renderStatementUsageCsv,
   sha,json,need,label,orderReference} from './core.mjs';
+import {compileServicePeriod,renderServicePeriodCsv,renderServicePeriodSummaryCsv} from './period-usage.mjs';
 
 const SCHEMA='stellar-forge.merchant-customer-statements-workspace.v1';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -53,6 +54,10 @@ function normalizedIntent(value){
     usageId:value.usageId===undefined||value.usageId===null||value.usageId===''?null:idValue(value.usageId,'service usage import'),
     replacesId:value.replacesId===undefined||value.replacesId===null||value.replacesId===''?null:idValue(value.replacesId,'retained statement')};
   if(value.from!==undefined||value.until!==undefined){result.from=value.from;result.until=value.until;}
+  if(value.usageOpeningId!==undefined&&value.usageOpeningId!==null&&value.usageOpeningId!==''){
+    result.usageOpeningId=idValue(value.usageOpeningId,'opening service usage import');
+    need(result.usageId,'SERVICE_PERIOD_CLOSING_REQUIRED','Choose the closing usage capture for this service period.');
+  }
   return result;
 }
 
@@ -182,19 +187,28 @@ export class CustomerStatementWorkspace{
     const customer=this.customer(intent.customerId),run=this.workspace.runRow(intent.runId);
     need(run.status==='complete','RUN_NOT_COMPLETE','Choose a completed original reconciliation.',409);
     const report=parse(await readVerified(join(this.workspace.runPath(run.id),'report','report.json'),{sha256:run.reportSha256}),'original accounting report');
-    let usage=null,usageSource=null;
+    let usage=null,usageSource=null,usageOpening=null,usageOpeningSource=null;
     if(intent.usageId){usageSource=this.usageRow(intent.usageId);usage=await this._readUsage(usageSource);}
+    if(intent.usageOpeningId){usageOpeningSource=this.usageRow(intent.usageOpeningId);usageOpening=await this._readUsage(usageOpeningSource);}
     if(intent.replacesId){
       const previous=this.statement(intent.replacesId);
       need(previous.customerId===customer.id&&previous.status==='RETAINED','INVALID_STATEMENT_REPLACEMENT','Replace the current retained statement for this same customer.',409);
     }
-    const draft=compileCustomerStatement({report,run,customer,bindings:this.data().bindings,usage,usageSource,
+    const draft=compileCustomerStatement({report,run,customer,bindings:this.data().bindings,usage,usageSource,usageOpening,usageOpeningSource,
       ...(intent.from!==undefined||intent.until!==undefined?{from:intent.from,until:intent.until}:{}),adjustments:this.workspace.state.adjustments??[]});
     if(intent.replacesId)draft.replacesId=intent.replacesId;
     return {intent:structuredClone(intent),draft,previewSha256:sha(json(draft)),revision:this.workspace.state.revision};
   }
   async preview(value){
     const intent=normalizedIntent(value);return this.workspace.serial(async()=>this._preview(intent));
+  }
+  async previewUsagePeriod(value){
+    need(object(value),'INVALID_STATEMENT_REQUEST','Choose the two original usage captures.');
+    return this.workspace.serial(async()=>{
+      const openingSource=this.usageRow(value.usageOpeningId),closingSource=this.usageRow(value.usageId);
+      const opening=await this._readUsage(openingSource),closing=await this._readUsage(closingSource);
+      return {period:compileServicePeriod({opening,closing,openingSource,closingSource}),revision:this.workspace.state.revision};
+    });
   }
   async retain(value){
     const intent=normalizedIntent(value),actor=actorValue(value.actor),requestId=label(value.requestId,'stable retention request ID',160);
@@ -219,6 +233,17 @@ export class CustomerStatementWorkspace{
         'usage.csv':Buffer.from(renderStatementUsageCsv(document)),
         'statement.html':Buffer.from(renderStatementHtml(document))
       };
+      if(document.servicePeriod){
+        files['period.csv']=Buffer.from(renderServicePeriodCsv(document));
+        files['period-summary.csv']=Buffer.from(renderServicePeriodSummaryCsv(document));
+        for(const [name,sourceId,source] of [
+          ['usage-opening.json',intent.usageOpeningId,document.source.usageOpening],
+          ['usage-closing.json',intent.usageId,document.source.usage]
+        ]){
+          const usage=await this._readUsage(this.usageRow(sourceId));
+          files[name]=Buffer.from(json({schema:'stellar-forge.merchant-customer-usage-source.v1',source,usage}));
+        }
+      }
       const metadata=Object.fromEntries(Object.entries(files).map(([name,bytes])=>[name,{sha256:sha(bytes),bytes:bytes.length}]));
       files['manifest.json']=Buffer.from(json({schema:'stellar-forge.merchant-customer-statement-files.v1',id,number,createdAt,
         documentSchema:STATEMENT_SCHEMA,customerId:intent.customerId,files:metadata,source:document.source}));
@@ -232,6 +257,7 @@ export class CustomerStatementWorkspace{
       await rename(temporary,target);await syncDirectory(exportsDir);
       const record={id,number,requestId,intentSha256,previewSha256:preview.previewSha256,customerId:intent.customerId,
         customerReference:document.customer.reference,customerName:document.customer.name,runId:intent.runId,usageId:intent.usageId,
+        ...(document.servicePeriod?{usageOpeningId:intent.usageOpeningId,servicePeriod:{from:document.servicePeriod.from,until:document.servicePeriod.until,orderRef:document.servicePeriod.orderRef}}:{}),
         createdAt,actor,status:'RETAINED',replacesId:intent.replacesId,supersededBy:null,files:metadata,
         orderCount:document.items.length,excludedOrderCount:document.excluded.length,from:document.selection.from,until:document.selection.until,
         history:[{at:createdAt,actor,action:'retained'}]};
